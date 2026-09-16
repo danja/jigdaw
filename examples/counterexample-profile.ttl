@@ -1,0 +1,53 @@
+# examples/counterexample-profile.ttl
+#
+# A deliberately broken profile. This file MUST NOT validate against
+# vocabs/shapes.ttl. It exists so that the shapes are known to fire: a shape that
+# has never rejected anything is indistinguishable from one that does not run.
+#
+# Every defect below is one an author could plausibly ship, and each is marked
+# with the constraint that should catch it.
+
+@base <https://example.org/plugins/broken/> .
+
+@prefix jig:   <http://purl.org/stuff/jigdaw/> .
+@prefix trn:   <http://purl.org/stuff/transmissions/> .
+@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+
+<>
+    a jig:WebPlugin ;
+    rdfs:label "Broken" ;
+    rdfs:comment "Every constraint in vocabs/shapes.ttl, violated once." ;
+    foaf:homepage <> ;
+    trn:role trn:Instrument ;
+
+    # Produces MIDI but never requires jig:MidiEvents, so its output goes nowhere.
+    trn:produces trn:Midi , trn:Audio ;
+
+    # Declares outputs without declaring how wide they are.
+    jig:audioOutputs 1 ;
+
+    jig:processor <#processor> ;
+    lv2:port <#cutoff> , <#rate> .
+
+<#processor>
+    a jig:Processor ;
+    jig:location <broken-processor.js> ;
+    # No jig:registeredName, so the host cannot construct the node.
+    # Integrity digest is not a valid SRI string.
+    jig:integrity "md5-abcdef" .
+
+<#cutoff>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
+    # Default sits outside its own range.
+    lv2:default 25000.0 ; lv2:minimum 20.0 ; lv2:maximum 18000.0 .
+
+<#rate>
+    a lv2:InputPort , lv2:ControlPort ;
+    # Symbol is not usable as an identifier, and there is no lv2:name.
+    lv2:symbol "rate in hz" ;
+    lv2:default 1.0 ; lv2:minimum 0.1 ; lv2:maximum 10.0 ;
+    # Not one of the two permitted automation rates.
+    jig:automationRate jig:FastRate .

@@ -1,0 +1,61 @@
+# examples/counterexample-project.ttl
+#
+# A deliberately broken project. This file MUST NOT validate against
+# vocabs/shapes.ttl. It exists so the project shapes are known to fire.
+#
+# Each defect is marked with the constraint that should catch it.
+
+@base <https://example.org/sessions/broken/> .
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Broken" ;
+    # No jig:revision, so no changeset can be checked against it.
+    jig:node <#a> ;
+    jig:connection <#c> ;
+    jig:transport <#transport> .
+
+<#a>
+    a jig:Node ;
+    # Plugin named by a relative reference that resolves to a non-https IRI, so
+    # the project cannot be reopened anywhere else.
+    jig:plugin <file:///home/danny/plugins/local.wasm> .
+
+<#c>
+    a jig:Connection ;
+    jig:from <#c-from> ; jig:to <#c-to> .
+    # No jig:signalKind, so nothing knows whether this is an audio edge or
+    # host-routed MIDI.
+
+# Names its port twice, two different ways. Nothing downstream can resolve which
+# was meant.
+<#c-from>
+    a jig:Endpoint ;
+    jig:endpointNode <#a> ;
+    jig:portIndex 0 ;
+    jig:portSymbol "mix" .
+
+# Names no port at all.
+<#c-to>
+    a jig:Endpoint ;
+    jig:endpointNode <#a> .
+
+# Symbol is not usable as an identifier, and there is no value.
+<#bad-setting>
+    a jig:ParameterSetting ;
+    jig:symbol "cutoff (hz)" .
+
+<#transport>
+    a jig:Transport ;
+    # A bar of no beats, and a loop that ends before it starts.
+    jig:beatsPerBar 0 ;
+    jig:loopStart 32.0 ;
+    jig:loopEnd 8.0 ;
+    jig:tempoPoint <#t0> .
+
+# A stopped clock.
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 0.0 .

@@ -1,0 +1,324 @@
+# vocabs/shapes.ttl
+#
+# SHACL shapes every profile is validated against before it is written to the
+# store. JigDAW ingests profiles from origins it does not control, so validation
+# is a gate rather than a diagnostic.
+#
+# Three decisions here were made by trying to validate examples/ and watching
+# what did not happen. Each is a trap that produces a shape which passes
+# everything, which is indistinguishable from a shape that does not run:
+#
+# 1. No sh:sparql. rdf-validate-shacl, the validator this project uses, throws
+#    "Cannot find validator for constraint component sh:SPARQLConstraintComponent"
+#    rather than skipping such a constraint. Everything here is SHACL Core, which
+#    turned out to express all three cross-field rules more precisely anyway.
+#
+# 2. No reliance on the vocabulary being loaded. A profile arrives on its own from
+#    a third-party origin, so nothing here may depend on rdfs:subClassOf or on the
+#    rdf:type of a vocabulary individual. Hence sh:in rather than sh:class for
+#    vocabulary terms, and an explicit target for every concrete resource class
+#    rather than one target on their shared superclass.
+#
+# 3. A conditional rule belongs at node level, not as a property constraint. A
+#    property shape on a path with no values is vacuously satisfied, so
+#    "requires MIDI events" expressed as a constraint on trn:requires passes
+#    exactly the plugins that omit trn:requires entirely.
+#
+# Shapes target jig:WebPlugin, never trn:PluginProfile. The 758 profiles already
+# published at plugin-universe.com are trn:PluginProfile and must stay valid. A
+# profile becomes subject to these constraints only by declaring itself loadable.
+#
+# Note on severity: rdf-validate-shacl reports conforms: false for a violation of
+# warning severity, contrary to SHACL section 3.6. Correct that in the validator,
+# as plugin-universe's ShapeValidator does, or a warning-severity shape aborts an
+# entire harvest over one odd string.
+
+# Shape IRIs are minted in the jig: namespace, following plugin-universe's
+# pu:PluginShape, but they are not vocabulary terms and are deliberately absent
+# from vocabs/jigdaw.ttl. A check that every jig: name used is declared in the
+# vocabulary has to know that, or every shape here reads as an undeclared term.
+
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+## -- The plugin itself -------------------------------------------------------
+
+jig:WebPluginShape a sh:NodeShape ;
+    sh:targetClass jig:WebPlugin ;
+    rdfs:label "Web plugin shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A plugin must be identified by an IRI. A blank node cannot be linked to, cached by identity, or re-ingested without duplicating itself." ;
+
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A plugin needs exactly one name."
+    ] ;
+    sh:property [
+        sh:path rdfs:comment ;
+        sh:minCount 1 ; sh:datatype xsd:string ;
+        sh:severity sh:Warning ;
+        sh:message "A plugin with no description is findable only by name, which is the one thing a searcher usually does not know."
+    ] ;
+    sh:property [
+        sh:path foaf:homepage ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A plugin must link to a page a person can read, so a machine-readable profile and its human explanation can be joined up."
+    ] ;
+    sh:property [
+        sh:path trn:role ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A plugin must declare at least one role."
+    ] ;
+    sh:property [
+        sh:path trn:produces ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A plugin that produces nothing cannot be wired to anything."
+    ] ;
+
+    sh:property [
+        sh:path jig:processor ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A plugin must name exactly one AudioWorklet processor module."
+    ] ;
+    sh:property [
+        sh:path jig:module ;
+        sh:maxCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message "No WebAssembly module declared. Permitted, for a plugin whose processing is plain JavaScript, but unusual enough to be worth confirming."
+    ] ;
+    sh:property [ sh:path jig:ui ; sh:maxCount 1 ] ;
+
+    sh:property [ sh:path jig:audioInputs   ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path jig:audioOutputs  ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path jig:inputChannels ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path jig:outputChannels; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path jig:renderQuantum ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path jig:latencyFrames ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path jig:tailFrames    ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+## -- Conditional rules, each as its own node shape ---------------------------
+##
+## Separate shapes rather than several sh:or values on one shape, so that each
+## failure reports its own message against its own constraint.
+
+jig:OutputWidthShape a sh:NodeShape ;
+    sh:targetClass jig:WebPlugin ;
+    rdfs:label "Output width shape" ;
+    sh:message "A plugin with audio outputs must declare jig:outputChannels. The host passes outputChannelCount when it constructs the node, and guessing stereo is how a mono plugin ends up silent in one ear." ;
+    sh:or (
+        [ sh:path jig:audioOutputs ; sh:maxCount 0 ]
+        [ sh:property [ sh:path jig:outputChannels ; sh:minCount 1 ] ]
+    ) .
+
+jig:MidiCapabilityShape a sh:NodeShape ;
+    sh:targetClass jig:WebPlugin ;
+    rdfs:label "MIDI capability shape" ;
+    sh:message "A plugin that accepts or produces MIDI must declare trn:requires jig:MidiEvents. The Web Audio graph carries no MIDI, so this is a host service rather than a property of an audio connection, and a plugin that does not ask for it has its MIDI go nowhere." ;
+    sh:or (
+        [ sh:node jig:NoMidiShape ]
+        [ sh:property [ sh:path trn:requires ; sh:hasValue jig:MidiEvents ] ]
+    ) .
+
+# Satisfied by a plugin naming no MIDI signal type in either direction. The types
+# are enumerated rather than matched by substring on the IRI, which would be
+# shorter and would also match any future term whose name merely contains "Midi".
+jig:NoMidiShape a sh:NodeShape ;
+    sh:property [
+        sh:path trn:produces ;
+        sh:qualifiedValueShape [ sh:in ( trn:Midi trn:BassMidi trn:DrumMidi trn:MelodyMidi
+                                         trn:HarmonyMidi trn:MultiPartMidi trn:ControlMidi
+                                         trn:MidiCC ) ] ;
+        sh:qualifiedMaxCount 0
+    ] ;
+    sh:property [
+        sh:path trn:accepts ;
+        sh:qualifiedValueShape [ sh:in ( trn:Midi trn:BassMidi trn:DrumMidi trn:MelodyMidi
+                                         trn:HarmonyMidi trn:MultiPartMidi trn:ControlMidi
+                                         trn:MidiCC ) ] ;
+        sh:qualifiedMaxCount 0
+    ] .
+
+## -- Fetchable files ---------------------------------------------------------
+##
+## Every concrete class is targeted explicitly. Targeting jig:Resource alone would
+## rely on rdfs:subClassOf from the vocabulary being present in the data graph,
+## and a profile validated on its own does not carry it.
+
+jig:ResourceShape a sh:NodeShape ;
+    sh:targetClass jig:Resource , jig:Module , jig:Processor , jig:UserInterface ;
+    rdfs:label "Resource shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A resource must have an IRI. Skolemise it as a fragment of the profile IRI rather than using a blank node: blank nodes are not diffable in version control, duplicate themselves on re-ingest, and are awkward to select over." ;
+
+    sh:property [
+        sh:path jig:location ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A resource must say where it is fetched from."
+    ] ;
+    sh:property [
+        sh:path jig:integrity ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$" ;
+        sh:message "Every resource needs a Subresource Integrity digest, as sha384-<base64>. The profile and the code it points at need not share an origin, and the whole install path is a host running code it found by following a link."
+    ] ;
+    sh:property [ sh:path jig:mediaType ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+jig:ProcessorShape a sh:NodeShape ;
+    sh:targetClass jig:Processor ;
+    sh:property [
+        sh:path jig:registeredName ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A processor must declare the name it passes to registerProcessor. There is no way to ask a worklet what it registered, so the host cannot construct the node without it."
+    ] .
+
+## -- Parameters --------------------------------------------------------------
+
+jig:PortShape a sh:NodeShape ;
+    sh:targetObjectsOf lv2:port ;
+    rdfs:label "Port shape" ;
+
+    sh:property [
+        sh:path lv2:symbol ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
+        sh:message "A port needs a symbol usable as an identifier. It becomes the AudioParam name, which automation and the saved project both key on."
+    ] ;
+    sh:property [
+        sh:path lv2:name ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A port needs a human-readable name, because the generated panel has nothing else to print on the control."
+    ] ;
+    sh:property [
+        sh:path jig:automationRate ;
+        sh:maxCount 1 ;
+        sh:in ( jig:ARate jig:KRate ) ;
+        sh:message "jig:automationRate must be jig:ARate or jig:KRate. Constrained by value rather than by sh:class so that a profile fetched from a third party validates on its own, without the JigDAW vocabulary loaded alongside it."
+    ] ;
+
+    # A default outside its own range is accepted by every parser and produces a
+    # plugin that is wrong the moment it loads, before anyone touches a control.
+    # SHACL Core compares two properties of the same node directly.
+    sh:property [
+        sh:path lv2:default ;
+        sh:greaterThanOrEquals lv2:minimum ;
+        sh:lessThanOrEquals lv2:maximum ;
+        sh:message "A port's lv2:default must lie between its lv2:minimum and lv2:maximum."
+    ] .
+
+## -- Projects ----------------------------------------------------------------
+
+jig:ProjectShape a sh:NodeShape ;
+    sh:targetClass jig:Project ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path jig:revision ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A project must carry a revision. Every changeset is checked against it, so a project without one cannot be edited safely by more than one surface."
+    ] ;
+    sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path jig:transport ; sh:maxCount 1 ] ;
+    sh:property [ sh:path jig:node ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path jig:connection ; sh:nodeKind sh:IRI ] .
+
+jig:TransportShape a sh:NodeShape ;
+    sh:targetClass jig:Transport ;
+    sh:property [
+        sh:path jig:beatsPerBar ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ;
+        sh:message "A bar has at least one beat."
+    ] ;
+    sh:property [
+        sh:path jig:beatUnit ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ;
+        sh:message "A beat unit is a note value: 1, 2, 4, 8, 16."
+    ] ;
+    # A loop that ends before it starts is accepted by every parser and produces
+    # a transport that either never advances or runs backwards, depending on who
+    # reads it first. SHACL Core compares two properties of one node directly.
+    sh:property [
+        sh:path jig:loopStart ;
+        sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:lessThan jig:loopEnd ;
+        sh:message "A loop must start before it ends."
+    ] ;
+    sh:property [ sh:path jig:loopEnd ; sh:maxCount 1 ] ;
+    sh:property [ sh:path jig:loopEnabled ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .
+
+jig:NodeShape_ a sh:NodeShape ;
+    sh:targetClass jig:Node ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path jig:plugin ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:pattern "^https://" ;
+        sh:message "A node must name the plugin it instantiates, by a dereferenceable https IRI. That is what lets a project be reopened on a machine that has never seen the plugin."
+    ] ;
+    sh:property [ sh:path jig:nodeState ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+jig:ConnectionShape a sh:NodeShape ;
+    sh:targetClass jig:Connection ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path jig:from ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A connection needs exactly one source endpoint."
+    ] ;
+    sh:property [
+        sh:path jig:to ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A connection needs exactly one destination endpoint."
+    ] ;
+    sh:property [
+        sh:path jig:signalKind ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A connection must say what travels along it. An audio edge and a host-routed MIDI edge look identical in the graph and are handled by different machinery."
+    ] .
+
+jig:EndpointShape a sh:NodeShape ;
+    sh:targetClass jig:Endpoint ;
+    sh:property [
+        sh:path jig:endpointNode ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "An endpoint must name its node."
+    ] ;
+    # Exactly one way of naming the port. A numbered audio port and a named
+    # parameter are different things, and an endpoint carrying both is ambiguous
+    # in a way nothing downstream can resolve.
+    sh:xone (
+        [ sh:property [ sh:path jig:portIndex  ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ]
+        [ sh:property [ sh:path jig:portSymbol ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ]
+    ) ;
+    sh:message "An endpoint must give exactly one of jig:portIndex, for an audio or MIDI port, or jig:portSymbol, for a parameter." .
+
+jig:ParameterSettingShape a sh:NodeShape ;
+    sh:targetClass jig:ParameterSetting ;
+    sh:property [
+        sh:path jig:symbol ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
+        sh:message "A setting is addressed by lv2:symbol. An index is a property of a build; a symbol is a property of the plugin."
+    ] ;
+    sh:property [
+        sh:path jig:value ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A setting without a value is not a setting."
+    ] .
+
+jig:TempoPointShape a sh:NodeShape ;
+    sh:targetClass jig:TempoPoint ;
+    sh:property [
+        sh:path jig:atBeat ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A tempo point is keyed by the beat it takes effect at. That key is what orders the tempo map, in place of a list."
+    ] ;
+    sh:property [
+        sh:path jig:bpm ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
+        sh:message "A tempo point needs a tempo greater than zero."
+    ] .

@@ -1,0 +1,85 @@
+# examples/session-project.ttl
+#
+# A worked JigDAW project. Two plugins, wired in series, with parameters set and
+# a tempo map.
+#
+# Note what is not here. There is no rdf:List and no ordering property. The order
+# the plugins process in is derived from the connections, exactly as Web Audio
+# derives it, so declaring it would be a second answer to a question the graph
+# already answers. The tempo map is ordered by the beat each point takes effect
+# at, which survives an insertion in the middle and is selectable in one triple
+# pattern.
+#
+# Editor metadata lives in a separate graph, not in this file, so that dragging a
+# node on screen cannot invalidate a compiled audio graph.
+
+@base <https://example.org/sessions/first/> .
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix trn:     <http://purl.org/stuff/transmissions/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "First" ;
+    dcterms:created "2026-09-16T19:00:00Z"^^xsd:dateTime ;
+    jig:revision 7 ;
+    jig:node <#pad> , <#verb> ;
+    jig:connection <#c1> , <#c2> ;
+    jig:transport <#transport> .
+
+## Nodes. A node is an instance, not a plugin: two instances of one plugin are
+## two nodes with the same jig:plugin and different settings.
+
+<#pad>
+    a jig:Node ;
+    rdfs:label "Pad" ;
+    jig:plugin <https://example.org/plugins/driftgate/> ;
+    jig:setting <#pad-drive> .
+
+<#verb>
+    a jig:Node ;
+    rdfs:label "Verb" ;
+    jig:plugin <https://example.org/plugins/cascade/> ;
+    jig:setting <#verb-mix> , <#verb-size> ;
+    # Opaque to the host. Parameter values are settings, not state, and storing
+    # them in both places means the two disagree on restore.
+    jig:nodeState "eyJtb2RlIjoicGxhdGUiLCJzZWVkIjo0MTF9" .
+
+<#pad-drive>  a jig:ParameterSetting ; jig:symbol "drive" ; jig:value 0.62 .
+<#verb-mix>   a jig:ParameterSetting ; jig:symbol "mix"   ; jig:value 0.34 .
+<#verb-size>  a jig:ParameterSetting ; jig:symbol "size"  ; jig:value 31.0 .
+
+## Connections. Explicit, directed, with named endpoints.
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Audio .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#pad>  ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+
+## A connection to a parameter names it by symbol rather than by index. An
+## endpoint gives one or the other and never both.
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#pad>  ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portSymbol "mix" .
+
+## Transport. The tempo map is keyed by beat.
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:loopStart 0.0 ; jig:loopEnd 32.0 ; jig:loopEnabled true ;
+    jig:tempoPoint <#t0> , <#t1> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0  ; jig:bpm 96.0 .
+<#t1> a jig:TempoPoint ; jig:atBeat 16.0 ; jig:bpm 104.0 .

@@ -1,0 +1,153 @@
+# examples/cascade-profile.ttl
+#
+# A worked JigDAW plugin profile. Cascade is invented; every statement in here is
+# one a real plugin would make.
+#
+# Served at https://example.org/plugins/cascade/ as text/turtle, with
+# Access-Control-Allow-Origin, this is everything a browser needs to find the
+# plugin, decide it can run it, fetch it and draw its panel.
+#
+# The subject is the plugin's homepage, which is the convention already published
+# at https://plugin-universe.com/about/profiles: an IRI you control, so the
+# profile is yours to version alongside the plugin.
+#
+# @base is stated explicitly rather than left to the document's own URL. A
+# profile then means the same thing wherever it is read from, including from a
+# file on disk during development, and jig:location stays readable as a relative
+# path.
+
+@base <https://example.org/plugins/cascade/> .
+
+@prefix jig:   <http://purl.org/stuff/jigdaw/> .
+@prefix trn:   <http://purl.org/stuff/transmissions/> .
+@prefix pu:    <http://purl.org/stuff/plugin-universe/> .
+@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+<>
+    a jig:WebPlugin , trn:PluginProfile ;
+
+    ## What it is. These terms are the transmissions vocabulary, unchanged, and
+    ## are what makes the plugin findable next to native ones in the same
+    ## catalogue.
+    rdfs:label "Cascade" ;
+    rdfs:comment "Multiband plate reverb with per-band damping and a freeze that holds the tail indefinitely." ;
+    trn:vendor "example" ;
+    foaf:homepage <> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:genre "Ambient", "Electronic" ;
+    trn:caution "Freeze holds the tail at unity. Following it with a limiter is wise when several instances are frozen at once." ;
+    trn:recommendedAfter <https://example.org/plugins/driftgate/> ;
+    pu:licenceId "Apache-2.0" ;
+
+    ## trn:WebAudio is a proposed term. The formats currently in the shared
+    ## vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone, none
+    ## of which describes a plugin that runs in a browser. It is named here in
+    ## trn: rather than invented in jig: because a plugin format belongs to the
+    ## shared vocabulary, and forking it would leave two answers to one question.
+    ##
+    ## Until it is accepted upstream, a profile carrying it is refused by
+    ## plugin-universe's pu:PluginShape, whose sh:in list enumerates the formats
+    ## above. See TODO.md: the vocabulary and that list have to change together.
+    trn:format trn:WebAudio ;
+
+    ## What it needs from the host. trn:requires is the transmissions property
+    ## that already carries trn:HostTransport; the capabilities named here are
+    ## the web-specific ones.
+    jig:prefers jig:SharedMemory ;
+    trn:requires jig:Persistence ;
+
+    ## Runtime shape. One stereo input, one stereo output.
+    jig:audioInputs 1 ;
+    jig:inputChannels 2 ;
+    jig:audioOutputs 1 ;
+    jig:outputChannels 2 ;
+    jig:renderQuantum 128 ;
+    jig:latencyFrames 0 ;
+    jig:tailFrames 441000 ;
+
+    ## What to fetch. Each is a named node rather than a blank one, so a host can
+    ## cache it by identity and a diff of this file is readable.
+    jig:module <#module> ;
+    jig:processor <#processor> ;
+    jig:ui <#ui> ;
+    jig:asset <#plate-ir> ;
+
+    ## Parameters, declared once. The host derives the processor's
+    ## parameterDescriptors from these and draws the panel from the same
+    ## statements, so the two cannot disagree.
+    lv2:port <#mix> , <#size> , <#damping> , <#freeze> , <#mode> .
+
+<#module>
+    a jig:Module ;
+    jig:location <cascade.wasm> ;
+    jig:mediaType "application/wasm" ;
+    jig:integrity "sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC" ;
+    jig:wasmFeature jig:Simd128 , jig:BulkMemory .
+
+<#processor>
+    a jig:Processor ;
+    jig:location <cascade-processor.js> ;
+    jig:mediaType "text/javascript" ;
+    jig:registeredName "cascade" ;
+    jig:integrity "sha384-ggOyR3iMd5o6dRsuOBsWl2VgVBq1TVwNNNXlKOJ6rPGxwsMiBfPGZBpQXKDzHGfz" .
+
+<#ui>
+    a jig:UserInterface ;
+    jig:location <ui/index.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-Mn3RhCrPdmtTsxOsiFxZmxeSOe5nD1vTMEqEVhsaxJEHpOa0BwVGVRDmkNLFPQpE" .
+
+<#plate-ir>
+    a jig:Resource ;
+    jig:location <plate.wav> ;
+    jig:mediaType "audio/wav" ;
+    jig:integrity "sha384-BqTzsTYGUXbBqBNaCHgpXVEcKlAAeVrKdcXGqrVyZTZjzvNGlKtmBXPzBAXeWVhz" .
+
+## Ports.
+##
+## The widget is decided by the shape of the declaration, never by the plugin
+## naming one. A port with lv2:portProperty lv2:toggled, or an enumeration with
+## exactly two scale points, is a switch; an enumeration with more is a selector
+## with every option named; anything else is a dial. So an author who wants a
+## switch declares a switch's shape.
+
+<#mix>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "mix" ; lv2:name "Mix" ;
+    lv2:default 0.3 ; lv2:minimum 0.0 ; lv2:maximum 1.0 ;
+    jig:automationRate jig:ARate .
+
+<#size>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "size" ; lv2:name "Size" ;
+    lv2:default 24.0 ; lv2:minimum 2.0 ; lv2:maximum 60.0 ;
+    units:unit units:ms .
+
+<#damping>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "damping" ; lv2:name "Damping" ;
+    lv2:default 4200.0 ; lv2:minimum 200.0 ; lv2:maximum 18000.0 ;
+    units:unit units:hz .
+
+<#freeze>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "freeze" ; lv2:name "Freeze" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    lv2:portProperty lv2:toggled .
+
+<#mode>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "mode" ; lv2:name "Mode" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        [ rdfs:label "Plate" ; rdf:value 0 ] ,
+        [ rdfs:label "Hall"  ; rdf:value 1 ] ,
+        [ rdfs:label "Bloom" ; rdf:value 2 ] .

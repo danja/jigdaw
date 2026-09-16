@@ -1,0 +1,23 @@
+{
+  "name": "jigdaw",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "A web-native digital audio workstation and plugin format",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "validate": "node bin/validate.js"
+  },
+  "dependencies": {
+    "@rdfjs/parser-n3": "^2.2.0",
+    "@zazuko/env": "^3.0.1",
+    "rdf-validate-shacl": "^0.6.5"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
