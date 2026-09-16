@@ -4,7 +4,9 @@ A web-native digital audio workstation and a web-native plugin format. Everythin
 the browser, everything is identified by a dereferenceable IRI, and the signal processing is
 WebAssembly.
 
-The project is in its specification phase. There is no implementation yet. Read
+The project is in its specification phase. The only code is the validator that enforces the
+specification on itself: `src/validate/`, `bin/validate.js` and the guards in `tests/`. None
+of the DAW exists. Read
 [docs/architecture.md](docs/architecture.md) for the shape of the thing, then
 [docs/host-plugin-contract.md](docs/host-plugin-contract.md), which is normative and which
 the rest hang off, before making structural changes.
@@ -138,8 +140,12 @@ broken, and nobody will notice until it has been broken many times. When adding 
 what would notice it being violated. If the answer is "a careful reader", write the check
 instead.
 
-Corollary, learned while writing `vocabs/shapes.ttl`: a guard that cannot run is worse than
-no guard, because it looks like coverage. Three constraints there were written as
+Corollary, learned twice: a guard that cannot run is worse than no guard, because it looks
+like coverage. **A guard must not depend on the thing it guards**, and the way to find out
+is to break the thing on purpose and watch the guard go red. One check of the vitest include
+list lived in a suite governed by that list, so deleting the entry switched off the test that
+would have caught it. Three sibling guards mutation-tested at the same time all failed
+correctly; that one looked identical and did not. Three constraints there were written as
 `sh:sparql` and would have thrown rather than validated; two more were written in forms that
 passed everything. They were found by writing `examples/counterexample-profile.ttl`, a
 profile that violates every constraint once, and checking that each one fired.

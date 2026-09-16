@@ -1,8 +1,10 @@
 # JigDAW architecture
 
-The specification phase. Nothing here is implemented. This document says what the pieces
+The specification phase. None of the DAW is implemented. This document says what the pieces
 are and where the boundaries fall, so that the normative
 [host-plugin-contract.md](host-plugin-contract.md) has something to be normative about.
+
+The premise comes from [first-thoughts.md](first-thoughts.md), which is kept as written.
 
 ## Layers
 

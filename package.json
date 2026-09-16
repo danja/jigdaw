@@ -9,8 +9,9 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "test": "vitest run",
-    "validate": "node bin/validate.js"
+    "test": "node bin/check-suites.js && vitest run",
+    "validate": "node bin/validate.js",
+    "check-suites": "node bin/check-suites.js"
   },
   "dependencies": {
     "@rdfjs/parser-n3": "^2.2.0",

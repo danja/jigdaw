@@ -78,16 +78,11 @@ complete. Review periodically.
 
 ## Before there is code
 
-- [ ] `src/rdf/Vocabulary.js` as frozen constants, and a test that every IRI in it appears
-      in `vocabs/jigdaw.ttl` and the reverse. This is the symmetry test valis has between
-      its ontology and its element registry, applied to the vocabulary itself. It is the
-      single highest-value check available to this project and it belongs in the first
-      commit that has code to bind.
-- [ ] `npm run validate`, wrapping the shapes over a profile. The scratch validator written
-      while drafting the shapes is not in the repository; see MISTAKES.md on what it found.
-- [ ] A test that runs `examples/counterexample-profile.ttl` and asserts each constraint
-      fires. Right now the file exists and nothing runs it, which is the state it was
-      written to prevent.
+- [ ] `src/rdf/Vocabulary.js` as frozen constants, once there is code that names a term.
+      Nothing does yet, so it would be a constants file constraining nothing.
+      `tests/rdf/vocabulary.test.js` already binds the vocabulary to the shapes and examples
+      in both directions, which is the useful half of valis's ontology-to-registry symmetry
+      test. The other half arrives with the code.
 - [ ] A `/new-plugin` command scaffolding profile, processor, registry entry and test in one
       pass, modelled on `~/github/valis/.claude/commands/new-element.md`.
 

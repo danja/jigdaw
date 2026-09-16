@@ -6,6 +6,10 @@ export default defineConfig({
     environment: 'node',
     // Every test directory must appear here. A suite that is written and never
     // run is the same as a suite that does not exist, and nothing reports it.
-    include: ['tests/validate/**/*.test.js', 'tests/rdf/**/*.test.js']
+    include: [
+      'tests/validate/**/*.test.js',
+      'tests/rdf/**/*.test.js',
+      'tests/docs/**/*.test.js'
+    ]
   }
 })

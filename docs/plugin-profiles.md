@@ -192,15 +192,10 @@ run until that file was written.
 
 ## Validating
 
-Syntax, which works today:
-
 ```sh
-rapper -i turtle -c yourplugin/profile.ttl
+rapper -i turtle -c yourplugin/profile.ttl        # syntax
+npm run validate -- yourplugin/profile.ttl        # shapes
 ```
-
-Shape validation needs any SHACL Core validator pointed at `vocabs/shapes.ttl`. There is no
-`npm run validate` in this repository yet, because there is no implementation yet;
-`HUMANS.md` gives a working recipe and `TODO.md` tracks turning it into a command.
 
 Validation is a gate, not a diagnostic. A profile that does not validate is not written to
 the store, because JigDAW ingests profiles from origins it does not control.

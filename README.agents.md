@@ -5,7 +5,8 @@ both run in the browser, plugins are identified by dereferenceable IRIs, and sig
 processing is WebAssembly.
 
 This file is the entry point for linked-data discovery. The project is in its specification
-phase: the vocabulary, the shapes and the contract exist; there is no implementation.
+phase: the vocabulary, the shapes and the contract exist, along with a validator that
+enforces them. None of the DAW exists.
 
 ## Resources
 
@@ -89,12 +90,12 @@ describes a native-only plugin stays valid.
 ## Validating
 
 ```sh
-rapper -i turtle -c examples/cascade-profile.ttl
+rapper -i turtle -c examples/cascade-profile.ttl   # syntax
+npm run validate -- examples/cascade-profile.ttl   # shapes, exits non-zero on violation
 ```
 
-Shape validation needs a SHACL Core validator. `rdf-validate-shacl` works;
-`vocabs/shapes.ttl` deliberately contains no `sh:sparql`, because that library throws rather
-than skipping such a constraint.
+`vocabs/shapes.ttl` is SHACL Core and deliberately contains no `sh:sparql`, because
+`rdf-validate-shacl` throws on such a constraint rather than skipping it.
 
 ## Related catalogues
 

@@ -28,18 +28,22 @@ fetched live from plugin-universe.com conforms untouched.
 
 Left open, and blocking Phase 2: there is no plugin format term for the web. See `TODO.md`.
 
-## Phase 1. The vocabulary in code
+## Phase 1. The vocabulary in code. Started.
 
-`src/rdf/Vocabulary.js` as frozen constants, a profile parser, and `npm run validate`.
+Delivered:
 
-The load-bearing piece is the symmetry test: every IRI named in `Vocabulary.js` appears in
-`vocabs/jigdaw.ttl`, and every term in `vocabs/jigdaw.ttl` that code names appears in
-`Vocabulary.js`. Both directions. This is valis's ontology-to-registry test applied to the
-vocabulary, and it is what stops the two drifting.
+- `src/validate/ShapeValidator.js` and `bin/validate.js`, so `npm run validate` exists and
+  the documented command is true. It holds the SHACL section 3.6 severity correction.
+- `tests/validate/ShapeValidator.test.js`, which asserts the exact violation count for every
+  example, so a shape that stops firing is a failing test rather than a quiet gap.
+- `tests/rdf/vocabulary.test.js`, which binds the vocabulary to the shapes and examples in
+  both directions, and refuses a `trn:` term that upstream does not declare.
 
-Also here: a test that runs `examples/counterexample-profile.ttl` and asserts each
-constraint fires. That file currently exists and nothing runs it, which is the state it was
-written to prevent.
+Both guards were checked by mutation: removing a constraint from `vocabs/shapes.ttl` and
+adding an undeclared term to an example each turn a test red.
+
+Remaining: a profile parser, and `src/rdf/Vocabulary.js` once there is code that names a
+term.
 
 ## Phase 2. One plugin, loaded
 

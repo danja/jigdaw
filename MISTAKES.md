@@ -2,6 +2,27 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-16 A guard that could not catch its own removal
+
+**What happened.** `tests/docs/conventions.test.js` included a check that every
+`tests/<dir>/` appears in the `include` list of `vitest.config.js`, so that a suite could not
+be written and then never run. Mutation-testing it, by deleting `tests/docs/` from that
+include list, produced a passing test run.
+
+**Root cause.** Removing `tests/docs/` from the include list stops
+`tests/docs/conventions.test.js` from running at all. The check was governed by the list it
+was checking, so the one edit it existed to catch was also the edit that switched it off. It
+went blind rather than red, and a green run said the opposite of the truth.
+
+**Prevention.** The check moved to `bin/check-suites.js` and runs as part of `npm test`,
+before vitest, where the include list has no power over it. Verified by mutation in both
+directions: removing a wired directory and adding an unwired one now both fail.
+
+The general rule, which is worth more than the instance: a guard must not depend on the
+thing it guards. When adding one, ask what happens to the guard when the defect is present,
+not only what happens when it is absent. Three sibling guards were mutation-tested at the
+same time and all three failed correctly; this one looked identical and did not.
+
 ## 2026-09-16 Three SHACL constraints that could never have run
 
 **What happened.** `vocabs/shapes.ttl` was first written with three `sh:sparql` constraints:

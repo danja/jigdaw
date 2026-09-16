@@ -8,7 +8,8 @@ WebAssembly. Finding a plugin and installing it are the same action: dereference
 it is there.
 
 The project is in its specification phase. The vocabulary, the validation shapes and the
-normative host and plugin contract exist. There is no implementation yet.
+normative host and plugin contract exist, along with a validator that enforces them
+(`npm run validate`). None of the DAW exists yet.
 
 ## Start here
 
@@ -23,6 +24,8 @@ normative host and plugin contract exist. There is no implementation yet.
 - [docs/architecture.md](docs/architecture.md) covers the layers, and why they are where they are.
 - [README.agents.md](README.agents.md) is the same, for machine consumers.
 - [docs/plan.md](docs/plan.md) has the phases and their status.
+- [docs/first-thoughts.md](docs/first-thoughts.md) is the original sketch the project was
+  built from, kept as written.
 
 ## The idea
 

@@ -13,9 +13,9 @@ A digital audio workstation and a plugin format, both native to the web. The pre
 a plugin's identity, its metadata and its delivery are one URL: you search, you get a link,
 the host dereferences it, and the plugin is running.
 
-The project is in its specification phase. There is no implementation. What exists is a
-vocabulary, a set of validation shapes, and a normative contract describing what a host
-guarantees and what a plugin must do.
+The project is in its specification phase. What exists is a vocabulary, a set of validation
+shapes, a normative contract describing what a host guarantees and what a plugin must do,
+and a validator that enforces the shapes. None of the DAW exists.
 
 ## Reading order
 
@@ -43,10 +43,10 @@ For the current phase, very little.
 
 | Tool | For | Install |
 |---|---|---|
+| Node 20 or later | the validator and the tests | your preference |
 | `rapper` | Turtle syntax checking | `apt install raptor2-utils` |
-| Node 20 or later | everything else, eventually | your preference |
 
-There is no `package.json` yet, so there is nothing to `npm install` in this repository.
+Then `npm install`.
 
 ## Checking a profile
 
@@ -56,52 +56,30 @@ Syntax:
 rapper -i turtle -c examples/cascade-profile.ttl
 ```
 
-Shapes. There is no `npm run validate` yet, so this is the working recipe until Phase 1
-provides one. Run it somewhere outside the repository:
+Shapes:
 
 ```sh
-mkdir -p /tmp/jigdaw-validate && cd /tmp/jigdaw-validate
-npm init -y && npm install rdf-validate-shacl @zazuko/env @rdfjs/parser-n3
-
-cat > validate.mjs <<'EOF'
-import fs from 'node:fs'
-import { Readable } from 'node:stream'
-import rdf from '@zazuko/env'
-import ParserN3 from '@rdfjs/parser-n3'
-import SHACLValidator from 'rdf-validate-shacl'
-
-const parse = (file, baseIRI) => rdf.dataset().import(
-  new ParserN3({ factory: rdf, baseIRI })
-    .import(Readable.from([fs.readFileSync(file, 'utf8')])))
-
-const [shapesFile, ...dataFiles] = process.argv.slice(2)
-const validator = new SHACLValidator(await parse(shapesFile, 'urn:shapes'), { factory: rdf })
-
-let failed = false
-for (const file of dataFiles) {
-  const report = await validator.validate(await parse(file, 'file://' + file))
-  // SHACL section 3.6: a warning must not make a graph non-conformant.
-  // rdf-validate-shacl reports conforms: false for any result, so judge on
-  // violations instead. Every consumer of this library needs that correction.
-  const violations = report.results.filter(
-    r => !String(r.severity?.value ?? '').endsWith('Warning'))
-  console.log(`${file}: ${violations.length} violation(s)`)
-  for (const r of report.results) {
-    const sev = String(r.severity?.value ?? '').split('#')[1] ?? '?'
-    console.log(`  [${sev}] ${r.focusNode?.value}`)
-    console.log(`     ${r.path?.value ?? '(node)'}`)
-    console.log(`     ${r.message.map(m => m.value).join(' ')}`)
-  }
-  if (violations.length) failed = true
-}
-process.exit(failed ? 1 : 0)
-EOF
-
-node validate.mjs ~/github/jigdaw/vocabs/shapes.ttl ~/github/jigdaw/examples/cascade-profile.ttl
+npm install          # once
+npm run validate -- examples/cascade-profile.ttl
 ```
 
-Two sanity checks that should hold at all times, and which are the closest thing this
-repository currently has to a test suite:
+It exits non-zero on a violation, so it works in a script. `--shapes FILE` points it at a
+different shapes file. A warning does not make it fail, per SHACL section 3.6, which is a
+correction `ShapeValidator` applies because `rdf-validate-shacl` does not: it reports a
+graph as non-conformant for a warning, and a caller that refuses to store non-conformant
+graphs would then reject a whole harvest over one odd string.
+
+```sh
+npm test             # the counts below, plus the repository guards
+```
+
+`npm test` runs `bin/check-suites.js` first, which fails if a `tests/<dir>/` is missing from
+`vitest.config.js`, then the suites. Those enforce the documentation rules that would
+otherwise need a careful reader: no em dashes, no broken internal links, no unreferenced
+document, a path comment at the top of every source file, and the vocabulary bound to the
+shapes and examples in both directions.
+
+`npm test` enforces these, in `tests/validate/ShapeValidator.test.js`:
 
 | File | Expected violations |
 |---|---|
