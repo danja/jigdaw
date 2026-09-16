@@ -1,0 +1,36 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/cascade/",
+  "label": "Cascade",
+  "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",
+  "vendor": "danja",
+  "registeredName": "cascade",
+  "roles": ["trn:AudioEffect"],
+  "accepts": ["trn:Audio"],
+  "produces": ["trn:Audio"],
+  "genres": ["Ambient", "Electronic"],
+  "cautions": ["Freeze holds the tail at unity feedback. Following it with a limiter is wise when several instances are frozen at once."],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "cascade.wasm",
+    "processor": "cascade-processor.js"
+  },
+  "ports": [
+    { "symbol": "mix", "name": "Mix", "default": 0.3, "minimum": 0.0, "maximum": 1.0 },
+    { "symbol": "size", "name": "Size", "default": 24.0, "minimum": 2.0, "maximum": 60.0, "unit": "ms" },
+    { "symbol": "damping", "name": "Damping", "default": 4200.0, "minimum": 200.0, "maximum": 18000.0, "unit": "hz" },
+    { "symbol": "freeze", "name": "Freeze", "default": 0, "minimum": 0, "maximum": 1, "toggled": true },
+    { "symbol": "mode", "name": "Mode", "default": 0, "minimum": 0, "maximum": 2,
+      "scalePoints": [{ "label": "Plate", "value": 0 }, { "label": "Hall", "value": 1 }, { "label": "Bloom", "value": 2 }] }
+  ]
+}

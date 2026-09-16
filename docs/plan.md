@@ -20,7 +20,7 @@ Delivered:
 - `docs/namespace.md`, what the vocabulary IRIs serve
 - `docs/plugin-profiles.md` and `docs/architecture.md`
 - four worked examples, two valid and two counterexamples
-- `AGENTS.md`, with `CLAUDE.md` a symlink to it, and `HUMANS.md` for people
+- `AGENTS.md`, with `CLAUDE.md` a symlink to it, and `HUMANS.md` listing the blockers
 
 Verified: all four examples parse; both valid ones conform; the profile counterexample
 produces eight violations and the project counterexample ten, one per constraint; a profile
@@ -70,7 +70,8 @@ require `trn:HostTransport`.
 
 ## Phase 5. The catalogue and the namespace
 
-The Podman container with the SPARQL store. Crawling profiles, named graph per source.
+The compose stack with the SPARQL store, per [deployment.md](deployment.md). Crawling
+profiles, named graph per source.
 Federating with or mirroring plugin-universe rather than starting empty.
 
 Serving the vocabulary at its namespace IRI belongs here too, and is independent of

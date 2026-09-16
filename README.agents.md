@@ -22,7 +22,7 @@ enforces them. None of the DAW exists.
 | Namespace | `docs/namespace.md` | What `http://purl.org/stuff/jigdaw/` serves, and how terms resolve |
 | Profile format | `docs/plugin-profiles.md` | How to write a profile, and how it extends the published one |
 | Architecture | `docs/architecture.md` | Layers, boundaries, and the decisions behind them |
-| Worked example | `examples/cascade-profile.ttl` | A complete profile that validates |
+| Worked example | `examples/reference-profile.ttl` | A complete profile that validates |
 | Worked project | `examples/session-project.ttl` | A complete session that validates |
 | Counterexamples | `examples/counterexample-profile.ttl`, `examples/counterexample-project.ttl` | Each violates every constraint once. Neither may validate |
 
@@ -90,8 +90,8 @@ describes a native-only plugin stays valid.
 ## Validating
 
 ```sh
-rapper -i turtle -c examples/cascade-profile.ttl   # syntax
-npm run validate -- examples/cascade-profile.ttl   # shapes, exits non-zero on violation
+rapper -i turtle -c examples/reference-profile.ttl   # syntax
+npm run validate -- examples/reference-profile.ttl   # shapes, exits non-zero on violation
 ```
 
 `vocabs/shapes.ttl` is SHACL Core and deliberately contains no `sh:sparql`, because

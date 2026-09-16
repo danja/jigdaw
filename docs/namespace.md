@@ -76,6 +76,24 @@ stating plainly: profiles published by four projects, and by third parties follo
 published guide, identify their roles and signal types with IRIs that resolve to nothing.
 See `TODO.md`.
 
+## Where things are served
+
+Two different questions, often confused, and the answer is different for each.
+
+**The vocabulary** is served at `https://hyperdata.it/xmlns/jigdaw/`, which is where the
+existing PURL wildcard already points. It needs no PURL administration, and nothing about it
+should move to an application host: a vocabulary outlives the applications that use it.
+
+**Plugins and the DAW** are served from `strandz.it`, on the same host as `hyperdata.it` and
+`plugin-universe.com`. Plugin IRIs mint under `https://strandz.it/jigdaw/plugins/`.
+
+That is an application host rather than a PURL, which is a deliberate difference from the
+vocabulary and from plugin-universe's catalogue IRIs. A plugin IRI is a retrieval address as
+well as a name: it has to resolve to the code. Putting it behind a PURL would add a redirect
+to every fetch of every resource for no gain, because the profile already separates identity
+from retrieval (see the rebasing rule in `docs/plugin-profiles.md`): a plugin mirrored
+anywhere keeps its canonical IRI and is fetched from wherever it was found.
+
 ## Never mint under the serving domain
 
 An IRI in JigDAW's own vocabulary MUST be minted under `http://purl.org/stuff/jigdaw/` and

@@ -35,6 +35,35 @@ const valid = allExamples.filter(f => !f.includes('counterexample'))
 const shapesFile = join(root, 'vocabs/shapes.ttl')
 const vocabFile = join(root, 'vocabs/jigdaw.ttl')
 
+describe('Vocabulary.js and the ontology', () => {
+  // valis asserts that the classes carrying val:implementation and the C++
+  // factory keys are equal in both directions, so drift is a test failure
+  // rather than a surprise. This is that test, applied to the vocabulary.
+  it('names only terms vocabs/jigdaw.ttl declares', async () => {
+    const { jigTerms } = await import('../../src/rdf/Vocabulary.js')
+    const declared = terms(vocabFile, JIG, 'jig')
+
+    const named = jigTerms().map(iri => iri.slice(JIG.length))
+    expect(named.length).toBeGreaterThan(0)
+
+    const undeclared = named.filter(t => !declared.has(t)).sort()
+    expect(undeclared, `named in Vocabulary.js but not in vocabs/jigdaw.ttl: ${undeclared.join(', ')}`).toEqual([])
+  })
+
+  it('names every term the shapes and examples actually use', async () => {
+    // The other direction. A term used in data that code cannot name is a term
+    // the host will silently ignore.
+    const { jigTerms } = await import('../../src/rdf/Vocabulary.js')
+    const named = new Set(jigTerms().map(iri => iri.slice(JIG.length)))
+
+    const used = new Set([shapesFile, ...valid].flatMap(f => [...terms(f, JIG, 'jig')]))
+    for (const t of [...used]) if (t.endsWith('Shape') || t.endsWith('Shape_')) used.delete(t)
+
+    const unnamed = [...used].filter(t => !named.has(t)).sort()
+    expect(unnamed, `used in data but not named in Vocabulary.js: ${unnamed.join(', ')}`).toEqual([])
+  })
+})
+
 describe('the jig: vocabulary', () => {
   it('has at least one example and one shape file to check against', () => {
     // Otherwise every assertion below passes vacuously.

@@ -31,7 +31,7 @@ complete. Review periodically.
 ## Blocking, cross-repository
 
 - [ ] **A web plugin format term.** `trn:WebAudio` is used by
-      `examples/cascade-profile.ttl` and does not exist upstream. The formats currently in
+      `examples/reference-profile.ttl` and does not exist upstream. The formats currently in
       the shared vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone,
       confirmed by querying `https://sparql.plugin-universe.com/public/query`.
 
@@ -40,7 +40,7 @@ complete. Review periodically.
          `vocabs/trn-extensions.ttl`, which is where `trn:PluginFormat` individuals live
       2. plugin-universe's `vocabs/shapes.ttl`, whose `pu:PluginShape` has an `sh:in` list
          enumerating the permitted formats
-      3. `examples/cascade-profile.ttl` here, and the note in it
+      3. `examples/reference-profile.ttl` here, and the note in it
 
       Until 1 and 2 are done, a JigDAW profile harvested by plugin-universe is a SHACL
       violation. This is exactly the first row of that project's own recurring-failure
@@ -63,7 +63,7 @@ complete. Review periodically.
       project stating it has already stepped around.
 
       This matters to JigDAW because it decides where a web format term is proposed, and
-      because `examples/cascade-profile.ttl` uses `trn:format`, which resolves in one of the
+      because `examples/reference-profile.ttl` uses `trn:format`, which resolves in one of the
       two places a reader might look. Worth settling before adding a third term to the pile.
 
       Needs the user: it is a question about which repository owns the vocabulary.

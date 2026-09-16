@@ -18,10 +18,22 @@ interface, [docs/latency.md](docs/latency.md) for compensation and feedback, and
 [docs/plugin-profiles.md](docs/plugin-profiles.md) and [docs/webmcp.md](docs/webmcp.md)
 describe the profile format and the agent tool surface.
 
-This file is the guidance for agents. `HUMANS.md` is the counterpart for human
-colleagues, and holds the instructions written for them. Keep the two in step: a working
-practice that changes for one usually changes for the other, and neither file will complain
-when it goes stale.
+This file is the guidance for agents and holds the conventions, which apply to everyone.
+[HUMANS.md](HUMANS.md) is not a counterpart to it: it is a short list of the actions only a
+person can take, the blockers. Keep it short. Anything that is guidance rather than an
+action belongs here, and anything an agent can do itself does not belong there at all.
+
+## The two inboxes
+
+**Read [INBOX.md](INBOX.md) at the start of a session, and periodically during a long one.**
+It holds later thoughts that have not been accommodated yet. Each item is worked into
+`docs/plan.md`, `TODO.md` or the relevant document, and struck from INBOX.md once it has a
+home. An item left there is an intention nothing acts on.
+
+**Record a tool that would help in HUMANS.md.** Installing something is a person's action,
+so asking for it in a chat message that scrolls away is how the ask gets lost. Say what the
+tool is, what it would let the work do that it currently cannot, and what is being done
+instead in the meantime.
 
 There should be no inline fallbacks, as this leads to indeterminate code. If a value is not
 successfully retrieved from config then that is an error that needs fixing.
@@ -112,6 +124,20 @@ and real-time processing.
   splitting, along a seam that already exists rather than by line count. Keep the old module
   as the front door and re-export, so callers do not change. A split that edits its callers
   is a rewrite wearing a refactor's clothes.
+
+## Interface rules
+
+- Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at AA. This is load bearing rather than
+  aspirational: almost every control a person touches in JigDAW is generated from an
+  `lv2:port` declaration by `src/ui/Panel.js`, so one accessible generator makes every
+  plugin accessible and one careless one makes every plugin unusable. A plugin author who
+  ships no `jig:ui` gets whatever that file does.
+- Every control has a programmatic name, a role and a current value. A slider reports its
+  value as text, not only as a number, because "4200" and "4200 Hz" are different
+  information.
+- Keyboard before pointer. Anything reachable by mouse is reachable by tab, and the focus
+  indicator is visible against the panel background.
+- Do not signal state by colour alone.
 
 ## Documentation rules
 

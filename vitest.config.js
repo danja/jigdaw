@@ -9,7 +9,10 @@ export default defineConfig({
     include: [
       'tests/validate/**/*.test.js',
       'tests/rdf/**/*.test.js',
-      'tests/docs/**/*.test.js'
+      'tests/docs/**/*.test.js',
+      'tests/host/**/*.test.js',
+      'tests/dsp/**/*.test.js',
+      'tests/ui/**/*.test.js'
     ]
   }
 })

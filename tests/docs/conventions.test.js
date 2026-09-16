@@ -13,8 +13,12 @@ import { resolve, join, dirname, extname } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
 
+// Tracked files that still exist. A rename leaves git listing the old path
+// until it is staged, and linting a path that is not there reports ENOENT
+// instead of the thing the guard is actually for.
 const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
   .split('\n').filter(Boolean)
+  .filter(f => existsSync(join(root, f)))
 
 const read = p => readFileSync(join(root, p), 'utf8')
 const byExt = (...exts) => tracked.filter(f => exts.includes(extname(f)))
@@ -28,11 +32,18 @@ describe('repository conventions', () => {
   })
 
   // AGENTS.md, documentation rules: "Technical plain English. No em dashes."
+  //
+  // The character is assembled at run time rather than written here, for the
+  // same reason plugin-universe assembles secret-shaped test fixtures from
+  // their prefix: a guard that must contain the thing it forbids will match
+  // itself. Written as the escape \u2014 it was normalised to a literal on the
+  // way to disk, and the test failed on its own source.
   it('uses no em dashes', () => {
+    const emDash = String.fromCharCode(0x2014)
     const offenders = []
     for (const f of byExt('.md', '.ttl', '.js')) {
       read(f).split('\n').forEach((line, i) => {
-        if (line.includes('—')) offenders.push(`${f}:${i + 1}`)
+        if (line.includes(emDash)) offenders.push(`${f}:${i + 1}`)
       })
     }
     expect(offenders, `em dashes at:\n  ${offenders.join('\n  ')}`).toEqual([])

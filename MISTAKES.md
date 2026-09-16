@@ -69,7 +69,7 @@ shape because it looks like coverage.
 
 ## 2026-09-16 An invented vocabulary term in the worked example
 
-**What happened.** `examples/cascade-profile.ttl` declared `pu:supportedPlatform pu:Web`.
+**What happened.** `examples/reference-profile.ttl` declared `pu:supportedPlatform pu:Web`.
 Neither the value nor, in the public dump, the predicate exists.
 
 **Root cause.** The term was written because it was the obvious thing to say, not because

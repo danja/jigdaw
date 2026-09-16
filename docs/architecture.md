@@ -73,7 +73,7 @@ are the price of the design and they shape the capability negotiation.
 
 ## The catalogue
 
-A local SPARQL store holds profiles, alongside the DAW, in a Podman container.
+A local SPARQL store holds profiles, alongside the DAW, in a compose stack.
 
 **It should not start empty.** `plugin-universe.com` already runs a public read-only SPARQL
 endpoint at `sparql.plugin-universe.com/public/query` and a public MCP endpoint at
@@ -132,9 +132,13 @@ hosting does not break IRIs already written into other people's project files.
 
 ## Deployment
 
-A Podman container with the DAW and the SPARQL store. Only the web surface is published;
-the store binds to loopback. A SPARQL update endpoint reachable from outside would be the
-worst mistake available here, and it is the default configuration of most stores.
+Compose: the DAW, a Fuseki store, and nginx terminating TLS. Only nginx is published and
+everything else binds to loopback. Hosting is `strandz.it`, alongside `hyperdata.it` and
+`plugin-universe.com`, and the arrangement follows plugin-universe's because copying one that
+is already running beats inventing a better one that has never been operated.
+
+The detail, including the headers a plugin origin must send and why an nginx `add_header`
+inside a `location` is a trap, is in [deployment.md](deployment.md).
 
 ## Since settled
 

@@ -140,7 +140,8 @@ A host MUST perform the following in order, and MUST abort at the first failure:
 5. `await audioContext.audioWorklet.addModule(processorUrl)`.
 6. Construct an `AudioWorkletNode` using the processor's `jig:registeredName`, with
    `numberOfInputs`, `numberOfOutputs` and `outputChannelCount` taken from the profile.
-7. Post the module bytes to the processor and await its ready message (section 3.3).
+7. Compile the module with `WebAssembly.compile()`, post the resulting
+   `WebAssembly.Module` to the processor, and await its ready message (section 3.3).
 8. Only then connect the node into the graph.
 
 A plugin MUST NOT be connected into the audio graph before step 7 completes. A processor

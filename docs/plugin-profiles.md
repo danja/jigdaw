@@ -182,7 +182,7 @@ ecosystem, and it is discoverable only if unsuccessful loads are written down.
 
 ## Getting one
 
-The quickest route is to copy `examples/cascade-profile.ttl` and edit it. It is a complete
+The quickest route is to copy `examples/reference-profile.ttl` and edit it. It is a complete
 profile exercising most of the vocabulary, and it validates.
 
 `examples/counterexample-profile.ttl` is the opposite: a profile in which every constraint

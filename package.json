@@ -11,7 +11,9 @@
   "scripts": {
     "test": "node bin/check-suites.js && vitest run",
     "validate": "node bin/validate.js",
-    "check-suites": "node bin/check-suites.js"
+    "check-suites": "node bin/check-suites.js",
+    "build:web": "node bin/build-web.js",
+    "serve": "node bin/serve.js"
   },
   "dependencies": {
     "@rdfjs/parser-n3": "^2.2.0",
@@ -19,6 +21,8 @@
     "rdf-validate-shacl": "^0.6.5"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
+    "linkedom": "^0.18.13",
     "vitest": "^3.0.0"
   }
 }

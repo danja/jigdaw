@@ -1,18 +1,8 @@
 // src/validate/ShapeValidator.js
-import { readFile } from 'node:fs/promises'
-import { Readable } from 'node:stream'
 import rdf from '@zazuko/env'
-import ParserN3 from '@rdfjs/parser-n3'
 import SHACLValidator from 'rdf-validate-shacl'
 
 const WARNING = 'http://www.w3.org/ns/shacl#Warning'
-
-/** Parse one Turtle file into a dataset. */
-export async function parseTurtle (path, baseIRI) {
-  const text = await readFile(path, 'utf8')
-  const parser = new ParserN3({ factory: rdf, baseIRI })
-  return rdf.dataset().import(parser.import(Readable.from([text])))
-}
 
 /**
  * Validates graphs against a set of SHACL shapes.
@@ -25,10 +15,6 @@ export class ShapeValidator {
 
   constructor (shapes) {
     this.#validator = new SHACLValidator(shapes, { factory: rdf })
-  }
-
-  static async fromFile (shapesPath) {
-    return new ShapeValidator(await parseTurtle(shapesPath, 'urn:jigdaw:shapes'))
   }
 
   /**
@@ -52,9 +38,5 @@ export class ShapeValidator {
     const violations = results.filter(r => r.severity !== WARNING)
     const warnings = results.filter(r => r.severity === WARNING)
     return { conforms: violations.length === 0, violations, warnings, results }
-  }
-
-  async validateFile (path, baseIRI = `file://${path}`) {
-    return this.validate(await parseTurtle(path, baseIRI))
   }
 }

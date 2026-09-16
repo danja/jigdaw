@@ -6,7 +6,7 @@
 //   npm run validate -- --shapes other.ttl file.ttl
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { ShapeValidator } from '../src/validate/ShapeValidator.js'
+import { shapeValidatorFromFile, validateFile } from '../src/validate/files.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -32,11 +32,11 @@ if (files.length === 0) {
   process.exit(2)
 }
 
-const validator = await ShapeValidator.fromFile(shapes)
+const validator = await shapeValidatorFromFile(shapes)
 let failed = false
 
 for (const file of files) {
-  const report = await validator.validateFile(resolve(file))
+  const report = await validateFile(validator, resolve(file))
   const { violations, warnings } = report
 
   const summary = violations.length === 0

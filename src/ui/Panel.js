@@ -1,0 +1,170 @@
+// src/ui/Panel.js
+//
+// A control panel generated from a plugin's lv2:port declarations.
+//
+// Contract section 9.1: a plugin with no jig:ui gets this, and that is the
+// expected case rather than a degraded one. It is consistent with every other
+// plugin, it is accessible, and it costs the author nothing.
+//
+// The widget is chosen by ProfileReader.widgetFor, from the shape of the
+// declaration. Nothing here inspects lv2:toggled itself.
+//
+// This file carries the project's whole accessibility story. AGENTS.md requires
+// WCAG 2.2 AA, and almost every control a person touches in JigDAW is generated
+// here: a plugin that ships no jig:ui gets exactly this. So one accessible
+// generator makes every such plugin accessible, and one careless generator
+// makes every one of them unusable.
+
+const UNIT_LABELS = Object.freeze({
+  'http://lv2plug.in/ns/extensions/units#hz': 'Hz',
+  'http://lv2plug.in/ns/extensions/units#ms': 'ms',
+  'http://lv2plug.in/ns/extensions/units#db': 'dB',
+  'http://lv2plug.in/ns/extensions/units#s': 's'
+})
+
+const formatValue = (port, value) => {
+  const unit = UNIT_LABELS[port.unit]
+  const decimals = port.maximum - port.minimum > 20 ? 0 : 2
+  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
+}
+
+/**
+ * What a screen reader should say for a value.
+ *
+ * WCAG 4.1.2 wants a name, a role and a value. A range reports its value as a
+ * bare number unless told otherwise, and "4200" and "4200 hertz" are different
+ * information. Units are spelled out because an abbreviation is read as
+ * letters.
+ */
+const SPOKEN_UNITS = Object.freeze({
+  'http://lv2plug.in/ns/extensions/units#hz': 'hertz',
+  'http://lv2plug.in/ns/extensions/units#ms': 'milliseconds',
+  'http://lv2plug.in/ns/extensions/units#db': 'decibels',
+  'http://lv2plug.in/ns/extensions/units#s': 'seconds'
+})
+
+const spokenValue = (port, value) => {
+  const unit = SPOKEN_UNITS[port.unit]
+  const decimals = port.maximum - port.minimum > 20 ? 0 : 2
+  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
+}
+
+/**
+ * Build a panel. `onChange(symbol, value)` is called on input; the panel does
+ * not apply the value itself.
+ *
+ * That round trip is deliberate, per messaging.md section 2.3: a UI that
+ * renders optimistically from its own input disagrees with the host the first
+ * time a value is clamped, rejected, or overridden by automation.
+ */
+export function createPanel (document, profile, onChange) {
+  const root = document.createElement('section')
+  root.className = 'panel'
+
+  const heading = document.createElement('h3')
+  heading.textContent = profile.label ?? profile.iri
+  const headingId = `${profile.iri}-heading`.replace(/[^\w-]/g, '_')
+  heading.id = headingId
+  // A group per plugin, named by its own heading, so a panel is one landmark a
+  // reader can skip rather than a flat run of controls from several plugins.
+  root.setAttribute('role', 'group')
+  root.setAttribute('aria-labelledby', headingId)
+  root.append(heading)
+
+  if (profile.comment) {
+    const description = document.createElement('p')
+    description.className = 'description'
+    description.textContent = profile.comment
+    root.append(description)
+  }
+
+  const setters = new Map()
+
+  for (const port of profile.ports) {
+    const row = document.createElement('div')
+    row.className = `control control-${port.widget}`
+
+    const label = document.createElement('label')
+    const id = `${profile.iri}#${port.symbol}`.replace(/[^\w-]/g, '_')
+    // setAttribute rather than the htmlFor property: the property is an alias
+    // that not every DOM implementation provides, and the association is the
+    // whole point of the label.
+    label.setAttribute('for', id)
+    label.textContent = port.name ?? port.symbol
+    row.append(label)
+
+    const readout = document.createElement('span')
+    readout.className = 'value'
+
+    let input
+    if (port.widget === 'switch') {
+      input = document.createElement('input')
+      input.type = 'checkbox'
+      input.checked = port.defaultValue >= 0.5
+      input.addEventListener('change', () => onChange(port.symbol, input.checked ? port.maximum : port.minimum))
+      setters.set(port.symbol, v => {
+        const on = v >= 0.5
+        input.checked = on
+        // WCAG 1.4.1: the readout is the non-colour signal for the state.
+        readout.textContent = on ? 'on' : 'off'
+      })
+    } else if (port.widget === 'selector') {
+      input = document.createElement('select')
+      for (const point of port.scalePoints) {
+        const option = document.createElement('option')
+        option.value = String(point.value)
+        option.textContent = point.label ?? String(point.value)
+        input.append(option)
+      }
+      // Selecting by marking the option rather than assigning select.value,
+      // which is a setter some DOM implementations do not provide.
+      const select = value => {
+        for (const option of input.options ?? input.children) {
+          option.selected = Number(option.value) === Number(value)
+        }
+      }
+      select(port.defaultValue)
+      input.addEventListener('change', () => onChange(port.symbol, Number(input.value)))
+      setters.set(port.symbol, v => {
+        select(v)
+        readout.textContent = port.scalePoints.find(p => p.value === v)?.label ?? String(v)
+      })
+    } else {
+      input = document.createElement('input')
+      input.type = 'range'
+      input.min = String(port.minimum)
+      input.max = String(port.maximum)
+      // 200 steps across any range, so a dial feels the same whether it spans
+      // 0 to 1 or 200 to 18000.
+      input.step = String((port.maximum - port.minimum) / 200)
+      input.value = String(port.defaultValue)
+      input.addEventListener('input', () => onChange(port.symbol, Number(input.value)))
+      setters.set(port.symbol, v => {
+        input.value = String(v)
+        readout.textContent = formatValue(port, v)
+        // aria-valuetext, because a range otherwise announces the raw number
+        // and loses the unit entirely.
+        input.setAttribute('aria-valuetext', spokenValue(port, v))
+      })
+    }
+
+    input.id = id
+    // The readout is the accessible description rather than a separate node a
+    // reader has to go and find.
+    const readoutId = `${id}-value`
+    readout.id = readoutId
+    input.setAttribute('aria-describedby', readoutId)
+    if (port.comment) input.title = port.comment
+    row.append(input, readout)
+    root.append(row)
+
+    // Render the declared default through the same path a host update takes.
+    setters.get(port.symbol)(port.defaultValue)
+  }
+
+  return {
+    element: root,
+    /** Called by the host when a value actually changed. */
+    update (symbol, value) { setters.get(symbol)?.(value) }
+  }
+}
