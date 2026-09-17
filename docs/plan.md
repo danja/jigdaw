@@ -188,10 +188,43 @@ Serving the vocabulary at its namespace IRI belongs here and is independent of e
 else in the phase. It is a deployment rather than a build, and `HUMANS.md` carries it
 because it needs a person.
 
-## Phase 6. WebMCP
+## Phase 5. The catalogue. Search complete.
 
-The agent surface, as a thin adapter over the same dispatcher the editor uses. Demand-driven
-search and chain validation, per [webmcp.md](webmcp.md).
+Search works without a store of our own, because plugin-universe already runs a public
+read-only SPARQL endpoint over 756 CC0 profiles and building a second catalogue of the same
+things would be worse than querying that one.
+
+- `src/catalogue/`: `QueryService` loading `.sparql` files by name, `terms.js` where a value
+  becomes syntax and nowhere else, `facets.js` holding the one facet list, and `Catalogue`.
+- `sparql/queries/catalogue/`. No SPARQL is inlined in JavaScript, and
+  `tests/docs/conventions.test.js` fails if any appears.
+- `/catalogue/search` and `/catalogue/describe` on the server, so no SPARQL reaches the
+  browser bundle and there is one place to cache. It also means the page does not depend on
+  an upstream endpoint's CORS headers being right.
+- A search box with facets in the page.
+
+Results say which plugins this host can actually run, as opposed to merely know about. None
+of the 756 can yet: they are native, and JigDAW's own two are not harvested. Saying so is
+more useful than hiding them, and it is what `jig:WebPlugin` being a subclass is for.
+
+Remaining: the local store and crawling. Neither is needed for search to work.
+
+## Phase 6. WebMCP. Complete.
+
+- `src/mcp/tools.js`, eleven tools over the dispatcher: `status`, `project_get`,
+  `plugins_search`, `plugin_describe`, `plugin_validate_chain`, `plugin_load`,
+  `graph_apply_changes`, `connection_add`, `parameter_set`, `transport_configure`,
+  `diagnostics`. Not one of them implements an operation of its own.
+- `src/mcp/adapter.js`, the only file that knows how a user agent learns of a tool. WebMCP is
+  still moving, so the surface is specified and the binding is isolated: it binds to
+  `navigator.modelContext` where that exists and to the page otherwise, and says which.
+
+Search is demand driven, as [webmcp.md](webmcp.md) requires: `plugins_search` returns enough
+to choose between candidates and `plugin_describe` is called only for the few that matter.
+
+Every failure is a result rather than a rejection, including a tool that throws, because an
+agent cannot read a stack trace and the message is the entire interface to a failure.
+A missing catalogue makes the discovery tools explain themselves rather than vanish.
 
 ## Blocked on a person
 

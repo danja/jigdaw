@@ -2,6 +2,26 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A browser module reaching a node builtin, twice
+
+**What happened.** `npm run build:web` failed with `Could not resolve "node:fs/promises"`
+after the agent surface imported `FACET_NAMES` from `Catalogue.js`, which imports
+`QueryService`, which reads query files off disk. The same thing had happened earlier with
+`ShapeValidator` reaching `node:fs`.
+
+**Root cause.** A module that a browser bundle must reach had been put in the same file as
+one that needs a filesystem, because the two are about the same subject. Subject is the wrong
+axis: what matters is which runtime a module can exist in.
+
+**Prevention.** `src/catalogue/facets.js` holds the list, with no filesystem anywhere near
+it, exactly as `src/validate/files.js` keeps the reading apart from the validating. And
+`tests/docs/conventions.test.js` now walks the import graph from `web/app.js` and fails on
+any `node:` specifier reachable from it. esbuild catches this too, but only when someone runs
+the build, and `npm test` passed happily both times.
+
+Verified by adding `import { readFile } from 'node:fs/promises'` to the tool surface and
+watching the guard fail.
+
 ## 2026-09-17 Guards that could not see new code
 
 **What happened.** A no-inline-SPARQL guard was added to `tests/docs/conventions.test.js`,

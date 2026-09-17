@@ -1,0 +1,263 @@
+// tests/mcp/tools.test.js
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createTools } from '../../src/mcp/tools.js'
+import { registerTools } from '../../src/mcp/adapter.js'
+import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
+
+const IRI = 'https://strandz.it/jigdaw/plugins/cascade/'
+const T = 'http://purl.org/stuff/transmissions/'
+
+const fakeCatalogue = (over = {}) => ({
+  async search () { return [{ iri: IRI, label: 'Cascade', web: true, roles: ['AudioEffect'], formats: [] }] },
+  async describe (iri) {
+    return { iri, properties: { produces: ['Audio'], accepts: ['Audio'], caution: ['Mind the tail.'] } }
+  },
+  ...over
+})
+
+let dispatcher
+let call
+beforeEach(() => {
+  dispatcher = new OpDispatcher()
+  const tools = createTools({ dispatcher, catalogue: fakeCatalogue() })
+  call = (name, input) => tools.find(t => t.name === name).handler(input)
+})
+
+const addNodes = () => dispatcher.apply([
+  { op: 'addNode', id: 'a', pluginIri: IRI },
+  { op: 'addNode', id: 'b', pluginIri: IRI }
+])
+
+describe('the tool surface', () => {
+  it('needs a dispatcher rather than working without one', () => {
+    expect(() => createTools({})).toThrow(/needs a dispatcher/)
+  })
+
+  it('describes every tool, because the description is the whole interface', () => {
+    // An agent cannot read the source. A tool with no description is unusable.
+    for (const tool of createTools({ dispatcher })) {
+      expect(tool.description.length, `${tool.name} has no useful description`).toBeGreaterThan(30)
+      expect(tool.inputSchema.type).toBe('object')
+    }
+  })
+})
+
+describe('status', () => {
+  it('is small and says whether the graph compiles', () => {
+    addNodes()
+    return call('status').then(result => {
+      expect(result.ok).toBe(true)
+      expect(result.nodes).toBe(2)
+      expect(result.compiles).toBe(true)
+      expect(result.problems).toEqual([])
+    })
+  })
+
+  it('reports a graph that does not compile as a problem, not a crash', async () => {
+    addNodes()
+    // Force an undelayed cycle straight into the model, bypassing the
+    // dispatcher, which is the only way to get one there.
+    dispatcher.project.apply([
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: `${T}Audio` },
+      { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'a', portIndex: 0 }, signalKind: `${T}Audio` }
+    ])
+    const result = await call('status')
+    expect(result.compiles).toBe(false)
+    expect(result.problems[0]).toContain('feedback loop')
+  })
+})
+
+describe('plugins_search', () => {
+  it('returns candidates', async () => {
+    const result = await call('plugins_search', { q: 'reverb' })
+    expect(result.ok).toBe(true)
+    expect(result.results[0].label).toBe('Cascade')
+  })
+
+  it('names an unknown facet rather than ignoring it', async () => {
+    // A silently dropped facet returns a full result set that looks like an
+    // answer, which is worse than an error.
+    const result = await call('plugins_search', { nonesuch: 'x' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('nonesuch')
+    expect(result.known).toContain('accepts')
+  })
+
+  it('explains itself when there is no catalogue, rather than vanishing', async () => {
+    const tools = createTools({ dispatcher, catalogue: null })
+    const result = await tools.find(t => t.name === 'plugins_search').handler({ q: 'x' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('no catalogue')
+  })
+
+  it('reports an upstream failure as the catalogue being down', async () => {
+    const tools = createTools({
+      dispatcher,
+      catalogue: fakeCatalogue({ async search () { throw new Error('returned 503') } })
+    })
+    const result = await tools.find(t => t.name === 'plugins_search').handler({})
+    expect(result.error).toContain('catalogue')
+  })
+})
+
+describe('plugin_validate_chain', () => {
+  it('accepts a chain whose signals line up, and reports cautions', async () => {
+    const result = await call('plugin_validate_chain', { iris: [IRI, IRI] })
+    expect(result.valid).toBe(true)
+    expect(result.cautions[0].caution).toContain('tail')
+  })
+
+  it('reports a mismatch with both sides named', async () => {
+    const tools = createTools({
+      dispatcher,
+      catalogue: fakeCatalogue({
+        async describe (iri) {
+          return iri.endsWith('midi/')
+            ? { iri, properties: { produces: ['Midi'], accepts: [] } }
+            : { iri, properties: { produces: ['Audio'], accepts: ['Audio'] } }
+        }
+      })
+    })
+    const result = await tools.find(t => t.name === 'plugin_validate_chain')
+      .handler({ iris: ['https://x/midi/', 'https://x/audio/'] })
+    expect(result.valid).toBe(false)
+    expect(result.problems[0].message).toContain('produces Midi')
+  })
+
+  it('does not call a plugin that declares nothing a mismatch', async () => {
+    // Declaring nothing is not evidence of a problem, and reporting one would
+    // train an agent to ignore this tool.
+    const tools = createTools({
+      dispatcher,
+      catalogue: fakeCatalogue({ async describe (iri) { return { iri, properties: {} } } })
+    })
+    const result = await tools.find(t => t.name === 'plugin_validate_chain').handler({ iris: [IRI, IRI] })
+    expect(result.valid).toBe(true)
+  })
+
+  it('refuses a chain of one', async () => {
+    expect((await call('plugin_validate_chain', { iris: [IRI] })).ok).toBe(false)
+  })
+})
+
+describe('graph_apply_changes', () => {
+  it('applies atomically and reports the revision', async () => {
+    const result = await call('graph_apply_changes', {
+      changes: [{ op: 'addNode', id: 'a', pluginIri: IRI }]
+    })
+    expect(result.ok).toBe(true)
+    expect(result.revision).toBe(1)
+  })
+
+  it('refuses a changeset that would not compile, and says why', async () => {
+    addNodes()
+    const result = await call('graph_apply_changes', {
+      changes: [
+        { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: `${T}Audio` },
+        { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'a', portIndex: 0 }, signalKind: `${T}Audio` }
+      ]
+    })
+    expect(result.ok).toBe(false)
+    expect(result.kind).toBe('compile')
+    expect(result.error).toContain('feedback loop')
+  })
+
+  it('reports a stale revision with both numbers', async () => {
+    addNodes()
+    const result = await call('graph_apply_changes', { changes: [], expectedRevision: 0 })
+    expect(result.kind).toBe('conflict')
+    expect(result.expected).toBe(0)
+    expect(result.revision).toBe(1)
+  })
+
+  it('does not commit under dryRun', async () => {
+    addNodes()
+    const before = dispatcher.revision
+    const result = await call('graph_apply_changes', {
+      changes: [{ op: 'removeNode', id: 'a' }], dryRun: true
+    })
+    expect(result.applied).toBe(false)
+    expect(dispatcher.revision).toBe(before)
+  })
+})
+
+describe('connection_add', () => {
+  it('takes a bare signal name and expands it', async () => {
+    addNodes()
+    const result = await call('connection_add', { from: 'a', to: 'b', signalKind: 'Audio' })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.connections[0].signalKind).toBe(`${T}Audio`)
+  })
+
+  it('can target a parameter by symbol', async () => {
+    addNodes()
+    await call('connection_add', { from: 'a', to: 'b', toParameter: 'mix' })
+    expect(dispatcher.project.connections[0].to.portSymbol).toBe('mix')
+  })
+
+  it('reports a node that is not there', async () => {
+    addNodes()
+    const result = await call('connection_add', { from: 'a', to: 'ghost' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('no such node')
+  })
+})
+
+describe('transport_configure', () => {
+  it('sets a tempo', async () => {
+    const result = await call('transport_configure', { tempo: 96 })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.transport.tempoPoints[0].bpm).toBe(96)
+  })
+
+  it('refuses a loop that ends before it starts', async () => {
+    const result = await call('transport_configure', { loopEnabled: true, loopStart: 8, loopEnd: 2 })
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('registerTools', () => {
+  it('always exposes the surface on the page, whatever else it finds', () => {
+    const target = {}
+    const { bound, surface, count } = registerTools({ dispatcher, target })
+    expect(bound).toBe('page')
+    expect(count).toBeGreaterThan(5)
+    expect(target.jigdaw.mcp).toBe(surface)
+  })
+
+  it('binds to navigator.modelContext when it is there', () => {
+    let provided = null
+    const target = { navigator: { modelContext: { provideContext: c => { provided = c } } } }
+    const { bound } = registerTools({ dispatcher, target })
+    expect(bound).toBe('navigator.modelContext')
+    expect(provided.tools.length).toBeGreaterThan(5)
+    expect(typeof provided.tools[0].execute).toBe('function')
+  })
+
+  it('keeps the page working when registration is refused', () => {
+    // A failure to register must not stop the page working.
+    const target = { navigator: { modelContext: { provideContext () { throw new Error('refused') } } } }
+    const { bound, warning } = registerTools({ dispatcher, target })
+    expect(bound).toBe('page')
+    expect(warning).toContain('refused')
+  })
+
+  it('names an unknown tool rather than throwing', async () => {
+    const { surface } = registerTools({ dispatcher, target: {} })
+    const result = await surface.call('nonesuch')
+    expect(result.ok).toBe(false)
+    expect(result.known).toContain('status')
+  })
+
+  it('turns a throwing tool into a result, not a rejection', async () => {
+    // Every failure must look like every other failure to an agent.
+    const broken = createTools({ dispatcher })
+    broken.find(t => t.name === 'status').handler = async () => { throw new Error('boom') }
+    const target = {}
+    const { surface } = registerTools({ dispatcher, target })
+    surface.tools.find(t => t.name === 'status').handler = async () => { throw new Error('boom') }
+    const result = await surface.call('status')
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('boom')
+  })
+})

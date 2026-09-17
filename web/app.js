@@ -13,6 +13,7 @@ import { detectCapabilities, compact } from '../src/host/Capabilities.js'
 import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
+import { registerTools } from '../src/mcp/adapter.js'
 
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
 const $ = id => document.getElementById(id)
@@ -60,8 +61,49 @@ async function ensureRunning () {
     }
   })
 
+  // The agent surface. Same operations as the buttons, through the same
+  // dispatcher: architecture.md requires that neither implements an operation
+  // of its own. What it binds to depends on the browser, so it says.
+  const registration = registerTools({
+    dispatcher,
+    catalogue: browserCatalogue(),
+    loadPlugin: iri => dispatcher.addPlugin(iri)
+  })
+  log(`${registration.count} agent tools registered via ${registration.bound}`)
+  if (registration.warning) log(registration.warning, 'error')
+
   $('state').textContent = `running at ${context.sampleRate} Hz`
   return dispatcher
+}
+
+/**
+ * The catalogue, as reached from the page.
+ *
+ * The queries live in files on the server and are never bundled, so this asks
+ * the host's own endpoint rather than talking SPARQL. That also means the page
+ * does not depend on an upstream endpoint's CORS headers being right, which is
+ * just as well: sparql.plugin-universe.com currently sends two
+ * Access-Control-Allow-Origin headers and a browser rejects that outright.
+ */
+function browserCatalogue () {
+  const ask = async (path, params) => {
+    const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI))
+    const body = await response.json()
+    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`)
+    return body
+  }
+  return {
+    async search ({ text = '', limit = 25, ...facets } = {}) {
+      const params = new URLSearchParams()
+      if (text) params.set('q', text)
+      for (const [k, v] of Object.entries(facets)) if (v) params.set(k, v)
+      params.set('limit', String(limit))
+      return (await ask('search', params)).results
+    },
+    async describe (iri) {
+      return ask('describe', new URLSearchParams({ iri }))
+    }
+  }
 }
 
 /** A repeating impulse, so a reverb tail is audible between hits. */

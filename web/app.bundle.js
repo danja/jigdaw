@@ -20219,6 +20219,333 @@ function createPanel(document2, profile, onChange) {
   };
 }
 
+// src/catalogue/facets.js
+var TRN2 = "http://purl.org/stuff/transmissions/";
+var FACETS = Object.freeze({
+  role: `${TRN2}role`,
+  accepts: `${TRN2}accepts`,
+  produces: `${TRN2}produces`,
+  requires: `${TRN2}requires`,
+  format: `${TRN2}format`
+});
+var FACET_NAMES = Object.freeze(Object.keys(FACETS));
+var expandTerm = (value) => String(value).startsWith("http") ? String(value) : `${TRN2}${value}`;
+
+// src/mcp/tools.js
+var ok = (data) => ({ ok: true, ...data });
+var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
+function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: loadPlugin2 = null }) {
+  if (!dispatcher2) throw new Error("the tool surface needs a dispatcher");
+  const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
+  const tools = [
+    {
+      name: "status",
+      description: "The state of the session: revision, how many nodes, the transport, and whether anything is failing. Deliberately small and cheap. Call it before making changes.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const compiled = dispatcher2.compile();
+        const project = dispatcher2.project;
+        return ok({
+          revision: dispatcher2.revision,
+          nodes: project.nodes.length,
+          connections: project.connections.length,
+          totalLatencyFrames: compiled.totalLatency,
+          compiles: compiled.ok,
+          problems: compiled.errors.map((e) => e.message),
+          transport: {
+            tempo: project.transport.tempoPoints[0]?.bpm ?? null,
+            beatsPerBar: project.transport.beatsPerBar,
+            loopEnabled: project.transport.loopEnabled
+          }
+        });
+      }
+    },
+    {
+      name: "project_get",
+      description: "The whole project as data: nodes, connections, parameter settings and transport.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        return ok({ project: dispatcher2.project.snapshot() });
+      }
+    },
+    {
+      name: "plugins_search",
+      description: "Find candidate plugins by text and by what they do. Returns enough to choose between them; call plugin_describe for the few that matter. Results marked web:true can run in this host; the rest are native plugins the catalogue knows about but this host cannot load.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          q: { type: "string", description: "Text matched against name, description and vendor" },
+          role: { type: "string", description: "A role such as Instrument or AudioEffect" },
+          accepts: { type: "string", description: "A signal type the plugin takes, such as Audio or Midi" },
+          produces: { type: "string", description: "A signal type the plugin emits" },
+          limit: { type: "integer", description: "At most 200, default 25" }
+        }
+      },
+      async handler({ q = "", limit = 25, ...facets } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        const unknown = Object.keys(facets).filter((k) => !FACET_NAMES.includes(k));
+        if (unknown.length > 0) {
+          return failed(`unknown facet: ${unknown.join(", ")}`, { known: FACET_NAMES });
+        }
+        try {
+          return ok({ results: await catalogue.search({ text: q, limit, ...facets }) });
+        } catch (error2) {
+          return failed(`catalogue: ${error2.message}`);
+        }
+      }
+    },
+    {
+      name: "plugin_describe",
+      description: "Everything the catalogue holds about one plugin, by its IRI.",
+      inputSchema: {
+        type: "object",
+        properties: { iri: { type: "string" } },
+        required: ["iri"]
+      },
+      async handler({ iri: iri2 } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        if (!iri2) return failed("plugin_describe needs an iri");
+        try {
+          return ok(await catalogue.describe(iri2));
+        } catch (error2) {
+          return failed(`catalogue: ${error2.message}`);
+        }
+      }
+    },
+    {
+      name: "plugin_validate_chain",
+      description: "Given plugins in order, check that each one produces something the next one accepts. Reports the mismatches and any cautions. Does not change anything.",
+      inputSchema: {
+        type: "object",
+        properties: { iris: { type: "array", items: { type: "string" } } },
+        required: ["iris"]
+      },
+      async handler({ iris = [] } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        if (iris.length < 2) return failed("a chain needs at least two plugins");
+        const described = [];
+        for (const iri2 of iris) {
+          try {
+            described.push(await catalogue.describe(iri2));
+          } catch (error2) {
+            return failed(`could not describe ${iri2}: ${error2.message}`);
+          }
+        }
+        const problems = [];
+        const cautions = [];
+        for (let i2 = 0; i2 < described.length - 1; i2++) {
+          const from = described[i2];
+          const to = described[i2 + 1];
+          const produces = from.properties.produces ?? [];
+          const accepts = to.properties.accepts ?? [];
+          for (const caution of from.properties.caution ?? []) {
+            cautions.push({ plugin: from.iri, caution });
+          }
+          if (produces.length === 0 || accepts.length === 0) continue;
+          if (!produces.some((signal) => accepts.includes(signal))) {
+            problems.push({
+              from: from.iri,
+              to: to.iri,
+              message: `${from.iri} produces ${produces.join(", ")} and ${to.iri} accepts ${accepts.join(", ")}`
+            });
+          }
+        }
+        return ok({ valid: problems.length === 0, problems, cautions });
+      }
+    },
+    {
+      name: "plugin_load",
+      description: "Fetch, validate and instantiate a plugin by IRI, adding it to the session. This is the only tool that reaches the network. Reports which step failed if it does.",
+      inputSchema: {
+        type: "object",
+        properties: { iri: { type: "string" } },
+        required: ["iri"]
+      },
+      async handler({ iri: iri2 } = {}) {
+        if (!iri2) return failed("plugin_load needs an iri");
+        if (!loadPlugin2) return failed("this host cannot load plugins");
+        const result = await loadPlugin2(iri2);
+        if (!result.ok) return failed(result.message, { step: result.step ?? null });
+        return ok({
+          nodeId: result.nodeId,
+          label: result.entry.profile.label,
+          parameters: result.entry.profile.ports.map((p) => ({
+            symbol: p.symbol,
+            name: p.name,
+            min: p.minimum,
+            max: p.maximum,
+            default: p.defaultValue
+          })),
+          latencyFrames: result.entry.ready.latencyFrames,
+          revision: result.revision
+        });
+      }
+    },
+    {
+      name: "graph_apply_changes",
+      description: "Apply a changeset atomically: all of it applies or none does. Pass expectedRevision to be rejected if the project has moved on, and dryRun to see what would happen without committing.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          changes: { type: "array", items: { type: "object" } },
+          expectedRevision: { type: "integer" },
+          dryRun: { type: "boolean" }
+        },
+        required: ["changes"]
+      },
+      async handler({ changes = [], expectedRevision, dryRun = false } = {}) {
+        const result = dispatcher2.apply(changes, { expectedRevision, dryRun });
+        if (!result.ok) {
+          return failed(result.message, {
+            kind: result.kind,
+            revision: result.revision,
+            ...result.expected !== void 0 ? { expected: result.expected } : {},
+            ...result.index !== void 0 ? { index: result.index } : {}
+          });
+        }
+        return ok({
+          revision: result.revision,
+          applied: result.applied,
+          totalLatencyFrames: result.compiled.totalLatency
+        });
+      }
+    },
+    {
+      name: "connection_add",
+      description: "Connect one node to another. signalKind is Audio or Midi, or a full IRI.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          fromPort: { type: "integer" },
+          toPort: { type: "integer" },
+          toParameter: { type: "string", description: "Target a parameter by symbol instead of a port" },
+          signalKind: { type: "string" }
+        },
+        required: ["from", "to"]
+      },
+      async handler({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = "Audio" } = {}) {
+        const change = {
+          op: "addConnection",
+          from: { node: from, portIndex: fromPort },
+          to: toParameter ? { node: to, portSymbol: toParameter } : { node: to, portIndex: toPort },
+          signalKind: expandTerm(signalKind)
+        };
+        const result = dispatcher2.apply([change]);
+        return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "parameter_set",
+      description: "Set a parameter by its symbol. Returns the value actually applied, which may be clamped to the range the plugin declares.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          node: { type: "string" },
+          symbol: { type: "string" },
+          value: { type: "number" }
+        },
+        required: ["node", "symbol", "value"]
+      },
+      async handler({ node, symbol, value } = {}) {
+        const result = dispatcher2.setParameter(node, symbol, value);
+        return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "transport_configure",
+      description: "Set the tempo, time signature or loop.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          tempo: { type: "number" },
+          beatsPerBar: { type: "integer" },
+          loopStart: { type: "number" },
+          loopEnd: { type: "number" },
+          loopEnabled: { type: "boolean" }
+        }
+      },
+      async handler({ tempo, ...rest } = {}) {
+        const change = { op: "setTransport", ...rest };
+        if (tempo !== void 0) change.tempoPoints = [{ atBeat: 0, bpm: tempo }];
+        const result = dispatcher2.apply([change]);
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "diagnostics",
+      description: "Engine detail, including the compiled graph, any cycles, and per-node load state.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const compiled = dispatcher2.compile();
+        return ok({
+          order: compiled.order,
+          cycles: compiled.cycles,
+          errors: compiled.errors,
+          compensation: compiled.compensation,
+          totalLatencyFrames: compiled.totalLatency,
+          nodes: dispatcher2.project.nodes.map((n2) => {
+            const entry = dispatcher2.engineNode(n2.id);
+            return {
+              id: n2.id,
+              plugin: n2.pluginIri,
+              loaded: Boolean(entry),
+              failed: entry?.failed ?? null,
+              latencyFrames: entry?.ready?.latencyFrames ?? null
+            };
+          })
+        });
+      }
+    }
+  ];
+  return tools;
+}
+
+// src/mcp/adapter.js
+function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2 });
+  const surface = {
+    tools,
+    names: tools.map((t) => t.name),
+    async call(name, input = {}) {
+      const tool = tools.find((t) => t.name === name);
+      if (!tool) {
+        return { ok: false, error: `no such tool: ${name}`, known: tools.map((t) => t.name) };
+      }
+      try {
+        return await tool.handler(input);
+      } catch (error2) {
+        return { ok: false, error: `${name} threw: ${error2?.message ?? error2}` };
+      }
+    }
+  };
+  target.jigdaw = { ...target.jigdaw ?? {}, mcp: surface };
+  const navigatorContext = target.navigator?.modelContext;
+  if (navigatorContext && typeof navigatorContext.provideContext === "function") {
+    try {
+      navigatorContext.provideContext({
+        tools: tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          async execute(input) {
+            const result = await surface.call(tool.name, input ?? {});
+            return { content: [{ type: "text", text: JSON.stringify(result) }] };
+          }
+        }))
+      });
+      return { bound: "navigator.modelContext", count: tools.length, surface };
+    } catch (error2) {
+      return { bound: "page", count: tools.length, surface, warning: `modelContext refused: ${error2.message}` };
+    }
+  }
+  return { bound: "page", count: tools.length, surface };
+}
+
 // web/app.js
 var AUDIO2 = "http://purl.org/stuff/transmissions/Audio";
 var $ = (id) => document.getElementById(id);
@@ -20252,8 +20579,35 @@ async function ensureRunning() {
       log(`compensating ${compiled.compensation.length} path(s): ${compiled.compensation.map((c3) => `${c3.delayFrames} frames`).join(", ")}`);
     }
   });
+  const registration = registerTools({
+    dispatcher,
+    catalogue: browserCatalogue(),
+    loadPlugin: (iri2) => dispatcher.addPlugin(iri2)
+  });
+  log(`${registration.count} agent tools registered via ${registration.bound}`);
+  if (registration.warning) log(registration.warning, "error");
   $("state").textContent = `running at ${context.sampleRate} Hz`;
   return dispatcher;
+}
+function browserCatalogue() {
+  const ask = async (path, params) => {
+    const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI));
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
+    return body;
+  };
+  return {
+    async search({ text = "", limit = 25, ...facets } = {}) {
+      const params = new URLSearchParams();
+      if (text) params.set("q", text);
+      for (const [k, v] of Object.entries(facets)) if (v) params.set(k, v);
+      params.set("limit", String(limit));
+      return (await ask("search", params)).results;
+    },
+    async describe(iri2) {
+      return ask("describe", new URLSearchParams({ iri: iri2 }));
+    }
+  };
 }
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);

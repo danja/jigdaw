@@ -148,3 +148,34 @@ describe('no inline SPARQL', () => {
     expect(offenders, `inline SPARQL at:\n  ${offenders.join('\n  ')}`).toEqual([])
   })
 })
+
+describe('the browser bundle', () => {
+  // Twice now a browser-bound module has imported a node-bound one and the
+  // build failed: once ShapeValidator reaching node:fs, once Catalogue.js doing
+  // the same through QueryService. esbuild catches it, but only when someone
+  // runs the build, and `npm test` passed happily both times.
+  it('reaches no node builtin from web/app.js', () => {
+    const seen = new Set()
+    const offenders = []
+
+    const walk = file => {
+      if (seen.has(file)) return
+      seen.add(file)
+      const body = readFileSync(join(root, file), 'utf8')
+      for (const match of body.matchAll(/^import\s[^'"]*['"]([^'"]+)['"]/gm)) {
+        const specifier = match[1]
+        if (specifier.startsWith('node:')) {
+          offenders.push(`${file} imports ${specifier}`)
+          continue
+        }
+        if (!specifier.startsWith('.')) continue // a package, esbuild's problem
+        const resolved = join(dirname(file), specifier).replace(/\\/g, '/')
+        if (existsSync(join(root, resolved))) walk(resolved)
+      }
+    }
+
+    walk('web/app.js')
+    expect(seen.size, 'app.js reached nothing, so this checked nothing').toBeGreaterThan(5)
+    expect(offenders, `node builtins reachable from the browser entry:\n  ${offenders.join('\n  ')}`).toEqual([])
+  })
+})

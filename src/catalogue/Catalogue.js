@@ -13,24 +13,11 @@
 // delay, and returning it anyway spends the context it needs for the task.
 import { QueryService } from './QueryService.js'
 import { iri, literal, integer } from './terms.js'
+import { FACETS, FACET_NAMES, expandTerm, compactTerm as compact, TRN } from './facets.js'
 
 const DEFAULT_ENDPOINT = 'https://sparql.plugin-universe.com/public/query'
 
-/** Facet name to the predicate it constrains. One list, not several. */
-const FACETS = Object.freeze({
-  role: 'http://purl.org/stuff/transmissions/role',
-  accepts: 'http://purl.org/stuff/transmissions/accepts',
-  produces: 'http://purl.org/stuff/transmissions/produces',
-  requires: 'http://purl.org/stuff/transmissions/requires',
-  format: 'http://purl.org/stuff/transmissions/format'
-})
-
-export const FACET_NAMES = Object.freeze(Object.keys(FACETS))
-
-const TRN = 'http://purl.org/stuff/transmissions/'
-
-/** Readable values for an agent or a panel, as transmission does. */
-const compact = value => (value?.startsWith(TRN) ? value.slice(TRN.length) : value)
+export { FACET_NAMES }
 
 export class Catalogue {
   #endpoint
@@ -79,8 +66,7 @@ export class Catalogue {
     for (const [name, value] of Object.entries(facets)) {
       if (value === undefined || value === null || value === '') continue
       if (!(name in FACETS)) throw new Error(`no such facet: ${name}. Known: ${FACET_NAMES.join(', ')}`)
-      const full = String(value).startsWith('http') ? String(value) : `${TRN}${value}`
-      clauses.push(`?plugin ${iri(FACETS[name])} ${iri(full)} .`)
+      clauses.push(`?plugin ${iri(FACETS[name])} ${iri(expandTerm(value))} .`)
     }
 
     if (text.trim() !== '') {
