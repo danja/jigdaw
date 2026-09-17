@@ -21014,6 +21014,7 @@ $("tempo").addEventListener("change", async () => {
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);
   if (!result.ok) log(result.message, "error");
 });
+$("iri").value = new URL($("iri").value, document.baseURI).href;
 drawRack();
 log("ready. Load the synth and press a key, or search for a plugin.");
 window.__jigdawLoad = loadPlugin;

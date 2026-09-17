@@ -449,6 +449,13 @@ $('tempo').addEventListener('change', async () => {
   if (!result.ok) log(result.message, 'error')
 })
 
+// Show the whole IRI, not a path. A plugin is identified by an absolute IRI,
+// and the box is the clearest place to say so: what goes in it is the same
+// thing that would be published, pasted into another host, or curled. It is
+// computed rather than written into the HTML because it depends on where this
+// host is served from.
+$('iri').value = new URL($('iri').value, document.baseURI).href
+
 drawRack()
 log('ready. Load the synth and press a key, or search for a plugin.')
 window.__jigdawLoad = loadPlugin

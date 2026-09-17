@@ -166,7 +166,8 @@
     <h2 style="margin-top:18px">Load by IRI</h2>
     <form class="searchbar" id="loadbar">
       <label class="visually-hidden" for="iri">Plugin IRI</label>
-      <input type="text" id="iri" value="plugins/pulse/" spellcheck="false">
+      <!-- Rewritten to the absolute IRI on load; this is the fallback. -->
+      <input type="text" id="iri" value="plugins/pulse/" spellcheck="false" autocomplete="off">
       <button type="submit">Load</button>
     </form>
   </section>

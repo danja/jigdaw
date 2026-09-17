@@ -180,3 +180,15 @@ describe('the page on a phone', () => {
     expect(page()).toMatch(/:focus-visible\s*\{[^}]*outline:/)
   })
 })
+
+describe('the Load by IRI field', () => {
+  it('is rewritten to an absolute IRI on load', async () => {
+    // A plugin is identified by an absolute IRI, and the box should show the
+    // thing that would be published or pasted into another host. It cannot be
+    // written into the HTML because it depends on where this host is served.
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
+    expect(app).toMatch(/\$\('iri'\)\.value\s*=\s*new URL\(\$\('iri'\)\.value,\s*document\.baseURI\)\.href/)
+  })
+})
