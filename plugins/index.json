@@ -1,0 +1,73 @@
+{
+  "generated": "bin/build-plugin-index.js",
+  "note": "Generated from each plugins/<name>/profile.ttl. Do not edit; run npm run build:index.",
+  "plugins": [
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/cascade/",
+      "label": "Cascade",
+      "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/cascade/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Freeze holds the tail at unity feedback. Following it with a limiter is wise when several instances are frozen at once."
+      ],
+      "parameters": [
+        "damping",
+        "freeze",
+        "mix",
+        "mode",
+        "size"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/pulse/",
+      "label": "Pulse",
+      "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/pulse/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "Eight voices. A ninth note steals the oldest voice rather than being refused."
+      ],
+      "parameters": [
+        "attack",
+        "cutoff",
+        "gain",
+        "release",
+        "waveform"
+      ]
+    }
+  ]
+}

@@ -2,24 +2,30 @@
 //
 // The plugins this host serves itself.
 //
-// A catalogue of 756 native plugins that none of them can run is not a plugin
-// browser, it is a list. Until JigDAW's own plugins are harvested upstream, the
-// host is the only thing that knows about them, so it indexes them and merges
-// them into search.
+// A catalogue of hundreds of native plugins that none of them can run is not a
+// plugin browser, it is a list. Until JigDAW's own plugins are harvested
+// upstream, the host is the only thing that knows about them.
 //
-// This is deliberately not a store. It reads the profiles that are already on
-// disk, which are the same files the host serves and the same ones a browser
-// validates, so there is no second copy to drift.
-import { readdir, readFile } from 'node:fs/promises'
+// It reads plugins/index.json, generated from the profiles by
+// `npm run build:index`, rather than parsing Turtle at runtime. That is not an
+// optimisation: it keeps bin/serve.js to node builtins alone, so the server
+// needs no npm install. Importing an RDF parser here once crashed a deployment
+// that had none, and the site answered 502 until it was reverted.
+//
+// tests/catalogue/LocalCatalogue.test.js fails if the index has drifted from
+// the profiles, so the generated copy cannot quietly go stale.
+import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join } from 'node:path'
-import { parseText } from '../rdf/parse.js'
-import { readProfile } from '../rdf/ProfileReader.js'
-import { FACETS, expandTerm, compactTerm } from './facets.js'
 
-// Facet name to the field that holds it. The two differ for role and format,
-// which are singular as facets and plural as fields, and reading entry[name]
-// directly meant those two silently matched nothing.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+
+const TRN = 'http://purl.org/stuff/transmissions/'
+const compact = value => (String(value).startsWith(TRN) ? String(value).slice(TRN.length) : String(value))
+
+// Facet name to the field that holds it. role and format are singular as
+// facets and plural as fields, and reading the entry by the facet name meant
+// those two silently matched nothing.
 const FIELD_FOR = Object.freeze({
   role: 'roles',
   format: 'formats',
@@ -28,91 +34,45 @@ const FIELD_FOR = Object.freeze({
   requires: 'requires'
 })
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-
-/** What search needs from a profile, in the same shape the upstream returns. */
-function summarise (profile) {
-  return {
-    iri: profile.iri,
-    label: profile.label,
-    comment: profile.comment,
-    vendor: profile.vendor,
-    homepage: profile.homepage ?? profile.iri,
-    // These are ours, so they run here by definition.
-    web: true,
-    local: true,
-    roles: profile.roles.map(compactTerm),
-    formats: profile.formats.map(compactTerm),
-    accepts: profile.accepts.map(compactTerm),
-    produces: profile.produces.map(compactTerm),
-    requires: profile.requires.map(compactTerm)
-  }
-}
-
 export class LocalCatalogue {
-  #dir
+  #path
   #entries = null
-  #profiles = new Map()
 
-  constructor ({ dir = join(root, 'plugins') } = {}) {
-    this.#dir = dir
+  constructor ({ path = join(root, 'plugins/index.json') } = {}) {
+    this.#path = path
   }
 
   /**
-   * Read every plugins/<name>/profile.ttl.
+   * Read the index.
    *
-   * A profile that does not parse is skipped and reported rather than throwing:
-   * one broken plugin in a directory must not take the browser down with it.
+   * A missing or unreadable index means no local plugins, never a crash: the
+   * host still serves and still searches upstream. A browser that fails to
+   * open because an index is absent is worse than one with nothing in it.
    */
   async load () {
     if (this.#entries) return this.#entries
-
-    const entries = []
-    const problems = []
-    let names = []
     try {
-      names = (await readdir(this.#dir, { withFileTypes: true }))
-        .filter(e => e.isDirectory()).map(e => e.name)
-    } catch {
+      const body = JSON.parse(await readFile(this.#path, 'utf8'))
+      this.#entries = Array.isArray(body.plugins) ? body.plugins : []
+    } catch (error) {
+      console.warn(`local catalogue unavailable: ${error.message}. Run npm run build:index.`)
       this.#entries = []
-      return this.#entries
     }
-
-    for (const name of names) {
-      const path = join(this.#dir, name, 'profile.ttl')
-      try {
-        const text = await readFile(path, 'utf8')
-        const dataset = await parseText(text, `file://${path}`)
-        const profile = readProfile(dataset)
-        entries.push(summarise(profile))
-        this.#profiles.set(profile.iri, profile)
-      } catch (error) {
-        problems.push(`${name}: ${error.message}`)
-      }
-    }
-
-    if (problems.length > 0) console.warn('local catalogue skipped:', problems.join('; '))
-    this.#entries = entries
-    return entries
+    return this.#entries
   }
 
-  /** Forget what was read, so a rebuilt plugin is picked up. */
-  invalidate () {
-    this.#entries = null
-    this.#profiles.clear()
-  }
+  /** Forget what was read, so a rebuilt index is picked up. */
+  invalidate () { this.#entries = null }
 
   async search ({ text = '', limit = 30, ...facets } = {}) {
     const entries = await this.load()
     const needle = text.trim().toLowerCase()
 
     return entries.filter(entry => {
-      for (const name of Object.keys(FACETS)) {
+      for (const [name, field] of Object.entries(FIELD_FOR)) {
         const wanted = facets[name]
         if (!wanted) continue
-        const have = entry[FIELD_FOR[name]] ?? []
-        const target = compactTerm(expandTerm(wanted))
-        if (!have.includes(target)) return false
+        if (!(entry[field] ?? []).includes(compact(wanted))) return false
       }
       if (needle === '') return true
       return [entry.label, entry.comment, entry.vendor]
@@ -121,22 +81,22 @@ export class LocalCatalogue {
     }).slice(0, limit)
   }
 
+  /** Everything the index holds about one plugin, or null to fall through. */
   async describe (iri) {
-    await this.load()
-    const profile = this.#profiles.get(iri)
-    if (!profile) return null
+    const entry = (await this.load()).find(e => e.iri === iri)
+    if (!entry) return null
     return {
       iri,
       properties: {
-        label: [profile.label],
-        comment: profile.comment ? [profile.comment] : [],
-        vendor: profile.vendor ? [profile.vendor] : [],
-        role: profile.roles.map(compactTerm),
-        accepts: profile.accepts.map(compactTerm),
-        produces: profile.produces.map(compactTerm),
-        requires: profile.requires.map(compactTerm),
-        caution: profile.cautions,
-        parameter: profile.ports.map(p => p.symbol)
+        label: entry.label ? [entry.label] : [],
+        comment: entry.comment ? [entry.comment] : [],
+        vendor: entry.vendor ? [entry.vendor] : [],
+        role: entry.roles ?? [],
+        accepts: entry.accepts ?? [],
+        produces: entry.produces ?? [],
+        requires: entry.requires ?? [],
+        caution: entry.cautions ?? [],
+        parameter: entry.parameters ?? []
       }
     }
   }

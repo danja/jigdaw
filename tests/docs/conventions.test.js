@@ -149,33 +149,51 @@ describe('no inline SPARQL', () => {
   })
 })
 
+/** Follow relative imports from an entry point, reporting bare specifiers. */
+function importGraph (entry) {
+  const seen = new Set()
+  const packages = new Set()
+  const builtins = new Set()
+
+  const walk = file => {
+    if (seen.has(file) || !existsSync(join(root, file))) return
+    seen.add(file)
+    for (const match of readFileSync(join(root, file), 'utf8').matchAll(/^import\s[^'"]*['"]([^'"]+)['"]/gm)) {
+      const specifier = match[1]
+      if (specifier.startsWith('node:')) { builtins.add(specifier); continue }
+      if (!specifier.startsWith('.')) { packages.add(`${file} imports ${specifier}`); continue }
+      walk(join(dirname(file), specifier).replace(/\\/g, '/'))
+    }
+  }
+
+  walk(entry)
+  return { seen, packages, builtins }
+}
+
+describe('the server', () => {
+  // bin/serve.js runs on a machine with no npm install. The wasm, the profiles,
+  // the browser bundle and plugins/index.json are all committed, so the
+  // deployment is a git pull and a restart.
+  //
+  // This was broken once by importing an RDF parser into the server to read
+  // profiles at runtime. The deployment had no node_modules, the service failed
+  // to start, and the site answered 502 until it was reverted. The property is
+  // load bearing and nothing but this guards it.
+  it('reaches no package, only node builtins', () => {
+    const { seen, packages } = importGraph('bin/serve.js')
+    expect(seen.size, 'serve.js reached nothing, so this checked nothing').toBeGreaterThan(3)
+    expect(packages, `bin/serve.js needs an npm install because:\n  ${[...packages].join('\n  ')}`).toEqual(new Set())
+  })
+})
+
 describe('the browser bundle', () => {
   // Twice now a browser-bound module has imported a node-bound one and the
   // build failed: once ShapeValidator reaching node:fs, once Catalogue.js doing
   // the same through QueryService. esbuild catches it, but only when someone
   // runs the build, and `npm test` passed happily both times.
   it('reaches no node builtin from web/app.js', () => {
-    const seen = new Set()
-    const offenders = []
-
-    const walk = file => {
-      if (seen.has(file)) return
-      seen.add(file)
-      const body = readFileSync(join(root, file), 'utf8')
-      for (const match of body.matchAll(/^import\s[^'"]*['"]([^'"]+)['"]/gm)) {
-        const specifier = match[1]
-        if (specifier.startsWith('node:')) {
-          offenders.push(`${file} imports ${specifier}`)
-          continue
-        }
-        if (!specifier.startsWith('.')) continue // a package, esbuild's problem
-        const resolved = join(dirname(file), specifier).replace(/\\/g, '/')
-        if (existsSync(join(root, resolved))) walk(resolved)
-      }
-    }
-
-    walk('web/app.js')
+    const { seen, builtins } = importGraph('web/app.js')
     expect(seen.size, 'app.js reached nothing, so this checked nothing').toBeGreaterThan(5)
-    expect(offenders, `node builtins reachable from the browser entry:\n  ${offenders.join('\n  ')}`).toEqual([])
+    expect([...builtins], 'node builtins are reachable from the browser entry').toEqual([])
   })
 })

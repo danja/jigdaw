@@ -27,6 +27,15 @@ Then hard-reload `https://strandz.it/jigdaw/`, press Load, and play the keyboard
 
 ## Updating a deployment
 
+Regenerate artefacts on your machine, never on the server:
+
+```sh
+npm run build        # index, vocabulary and browser bundle
+npm test
+git add -A && git commit && git push
+```
+
+
 ```sh
 # On the server, in /home/github/jigdaw
 git pull

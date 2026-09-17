@@ -86,7 +86,9 @@ only pass if it were live.
 under `/jigdaw/` and listens on **6011**, loopback only.
 
 **The server needs only node 20 or later.** `bin/serve.js` imports nothing but node
-builtins, so there is no `npm install`. The WebAssembly modules, the generated profiles and
+builtins, so there is no `npm install`. `tests/docs/conventions.test.js` fails if anything
+reachable from it ever imports a package again: that happened once, the service would not
+start, and the site answered 502 until it was reverted. The WebAssembly modules, the generated profiles and
 the browser bundle are committed, so there is no build step and no Rust toolchain either.
 The repository is the delivery mechanism.
 
