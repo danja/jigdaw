@@ -257,6 +257,42 @@ which says plainly that they are the authority where the two disagree.
 missing viewport or a missing title. The repository check exists because `github.com/jigdaw`
 is somebody's account and returns 200, so that typo would not even have looked broken.
 
+## Phase 7. A native host. Complete.
+
+`native/jigdaw-adapter` is a VST3, CLAP and LV2 built with DPF, in the shape downspout uses:
+a portable core with the plugin format as a thin shell over it. Two channels of audio in and
+out, MIDI in and out, and a chain of JigDAW plugins loaded by IRI.
+
+- `src/Turtle.cpp`, the subset of Turtle a profile uses, about 300 lines and no dependency.
+- `src/Profile.cpp`, including the rebasing that keeps identity canonical while retrieval
+  follows the mirror.
+- `src/Integrity.cpp`, sha384 through OpenSSL, agreeing with the browser host's digests.
+- `src/Module.cpp`, `jig:Abi1` through wasm3, and the only file that knows which runtime.
+- `src/Chain.cpp` and `src/dpf/`.
+
+Verified: both worked plugins fetched over HTTP, verified against their declared digests,
+instantiated and sounded. Pulse silent, then 0.133 on a note, then silent on release. Cascade
+passing dry signal through bit-exactly at mix 0 and producing a tail over 189 of 200 blocks.
+A chain of both: the synth through the reverb, with the tail outliving the note.
+
+Four native tests run under ctest. The one that fetches over HTTP skips, loudly, when nothing
+is serving, because a network test that fails a build is a test that gets disabled.
+
+## What it found
+
+`native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads
+JigDAW plugins by IRI.
+
+It was proposed as a sanity check on the specification and it worked as one immediately: a
+native host could not load a JigDAW plugin at all. The only thing the contract guarantees is
+a JavaScript `AudioWorklet` module, and the WebAssembly ABI is explicitly private to the
+plugin. The specification had accidentally made itself browser-only.
+
+[module-abi.md](module-abi.md) is the answer: a module may declare `jig:abi jig:Abi1`, and a
+host with a WebAssembly runtime loads it directly. Both worked plugins declare it, every port
+now carries a `jig:paramIndex`, and the shapes refuse a plugin that declares an ABI without
+one.
+
 ## Blocked on a person
 
 In `HUMANS.md`, and unchanged by any amount of building: serving the vocabulary, minting a

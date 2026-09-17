@@ -45,6 +45,7 @@
     a jig:Module ;
     jig:location <pulse.wasm> ;
     jig:mediaType "application/wasm" ;
+    jig:abi jig:Abi1 ;
     jig:integrity "sha384-g3DvRxgIQlAOtAs4igRA3txWG2twyHsPR5zgZxM2iods9jcnIcPebid0qCDgohrE" .
 
 <#processor>
@@ -58,6 +59,7 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "waveform" ; lv2:name "Waveform" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
+    jig:paramIndex 0 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         [ rdfs:label "Saw" ; rdf:value 0 ] ,
@@ -68,21 +70,25 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "attack" ; lv2:name "Attack" ;
     lv2:default 5 ; lv2:minimum 0.5 ; lv2:maximum 500 ;
+    jig:paramIndex 1 ;
     units:unit units:ms .
 
 <#release>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "release" ; lv2:name "Release" ;
     lv2:default 200 ; lv2:minimum 1 ; lv2:maximum 4000 ;
+    jig:paramIndex 2 ;
     units:unit units:ms .
 
 <#cutoff>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
     lv2:default 6000 ; lv2:minimum 100 ; lv2:maximum 18000 ;
+    jig:paramIndex 3 ;
     units:unit units:hz .
 
 <#gain>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "gain" ; lv2:name "Gain" ;
-    lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 .
+    lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 4 .

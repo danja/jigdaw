@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  74 terms.
+  78 terms.
 </p>
 
 <h2>Classes</h2>
@@ -62,6 +62,8 @@
         questions and the second cannot be derived from the first.</dd>
   <dt id="Module"><code>jig:Module</code></dt>
   <dd>The WebAssembly binary carrying the plugin's signal processing.</dd>
+  <dt id="ModuleAbi"><code>jig:ModuleAbi</code> <span class="label">Module ABI</span></dt>
+  <dd>A published calling convention between a host and a WebAssembly module, letting a host without a JavaScript engine load the module directly.</dd>
   <dt id="Node"><code>jig:Node</code></dt>
   <dd>One instance of a plugin in a project. Distinct from the plugin itself,
         because a project may hold several instances of one plugin, each with its own
@@ -104,6 +106,8 @@
 
 <h2>Object properties</h2>
 <dl>
+  <dt id="abi"><code>jig:abi</code> <span class="label">ABI</span></dt>
+  <dd>The calling convention this module implements, if any. Absent means the module is private to its processor, and only a browser can run the plugin.</dd>
   <dt id="asset"><code>jig:asset</code></dt>
   <dd>Any further file the plugin needs, such as an impulse response or a
         wavetable. Listed so a host can prefetch, cache and integrity-check it, and so an
@@ -211,6 +215,8 @@
   <dd>Channels per output. A host declaring outputChannelCount on the node
         must agree with this, and a plugin writing a different number of channels is a
         load-time error rather than a silent half-signal.</dd>
+  <dt id="paramIndex"><code>jig:paramIndex</code> <span class="label">parameter index</span></dt>
+  <dd>Which index this parameter has in jig_set_param. Required on every port of a module declaring an ABI, because a host loading the module directly has no processor to hold the mapping and cannot infer it: a position in the profile is a property of the document, not of the module.</dd>
   <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>
   <dd>Which audio input or output, zero-based, as Web Audio numbers them.</dd>
   <dt id="portSymbol"><code>jig:portSymbol</code> <span class="label">port symbol</span></dt>
@@ -246,6 +252,8 @@
 
 <h2>Individuals</h2>
 <dl>
+  <dt id="Abi1"><code>jig:Abi1</code> <span class="label">JigDAW ABI 1</span></dt>
+  <dd>The first published ABI. Exports jig_init, jig_max_frames, jig_output_ptr, jig_process and jig_set_param, plus jig_input_ptr when the plugin takes audio and jig_note_on, jig_note_off and jig_all_notes_off when it takes MIDI. One pointer per channel; nothing is interleaved.</dd>
   <dt id="ARate"><code>jig:ARate</code> <span class="label">a-rate</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="BulkMemory"><code>jig:BulkMemory</code> <span class="label">Bulk Memory</span></dt>

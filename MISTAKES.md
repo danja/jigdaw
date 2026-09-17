@@ -2,6 +2,46 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 The specification had made itself browser-only
+
+**What happened.** A VST3 was proposed as a sanity check on the plugin specification. It
+found the problem before it played a note: there was no way for a native host to load a
+JigDAW plugin at all.
+
+**Root cause.** The contract guarantees a host exactly one thing it can execute, a JavaScript
+`AudioWorkletProcessor`, and states explicitly that what the processor and the WebAssembly
+module say to each other is the plugin author's business. That is right for a browser and a
+dead end for anything else. Every reader of the specification until now was a browser, so
+nothing was ever in a position to notice.
+
+**Prevention.** `docs/module-abi.md` and `jig:abi`: a module may declare that it implements a
+published ABI, and a host with a WebAssembly runtime then loads it directly and ignores the
+processor. Optional on both sides, so nothing existing is invalidated. Both worked plugins
+declare it, every port gained a `jig:paramIndex`, and the shapes refuse a plugin that
+declares an ABI without one.
+
+The general shape: **a specification checked only by implementations of one kind will encode
+that kind's assumptions and look complete.** The way out is not more careful reading; it is a
+second implementation that is different in the way that matters. Writing the host in C++ took
+a day and found in an hour something that four hundred tests and several passes of prose
+review had not.
+
+## 2026-09-17 A parser stricter than the format it parsed
+
+**What happened.** The native Turtle parser refused both worked profiles at line 92.
+
+**Root cause.** It rejected blank nodes outright, because `plugin-profiles.md` says not to
+use them. The document says something narrower: nothing *addressable* may be a blank node,
+for reasons about diffing and re-ingest that do not apply to an `lv2:scalePoint`. The format's
+own worked example uses blank nodes there, so the parser was enforcing a stricter rule than
+the specification states, against the specification's own example.
+
+**Prevention.** Blank nodes are parsed, with a comment saying which rule actually applies.
+
+The general shape, which keeps recurring in a different costume: a rule remembered as a
+slogan is not the rule. "No blank nodes" is shorter than "no blank nodes for anything
+addressable" and means something else.
+
 ## 2026-09-17 A keyboard 88px wider than the phone it was on
 
 **What happened.** The DAW page scrolled sideways on a phone, slightly.

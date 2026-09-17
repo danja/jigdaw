@@ -170,6 +170,16 @@ MUST be refused. A host MUST NOT offer an option to skip verification. The profi
 code it names need not share an origin, and an unverified profile is an instruction to
 execute whatever currently sits at a URL.
 
+### 3.2a A module MAY declare a portable ABI
+
+The processor is JavaScript, so only a browser can run a plugin through it. A module MAY
+additionally declare `jig:abi`, and a host with a WebAssembly runtime and no JavaScript
+engine MAY then load the module directly and ignore the processor entirely.
+
+This is optional for a plugin and optional for a host. A browser host SHOULD continue to use
+the processor, which is the plugin author's own code and may do more than the ABI exposes.
+See [module-abi.md](module-abi.md).
+
 ### 3.3 WebAssembly is compiled inside the worklet
 
 The host MUST post the module's bytes, as an `ArrayBuffer`, and SHOULD transfer rather than

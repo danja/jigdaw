@@ -45,6 +45,7 @@
     a jig:Module ;
     jig:location <cascade.wasm> ;
     jig:mediaType "application/wasm" ;
+    jig:abi jig:Abi1 ;
     jig:integrity "sha384-JFm3wWQJ1dWYFPyPpvGoO/I4QCQdI/8vuq9HatR3YqPnScqHaMiJhWJsD1Xf3Z1H" .
 
 <#processor>
@@ -57,30 +58,35 @@
 <#mix>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mix" ; lv2:name "Mix" ;
-    lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 .
+    lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 0 .
 
 <#size>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "size" ; lv2:name "Size" ;
     lv2:default 24 ; lv2:minimum 2 ; lv2:maximum 60 ;
+    jig:paramIndex 1 ;
     units:unit units:ms .
 
 <#damping>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "damping" ; lv2:name "Damping" ;
     lv2:default 4200 ; lv2:minimum 200 ; lv2:maximum 18000 ;
+    jig:paramIndex 2 ;
     units:unit units:hz .
 
 <#freeze>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "freeze" ; lv2:name "Freeze" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 3 ;
     lv2:portProperty lv2:toggled .
 
 <#mode>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mode" ; lv2:name "Mode" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
+    jig:paramIndex 4 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         [ rdfs:label "Plate" ; rdf:value 0 ] ,

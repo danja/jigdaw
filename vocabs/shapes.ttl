@@ -145,6 +145,19 @@ jig:NoMidiShape a sh:NodeShape ;
         sh:qualifiedMaxCount 0
     ] .
 
+# A module declaring an ABI can be loaded by a host with no JavaScript engine,
+# which means every parameter needs an index: that host has no processor to hold
+# the mapping, and a port's position in the profile is a property of the
+# document rather than of the module.
+jig:DeclaredAbiShape a sh:NodeShape ;
+    sh:targetClass jig:WebPlugin ;
+    rdfs:label "Declared ABI shape" ;
+    sh:message "A plugin whose module declares jig:abi must give every lv2:port a jig:paramIndex, because a host loading the module directly has no processor to map symbols to indices." ;
+    sh:or (
+        [ sh:property [ sh:path ( jig:module jig:abi ) ; sh:maxCount 0 ] ]
+        [ sh:property [ sh:path lv2:port ; sh:qualifiedValueShape [ sh:not [ sh:path jig:paramIndex ; sh:minCount 1 ] ] ; sh:qualifiedMaxCount 0 ] ]
+    ) .
+
 ## -- Fetchable files ---------------------------------------------------------
 ##
 ## Every concrete class is targeted explicitly. Targeting jig:Resource alone would

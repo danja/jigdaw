@@ -68,6 +68,9 @@ w('<#module>')
 w('    a jig:Module ;')
 w(`    jig:location <${resources.module.file}> ;`)
 w('    jig:mediaType "application/wasm" ;')
+// A declared ABI is what lets a host without a JavaScript engine load the
+// module directly, skipping the processor. See docs/module-abi.md.
+if (template.abi) w(`    jig:abi ${template.abi} ;`)
 w(`    jig:integrity "${resources.module.integrity}" .`)
 w('')
 w('<#processor>')
@@ -83,6 +86,10 @@ for (const port of template.ports) {
   w('    a lv2:InputPort , lv2:ControlPort ;')
   w(`    lv2:symbol ${JSON.stringify(port.symbol)} ; lv2:name ${JSON.stringify(port.name)} ;`)
   let line = `    lv2:default ${port.default} ; lv2:minimum ${port.minimum} ; lv2:maximum ${port.maximum}`
+  // Required when the module declares an ABI: a native host has no processor
+  // holding the symbol to index mapping, and position in this file is a
+  // property of the document rather than of the module.
+  if (port.paramIndex !== undefined) line += ` ;\n    jig:paramIndex ${port.paramIndex}`
   if (port.unit) line += ` ;\n    units:unit units:${port.unit}`
   if (port.toggled) line += ' ;\n    lv2:portProperty lv2:toggled'
   if (port.scalePoints) {

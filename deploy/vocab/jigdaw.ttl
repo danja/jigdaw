@@ -154,6 +154,40 @@ jig:registeredName a owl:DatatypeProperty ;
         needs it to construct the AudioWorkletNode, and there is no way to ask a worklet
         what it registered.""" .
 
+## -- Portable module ABI -----------------------------------------------------
+##
+## A plugin's processor is JavaScript, so a browser can always run it. Nothing
+## else can: a native host has no AudioWorklet and no JavaScript, and the
+## contract deliberately leaves what the processor and the module say to each
+## other as the plugin author's business.
+##
+## That makes a JigDAW plugin browser-only, which was not the intention. A
+## module MAY therefore declare that it implements a published ABI, and a host
+## with a WebAssembly runtime can then load it directly and skip the processor
+## entirely. The processor remains what a browser uses, so declaring an ABI
+## costs a plugin nothing and loses it nothing.
+##
+## Found by writing a VST3 host and discovering there was no way in.
+
+jig:ModuleAbi a owl:Class ;
+    rdfs:label "Module ABI" ;
+    rdfs:comment "A published calling convention between a host and a WebAssembly module, letting a host without a JavaScript engine load the module directly." .
+
+jig:Abi1 a owl:NamedIndividual , jig:ModuleAbi ;
+    rdfs:label "JigDAW ABI 1" ;
+    rdfs:seeAlso <https://github.com/danja/jigdaw/blob/main/docs/module-abi.md> ;
+    rdfs:comment "The first published ABI. Exports jig_init, jig_max_frames, jig_output_ptr, jig_process and jig_set_param, plus jig_input_ptr when the plugin takes audio and jig_note_on, jig_note_off and jig_all_notes_off when it takes MIDI. One pointer per channel; nothing is interleaved." .
+
+jig:abi a owl:ObjectProperty ;
+    rdfs:domain jig:Module ; rdfs:range jig:ModuleAbi ;
+    rdfs:label "ABI" ;
+    rdfs:comment "The calling convention this module implements, if any. Absent means the module is private to its processor, and only a browser can run the plugin." .
+
+jig:paramIndex a owl:DatatypeProperty ;
+    rdfs:domain lv2:Port ; rdfs:range xsd:integer ;
+    rdfs:label "parameter index" ;
+    rdfs:comment "Which index this parameter has in jig_set_param. Required on every port of a module declaring an ABI, because a host loading the module directly has no processor to hold the mapping and cannot infer it: a position in the profile is a property of the document, not of the module." .
+
 ## -- Capabilities ------------------------------------------------------------
 ##
 ## A plugin names a capability with trn:requires, reusing the property that already
