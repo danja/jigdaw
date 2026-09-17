@@ -5,94 +5,163 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JigDAW</title>
 <style>
-  :root { color-scheme: dark; --bg:#14161a; --fg:#e6e6e6; --dim:#8b93a1; --ok:#7ddc8e; --err:#ff8a8a; --line:#2a2f38; }
-  body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:16px 20px; border-bottom:1px solid var(--line); }
-  h1 { margin:0 0 4px; font-size:18px; font-weight:600; }
-  .sub { color:var(--dim); font-size:12px; }
-  main { display:grid; grid-template-columns: 1fr 1fr; gap:20px; padding:20px; align-items:start; }
-  .bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; grid-column:1/-1; }
-  /* 16px or larger, or iOS zooms the page in when the field takes focus. */
-  input[type=text] { flex:1 1 12rem; min-width:0; padding:10px 12px; background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; font-family:ui-monospace,monospace; font-size:16px; }
-  /* WCAG 2.5.8: a touch target is at least 24px, and 44px is comfortable. */
-  button { min-height:44px; padding:10px 20px; background:#2b6cb0; color:#fff; border:0; border-radius:4px; cursor:pointer; font-size:16px; }
-  button:hover { background:#3182ce; }
+  :root {
+    color-scheme: dark;
+    --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
+    --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --wire:#4a5464;
+    --white-width: 34px; --black-width: 22px;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
   :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-  .panel { border:1px solid var(--line); border-radius:6px; padding:14px; margin-bottom:14px; background:#181b21; }
-  .panel h3 { margin:0 0 4px; font-size:15px; }
-  .description { margin:0 0 12px; color:var(--dim); font-size:12px; }
-  .control { display:grid; grid-template-columns:110px 1fr 70px; gap:10px; align-items:center; margin-bottom:12px; }
-  .control label { color:var(--dim); font-size:13px; }
-  .control .value { font-family:ui-monospace,monospace; font-size:13px; text-align:right; }
-  /* A slider thumb is the touch target, so the track needs room around it. */
-  input[type=range] { width:100%; min-width:0; height:44px; }
-  input[type=checkbox] { width:24px; height:24px; }
-  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:10px; font-size:16px; min-height:44px; }
-  #log { overflow-wrap:anywhere; }
-
-  /* One column on a phone. The log goes under the panels rather than beside
-     them, because a plugin panel is what someone came for and a two column
-     grid at 390px gives neither enough room. */
-  @media (max-width: 720px) {
-    main { grid-template-columns: 1fr; gap:16px; padding:16px; }
-    header { padding:14px 16px; }
-    .control { grid-template-columns:1fr auto; gap:4px 10px; }
-    .control label { grid-column:1; }
-    .control .value { grid-column:2; }
-    .control input, .control select { grid-column:1 / -1; }
-    #log { max-height:40vh; }
-  }
-
-  /* Respect a reduced-motion preference: nothing here animates, but the rule
-     documents that and stops a future addition being added without one. */
-  @media (prefers-reduced-motion: reduce) {
-    * { animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
-  }
-  #log { font-family:ui-monospace,monospace; font-size:12px; border:1px solid var(--line); border-radius:6px; padding:12px; background:#0e1013; max-height:70vh; overflow:auto; }
-  .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; white-space:pre-wrap; word-break:break-word; }
-  .log-ok { color:var(--ok); } .log-error { color:var(--err); }
-  #state { color:var(--dim); font-size:12px; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
-  input[type=search] { flex:1 1 12rem; min-width:0; padding:10px 12px; background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; font-size:16px; }
-  #results { grid-column:1/-1; }
-  #results:empty { display:none; }
-  .result { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:baseline; padding:10px 12px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; background:#181b21; }
-  .result .name { font-weight:600; }
-  .result .meta { color:var(--dim); font-size:12px; flex:1 1 10rem; }
-  .result button { min-height:44px; padding:8px 14px; font-size:14px; }
-  .result .native { color:var(--dim); font-size:12px; font-style:italic; }
-  .badge { font-size:11px; padding:2px 7px; border-radius:99px; background:#2b6cb0; color:#fff; }
-  .results-note { color:var(--dim); font-size:12px; margin:4px 0 10px; }
+
+  /* Transport */
+  .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+    padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  .brand { font-weight:700; letter-spacing:.5px; margin-right:4px; }
+  .transport button { min-height:40px; min-width:44px; padding:8px 14px; font-size:15px;
+    background:#242a33; color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
+  .transport button:hover { background:#2d343f; }
+  .transport button[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .tempo { display:flex; align-items:center; gap:6px; }
+  .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
+    background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  .position { font-family:ui-monospace,monospace; font-size:15px; min-width:7ch; color:var(--dim); }
+  .meter { display:flex; gap:3px; align-items:flex-end; height:26px; margin-left:auto; }
+  .meter i { display:block; width:5px; background:#232a33; border-radius:1px; height:100%; }
+  .meter i.on { background:var(--ok); }
+  .meter i.hot { background:var(--err); }
+
+  /* Layout */
+  main { display:grid; grid-template-columns: 300px 1fr; gap:0; min-height:calc(100vh - 62px); }
+  .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
+  .stage { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
+
+  /* Browser */
+  .searchbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .searchbar input, .searchbar select { padding:9px 10px; font-size:16px; background:#0e1013;
+    color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  .searchbar input { flex:1 1 8rem; min-width:0; }
+  .searchbar select { flex:1 1 100%; min-height:40px; }
+  .searchbar button { flex:1 1 100%; min-height:44px; background:var(--accent); color:#fff;
+    border:0; border-radius:4px; font-size:15px; cursor:pointer; }
+  .result { padding:8px 10px; border:1px solid var(--line); border-radius:5px; margin-bottom:6px; background:var(--panel); }
+  .result .name { font-weight:600; font-size:13px; }
+  .result .meta { color:var(--dim); font-size:11px; }
+  .result button { margin-top:6px; min-height:36px; padding:6px 12px; font-size:13px;
+    background:var(--accent); color:#fff; border:0; border-radius:4px; cursor:pointer; }
+  .result .native { color:var(--dim); font-size:11px; font-style:italic; }
+  .badge { font-size:10px; padding:1px 6px; border-radius:99px; background:var(--accent); color:#fff; vertical-align:middle; }
+  .note { color:var(--dim); font-size:11px; margin:6px 0; }
+
+  /* Rack */
+  .rack { display:flex; flex-direction:column; gap:0; }
+  .slot { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:12px 14px; }
+  .slot.source, .slot.output { background:#161a20; border-style:dashed; color:var(--dim); }
+  .slot header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .slot h3 { margin:0; font-size:15px; flex:1; }
+  .slot .kind { font-size:11px; color:var(--dim); }
+  .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:#2a2f38;
+    color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .slot .remove:hover { color:var(--err); border-color:var(--err); }
+  .wire { height:20px; margin-left:26px; border-left:2px solid var(--wire); position:relative; }
+  .wire::after { content:""; position:absolute; bottom:-1px; left:-5px;
+    border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid var(--wire); }
+  .wire span { position:absolute; left:10px; top:1px; font-size:10px; color:var(--dim); }
+  .empty { color:var(--dim); text-align:center; padding:26px 14px; border:1px dashed var(--line); border-radius:7px; }
+
+  /* Controls */
+  .control { display:grid; grid-template-columns:104px 1fr 72px; gap:8px; align-items:center; margin-bottom:8px; }
+  .control label { color:var(--dim); font-size:12px; }
+  .control .value { font-family:ui-monospace,monospace; font-size:12px; text-align:right; }
+  input[type=range] { width:100%; min-width:0; height:40px; }
+  input[type=checkbox] { width:22px; height:22px; }
+  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:8px; font-size:16px; min-height:40px; }
+
+  /* Keyboard */
+  .keyboard { position:relative; height:110px; margin-top:10px; user-select:none; touch-action:none;
+    width:calc(var(--white-count) * var(--white-width)); max-width:100%; }
+  .keys-white { display:flex; height:100%; }
+  .key { padding:0; border:0; cursor:pointer; }
+  .key-white { width:var(--white-width); height:100%; background:#e8eaed; border:1px solid #9aa1ab;
+    border-radius:0 0 4px 4px; }
+  .key-white.held { background:var(--accent); }
+  .keys-black { position:absolute; top:0; left:0; height:64%; width:100%; }
+  .key-black { position:absolute; width:var(--black-width); height:100%; background:#16181d;
+    border:1px solid #000; border-radius:0 0 3px 3px; }
+  .key-black.held { background:var(--accent); }
+
+  /* Log */
+  details.log { border-top:1px solid var(--line); padding:8px 14px; background:#13161b; }
+  details.log summary { cursor:pointer; color:var(--dim); font-size:12px; }
+  #log { font-family:ui-monospace,monospace; font-size:11px; max-height:28vh; overflow:auto; margin-top:8px; }
+  .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
+  .log-ok { color:var(--ok); } .log-error { color:var(--err); }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns:1fr; }
+    .browser { border-right:0; border-bottom:1px solid var(--line); }
+    .control { grid-template-columns:1fr auto; gap:2px 8px; }
+    .control label { grid-column:1; } .control .value { grid-column:2; }
+    .control input, .control select { grid-column:1 / -1; }
+    .meter { margin-left:0; }
+    :root { --white-width:30px; --black-width:19px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>JigDAW</h1>
-  <div class="sub">A plugin is a URL. Dereference it and it is running. <span id="state">no audio context yet</span></div>
-</header>
+
+<div class="transport">
+  <span class="brand">JigDAW</span>
+  <button id="play" aria-pressed="false">Play</button>
+  <button id="stop">Stop</button>
+  <span class="tempo">
+    <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
+    <input type="number" id="tempo" value="120" min="20" max="300" step="1">
+    <span style="color:var(--dim);font-size:12px">BPM</span>
+  </span>
+  <span class="position" id="position" aria-live="off">1 . 1</span>
+  <span class="meter" id="meter" role="img" aria-label="Output level"></span>
+</div>
+
 <main>
-  <form class="bar" id="searchbar" role="search">
-    <label class="visually-hidden" for="q">Search for plugins</label>
-    <input type="search" id="q" placeholder="Search instruments and effects" spellcheck="false">
-    <label class="visually-hidden" for="facet">Filter by kind</label>
-    <select id="facet">
-      <option value="">Anything</option>
-      <option value="role=Instrument">Instruments</option>
-      <option value="role=AudioEffect">Effects</option>
-      <option value="accepts=Midi">Accepts MIDI</option>
-      <option value="produces=Midi">Produces MIDI</option>
-    </select>
-    <button type="submit" id="search">Search</button>
-  </form>
-  <div id="results" aria-live="polite"></div>
-  <div class="bar">
-    <label class="visually-hidden" for="iri">Plugin IRI</label>
-    <input type="text" id="iri" value="plugins/cascade/" spellcheck="false">
-    <button id="load">Load</button>
-  </div>
-  <div id="panels"></div>
-  <div id="log"></div>
+  <section class="browser" aria-label="Plugin browser">
+    <h2>Browser</h2>
+    <form class="searchbar" id="searchbar" role="search">
+      <label class="visually-hidden" for="q">Search for plugins</label>
+      <input type="search" id="q" placeholder="Search plugins">
+      <label class="visually-hidden" for="facet">Filter by kind</label>
+      <select id="facet">
+        <option value="">Anything</option>
+        <option value="role=Instrument">Instruments</option>
+        <option value="role=AudioEffect">Effects</option>
+        <option value="accepts=Midi">Accepts MIDI</option>
+      </select>
+      <button type="submit">Search</button>
+    </form>
+    <div id="results" aria-live="polite"></div>
+    <h2 style="margin-top:18px">Load by IRI</h2>
+    <form class="searchbar" id="loadbar">
+      <label class="visually-hidden" for="iri">Plugin IRI</label>
+      <input type="text" id="iri" value="plugins/pulse/" spellcheck="false">
+      <button type="submit">Load</button>
+    </form>
+  </section>
+
+  <section class="stage" aria-label="Signal chain">
+    <h2>Chain</h2>
+    <div class="rack" id="rack"></div>
+  </section>
 </main>
+
+<details class="log">
+  <summary>Log <span id="state" style="color:var(--dim)"></span></summary>
+  <div id="log"></div>
+</details>
+
 <script type="module" src="./app.bundle.js"></script>
 </body>
 </html>

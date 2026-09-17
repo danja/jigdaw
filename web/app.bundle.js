@@ -19846,9 +19846,9 @@ var Transport = class _Transport {
    * context did. The two differ after a stop and restart, and using the wrong
    * one is the class of bug contract section 7 exists to prevent.
    */
-  positionAtElapsed(elapsedFrames, { startBeat = 0 } = {}) {
+  positionAtElapsed(elapsedFrames2, { startBeat = 0 } = {}) {
     const startSeconds = this.secondsAtBeat(startBeat);
-    let absolute = startSeconds + elapsedFrames / this.#sampleRate;
+    let absolute = startSeconds + elapsedFrames2 / this.#sampleRate;
     if (this.#loop.enabled) {
       const loopStartSeconds = this.secondsAtBeat(this.#loop.start);
       const loopEndSeconds = this.secondsAtBeat(this.#loop.end);
@@ -19868,11 +19868,11 @@ var Transport = class _Transport {
     };
   }
   /** The message a processor receives each quantum. messaging.md section 1.2. */
-  messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
-    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
+  messageAt(elapsedFrames2, { frame, playing: playing2 = true, startBeat = 0 } = {}) {
+    const position = this.positionAtElapsed(elapsedFrames2, { startBeat });
     return {
       type: "transport",
-      playing,
+      playing: playing2,
       frame,
       beat: position.beat,
       beatsPerFrame: position.beatsPerFrame,
@@ -19927,9 +19927,9 @@ var OpDispatcher = class {
    * counting process() calls, so the host has to supply it rather than leave a
    * plugin to infer it.
    */
-  sendTransport(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+  sendTransport(elapsedFrames2, { frame, playing: playing2 = true, startBeat = 0 } = {}) {
     if (!this.#router) return null;
-    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
+    const message = this.transport().messageAt(elapsedFrames2, { frame, playing: playing2, startBeat });
     this.#router.broadcastTransport(message);
     return message;
   }
@@ -20215,6 +20215,89 @@ function createPanel(document2, profile, onChange) {
     /** Called by the host when a value actually changed. */
     update(symbol, value) {
       setters.get(symbol)?.(value);
+    }
+  };
+}
+
+// src/ui/Keyboard.js
+var WHITE = [0, 2, 4, 5, 7, 9, 11];
+var BLACK = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
+var NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var noteName = (note) => `${NAMES[note % 12]}${Math.floor(note / 12) - 1}`;
+var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
+var noteOff = (note) => Uint8Array.from([128, note, 0]);
+function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
+  const root = document2.createElement("div");
+  root.className = "keyboard";
+  root.setAttribute("role", "group");
+  root.setAttribute("aria-label", "Play notes");
+  const held = /* @__PURE__ */ new Set();
+  const press = (note) => {
+    if (held.has(note)) return;
+    held.add(note);
+    onNote?.(noteOn(note), note);
+    root.querySelector(`[data-note="${note}"]`)?.classList.add("held");
+  };
+  const release = (note) => {
+    if (!held.has(note)) return;
+    held.delete(note);
+    onNote?.(noteOff(note), note);
+    root.querySelector(`[data-note="${note}"]`)?.classList.remove("held");
+  };
+  const key = (note, className) => {
+    const element = document2.createElement("button");
+    element.type = "button";
+    element.className = className;
+    element.dataset.note = String(note);
+    element.setAttribute("aria-label", noteName(note));
+    element.title = noteName(note);
+    element.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      element.setPointerCapture?.(event.pointerId);
+      press(note);
+    });
+    element.addEventListener("pointerup", () => release(note));
+    element.addEventListener("pointercancel", () => release(note));
+    element.addEventListener("pointerleave", () => release(note));
+    element.addEventListener("keydown", (event) => {
+      if (event.key === " " || event.key === "Enter") {
+        event.preventDefault();
+        press(note);
+      }
+    });
+    element.addEventListener("keyup", (event) => {
+      if (event.key === " " || event.key === "Enter") release(note);
+    });
+    return element;
+  };
+  const whites = document2.createElement("div");
+  whites.className = "keys-white";
+  const blacks = document2.createElement("div");
+  blacks.className = "keys-black";
+  for (let octave = 0; octave < octaves; octave++) {
+    for (const [index, semitone] of WHITE.entries()) {
+      whites.append(key(first + octave * 12 + semitone, "key key-white"));
+      void index;
+    }
+  }
+  for (let octave = 0; octave < octaves; octave++) {
+    for (const [semitone, after] of Object.entries(BLACK)) {
+      const element = key(first + octave * 12 + Number(semitone), "key key-black");
+      const position = octave * 7 + after;
+      element.style.left = `calc(${position + 1} * var(--white-width) - var(--black-width) / 2)`;
+      blacks.append(element);
+    }
+  }
+  root.append(whites, blacks);
+  root.style.setProperty("--white-count", String(octaves * 7));
+  return {
+    element: root,
+    /** Release everything, for when the instrument goes away. */
+    allNotesOff() {
+      for (const note of [...held]) release(note);
+    },
+    get held() {
+      return [...held];
     }
   };
 }
@@ -20548,6 +20631,7 @@ function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlu
 
 // web/app.js
 var AUDIO2 = "http://purl.org/stuff/transmissions/Audio";
+var MIDI = "http://purl.org/stuff/transmissions/Midi";
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
   const line = document.createElement("div");
@@ -20558,40 +20642,18 @@ var log = (message, kind = "info") => {
 };
 var dispatcher = null;
 var engine = null;
+var analyser = null;
 var source = null;
-var lastNodeId = null;
-async function ensureRunning() {
-  if (dispatcher) return dispatcher;
-  const context = new AudioContext();
-  await context.resume();
-  const response = await fetch(new URL("vocabs/shapes.ttl", document.baseURI));
-  const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
-  log("shapes loaded; every profile is validated before any code is fetched");
-  const capabilities = detectCapabilities(globalThis);
-  log(`host offers ${[...capabilities].map(compact).join(", ")}`);
-  engine = new Engine({ context, loader: new PluginLoader({ parse: parseText, validator, capabilities }) });
-  dispatcher = new OpDispatcher({ engine });
-  dispatcher.subscribe((event) => {
-    if (event.type !== "changed") return;
-    const { compiled } = event;
-    $("state").textContent = `revision ${event.revision}, ${dispatcher.project.nodes.length} nodes, latency ${compiled.totalLatency} frames`;
-    if (compiled.compensation.length > 0) {
-      log(`compensating ${compiled.compensation.length} path(s): ${compiled.compensation.map((c3) => `${c3.delayFrames} frames`).join(", ")}`);
-    }
-  });
-  const registration = registerTools({
-    dispatcher,
-    catalogue: browserCatalogue(),
-    loadPlugin: (iri2) => dispatcher.addPlugin(iri2)
-  });
-  log(`${registration.count} agent tools registered via ${registration.bound}`);
-  if (registration.warning) log(registration.warning, "error");
-  $("state").textContent = `running at ${context.sampleRate} Hz`;
-  return dispatcher;
-}
+var playing = false;
+var startedAt = 0;
+var panels = /* @__PURE__ */ new Map();
 function browserCatalogue() {
   const ask = async (path, params) => {
     const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI));
+    const isJson = (response.headers.get("content-type") ?? "").includes("json");
+    if (!isJson) {
+      throw new Error(response.status === 404 ? `the catalogue endpoint is not there (${response.status}). If the page was just updated, the server needs restarting.` : `the catalogue answered ${response.status}`);
+    }
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
     return body;
@@ -20609,22 +20671,207 @@ function browserCatalogue() {
     }
   };
 }
+async function ensureRunning() {
+  if (dispatcher) return dispatcher;
+  const context = new AudioContext();
+  await context.resume();
+  const response = await fetch(new URL("vocabs/shapes.ttl", document.baseURI));
+  const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
+  const capabilities = detectCapabilities(globalThis);
+  engine = new Engine({ context, loader: new PluginLoader({ parse: parseText, validator, capabilities }) });
+  dispatcher = new OpDispatcher({ engine });
+  analyser = context.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.connect(context.destination);
+  dispatcher.subscribe((event) => {
+    if (event.type === "changed") {
+      $("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
+      drawRack();
+    }
+  });
+  const registration = registerTools({
+    dispatcher,
+    catalogue: browserCatalogue(),
+    loadPlugin: (iri2) => dispatcher.addPlugin(iri2)
+  });
+  log(`host offers ${[...capabilities].map(compact).join(", ")}`);
+  log(`${registration.count} agent tools via ${registration.bound}`);
+  meterLoop();
+  positionLoop();
+  return dispatcher;
+}
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
   const buffer = context.createBuffer(2, length, context.sampleRate);
   for (let channel = 0; channel < 2; channel++) {
     const data = buffer.getChannelData(channel);
     for (let i2 = 0; i2 < length; i2++) {
-      const t = i2 / context.sampleRate;
-      const phase = t % 1;
+      const phase = i2 / context.sampleRate % 1;
       data[i2] = phase < 4e-3 ? (Math.random() * 2 - 1) * Math.exp(-phase * 500) : 0;
     }
   }
   const node = context.createBufferSource();
   node.buffer = buffer;
   node.loop = true;
-  node.start();
   return node;
+}
+async function play() {
+  const d = await ensureRunning();
+  if (playing) return;
+  playing = true;
+  startedAt = engine.context.currentTime;
+  $("play").setAttribute("aria-pressed", "true");
+  const first = d.project.nodes[0];
+  const startsWithEffect = first && !(dispatcher.engineNode(first.id)?.profile.roles ?? []).some((role) => role.includes("Instrument"));
+  if (startsWithEffect) {
+    source = makeSource(engine.context);
+    source.start();
+    const entry = dispatcher.engineNode(first.id);
+    if (entry) source.connect(entry.node, 0, 0);
+  }
+  sendTransport();
+  log("playing", "ok");
+}
+function stop() {
+  playing = false;
+  $("play").setAttribute("aria-pressed", "false");
+  if (source) {
+    try {
+      source.stop();
+    } catch {
+    }
+    source.disconnect();
+    source = null;
+  }
+  for (const entry of engine?.nodes() ?? []) {
+    engine.post(entry.id, { type: "events", events: [{ frame: 0, bytes: Uint8Array.from([176, 123, 0]) }] });
+  }
+  sendTransport();
+  log("stopped");
+}
+function elapsedFrames() {
+  if (!engine || !playing) return 0;
+  return Math.max(0, Math.round((engine.context.currentTime - startedAt) * engine.context.sampleRate));
+}
+function sendTransport() {
+  if (!dispatcher) return;
+  dispatcher.sendTransport(elapsedFrames(), {
+    frame: Math.round((engine?.context.currentTime ?? 0) * (engine?.context.sampleRate ?? 48e3)),
+    playing
+  });
+}
+function positionLoop() {
+  const tick = () => {
+    if (dispatcher) {
+      const position = dispatcher.transport().positionAtElapsed(elapsedFrames());
+      const bar = Math.floor(position.bar) + 1;
+      const beat = Math.floor(position.beatInBar) + 1;
+      $("position").textContent = `${bar} . ${beat}`;
+      if (playing) sendTransport();
+    }
+    setTimeout(tick, 100);
+  };
+  tick();
+}
+function meterLoop() {
+  const bars = 12;
+  const meter = $("meter");
+  meter.textContent = "";
+  for (let i2 = 0; i2 < bars; i2++) meter.append(document.createElement("i"));
+  const data = new Float32Array(analyser.fftSize);
+  const frame = () => {
+    analyser.getFloatTimeDomainData(data);
+    let peak = 0;
+    for (const v of data) peak = Math.max(peak, Math.abs(v));
+    const lit = Math.round(Math.min(1, peak) * bars);
+    meter.querySelectorAll("i").forEach((bar, i2) => {
+      bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";
+    });
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+function slot(title, kind, className) {
+  const element = document.createElement("div");
+  element.className = `slot ${className}`;
+  const header = document.createElement("header");
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const kindLabel = document.createElement("span");
+  kindLabel.className = "kind";
+  kindLabel.textContent = kind;
+  header.append(heading, kindLabel);
+  element.append(header);
+  return element;
+}
+function wire(label) {
+  const element = document.createElement("div");
+  element.className = "wire";
+  if (label) {
+    const span = document.createElement("span");
+    span.textContent = label;
+    element.append(span);
+  }
+  return element;
+}
+function drawRack() {
+  const rack = $("rack");
+  rack.textContent = "";
+  const nodes = dispatcher?.project.nodes ?? [];
+  if (nodes.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "Nothing loaded. Search for a plugin, or press Load to add the synth.";
+    rack.append(empty);
+    return;
+  }
+  rack.append(slot("Source", "impulse or keyboard", "source"));
+  for (const node of nodes) {
+    rack.append(wire(node === nodes[0] ? "" : "audio"));
+    const entry = dispatcher.engineNode(node.id);
+    const profile = entry?.profile;
+    const element = slot(node.label ?? node.pluginIri, (profile?.roles ?? []).map(compact).join(", "), "plugin");
+    const remove = document.createElement("button");
+    remove.className = "remove";
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${node.label ?? "plugin"}`);
+    remove.addEventListener("click", () => {
+      const result = dispatcher.apply([{ op: "removeNode", id: node.id }]);
+      if (!result.ok) log(result.message, "error");
+      else {
+        panels.delete(node.id);
+        log(`removed ${node.label}`);
+      }
+    });
+    element.querySelector("header").append(remove);
+    if (profile) {
+      let panel = panels.get(node.id);
+      if (!panel) {
+        panel = createPanel(document, profile, (symbol, value) => {
+          const applied = dispatcher.setParameter(node.id, symbol, value);
+          if (applied.ok) panel.update(symbol, applied.value);
+        });
+        panels.set(node.id, panel);
+      }
+      panel.element.querySelector("h3")?.remove();
+      element.append(panel.element);
+      if ((profile.accepts ?? []).some((signal) => signal.includes("Midi"))) {
+        const keyboard = createKeyboard(document, {
+          first: 48,
+          octaves: 2,
+          onNote: (bytes) => {
+            dispatcher.sendEvents(node.id, [{
+              frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
+              bytes
+            }]);
+          }
+        });
+        element.append(keyboard.element);
+      }
+    }
+  }
+  rack.append(wire("audio"), slot("Output", "speakers", "output"));
 }
 async function loadPlugin(input) {
   const d = await ensureRunning();
@@ -20636,33 +20883,22 @@ async function loadPlugin(input) {
     return;
   }
   const { nodeId, entry } = result;
-  log(`loaded ${entry.profile.label}: ${entry.profile.ports.length} parameters, latency ${entry.ready.latencyFrames} frames`, "ok");
-  const panel = createPanel(document, entry.profile, (symbol, value) => {
-    const applied = d.setParameter(nodeId, symbol, value);
-    if (applied.ok) panel.update(symbol, applied.value);
-  });
-  panel.element.dataset.node = nodeId;
-  $("panels").append(panel.element);
-  for (const [symbol, value] of d.project.node(nodeId).settings) panel.update(symbol, value);
-  if (lastNodeId) {
+  log(`loaded ${entry.profile.label}`, "ok");
+  const nodes = d.project.nodes;
+  const previous = nodes[nodes.length - 2];
+  if (previous) {
+    const produces = dispatcher.engineNode(previous.id)?.profile.produces ?? [];
+    const kind = produces.some((s) => s.includes("Midi")) && !produces.includes(AUDIO2) ? MIDI : AUDIO2;
     const chained = d.apply([{
       op: "addConnection",
-      from: { node: lastNodeId, portIndex: 0 },
+      from: { node: previous.id, portIndex: 0 },
       to: { node: nodeId, portIndex: 0 },
-      signalKind: AUDIO2
+      signalKind: kind
     }]);
-    if (chained.ok) log(`connected ${lastNodeId} -> ${nodeId}`, "ok");
-    else log(chained.message, "error");
+    if (!chained.ok) log(chained.message, "error");
   }
-  if (!source) {
-    source = makeSource(engine.context);
-    log("source started");
-  }
-  source.disconnect();
-  const firstNode = d.engineNode(d.project.nodes[0].id);
-  source.connect(firstNode.node, 0, 0);
-  engine.get(entry.id).node.connect(engine.context.destination);
-  lastNodeId = nodeId;
+  engine.get(entry.id).node.connect(analyser);
+  drawRack();
   window.__jigdaw = { dispatcher: d, engine };
 }
 function renderResults(results, query) {
@@ -20670,45 +20906,42 @@ function renderResults(results, query) {
   box.textContent = "";
   if (results.length === 0) {
     const empty = document.createElement("p");
-    empty.className = "results-note";
+    empty.className = "note";
     empty.textContent = `Nothing matched ${query}.`;
     box.append(empty);
     return;
   }
   const loadable = results.filter((r) => r.web).length;
   const note = document.createElement("p");
-  note.className = "results-note";
-  note.textContent = `${results.length} found, ${loadable} of them loadable here. The rest are real plugins this host cannot run: they are native, and the catalogue knows about them anyway.`;
+  note.className = "note";
+  note.textContent = `${results.length} found, ${loadable} loadable here. The rest are native plugins the catalogue knows about.`;
   box.append(note);
   for (const result of results) {
     const row = document.createElement("div");
     row.className = "result";
-    const name = document.createElement("span");
+    const name = document.createElement("div");
     name.className = "name";
     name.textContent = result.label ?? result.iri;
-    row.append(name);
     if (result.web) {
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = "web";
-      row.append(badge);
+      badge.textContent = " web";
+      name.append(" ", badge);
     }
-    const meta = document.createElement("span");
+    row.append(name);
+    const meta = document.createElement("div");
     meta.className = "meta";
-    meta.textContent = [result.vendor, result.roles.join(", "), result.formats.join(", ")].filter(Boolean).join(" \xB7 ");
+    meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
     row.append(meta);
     if (result.web) {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = "Load";
-      button.addEventListener("click", () => {
-        $("iri").value = result.homepage ?? result.iri;
-        loadPlugin($("iri").value).catch(() => {
-        });
-      });
+      button.addEventListener("click", () => loadPlugin(result.homepage ?? result.iri).catch(() => {
+      }));
       row.append(button);
     } else {
-      const why = document.createElement("span");
+      const why = document.createElement("div");
       why.className = "native";
       why.textContent = "native only";
       row.append(why);
@@ -20722,36 +20955,44 @@ async function search() {
   const params = new URLSearchParams();
   if (text) params.set("q", text);
   if (facet) {
-    const [name, value] = facet.split("=");
-    params.set(name, value);
+    const [k, v] = facet.split("=");
+    params.set(k, v);
   }
   params.set("limit", "25");
-  if (![...params.keys()].some((k) => k !== "limit")) {
+  if (!text && !facet) {
     log("type something to search for, or pick a filter");
     return;
   }
-  log(`searching the catalogue for ${text || facet}`);
   try {
-    const response = await fetch(new URL(`catalogue/search?${params}`, document.baseURI));
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
-    renderResults(body.results, text || facet);
-    log(`${body.results.length} result(s)`, "ok");
+    const results = await browserCatalogue().search({
+      text,
+      limit: 25,
+      ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
+    });
+    renderResults(results, text || facet);
+    log(`${results.length} result(s)`, "ok");
   } catch (error2) {
     log(`search failed: ${error2.message}`, "error");
   }
 }
-$("searchbar").addEventListener("submit", (event) => {
-  event.preventDefault();
+$("searchbar").addEventListener("submit", (e) => {
+  e.preventDefault();
   search();
 });
-$("load").addEventListener("click", () => {
-  loadPlugin($("iri").value.trim()).catch((error2) => log(error2.message, "error"));
+$("loadbar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  loadPlugin($("iri").value.trim()).catch(() => {
+  });
 });
-$("iri").addEventListener("keydown", (event) => {
-  if (event.key === "Enter") $("load").click();
+$("play").addEventListener("click", () => play().catch((error2) => log(error2.message, "error")));
+$("stop").addEventListener("click", stop);
+$("tempo").addEventListener("change", async () => {
+  const d = await ensureRunning();
+  const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);
+  if (!result.ok) log(result.message, "error");
 });
-log("ready. Enter a plugin IRI and press Load. Load twice to chain two plugins.");
+drawRack();
+log("ready. Load the synth and press a key, or search for a plugin.");
 window.__jigdawLoad = loadPlugin;
 /*! Bundled license information:
 

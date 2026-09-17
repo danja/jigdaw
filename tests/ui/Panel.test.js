@@ -148,11 +148,25 @@ describe('the page on a phone', () => {
   })
 
   it('does not zoom the page in when a text input takes focus on iOS', () => {
-    // Safari zooms when a focused input has a font size below 16px, and the
-    // page does not zoom back out afterwards.
-    const rule = /input\[type=text\][^}]*font-size:\s*(\d+)px/.exec(page())
-    expect(rule, 'no font-size on the text input').not.toBeNull()
-    expect(Number(rule[1])).toBeGreaterThanOrEqual(16)
+    // Safari zooms when a focused input has a font size below 16px, and does
+    // not zoom back out afterwards.
+    //
+    // Every rule that both mentions an input and sets a font size is checked,
+    // rather than one named selector. The first version of this looked for
+    // `input[type=text]` specifically and went quiet the moment the stylesheet
+    // was rewritten to use a class: the rule was right, the population was
+    // wrong, which is the recurring shape in MISTAKES.md.
+    const rules = [...page().matchAll(/([^{}]+)\{([^}]*)\}/g)]
+    let checked = 0
+    for (const [, selector, body] of rules) {
+      if (!/\binput\b|\bselect\b|\btextarea\b/.test(selector)) continue
+      const size = /font-size:\s*(\d+(?:\.\d+)?)px/.exec(body)
+      if (!size) continue
+      checked += 1
+      expect(Number(size[1]), `${selector.trim()} sets ${size[1]}px, which makes iOS zoom`)
+        .toBeGreaterThanOrEqual(16)
+    }
+    expect(checked, 'no input rule set a font size, so this checked nothing').toBeGreaterThan(0)
   })
 
   it('gives buttons a touch-sized target', () => {

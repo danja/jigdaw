@@ -30,6 +30,25 @@ one does.
 
 **Blocks:** nothing, but until someone does it the browser half is unverified.
 
+## Updating a deployment
+
+```sh
+# On the server, in /home/github/jigdaw
+git pull
+sudo systemctl restart jigdaw
+```
+
+**The restart is not optional, and forgetting it fails in a confusing way.** Static files are
+read from disk on every request, so a pull changes the page, the bundle, the profiles and the
+WebAssembly immediately. `bin/serve.js` is loaded once when the process starts, so any new
+route in it does not exist until the service is restarted.
+
+The symptom is a new interface calling an endpoint the old server has never heard of. It
+showed up as `search failed: Unexpected token 'o', "not found: "... is not valid JSON`, which
+is the page trying to parse a plain-text 404 as JSON.
+
+If nginx configuration changed as well, reload nginx too. `nginx -t` first.
+
 ## 2. Mint a web plugin format term
 
 `trn:WebAudio` is used by `examples/reference-profile.ttl` and does not exist. The formats in

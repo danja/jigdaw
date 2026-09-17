@@ -105,7 +105,15 @@ Everything in the runbook has been validated locally against real nginx in a con
 proxying to the real server. `deploy/nginx/check.sh` runs that validation, and it fails on
 things `nginx -t` cannot see.
 
-## Two traps this configuration is built around
+## Three traps this configuration is built around
+
+**A pull is not a deploy.** Static files are read from disk on every request, so pulling
+changes the page, the bundle, the profiles and the WebAssembly at once. `bin/serve.js` is
+loaded when the process starts, so a new route in it needs `systemctl restart jigdaw`. The
+failure mode is the worst kind: a new interface talking to an old server, which looks like
+the new feature is broken rather than absent.
+
+
 
 **The trailing slash on `proxy_pass`.** `proxy_pass http://127.0.0.1:6011/;` strips the
 `/jigdaw/` prefix, so the application serves at its own root and is identical in development
