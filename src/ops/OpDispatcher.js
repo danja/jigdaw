@@ -201,19 +201,31 @@ export class OpDispatcher {
     return { ...result, nodeId, entry }
   }
 
-  /** Set a parameter. Goes to the model and the AudioParam, never a message. */
+  /**
+   * Set a parameter. Goes to the model and the AudioParam, never a message.
+   *
+   * The clamp is asked for before the write rather than corrected after it. The
+   * engine clamps to the declared range and the model must record what was
+   * actually applied, not what was asked for, per messaging.md 2.3: a surface
+   * renders what it is told, not what it requested. Writing the asked-for value
+   * and then writing the clamped one was two revisions for one edit, and the
+   * second went straight to the project, around this dispatcher's own gate.
+   */
   setParameter (nodeId, symbol, value) {
-    const result = this.apply([{ op: 'setSetting', node: nodeId, symbol, value }])
+    const engineId = this.#nodeIds.get(nodeId)
+    let applied = value
+    if (engineId && this.#engine) {
+      try {
+        applied = this.#engine.clampParameter(engineId, symbol, value)
+      } catch (error) {
+        return { ok: false, kind: 'change', message: error.message }
+      }
+    }
+
+    const result = this.apply([{ op: 'setSetting', node: nodeId, symbol, value: applied }])
     if (!result.ok) return result
 
-    let applied = value
-    const engineId = this.#nodeIds.get(nodeId)
-    if (engineId && this.#engine) applied = this.#engine.setParameter(engineId, symbol, value)
-
-    // The engine clamps to the declared range, so the model records what was
-    // actually applied rather than what was asked for. messaging.md 2.3: a
-    // surface renders what it is told, not what it requested.
-    if (applied !== value) this.#project.apply([{ op: 'setSetting', node: nodeId, symbol, value: applied }])
+    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied)
 
     this.#emit({ type: 'parameter', nodeId, symbol, value: applied })
     return { ...result, value: applied }
@@ -270,9 +282,14 @@ export class OpDispatcher {
         continue
       }
 
+      // An endpoint names its port exactly one way, and a symbol names a
+      // parameter rather than an input. Passing portIndex ?? 0 for one of those
+      // wired it to audio input zero, which the model allows, the shapes
+      // enforce, connection_add exposes as toParameter, and nothing delivered.
       this.#engine.link(from, to, {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
+        toParameter: connection.to.portSymbol ?? null,
         delayFrames: delayFor.get(connection.id) ?? 0
       })
     }

@@ -98,9 +98,30 @@ export class Engine {
    * delay node is owned here and torn down with the link, so a recompile
    * cannot leave one behind feeding silence into a mix.
    */
-  link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0 } = {}) {
+  /**
+   * Connect one node to another, or to one of its parameters.
+   *
+   * `toParameter` names an AudioParam by its lv2:symbol, and is what an endpoint
+   * carrying jig:portSymbol means. Web Audio sums a connection into a parameter
+   * on top of that parameter's own value, which is the modulation the project
+   * format has been able to express since it was written and which nothing
+   * honoured: the symbol was ignored and the signal was connected to audio input
+   * zero instead, silently and audibly.
+   *
+   * A parameter takes no input index, so toInput is not consulted for one.
+   */
+  link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
     const source = this.get(fromId).node
-    const destination = toId === 'output' ? this.#context.destination : this.get(toId).node
+    let destination
+    if (toParameter !== null) {
+      const entry = this.get(toId)
+      destination = entry.node.parameters?.get(toParameter)
+      if (!destination) {
+        throw new Error(`${entry.profile.label} has no parameter "${toParameter}" to modulate`)
+      }
+    } else {
+      destination = toId === 'output' ? this.#context.destination : this.get(toId).node
+    }
     const targetInput = toId === 'output' ? 0 : toInput
 
     if (delayFrames > 0) {
@@ -112,12 +133,14 @@ export class Engine {
       const delay = this.#context.createDelay(Math.max(seconds * 2, 1))
       delay.delayTime.value = seconds
       source.connect(delay, fromOutput, 0)
-      delay.connect(destination, 0, targetInput)
+      if (toParameter !== null) delay.connect(destination)
+      else delay.connect(destination, 0, targetInput)
       this.#links.push({ fromId, toId, delay })
       return
     }
 
-    source.connect(destination, fromOutput, targetInput)
+    if (toParameter !== null) source.connect(destination, fromOutput)
+    else source.connect(destination, fromOutput, targetInput)
     this.#links.push({ fromId, toId, delay: null })
   }
 
@@ -145,14 +168,31 @@ export class Engine {
    * contract section 5.1 and messaging.md section 1.5, because two paths for
    * one value arrive at different times with no defined precedence.
    */
+  /**
+   * What a value would become, without applying it.
+   *
+   * Separate from setParameter so a caller can record the value it is going to
+   * apply before applying it. Writing the asked-for value and then correcting it
+   * is two edits to the model for one edit by the person, which an undo stack
+   * then has to unpick.
+   */
+  clampParameter (id, symbol, value) {
+    const entry = this.get(id)
+    // Against the profile rather than against the live AudioParam, because the
+    // profile is the single declaration the range comes from and the parameter
+    // map is derived from it. Contract section 5.1.
+    const port = entry.profile.ports?.find(p => p.symbol === symbol)
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`)
+    return Math.min(port.maximum, Math.max(port.minimum, value))
+  }
+
   setParameter (id, symbol, value) {
     const entry = this.get(id)
     const param = entry.node.parameters.get(symbol)
     if (!param) {
       throw new Error(`${entry.profile.label} has no parameter "${symbol}"`)
     }
-    const port = entry.profile.ports.find(p => p.symbol === symbol)
-    const clamped = port ? Math.min(port.maximum, Math.max(port.minimum, value)) : value
+    const clamped = this.clampParameter(id, symbol, value)
     param.setValueAtTime(clamped, this.#context.currentTime)
     return clamped
   }

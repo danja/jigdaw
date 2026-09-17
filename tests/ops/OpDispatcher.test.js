@@ -36,6 +36,11 @@ function fakeEngine ({ latency = 0, failWith = null } = {}) {
     post (id, message) { this.calls.push(['post', id, message]) },
     clearLinks () { this.links = [] },
     link (from, to, options = {}) { this.links.push({ from, to, ...options }) },
+    clampParameter (id, symbol, value) {
+      const port = this.get(id).profile.ports.find(p => p.symbol === symbol)
+      if (!port) throw new Error(`no parameter "${symbol}"`)
+      return Math.min(port.maximum, Math.max(port.minimum, value))
+    },
     setParameter (id, symbol, value) {
       this.calls.push(['setParameter', id, symbol, value])
       return Math.min(1, Math.max(0, value))
@@ -229,6 +234,35 @@ describe('setParameter', () => {
 
     const result = d.setParameter(nodeId, 'mix', 99)
     expect(result.value).toBe(1)
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(1)
+  })
+
+  it('is one revision for one edit, even when the value is clamped', async () => {
+    // It used to write the asked-for value, then write the clamped one straight
+    // to the project, around this dispatcher's own compile gate. Two revisions
+    // for one movement of one slider, which an undo stack then has to unpick.
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI)
+
+    const before = d.revision
+    d.setParameter(nodeId, 'mix', 0.4)
+    expect(d.revision - before, 'a value inside the range').toBe(1)
+
+    const middle = d.revision
+    d.setParameter(nodeId, 'mix', 99)
+    expect(d.revision - middle, 'a value that had to be clamped').toBe(1)
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(1)
+  })
+
+  it('never asks the engine to apply a value it did not record', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI)
+    d.setParameter(nodeId, 'mix', 99)
+    // The model and the AudioParam must have been given the same number.
+    const applied = engine.calls.filter(c => c[0] === 'setParameter').map(c => c[3])
+    expect(applied).toEqual([1])
     expect(d.project.node(nodeId).settings.get('mix')).toBe(1)
   })
 
