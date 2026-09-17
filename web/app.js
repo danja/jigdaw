@@ -290,6 +290,8 @@ function drawRack () {
         element.append(keyboard.element)
       }
     }
+
+    rack.append(element)
   }
 
   rack.append(wire('audio'), slot('Output', 'speakers', 'output'))

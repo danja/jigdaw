@@ -55,8 +55,21 @@ class OfflinePort {
     this.posted = []
   }
 
-  postMessage (message) {
+  postMessage (message, transfer = []) {
     this.posted.push(message)
+
+    // A real AudioWorklet port silently drops a message carrying a
+    // WebAssembly.Module: it is serializable only within an agent cluster and
+    // a worklet is outside the page's. The fake used to pass one through
+    // happily, which is why a contract requiring exactly that passed every
+    // test here and failed on the first page load. Measured in Chrome,
+    // 2026-09-17.
+    if (message && typeof message === 'object') {
+      for (const value of Object.values(message)) {
+        if (value instanceof WebAssembly.Module) return
+      }
+    }
+    void transfer
     // Delivered asynchronously, as a real MessagePort would, so nothing can
     // accidentally depend on synchronous delivery.
     queueMicrotask(() => this.peer?.onmessage?.({ data: message }))

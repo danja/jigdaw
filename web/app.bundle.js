@@ -13483,14 +13483,14 @@ var PluginLoader = class {
   #parse;
   #validator;
   #capabilities;
-  #compile;
+  #validate;
   #processorUrlFor;
   /**
    * @param fetch       fetch implementation
    * @param parse       (text, baseIRI) => Promise<dataset>
    * @param validator   ShapeValidator, or null to skip shape validation
    * @param capabilities Set of capability IRIs this host offers
-   * @param compile     bytes => Promise<WebAssembly.Module>
+   * @param validate    bytes => boolean, a cheap check before posting
    */
   constructor({
     // Bound, not taken by reference. A browser's fetch must be called with the
@@ -13501,7 +13501,7 @@ var PluginLoader = class {
     parse,
     validator = null,
     capabilities = detectCapabilities(),
-    compile = (bytes) => WebAssembly.compile(bytes),
+    validate = (bytes) => WebAssembly.validate(bytes),
     processorUrl = null
   } = {}) {
     if (typeof fetch2 !== "function") throw new Error("PluginLoader needs a fetch implementation");
@@ -13510,7 +13510,7 @@ var PluginLoader = class {
     this.#parse = parse;
     this.#validator = validator;
     this.#capabilities = capabilities;
-    this.#compile = compile;
+    this.#validate = validate;
     this.#processorUrlFor = processorUrl;
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
@@ -13593,16 +13593,13 @@ var PluginLoader = class {
    */
   async instantiate(profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
     const processorBytes = await this.fetchVerified(profile.processor, { kind: "processor" });
-    let compiledModule = null;
+    let moduleBytes = null;
     if (profile.module) {
-      const moduleBytes = await this.fetchVerified(profile.module, { kind: "module" });
-      try {
-        compiledModule = await this.#compile(moduleBytes);
-      } catch (cause) {
+      moduleBytes = await this.fetchVerified(profile.module, { kind: "module" });
+      if (!this.#validate(moduleBytes)) {
         throw new LoadError(
           STEPS.compileModule,
-          `the WebAssembly module at ${profile.module.location} did not compile: ${cause.message}`,
-          { cause }
+          `the file at ${profile.module.location} is not valid WebAssembly`
         );
       }
     }
@@ -13643,12 +13640,12 @@ var PluginLoader = class {
         { cause }
       );
     }
-    const ready = await this.#init(node, compiledModule, granted, context, profile);
+    const ready = await this.#init(node, moduleBytes, granted, context, profile);
     const descriptors = parameterDescriptors(profile.ports);
     return { node, ready, descriptors };
   }
   /** Post init and await ready. Contract section 3.1 step 7. */
-  #init(node, compiledModule, granted, context, profile) {
+  #init(node, moduleBytes, granted, context, profile) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         node.port.onmessage = null;
@@ -13669,13 +13666,14 @@ var PluginLoader = class {
           reject(new LoadError(STEPS.ready, `${message.phase ?? "instantiate"}: ${message.message}`));
         }
       };
+      const buffer = moduleBytes ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength) : null;
       node.port.postMessage({
         type: "init",
-        module: compiledModule,
+        module: buffer,
         capabilities: granted,
         sampleRate: context.sampleRate,
         quantum: profile.renderQuantum ?? 128
-      });
+      }, buffer ? [buffer] : []);
     });
   }
   /**
@@ -19342,6 +19340,17 @@ function noteExplicitId(counters, prefix, counterKey, id) {
   const minted = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
   if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]));
 }
+function isLoadableIRI(value) {
+  let url;
+  try {
+    url = new URL(String(value));
+  } catch {
+    return false;
+  }
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
+}
 var connectionKey = (c3) => `${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
 var cloneState = (state) => ({
   nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
@@ -19351,8 +19360,8 @@ var cloneState = (state) => ({
 var OPERATIONS = {
   addNode(state, change, counters) {
     if (!change.pluginIri) throw new Error("needs a pluginIri");
-    if (!/^https:\/\//.test(change.pluginIri)) {
-      throw new Error(`pluginIri must be a dereferenceable https IRI: ${change.pluginIri}`);
+    if (!isLoadableIRI(change.pluginIri)) {
+      throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`);
     }
     const id = change.id ?? `node-${++counters.node}`;
     if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
@@ -20870,6 +20879,7 @@ function drawRack() {
         element.append(keyboard.element);
       }
     }
+    rack.append(element);
   }
   rack.append(wire("audio"), slot("Output", "speakers", "output"));
 }

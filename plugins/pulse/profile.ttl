@@ -52,7 +52,7 @@
     jig:location <pulse-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "pulse" ;
-    jig:integrity "sha384-B+ZopHDxoo+/o0LZDBopUS1nR781z723v1kSjPpRv8pKPpS7D3N1gFraUqSVCJno" .
+    jig:integrity "sha384-fZtQJjxQJqbNP/ksoVliyrPmWTLZFNt1kK5zNatone/A4HU/cXI0gfQ3kJn9ff7k" .
 
 <#waveform>
     a lv2:InputPort , lv2:ControlPort ;

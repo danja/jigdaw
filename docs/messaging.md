@@ -45,16 +45,25 @@ or a wall-clock time.
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `init` | `{ module, capabilities, sampleRate, quantum, state? }` | `module` is a `WebAssembly.Module`, already compiled by the host. Sent once |
+| `init` | `{ module, capabilities, sampleRate, quantum, state? }` | `module` is an `ArrayBuffer` of WebAssembly bytes, transferred. Sent once |
 | `events` | `{ events: [{ frame, bytes }] }` | `bytes` is a `Uint8Array` of one MIDI message |
 | `transport` | `{ playing, frame, beat, beatsPerFrame, tempo, timeSignature, loop? }` | Sent when anything in it changes, and at least once before playback |
 | `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token |
 | `dispose` | `{}` | Release everything. No further messages will be sent |
 
-`init` carries a compiled `WebAssembly.Module` rather than bytes or a URL. It is
-structured-cloneable and carries the already-compiled code, so the processor instantiates it
-synchronously and compilation never touches the audio thread. `AudioWorkletGlobalScope` has
-no `fetch` and the processor MUST NOT attempt one.
+`init` carries bytes rather than a compiled `WebAssembly.Module` or a URL.
+
+Bytes because a `WebAssembly.Module` posted to an `AudioWorklet` is silently never delivered:
+`postMessage` does not throw, nothing arrives, and the load fails on a timeout. A `Module` is
+serializable only within an agent cluster and a worklet is outside the page's. Measured in
+Chrome, 2026-09-17.
+
+Not a URL because `AudioWorkletGlobalScope` has no `fetch`, and because the host has already
+verified these exact bytes against the profile's digest. Fetching again would verify one
+response and execute another.
+
+The processor compiles them synchronously with `new WebAssembly.Module(bytes)`. The 4 KB
+limit on synchronous compilation applies to the main thread, not to a worklet.
 
 `capabilities` is the resolved set from contract section 2, as an array of capability IRIs.
 A plugin that declared `jig:prefers` reads its fallback decision from here rather than

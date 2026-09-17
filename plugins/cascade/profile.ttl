@@ -52,7 +52,7 @@
     jig:location <cascade-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "cascade" ;
-    jig:integrity "sha384-YLtzr98CosvD+wmCsbnzXhIe91kHpgi+zgdGvCvKGPku2JeHIusGj/G+ncSt3fiJ" .
+    jig:integrity "sha384-TYHnDqjNPQdg8XkEuESH8ZPjNejrz28TxHxYbNv8uhUkqO1HvQYYQqVduCBaEeA6" .
 
 <#mix>
     a lv2:InputPort , lv2:ControlPort ;

@@ -19,7 +19,7 @@ export class PluginLoader {
   #parse
   #validator
   #capabilities
-  #compile
+  #validate
   #processorUrlFor
 
   /**
@@ -27,7 +27,7 @@ export class PluginLoader {
    * @param parse       (text, baseIRI) => Promise<dataset>
    * @param validator   ShapeValidator, or null to skip shape validation
    * @param capabilities Set of capability IRIs this host offers
-   * @param compile     bytes => Promise<WebAssembly.Module>
+   * @param validate    bytes => boolean, a cheap check before posting
    */
   constructor ({
     // Bound, not taken by reference. A browser's fetch must be called with the
@@ -38,7 +38,7 @@ export class PluginLoader {
     parse,
     validator = null,
     capabilities = detectCapabilities(),
-    compile = bytes => WebAssembly.compile(bytes),
+    validate = bytes => WebAssembly.validate(bytes),
     processorUrl = null
   } = {}) {
     if (typeof fetch !== 'function') throw new Error('PluginLoader needs a fetch implementation')
@@ -47,7 +47,7 @@ export class PluginLoader {
     this.#parse = parse
     this.#validator = validator
     this.#capabilities = capabilities
-    this.#compile = compile
+    this.#validate = validate
     this.#processorUrlFor = processorUrl
   }
 
@@ -150,18 +150,16 @@ export class PluginLoader {
   async instantiate (profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
     const processorBytes = await this.fetchVerified(profile.processor, { kind: 'processor' })
 
-    let compiledModule = null
+    let moduleBytes = null
     if (profile.module) {
-      const moduleBytes = await this.fetchVerified(profile.module, { kind: 'module' })
-      try {
-        // Compiled on this thread. A WebAssembly.Module is structured
-        // cloneable and carries the already compiled code, so the processor
-        // instantiates synchronously and never awaits. Contract section 3.3.
-        compiledModule = await this.#compile(moduleBytes)
-      } catch (cause) {
+      moduleBytes = await this.fetchVerified(profile.module, { kind: 'module' })
+
+      // Validated here, not compiled. Validation is cheap and gives an error
+      // naming the module, rather than a generic instantiation failure from
+      // inside the worklet where there is less context to report.
+      if (!this.#validate(moduleBytes)) {
         throw new LoadError(STEPS.compileModule,
-          `the WebAssembly module at ${profile.module.location} did not compile: ${cause.message}`,
-          { cause })
+          `the file at ${profile.module.location} is not valid WebAssembly`)
       }
     }
 
@@ -201,7 +199,7 @@ export class PluginLoader {
         { cause })
     }
 
-    const ready = await this.#init(node, compiledModule, granted, context, profile)
+    const ready = await this.#init(node, moduleBytes, granted, context, profile)
 
     // Derived here so a descriptor mismatch is reported against the profile
     // rather than surfacing later as a missing AudioParam.
@@ -211,7 +209,7 @@ export class PluginLoader {
   }
 
   /** Post init and await ready. Contract section 3.1 step 7. */
-  #init (node, compiledModule, granted, context, profile) {
+  #init (node, moduleBytes, granted, context, profile) {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         node.port.onmessage = null
@@ -232,13 +230,21 @@ export class PluginLoader {
         }
       }
 
+      // Bytes, never a compiled WebAssembly.Module. A Module posted to an
+      // AudioWorklet is silently never delivered: postMessage does not throw,
+      // nothing arrives, and this promise times out ten seconds later naming
+      // nothing useful. Contract section 3.3.
+      const buffer = moduleBytes
+        ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength)
+        : null
+
       node.port.postMessage({
         type: 'init',
-        module: compiledModule,
+        module: buffer,
         capabilities: granted,
         sampleRate: context.sampleRate,
         quantum: profile.renderQuantum ?? 128
-      })
+      }, buffer ? [buffer] : [])
     })
   }
 

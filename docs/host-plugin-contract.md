@@ -31,9 +31,18 @@ and MUST return the plugin's profile. There is no separate registry, no identifi
 and no install step: the IRI is the name, the metadata is what the name returns, and
 installation is having fetched it.
 
-`http:` IRIs MUST NOT be used. A page serving a JigDAW host is served over TLS, and a
-browser refuses mixed content, so an `http:` plugin is unreachable in practice as well as
-unsafe in principle.
+`http:` IRIs MUST NOT be used, **except on loopback**, where `http://localhost`,
+`http://127.0.0.1` and `http://[::1]` MUST be accepted.
+
+Away from loopback, a page serving a JigDAW host is served over TLS and a browser refuses
+mixed content, so an `http:` plugin is unreachable in practice as well as unsafe in
+principle.
+
+The loopback exception is not a relaxation. A browser already treats `http://localhost` as a
+secure context, because it cannot be intercepted, and grants it every other secure-context
+feature for that reason. Refusing it would mean the only way to develop a plugin is to deploy
+it, which is the opposite of what a local host is for. This was found by running the host on
+localhost and watching it refuse its own plugins.
 
 Rationale, since a registry is the reflex and will be proposed again: a registry makes the
 registry's operator the arbiter of what exists. Dereferenceable IRIs mean a plugin author
@@ -140,8 +149,7 @@ A host MUST perform the following in order, and MUST abort at the first failure:
 5. `await audioContext.audioWorklet.addModule(processorUrl)`.
 6. Construct an `AudioWorkletNode` using the processor's `jig:registeredName`, with
    `numberOfInputs`, `numberOfOutputs` and `outputChannelCount` taken from the profile.
-7. Compile the module with `WebAssembly.compile()`, post the resulting
-   `WebAssembly.Module` to the processor, and await its ready message (section 3.3).
+7. Post the module's **bytes** to the processor and await its ready message (section 3.3).
 8. Only then connect the node into the graph.
 
 A plugin MUST NOT be connected into the audio graph before step 7 completes. A processor
@@ -162,19 +170,33 @@ MUST be refused. A host MUST NOT offer an option to skip verification. The profi
 code it names need not share an origin, and an unverified profile is an instruction to
 execute whatever currently sits at a URL.
 
-### 3.3 WebAssembly is compiled on the audio thread's terms
+### 3.3 WebAssembly is compiled inside the worklet
 
-The host MUST compile the module with `WebAssembly.compile()` on the main thread and post
-the resulting `WebAssembly.Module` to the processor. The processor MUST instantiate it
-synchronously with `new WebAssembly.Instance(module)` inside its constructor or on first
-message, and MUST post a ready message when its instance and all its buffers exist.
+The host MUST post the module's bytes, as an `ArrayBuffer`, and SHOULD transfer rather than
+copy them. The processor MUST compile them synchronously with `new WebAssembly.Module(bytes)`
+and instantiate with `new WebAssembly.Instance(module)`, and MUST post a ready message once
+its instance and all its buffers exist.
 
-A `WebAssembly.Module` is structured-cloneable and carries the already-compiled code, so
-this keeps compilation off the audio thread without the processor awaiting anything. The
-`init` and `ready` messages are specified in [messaging.md](messaging.md) section 1.
+**A host MUST NOT post a compiled `WebAssembly.Module` to an `AudioWorklet`.** An earlier
+version of this document required exactly that, on the reasoning that a `Module` carries
+already-compiled code and would keep compilation off the audio thread. It does not work.
+Measured in Chrome on 2026-09-17: `port.postMessage({ module })` does not throw, and the
+message is never delivered. The processor waits for an `init` that never arrives and the load
+fails ten seconds later with a timeout that names nothing useful. A `WebAssembly.Module` is
+serializable only within an agent cluster, and an `AudioWorklet` is outside the page's.
 
-A processor MUST NOT call `WebAssembly.instantiate()`, `fetch()`, `import()` or any other
-asynchronous or network operation. `AudioWorkletGlobalScope` deliberately has no `fetch`,
+The synchronous compile is deliberate and is allowed here. The 4 KB limit on
+`new WebAssembly.Module()` applies to the main thread, not to a worklet: a 227 KB module
+compiles synchronously inside one without complaint, measured the same day.
+
+The `init` and `ready` messages are specified in [messaging.md](messaging.md) section 1.
+
+A host MAY call `WebAssembly.validate()` on the bytes before posting them, which is cheap and
+gives a precise error naming the module rather than a generic instantiation failure from
+inside the worklet.
+
+A processor MUST NOT call `fetch()`, `import()` or any other network operation, and SHOULD
+NOT await anything on the path to becoming ready. `AudioWorkletGlobalScope` deliberately has no `fetch`,
 and a plugin discovering this at run time is a plugin that was written against the wrong
 model.
 

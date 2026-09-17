@@ -230,7 +230,7 @@ describe('PluginLoader.instantiate', () => {
     const added = []
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse,
-      compile: async () => ({ fakeModule: true })
+      validate: () => true
     })
 
     const { node, ready, descriptors } = await loader.instantiate(
@@ -246,29 +246,30 @@ describe('PluginLoader.instantiate', () => {
     expect(descriptors.map(d => d.name)).toContain('mix')
   })
 
-  it('posts the compiled module rather than the bytes', async () => {
-    // Contract section 3.3. A WebAssembly.Module carries already compiled code,
-    // so the processor instantiates synchronously and compilation never
-    // touches the audio thread.
+  it('posts bytes, never a compiled module', async () => {
+    // Contract section 3.3. A WebAssembly.Module posted to an AudioWorklet is
+    // silently never delivered, so the load times out naming nothing useful.
+    // Measured in Chrome on 2026-09-17.
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
       await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
     const loader = new PluginLoader({
-      fetch: fakeFetch(await routesFor()), parse, compile: async () => ({ fakeModule: true })
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })
     const { node } = await loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
     const init = node.port.posted.find(m => m.type === 'init')
-    expect(init.module).toEqual({ fakeModule: true })
+    expect(init.module).toBeInstanceOf(ArrayBuffer)
+    expect(init.module.byteLength).toBe(MODULE_BYTES.length)
     expect(init.sampleRate).toBe(48000)
   })
 
-  it('reports a module that does not compile against the module, not the processor', async () => {
+  it('reports invalid WebAssembly against the module, not the processor', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
       await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse,
-      compile: async () => { throw new Error('unexpected opcode') }
+      validate: () => false
     })
     const error = await loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
       .catch(e => e)
@@ -282,7 +283,7 @@ describe('PluginLoader.instantiate', () => {
       await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
     patched.processor = { ...patched.processor, registeredName: 'wrong' }
     const loader = new PluginLoader({
-      fetch: fakeFetch(await routesFor()), parse, compile: async () => ({})
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })
     const error = await loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
       .catch(e => e)
@@ -295,7 +296,7 @@ describe('PluginLoader.instantiate', () => {
     const patched = patchDigests(profile,
       await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
     const loader = new PluginLoader({
-      fetch: fakeFetch(await routesFor()), parse, compile: async () => ({})
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })
     class FailingNode extends FakeNode {
       constructor (...args) { super(...args); this.port.reply = { type: 'error', phase: 'instantiate', message: 'out of memory' } }

@@ -109,8 +109,14 @@ behind the existing nginx. Verified live: every URL returns the right status and
 both profiles validate against the shapes, and the digests in the live profiles match the
 bytes served. `deploy/` holds the nginx fragment, the systemd unit and `check.sh`.
 
-**Remaining: verification in a real browser.** The page has never been opened. The Claude in
-Chrome extension is not connected, so it cannot be driven from here. See `HUMANS.md` item 1.
+**Verified in a real browser, 2026-09-17.** The synth loads, the on-screen keyboard plays it,
+a reverb chains after it, and the reverb tail outlives the synth's release.
+
+That first run found four defects the headless suite had passed, one of them a specification
+error: contract section 3.3 required posting a compiled `WebAssembly.Module` into an
+`AudioWorklet`, which browsers silently refuse to deliver. The offline harness had been more
+permissive than a real `MessagePort`, which is what let a wrong contract pass. All four are
+in `MISTAKES.md`.
 
 Changes the phase forced on the specification, which is what a vertical slice is for:
 

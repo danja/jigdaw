@@ -57,13 +57,15 @@ class CascadeProcessor extends AudioWorkletProcessor {
     }
   }
 
-  instantiate (compiledModule, rate) {
-    if (!compiledModule) throw new Error('init carried no WebAssembly module')
+  instantiate (moduleBytes, rate) {
+    if (!moduleBytes) throw new Error('init carried no WebAssembly bytes')
 
-    // Synchronous. new WebAssembly.Instance takes a Module that already holds
-    // compiled code, so nothing is awaited and nothing blocks the thread on a
-    // network round trip that could not happen here anyway.
-    const instance = new WebAssembly.Instance(compiledModule, {})
+    // Compiled here, synchronously. The 4 KB limit on synchronous compilation
+    // applies to the main thread, not to a worklet, and a compiled Module
+    // cannot be posted into one at all: it is silently never delivered.
+    // Contract section 3.3.
+    const compiled = new WebAssembly.Module(moduleBytes)
+    const instance = new WebAssembly.Instance(compiled, {})
     const exports = instance.exports
 
     for (const name of ['jig_init', 'jig_process', 'jig_input_ptr', 'jig_output_ptr', 'jig_set_param', 'jig_max_frames', 'memory']) {

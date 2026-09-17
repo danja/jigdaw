@@ -72,6 +72,29 @@ function noteExplicitId (counters, prefix, counterKey, id) {
   if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]))
 }
 
+/**
+ * Whether a plugin IRI can be loaded.
+ *
+ * https everywhere, and http on loopback.
+ *
+ * The loopback exception is not a relaxation of the rule. A browser treats
+ * http://localhost as a secure context precisely because it cannot be
+ * intercepted, and every other secure-context feature is available there for
+ * the same reason. Without it the only way to develop a plugin is to deploy it,
+ * which is the opposite of what a local host is for.
+ */
+export function isLoadableIRI (value) {
+  let url
+  try { url = new URL(String(value)) } catch { return false }
+  if (url.protocol === 'https:') return true
+  if (url.protocol !== 'http:') return false
+  return url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname === '[::1]' ||
+    url.hostname === '::1' ||
+    url.hostname.endsWith('.localhost')
+}
+
 const connectionKey = c =>
   `${c.from.node}:${c.from.portIndex ?? c.from.portSymbol}->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
 
@@ -84,10 +107,10 @@ const cloneState = state => ({
 const OPERATIONS = {
   addNode (state, change, counters) {
     if (!change.pluginIri) throw new Error('needs a pluginIri')
-    if (!/^https:\/\//.test(change.pluginIri)) {
+    if (!isLoadableIRI(change.pluginIri)) {
       // project-format.md: what lets a project be reopened on a machine that
       // has never seen the plugin.
-      throw new Error(`pluginIri must be a dereferenceable https IRI: ${change.pluginIri}`)
+      throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`)
     }
     const id = change.id ?? `node-${++counters.node}`
     if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`)

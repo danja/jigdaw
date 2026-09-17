@@ -2,6 +2,53 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 The contract required something browsers silently refuse
+
+**What happened.** The first time the page was ever opened in a browser, every plugin load
+failed after ten seconds with `"pulse" did not report ready`. 288 tests passed, including an
+end-to-end one that loads the same plugin, compiles the same WebAssembly and renders audio
+from it.
+
+**Root cause.** Contract section 3.3 required the host to compile the module on the main
+thread and post the resulting `WebAssembly.Module` to the processor, reasoning that a Module
+carries already-compiled code and keeps compilation off the audio thread. That does not work.
+Measured in Chrome: `port.postMessage({ module })` does not throw and the message is never
+delivered. A `WebAssembly.Module` is serializable only within an agent cluster and an
+`AudioWorklet` is outside the page's. The processor waits for an `init` that never arrives.
+
+The offline harness passed it through happily, because a fake `MessagePort` that hands an
+object to a callback is not a structured clone and never could have caught this.
+
+**Prevention.** The contract now requires the bytes to be posted and compiled inside the
+worklet with `new WebAssembly.Module(bytes)`, which was verified in the same session to work
+for a 227 KB module: the 4 KB synchronous-compile limit applies to the main thread, not to a
+worklet. And `src/testing/OfflineHost.js` now drops a message carrying a `WebAssembly.Module`
+exactly as a real port does, so the old contract fails in the suite. Verified by reverting
+the fix and watching the offline tests time out the way the browser did.
+
+The general shape, and the reason this one matters most: **a fake that is more permissive
+than the real thing turns a specification error into a passing test.** When writing a
+stand-in for a platform API, ask what the real one refuses, not only what it accepts.
+
+## 2026-09-17 Three smaller things the first browser run found
+
+All three had passed every headless test.
+
+**A slot built and never appended.** `drawRack` created each plugin's element, attached its
+panel and keyboard, and never called `rack.append(element)`. The rack drew Source, two wires
+and Output with nothing between them. Nothing tests the page's own rendering, which is why
+the DOM-level guards in `tests/ui/` exist for the panel and should grow to cover the rack.
+
+**`https:` only, which forbids localhost.** `Project.addNode` required a plugin IRI to be
+`https:`, so a host running on `http://localhost:6017` refused its own plugins. A browser
+already treats loopback as a secure context because it cannot be intercepted. The rule now
+allows `http` on `localhost`, `127.0.0.1` and `[::1]`, and the contract says why. Refusing it
+meant the only way to develop a plugin was to deploy it.
+
+**`performance` does not exist in an `AudioWorkletGlobalScope`.** Not a defect in the
+project, but worth writing down: a diagnostic added to a processor that calls it throws, and
+the throw surfaces as the processor never replying.
+
 ## 2026-09-17 A browser module reaching a node builtin, twice
 
 **What happened.** `npm run build:web` failed with `Could not resolve "node:fs/promises"`

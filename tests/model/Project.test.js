@@ -89,10 +89,11 @@ describe('optimistic concurrency', () => {
 })
 
 describe('nodes', () => {
-  it('requires a dereferenceable https plugin IRI', () => {
+  it('requires a dereferenceable plugin IRI', () => {
     // What lets a project be reopened on a machine that has never seen it.
+    // Loopback is covered separately below.
     for (const bad of ['cascade', 'file:///home/danny/cascade.wasm', 'http://insecure/p/']) {
-      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow(/dereferenceable https IRI/)
+      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow(/https IRI/)
     }
   })
 
@@ -211,5 +212,32 @@ describe('minting ids alongside ids it was given', () => {
     project.apply([connect({ id: 'conn-5' })])
     const { results } = project.apply([connect({ to: { node: 'b', portIndex: 1 } })])
     expect(results[0]).toBe('conn-6')
+  })
+})
+
+describe('which plugin IRIs are loadable', () => {
+  it('accepts https anywhere', () => {
+    expect(() => project.apply([{ op: 'addNode', pluginIri: 'https://strandz.it/jigdaw/plugins/pulse/' }])).not.toThrow()
+  })
+
+  it('accepts http on loopback, which is how a plugin is developed', () => {
+    // A browser treats http://localhost as a secure context because it cannot
+    // be intercepted. Refusing it would mean the only way to develop a plugin
+    // is to deploy it.
+    for (const host of ['localhost:6017', '127.0.0.1:8748', 'jigdaw.localhost']) {
+      expect(() => project.apply([{ op: 'addNode', pluginIri: `http://${host}/plugins/pulse/` }]), host).not.toThrow()
+    }
+  })
+
+  it('refuses http anywhere else', () => {
+    for (const bad of ['http://strandz.it/p/', 'http://192.168.1.10/p/', 'http://evil.com/localhost/p/']) {
+      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow(/https IRI/)
+    }
+  })
+
+  it('refuses anything that is not a fetchable URL', () => {
+    for (const bad of ['pulse', 'file:///home/danny/p.wasm', 'javascript:alert(1)', '']) {
+      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow()
+    }
   })
 })

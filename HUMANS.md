@@ -5,30 +5,25 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Open it and confirm it makes a sound
+## 1. Pull, so the browser fixes reach the server
 
-Deployed and verified from here on 2026-09-17: every URL returns the right status and media
-type, both profiles validate against the shapes, and the sha384 digests in the live profiles
-match the bytes the site actually serves. The canonical IRI in each profile equals the URL it
-is served from, so a plugin is being fetched from its own identity.
+Verified in Chrome on 2026-09-17, against a local server: the synth loads, the keyboard
+plays it, a reverb chains after it, and the reverb tail outlives the synth's release. Peak
+output measured 0 before a note, 0.228 while held, 0 after release, and the tail decayed
+from 0.0075 at 600ms to 0.00013 at 1800ms.
 
-What no one has done is open it.
+That run found four defects that every headless test had passed, the largest being a
+specification error: the contract required posting a compiled `WebAssembly.Module` into an
+`AudioWorklet`, which browsers silently refuse. All four are fixed and recorded in
+`MISTAKES.md`, but **the live site is still running the broken version**.
 
-1. Go to <https://strandz.it/jigdaw/> and press **Load**. A repeating impulse plays through
-   Cascade and you should hear a reverb tail. Move Mix and Size and the sound should follow.
-2. Type `plugins/pulse/` into the box and press Load. That chains the synth in front of the
-   reverb.
-3. Press Load again with `plugins/cascade/` to confirm two plugins chain.
+```sh
+# On the server, in /home/github/jigdaw
+git pull
+sudo systemctl restart jigdaw
+```
 
-If anything is wrong, the page's own log pane names the step that failed, and the browser
-console carries the same text.
-
-This is the one thing the test suite cannot reach. 216 tests cover the whole load path
-headlessly, including the audio, but nothing here has ever run in a real browser: no visual
-check, no keyboard check, no confirmation that a real `AudioContext` behaves as the offline
-one does.
-
-**Blocks:** nothing, but until someone does it the browser half is unverified.
+Then hard-reload `https://strandz.it/jigdaw/`, press Load, and play the keyboard.
 
 ## Updating a deployment
 
@@ -108,15 +103,8 @@ in a browser, and the format term from item 2 carries it instead. Say if not.
 
 ## 6. Tools that would help
 
-- **The Claude in Chrome extension.** `tabs_context_mcp` reports the extension is not
-  connected, so the page at `npm run serve` cannot be driven or screenshotted from here.
-  Meanwhile the whole load path is verified headlessly by `tests/host/integration.test.js`,
-  which runs the real loader, validator, integrity check, wasm and processor against an
-  offline Web Audio stand-in. That is better verification than a screenshot, so this is a
-  convenience rather than a blocker: it would let the panel be checked visually and for
-  keyboard and contrast behaviour, which the headless path cannot see.
-
-**Blocks:** nothing. Visual and accessibility checking only.
+The Claude in Chrome extension is connected and working, which is what made the four fixes
+above possible. Nothing else is needed.
 
 ---
 

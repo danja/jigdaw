@@ -70,8 +70,13 @@ class PulseProcessor extends AudioWorkletProcessor {
 
   init (message) {
     try {
-      if (!message.module) throw new Error('init carried no WebAssembly module')
-      const instance = new WebAssembly.Instance(message.module, {})
+      if (!message.module) throw new Error('init carried no WebAssembly bytes')
+      // Compiled here, synchronously. The 4 KB limit on synchronous
+      // compilation applies to the main thread, not to a worklet, and a
+      // compiled Module cannot be posted into one at all: it is silently
+      // never delivered. Contract section 3.3.
+      const compiled = new WebAssembly.Module(message.module)
+      const instance = new WebAssembly.Instance(compiled, {})
       const exports = instance.exports
 
       for (const name of ['jig_init', 'jig_process', 'jig_output_ptr', 'jig_set_param',
