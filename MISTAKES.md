@@ -2,6 +2,39 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A keyboard 88px wider than the phone it was on
+
+**What happened.** The DAW page scrolled sideways on a phone, slightly.
+
+**Root cause.** The keyboard sized its keys in pixels: `--white-width: 30px` on a narrow
+screen, fourteen white keys, 420px in a 390px viewport. `.keyboard` carried
+`max-width: 100%`, which did nothing, because `.keys-white` is a flex row and a flex child
+with a set `width` does not shrink below it.
+
+The mobile guard in `tests/ui/` passed throughout. It checks font sizes, touch targets, the
+viewport meta and the media query, and it cannot see layout, because there is no layout in
+linkedom.
+
+**Prevention.** Keys divide the width they are given: `flex: 1 1 0` on the white keys, and
+`--white-width: calc(100% / var(--white-count))` so the absolutely positioned black keys
+follow. A stylesheet guard fails if `.key-white` gets a fixed width again.
+
+**Two further faults surfaced while measuring**, and both would have shipped:
+
+Reading `element.clientWidth` before the element was in the document returned zero, so the
+code fell back to the body width and chose two octaves where one fits. The slot is now
+appended before anything measures it.
+
+`clientWidth` **includes padding**. Counting the slot's 14px each side made a 390px phone
+look like it had room for two octaves, and the keys came out at 22.6px, under the 24px WCAG
+minimum. The width that matters is the content box.
+
+**How it was found, which is the transferable part.** The extension cannot resize the
+viewport, so the page was loaded into a 390px iframe inside a normal window and measured
+there: `documentElement.scrollWidth` against `innerWidth`, and every element whose right edge
+passed the viewport. That gives a number rather than an impression, and the same harness then
+showed the fix working at nine widths from 320 to 1280.
+
 ## 2026-09-17 A 502, from an import into a server that has no dependencies
 
 **What happened.** The site went down with a 502 immediately after a deploy. `bin/serve.js`

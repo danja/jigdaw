@@ -13,6 +13,24 @@ const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
 export const noteName = note => `${NAMES[note % 12]}${Math.floor(note / 12) - 1}`
 
+/** The smallest a key may be and still be reliably hit. WCAG 2.5.8 asks 24px. */
+export const MIN_KEY_WIDTH = 24
+
+/**
+ * How many octaves fit in a given width with usable keys.
+ *
+ * The keys divide the width they are given, so more octaves means narrower
+ * keys. At two octaves in a 320px phone they come out at 17.6px, which is under
+ * the WCAG minimum and hard to hit with a thumb. Showing fewer octaves is
+ * better than showing more keys nobody can press accurately.
+ */
+export function octavesForWidth (width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
+  for (let octaves = max; octaves > 1; octaves--) {
+    if (width / (octaves * 7) >= minKeyWidth) return octaves
+  }
+  return 1
+}
+
 /** Note on and note off, as the three bytes a MIDI source sends. */
 export const noteOn = (note, velocity = 100) => Uint8Array.from([0x90, note, velocity])
 export const noteOff = note => Uint8Array.from([0x80, note, 0])

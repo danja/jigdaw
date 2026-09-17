@@ -9,8 +9,7 @@
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
     --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --wire:#4a5464;
-    --white-width: 34px; --black-width: 22px;
-  }
+    }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
   :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
@@ -88,11 +87,18 @@
   select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:8px; font-size:16px; min-height:40px; }
 
   /* Keyboard */
+  /* The keys divide the available width rather than each taking a fixed number
+     of pixels. Fixed widths overflowed a phone by 88px: fourteen 30px keys in a
+     390px viewport, and max-width could not help because flex children with a
+     set width do not shrink. Everything here is a proportion of the container,
+     so it fits whatever it is given. */
   .keyboard { position:relative; height:110px; margin-top:10px; user-select:none; touch-action:none;
-    width:calc(var(--white-count) * var(--white-width)); max-width:100%; }
+    width:100%; max-width:520px;
+    --white-width: calc(100% / var(--white-count));
+    --black-width: calc(100% / var(--white-count) * 0.62); }
   .keys-white { display:flex; height:100%; }
   .key { padding:0; border:0; cursor:pointer; }
-  .key-white { width:var(--white-width); height:100%; background:#e8eaed; border:1px solid #9aa1ab;
+  .key-white { flex:1 1 0; min-width:0; height:100%; background:#e8eaed; border:1px solid #9aa1ab;
     border-radius:0 0 4px 4px; }
   .key-white.held { background:var(--accent); }
   .keys-black { position:absolute; top:0; left:0; height:64%; width:100%; }
@@ -114,7 +120,6 @@
     .control label { grid-column:1; } .control .value { grid-column:2; }
     .control input, .control select { grid-column:1 / -1; }
     .links { margin-left:0; }
-    :root { --white-width:30px; --black-width:19px; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
 </style>

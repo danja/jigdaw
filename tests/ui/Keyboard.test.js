@@ -112,3 +112,55 @@ describe('playing', () => {
     expect(sent.filter(m => m[0] === 0x80)).toHaveLength(2)
   })
 })
+
+describe('octavesForWidth', () => {
+  it('shows two octaves when the keys stay big enough to hit', async () => {
+    const { octavesForWidth } = await import('../../src/ui/Keyboard.js')
+    // 14 keys at 24px each needs 336px.
+    expect(octavesForWidth(400)).toBe(2)
+    expect(octavesForWidth(336)).toBe(2)
+  })
+
+  it('drops to one octave rather than showing keys nobody can press', async () => {
+    // WCAG 2.5.8 asks for 24px. Two octaves in a 320px phone gives 17.6px keys,
+    // which is what this exists to prevent.
+    const { octavesForWidth } = await import('../../src/ui/Keyboard.js')
+    expect(octavesForWidth(320)).toBe(1)
+    expect(octavesForWidth(280)).toBe(1)
+  })
+
+  it('never returns zero octaves, however narrow', async () => {
+    const { octavesForWidth } = await import('../../src/ui/Keyboard.js')
+    expect(octavesForWidth(10)).toBe(1)
+    expect(octavesForWidth(0)).toBe(1)
+  })
+
+  it('keeps every key at or above the minimum when it can', async () => {
+    const { octavesForWidth, MIN_KEY_WIDTH } = await import('../../src/ui/Keyboard.js')
+    for (const width of [280, 320, 360, 390, 430, 560, 768]) {
+      const octaves = octavesForWidth(width)
+      if (octaves > 1) {
+        expect(width / (octaves * 7), `${width}px`).toBeGreaterThanOrEqual(MIN_KEY_WIDTH)
+      }
+    }
+  })
+})
+
+describe('the keyboard stylesheet', () => {
+  it('sizes keys by proportion, not by a fixed number of pixels', async () => {
+    // Fixed widths overflowed a phone by 88px: fourteen 30px keys in a 390px
+    // viewport, and max-width could not help because flex children with a set
+    // width do not shrink.
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const page = readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+
+    const whiteKey = /\.key-white\s*\{([^}]*)\}/.exec(page)
+    expect(whiteKey, 'no .key-white rule').not.toBeNull()
+    expect(whiteKey[1], '.key-white has a fixed width again').not.toMatch(/\bwidth:\s*\d+px/)
+    expect(whiteKey[1]).toMatch(/flex:/)
+
+    const keyboard = /\.keyboard\s*\{([^}]*)\}/.exec(page)
+    expect(keyboard[1]).toMatch(/width:\s*100%/)
+  })
+})

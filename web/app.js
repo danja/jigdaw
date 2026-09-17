@@ -12,7 +12,7 @@ import { detectCapabilities, compact } from '../src/host/Capabilities.js'
 import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
-import { createKeyboard } from '../src/ui/Keyboard.js'
+import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
@@ -263,6 +263,12 @@ function drawRack () {
     })
     element.querySelector('header').append(remove)
 
+    // Appended before the panel and keyboard are built, because both measure
+    // the slot and an element outside the document has a clientWidth of zero.
+    // Reading it early fell back to the body width and chose two octaves where
+    // one fits, giving keys below the size anyone can reliably press.
+    rack.append(element)
+
     if (profile) {
       let panel = panels.get(node.id)
       if (!panel) {
@@ -278,9 +284,19 @@ function drawRack () {
 
       // An instrument gets a keyboard, so it can be played.
       if ((profile.accepts ?? []).some(signal => signal.includes('Midi'))) {
+        // Fewer octaves on a narrow screen, so the keys stay big enough to hit.
+        //
+        // The width that matters is the slot's CONTENT box, not the viewport
+        // and not clientWidth: clientWidth includes padding, and counting the
+        // slot's 14px each side made a 390px phone look like it had room for
+        // two octaves when the keys came out at 22.6px.
+        const style = getComputedStyle(element)
+        const available = element.clientWidth
+          ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+          : document.body.clientWidth
         const keyboard = createKeyboard(document, {
           first: 48,
-          octaves: 2,
+          octaves: octavesForWidth(available),
           onNote: bytes => {
             dispatcher.sendEvents(node.id, [{
               frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
@@ -291,8 +307,6 @@ function drawRack () {
         element.append(keyboard.element)
       }
     }
-
-    rack.append(element)
   }
 
   rack.append(wire('audio'), slot('Output', 'speakers', 'output'))

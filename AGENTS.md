@@ -142,6 +142,13 @@ and real-time processing.
   scrolling, touch targets of at least 44px, and a font size of at least 16px on any text
   input, because iOS zooms the page in when a smaller one takes focus. A plugin panel is
   generated, so getting this right once gets it right for every plugin.
+- **Size by proportion, not by pixels.** A fixed width on a flex child does not shrink, so
+  `max-width` on its parent will not save it: that is how the keyboard came to be 88px wider
+  than the phone it was on.
+- **Measure a narrow layout rather than reasoning about it.** The tests cannot see layout,
+  because there is no layout in a DOM without a renderer. Load the page into a narrow iframe
+  in a real browser and compare `documentElement.scrollWidth` with `innerWidth`. Note that
+  `clientWidth` includes padding, and that an element outside the document measures zero.
 
 ## Documentation rules
 

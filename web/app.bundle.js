@@ -20233,6 +20233,13 @@ var WHITE = [0, 2, 4, 5, 7, 9, 11];
 var BLACK = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
 var NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 var noteName = (note) => `${NAMES[note % 12]}${Math.floor(note / 12) - 1}`;
+var MIN_KEY_WIDTH = 24;
+function octavesForWidth(width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
+  for (let octaves = max; octaves > 1; octaves--) {
+    if (width / (octaves * 7) >= minKeyWidth) return octaves;
+  }
+  return 1;
+}
 var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
 var noteOff = (note) => Uint8Array.from([128, note, 0]);
 function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
@@ -20855,6 +20862,7 @@ function drawRack() {
       }
     });
     element.querySelector("header").append(remove);
+    rack.append(element);
     if (profile) {
       let panel = panels.get(node.id);
       if (!panel) {
@@ -20867,9 +20875,11 @@ function drawRack() {
       panel.element.querySelector("h3")?.remove();
       element.append(panel.element);
       if ((profile.accepts ?? []).some((signal) => signal.includes("Midi"))) {
+        const style = getComputedStyle(element);
+        const available = element.clientWidth ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : document.body.clientWidth;
         const keyboard = createKeyboard(document, {
           first: 48,
-          octaves: 2,
+          octaves: octavesForWidth(available),
           onNote: (bytes) => {
             dispatcher.sendEvents(node.id, [{
               frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
@@ -20880,7 +20890,6 @@ function drawRack() {
         element.append(keyboard.element);
       }
     }
-    rack.append(element);
   }
   rack.append(wire("audio"), slot("Output", "speakers", "output"));
 }
