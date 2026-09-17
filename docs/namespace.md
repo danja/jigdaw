@@ -108,3 +108,32 @@ The PURL is the identity and the host is an implementation detail. Minting under
 domain means that moving the site breaks every IRI ever published, including those written
 into other people's project files, which cannot be corrected by us. This rule is
 plugin-universe's and it is the reason its plugin IRIs survive a change of domain.
+
+## Dereferencing it from a browser needs the https form
+
+Measured 2026-09-17, following the redirects as a browser does:
+
+| Hop | Status | `Access-Control-Allow-Origin` |
+|---|---|---|
+| `http://purl.org/stuff/jigdaw/` | 302 | **absent** |
+| `https://purl.org/stuff/jigdaw/` | 307 | `*` |
+| `https://purl.archive.org/stuff/jigdaw/` | 302 | `*` |
+| `https://hyperdata.it/xmlns/jigdaw/` | 200 | `*` |
+
+Only the opening hop is a problem, and it is enough to stop the fetch: a CORS request must
+pass the check on **every** response in a redirect chain, not only the last. From a page
+served over `https:` it fails earlier still, because `http:` is mixed content and never
+leaves the browser.
+
+So a browser based consumer MUST dereference `https://purl.org/stuff/jigdaw/`. Everything
+from that hop onward carries the header and the vocabulary answers correctly.
+
+**This does not change what the IRIs are.** They are minted on `http:` because that is the
+identifier, and it is what the sibling projects do. An identifier is not a fetch instruction,
+and `http://purl.org/stuff/jigdaw/abi` and `https://purl.org/stuff/jigdaw/abi` are different
+IRIs that must not be used interchangeably in data.
+
+It is written down because the project tells plugin authors to dereference these IRIs, and an
+author who does it the obvious way from a web page gets a network error and reasonably
+concludes the vocabulary is broken. It is not: `purl.org` does not send the header on its
+plain `http:` redirect, and that hop is not ours to change.

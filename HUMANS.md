@@ -5,17 +5,26 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Pull, so the browser fixes reach the server
+## 1. Commit and deploy
 
-Verified in Chrome on 2026-09-17, against a local server: the synth loads, the keyboard
-plays it, a reverb chains after it, and the reverb tail outlives the synth's release. Peak
-output measured 0 before a note, 0.228 while held, 0 after release, and the tail decayed
-from 0.0075 at 600ms to 0.00013 at 1800ms.
+Verified in Chrome on 2026-09-17 against a local server: BassGen loads, its panel generates
+from its `lv2:port` declarations, it emits MIDI on the transport, the host routes that to
+Pulse, and Pulse sounds. Measured 34 events in 5 seconds out of BassGen, 113 into Pulse, and a
+peak of 0.273 out of Pulse. Verified natively in a real JACK host as well.
 
-That run found four defects that every headless test had passed, the largest being a
-specification error: the contract required posting a compiled `WebAssembly.Module` into an
-`AudioWorklet`, which browsers silently refuse. All four are fixed and recorded in
-`MISTAKES.md`, but **the live site is still running the broken version**.
+That run found three defects no test had: the host never offered `jig:MidiOut` so it refused
+its own plugin, connecting a plugin with no audio outputs threw, and the transport's time
+signature was read as a pair where it is sent as an object. All three are fixed, guarded and
+recorded in `MISTAKES.md`.
+
+**The live site does not have any of it**, including `jig:Abi2`, the MIDI work and BassGen.
+
+```sh
+# On your machine, in the repository
+npm run build
+npm test
+git add -A && git commit && git push
+```
 
 ```sh
 # On the server, in /home/github/jigdaw
@@ -23,7 +32,8 @@ git pull
 sudo systemctl restart jigdaw
 ```
 
-Then hard-reload `https://strandz.it/jigdaw/`, press Load, and play the keyboard.
+Nothing has been committed for either of the last two sessions, so this is a large change.
+`git status` currently lists 44 changed or new files.
 
 ## Updating a deployment
 
@@ -97,7 +107,8 @@ lands on the site root and 404s.
 ### Also worth knowing
 
 `sparql.plugin-universe.com` returns **two** `Access-Control-Allow-Origin` headers, one from
-Fuseki echoing the request origin and one added by nginx. A browser rejects that outright, so
+Fuseki echoing the request origin and one added by nginx. Re-measured 2026-09-17 and still
+true: a request with `Origin: https://strandz.it` comes back with both that origin and `*`. A browser rejects that outright, so
 no browser application can query that endpoint, although `curl` works. It is the same
 duplicate-header fault `deploy/nginx/jigdaw.conf` was built to avoid, and the same fix:
 `proxy_hide_header Access-Control-Allow-Origin;` in that location, or drop the nginx

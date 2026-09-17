@@ -13403,6 +13403,10 @@ function detectCapabilities(env = globalThis) {
     // Always provided by the host itself rather than by the platform.
     trn2.HostTransport,
     jig2.MidiEvents,
+    // Collecting what a plugin emits and routing it onward. Separate from
+    // MidiEvents because they are separate services and a host may do one and
+    // not the other: EventRouter.observe is what makes this one true here.
+    jig2.MidiOut,
     jig2.Persistence,
     jig2.OfflineRender
   ]);
@@ -13628,8 +13632,9 @@ var PluginLoader = class {
     }
     let node;
     try {
+      const driven = profile.audioOutputs === 0 && profile.audioInputs === 0;
       node = new AudioWorkletNode(context, name, {
-        numberOfInputs: profile.audioInputs,
+        numberOfInputs: driven ? 1 : profile.audioInputs,
         numberOfOutputs: profile.audioOutputs,
         outputChannelCount: profile.audioOutputs > 0 ? Array(profile.audioOutputs).fill(profile.outputChannels) : void 0,
         parameterData: {},
@@ -13639,6 +13644,7 @@ var PluginLoader = class {
           quantum: profile.renderQuantum ?? 128
         }
       });
+      if (driven) node.jigdawNeedsDriving = true;
     } catch (cause) {
       throw new LoadError(
         STEPS.constructNode,
@@ -19172,8 +19178,15 @@ var Engine = class {
       this.#context,
       { AudioWorkletNode: this.#nodeClass }
     );
+    let driver = null;
+    if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
+      driver = this.#context.createConstantSource();
+      driver.offset.value = 0;
+      driver.connect(node, 0, 0);
+      driver.start();
+    }
     const id = nextId();
-    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted };
+    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted, driver };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -19181,6 +19194,10 @@ var Engine = class {
   remove(id) {
     const entry = this.get(id);
     try {
+      if (entry.driver) {
+        entry.driver.stop();
+        entry.driver.disconnect();
+      }
       entry.node.disconnect();
       entry.node.port.postMessage({ type: "dispose" });
     } catch {
@@ -20923,7 +20940,9 @@ async function loadPlugin(input) {
     }]);
     if (!chained.ok) log(chained.message, "error");
   }
-  engine.get(entry.id).node.connect(analyser);
+  if (engine.get(entry.id).node.numberOfOutputs > 0) {
+    engine.get(entry.id).node.connect(analyser);
+  }
   drawRack();
   window.__jigdaw = { dispatcher: d, engine };
 }

@@ -32,6 +32,10 @@ export function detectCapabilities (env = globalThis) {
     // Always provided by the host itself rather than by the platform.
     trn.HostTransport,
     jig.MidiEvents,
+    // Collecting what a plugin emits and routing it onward. Separate from
+    // MidiEvents because they are separate services and a host may do one and
+    // not the other: EventRouter.observe is what makes this one true here.
+    jig.MidiOut,
     jig.Persistence,
     jig.OfflineRender
   ])

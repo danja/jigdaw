@@ -183,7 +183,7 @@ class BassgenProcessor extends AudioWorkletProcessor {
       if (typeof t.tempo === 'number') { view.setFloat64(8, t.tempo, true); valid |= VALID_BPM }
       if (typeof t.beat === 'number') {
         view.setFloat64(16, t.beat, true)
-        const perBar = t.timeSignature?.[0] ?? 4
+        const perBar = t.timeSignature?.beatsPerBar ?? 4
         const bars = Math.floor(t.beat / perBar)
         view.setFloat64(24, bars * perBar, true)
         valid |= VALID_BEAT
@@ -193,9 +193,12 @@ class BassgenProcessor extends AudioWorkletProcessor {
         view.setInt32(40, Math.floor((t.beat % 1) * 960), true)
         valid |= VALID_BBT
       }
-      if (t.timeSignature) {
-        view.setInt32(44, t.timeSignature[0], true)
-        view.setInt32(48, t.timeSignature[1], true)
+      // An object with named fields, which is what Transport.messageAt sends.
+      // Reading it as a pair would silently give a meter of undefined, and the
+      // bar numbering that depends on it would be wrong rather than absent.
+      if (typeof t.timeSignature?.beatsPerBar === 'number') {
+        view.setInt32(44, t.timeSignature.beatsPerBar, true)
+        view.setInt32(48, t.timeSignature.beatUnit ?? 4, true)
         valid |= VALID_METER
       }
       if (typeof t.frame === 'number') {

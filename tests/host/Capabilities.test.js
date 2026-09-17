@@ -72,3 +72,67 @@ describe('explainMissing', () => {
     expect(compact('https://other.example/Thing')).toBe('https://other.example/Thing')
   })
 })
+
+describe('the host offers what its own plugins ask for', () => {
+  // The paired-file rule, applied to the thing it keeps catching. A capability
+  // is minted in vocabs/jigdaw.ttl, required by a profile, and enforced by the
+  // shapes, and none of that makes the host offer it. jig:MidiOut went through
+  // all three and the host still refused BassGen, which was found by loading it
+  // in a browser rather than by any of 341 tests.
+  it('grants every capability the worked plugins require', async () => {
+    const { readdir, readFile } = await import('node:fs/promises')
+    const { resolve, join } = await import('node:path')
+    const { parseTurtleFile } = await import('../../src/validate/files.js')
+    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+
+    const root = resolve(import.meta.dirname, '../..')
+    const plugins = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
+      .filter(e => e.isDirectory()).map(e => e.name)
+    expect(plugins.length, 'there should be plugins to check').toBeGreaterThan(0)
+
+    const offered = detectCapabilities({})
+    for (const name of plugins) {
+      const file = join(root, 'plugins', name, 'profile.ttl')
+      const iri = `https://strandz.it/jigdaw/plugins/${name}/`
+      const profile = readProfile(await parseTurtleFile(file, iri), iri)
+      for (const required of profile.requires ?? []) {
+        expect(offered.has(required),
+          `${profile.label} requires ${compact(required)}, which this host does not offer`)
+          .toBe(true)
+      }
+    }
+  })
+})
+
+describe('the transport message a processor receives', () => {
+  // The shape is read by every plugin processor and written in one place. The
+  // BassGen processor read timeSignature as a pair and got undefined, because
+  // Transport.messageAt sends an object with named fields. Nothing failed: the
+  // meter was simply wrong. Found in a browser, not by any test.
+  it('carries timeSignature as named fields, not a pair', async () => {
+    const { Transport } = await import('../../src/engine/Transport.js')
+    const message = new Transport({ sampleRate: 48000 }).messageAt(0, { frame: 0 })
+    expect(message.type).toBe('transport')
+    expect(Array.isArray(message.timeSignature)).toBe(false)
+    expect(typeof message.timeSignature.beatsPerBar).toBe('number')
+    expect(typeof message.timeSignature.beatUnit).toBe('number')
+  })
+
+  it('is read that way by every processor that reads it', async () => {
+    const { readdir, readFile } = await import('node:fs/promises')
+    const { resolve, join } = await import('node:path')
+    const root = resolve(import.meta.dirname, '../..')
+    const plugins = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
+      .filter(e => e.isDirectory()).map(e => e.name)
+
+    for (const name of plugins) {
+      const file = join(root, 'plugins', name, `${name}-processor.js`)
+      const source = await readFile(file, 'utf8').catch(() => '')
+      if (!source.includes('timeSignature')) continue
+      expect(source, `${name} should read timeSignature by name`)
+        .toMatch(/timeSignature(\?)?\.(beatsPerBar|beatUnit)/)
+      expect(source, `${name} indexes timeSignature as a pair`)
+        .not.toMatch(/timeSignature(\?)?\[\d\]/)
+    }
+  })
+})

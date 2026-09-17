@@ -343,8 +343,13 @@ async function loadPlugin (input) {
     if (!chained.ok) log(chained.message, 'error')
   }
 
-  // The last node in the chain reaches the speakers.
-  engine.get(entry.id).node.connect(analyser)
+  // The last node in the chain reaches the speakers. A plugin with no audio
+  // output does not: connect() on it throws IndexSizeError, which is an
+  // uncaught exception in the middle of loading and leaves the rack undrawn.
+  // A MIDI generator is heard through whatever it drives, not by itself.
+  if (engine.get(entry.id).node.numberOfOutputs > 0) {
+    engine.get(entry.id).node.connect(analyser)
+  }
   drawRack()
   window.__jigdaw = { dispatcher: d, engine }
 }

@@ -55,7 +55,7 @@
     jig:location <bassgen-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "bassgen" ;
-    jig:integrity "sha384-xxeNDRrzUmMysIKfy7BrK8L/3yMk0FDU41kSjPlPxt/8xuYQOd5lLux554at6+c9" .
+    jig:integrity "sha384-QbzJTqhcM7WdQmxcwDLCx8x9XYNV2d6NOymy6c1GZYy5vAd5fs1koLTFLf0FZFoA" .
 
 <#root>
     a lv2:InputPort , lv2:ControlPort ;

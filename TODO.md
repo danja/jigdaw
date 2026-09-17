@@ -5,27 +5,78 @@ complete. Review periodically.
 
 ## From the inbox
 
-- [ ] **Check for unintended CORS issues across the site and plugin loading.** Two have
-      already been found and fixed the hard way: a cross-origin profile with no
-      `Access-Control-Allow-Origin` could not be loaded at all, and node and nginx both
-      adding the header produced two of them, which a browser refuses. Both were found by
-      curling through real nginx rather than by reading the config, which is how this one
-      should be done too.
+- [x] **CORS audited, 2026-09-17.** Measured through the real servers, not read from config.
 
-      Worth checking: every path the DAW fetches from (`/plugins/`, `/catalogue/search`, the
-      vocabulary at `hyperdata.it`, the PURL redirect), and a plugin hosted on a third
-      origin, which is the case the whole design rests on and the one nothing here exercises.
+      Clean: every route the page fetches returns exactly one `Access-Control-Allow-Origin: *`,
+      on the live site and locally, and preflight answers 204 with the right headers. Now
+      guarded by `tests/server/cors.test.js`, which starts `bin/serve.js` and asks it, counting
+      `rawHeaders` because node joins duplicates with a comma and would turn the exact fault
+      into a plausible string. Mutation tested by adding a second header and by removing it.
 
-- [ ] **Serve the WebMCP tool surface over HTTP, so a local agent can drive the DAW.**
-      `src/mcp/` has the eleven tools and `src/mcp/adapter.js` binds them to
-      `navigator.modelContext` or the page. That reaches an agent inside the browser and
-      nothing outside it. An HTTP MCP endpoint would let a local model connect.
+      **The cross-origin case was exercised for the first time.** A plugin served from
+      `localhost:6027` loaded into a page served from `127.0.0.1:6026`, a genuinely different
+      origin, and played a note: fetched, digest verified, worklet registered cross-origin,
+      WebAssembly instantiated, peak 0.2284 held and 0 released. The identity and retrieval
+      split held: the profile kept its canonical `https://strandz.it/...` IRI while its module
+      and processor were rebased onto the origin it was actually fetched from. This is the case
+      the whole design rests on and nothing had ever run it.
 
-      The hard part is not the transport. Every operation goes through one `OpDispatcher`
-      against a project model that lives in the page, so an endpoint outside the browser has
-      no dispatcher to call. Decide first whether the endpoint proxies into an open page or
-      whether the model moves, because that is an architecture decision and not a protocol
-      one. See `docs/webmcp.md` and the operation boundary in `docs/architecture.md`.
+      An origin that forgets the header fails correctly: *Failed to fetch. If the profile is on
+      another origin, it must be served with Access-Control-Allow-Origin.* The real error first
+      and CORS as a conditional suggestion, which is the corrected wording from `MISTAKES.md`.
+
+      Two findings, neither ours to fix, both recorded below.
+
+- [ ] **`http://purl.org/stuff/jigdaw/` cannot be dereferenced by a browser.** The namespace is
+      minted on `http:`, and that first hop redirects to `https://purl.org/...` **without**
+      `Access-Control-Allow-Origin`. Every later hop has it and the vocabulary itself answers
+      correctly, so only the opening redirect is the problem. From a page served over `https:`
+      it fails earlier still, as mixed content.
+
+      This does not make the IRI wrong: it is an identifier, and minting on `http:` is the
+      convention the sibling projects follow. It does mean **a browser based consumer must
+      dereference the `https://purl.org/stuff/jigdaw/` form**, which works end to end with CORS
+      all the way. Say so in `docs/namespace.md` and in the published plugin author guide,
+      because an author who follows the advice to dereference will hit this and conclude the
+      vocabulary is broken.
+
+      Measured 2026-09-17. `hyperdata.it/xmlns/jigdaw/` serves the current vocabulary including
+      `jig:Abi2`, with one correct header.
+
+- [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
+
+      **First, try inverting the direction.** The page already has everything: `registerTools`
+      returns a surface with the eleven tools, their schemas, and `call(name, input)` that
+      normalises a throw into a result. A local model with an HTTP API is reachable from the
+      page, so the page can run the agent loop itself: read `jigdaw.mcp.tools` as the tool
+      list, POST to the model, call `jigdaw.mcp.call` with what comes back. No new endpoint, no
+      new listener, and nothing outside the browser can reach the session. Ollama and llama.cpp
+      both answer on loopback and both send permissive CORS, so this works today.
+
+      **If the agent must be the caller**, a relay, never a second implementation. `bin/serve.js`
+      gains `GET /mcp/events` as an SSE stream and `POST /mcp/result`; the page connects,
+      receives `{id, name, input}`, calls `jigdaw.mcp.call`, and posts the result back. An MCP
+      client POSTs to `/mcp`, the server parks the request until the page answers. SSE and POST
+      rather than a WebSocket because node has a WebSocket client and no server, and
+      `bin/serve.js` is guarded to node builtins only: a dependency there breaks deployment.
+      The page posts its tool list on connect so `tools/list` needs no round trip.
+
+      **What it costs, which is the part to decide on.**
+
+      - It only works while a page is open. The DAW *is* the page, and there is no session
+        without one. An agent that should run unattended wants something else entirely.
+      - Two open pages are two sessions. Needs a session id, or first-one-wins stated plainly.
+      - **Security is the real objection.** A loopback endpoint that can drive the DAW is
+        reachable by every process on the machine, and by any website through DNS rebinding: a
+        public page resolving its own name to 127.0.0.1 can POST to it, and CORS blocking the
+        *response* does not help, because the edit has already happened. Bind to loopback,
+        require a bearer token printed at startup, and reject any request carrying an `Origin`
+        that is not the DAW's own. Doing this without a token would be a bad idea.
+
+      **What would be a bad idea: moving the model out of the page.** The audio graph cannot
+      leave the browser, so a model in node means the model and the engine are on opposite
+      sides of a wire, which is two sources of truth for the thing `docs/architecture.md` keeps
+      as one. Refuse that even though it is the obvious way to get a headless agent.
 
 ## Namespaces
 

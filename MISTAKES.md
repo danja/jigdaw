@@ -2,6 +2,64 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A diagnostic command that kills the shell running it, twice
+
+**What happened.** `pkill -f 'bin/jigdaw-adapter'` was used to clear a stray process before a
+test run. The pattern matched the shell's own command line, which contains that string, so the
+shell killed itself: exit 144, no output, and a log file that was empty because the thing it
+was meant to capture never started. It cost an hour of looking for a fault in a plugin that
+was working. It was diagnosed, written up here, and then **done again** three hours later with
+`pkill -f "PORT=6027"`, for the same reason.
+
+**Root cause.** `pkill -f` matches against the full command line of every process, including
+the one issuing it. Writing the pattern down as a lesson did not help, because the second time
+the pattern looked nothing like the first and the rule was remembered as being about that
+specific string rather than about `-f`.
+
+**Prevention.** Do not use `pkill -f` from a shell whose command line contains the pattern.
+Kill by exact process name, `pkill -x jigdaw-adapter`, or by the port, which is what the
+process actually holds:
+
+```sh
+pid=$(ss -lptn "sport = :6027" | grep -oP 'pid=\K[0-9]+' | head -1) && kill "$pid"
+```
+
+**The general shape.** A rule stated as an example gets remembered as the example. This one is
+about `-f`, not about any particular pattern, and the way to notice it is that a command which
+exits 144 with no output has almost certainly killed its own shell.
+
+## 2026-09-17 A capability minted, required and enforced, and never offered
+
+**What happened.** `jig:MidiOut` was added to the vocabulary, required by BassGen's profile,
+and enforced by a SHACL shape that refuses a MIDI producer without it. The native adapter ran
+it end to end. The browser refused to load it: *BassGen requires jig:MidiOut, which this host
+does not offer.* The capability existed in four places and was offered in none.
+
+**Root cause.** `src/host/Capabilities.js` holds a literal list of what the host provides, and
+nothing connects that list to the capabilities plugins ask for. Minting a term, requiring it
+and validating it are three separate acts, and none of them makes a host able to do the thing.
+The negotiation behaved correctly: it refused a plugin the host genuinely could not serve. The
+defect was that the host could serve it and had not said so.
+
+341 tests passed. It took one page load to find, which is the same lesson as the last browser
+run and the reason that run happens.
+
+**Prevention.** `tests/host/Capabilities.test.js` walks `plugins/` and asserts that every
+`trn:requires` of every worked profile is in `detectCapabilities`. Mutation tested by
+withdrawing `jig:MidiOut`, which reproduces the browser's message as an assertion failure. The
+guard walks the plugin directory rather than a list, so a plugin added later is covered
+without anyone remembering to add it.
+
+**Also found in the same run.** `web/app.js` connected every loaded plugin to the analyser, and
+`connect()` on a node with no outputs throws `IndexSizeError`. A MIDI generator threw in the
+middle of loading. And the BassGen processor read `timeSignature` as a pair while
+`Transport.messageAt` sends `{ beatsPerBar, beatUnit }`, so its meter was silently undefined.
+Both are one shape: a thing that is true of every plugin so far, written as if true of all.
+
+**Not a defect, recorded so it is not chased twice.** The level meter read zero throughout.
+It is driven by `requestAnimationFrame`, and the tab was hidden, where rAF does not fire.
+Measuring a page from outside it does not make the page's own animation run.
+
 ## 2026-09-17 Every slice of the block was told it was the same moment
 
 **What happened.** The adapter runs a chain in slices of at most the module's `jig_max_frames`,
