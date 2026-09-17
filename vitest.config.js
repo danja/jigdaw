@@ -15,7 +15,8 @@ export default defineConfig({
       'tests/ui/**/*.test.js',
       'tests/model/**/*.test.js',
       'tests/compiler/**/*.test.js',
-      'tests/ops/**/*.test.js'
+      'tests/ops/**/*.test.js',
+      'tests/engine/**/*.test.js'
     ]
   }
 })

@@ -2,6 +2,25 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A node dropping events while nobody was listening
+
+**What happened.** `EventRouter` accumulated the counts a processor reports when its event
+queue overflows, and a test flooding a real instrument with 700 notes saw the processor drop
+188 and say so, while `router.droppedFor()` reported zero.
+
+**Root cause.** The router attached its listener inside `setRoutes`, so it heard from a node
+only once that node had an outgoing MIDI route. Overflow arrives on the same channel as
+outgoing events, so a node with nothing wired to its MIDI output was never listened to at
+all. The condition for hearing a report was confused with the condition for forwarding one.
+
+**Prevention.** `observe()` is now public and the dispatcher calls it when a plugin loads,
+not when it is wired. An instrument dropping notes is worth knowing about whether or not
+anything is listening to it.
+
+The general shape, which is the second time this week: a rule about routing is not a rule
+about listening. When one method sets up two things, ask whether they really share a
+condition.
+
 ## 2026-09-16 Latency stopped at the edge of a feedback loop
 
 **What happened.** `compileGraph` computed accumulated latency over the graph with every

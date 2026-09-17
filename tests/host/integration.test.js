@@ -215,3 +215,162 @@ suite('a graph of real plugins', () => {
     expect(result.compiled.totalLatency).toBe(512)
   })
 })
+
+const PULSE = 'https://strandz.it/jigdaw/plugins/pulse/'
+const pulseDir = resolve(root, 'plugins/pulse')
+const pulseBuilt = existsSync(resolve(pulseDir, 'pulse.wasm'))
+const midiSuite = pulseBuilt ? describe : describe.skip
+
+midiSuite('MIDI into a real instrument', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  const loaderFor = () => new PluginLoader({
+    fetch: directoryFetch({ [PULSE]: pulseDir, [CANONICAL]: pluginDir }),
+    parse: parseText,
+    validator,
+    capabilities: detectCapabilities({}),
+    processorUrl: (bytes, url) =>
+      pathToFileURL(resolve(url.includes('pulse') ? pulseDir : pluginDir,
+        url.includes('pulse') ? 'pulse-processor.js' : 'cascade-processor.js')).href
+  })
+
+  // Message delivery hops through the ports, so let the queue drain on a real
+  // tick rather than a microtask checkpoint.
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0))
+
+  const noteOn = (frame, note = 69, velocity = 100) => ({ frame, bytes: Uint8Array.from([0x90, note, velocity]) })
+  const noteOff = (frame, note = 69) => ({ frame, bytes: Uint8Array.from([0x80, note, 0]) })
+  // render() returns the output's channels, so take the first one.
+  const rmsOf = channels => {
+    const channel = channels[0]
+    return Math.sqrt(channel.reduce((sum, v) => sum + v * v, 0) / channel.length)
+  }
+
+  async function loadPulse () {
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: loaderFor(), AudioWorkletNode: OfflineWorkletNode })
+    const dispatcher = new OpDispatcher({ engine })
+    const added = await dispatcher.addPlugin(PULSE)
+    expect(added.ok, added.message).toBe(true)
+    return { context, engine, dispatcher, added }
+  }
+
+  it('requires the MIDI capability, and the host grants it', async () => {
+    const { added } = await loadPulse()
+    expect(added.entry.profile.requires).toContain('http://purl.org/stuff/jigdaw/MidiEvents')
+    expect(added.entry.granted).toContain('http://purl.org/stuff/jigdaw/MidiEvents')
+  })
+
+  it('is silent until a note arrives', async () => {
+    const { added } = await loadPulse()
+    for (let i = 0; i < 4; i++) {
+      expect(rmsOf(added.entry.node.render())).toBe(0)
+    }
+  })
+
+  it('makes sound when sent a note, and stops when the note ends', async () => {
+    // The whole of contract section 6, end to end: the host routes the event,
+    // the processor queues it, applies it by stream position, and the wasm
+    // sounds it.
+    const { dispatcher, added } = await loadPulse()
+    const node = added.entry.node
+
+    expect(dispatcher.sendEvents(added.nodeId, [noteOn(0)])).toBe(true)
+    await settle()
+
+    let peak = 0
+    for (let i = 0; i < 40; i++) peak = Math.max(peak, rmsOf(node.render()))
+    expect(peak, 'the instrument made no sound').toBeGreaterThan(0.01)
+
+    dispatcher.sendEvents(added.nodeId, [noteOff(node.frame)])
+    await settle()
+    for (let i = 0; i < 400; i++) node.render()
+    expect(rmsOf(node.render())).toBeLessThan(1e-6)
+  })
+
+  it('applies a note in the quantum that contains its frame, not before', async () => {
+    // Located by stream position. An event scheduled three quanta ahead must
+    // not sound now, and must not be lost either.
+    const { dispatcher, added } = await loadPulse()
+    const node = added.entry.node
+    const target = 128 * 3
+
+    dispatcher.sendEvents(added.nodeId, [noteOn(target)])
+    await settle()
+
+    for (let i = 0; i < 3; i++) {
+      expect(rmsOf(node.render()), `sounded early, in quantum ${i}`).toBe(0)
+    }
+    let peak = 0
+    for (let i = 0; i < 40; i++) peak = Math.max(peak, rmsOf(node.render()))
+    expect(peak).toBeGreaterThan(0.01)
+  })
+
+  it('sounds an event whose frame has already passed rather than losing it', async () => {
+    const { dispatcher, added } = await loadPulse()
+    const node = added.entry.node
+    for (let i = 0; i < 5; i++) node.render()
+
+    // Frame 0 is long gone. Moving it is better than dropping it.
+    dispatcher.sendEvents(added.nodeId, [noteOn(0)])
+    await settle()
+
+    let peak = 0
+    for (let i = 0; i < 40; i++) peak = Math.max(peak, rmsOf(node.render()))
+    expect(peak).toBeGreaterThan(0.01)
+  })
+
+  it('treats a note on with velocity zero as a note off', async () => {
+    // Every MIDI source does this, and a synth that ignores it sustains for ever.
+    const { dispatcher, added } = await loadPulse()
+    const node = added.entry.node
+    dispatcher.sendEvents(added.nodeId, [noteOn(0)])
+    await settle()
+    for (let i = 0; i < 40; i++) node.render()
+
+    dispatcher.sendEvents(added.nodeId, [noteOn(node.frame, 69, 0)])
+    await settle()
+    for (let i = 0; i < 400; i++) node.render()
+    expect(rmsOf(node.render())).toBeLessThan(1e-6)
+  })
+
+  it('reports dropped events rather than growing its queue', async () => {
+    const { dispatcher, added, engine } = await loadPulse()
+    const reports = []
+    engine.onMessage(added.entry.id, message => { if (message?.type === 'dropped') reports.push(message) })
+
+    // More than the queue holds. The processor cannot allocate, so it refuses
+    // and says how many.
+    const flood = Array.from({ length: 700 }, (_, i) => noteOn(100000 + i, 40 + (i % 40)))
+    dispatcher.sendEvents(added.nodeId, flood)
+    await settle()
+
+    expect(reports.length).toBeGreaterThan(0)
+    expect(reports[0].count).toBeGreaterThan(0)
+    expect(dispatcher.router.droppedFor(added.entry.id)).toBeGreaterThan(0)
+  })
+
+  it('routes MIDI from one node to another through the host', async () => {
+    // A MIDI connection is not an audio edge: the host carries it between two
+    // ports, which is why it must never reach connect().
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: loaderFor(), AudioWorkletNode: OfflineWorkletNode })
+    const dispatcher = new OpDispatcher({ engine })
+
+    const a = await dispatcher.addPlugin(PULSE)
+    const b = await dispatcher.addPlugin(PULSE)
+
+    const result = dispatcher.apply([{
+      op: 'addConnection',
+      from: { node: a.nodeId, portIndex: 0 },
+      to: { node: b.nodeId, portIndex: 0 },
+      signalKind: 'http://purl.org/stuff/transmissions/Midi'
+    }])
+    expect(result.ok).toBe(true)
+
+    // No audio link was made for it.
+    expect(engine.links).toEqual([])
+    expect(dispatcher.router.routes).toEqual([{ from: a.entry.id, to: b.entry.id }])
+  })
+})

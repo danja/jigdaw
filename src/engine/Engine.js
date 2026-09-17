@@ -157,15 +157,39 @@ export class Engine {
     return entry
   }
 
-  /** Watch a node for the errors a processor reports after loading. */
-  watch (id, onError) {
+  /**
+   * Register a handler for messages from a node's processor.
+   *
+   * A port has one `onmessage`, and more than one part of the host needs to
+   * hear from a processor: errors, outgoing events, dropped counts. So the
+   * engine owns the handler and fans out, rather than each subsystem
+   * overwriting the last one to register.
+   */
+  onMessage (id, handler) {
     const entry = this.get(id)
-    entry.node.port.onmessage = event => {
-      const message = event.data
-      if (message?.type === 'error') {
-        this.quarantine(id, message.message)
-        onError?.(new LoadError('process', `${entry.profile.label}: ${message.message}`))
+    if (!entry.handlers) {
+      entry.handlers = new Set()
+      entry.node.port.onmessage = event => {
+        for (const listener of entry.handlers) {
+          try { listener(event.data, entry) } catch (error) { console.error('message handler failed', error) }
+        }
       }
     }
+    entry.handlers.add(handler)
+    return () => entry.handlers.delete(handler)
+  }
+
+  /** Watch a node for the errors a processor reports after loading. */
+  watch (id, onError) {
+    return this.onMessage(id, message => {
+      if (message?.type !== 'error') return
+      this.quarantine(id, message.message)
+      onError?.(new LoadError('process', `${this.get(id).profile.label}: ${message.message}`))
+    })
+  }
+
+  /** Post a message to a node's processor. */
+  post (id, message) {
+    this.get(id).node.port.postMessage(message)
   }
 }

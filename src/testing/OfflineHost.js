@@ -93,6 +93,7 @@ export class OfflineWorkletNode {
 
     this.processor = new registered.ctor({ ...options, port: processorSide })
     this.connections = []
+    this.frame = 0
     this.outputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
     this.inputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
   }
@@ -106,6 +107,9 @@ export class OfflineWorkletNode {
 
   /** Run one render quantum. Returns the output channels. */
   render (inputChannels = null) {
+    // Advance the worklet clock, so a processor sees the same frame a real one
+    // would and events land in the quantum that contains them.
+    this.context.registry.currentFrame = this.frame
     for (let c = 0; c < this.channels; c++) {
       if (inputChannels) this.inputs[0][c].set(inputChannels[Math.min(c, inputChannels.length - 1)])
       else this.inputs[0][c].fill(0)
@@ -116,6 +120,7 @@ export class OfflineWorkletNode {
       parameters[name] = param.values
     }
     this.processor.process(this.inputs, this.outputs, parameters)
+    this.frame += QUANTUM
     return this.outputs[0]
   }
 }
@@ -125,6 +130,7 @@ export class OfflineContext {
     this.sampleRate = sampleRate
     this.currentTime = 0
     this.registry = new Map()
+    this.registry.currentFrame = 0
     this.destination = { connect () {}, disconnect () {} }
     // Enough of a DelayNode for latency compensation to be exercised offline.
     this.delays = []
@@ -161,6 +167,13 @@ export class OfflineContext {
           registry.set(name, { ctor, parameterDescriptors: ctor.parameterDescriptors ?? [] })
         }
         globalThis.sampleRate = 48000
+        // A real AudioWorkletGlobalScope exposes the frame at the start of the
+        // current quantum. Events are located against it, so without it every
+        // event in the queue looks due at once.
+        Object.defineProperty(globalThis, 'currentFrame', {
+          configurable: true,
+          get: () => registry.currentFrame ?? 0
+        })
         try {
           // Cache-busted so two loads in one process both evaluate.
           await import(`${url}${url.includes('?') ? '&' : '?'}v=${registry.size}-${Date.now()}`)

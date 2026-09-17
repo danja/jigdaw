@@ -1,0 +1,35 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/pulse/",
+  "label": "Pulse",
+  "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",
+  "vendor": "danja",
+  "registeredName": "pulse",
+  "roles": ["trn:Instrument", "trn:AudioInstrument"],
+  "accepts": ["trn:Midi"],
+  "produces": ["trn:Audio"],
+  "genres": ["Electronic", "Ambient"],
+  "cautions": ["Eight voices. A ninth note steals the oldest voice rather than being refused."],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": ["jig:MidiEvents"],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "pulse.wasm",
+    "processor": "pulse-processor.js"
+  },
+  "ports": [
+    { "symbol": "waveform", "name": "Waveform", "default": 0, "minimum": 0, "maximum": 2,
+      "scalePoints": [{ "label": "Saw", "value": 0 }, { "label": "Square", "value": 1 }, { "label": "Triangle", "value": 2 }] },
+    { "symbol": "attack", "name": "Attack", "default": 5.0, "minimum": 0.5, "maximum": 500.0, "unit": "ms" },
+    { "symbol": "release", "name": "Release", "default": 200.0, "minimum": 1.0, "maximum": 4000.0, "unit": "ms" },
+    { "symbol": "cutoff", "name": "Cutoff", "default": 6000.0, "minimum": 100.0, "maximum": 18000.0, "unit": "hz" },
+    { "symbol": "gain", "name": "Gain", "default": 0.3, "minimum": 0.0, "maximum": 1.0 }
+  ]
+}

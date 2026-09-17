@@ -14,16 +14,54 @@
 // the model describes.
 import { Project, RevisionConflict, ChangeError } from '../model/Project.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
+import { EventRouter, isMidi } from '../engine/EventRouter.js'
+import { Transport } from '../engine/Transport.js'
 
 export class OpDispatcher {
   #project
   #engine
   #listeners = new Set()
   #nodeIds = new Map()
+  #router = null
 
   constructor ({ project = new Project(), engine = null } = {}) {
     this.#project = project
     this.#engine = engine
+    if (engine) {
+      this.#router = new EventRouter({
+        engine,
+        onDropped: report => this.#emit({ type: 'dropped', ...report })
+      })
+    }
+  }
+
+  get router () { return this.#router }
+
+  /** The musical clock, built from the project so the two cannot disagree. */
+  transport (sampleRate = this.#engine?.context?.sampleRate ?? 48000) {
+    return Transport.fromProject(this.#project, sampleRate)
+  }
+
+  /**
+   * Send the transport position to every plugin.
+   *
+   * Contract section 7: a plugin derives musical timing from this and never by
+   * counting process() calls, so the host has to supply it rather than leave a
+   * plugin to infer it.
+   */
+  sendTransport (elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    if (!this.#router) return null
+    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat })
+    this.#router.broadcastTransport(message)
+    return message
+  }
+
+  /** Deliver MIDI into a node, as if from outside the graph. */
+  sendEvents (nodeId, events) {
+    const engineId = this.#nodeIds.get(nodeId)
+    if (!engineId || !this.#router) return false
+    this.#router.send(engineId, events)
+    return true
   }
 
   get project () { return this.#project }
@@ -145,6 +183,8 @@ export class OpDispatcher {
 
     const nodeId = result.results[0]
     this.#nodeIds.set(nodeId, entry.id)
+    // Listen from the moment it is loaded, not from the moment it is wired.
+    this.#router?.observe(entry.id)
     if (position) this.#project.moveNode(nodeId, position.x, position.y)
 
     this.#emit({ type: 'plugin-added', nodeId, entry })
@@ -183,18 +223,30 @@ export class OpDispatcher {
     const delayFor = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
     this.#engine.clearLinks()
 
+    const midiRoutes = []
+
     for (const connection of this.#project.connections) {
       const from = this.#nodeIds.get(connection.from.node)
       const to = this.#nodeIds.get(connection.to.node)
       // A connection between nodes that are not both loaded is in the model
       // but not yet in the audio graph, which is normal while loading.
       if (!from || !to) continue
+
+      // A MIDI connection is not an audio edge. It is the host carrying
+      // messages between two ports, so it must not reach connect().
+      if (isMidi(connection.signalKind)) {
+        midiRoutes.push({ from, to })
+        continue
+      }
+
       this.#engine.link(from, to, {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
         delayFrames: delayFor.get(connection.id) ?? 0
       })
     }
+
+    this.#router?.setRoutes(midiRoutes)
   }
 
   /** The engine node behind a model node, if it has been loaded. */

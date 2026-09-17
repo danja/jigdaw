@@ -27,6 +27,13 @@ function fakeEngine ({ latency = 0, failWith = null } = {}) {
     },
     remove (id) { this.calls.push(['remove', id]); entries.delete(id) },
     links: [],
+    handlers: new Map(),
+    onMessage (id, handler) {
+      if (!this.handlers.has(id)) this.handlers.set(id, new Set())
+      this.handlers.get(id).add(handler)
+      return () => this.handlers.get(id).delete(handler)
+    },
+    post (id, message) { this.calls.push(['post', id, message]) },
     clearLinks () { this.links = [] },
     link (from, to, options = {}) { this.links.push({ from, to, ...options }) },
     setParameter (id, symbol, value) {

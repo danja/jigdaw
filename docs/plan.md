@@ -146,10 +146,34 @@ Two bugs this phase found, both recorded in `MISTAKES.md`:
 Remaining: wiring the dispatcher into the page, so the demo is a graph rather than one
 plugin.
 
-## Phase 4. Events and transport
+## Phase 4. Events and transport. Core complete.
 
-MIDI over message ports, located by stream position and never by block index. Host transport.
-The first plugins that require `trn:HostTransport`.
+- `src/engine/Transport.js`, the musical clock. Beats to seconds and back across a tempo map,
+  looping wrapped by modulo so an hour of playback costs what a second does, and the
+  per-quantum message contract section 7 requires.
+- `src/engine/EventRouter.js`. A MIDI connection is not an audio edge: it is the host
+  carrying messages between two ports, so it never reaches `connect()`. Events are ordered by
+  frame before sending, and overflow reports are accumulated per node.
+- `src/engine/Engine.js` gained `onMessage`, which fans one port out to several listeners.
+  A port has one `onmessage` and errors, outgoing events and dropped counts all arrive on it.
+- `plugins/pulse`, an eight voice subtractive synthesiser in Rust: `no_std`, no allocator, no
+  transcendental functions, pitch from a twelve entry table and an octave shift rather than
+  `powf`. 3 KB of wasm.
+- `plugins/pulse/pulse-processor.js`, with the bounded preallocated event queue. Events are
+  applied in the quantum containing their frame, compared by range, and an event whose frame
+  has passed is applied now rather than lost.
+
+Verified end to end: a note sounds, a note off silences it, an event scheduled three quanta
+ahead does not sound early and is not lost, a note on with velocity zero is treated as a note
+off, overflow is reported rather than hidden, and a MIDI connection produces a host route and
+no audio link. The MIDI capability shape was checked against the real plugin by removing
+`trn:requires jig:MidiEvents` from it and watching validation fail.
+
+Found this phase and recorded in `MISTAKES.md`: the router listened to a node only once it
+had a route, so a node dropping events while unwired was invisible.
+
+Remaining: a plugin that requires `trn:HostTransport`, to exercise the transport against real
+DSP rather than only against its own tests.
 
 ## Phase 5. The catalogue and the namespace
 
