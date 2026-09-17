@@ -537,3 +537,29 @@ the shapes constrains a vocabulary that is not ours.
 `https://sparql.plugin-universe.com/public/query` for the distinct values actually in use
 takes one call and settles it. This is how the `trn:WebAudio` gap in TODO.md was found, and
 it was found one step too late.
+
+## 2026-09-17 The audio thread compiled the WebAssembly
+
+**What happened.** `Module::load` found the exported functions, called `jig_init`, took the
+pointers and reported ready. wasm3 compiles a function the first time it is *called*, and
+`Compile_Call` emits `op_Compile` for a callee that is not compiled yet, so everything
+`jig_process` reaches was compiled during the first `jig_process`, on the audio thread,
+allocating, inside a callback that must do neither.
+
+**Root cause.** `m3_FindFunction` compiles the function it returns, so the four exports the
+loader looks up were compiled on the loading thread. That looked like the whole answer. It
+is not: the call tree underneath them was not touched, and nothing in the loader says
+"everything reachable is now compiled" because nothing was checking.
+
+**Why it was not noticed.** The symptom is one late block at the start of playback, which is
+indistinguishable from a host still settling, and none of the tests measure a first block
+against a later one. It was found by reading wasm3's compiler while writing a second host,
+not by anything failing.
+
+**Fix.** `m3_CompileModule` after `m3_LoadModule`, which compiles every function ahead of
+time. Non-fatal on failure: a module may carry a function this build cannot compile and
+never call it, and refusing a plugin that works would be worse than the problem.
+
+**Prevention.** For anything called from an audio callback, the question is not "does this
+allocate" but "does anything it reaches allocate, the first time". A lazy runtime moves the
+cost to the first call, which is exactly the call a host makes in the worst place.

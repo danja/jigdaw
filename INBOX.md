@@ -4,6 +4,4 @@ Make a note in AGENTS.md to periodically read and integrate this.
 
 ## Items
 
-* publish profiles for the plugins that /home/danny/github/plugin-universe can read
-* give the DAW standard DAW features
-
+* add provenance to bundles, somehow support signing

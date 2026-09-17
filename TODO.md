@@ -105,24 +105,17 @@ complete. Review periodically.
 
 ## Blocking, cross-repository
 
-- [ ] **A web plugin format term.** `trn:WebAudio` is used by
-      `examples/reference-profile.ttl` and does not exist upstream. The formats currently in
-      the shared vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone,
-      confirmed by querying `https://sparql.plugin-universe.com/public/query`.
+- [x] **A web plugin format term, 2026-09-17.** `trn:WebAudio` added to plugin-universe's
+      `vocabs/trn-extensions.ttl` and to the `sh:in` list on `trn:format` in its
+      `vocabs/shapes.ttl`, and `trn:requires` there no longer insists on the `trn:` namespace,
+      which was refusing `jig:MidiEvents` and `jig:MidiOut`.
 
-      Three files have to change together, and nothing connects them:
-      1. `~/github/transmission/vocabs/profile.ttl`, or plugin-universe's
-         `vocabs/trn-extensions.ttl`, which is where `trn:PluginFormat` individuals live
-      2. plugin-universe's `vocabs/shapes.ttl`, whose `pu:PluginShape` has an `sh:in` list
-         enumerating the permitted formats
-      3. `examples/reference-profile.ttl` here, and the note in it
+      All three JigDAW profiles now conform to plugin-universe's shapes, measured with its own
+      validator; all three failed before. Both changes mutation tested, its suite at 1351
+      passing. Uncommitted in that repository: `HUMANS.md` item 2.
 
-      Until 1 and 2 are done, a JigDAW profile harvested by plugin-universe is a SHACL
-      violation. This is exactly the first row of that project's own recurring-failure
-      table, which was adding a value to a list without adding it to the `sh:in` that
-      constrains the list.
-
-      Needs the user: it is a change to two repositories and a deployed service.
+      It needed a third file, `src/contrib/Submissions.js`, which its own test found. See the
+      worked example in `AGENTS.md`.
 
 - [ ] **Decide whether platforms apply.** `pu:supportedPlatform` was assumed to have a
       `pu:Web` value. It does not, and a query for the predicate over the public endpoint
@@ -150,6 +143,21 @@ complete. Review periodically.
       same position. That is the state plugin-universe describes as invisible: terms
       written into the data and selected by no query, which is not a condition anything
       reports. Either Phase 5 uses them or they come out.
+
+## The native adapter
+
+- [ ] **`Chain::process` drops the tail of a block.** It processes
+      `min(frames, jig_max_frames())` and leaves the rest of the host's buffer as it found
+      it. Every worked plugin reports 128 frames, so a DAW at 256 or above gets one eighth
+      to one half of each block rendered and the remainder stale, and the MIDI and the
+      transport are handled once for the whole block rather than per sub-block. Transmission
+      drives `Module` directly and splits the block itself; `Chain` should do the same so the
+      adapter is right at any buffer size. Worth a test that runs a chain at 512 and checks
+      the second half of the buffer.
+- [ ] `docs/module-abi.md` does not say what a host must do when the block it is given is
+      larger than `jig_max_frames()`. It says a host must never pass more than that, which
+      leaves splitting implied rather than stated. Say it: a host processes in sub-blocks,
+      rebases event frames into each, and advances the transport across them.
 
 ## Before there is code
 

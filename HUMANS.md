@@ -28,59 +28,42 @@ git pull
 sudo systemctl restart jigdaw
 ```
 
-## Updating a deployment
+## 2. Review and commit the plugin-universe change
 
-**This one needs the restart:** `bin/serve.js` gained directory-index handling, without which
-`/jigdaw/docs/` answers 404 even though the files are there.
+**Done, in `~/github/plugin-universe`, and uncommitted.** It needs your eye because it is a
+second repository and because one part of it is a judgement rather than an addition.
 
+What changed, and why:
 
-Regenerate artefacts on your machine, never on the server:
+- `vocabs/trn-extensions.ttl`: `trn:WebAudio a trn:PluginFormat`. The addition the format
+  list was missing, in the file that already holds every other format individual and already
+  says such things should be proposed upstream to `transmission`.
+- `vocabs/shapes.ttl`: `trn:WebAudio` added to the `sh:in` list on `trn:format`.
+- `src/contrib/Submissions.js`: `'WebAudio'` added to `PLUGIN_FORMATS`. This third file was
+  not expected. Its own test binds the submission form's list to the shapes and failed the
+  moment the other two changed, which is that repository's paired-file rule working.
+- `vocabs/shapes.ttl` again, and **this one is a judgement call**: `trn:requires` no longer
+  requires the `trn:` namespace. JigDAW declares `trn:requires jig:MidiEvents` and
+  `jig:MidiOut`, which are real terms in a published dereferenceable vocabulary and exactly
+  what `trn:requires` is for. The constraint refused them while reporting only that the
+  namespace was wrong. It still requires an IRI, which is the check that catches the actual
+  mistake. Say if you would rather JigDAW expressed capabilities some other way.
 
-```sh
-npm run build        # index, vocabulary and browser bundle
-npm test
-git add -A && git commit && git push
-```
+Measured after the change: all three JigDAW profiles conform to plugin-universe's shapes,
+where all three failed before. Its own suite is 1351 tests passing, and both changes were
+mutation tested.
 
-
-```sh
-# On the server, in /home/github/jigdaw
-git pull
-sudo systemctl restart jigdaw
-```
-
-**The restart is not optional, and forgetting it fails in a confusing way.** Static files are
-read from disk on every request, so a pull changes the page, the bundle, the profiles and the
-WebAssembly immediately. `bin/serve.js` is loaded once when the process starts, so any new
-route in it does not exist until the service is restarted.
-
-The symptom is a new interface calling an endpoint the old server has never heard of. It
-showed up as `search failed: Unexpected token 'o', "not found: "... is not valid JSON`, which
-is the page trying to parse a plain-text 404 as JSON.
-
-If nginx configuration changed as well, reload nginx too. `nginx -t` first.
-
-## 2. Mint a web plugin format term
-
-`trn:WebAudio` is used by `examples/reference-profile.ttl` and does not exist. The formats in
-the shared vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone.
-
-Two files have to change together, or every JigDAW profile harvested by plugin-universe is a
-SHACL violation:
-
-- the vocabulary, in `transmission/vocabs/profile.ttl` or plugin-universe's
-  `vocabs/trn-extensions.ttl`
-- the `sh:in` list in plugin-universe's `vocabs/shapes.ttl`
-
-**Blocks:** publishing any JigDAW plugin to the catalogue.
+**Still needs you:** committing it, and deploying it, before anything is harvested.
 
 ## 3. Decide which repository owns `trn:`
 
-`trn:format`, `trn:MidiCC` and `trn:AudioSidechain` are declared in plugin-universe and
-absent from transmission, which everything calls upstream. The rule says propose extensions
-upstream; the practice has already gone the other way.
+Unchanged, and now with a concrete instance. `trn:WebAudio` has been added to
+plugin-universe's `trn-extensions.ttl`, which is where `trn:format` and every other format
+individual already live, under a comment saying they should be proposed upstream to
+`transmission` rather than maintained there. The practice has gone one way and the stated rule
+the other, for long enough that the practice is the de facto answer.
 
-**Blocks:** item 2, which needs to know where to put the term.
+**Blocks:** nothing now. It is a question about where the next term goes.
 
 ## 4. Fix `trn:` dereferencing
 
@@ -112,16 +95,53 @@ JigDAW is not blocked by it, because its search proxies through its own origin.
 
 ## 5. Confirm platforms are meaningless here
 
-`pu:supportedPlatform` has no web value, and a query for the predicate over the public
-endpoint returns nothing. My reading is that platform is meaningless for a plugin that runs
-in a browser, and the format term from item 2 carries it instead. Say if not.
+`pu:supportedPlatform` has no web value, a query for the predicate over the public endpoint
+returns nothing, and JigDAW's profiles declare none. They validate against plugin-universe's
+shapes without it, so it is optional rather than missing.
 
-**Blocks:** nothing. It is a question about whether a field should exist.
+My reading, now written into `trn-extensions.ttl` beside the new term: the platform of a web
+plugin is the browser, which is not one of the operating systems that predicate enumerates,
+and `trn:WebAudio` carries what the platform list was carrying. Say if you disagree, because
+it is now recorded as a comment in a second repository.
+
+**Blocks:** nothing.
 
 ## 6. Tools that would help
 
 The Claude in Chrome extension is connected and working, which is what made the four fixes
 above possible. Nothing else is needed.
+
+## Updating a deployment
+
+**This one needs the restart:** `bin/serve.js` gained directory-index handling, without which
+`/jigdaw/docs/` answers 404 even though the files are there.
+
+
+Regenerate artefacts on your machine, never on the server:
+
+```sh
+npm run build        # index, vocabulary and browser bundle
+npm test
+git add -A && git commit && git push
+```
+
+
+```sh
+# On the server, in /home/github/jigdaw
+git pull
+sudo systemctl restart jigdaw
+```
+
+**The restart is not optional, and forgetting it fails in a confusing way.** Static files are
+read from disk on every request, so a pull changes the page, the bundle, the profiles and the
+WebAssembly immediately. `bin/serve.js` is loaded once when the process starts, so any new
+route in it does not exist until the service is restarted.
+
+The symptom is a new interface calling an endpoint the old server has never heard of. It
+showed up as `search failed: Unexpected token 'o', "not found: "... is not valid JSON`, which
+is the page trying to parse a plain-text 404 as JSON.
+
+If nginx configuration changed as well, reload nginx too. `nginx -t` first.
 
 ---
 

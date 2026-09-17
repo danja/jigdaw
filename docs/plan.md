@@ -310,6 +310,37 @@ came back, exactly two engine nodes existed afterwards, and it played at peak 0.
 
 It found that removing a node never removed the AudioWorkletNode behind it. See MISTAKES.md.
 
+## Phase 9a. Bundles. Complete.
+
+"Install is a HTTP GET" works for as long as somebody is serving the plugin, which is not the
+same as for ever and not the same as on a machine with no network. There was no way to hand a
+plugin to a person as a file.
+
+[plugin-bundles.md](plugin-bundles.md) defines two forms, and the first turned out to exist
+already without anybody noticing: **a profile whose `jig:location` values are `data:` URIs is
+a legal profile**, and the loader reads it unchanged. `resolveLocation` leaves a `data:` URI
+alone, `fetch` reads it, and the integrity digest verifies over the decoded bytes exactly as
+over bytes from a server. The second is a `.jig` zip with `profile.ttl` at the root, which
+unpacks into a working plugin origin.
+
+Neither changes what a plugin is. Both carry the canonical IRI, and a bundle is a retrieval
+origin rather than an identity, which is the rule `rebaseLocation` already implemented for
+mirrors.
+
+- `bin/bundle.js`, no dependency: the zip container is written over `node:zlib`. Deterministic,
+  with a fixed date, for the same reason the profile writer is.
+- It verifies before it packs. A profile whose declared digest does not match the file beside
+  it is refused, because that failure is local until the bundle reaches somebody else.
+- `tests/host/bundle.test.js` loads a flattened profile through the real `PluginLoader` and
+  unpacks an archive into a directory the loader treats as an origin. Mutation tested.
+
+Measured on the worked plugins: cascade is 227 kB of wasm, 314 kB flattened and 5 kB archived.
+The two forms are for two jobs and the numbers say why.
+
+Still open, and recorded in the document rather than invented: every file in a bundle is
+tamper evident because the profile digests it, and the profile itself is not. Closing that
+needs a digest published somewhere the bundle is not, and a decision about who is trusted.
+
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads

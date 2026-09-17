@@ -20,6 +20,10 @@ struct Response {
 ///
 /// `accept` is sent as the Accept header, which is how a plugin IRI is asked
 /// for Turtle rather than the page a person would get.
+///
+/// http, https and file are understood. A file URL naming a directory reads
+/// profile.ttl inside it, so a plugin IRI keeps the trailing-slash shape it has
+/// over http, where the profile arrives by content negotiation.
 Response fetchUrl(const std::string& url, const std::string& accept = {});
 
 }  // namespace jigdaw

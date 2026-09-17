@@ -167,10 +167,18 @@ connects them.** When adding a runtime dependency on a path, a value or a list, 
 else has to agree with it and write the test that binds them. A test asserting that two
 lists match is worth more than either list being carefully reviewed.
 
-The open instance of this in JigDAW: `trn:WebAudio` does not exist upstream, and
-plugin-universe's `pu:PluginShape` has an `sh:in` list enumerating the permitted formats. A
-web format has to be added to both, in the same change, or every JigDAW profile harvested
-there is a SHACL violation. See `TODO.md`.
+That instance is now closed, and it is worth reading as a worked example. `trn:WebAudio` did
+not exist upstream and plugin-universe's `pu:PluginShape` had an `sh:in` list of permitted
+formats, so every JigDAW profile harvested there was a violation. Fixing it turned out to
+need **three** files in step, not two: the format individual in
+`plugin-universe/vocabs/trn-extensions.ttl`, the `sh:in` list in its `vocabs/shapes.ttl`, and
+`PLUGIN_FORMATS` in `src/contrib/Submissions.js`, which is the list its submission form
+offers. The third was found by a test that repository already had, binding the form's list to
+the shapes, which failed the moment the other two changed.
+
+Two lessons. The population was larger than the rule stated, which is the recurring shape of
+this failure. And the guard that caught it was written by the project that had paid for the
+mistake before.
 
 **A rule worth stating is worth a test.** A rule in this file that nothing checks will be
 broken, and nobody will notice until it has been broken many times. When adding one, ask

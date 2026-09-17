@@ -16,6 +16,7 @@
     "serve": "node bin/serve.js",
     "build:vocab": "node bin/build-vocab-site.js",
     "build:index": "node bin/build-plugin-index.js",
+    "bundle": "node bin/bundle.js",
     "build": "npm run build:index && npm run build:vocab && npm run build:web"
   },
   "dependencies": {

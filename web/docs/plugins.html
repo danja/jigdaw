@@ -210,6 +210,35 @@ does here, and a test fails if a profile drifts from its files.</p>
 profile at <code>profile.ttl</code> and point people at that; it is less elegant and it
 works.</p>
 
+<h3>Sending it to somebody</h3>
+<p>Publishing needs a server, which is not always what you have and never what a recipient
+has. A <strong>bundle</strong> is the same plugin as a file, carrying the same IRI and the
+same digests. <code>node bin/bundle.js yourplugin/</code> writes both forms:</p>
+
+<table>
+  <thead><tr><th>Form</th><th>What it is for</th></tr></thead>
+  <tbody>
+    <tr><td><code>yourplugin.ttl</code></td>
+      <td>A profile with every file inlined as a <code>data:</code> URI. One file to send, and
+      it is an ordinary profile, so any host already loads it with no special handling.
+      About a third larger than the files it carries.</td></tr>
+    <tr><td><code>yourplugin.jig</code></td>
+      <td>A zip with <code>profile.ttl</code> at the root. Keeps the bytes as bytes, so it
+      compresses and streams, and unpacking it into a web root gives a working plugin
+      origin.</td></tr>
+  </tbody>
+</table>
+
+<p>Both are only as complete as your profile. <strong>Declare every file your plugin
+fetches</strong>, as <code>jig:module</code>, <code>jig:processor</code>, <code>jig:ui</code>
+or <code>jig:asset</code>; a processor that fetches something the profile does not name cannot
+be bundled, and the bundler refuses rather than making one that fails on the other machine. It
+also checks every declared digest against the file beside it, so a stale profile is caught
+here rather than by whoever you sent it to.</p>
+
+<p>A bundle is tamper evident but not signed: the digests prove the files are the ones the
+profile names, and nothing yet proves who wrote the profile. Opening one runs their code.</p>
+
 <h3>Being found</h3>
 <p>Listing is separate from publishing: your plugin works the moment it is fetchable. To be
 findable, add it to <a href="https://plugin-universe.com/about/profiles">plugin-universe</a>,

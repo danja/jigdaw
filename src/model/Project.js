@@ -95,8 +95,16 @@ export function isLoadableIRI (value) {
     url.hostname.endsWith('.localhost')
 }
 
+// What makes two connections the same connection.
+//
+// The signal kind is part of the identity, not decoration. An audio edge and a
+// host-routed MIDI edge between the same two port coordinates are different
+// edges handled by entirely different machinery, one by Web Audio and one by the
+// event router, and a plugin that both takes MIDI and takes audio on port 0 is
+// ordinary. Leaving the kind out made the second of the two a duplicate.
 const connectionKey = c =>
-  `${c.from.node}:${c.from.portIndex ?? c.from.portSymbol}->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
+  `${c.signalKind}|${c.from.node}:${c.from.portIndex ?? c.from.portSymbol}` +
+  `->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
 
 const cloneState = state => ({
   nodes: new Map([...state.nodes].map(([id, n]) => [id, { ...n, settings: new Map(n.settings) }])),

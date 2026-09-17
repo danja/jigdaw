@@ -84,6 +84,12 @@ A `.ttl` file served as `text/plain`, which is what most static hosts and GitHub
 return, is read as a profile. The syntax is determined by looking at the content, not by
 trusting the media type.
 
+A `file:` URL is read the same way by a host that has a filesystem, and one naming a
+directory reads `profile.ttl` inside it, because an http plugin IRI ends in a slash and
+serves the profile by content negotiation while a filesystem has no such thing. That is what
+makes the `@base` rule below usable: a profile read from a checkout during development means
+what it means when it is published. A browser host cannot do this, and does not need to.
+
 **CORS is not optional.** The profile and every resource it names must be served with
 `Access-Control-Allow-Origin`. `AudioWorklet.addModule()` fetches cross-origin in CORS
 mode, so a response without the header is not merely untrusted, it is unreadable. This is
@@ -199,3 +205,15 @@ npm run validate -- yourplugin/profile.ttl        # shapes
 
 Validation is a gate, not a diagnostic. A profile that does not validate is not written to
 the store, because JigDAW ingests profiles from origins it does not control.
+
+## Sending one to somebody
+
+A profile and the files it names make a plugin, and a plugin is normally reached by
+dereferencing its IRI. [plugin-bundles.md](plugin-bundles.md) defines the two ways to hand the
+same plugin over as a file instead, for archiving, mirroring, offline installation, or simply
+sending it to a person: a flattened profile, which inlines every resource and which any host
+already reads, and a `.jig` archive, which unpacks into a working plugin origin.
+
+Both depend on the profile naming every file the plugin uses. **A plugin that fetches a
+resource its profile does not declare cannot be bundled**, and `bin/bundle.js` refuses rather
+than making one that will fail on the machine it is sent to.

@@ -120,6 +120,22 @@ std::string Module::load(const std::vector<uint8_t>& wasm, const Profile& profil
         return error;
     }
 
+    // Compile every function now, on the thread that is loading.
+    //
+    // wasm3 compiles lazily: a call to a function that has not been compiled
+    // yet compiles it there and then, on whichever thread made the call. The
+    // first jig_process therefore compiles the whole reachable call tree, and
+    // that first call is on the audio thread, where allocating is the one thing
+    // a host must never do. It is not a hypothetical: an audio callback that
+    // compiles a synthesiser is an xrun on the first note and nothing
+    // afterwards, which is exactly the shape of bug that gets blamed on the
+    // plugin.
+    //
+    // A failure here is not fatal. A module may carry a function this build
+    // cannot compile and never call it, and refusing a plugin that works is
+    // worse than the lazy compilation this is avoiding.
+    m3_CompileModule(s.module);
+
     struct Wanted { const char* name; IM3Function* into; bool required; };
     const Wanted wanted[] = {
         {"jig_init", &s.init, true},

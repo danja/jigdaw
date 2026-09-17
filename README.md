@@ -15,7 +15,8 @@ normative host and plugin contract exist, along with a validator that enforces t
 
 - [docs/host-plugin-contract.md](docs/host-plugin-contract.md) states what a host guarantees and
   what a plugin must do. Normative.
-- [docs/plugin-profiles.md](docs/plugin-profiles.md) is how to describe a plugin, and
+- [docs/plugin-profiles.md](docs/plugin-profiles.md) is how to describe a plugin,
+  [docs/plugin-bundles.md](docs/plugin-bundles.md) how to send one to somebody as a file, and
   [docs/project-format.md](docs/project-format.md) how to describe a session. A session saves
   and reopens as RDF in that format, carrying the plugin IRIs that make it portable.
 - [docs/messaging.md](docs/messaging.md), [docs/latency.md](docs/latency.md) and

@@ -28,9 +28,11 @@ find_package(Threads REQUIRED)
 target_link_libraries(jigdaw_core PUBLIC m3 Threads::Threads PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 if(JIGDAW_BUILD_TESTS)
-  # turtle and integrity need nothing. profile reads the worked plugins from the
-  # repository. chain fetches over HTTP and skips when nothing is serving.
-  foreach(name turtle integrity)
+  # turtle, integrity and fetch need nothing. profile reads the worked plugins
+  # from the repository. chain fetches over HTTP and skips when nothing is
+  # serving; chain_file runs the same test over file:// against this checkout,
+  # so the whole native path is covered with nothing running.
+  foreach(name turtle integrity fetch)
     add_executable(test_${name} tests/${name}_test.cpp)
     target_link_libraries(test_${name} PRIVATE jigdaw_core)
     add_test(NAME ${name} COMMAND test_${name})
@@ -47,6 +49,9 @@ if(JIGDAW_BUILD_TESTS)
   target_link_libraries(test_chain PRIVATE jigdaw_core)
   add_test(NAME chain COMMAND test_chain ${JIGDAW_TEST_BASE})
   set_tests_properties(chain PROPERTIES SKIP_RETURN_CODE 77)
+
+  add_test(NAME chain_file COMMAND test_chain "file://${JIGDAW_REPO}")
+  set_tests_properties(chain_file PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 if(JIGDAW_BUILD_PLUGIN)
