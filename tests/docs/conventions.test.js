@@ -13,12 +13,21 @@ import { resolve, join, dirname, extname } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
 
-// Tracked files that still exist. A rename leaves git listing the old path
+// Tracked files AND new ones that are not ignored.
+//
+// `git ls-files` alone lists only what is committed, so every new file was
+// invisible to every guard below until it was staged. That is precisely when
+// the checks are wanted: a convention is easiest to break in code that has just
+// been written. Found by adding inline SPARQL to a new module and watching the
+// guard pass.
+//
+// Files that still exist, because a rename leaves git listing the old path
 // until it is staged, and linting a path that is not there reports ENOENT
-// instead of the thing the guard is actually for.
-const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' })
-  .split('\n').filter(Boolean)
-  .filter(f => existsSync(join(root, f)))
+// instead of the thing the guard is for.
+const tracked = execFileSync(
+  'git', ['ls-files', '--cached', '--others', '--exclude-standard'],
+  { cwd: root, encoding: 'utf8' }
+).split('\n').filter(Boolean).filter(f => existsSync(join(root, f)))
 
 const read = p => readFileSync(join(root, p), 'utf8')
 
@@ -117,5 +126,25 @@ describe('generated deployment artefacts', () => {
     for (const term of ['module', 'processor', 'integrity', 'WebPlugin', 'renderQuantum', 'MidiEvents']) {
       expect(page, `jig:${term} is not on the page`).toContain(`jig:${term}`)
     }
+  })
+})
+
+describe('no inline SPARQL', () => {
+  // AGENTS.md states this rule, and a rule worth stating is worth a test.
+  // plugin-universe's version of it sat in prose from Phase 0 and reached
+  // seventeen violations across eight files before anyone counted.
+  it('keeps every query in a file under sparql/queries/', () => {
+    const KEYWORDS = /\b(SELECT|CONSTRUCT|INSERT DATA|DELETE WHERE)\b[\s\S]*\bWHERE\b/
+    const offenders = []
+    for (const file of tracked.filter(f => f.startsWith('src/') || f.startsWith('bin/'))) {
+      if (!file.endsWith('.js')) continue
+      for (const [i, line] of read(file).split('\n').entries()) {
+        // Template literals and ordinary strings both count.
+        const literals = [...line.matchAll(/`([^`]*)`|'([^']*)'|"([^"]*)"/g)]
+          .map(m => m[1] ?? m[2] ?? m[3] ?? '')
+        if (literals.some(text => KEYWORDS.test(text))) offenders.push(`${file}:${i + 1}`)
+      }
+    }
+    expect(offenders, `inline SPARQL at:\n  ${offenders.join('\n  ')}`).toEqual([])
   })
 })

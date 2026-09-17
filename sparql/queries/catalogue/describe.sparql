@@ -1,0 +1,17 @@
+# Everything about one plugin.
+#
+# Demand driven: search returns enough to choose between candidates, and this
+# is called only for the few that matter. An agent picking a reverb does not
+# need the parameter list of every delay, and returning it anyway spends the
+# context it needs for the actual task.
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX trn:  <http://purl.org/stuff/transmissions/>
+PREFIX pu:   <http://purl.org/stuff/plugin-universe/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?p ?o
+WHERE {
+  GRAPH ?graph { ${plugin} ?p ?o }
+}
+LIMIT 400

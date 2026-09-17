@@ -1,0 +1,37 @@
+# Find plugins by text and by what they do.
+#
+# Text matches the name, the description and the vendor, because a person
+# searching for "reverb" may be thinking of any of the three.
+#
+# ${filters} carries the facet clauses, built by Catalogue.js from already
+# formatted terms. Nothing is interpolated into this file as a bare string.
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX trn:  <http://purl.org/stuff/transmissions/>
+PREFIX jig:  <http://purl.org/stuff/jigdaw/>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+
+SELECT ?plugin ?label ?comment ?vendor ?homepage ?web
+       (GROUP_CONCAT(DISTINCT ?role;   separator="|") AS ?roles)
+       (GROUP_CONCAT(DISTINCT ?format; separator="|") AS ?formats)
+WHERE {
+  GRAPH ?graph {
+    ?plugin a trn:PluginProfile ;
+            rdfs:label ?label .
+    OPTIONAL { ?plugin rdfs:comment ?comment }
+    OPTIONAL { ?plugin trn:vendor ?vendor }
+    OPTIONAL { ?plugin foaf:homepage ?homepage }
+    OPTIONAL { ?plugin trn:role ?role }
+    OPTIONAL { ?plugin trn:format ?format }
+
+    # Loadable here, as opposed to merely known about. A catalogue entry that
+    # is not a jig:WebPlugin is a real plugin that this host cannot run, and
+    # saying so is more useful than hiding it.
+    BIND(EXISTS { ?plugin a jig:WebPlugin } AS ?web)
+
+    ${filters}
+  }
+}
+GROUP BY ?plugin ?label ?comment ?vendor ?homepage ?web
+ORDER BY DESC(?web) ?label
+LIMIT ${limit}

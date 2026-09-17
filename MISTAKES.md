@@ -2,6 +2,31 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 Guards that could not see new code
+
+**What happened.** A no-inline-SPARQL guard was added to `tests/docs/conventions.test.js`,
+and mutation-testing it by putting a `SELECT ... WHERE` template literal into
+`src/catalogue/Catalogue.js` produced a passing run.
+
+**Root cause.** Every guard in that file walks `git ls-files`, which lists only committed
+files. `src/catalogue/` was new and therefore invisible, along with `sparql/` and
+`tests/catalogue/`. So the em-dash rule, the path-comment rule, the broken-link check and the
+new SPARQL rule had all silently stopped applying to exactly the code most likely to break
+them: code that had just been written and not yet committed.
+
+**Prevention.** `git ls-files --cached --others --exclude-standard`, which is tracked files
+plus new ones that are not ignored. Verified by repeating the mutation and watching the guard
+fail.
+
+This is the third instance of the same shape in three days, and the shape is worth stating
+plainly: **a guard is only as wide as the list it walks, and the list is the part nobody
+re-reads.** The first was a check of the vitest include list that lived inside a suite
+governed by that list. The second was a router that listened only to nodes with routes. This
+was a linter that read only committed files. In each case the rule was right and the
+population it ran over was wrong.
+
+When adding a guard, write down what it walks and ask what is outside that set.
+
 ## 2026-09-17 A detached fetch, and an error message that blamed the wrong thing
 
 **What happened.** The deployed page failed on its first real load with

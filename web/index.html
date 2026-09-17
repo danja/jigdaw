@@ -52,6 +52,17 @@
   .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; white-space:pre-wrap; word-break:break-word; }
   .log-ok { color:var(--ok); } .log-error { color:var(--err); }
   #state { color:var(--dim); font-size:12px; }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  input[type=search] { flex:1 1 12rem; min-width:0; padding:10px 12px; background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; font-size:16px; }
+  #results { grid-column:1/-1; }
+  #results:empty { display:none; }
+  .result { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:baseline; padding:10px 12px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; background:#181b21; }
+  .result .name { font-weight:600; }
+  .result .meta { color:var(--dim); font-size:12px; flex:1 1 10rem; }
+  .result button { min-height:44px; padding:8px 14px; font-size:14px; }
+  .result .native { color:var(--dim); font-size:12px; font-style:italic; }
+  .badge { font-size:11px; padding:2px 7px; border-radius:99px; background:#2b6cb0; color:#fff; }
+  .results-note { color:var(--dim); font-size:12px; margin:4px 0 10px; }
 </style>
 </head>
 <body>
@@ -60,7 +71,22 @@
   <div class="sub">A plugin is a URL. Dereference it and it is running. <span id="state">no audio context yet</span></div>
 </header>
 <main>
+  <form class="bar" id="searchbar" role="search">
+    <label class="visually-hidden" for="q">Search for plugins</label>
+    <input type="search" id="q" placeholder="Search instruments and effects" spellcheck="false">
+    <label class="visually-hidden" for="facet">Filter by kind</label>
+    <select id="facet">
+      <option value="">Anything</option>
+      <option value="role=Instrument">Instruments</option>
+      <option value="role=AudioEffect">Effects</option>
+      <option value="accepts=Midi">Accepts MIDI</option>
+      <option value="produces=Midi">Produces MIDI</option>
+    </select>
+    <button type="submit" id="search">Search</button>
+  </form>
+  <div id="results" aria-live="polite"></div>
   <div class="bar">
+    <label class="visually-hidden" for="iri">Plugin IRI</label>
     <input type="text" id="iri" value="plugins/cascade/" spellcheck="false">
     <button id="load">Load</button>
   </div>

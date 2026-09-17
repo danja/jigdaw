@@ -170,6 +170,12 @@ broken, and nobody will notice until it has been broken many times. When adding 
 what would notice it being violated. If the answer is "a careful reader", write the check
 instead.
 
+**A guard is only as wide as the list it walks**, and the list is the part nobody re-reads.
+Three separate guards here have been right about the rule and wrong about the population:
+one read only committed files and so ignored all new code, one listened only to nodes that
+had routes, one checked a config list from inside a suite that list governed. When adding a
+guard, write down what it walks and ask what is outside that set.
+
 Corollary, learned twice: a guard that cannot run is worse than no guard, because it looks
 like coverage. **A guard must not depend on the thing it guards**, and the way to find out
 is to break the thing on purpose and watch the guard go red. One check of the vitest include

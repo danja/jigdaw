@@ -113,6 +113,12 @@ if ! grep -q 'return 303' "$here/vocab.conf"; then
   echo "check: vocab.conf does not 303 a term to its document; a 200 would assert the term is the page" >&2
   fail=1
 fi
+# The bare form without the trailing slash. The namespace IRI has one, but a
+# person types the short form and the PURL passes through whatever it is given.
+if ! grep -q 'location = /xmlns/jigdaw {' "$here/vocab.conf"; then
+  echo "check: vocab.conf does not handle /xmlns/jigdaw without its trailing slash, which is what a person types" >&2
+  fail=1
+fi
 if ! grep -q 'add_header Access-Control-Allow-Origin' "$here/vocab.conf"; then
   echo "check: vocab.conf has no CORS header; a browser cannot read the vocabulary cross-origin" >&2
   fail=1

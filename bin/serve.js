@@ -13,6 +13,7 @@ import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join, extname, normalize } from 'node:path'
+import { Catalogue, FACET_NAMES } from '../src/catalogue/Catalogue.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const port = Number(process.env.PORT ?? 8748)
@@ -95,6 +96,86 @@ pre{background:#0e1013;padding:16px;border-radius:6px;overflow:auto;font-size:12
   return serveFile(response, join(dir, 'profile.ttl'))
 }
 
+// The catalogue is queried here rather than from the page. Three reasons, and
+// the first is the one that decides it: the queries stay in files under
+// sparql/queries/, as AGENTS.md requires, instead of being bundled into the
+// browser as strings. It also means one place to cache, and it does not depend
+// on an upstream endpoint's CORS headers being right.
+const catalogue = new Catalogue({
+  endpoint: process.env.CATALOGUE_ENDPOINT ?? undefined
+})
+
+// A small cache, because a person typing into a search box produces a request
+// per keystroke and the upstream is someone else's server.
+const CACHE_TTL = 60_000
+const cache = new Map()
+
+function cached (key) {
+  const entry = cache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.at > CACHE_TTL) { cache.delete(key); return null }
+  return entry.value
+}
+
+function remember (key, value) {
+  // Bounded. An unbounded cache on a public endpoint is a memory leak with a
+  // query string for a key.
+  if (cache.size > 200) cache.delete(cache.keys().next().value)
+  cache.set(key, { at: Date.now(), value })
+}
+
+async function serveCatalogue (request, response, url) {
+  const key = url.pathname + url.search
+  const hit = cached(key)
+  if (hit) {
+    return send(response, 200, hit, { 'content-type': TYPES['.json'], 'x-cache': 'hit' })
+  }
+
+  try {
+    let result
+    if (url.pathname === '/catalogue/search') {
+      // A parameter this does not know is reported, never ignored. A silently
+      // dropped facet returns a full result set that looks like an answer:
+      // plugin-universe shipped exactly this, where ?category=reverb was
+      // quietly ignored on one listing and nothing said so.
+      const known = new Set(['q', 'limit', ...FACET_NAMES])
+      const unknown = [...url.searchParams.keys()].filter(k => !known.has(k))
+      if (unknown.length > 0) {
+        return send(response, 400, JSON.stringify({
+          error: `unknown parameter: ${unknown.join(', ')}`,
+          known: [...known]
+        }), { 'content-type': TYPES['.json'] })
+      }
+
+      const facets = {}
+      for (const name of FACET_NAMES) {
+        const value = url.searchParams.get(name)
+        if (value) facets[name] = value
+      }
+      result = {
+        results: await catalogue.search({
+          text: url.searchParams.get('q') ?? '',
+          limit: Number(url.searchParams.get('limit') ?? 30),
+          ...facets
+        })
+      }
+    } else {
+      const iri = url.searchParams.get('iri')
+      if (!iri) return send(response, 400, JSON.stringify({ error: 'describe needs an iri' }), { 'content-type': TYPES['.json'] })
+      result = await catalogue.describe(iri)
+    }
+
+    const body = JSON.stringify(result)
+    remember(key, body)
+    send(response, 200, body, { 'content-type': TYPES['.json'], 'x-cache': 'miss' })
+  } catch (error) {
+    // Named, so a failure reads as "the catalogue is down" rather than as the
+    // search being broken.
+    send(response, 502, JSON.stringify({ error: `catalogue: ${error.message}` }),
+      { 'content-type': TYPES['.json'] })
+  }
+}
+
 const server = createServer(async (request, response) => {
   if (request.method === 'OPTIONS') return send(response, 204, '')
   if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -103,6 +184,10 @@ const server = createServer(async (request, response) => {
 
   const url = new URL(request.url, `http://localhost:${port}`)
   const path = url.pathname
+
+  if (path === '/catalogue/search' || path === '/catalogue/describe') {
+    return serveCatalogue(request, response, url)
+  }
 
   if (path === '/') {
     if (await serveFile(response, join(root, 'web/index.html'))) return

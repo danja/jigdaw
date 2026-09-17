@@ -9374,13 +9374,13 @@ var require_common = __commonJS({
           }
         }
       }
-      function matchesTemplate(search, template) {
+      function matchesTemplate(search2, template) {
         let searchIndex = 0;
         let templateIndex = 0;
         let starIndex = -1;
         let matchIndex = 0;
-        while (searchIndex < search.length) {
-          if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === "*")) {
+        while (searchIndex < search2.length) {
+          if (templateIndex < template.length && (template[templateIndex] === search2[searchIndex] || template[templateIndex] === "*")) {
             if (template[templateIndex] === "*") {
               starIndex = templateIndex;
               matchIndex = searchIndex;
@@ -20311,6 +20311,86 @@ async function loadPlugin(input) {
   lastNodeId = nodeId;
   window.__jigdaw = { dispatcher: d, engine };
 }
+function renderResults(results, query) {
+  const box = $("results");
+  box.textContent = "";
+  if (results.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "results-note";
+    empty.textContent = `Nothing matched ${query}.`;
+    box.append(empty);
+    return;
+  }
+  const loadable = results.filter((r) => r.web).length;
+  const note = document.createElement("p");
+  note.className = "results-note";
+  note.textContent = `${results.length} found, ${loadable} of them loadable here. The rest are real plugins this host cannot run: they are native, and the catalogue knows about them anyway.`;
+  box.append(note);
+  for (const result of results) {
+    const row = document.createElement("div");
+    row.className = "result";
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = result.label ?? result.iri;
+    row.append(name);
+    if (result.web) {
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = "web";
+      row.append(badge);
+    }
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    meta.textContent = [result.vendor, result.roles.join(", "), result.formats.join(", ")].filter(Boolean).join(" \xB7 ");
+    row.append(meta);
+    if (result.web) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Load";
+      button.addEventListener("click", () => {
+        $("iri").value = result.homepage ?? result.iri;
+        loadPlugin($("iri").value).catch(() => {
+        });
+      });
+      row.append(button);
+    } else {
+      const why = document.createElement("span");
+      why.className = "native";
+      why.textContent = "native only";
+      row.append(why);
+    }
+    box.append(row);
+  }
+}
+async function search() {
+  const text = $("q").value.trim();
+  const facet = $("facet").value;
+  const params = new URLSearchParams();
+  if (text) params.set("q", text);
+  if (facet) {
+    const [name, value] = facet.split("=");
+    params.set(name, value);
+  }
+  params.set("limit", "25");
+  if (![...params.keys()].some((k) => k !== "limit")) {
+    log("type something to search for, or pick a filter");
+    return;
+  }
+  log(`searching the catalogue for ${text || facet}`);
+  try {
+    const response = await fetch(new URL(`catalogue/search?${params}`, document.baseURI));
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
+    renderResults(body.results, text || facet);
+    log(`${body.results.length} result(s)`, "ok");
+  } catch (error2) {
+    log(`search failed: ${error2.message}`, "error");
+  }
+}
+$("searchbar").addEventListener("submit", (event) => {
+  event.preventDefault();
+  search();
+});
 $("load").addEventListener("click", () => {
   loadPlugin($("iri").value.trim()).catch((error2) => log(error2.message, "error"));
 });
