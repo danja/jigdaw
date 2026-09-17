@@ -191,6 +191,10 @@ Where prose is a commitment, bind it with a test.
 - A route or a tool is not reachable until a real request has reached it. Unit-testing a
   handler proves the handler and says nothing about the guard or the mounting order in front
   of it.
+- Read a test run by its `Test Files` line and its exit code, not only the `Tests` count. A
+  file that cannot be parsed runs no tests and prints none of the markers a failing
+  assertion does, so filtering the output can turn it into an apparent pass. A suite just
+  added must move the count; if it did not, it did not run.
 - Log mistakes in `MISTAKES.md`, newest first: what happened, root cause, prevention.
 - Review `TODO.md` periodically and revise it. Promote anything systematic from
   `MISTAKES.md` into this file.

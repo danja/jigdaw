@@ -12,7 +12,10 @@ export default defineConfig({
       'tests/docs/**/*.test.js',
       'tests/host/**/*.test.js',
       'tests/dsp/**/*.test.js',
-      'tests/ui/**/*.test.js'
+      'tests/ui/**/*.test.js',
+      'tests/model/**/*.test.js',
+      'tests/compiler/**/*.test.js',
+      'tests/ops/**/*.test.js'
     ]
   }
 })

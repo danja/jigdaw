@@ -21,7 +21,14 @@ const tracked = execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' 
   .filter(f => existsSync(join(root, f)))
 
 const read = p => readFileSync(join(root, p), 'utf8')
-const byExt = (...exts) => tracked.filter(f => exts.includes(extname(f)))
+
+// Generated output. Listed explicitly rather than matched by a pattern, so that
+// adding a build artefact is a deliberate act and a stray file does not quietly
+// exempt itself from every rule below.
+const GENERATED = new Set(['web/app.bundle.js', 'web/app.bundle.js.map'])
+
+const byExt = (...exts) =>
+  tracked.filter(f => exts.includes(extname(f)) && !GENERATED.has(f))
 
 describe('repository conventions', () => {
   it('finds the tracked files it is meant to check', () => {

@@ -2,6 +2,46 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-16 Latency stopped at the edge of a feedback loop
+
+**What happened.** `compileGraph` computed accumulated latency over the graph with every
+cycle edge removed. A test asking whether the acyclic part of a graph containing a loop still
+gets compensated failed: it produced none at all.
+
+**Root cause.** Two different things were conflated. `latency.md` says latency inside a cycle
+is never *compensated*, which is right, and that was implemented by dropping cycle edges
+before *accumulating*, which is not the same thing. Dropping them stops latency propagating
+forward through a loop, so a delay line in a feedback path contributes nothing to what the
+rest of the graph thinks it must wait for, and a dry signal beside it arrives early. The
+symptom would have been a phase problem nobody could trace to the compiler.
+
+**Prevention.** Condense each strongly connected component to a single unit, which makes the
+graph a DAG, and accumulate over that. A component's latency is the largest latency of any
+one member. There is no exact answer, because a signal entering a loop may leave it by any of
+several paths, so the figure is documented as an under-estimate and the reasoning is in the
+code rather than in a commit message.
+
+The general shape: a rule about what not to do at a boundary is not the same as a rule about
+what not to compute across it. Ask which one a piece of code implements.
+
+## 2026-09-16 A test file that could not parse, reported as a pass
+
+**What happened.** `tests/compiler/GraphCompiler.test.js` contained
+`it('counts a plugin's own latency...')`, an unescaped apostrophe inside a single-quoted
+string. The file failed to parse, so it ran no tests. Reading the run through
+`grep -E 'check-suites|x |-> |Tests '` showed `Tests 126 passed` and nothing else, and the
+new suite appeared to have been added and to be passing. It had not run at all.
+
+**Root cause.** Two together. The filter matched the markers vitest prints for a failing
+assertion, and a file that cannot be parsed produces none of them: it reports a failed *file*
+with no tests. And the test count was read as a number rather than compared against what it
+was before, so 126 before and 126 after looked like success.
+
+**Prevention.** Read the `Test Files` line and the exit code, not only `Tests`. A suite that
+was just added must move the count; if it did not, it did not run. `npm test` did exit 1
+throughout, which is the thing that would have caught it in CI and the thing a person filters
+away at a terminal.
+
 ## 2026-09-16 A guard that could not catch its own removal
 
 **What happened.** `tests/docs/conventions.test.js` included a check that every

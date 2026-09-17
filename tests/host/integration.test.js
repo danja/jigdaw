@@ -22,6 +22,7 @@ import { shapeValidatorFromFile } from '../../src/validate/files.js'
 import { parseText } from '../../src/rdf/parse.js'
 import { detectCapabilities } from '../../src/host/Capabilities.js'
 import { Engine } from '../../src/engine/Engine.js'
+import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 import { OfflineContext, OfflineWorkletNode, directoryFetch } from '../../src/testing/OfflineHost.js'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -144,5 +145,73 @@ suite('loading a real plugin end to end', () => {
     const signal = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i / 8) * 0.5)
     const output = entry.node.render([signal, signal])
     expect(Array.from(output[0])).toEqual(Array.from(signal))
+  })
+})
+
+suite('a graph of real plugins', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  const dispatcherWithEngine = () => {
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({
+      context, loader: makeLoader(validator), AudioWorkletNode: OfflineWorkletNode
+    })
+    return { context, engine, dispatcher: new OpDispatcher({ engine }) }
+  }
+
+  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+  const edge = (from, to, toPort = 0) => ({
+    op: 'addConnection',
+    from: { node: from, portIndex: 0 },
+    to: { node: to, portIndex: toPort },
+    signalKind: AUDIO
+  })
+
+  it('loads two real plugins and links them', async () => {
+    const { engine, dispatcher } = dispatcherWithEngine()
+    const a = await dispatcher.addPlugin(CANONICAL)
+    const b = await dispatcher.addPlugin(CANONICAL)
+    expect(a.ok && b.ok).toBe(true)
+
+    const result = dispatcher.apply([edge(a.nodeId, b.nodeId)])
+    expect(result.ok).toBe(true)
+    expect(engine.links).toHaveLength(1)
+    expect(engine.links[0].delay).toBeNull()
+  })
+
+  it('refuses a feedback loop between two real plugins', async () => {
+    // Cascade declares zero latency, so a loop between two of them carries no
+    // delay at all and Web Audio would answer with silence.
+    const { dispatcher } = dispatcherWithEngine()
+    const a = await dispatcher.addPlugin(CANONICAL)
+    const b = await dispatcher.addPlugin(CANONICAL)
+
+    const result = dispatcher.apply([edge(a.nodeId, b.nodeId), edge(b.nodeId, a.nodeId)])
+    expect(result.ok).toBe(false)
+    expect(result.kind).toBe('compile')
+    expect(dispatcher.project.connections).toHaveLength(0)
+  })
+
+  it('creates a real delay node when a path needs compensating', async () => {
+    const { context, engine, dispatcher } = dispatcherWithEngine()
+    const src = await dispatcher.addPlugin(CANONICAL)
+    const slow = await dispatcher.addPlugin(CANONICAL)
+    const fast = await dispatcher.addPlugin(CANONICAL)
+    const mix = await dispatcher.addPlugin(CANONICAL)
+
+    // Cascade reports zero latency, so one is given some to compensate for.
+    engine.get(slow.entry.id).ready.latencyFrames = 512
+
+    const result = dispatcher.apply([
+      edge(src.nodeId, slow.nodeId), edge(src.nodeId, fast.nodeId),
+      edge(slow.nodeId, mix.nodeId), edge(fast.nodeId, mix.nodeId, 1)
+    ])
+    expect(result.ok).toBe(true)
+
+    expect(context.delays).toHaveLength(1)
+    // 512 frames at 48 kHz.
+    expect(context.delays[0].delayTime.value).toBeCloseTo(512 / 48000, 6)
+    expect(result.compiled.totalLatency).toBe(512)
   })
 })

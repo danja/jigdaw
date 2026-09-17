@@ -13484,6 +13484,7 @@ var PluginLoader = class {
   #validator;
   #capabilities;
   #compile;
+  #processorUrlFor;
   /**
    * @param fetch       fetch implementation
    * @param parse       (text, baseIRI) => Promise<dataset>
@@ -13494,17 +13495,19 @@ var PluginLoader = class {
   constructor({
     fetch: fetch2 = globalThis.fetch,
     parse,
-    validator: validator2 = null,
+    validator = null,
     capabilities = detectCapabilities(),
-    compile = (bytes) => WebAssembly.compile(bytes)
+    compile = (bytes) => WebAssembly.compile(bytes),
+    processorUrl = null
   } = {}) {
     if (typeof fetch2 !== "function") throw new Error("PluginLoader needs a fetch implementation");
     if (typeof parse !== "function") throw new Error("PluginLoader needs a parse function");
     this.#fetch = fetch2;
     this.#parse = parse;
-    this.#validator = validator2;
+    this.#validator = validator;
     this.#capabilities = capabilities;
     this.#compile = compile;
+    this.#processorUrlFor = processorUrl;
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
   async loadProfile(iri2) {
@@ -13680,6 +13683,7 @@ var PluginLoader = class {
    * blob URL. Re-fetching by URL would verify one response and execute another.
    */
   async #processorUrl(bytes, originalUrl) {
+    if (this.#processorUrlFor) return this.#processorUrlFor(bytes, originalUrl);
     if (typeof Blob === "undefined" || typeof URL.createObjectURL !== "function") {
       return originalUrl;
     }
@@ -18488,9 +18492,9 @@ function validateTerm(term2) {
   if (term2.termType !== "Literal") {
     throw new Error("Cannot validate non-literal terms");
   }
-  const validator2 = validators.find(term2.datatype);
-  if (validator2) {
-    return validator2(term2.value);
+  const validator = validators.find(term2.datatype);
+  if (validator) {
+    return validator(term2.value);
   }
   return true;
 }
@@ -19117,12 +19121,24 @@ var nextId = () => `node-${++counter}`;
 var Engine = class {
   #context;
   #loader;
+  #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
-  constructor({ context, loader }) {
+  #links = [];
+  /**
+   * `AudioWorkletNode` is injected rather than read from globals so the engine
+   * can be driven by an offline host in a test. Web Audio hangs the class off
+   * the global rather than off the context, so there is nowhere else to get it
+   * from and no way to substitute it without this.
+   */
+  constructor({ context, loader, AudioWorkletNode = globalThis.AudioWorkletNode }) {
     if (!context) throw new Error("Engine needs an AudioContext");
     if (!loader) throw new Error("Engine needs a PluginLoader");
+    if (typeof AudioWorkletNode !== "function") {
+      throw new Error("Engine needs an AudioWorkletNode constructor; this environment has none");
+    }
     this.#context = context;
     this.#loader = loader;
+    this.#nodeClass = AudioWorkletNode;
   }
   get context() {
     return this.#context;
@@ -19142,7 +19158,12 @@ var Engine = class {
    */
   async addPlugin(iri2) {
     const { profile, granted } = await this.#loader.loadProfile(iri2);
-    const { node, ready, descriptors } = await this.#loader.instantiate(profile, granted, this.#context);
+    const { node, ready, descriptors } = await this.#loader.instantiate(
+      profile,
+      granted,
+      this.#context,
+      { AudioWorkletNode: this.#nodeClass }
+    );
     const id = nextId();
     const entry = { id, iri: iri2, profile, node, ready, descriptors, granted };
     this.#nodes.set(id, entry);
@@ -19162,6 +19183,46 @@ var Engine = class {
     const source2 = this.get(fromId).node;
     const destination = toId === "output" ? this.#context.destination : this.get(toId).node;
     source2.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
+  }
+  /**
+   * Link two nodes, inserting the delay the compiler asked for.
+   *
+   * Compensation is delay added to the fast paths, per docs/latency.md. The
+   * delay node is owned here and torn down with the link, so a recompile
+   * cannot leave one behind feeding silence into a mix.
+   */
+  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0 } = {}) {
+    const source2 = this.get(fromId).node;
+    const destination = toId === "output" ? this.#context.destination : this.get(toId).node;
+    const targetInput = toId === "output" ? 0 : toInput;
+    if (delayFrames > 0) {
+      if (typeof this.#context.createDelay !== "function") {
+        throw new Error("this context cannot create a delay, so latency cannot be compensated");
+      }
+      const seconds = delayFrames / this.#context.sampleRate;
+      const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
+      delay.delayTime.value = seconds;
+      source2.connect(delay, fromOutput, 0);
+      delay.connect(destination, 0, targetInput);
+      this.#links.push({ fromId, toId, delay });
+      return;
+    }
+    source2.connect(destination, fromOutput, targetInput);
+    this.#links.push({ fromId, toId, delay: null });
+  }
+  /** Tear down every link, including the delay nodes this engine created. */
+  clearLinks() {
+    for (const link of this.#links) {
+      try {
+        if (link.delay) link.delay.disconnect();
+        this.get(link.fromId).node.disconnect();
+      } catch {
+      }
+    }
+    this.#links = [];
+  }
+  get links() {
+    return [...this.#links];
   }
   connectSource(audioNode, toId, { toInput = 0 } = {}) {
     audioNode.connect(this.get(toId).node, 0, toInput);
@@ -19209,6 +19270,540 @@ var Engine = class {
   }
 };
 
+// src/model/Project.js
+var RevisionConflict = class extends Error {
+  constructor(expected, actual) {
+    super(`project has moved on: expected revision ${expected}, current is ${actual}`);
+    this.name = "RevisionConflict";
+    this.expected = expected;
+    this.actual = actual;
+  }
+};
+var ChangeError = class extends Error {
+  constructor(index, op, message) {
+    super(`change ${index} (${op}): ${message}`);
+    this.name = "ChangeError";
+    this.index = index;
+    this.op = op;
+  }
+};
+var DEFAULT_TRANSPORT = Object.freeze({
+  playing: false,
+  beatsPerBar: 4,
+  beatUnit: 4,
+  loopStart: 0,
+  loopEnd: 0,
+  loopEnabled: false,
+  tempoPoints: [{ atBeat: 0, bpm: 120 }]
+});
+function checkEndpoint(state, endpoint, what) {
+  if (!endpoint || typeof endpoint !== "object") throw new Error(`${what} is missing`);
+  if (!state.nodes.has(endpoint.node)) throw new Error(`${what} names no such node: ${endpoint.node}`);
+  const hasIndex = endpoint.portIndex !== void 0 && endpoint.portIndex !== null;
+  const hasSymbol = endpoint.portSymbol !== void 0 && endpoint.portSymbol !== null;
+  if (hasIndex === hasSymbol) {
+    throw new Error(`${what} must give exactly one of portIndex, for an audio or MIDI port, or portSymbol, for a parameter`);
+  }
+  if (hasIndex && (!Number.isInteger(endpoint.portIndex) || endpoint.portIndex < 0)) {
+    throw new Error(`${what} has a portIndex that is not a non-negative integer`);
+  }
+}
+function noteExplicitId(counters, prefix, counterKey, id) {
+  const minted = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
+  if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]));
+}
+var connectionKey = (c3) => `${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+var cloneState = (state) => ({
+  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
+  connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
+  transport: { ...state.transport, tempoPoints: state.transport.tempoPoints.map((p) => ({ ...p })) }
+});
+var OPERATIONS = {
+  addNode(state, change, counters) {
+    if (!change.pluginIri) throw new Error("needs a pluginIri");
+    if (!/^https:\/\//.test(change.pluginIri)) {
+      throw new Error(`pluginIri must be a dereferenceable https IRI: ${change.pluginIri}`);
+    }
+    const id = change.id ?? `node-${++counters.node}`;
+    if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
+    noteExplicitId(counters, "node", "node", id);
+    state.nodes.set(id, {
+      id,
+      pluginIri: change.pluginIri,
+      label: change.label ?? null,
+      settings: new Map(Object.entries(change.settings ?? {})),
+      state: change.state ?? null
+    });
+    return id;
+  },
+  removeNode(state, change) {
+    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
+    state.nodes.delete(change.id);
+    for (const [key, connection] of [...state.connections]) {
+      if (connection.from.node === change.id || connection.to.node === change.id) {
+        state.connections.delete(key);
+      }
+    }
+    return change.id;
+  },
+  addConnection(state, change, counters) {
+    checkEndpoint(state, change.from, "from");
+    checkEndpoint(state, change.to, "to");
+    if (!change.signalKind) {
+      throw new Error("needs a signalKind");
+    }
+    const key = connectionKey(change);
+    for (const existing of state.connections.values()) {
+      if (connectionKey(existing) === key) throw new Error("that connection already exists");
+    }
+    const id = change.id ?? `conn-${++counters.connection}`;
+    noteExplicitId(counters, "conn", "connection", id);
+    state.connections.set(id, {
+      id,
+      from: { ...change.from },
+      to: { ...change.to },
+      signalKind: change.signalKind,
+      delayFrames: change.delayFrames ?? 0
+    });
+    return id;
+  },
+  removeConnection(state, change) {
+    if (!state.connections.has(change.id)) throw new Error(`no such connection: ${change.id}`);
+    state.connections.delete(change.id);
+    return change.id;
+  },
+  setSetting(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    if (!change.symbol) throw new Error("needs a symbol");
+    if (!Number.isFinite(change.value)) throw new Error(`value is not a number: ${change.value}`);
+    node.settings.set(change.symbol, change.value);
+    return change.symbol;
+  },
+  setNodeState(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    node.state = change.state ?? null;
+    return change.node;
+  },
+  setTransport(state, change) {
+    const next = { ...state.transport };
+    for (const key of ["beatsPerBar", "beatUnit", "loopStart", "loopEnd", "loopEnabled", "playing"]) {
+      if (change[key] !== void 0) next[key] = change[key];
+    }
+    if (change.tempoPoints) {
+      if (!Array.isArray(change.tempoPoints) || change.tempoPoints.length === 0) {
+        throw new Error("tempoPoints must be a non-empty array");
+      }
+      for (const point of change.tempoPoints) {
+        if (!(point.bpm > 0)) throw new Error(`a tempo point needs a bpm greater than zero: ${point.bpm}`);
+        if (!(point.atBeat >= 0)) throw new Error(`a tempo point needs atBeat at or after zero: ${point.atBeat}`);
+      }
+      next.tempoPoints = [...change.tempoPoints].sort((a2, b) => a2.atBeat - b.atBeat);
+    }
+    if (next.loopEnabled && !(next.loopEnd > next.loopStart)) {
+      throw new Error("a loop must start before it ends");
+    }
+    state.transport = next;
+    return "transport";
+  }
+};
+var Project = class {
+  #revision = 0;
+  #state = { nodes: /* @__PURE__ */ new Map(), connections: /* @__PURE__ */ new Map(), transport: { ...DEFAULT_TRANSPORT } };
+  #counters = { node: 0, connection: 0 };
+  // Editor metadata, deliberately outside the state a revision covers.
+  #positions = /* @__PURE__ */ new Map();
+  #label = null;
+  get revision() {
+    return this.#revision;
+  }
+  get label() {
+    return this.#label;
+  }
+  set label(value) {
+    this.#label = value;
+  }
+  get nodes() {
+    return [...this.#state.nodes.values()];
+  }
+  get connections() {
+    return [...this.#state.connections.values()];
+  }
+  get transport() {
+    return this.#state.transport;
+  }
+  node(id) {
+    return this.#state.nodes.get(id) ?? null;
+  }
+  connection(id) {
+    return this.#state.connections.get(id) ?? null;
+  }
+  /** Position is editor metadata and never bumps the revision. */
+  position(id) {
+    return this.#positions.get(id) ?? { x: 0, y: 0 };
+  }
+  moveNode(id, x, y) {
+    if (!this.#state.nodes.has(id)) throw new Error(`no such node: ${id}`);
+    this.#positions.set(id, { x, y });
+  }
+  /**
+   * Apply a changeset atomically.
+   *
+   * Returns { revision, results, applied }. With dryRun the project is
+   * untouched and `applied` is false, which is how an agent checks a chain
+   * before committing it.
+   */
+  apply(changes, { expectedRevision, dryRun = false } = {}) {
+    if (!Array.isArray(changes)) throw new TypeError("changes must be an array");
+    if (expectedRevision !== void 0 && expectedRevision !== this.#revision) {
+      throw new RevisionConflict(expectedRevision, this.#revision);
+    }
+    const draft = cloneState(this.#state);
+    const counters = { ...this.#counters };
+    const results = [];
+    changes.forEach((change, index) => {
+      const operation = OPERATIONS[change.op];
+      if (!operation) throw new ChangeError(index, change.op ?? "undefined", "unknown operation");
+      try {
+        results.push(operation(draft, change, counters));
+      } catch (error2) {
+        throw new ChangeError(index, change.op, error2.message);
+      }
+    });
+    if (dryRun) return { revision: this.#revision, results, applied: false };
+    this.#state = draft;
+    this.#counters = counters;
+    this.#revision += 1;
+    for (const id of [...this.#positions.keys()]) {
+      if (!this.#state.nodes.has(id)) this.#positions.delete(id);
+    }
+    return { revision: this.#revision, results, applied: true };
+  }
+  /** A plain snapshot, for serialisation or for handing to an agent. */
+  snapshot() {
+    return {
+      label: this.#label,
+      revision: this.#revision,
+      nodes: this.nodes.map((n2) => ({
+        id: n2.id,
+        pluginIri: n2.pluginIri,
+        label: n2.label,
+        settings: Object.fromEntries(n2.settings),
+        state: n2.state,
+        position: this.position(n2.id)
+      })),
+      connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
+      transport: { ...this.#state.transport, tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })) }
+    };
+  }
+};
+
+// src/compiler/GraphCompiler.js
+var AUDIO = "http://purl.org/stuff/transmissions/Audio";
+var isAudio = (connection) => connection.signalKind === AUDIO;
+function stronglyConnected(nodeIds, edgesFrom) {
+  const index = /* @__PURE__ */ new Map();
+  const low = /* @__PURE__ */ new Map();
+  const onStack = /* @__PURE__ */ new Set();
+  const stack = [];
+  const components = [];
+  let counter2 = 0;
+  for (const start of nodeIds) {
+    if (index.has(start)) continue;
+    const work = [{ node: start, edge: 0 }];
+    while (work.length > 0) {
+      const frame = work[work.length - 1];
+      const { node } = frame;
+      if (frame.edge === 0) {
+        index.set(node, counter2);
+        low.set(node, counter2);
+        counter2 += 1;
+        stack.push(node);
+        onStack.add(node);
+      }
+      const edges = edgesFrom(node);
+      if (frame.edge < edges.length) {
+        const next = edges[frame.edge];
+        frame.edge += 1;
+        if (!index.has(next)) work.push({ node: next, edge: 0 });
+        else if (onStack.has(next)) low.set(node, Math.min(low.get(node), index.get(next)));
+        continue;
+      }
+      if (low.get(node) === index.get(node)) {
+        const component = [];
+        let member;
+        do {
+          member = stack.pop();
+          onStack.delete(member);
+          component.push(member);
+        } while (member !== node);
+        components.push(component);
+      }
+      work.pop();
+      if (work.length > 0) {
+        const parent = work[work.length - 1].node;
+        low.set(parent, Math.min(low.get(parent), low.get(node)));
+      }
+    }
+  }
+  return components;
+}
+function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
+  const nodes = project.nodes.map((n2) => n2.id);
+  const connections = project.connections.filter(isAudio);
+  const outgoing = new Map(nodes.map((id) => [id, []]));
+  const incoming = new Map(nodes.map((id) => [id, []]));
+  for (const connection of connections) {
+    outgoing.get(connection.from.node)?.push(connection);
+    incoming.get(connection.to.node)?.push(connection);
+  }
+  const components = stronglyConnected(nodes, (id) => (outgoing.get(id) ?? []).map((c3) => c3.to.node));
+  const cycles = components.filter((component) => component.length > 1 || (outgoing.get(component[0]) ?? []).some((c3) => c3.to.node === component[0]));
+  const componentOf = /* @__PURE__ */ new Map();
+  for (const component of components) for (const id of component) componentOf.set(id, component);
+  const inCycle = new Set(cycles.flat());
+  const onCycle = (connection) => inCycle.has(connection.from.node) && componentOf.get(connection.from.node) === componentOf.get(connection.to.node);
+  const errors = [];
+  for (const cycle of cycles) {
+    const members = new Set(cycle);
+    const nodeDelay = cycle.reduce((total, id) => total + latencyOf(id), 0);
+    const edgeDelay = connections.filter((c3) => members.has(c3.from.node) && members.has(c3.to.node)).reduce((total, c3) => total + (c3.delayFrames ?? 0), 0);
+    if (nodeDelay + edgeDelay < quantum) {
+      errors.push({
+        kind: "undelayed-cycle",
+        nodes: [...cycle],
+        message: `feedback loop through ${cycle.join(", ")} carries ${nodeDelay + edgeDelay} frames of delay and needs at least ${quantum}. Web Audio outputs silence for a cycle with no delay in it, so this is refused rather than left to go quiet.`
+      });
+    }
+  }
+  const componentIndex = /* @__PURE__ */ new Map();
+  components.forEach((component, i2) => {
+    for (const id of component) componentIndex.set(id, i2);
+  });
+  const componentLatency = components.map((component) => component.reduce((most, id) => Math.max(most, latencyOf(id)), 0));
+  const crossing = connections.filter((c3) => componentIndex.get(c3.from.node) !== componentIndex.get(c3.to.node));
+  const compIncoming = components.map(() => []);
+  const compOutgoing = components.map(() => []);
+  for (const connection of crossing) {
+    compIncoming[componentIndex.get(connection.to.node)].push(connection);
+    compOutgoing[componentIndex.get(connection.from.node)].push(connection);
+  }
+  const remaining = components.map((_, i2) => compIncoming[i2].length);
+  const componentOrder = [];
+  const queue = components.map((_, i2) => i2).filter((i2) => remaining[i2] === 0);
+  while (queue.length > 0) {
+    const i2 = queue.shift();
+    componentOrder.push(i2);
+    for (const connection of compOutgoing[i2]) {
+      const target = componentIndex.get(connection.to.node);
+      remaining[target] -= 1;
+      if (remaining[target] === 0) queue.push(target);
+    }
+  }
+  const componentArrival = components.map(() => 0);
+  for (const i2 of componentOrder) {
+    let latest = 0;
+    for (const connection of compIncoming[i2]) {
+      const source2 = componentIndex.get(connection.from.node);
+      latest = Math.max(latest, componentArrival[source2] + componentLatency[source2] + (connection.delayFrames ?? 0));
+    }
+    componentArrival[i2] = latest;
+  }
+  const compensation = [];
+  for (const i2 of componentOrder) {
+    for (const connection of compIncoming[i2]) {
+      const source2 = componentIndex.get(connection.from.node);
+      const path = componentArrival[source2] + componentLatency[source2] + (connection.delayFrames ?? 0);
+      const needed = componentArrival[i2] - path;
+      if (needed > 0) compensation.push({ connection: connection.id, delayFrames: needed });
+    }
+  }
+  const arrival = new Map(nodes.map((id) => [id, componentArrival[componentIndex.get(id)]]));
+  const order = componentOrder.flatMap((i2) => components[i2]);
+  const sinks = componentOrder.filter((i2) => compOutgoing[i2].length === 0);
+  const totalLatency = sinks.reduce((max, i2) => Math.max(max, componentArrival[i2] + componentLatency[i2]), 0);
+  return {
+    order,
+    cycles,
+    errors,
+    ok: errors.length === 0,
+    arrival,
+    compensation,
+    totalLatency
+  };
+}
+
+// src/ops/OpDispatcher.js
+var OpDispatcher = class {
+  #project;
+  #engine;
+  #listeners = /* @__PURE__ */ new Set();
+  #nodeIds = /* @__PURE__ */ new Map();
+  constructor({ project = new Project(), engine: engine2 = null } = {}) {
+    this.#project = project;
+    this.#engine = engine2;
+  }
+  get project() {
+    return this.#project;
+  }
+  get revision() {
+    return this.#project.revision;
+  }
+  /** Subscribe to what happened. Returns an unsubscribe function. */
+  subscribe(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+  #emit(event) {
+    for (const listener of this.#listeners) {
+      try {
+        listener(event);
+      } catch (error2) {
+        console.error("listener failed", error2);
+      }
+    }
+  }
+  /** The latency each node declares, from what the engine actually loaded. */
+  #latencyOf(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return 0;
+    try {
+      return this.#engine.get(engineId).ready?.latencyFrames ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+  /**
+   * Apply a changeset.
+   *
+   * Compilation happens against the result before it is committed, so a
+   * changeset that would produce an uncompilable graph is refused whole. That
+   * is why this is the only way in.
+   */
+  apply(changes, { expectedRevision, dryRun = false } = {}) {
+    try {
+      this.#project.apply(changes, { expectedRevision, dryRun: true });
+    } catch (error2) {
+      return this.#failure(error2);
+    }
+    const trial = this.#clone();
+    trial.apply(changes);
+    const compiled = compileGraph(trial, { latencyOf: (id) => this.#latencyOf(id) });
+    if (!compiled.ok) {
+      return {
+        ok: false,
+        kind: "compile",
+        revision: this.#project.revision,
+        errors: compiled.errors,
+        message: compiled.errors[0].message
+      };
+    }
+    if (dryRun) {
+      return { ok: true, applied: false, revision: this.#project.revision, compiled };
+    }
+    const result = this.#project.apply(changes, { expectedRevision });
+    this.#rebuildLinks(compiled);
+    this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
+    return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
+  }
+  #failure(error2) {
+    if (error2 instanceof RevisionConflict) {
+      return {
+        ok: false,
+        kind: "conflict",
+        revision: this.#project.revision,
+        expected: error2.expected,
+        message: error2.message
+      };
+    }
+    if (error2 instanceof ChangeError) {
+      return { ok: false, kind: "change", revision: this.#project.revision, index: error2.index, message: error2.message };
+    }
+    throw error2;
+  }
+  /** A copy of the project, for trying a changeset without committing it. */
+  #clone() {
+    const copy = new Project();
+    const snapshot = this.#project.snapshot();
+    copy.apply([
+      ...snapshot.nodes.map((n2) => ({ op: "addNode", id: n2.id, pluginIri: n2.pluginIri, label: n2.label, settings: n2.settings, state: n2.state })),
+      ...snapshot.connections.map((c3) => ({ op: "addConnection", id: c3.id, from: c3.from, to: c3.to, signalKind: c3.signalKind, delayFrames: c3.delayFrames })),
+      { op: "setTransport", ...snapshot.transport }
+    ]);
+    return copy;
+  }
+  /**
+   * Load a plugin and add it as a node.
+   *
+   * Loading reaches the network and can fail slowly, which does not sit well
+   * inside an atomic changeset, so it happens first and the node id joins the
+   * two halves. webmcp.md raises this as open; this is the answer.
+   */
+  async addPlugin(iri2, { position } = {}) {
+    if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
+    let entry;
+    try {
+      entry = await this.#engine.addPlugin(iri2);
+    } catch (error2) {
+      return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
+    }
+    const result = this.apply([{ op: "addNode", pluginIri: iri2, label: entry.profile.label }]);
+    if (!result.ok) {
+      this.#engine.remove(entry.id);
+      return result;
+    }
+    const nodeId = result.results[0];
+    this.#nodeIds.set(nodeId, entry.id);
+    if (position) this.#project.moveNode(nodeId, position.x, position.y);
+    this.#emit({ type: "plugin-added", nodeId, entry });
+    return { ...result, nodeId, entry };
+  }
+  /** Set a parameter. Goes to the model and the AudioParam, never a message. */
+  setParameter(nodeId, symbol, value) {
+    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value }]);
+    if (!result.ok) return result;
+    let applied = value;
+    const engineId = this.#nodeIds.get(nodeId);
+    if (engineId && this.#engine) applied = this.#engine.setParameter(engineId, symbol, value);
+    if (applied !== value) this.#project.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    this.#emit({ type: "parameter", nodeId, symbol, value: applied });
+    return { ...result, value: applied };
+  }
+  /**
+   * Rebuild the audio links to match the compiled graph.
+   *
+   * The whole set is torn down and rebuilt rather than diffed. A diff is an
+   * optimisation and this is the correctness-first version: after any edit the
+   * links are exactly what the compiler said, with no stale delay node left
+   * feeding silence into a mix because an edge moved.
+   */
+  #rebuildLinks(compiled) {
+    if (!this.#engine) return;
+    const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
+    this.#engine.clearLinks();
+    for (const connection of this.#project.connections) {
+      const from = this.#nodeIds.get(connection.from.node);
+      const to = this.#nodeIds.get(connection.to.node);
+      if (!from || !to) continue;
+      this.#engine.link(from, to, {
+        fromOutput: connection.from.portIndex ?? 0,
+        toInput: connection.to.portIndex ?? 0,
+        delayFrames: delayFor.get(connection.id) ?? 0
+      });
+    }
+  }
+  /** The engine node behind a model node, if it has been loaded. */
+  engineNode(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    return engineId && this.#engine ? this.#engine.get(engineId) : null;
+  }
+  /** Compile without changing anything, for diagnostics. */
+  compile() {
+    return compileGraph(this.#project, { latencyOf: (id) => this.#latencyOf(id) });
+  }
+};
+
 // src/ui/Panel.js
 var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "Hz",
@@ -19221,11 +19816,26 @@ var formatValue = (port, value) => {
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
   return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
+var SPOKEN_UNITS = Object.freeze({
+  "http://lv2plug.in/ns/extensions/units#hz": "hertz",
+  "http://lv2plug.in/ns/extensions/units#ms": "milliseconds",
+  "http://lv2plug.in/ns/extensions/units#db": "decibels",
+  "http://lv2plug.in/ns/extensions/units#s": "seconds"
+});
+var spokenValue = (port, value) => {
+  const unit = SPOKEN_UNITS[port.unit];
+  const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
+  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+};
 function createPanel(document2, profile, onChange) {
-  const root = document2.createElement("div");
+  const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
   heading.textContent = profile.label ?? profile.iri;
+  const headingId = `${profile.iri}-heading`.replace(/[^\w-]/g, "_");
+  heading.id = headingId;
+  root.setAttribute("role", "group");
+  root.setAttribute("aria-labelledby", headingId);
   root.append(heading);
   if (profile.comment) {
     const description = document2.createElement("p");
@@ -19239,7 +19849,7 @@ function createPanel(document2, profile, onChange) {
     row.className = `control control-${port.widget}`;
     const label = document2.createElement("label");
     const id = `${profile.iri}#${port.symbol}`.replace(/[^\w-]/g, "_");
-    label.htmlFor = id;
+    label.setAttribute("for", id);
     label.textContent = port.name ?? port.symbol;
     row.append(label);
     const readout = document2.createElement("span");
@@ -19251,8 +19861,9 @@ function createPanel(document2, profile, onChange) {
       input.checked = port.defaultValue >= 0.5;
       input.addEventListener("change", () => onChange(port.symbol, input.checked ? port.maximum : port.minimum));
       setters.set(port.symbol, (v) => {
-        input.checked = v >= 0.5;
-        readout.textContent = v >= 0.5 ? "on" : "off";
+        const on = v >= 0.5;
+        input.checked = on;
+        readout.textContent = on ? "on" : "off";
       });
     } else if (port.widget === "selector") {
       input = document2.createElement("select");
@@ -19262,10 +19873,15 @@ function createPanel(document2, profile, onChange) {
         option.textContent = point.label ?? String(point.value);
         input.append(option);
       }
-      input.value = String(port.defaultValue);
+      const select = (value) => {
+        for (const option of input.options ?? input.children) {
+          option.selected = Number(option.value) === Number(value);
+        }
+      };
+      select(port.defaultValue);
       input.addEventListener("change", () => onChange(port.symbol, Number(input.value)));
       setters.set(port.symbol, (v) => {
-        input.value = String(v);
+        select(v);
         readout.textContent = port.scalePoints.find((p) => p.value === v)?.label ?? String(v);
       });
     } else {
@@ -19279,9 +19895,14 @@ function createPanel(document2, profile, onChange) {
       setters.set(port.symbol, (v) => {
         input.value = String(v);
         readout.textContent = formatValue(port, v);
+        input.setAttribute("aria-valuetext", spokenValue(port, v));
       });
     }
     input.id = id;
+    const readoutId = `${id}-value`;
+    readout.id = readoutId;
+    input.setAttribute("aria-describedby", readoutId);
+    if (port.comment) input.title = port.comment;
     row.append(input, readout);
     root.append(row);
     setters.get(port.symbol)(port.defaultValue);
@@ -19296,6 +19917,7 @@ function createPanel(document2, profile, onChange) {
 }
 
 // web/app.js
+var AUDIO2 = "http://purl.org/stuff/transmissions/Audio";
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
   const line = document.createElement("div");
@@ -19304,24 +19926,31 @@ var log = (message, kind = "info") => {
   $("log").prepend(line);
   console.log(`[jigdaw] ${message}`);
 };
+var dispatcher = null;
 var engine = null;
-var validator = null;
 var source = null;
-async function ensureEngine() {
-  if (engine) return engine;
+var lastNodeId = null;
+async function ensureRunning() {
+  if (dispatcher) return dispatcher;
   const context = new AudioContext();
   await context.resume();
-  if (!validator) {
-    const response = await fetch("/vocabs/shapes.ttl");
-    validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
-    log("shapes loaded; profiles will be validated before anything is fetched");
-  }
+  const response = await fetch("/vocabs/shapes.ttl");
+  const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
+  log("shapes loaded; every profile is validated before any code is fetched");
   const capabilities = detectCapabilities(globalThis);
   log(`host offers ${[...capabilities].map(compact).join(", ")}`);
-  const loader = new PluginLoader({ parse: parseText, validator, capabilities });
-  engine = new Engine({ context, loader });
+  engine = new Engine({ context, loader: new PluginLoader({ parse: parseText, validator, capabilities }) });
+  dispatcher = new OpDispatcher({ engine });
+  dispatcher.subscribe((event) => {
+    if (event.type !== "changed") return;
+    const { compiled } = event;
+    $("state").textContent = `revision ${event.revision}, ${dispatcher.project.nodes.length} nodes, latency ${compiled.totalLatency} frames`;
+    if (compiled.compensation.length > 0) {
+      log(`compensating ${compiled.compensation.length} path(s): ${compiled.compensation.map((c3) => `${c3.delayFrames} frames`).join(", ")}`);
+    }
+  });
   $("state").textContent = `running at ${context.sampleRate} Hz`;
-  return engine;
+  return dispatcher;
 }
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -19330,51 +19959,61 @@ function makeSource(context) {
     const data = buffer.getChannelData(channel);
     for (let i2 = 0; i2 < length; i2++) {
       const t = i2 / context.sampleRate;
-      const hit = t % 1 < 4e-3;
-      data[i2] = hit ? (Math.random() * 2 - 1) * Math.exp(-(t % 1 * 500)) : 0;
+      const phase = t % 1;
+      data[i2] = phase < 4e-3 ? (Math.random() * 2 - 1) * Math.exp(-phase * 500) : 0;
     }
   }
   const node = context.createBufferSource();
   node.buffer = buffer;
   node.loop = true;
+  node.start();
   return node;
 }
 async function loadPlugin(iri2) {
-  const e = await ensureEngine();
+  const d = await ensureRunning();
   log(`GET ${iri2}`);
-  try {
-    const entry = await e.addPlugin(iri2);
-    log(`loaded ${entry.profile.label}: ${entry.profile.ports.length} parameters, latency ${entry.ready.latencyFrames} frames`, "ok");
-    e.watch(entry.id, (error2) => log(error2.message, "error"));
-    const panel = createPanel(document, entry.profile, (symbol, value) => {
-      const applied = e.setParameter(entry.id, symbol, value);
-      panel.update(symbol, applied);
-    });
-    $("panels").append(panel.element);
-    if (!source) {
-      source = makeSource(e.context);
-      source.start();
-      log("source started");
-    }
-    source.disconnect();
-    e.connectSource(source, entry.id);
-    e.connect(entry.id, "output");
-    log(`connected: source -> ${entry.profile.label} -> output`, "ok");
-    window.__jigdaw = { engine: e, entry };
-  } catch (error2) {
-    const step = error2.step ? `[${error2.step}] ` : "";
-    log(`${step}${error2.message}`, "error");
-    throw error2;
+  const result = await d.addPlugin(iri2);
+  if (!result.ok) {
+    log(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
+    return;
   }
+  const { nodeId, entry } = result;
+  log(`loaded ${entry.profile.label}: ${entry.profile.ports.length} parameters, latency ${entry.ready.latencyFrames} frames`, "ok");
+  const panel = createPanel(document, entry.profile, (symbol, value) => {
+    const applied = d.setParameter(nodeId, symbol, value);
+    if (applied.ok) panel.update(symbol, applied.value);
+  });
+  panel.element.dataset.node = nodeId;
+  $("panels").append(panel.element);
+  for (const [symbol, value] of d.project.node(nodeId).settings) panel.update(symbol, value);
+  if (lastNodeId) {
+    const chained = d.apply([{
+      op: "addConnection",
+      from: { node: lastNodeId, portIndex: 0 },
+      to: { node: nodeId, portIndex: 0 },
+      signalKind: AUDIO2
+    }]);
+    if (chained.ok) log(`connected ${lastNodeId} -> ${nodeId}`, "ok");
+    else log(chained.message, "error");
+  }
+  if (!source) {
+    source = makeSource(engine.context);
+    log("source started");
+  }
+  source.disconnect();
+  const firstNode = d.engineNode(d.project.nodes[0].id);
+  source.connect(firstNode.node, 0, 0);
+  engine.get(entry.id).node.connect(engine.context.destination);
+  lastNodeId = nodeId;
+  window.__jigdaw = { dispatcher: d, engine };
 }
 $("load").addEventListener("click", () => {
-  loadPlugin($("iri").value.trim()).catch(() => {
-  });
+  loadPlugin($("iri").value.trim()).catch((error2) => log(error2.message, "error"));
 });
 $("iri").addEventListener("keydown", (event) => {
   if (event.key === "Enter") $("load").click();
 });
-log("ready. Enter a plugin IRI and press Load.");
+log("ready. Enter a plugin IRI and press Load. Load twice to chain two plugins.");
 window.__jigdawLoad = loadPlugin;
 /*! Bundled license information:
 

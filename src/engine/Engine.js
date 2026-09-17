@@ -15,6 +15,7 @@ export class Engine {
   #loader
   #nodeClass
   #nodes = new Map()
+  #links = []
 
   /**
    * `AudioWorkletNode` is injected rather than read from globals so the engine
@@ -77,6 +78,51 @@ export class Engine {
     const destination = toId === 'output' ? this.#context.destination : this.get(toId).node
     source.connect(destination, fromOutput, toId === 'output' ? 0 : toInput)
   }
+
+  /**
+   * Link two nodes, inserting the delay the compiler asked for.
+   *
+   * Compensation is delay added to the fast paths, per docs/latency.md. The
+   * delay node is owned here and torn down with the link, so a recompile
+   * cannot leave one behind feeding silence into a mix.
+   */
+  link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0 } = {}) {
+    const source = this.get(fromId).node
+    const destination = toId === 'output' ? this.#context.destination : this.get(toId).node
+    const targetInput = toId === 'output' ? 0 : toInput
+
+    if (delayFrames > 0) {
+      if (typeof this.#context.createDelay !== 'function') {
+        throw new Error('this context cannot create a delay, so latency cannot be compensated')
+      }
+      const seconds = delayFrames / this.#context.sampleRate
+      // maxDelayTime must exceed the value, and the constructor takes seconds.
+      const delay = this.#context.createDelay(Math.max(seconds * 2, 1))
+      delay.delayTime.value = seconds
+      source.connect(delay, fromOutput, 0)
+      delay.connect(destination, 0, targetInput)
+      this.#links.push({ fromId, toId, delay })
+      return
+    }
+
+    source.connect(destination, fromOutput, targetInput)
+    this.#links.push({ fromId, toId, delay: null })
+  }
+
+  /** Tear down every link, including the delay nodes this engine created. */
+  clearLinks () {
+    for (const link of this.#links) {
+      try {
+        if (link.delay) link.delay.disconnect()
+        this.get(link.fromId).node.disconnect()
+      } catch {
+        // A node already removed is still worth clearing past.
+      }
+    }
+    this.#links = []
+  }
+
+  get links () { return [...this.#links] }
 
   connectSource (audioNode, toId, { toInput = 0 } = {}) {
     audioNode.connect(this.get(toId).node, 0, toInput)

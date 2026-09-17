@@ -92,12 +92,17 @@ export class OfflineWorkletNode {
     }
 
     this.processor = new registered.ctor({ ...options, port: processorSide })
+    this.connections = []
     this.outputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
     this.inputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
   }
 
-  connect () { return this }
-  disconnect () { return this }
+  connect (destination, output = 0, input = 0) {
+    this.connections.push({ destination, output, input })
+    return destination
+  }
+
+  disconnect () { this.connections = []; return this }
 
   /** Run one render quantum. Returns the output channels. */
   render (inputChannels = null) {
@@ -121,6 +126,19 @@ export class OfflineContext {
     this.currentTime = 0
     this.registry = new Map()
     this.destination = { connect () {}, disconnect () {} }
+    // Enough of a DelayNode for latency compensation to be exercised offline.
+    this.delays = []
+    this.createDelay = max => {
+      const delay = {
+        maxDelayTime: max,
+        delayTime: { value: 0 },
+        connections: [],
+        connect (destination, output = 0, input = 0) { this.connections.push({ destination, output, input }); return destination },
+        disconnect () { this.connections = []; return this }
+      }
+      this.delays.push(delay)
+      return delay
+    }
     const registry = this.registry
     this.audioWorklet = {
       async addModule (url) {
