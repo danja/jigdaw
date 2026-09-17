@@ -43,7 +43,18 @@ running JigDAW plugins in a native host, not a way of presenting them.
 A plugin that declares no `jig:abi` is refused, with a message saying it is private to its
 JavaScript processor.
 
-## Building
+## Installing
+
+```sh
+native/install.sh            # builds, tests, and puts the VST3 in ~/.vst3
+native/install.sh --all      # the CLAP and LV2 too
+native/install.sh --help     # the rest of the options
+```
+
+It ends by loading what it installed, because a copy that succeeded says nothing about
+whether a host can open the result.
+
+## Building by hand
 
 ```sh
 cmake -S native -B build -DCMAKE_BUILD_TYPE=Release

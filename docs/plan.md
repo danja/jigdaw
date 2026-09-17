@@ -278,6 +278,12 @@ A chain of both: the synth through the reverb, with the tail outliving the note.
 Four native tests run under ctest. The one that fetches over HTTP skips, loudly, when nothing
 is serving, because a network test that fails a build is a test that gets disabled.
 
+`native/install.sh` builds, tests and installs into `~/.vst3`, with `--all` for the CLAP and
+LV2 as well. It finishes by `dlopen`ing what it installed and calling `GetPluginFactory`,
+because a copy that succeeded says nothing about whether a host can open the result. Verified
+on the installed bundle: no unresolved libraries, the execute bit intact, and a factory
+returned.
+
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads

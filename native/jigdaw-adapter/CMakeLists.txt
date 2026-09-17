@@ -54,5 +54,16 @@ if(JIGDAW_BUILD_PLUGIN)
       FILES_DSP src/dpf/JigdawPlugin.cpp)
     target_include_directories(jigdaw-adapter PUBLIC include src/dpf)
     target_link_libraries(jigdaw-adapter PUBLIC jigdaw_core)
+
+    # Installed by copying the bundles DPF produced. USE_SOURCE_PERMISSIONS
+    # because install(DIRECTORY) otherwise drops the execute bit, and a host
+    # that cannot dlopen the shared object reports the plugin as missing
+    # rather than as unreadable.
+    foreach(format vst3 clap lv2)
+      install(DIRECTORY "${CMAKE_BINARY_DIR}/bin/jigdaw-adapter.${format}"
+              DESTINATION "${format}"
+              USE_SOURCE_PERMISSIONS
+              OPTIONAL)
+    endforeach()
   endif()
 endif()
