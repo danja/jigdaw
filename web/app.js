@@ -15,6 +15,9 @@ import { createPanel } from '../src/ui/Panel.js'
 import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
+import { writeProject } from '../src/rdf/ProjectWriter.js'
+import { readProject } from '../src/rdf/ProjectReader.js'
+
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
 const MIDI = 'http://purl.org/stuff/transmissions/Midi'
 const $ = id => document.getElementById(id)
@@ -444,10 +447,107 @@ async function search () {
   }
 }
 
+// ── Sessions ───────────────────────────────────────────────────────────────
+//
+// A project is RDF, per docs/project-format.md, and the plugin IRIs in it are
+// what make it portable: a session opened on a machine that has never seen these
+// plugins carries everything needed to fetch them. That is the premise of the
+// whole system applied to its own file format.
+
+/** Where this session lives, for the @base. A saved file is self describing. */
+function sessionIri () {
+  return new URL(`sessions/${Date.now()}/`, document.baseURI).href
+}
+
+function saveSession () {
+  if (!dispatcher) { log('nothing to save yet', 'error'); return }
+  const turtle = writeProject(dispatcher.project, {
+    iri: sessionIri(),
+    created: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+  })
+  const url = URL.createObjectURL(new Blob([turtle], { type: 'text/turtle' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'session.ttl'
+  link.click()
+  // Revoked on the next turn: revoking immediately races the download in some
+  // browsers and the file arrives empty.
+  setTimeout(() => URL.revokeObjectURL(url), 10000)
+  log(`saved ${dispatcher.project.nodes.length} nodes as Turtle`, 'ok')
+}
+
+/**
+ * Reopen a session.
+ *
+ * Plugins first and connections after, because a connection names nodes that
+ * have to exist, and each plugin has to be fetched and instantiated before the
+ * node it belongs to means anything. A plugin that cannot be loaded is reported
+ * and skipped rather than abandoning the rest: an unreachable origin should cost
+ * one node, not the session.
+ */
+async function openSession (text) {
+  const d = await ensureRunning()
+  const parsed = await parseText(text, document.baseURI)
+  let read
+  try { read = readProject(parsed) } catch (error) { log(error.message, 'error'); return }
+
+  // Clear the current session first. removeNode takes the engine node with it,
+  // through the dispatcher, so nothing is left playing underneath the one being
+  // opened.
+  const existing = [...d.project.nodes].map(n => ({ op: 'removeNode', id: n.id }))
+  if (existing.length > 0) {
+    const cleared = d.apply(existing)
+    if (!cleared.ok) { log(cleared.message, 'error'); return }
+  }
+  panels.clear()
+
+  const loaded = new Set()
+  for (const change of read.changes.filter(c => c.op === 'addNode')) {
+    log(`GET ${change.pluginIri}`)
+    const result = await d.addPlugin(change.pluginIri, { id: change.id, label: change.label })
+    if (!result.ok) { log(`${change.id}: ${result.message}`, 'error'); continue }
+    loaded.add(change.id)
+    if (engine.get(result.entry.id).node.numberOfOutputs > 0) {
+      engine.get(result.entry.id).node.connect(analyser)
+    }
+    for (const [symbol, value] of Object.entries(change.settings ?? {})) {
+      const set = d.setParameter(change.id, symbol, value)
+      if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, 'error')
+    }
+    if (change.state) d.apply([{ op: 'setNodeState', node: change.id, state: change.state }])
+  }
+
+  // Only between nodes that actually loaded. A connection to a node that failed
+  // would be refused by the model and reported as a second error about the same
+  // failure.
+  const rest = read.changes.filter(c =>
+    c.op !== 'addNode' &&
+    (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))))
+  if (rest.length > 0) {
+    const applied = d.apply(rest)
+    if (!applied.ok) log(applied.message, 'error')
+  }
+
+  const bpm = d.project.transport.tempoPoints[0]?.bpm
+  if (bpm) $('tempo').value = String(bpm)
+  drawRack()
+  window.__jigdaw = { dispatcher: d, engine }
+  log(`opened ${loaded.size} of ${read.changes.filter(c => c.op === 'addNode').length} nodes`, 'ok')
+}
+
 $('searchbar').addEventListener('submit', e => { e.preventDefault(); search() })
 $('loadbar').addEventListener('submit', e => { e.preventDefault(); loadPlugin($('iri').value.trim()).catch(() => {}) })
 $('play').addEventListener('click', () => play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', stop)
+$('save').addEventListener('click', saveSession)
+$('open').addEventListener('click', () => $('openfile').click())
+$('openfile').addEventListener('change', async event => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  // Cleared so that opening the same file twice in a row still fires a change.
+  event.target.value = ''
+  try { await openSession(await file.text()) } catch (error) { log(error.message, 'error') }
+})
 $('tempo').addEventListener('change', async () => {
   const d = await ensureRunning()
   const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: Number($('tempo').value) }] }])

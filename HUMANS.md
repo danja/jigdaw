@@ -7,17 +7,13 @@ Ordered by what blocks most.
 
 ## 1. Commit and deploy
 
-Verified in Chrome on 2026-09-17 against a local server: BassGen loads, its panel generates
-from its `lv2:port` declarations, it emits MIDI on the transport, the host routes that to
-Pulse, and Pulse sounds. Measured 34 events in 5 seconds out of BassGen, 113 into Pulse, and a
-peak of 0.273 out of Pulse. Verified natively in a real JACK host as well.
+Since the last deployment: sessions save and reopen as RDF, in the project format that has
+been normative since phase 0 and that nothing had ever written. Verified in a browser, a chain
+of BassGen into Pulse with two parameters set, saved, cleared and reopened from the saved
+bytes: ids, plugin IRIs, settings and the MIDI connection all came back and it played.
 
-That run found three defects no test had: the host never offered `jig:MidiOut` so it refused
-its own plugin, connecting a plugin with no audio outputs threw, and the transport's time
-signature was read as a pair where it is sent as an object. All three are fixed, guarded and
-recorded in `MISTAKES.md`.
-
-**The live site does not have any of it**, including `jig:Abi2`, the MIDI work and BassGen.
+It found that removing a plugin never stopped it: the model forgot the node and the
+AudioWorkletNode kept running. Fixed and guarded, recorded in `MISTAKES.md`.
 
 ```sh
 # On your machine, in the repository
@@ -31,9 +27,6 @@ git add -A && git commit && git push
 git pull
 sudo systemctl restart jigdaw
 ```
-
-Nothing has been committed for either of the last two sessions, so this is a large change.
-`git status` currently lists 44 changed or new files.
 
 ## Updating a deployment
 

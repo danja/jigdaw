@@ -297,3 +297,72 @@ describe('rebuilding the audio links', () => {
     expect(engine.links).toEqual([])
   })
 })
+
+describe('removing a node lets go of what was playing it', () => {
+  // Until this was checked, removing a plugin from the model left its
+  // AudioWorkletNode running and connected to whatever the page had wired it
+  // to. Rebuilding links does not cover it: a node with no links is exactly the
+  // case that leaks. Found while adding session reopening, where the symptom
+  // would have been the old session still audible under the new one.
+  function recordingEngine () {
+    const removed = []
+    return {
+      removed,
+      nodes: () => [],
+      addPlugin: async iri => ({
+        id: `engine-${iri}`,
+        profile: { label: 'X', produces: [], latencyFrames: 0 },
+        node: {},
+        ready: {}
+      }),
+      remove: id => removed.push(id),
+      clearLinks: () => {},
+      link: () => {},
+      get: () => ({ profile: { produces: [] } }),
+      onMessage: () => () => {}
+    }
+  }
+
+  it('removes the engine node too', async () => {
+    const engine = recordingEngine()
+    const d = new OpDispatcher({ engine })
+    const added = await d.addPlugin('https://example.org/plugins/pulse/')
+    expect(d.apply([{ op: 'removeNode', id: added.nodeId }]).ok).toBe(true)
+    expect(engine.removed).toEqual([added.entry.id])
+  })
+
+  it('removes every engine node when a whole session is cleared', async () => {
+    const engine = recordingEngine()
+    const d = new OpDispatcher({ engine })
+    const a = await d.addPlugin('https://example.org/plugins/pulse/')
+    const b = await d.addPlugin('https://example.org/plugins/cascade/')
+    d.apply([{ op: 'removeNode', id: a.nodeId }, { op: 'removeNode', id: b.nodeId }])
+    expect(engine.removed.sort()).toEqual([a.entry.id, b.entry.id].sort())
+  })
+
+  it('keeps the ones that are still there', async () => {
+    const engine = recordingEngine()
+    const d = new OpDispatcher({ engine })
+    const a = await d.addPlugin('https://example.org/plugins/pulse/')
+    await d.addPlugin('https://example.org/plugins/cascade/')
+    d.apply([{ op: 'removeNode', id: a.nodeId }])
+    expect(engine.removed).toEqual([a.entry.id])
+  })
+})
+
+describe('a node can be given its name, so a session can be reopened', () => {
+  it('uses the id it is given rather than minting one', async () => {
+    // The connections in a saved project name the nodes they join, so a node
+    // that came back under a different name would be joined to nothing.
+    const engine = {
+      nodes: () => [],
+      addPlugin: async () => ({ id: 'e1', profile: { label: 'X', produces: [], latencyFrames: 0 }, node: {}, ready: {} }),
+      remove: () => {}, clearLinks: () => {}, link: () => {},
+      get: () => ({ profile: { produces: [] } }), onMessage: () => () => {}
+    }
+    const d = new OpDispatcher({ engine })
+    const added = await d.addPlugin('https://example.org/plugins/pulse/', { id: 'verb', label: 'Verb' })
+    expect(added.nodeId).toBe('verb')
+    expect(d.project.node('verb').label).toBe('Verb')
+  })
+})

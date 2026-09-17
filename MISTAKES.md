@@ -2,6 +2,30 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A removed plugin kept playing
+
+**What happened.** Removing a node from the model never removed the
+`AudioWorkletNode` behind it. The rack's Remove button took the plugin off the screen and out
+of the project, and left it running and connected to whatever the page had wired it to. Found
+while adding session reopening, where clearing the old session before loading the new one
+would have stacked the two.
+
+**Root cause.** `OpDispatcher` kept a map from model node to engine node and only ever added
+to it. `#rebuildLinks` runs after every change and looked like the place that would catch
+this, but it rebuilds *links*, and a node with no links is exactly the case that leaks. The
+one call to `engine.remove` in the file was in the failure path of `addPlugin`, which made the
+capability look present.
+
+**Prevention.** `#releaseRemoved` reconciles the map against the project after every apply and
+releases anything whose model node has gone. Driven by the model rather than by the change
+list, so it is right for any route that removes a node, including a changeset that removes one
+as a side effect. Three tests in `tests/ops/OpDispatcher.test.js` cover one node, a whole
+session, and leaving the survivors alone.
+
+**The general shape.** A pair of structures where one is authoritative and the other mirrors
+it needs a reconcile, not a handler per operation. Asking "what removes from this map" found
+nothing, and the answer was that nothing did.
+
 ## 2026-09-17 A diagnostic command that kills the shell running it, twice
 
 **What happened.** `pkill -f 'bin/jigdaw-adapter'` was used to clear a stray process before a

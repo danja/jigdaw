@@ -175,7 +175,7 @@ var require_ieee754 = __commonJS({
       }
       return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
     };
-    exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
+    exports.write = function(buffer, value2, offset, isLE, mLen, nBytes) {
       var e, m, c3;
       var eLen = nBytes * 8 - mLen - 1;
       var eMax = (1 << eLen) - 1;
@@ -183,23 +183,23 @@ var require_ieee754 = __commonJS({
       var rt = mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0;
       var i2 = isLE ? 0 : nBytes - 1;
       var d = isLE ? 1 : -1;
-      var s = value < 0 || value === 0 && 1 / value < 0 ? 1 : 0;
-      value = Math.abs(value);
-      if (isNaN(value) || value === Infinity) {
-        m = isNaN(value) ? 1 : 0;
+      var s = value2 < 0 || value2 === 0 && 1 / value2 < 0 ? 1 : 0;
+      value2 = Math.abs(value2);
+      if (isNaN(value2) || value2 === Infinity) {
+        m = isNaN(value2) ? 1 : 0;
         e = eMax;
       } else {
-        e = Math.floor(Math.log(value) / Math.LN2);
-        if (value * (c3 = Math.pow(2, -e)) < 1) {
+        e = Math.floor(Math.log(value2) / Math.LN2);
+        if (value2 * (c3 = Math.pow(2, -e)) < 1) {
           e--;
           c3 *= 2;
         }
         if (e + eBias >= 1) {
-          value += rt / c3;
+          value2 += rt / c3;
         } else {
-          value += rt * Math.pow(2, 1 - eBias);
+          value2 += rt * Math.pow(2, 1 - eBias);
         }
-        if (value * c3 >= 2) {
+        if (value2 * c3 >= 2) {
           e++;
           c3 /= 2;
         }
@@ -207,10 +207,10 @@ var require_ieee754 = __commonJS({
           m = 0;
           e = eMax;
         } else if (e + eBias >= 1) {
-          m = (value * c3 - 1) * Math.pow(2, mLen);
+          m = (value2 * c3 - 1) * Math.pow(2, mLen);
           e = e + eBias;
         } else {
-          m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+          m = value2 * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
           e = 0;
         }
       }
@@ -290,44 +290,44 @@ var require_buffer = __commonJS({
       return from(arg, encodingOrOffset, length);
     }
     Buffer3.poolSize = 8192;
-    function from(value, encodingOrOffset, length) {
-      if (typeof value === "string") {
-        return fromString(value, encodingOrOffset);
+    function from(value2, encodingOrOffset, length) {
+      if (typeof value2 === "string") {
+        return fromString(value2, encodingOrOffset);
       }
-      if (ArrayBuffer.isView(value)) {
-        return fromArrayView(value);
+      if (ArrayBuffer.isView(value2)) {
+        return fromArrayView(value2);
       }
-      if (value == null) {
+      if (value2 == null) {
         throw new TypeError(
-          "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value
+          "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value2
         );
       }
-      if (isInstance(value, ArrayBuffer) || value && isInstance(value.buffer, ArrayBuffer)) {
-        return fromArrayBuffer(value, encodingOrOffset, length);
+      if (isInstance(value2, ArrayBuffer) || value2 && isInstance(value2.buffer, ArrayBuffer)) {
+        return fromArrayBuffer(value2, encodingOrOffset, length);
       }
-      if (typeof SharedArrayBuffer !== "undefined" && (isInstance(value, SharedArrayBuffer) || value && isInstance(value.buffer, SharedArrayBuffer))) {
-        return fromArrayBuffer(value, encodingOrOffset, length);
+      if (typeof SharedArrayBuffer !== "undefined" && (isInstance(value2, SharedArrayBuffer) || value2 && isInstance(value2.buffer, SharedArrayBuffer))) {
+        return fromArrayBuffer(value2, encodingOrOffset, length);
       }
-      if (typeof value === "number") {
+      if (typeof value2 === "number") {
         throw new TypeError(
           'The "value" argument must not be of type number. Received type number'
         );
       }
-      const valueOf = value.valueOf && value.valueOf();
-      if (valueOf != null && valueOf !== value) {
+      const valueOf = value2.valueOf && value2.valueOf();
+      if (valueOf != null && valueOf !== value2) {
         return Buffer3.from(valueOf, encodingOrOffset, length);
       }
-      const b = fromObject(value);
+      const b = fromObject(value2);
       if (b) return b;
-      if (typeof Symbol !== "undefined" && Symbol.toPrimitive != null && typeof value[Symbol.toPrimitive] === "function") {
-        return Buffer3.from(value[Symbol.toPrimitive]("string"), encodingOrOffset, length);
+      if (typeof Symbol !== "undefined" && Symbol.toPrimitive != null && typeof value2[Symbol.toPrimitive] === "function") {
+        return Buffer3.from(value2[Symbol.toPrimitive]("string"), encodingOrOffset, length);
       }
       throw new TypeError(
-        "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value
+        "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value2
       );
     }
-    Buffer3.from = function(value, encodingOrOffset, length) {
-      return from(value, encodingOrOffset, length);
+    Buffer3.from = function(value2, encodingOrOffset, length) {
+      return from(value2, encodingOrOffset, length);
     };
     Object.setPrototypeOf(Buffer3.prototype, Uint8Array.prototype);
     Object.setPrototypeOf(Buffer3, Uint8Array);
@@ -361,16 +361,16 @@ var require_buffer = __commonJS({
     Buffer3.allocUnsafeSlow = function(size) {
       return allocUnsafe(size);
     };
-    function fromString(string, encoding) {
+    function fromString(string2, encoding) {
       if (typeof encoding !== "string" || encoding === "") {
         encoding = "utf8";
       }
       if (!Buffer3.isEncoding(encoding)) {
         throw new TypeError("Unknown encoding: " + encoding);
       }
-      const length = byteLength(string, encoding) | 0;
+      const length = byteLength(string2, encoding) | 0;
       let buf = createBuffer(length);
-      const actual = buf.write(string, encoding);
+      const actual = buf.write(string2, encoding);
       if (actual !== length) {
         buf = buf.slice(0, actual);
       }
@@ -522,19 +522,19 @@ var require_buffer = __commonJS({
       }
       return buffer;
     };
-    function byteLength(string, encoding) {
-      if (Buffer3.isBuffer(string)) {
-        return string.length;
+    function byteLength(string2, encoding) {
+      if (Buffer3.isBuffer(string2)) {
+        return string2.length;
       }
-      if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
-        return string.byteLength;
+      if (ArrayBuffer.isView(string2) || isInstance(string2, ArrayBuffer)) {
+        return string2.byteLength;
       }
-      if (typeof string !== "string") {
+      if (typeof string2 !== "string") {
         throw new TypeError(
-          'The "string" argument must be one of type string, Buffer, or ArrayBuffer. Received type ' + typeof string
+          'The "string" argument must be one of type string, Buffer, or ArrayBuffer. Received type ' + typeof string2
         );
       }
-      const len = string.length;
+      const len = string2.length;
       const mustMatch = arguments.length > 2 && arguments[2] === true;
       if (!mustMatch && len === 0) return 0;
       let loweredCase = false;
@@ -546,7 +546,7 @@ var require_buffer = __commonJS({
             return len;
           case "utf8":
           case "utf-8":
-            return utf8ToBytes(string).length;
+            return utf8ToBytes(string2).length;
           case "ucs2":
           case "ucs-2":
           case "utf16le":
@@ -555,10 +555,10 @@ var require_buffer = __commonJS({
           case "hex":
             return len >>> 1;
           case "base64":
-            return base64ToBytes(string).length;
+            return base64ToBytes(string2).length;
           default:
             if (loweredCase) {
-              return mustMatch ? -1 : utf8ToBytes(string).length;
+              return mustMatch ? -1 : utf8ToBytes(string2).length;
             }
             encoding = ("" + encoding).toLowerCase();
             loweredCase = true;
@@ -830,7 +830,7 @@ var require_buffer = __commonJS({
     Buffer3.prototype.lastIndexOf = function lastIndexOf(val, byteOffset, encoding) {
       return bidirectionalIndexOf(this, val, byteOffset, encoding, false);
     };
-    function hexWrite(buf, string, offset, length) {
+    function hexWrite(buf, string2, offset, length) {
       offset = Number(offset) || 0;
       const remaining = buf.length - offset;
       if (!length) {
@@ -841,31 +841,31 @@ var require_buffer = __commonJS({
           length = remaining;
         }
       }
-      const strLen = string.length;
+      const strLen = string2.length;
       if (length > strLen / 2) {
         length = strLen / 2;
       }
       let i2;
       for (i2 = 0; i2 < length; ++i2) {
-        const parsed = parseInt(string.substr(i2 * 2, 2), 16);
+        const parsed = parseInt(string2.substr(i2 * 2, 2), 16);
         if (numberIsNaN(parsed)) return i2;
         buf[offset + i2] = parsed;
       }
       return i2;
     }
-    function utf8Write(buf, string, offset, length) {
-      return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length);
+    function utf8Write(buf, string2, offset, length) {
+      return blitBuffer(utf8ToBytes(string2, buf.length - offset), buf, offset, length);
     }
-    function asciiWrite(buf, string, offset, length) {
-      return blitBuffer(asciiToBytes(string), buf, offset, length);
+    function asciiWrite(buf, string2, offset, length) {
+      return blitBuffer(asciiToBytes(string2), buf, offset, length);
     }
-    function base64Write(buf, string, offset, length) {
-      return blitBuffer(base64ToBytes(string), buf, offset, length);
+    function base64Write(buf, string2, offset, length) {
+      return blitBuffer(base64ToBytes(string2), buf, offset, length);
     }
-    function ucs2Write(buf, string, offset, length) {
-      return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length);
+    function ucs2Write(buf, string2, offset, length) {
+      return blitBuffer(utf16leToBytes(string2, buf.length - offset), buf, offset, length);
     }
-    Buffer3.prototype.write = function write(string, offset, length, encoding) {
+    Buffer3.prototype.write = function write(string2, offset, length, encoding) {
       if (offset === void 0) {
         encoding = "utf8";
         length = this.length;
@@ -890,7 +890,7 @@ var require_buffer = __commonJS({
       }
       const remaining = this.length - offset;
       if (length === void 0 || length > remaining) length = remaining;
-      if (string.length > 0 && (length < 0 || offset < 0) || offset > this.length) {
+      if (string2.length > 0 && (length < 0 || offset < 0) || offset > this.length) {
         throw new RangeError("Attempt to write outside buffer bounds");
       }
       if (!encoding) encoding = "utf8";
@@ -898,21 +898,21 @@ var require_buffer = __commonJS({
       for (; ; ) {
         switch (encoding) {
           case "hex":
-            return hexWrite(this, string, offset, length);
+            return hexWrite(this, string2, offset, length);
           case "utf8":
           case "utf-8":
-            return utf8Write(this, string, offset, length);
+            return utf8Write(this, string2, offset, length);
           case "ascii":
           case "latin1":
           case "binary":
-            return asciiWrite(this, string, offset, length);
+            return asciiWrite(this, string2, offset, length);
           case "base64":
-            return base64Write(this, string, offset, length);
+            return base64Write(this, string2, offset, length);
           case "ucs2":
           case "ucs-2":
           case "utf16le":
           case "utf-16le":
-            return ucs2Write(this, string, offset, length);
+            return ucs2Write(this, string2, offset, length);
           default:
             if (loweredCase) throw new TypeError("Unknown encoding: " + encoding);
             encoding = ("" + encoding).toLowerCase();
@@ -1241,89 +1241,89 @@ var require_buffer = __commonJS({
       if (!noAssert) checkOffset(offset, 8, this.length);
       return ieee754.read(this, offset, false, 52, 8);
     };
-    function checkInt(buf, value, offset, ext, max, min) {
+    function checkInt(buf, value2, offset, ext, max, min) {
       if (!Buffer3.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance');
-      if (value > max || value < min) throw new RangeError('"value" argument is out of bounds');
+      if (value2 > max || value2 < min) throw new RangeError('"value" argument is out of bounds');
       if (offset + ext > buf.length) throw new RangeError("Index out of range");
     }
-    Buffer3.prototype.writeUintLE = Buffer3.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength2, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUintLE = Buffer3.prototype.writeUIntLE = function writeUIntLE(value2, offset, byteLength2, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) {
         const maxBytes = Math.pow(2, 8 * byteLength2) - 1;
-        checkInt(this, value, offset, byteLength2, maxBytes, 0);
+        checkInt(this, value2, offset, byteLength2, maxBytes, 0);
       }
       let mul = 1;
       let i2 = 0;
-      this[offset] = value & 255;
+      this[offset] = value2 & 255;
       while (++i2 < byteLength2 && (mul *= 256)) {
-        this[offset + i2] = value / mul & 255;
+        this[offset + i2] = value2 / mul & 255;
       }
       return offset + byteLength2;
     };
-    Buffer3.prototype.writeUintBE = Buffer3.prototype.writeUIntBE = function writeUIntBE(value, offset, byteLength2, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUintBE = Buffer3.prototype.writeUIntBE = function writeUIntBE(value2, offset, byteLength2, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       byteLength2 = byteLength2 >>> 0;
       if (!noAssert) {
         const maxBytes = Math.pow(2, 8 * byteLength2) - 1;
-        checkInt(this, value, offset, byteLength2, maxBytes, 0);
+        checkInt(this, value2, offset, byteLength2, maxBytes, 0);
       }
       let i2 = byteLength2 - 1;
       let mul = 1;
-      this[offset + i2] = value & 255;
+      this[offset + i2] = value2 & 255;
       while (--i2 >= 0 && (mul *= 256)) {
-        this[offset + i2] = value / mul & 255;
+        this[offset + i2] = value2 / mul & 255;
       }
       return offset + byteLength2;
     };
-    Buffer3.prototype.writeUint8 = Buffer3.prototype.writeUInt8 = function writeUInt8(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUint8 = Buffer3.prototype.writeUInt8 = function writeUInt8(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 1, 255, 0);
-      this[offset] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 1, 255, 0);
+      this[offset] = value2 & 255;
       return offset + 1;
     };
-    Buffer3.prototype.writeUint16LE = Buffer3.prototype.writeUInt16LE = function writeUInt16LE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUint16LE = Buffer3.prototype.writeUInt16LE = function writeUInt16LE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
+      if (!noAssert) checkInt(this, value2, offset, 2, 65535, 0);
+      this[offset] = value2 & 255;
+      this[offset + 1] = value2 >>> 8;
       return offset + 2;
     };
-    Buffer3.prototype.writeUint16BE = Buffer3.prototype.writeUInt16BE = function writeUInt16BE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUint16BE = Buffer3.prototype.writeUInt16BE = function writeUInt16BE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
-      this[offset] = value >>> 8;
-      this[offset + 1] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 2, 65535, 0);
+      this[offset] = value2 >>> 8;
+      this[offset + 1] = value2 & 255;
       return offset + 2;
     };
-    Buffer3.prototype.writeUint32LE = Buffer3.prototype.writeUInt32LE = function writeUInt32LE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUint32LE = Buffer3.prototype.writeUInt32LE = function writeUInt32LE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
-      this[offset + 3] = value >>> 24;
-      this[offset + 2] = value >>> 16;
-      this[offset + 1] = value >>> 8;
-      this[offset] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 4, 4294967295, 0);
+      this[offset + 3] = value2 >>> 24;
+      this[offset + 2] = value2 >>> 16;
+      this[offset + 1] = value2 >>> 8;
+      this[offset] = value2 & 255;
       return offset + 4;
     };
-    Buffer3.prototype.writeUint32BE = Buffer3.prototype.writeUInt32BE = function writeUInt32BE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeUint32BE = Buffer3.prototype.writeUInt32BE = function writeUInt32BE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
-      this[offset] = value >>> 24;
-      this[offset + 1] = value >>> 16;
-      this[offset + 2] = value >>> 8;
-      this[offset + 3] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 4, 4294967295, 0);
+      this[offset] = value2 >>> 24;
+      this[offset + 1] = value2 >>> 16;
+      this[offset + 2] = value2 >>> 8;
+      this[offset + 3] = value2 & 255;
       return offset + 4;
     };
-    function wrtBigUInt64LE(buf, value, offset, min, max) {
-      checkIntBI(value, min, max, buf, offset, 7);
-      let lo = Number(value & BigInt(4294967295));
+    function wrtBigUInt64LE(buf, value2, offset, min, max) {
+      checkIntBI(value2, min, max, buf, offset, 7);
+      let lo = Number(value2 & BigInt(4294967295));
       buf[offset++] = lo;
       lo = lo >> 8;
       buf[offset++] = lo;
@@ -1331,7 +1331,7 @@ var require_buffer = __commonJS({
       buf[offset++] = lo;
       lo = lo >> 8;
       buf[offset++] = lo;
-      let hi = Number(value >> BigInt(32) & BigInt(4294967295));
+      let hi = Number(value2 >> BigInt(32) & BigInt(4294967295));
       buf[offset++] = hi;
       hi = hi >> 8;
       buf[offset++] = hi;
@@ -1341,9 +1341,9 @@ var require_buffer = __commonJS({
       buf[offset++] = hi;
       return offset;
     }
-    function wrtBigUInt64BE(buf, value, offset, min, max) {
-      checkIntBI(value, min, max, buf, offset, 7);
-      let lo = Number(value & BigInt(4294967295));
+    function wrtBigUInt64BE(buf, value2, offset, min, max) {
+      checkIntBI(value2, min, max, buf, offset, 7);
+      let lo = Number(value2 & BigInt(4294967295));
       buf[offset + 7] = lo;
       lo = lo >> 8;
       buf[offset + 6] = lo;
@@ -1351,7 +1351,7 @@ var require_buffer = __commonJS({
       buf[offset + 5] = lo;
       lo = lo >> 8;
       buf[offset + 4] = lo;
-      let hi = Number(value >> BigInt(32) & BigInt(4294967295));
+      let hi = Number(value2 >> BigInt(32) & BigInt(4294967295));
       buf[offset + 3] = hi;
       hi = hi >> 8;
       buf[offset + 2] = hi;
@@ -1361,134 +1361,134 @@ var require_buffer = __commonJS({
       buf[offset] = hi;
       return offset + 8;
     }
-    Buffer3.prototype.writeBigUInt64LE = defineBigIntMethod(function writeBigUInt64LE(value, offset = 0) {
-      return wrtBigUInt64LE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
+    Buffer3.prototype.writeBigUInt64LE = defineBigIntMethod(function writeBigUInt64LE(value2, offset = 0) {
+      return wrtBigUInt64LE(this, value2, offset, BigInt(0), BigInt("0xffffffffffffffff"));
     });
-    Buffer3.prototype.writeBigUInt64BE = defineBigIntMethod(function writeBigUInt64BE(value, offset = 0) {
-      return wrtBigUInt64BE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
+    Buffer3.prototype.writeBigUInt64BE = defineBigIntMethod(function writeBigUInt64BE(value2, offset = 0) {
+      return wrtBigUInt64BE(this, value2, offset, BigInt(0), BigInt("0xffffffffffffffff"));
     });
-    Buffer3.prototype.writeIntLE = function writeIntLE(value, offset, byteLength2, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeIntLE = function writeIntLE(value2, offset, byteLength2, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       if (!noAssert) {
         const limit = Math.pow(2, 8 * byteLength2 - 1);
-        checkInt(this, value, offset, byteLength2, limit - 1, -limit);
+        checkInt(this, value2, offset, byteLength2, limit - 1, -limit);
       }
       let i2 = 0;
       let mul = 1;
       let sub = 0;
-      this[offset] = value & 255;
+      this[offset] = value2 & 255;
       while (++i2 < byteLength2 && (mul *= 256)) {
-        if (value < 0 && sub === 0 && this[offset + i2 - 1] !== 0) {
+        if (value2 < 0 && sub === 0 && this[offset + i2 - 1] !== 0) {
           sub = 1;
         }
-        this[offset + i2] = (value / mul >> 0) - sub & 255;
+        this[offset + i2] = (value2 / mul >> 0) - sub & 255;
       }
       return offset + byteLength2;
     };
-    Buffer3.prototype.writeIntBE = function writeIntBE(value, offset, byteLength2, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeIntBE = function writeIntBE(value2, offset, byteLength2, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       if (!noAssert) {
         const limit = Math.pow(2, 8 * byteLength2 - 1);
-        checkInt(this, value, offset, byteLength2, limit - 1, -limit);
+        checkInt(this, value2, offset, byteLength2, limit - 1, -limit);
       }
       let i2 = byteLength2 - 1;
       let mul = 1;
       let sub = 0;
-      this[offset + i2] = value & 255;
+      this[offset + i2] = value2 & 255;
       while (--i2 >= 0 && (mul *= 256)) {
-        if (value < 0 && sub === 0 && this[offset + i2 + 1] !== 0) {
+        if (value2 < 0 && sub === 0 && this[offset + i2 + 1] !== 0) {
           sub = 1;
         }
-        this[offset + i2] = (value / mul >> 0) - sub & 255;
+        this[offset + i2] = (value2 / mul >> 0) - sub & 255;
       }
       return offset + byteLength2;
     };
-    Buffer3.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeInt8 = function writeInt8(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 1, 127, -128);
-      if (value < 0) value = 255 + value + 1;
-      this[offset] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 1, 127, -128);
+      if (value2 < 0) value2 = 255 + value2 + 1;
+      this[offset] = value2 & 255;
       return offset + 1;
     };
-    Buffer3.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeInt16LE = function writeInt16LE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
+      if (!noAssert) checkInt(this, value2, offset, 2, 32767, -32768);
+      this[offset] = value2 & 255;
+      this[offset + 1] = value2 >>> 8;
       return offset + 2;
     };
-    Buffer3.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeInt16BE = function writeInt16BE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
-      this[offset] = value >>> 8;
-      this[offset + 1] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 2, 32767, -32768);
+      this[offset] = value2 >>> 8;
+      this[offset + 1] = value2 & 255;
       return offset + 2;
     };
-    Buffer3.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeInt32LE = function writeInt32LE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
-      this[offset + 2] = value >>> 16;
-      this[offset + 3] = value >>> 24;
+      if (!noAssert) checkInt(this, value2, offset, 4, 2147483647, -2147483648);
+      this[offset] = value2 & 255;
+      this[offset + 1] = value2 >>> 8;
+      this[offset + 2] = value2 >>> 16;
+      this[offset + 3] = value2 >>> 24;
       return offset + 4;
     };
-    Buffer3.prototype.writeInt32BE = function writeInt32BE(value, offset, noAssert) {
-      value = +value;
+    Buffer3.prototype.writeInt32BE = function writeInt32BE(value2, offset, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
-      if (value < 0) value = 4294967295 + value + 1;
-      this[offset] = value >>> 24;
-      this[offset + 1] = value >>> 16;
-      this[offset + 2] = value >>> 8;
-      this[offset + 3] = value & 255;
+      if (!noAssert) checkInt(this, value2, offset, 4, 2147483647, -2147483648);
+      if (value2 < 0) value2 = 4294967295 + value2 + 1;
+      this[offset] = value2 >>> 24;
+      this[offset + 1] = value2 >>> 16;
+      this[offset + 2] = value2 >>> 8;
+      this[offset + 3] = value2 & 255;
       return offset + 4;
     };
-    Buffer3.prototype.writeBigInt64LE = defineBigIntMethod(function writeBigInt64LE(value, offset = 0) {
-      return wrtBigUInt64LE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
+    Buffer3.prototype.writeBigInt64LE = defineBigIntMethod(function writeBigInt64LE(value2, offset = 0) {
+      return wrtBigUInt64LE(this, value2, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
     });
-    Buffer3.prototype.writeBigInt64BE = defineBigIntMethod(function writeBigInt64BE(value, offset = 0) {
-      return wrtBigUInt64BE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
+    Buffer3.prototype.writeBigInt64BE = defineBigIntMethod(function writeBigInt64BE(value2, offset = 0) {
+      return wrtBigUInt64BE(this, value2, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
     });
-    function checkIEEE754(buf, value, offset, ext, max, min) {
+    function checkIEEE754(buf, value2, offset, ext, max, min) {
       if (offset + ext > buf.length) throw new RangeError("Index out of range");
       if (offset < 0) throw new RangeError("Index out of range");
     }
-    function writeFloat(buf, value, offset, littleEndian, noAssert) {
-      value = +value;
+    function writeFloat(buf, value2, offset, littleEndian, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       if (!noAssert) {
-        checkIEEE754(buf, value, offset, 4, 34028234663852886e22, -34028234663852886e22);
+        checkIEEE754(buf, value2, offset, 4, 34028234663852886e22, -34028234663852886e22);
       }
-      ieee754.write(buf, value, offset, littleEndian, 23, 4);
+      ieee754.write(buf, value2, offset, littleEndian, 23, 4);
       return offset + 4;
     }
-    Buffer3.prototype.writeFloatLE = function writeFloatLE(value, offset, noAssert) {
-      return writeFloat(this, value, offset, true, noAssert);
+    Buffer3.prototype.writeFloatLE = function writeFloatLE(value2, offset, noAssert) {
+      return writeFloat(this, value2, offset, true, noAssert);
     };
-    Buffer3.prototype.writeFloatBE = function writeFloatBE(value, offset, noAssert) {
-      return writeFloat(this, value, offset, false, noAssert);
+    Buffer3.prototype.writeFloatBE = function writeFloatBE(value2, offset, noAssert) {
+      return writeFloat(this, value2, offset, false, noAssert);
     };
-    function writeDouble(buf, value, offset, littleEndian, noAssert) {
-      value = +value;
+    function writeDouble(buf, value2, offset, littleEndian, noAssert) {
+      value2 = +value2;
       offset = offset >>> 0;
       if (!noAssert) {
-        checkIEEE754(buf, value, offset, 8, 17976931348623157e292, -17976931348623157e292);
+        checkIEEE754(buf, value2, offset, 8, 17976931348623157e292, -17976931348623157e292);
       }
-      ieee754.write(buf, value, offset, littleEndian, 52, 8);
+      ieee754.write(buf, value2, offset, littleEndian, 52, 8);
       return offset + 8;
     }
-    Buffer3.prototype.writeDoubleLE = function writeDoubleLE(value, offset, noAssert) {
-      return writeDouble(this, value, offset, true, noAssert);
+    Buffer3.prototype.writeDoubleLE = function writeDoubleLE(value2, offset, noAssert) {
+      return writeDouble(this, value2, offset, true, noAssert);
     };
-    Buffer3.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
-      return writeDouble(this, value, offset, false, noAssert);
+    Buffer3.prototype.writeDoubleBE = function writeDoubleBE(value2, offset, noAssert) {
+      return writeDouble(this, value2, offset, false, noAssert);
     };
     Buffer3.prototype.copy = function copy(target, targetStart, start, end) {
       if (!Buffer3.isBuffer(target)) throw new TypeError("argument should be a Buffer");
@@ -1590,11 +1590,11 @@ var require_buffer = __commonJS({
         get code() {
           return sym;
         }
-        set code(value) {
+        set code(value2) {
           Object.defineProperty(this, "code", {
             configurable: true,
             enumerable: true,
-            value,
+            value: value2,
             writable: true
           });
         }
@@ -1654,8 +1654,8 @@ var require_buffer = __commonJS({
         boundsError(offset, buf.length - (byteLength2 + 1));
       }
     }
-    function checkIntBI(value, min, max, buf, offset, byteLength2) {
-      if (value > max || value < min) {
+    function checkIntBI(value2, min, max, buf, offset, byteLength2) {
+      if (value2 > max || value2 < min) {
         const n2 = typeof min === "bigint" ? "n" : "";
         let range;
         if (byteLength2 > 3) {
@@ -1667,19 +1667,19 @@ var require_buffer = __commonJS({
         } else {
           range = `>= ${min}${n2} and <= ${max}${n2}`;
         }
-        throw new errors.ERR_OUT_OF_RANGE("value", range, value);
+        throw new errors.ERR_OUT_OF_RANGE("value", range, value2);
       }
       checkBounds(buf, offset, byteLength2);
     }
-    function validateNumber(value, name) {
-      if (typeof value !== "number") {
-        throw new errors.ERR_INVALID_ARG_TYPE(name, "number", value);
+    function validateNumber(value2, name) {
+      if (typeof value2 !== "number") {
+        throw new errors.ERR_INVALID_ARG_TYPE(name, "number", value2);
       }
     }
-    function boundsError(value, length, type) {
-      if (Math.floor(value) !== value) {
-        validateNumber(value, type);
-        throw new errors.ERR_OUT_OF_RANGE(type || "offset", "an integer", value);
+    function boundsError(value2, length, type) {
+      if (Math.floor(value2) !== value2) {
+        validateNumber(value2, type);
+        throw new errors.ERR_OUT_OF_RANGE(type || "offset", "an integer", value2);
       }
       if (length < 0) {
         throw new errors.ERR_BUFFER_OUT_OF_BOUNDS();
@@ -1687,7 +1687,7 @@ var require_buffer = __commonJS({
       throw new errors.ERR_OUT_OF_RANGE(
         type || "offset",
         `>= ${type ? 1 : 0} and <= ${length}`,
-        value
+        value2
       );
     }
     var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g;
@@ -1700,14 +1700,14 @@ var require_buffer = __commonJS({
       }
       return str;
     }
-    function utf8ToBytes(string, units2) {
+    function utf8ToBytes(string2, units2) {
       units2 = units2 || Infinity;
       let codePoint;
-      const length = string.length;
+      const length = string2.length;
       let leadSurrogate = null;
       const bytes = [];
       for (let i2 = 0; i2 < length; ++i2) {
-        codePoint = string.charCodeAt(i2);
+        codePoint = string2.charCodeAt(i2);
         if (codePoint > 55295 && codePoint < 57344) {
           if (!leadSurrogate) {
             if (codePoint > 56319) {
@@ -1905,8 +1905,8 @@ var require_primordials = __commonJS({
         return Promise.resolve(val);
       },
       ReflectApply: Reflect.apply,
-      RegExpPrototypeTest(self2, value) {
-        return self2.test(value);
+      RegExpPrototypeTest(self2, value2) {
+        return self2.test(value2);
       },
       SafeSet: Set,
       String,
@@ -1958,29 +1958,29 @@ var require_inspect = __commonJS({
           }
         });
       },
-      inspect(value) {
-        switch (typeof value) {
+      inspect(value2) {
+        switch (typeof value2) {
           case "string":
-            if (value.includes("'")) {
-              if (!value.includes('"')) {
-                return `"${value}"`;
-              } else if (!value.includes("`") && !value.includes("${")) {
-                return `\`${value}\``;
+            if (value2.includes("'")) {
+              if (!value2.includes('"')) {
+                return `"${value2}"`;
+              } else if (!value2.includes("`") && !value2.includes("${")) {
+                return `\`${value2}\``;
               }
             }
-            return `'${value}'`;
+            return `'${value2}'`;
           case "number":
-            if (isNaN(value)) {
+            if (isNaN(value2)) {
               return "NaN";
-            } else if (Object.is(value, -0)) {
-              return String(value);
+            } else if (Object.is(value2, -0)) {
+              return String(value2);
             }
-            return value;
+            return value2;
           case "bigint":
-            return `${String(value)}n`;
+            return `${String(value2)}n`;
           case "boolean":
           case "undefined":
-            return String(value);
+            return String(value2);
           case "object":
             return "{}";
         }
@@ -2012,8 +2012,8 @@ var require_errors = __commonJS({
     var classRegExp = /^([A-Z][a-z0-9]*)+$/;
     var nodeInternalPrefix = "__node_internal_";
     var codes = {};
-    function assert(value, message) {
-      if (!value) {
+    function assert(value2, message) {
+      if (!value2) {
         throw new codes.ERR_INTERNAL_ASSERTION(message);
       }
     }
@@ -2124,15 +2124,15 @@ var require_errors = __commonJS({
         const types = [];
         const instances = [];
         const other = [];
-        for (const value of expected) {
-          assert(typeof value === "string", "All expected entries have to be of type string");
-          if (kTypes.includes(value)) {
-            types.push(value.toLowerCase());
-          } else if (classRegExp.test(value)) {
-            instances.push(value);
+        for (const value2 of expected) {
+          assert(typeof value2 === "string", "All expected entries have to be of type string");
+          if (kTypes.includes(value2)) {
+            types.push(value2.toLowerCase());
+          } else if (classRegExp.test(value2)) {
+            instances.push(value2);
           } else {
-            assert(value !== "object", 'The value "object" should be written as "Object"');
-            other.push(value);
+            assert(value2 !== "object", 'The value "object" should be written as "Object"');
+            other.push(value2);
           }
         }
         if (instances.length > 0) {
@@ -2222,8 +2222,8 @@ var require_errors = __commonJS({
     );
     E(
       "ERR_INVALID_ARG_VALUE",
-      (name, value, reason = "is invalid") => {
-        let inspected = inspect2(value);
+      (name, value2, reason = "is invalid") => {
+        let inspected = inspect2(value2);
         if (inspected.length > 128) {
           inspected = inspected.slice(0, 128) + "...";
         }
@@ -2234,9 +2234,9 @@ var require_errors = __commonJS({
     );
     E(
       "ERR_INVALID_RETURN_VALUE",
-      (input, name, value) => {
+      (input, name, value2) => {
         var _value$constructor;
-        const type = value !== null && value !== void 0 && (_value$constructor = value.constructor) !== null && _value$constructor !== void 0 && _value$constructor.name ? `instance of ${value.constructor.name}` : `type ${typeof value}`;
+        const type = value2 !== null && value2 !== void 0 && (_value$constructor = value2.constructor) !== null && _value$constructor !== void 0 && _value$constructor.name ? `instance of ${value2.constructor.name}` : `type ${typeof value2}`;
         return `Expected ${input} to be returned from the "${name}" function but got ${type}.`;
       },
       TypeError
@@ -2344,8 +2344,8 @@ var require_events = __commonJS({
     function ProcessEmitWarning(warning) {
       if (console && console.warn) console.warn(warning);
     }
-    var NumberIsNaN = Number.isNaN || function NumberIsNaN2(value) {
-      return value !== value;
+    var NumberIsNaN = Number.isNaN || function NumberIsNaN2(value2) {
+      return value2 !== value2;
     };
     function EventEmitter() {
       EventEmitter.init.call(this);
@@ -2715,9 +2715,9 @@ var require_util = __commonJS({
         throw new ERR_INVALID_ARG_TYPE(name, "AbortSignal", signal);
       }
     };
-    var validateFunction = (value, name) => {
-      if (typeof value !== "function") {
-        throw new ERR_INVALID_ARG_TYPE(name, "Function", value);
+    var validateFunction = (value2, name) => {
+      if (typeof value2 !== "function") {
+        throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
       }
     };
     module.exports = {
@@ -2856,123 +2856,123 @@ var require_validators = __commonJS({
     var { normalizeEncoding } = require_util();
     var { isAsyncFunction, isArrayBufferView } = require_util().types;
     var signals = {};
-    function isInt32(value) {
-      return value === (value | 0);
+    function isInt32(value2) {
+      return value2 === (value2 | 0);
     }
-    function isUint32(value) {
-      return value === value >>> 0;
+    function isUint32(value2) {
+      return value2 === value2 >>> 0;
     }
     var octalReg = /^[0-7]+$/;
     var modeDesc = "must be a 32-bit unsigned integer or an octal string";
-    function parseFileMode(value, name, def) {
-      if (typeof value === "undefined") {
-        value = def;
+    function parseFileMode(value2, name, def) {
+      if (typeof value2 === "undefined") {
+        value2 = def;
       }
-      if (typeof value === "string") {
-        if (RegExpPrototypeExec(octalReg, value) === null) {
-          throw new ERR_INVALID_ARG_VALUE(name, value, modeDesc);
+      if (typeof value2 === "string") {
+        if (RegExpPrototypeExec(octalReg, value2) === null) {
+          throw new ERR_INVALID_ARG_VALUE(name, value2, modeDesc);
         }
-        value = NumberParseInt(value, 8);
+        value2 = NumberParseInt(value2, 8);
       }
-      validateUint32(value, name);
-      return value;
+      validateUint32(value2, name);
+      return value2;
     }
-    var validateInteger = hideStackFrames((value, name, min = NumberMIN_SAFE_INTEGER, max = NumberMAX_SAFE_INTEGER) => {
-      if (typeof value !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value);
-      if (!NumberIsInteger(value)) throw new ERR_OUT_OF_RANGE(name, "an integer", value);
-      if (value < min || value > max) throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value);
+    var validateInteger = hideStackFrames((value2, name, min = NumberMIN_SAFE_INTEGER, max = NumberMAX_SAFE_INTEGER) => {
+      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
+      if (!NumberIsInteger(value2)) throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
+      if (value2 < min || value2 > max) throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
     });
-    var validateInt32 = hideStackFrames((value, name, min = -2147483648, max = 2147483647) => {
-      if (typeof value !== "number") {
-        throw new ERR_INVALID_ARG_TYPE(name, "number", value);
+    var validateInt32 = hideStackFrames((value2, name, min = -2147483648, max = 2147483647) => {
+      if (typeof value2 !== "number") {
+        throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
       }
-      if (!NumberIsInteger(value)) {
-        throw new ERR_OUT_OF_RANGE(name, "an integer", value);
+      if (!NumberIsInteger(value2)) {
+        throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
       }
-      if (value < min || value > max) {
-        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value);
+      if (value2 < min || value2 > max) {
+        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
       }
     });
-    var validateUint32 = hideStackFrames((value, name, positive = false) => {
-      if (typeof value !== "number") {
-        throw new ERR_INVALID_ARG_TYPE(name, "number", value);
+    var validateUint32 = hideStackFrames((value2, name, positive = false) => {
+      if (typeof value2 !== "number") {
+        throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
       }
-      if (!NumberIsInteger(value)) {
-        throw new ERR_OUT_OF_RANGE(name, "an integer", value);
+      if (!NumberIsInteger(value2)) {
+        throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
       }
       const min = positive ? 1 : 0;
       const max = 4294967295;
-      if (value < min || value > max) {
-        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value);
+      if (value2 < min || value2 > max) {
+        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
       }
     });
-    function validateString(value, name) {
-      if (typeof value !== "string") throw new ERR_INVALID_ARG_TYPE(name, "string", value);
+    function validateString(value2, name) {
+      if (typeof value2 !== "string") throw new ERR_INVALID_ARG_TYPE(name, "string", value2);
     }
-    function validateNumber(value, name, min = void 0, max) {
-      if (typeof value !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value);
-      if (min != null && value < min || max != null && value > max || (min != null || max != null) && NumberIsNaN(value)) {
+    function validateNumber(value2, name, min = void 0, max) {
+      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
+      if (min != null && value2 < min || max != null && value2 > max || (min != null || max != null) && NumberIsNaN(value2)) {
         throw new ERR_OUT_OF_RANGE(
           name,
           `${min != null ? `>= ${min}` : ""}${min != null && max != null ? " && " : ""}${max != null ? `<= ${max}` : ""}`,
-          value
+          value2
         );
       }
     }
-    var validateOneOf = hideStackFrames((value, name, oneOf) => {
-      if (!ArrayPrototypeIncludes(oneOf, value)) {
+    var validateOneOf = hideStackFrames((value2, name, oneOf) => {
+      if (!ArrayPrototypeIncludes(oneOf, value2)) {
         const allowed = ArrayPrototypeJoin(
           ArrayPrototypeMap(oneOf, (v) => typeof v === "string" ? `'${v}'` : String2(v)),
           ", "
         );
         const reason = "must be one of: " + allowed;
-        throw new ERR_INVALID_ARG_VALUE(name, value, reason);
+        throw new ERR_INVALID_ARG_VALUE(name, value2, reason);
       }
     });
-    function validateBoolean(value, name) {
-      if (typeof value !== "boolean") throw new ERR_INVALID_ARG_TYPE(name, "boolean", value);
+    function validateBoolean(value2, name) {
+      if (typeof value2 !== "boolean") throw new ERR_INVALID_ARG_TYPE(name, "boolean", value2);
     }
     function getOwnPropertyValueOrDefault(options, key, defaultValue) {
       return options == null || !ObjectPrototypeHasOwnProperty(options, key) ? defaultValue : options[key];
     }
-    var validateObject = hideStackFrames((value, name, options = null) => {
+    var validateObject = hideStackFrames((value2, name, options = null) => {
       const allowArray = getOwnPropertyValueOrDefault(options, "allowArray", false);
       const allowFunction = getOwnPropertyValueOrDefault(options, "allowFunction", false);
       const nullable = getOwnPropertyValueOrDefault(options, "nullable", false);
-      if (!nullable && value === null || !allowArray && ArrayIsArray(value) || typeof value !== "object" && (!allowFunction || typeof value !== "function")) {
-        throw new ERR_INVALID_ARG_TYPE(name, "Object", value);
+      if (!nullable && value2 === null || !allowArray && ArrayIsArray(value2) || typeof value2 !== "object" && (!allowFunction || typeof value2 !== "function")) {
+        throw new ERR_INVALID_ARG_TYPE(name, "Object", value2);
       }
     });
-    var validateDictionary = hideStackFrames((value, name) => {
-      if (value != null && typeof value !== "object" && typeof value !== "function") {
-        throw new ERR_INVALID_ARG_TYPE(name, "a dictionary", value);
+    var validateDictionary = hideStackFrames((value2, name) => {
+      if (value2 != null && typeof value2 !== "object" && typeof value2 !== "function") {
+        throw new ERR_INVALID_ARG_TYPE(name, "a dictionary", value2);
       }
     });
-    var validateArray = hideStackFrames((value, name, minLength = 0) => {
-      if (!ArrayIsArray(value)) {
-        throw new ERR_INVALID_ARG_TYPE(name, "Array", value);
+    var validateArray = hideStackFrames((value2, name, minLength = 0) => {
+      if (!ArrayIsArray(value2)) {
+        throw new ERR_INVALID_ARG_TYPE(name, "Array", value2);
       }
-      if (value.length < minLength) {
+      if (value2.length < minLength) {
         const reason = `must be longer than ${minLength}`;
-        throw new ERR_INVALID_ARG_VALUE(name, value, reason);
+        throw new ERR_INVALID_ARG_VALUE(name, value2, reason);
       }
     });
-    function validateStringArray(value, name) {
-      validateArray(value, name);
-      for (let i2 = 0; i2 < value.length; i2++) {
-        validateString(value[i2], `${name}[${i2}]`);
+    function validateStringArray(value2, name) {
+      validateArray(value2, name);
+      for (let i2 = 0; i2 < value2.length; i2++) {
+        validateString(value2[i2], `${name}[${i2}]`);
       }
     }
-    function validateBooleanArray(value, name) {
-      validateArray(value, name);
-      for (let i2 = 0; i2 < value.length; i2++) {
-        validateBoolean(value[i2], `${name}[${i2}]`);
+    function validateBooleanArray(value2, name) {
+      validateArray(value2, name);
+      for (let i2 = 0; i2 < value2.length; i2++) {
+        validateBoolean(value2[i2], `${name}[${i2}]`);
       }
     }
-    function validateAbortSignalArray(value, name) {
-      validateArray(value, name);
-      for (let i2 = 0; i2 < value.length; i2++) {
-        const signal = value[i2];
+    function validateAbortSignalArray(value2, name) {
+      validateArray(value2, name);
+      for (let i2 = 0; i2 < value2.length; i2++) {
+        const signal = value2[i2];
         const indexedName = `${name}[${i2}]`;
         if (signal == null) {
           throw new ERR_INVALID_ARG_TYPE(indexedName, "AbortSignal", signal);
@@ -3012,26 +3012,26 @@ var require_validators = __commonJS({
         throw new ERR_INVALID_ARG_TYPE(name, "AbortSignal", signal);
       }
     });
-    var validateFunction = hideStackFrames((value, name) => {
-      if (typeof value !== "function") throw new ERR_INVALID_ARG_TYPE(name, "Function", value);
+    var validateFunction = hideStackFrames((value2, name) => {
+      if (typeof value2 !== "function") throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
     });
-    var validatePlainFunction = hideStackFrames((value, name) => {
-      if (typeof value !== "function" || isAsyncFunction(value)) throw new ERR_INVALID_ARG_TYPE(name, "Function", value);
+    var validatePlainFunction = hideStackFrames((value2, name) => {
+      if (typeof value2 !== "function" || isAsyncFunction(value2)) throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
     });
-    var validateUndefined = hideStackFrames((value, name) => {
-      if (value !== void 0) throw new ERR_INVALID_ARG_TYPE(name, "undefined", value);
+    var validateUndefined = hideStackFrames((value2, name) => {
+      if (value2 !== void 0) throw new ERR_INVALID_ARG_TYPE(name, "undefined", value2);
     });
-    function validateUnion(value, name, union) {
-      if (!ArrayPrototypeIncludes(union, value)) {
-        throw new ERR_INVALID_ARG_TYPE(name, `('${ArrayPrototypeJoin(union, "|")}')`, value);
+    function validateUnion(value2, name, union) {
+      if (!ArrayPrototypeIncludes(union, value2)) {
+        throw new ERR_INVALID_ARG_TYPE(name, `('${ArrayPrototypeJoin(union, "|")}')`, value2);
       }
     }
     var linkValueRegExp = /^(?:<[^>]*>)(?:\s*;\s*[^;"\s]+(?:=(")?[^;"\s]*\1)?)*$/;
-    function validateLinkHeaderFormat(value, name) {
-      if (typeof value === "undefined" || !RegExpPrototypeExec(linkValueRegExp, value)) {
+    function validateLinkHeaderFormat(value2, name) {
+      if (typeof value2 === "undefined" || !RegExpPrototypeExec(linkValueRegExp, value2)) {
         throw new ERR_INVALID_ARG_VALUE(
           name,
-          value,
+          value2,
           'must be an array or string of format "</styles.css>; rel=preload; as=style"'
         );
       }
@@ -4280,12 +4280,12 @@ var require_state = __commonJS({
     function getDefaultHighWaterMark(objectMode) {
       return objectMode ? defaultHighWaterMarkObjectMode : defaultHighWaterMarkBytes;
     }
-    function setDefaultHighWaterMark(objectMode, value) {
-      validateInteger(value, "value", 0);
+    function setDefaultHighWaterMark(objectMode, value2) {
+      validateInteger(value2, "value", 0);
       if (objectMode) {
-        defaultHighWaterMarkObjectMode = value;
+        defaultHighWaterMarkObjectMode = value2;
       } else {
-        defaultHighWaterMarkBytes = value;
+        defaultHighWaterMarkBytes = value2;
       }
     }
     function getHighWaterMark(state, options, duplexKey, isDuplex) {
@@ -4658,25 +4658,25 @@ var require_from = __commonJS({
         const hadError = error2 !== void 0 && error2 !== null;
         const hasThrow = typeof iterator.throw === "function";
         if (hadError && hasThrow) {
-          const { value, done } = await iterator.throw(error2);
-          await value;
+          const { value: value2, done } = await iterator.throw(error2);
+          await value2;
           if (done) {
             return;
           }
         }
         if (typeof iterator.return === "function") {
-          const { value } = await iterator.return();
-          await value;
+          const { value: value2 } = await iterator.return();
+          await value2;
         }
       }
       async function next() {
         for (; ; ) {
           try {
-            const { value, done } = isAsync ? await iterator.next() : iterator.next();
+            const { value: value2, done } = isAsync ? await iterator.next() : iterator.next();
             if (done) {
               readable.push(null);
             } else {
-              const res = value && typeof value.then === "function" ? await value : value;
+              const res = value2 && typeof value2.then === "function" ? await value2 : value2;
               if (res === null) {
                 reading = false;
                 throw new ERR_STREAM_NULL_VALUES();
@@ -4775,8 +4775,8 @@ var require_readable = __commonJS({
         get() {
           return (this.state & bit) !== 0;
         },
-        set(value) {
-          if (value) this.state |= bit;
+        set(value2) {
+          if (value2) this.state |= bit;
           else this.state &= ~bit;
         }
       };
@@ -5555,11 +5555,11 @@ var require_readable = __commonJS({
         get() {
           return this._readableState ? this._readableState.destroyed : false;
         },
-        set(value) {
+        set(value2) {
           if (!this._readableState) {
             return;
           }
-          this._readableState.destroyed = value;
+          this._readableState.destroyed = value2;
         }
       },
       readableEnded: {
@@ -5584,8 +5584,8 @@ var require_readable = __commonJS({
         get() {
           return this[kPaused] !== false;
         },
-        set(value) {
-          this[kPaused] = !!value;
+        set(value2) {
+          this[kPaused] = !!value2;
         }
       }
     });
@@ -6172,9 +6172,9 @@ var require_writable = __commonJS({
         get() {
           return this._writableState ? this._writableState.destroyed : false;
         },
-        set(value) {
+        set(value2) {
           if (this._writableState) {
-            this._writableState.destroyed = value;
+            this._writableState.destroyed = value2;
           }
         }
       },
@@ -6367,9 +6367,9 @@ var require_duplexify = __commonJS({
         });
       }
       if (typeof body === "function") {
-        const { value, write, final, destroy } = fromAsyncGen(body);
-        if (isIterable(value)) {
-          return from(Duplexify, value, {
+        const { value: value2, write, final, destroy } = fromAsyncGen(body);
+        if (isIterable(value2)) {
+          return from(Duplexify, value2, {
             // TODO (ronag): highWaterMark?
             objectMode: true,
             write,
@@ -6377,12 +6377,12 @@ var require_duplexify = __commonJS({
             destroy
           });
         }
-        const then2 = value === null || value === void 0 ? void 0 : value.then;
+        const then2 = value2 === null || value2 === void 0 ? void 0 : value2.then;
         if (typeof then2 === "function") {
           let d;
           const promise = FunctionPrototypeCall(
             then2,
-            value,
+            value2,
             (val) => {
               if (val != null) {
                 throw new ERR_INVALID_RETURN_VALUE("nully", "body", val);
@@ -6410,7 +6410,7 @@ var require_duplexify = __commonJS({
             destroy
           });
         }
-        throw new ERR_INVALID_RETURN_VALUE("Iterable, AsyncIterable or AsyncFunction", name, value);
+        throw new ERR_INVALID_RETURN_VALUE("Iterable, AsyncIterable or AsyncFunction", name, value2);
       }
       if (isBlob(body)) {
         return duplexify(body.arrayBuffer());
@@ -6476,7 +6476,7 @@ var require_duplexify = __commonJS({
       let { promise, resolve } = createDeferredPromise();
       const ac = new AbortController2();
       const signal = ac.signal;
-      const value = fn(
+      const value2 = fn(
         (async function* () {
           while (true) {
             const _promise = promise;
@@ -6497,7 +6497,7 @@ var require_duplexify = __commonJS({
         }
       );
       return {
-        value,
+        value: value2,
         write(chunk, encoding, cb) {
           const _resolve = resolve;
           resolve = null;
@@ -6720,10 +6720,10 @@ var require_duplex = __commonJS({
           }
           return this._readableState.destroyed && this._writableState.destroyed;
         },
-        set(value) {
+        set(value2) {
           if (this._readableState && this._writableState) {
-            this._readableState.destroyed = value;
-            this._writableState.destroyed = value;
+            this._readableState.destroyed = value2;
+            this._writableState.destroyed = value2;
           }
         }
       }
@@ -7051,7 +7051,7 @@ var require_pipeline = __commonJS({
         disposable = addAbortListener(outerSignal, abort);
       }
       let error2;
-      let value;
+      let value2;
       const destroys = [];
       let finishCount = 0;
       function finish(err) {
@@ -7075,7 +7075,7 @@ var require_pipeline = __commonJS({
           if (!error2) {
             lastStreamCleanup.forEach((fn) => fn());
           }
-          process2.nextTick(callback, error2, value);
+          process2.nextTick(callback, error2, value2);
         }
       }
       let ret;
@@ -7147,7 +7147,7 @@ var require_pipeline = __commonJS({
               then.call(
                 ret,
                 (val) => {
-                  value = val;
+                  value2 = val;
                   if (val != null) {
                     pt.write(val);
                   }
@@ -7455,8 +7455,8 @@ var require_compose = __commonJS({
           d._read = async function() {
             while (true) {
               try {
-                const { value, done } = await reader.read();
-                if (!d.push(value)) {
+                const { value: value2, done } = await reader.read();
+                if (!d.push(value2)) {
                   return;
                 }
                 if (done) {
@@ -7708,8 +7708,8 @@ var require_operators = __commonJS({
       if (typeof fn !== "function") {
         throw new ERR_INVALID_ARG_TYPE("fn", ["Function", "AsyncFunction"], fn);
       }
-      async function forEachFn(value, options2) {
-        await fn(value, options2);
+      async function forEachFn(value2, options2) {
+        await fn(value2, options2);
         return kEmpty;
       }
       for await (const unused of map.call(this, forEachFn, options)) ;
@@ -7718,9 +7718,9 @@ var require_operators = __commonJS({
       if (typeof fn !== "function") {
         throw new ERR_INVALID_ARG_TYPE("fn", ["Function", "AsyncFunction"], fn);
       }
-      async function filterFn(value, options2) {
-        if (await fn(value, options2)) {
-          return value;
+      async function filterFn(value2, options2) {
+        if (await fn(value2, options2)) {
+          return value2;
         }
         return kEmpty;
       }
@@ -7765,17 +7765,17 @@ var require_operators = __commonJS({
       }
       let gotAnyItemFromStream = false;
       try {
-        for await (const value of this) {
+        for await (const value2 of this) {
           var _options$signal3;
           gotAnyItemFromStream = true;
           if (options !== null && options !== void 0 && (_options$signal3 = options.signal) !== null && _options$signal3 !== void 0 && _options$signal3.aborted) {
             throw new AbortError();
           }
           if (!hasInitialValue) {
-            initialValue = value;
+            initialValue = value2;
             hasInitialValue = true;
           } else {
-            initialValue = await reducer(initialValue, value, {
+            initialValue = await reducer(initialValue, value2, {
               signal
             });
           }
@@ -7815,24 +7815,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number) {
-      number = Number2(number);
-      if (NumberIsNaN(number)) {
+    function toIntegerOrInfinity(number2) {
+      number2 = Number2(number2);
+      if (NumberIsNaN(number2)) {
         return 0;
       }
-      if (number < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number);
+      if (number2 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number2);
       }
-      return number;
+      return number2;
     }
-    function drop(number, options = void 0) {
+    function drop(number2, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number = toIntegerOrInfinity(number);
+      number2 = toIntegerOrInfinity(number2);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7843,20 +7843,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number-- <= 0) {
+          if (number2-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number, options = void 0) {
+    function take2(number2, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number = toIntegerOrInfinity(number);
+      number2 = toIntegerOrInfinity(number2);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7867,10 +7867,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number-- > 0) {
+          if (number2-- > 0) {
             yield val;
           }
-          if (number <= 0) {
+          if (number2 <= 0) {
             return;
           }
         }
@@ -7917,11 +7917,11 @@ var require_promises = __commonJS({
         }
         pl(
           streams,
-          (err, value) => {
+          (err, value2) => {
             if (err) {
               reject(err);
             } else {
-              resolve(value);
+              resolve(value2);
             }
           },
           {
@@ -8048,8 +8048,8 @@ var require_stream = __commonJS({
       }
     });
     Stream.Stream = Stream;
-    Stream._isUint8Array = function isUint8Array(value) {
-      return value instanceof Uint8Array;
+    Stream._isUint8Array = function isUint8Array(value2) {
+      return value2 instanceof Uint8Array;
     };
     Stream._uint8ArrayToBuffer = function _uint8ArrayToBuffer(chunk) {
       return Buffer3.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
@@ -8131,10 +8131,10 @@ __export(util_exports, {
 var promisify, inherits, inspect, util_default;
 var init_util = __esm({
   "web/shims/util.js"() {
-    promisify = (fn) => (...args) => new Promise((resolve, reject) => fn(...args, (err, value) => err ? reject(err) : resolve(value)));
+    promisify = (fn) => (...args) => new Promise((resolve, reject) => fn(...args, (err, value2) => err ? reject(err) : resolve(value2)));
     inherits = () => {
     };
-    inspect = (value) => String(value);
+    inspect = (value2) => String(value2);
     util_default = { promisify, inherits, inspect };
   }
 });
@@ -9616,9 +9616,9 @@ var require_BlankNode = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BlankNode = void 0;
     var BlankNode3 = class {
-      constructor(value) {
+      constructor(value2) {
         this.termType = "BlankNode";
-        this.value = value;
+        this.value = value2;
       }
       equals(other) {
         return !!other && other.termType === "BlankNode" && other.value === this.value;
@@ -9655,9 +9655,9 @@ var require_NamedNode = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NamedNode = void 0;
     var NamedNode3 = class {
-      constructor(value) {
+      constructor(value2) {
         this.termType = "NamedNode";
-        this.value = value;
+        this.value = value2;
       }
       equals(other) {
         return !!other && other.termType === "NamedNode" && other.value === this.value;
@@ -9675,9 +9675,9 @@ var require_Literal = __commonJS({
     exports.Literal = void 0;
     var NamedNode_1 = require_NamedNode();
     var Literal3 = class _Literal {
-      constructor(value, languageOrDatatype) {
+      constructor(value2, languageOrDatatype) {
         this.termType = "Literal";
-        this.value = value;
+        this.value = value2;
         if (typeof languageOrDatatype === "string") {
           this.language = languageOrDatatype;
           this.datatype = _Literal.RDF_LANGUAGE_STRING;
@@ -9739,9 +9739,9 @@ var require_Variable = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Variable = void 0;
     var Variable3 = class {
-      constructor(value) {
+      constructor(value2) {
         this.termType = "Variable";
-        this.value = value;
+        this.value = value2;
       }
       equals(other) {
         return !!other && other.termType === "Variable" && other.value === this.value;
@@ -9775,8 +9775,8 @@ var require_DataFactory = __commonJS({
        * @return A new instance of NamedNode.
        * @see NamedNode
        */
-      namedNode(value) {
-        return new NamedNode_1.NamedNode(value);
+      namedNode(value2) {
+        return new NamedNode_1.NamedNode(value2);
       }
       /**
        * @param value The optional blank node identifier.
@@ -9785,8 +9785,8 @@ var require_DataFactory = __commonJS({
        *         for the blank node is generated for each call.
        * @see BlankNode
        */
-      blankNode(value) {
-        return new BlankNode_1.BlankNode(value || `${this.blankNodePrefix}${this.blankNodeCounter++}`);
+      blankNode(value2) {
+        return new BlankNode_1.BlankNode(value2 || `${this.blankNodePrefix}${this.blankNodeCounter++}`);
       }
       /**
        * @param value              The literal value.
@@ -9801,8 +9801,8 @@ var require_DataFactory = __commonJS({
        * @return A new instance of Literal.
        * @see Literal
        */
-      literal(value, languageOrDatatype) {
-        return new Literal_1.Literal(value, languageOrDatatype);
+      literal(value2, languageOrDatatype) {
+        return new Literal_1.Literal(value2, languageOrDatatype);
       }
       /**
        * This method is optional.
@@ -9810,8 +9810,8 @@ var require_DataFactory = __commonJS({
        * @return A new instance of Variable.
        * @see Variable
        */
-      variable(value) {
-        return new Variable_1.Variable(value);
+      variable(value2) {
+        return new Variable_1.Variable(value2);
       }
       /**
        * @return An instance of DefaultGraph.
@@ -9943,17 +9943,17 @@ var require_Translator = __commonJS({
           return literal4.value;
         }
       }
-      toRdf(value, options) {
-        const handlers = this.toRdfHandlers[typeof value];
+      toRdf(value2, options) {
+        const handlers = this.toRdfHandlers[typeof value2];
         if (handlers) {
           for (const handler2 of handlers) {
-            const ret = handler2.toRdf(value, options);
+            const ret = handler2.toRdf(value2, options);
             if (ret) {
               return ret;
             }
           }
         }
-        throw new Error(`Invalid JavaScript value: '${value}'`);
+        throw new Error(`Invalid JavaScript value: '${value2}'`);
       }
       /**
        * @return {NamedNode[]} An array of all supported RDF datatypes.
@@ -9996,8 +9996,8 @@ var require_TypeHandlerBoolean = __commonJS({
         }
         return false;
       }
-      toRdf(value, { datatype, dataFactory }) {
-        return dataFactory.literal(value ? "true" : "false", datatype || dataFactory.namedNode(_TypeHandlerBoolean.TYPE));
+      toRdf(value2, { datatype, dataFactory }) {
+        return dataFactory.literal(value2 ? "true" : "false", datatype || dataFactory.namedNode(_TypeHandlerBoolean.TYPE));
       }
     };
     exports.TypeHandlerBoolean = TypeHandlerBoolean;
@@ -10031,12 +10031,12 @@ var require_TypeHandlerDate = __commonJS({
             return new Date(literal4.value);
         }
       }
-      toRdf(value, { datatype, dataFactory }) {
+      toRdf(value2, { datatype, dataFactory }) {
         datatype = datatype || dataFactory.namedNode(_TypeHandlerDate.TYPES[0]);
-        if (!(value instanceof Date)) {
+        if (!(value2 instanceof Date)) {
           return null;
         }
-        const date = value;
+        const date = value2;
         let valueString;
         switch (datatype.value) {
           case "http://www.w3.org/2001/XMLSchema#gDay":
@@ -10097,18 +10097,18 @@ var require_TypeHandlerNumberDouble = __commonJS({
         }
         return parsed;
       }
-      toRdf(value, { datatype, dataFactory }) {
+      toRdf(value2, { datatype, dataFactory }) {
         datatype = datatype || dataFactory.namedNode(_TypeHandlerNumberDouble.TYPES[0]);
-        if (isNaN(value)) {
+        if (isNaN(value2)) {
           return dataFactory.literal("NaN", datatype);
         }
-        if (!isFinite(value)) {
-          return dataFactory.literal(value > 0 ? "INF" : "-INF", datatype);
+        if (!isFinite(value2)) {
+          return dataFactory.literal(value2 > 0 ? "INF" : "-INF", datatype);
         }
-        if (value % 1 === 0) {
+        if (value2 % 1 === 0) {
           return null;
         }
-        return dataFactory.literal(value.toExponential(15).replace(/(\d)0*e\+?/, "$1E"), datatype);
+        return dataFactory.literal(value2.toExponential(15).replace(/(\d)0*e\+?/, "$1E"), datatype);
       }
     };
     exports.TypeHandlerNumberDouble = TypeHandlerNumberDouble;
@@ -10137,8 +10137,8 @@ var require_TypeHandlerNumberInteger = __commonJS({
         }
         return parsed;
       }
-      toRdf(value, { datatype, dataFactory }) {
-        return dataFactory.literal(String(value), datatype || (value <= _TypeHandlerNumberInteger.MAX_INT && value >= _TypeHandlerNumberInteger.MIN_INT ? dataFactory.namedNode(_TypeHandlerNumberInteger.TYPES[0]) : dataFactory.namedNode(_TypeHandlerNumberInteger.TYPES[1])));
+      toRdf(value2, { datatype, dataFactory }) {
+        return dataFactory.literal(String(value2), datatype || (value2 <= _TypeHandlerNumberInteger.MAX_INT && value2 >= _TypeHandlerNumberInteger.MIN_INT ? dataFactory.namedNode(_TypeHandlerNumberInteger.TYPES[0]) : dataFactory.namedNode(_TypeHandlerNumberInteger.TYPES[1])));
       }
     };
     exports.TypeHandlerNumberInteger = TypeHandlerNumberInteger;
@@ -10172,8 +10172,8 @@ var require_TypeHandlerString = __commonJS({
       fromRdf(literal4) {
         return literal4.value;
       }
-      toRdf(value, { datatype, dataFactory }) {
-        return dataFactory.literal(value, datatype);
+      toRdf(value2, { datatype, dataFactory }) {
+        return dataFactory.literal(value2, datatype);
       }
     };
     exports.TypeHandlerString = TypeHandlerString;
@@ -10275,7 +10275,7 @@ var require_rdf_literal = __commonJS({
     function fromRdf2(literal4, validate) {
       return translator.fromRdf(literal4, validate);
     }
-    function toRdf(value, options) {
+    function toRdf(value2, options) {
       if (options && "namedNode" in options) {
         options = { dataFactory: options };
       }
@@ -10283,13 +10283,13 @@ var require_rdf_literal = __commonJS({
       if (options && !options.dataFactory) {
         options.dataFactory = DF;
       }
-      return translator.toRdf(value, options);
+      return translator.toRdf(value2, options);
     }
-    function getTermRaw(term2, validate) {
-      if (term2.termType === "Literal") {
-        return fromRdf2(term2, validate);
+    function getTermRaw(term3, validate) {
+      if (term3.termType === "Literal") {
+        return fromRdf2(term3, validate);
       }
-      return term2.value;
+      return term3.value;
     }
     function getSupportedRdfDatatypes() {
       return translator.getSupportedRdfDatatypes();
@@ -10335,8 +10335,8 @@ function extend({ parent, child }) {
     get(target, prop) {
       return child[prop] || parent[prop];
     },
-    set(target, prop, value) {
-      child[prop] = value;
+    set(target, prop, value2) {
+      child[prop] = value2;
       return true;
     },
     has(target, prop) {
@@ -10668,7 +10668,7 @@ var MaxBufferError = class extends Error {
 };
 
 // node_modules/get-stream/source/utils.js
-var identity = (value) => value;
+var identity = (value2) => value2;
 var getContentsProperty = ({ contents }) => contents;
 var throwObjectStream = (chunk) => {
   throw new Error(`Streams in object mode are not supported: ${String(chunk)}`);
@@ -10965,8 +10965,8 @@ var fromTerm_default = fromTerm;
 
 // node_modules/@rdfjs/data-model/lib/Literal.js
 var Literal = class {
-  constructor(value, language, datatype, direction = "") {
-    this.value = value;
+  constructor(value2, language, datatype, direction = "") {
+    this.value = value2;
     this.language = language;
     this.datatype = datatype;
     this.direction = direction;
@@ -11032,29 +11032,29 @@ var DataFactory = class {
       defaultGraph: new DefaultGraph_default()
     };
   }
-  namedNode(value) {
-    return new NamedNode_default(value);
+  namedNode(value2) {
+    return new NamedNode_default(value2);
   }
-  blankNode(value) {
-    value = value || "b" + ++this._data.blankNodeCounter;
-    return new BlankNode_default(value);
+  blankNode(value2) {
+    value2 = value2 || "b" + ++this._data.blankNodeCounter;
+    return new BlankNode_default(value2);
   }
-  literal(value, languageOrDatatype) {
+  literal(value2, languageOrDatatype) {
     if (typeof languageOrDatatype === "string") {
-      return new Literal_default(value, languageOrDatatype, langStringDatatype);
+      return new Literal_default(value2, languageOrDatatype, langStringDatatype);
     } else if (typeof languageOrDatatype?.language === "string") {
       return new Literal_default(
-        value,
+        value2,
         languageOrDatatype.language,
         languageOrDatatype.direction ? dirLangStringDatatype : langStringDatatype,
         languageOrDatatype.direction
       );
     } else {
-      return new Literal_default(value, "", languageOrDatatype || stringDatatype);
+      return new Literal_default(value2, "", languageOrDatatype || stringDatatype);
     }
   }
-  variable(value) {
-    return new Variable_default(value);
+  variable(value2) {
+    return new Variable_default(value2);
   }
   defaultGraph() {
     return this._data.defaultGraph;
@@ -11137,7 +11137,7 @@ var handler = {
   get: (target, property) => target(property)
 };
 function namespace(baseIRI, { factory: factory3 = data_model_default } = {}) {
-  const builder111 = (term2 = "") => factory3.namedNode(`${baseIRI}${term2.raw || term2}`);
+  const builder111 = (term3 = "") => factory3.namedNode(`${baseIRI}${term3.raw || term3}`);
   return typeof Proxy === "undefined" ? builder111 : new Proxy(builder111, handler);
 }
 var namespace_default = namespace;
@@ -11731,17 +11731,17 @@ var namespace_default2 = (factory3) => {
 };
 
 // node_modules/clownface/lib/toArray.js
-function toArray(value, defaultValue) {
-  if (typeof value === "undefined" || value === null) {
+function toArray(value2, defaultValue) {
+  if (typeof value2 === "undefined" || value2 === null) {
     return defaultValue;
   }
-  if (Array.isArray(value)) {
-    return value;
+  if (Array.isArray(value2)) {
+    return value2;
   }
-  if (typeof value !== "string" && value[Symbol.iterator]) {
-    return [...value];
+  if (typeof value2 !== "string" && value2[Symbol.iterator]) {
+    return [...value2];
   }
-  return [value];
+  return [value2];
 }
 
 // node_modules/clownface/lib/environment.js
@@ -11752,76 +11752,76 @@ var environment_default = new Environment_default([
 
 // node_modules/clownface/lib/fromPrimitive.js
 var { xsd } = namespace_default2(environment_default);
-function booleanToLiteral(value, factory3 = environment_default) {
-  if (typeof value !== "boolean") {
+function booleanToLiteral(value2, factory3 = environment_default) {
+  if (typeof value2 !== "boolean") {
     return null;
   }
-  return factory3.literal(value.toString(), xsd("boolean"));
+  return factory3.literal(value2.toString(), xsd("boolean"));
 }
-function numberToLiteral(value, factory3 = environment_default) {
-  if (typeof value !== "number") {
+function numberToLiteral(value2, factory3 = environment_default) {
+  if (typeof value2 !== "number") {
     return null;
   }
-  if (Number.isInteger(value)) {
-    return factory3.literal(value.toString(10), xsd("integer"));
+  if (Number.isInteger(value2)) {
+    return factory3.literal(value2.toString(10), xsd("integer"));
   }
-  return factory3.literal(value.toString(10), xsd("double"));
+  return factory3.literal(value2.toString(10), xsd("double"));
 }
-function stringToLiteral(value, factory3 = environment_default) {
-  if (typeof value !== "string") {
+function stringToLiteral(value2, factory3 = environment_default) {
+  if (typeof value2 !== "string") {
     return null;
   }
-  return factory3.literal(value);
+  return factory3.literal(value2);
 }
-function toLiteral(value, factory3 = environment_default) {
-  return booleanToLiteral(value, factory3) || numberToLiteral(value, factory3) || stringToLiteral(value, factory3);
+function toLiteral(value2, factory3 = environment_default) {
+  return booleanToLiteral(value2, factory3) || numberToLiteral(value2, factory3) || stringToLiteral(value2, factory3);
 }
 
 // node_modules/clownface/lib/term.js
-function blankNode(value, factory3) {
-  if (value && typeof value !== "string") {
+function blankNode(value2, factory3) {
+  if (value2 && typeof value2 !== "string") {
     throw new Error("Blank node identifier must be a string");
   }
-  return factory3.blankNode(value);
+  return factory3.blankNode(value2);
 }
-function literal(value, languageOrDatatype, factory3) {
-  if (typeof value === "string") {
+function literal(value2, languageOrDatatype, factory3) {
+  if (typeof value2 === "string") {
     languageOrDatatype = languageOrDatatype && (languageOrDatatype.value || languageOrDatatype.toString());
     if (languageOrDatatype && languageOrDatatype.indexOf(":") !== -1) {
       languageOrDatatype = factory3.namedNode(languageOrDatatype);
     }
-    return factory3.literal(value.toString(), languageOrDatatype);
+    return factory3.literal(value2.toString(), languageOrDatatype);
   }
-  const term2 = toLiteral(value, factory3);
-  if (!term2) {
+  const term3 = toLiteral(value2, factory3);
+  if (!term3) {
     throw new Error("The value cannot be converted to a literal node");
   }
-  return term2;
+  return term3;
 }
-function namedNode(value, factory3) {
-  if (typeof value !== "string") {
+function namedNode(value2, factory3) {
+  if (typeof value2 !== "string") {
     throw new Error("Named node must be an IRI string");
   }
-  return factory3.namedNode(value);
+  return factory3.namedNode(value2);
 }
-function term(value, type = "Literal", languageOrDatatype, factory3) {
-  if (value && typeof value === "object" && value.termType) {
-    return value;
+function term(value2, type = "Literal", languageOrDatatype, factory3) {
+  if (value2 && typeof value2 === "object" && value2.termType) {
+    return value2;
   }
-  if (value && value.constructor.name === "URL") {
-    return namedNode(value.toString(), factory3);
+  if (value2 && value2.constructor.name === "URL") {
+    return namedNode(value2.toString(), factory3);
   }
   if (type === "BlankNode") {
-    return blankNode(value, factory3);
+    return blankNode(value2, factory3);
   }
-  if (value === null || typeof value === "undefined") {
+  if (value2 === null || typeof value2 === "undefined") {
     return void 0;
   }
   if (type === "Literal") {
-    return literal(value, languageOrDatatype, factory3);
+    return literal(value2, languageOrDatatype, factory3);
   }
   if (type === "NamedNode") {
-    return namedNode(value, factory3);
+    return namedNode(value2, factory3);
   }
   throw new Error("unknown type");
 }
@@ -11854,8 +11854,8 @@ function mapLiteralsByLanguage(map, current) {
   }
   return map;
 }
-function createLanguageMapper(objects2) {
-  const literalsByLanguage = objects2.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
+function createLanguageMapper(objects3) {
+  const literalsByLanguage = objects3.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
   const langMapEntries = [...literalsByLanguage.entries()];
   return (language) => {
     const languageLowerCase = language.toLowerCase();
@@ -11878,15 +11878,15 @@ function filterTaggedLiterals(terms, { language }) {
 
 // node_modules/clownface/lib/Context.js
 var Context = class _Context {
-  constructor({ dataset: dataset2, graph, value, factory: factory3, namespace: namespace2 }) {
+  constructor({ dataset: dataset2, graph, value: value2, factory: factory3, namespace: namespace2 }) {
     this.dataset = dataset2;
     this.graph = graph;
     this.factory = factory3;
     this.namespace = namespace2;
-    this.term = term(value, void 0, void 0, factory3);
+    this.term = term(value2, void 0, void 0, factory3);
   }
-  clone({ dataset: dataset2 = this.dataset, graph = this.graph, value, factory: factory3 = this.factory, namespace: namespace2 = this.namespace }) {
-    return new _Context({ dataset: dataset2, graph, value, factory: factory3, namespace: namespace2 });
+  clone({ dataset: dataset2 = this.dataset, graph = this.graph, value: value2, factory: factory3 = this.factory, namespace: namespace2 = this.namespace }) {
+    return new _Context({ dataset: dataset2, graph, value: value2, factory: factory3, namespace: namespace2 });
   }
   has(predicate, object) {
     return this.matchProperty(toArray(this.term), predicate, object, toArray(this.graph), "subject").map((subject) => {
@@ -11899,11 +11899,11 @@ var Context = class _Context {
     });
   }
   out(predicate, { language } = {}) {
-    let objects2 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
+    let objects3 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
     if (typeof language !== "undefined") {
-      objects2 = filterTaggedLiterals(objects2, { language });
+      objects3 = filterTaggedLiterals(objects3, { language });
     }
-    return objects2.map((object) => {
+    return objects3.map((object) => {
       return this.clone({ value: object });
     });
   }
@@ -11919,10 +11919,10 @@ var Context = class _Context {
     }
     return context;
   }
-  addOut(predicates, objects2) {
+  addOut(predicates, objects3) {
     const context = [];
     if (this.term) {
-      objects2.forEach((object) => {
+      objects3.forEach((object) => {
         predicates.forEach((predicate) => {
           this.dataset.add(this.factory.quad(this.term, predicate, object, this.graph));
         });
@@ -11947,8 +11947,8 @@ var Context = class _Context {
   deleteIn(predicate, subject) {
     this.deleteMatch(subject, predicate, toArray(this.term), toArray(this.graph));
   }
-  deleteOut(predicate, objects2) {
-    this.deleteMatch(toArray(this.term), predicate, objects2, toArray(this.graph));
+  deleteOut(predicate, objects3) {
+    this.deleteMatch(toArray(this.term), predicate, objects3, toArray(this.graph));
   }
   deleteList(predicates) {
     predicates.forEach((predicate) => {
@@ -12001,16 +12001,16 @@ var Context = class _Context {
 
 // node_modules/clownface/lib/Clownface.js
 var Clownface = class _Clownface {
-  constructor({ dataset: dataset2, graph, term: term2, value, factory: factory3, _context }) {
+  constructor({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3, _context }) {
     this.factory = factory3;
     this.namespace = namespace_default2(factory3);
     if (_context) {
       this._context = _context;
       return;
     }
-    const terms = term2 && toArray(term2) || value && toArray(value) || [null];
-    this._context = terms.map((term3) => {
-      return new Context({ dataset: dataset2, graph, value: term3, factory: this.factory, namespace: this.namespace });
+    const terms = term3 && toArray(term3) || value2 && toArray(value2) || [null];
+    this._context = terms.map((term4) => {
+      return new Context({ dataset: dataset2, graph, value: term4, factory: this.factory, namespace: this.namespace });
     });
   }
   /**
@@ -12039,8 +12039,8 @@ var Clownface = class _Clownface {
    * @returns {undefined|string}
    */
   get value() {
-    const term2 = this.term;
-    return term2 && term2.value;
+    const term3 = this.term;
+    return term3 && term3.value;
   }
   /**
    * Gets the string representation of terms
@@ -12048,7 +12048,7 @@ var Clownface = class _Clownface {
    * @returns {string[]}
    */
   get values() {
-    return this.terms.map((term2) => term2.value);
+    return this.terms.map((term3) => term3.value);
   }
   /**
    * Gets the current context's dataset, or undefined if there are multiple
@@ -12121,8 +12121,8 @@ var Clownface = class _Clownface {
             if (!item.term || item.term.equals(this.namespace.nil)) {
               return { done: true };
             }
-            const value = item.out(this.namespace.first);
-            if (value.terms.length > 1) {
+            const value2 = item.out(this.namespace.first);
+            if (value2.terms.length > 1) {
               throw new Error(`Invalid list: multiple values for rdf:first on ${item.value}`);
             }
             const rest = item.out(this.namespace.rest);
@@ -12130,7 +12130,7 @@ var Clownface = class _Clownface {
               throw new Error(`Invalid list: multiple values for rdf:rest on ${item.value}`);
             }
             item = rest;
-            return { done: false, value };
+            return { done: false, value: value2 };
           }
         };
       }
@@ -12193,9 +12193,9 @@ var Clownface = class _Clownface {
    */
   node(values2, { type, datatype, language } = {}) {
     values2 = this._toTermArray(values2, type, datatype || language) || [null];
-    const context = values2.reduce((context2, value) => {
+    const context = values2.reduce((context2, value2) => {
       return context2.concat(this._context.reduce((all, current) => {
-        return all.concat([current.clone({ value })]);
+        return all.concat([current.clone({ value: value2 })]);
       }, []));
     }, []);
     return _Clownface.fromContext(context, { factory: this.factory });
@@ -12257,10 +12257,10 @@ var Clownface = class _Clownface {
    * @param {*} [objects] object values to match
    * @returns {Clownface}
    */
-  has(predicates, objects2) {
+  has(predicates, objects3) {
     predicates = this._toTermArray(predicates);
-    objects2 = this._toTermArray(objects2);
-    const context = this._context.reduce((all, current) => all.concat(current.has(predicates, objects2)), []);
+    objects3 = this._toTermArray(objects3);
+    const context = this._context.reduce((all, current) => all.concat(current.has(predicates, objects3)), []);
     return _Clownface.fromContext(context, this);
   }
   /**
@@ -12295,17 +12295,17 @@ var Clownface = class _Clownface {
    * @param {GraphPointerCallback} [callback] called for each subject, with object pointer as parameter
    * @returns {Clownface} current graph pointer
    */
-  addOut(predicates, objects2, callback) {
+  addOut(predicates, objects3, callback) {
     if (!predicates) {
       throw new Error("predicate parameter is required");
     }
-    if (typeof objects2 === "function") {
-      callback = objects2;
-      objects2 = null;
+    if (typeof objects3 === "function") {
+      callback = objects3;
+      objects3 = null;
     }
     predicates = this._toTermArray(predicates);
-    objects2 = this._toTermArray(objects2) || [this.factory.blankNode()];
-    const context = this._context.map((context2) => context2.addOut(predicates, objects2));
+    objects3 = this._toTermArray(objects3) || [this.factory.blankNode()];
+    const context = this._context.map((context2) => context2.addOut(predicates, objects3));
     if (callback) {
       _Clownface.fromContext(context, this).forEach(callback);
     }
@@ -12347,10 +12347,10 @@ var Clownface = class _Clownface {
    * @param {Term|Term[]|Clownface|Clownface[]} [objects]
    * @returns {Clownface} current graph pointer
    */
-  deleteOut(predicates, objects2) {
+  deleteOut(predicates, objects3) {
     predicates = this._toTermArray(predicates);
-    objects2 = this._toTermArray(objects2);
-    this._context.forEach((context) => context.deleteOut(predicates, objects2));
+    objects3 = this._toTermArray(objects3);
+    this._context.forEach((context) => context.deleteOut(predicates, objects3));
     return this;
   }
   /**
@@ -12376,8 +12376,8 @@ var Clownface = class _Clownface {
 };
 
 // node_modules/clownface/index.js
-function factory2({ dataset: dataset2, graph, term: term2, value, factory: factory3 = environment_default, _context }) {
-  return new Clownface({ dataset: dataset2, graph, term: term2, value, factory: factory3, _context });
+function factory2({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3 = environment_default, _context }) {
+  return new Clownface({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3, _context });
 }
 
 // node_modules/clownface/Factory.js
@@ -12428,11 +12428,11 @@ var echarReplacement = {
 function echarReplacer(char) {
   return echarReplacement[char];
 }
-function escapeValue(value) {
-  if (echarRegEx.test(value)) {
-    return value.replace(echarRegExAll, echarReplacer);
+function escapeValue(value2) {
+  if (echarRegEx.test(value2)) {
+    return value2.replace(echarRegExAll, echarReplacer);
   }
-  return value;
+  return value2;
 }
 function literal2(literal4) {
   const escapedValue = escapeValue(literal4.value);
@@ -12463,32 +12463,32 @@ function variable(variable3) {
 var variable_default = variable;
 
 // node_modules/@rdfjs/to-ntriples/index.js
-function toNT(term2) {
-  if (!term2) {
+function toNT(term3) {
+  if (!term3) {
     return null;
   }
-  if (term2.termType === "BlankNode") {
-    return blankNode_default(term2);
+  if (term3.termType === "BlankNode") {
+    return blankNode_default(term3);
   }
-  if (term2.termType === "DefaultGraph") {
+  if (term3.termType === "DefaultGraph") {
     return defaultGraph_default();
   }
-  if (term2.termType === "Literal") {
-    return literal_default(term2);
+  if (term3.termType === "Literal") {
+    return literal_default(term3);
   }
-  if (term2.termType === "NamedNode") {
-    return namedNode_default(term2);
+  if (term3.termType === "NamedNode") {
+    return namedNode_default(term3);
   }
-  if (term2.termType === "Quad" || term2.subject && term2.predicate && term2.object && term2.graph) {
-    return quad_default(term2, toNT);
+  if (term3.termType === "Quad" || term3.subject && term3.predicate && term3.object && term3.graph) {
+    return quad_default(term3, toNT);
   }
-  if (term2.termType === "Variable") {
-    return variable_default(term2);
+  if (term3.termType === "Variable") {
+    return variable_default(term3);
   }
-  if (term2[Symbol.iterator]) {
-    return dataset_default(term2, toNT);
+  if (term3[Symbol.iterator]) {
+    return dataset_default(term3, toNT);
   }
-  throw new Error(`unknown termType ${term2.termType}`);
+  throw new Error(`unknown termType ${term3.termType}`);
 }
 var to_ntriples_default = toNT;
 
@@ -12497,8 +12497,8 @@ var TermMap = class {
   constructor(entries) {
     this.index = /* @__PURE__ */ new Map();
     if (entries) {
-      for (const [term2, value] of entries) {
-        this.set(term2, value);
+      for (const [term3, value2] of entries) {
+        this.set(term3, value2);
       }
     }
   }
@@ -12508,12 +12508,12 @@ var TermMap = class {
   clear() {
     this.index.clear();
   }
-  delete(term2) {
-    return this.index.delete(to_ntriples_default(term2));
+  delete(term3) {
+    return this.index.delete(to_ntriples_default(term3));
   }
   *entries() {
-    for (const [, { term: term2, value }] of this.index) {
-      yield [term2, value];
+    for (const [, { term: term3, value: value2 }] of this.index) {
+      yield [term3, value2];
     }
   }
   forEach(callback, thisArg) {
@@ -12521,26 +12521,26 @@ var TermMap = class {
       callback.call(thisArg, entry[1], entry[0], this);
     }
   }
-  get(term2) {
-    const item = this.index.get(to_ntriples_default(term2));
+  get(term3) {
+    const item = this.index.get(to_ntriples_default(term3));
     return item && item.value;
   }
-  has(term2) {
-    return this.index.has(to_ntriples_default(term2));
+  has(term3) {
+    return this.index.has(to_ntriples_default(term3));
   }
   *keys() {
-    for (const [, { term: term2 }] of this.index) {
-      yield term2;
+    for (const [, { term: term3 }] of this.index) {
+      yield term3;
     }
   }
-  set(term2, value) {
-    const key = to_ntriples_default(term2);
-    this.index.set(key, { term: term2, value });
+  set(term3, value2) {
+    const key = to_ntriples_default(term3);
+    this.index.set(key, { term: term3, value: value2 });
     return this;
   }
   *values() {
-    for (const [, { value }] of this.index) {
-      yield value;
+    for (const [, { value: value2 }] of this.index) {
+      yield value2;
     }
   }
   [Symbol.iterator]() {
@@ -12559,9 +12559,9 @@ Factory3.exports = ["termMap"];
 var Factory_default5 = Factory3;
 
 // node_modules/@rdfjs/term-set/TermSet.js
-function quietToNT(term2) {
+function quietToNT(term3) {
   try {
-    return to_ntriples_default(term2);
+    return to_ntriples_default(term3);
   } catch (err) {
     return null;
   }
@@ -12570,29 +12570,29 @@ var TermSet = class {
   constructor(terms) {
     this.index = /* @__PURE__ */ new Map();
     if (terms) {
-      for (const term2 of terms) {
-        this.add(term2);
+      for (const term3 of terms) {
+        this.add(term3);
       }
     }
   }
   get size() {
     return this.index.size;
   }
-  add(term2) {
-    const key = to_ntriples_default(term2);
+  add(term3) {
+    const key = to_ntriples_default(term3);
     if (!this.index.has(key)) {
-      this.index.set(key, term2);
+      this.index.set(key, term3);
     }
     return this;
   }
   clear() {
     this.index.clear();
   }
-  delete(term2) {
-    if (!term2) {
+  delete(term3) {
+    if (!term3) {
       return false;
     }
-    return this.index.delete(quietToNT(term2));
+    return this.index.delete(quietToNT(term3));
   }
   entries() {
     return this.values().entries();
@@ -12600,11 +12600,11 @@ var TermSet = class {
   forEach(callbackfn, thisArg) {
     return this.values().forEach(callbackfn, thisArg);
   }
-  has(term2) {
-    if (!term2) {
+  has(term3) {
+    if (!term3) {
       return false;
     }
-    return this.index.has(quietToNT(term2));
+    return this.index.has(quietToNT(term3));
   }
   values() {
     return new Set(this.index.values());
@@ -12643,8 +12643,8 @@ var Visisted = class {
     return seenAt <= level;
   }
 };
-function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term2, visited = new Visisted() }) {
-  const next = (term3, level) => {
+function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term3, visited = new Visisted() }) {
+  const next = (term4, level) => {
     const checkMatches = (matches) => {
       for (const quad3 of matches) {
         if (visited.has(quad3, level)) {
@@ -12664,13 +12664,13 @@ function forEach({ backward, callback, dataset: dataset2, filter, forward, term:
       }
     };
     if (forward) {
-      checkMatches(dataset2.match(term3));
+      checkMatches(dataset2.match(term4));
     }
     if (backward) {
-      checkMatches(dataset2.match(null, null, term3));
+      checkMatches(dataset2.match(null, null, term4));
     }
   };
-  next(term2, 0);
+  next(term3, 0);
 }
 var Traverser = class {
   constructor(filter, { backward = false, factory: factory3, forward = true }) {
@@ -12679,17 +12679,17 @@ var Traverser = class {
     this.filter = filter;
     this.forward = forward;
   }
-  forEach({ term: term2, dataset: dataset2 }, callback) {
+  forEach({ term: term3, dataset: dataset2 }, callback) {
     forEach({
       backward: this.backward,
       callback,
       dataset: dataset2,
       filter: this.filter,
       forward: this.forward,
-      term: term2
+      term: term3
     });
   }
-  match({ term: term2, dataset: dataset2 }) {
+  match({ term: term3, dataset: dataset2 }) {
     const result = this.factory.dataset();
     forEach({
       backward: this.backward,
@@ -12697,11 +12697,11 @@ var Traverser = class {
       dataset: dataset2,
       filter: this.filter,
       forward: this.forward,
-      term: term2
+      term: term3
     });
     return result;
   }
-  reduce({ term: term2, dataset: dataset2 }, callback, initialValue) {
+  reduce({ term: term3, dataset: dataset2 }, callback, initialValue) {
     let result = initialValue;
     forEach({
       backward: this.backward,
@@ -12711,7 +12711,7 @@ var Traverser = class {
       dataset: dataset2,
       filter: this.filter,
       forward: this.forward,
-      term: term2
+      term: term3
     });
     return result;
   }
@@ -12749,39 +12749,39 @@ function isString(s) {
   return typeof s === "string" || s instanceof String;
 }
 var xsdString = "http://www.w3.org/2001/XMLSchema#string";
-function termToId(term2) {
-  if (typeof term2 === "string") {
-    return term2;
+function termToId(term3) {
+  if (typeof term3 === "string") {
+    return term3;
   }
-  if (!term2) {
+  if (!term3) {
     return "";
   }
-  if (typeof term2.id !== "undefined" && term2.termType !== "Quad") {
-    return term2.id;
+  if (typeof term3.id !== "undefined" && term3.termType !== "Quad") {
+    return term3.id;
   }
   let subject, predicate, object, graph;
-  switch (term2.termType) {
+  switch (term3.termType) {
     case "NamedNode":
-      return term2.value;
+      return term3.value;
     case "BlankNode":
-      return `_:${term2.value}`;
+      return `_:${term3.value}`;
     case "Variable":
-      return `?${term2.value}`;
+      return `?${term3.value}`;
     case "DefaultGraph":
       return "";
     case "Literal":
-      if (term2.language) {
-        return `"${term2.value}"@${term2.language}${term2.direction ? `--${term2.direction}` : ""}`;
+      if (term3.language) {
+        return `"${term3.value}"@${term3.language}${term3.direction ? `--${term3.direction}` : ""}`;
       }
-      return `"${term2.value}"${term2.datatype && term2.datatype.value !== xsdString ? `^^${term2.datatype.value}` : ""}`;
+      return `"${term3.value}"${term3.datatype && term3.datatype.value !== xsdString ? `^^${term3.datatype.value}` : ""}`;
     case "Quad":
-      subject = escapeQuotes(termToId(term2.subject));
-      predicate = escapeQuotes(termToId(term2.predicate));
-      object = escapeQuotes(termToId(term2.object));
-      graph = term2.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term2.graph)}`;
+      subject = escapeQuotes(termToId(term3.subject));
+      predicate = escapeQuotes(termToId(term3.predicate));
+      object = escapeQuotes(termToId(term3.object));
+      graph = term3.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term3.graph)}`;
       return `<<${subject} ${predicate} ${object}${graph}>>`;
     default:
-      throw new Error(`Unexpected termType: ${term2.termType}`);
+      throw new Error(`Unexpected termType: ${term3.termType}`);
   }
 }
 var escapedLiteral = /^"(.*".*)(?="[^"]*$)/;
@@ -13243,18 +13243,18 @@ var vocabulary = Object.freeze({
 
 // src/rdf/ProfileReader.js
 var { jig, trn, lv2, rdfs, foaf, units, rdf: rdfTerms } = vocabulary;
-var iri = (value) => env_default.namedNode(value);
+var iri = (value2) => env_default.namedNode(value2);
 function objects(dataset2, subject, predicate) {
   return [...dataset2.match(subject, iri(predicate), null)].map((q) => q.object);
 }
 function one(dataset2, subject, predicate) {
   return objects(dataset2, subject, predicate)[0] ?? null;
 }
-var asString = (term2) => term2 ? term2.value : null;
-function asNumber(term2) {
-  if (!term2) return null;
-  const n2 = Number(term2.value);
-  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term2.value}`);
+var asString = (term3) => term3 ? term3.value : null;
+function asNumber(term3) {
+  if (!term3) return null;
+  const n2 = Number(term3.value);
+  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term3.value}`);
   return n2;
 }
 var values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
@@ -13265,17 +13265,17 @@ function rebaseLocation(location, canonical, retrieval) {
   if (!location || !canonical || !retrieval || canonical === retrieval) return location;
   return location.startsWith(canonical) ? retrieval + location.slice(canonical.length) : location;
 }
-function readResource(dataset2, term2, baseIRI, canonical) {
-  if (!term2) return null;
-  const location = one(dataset2, term2, jig.location);
+function readResource(dataset2, term3, baseIRI, canonical) {
+  if (!term3) return null;
+  const location = one(dataset2, term3, jig.location);
   const resolved = location ? resolveLocation(location.value, baseIRI) : null;
   return {
-    iri: term2.value,
+    iri: term3.value,
     location: rebaseLocation(resolved, canonical, baseIRI),
-    integrity: asString(one(dataset2, term2, jig.integrity)),
-    mediaType: asString(one(dataset2, term2, jig.mediaType)),
-    registeredName: asString(one(dataset2, term2, jig.registeredName)),
-    wasmFeatures: values(dataset2, term2, jig.wasmFeature)
+    integrity: asString(one(dataset2, term3, jig.integrity)),
+    mediaType: asString(one(dataset2, term3, jig.mediaType)),
+    registeredName: asString(one(dataset2, term3, jig.registeredName)),
+    wasmFeatures: values(dataset2, term3, jig.wasmFeature)
   };
 }
 function readScalePoints(dataset2, port) {
@@ -13290,22 +13290,22 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
-function readPort(dataset2, term2) {
-  const properties = values(dataset2, term2, lv2.portProperty);
+function readPort(dataset2, term3) {
+  const properties = values(dataset2, term3, lv2.portProperty);
   const port = {
-    iri: term2.value,
-    symbol: asString(one(dataset2, term2, lv2.symbol)),
-    name: asString(one(dataset2, term2, lv2.name)),
-    defaultValue: asNumber(one(dataset2, term2, lv2.default)),
-    minimum: asNumber(one(dataset2, term2, lv2.minimum)),
-    maximum: asNumber(one(dataset2, term2, lv2.maximum)),
-    unit: asString(one(dataset2, term2, units.unit)),
+    iri: term3.value,
+    symbol: asString(one(dataset2, term3, lv2.symbol)),
+    name: asString(one(dataset2, term3, lv2.name)),
+    defaultValue: asNumber(one(dataset2, term3, lv2.default)),
+    minimum: asNumber(one(dataset2, term3, lv2.minimum)),
+    maximum: asNumber(one(dataset2, term3, lv2.maximum)),
+    unit: asString(one(dataset2, term3, units.unit)),
     toggled: properties.includes(lv2.toggled),
     enumeration: properties.includes(lv2.enumeration),
-    scalePoints: readScalePoints(dataset2, term2),
+    scalePoints: readScalePoints(dataset2, term3),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
-    automationRate: one(dataset2, term2, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
+    automationRate: one(dataset2, term3, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
   };
   port.widget = widgetFor(port);
   return port;
@@ -13437,12 +13437,12 @@ function explainMissing(profile, missing) {
 // src/host/Parameters.js
 function parameterDescriptors(ports) {
   return ports.filter((p) => p.symbol !== null).map((port) => {
-    for (const [field, value] of Object.entries({
+    for (const [field, value2] of Object.entries({
       defaultValue: port.defaultValue,
       minValue: port.minimum,
       maxValue: port.maximum
     })) {
-      if (value === null || value === void 0) {
+      if (value2 === null || value2 === void 0) {
         throw new Error(`port ${port.symbol} has no ${field}; a parameter without a range cannot be an AudioParam`);
       }
     }
@@ -13898,7 +13898,7 @@ var N3Lexer = class {
         return this._input = input;
       }
       const line = this._line, firstChar = input[0];
-      let type = "", value = "", prefix = "", match = null, matchLength = 0, lexicalLength = 0, finalLineLength = 0, inconclusive = false;
+      let type = "", value2 = "", prefix = "", match = null, matchLength = 0, lexicalLength = 0, finalLineLength = 0, inconclusive = false;
       switch (firstChar) {
         case "^":
           if (input.length < 3)
@@ -13920,11 +13920,11 @@ var N3Lexer = class {
         // Fall through in case the type is an IRI
         case "<":
           if (match = this._unescapedIri.exec(input)) {
-            type = "IRI", value = match[1];
+            type = "IRI", value2 = match[1];
             lexicalLength = match[1].length + 2;
           } else if (match = this._iri.exec(input)) {
-            value = this._unescape(match[1], stringEscapeReplacements);
-            if (value === null || illegalIriChars.test(value))
+            value2 = this._unescape(match[1], stringEscapeReplacements);
+            if (value2 === null || illegalIriChars.test(value2))
               return reportSyntaxError(this);
             type = "IRI";
             lexicalLength = match[1].length + 2;
@@ -13934,8 +13934,8 @@ var N3Lexer = class {
             type = "<<", matchLength = 2;
           else if (this._n3Mode && input.length > 1 && input[1] === "=") {
             matchLength = 2;
-            if (this._isImpliedBy) type = "abbreviation", value = "<";
-            else type = "inverse", value = ">";
+            if (this._isImpliedBy) type = "abbreviation", value2 = "<";
+            else type = "inverse", value2 = ">";
           } else if (this._n3Mode && input.length > 1 && input[1] === "-")
             type = "inversePredicate", matchLength = 2;
           break;
@@ -13945,16 +13945,16 @@ var N3Lexer = class {
           break;
         case "_":
           if ((match = this._blank.exec(input)) || inputFinished && (match = this._blank.exec(`${input} `))) {
-            type = "blank", prefix = "_", value = match[1];
+            type = "blank", prefix = "_", value2 = match[1];
             lexicalLength = match[1].length + 2;
           }
           break;
         case '"':
           if (match = this._simpleQuotedString.exec(input))
-            value = match[1];
+            value2 = match[1];
           else {
-            ({ value, matchLength, finalLineLength } = this._parseLiteral(input));
-            if (value === null)
+            ({ value: value2, matchLength, finalLineLength } = this._parseLiteral(input));
+            if (value2 === null)
               return reportSyntaxError(this);
           }
           if (match !== null || matchLength !== 0) {
@@ -13965,10 +13965,10 @@ var N3Lexer = class {
         case "'":
           if (!this._lineMode) {
             if (match = this._simpleApostropheString.exec(input))
-              value = match[1];
+              value2 = match[1];
             else {
-              ({ value, matchLength, finalLineLength } = this._parseLiteral(input));
-              if (value === null)
+              ({ value: value2, matchLength, finalLineLength } = this._parseLiteral(input));
+              if (value2 === null)
                 return reportSyntaxError(this);
             }
             if (match !== null || matchLength !== 0) {
@@ -13979,14 +13979,14 @@ var N3Lexer = class {
           break;
         case "?":
           if (this._n3Mode && (match = this._variable.exec(input)))
-            type = "var", value = match[0];
+            type = "var", value2 = match[0];
           break;
         case "@":
           if (this._previousMarker === "literal" && (match = this._langcode.exec(input)) && match[1] !== "version") {
             if (!inputFinished && input[match[0].length] === "-" && input[match[0].length + 1] !== "-")
               match = null;
             else
-              type = "langcode", value = match[1];
+              type = "langcode", value2 = match[1];
           } else if (match = this._atKeyword.exec(input))
             type = match[0];
           break;
@@ -14012,14 +14012,14 @@ var N3Lexer = class {
           if (input[1] === "-") {
             if (this._previousMarker === "langcode") {
               if (input.startsWith("--ltr"))
-                type = "dircode", value = "ltr", matchLength = 5;
+                type = "dircode", value2 = "ltr", matchLength = 5;
               else if (input.startsWith("--rtl"))
-                type = "dircode", value = "rtl", matchLength = 5;
+                type = "dircode", value2 = "rtl", matchLength = 5;
             }
             break;
           }
           if (match = this._number.exec(input) || inputFinished && (match = this._number.exec(`${input} `))) {
-            type = "literal", value = match[0];
+            type = "literal", value2 = match[0];
             prefix = typeof match[1] === "string" ? xsd2.double : typeof match[2] === "string" ? xsd2.decimal : xsd2.integer;
           }
           break;
@@ -14039,13 +14039,13 @@ var N3Lexer = class {
         case "f":
         case "t":
           if (this._boolean.test(input))
-            type = "literal", value = firstChar === "t" ? "true" : "false", prefix = xsd2.boolean, matchLength = value.length;
+            type = "literal", value2 = firstChar === "t" ? "true" : "false", prefix = xsd2.boolean, matchLength = value2.length;
           else
             inconclusive = true;
           break;
         case "a":
           if (this._shortPredicates.test(input))
-            type = "abbreviation", value = "a", matchLength = 1;
+            type = "abbreviation", value2 = "a", matchLength = 1;
           else
             inconclusive = true;
           break;
@@ -14068,9 +14068,9 @@ var N3Lexer = class {
           if (this._n3Mode && input.length > 1) {
             type = "abbreviation";
             if (input[1] !== ">")
-              matchLength = 1, value = "=";
+              matchLength = 1, value2 = "=";
             else
-              matchLength = 2, value = ">";
+              matchLength = 2, value2 = ">";
           }
           break;
         case "!":
@@ -14113,10 +14113,10 @@ var N3Lexer = class {
       }
       if (inconclusive) {
         if ((this._previousMarker === "@prefix" || this._previousMarker === "PREFIX") && (match = this._prefix.exec(input)))
-          type = "prefix", value = match[1] || "";
+          type = "prefix", value2 = match[1] || "";
         else if ((match = this._prefixed.exec(input)) || inputFinished && (match = this._prefixed.exec(`${input} `))) {
           type = "prefixed", prefix = match[1] || "";
-          value = this._unescape(match[2], localNameEscapeReplacements);
+          value2 = this._unescape(match[2], localNameEscapeReplacements);
           lexicalLength = prefix.length + match[2].length + 1;
         }
       }
@@ -14145,7 +14145,7 @@ var N3Lexer = class {
       if (finalLineLength) {
         token = {
           type,
-          value,
+          value: value2,
           prefix,
           line,
           start: currentLineLength - input.length,
@@ -14154,28 +14154,28 @@ var N3Lexer = class {
         };
         callback(null, token);
       } else
-        token = emitToken(type, value, prefix, line, lexicalLength || length);
+        token = emitToken(type, value2, prefix, line, lexicalLength || length);
       this.previousToken = token;
       this._previousMarker = type;
       input = input.slice(length);
       if (finalLineLength)
         currentLineLength = input.length + finalLineLength;
     }
-    function emitComment(value, line, offset) {
+    function emitComment(value2, line, offset) {
       const start = currentLineLength - input.length + offset;
       callback(null, {
         type: "comment",
-        value,
+        value: value2,
         prefix: "",
         line,
         start,
-        end: start + value.length + 1
+        end: start + value2.length + 1
       });
     }
-    function emitToken(type, value, prefix, line, length) {
+    function emitToken(type, value2, prefix, line, length) {
       const start = input ? currentLineLength - input.length : currentLineLength;
       const end = start + length;
-      const token = { type, value, prefix, line, start, end };
+      const token = { type, value: value2, prefix, line, start, end };
       callback(null, token);
       return token;
     }
@@ -14567,30 +14567,30 @@ function namedNode3(iri2) {
 function blankNode3(name) {
   return new BlankNode2(name || `n3-${_blankNodeCounter++}`);
 }
-function literal3(value, languageOrDataType) {
+function literal3(value2, languageOrDataType) {
   if (typeof languageOrDataType === "string")
-    return new Literal2(`"${value}"@${languageOrDataType.toLowerCase()}`);
+    return new Literal2(`"${value2}"@${languageOrDataType.toLowerCase()}`);
   if (languageOrDataType !== void 0 && !("termType" in languageOrDataType)) {
-    return new Literal2(`"${value}"@${languageOrDataType.language.toLowerCase()}${languageOrDataType.direction ? `--${languageOrDataType.direction.toLowerCase()}` : ""}`);
+    return new Literal2(`"${value2}"@${languageOrDataType.language.toLowerCase()}${languageOrDataType.direction ? `--${languageOrDataType.direction.toLowerCase()}` : ""}`);
   }
   let datatype = languageOrDataType ? languageOrDataType.value : "";
   if (datatype === "") {
-    if (typeof value === "boolean")
+    if (typeof value2 === "boolean")
       datatype = xsd3.boolean;
-    else if (typeof value === "number") {
-      if (Number.isFinite(value))
-        datatype = Number.isInteger(value) ? xsd3.integer : xsd3.double;
+    else if (typeof value2 === "number") {
+      if (Number.isFinite(value2))
+        datatype = Number.isInteger(value2) ? xsd3.integer : xsd3.double;
       else {
         datatype = xsd3.double;
-        if (!Number.isNaN(value))
-          value = value > 0 ? "INF" : "-INF";
+        if (!Number.isNaN(value2))
+          value2 = value2 > 0 ? "INF" : "-INF";
       }
-    } else if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    } else if (value2 instanceof Date && !Number.isNaN(value2.getTime())) {
       datatype = xsd3.dateTime;
-      value = value.toISOString();
+      value2 = value2.toISOString();
     }
   }
-  return datatype === "" || datatype === xsd3.string ? new Literal2(`"${value}"`) : new Literal2(`"${value}"^^${datatype}`);
+  return datatype === "" || datatype === xsd3.string ? new Literal2(`"${value2}"`) : new Literal2(`"${value2}"^^${datatype}`);
 }
 function variable2(name) {
   return new Variable2(name);
@@ -14601,24 +14601,24 @@ function defaultGraph2() {
 function quad2(subject, predicate, object, graph) {
   return new Quad2(subject, predicate, object, graph);
 }
-function fromTerm2(term2) {
-  if (term2 instanceof Term)
-    return term2;
-  switch (term2.termType) {
+function fromTerm2(term3) {
+  if (term3 instanceof Term)
+    return term3;
+  switch (term3.termType) {
     case "NamedNode":
-      return namedNode3(term2.value);
+      return namedNode3(term3.value);
     case "BlankNode":
-      return blankNode3(term2.value);
+      return blankNode3(term3.value);
     case "Variable":
-      return variable2(term2.value);
+      return variable2(term3.value);
     case "DefaultGraph":
       return DEFAULTGRAPH;
     case "Literal":
-      return literal3(term2.value, term2.language || term2.datatype);
+      return literal3(term3.value, term3.language || term3.datatype);
     case "Quad":
-      return fromQuad(term2);
+      return fromQuad(term3);
     default:
-      throw new Error(`Unexpected termType: ${term2.termType}`);
+      throw new Error(`Unexpected termType: ${term3.termType}`);
   }
 }
 function fromQuad(inQuad) {
@@ -14806,7 +14806,7 @@ var N3Parser = class _N3Parser {
   }
   // ### `_readEntity` reads an IRI, prefixed name, blank node, or variable
   _readEntity(token, quantifier) {
-    let value;
+    let value2;
     switch (token.type) {
       // Read a relative or absolute IRI
       case "IRI":
@@ -14814,7 +14814,7 @@ var N3Parser = class _N3Parser {
         const iri2 = this._resolveIRI(token.value);
         if (iri2 === null)
           return this._error("Invalid IRI", token);
-        value = this._factory.namedNode(iri2);
+        value2 = this._factory.namedNode(iri2);
         break;
       // Read a prefixed name
       case "type":
@@ -14822,23 +14822,23 @@ var N3Parser = class _N3Parser {
         const prefix = this._prefixes[token.prefix];
         if (prefix === void 0)
           return this._error(`Undefined prefix "${token.prefix}:"`, token);
-        value = this._factory.namedNode(prefix + token.value);
+        value2 = this._factory.namedNode(prefix + token.value);
         break;
       // Read a blank node
       case "blank":
-        value = this._factory.blankNode(this._prefixes[token.prefix] + token.value);
+        value2 = this._factory.blankNode(this._prefixes[token.prefix] + token.value);
         break;
       // Read a variable
       case "var":
-        value = this._factory.variable(token.value.substr(1));
+        value2 = this._factory.variable(token.value.substr(1));
         break;
       // Everything else is not an entity
       default:
         return this._error(`Expected entity but got ${token.type}`, token);
     }
-    if (!quantifier && this._n3Mode && value.id in this._quantified)
-      value = this._quantified[value.id];
-    return value;
+    if (!quantifier && this._n3Mode && value2.id in this._quantified)
+      value2 = this._quantified[value2.id];
+    return value2;
   }
   // ### `_readList` starts reading a list in the subject, predicate, or object position
   _readList(token, subject, predicate, object) {
@@ -15307,13 +15307,13 @@ var N3Parser = class _N3Parser {
   _readDirCode(token) {
     const component = this._literalComponent, listItem = this._literalListItem;
     if (token.type === "dircode") {
-      const term2 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
+      const term3 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
       if (component === "subject")
-        this._subject = term2;
+        this._subject = term3;
       else if (component === "predicate")
-        this._predicate = term2;
+        this._predicate = term3;
       else
-        this._object = term2;
+        this._object = term3;
       this._literalLanguage = void 0;
       token = null;
     }
@@ -17701,8 +17701,8 @@ function* extractSourceShapeStructure(shape, dataset2, startNode, visited = new 
   }
   const { factory: factory3 } = shape.context;
   const { sh, rdfs: rdfs2 } = shape.context.ns;
-  const inListSize = (term2) => {
-    const inConstraint = shape.constraints.find((x) => term2.equals(x.paramValue));
+  const inListSize = (term3) => {
+    const inConstraint = shape.constraints.find((x) => term3.equals(x.paramValue));
     return inConstraint?.nodeSet.size || -1;
   };
   visited.add(startNode);
@@ -17741,7 +17741,7 @@ function isInstanceOf(instance, cls, ns2) {
   return types.some((type) => classes.has(type));
 }
 function rdfListToArray(listNode) {
-  return [...listNode.list?.() || []].map(({ term: term2 }) => term2);
+  return [...listNode.list?.() || []].map(({ term: term3 }) => term3);
 }
 
 // node_modules/rdf-validate-shacl/src/shapes-graph.js
@@ -17839,9 +17839,9 @@ var Constraint = class _Constraint {
         return acc;
       }
       if (acc.length === 0) {
-        return values2.map((value) => [[param, value]]);
+        return values2.map((value2) => [[param, value2]]);
       }
-      return acc.flatMap((comb) => values2.map((value) => comb.concat([[param, value]])));
+      return acc.flatMap((comb) => values2.map((value2) => comb.concat([[param, value2]])));
     }, []);
     for (const combination of combinations) {
       if (component.parameters.length === 1) {
@@ -17983,8 +17983,8 @@ var Shape = class _Shape {
       results.addAll(subjects);
     });
     this.shapeNodePointer.out(sh.targetObjectsOf).terms.forEach((predicate) => {
-      const objects2 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
-      results.addAll(objects2);
+      const objects3 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
+      results.addAll(objects3);
     });
     return [...results];
   }
@@ -18388,40 +18388,40 @@ var validators = new Registry();
 validators.register(strict106.anySimpleType, () => true);
 validators.register(strict106.anyAtomicType, () => true);
 validators.register(strict106.string, () => true);
-validators.register(strict106.normalizedString, (value) => isNormalized(value));
-validators.register(strict106.token, (value) => isNormalized(value) && !value.startsWith(" ") && !value.endsWith(" ") && !value.includes("  "));
-function isNormalized(value) {
+validators.register(strict106.normalizedString, (value2) => isNormalized(value2));
+validators.register(strict106.token, (value2) => isNormalized(value2) && !value2.startsWith(" ") && !value2.endsWith(" ") && !value2.includes("  "));
+function isNormalized(value2) {
   const forbiddenChars = ["\n", "\r", "	"];
-  return !forbiddenChars.some((forbiddenChar) => value.includes(forbiddenChar));
+  return !forbiddenChars.some((forbiddenChar) => value2.includes(forbiddenChar));
 }
 var languagePattern = /^[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*$/;
-validators.register(strict106.language, (value) => languagePattern.test(value));
+validators.register(strict106.language, (value2) => languagePattern.test(value2));
 var anyURIPattern = /^[^\ufffe\uffff]*$/;
-validators.register(strict106.anyURI, (value) => anyURIPattern.test(value));
+validators.register(strict106.anyURI, (value2) => anyURIPattern.test(value2));
 var signSeg = "(\\+|-)?";
 var integerPattern = new RegExp(`^${signSeg}\\d+$`);
-validators.register(strict106.integer, (value) => integerPattern.test(value));
-validators.register(strict106.nonNegativeInteger, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("0"));
-validators.register(strict106.positiveInteger, (value) => integerPattern.test(value) && BigInt(value) > BigInt("0"));
-validators.register(strict106.nonPositiveInteger, (value) => integerPattern.test(value) && BigInt(value) <= BigInt("0"));
-validators.register(strict106.negativeInteger, (value) => integerPattern.test(value) && BigInt(value) < BigInt("0"));
-validators.register(strict106.int, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("-2147483647") && BigInt(value) <= BigInt("2147483648"));
-validators.register(strict106.unsignedInt, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("0") && BigInt(value) <= BigInt("4294967295"));
-validators.register(strict106.long, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("-9223372036854775808") && BigInt(value) <= BigInt("9223372036854775807"));
-validators.register(strict106.unsignedLong, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("0") && BigInt(value) <= BigInt("18446744073709551615"));
-validators.register(strict106.short, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("-32768") && BigInt(value) <= BigInt("32767"));
-validators.register(strict106.unsignedShort, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("0") && BigInt(value) <= BigInt("65535"));
-validators.register(strict106.byte, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("-128") && BigInt(value) <= BigInt("127"));
-validators.register(strict106.unsignedByte, (value) => integerPattern.test(value) && BigInt(value) >= BigInt("0") && BigInt(value) <= BigInt("255"));
-validators.register(strict106.boolean, (value) => value === "1" || value === "true" || value === "0" || value === "false");
+validators.register(strict106.integer, (value2) => integerPattern.test(value2));
+validators.register(strict106.nonNegativeInteger, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("0"));
+validators.register(strict106.positiveInteger, (value2) => integerPattern.test(value2) && BigInt(value2) > BigInt("0"));
+validators.register(strict106.nonPositiveInteger, (value2) => integerPattern.test(value2) && BigInt(value2) <= BigInt("0"));
+validators.register(strict106.negativeInteger, (value2) => integerPattern.test(value2) && BigInt(value2) < BigInt("0"));
+validators.register(strict106.int, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("-2147483647") && BigInt(value2) <= BigInt("2147483648"));
+validators.register(strict106.unsignedInt, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("0") && BigInt(value2) <= BigInt("4294967295"));
+validators.register(strict106.long, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("-9223372036854775808") && BigInt(value2) <= BigInt("9223372036854775807"));
+validators.register(strict106.unsignedLong, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("0") && BigInt(value2) <= BigInt("18446744073709551615"));
+validators.register(strict106.short, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("-32768") && BigInt(value2) <= BigInt("32767"));
+validators.register(strict106.unsignedShort, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("0") && BigInt(value2) <= BigInt("65535"));
+validators.register(strict106.byte, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("-128") && BigInt(value2) <= BigInt("127"));
+validators.register(strict106.unsignedByte, (value2) => integerPattern.test(value2) && BigInt(value2) >= BigInt("0") && BigInt(value2) <= BigInt("255"));
+validators.register(strict106.boolean, (value2) => value2 === "1" || value2 === "true" || value2 === "0" || value2 === "false");
 var decimalSeg = `${signSeg}(\\d+\\.?\\d*|\\.\\d+)`;
 var decimalPattern = new RegExp(`^${signSeg}${decimalSeg}$`);
-validators.register(strict106.decimal, (value) => decimalPattern.test(value));
+validators.register(strict106.decimal, (value2) => decimalPattern.test(value2));
 validators.register(strict106.float, validateFloat);
 validators.register(strict106.double, validateFloat);
 var floatPattern = new RegExp(`^${signSeg}${decimalSeg}((E|e)(\\+|-)?\\d+)?$`);
-function validateFloat(value) {
-  return value === "INF" || value === "-INF" || value === "NaN" || floatPattern.test(value);
+function validateFloat(value2) {
+  return value2 === "INF" || value2 === "-INF" || value2 === "NaN" || floatPattern.test(value2);
 }
 var dateSignSeg = "-?";
 var durationYearSeg = "\\d+Y";
@@ -18435,11 +18435,11 @@ var durationTimeSeg = `T((${durationHourSeg}(${durationMinuteSeg})?(${durationSe
 var durationDayTimeSeg = `(${durationDaySeg}(${durationTimeSeg})?|${durationTimeSeg})`;
 var durationSeg = `${dateSignSeg}P((${durationYearMonthSeg}(${durationDayTimeSeg})?)|${durationDayTimeSeg})`;
 var durationPattern = new RegExp(`^${durationSeg}$`);
-validators.register(strict106.duration, (value) => durationPattern.test(value));
+validators.register(strict106.duration, (value2) => durationPattern.test(value2));
 var dayTimeDurationPattern = new RegExp(`^${dateSignSeg}P${durationDayTimeSeg}$`);
-validators.register(strict106.dayTimeDuration, (value) => dayTimeDurationPattern.test(value));
+validators.register(strict106.dayTimeDuration, (value2) => dayTimeDurationPattern.test(value2));
 var yearMonthDurationPattern = new RegExp(`^${dateSignSeg}P${durationYearMonthSeg}$`);
-validators.register(strict106.yearMonthDuration, (value) => yearMonthDurationPattern.test(value));
+validators.register(strict106.yearMonthDuration, (value2) => yearMonthDurationPattern.test(value2));
 var yearSeg = `${dateSignSeg}(([1-9]\\d{3,})|(0\\d{3}))`;
 var timezoneSeg = "(((\\+|-)\\d{2}:\\d{2})|Z)";
 var monthSeg = "\\d{2}";
@@ -18447,25 +18447,25 @@ var daySeg = "\\d{2}";
 var dateSeg = `${yearSeg}-${monthSeg}-${daySeg}`;
 var timeSeg = "\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?";
 var dateTimePattern = new RegExp(`^${dateSeg}T${timeSeg}${timezoneSeg}?$`);
-validators.register(strict106.dateTime, (value) => dateTimePattern.test(value));
+validators.register(strict106.dateTime, (value2) => dateTimePattern.test(value2));
 var dateTimeStampPattern = new RegExp(`^${dateSeg}T${timeSeg}${timezoneSeg}$`);
-validators.register(strict106.dateTimeStamp, (value) => dateTimeStampPattern.test(value));
+validators.register(strict106.dateTimeStamp, (value2) => dateTimeStampPattern.test(value2));
 var datePattern = new RegExp(`^${dateSeg}${timezoneSeg}?$`);
-validators.register(strict106.date, (value) => datePattern.test(value));
+validators.register(strict106.date, (value2) => datePattern.test(value2));
 var dayPattern = new RegExp(`^${daySeg}${timezoneSeg}?$`);
-validators.register(strict106.gDay, (value) => dayPattern.test(value));
+validators.register(strict106.gDay, (value2) => dayPattern.test(value2));
 var monthPattern = new RegExp(`^--${monthSeg}${timezoneSeg}?$`);
-validators.register(strict106.gMonth, (value) => monthPattern.test(value));
+validators.register(strict106.gMonth, (value2) => monthPattern.test(value2));
 var monthDayPattern = new RegExp(`^${monthSeg}-${daySeg}${timezoneSeg}?$`);
-validators.register(strict106.gMonthDay, (value) => monthDayPattern.test(value));
+validators.register(strict106.gMonthDay, (value2) => monthDayPattern.test(value2));
 var yearPattern = new RegExp(`^${yearSeg}${timezoneSeg}?$`);
-validators.register(strict106.gYear, (value) => yearPattern.test(value));
+validators.register(strict106.gYear, (value2) => yearPattern.test(value2));
 var yearMonthPattern = new RegExp(`^${yearSeg}-${monthSeg}${timezoneSeg}?$`);
-validators.register(strict106.gYearMonth, (value) => yearMonthPattern.test(value));
+validators.register(strict106.gYearMonth, (value2) => yearMonthPattern.test(value2));
 var timePattern = new RegExp(`^${timeSeg}${timezoneSeg}?$`);
-validators.register(strict106.time, (value) => timePattern.test(value));
+validators.register(strict106.time, (value2) => timePattern.test(value2));
 var hexBinaryPattern = /^([0-9a-fA-F]{2})*$/;
-validators.register(strict106.hexBinary, (value) => hexBinaryPattern.test(value));
+validators.register(strict106.hexBinary, (value2) => hexBinaryPattern.test(value2));
 var b64CharSeg = "[A-Za-z0-9+/]";
 var b16CharSeg = "[AEIMQUYcgkosw048]";
 var b04CharSeg = "[AQgw]";
@@ -18478,10 +18478,10 @@ var b64QuadSeg = `(${b64Seg}{4})`;
 var b64FinalQuadSeg = `(${b64Seg}{3}${b64CharSeg})`;
 var b64FinalSeg = `(${b64FinalQuadSeg}|${b64Padded16Seg}|${b64Padded8Seg})`;
 var b64Pattern = new RegExp(`^(${b64QuadSeg}*${b64FinalSeg})?$`);
-validators.register(strict106.base64Binary, (value) => b64Pattern.test(value));
-validators.register(strict9.JSON, (value) => {
+validators.register(strict106.base64Binary, (value2) => b64Pattern.test(value2));
+validators.register(strict9.JSON, (value2) => {
   try {
-    JSON.parse(value);
+    JSON.parse(value2);
     return true;
   } catch (e) {
     return false;
@@ -18502,13 +18502,13 @@ validators.register(strict68.XMLLiteral, () => true);
 validators.register(strict68.HTML, () => true);
 
 // node_modules/rdf-validate-datatype/src/validate-term.js
-function validateTerm(term2) {
-  if (term2.termType !== "Literal") {
+function validateTerm(term3) {
+  if (term3.termType !== "Literal") {
     throw new Error("Cannot validate non-literal terms");
   }
-  const validator = validators.find(term2.datatype);
+  const validator = validators.find(term3.datatype);
   if (validator) {
-    return validator(term2.value);
+    return validator(term3.value);
   }
   return true;
 }
@@ -18544,7 +18544,7 @@ var validateClosed = {
     if (!trueTerm.equals(closedNode)) {
       return;
     }
-    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term2) => term2.termType === "NamedNode"));
+    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term3) => term3.termType === "NamedNode"));
     if (ignoredPropertiesNode) {
       allowed.addAll(rdfListToArray(context.$shapes.node(ignoredPropertiesNode)));
     }
@@ -18583,16 +18583,16 @@ var validateEquals = {
     const path = constraint.shape.pathObject;
     const equalsNode = constraint.getParameterValue(sh.equals);
     const results = [];
-    getPathObjects(context.$data, focusNode, path).forEach((value) => {
-      if (context.$data.dataset.match(focusNode, equalsNode, value).size === 0) {
-        results.push({ value });
+    getPathObjects(context.$data, focusNode, path).forEach((value2) => {
+      if (context.$data.dataset.match(focusNode, equalsNode, value2).size === 0) {
+        results.push({ value: value2 });
       }
     });
     const equalsQuads = [...context.$data.dataset.match(focusNode, equalsNode, null)];
     equalsQuads.forEach(({ object }) => {
-      const value = object;
-      if (!getPathObjects(context.$data, focusNode, path).some((pathValue) => pathValue.equals(value))) {
-        results.push({ value });
+      const value2 = object;
+      if (!getPathObjects(context.$data, focusNode, path).some((pathValue) => pathValue.equals(value2))) {
+        results.push({ value: value2 });
       }
     });
     return results;
@@ -18603,10 +18603,10 @@ var validateEquals = {
     const equalsNode = constraint.getParameterValue(sh.equals);
     const results = [];
     let solutions = 0;
-    getPathObjects(context.$data, focusNode, equalsNode).forEach((value) => {
+    getPathObjects(context.$data, focusNode, equalsNode).forEach((value2) => {
       solutions++;
-      if (!value.equals(focusNode)) {
-        results.push({ value });
+      if (!value2.equals(focusNode)) {
+        results.push({ value: value2 });
       }
     });
     if (results.length === 0 && solutions === 0) {
@@ -18627,7 +18627,7 @@ var validateHasValue = {
     const { sh } = context.ns;
     const path = constraint.shape.pathObject;
     const hasValueNode = constraint.getParameterValue(sh.hasValue);
-    return getPathObjects(context.$data, focusNode, path).some((value) => value.equals(hasValueNode));
+    return getPathObjects(context.$data, focusNode, path).some((value2) => value2.equals(hasValueNode));
   },
   propertyValidationMessage: "Missing expected value {$hasValue}"
 };
@@ -18661,11 +18661,11 @@ var validateLessThan = {
     const lessThanNode = constraint.getParameterValue(sh.lessThan);
     const referenceValues = context.$data.node(focusNode).out(lessThanNode).terms;
     const invalidValues = [];
-    for (const value of values2) {
+    for (const value2 of values2) {
       for (const referenceValue of referenceValues) {
-        const c3 = compareTerms(value, referenceValue, context.ns);
+        const c3 = compareTerms(value2, referenceValue, context.ns);
         if (c3 === null || c3 >= 0) {
-          invalidValues.push({ value });
+          invalidValues.push({ value: value2 });
         }
       }
     }
@@ -18681,11 +18681,11 @@ var validateLessThanOrEquals = {
     const lessThanOrEqualsNode = constraint.getParameterValue(sh.lessThanOrEquals);
     const referenceValues = context.$data.node(focusNode).out(lessThanOrEqualsNode).terms;
     const invalidValues = [];
-    for (const value of values2) {
+    for (const value2 of values2) {
       for (const referenceValue of referenceValues) {
-        const c3 = compareTerms(value, referenceValue, context.ns);
+        const c3 = compareTerms(value2, referenceValue, context.ns);
         if (c3 === null || c3 > 0) {
-          invalidValues.push({ value });
+          invalidValues.push({ value: value2 });
         }
       }
     }
@@ -18848,15 +18848,15 @@ function validateQualifiedHelper(context, focusNode, constraint) {
   const trueTerm = context.factory.literal("true", xsd4.boolean);
   const siblingShapes = new node_set_default();
   if (trueTerm.equals(qualifiedValueShapesDisjointNode)) {
-    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term2 }) => !term2.equals(qualifiedValueShapeNode)).terms;
+    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term3 }) => !term3.equals(qualifiedValueShapeNode)).terms;
     siblingShapes.addAll(qualifiedSiblingShapes);
   }
   const path = constraint.shape.pathObject;
-  return getPathObjects(context.$data, focusNode, path).filter((value) => context.nodeConformsToShape(value, qualifiedValueShapeNode) && !validateQualifiedConformsToASibling(context, value, [...siblingShapes])).length;
+  return getPathObjects(context.$data, focusNode, path).filter((value2) => context.nodeConformsToShape(value2, qualifiedValueShapeNode) && !validateQualifiedConformsToASibling(context, value2, [...siblingShapes])).length;
 }
-function validateQualifiedConformsToASibling(context, value, siblingShapes) {
+function validateQualifiedConformsToASibling(context, value2, siblingShapes) {
   for (let i2 = 0; i2 < siblingShapes.length; i2++) {
-    if (context.nodeConformsToShape(value, siblingShapes[i2])) {
+    if (context.nodeConformsToShape(value2, siblingShapes[i2])) {
       return true;
     }
   }
@@ -18872,13 +18872,13 @@ var validateUniqueLang = {
     }
     const path = constraint.shape.pathObject;
     const map = {};
-    getPathObjects(context.$data, focusNode, path).forEach((value) => {
-      if (value.termType === "Literal" && value.language && value.language !== "") {
-        const old = map[value.language];
+    getPathObjects(context.$data, focusNode, path).forEach((value2) => {
+      if (value2.termType === "Literal" && value2.language && value2.language !== "") {
+        const old = map[value2.language];
         if (!old) {
-          map[value.language] = 1;
+          map[value2.language] = 1;
         } else {
-          map[value.language] = old + 1;
+          map[value2.language] = old + 1;
         }
       }
     });
@@ -18904,15 +18904,15 @@ var validateXone = {
     return conformsCount === 1;
   }
 };
-function compareTerms(term1, term2, ns2) {
-  if (!term1 || !term2 || term1.termType !== "Literal" || term2.termType !== "Literal") {
+function compareTerms(term1, term22, ns2) {
+  if (!term1 || !term22 || term1.termType !== "Literal" || term22.termType !== "Literal") {
     return null;
   }
-  if (hasTimezone(term1, ns2) !== hasTimezone(term2, ns2)) {
+  if (hasTimezone(term1, ns2) !== hasTimezone(term22, ns2)) {
     return null;
   }
   const value1 = (0, import_rdf_literal.fromRdf)(term1);
-  const value2 = (0, import_rdf_literal.fromRdf)(term2);
+  const value2 = (0, import_rdf_literal.fromRdf)(term22);
   if (typeof value1 !== typeof value2) {
     return null;
   }
@@ -19257,14 +19257,14 @@ var Engine = class {
    * contract section 5.1 and messaging.md section 1.5, because two paths for
    * one value arrive at different times with no defined precedence.
    */
-  setParameter(id, symbol, value) {
+  setParameter(id, symbol, value2) {
     const entry = this.get(id);
     const param = entry.node.parameters.get(symbol);
     if (!param) {
       throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
     }
     const port = entry.profile.ports.find((p) => p.symbol === symbol);
-    const clamped = port ? Math.min(port.maximum, Math.max(port.minimum, value)) : value;
+    const clamped = port ? Math.min(port.maximum, Math.max(port.minimum, value2)) : value2;
     param.setValueAtTime(clamped, this.#context.currentTime);
     return clamped;
   }
@@ -19347,15 +19347,15 @@ var DEFAULT_TRANSPORT = Object.freeze({
   loopEnabled: false,
   tempoPoints: [{ atBeat: 0, bpm: 120 }]
 });
-function checkEndpoint(state, endpoint, what) {
-  if (!endpoint || typeof endpoint !== "object") throw new Error(`${what} is missing`);
-  if (!state.nodes.has(endpoint.node)) throw new Error(`${what} names no such node: ${endpoint.node}`);
-  const hasIndex = endpoint.portIndex !== void 0 && endpoint.portIndex !== null;
-  const hasSymbol = endpoint.portSymbol !== void 0 && endpoint.portSymbol !== null;
+function checkEndpoint(state, endpoint2, what) {
+  if (!endpoint2 || typeof endpoint2 !== "object") throw new Error(`${what} is missing`);
+  if (!state.nodes.has(endpoint2.node)) throw new Error(`${what} names no such node: ${endpoint2.node}`);
+  const hasIndex = endpoint2.portIndex !== void 0 && endpoint2.portIndex !== null;
+  const hasSymbol = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null;
   if (hasIndex === hasSymbol) {
     throw new Error(`${what} must give exactly one of portIndex, for an audio or MIDI port, or portSymbol, for a parameter`);
   }
-  if (hasIndex && (!Number.isInteger(endpoint.portIndex) || endpoint.portIndex < 0)) {
+  if (hasIndex && (!Number.isInteger(endpoint2.portIndex) || endpoint2.portIndex < 0)) {
     throw new Error(`${what} has a portIndex that is not a non-negative integer`);
   }
 }
@@ -19363,10 +19363,10 @@ function noteExplicitId(counters, prefix, counterKey, id) {
   const minted = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
   if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]));
 }
-function isLoadableIRI(value) {
+function isLoadableIRI(value2) {
   let url;
   try {
-    url = new URL(String(value));
+    url = new URL(String(value2));
   } catch {
     return false;
   }
@@ -19483,8 +19483,8 @@ var Project = class {
   get label() {
     return this.#label;
   }
-  set label(value) {
-    this.#label = value;
+  set label(value2) {
+    this.#label = value2;
   }
   get nodes() {
     return [...this.#state.nodes.values()];
@@ -20031,6 +20031,7 @@ var OpDispatcher = class {
       return { ok: true, applied: false, revision: this.#project.revision, compiled };
     }
     const result = this.#project.apply(changes, { expectedRevision });
+    this.#releaseRemoved();
     this.#rebuildLinks(compiled);
     this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
@@ -20068,7 +20069,16 @@ var OpDispatcher = class {
    * inside an atomic changeset, so it happens first and the node id joins the
    * two halves. webmcp.md raises this as open; this is the answer.
    */
-  async addPlugin(iri2, { position } = {}) {
+  /**
+   * Load a plugin and add a node for it.
+   *
+   * `id` names the node rather than letting one be minted, which is what
+   * reopening a saved project needs: the connections in the file name the nodes
+   * they join, so a node that came back under a different name would be joined
+   * to nothing. The model tracks ids it did not mint, so a later minted id
+   * cannot collide with one restored here.
+   */
+  async addPlugin(iri2, { position, id, label } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
@@ -20076,7 +20086,7 @@ var OpDispatcher = class {
     } catch (error2) {
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    const result = this.apply([{ op: "addNode", pluginIri: iri2, label: entry.profile.label }]);
+    const result = this.apply([{ op: "addNode", id, pluginIri: iri2, label: label ?? entry.profile.label }]);
     if (!result.ok) {
       this.#engine.remove(entry.id);
       return result;
@@ -20089,13 +20099,13 @@ var OpDispatcher = class {
     return { ...result, nodeId, entry };
   }
   /** Set a parameter. Goes to the model and the AudioParam, never a message. */
-  setParameter(nodeId, symbol, value) {
-    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value }]);
+  setParameter(nodeId, symbol, value2) {
+    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: value2 }]);
     if (!result.ok) return result;
-    let applied = value;
+    let applied = value2;
     const engineId = this.#nodeIds.get(nodeId);
-    if (engineId && this.#engine) applied = this.#engine.setParameter(engineId, symbol, value);
-    if (applied !== value) this.#project.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    if (engineId && this.#engine) applied = this.#engine.setParameter(engineId, symbol, value2);
+    if (applied !== value2) this.#project.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
     this.#emit({ type: "parameter", nodeId, symbol, value: applied });
     return { ...result, value: applied };
   }
@@ -20107,6 +20117,29 @@ var OpDispatcher = class {
    * links are exactly what the compiler said, with no stale delay node left
    * feeding silence into a mix because an edge moved.
    */
+  /**
+   * Let go of the engine nodes whose model nodes are gone.
+   *
+   * Removing a node from the model does not remove the AudioWorkletNode behind
+   * it, and until this existed nothing did: a removed plugin kept running and
+   * kept whatever the page had connected it to. Rebuilding links does not cover
+   * it, because a node with no links is exactly the case.
+   *
+   * Driven by the model rather than by the change list, so it is right for any
+   * route that removes a node, including a changeset that removes one as a side
+   * effect of removing something else.
+   */
+  #releaseRemoved() {
+    if (!this.#engine) return;
+    for (const [nodeId, engineId] of [...this.#nodeIds]) {
+      if (this.#project.node(nodeId)) continue;
+      try {
+        this.#engine.remove(engineId);
+      } catch {
+      }
+      this.#nodeIds.delete(nodeId);
+    }
+  }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
@@ -20146,10 +20179,10 @@ var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#db": "dB",
   "http://lv2plug.in/ns/extensions/units#s": "s"
 });
-var formatValue = (port, value) => {
+var formatValue = (port, value2) => {
   const unit = UNIT_LABELS[port.unit];
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
-  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+  return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
 var SPOKEN_UNITS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "hertz",
@@ -20157,10 +20190,10 @@ var SPOKEN_UNITS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#db": "decibels",
   "http://lv2plug.in/ns/extensions/units#s": "seconds"
 });
-var spokenValue = (port, value) => {
+var spokenValue = (port, value2) => {
   const unit = SPOKEN_UNITS[port.unit];
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
-  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
+  return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
 function createPanel(document2, profile, onChange) {
   const root = document2.createElement("section");
@@ -20208,9 +20241,9 @@ function createPanel(document2, profile, onChange) {
         option.textContent = point.label ?? String(point.value);
         input.append(option);
       }
-      const select = (value) => {
+      const select = (value2) => {
         for (const option of input.options ?? input.children) {
-          option.selected = Number(option.value) === Number(value);
+          option.selected = Number(option.value) === Number(value2);
         }
       };
       select(port.defaultValue);
@@ -20245,8 +20278,8 @@ function createPanel(document2, profile, onChange) {
   return {
     element: root,
     /** Called by the host when a value actually changed. */
-    update(symbol, value) {
-      setters.get(symbol)?.(value);
+    update(symbol, value2) {
+      setters.get(symbol)?.(value2);
     }
   };
 }
@@ -20351,7 +20384,7 @@ var FACETS = Object.freeze({
   format: `${TRN2}format`
 });
 var FACET_NAMES = Object.freeze(Object.keys(FACETS));
-var expandTerm = (value) => String(value).startsWith("http") ? String(value) : `${TRN2}${value}`;
+var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
 
 // src/mcp/tools.js
 var ok = (data) => ({ ok: true, ...data });
@@ -20573,8 +20606,8 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
         },
         required: ["node", "symbol", "value"]
       },
-      async handler({ node, symbol, value } = {}) {
-        const result = dispatcher2.setParameter(node, symbol, value);
+      async handler({ node, symbol, value: value2 } = {}) {
+        const result = dispatcher2.setParameter(node, symbol, value2);
         return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
       }
     },
@@ -20666,6 +20699,226 @@ function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlu
     }
   }
   return { bound: "page", count: tools.length, surface };
+}
+
+// src/rdf/ProjectWriter.js
+var { jig: jig3 } = vocabulary;
+var PREFIXES2 = [
+  ["jig", JIG],
+  ["trn", TRN],
+  ["rdfs", "http://www.w3.org/2000/01/rdf-schema#"],
+  ["dcterms", "http://purl.org/dc/terms/"],
+  ["xsd", "http://www.w3.org/2001/XMLSchema#"]
+];
+function term2(iri2) {
+  for (const [prefix, namespace2] of PREFIXES2) {
+    if (iri2.startsWith(namespace2)) return `${prefix}:${iri2.slice(namespace2.length)}`;
+  }
+  return `<${iri2}>`;
+}
+function string(value2) {
+  return JSON.stringify(String(value2));
+}
+function decimal(value2) {
+  const n2 = Number(value2);
+  if (!Number.isFinite(n2)) throw new Error(`not a finite number: ${value2}`);
+  return Number.isInteger(n2) ? `${n2}.0` : String(n2);
+}
+function integer(value2) {
+  const n2 = Number(value2);
+  if (!Number.isInteger(n2)) throw new Error(`not an integer: ${value2}`);
+  return String(n2);
+}
+var byId = (a2, b) => a2.id < b.id ? -1 : a2.id > b.id ? 1 : 0;
+function endpoint(lines, base, id, e) {
+  const hasIndex = e.portIndex !== void 0 && e.portIndex !== null;
+  const hasSymbol = e.portSymbol !== void 0 && e.portSymbol !== null;
+  if (hasIndex === hasSymbol) {
+    throw new Error(`endpoint ${id} must give exactly one of portIndex or portSymbol`);
+  }
+  const port = hasIndex ? `${term2(jig3.portIndex)} ${integer(e.portIndex)}` : `${term2(jig3.portSymbol)} ${string(e.portSymbol)}`;
+  lines.push(`<#${id}> a ${term2(jig3.Endpoint)} ; ${term2(jig3.endpointNode)} <#${e.node}> ; ${port} .`);
+}
+function writeProject(project, { iri: iri2, created = null } = {}) {
+  if (!iri2) throw new Error("writeProject needs the project IRI, which becomes the @base");
+  const nodes = [...project.nodes].sort(byId);
+  const connections = [...project.connections].sort(byId);
+  const transport = project.transport;
+  const lines = [];
+  lines.push(`@base <${iri2}> .`);
+  lines.push("");
+  for (const [prefix, namespace2] of PREFIXES2) lines.push(`@prefix ${prefix}: <${namespace2}> .`);
+  lines.push("");
+  lines.push("<>");
+  lines.push(`    a ${term2(jig3.Project)} ;`);
+  if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
+  if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
+  lines.push(`    ${term2(jig3.revision)} ${integer(project.revision)} ;`);
+  if (nodes.length > 0) {
+    lines.push(`    ${term2(jig3.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
+  }
+  if (connections.length > 0) {
+    lines.push(`    ${term2(jig3.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
+  }
+  lines.push(`    ${term2(jig3.transport)} <#transport> .`);
+  for (const node of nodes) {
+    lines.push("");
+    lines.push(`<#${node.id}>`);
+    lines.push(`    a ${term2(jig3.Node)} ;`);
+    if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`);
+    const settings = [...node.settings.keys()].sort();
+    if (settings.length > 0) {
+      lines.push(`    ${term2(jig3.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
+    }
+    if (node.state) lines.push(`    ${term2(jig3.nodeState)} ${string(node.state)} ;`);
+    lines.push(`    ${term2(jig3.plugin)} <${node.pluginIri}> .`);
+    for (const symbol of settings) {
+      lines.push(`<#${node.id}-${symbol}> a ${term2(jig3.ParameterSetting)} ; ${term2(jig3.symbol)} ${string(symbol)} ; ${term2(jig3.value)} ${decimal(node.settings.get(symbol))} .`);
+    }
+  }
+  for (const c3 of connections) {
+    lines.push("");
+    lines.push(`<#${c3.id}>`);
+    lines.push(`    a ${term2(jig3.Connection)} ;`);
+    lines.push(`    ${term2(jig3.from)} <#${c3.id}-from> ; ${term2(jig3.to)} <#${c3.id}-to> ;`);
+    lines.push(`    ${term2(jig3.signalKind)} ${term2(c3.signalKind)} .`);
+    endpoint(lines, iri2, `${c3.id}-from`, c3.from);
+    endpoint(lines, iri2, `${c3.id}-to`, c3.to);
+  }
+  const points = [...transport.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
+  lines.push("");
+  lines.push("<#transport>");
+  lines.push(`    a ${term2(jig3.Transport)} ;`);
+  lines.push(`    ${term2(jig3.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term2(jig3.beatUnit)} ${integer(transport.beatUnit)} ;`);
+  lines.push(`    ${term2(jig3.loopStart)} ${decimal(transport.loopStart)} ; ${term2(jig3.loopEnd)} ${decimal(transport.loopEnd)} ; ${term2(jig3.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
+  lines.push(`    ${term2(jig3.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
+  points.forEach((point, i2) => {
+    lines.push(`<#t${i2}> a ${term2(jig3.TempoPoint)} ; ${term2(jig3.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig3.bpm)} ${decimal(point.bpm)} .`);
+  });
+  return lines.join("\n") + "\n";
+}
+
+// src/rdf/ProjectReader.js
+var { jig: jig4 } = vocabulary;
+var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
+function objects2(dataset2, subject, predicate) {
+  const out = [];
+  for (const quad3 of dataset2) {
+    if (quad3.subject.value === subject && quad3.predicate.value === predicate) {
+      out.push(quad3.object);
+    }
+  }
+  return out;
+}
+var one2 = (dataset2, subject, predicate) => objects2(dataset2, subject, predicate)[0] ?? null;
+var value = (term3) => term3 ? term3.value : null;
+function number(term3, what) {
+  if (!term3) return null;
+  const n2 = Number(term3.value);
+  if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term3.value}`);
+  return n2;
+}
+function findProject(dataset2) {
+  const found = [];
+  for (const quad3 of dataset2) {
+    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig4.Project) {
+      found.push(quad3.subject.value);
+    }
+  }
+  if (found.length === 0) throw new Error("this document declares no jig:Project");
+  if (found.length > 1) {
+    throw new Error(`this document declares ${found.length} projects, and a project file holds one`);
+  }
+  return found[0];
+}
+function idOf(iri2, projectIri, what) {
+  if (!iri2) throw new Error(`${what} is missing`);
+  const hash = iri2.indexOf("#");
+  if (hash < 0 || !iri2.startsWith(projectIri.split("#")[0])) {
+    throw new Error(`${what} is not a fragment of the project: ${iri2}`);
+  }
+  return iri2.slice(hash + 1);
+}
+function readEndpoint(dataset2, iri2, projectIri, what) {
+  if (!iri2) throw new Error(`${what} is missing`);
+  const node = value(one2(dataset2, iri2, jig4.endpointNode));
+  if (!node) throw new Error(`${what} names no jig:endpointNode`);
+  const index = one2(dataset2, iri2, jig4.portIndex);
+  const symbol = one2(dataset2, iri2, jig4.portSymbol);
+  if (index === null === (symbol === null)) {
+    throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
+  }
+  const endpoint2 = { node: idOf(node, projectIri, `${what} endpointNode`) };
+  if (index !== null) endpoint2.portIndex = number(index, `${what} portIndex`);
+  else endpoint2.portSymbol = symbol.value;
+  return endpoint2;
+}
+function readProject(dataset2) {
+  const iri2 = findProject(dataset2);
+  const changes = [];
+  const nodeIris = objects2(dataset2, iri2, jig4.node).map((t) => t.value).sort();
+  for (const nodeIri of nodeIris) {
+    const id = idOf(nodeIri, iri2, "node");
+    const pluginIri = value(one2(dataset2, nodeIri, jig4.plugin));
+    if (!pluginIri) throw new Error(`node ${id} names no jig:plugin, so nothing says what to load`);
+    const settings = {};
+    for (const settingIri of objects2(dataset2, nodeIri, jig4.setting).map((t) => t.value).sort()) {
+      const symbol = value(one2(dataset2, settingIri, jig4.symbol));
+      const setting = one2(dataset2, settingIri, jig4.value);
+      if (!symbol) throw new Error(`a setting on ${id} names no jig:symbol`);
+      if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
+      settings[symbol] = number(setting, `setting ${symbol} on ${id}`);
+    }
+    changes.push({
+      op: "addNode",
+      id,
+      pluginIri,
+      label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
+      settings,
+      state: value(one2(dataset2, nodeIri, jig4.nodeState))
+    });
+  }
+  for (const connIri of objects2(dataset2, iri2, jig4.connection).map((t) => t.value).sort()) {
+    const id = idOf(connIri, iri2, "connection");
+    const signalKind = value(one2(dataset2, connIri, jig4.signalKind));
+    if (!signalKind) {
+      throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
+    }
+    changes.push({
+      op: "addConnection",
+      id,
+      from: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.from)), iri2, `connection ${id} from`),
+      to: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.to)), iri2, `connection ${id} to`),
+      signalKind
+    });
+  }
+  const transportIri = value(one2(dataset2, iri2, jig4.transport));
+  if (transportIri) {
+    const points = objects2(dataset2, transportIri, jig4.tempoPoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number(one2(dataset2, pointIri, jig4.atBeat), "atBeat") ?? 0,
+      bpm: number(one2(dataset2, pointIri, jig4.bpm), "bpm") ?? 120
+    })).sort((a2, b) => a2.atBeat - b.atBeat);
+    const transport = {};
+    const beatsPerBar = number(one2(dataset2, transportIri, jig4.beatsPerBar), "beatsPerBar");
+    const beatUnit = number(one2(dataset2, transportIri, jig4.beatUnit), "beatUnit");
+    const loopStart = number(one2(dataset2, transportIri, jig4.loopStart), "loopStart");
+    const loopEnd = number(one2(dataset2, transportIri, jig4.loopEnd), "loopEnd");
+    const loopEnabled = one2(dataset2, transportIri, jig4.loopEnabled);
+    if (beatsPerBar !== null) transport.beatsPerBar = beatsPerBar;
+    if (beatUnit !== null) transport.beatUnit = beatUnit;
+    if (loopStart !== null) transport.loopStart = loopStart;
+    if (loopEnd !== null) transport.loopEnd = loopEnd;
+    if (loopEnabled !== null) transport.loopEnabled = loopEnabled.value === "true";
+    if (points.length > 0) transport.tempoPoints = points;
+    if (Object.keys(transport).length > 0) changes.push({ op: "setTransport", ...transport });
+  }
+  return {
+    iri: iri2,
+    label: value(one2(dataset2, iri2, RDFS_LABEL)),
+    revision: number(one2(dataset2, iri2, jig4.revision), "revision") ?? 0,
+    changes
+  };
 }
 
 // web/app.js
@@ -20889,8 +21142,8 @@ function drawRack() {
     if (profile) {
       let panel = panels.get(node.id);
       if (!panel) {
-        panel = createPanel(document, profile, (symbol, value) => {
-          const applied = dispatcher.setParameter(node.id, symbol, value);
+        panel = createPanel(document, profile, (symbol, value2) => {
+          const applied = dispatcher.setParameter(node.id, symbol, value2);
           if (applied.ok) panel.update(symbol, applied.value);
         });
         panels.set(node.id, panel);
@@ -21023,6 +21276,74 @@ async function search() {
     log(`search failed: ${error2.message}`, "error");
   }
 }
+function sessionIri() {
+  return new URL(`sessions/${Date.now()}/`, document.baseURI).href;
+}
+function saveSession() {
+  if (!dispatcher) {
+    log("nothing to save yet", "error");
+    return;
+  }
+  const turtle = writeProject(dispatcher.project, {
+    iri: sessionIri(),
+    created: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d+Z$/, "Z")
+  });
+  const url = URL.createObjectURL(new Blob([turtle], { type: "text/turtle" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "session.ttl";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1e4);
+  log(`saved ${dispatcher.project.nodes.length} nodes as Turtle`, "ok");
+}
+async function openSession(text) {
+  const d = await ensureRunning();
+  const parsed = await parseText(text, document.baseURI);
+  let read;
+  try {
+    read = readProject(parsed);
+  } catch (error2) {
+    log(error2.message, "error");
+    return;
+  }
+  const existing = [...d.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id }));
+  if (existing.length > 0) {
+    const cleared = d.apply(existing);
+    if (!cleared.ok) {
+      log(cleared.message, "error");
+      return;
+    }
+  }
+  panels.clear();
+  const loaded = /* @__PURE__ */ new Set();
+  for (const change of read.changes.filter((c3) => c3.op === "addNode")) {
+    log(`GET ${change.pluginIri}`);
+    const result = await d.addPlugin(change.pluginIri, { id: change.id, label: change.label });
+    if (!result.ok) {
+      log(`${change.id}: ${result.message}`, "error");
+      continue;
+    }
+    loaded.add(change.id);
+    if (engine.get(result.entry.id).node.numberOfOutputs > 0) {
+      engine.get(result.entry.id).node.connect(analyser);
+    }
+    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
+      const set = d.setParameter(change.id, symbol, value2);
+      if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, "error");
+    }
+    if (change.state) d.apply([{ op: "setNodeState", node: change.id, state: change.state }]);
+  }
+  const rest = read.changes.filter((c3) => c3.op !== "addNode" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)));
+  if (rest.length > 0) {
+    const applied = d.apply(rest);
+    if (!applied.ok) log(applied.message, "error");
+  }
+  const bpm = d.project.transport.tempoPoints[0]?.bpm;
+  if (bpm) $("tempo").value = String(bpm);
+  drawRack();
+  window.__jigdaw = { dispatcher: d, engine };
+  log(`opened ${loaded.size} of ${read.changes.filter((c3) => c3.op === "addNode").length} nodes`, "ok");
+}
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
   search();
@@ -21034,6 +21355,18 @@ $("loadbar").addEventListener("submit", (e) => {
 });
 $("play").addEventListener("click", () => play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", stop);
+$("save").addEventListener("click", saveSession);
+$("open").addEventListener("click", () => $("openfile").click());
+$("openfile").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  event.target.value = "";
+  try {
+    await openSession(await file.text());
+  } catch (error2) {
+    log(error2.message, "error");
+  }
+});
 $("tempo").addEventListener("change", async () => {
   const d = await ensureRunning();
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);

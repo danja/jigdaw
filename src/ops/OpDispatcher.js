@@ -124,6 +124,7 @@ export class OpDispatcher {
     }
 
     const result = this.#project.apply(changes, { expectedRevision })
+    this.#releaseRemoved()
     this.#rebuildLinks(compiled)
     this.#emit({ type: 'changed', revision: result.revision, results: result.results, compiled })
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled }
@@ -164,7 +165,16 @@ export class OpDispatcher {
    * inside an atomic changeset, so it happens first and the node id joins the
    * two halves. webmcp.md raises this as open; this is the answer.
    */
-  async addPlugin (iri, { position } = {}) {
+  /**
+   * Load a plugin and add a node for it.
+   *
+   * `id` names the node rather than letting one be minted, which is what
+   * reopening a saved project needs: the connections in the file name the nodes
+   * they join, so a node that came back under a different name would be joined
+   * to nothing. The model tracks ids it did not mint, so a later minted id
+   * cannot collide with one restored here.
+   */
+  async addPlugin (iri, { position, id, label } = {}) {
     if (!this.#engine) throw new Error('no engine: this dispatcher can edit a project but not play it')
 
     let entry
@@ -174,7 +184,7 @@ export class OpDispatcher {
       return { ok: false, kind: 'load', step: error.step ?? null, message: error.message }
     }
 
-    const result = this.apply([{ op: 'addNode', pluginIri: iri, label: entry.profile.label }])
+    const result = this.apply([{ op: 'addNode', id, pluginIri: iri, label: label ?? entry.profile.label }])
     if (!result.ok) {
       // The model refused it, so the engine must not keep it either.
       this.#engine.remove(entry.id)
@@ -217,6 +227,27 @@ export class OpDispatcher {
    * links are exactly what the compiler said, with no stale delay node left
    * feeding silence into a mix because an edge moved.
    */
+  /**
+   * Let go of the engine nodes whose model nodes are gone.
+   *
+   * Removing a node from the model does not remove the AudioWorkletNode behind
+   * it, and until this existed nothing did: a removed plugin kept running and
+   * kept whatever the page had connected it to. Rebuilding links does not cover
+   * it, because a node with no links is exactly the case.
+   *
+   * Driven by the model rather than by the change list, so it is right for any
+   * route that removes a node, including a changeset that removes one as a side
+   * effect of removing something else.
+   */
+  #releaseRemoved () {
+    if (!this.#engine) return
+    for (const [nodeId, engineId] of [...this.#nodeIds]) {
+      if (this.#project.node(nodeId)) continue
+      try { this.#engine.remove(engineId) } catch { /* already gone */ }
+      this.#nodeIds.delete(nodeId)
+    }
+  }
+
   #rebuildLinks (compiled) {
     if (!this.#engine) return
 

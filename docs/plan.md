@@ -284,6 +284,32 @@ because a copy that succeeded says nothing about whether a host can open the res
 on the installed bundle: no unresolved libraries, the execute bit intact, and a factory
 returned.
 
+## Phase 8. Sessions. Complete.
+
+The project format has been normative since phase 0 and nothing wrote it, which made every
+claim in `docs/project-format.md` a claim about a file no code produced, and meant a session
+could not survive closing the tab.
+
+- `src/rdf/ProjectWriter.js` and `src/rdf/ProjectReader.js`. Skolemised fragments, no blank
+  nodes, deterministic output, and editor positions in their own document because dragging a
+  node must not invalidate a compiled graph.
+- The reader returns a changeset rather than a Project. The model has one way in, and a reader
+  that built state directly would be a second implementation of every rule that lives there,
+  enforced on a project a person built and not on one they opened.
+- `OpDispatcher.addPlugin` takes an explicit node id, because the connections in a saved file
+  name the nodes they join.
+- Save and Open in the transport bar.
+
+`tests/rdf/ProjectRoundTrip.test.js` round trips a project with one of everything the format
+can express, checks the written Turtle against `vocabs/shapes.ttl`, and reads the worked
+example the documentation points people at.
+
+Verified in a browser: a chain of BassGen into Pulse with two parameters set, saved, cleared,
+and reopened from the saved bytes. Ids, plugin IRIs, settings and the MIDI connection all
+came back, exactly two engine nodes existed afterwards, and it played at peak 0.373.
+
+It found that removing a node never removed the AudioWorkletNode behind it. See MISTAKES.md.
+
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads

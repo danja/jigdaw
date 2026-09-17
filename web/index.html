@@ -136,7 +136,12 @@
     <span style="color:var(--dim);font-size:12px">BPM</span>
   </span>
   <span class="position" id="position" aria-live="off">1 . 1</span>
-  <nav class="links" aria-label="Project">
+  <span class="session">
+      <button id="save" title="Save this session as RDF">Save</button>
+      <button id="open" title="Open a saved session">Open</button>
+      <input type="file" id="openfile" accept=".ttl,text/turtle" class="visually-hidden">
+    </span>
+    <nav class="links" aria-label="Project">
     <a href="docs/">Docs</a>
     <a href="https://github.com/danja/jigdaw">GitHub</a>
   </nav>
