@@ -14,7 +14,7 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fragment="$here/jigdaw.conf"
+fragments=("$here/jigdaw.conf" "$here/vocab.conf")
 image="${NGINX_IMAGE:-nginx:alpine}"
 
 runtime=""
@@ -41,14 +41,20 @@ http {
     server_name strandz.it;
     include /etc/nginx/conf.d/jigdaw.conf;
   }
+  server {
+    listen 8081;
+    server_name hyperdata.it;
+    include /etc/nginx/conf.d/vocab.conf;
+  }
 }
 CONF
-cp "$fragment" "$work/jigdaw.conf"
+for f in "${fragments[@]}"; do cp "$f" "$work/"; done
 
 echo "check: validating with $runtime ($image)"
 output="$($runtime run --rm \
   -v "$work/nginx.conf:/etc/nginx/nginx.conf:ro,Z" \
   -v "$work/jigdaw.conf:/etc/nginx/conf.d/jigdaw.conf:ro,Z" \
+  -v "$work/vocab.conf:/etc/nginx/conf.d/vocab.conf:ro,Z" \
   "$image" nginx -t 2>&1)" || {
     echo "$output" >&2
     echo "check: FAILED" >&2
@@ -59,8 +65,10 @@ echo "$output" | sed 's/^/  /'
 warnings="$(printf '%s\n' "$output" | grep -ci 'warn' || true)"
 echo "check: syntax ok, $warnings warning(s)"
 
-# What nginx -t cannot see.
+# What nginx -t cannot see. These apply to the proxying fragment; vocab.conf
+# serves files directly and has no upstream to hide headers from.
 fail=0
+fragment="$here/jigdaw.conf"
 
 if ! grep -qE 'proxy_pass\s+http://127\.0\.0\.1:[0-9]+/;' "$fragment"; then
   echo "check: proxy_pass has no trailing slash, so the /jigdaw/ prefix is not stripped" >&2
@@ -96,6 +104,17 @@ done < <(grep -v '^[[:space:]]*#' "$fragment" | grep -oP 'add_header \K[A-Za-z-]
 
 if grep -qE '^\s*types\s*\{' "$fragment"; then
   echo "check: a types block replaces the mime map for this location" >&2
+  fail=1
+fi
+
+# The vocabulary fragment has its own rule: a term must 303, not 200. Answering
+# 200 asserts that the property IS the page returned.
+if ! grep -q 'return 303' "$here/vocab.conf"; then
+  echo "check: vocab.conf does not 303 a term to its document; a 200 would assert the term is the page" >&2
+  fail=1
+fi
+if ! grep -q 'add_header Access-Control-Allow-Origin' "$here/vocab.conf"; then
+  echo "check: vocab.conf has no CORS header; a browser cannot read the vocabulary cross-origin" >&2
   fail=1
 fi
 

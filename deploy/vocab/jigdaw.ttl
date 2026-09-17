@@ -1,0 +1,408 @@
+# vocabs/jigdaw.ttl
+#
+# The JigDAW vocabulary: what a plugin profile must say for a browser to fetch,
+# instantiate and run the plugin.
+#
+# This file adds only web delivery and runtime terms. Everything about what a
+# plugin IS musically already exists in the transmissions vocabulary and is
+# reused unchanged: trn:PluginProfile, the role taxonomy, the signal types, and
+# the routing properties trn:accepts, trn:produces, trn:requires,
+# trn:recommendedBefore, trn:recommendedAfter and trn:companion.
+#
+# See /home/danny/github/transmission/vocabs/profile.ttl for those terms, and
+# https://plugin-universe.com/ns for the published copies. A term general enough
+# to belong to trn: is proposed upstream to the transmission repository rather
+# than redefined here.
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix trn:     <http://purl.org/stuff/transmissions/> .
+@prefix lv2:     <http://lv2plug.in/ns/lv2core#> .
+@prefix units:   <http://lv2plug.in/ns/extensions/units#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix vann:    <http://purl.org/vocab/vann/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+
+<http://purl.org/stuff/jigdaw/>
+    a owl:Ontology ;
+    rdfs:label "JigDAW" ;
+    dcterms:title "JigDAW Web Delivery Vocabulary" ;
+    dcterms:description """Terms describing how an audio plugin is fetched and run in a
+        web browser: the WebAssembly module, the AudioWorklet processor, the user
+        interface, subresource integrity, the capabilities a plugin needs from its host,
+        and the shape of its audio and parameter ports. Musical semantics are not defined
+        here. They come from the transmissions vocabulary, which this one extends.""" ;
+    dcterms:license <https://www.apache.org/licenses/LICENSE-2.0> ;
+    vann:preferredNamespacePrefix "jig" ;
+    vann:preferredNamespaceUri "http://purl.org/stuff/jigdaw/" ;
+    owl:versionInfo "0.1.0-draft" ;
+    rdfs:seeAlso <http://purl.org/stuff/transmissions/> ,
+                 <http://purl.org/stuff/plugin-universe/> ,
+                 <http://lv2plug.in/ns/lv2core#> ,
+                 <https://www.w3.org/TR/webaudio/> .
+
+## -- Classes -----------------------------------------------------------------
+
+jig:WebPlugin a owl:Class ;
+    rdfs:subClassOf trn:PluginProfile ;
+    rdfs:label "Web Plugin" ;
+    rdfs:comment """A plugin profile that additionally declares everything a browser
+        needs to load and run the plugin. A subclass rather than a separate class so that
+        an existing trn:PluginProfile becomes loadable by adding statements, never by
+        being rewritten. A profile typing itself only trn:PluginProfile stays valid and
+        stays findable; it is simply not installable here.""" .
+
+jig:Resource a owl:Class ;
+    rdfs:label "Resource" ;
+    rdfs:comment """A fetchable file belonging to a plugin. Its jig:location is resolved
+        against the profile's own IRI, so a profile that moves keeps working and a plugin
+        can be served from a directory copied anywhere.""" .
+
+jig:Module a owl:Class ;
+    rdfs:subClassOf jig:Resource ;
+    rdfs:label "Module" ;
+    rdfs:comment "The WebAssembly binary carrying the plugin's signal processing." .
+
+jig:Processor a owl:Class ;
+    rdfs:subClassOf jig:Resource ;
+    rdfs:label "Processor" ;
+    rdfs:comment """The JavaScript module passed to AudioWorklet.addModule. It calls
+        registerProcessor and is the only plugin code that runs on the audio thread.""" .
+
+jig:UserInterface a owl:Class ;
+    rdfs:subClassOf jig:Resource ;
+    rdfs:label "User Interface" ;
+    rdfs:comment """The plugin's editor. It is a document loaded into a sandboxed frame,
+        not a script loaded into the host's page, so a plugin cannot reach the host's DOM,
+        its storage or its audio graph. A plugin with no jig:ui gets a generic panel
+        generated from its declared lv2:port list, which is the expected case rather than
+        a degraded one.""" .
+
+jig:Capability a owl:Class ;
+    rdfs:label "Capability" ;
+    rdfs:comment """Something a host either offers or does not. A plugin names one with
+        trn:requires when it cannot run without it, or jig:prefers when it can. Both are
+        answered before any code is fetched, so an unsatisfiable plugin is reported rather
+        than loaded and then found wanting.""" .
+
+jig:WasmFeature a owl:Class ;
+    rdfs:label "WebAssembly Feature" ;
+    rdfs:comment """A WebAssembly proposal the module's bytecode relies on. Declared
+        because feature detection after instantiation is too late: an unsupported opcode
+        fails at compile time with a message that names the byte offset and nothing
+        else.""" .
+
+jig:Inspection a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Inspection" ;
+    rdfs:comment """A record of what a host observed when it actually loaded a module:
+        the exports it found, the port counts it read back, the features it needed. This
+        is the discovered half of the two-layer split JigDAW inherits from transmission.
+        Inspection is authoritative for technical facts and the curated profile is
+        authoritative for what the signals mean, because the two answer different
+        questions and the second cannot be derived from the first.""" .
+
+## -- Delivery ----------------------------------------------------------------
+
+jig:module a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:Module ;
+    rdfs:label "module" .
+
+jig:processor a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:Processor ;
+    rdfs:label "processor" .
+
+jig:ui a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:UserInterface ;
+    rdfs:label "user interface" .
+
+jig:asset a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:Resource ;
+    rdfs:label "asset" ;
+    rdfs:comment """Any further file the plugin needs, such as an impulse response or a
+        wavetable. Listed so a host can prefetch, cache and integrity-check it, and so an
+        offline or archived copy of a plugin is known to be complete.""" .
+
+jig:location a owl:ObjectProperty ;
+    rdfs:domain jig:Resource ; rdfs:range rdfs:Resource ;
+    rdfs:label "location" ;
+    rdfs:comment """Where the file is fetched from. Normally relative to the profile,
+        which is what makes a plugin directory portable.""" .
+
+jig:integrity a owl:DatatypeProperty ;
+    rdfs:domain jig:Resource ; rdfs:range xsd:string ;
+    rdfs:label "integrity" ;
+    rdfs:comment """A Subresource Integrity digest, as in sha384-<base64>. Required for
+        every resource, because the profile and the code it points at need not come from
+        the same origin and the whole install story is that a host runs code it found by
+        following a link.""" .
+
+jig:mediaType a owl:DatatypeProperty ;
+    rdfs:domain jig:Resource ; rdfs:range xsd:string ;
+    rdfs:label "media type" ;
+    rdfs:comment """The media type the resource is expected to be served as. A statement
+        of intent that lets a host report a misconfigured server precisely, rather than a
+        substitute for the Content-Type header, which still governs.""" .
+
+jig:registeredName a owl:DatatypeProperty ;
+    rdfs:domain jig:Processor ; rdfs:range xsd:string ;
+    rdfs:label "registered name" ;
+    rdfs:comment """The name the processor module passes to registerProcessor. The host
+        needs it to construct the AudioWorkletNode, and there is no way to ask a worklet
+        what it registered.""" .
+
+## -- Capabilities ------------------------------------------------------------
+##
+## A plugin names a capability with trn:requires, reusing the property that already
+## carries trn:HostTransport, or with jig:prefers when the capability improves the
+## plugin without being necessary.
+
+jig:prefers a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:Capability ;
+    rdfs:label "prefers" ;
+    rdfs:comment """A capability the plugin uses when the host has it and does without
+        when it does not. Distinct from trn:requires because the host's answer differs:
+        a missing requirement refuses the load, a missing preference is passed to the
+        plugin at instantiation so it can choose its own fallback.""" .
+
+jig:SharedMemory a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "Shared Memory" ;
+    rdfs:comment """SharedArrayBuffer between the audio thread and elsewhere. Available
+        only in a cross-origin isolated page, which in turn requires every cross-origin
+        subresource to opt in with Cross-Origin-Resource-Policy. Requiring it therefore
+        constrains not just the host but every server that hosts a plugin, which is why it
+        is negotiated rather than assumed.""" .
+
+jig:CrossOriginIsolation a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "Cross-Origin Isolation" ;
+    rdfs:comment "The page is cross-origin isolated, so high-resolution timers and shared memory are available." .
+
+jig:MidiEvents a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "MIDI Events" ;
+    rdfs:comment """The host delivers and accepts MIDI. The Web Audio graph carries no
+        MIDI, so this is a host service over a message port rather than a property of the
+        audio connection, and a plugin that produces trn:Midi must require it.""" .
+
+jig:OfflineRender a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "Offline Render" ;
+    rdfs:comment """The plugin may be run faster than real time in an OfflineAudioContext.
+        A plugin whose output depends on wall-clock time, or on a device the offline
+        context does not have, declares that it does not support this.""" .
+
+jig:Persistence a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "Persistence" ;
+    rdfs:comment "The host will save and restore the plugin's state with the project." .
+
+jig:Simd128 a owl:NamedIndividual , jig:WasmFeature ; rdfs:label "SIMD 128" .
+jig:Threads a owl:NamedIndividual , jig:WasmFeature ; rdfs:label "Threads" .
+jig:BulkMemory a owl:NamedIndividual , jig:WasmFeature ; rdfs:label "Bulk Memory" .
+jig:ExceptionHandling a owl:NamedIndividual , jig:WasmFeature ; rdfs:label "Exception Handling" .
+
+jig:wasmFeature a owl:ObjectProperty ;
+    rdfs:domain jig:Module ; rdfs:range jig:WasmFeature ;
+    rdfs:label "WebAssembly feature" .
+
+## -- Runtime shape -----------------------------------------------------------
+
+jig:audioInputs a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "audio inputs" ;
+    rdfs:comment """Number of audio inputs, which is the AudioWorkletNode's
+        numberOfInputs. Note that this is a count of inputs, not of channels: an input
+        carries jig:inputChannels channels.""" .
+
+jig:audioOutputs a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "audio outputs" .
+
+jig:inputChannels a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "input channels" .
+
+jig:outputChannels a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "output channels" ;
+    rdfs:comment """Channels per output. A host declaring outputChannelCount on the node
+        must agree with this, and a plugin writing a different number of channels is a
+        load-time error rather than a silent half-signal.""" .
+
+jig:renderQuantum a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "render quantum" ;
+    rdfs:comment """Frames per process call the plugin is written for. Web Audio fixes
+        this at 128 today. Declared rather than assumed because the figure is a
+        specification constant that has been proposed for change, and a plugin that has
+        baked 128 into a buffer size should say so rather than corrupt memory if it ever
+        moves.""" .
+
+jig:latencyFrames a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "latency frames" ;
+    rdfs:comment "Frames of delay the plugin introduces, for the host to compensate." .
+
+jig:tailFrames a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "tail frames" ;
+    rdfs:comment """Frames the plugin keeps producing after its input goes silent. A
+        reverb that does not declare this is cut off at the end of an offline render.""" .
+
+## -- Parameters --------------------------------------------------------------
+##
+## Parameters are declared with lv2:port and units:, exactly as valis declares them,
+## so that one declaration yields both the AudioWorkletProcessor's
+## parameterDescriptors and the control the generated panel draws. Only the terms
+## LV2 has no equivalent for are defined here.
+
+jig:automationRate a owl:ObjectProperty ;
+    rdfs:domain lv2:Port ; rdfs:range jig:AutomationRate ;
+    rdfs:label "automation rate" ;
+    rdfs:comment """Whether the parameter is sampled once per render quantum or once per
+        frame, which is the AudioParamDescriptor automationRate. LV2 has no equivalent
+        because its control ports are block-rate by construction. Default is k-rate: a
+        parameter is a-rate only when it is meant to be audio-modulated, and making every
+        parameter a-rate costs a Float32Array per parameter per quantum.""" .
+
+jig:AutomationRate a owl:Class ; rdfs:label "Automation Rate" .
+jig:ARate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "a-rate" .
+jig:KRate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "k-rate" .
+
+## -- Inspection --------------------------------------------------------------
+
+jig:inspectionOf a owl:ObjectProperty ;
+    rdfs:domain jig:Inspection ; rdfs:range jig:WebPlugin ;
+    rdfs:label "inspection of" .
+
+jig:inspectedAt a owl:DatatypeProperty ;
+    rdfs:domain jig:Inspection ; rdfs:range xsd:dateTime ;
+    rdfs:label "inspected at" .
+
+jig:hostVersion a owl:DatatypeProperty ;
+    rdfs:domain jig:Inspection ; rdfs:range xsd:string ;
+    rdfs:label "host version" ;
+    rdfs:comment """Which host produced this reading. Inspections from different host
+        versions are not comparable, for the same reason plugin-universe refuses to
+        compare descriptors across extractor versions.""" .
+
+jig:loadOutcome a owl:DatatypeProperty ;
+    rdfs:domain jig:Inspection ; rdfs:range xsd:string ;
+    rdfs:label "load outcome" ;
+    rdfs:comment """What happened: loaded, refused, or failed, with the reason. A plugin
+        that fails to load is a recorded result, not an error, so that a catalogue can
+        report which plugins work in which browsers.""" .
+
+## -- Projects ----------------------------------------------------------------
+##
+## A session: which plugins are loaded, how they are wired, what their parameters
+## are set to, and what the transport is doing.
+##
+## Nothing here is an rdf:List. Two kinds of ordering exist in a project and
+## neither needs one. Processing order is derived from the connections, because
+## Web Audio derives it too, so declaring it would be a second answer to a
+## question the graph already answers. Everything else that looks ordered is
+## really keyed: a tempo change is at a beat, a scale point has a value. Keying
+## it explicitly survives an insertion in the middle, is selectable in one
+## triple pattern, and does not turn a diff of one edit into a rewrite of a
+## linked list.
+
+jig:Project a owl:Class ;
+    rdfs:label "Project" ;
+    rdfs:comment "A session: nodes, connections, parameter settings and transport." .
+
+jig:Node a owl:Class ;
+    rdfs:label "Node" ;
+    rdfs:comment """One instance of a plugin in a project. Distinct from the plugin itself,
+        because a project may hold several instances of one plugin, each with its own
+        parameters and state.""" .
+
+jig:Connection a owl:Class ;
+    rdfs:label "Connection" ;
+    rdfs:comment """A directed link between two endpoints. Topology is modelled as explicit
+        connections with named endpoints, never as a list, so the graph is a faithful
+        picture of the dataflow rather than an encoding of one.""" .
+
+jig:Endpoint a owl:Class ;
+    rdfs:label "Endpoint" ;
+    rdfs:comment "One end of a connection: a node, and which of its ports." .
+
+jig:ParameterSetting a owl:Class ;
+    rdfs:label "Parameter Setting" ;
+    rdfs:comment """A parameter's value on one node. Addressed by lv2:symbol rather than by
+        index, because an index is a property of a build and a symbol is a property of the
+        plugin.""" .
+
+jig:Transport a owl:Class ; rdfs:label "Transport" .
+
+jig:TempoPoint a owl:Class ;
+    rdfs:label "Tempo Point" ;
+    rdfs:comment "A tempo, from a given beat onward. Ordered by jig:atBeat, not by position in a list." .
+
+jig:revision a owl:DatatypeProperty ;
+    rdfs:domain jig:Project ; rdfs:range xsd:integer ;
+    rdfs:label "revision" ;
+    rdfs:comment """Increments on every committed change. A caller submitting a changeset
+        names the revision it last saw and is rejected if the project has moved on. An agent
+        and a person editing one project is the normal case here.""" .
+
+jig:node a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Node .
+jig:connection a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Connection .
+jig:transport a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Transport .
+
+jig:plugin a owl:ObjectProperty ;
+    rdfs:domain jig:Node ; rdfs:range jig:WebPlugin ;
+    rdfs:label "plugin" ;
+    rdfs:comment """The plugin IRI this node instantiates. Dereferenceable, so a project
+        carries everything needed to reconstruct itself on a machine that has never seen
+        these plugins.""" .
+
+jig:nodeState a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:string ;
+    rdfs:label "node state" ;
+    rdfs:comment """The plugin's own saved state, opaque to the host. Parameter values are
+        not state and do not belong here: they are settings, and storing them twice means
+        the two disagree on restore with no defined winner.""" .
+
+jig:setting a owl:ObjectProperty ; rdfs:domain jig:Node ; rdfs:range jig:ParameterSetting .
+
+jig:from a owl:ObjectProperty ; rdfs:domain jig:Connection ; rdfs:range jig:Endpoint .
+jig:to a owl:ObjectProperty ; rdfs:domain jig:Connection ; rdfs:range jig:Endpoint .
+
+jig:signalKind a owl:ObjectProperty ;
+    rdfs:domain jig:Connection ;
+    rdfs:label "signal kind" ;
+    rdfs:comment """What travels along this connection, as a trn: signal type. Audio
+        connections are Web Audio edges; MIDI connections are host-routed message traffic,
+        which is why the kind has to be stated rather than inferred from the endpoints.""" .
+
+jig:endpointNode a owl:ObjectProperty ; rdfs:domain jig:Endpoint ; rdfs:range jig:Node .
+
+jig:portIndex a owl:DatatypeProperty ;
+    rdfs:domain jig:Endpoint ; rdfs:range xsd:integer ;
+    rdfs:label "port index" ;
+    rdfs:comment "Which audio input or output, zero-based, as Web Audio numbers them." .
+
+jig:portSymbol a owl:DatatypeProperty ;
+    rdfs:domain jig:Endpoint ; rdfs:range xsd:string ;
+    rdfs:label "port symbol" ;
+    rdfs:comment """The lv2:symbol of a parameter, when a connection targets one rather than
+        an audio port. Modulating a parameter is an edge to a named thing, not to a numbered
+        one.""" .
+
+jig:symbol a owl:DatatypeProperty ; rdfs:domain jig:ParameterSetting ; rdfs:range xsd:string .
+jig:value a owl:DatatypeProperty ; rdfs:domain jig:ParameterSetting ; rdfs:range xsd:decimal .
+
+jig:tempoPoint a owl:ObjectProperty ; rdfs:domain jig:Transport ; rdfs:range jig:TempoPoint .
+jig:atBeat a owl:DatatypeProperty ; rdfs:domain jig:TempoPoint ; rdfs:range xsd:decimal .
+jig:bpm a owl:DatatypeProperty ; rdfs:domain jig:TempoPoint ; rdfs:range xsd:decimal .
+jig:beatsPerBar a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:integer .
+jig:beatUnit a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:integer .
+jig:loopStart a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:decimal .
+jig:loopEnd a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:decimal .
+jig:loopEnabled a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:boolean .
+
+## Editor metadata. Kept in a separate named graph from execution metadata, so
+## that moving a node on screen cannot invalidate a compiled audio graph.
+jig:x a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .
+jig:y a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .

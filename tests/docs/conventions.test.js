@@ -95,3 +95,27 @@ describe('repository conventions', () => {
     expect(wrong, `path comments:\n  ${wrong.join('\n  ')}`).toEqual([])
   })
 })
+
+describe('generated deployment artefacts', () => {
+  // These are generated but committed, because the server runs them without a
+  // build step. That makes them exactly the kind of pair that drifts silently:
+  // nothing connects vocabs/jigdaw.ttl to the copy nginx serves.
+  it('serves the same vocabulary it defines', () => {
+    const source = join(root, 'vocabs/jigdaw.ttl')
+    const deployed = join(root, 'deploy/vocab/jigdaw.ttl')
+    expect(existsSync(deployed), 'deploy/vocab/jigdaw.ttl is missing; run npm run build:vocab').toBe(true)
+    expect(
+      readFileSync(deployed, 'utf8'),
+      'deploy/vocab is stale; run npm run build:vocab and commit the result'
+    ).toBe(readFileSync(source, 'utf8'))
+  })
+
+  it('describes every term on the generated page', () => {
+    // The page is built from the vocabulary, so a term missing from it means
+    // the generator stopped seeing a whole category of term.
+    const page = readFileSync(join(root, 'deploy/vocab/index.html'), 'utf8')
+    for (const term of ['module', 'processor', 'integrity', 'WebPlugin', 'renderQuantum', 'MidiEvents']) {
+      expect(page, `jig:${term} is not on the page`).toContain(`jig:${term}`)
+    }
+  })
+})

@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JigDAW vocabulary</title>
+<link rel="alternate" type="text/turtle" href="jigdaw.ttl">
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 46rem; margin: 0 auto; padding: 2rem 1rem; }
+  h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+  .sub { color: #666; margin-top: 0; }
+  h2 { font-size: 1.1rem; margin-top: 2rem; border-bottom: 1px solid #8884; padding-bottom: .25rem; }
+  dt { margin-top: 1rem; font-weight: 600; }
+  dt code { font-size: .95rem; }
+  .label { font-weight: 400; color: #666; }
+  dd { margin: .2rem 0 0 0; }
+  .undescribed { color: #a00; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<h1>JigDAW vocabulary</h1>
+<p class="sub">
+  Namespace <code>http://purl.org/stuff/jigdaw/</code>, prefix <code>jig:</code>.
+  Also available as <a href="jigdaw.ttl">Turtle</a>, which is what you get if you ask for
+  <code>text/turtle</code>.
+</p>
+<p>
+  Terms describing how an audio plugin is fetched and run in a web browser. What a plugin
+  <em>is</em> musically comes from the
+  <a href="https://plugin-universe.com/ns">transmissions vocabulary</a>, which this one
+  extends rather than replaces. Parameters are described with
+  <a href="https://lv2plug.in/ns/lv2core">LV2</a>.
+</p>
+<p>
+  This page is generated from the vocabulary, so it cannot drift from it.
+  74 terms.
+</p>
+
+<h2>Classes</h2>
+<dl>
+  <dt id="AutomationRate"><code>jig:AutomationRate</code> <span class="label">Automation Rate</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="Capability"><code>jig:Capability</code></dt>
+  <dd>Something a host either offers or does not. A plugin names one with
+        trn:requires when it cannot run without it, or jig:prefers when it can. Both are
+        answered before any code is fetched, so an unsatisfiable plugin is reported rather
+        than loaded and then found wanting.</dd>
+  <dt id="Connection"><code>jig:Connection</code></dt>
+  <dd>A directed link between two endpoints. Topology is modelled as explicit
+        connections with named endpoints, never as a list, so the graph is a faithful
+        picture of the dataflow rather than an encoding of one.</dd>
+  <dt id="Endpoint"><code>jig:Endpoint</code></dt>
+  <dd>One end of a connection: a node, and which of its ports.</dd>
+  <dt id="Inspection"><code>jig:Inspection</code></dt>
+  <dd>A record of what a host observed when it actually loaded a module:
+        the exports it found, the port counts it read back, the features it needed. This
+        is the discovered half of the two-layer split JigDAW inherits from transmission.
+        Inspection is authoritative for technical facts and the curated profile is
+        authoritative for what the signals mean, because the two answer different
+        questions and the second cannot be derived from the first.</dd>
+  <dt id="Module"><code>jig:Module</code></dt>
+  <dd>The WebAssembly binary carrying the plugin's signal processing.</dd>
+  <dt id="Node"><code>jig:Node</code></dt>
+  <dd>One instance of a plugin in a project. Distinct from the plugin itself,
+        because a project may hold several instances of one plugin, each with its own
+        parameters and state.</dd>
+  <dt id="ParameterSetting"><code>jig:ParameterSetting</code> <span class="label">Parameter Setting</span></dt>
+  <dd>A parameter's value on one node. Addressed by lv2:symbol rather than by
+        index, because an index is a property of a build and a symbol is a property of the
+        plugin.</dd>
+  <dt id="Processor"><code>jig:Processor</code></dt>
+  <dd>The JavaScript module passed to AudioWorklet.addModule. It calls
+        registerProcessor and is the only plugin code that runs on the audio thread.</dd>
+  <dt id="Project"><code>jig:Project</code></dt>
+  <dd>A session: nodes, connections, parameter settings and transport.</dd>
+  <dt id="Resource"><code>jig:Resource</code></dt>
+  <dd>A fetchable file belonging to a plugin. Its jig:location is resolved
+        against the profile's own IRI, so a profile that moves keeps working and a plugin
+        can be served from a directory copied anywhere.</dd>
+  <dt id="TempoPoint"><code>jig:TempoPoint</code> <span class="label">Tempo Point</span></dt>
+  <dd>A tempo, from a given beat onward. Ordered by jig:atBeat, not by position in a list.</dd>
+  <dt id="Transport"><code>jig:Transport</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="UserInterface"><code>jig:UserInterface</code> <span class="label">User Interface</span></dt>
+  <dd>The plugin's editor. It is a document loaded into a sandboxed frame,
+        not a script loaded into the host's page, so a plugin cannot reach the host's DOM,
+        its storage or its audio graph. A plugin with no jig:ui gets a generic panel
+        generated from its declared lv2:port list, which is the expected case rather than
+        a degraded one.</dd>
+  <dt id="WasmFeature"><code>jig:WasmFeature</code> <span class="label">WebAssembly Feature</span></dt>
+  <dd>A WebAssembly proposal the module's bytecode relies on. Declared
+        because feature detection after instantiation is too late: an unsupported opcode
+        fails at compile time with a message that names the byte offset and nothing
+        else.</dd>
+  <dt id="WebPlugin"><code>jig:WebPlugin</code> <span class="label">Web Plugin</span></dt>
+  <dd>A plugin profile that additionally declares everything a browser
+        needs to load and run the plugin. A subclass rather than a separate class so that
+        an existing trn:PluginProfile becomes loadable by adding statements, never by
+        being rewritten. A profile typing itself only trn:PluginProfile stays valid and
+        stays findable; it is simply not installable here.</dd>
+</dl>
+
+<h2>Object properties</h2>
+<dl>
+  <dt id="asset"><code>jig:asset</code></dt>
+  <dd>Any further file the plugin needs, such as an impulse response or a
+        wavetable. Listed so a host can prefetch, cache and integrity-check it, and so an
+        offline or archived copy of a plugin is known to be complete.</dd>
+  <dt id="automationRate"><code>jig:automationRate</code> <span class="label">automation rate</span></dt>
+  <dd>Whether the parameter is sampled once per render quantum or once per
+        frame, which is the AudioParamDescriptor automationRate. LV2 has no equivalent
+        because its control ports are block-rate by construction. Default is k-rate: a
+        parameter is a-rate only when it is meant to be audio-modulated, and making every
+        parameter a-rate costs a Float32Array per parameter per quantum.</dd>
+  <dt id="connection"><code>jig:connection</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="endpointNode"><code>jig:endpointNode</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="from"><code>jig:from</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="inspectionOf"><code>jig:inspectionOf</code> <span class="label">inspection of</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="location"><code>jig:location</code></dt>
+  <dd>Where the file is fetched from. Normally relative to the profile,
+        which is what makes a plugin directory portable.</dd>
+  <dt id="module"><code>jig:module</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="node"><code>jig:node</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="plugin"><code>jig:plugin</code></dt>
+  <dd>The plugin IRI this node instantiates. Dereferenceable, so a project
+        carries everything needed to reconstruct itself on a machine that has never seen
+        these plugins.</dd>
+  <dt id="prefers"><code>jig:prefers</code></dt>
+  <dd>A capability the plugin uses when the host has it and does without
+        when it does not. Distinct from trn:requires because the host's answer differs:
+        a missing requirement refuses the load, a missing preference is passed to the
+        plugin at instantiation so it can choose its own fallback.</dd>
+  <dt id="processor"><code>jig:processor</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="setting"><code>jig:setting</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="signalKind"><code>jig:signalKind</code> <span class="label">signal kind</span></dt>
+  <dd>What travels along this connection, as a trn: signal type. Audio
+        connections are Web Audio edges; MIDI connections are host-routed message traffic,
+        which is why the kind has to be stated rather than inferred from the endpoints.</dd>
+  <dt id="tempoPoint"><code>jig:tempoPoint</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="to"><code>jig:to</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="transport"><code>jig:transport</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="ui"><code>jig:ui</code> <span class="label">user interface</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="wasmFeature"><code>jig:wasmFeature</code> <span class="label">WebAssembly feature</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+</dl>
+
+<h2>Data properties</h2>
+<dl>
+  <dt id="atBeat"><code>jig:atBeat</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="audioInputs"><code>jig:audioInputs</code> <span class="label">audio inputs</span></dt>
+  <dd>Number of audio inputs, which is the AudioWorkletNode's
+        numberOfInputs. Note that this is a count of inputs, not of channels: an input
+        carries jig:inputChannels channels.</dd>
+  <dt id="audioOutputs"><code>jig:audioOutputs</code> <span class="label">audio outputs</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="beatsPerBar"><code>jig:beatsPerBar</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="beatUnit"><code>jig:beatUnit</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="bpm"><code>jig:bpm</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="hostVersion"><code>jig:hostVersion</code> <span class="label">host version</span></dt>
+  <dd>Which host produced this reading. Inspections from different host
+        versions are not comparable, for the same reason plugin-universe refuses to
+        compare descriptors across extractor versions.</dd>
+  <dt id="inputChannels"><code>jig:inputChannels</code> <span class="label">input channels</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="inspectedAt"><code>jig:inspectedAt</code> <span class="label">inspected at</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="integrity"><code>jig:integrity</code></dt>
+  <dd>A Subresource Integrity digest, as in sha384-&lt;base64&gt;. Required for
+        every resource, because the profile and the code it points at need not come from
+        the same origin and the whole install story is that a host runs code it found by
+        following a link.</dd>
+  <dt id="latencyFrames"><code>jig:latencyFrames</code> <span class="label">latency frames</span></dt>
+  <dd>Frames of delay the plugin introduces, for the host to compensate.</dd>
+  <dt id="loadOutcome"><code>jig:loadOutcome</code> <span class="label">load outcome</span></dt>
+  <dd>What happened: loaded, refused, or failed, with the reason. A plugin
+        that fails to load is a recorded result, not an error, so that a catalogue can
+        report which plugins work in which browsers.</dd>
+  <dt id="loopEnabled"><code>jig:loopEnabled</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="loopEnd"><code>jig:loopEnd</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="loopStart"><code>jig:loopStart</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="mediaType"><code>jig:mediaType</code> <span class="label">media type</span></dt>
+  <dd>The media type the resource is expected to be served as. A statement
+        of intent that lets a host report a misconfigured server precisely, rather than a
+        substitute for the Content-Type header, which still governs.</dd>
+  <dt id="nodeState"><code>jig:nodeState</code> <span class="label">node state</span></dt>
+  <dd>The plugin's own saved state, opaque to the host. Parameter values are
+        not state and do not belong here: they are settings, and storing them twice means
+        the two disagree on restore with no defined winner.</dd>
+  <dt id="outputChannels"><code>jig:outputChannels</code> <span class="label">output channels</span></dt>
+  <dd>Channels per output. A host declaring outputChannelCount on the node
+        must agree with this, and a plugin writing a different number of channels is a
+        load-time error rather than a silent half-signal.</dd>
+  <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>
+  <dd>Which audio input or output, zero-based, as Web Audio numbers them.</dd>
+  <dt id="portSymbol"><code>jig:portSymbol</code> <span class="label">port symbol</span></dt>
+  <dd>The lv2:symbol of a parameter, when a connection targets one rather than
+        an audio port. Modulating a parameter is an edge to a named thing, not to a numbered
+        one.</dd>
+  <dt id="registeredName"><code>jig:registeredName</code> <span class="label">registered name</span></dt>
+  <dd>The name the processor module passes to registerProcessor. The host
+        needs it to construct the AudioWorkletNode, and there is no way to ask a worklet
+        what it registered.</dd>
+  <dt id="renderQuantum"><code>jig:renderQuantum</code> <span class="label">render quantum</span></dt>
+  <dd>Frames per process call the plugin is written for. Web Audio fixes
+        this at 128 today. Declared rather than assumed because the figure is a
+        specification constant that has been proposed for change, and a plugin that has
+        baked 128 into a buffer size should say so rather than corrupt memory if it ever
+        moves.</dd>
+  <dt id="revision"><code>jig:revision</code></dt>
+  <dd>Increments on every committed change. A caller submitting a changeset
+        names the revision it last saw and is rejected if the project has moved on. An agent
+        and a person editing one project is the normal case here.</dd>
+  <dt id="symbol"><code>jig:symbol</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="tailFrames"><code>jig:tailFrames</code> <span class="label">tail frames</span></dt>
+  <dd>Frames the plugin keeps producing after its input goes silent. A
+        reverb that does not declare this is cut off at the end of an offline render.</dd>
+  <dt id="value"><code>jig:value</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="x"><code>jig:x</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="y"><code>jig:y</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+</dl>
+
+<h2>Individuals</h2>
+<dl>
+  <dt id="ARate"><code>jig:ARate</code> <span class="label">a-rate</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="BulkMemory"><code>jig:BulkMemory</code> <span class="label">Bulk Memory</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="CrossOriginIsolation"><code>jig:CrossOriginIsolation</code> <span class="label">Cross-Origin Isolation</span></dt>
+  <dd>The page is cross-origin isolated, so high-resolution timers and shared memory are available.</dd>
+  <dt id="ExceptionHandling"><code>jig:ExceptionHandling</code> <span class="label">Exception Handling</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="KRate"><code>jig:KRate</code> <span class="label">k-rate</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="MidiEvents"><code>jig:MidiEvents</code> <span class="label">MIDI Events</span></dt>
+  <dd>The host delivers and accepts MIDI. The Web Audio graph carries no
+        MIDI, so this is a host service over a message port rather than a property of the
+        audio connection, and a plugin that produces trn:Midi must require it.</dd>
+  <dt id="OfflineRender"><code>jig:OfflineRender</code> <span class="label">Offline Render</span></dt>
+  <dd>The plugin may be run faster than real time in an OfflineAudioContext.
+        A plugin whose output depends on wall-clock time, or on a device the offline
+        context does not have, declares that it does not support this.</dd>
+  <dt id="Persistence"><code>jig:Persistence</code></dt>
+  <dd>The host will save and restore the plugin's state with the project.</dd>
+  <dt id="SharedMemory"><code>jig:SharedMemory</code> <span class="label">Shared Memory</span></dt>
+  <dd>SharedArrayBuffer between the audio thread and elsewhere. Available
+        only in a cross-origin isolated page, which in turn requires every cross-origin
+        subresource to opt in with Cross-Origin-Resource-Policy. Requiring it therefore
+        constrains not just the host but every server that hosts a plugin, which is why it
+        is negotiated rather than assumed.</dd>
+  <dt id="Simd128"><code>jig:Simd128</code> <span class="label">SIMD 128</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="Threads"><code>jig:Threads</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+</dl>
+</body>
+</html>

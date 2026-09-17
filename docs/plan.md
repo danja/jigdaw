@@ -104,10 +104,13 @@ The vertical slice, and the point where the contract stopped being prose.
   `src/testing/OfflineHost.js`: fetch, parse, validate, negotiate, verify digests, compile
   wasm, register, instantiate, render, and assert audio comes out.
 
-**Remaining: verification in a real browser.** The Claude in Chrome extension is not
-connected, so the page has not been driven or screenshotted. See `HUMANS.md` item 6. The
-headless path covers more of the contract than clicking would, so this is a gap in visual
-and accessibility checking rather than in the audio path.
+**Deployed 2026-09-17** to <https://strandz.it/jigdaw/>, under `/jigdaw/` on port 6011
+behind the existing nginx. Verified live: every URL returns the right status and media type,
+both profiles validate against the shapes, and the digests in the live profiles match the
+bytes served. `deploy/` holds the nginx fragment, the systemd unit and `check.sh`.
+
+**Remaining: verification in a real browser.** The page has never been opened. The Claude in
+Chrome extension is not connected, so it cannot be driven from here. See `HUMANS.md` item 1.
 
 Changes the phase forced on the specification, which is what a vertical slice is for:
 

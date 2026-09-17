@@ -25,6 +25,11 @@ So there is a wildcard rule mapping `purl.org/stuff/<name>` to
 `hyperdata.it/xmlns/<name>`, and `plugin-universe` has a specific override on top of it that
 points at its own site.
 
+The configuration that serves this is `deploy/nginx/vocab.conf`, and the files it serves are
+generated into `deploy/vocab/` by `npm run build:vocab`. Both are validated by
+`deploy/nginx/check.sh`, and a test fails if the deployed copy of the vocabulary drifts from
+`vocabs/jigdaw.ttl`. The runbook is `HUMANS.md` item 2.
+
 **JigDAW needs no PURL administration.** `http://purl.org/stuff/jigdaw/` already resolves to
 `https://hyperdata.it/xmlns/jigdaw/`. Putting the vocabulary there is the whole job. A
 specific override to a jigdaw.org, were there ever one, would be an optimisation and not a

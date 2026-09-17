@@ -5,109 +5,88 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Deploy to strandz.it
+## 1. Open it and confirm it makes a sound
 
-Every command below says where it runs. Nothing is public until this is done.
+Deployed and verified from here on 2026-09-17: every URL returns the right status and media
+type, both profiles validate against the shapes, and the sha384 digests in the live profiles
+match the bytes the site actually serves. The canonical IRI in each profile equals the URL it
+is served from, so a plugin is being fetched from its own identity.
 
-The server needs **only node 20 or later**. `bin/serve.js` imports nothing but node
-builtins, and the WebAssembly, the profiles and the browser bundle are all committed, so
-there is no `npm install`, no Rust and no build step on the server.
+What no one has done is open it.
+
+1. Go to <https://strandz.it/jigdaw/> and press **Load**. A repeating impulse plays through
+   Cascade and you should hear a reverb tail. Move Mix and Size and the sound should follow.
+2. Type `plugins/pulse/` into the box and press Load. That chains the synth in front of the
+   reverb.
+3. Press Load again with `plugins/cascade/` to confirm two plugins chain.
+
+If anything is wrong, the page's own log pane names the step that failed, and the browser
+console carries the same text.
+
+This is the one thing the test suite cannot reach. 216 tests cover the whole load path
+headlessly, including the audio, but nothing here has ever run in a real browser: no visual
+check, no keyboard check, no confirmation that a real `AudioContext` behaves as the offline
+one does.
+
+**Blocks:** nothing, but until someone does it the browser half is unverified.
+
+## 2. Serve the JigDAW vocabulary
+
+`http://purl.org/stuff/jigdaw/` already redirects, through the existing wildcard, to
+`https://hyperdata.it/xmlns/jigdaw/`, which returns 404. No PURL administration is needed.
+Serving the files is the whole job, and they are prepared and validated.
+
+`hyperdata.it/xmlns/` is already a static page on the same nginx, so this is the same shape
+of job as item 1 was.
 
 ### On your machine, in `/chalet/github/jigdaw`
 
 ```sh
-npm test                        # 216 tests
-deploy/nginx/check.sh           # validates nginx in a container, before the server sees it
+npm run build:vocab             # regenerates deploy/vocab/ from vocabs/jigdaw.ttl
+npm test                        # a test fails if deploy/vocab has gone stale
+deploy/nginx/check.sh
 git add -A && git commit && git push
 ```
 
-Only rebuild if you changed the source. The artefacts are committed as they stand:
-
-```sh
-npm run build:web               # only if web/ or src/ changed
-plugins/cascade/build.sh        # only if the Rust or profile.json changed
-plugins/pulse/build.sh          # these two need the rust wasm32-unknown-unknown target
-```
-
-### On the server, in `/home/github/jigdaw`
-
-```sh
-git pull
-node --version                  # must be v20.11 or later
-
-# The service runs as www-data, so it has to be able to read the repository.
-sudo -u www-data test -r bin/serve.js && echo "readable" || echo "PERMISSIONS PROBLEM"
-
-sudo cp deploy/jigdaw.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now jigdaw
-sudo systemctl status jigdaw --no-pager
-
-curl -sI http://127.0.0.1:6011/ | head -1       # expect: HTTP/1.1 200 OK
-```
-
-Do not touch nginx until that 200 appears.
-
 ### On the server, as root
 
-Add one line inside the existing `server { server_name strandz.it; ... }` block of
-`/etc/nginx/sites-available/strandz.it.conf`, anywhere among the `location` blocks:
+Add one line inside the existing `server { server_name hyperdata.it; ... }` block:
 
 ```nginx
-include /home/github/jigdaw/deploy/nginx/jigdaw.conf;
+include /home/github/jigdaw/deploy/nginx/vocab.conf;
 ```
 
-`location /jigdaw/` is more specific than your `location /`, so nginx matches it first
-whatever the order. Including the file rather than pasting it means the configuration is
-version controlled with the code it serves.
+nginx must be able to read `/home/github/jigdaw/deploy/vocab/`.
 
 ```sh
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### On any machine, to confirm it is actually live
-
-`nginx -t` passing says nothing about whether the file you edited is the file being served.
+### From anywhere, to confirm
 
 ```sh
-curl -sI https://strandz.it/jigdaw/ | head -1
-curl -s -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/ | head -8
-curl -sI https://strandz.it/jigdaw/plugins/cascade/cascade.wasm | grep -i 'content-type\|allow-origin'
+# The namespace: a page for a person, Turtle for a machine.
+curl -sI https://hyperdata.it/xmlns/jigdaw/ | head -1
+curl -s -H 'Accept: text/turtle' https://hyperdata.it/xmlns/jigdaw/ | head -3
+
+# A term must answer 303, not 200.
+curl -sI https://hyperdata.it/xmlns/jigdaw/module | head -2
+
+# And the PURL, which is the IRI that actually appears in profiles.
+curl -sIL http://purl.org/stuff/jigdaw/ | grep -iE '^HTTP|^location'
 ```
 
-The last one must show `application/wasm` and exactly one `Access-Control-Allow-Origin`. Two
-of that header and no plugin will load anywhere.
+The 303 matters: a term denotes a property, not a document, and a 200 would assert that the
+property *is* the page returned. It is the one place where that distinction has a practical
+consequence, because a reasoner that conflates them starts inferring that a property is a
+document.
 
-Then open `https://strandz.it/jigdaw/` and press Load.
+Verified here against real nginx: negotiation both ways, every term 303ing to the document,
+one CORS header, and the served Turtle validating.
 
-### If something is wrong
-
-```sh
-sudo journalctl -u jigdaw -n 50 --no-pager      # on the server
-sudo nginx -T | grep -A5 'location /jigdaw/'    # what nginx is really serving
-```
-
-### One thing about your existing config
-
-`strandz.it.conf` currently sends no security headers at all, for either application. The
-JigDAW block sets its own, so this blocks nothing, but the application on 6010 is serving
-without `X-Content-Type-Options`, `Referrer-Policy` or HSTS. If you add them at server level
-later, note that an `add_header` inside a `location` replaces the server block's headers
-rather than adding to them, so the JigDAW block would need them repeated.
-
-## 2. Serve the JigDAW vocabulary
-
-`http://purl.org/stuff/jigdaw/` already resolves, through the existing wildcard, to
-`https://hyperdata.it/xmlns/jigdaw/`, which returns 404. No PURL administration is needed:
-putting the vocabulary there is the whole job.
-
-It must serve `vocabs/jigdaw.ttl` content-negotiated, answer `303 See Other` from each term
-to that document, and send `Access-Control-Allow-Origin`. Details in
-[docs/namespace.md](docs/namespace.md).
-
-**Blocks:** nothing in the build, but every IRI the project publishes is a dead link until
-it is done.
+**Blocks:** nothing in the build, but every `jig:` IRI in the profiles now published at
+strandz.it is a dead link until this is done.
 
 ## 3. Mint a web plugin format term
 
