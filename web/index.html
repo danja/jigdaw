@@ -28,7 +28,10 @@
   .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
     background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .position { font-family:ui-monospace,monospace; font-size:15px; min-width:7ch; color:var(--dim); }
-  .meter { display:flex; gap:3px; align-items:flex-end; height:26px; margin-left:auto; }
+  .links { display:flex; gap:14px; font-size:13px; margin-left:auto; }
+  .links a { color:var(--dim); text-decoration:none; padding:6px 2px; }
+  .links a:hover { color:var(--fg); text-decoration:underline; }
+  .meter { display:flex; gap:3px; align-items:flex-end; height:26px; }
   .meter i { display:block; width:5px; background:#232a33; border-radius:1px; height:100%; }
   .meter i.on { background:var(--ok); }
   .meter i.hot { background:var(--err); }
@@ -110,7 +113,7 @@
     .control { grid-template-columns:1fr auto; gap:2px 8px; }
     .control label { grid-column:1; } .control .value { grid-column:2; }
     .control input, .control select { grid-column:1 / -1; }
-    .meter { margin-left:0; }
+    .links { margin-left:0; }
     :root { --white-width:30px; --black-width:19px; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
@@ -128,6 +131,10 @@
     <span style="color:var(--dim);font-size:12px">BPM</span>
   </span>
   <span class="position" id="position" aria-live="off">1 . 1</span>
+  <nav class="links" aria-label="Project">
+    <a href="docs/">Docs</a>
+    <a href="https://github.com/danja/jigdaw">GitHub</a>
+  </nav>
   <span class="meter" id="meter" role="img" aria-label="Output level"></span>
 </div>
 

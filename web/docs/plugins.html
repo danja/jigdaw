@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building and publishing a JigDAW plugin</title>
+<meta name="description" content="Write a profile, build the WebAssembly, publish it at a URL.">
+<link rel="stylesheet" href="docs.css">
+</head>
+<body>
+<div class="bar"><div class="inner">
+  <a class="brand" href="../">JigDAW</a>
+  <nav>
+    <a href="./">Docs</a>
+    <a href="hosts.html">For DAW builders</a>
+    <a href="plugins.html" aria-current="page">For plugin authors</a>
+    <a href="../">Open the DAW</a>
+    <a href="https://github.com/danja/jigdaw">GitHub</a>
+  </nav>
+</div></div>
+
+<main>
+<h1>Building and publishing a plugin</h1>
+<p class="lede">Three files at a URL. A profile saying what it is, a processor that runs on the
+audio thread, and the WebAssembly that does the work.</p>
+
+<p>Publishing is putting them somewhere a browser can fetch them. There is no store, no review
+and nobody to ask.</p>
+
+<h2>1. The profile</h2>
+<p>The subject is an IRI you control, normally the plugin's own page. That is the convention
+already published at
+<a href="https://plugin-universe.com/about/profiles">plugin-universe.com/about/profiles</a>,
+and it is what makes the profile yours to version alongside the code.</p>
+
+<pre><code>@base &lt;https://example.org/plugins/cascade/&gt; .
+
+@prefix jig:   &lt;http://purl.org/stuff/jigdaw/&gt; .
+@prefix trn:   &lt;http://purl.org/stuff/transmissions/&gt; .
+@prefix lv2:   &lt;http://lv2plug.in/ns/lv2core#&gt; .
+@prefix units: &lt;http://lv2plug.in/ns/extensions/units#&gt; .
+@prefix rdfs:  &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix foaf:  &lt;http://xmlns.com/foaf/0.1/&gt; .
+
+&lt;&gt;  a jig:WebPlugin , trn:PluginProfile ;
+    rdfs:label "Cascade" ;
+    rdfs:comment "Schroeder plate reverb with a freeze that holds the tail." ;
+    trn:vendor "danja" ;
+    foaf:homepage &lt;&gt; ;
+
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+
+    jig:audioInputs 1 ; jig:inputChannels 2 ;
+    jig:audioOutputs 1 ; jig:outputChannels 2 ;
+
+    jig:module &lt;#module&gt; ;
+    jig:processor &lt;#processor&gt; ;
+    lv2:port &lt;#mix&gt; .
+
+&lt;#module&gt;    a jig:Module ;
+    jig:location &lt;cascade.wasm&gt; ; jig:mediaType "application/wasm" ;
+    jig:integrity "sha384-..." .
+
+&lt;#processor&gt; a jig:Processor ;
+    jig:location &lt;cascade-processor.js&gt; ; jig:mediaType "text/javascript" ;
+    jig:registeredName "cascade" ;
+    jig:integrity "sha384-..." .
+
+&lt;#mix&gt; a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "mix" ; lv2:name "Mix" ;
+    lv2:default 0.3 ; lv2:minimum 0.0 ; lv2:maximum 1.0 .</code></pre>
+
+<div class="note">
+<p><strong>Set an explicit <code>@base</code>.</strong> Without it, a profile whose subject is
+<code>.../cascade/</code> but which is served at <code>.../cascade/profile.ttl</code> resolves
+every relative location one directory off, silently.</p>
+</div>
+
+<h3>Declare parameters once</h3>
+<p>An <code>lv2:port</code> becomes both the <code>AudioParam</code> your processor receives
+and the control a host draws. Do not name a widget: the host picks one from the shape of your
+declaration. <code>lv2:portProperty lv2:toggled</code> gives a switch, an enumeration with
+<code>lv2:scalePoint</code>s gives a selector with every option named, anything else is a
+dial. So if you want a switch, declare a switch's shape.</p>
+<p><code>lv2:symbol</code> is what automation and saved projects key on. Changing one is
+introducing a new parameter, not renaming an old one.</p>
+
+<h3>Say what you need</h3>
+<p><code>trn:requires</code> for what you cannot run without, <code>jig:prefers</code> for what
+improves you. A host answers both before fetching your code, so a plugin that cannot work
+somewhere is refused cleanly rather than loaded and found wanting.</p>
+<p>If you accept or produce MIDI you <strong>must</strong> declare
+<code>trn:requires jig:MidiEvents</code>. The Web Audio graph carries no MIDI, so it is a host
+service; without the declaration your MIDI silently goes nowhere. The shapes enforce this.</p>
+
+<h2>2. The processor</h2>
+<p>One JavaScript module calling <code>registerProcessor</code>. This is the only code of
+yours on the audio thread, and the real-time rules are absolute there.</p>
+
+<pre><code>class CascadeProcessor extends AudioWorkletProcessor {
+  static get parameterDescriptors () {
+    return [{ name: 'mix', defaultValue: 0.3, minValue: 0, maxValue: 1 }]
+  }
+
+  constructor (options) {
+    super(options)
+    this.ready = false
+    this.port.onmessage = event =&gt; {
+      if (event.data?.type !== 'init') return
+      try {
+        // Bytes, compiled here. A compiled Module cannot be posted into a
+        // worklet at all: it is silently never delivered.
+        const module = new WebAssembly.Module(event.data.module)
+        const instance = new WebAssembly.Instance(module, {})
+        instance.exports.jig_init(event.data.sampleRate)
+        // Every view and buffer exists before ready is posted.
+        this.out = new Float32Array(instance.exports.memory.buffer,
+                                    instance.exports.jig_output_ptr(0), 128)
+        this.exports = instance.exports
+        this.ready = true
+        this.port.postMessage({ type: 'ready', latencyFrames: 0 })
+      } catch (error) {
+        // Reported, not thrown: the rest of the graph keeps playing.
+        this.port.postMessage({ type: 'error', phase: 'instantiate',
+                                fatal: true, message: String(error.message) })
+      }
+    }
+  }
+
+  process (inputs, outputs, parameters) {
+    if (!this.ready) { outputs[0].forEach(c =&gt; c.fill(0)); return true }
+    // ... copy in, set parameters that changed, call jig_process, copy out
+    return true
+  }
+}
+
+registerProcessor('cascade', CascadeProcessor)</code></pre>
+
+<div class="note warn">
+<p><strong>Inside <code>process()</code>: no allocation of any kind</strong>, no array, object,
+closure or string; no <code>WebAssembly.Memory.grow()</code>, which detaches every view you
+hold and turns your output silent with no exception; no storage, no network, no unbounded
+logging, no lock; and never throw.</p>
+<p>Allocate everything before you post <code>ready</code>. A processor that is not ready
+outputs silence and is not audible.</p>
+</div>
+
+<h3>Things worth knowing</h3>
+<ul>
+  <li>Write <em>every</em> frame of every output you declared, zeroes included. An untouched
+    buffer is not specified to be silent.</li>
+  <li>A disconnected input arrives as an empty array. That is silence, not an error.</li>
+  <li><code>parameters[name]</code> has length 1 when the value is constant across the
+    quantum and 128 when it is not. Handle both.</li>
+  <li>Derive musical timing from the beat position the host sends, never by counting
+    <code>process()</code> calls. Counting desynchronises the moment the transport is
+    repositioned or looped.</li>
+  <li><code>performance</code> does not exist in an <code>AudioWorkletGlobalScope</code>.</li>
+</ul>
+
+<h2>3. The WebAssembly</h2>
+<p>Any language that targets <code>wasm32</code>. Both example plugins are Rust,
+<code>no_std</code> with no allocator at all, so nothing can allocate on the audio thread even
+by accident. Pulse is 3&nbsp;KB and avoids transcendental functions entirely: pitch comes from
+a twelve entry semitone table and an octave shift rather than <code>powf</code>.</p>
+
+<pre><code>#[no_mangle] pub extern "C" fn jig_init(sample_rate: f32) { … }
+#[no_mangle] pub extern "C" fn jig_output_ptr(channel: u32) -&gt; *mut f32 { … }
+#[no_mangle] pub extern "C" fn jig_set_param(index: u32, value: f32) { … }
+#[no_mangle] pub extern "C" fn jig_process(frames: u32) { … }</code></pre>
+
+<p>That ABI is a convention between your module and your processor, not part of the host
+contract. The host only knows your processor module. Use whatever shape suits you.</p>
+
+<h2>4. Digests</h2>
+<p>Every resource needs a <code>jig:integrity</code> digest, and a host will refuse your plugin
+without one. <strong>Generate them; never write one by hand.</strong> A hand-written digest goes
+stale on the next build, silently, and the symptom is a plugin nobody can load.</p>
+<pre><code>printf 'sha384-%s\n' "$(openssl dgst -sha384 -binary cascade.wasm | openssl base64 -A)"</code></pre>
+<p>Better, generate the whole profile from a template as part of your build, so it always
+describes the artefacts that exist. That is what
+<a href="https://github.com/danja/jigdaw/blob/main/bin/write-profile.js">bin/write-profile.js</a>
+does here, and a test fails if a profile drifts from its files.</p>
+
+<h2>5. Publishing</h2>
+<p>Put the four files in one directory and serve it. The directory <em>is</em> the plugin.</p>
+
+<table>
+  <thead><tr><th>Requirement</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><code>Access-Control-Allow-Origin</code> on everything</td>
+      <td>Not optional. <code>addModule()</code> fetches cross-origin in CORS mode, so a
+      response without it is unreadable rather than merely untrusted. Exactly one such header;
+      two and browsers reject it.</td></tr>
+    <tr><td><code>Cross-Origin-Resource-Policy: cross-origin</code></td>
+      <td>So a host that opts into cross-origin isolation can still load you.</td></tr>
+    <tr><td><code>application/wasm</code> and <code>text/javascript</code></td>
+      <td>Streaming compilation refuses anything else.</td></tr>
+    <tr><td>Content negotiation on the directory IRI</td>
+      <td>Turtle to a machine, a page to a person, HTML by default.</td></tr>
+    <tr><td><code>https</code></td>
+      <td>Except on loopback, which browsers already treat as a secure context, so you can
+      develop without deploying.</td></tr>
+  </tbody>
+</table>
+
+<p>A static host works if it can do the above. If you cannot negotiate content, serve the
+profile at <code>profile.ttl</code> and point people at that; it is less elegant and it
+works.</p>
+
+<h3>Being found</h3>
+<p>Listing is separate from publishing: your plugin works the moment it is fetchable. To be
+findable, add it to <a href="https://plugin-universe.com/about/profiles">plugin-universe</a>,
+which indexes profiles in this format and holds several hundred already.</p>
+
+<h2>Checklist</h2>
+<ul>
+  <li>The profile validates against the shapes.</li>
+  <li>Every digest matches the file on disk, and is generated by your build.</li>
+  <li>Every port has a symbol, a name and a range, and the default is inside it.</li>
+  <li>You declare <code>jig:MidiEvents</code> if you touch MIDI.</li>
+  <li><code>process()</code> allocates nothing and never throws.</li>
+  <li>You write every output channel every quantum.</li>
+  <li>CORS headers are present, and there is exactly one of each.</li>
+  <li>Loading it in a host actually makes the sound you expect.</li>
+</ul>
+
+<h2>Two you can read</h2>
+<p><a href="../plugins/cascade/">Cascade</a> and <a href="../plugins/pulse/">Pulse</a> are
+complete and small:
+<a href="https://github.com/danja/jigdaw/tree/main/plugins/cascade">the reverb</a> is about 250
+lines of Rust and 150 of JavaScript, and
+<a href="https://github.com/danja/jigdaw/tree/main/plugins/pulse">the synth</a> is a little
+less.</p>
+
+<footer><p><a href="./">Back to the documentation index</a> &middot;
+<a href="hosts.html">Writing a host instead</a></p></footer>
+</main>
+</body>
+</html>

@@ -27,6 +27,10 @@ Then hard-reload `https://strandz.it/jigdaw/`, press Load, and play the keyboard
 
 ## Updating a deployment
 
+**This one needs the restart:** `bin/serve.js` gained directory-index handling, without which
+`/jigdaw/docs/` answers 404 even though the files are there.
+
+
 Regenerate artefacts on your machine, never on the server:
 
 ```sh

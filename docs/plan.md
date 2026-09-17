@@ -238,6 +238,25 @@ Every failure is a result rather than a rejection, including a tool that throws,
 agent cannot read a stack trace and the message is the entire interface to a failure.
 A missing catalogue makes the discovery tools explain themselves rather than vanish.
 
+## Documentation for people outside the project
+
+`web/docs/` is served at `/jigdaw/docs/` and linked from the front page alongside the
+repository:
+
+- an overview and index, explaining the one idea and the three vocabularies, with an honest
+  account of what works and what does not;
+- a guide for host authors: the load sequence, capability negotiation, and the traps that
+  cost real time here;
+- a guide for plugin authors: writing a profile, the processor, the WebAssembly, digests,
+  and what a server must send.
+
+These are guides. The normative specifications stay in `docs/` and are linked from the index,
+which says plainly that they are the authority where the two disagree.
+
+`tests/docs/conventions.test.js` fails on a broken link, a link to the wrong repository, a
+missing viewport or a missing title. The repository check exists because `github.com/jigdaw`
+is somebody's account and returns 200, so that typo would not even have looked broken.
+
 ## Blocked on a person
 
 In `HUMANS.md`, and unchanged by any amount of building: serving the vocabulary, minting a

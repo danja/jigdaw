@@ -197,3 +197,72 @@ describe('the browser bundle', () => {
     expect([...builtins], 'node builtins are reachable from the browser entry').toEqual([])
   })
 })
+
+describe('the published documentation', () => {
+  const pages = ['web/docs/index.html', 'web/docs/hosts.html', 'web/docs/plugins.html']
+
+  it('exists, and the front page links to it and to the repository', () => {
+    for (const page of pages) expect(existsSync(join(root, page)), page).toBe(true)
+    const front = read('web/index.html')
+    expect(front).toContain('href="docs/"')
+    expect(front).toContain('https://github.com/danja/jigdaw')
+  })
+
+  it('links only to pages and files that are there', () => {
+    // A published link that 404s is the failure this project has already made
+    // once, by naming github.com/jigdaw when the repository is danja/jigdaw.
+    const broken = []
+    for (const page of [...pages, 'web/index.html']) {
+      for (const match of read(page).matchAll(/(?:href|src)="([^"]+)"/g)) {
+        const target = match[1]
+        if (/^(https?:|mailto:|#)/.test(target)) continue
+        const from = dirname(page)
+        const raw = join(from, target).replace(/\\/g, '/')
+
+        // A plugin IRI is not a file. bin/serve.js answers /plugins/<name>/ by
+        // negotiating that plugin's profile, so the check is whether the
+        // profile exists, which is exactly what the route requires.
+        const plugin = /(?:^|\/)plugins\/([^/]+)\/$/.exec(raw)
+        if (plugin) {
+          if (!existsSync(join(root, 'plugins', plugin[1], 'profile.ttl'))) {
+            broken.push(`${page} -> ${target} (no such plugin)`)
+          }
+          continue
+        }
+
+        // A directory reference resolves to its index, which bin/serve.js serves
+        // for any path ending in a slash. The file existing is not enough on
+        // its own: /docs/ answered 404 for a while with the file right there,
+        // because the server had no directory handling.
+        const resolved = target.endsWith('/') ? join(raw, 'index.html') : raw
+        // Paths that leave web/ are served from the repository root.
+        const candidates = [join(root, resolved), join(root, resolved.replace(/^web\//, ''))]
+        if (!candidates.some(existsSync)) broken.push(`${page} -> ${target}`)
+      }
+    }
+    expect(broken, `broken links:\n  ${broken.join('\n  ')}`).toEqual([])
+  })
+
+  it('names the repository correctly everywhere', () => {
+    // github.com/jigdaw is somebody's user account and returns 200, so a typo
+    // here would not even look broken.
+    for (const page of pages) {
+      const wrong = [...read(page).matchAll(/github\.com\/([\w.-]+)(?:\/([\w.-]+))?/g)]
+        .filter(m => !(m[1] === 'danja' && m[2] === 'jigdaw'))
+      expect(wrong.map(m => m[0]), `${page} links to the wrong repository`).toEqual([])
+    }
+  })
+
+  it('declares a viewport on every page, since docs are read on phones', () => {
+    for (const page of pages) {
+      expect(read(page), page).toMatch(/<meta\s+name="viewport"/)
+    }
+  })
+
+  it('gives every page a title and a description', () => {
+    for (const page of pages) {
+      expect(read(page), `${page} title`).toMatch(/<title>[^<]{10,}<\/title>/)
+      expect(read(page), `${page} description`).toMatch(/name="description"/)
+    }
+  })
+})

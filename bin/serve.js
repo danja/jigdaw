@@ -24,6 +24,7 @@ const host = process.env.HOST ?? '127.0.0.1'
 
 const TYPES = Object.freeze({
   '.html': 'text/html; charset=utf-8',
+  '.svg': 'image/svg+xml',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
@@ -224,6 +225,14 @@ const server = createServer(async (request, response) => {
 
   if (path === '/catalogue/search' || path === '/catalogue/describe') {
     return serveCatalogue(request, response, url)
+  }
+
+  // A directory is served by its index. Without this, /docs/ answers 404 while
+  // web/docs/index.html sits right there, which is the kind of gap a file
+  // existence check cannot see: the file is present and the route is not.
+  if (path.endsWith('/')) {
+    const index = safeResolve(join('/web', path, 'index.html'))
+    if (index && await serveFile(response, index)) return
   }
 
   if (path === '/') {
