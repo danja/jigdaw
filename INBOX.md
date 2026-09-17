@@ -5,7 +5,6 @@ Make a note in AGENTS.md to periodically read and integrate this.
 ## Items
 
 * give the DAW standard DAW features
-
-* ~~a VST3 adapter, as a sanity check on the plugin spec~~ → `native/jigdaw-adapter`,
-  installed by `native/install.sh`. It found that the specification had made itself
-  browser-only; see `docs/module-abi.md` and MISTAKES.md.
+* ~~check for any unintended CORS issues relating to the site and use of plugins~~ → `TODO.md`
+* ~~support HTTP MCP so that a local LLM agent can control the DAW~~ → `TODO.md`, where the
+  open question is recorded: an endpoint outside the browser has no dispatcher to call.

@@ -54,8 +54,19 @@ export class Engine {
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass })
 
+    // Keep a plugin with no audio ports being rendered. See PluginLoader: it
+    // asks for one input precisely so that something can be connected to it,
+    // and a constant source of zero is the cheapest thing that pulls a node.
+    let driver = null
+    if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === 'function') {
+      driver = this.#context.createConstantSource()
+      driver.offset.value = 0
+      driver.connect(node, 0, 0)
+      driver.start()
+    }
+
     const id = nextId()
-    const entry = { id, iri, profile, node, ready, descriptors, granted }
+    const entry = { id, iri, profile, node, ready, descriptors, granted, driver }
     this.#nodes.set(id, entry)
     return entry
   }
@@ -64,6 +75,7 @@ export class Engine {
   remove (id) {
     const entry = this.get(id)
     try {
+      if (entry.driver) { entry.driver.stop(); entry.driver.disconnect() }
       entry.node.disconnect()
       entry.node.port.postMessage({ type: 'dispose' })
     } catch {

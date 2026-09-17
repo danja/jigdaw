@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# native/install.sh
+# install.sh
 #
 # Build the JigDAW Adapter and install it where a DAW will find it.
+#
+# At the repository root rather than in native/, because it is the thing a
+# person arriving here runs, and the native adapter is only one of the things
+# this repository holds.
 #
 # Follows downspout's installer in shape, including its hard-won note about
 # plugin caches at the end. One difference worth knowing: this installs from
@@ -10,10 +14,10 @@
 # unreadable.
 set -euo pipefail
 
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "$here/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+native_dir="$repo_root/native"
 
-build_dir="${JIGDAW_BUILD_DIR:-$here/build}"
+build_dir="${JIGDAW_BUILD_DIR:-$native_dir/build}"
 build_type="${CMAKE_BUILD_TYPE:-Release}"
 vst3_dir="${JIGDAW_VST3_DIR:-$HOME/.vst3}"
 clap_dir="${JIGDAW_CLAP_DIR:-$HOME/.clap}"
@@ -24,7 +28,7 @@ install_lv2="${JIGDAW_INSTALL_LV2:-0}"
 
 usage() {
   cat <<'EOF'
-Usage: native/install.sh [--clap] [--lv2] [--no-tests] [--debug]
+Usage: ./install.sh [--clap] [--lv2] [--no-tests] [--debug]
 
 Builds the JigDAW Adapter and installs the VST3 into ~/.vst3.
 
@@ -65,13 +69,13 @@ The adapter is built against the same DPF the downspout plugins use, rather
 than vendoring a second copy. Either check downspout out beside this
 repository, or point at a DPF you already have:
 
-  JIGDAW_DPF_DIR=/path/to/DPF native/install.sh
+  JIGDAW_DPF_DIR=/path/to/DPF ./install.sh
 EOF
   exit 1
 fi
 
 echo "Building the JigDAW Adapter ($build_type)"
-cmake -S "$here" -B "$build_dir" \
+cmake -S "$native_dir" -B "$build_dir" \
   -DCMAKE_BUILD_TYPE="$build_type" \
   -DJIGDAW_DPF_DIR="$dpf_dir" >/dev/null
 

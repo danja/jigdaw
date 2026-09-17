@@ -3,6 +3,52 @@
   "note": "Generated from each plugins/<name>/profile.ttl. Do not edit; run npm run build:index.",
   "plugins": [
     {
+      "iri": "https://strandz.it/jigdaw/plugins/bassgen/",
+      "label": "BassGen",
+      "comment": "Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/bassgen/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi",
+        "BassMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+        "Monophonic by design. A new step ends the note before it rather than overlapping."
+      ],
+      "parameters": [
+        "accent",
+        "colour",
+        "density",
+        "follow",
+        "genre",
+        "hold",
+        "length",
+        "register",
+        "root",
+        "scale",
+        "seed",
+        "subdivision",
+        "vary"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/cascade/",
       "label": "Cascade",
       "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",

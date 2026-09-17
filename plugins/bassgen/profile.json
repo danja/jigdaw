@@ -1,0 +1,323 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/bassgen/",
+  "label": "BassGen",
+  "comment": "Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard.",
+  "vendor": "danja",
+  "registeredName": "bassgen",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:BassMidi"
+  ],
+  "genres": [
+    "Techno",
+    "Acid",
+    "House",
+    "Electro",
+    "Dub",
+    "Ambient",
+    "Funk",
+    "Sabbath",
+    "Jazz",
+    "Fugue",
+    "Rock",
+    "Moroder"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+    "Monophonic by design. A new step ends the note before it rather than overlapping."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "bassgen.wasm",
+    "processor": "bassgen-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "root",
+      "name": "Root",
+      "default": 36,
+      "minimum": 12,
+      "maximum": 72,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "scale",
+      "name": "Scale",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 22,
+      "paramIndex": 1,
+      "scalePoints": [
+        {
+          "label": "Major",
+          "value": 0
+        },
+        {
+          "label": "Ionian",
+          "value": 1
+        },
+        {
+          "label": "Minor",
+          "value": 2
+        },
+        {
+          "label": "Harmonic Minor",
+          "value": 3
+        },
+        {
+          "label": "Melodic Minor",
+          "value": 4
+        },
+        {
+          "label": "Dorian",
+          "value": 5
+        },
+        {
+          "label": "Phrygian",
+          "value": 6
+        },
+        {
+          "label": "Lydian",
+          "value": 7
+        },
+        {
+          "label": "Mixolydian",
+          "value": 8
+        },
+        {
+          "label": "Locrian",
+          "value": 9
+        },
+        {
+          "label": "Phrygian Dominant",
+          "value": 10
+        },
+        {
+          "label": "Neapolitan Major",
+          "value": 11
+        },
+        {
+          "label": "Neapolitan Minor",
+          "value": 12
+        },
+        {
+          "label": "Pentatonic Major",
+          "value": 13
+        },
+        {
+          "label": "Pentatonic Minor",
+          "value": 14
+        },
+        {
+          "label": "Blues",
+          "value": 15
+        },
+        {
+          "label": "Whole Tone",
+          "value": 16
+        },
+        {
+          "label": "Altered",
+          "value": 17
+        },
+        {
+          "label": "Half Whole Diminished",
+          "value": 18
+        },
+        {
+          "label": "Whole Half Diminished",
+          "value": 19
+        },
+        {
+          "label": "Bebop Dominant",
+          "value": 20
+        },
+        {
+          "label": "Bebop Major",
+          "value": 21
+        },
+        {
+          "label": "Bebop Minor",
+          "value": 22
+        }
+      ]
+    },
+    {
+      "symbol": "genre",
+      "name": "Genre",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 11,
+      "paramIndex": 2,
+      "scalePoints": [
+        {
+          "label": "Techno",
+          "value": 0
+        },
+        {
+          "label": "Acid",
+          "value": 1
+        },
+        {
+          "label": "House",
+          "value": 2
+        },
+        {
+          "label": "Electro",
+          "value": 3
+        },
+        {
+          "label": "Dub",
+          "value": 4
+        },
+        {
+          "label": "Ambient",
+          "value": 5
+        },
+        {
+          "label": "Funk",
+          "value": 6
+        },
+        {
+          "label": "Sabbath",
+          "value": 7
+        },
+        {
+          "label": "Jazz",
+          "value": 8
+        },
+        {
+          "label": "Fugue",
+          "value": 9
+        },
+        {
+          "label": "Rock",
+          "value": 10
+        },
+        {
+          "label": "Moroder",
+          "value": 11
+        }
+      ]
+    },
+    {
+      "symbol": "length",
+      "name": "Length",
+      "default": 16,
+      "minimum": 1,
+      "maximum": 32,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "subdivision",
+      "name": "Subdivision",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "paramIndex": 4,
+      "scalePoints": [
+        {
+          "label": "Eighth",
+          "value": 0
+        },
+        {
+          "label": "Sixteenth",
+          "value": 1
+        },
+        {
+          "label": "Sixteenth Triplet",
+          "value": 2
+        },
+        {
+          "label": "Quarter",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "symbol": "density",
+      "name": "Density",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "register",
+      "name": "Register",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "hold",
+      "name": "Hold",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "accent",
+      "name": "Accent",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "colour",
+      "name": "Colour",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "vary",
+      "name": "Vary",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 9999,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "follow",
+      "name": "Follow",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 12,
+      "toggled": true
+    }
+  ]
+}

@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  78 terms.
+  80 terms.
 </p>
 
 <h2>Classes</h2>
@@ -254,6 +254,14 @@
 <dl>
   <dt id="Abi1"><code>jig:Abi1</code> <span class="label">JigDAW ABI 1</span></dt>
   <dd>The first published ABI. Exports jig_init, jig_max_frames, jig_output_ptr, jig_process and jig_set_param, plus jig_input_ptr when the plugin takes audio and jig_note_on, jig_note_off and jig_all_notes_off when it takes MIDI. One pointer per channel; nothing is interleaved.</dd>
+  <dt id="Abi2"><code>jig:Abi2</code> <span class="label">JigDAW ABI 2</span></dt>
+  <dd>Everything ABI 1 requires, plus three optional facilities it deliberately
+left out: MIDI arriving as whole frame stamped messages rather than note on and note off
+alone, MIDI leaving the module the same way, and a host transport carrying tempo, meter and
+bar, beat and tick. Each is declared by the profile and absent otherwise, so a module using
+none of them is an ABI 1 module under another name and a host that speaks ABI 2 speaks ABI 1.
+Added because a MIDI generator could not be written at all under version 1: it had nothing to
+emit through and no transport to be in time with.</dd>
   <dt id="ARate"><code>jig:ARate</code> <span class="label">a-rate</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="BulkMemory"><code>jig:BulkMemory</code> <span class="label">Bulk Memory</span></dt>
@@ -268,6 +276,12 @@
   <dd>The host delivers and accepts MIDI. The Web Audio graph carries no
         MIDI, so this is a host service over a message port rather than a property of the
         audio connection, and a plugin that produces trn:Midi must require it.</dd>
+  <dt id="MidiOut"><code>jig:MidiOut</code> <span class="label">MIDI output</span></dt>
+  <dd>The host will collect MIDI the plugin emits and deliver it onward. A plugin
+that produces MIDI and does not ask for this has its output go nowhere, exactly as an
+incoming MIDI plugin does without jig:MidiEvents. Named separately because the two are
+separate services: a host may route MIDI to a plugin and have nowhere to send what comes
+back.</dd>
   <dt id="OfflineRender"><code>jig:OfflineRender</code> <span class="label">Offline Render</span></dt>
   <dd>The plugin may be run faster than real time in an OfflineAudioContext.
         A plugin whose output depends on wall-clock time, or on a device the offline

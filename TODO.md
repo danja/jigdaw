@@ -3,6 +3,30 @@
 What the project needs. Remove an item when its implementation and verification are
 complete. Review periodically.
 
+## From the inbox
+
+- [ ] **Check for unintended CORS issues across the site and plugin loading.** Two have
+      already been found and fixed the hard way: a cross-origin profile with no
+      `Access-Control-Allow-Origin` could not be loaded at all, and node and nginx both
+      adding the header produced two of them, which a browser refuses. Both were found by
+      curling through real nginx rather than by reading the config, which is how this one
+      should be done too.
+
+      Worth checking: every path the DAW fetches from (`/plugins/`, `/catalogue/search`, the
+      vocabulary at `hyperdata.it`, the PURL redirect), and a plugin hosted on a third
+      origin, which is the case the whole design rests on and the one nothing here exercises.
+
+- [ ] **Serve the WebMCP tool surface over HTTP, so a local agent can drive the DAW.**
+      `src/mcp/` has the eleven tools and `src/mcp/adapter.js` binds them to
+      `navigator.modelContext` or the page. That reaches an agent inside the browser and
+      nothing outside it. An HTTP MCP endpoint would let a local model connect.
+
+      The hard part is not the transport. Every operation goes through one `OpDispatcher`
+      against a project model that lives in the page, so an endpoint outside the browser has
+      no dispatcher to call. Decide first whether the endpoint proxies into an open page or
+      whether the model moves, because that is an architecture decision and not a protocol
+      one. See `docs/webmcp.md` and the operation boundary in `docs/architecture.md`.
+
 ## Namespaces
 
 - [ ] **Serve the JigDAW vocabulary.** `http://purl.org/stuff/jigdaw/` already resolves,

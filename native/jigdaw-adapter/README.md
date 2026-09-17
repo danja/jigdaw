@@ -35,21 +35,96 @@ https://strandz.it/jigdaw/plugins/cascade/
 That chain is a synthesiser into a reverb: MIDI reaches every plugin that accepts it, and
 each plugin's audio output feeds the next.
 
-Parameters appear as a flat list of 32 generic slots, filled in load order: a plugin's
+Parameters appear as a flat list of 16 generic slots, filled in load order: a plugin's
 parameters follow the previous plugin's. A DAW asks for the parameter list before anything is
-loaded, so the names cannot be the real ones, and there is no editor: the adapter is a way of
-running JigDAW plugins in a native host, not a way of presenting them.
+loaded, so the names cannot be the real ones. The editor says which slot is which.
 
 A plugin that declares no `jig:abi` is refused, with a message saying it is private to its
-JavaScript processor.
+JavaScript processor. Both `jig:Abi1` and `jig:Abi2` are implemented.
+
+### The editor
+
+Paste IRIs, press Load, and the list says what loaded, what did not and why, and which
+parameter slots belong to which plugin. That last part is the reason it exists: the host shows
+"Param 7" and has no way to say what that is.
+
+Click a loaded plugin and it opens that plugin's panel.
+
+### A plugin's panel
+
+The panel is generated from the `lv2:port` statements in the plugin's profile: the declared
+name, range, default and unit for each parameter, and the named values where the profile names
+them, so Pulse's waveform reads "Saw" rather than "0.00". The slot number is shown beside each
+control, which is what connects it to the host's "Param 4". This is the same rule the browser
+panel follows, from the same statements.
+
+It is generated rather than fetched because there is nothing to fetch. A `jig:ui` is a web page
+and this host has no JavaScript engine, so a panel built from what the profile declares is the
+only one a native host can honestly draw. Neither worked plugin declares a `jig:ui` at all.
+
+Controls write through the host, never straight into the chain, so automation and undo keep
+working and the host's own generic sliders stay in agreement. Arrow keys move and adjust,
+shift is a fine adjustment, and escape goes back to the list.
+
+The editor resolves the IRIs itself, in parallel with the plugin doing the real load, rather
+than being told the answer. DPF delivers a plugin-to-editor state push under CLAP only, and
+the callback is a null pointer in the VST3, VST2 and JACK wrappers. Both sides call the same
+`jigdaw::buildChain`, so they cannot disagree about what happened. See MISTAKES.md.
+
+### MIDI
+
+MIDI in reaches every plugin in the chain that accepts it. Note on, note off, note on with
+velocity zero, and controllers 120 and 123 are understood; anything else is passed over rather
+than guessed at. Events are applied at the frame they were written at, not at the start of the
+block that contains them.
+
+MIDI out carries the incoming MIDI through, and whatever the plugins in the chain generate.
+A plugin declaring `jig:Abi2` can emit, and what it emits also reaches every plugin after it
+in the chain, so a generator drives an instrument with no host in the middle.
+
+### The transport
+
+The adapter fills in the `jig:Abi2` transport block from the DAW: tempo, meter, and bar, beat
+and tick, each flagged so a plugin can tell a real zero from a host that does not know. It is
+advanced per slice rather than per block, so a note lands where it was written rather than at
+the start of whatever buffer the host happened to use. At a 1024 frame buffer that difference
+is 21 milliseconds, which is audible.
+
+A host with no bar, beat and tick is ordinary rather than broken. Under JACK it means nothing
+on the graph is a timebase master, and a plugin that assumes bar 1 beat 1 in that case will
+restart its pattern on every block. `docs/module-abi.md` says what a module must check.
+
+### BassGen
+
+`plugins/bassgen` is a port of the downspout VST3 of the same name, and the worked example of
+a plugin that could not have been written under version 1 of the ABI: it emits MIDI, which
+version 1 could not carry, and it plays in time with the session, which version 1 could not
+tell it about. It declares no audio at all.
+
+Loading `bassgen` and then `pulse` gives a generated bass line played by a synthesiser, with
+the adapter routing MIDI between them.
+
+### What a DAW shows alongside it
+
+In VST3 the adapter reports about 2098 parameters. 2080 of those are the MIDI CC controls DPF
+synthesises for any plugin that takes MIDI input, 130 per channel across 16 channels. DPF
+marks them hidden; REAPER shows hidden parameters anyway, as a long list beside the real 16.
+This is not particular to the adapter. Every DPF plugin with MIDI input does it, and it cannot
+be switched off without giving up MIDI input.
+
+If a DAW shows the generic slider panel rather than the editor, it is using a cached scan from
+an earlier build. Force a plugin rescan, or clear that DAW's VST3 cache, and reopen it.
 
 ## Installing
 
 ```sh
-native/install.sh            # builds, tests, and puts the VST3 in ~/.vst3
-native/install.sh --all      # the CLAP and LV2 too
-native/install.sh --help     # the rest of the options
+./install.sh            # builds, tests, and puts the VST3 in ~/.vst3
+./install.sh --all      # the CLAP and LV2 too
+./install.sh --help     # the rest of the options
 ```
+
+From the repository root: the adapter is one of the things this repository holds, and the
+installer is what a person arriving here runs.
 
 It ends by loading what it installed, because a copy that succeeded says nothing about
 whether a host can open the result.

@@ -2,6 +2,7 @@
 #include "jigdaw/Profile.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <stdexcept>
 
@@ -16,6 +17,7 @@ constexpr const char* LV2 = "http://lv2plug.in/ns/lv2core#";
 constexpr const char* UNITS = "http://lv2plug.in/ns/extensions/units#";
 constexpr const char* RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 constexpr const char* RDFS = "http://www.w3.org/2000/01/rdf-schema#";
+constexpr const char* RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 
 std::string jig(const char* term) { return std::string(JIG) + term; }
 std::string trn(const char* term) { return std::string(TRN) + term; }
@@ -48,8 +50,26 @@ int toInt(const std::string& text) {
 
 }  // namespace
 
+std::string Port::labelFor(const float value) const {
+    // Nearest, not equal: a value arrives as a float that has been round tripped
+    // through a normalised host parameter, so it is rarely exactly the integer
+    // the profile wrote.
+    const ScalePoint* best = nullptr;
+    float closest = 0.0f;
+    for (const auto& point : scalePoints) {
+        const float distance = std::fabs(point.value - value);
+        if (best == nullptr || distance < closest) { best = &point; closest = distance; }
+    }
+    return best != nullptr ? best->label : std::string();
+}
+
 bool Profile::acceptsMidi() const { return containsMidi(accepts); }
 bool Profile::producesMidi() const { return containsMidi(produces); }
+
+bool Profile::requiresTransport() const {
+    const std::string wanted = std::string(TRN) + "HostTransport";
+    return std::find(requires_.begin(), requires_.end(), wanted) != requires_.end();
+}
 
 std::vector<Port> Profile::portsByIndex() const {
     std::vector<Port> sorted = ports;
@@ -154,6 +174,24 @@ ParseResult parseProfile(const std::string& turtleText, const std::string& retri
             if (!index.empty()) port.index = toInt(index);
             const auto unit = first(portNode, std::string(UNITS) + "unit");
             if (!unit.empty()) port.unit = unit.substr(unit.find_last_of("#/") + 1);
+
+            for (const auto& property : objects(portNode, lv2("portProperty"))) {
+                if (property == lv2("toggled")) port.toggled = true;
+                if (property == lv2("enumeration")) port.enumeration = true;
+            }
+
+            // Scale points are the one place a profile's own blank nodes are
+            // right: a named value is not addressable and nothing links to it.
+            for (const auto& pointNode : objects(portNode, lv2("scalePoint"))) {
+                ScalePoint point;
+                point.label = first(pointNode, std::string(RDFS) + "label");
+                const auto pointValue = first(pointNode, std::string(RDF) + "value");
+                if (!pointValue.empty()) point.value = toFloat(pointValue);
+                if (!point.label.empty()) port.scalePoints.push_back(std::move(point));
+            }
+            std::sort(port.scalePoints.begin(), port.scalePoints.end(),
+                      [](const ScalePoint& a, const ScalePoint& b) { return a.value < b.value; });
+
             p.ports.push_back(std::move(port));
         }
     } catch (const std::exception& error) {

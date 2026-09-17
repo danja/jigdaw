@@ -7,6 +7,12 @@
 
 namespace jigdaw {
 
+/// One named value a port can take, as lv2:scalePoint.
+struct ScalePoint {
+    std::string label;
+    float value = 0.0f;
+};
+
 /// One declared parameter, as lv2:port plus the index jig:Abi1 needs.
 struct Port {
     std::string symbol;
@@ -16,6 +22,17 @@ struct Port {
     float defaultValue = 0.0f;
     int index = -1;          ///< jig:paramIndex
     std::string unit;        ///< units:unit, empty when unitless
+
+    /// lv2:portProperty. The same rule the browser panel follows: toggled is a
+    /// switch, an enumeration is a selector, anything else is a dial. A panel
+    /// reads these rather than guessing from the range, because a 0 to 2 range
+    /// says nothing about whether 1 means anything on its own.
+    bool toggled = false;
+    bool enumeration = false;
+    std::vector<ScalePoint> scalePoints;   ///< sorted by value
+
+    /// The label for a value, when the port names its values. Empty otherwise.
+    std::string labelFor(float value) const;
 };
 
 /// A fetchable file named by the profile.
@@ -53,6 +70,9 @@ struct Profile {
 
     bool acceptsMidi() const;
     bool producesMidi() const;
+
+    /// trn:requires trn:HostTransport. A plugin in time with the session says so.
+    bool requiresTransport() const;
 
     /// Sorted by jig:paramIndex, which is the order jig_set_param uses.
     std::vector<Port> portsByIndex() const;

@@ -223,6 +223,44 @@ describe('PluginLoader.instantiate', () => {
     }
   }
 
+  it('gives a plugin with no audio ports an input, so the graph renders it', async () => {
+    // Web Audio pulls from the destination. A node with no outputs and no
+    // inputs is attached to nothing and its process() is never called, so a
+    // MIDI generator declaring jig:audioOutputs 0 would simply never run. It is
+    // given one input for the host to feed silence into.
+    const { profile, granted } = await loadedProfile()
+    const patched = {
+      ...patchDigests(profile,
+        await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES)),
+      audioInputs: 0,
+      audioOutputs: 0
+    }
+    const loader = new PluginLoader({
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
+    })
+
+    const { node } = await loader.instantiate(
+      patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
+
+    expect(node.options.numberOfOutputs).toBe(0)
+    expect(node.options.numberOfInputs).toBe(1)
+    expect(node.options.outputChannelCount).toBeUndefined()
+    // The engine looks for this to decide whether to attach a driver.
+    expect(node.jigdawNeedsDriving).toBe(true)
+  })
+
+  it('leaves a plugin that has audio ports alone', async () => {
+    const { profile, granted } = await loadedProfile()
+    const patched = patchDigests(profile,
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+    const loader = new PluginLoader({
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
+    })
+    const { node } = await loader.instantiate(
+      patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
+    expect(node.jigdawNeedsDriving).toBeUndefined()
+  })
+
   it('constructs the node with the shape the profile declares, and awaits ready', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,

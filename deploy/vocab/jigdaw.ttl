@@ -178,6 +178,17 @@ jig:Abi1 a owl:NamedIndividual , jig:ModuleAbi ;
     rdfs:seeAlso <https://github.com/danja/jigdaw/blob/main/docs/module-abi.md> ;
     rdfs:comment "The first published ABI. Exports jig_init, jig_max_frames, jig_output_ptr, jig_process and jig_set_param, plus jig_input_ptr when the plugin takes audio and jig_note_on, jig_note_off and jig_all_notes_off when it takes MIDI. One pointer per channel; nothing is interleaved." .
 
+jig:Abi2 a owl:NamedIndividual , jig:ModuleAbi ;
+    rdfs:label "JigDAW ABI 2" ;
+    rdfs:seeAlso <https://github.com/danja/jigdaw/blob/main/docs/module-abi.md> ;
+    rdfs:comment """Everything ABI 1 requires, plus three optional facilities it deliberately
+left out: MIDI arriving as whole frame stamped messages rather than note on and note off
+alone, MIDI leaving the module the same way, and a host transport carrying tempo, meter and
+bar, beat and tick. Each is declared by the profile and absent otherwise, so a module using
+none of them is an ABI 1 module under another name and a host that speaks ABI 2 speaks ABI 1.
+Added because a MIDI generator could not be written at all under version 1: it had nothing to
+emit through and no transport to be in time with.""" .
+
 jig:abi a owl:ObjectProperty ;
     rdfs:domain jig:Module ; rdfs:range jig:ModuleAbi ;
     rdfs:label "ABI" ;
@@ -213,6 +224,14 @@ jig:SharedMemory a owl:NamedIndividual , jig:Capability ;
 jig:CrossOriginIsolation a owl:NamedIndividual , jig:Capability ;
     rdfs:label "Cross-Origin Isolation" ;
     rdfs:comment "The page is cross-origin isolated, so high-resolution timers and shared memory are available." .
+
+jig:MidiOut a owl:NamedIndividual , jig:Capability ;
+    rdfs:label "MIDI output" ;
+    rdfs:comment """The host will collect MIDI the plugin emits and deliver it onward. A plugin
+that produces MIDI and does not ask for this has its output go nowhere, exactly as an
+incoming MIDI plugin does without jig:MidiEvents. Named separately because the two are
+separate services: a host may route MIDI to a plugin and have nowhere to send what comes
+back.""" .
 
 jig:MidiEvents a owl:NamedIndividual , jig:Capability ;
     rdfs:label "MIDI Events" ;

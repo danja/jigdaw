@@ -6,6 +6,7 @@
 
 #include "jigdaw/Fetch.hpp"
 #include "jigdaw/Integrity.hpp"
+#include "jigdaw/Midi.hpp"
 
 namespace jigdaw {
 
@@ -38,6 +39,12 @@ std::string Chain::add(const std::string& iri, double sampleRate) {
     // way to skip.
     if (auto bad = verifyIntegrity(wasm.bytes, profile.module->integrity); !bad.empty()) {
         return profile.label + ": " + bad;
+    }
+
+    // Preallocated the first time anything loads, so processing never does.
+    if (pending_.empty()) {
+        pending_.resize(kEventCapacity);
+        emitted_.resize(kEventCapacity);
     }
 
     auto slot = std::make_unique<Slot>();
@@ -84,10 +91,51 @@ void Chain::allNotesOff() {
     for (const auto& slot : slots_) if (slot->module->hasMidi()) slot->module->allNotesOff();
 }
 
-void Chain::process(float** audio, int channels, uint32_t frames) {
+bool Chain::producesMidi() const {
+    for (const auto& slot : slots_) if (slot->module->hasMidiOut()) return true;
+    return false;
+}
+
+const MidiEvent* Chain::midiOut(uint32_t& count) const {
+    count = emittedCount_;
+    return emitted_.empty() ? nullptr : emitted_.data();
+}
+
+void Chain::deliver(Slot& slot, const MidiEvent* events, const uint32_t count) {
+    Module& module = *slot.module;
+    if (count == 0) return;
+
+    if (module.hasMidiIn()) {
+        module.sendMidi(events, count);
+        return;
+    }
+
+    // A version 1 module knows notes and nothing else. Decoding here rather
+    // than at the host edge means one MIDI path for both ABIs, and a plugin
+    // author can move to version 2 without the host changing.
+    if (!module.hasMidi()) return;
+    for (uint32_t i = 0; i < count; ++i) {
+        applyMidi(module, events[i].data, events[i].size);
+    }
+}
+
+void Chain::process(float** audio, int channels, uint32_t frames,
+                    const MidiEvent* in, uint32_t inCount) {
+    emittedCount_ = 0;
+    pendingCount_ = 0;
+
+    if (!pending_.empty() && in != nullptr) {
+        pendingCount_ = std::min(inCount, kEventCapacity);
+        std::memcpy(pending_.data(), in, pendingCount_ * sizeof(MidiEvent));
+    }
+
     for (const auto& slot : slots_) {
         Module& module = *slot->module;
         const uint32_t block = std::min(frames, module.maxFrames());
+
+        if (Transport* into = module.transport()) *into = transport_;
+
+        deliver(*slot, pending_.data(), pendingCount_);
 
         // An instrument takes no audio: it replaces what is there rather than
         // adding to it, which is why the input copy is conditional.
@@ -102,11 +150,38 @@ void Chain::process(float** audio, int channels, uint32_t frames) {
 
         module.process(block);
 
-        for (int channel = 0; channel < channels; ++channel) {
-            const float* from = module.output(static_cast<uint32_t>(channel));
-            if (from == nullptr) continue;
-            std::memcpy(audio[channel], from, block * sizeof(float));
+        // A plugin with no audio output leaves what is passing through it
+        // untouched. A MIDI generator has nothing to write and version 2 lets
+        // it say so; writing silence instead would mute the whole chain.
+        if (slot->profile.audioOutputs > 0) {
+            for (int channel = 0; channel < channels; ++channel) {
+                const float* from = module.output(static_cast<uint32_t>(channel));
+                if (from == nullptr) continue;
+                std::memcpy(audio[channel], from, block * sizeof(float));
+            }
         }
+
+        if (!module.hasMidiOut()) continue;
+
+        uint32_t produced = 0;
+        const MidiEvent* fromModule = module.midiOut(produced);
+        if (fromModule == nullptr || produced == 0) continue;
+
+        for (uint32_t i = 0; i < produced; ++i) {
+            const MidiEvent& event = fromModule[i];
+            if (event.size < 1 || event.size > 3) continue;   // the ABI says ignore
+
+            // Out of the chain, for the host.
+            if (emittedCount_ < kEventCapacity) emitted_[emittedCount_++] = event;
+            // And on to whatever comes next, so a generator can drive an
+            // instrument further down without the host routing it back round.
+            if (pendingCount_ < kEventCapacity) pending_[pendingCount_++] = event;
+        }
+
+        // The next plugin is entitled to events in ascending frame order, and
+        // what a generator emits is not necessarily later than what arrived.
+        std::sort(pending_.begin(), pending_.begin() + pendingCount_,
+                  [](const MidiEvent& a, const MidiEvent& b) { return a.frame < b.frame; });
     }
 }
 

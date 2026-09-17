@@ -43,6 +43,13 @@ The profile format is not new. It extends the one published at
 in use over 758 plugins, adding what a browser needs. A profile written for that catalogue
 stays valid here.
 
+## The native adapter
+
+`./install.sh` builds a VST3 that loads JigDAW plugins by IRI and installs it into `~/.vst3`.
+It exists as a sanity check on the specification, and found that the specification had made
+itself browser-only. See [native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md)
+and [docs/module-abi.md](docs/module-abi.md).
+
 ## Licence
 
 Apache 2.0. See [LICENSE](LICENSE).

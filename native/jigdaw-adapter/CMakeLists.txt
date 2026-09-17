@@ -11,6 +11,9 @@ add_library(jigdaw_core STATIC
   src/Module.cpp
   src/Fetch.cpp
   src/Chain.cpp
+  src/Report.cpp
+  src/Midi.cpp
+  src/Params.cpp
 )
 # The core is linked into a shared module, so it must be position independent.
 # Without this the VST3 fails to link with a relocation error naming a symbol
@@ -19,7 +22,10 @@ set_target_properties(jigdaw_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(jigdaw_core PUBLIC include)
 target_include_directories(jigdaw_core PRIVATE ${JIGDAW_HTTPLIB_DIR})
 target_compile_definitions(jigdaw_core PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
-target_link_libraries(jigdaw_core PUBLIC m3 PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+# Threads because the editor builds its report on a worker: a load fetches
+# over the network and an editor that stops repainting looks like a hung DAW.
+find_package(Threads REQUIRED)
+target_link_libraries(jigdaw_core PUBLIC m3 Threads::Threads PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 if(JIGDAW_BUILD_TESTS)
   # turtle and integrity need nothing. profile reads the worked plugins from the
@@ -50,20 +56,28 @@ if(JIGDAW_BUILD_PLUGIN)
   else()
     add_subdirectory(${JIGDAW_DPF_DIR} ${CMAKE_BINARY_DIR}/dpf EXCLUDE_FROM_ALL)
     dpf_add_plugin(jigdaw-adapter
-      TARGETS vst3 clap lv2
-      FILES_DSP src/dpf/JigdawPlugin.cpp)
+      # A JACK standalone as well: it is the quickest way to see the editor
+      # without a DAW, and the quickest way to try a plugin IRI.
+      TARGETS vst3 clap lv2 jack
+      FILES_DSP src/dpf/JigdawPlugin.cpp
+      FILES_UI src/dpf/JigdawUI.cpp)
     target_include_directories(jigdaw-adapter PUBLIC include src/dpf)
     target_link_libraries(jigdaw-adapter PUBLIC jigdaw_core)
 
-    # Installed by copying the bundles DPF produced. USE_SOURCE_PERMISSIONS
-    # because install(DIRECTORY) otherwise drops the execute bit, and a host
-    # that cannot dlopen the shared object reports the plugin as missing
-    # rather than as unreadable.
-    foreach(format vst3 clap lv2)
-      install(DIRECTORY "${CMAKE_BINARY_DIR}/bin/jigdaw-adapter.${format}"
-              DESTINATION "${format}"
-              USE_SOURCE_PERMISSIONS
-              OPTIONAL)
-    endforeach()
+    # The three formats are not the same shape, and a loop over them is wrong.
+    # A .vst3 and a .lv2 are directories; a .clap is a single shared object.
+    # install(DIRECTORY) given the .clap fails with "given non-directory", and
+    # only on a RECONFIGURE, because on a first run the file does not exist yet
+    # and OPTIONAL covers it. So a clean build works and the second one breaks.
+    #
+    # USE_SOURCE_PERMISSIONS on the bundles because install(DIRECTORY) otherwise
+    # drops the execute bit, and a host that cannot dlopen the shared object
+    # reports the plugin as missing rather than as unreadable.
+    install(DIRECTORY "${CMAKE_BINARY_DIR}/bin/jigdaw-adapter.vst3"
+            DESTINATION vst3 USE_SOURCE_PERMISSIONS OPTIONAL)
+    install(DIRECTORY "${CMAKE_BINARY_DIR}/bin/jigdaw-adapter.lv2"
+            DESTINATION lv2 USE_SOURCE_PERMISSIONS OPTIONAL)
+    install(PROGRAMS "${CMAKE_BINARY_DIR}/bin/jigdaw-adapter.clap"
+            DESTINATION clap OPTIONAL)
   endif()
 endif()

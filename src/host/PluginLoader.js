@@ -180,8 +180,15 @@ export class PluginLoader {
 
     let node
     try {
+      // A plugin with no audio at all still has to be rendered: a MIDI
+      // generator does its work in process(). Web Audio pulls from the
+      // destination, so a node with no outputs and no inputs is attached to
+      // nothing and is never called. Giving it one input lets the host feed it
+      // silence, which is what keeps it running. The module never reads that
+      // input and does not know it is there.
+      const driven = profile.audioOutputs === 0 && profile.audioInputs === 0
       node = new AudioWorkletNode(context, name, {
-        numberOfInputs: profile.audioInputs,
+        numberOfInputs: driven ? 1 : profile.audioInputs,
         numberOfOutputs: profile.audioOutputs,
         outputChannelCount: profile.audioOutputs > 0
           ? Array(profile.audioOutputs).fill(profile.outputChannels)
@@ -193,6 +200,7 @@ export class PluginLoader {
           quantum: profile.renderQuantum ?? 128
         }
       })
+      if (driven) node.jigdawNeedsDriving = true
     } catch (cause) {
       throw new LoadError(STEPS.constructNode,
         `could not construct "${name}": ${cause.message}. The processor module may register a different name.`,

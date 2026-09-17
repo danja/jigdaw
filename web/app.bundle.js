@@ -13159,6 +13159,7 @@ var vocabulary = Object.freeze({
     wasmFeature: `${JIG}wasmFeature`,
     ModuleAbi: `${JIG}ModuleAbi`,
     Abi1: `${JIG}Abi1`,
+    Abi2: `${JIG}Abi2`,
     abi: `${JIG}abi`,
     paramIndex: `${JIG}paramIndex`,
     Simd128: `${JIG}Simd128`,
@@ -13170,6 +13171,7 @@ var vocabulary = Object.freeze({
     SharedMemory: `${JIG}SharedMemory`,
     CrossOriginIsolation: `${JIG}CrossOriginIsolation`,
     MidiEvents: `${JIG}MidiEvents`,
+    MidiOut: `${JIG}MidiOut`,
     OfflineRender: `${JIG}OfflineRender`,
     Persistence: `${JIG}Persistence`,
     // Runtime shape

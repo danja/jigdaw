@@ -22,7 +22,9 @@
     foaf:homepage <> ;
     trn:role trn:Instrument ;
 
-    # Produces MIDI but never requires jig:MidiEvents, so its output goes nowhere.
+    # Produces MIDI but requires neither jig:MidiEvents nor jig:MidiOut, so nothing
+    # routes MIDI to it and nothing collects what it emits. Two constraints, because
+    # they are two host services and a host may offer one without the other.
     trn:produces trn:Midi , trn:Audio ;
 
     # Declares outputs without declaring how wide they are.

@@ -18,7 +18,8 @@ export default defineConfig({
       'tests/ops/**/*.test.js',
       'tests/engine/**/*.test.js',
       'tests/catalogue/**/*.test.js',
-      'tests/mcp/**/*.test.js'
+      'tests/mcp/**/*.test.js',
+      'tests/native/**/*.test.js'
     ]
   }
 })

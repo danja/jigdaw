@@ -114,6 +114,11 @@ jig:OutputWidthShape a sh:NodeShape ;
     sh:message "A plugin with audio outputs must declare jig:outputChannels. The host passes outputChannelCount when it constructs the node, and guessing stereo is how a mono plugin ends up silent in one ear." ;
     sh:or (
         [ sh:path jig:audioOutputs ; sh:maxCount 0 ]
+        # Saying nothing and saying none are different statements and both mean
+        # there is no width to declare. jig:Abi2 lets a MIDI generator declare
+        # zero outputs explicitly, which is the honest thing for it to do, and
+        # this branch is what stops that honesty being a violation.
+        [ sh:property [ sh:path jig:audioOutputs ; sh:hasValue 0 ] ]
         [ sh:property [ sh:path jig:outputChannels ; sh:minCount 1 ] ]
     ) .
 
@@ -139,6 +144,28 @@ jig:NoMidiShape a sh:NodeShape ;
     ] ;
     sh:property [
         sh:path trn:accepts ;
+        sh:qualifiedValueShape [ sh:in ( trn:Midi trn:BassMidi trn:DrumMidi trn:MelodyMidi
+                                         trn:HarmonyMidi trn:MultiPartMidi trn:ControlMidi
+                                         trn:MidiCC ) ] ;
+        sh:qualifiedMaxCount 0
+    ] .
+
+jig:MidiOutCapabilityShape a sh:NodeShape ;
+    sh:targetClass jig:WebPlugin ;
+    rdfs:label "MIDI output capability shape" ;
+    sh:message "A plugin that produces MIDI must declare trn:requires jig:MidiOut. Collecting what a plugin emits and delivering it onward is a host service, separate from routing MIDI in: a host may do one and not the other, and a plugin that does not ask has its output go nowhere." ;
+    sh:or (
+        [ sh:node jig:ProducesNoMidiShape ]
+        [ sh:property [ sh:path trn:requires ; sh:hasValue jig:MidiOut ] ]
+    ) .
+
+# Satisfied by a plugin naming no MIDI signal type on trn:produces. Separate from
+# jig:NoMidiShape, which is about either direction: a plugin that accepts MIDI and
+# produces only audio needs jig:MidiEvents and must not be made to ask for
+# jig:MidiOut as well.
+jig:ProducesNoMidiShape a sh:NodeShape ;
+    sh:property [
+        sh:path trn:produces ;
         sh:qualifiedValueShape [ sh:in ( trn:Midi trn:BassMidi trn:DrumMidi trn:MelodyMidi
                                          trn:HarmonyMidi trn:MultiPartMidi trn:ControlMidi
                                          trn:MidiCC ) ] ;

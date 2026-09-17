@@ -15,7 +15,8 @@ const EXPECTED = {
   'examples/session-project.ttl': 0,
   'plugins/cascade/profile.ttl': 0,
   'plugins/pulse/profile.ttl': 0,
-  'examples/counterexample-profile.ttl': 8,
+  'plugins/bassgen/profile.ttl': 0,
+  'examples/counterexample-profile.ttl': 9,
   'examples/counterexample-project.ttl': 10
 }
 

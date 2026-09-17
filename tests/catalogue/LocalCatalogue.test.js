@@ -1,6 +1,6 @@
 // tests/catalogue/LocalCatalogue.test.js
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFile, mkdtemp, writeFile } from 'node:fs/promises'
+import { readFile, readdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { LocalCatalogue } from '../../src/catalogue/LocalCatalogue.js'
@@ -14,7 +14,15 @@ describe('the plugins this host serves', () => {
   beforeAll(() => { catalogue = new LocalCatalogue() })
 
   it('finds them without a store, a network, or an npm install', async () => {
-    expect((await catalogue.search({})).map(e => e.label).sort()).toEqual(['Cascade', 'Pulse'])
+    // Taken from the directory rather than written out here. A list in a test
+    // that names the plugins is a list that goes stale the day one is added,
+    // and the failure looks like the catalogue being wrong.
+    const expected = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
+      .filter(e => e.isDirectory())
+      .map(e => e.name)
+      .sort()
+    const found = (await catalogue.search({})).map(e => e.label.toLowerCase()).sort()
+    expect(found).toEqual(expected)
   })
 
   it('marks them loadable, because they are ours', async () => {
@@ -24,7 +32,9 @@ describe('the plugins this host serves', () => {
   it('matches text against name, description and vendor', async () => {
     expect((await catalogue.search({ text: 'reverb' })).map(e => e.label)).toEqual(['Cascade'])
     expect((await catalogue.search({ text: 'synthesiser' })).map(e => e.label)).toEqual(['Pulse'])
-    expect((await catalogue.search({ text: 'danja' })).length).toBe(2)
+    // Every plugin here is by the same vendor, so this matches all of them.
+    expect((await catalogue.search({ text: 'danja' })).length)
+      .toBe((await catalogue.search({})).length)
   })
 
   it('filters by facet, including the ones whose field is named differently', async () => {
@@ -32,7 +42,10 @@ describe('the plugins this host serves', () => {
     // entry by the facet name meant those two silently matched nothing.
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label)).toEqual(['Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label)).toEqual(['Cascade'])
-    expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label)).toEqual(['Pulse'])
+    // BassGen accepts MIDI too: it can be steered from a keyboard.
+    expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
+      .toEqual(['BassGen', 'Pulse'])
+    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen'])
   })
 
   it('takes a full IRI for a facet as well as a bare name', async () => {

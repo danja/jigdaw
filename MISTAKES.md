@@ -2,6 +2,95 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 Every slice of the block was told it was the same moment
+
+**What happened.** The adapter runs a chain in slices of at most the module's `jig_max_frames`,
+which is 128, while a DAW hands over a whole buffer at once, here 1024 frames. The `jig:Abi2`
+transport block was filled in once per buffer, so all eight slices were told they were at the
+same beat. A generated note could only land on a buffer boundary.
+
+**Root cause.** The transport was treated as a property of the callback rather than of the
+moment. It is written once because the host reports it once, and that made it look like one
+value for the whole call. Each slice is at a different point in time, and the block says so
+only if something advances it.
+
+At a 1024 frame buffer and 48 kHz that is 21 milliseconds of quantisation, which is audible
+as a late note and gets worse as the buffer grows. It would have been invisible at a 128 frame
+buffer, where the slice and the buffer are the same thing, and that is the size a developer
+tends to run.
+
+**Prevention.** The slice loop advances `beat` and `seconds` by the frames already processed,
+from the tempo the host reported. Found by watching what a plugin emitted in a real host with
+a real transport rather than by reading the code: the native tests drive the transport by hand,
+one block at a time, and a test that advances the transport itself can never catch a host that
+does not.
+
+**The general shape.** When code processes a buffer in pieces, ask which of the things handed
+to it are properties of the buffer and which are properties of the instant. The instant ones
+have to move.
+
+## 2026-09-17 The adapter was silent in a DAW, and every test passed
+
+**What happened.** Asked to confirm that Pulse responds to MIDI, the byte level tests said yes
+and a real host said nothing at all. MIDI arrived, the voices ran, and the output was digital
+silence. Six seconds of recorded audio measured a peak sample of exactly 0.000000 while the
+note on and note off were visible on the plugin's own MIDI output in the same run.
+
+**Root cause.** After loading a chain the plugin wrote the host's parameter values into it,
+mapping a normalised slot onto the port's declared range. The host's sixteen slots mean nothing
+until something is loaded, so they all read zero, and zero normalised is the bottom of whatever
+range the port turns out to have. Pulse came up with its gain at its minimum and its filter at
+100 Hz. Nothing was broken in any component; the defaults the profile declares were simply
+never consulted.
+
+It survived because the code that did it lived in the DPF wrapper, which no test can construct,
+and the chain tests drive `Chain` directly, where a module keeps the defaults `jig_init` gave
+it until something overwrites them. The test suite and the real plugin took different paths
+through the same load, and only one of those paths had the bug.
+
+**Prevention.** `jigdaw::applyParameters` and `jigdaw::normalisedDefault` in the core library,
+with `tests/chain_test.cpp` asserting that every port of a freshly loaded Pulse sits at its
+declared default and that the plugin is audible without touching a control. Mutation tested:
+reverting the fix turns that check into "audible without touching a control: 0.000000", which
+is the symptom stated as an assertion. The editor computes its displayed values through the
+same `normalisedDefault`, because DPF cannot tell a VST3 host that a parameter changed, so the
+two sides can never be told each other's answer and have to compute the same one.
+
+**The general shape.** When a test and the shipped program reach the same feature by different
+routes, the untested route is where the bug will be. Ask what the wrapper does that the test
+harness does not, and this time the answer was "applies the host's idea of every parameter".
+
+## 2026-09-17 The editor waited for a message DPF never sends
+
+**What happened.** The adapter grew an editor, because a host with no editor shows a generic
+panel of sliders named "Param 7" and no way to say which plugin to load. The editor sent the
+IRIs to the plugin and then waited to be told what had loaded. It waited for ever. The load
+itself was fine: the plugin fetched both profiles, verified both digests, instantiated both
+modules and wrote the report. Nothing was broken except the one path a person can see.
+
+**Root cause.** The report travelled by `Plugin::updateStateValue`. DPF wires that callback
+under CLAP only. It is a literal `nullptr` in the VST3, VST2 and JACK wrappers, which is every
+format this is actually used in. DPF says so out loud at runtime, `updateStateValueCallback
+(nil)`, and the line was in the log all along under a plugin that was otherwise working
+perfectly. The API is present, compiles, and returns a value, so nothing at build time
+distinguishes a format that delivers from a format that discards.
+
+Two things hid it. The standalone was driven with `pkill -f bin/jigdaw-adapter` beforehand,
+and that pattern matches the shell running it, so the shell killed itself, the launch never
+happened and the log was empty rather than wrong. And the wrapper does push state to the
+editor once, on open, so reopening the editor showed the right report and made the channel
+look sound.
+
+**Prevention.** The editor works the report out for itself, through the same
+`jigdaw::buildChain` the plugin calls, on a worker so a network fetch does not freeze the
+panel. One writer, two callers, so the two cannot disagree. `tests/native/adapter-report.test.js`
+binds them and was mutation-tested in both directions. The push is kept, because it is an
+improvement where it lands, and is now commented as never being the only source.
+
+**The general shape.** A host API that is optional per format is a runtime fact wearing a
+compile-time face. Ask what a wrapper that does not implement it does, and assume it is
+"nothing, silently". Before that: a diagnostic command must not match its own command line.
+
 ## 2026-09-17 The specification had made itself browser-only
 
 **What happened.** A VST3 was proposed as a sanity check on the plugin specification. It

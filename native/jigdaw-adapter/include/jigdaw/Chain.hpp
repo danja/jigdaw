@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "jigdaw/Abi.hpp"
 #include "jigdaw/Module.hpp"
 #include "jigdaw/Profile.hpp"
 
@@ -32,7 +33,24 @@ public:
     ///
     /// `audio` is the host's buffers, which are read and written. Each plugin
     /// reads what the last one wrote, which is what makes it a chain.
-    void process(float** audio, int channels, uint32_t frames);
+    ///
+    /// `in` is the host's MIDI for this block, in ascending frame order. A
+    /// plugin that accepts MIDI receives it, along with whatever the plugins
+    /// before it emitted, so a generator can drive an instrument further down
+    /// the chain. After the call, midiOut() is what the chain produced.
+    void process(float** audio, int channels, uint32_t frames,
+                 const MidiEvent* in = nullptr, uint32_t inCount = 0);
+
+    /// What the last process() emitted, which is what the plugins generated and
+    /// never an echo of what the host sent in. Valid until the next process().
+    const MidiEvent* midiOut(uint32_t& count) const;
+
+    /// Filled in by the host before process(). Copied to every plugin that asked
+    /// for a transport.
+    Transport& transport() { return transport_; }
+
+    /// True when some plugin in the chain emits MIDI.
+    bool producesMidi() const;
 
     void noteOn(uint8_t note, uint8_t velocity);
     void noteOff(uint8_t note);
@@ -52,9 +70,23 @@ public:
     static std::string fetchProfile(const std::string& iri, Profile& into);
 
 private:
+    /// Hand one block's events to a slot, whichever ABI it speaks.
+    void deliver(Slot& slot, const MidiEvent* events, uint32_t count);
+
     std::vector<std::unique_ptr<Slot>> slots_;
     std::vector<Port> flat_;
     uint32_t maxFrames_ = 128;
+
+    Transport transport_;
+
+    /// Preallocated at load, never resized while processing. A chain that ran
+    /// out of room drops the latest events rather than allocating on the audio
+    /// thread, which is the one thing it must never do.
+    static constexpr uint32_t kEventCapacity = 512;
+    std::vector<MidiEvent> pending_;   ///< what the next plugin will receive
+    std::vector<MidiEvent> emitted_;   ///< what the chain hands back
+    uint32_t pendingCount_ = 0;
+    uint32_t emittedCount_ = 0;
 };
 
 }  // namespace jigdaw
