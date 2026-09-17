@@ -79,52 +79,31 @@ only pass if it were live.
 
 ## The runbook for strandz.it
 
+**The step-by-step list, with every command labelled by where it runs, is
+[HUMANS.md](../HUMANS.md) item 1.** This section is the reasoning behind it.
+
 `/` on that host is already taken by another application on port 6010, so JigDAW is served
 under `/jigdaw/` and listens on **6011**, loopback only.
 
-Everything below has been validated here, against real nginx in a container proxying to the
-real server. `deploy/nginx/check.sh` runs that validation.
+**The server needs only node 20 or later.** `bin/serve.js` imports nothing but node
+builtins, so there is no `npm install`. The WebAssembly modules, the generated profiles and
+the browser bundle are committed, so there is no build step and no Rust toolchain either.
+The repository is the delivery mechanism.
 
-```sh
-# On the server, in /home/github/jigdaw
-npm ci
-npm run build:web                    # produces web/app.bundle.js
-plugins/cascade/build.sh             # needs the rust wasm32-unknown-unknown target
-plugins/pulse/build.sh
+That is a deliberate choice rather than an oversight. A build on the server is a second
+place for the artefacts to differ from the profiles that declare their digests, and a
+mismatch there is a plugin the host refuses with an integrity error. Building in one place
+and shipping the result means the digests in `profile.ttl` always describe the bytes that
+are actually served.
 
-sudo cp deploy/jigdaw.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now jigdaw
-curl -sI http://127.0.0.1:6011/      # expect 200 before touching nginx
-```
+The consequence, which has to be honoured: **`web/app.bundle.js` and the `.wasm` files are
+committed and must be regenerated and committed whenever their sources change.**
+`tests/dsp/cascade.test.js` binds each profile to the artefact on disk, so a stale wasm is a
+failing test rather than a broken deployment.
 
-Then add one line inside the existing `server { server_name strandz.it; ... }` block, above
-the `location / { ... }` that proxies to 6010:
-
-```nginx
-include /home/github/jigdaw/deploy/nginx/jigdaw.conf;
-```
-
-`location /jigdaw/` is more specific than `location /`, so nginx matches it first whatever
-the order. Including the file rather than pasting its contents means the configuration is
-version controlled with the code it serves, and `check.sh` validates the file that is
-actually included.
-
-```sh
-deploy/nginx/check.sh                # here, before the server sees it
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-Finish by asking the consumer, not the artefact:
-
-```sh
-curl -sI https://strandz.it/jigdaw/
-curl -s -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/ | head -8
-curl -sI https://strandz.it/jigdaw/plugins/cascade/cascade.wasm | grep -i 'content-type\|allow-origin'
-```
-
-`nginx -t` passing and a reload succeeding say nothing about whether the file you edited is
-the file being served.
+Everything in the runbook has been validated locally against real nginx in a container
+proxying to the real server. `deploy/nginx/check.sh` runs that validation, and it fails on
+things `nginx -t` cannot see.
 
 ## Two traps this configuration is built around
 

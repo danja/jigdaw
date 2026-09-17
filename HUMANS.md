@@ -7,27 +7,94 @@ Ordered by what blocks most.
 
 ## 1. Deploy to strandz.it
 
-Everything is prepared and validated here against real nginx. The runbook is
-[docs/deployment.md](docs/deployment.md), and the short version is:
+Every command below says where it runs. Nothing is public until this is done.
 
-- `npm ci && npm run build:web`, then `plugins/cascade/build.sh` and `plugins/pulse/build.sh`
-  (these need the rust `wasm32-unknown-unknown` target).
-- Install `deploy/jigdaw.service`, which listens on **6011**, loopback only. `/` and 6010
-  are already taken by another application, so JigDAW lives under `/jigdaw/`.
-- Add one line inside the existing `server { server_name strandz.it; ... }` block:
-  `include /home/github/jigdaw/deploy/nginx/jigdaw.conf;`
-- Run `deploy/nginx/check.sh` before `nginx -t`. It catches things `nginx -t` cannot: a
-  `proxy_pass` missing its trailing slash, a missing CORS header, an `add_header` without
-  `always`, and a header added without hiding the upstream copy.
+The server needs **only node 20 or later**. `bin/serve.js` imports nothing but node
+builtins, and the WebAssembly, the profiles and the browser bundle are all committed, so
+there is no `npm install`, no Rust and no build step on the server.
 
-One thing worth knowing: your current `strandz.it.conf` sends **no security headers at all**,
-for either application. The JigDAW location sets its own, so this does not block anything,
-but the other application on 6010 is serving without `X-Content-Type-Options`,
-`Referrer-Policy` or HSTS. If you add them at server level later, remember that an
-`add_header` inside a `location` replaces the server block's headers rather than adding to
-them, so the JigDAW block would need them repeated.
+### On your machine, in `/chalet/github/jigdaw`
 
-**Blocks:** nothing here, but nothing is public until it is done.
+```sh
+npm test                        # 216 tests
+deploy/nginx/check.sh           # validates nginx in a container, before the server sees it
+git add -A && git commit && git push
+```
+
+Only rebuild if you changed the source. The artefacts are committed as they stand:
+
+```sh
+npm run build:web               # only if web/ or src/ changed
+plugins/cascade/build.sh        # only if the Rust or profile.json changed
+plugins/pulse/build.sh          # these two need the rust wasm32-unknown-unknown target
+```
+
+### On the server, in `/home/github/jigdaw`
+
+```sh
+git pull
+node --version                  # must be v20.11 or later
+
+# The service runs as www-data, so it has to be able to read the repository.
+sudo -u www-data test -r bin/serve.js && echo "readable" || echo "PERMISSIONS PROBLEM"
+
+sudo cp deploy/jigdaw.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now jigdaw
+sudo systemctl status jigdaw --no-pager
+
+curl -sI http://127.0.0.1:6011/ | head -1       # expect: HTTP/1.1 200 OK
+```
+
+Do not touch nginx until that 200 appears.
+
+### On the server, as root
+
+Add one line inside the existing `server { server_name strandz.it; ... }` block of
+`/etc/nginx/sites-available/strandz.it.conf`, anywhere among the `location` blocks:
+
+```nginx
+include /home/github/jigdaw/deploy/nginx/jigdaw.conf;
+```
+
+`location /jigdaw/` is more specific than your `location /`, so nginx matches it first
+whatever the order. Including the file rather than pasting it means the configuration is
+version controlled with the code it serves.
+
+```sh
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### On any machine, to confirm it is actually live
+
+`nginx -t` passing says nothing about whether the file you edited is the file being served.
+
+```sh
+curl -sI https://strandz.it/jigdaw/ | head -1
+curl -s -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/ | head -8
+curl -sI https://strandz.it/jigdaw/plugins/cascade/cascade.wasm | grep -i 'content-type\|allow-origin'
+```
+
+The last one must show `application/wasm` and exactly one `Access-Control-Allow-Origin`. Two
+of that header and no plugin will load anywhere.
+
+Then open `https://strandz.it/jigdaw/` and press Load.
+
+### If something is wrong
+
+```sh
+sudo journalctl -u jigdaw -n 50 --no-pager      # on the server
+sudo nginx -T | grep -A5 'location /jigdaw/'    # what nginx is really serving
+```
+
+### One thing about your existing config
+
+`strandz.it.conf` currently sends no security headers at all, for either application. The
+JigDAW block sets its own, so this blocks nothing, but the application on 6010 is serving
+without `X-Content-Type-Options`, `Referrer-Policy` or HSTS. If you add them at server level
+later, note that an `add_header` inside a `location` replaces the server block's headers
+rather than adding to them, so the JigDAW block would need them repeated.
 
 ## 2. Serve the JigDAW vocabulary
 
