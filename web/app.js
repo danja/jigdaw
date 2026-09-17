@@ -50,12 +50,13 @@ function browserCatalogue () {
     return body
   }
   return {
-    async search ({ text = '', limit = 25, ...facets } = {}) {
+    async search ({ text = '', limit = 25, loadable = true, ...facets } = {}) {
       const params = new URLSearchParams()
       if (text) params.set('q', text)
       for (const [k, v] of Object.entries(facets)) if (v) params.set(k, v)
       params.set('limit', String(limit))
-      return (await ask('search', params)).results
+      if (!loadable) params.set('loadable', 'false')
+      return ask('search', params)
     },
     async describe (iri) { return ask('describe', new URLSearchParams({ iri })) }
   }
@@ -350,12 +351,15 @@ function renderResults (results, query) {
   const loadable = results.filter(r => r.web).length
   const note = document.createElement('p')
   note.className = 'note'
-  note.textContent = `${results.length} found, ${loadable} loadable here. The rest are native plugins the catalogue knows about.`
+  note.textContent = loadable === results.length
+    ? `${results.length} loadable here.`
+    : `${results.length} found, ${loadable} loadable here. The rest are native plugins the catalogue knows about but this host cannot run.`
   box.append(note)
 
   for (const result of results) {
     const row = document.createElement('div')
-    row.className = 'result'
+    // Dimmed, so the ones that can be loaded read first at a glance.
+    row.className = result.web ? 'result' : 'result native'
 
     const name = document.createElement('div')
     name.className = 'name'
@@ -396,15 +400,26 @@ async function search () {
   if (text) params.set('q', text)
   if (facet) { const [k, v] = facet.split('='); params.set(k, v) }
   params.set('limit', '25')
-  if (!text && !facet) { log('type something to search for, or pick a filter'); return }
+  // An empty search lists what this host can run, which is the useful default
+  // for a browser: it answers "what have I got" without being asked twice.
+
 
   try {
-    const results = await browserCatalogue().search({
+    const body = await browserCatalogue().search({
       text, limit: 25,
+      loadable: !$('everything').checked,
       ...(facet ? { [facet.split('=')[0]]: facet.split('=')[1] } : {})
     })
-    renderResults(results, text || facet)
-    log(`${results.length} result(s)`, 'ok')
+    renderResults(body.results, text || facet)
+
+    if (body.upstreamError) {
+      // The wider catalogue being down must not hide the plugins held here.
+      log(`the wider catalogue is unavailable: ${body.upstreamError}`, 'error')
+    }
+    if (body.loadableOnly && body.results.length === 0) {
+      log('nothing loadable matched. Tick the box to include native plugins.')
+    }
+    log(`${body.results.length} result(s)`, 'ok')
   } catch (error) {
     log(`search failed: ${error.message}`, 'error')
   }

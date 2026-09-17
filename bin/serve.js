@@ -14,6 +14,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join, extname, normalize } from 'node:path'
 import { Catalogue, FACET_NAMES } from '../src/catalogue/Catalogue.js'
+import { LocalCatalogue } from '../src/catalogue/LocalCatalogue.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const port = Number(process.env.PORT ?? 8748)
@@ -105,6 +106,11 @@ const catalogue = new Catalogue({
   endpoint: process.env.CATALOGUE_ENDPOINT ?? undefined
 })
 
+// This host's own plugins. Until they are harvested upstream, nothing else
+// knows they exist, and a browser that lists 756 plugins none of which can run
+// is a list rather than a browser.
+const local = new LocalCatalogue()
+
 // A small cache, because a person typing into a search box produces a request
 // per keystroke and the upstream is someone else's server.
 const CACHE_TTL = 60_000
@@ -132,13 +138,13 @@ async function serveCatalogue (request, response, url) {
   }
 
   try {
-    let result
+    let result = null
     if (url.pathname === '/catalogue/search') {
       // A parameter this does not know is reported, never ignored. A silently
       // dropped facet returns a full result set that looks like an answer:
       // plugin-universe shipped exactly this, where ?category=reverb was
       // quietly ignored on one listing and nothing said so.
-      const known = new Set(['q', 'limit', ...FACET_NAMES])
+      const known = new Set(['q', 'limit', 'loadable', ...FACET_NAMES])
       const unknown = [...url.searchParams.keys()].filter(k => !known.has(k))
       if (unknown.length > 0) {
         return send(response, 400, JSON.stringify({
@@ -152,17 +158,48 @@ async function serveCatalogue (request, response, url) {
         const value = url.searchParams.get(name)
         if (value) facets[name] = value
       }
-      result = {
-        results: await catalogue.search({
-          text: url.searchParams.get('q') ?? '',
-          limit: Number(url.searchParams.get('limit') ?? 30),
-          ...facets
-        })
+      const query = {
+        text: url.searchParams.get('q') ?? '',
+        limit: Number(url.searchParams.get('limit') ?? 30),
+        ...facets
+      }
+
+      // Ours first, always. They are the ones that can actually be loaded, and
+      // burying them under several hundred that cannot is the complaint this
+      // answers.
+      const mine = await local.search(query)
+
+      // `loadable` restricts the answer to plugins this host can run. It is the
+      // default in the page, because that is what a person means by a plugin
+      // browser, and it is a parameter rather than a hardcoded filter so the
+      // rest of the catalogue stays one query away.
+      const loadableOnly = url.searchParams.get('loadable') !== 'false'
+
+      let upstream = []
+      if (!loadableOnly) {
+        try {
+          upstream = await catalogue.search(query)
+        } catch (error) {
+          // A catalogue that is down must not hide the plugins we hold
+          // ourselves, so this is reported alongside them rather than instead.
+          result = { results: mine, upstreamError: error.message }
+        }
+      }
+
+      if (!result) {
+        const seen = new Set(mine.map(m => m.iri))
+        result = {
+          results: [...mine, ...upstream.filter(u => !seen.has(u.iri))],
+          loadable: mine.length,
+          loadableOnly
+        }
       }
     } else {
       const iri = url.searchParams.get('iri')
       if (!iri) return send(response, 400, JSON.stringify({ error: 'describe needs an iri' }), { 'content-type': TYPES['.json'] })
-      result = await catalogue.describe(iri)
+      // Ours is authoritative for our own plugins: it reads the profile the
+      // host actually serves, rather than someone's copy of it.
+      result = (await local.describe(iri)) ?? await catalogue.describe(iri)
     }
 
     const body = JSON.stringify(result)

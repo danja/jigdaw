@@ -209,11 +209,17 @@ things would be worse than querying that one.
   an upstream endpoint's CORS headers being right.
 - A search box with facets in the page.
 
-Results say which plugins this host can actually run, as opposed to merely know about. None
-of the 756 can yet: they are native, and JigDAW's own two are not harvested. Saying so is
-more useful than hiding them, and it is what `jig:WebPlugin` being a subclass is for.
+- `src/catalogue/LocalCatalogue.js`, which indexes the plugins this host serves itself by
+  reading the same `profile.ttl` files it serves. No store, and no second copy to drift.
 
-Remaining: the local store and crawling. Neither is needed for search to work.
+Search returns this host's own plugins first and, by default, only those. A browser listing
+756 plugins that none of them can run is a list rather than a browser. The rest of the
+catalogue is one checkbox away, dimmed and labelled, because hiding it entirely would
+misrepresent what exists: those are real plugins, and `jig:WebPlugin` being a subclass is
+exactly what lets the catalogue hold both.
+
+Remaining: crawling, and getting JigDAW's own plugins harvested upstream so other hosts can
+find them. Neither is needed for search to work.
 
 ## Phase 6. WebMCP. Complete.
 

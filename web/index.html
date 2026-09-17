@@ -55,6 +55,10 @@
   .result .native { color:var(--dim); font-size:11px; font-style:italic; }
   .badge { font-size:10px; padding:1px 6px; border-radius:99px; background:var(--accent); color:#fff; vertical-align:middle; }
   .note { color:var(--dim); font-size:11px; margin:6px 0; }
+  .everything { flex:1 1 100%; display:flex; align-items:center; gap:8px;
+    color:var(--dim); font-size:12px; cursor:pointer; min-height:36px; }
+  .everything input { width:20px; height:20px; flex:none; }
+  .result.native { opacity:.62; }
 
   /* Rack */
   .rack { display:flex; flex-direction:column; gap:0; }
@@ -140,6 +144,10 @@
         <option value="role=AudioEffect">Effects</option>
         <option value="accepts=Midi">Accepts MIDI</option>
       </select>
+      <label class="everything">
+        <input type="checkbox" id="everything">
+        <span>Include plugins this host cannot run</span>
+      </label>
       <button type="submit">Search</button>
     </form>
     <div id="results" aria-live="polite"></div>
