@@ -563,3 +563,35 @@ never call it, and refusing a plugin that works would be worse than the problem.
 **Prevention.** For anything called from an audio callback, the question is not "does this
 allocate" but "does anything it reaches allocate, the first time". A lazy runtime moves the
 cost to the first call, which is exactly the call a host makes in the worst place.
+
+## 2026-09-17 The profile parser read numbers in the user's locale
+
+**What happened.** `Profile.cpp` parsed `lv2:default`, `lv2:minimum`, `lv2:maximum` and
+`rdf:value` with `std::stof`. That function reads the decimal separator from the global C
+locale. A library does not set the locale, but an application does, and every GTK
+application and every DAW calls `setlocale(LC_ALL, "")`. On a machine with
+`LC_NUMERIC=it_IT.UTF-8`, `std::stof("0.3")` stops at the `.` and returns 0.
+
+So every fractional number in every profile became zero, in every host, for every user
+outside the anglosphere. Pulse came up with its gain at 0 and its attack range starting at
+0 instead of 0.5.
+
+**Why it survived every test.** The tests ran in the default `C` locale, which a C++
+program starts in and which nothing here changed. And whole numbers parse identically
+everywhere: `5`, `200`, `6000` and `2` were all correct, so the output looked right unless
+you knew that one specific port's default was `0.3`. It was found by hosting Pulse in
+transmission's GTK editor and noticing one control out of five sitting at the bottom.
+
+**This is very likely the bug behind `Params.hpp`.** That file's comment describes Pulse
+coming up with "its gain at minimum and its filter at 100 Hz: notes arrived, voices ran,
+and nothing was audible", and attributes it to untouched host slots reading zero. A zeroed
+`defaultValue` produces exactly that, from the other direction. Worth re-checking whether
+the slot-initialisation logic was treating a symptom.
+
+**Fix.** `toFloat` parses through an `istringstream` imbued with `std::locale::classic()`.
+A Turtle number is always `.`-decimal, so the classic locale is the only correct one.
+
+**Prevention.** `profile_test` now calls `setlocale(LC_ALL, "it_IT.UTF-8")` before parsing
+anything, and asserts that `0.3` and `0.5` survive. Verified to fail before the fix. More
+generally: a parser for a wire format must never use a locale-sensitive conversion, and a
+test that runs only in `C` is testing the one case that was never in doubt.

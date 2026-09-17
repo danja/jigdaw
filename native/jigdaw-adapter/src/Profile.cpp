@@ -3,7 +3,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <locale>
 #include <map>
+#include <sstream>
 #include <stdexcept>
 
 #include "jigdaw/Turtle.hpp"
@@ -40,12 +42,31 @@ std::string rebase(const std::string& location, const std::string& canonical, co
     return retrieval + location.substr(canonical.size());
 }
 
+/// Parse a number the way Turtle writes one, whatever locale the host is in.
+///
+/// std::stof reads the *global C locale's* decimal separator, and a host that
+/// has called setlocale(LC_ALL, "") — which every GTK application does, and
+/// every DAW — is in the user's locale. Under a comma-decimal locale
+/// std::stof("0.3") stops at the '.' and returns 0.
+///
+/// The damage is silent and total: every fractional lv2:default, lv2:minimum,
+/// lv2:maximum and rdf:value in every profile becomes zero, so a plugin comes
+/// up with its gain at the bottom of a range that is itself wrong. Whole
+/// numbers are unaffected, which is why it survives a reading of the output.
+/// A Turtle number is always '.'-decimal, so the classic locale is the only
+/// correct one to read it with.
 float toFloat(const std::string& text) {
-    try { return std::stof(text); } catch (...) { throw std::runtime_error("not a number: " + text); }
+    std::istringstream stream(text);
+    stream.imbue(std::locale::classic());
+    float value = 0.0f;
+    stream >> value;
+    if (stream.fail()) throw std::runtime_error("not a number: " + text);
+    return value;
 }
 
 int toInt(const std::string& text) {
-    try { return static_cast<int>(std::stof(text)); } catch (...) { throw std::runtime_error("not an integer: " + text); }
+    try { return static_cast<int>(toFloat(text)); }
+    catch (...) { throw std::runtime_error("not an integer: " + text); }
 }
 
 }  // namespace
