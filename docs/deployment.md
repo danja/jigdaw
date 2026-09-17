@@ -77,6 +77,72 @@ passing says nothing about whether the file you edited is the file being served.
 `nginx -T | grep -c` for something the new configuration contains, or a `curl` that would
 only pass if it were live.
 
+## The runbook for strandz.it
+
+`/` on that host is already taken by another application on port 6010, so JigDAW is served
+under `/jigdaw/` and listens on **6011**, loopback only.
+
+Everything below has been validated here, against real nginx in a container proxying to the
+real server. `deploy/nginx/check.sh` runs that validation.
+
+```sh
+# On the server, in /home/github/jigdaw
+npm ci
+npm run build:web                    # produces web/app.bundle.js
+plugins/cascade/build.sh             # needs the rust wasm32-unknown-unknown target
+plugins/pulse/build.sh
+
+sudo cp deploy/jigdaw.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now jigdaw
+curl -sI http://127.0.0.1:6011/      # expect 200 before touching nginx
+```
+
+Then add one line inside the existing `server { server_name strandz.it; ... }` block, above
+the `location / { ... }` that proxies to 6010:
+
+```nginx
+include /home/github/jigdaw/deploy/nginx/jigdaw.conf;
+```
+
+`location /jigdaw/` is more specific than `location /`, so nginx matches it first whatever
+the order. Including the file rather than pasting its contents means the configuration is
+version controlled with the code it serves, and `check.sh` validates the file that is
+actually included.
+
+```sh
+deploy/nginx/check.sh                # here, before the server sees it
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Finish by asking the consumer, not the artefact:
+
+```sh
+curl -sI https://strandz.it/jigdaw/
+curl -s -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/ | head -8
+curl -sI https://strandz.it/jigdaw/plugins/cascade/cascade.wasm | grep -i 'content-type\|allow-origin'
+```
+
+`nginx -t` passing and a reload succeeding say nothing about whether the file you edited is
+the file being served.
+
+## Two traps this configuration is built around
+
+**The trailing slash on `proxy_pass`.** `proxy_pass http://127.0.0.1:6011/;` strips the
+`/jigdaw/` prefix, so the application serves at its own root and is identical in development
+and production. Without it every path 404s, and nothing says why.
+
+**Duplicate headers.** The application sets the CORS and security headers itself, because it
+is the reference for what a plugin origin must send and has to be right when run with no
+proxy in front of it. nginx adding them again sends each twice, and a browser rejects
+`Access-Control-Allow-Origin` with multiple values outright: every cross-origin plugin load
+fails with a message about the header containing multiple values. So the location hides the
+upstream copies with `proxy_hide_header` and nginx owns them at the edge, which also puts
+them on responses nginx generates itself, such as a 404 for a profile that is not there.
+
+Both are checked by `deploy/nginx/check.sh`, which fails on either. The second was found by
+curling through a real nginx rather than by reading the configuration.
+
 ## What is not settled
 
 - Whether the store federates with plugin-universe's public endpoint or mirrors it.

@@ -19257,16 +19257,42 @@ var Engine = class {
     entry.failed = reason;
     return entry;
   }
+  /**
+   * Register a handler for messages from a node's processor.
+   *
+   * A port has one `onmessage`, and more than one part of the host needs to
+   * hear from a processor: errors, outgoing events, dropped counts. So the
+   * engine owns the handler and fans out, rather than each subsystem
+   * overwriting the last one to register.
+   */
+  onMessage(id, handler2) {
+    const entry = this.get(id);
+    if (!entry.handlers) {
+      entry.handlers = /* @__PURE__ */ new Set();
+      entry.node.port.onmessage = (event) => {
+        for (const listener of entry.handlers) {
+          try {
+            listener(event.data, entry);
+          } catch (error2) {
+            console.error("message handler failed", error2);
+          }
+        }
+      };
+    }
+    entry.handlers.add(handler2);
+    return () => entry.handlers.delete(handler2);
+  }
   /** Watch a node for the errors a processor reports after loading. */
   watch(id, onError) {
-    const entry = this.get(id);
-    entry.node.port.onmessage = (event) => {
-      const message = event.data;
-      if (message?.type === "error") {
-        this.quarantine(id, message.message);
-        onError?.(new LoadError("process", `${entry.profile.label}: ${message.message}`));
-      }
-    };
+    return this.onMessage(id, (message) => {
+      if (message?.type !== "error") return;
+      this.quarantine(id, message.message);
+      onError?.(new LoadError("process", `${this.get(id).profile.label}: ${message.message}`));
+    });
+  }
+  /** Post a message to a node's processor. */
+  post(id, message) {
+    this.get(id).node.port.postMessage(message);
   }
 };
 
@@ -19634,15 +19660,281 @@ function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
   };
 }
 
+// src/engine/EventRouter.js
+var MIDI_SIGNALS = /* @__PURE__ */ new Set([
+  "http://purl.org/stuff/transmissions/Midi",
+  "http://purl.org/stuff/transmissions/BassMidi",
+  "http://purl.org/stuff/transmissions/DrumMidi",
+  "http://purl.org/stuff/transmissions/MelodyMidi",
+  "http://purl.org/stuff/transmissions/HarmonyMidi",
+  "http://purl.org/stuff/transmissions/MultiPartMidi",
+  "http://purl.org/stuff/transmissions/ControlMidi",
+  "http://purl.org/stuff/transmissions/MidiCC"
+]);
+var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
+var EventRouter = class {
+  #engine;
+  #routes = /* @__PURE__ */ new Map();
+  #detach = /* @__PURE__ */ new Map();
+  #dropped = /* @__PURE__ */ new Map();
+  #onDropped;
+  constructor({ engine: engine2, onDropped = null }) {
+    if (!engine2) throw new Error("EventRouter needs an engine");
+    this.#engine = engine2;
+    this.#onDropped = onDropped;
+  }
+  get routes() {
+    return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
+  }
+  /** How many events a node has reported dropping, since it last said. */
+  droppedFor(engineId) {
+    return this.#dropped.get(engineId) ?? 0;
+  }
+  /**
+   * Replace every route.
+   *
+   * Rebuilt whole rather than diffed, for the same reason the audio links are:
+   * after any edit the routes are exactly what the model says, with no stale
+   * target left receiving notes from a node it is no longer connected to.
+   */
+  setRoutes(pairs) {
+    this.#routes = /* @__PURE__ */ new Map();
+    for (const { from, to } of pairs) {
+      if (!this.#routes.has(from)) this.#routes.set(from, []);
+      this.#routes.get(from).push(to);
+      this.observe(from);
+    }
+  }
+  /**
+   * Listen to a node whether or not it has routes.
+   *
+   * A node reports overflow on the same channel it reports outgoing events,
+   * and overflow matters regardless of how the node is wired: an instrument
+   * dropping notes is worth knowing about even when nothing is listening to
+   * its MIDI output. Listening only to routed nodes made that invisible.
+   */
+  observe(engineId) {
+    if (this.#detach.has(engineId)) return;
+    const off = this.#engine.onMessage(engineId, (message) => {
+      if (message?.type === "events") this.#forward(engineId, message.events);
+      else if (message?.type === "dropped") this.#noteDropped(engineId, message);
+    });
+    this.#detach.set(engineId, off);
+  }
+  #noteDropped(engineId, message) {
+    const total = (this.#dropped.get(engineId) ?? 0) + (message.count ?? 0);
+    this.#dropped.set(engineId, total);
+    this.#onDropped?.({ engineId, count: message.count ?? 0, total });
+  }
+  #forward(fromEngineId, events) {
+    const targets = this.#routes.get(fromEngineId);
+    if (!targets || !events?.length) return;
+    for (const target of targets) this.send(target, events);
+  }
+  /**
+   * Deliver events to one node.
+   *
+   * Sorted before sending, because messaging.md section 1.4 requires the host
+   * to post in non-decreasing frame order and a processor is entitled to stop
+   * scanning once it passes the quantum.
+   */
+  send(engineId, events) {
+    if (!events?.length) return;
+    const ordered = [...events].sort((a2, b) => a2.frame - b.frame);
+    this.#engine.post(engineId, { type: "events", events: ordered });
+  }
+  /** Broadcast a transport message to every loaded node. */
+  broadcastTransport(message) {
+    for (const entry of this.#engine.nodes()) {
+      this.#engine.post(entry.id, message);
+    }
+  }
+  /** Stop listening to everything. */
+  dispose() {
+    for (const off of this.#detach.values()) off();
+    this.#detach.clear();
+    this.#routes.clear();
+  }
+};
+
+// src/engine/Transport.js
+var MINUTE = 60;
+function normalise(tempoPoints) {
+  const points = [...tempoPoints ?? []].filter((p) => Number.isFinite(p.atBeat) && p.bpm > 0).sort((a2, b) => a2.atBeat - b.atBeat);
+  if (points.length === 0) return [{ atBeat: 0, bpm: 120 }];
+  if (points[0].atBeat > 0) points.unshift({ atBeat: 0, bpm: points[0].bpm });
+  return points;
+}
+var Transport = class _Transport {
+  #points;
+  #sampleRate;
+  #beatsPerBar;
+  #beatUnit;
+  #loop;
+  constructor({
+    tempoPoints = [{ atBeat: 0, bpm: 120 }],
+    sampleRate = 48e3,
+    beatsPerBar = 4,
+    beatUnit = 4,
+    loopStart = 0,
+    loopEnd = 0,
+    loopEnabled = false
+  } = {}) {
+    this.#points = normalise(tempoPoints);
+    this.#sampleRate = sampleRate;
+    this.#beatsPerBar = beatsPerBar;
+    this.#beatUnit = beatUnit;
+    this.#loop = { start: loopStart, end: loopEnd, enabled: loopEnabled && loopEnd > loopStart };
+  }
+  get tempoPoints() {
+    return this.#points.map((p) => ({ ...p }));
+  }
+  get sampleRate() {
+    return this.#sampleRate;
+  }
+  get loop() {
+    return { ...this.#loop };
+  }
+  /** The tempo in force at a beat. */
+  tempoAtBeat(beat) {
+    let tempo = this.#points[0].bpm;
+    for (const point of this.#points) {
+      if (point.atBeat > beat) break;
+      tempo = point.bpm;
+    }
+    return tempo;
+  }
+  /** Seconds from beat zero to a beat, across every tempo change between. */
+  secondsAtBeat(beat) {
+    if (beat <= 0) return 0;
+    let seconds = 0;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const from = this.#points[i2].atBeat;
+      if (from >= beat) break;
+      const to = Math.min(this.#points[i2 + 1]?.atBeat ?? Infinity, beat);
+      seconds += (to - from) * MINUTE / this.#points[i2].bpm;
+    }
+    return seconds;
+  }
+  /** The inverse: which beat a number of seconds reaches. */
+  beatAtSeconds(seconds) {
+    if (seconds <= 0) return 0;
+    let elapsed = 0;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const { atBeat, bpm } = this.#points[i2];
+      const next = this.#points[i2 + 1]?.atBeat ?? Infinity;
+      const segment = (next - atBeat) * MINUTE / bpm;
+      if (elapsed + segment > seconds || next === Infinity) {
+        return atBeat + (seconds - elapsed) * bpm / MINUTE;
+      }
+      elapsed += segment;
+    }
+    return 0;
+  }
+  /** Beats advanced per frame at a given beat. Sent to plugins each quantum. */
+  beatsPerFrame(beat) {
+    return this.tempoAtBeat(beat) / (MINUTE * this.#sampleRate);
+  }
+  /**
+   * Where the transport is, given how long it has been rolling.
+   *
+   * `elapsedFrames` counts frames since play started, not frames since the
+   * context did. The two differ after a stop and restart, and using the wrong
+   * one is the class of bug contract section 7 exists to prevent.
+   */
+  positionAtElapsed(elapsedFrames, { startBeat = 0 } = {}) {
+    const startSeconds = this.secondsAtBeat(startBeat);
+    let absolute = startSeconds + elapsedFrames / this.#sampleRate;
+    if (this.#loop.enabled) {
+      const loopStartSeconds = this.secondsAtBeat(this.#loop.start);
+      const loopEndSeconds = this.secondsAtBeat(this.#loop.end);
+      const length = loopEndSeconds - loopStartSeconds;
+      if (length > 0 && absolute >= loopEndSeconds) {
+        absolute = loopStartSeconds + (absolute - loopStartSeconds) % length;
+      }
+    }
+    const beat = this.beatAtSeconds(absolute);
+    return {
+      beat,
+      seconds: absolute,
+      tempo: this.tempoAtBeat(beat),
+      beatsPerFrame: this.beatsPerFrame(beat),
+      bar: Math.floor(beat / this.#beatsPerBar),
+      beatInBar: beat % this.#beatsPerBar
+    };
+  }
+  /** The message a processor receives each quantum. messaging.md section 1.2. */
+  messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
+    return {
+      type: "transport",
+      playing,
+      frame,
+      beat: position.beat,
+      beatsPerFrame: position.beatsPerFrame,
+      tempo: position.tempo,
+      timeSignature: { beatsPerBar: this.#beatsPerBar, beatUnit: this.#beatUnit },
+      loop: this.#loop.enabled ? { start: this.#loop.start, end: this.#loop.end } : null
+    };
+  }
+  /** Build one from a project's transport, so the two cannot disagree. */
+  static fromProject(project, sampleRate) {
+    const t = project.transport;
+    return new _Transport({
+      tempoPoints: t.tempoPoints,
+      sampleRate,
+      beatsPerBar: t.beatsPerBar,
+      beatUnit: t.beatUnit,
+      loopStart: t.loopStart,
+      loopEnd: t.loopEnd,
+      loopEnabled: t.loopEnabled
+    });
+  }
+};
+
 // src/ops/OpDispatcher.js
 var OpDispatcher = class {
   #project;
   #engine;
   #listeners = /* @__PURE__ */ new Set();
   #nodeIds = /* @__PURE__ */ new Map();
+  #router = null;
   constructor({ project = new Project(), engine: engine2 = null } = {}) {
     this.#project = project;
     this.#engine = engine2;
+    if (engine2) {
+      this.#router = new EventRouter({
+        engine: engine2,
+        onDropped: (report) => this.#emit({ type: "dropped", ...report })
+      });
+    }
+  }
+  get router() {
+    return this.#router;
+  }
+  /** The musical clock, built from the project so the two cannot disagree. */
+  transport(sampleRate = this.#engine?.context?.sampleRate ?? 48e3) {
+    return Transport.fromProject(this.#project, sampleRate);
+  }
+  /**
+   * Send the transport position to every plugin.
+   *
+   * Contract section 7: a plugin derives musical timing from this and never by
+   * counting process() calls, so the host has to supply it rather than leave a
+   * plugin to infer it.
+   */
+  sendTransport(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    if (!this.#router) return null;
+    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
+    this.#router.broadcastTransport(message);
+    return message;
+  }
+  /** Deliver MIDI into a node, as if from outside the graph. */
+  sendEvents(nodeId, events) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#router) return false;
+    this.#router.send(engineId, events);
+    return true;
   }
   get project() {
     return this.#project;
@@ -19755,6 +20047,7 @@ var OpDispatcher = class {
     }
     const nodeId = result.results[0];
     this.#nodeIds.set(nodeId, entry.id);
+    this.#router?.observe(entry.id);
     if (position) this.#project.moveNode(nodeId, position.x, position.y);
     this.#emit({ type: "plugin-added", nodeId, entry });
     return { ...result, nodeId, entry };
@@ -19782,16 +20075,22 @@ var OpDispatcher = class {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
     this.#engine.clearLinks();
+    const midiRoutes = [];
     for (const connection of this.#project.connections) {
       const from = this.#nodeIds.get(connection.from.node);
       const to = this.#nodeIds.get(connection.to.node);
       if (!from || !to) continue;
+      if (isMidi(connection.signalKind)) {
+        midiRoutes.push({ from, to });
+        continue;
+      }
       this.#engine.link(from, to, {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
         delayFrames: delayFor.get(connection.id) ?? 0
       });
     }
+    this.#router?.setRoutes(midiRoutes);
   }
   /** The engine node behind a model node, if it has been loaded. */
   engineNode(nodeId) {
@@ -19934,7 +20233,7 @@ async function ensureRunning() {
   if (dispatcher) return dispatcher;
   const context = new AudioContext();
   await context.resume();
-  const response = await fetch("/vocabs/shapes.ttl");
+  const response = await fetch(new URL("vocabs/shapes.ttl", document.baseURI));
   const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
   log("shapes loaded; every profile is validated before any code is fetched");
   const capabilities = detectCapabilities(globalThis);
@@ -19969,8 +20268,9 @@ function makeSource(context) {
   node.start();
   return node;
 }
-async function loadPlugin(iri2) {
+async function loadPlugin(input) {
   const d = await ensureRunning();
+  const iri2 = new URL(input, document.baseURI).href;
   log(`GET ${iri2}`);
   const result = await d.addPlugin(iri2);
   if (!result.ok) {

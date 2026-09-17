@@ -1,0 +1,37 @@
+# deploy/jigdaw.service
+#
+# Install to /etc/systemd/system/jigdaw.service
+#
+# Binds to loopback only. Nothing but nginx is published, which is the rule in
+# docs/deployment.md and matters more here than it looks: the SPARQL store this
+# will grow into exposes an update endpoint, and publishing that by accident is
+# the worst mistake available in this project.
+
+[Unit]
+Description=JigDAW
+Documentation=https://strandz.it/jigdaw/
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/home/github/jigdaw
+Environment=NODE_ENV=production
+Environment=PORT=6011
+Environment=HOST=127.0.0.1
+ExecStart=/usr/bin/node bin/serve.js
+Restart=on-failure
+RestartSec=5
+
+# The process serves static files and needs nothing else.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

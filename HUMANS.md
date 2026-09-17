@@ -5,7 +5,31 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Serve the JigDAW vocabulary
+## 1. Deploy to strandz.it
+
+Everything is prepared and validated here against real nginx. The runbook is
+[docs/deployment.md](docs/deployment.md), and the short version is:
+
+- `npm ci && npm run build:web`, then `plugins/cascade/build.sh` and `plugins/pulse/build.sh`
+  (these need the rust `wasm32-unknown-unknown` target).
+- Install `deploy/jigdaw.service`, which listens on **6011**, loopback only. `/` and 6010
+  are already taken by another application, so JigDAW lives under `/jigdaw/`.
+- Add one line inside the existing `server { server_name strandz.it; ... }` block:
+  `include /home/github/jigdaw/deploy/nginx/jigdaw.conf;`
+- Run `deploy/nginx/check.sh` before `nginx -t`. It catches things `nginx -t` cannot: a
+  `proxy_pass` missing its trailing slash, a missing CORS header, an `add_header` without
+  `always`, and a header added without hiding the upstream copy.
+
+One thing worth knowing: your current `strandz.it.conf` sends **no security headers at all**,
+for either application. The JigDAW location sets its own, so this does not block anything,
+but the other application on 6010 is serving without `X-Content-Type-Options`,
+`Referrer-Policy` or HSTS. If you add them at server level later, remember that an
+`add_header` inside a `location` replaces the server block's headers rather than adding to
+them, so the JigDAW block would need them repeated.
+
+**Blocks:** nothing here, but nothing is public until it is done.
+
+## 2. Serve the JigDAW vocabulary
 
 `http://purl.org/stuff/jigdaw/` already resolves, through the existing wildcard, to
 `https://hyperdata.it/xmlns/jigdaw/`, which returns 404. No PURL administration is needed:
@@ -18,7 +42,7 @@ to that document, and send `Access-Control-Allow-Origin`. Details in
 **Blocks:** nothing in the build, but every IRI the project publishes is a dead link until
 it is done.
 
-## 2. Mint a web plugin format term
+## 3. Mint a web plugin format term
 
 `trn:WebAudio` is used by `examples/reference-profile.ttl` and does not exist. The formats in
 the shared vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone.
@@ -32,15 +56,15 @@ SHACL violation:
 
 **Blocks:** publishing any JigDAW plugin to the catalogue.
 
-## 3. Decide which repository owns `trn:`
+## 4. Decide which repository owns `trn:`
 
 `trn:format`, `trn:MidiCC` and `trn:AudioSidechain` are declared in plugin-universe and
 absent from transmission, which everything calls upstream. The rule says propose extensions
 upstream; the practice has already gone the other way.
 
-**Blocks:** item 2, which needs to know where to put the term.
+**Blocks:** item 3, which needs to know where to put the term.
 
-## 4. Fix `trn:` dereferencing
+## 5. Fix `trn:` dereferencing
 
 `purl.org/stuff/transmissions/` redirects to `hyperdata.it/xmlns/transmissions/` and returns
 404. It is the vocabulary all four projects share and that JigDAW's profile format is built
@@ -53,15 +77,15 @@ lands on the site root and 404s.
 **Blocks:** nothing here, but it undermines the published guide that invites third parties
 to write profiles.
 
-## 5. Confirm platforms are meaningless here
+## 6. Confirm platforms are meaningless here
 
 `pu:supportedPlatform` has no web value, and a query for the predicate over the public
 endpoint returns nothing. My reading is that platform is meaningless for a plugin that runs
-in a browser, and the format term from item 2 carries it instead. Say if not.
+in a browser, and the format term from item 3 carries it instead. Say if not.
 
 **Blocks:** nothing. It is a question about whether a field should exist.
 
-## 6. Tools that would help
+## 7. Tools that would help
 
 - **The Claude in Chrome extension.** `tabs_context_mcp` reports the extension is not
   connected, so the page at `npm run serve` cannot be driven or screenshotted from here.

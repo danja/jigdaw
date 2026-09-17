@@ -16,6 +16,9 @@ import { dirname, resolve, join, extname, normalize } from 'node:path'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const port = Number(process.env.PORT ?? 8748)
+// Loopback by default. Nothing but nginx is published, and the store this will
+// grow into exposes a SPARQL update endpoint. See docs/deployment.md.
+const host = process.env.HOST ?? '127.0.0.1'
 
 const TYPES = Object.freeze({
   '.html': 'text/html; charset=utf-8',
@@ -122,8 +125,8 @@ const server = createServer(async (request, response) => {
   send(response, 404, `not found: ${path}`)
 })
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`jigdaw dev server on http://127.0.0.1:${port}`)
+server.listen(port, host, () => {
+  console.log(`jigdaw server on http://${host}:${port}`)
   console.log(`  page:   http://127.0.0.1:${port}/`)
   console.log(`  plugin: http://127.0.0.1:${port}/plugins/cascade/`)
 })

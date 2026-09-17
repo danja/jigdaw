@@ -38,7 +38,9 @@ async function ensureRunning () {
   const context = new AudioContext()
   await context.resume()
 
-  const response = await fetch('/vocabs/shapes.ttl')
+  // Relative to the page, so the app works at the site root in development
+  // and under a path in production without knowing which it is in.
+  const response = await fetch(new URL('vocabs/shapes.ttl', document.baseURI))
   const validator = new ShapeValidator(await parseText(await response.text(), 'urn:jigdaw:shapes'))
   log('shapes loaded; every profile is validated before any code is fetched')
 
@@ -81,8 +83,12 @@ function makeSource (context) {
   return node
 }
 
-async function loadPlugin (iri) {
+async function loadPlugin (input) {
   const d = await ensureRunning()
+  // A plugin is identified by an absolute IRI, but a person typing one into
+  // the box should be able to write a path. Resolving here means the model and
+  // the profile both see the same absolute IRI whatever was typed.
+  const iri = new URL(input, document.baseURI).href
   log(`GET ${iri}`)
 
   const result = await d.addPlugin(iri)
