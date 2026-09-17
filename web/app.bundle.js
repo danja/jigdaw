@@ -13493,7 +13493,11 @@ var PluginLoader = class {
    * @param compile     bytes => Promise<WebAssembly.Module>
    */
   constructor({
-    fetch: fetch2 = globalThis.fetch,
+    // Bound, not taken by reference. A browser's fetch must be called with the
+    // window as its receiver and throws "Illegal invocation" otherwise, while
+    // node's does not care. So a detached reference passes every test here and
+    // fails on the first real page load.
+    fetch: fetch2 = (...args) => globalThis.fetch(...args),
     parse,
     validator = null,
     capabilities = detectCapabilities(),
@@ -13517,7 +13521,7 @@ var PluginLoader = class {
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchProfile,
-        `could not fetch ${iri2}. A cross-origin profile must be served with Access-Control-Allow-Origin.`,
+        `could not fetch ${iri2}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
         { cause, iri: iri2 }
       );
     }
@@ -13565,7 +13569,7 @@ var PluginLoader = class {
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchResource,
-        `could not fetch the ${kind} at ${resource.location}. A cross-origin resource must be served with Access-Control-Allow-Origin.`,
+        `could not fetch the ${kind} at ${resource.location}: ${cause?.message ?? cause}. If it is on another origin, it must be served with Access-Control-Allow-Origin.`,
         { cause }
       );
     }

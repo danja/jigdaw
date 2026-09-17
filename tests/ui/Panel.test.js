@@ -5,6 +5,8 @@
 // assertions are the difference between every generated plugin being usable
 // with a keyboard and a screen reader, and none of them being.
 import { describe, it, expect, beforeEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
 import { createPanel } from '../../src/ui/Panel.js'
 
@@ -126,5 +128,41 @@ describe('createPanel behaviour', () => {
   it('steps a dial evenly whatever its range', () => {
     const wide = build([port({ symbol: 'damping', minimum: 200, maximum: 18000, defaultValue: 4200 })])
     expect(wide.element.querySelector('input[type=range]').step).toBe('89')
+  })
+})
+
+describe('the page on a phone', () => {
+  // AGENTS.md says a rule worth stating is worth a test. These are the parts of
+  // "works on a phone" that can be checked without a browser; the rest needs
+  // someone to open it, which is HUMANS.md item 1.
+  const page = () => readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+
+  it('declares a viewport, without which a phone renders at 980px and zooms out', () => {
+    expect(page()).toMatch(/<meta\s+name="viewport"\s+content="width=device-width/)
+  })
+
+  it('collapses to one column on a narrow screen', () => {
+    const css = page()
+    expect(css).toMatch(/@media\s*\(max-width:\s*\d+px\)/)
+    expect(css).toMatch(/grid-template-columns:\s*1fr\s*;/)
+  })
+
+  it('does not zoom the page in when a text input takes focus on iOS', () => {
+    // Safari zooms when a focused input has a font size below 16px, and the
+    // page does not zoom back out afterwards.
+    const rule = /input\[type=text\][^}]*font-size:\s*(\d+)px/.exec(page())
+    expect(rule, 'no font-size on the text input').not.toBeNull()
+    expect(Number(rule[1])).toBeGreaterThanOrEqual(16)
+  })
+
+  it('gives buttons a touch-sized target', () => {
+    // WCAG 2.5.8 asks for 24px; 44px is the comfortable figure.
+    const rule = /\bbutton\s*\{[^}]*min-height:\s*(\d+)px/.exec(page())
+    expect(rule, 'no min-height on button').not.toBeNull()
+    expect(Number(rule[1])).toBeGreaterThanOrEqual(24)
+  })
+
+  it('shows a visible focus indicator, since a keyboard user has nothing else', () => {
+    expect(page()).toMatch(/:focus-visible\s*\{[^}]*outline:/)
   })
 })

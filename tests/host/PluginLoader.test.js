@@ -69,12 +69,38 @@ describe('PluginLoader.loadProfile', () => {
     expect(seen).toContain('text/turtle')
   })
 
-  it('blames the missing CORS header when a fetch fails at network level', async () => {
+  it('calls fetch with a receiver, as a browser requires', async () => {
+    // A browser's fetch throws "Illegal invocation" when called detached from
+    // the window; node's does not care. A default of `fetch = globalThis.fetch`
+    // therefore passes every test here and fails on the first real page load,
+    // which is exactly what it did.
+    const real = globalThis.fetch
+    let calledWithReceiver = false
+    globalThis.fetch = function (...args) {
+      if (this !== globalThis && this !== undefined) throw new TypeError('Illegal invocation')
+      // Mimic a browser: refuse a detached call.
+      if (this === undefined) throw new TypeError('Illegal invocation')
+      calledWithReceiver = true
+      return Promise.resolve({ ok: true, status: 200, text: async () => profileTurtle })
+    }
+    try {
+      const loader = new PluginLoader({ parse, validator })
+      await loader.loadProfile(PROFILE_IRI)
+      expect(calledWithReceiver).toBe(true)
+    } finally {
+      globalThis.fetch = real
+    }
+  })
+
+  it('reports what actually went wrong, not a guess at the cause', async () => {
     // A cross-origin response without the header is unreadable, and this is by
     // far the most likely cause. Contract section 1.3.
     const error = await loaderFor({}).loadProfile(PROFILE_IRI).catch(e => e)
     expect(error.step).toBe(STEPS.fetchProfile)
-    expect(error.message).toContain('Access-Control-Allow-Origin')
+    // The underlying failure, verbatim. Asserting a cause outright sent a
+    // reader to look at nginx for a bug that was in this file.
+    expect(error.message).toContain('Failed to fetch')
+    expect(error.message).toContain('another origin')
   })
 
   it('reports the status code on an HTTP error', async () => {

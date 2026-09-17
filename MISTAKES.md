@@ -2,6 +2,39 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-17 A detached fetch, and an error message that blamed the wrong thing
+
+**What happened.** The deployed page failed on its first real load with
+`[fetch-profile] could not fetch https://strandz.it/jigdaw/plugins/cascade/. A cross-origin
+profile must be served with Access-Control-Allow-Origin.` The request was same-origin, so
+CORS could not have been involved, and `curl` showed the headers were correct anyway.
+
+**Root cause, two of them.**
+
+`PluginLoader` defaulted to `fetch = globalThis.fetch` and then called it through a private
+field. A browser's `fetch` must be called with the window as its receiver and throws
+`TypeError: Illegal invocation` otherwise; node's does not care. So the defect passed 219
+tests and failed on the first page load. The shapes fetch in `web/app.js` worked throughout
+because it calls `fetch(...)` directly, which is what made the failure look selective.
+
+Then the error message asserted a cause rather than reporting one. Any throw from `fetch`
+was labelled a missing `Access-Control-Allow-Origin`, so the message sent the reader to look
+at nginx for a bug that was in this file. Two of us spent time on the configuration.
+
+**Prevention.** The default is now `(...args) => globalThis.fetch(...args)`, and
+`tests/host/PluginLoader.test.js` installs a `fetch` that refuses a detached call, exactly as
+a browser does. Verified by reverting the fix and watching the test fail with the same
+`Illegal invocation` text the browser produced.
+
+For the message: report what happened, then the likely cause. `could not fetch X: <the real
+error>. If the profile is on another origin, it must be served with
+Access-Control-Allow-Origin.` A diagnostic that states a cause it has not established is
+worse than one that states nothing, because it is believed.
+
+The general shape: **a default that reads a host global is a default that only the host can
+test.** Anything taken from `globalThis` and called later needs a test that exercises it the
+way the real environment will.
+
 ## 2026-09-17 A node dropping events while nobody was listening
 
 **What happened.** `EventRouter` accumulated the counts a processor reports when its event

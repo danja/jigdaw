@@ -138,6 +138,10 @@ and real-time processing.
 - Keyboard before pointer. Anything reachable by mouse is reachable by tab, and the focus
   indicator is visible against the panel background.
 - Do not signal state by colour alone.
+- **Works on a phone.** A `viewport` meta tag, one column below 720px, no horizontal
+  scrolling, touch targets of at least 44px, and a font size of at least 16px on any text
+  input, because iOS zooms the page in when a smaller one takes focus. A plugin panel is
+  generated, so getting this right once gets it right for every plugin.
 
 ## Documentation rules
 

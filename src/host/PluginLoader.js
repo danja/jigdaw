@@ -30,7 +30,11 @@ export class PluginLoader {
    * @param compile     bytes => Promise<WebAssembly.Module>
    */
   constructor ({
-    fetch = globalThis.fetch,
+    // Bound, not taken by reference. A browser's fetch must be called with the
+    // window as its receiver and throws "Illegal invocation" otherwise, while
+    // node's does not care. So a detached reference passes every test here and
+    // fails on the first real page load.
+    fetch = (...args) => globalThis.fetch(...args),
     parse,
     validator = null,
     capabilities = detectCapabilities(),
@@ -53,12 +57,14 @@ export class PluginLoader {
     try {
       response = await this.#fetch(iri, { headers: { accept: PROFILE_ACCEPT } })
     } catch (cause) {
-      // A network-level failure on a cross-origin request is what a missing
-      // Access-Control-Allow-Origin looks like from JavaScript: the response is
-      // unreadable rather than merely untrusted. Say so, because it is by far
-      // the most likely cause and the fix is a header.
+      // Report what actually happened, then the likely cause. Asserting the
+      // cause outright was wrong: this message blamed a missing
+      // Access-Control-Allow-Origin on a request that was same-origin, while
+      // the real fault was a detached fetch throwing a TypeError, and the
+      // message sent the reader to look at nginx.
       throw new LoadError(STEPS.fetchProfile,
-        `could not fetch ${iri}. A cross-origin profile must be served with Access-Control-Allow-Origin.`,
+        `could not fetch ${iri}: ${cause?.message ?? cause}. ` +
+        'If the profile is on another origin, it must be served with Access-Control-Allow-Origin.',
         { cause, iri })
     }
     if (!response.ok) {
@@ -114,7 +120,8 @@ export class PluginLoader {
       response = await this.#fetch(resource.location)
     } catch (cause) {
       throw new LoadError(STEPS.fetchResource,
-        `could not fetch the ${kind} at ${resource.location}. A cross-origin resource must be served with Access-Control-Allow-Origin.`,
+        `could not fetch the ${kind} at ${resource.location}: ${cause?.message ?? cause}. ` +
+        'If it is on another origin, it must be served with Access-Control-Allow-Origin.',
         { cause })
     }
     if (!response.ok) {
