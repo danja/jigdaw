@@ -44,6 +44,9 @@
 @prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix sec:  <https://w3id.org/security#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
 ## -- The plugin itself -------------------------------------------------------
@@ -375,4 +378,112 @@ jig:TempoPointShape a sh:NodeShape ;
         sh:path jig:bpm ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
         sh:message "A tempo point needs a tempo greater than zero."
+    ] .
+
+## -- Bundles, provenance and signatures ---------------------------------------
+##
+## docs/plugin-bundles.md sections 5 and 6. These constrain the record a bundle
+## carries about itself, not the plugin, which is why nothing here targets
+## jig:WebPlugin: a bundle says nothing new about the plugin and must not be able
+## to appear to.
+##
+## The flattened form puts this record in the same document as the profile, so
+## these shapes run over a profile that a host is about to load. A bundle whose
+## provenance is malformed is refused before its code is fetched, for the same
+## reason a malformed profile is.
+
+jig:BundleShape a sh:NodeShape ;
+    sh:targetClass jig:Bundle ;
+    rdfs:label "Bundle shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A bundle must have an IRI. It is skolemised as a fragment of the provenance document, because a blank node has no canonical form and so cannot be signed." ;
+
+    sh:property [
+        sh:path prov:wasDerivedFrom ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A bundle must name the plugin it is a copy of. A bundle is a retrieval origin and not an identity, so the two are separate nodes and the link between them is stated."
+    ] ;
+    sh:property [
+        sh:path jig:bundleForm ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( jig:Archive jig:FlattenedProfile ) ;
+        sh:message "A bundle is either an archive or a flattened profile. Anything else is a form no host has been told how to open."
+    ] ;
+    sh:property [
+        sh:path jig:canonicalDigest ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$" ;
+        sh:message "A bundle must state the canonical digest of the profile it carries, as sha384-<base64>. Without it the files are tamper evident and the profile that names them is not."
+    ] ;
+    sh:property [
+        sh:path prov:wasGeneratedBy ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A bundle must name the act that made it, which is where when and by whom are recorded."
+    ] .
+
+jig:BundlingShape a sh:NodeShape ;
+    sh:targetClass jig:Bundling ;
+    rdfs:label "Bundling shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path prov:used ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "Bundling used a profile, and the record says which."
+    ] ;
+    sh:property [
+        sh:path prov:endedAtTime ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+        sh:message "A provenance record states when. It is the one fact in a bundle that is not reproducible, and the only reason the record cannot be derived from the plugin."
+    ] ;
+    sh:property [
+        sh:path prov:wasAssociatedWith ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A provenance record names the tool that made the bundle. Who made it, prov:wasAttributedTo, is optional: an anonymous bundle is a real thing and a host reports it as anonymous rather than refusing it."
+    ] ;
+    sh:property [
+        sh:path prov:wasAttributedTo ;
+        sh:nodeKind sh:IRI ;
+        sh:message "Attribution is to an IRI, not to a name. A name is not something a signature can be checked against."
+    ] .
+
+jig:ProofShape a sh:NodeShape ;
+    sh:targetClass sec:DataIntegrityProof ;
+    rdfs:label "Proof shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path sec:cryptosuite ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "jigdaw-eddsa-2026" ) ;
+        sh:message "JigDAW defines one cryptosuite, jigdaw-eddsa-2026. A proof naming another is one this host cannot check, and a proof it cannot check is worse than none because it looks like one."
+    ] ;
+    sh:property [
+        sh:path sec:verificationMethod ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A proof names the key it was made with, as an IRI that can be dereferenced. The key inside a bundle is a copy; the IRI is the claim about whose key it is."
+    ] ;
+    sh:property [
+        sh:path sec:proofValue ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^z[1-9A-HJ-NP-Za-km-z]+$" ;
+        sh:message "A proof value is multibase base58btc, which begins with z."
+    ] ;
+    sh:property [
+        sh:path dcterms:created ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+        sh:message "A proof states when it was made. It is covered by the signature, so it is a statement rather than a decoration."
+    ] .
+
+jig:MultikeyShape a sh:NodeShape ;
+    sh:targetClass sec:Multikey ;
+    rdfs:label "Multikey shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path sec:publicKeyMultibase ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^z6Mk[1-9A-HJ-NP-Za-km-z]+$" ;
+        sh:message "A public key is an Ed25519 Multikey: multibase base58btc of the key behind its multicodec prefix, which is what makes it begin z6Mk. A bare base64 key would be indistinguishable from a key of another kind."
     ] .

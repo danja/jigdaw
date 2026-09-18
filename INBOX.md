@@ -4,4 +4,4 @@ Make a note in AGENTS.md to periodically read and integrate this.
 
 ## Items
 
-* add provenance to bundles, somehow support signing
+Nothing outstanding.

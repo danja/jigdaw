@@ -15,16 +15,21 @@ import { readFile, writeFile, mkdtemp, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { bundle } from '../../bin/bundle.js'
+import { bundle, unzip } from '../../bin/bundle.js'
 import { PluginLoader } from '../../src/host/PluginLoader.js'
 import { shapeValidatorFromFile } from '../../src/validate/files.js'
 import { parseText } from '../../src/rdf/parse.js'
 import { detectCapabilities } from '../../src/host/Capabilities.js'
 import { directoryFetch } from '../../src/testing/OfflineHost.js'
+import { vocabulary } from '../../src/rdf/Vocabulary.js'
 
 const root = resolve(import.meta.dirname, '../..')
 const pluginDir = resolve(root, 'plugins/pulse')
 const CANONICAL = 'https://strandz.it/jigdaw/plugins/pulse/'
+
+// Pinned so the archive is reproducible; see bin/bundle.js on the one
+// part of a bundle that carries a time.
+const WHEN = new Date('2026-09-18T11:00:00Z')
 
 const built = existsSync(resolve(pluginDir, 'pulse.wasm'))
 const suite = built ? describe : describe.skip
@@ -49,7 +54,7 @@ suite('a bundle', () => {
   let made
   beforeAll(async () => {
     validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
-    made = await bundle(pluginDir)
+    made = await bundle(pluginDir, { now: WHEN })
   }, 30000)
 
   describe('the flattened profile', () => {
@@ -112,12 +117,34 @@ suite('a bundle', () => {
       expect(bytes.subarray(30, 30 + nameLength).toString('utf8')).toBe('profile.ttl')
     })
 
-    it('is byte identical when made twice', async () => {
+    it('is byte identical when made twice at the same stated time', async () => {
       // Same reason the profile writer is deterministic: a diff should show what
-      // changed rather than when it was made. A timestamp from the clock would
-      // make every rebuild a different file.
-      const again = await bundle(pluginDir)
+      // changed rather than when it was made.
+      const again = await bundle(pluginDir, { now: WHEN })
       expect(again.archive.equals(made.archive)).toBe(true)
+    })
+
+    it('differs between two times in the provenance record and nowhere else', async () => {
+      // The one part of a bundle that cannot be reproducible is the part that
+      // says when it was made. Asserting that the difference is confined to it
+      // is the stronger claim, and the one that would catch a clock leaking
+      // into the archive's own entries the way it did before the date was fixed.
+      const later = await bundle(pluginDir, { now: new Date('2027-01-01T00:00:00Z') })
+      expect(later.archive.equals(made.archive)).toBe(false)
+
+      const before = new Map((unzip(made.archive)).map(f => [f.name, f.bytes]))
+      const after = new Map((unzip(later.archive)).map(f => [f.name, f.bytes]))
+      expect([...after.keys()]).toEqual([...before.keys()])
+      const differing = [...before.keys()].filter(name => !before.get(name).equals(after.get(name)))
+      expect(differing).toEqual(['provenance.ttl'])
+    })
+
+    it('carries a provenance record at its root, beside the profile', async () => {
+      // Section 2.2 reserves exactly two root names and section 1 says an
+      // archive holds nothing a resource does not name. The record is the
+      // exception, and reserving the name is how the two rules coexist.
+      const names = unzip(made.archive).map(f => f.name)
+      expect(names.slice(0, 2)).toEqual(['profile.ttl', 'provenance.ttl'])
     })
 
     it('unpacks into a directory the loader treats as an origin', async () => {
@@ -125,7 +152,7 @@ suite('a bundle', () => {
       // origin. Unpacked here with the host's own reader rather than a shell,
       // so the test covers the bytes and not unzip.
       const dir = await mkdtemp(join(tmpdir(), 'jig-bundle-'))
-      for (const file of await unzip(made.archive)) {
+      for (const file of unzip(made.archive)) {
         const at = join(dir, file.name)
         await mkdir(join(at, '..'), { recursive: true })
         await writeFile(at, file.bytes)
@@ -167,29 +194,120 @@ suite('a bundle', () => {
   })
 })
 
-/** A minimal zip reader, over the central directory. */
-async function unzip (buffer) {
-  const end = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
-  const count = buffer.readUInt16LE(end + 10)
-  let at = buffer.readUInt32LE(end + 16)
-  const files = []
-  for (let i = 0; i < count; i++) {
-    const method = buffer.readUInt16LE(at + 10)
-    const compressed = buffer.readUInt32LE(at + 20)
-    const nameLength = buffer.readUInt16LE(at + 28)
-    const extraLength = buffer.readUInt16LE(at + 30)
-    const commentLength = buffer.readUInt16LE(at + 32)
-    const offset = buffer.readUInt32LE(at + 42)
-    const name = buffer.subarray(at + 46, at + 46 + nameLength).toString('utf8')
+suite('a signed bundle', () => {
+  // The whole path, from a key that does not exist yet to a report a person
+  // reads. Unit testing the verifier proves the verifier; this is the only
+  // thing that proves the two forms a bundle actually ships in carry a
+  // signature that survives the trip.
+  let key
+  let made
+  beforeAll(async () => {
+    const { generateKeyPair } = await import('../../src/host/Signature.js')
+    key = await generateKeyPair()
+    made = await bundle(pluginDir, {
+      now: WHEN,
+      attributedTo: 'https://example.org/people/test#me',
+      signer: {
+        verificationMethod: 'https://example.org/keys/test#ed25519',
+        publicKeyMultibase: key.publicKeyMultibase,
+        privateKey: key.privateKey
+      }
+    })
+  }, 30000)
 
-    const localNameLength = buffer.readUInt16LE(offset + 26)
-    const localExtraLength = buffer.readUInt16LE(offset + 28)
-    const start = offset + 30 + localNameLength + localExtraLength
-    const body = buffer.subarray(start, start + compressed)
+  it('states one canonical digest for both forms', async () => {
+    // The property that makes the digest a name for the plugin rather than for
+    // the copy, and the reason jig:location is outside the canonical form.
+    const { inspect } = await import('../../bin/verify.js')
+    const dir = await mkdtemp(join(tmpdir(), 'jig-signed-'))
+    await writeFile(join(dir, 'pulse.ttl'), made.flat)
+    await writeFile(join(dir, 'pulse.jig'), made.archive)
 
-    const { inflateRawSync } = await import('node:zlib')
-    files.push({ name, bytes: method === 0 ? body : inflateRawSync(body) })
-    at += 46 + nameLength + extraLength + commentLength
-  }
-  return files
-}
+    const flat = await inspect(join(dir, 'pulse.ttl'))
+    const archive = await inspect(join(dir, 'pulse.jig'))
+    expect(flat.signature.digest).toBe(made.digest)
+    expect(archive.signature.digest).toBe(made.digest)
+    expect(flat.signature.digestMatches).toBe(true)
+    expect(archive.signature.digestMatches).toBe(true)
+  })
+
+  it('verifies in both forms, and says who it is attributed to', async () => {
+    const { inspect } = await import('../../bin/verify.js')
+    const dir = await mkdtemp(join(tmpdir(), 'jig-signed-'))
+    await writeFile(join(dir, 'pulse.ttl'), made.flat)
+    await writeFile(join(dir, 'pulse.jig'), made.archive)
+
+    for (const file of ['pulse.ttl', 'pulse.jig']) {
+      const found = await inspect(join(dir, file))
+      expect(found.signature.valid, file).toBe(true)
+      expect(found.provenance.attributedTo, file).toBe('https://example.org/people/test#me')
+      expect(found.resources.every(r => r.state === 'verified'), file).toBe(true)
+    }
+  })
+
+  it('is refused when a byte of the archive is changed', async () => {
+    // Tamper evidence has to hold over the bytes that actually travel, not
+    // only over a graph in memory. Changing the processor inside the archive
+    // leaves the profile and its signature intact and breaks the file digest,
+    // which is the layer that is supposed to catch it.
+    const dir = await mkdtemp(join(tmpdir(), 'jig-tampered-'))
+    const entries = unzip(made.archive)
+    for (const file of entries) {
+      await writeFile(join(dir, file.name),
+        file.name === 'pulse-processor.js'
+          ? Buffer.concat([file.bytes, Buffer.from('\n// and one more thing\n')])
+          : file.bytes)
+    }
+    const { inspect, report } = await import('../../bin/verify.js')
+    const found = await inspect(dir)
+    expect(found.signature.valid).toBe(true)
+    expect(found.resources.find(r => r.name === 'pulse-processor.js').state).toBe('failed')
+    expect(report(found)).toContain('Refuse this bundle')
+  })
+
+  it('reads a directory and an unpacked archive as the same thing', async () => {
+    // Section 2.2 says an archive unpacked into a web root is a working plugin
+    // origin. A reader that treated the two differently would be evidence
+    // against that claim rather than a convenience.
+    const dir = await mkdtemp(join(tmpdir(), 'jig-unpacked-'))
+    for (const file of unzip(made.archive)) await writeFile(join(dir, file.name), file.bytes)
+    const { inspect } = await import('../../bin/verify.js')
+    const found = await inspect(dir)
+    expect(found.kind).toBe('directory')
+    expect(found.signature.valid).toBe(true)
+    expect(found.provenance.form).toBe(vocabulary.jig.Archive)
+  })
+
+  it('says a plain served profile makes no claim, rather than failing', async () => {
+    // A plugin directory with no provenance.ttl is the normal case today and
+    // must not read as a tampered bundle.
+    const { inspect, report } = await import('../../bin/verify.js')
+    const found = await inspect(pluginDir)
+    expect(found.provenance).toBeNull()
+    expect(found.signature.digestMatches).toBeNull()
+    expect(report(found)).toContain('nothing here is tamper evident')
+  })
+})
+
+suite('what signing refuses', () => {
+  it('refuses to write a private key anywhere a commit could reach it', async () => {
+    // The rule in AGENTS.md is that a scanner cannot tell an invented fixture
+    // from a live credential, so the safest key file is one that was never
+    // written inside a repository. Enforced rather than documented.
+    const { createKeyFile, insideGitTree } = await import('../../bin/keys.js')
+    expect(insideGitTree(root)).toBe(root)
+    await expect(createKeyFile(join(root, 'signing.json'), 'https://example.org/k#1'))
+      .rejects.toThrow(/inside the git working tree/)
+  })
+
+  it('refuses a profile that does not state its own IRI', async () => {
+    // Without @base the profile canonicalises under whatever placeholder the
+    // parser was given, which would make its digest a fact about the machine it
+    // was bundled on.
+    const dir = await mkdtemp(join(tmpdir(), 'jig-baseless-'))
+    const text = (await readFile(resolve(pluginDir, 'profile.ttl'), 'utf8'))
+      .replace(/@base <[^>]*> \./, '')
+    await writeFile(join(dir, 'profile.ttl'), text)
+    await expect(bundle(dir)).rejects.toThrow(/not an absolute http IRI/)
+  })
+})

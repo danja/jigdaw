@@ -95,10 +95,21 @@ for (const port of template.ports) {
   if (port.scalePoints) {
     line += ' ;\n    lv2:portProperty lv2:enumeration ;\n    lv2:scalePoint\n'
     line += port.scalePoints
-      .map(sp => `        [ rdfs:label ${JSON.stringify(sp.label)} ; rdf:value ${sp.value} ]`)
+      .map((sp, i) => `        <#${port.symbol}-${i}>`)
       .join(' ,\n')
   }
   w(`${line} .`)
+
+  // Skolemised, not blank. AGENTS.md forbids a blank node for anything
+  // addressable, and a scale point is addressable: it is what a selector's
+  // options are generated from. It is also what made the first attempt at
+  // signing a profile fail, because a blank node has no stable name and so no
+  // canonical form. A hyphen cannot appear in an lv2:symbol, which is why this
+  // cannot collide with a port.
+  for (const [i, sp] of (port.scalePoints ?? []).entries()) {
+    w('')
+    w(`<#${port.symbol}-${i}> rdfs:label ${JSON.stringify(sp.label)} ; rdf:value ${sp.value} .`)
+  }
 }
 
 const output = lines.join('\n') + '\n'

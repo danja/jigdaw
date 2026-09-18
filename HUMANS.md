@@ -55,7 +55,24 @@ mutation tested.
 
 **Still needs you:** committing it, and deploying it, before anything is harvested.
 
-## 3. Decide which repository owns `trn:`
+## 3. Decide where your signing key is published
+
+Bundles now carry provenance and can be signed, and `bin/keys.js create <iri>` prints the
+Turtle to serve at the verification method IRI. Two things only you can do:
+
+- **Choose the IRI and serve the file.** Something like
+  `https://strandz.it/jigdaw/keys/danja#ed25519`, served as `text/turtle` with
+  `Access-Control-Allow-Origin: *`. Until it exists, `bin/verify.js --online` has nothing to
+  dereference and every signature is checked only against the copy inside the bundle, which
+  proves the bundle is self consistent and nothing about who made it.
+- **Make the key and keep it.** `bin/keys.js` refuses to write one anywhere inside a git
+  working tree, so it will land in `~/.config/jigdaw/keys/` unless you say otherwise. Nothing
+  in this repository can back it up for you, and a lost key cannot sign as the same author
+  again.
+
+Nothing in the repository is blocked by this. Published bundles are weaker without it.
+
+## 4. Decide which repository owns `trn:`
 
 Unchanged, and now with a concrete instance. `trn:WebAudio` has been added to
 plugin-universe's `trn-extensions.ttl`, which is where `trn:format` and every other format
@@ -65,7 +82,7 @@ the other, for long enough that the practice is the de facto answer.
 
 **Blocks:** nothing now. It is a question about where the next term goes.
 
-## 4. Fix `trn:` dereferencing
+## 5. Fix `trn:` dereferencing
 
 Now the conspicuous one. As of 2026-09-17 `jig:` resolves and `trn:` does not, and `trn:` is
 the vocabulary that actually carries the meaning: it is used by four projects and by every
@@ -93,7 +110,7 @@ duplicate-header fault `deploy/nginx/jigdaw.conf` was built to avoid, and the sa
 
 JigDAW is not blocked by it, because its search proxies through its own origin.
 
-## 5. Confirm platforms are meaningless here
+## 6. Confirm platforms are meaningless here
 
 `pu:supportedPlatform` has no web value, a query for the predicate over the public endpoint
 returns nothing, and JigDAW's profiles declare none. They validate against plugin-universe's
@@ -106,7 +123,7 @@ it is now recorded as a comment in a second repository.
 
 **Blocks:** nothing.
 
-## 6. Tools that would help
+## 7. Tools that would help
 
 The Claude in Chrome extension is connected and working, which is what made the four fixes
 above possible. Nothing else is needed.

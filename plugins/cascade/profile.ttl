@@ -89,6 +89,12 @@
     jig:paramIndex 4 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
-        [ rdfs:label "Plate" ; rdf:value 0 ] ,
-        [ rdfs:label "Hall" ; rdf:value 1 ] ,
-        [ rdfs:label "Bloom" ; rdf:value 2 ] .
+        <#mode-0> ,
+        <#mode-1> ,
+        <#mode-2> .
+
+<#mode-0> rdfs:label "Plate" ; rdf:value 0 .
+
+<#mode-1> rdfs:label "Hall" ; rdf:value 1 .
+
+<#mode-2> rdfs:label "Bloom" ; rdf:value 2 .

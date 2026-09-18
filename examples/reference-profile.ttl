@@ -153,7 +153,11 @@
     lv2:symbol "mode" ; lv2:name "Mode" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
     lv2:portProperty lv2:enumeration ;
-    lv2:scalePoint
-        [ rdfs:label "Plate" ; rdf:value 0 ] ,
-        [ rdfs:label "Hall"  ; rdf:value 1 ] ,
-        [ rdfs:label "Bloom" ; rdf:value 2 ] .
+    lv2:scalePoint <#mode-0> , <#mode-1> , <#mode-2> .
+
+# Skolemised rather than blank, per AGENTS.md. A scale point is what a
+# selector's options are generated from, so it is addressable, and a blank node
+# has no canonical form and so cannot be signed.
+<#mode-0> rdfs:label "Plate" ; rdf:value 0 .
+<#mode-1> rdfs:label "Hall"  ; rdf:value 1 .
+<#mode-2> rdfs:label "Bloom" ; rdf:value 2 .

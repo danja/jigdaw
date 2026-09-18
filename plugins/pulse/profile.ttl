@@ -62,9 +62,15 @@
     jig:paramIndex 0 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
-        [ rdfs:label "Saw" ; rdf:value 0 ] ,
-        [ rdfs:label "Square" ; rdf:value 1 ] ,
-        [ rdfs:label "Triangle" ; rdf:value 2 ] .
+        <#waveform-0> ,
+        <#waveform-1> ,
+        <#waveform-2> .
+
+<#waveform-0> rdfs:label "Saw" ; rdf:value 0 .
+
+<#waveform-1> rdfs:label "Square" ; rdf:value 1 .
+
+<#waveform-2> rdfs:label "Triangle" ; rdf:value 2 .
 
 <#attack>
     a lv2:InputPort , lv2:ControlPort ;

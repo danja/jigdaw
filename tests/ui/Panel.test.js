@@ -192,3 +192,62 @@ describe('the Load by IRI field', () => {
     expect(app).toMatch(/\$\('iri'\)\.value\s*=\s*new URL\(\$\('iri'\)\.value,\s*document\.baseURI\)\.href/)
   })
 })
+
+describe('the panel each committed plugin actually generates', () => {
+  // Every other test in this file builds a port object by hand, which proves
+  // the generator and says nothing about whether a real profile still reaches
+  // it. That gap is how a change to bin/write-profile.js could empty every
+  // selector in the application while this suite stayed green.
+  //
+  // It is not hypothetical. Skolemising lv2:scalePoint, so that a profile could
+  // be canonicalised and signed, moved three triples per option out of a blank
+  // node and into a named one. Nothing in tests/ read a committed profile
+  // through the panel, so nothing would have reported it if that had gone
+  // wrong. This walks plugins/ rather than naming a plugin, so a new one comes
+  // into scope by existing.
+  const walk = async () => {
+    const { readdirSync, readFileSync, existsSync } = await import('node:fs')
+    const { resolve, join } = await import('node:path')
+    const root = resolve(import.meta.dirname, '../..')
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+
+    const found = []
+    for (const entry of readdirSync(join(root, 'plugins'), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const file = join(root, 'plugins', entry.name, 'profile.ttl')
+      if (!existsSync(file)) continue
+      found.push({
+        name: entry.name,
+        profile: readProfile(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
+      })
+    }
+    return found
+  }
+
+  it('offers every scale point the profile declares, in order', async () => {
+    const plugins = await walk()
+    expect(plugins.length, 'no plugins found, so this checked nothing').toBeGreaterThan(0)
+
+    let selectorsSeen = 0
+    for (const { name, profile } of plugins) {
+      const { document } = parseHTML('<!doctype html><html><body></body></html>')
+      const { element } = createPanel(document, profile, () => {})
+
+      for (const port of profile.ports.filter(p => p.widget === 'selector')) {
+        selectorsSeen++
+        const row = element.querySelector(`.control-selector select`)
+        expect(row, `${name}/${port.symbol} generated no selector`).not.toBeNull()
+      }
+      const options = [...element.querySelectorAll('select')]
+        .map(select => [...select.children].map(o => o.textContent))
+      const declared = profile.ports
+        .filter(p => p.widget === 'selector')
+        .map(p => p.scalePoints.map(s => s.label))
+      expect(options, name).toEqual(declared)
+    }
+    // The assertion above is vacuously true for a plugin with no enumerated
+    // port, so the population is checked as well as the rule.
+    expect(selectorsSeen, 'no plugin declares an enumerated port').toBeGreaterThan(0)
+  })
+})

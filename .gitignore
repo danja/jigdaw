@@ -148,3 +148,11 @@ vite.config.ts.timestamp-*
 
 # Build output for the native adapter (native/install.sh)
 native/build/
+
+# Signing keys. bin/keys.js refuses to write one inside a git working tree, so
+# this should never match anything. It is here as the second lock: a key is the
+# one thing in this repository that would be an incident rather than a bug, and
+# a scanner cannot tell an invented fixture from a live credential.
+*.pkcs8
+jigdaw-key*.json
+**/keys/*.json

@@ -13111,6 +13111,9 @@ var UNITS = "http://lv2plug.in/ns/extensions/units#";
 var RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 var RDFS = "http://www.w3.org/2000/01/rdf-schema#";
 var FOAF = "http://xmlns.com/foaf/0.1/";
+var DCTERMS = "http://purl.org/dc/terms/";
+var PROV = "http://www.w3.org/ns/prov#";
+var SEC = "https://w3id.org/security#";
 var vocabulary = Object.freeze({
   rdf: Object.freeze({
     type: `${RDF}type`,
@@ -13121,7 +13124,37 @@ var vocabulary = Object.freeze({
     comment: `${RDFS}comment`
   }),
   foaf: Object.freeze({
-    homepage: `${FOAF}homepage`
+    homepage: `${FOAF}homepage`,
+    name: `${FOAF}name`
+  }),
+  dcterms: Object.freeze({
+    created: `${DCTERMS}created`
+  }),
+  // Provenance. Reused unchanged: who made a bundle, when, and from what.
+  prov: Object.freeze({
+    Agent: `${PROV}Agent`,
+    SoftwareAgent: `${PROV}SoftwareAgent`,
+    used: `${PROV}used`,
+    atLocation: `${PROV}atLocation`,
+    endedAtTime: `${PROV}endedAtTime`,
+    wasDerivedFrom: `${PROV}wasDerivedFrom`,
+    wasGeneratedBy: `${PROV}wasGeneratedBy`,
+    wasAssociatedWith: `${PROV}wasAssociatedWith`,
+    wasAttributedTo: `${PROV}wasAttributedTo`
+  }),
+  // Signatures. The W3C security vocabulary, which is what Data Integrity
+  // proofs and Multikey are already expressed in. Inventing a jig: parallel to
+  // sec:proofValue would be a second answer to a question with a standard one.
+  sec: Object.freeze({
+    DataIntegrityProof: `${SEC}DataIntegrityProof`,
+    Multikey: `${SEC}Multikey`,
+    proof: `${SEC}proof`,
+    proofValue: `${SEC}proofValue`,
+    proofPurpose: `${SEC}proofPurpose`,
+    assertionMethod: `${SEC}assertionMethod`,
+    cryptosuite: `${SEC}cryptosuite`,
+    verificationMethod: `${SEC}verificationMethod`,
+    publicKeyMultibase: `${SEC}publicKeyMultibase`
   }),
   // Musical semantics. Reused unchanged; never redefined here.
   trn: Object.freeze({
@@ -13222,7 +13255,15 @@ var vocabulary = Object.freeze({
     loopEnd: `${JIG}loopEnd`,
     loopEnabled: `${JIG}loopEnabled`,
     x: `${JIG}x`,
-    y: `${JIG}y`
+    y: `${JIG}y`,
+    // Bundles and provenance
+    Bundle: `${JIG}Bundle`,
+    Bundling: `${JIG}Bundling`,
+    BundleForm: `${JIG}BundleForm`,
+    Archive: `${JIG}Archive`,
+    FlattenedProfile: `${JIG}FlattenedProfile`,
+    bundleForm: `${JIG}bundleForm`,
+    canonicalDigest: `${JIG}canonicalDigest`
   }),
   lv2: Object.freeze({
     port: `${LV2}port`,

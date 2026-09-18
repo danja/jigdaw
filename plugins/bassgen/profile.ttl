@@ -70,29 +70,75 @@
     jig:paramIndex 1 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
-        [ rdfs:label "Major" ; rdf:value 0 ] ,
-        [ rdfs:label "Ionian" ; rdf:value 1 ] ,
-        [ rdfs:label "Minor" ; rdf:value 2 ] ,
-        [ rdfs:label "Harmonic Minor" ; rdf:value 3 ] ,
-        [ rdfs:label "Melodic Minor" ; rdf:value 4 ] ,
-        [ rdfs:label "Dorian" ; rdf:value 5 ] ,
-        [ rdfs:label "Phrygian" ; rdf:value 6 ] ,
-        [ rdfs:label "Lydian" ; rdf:value 7 ] ,
-        [ rdfs:label "Mixolydian" ; rdf:value 8 ] ,
-        [ rdfs:label "Locrian" ; rdf:value 9 ] ,
-        [ rdfs:label "Phrygian Dominant" ; rdf:value 10 ] ,
-        [ rdfs:label "Neapolitan Major" ; rdf:value 11 ] ,
-        [ rdfs:label "Neapolitan Minor" ; rdf:value 12 ] ,
-        [ rdfs:label "Pentatonic Major" ; rdf:value 13 ] ,
-        [ rdfs:label "Pentatonic Minor" ; rdf:value 14 ] ,
-        [ rdfs:label "Blues" ; rdf:value 15 ] ,
-        [ rdfs:label "Whole Tone" ; rdf:value 16 ] ,
-        [ rdfs:label "Altered" ; rdf:value 17 ] ,
-        [ rdfs:label "Half Whole Diminished" ; rdf:value 18 ] ,
-        [ rdfs:label "Whole Half Diminished" ; rdf:value 19 ] ,
-        [ rdfs:label "Bebop Dominant" ; rdf:value 20 ] ,
-        [ rdfs:label "Bebop Major" ; rdf:value 21 ] ,
-        [ rdfs:label "Bebop Minor" ; rdf:value 22 ] .
+        <#scale-0> ,
+        <#scale-1> ,
+        <#scale-2> ,
+        <#scale-3> ,
+        <#scale-4> ,
+        <#scale-5> ,
+        <#scale-6> ,
+        <#scale-7> ,
+        <#scale-8> ,
+        <#scale-9> ,
+        <#scale-10> ,
+        <#scale-11> ,
+        <#scale-12> ,
+        <#scale-13> ,
+        <#scale-14> ,
+        <#scale-15> ,
+        <#scale-16> ,
+        <#scale-17> ,
+        <#scale-18> ,
+        <#scale-19> ,
+        <#scale-20> ,
+        <#scale-21> ,
+        <#scale-22> .
+
+<#scale-0> rdfs:label "Major" ; rdf:value 0 .
+
+<#scale-1> rdfs:label "Ionian" ; rdf:value 1 .
+
+<#scale-2> rdfs:label "Minor" ; rdf:value 2 .
+
+<#scale-3> rdfs:label "Harmonic Minor" ; rdf:value 3 .
+
+<#scale-4> rdfs:label "Melodic Minor" ; rdf:value 4 .
+
+<#scale-5> rdfs:label "Dorian" ; rdf:value 5 .
+
+<#scale-6> rdfs:label "Phrygian" ; rdf:value 6 .
+
+<#scale-7> rdfs:label "Lydian" ; rdf:value 7 .
+
+<#scale-8> rdfs:label "Mixolydian" ; rdf:value 8 .
+
+<#scale-9> rdfs:label "Locrian" ; rdf:value 9 .
+
+<#scale-10> rdfs:label "Phrygian Dominant" ; rdf:value 10 .
+
+<#scale-11> rdfs:label "Neapolitan Major" ; rdf:value 11 .
+
+<#scale-12> rdfs:label "Neapolitan Minor" ; rdf:value 12 .
+
+<#scale-13> rdfs:label "Pentatonic Major" ; rdf:value 13 .
+
+<#scale-14> rdfs:label "Pentatonic Minor" ; rdf:value 14 .
+
+<#scale-15> rdfs:label "Blues" ; rdf:value 15 .
+
+<#scale-16> rdfs:label "Whole Tone" ; rdf:value 16 .
+
+<#scale-17> rdfs:label "Altered" ; rdf:value 17 .
+
+<#scale-18> rdfs:label "Half Whole Diminished" ; rdf:value 18 .
+
+<#scale-19> rdfs:label "Whole Half Diminished" ; rdf:value 19 .
+
+<#scale-20> rdfs:label "Bebop Dominant" ; rdf:value 20 .
+
+<#scale-21> rdfs:label "Bebop Major" ; rdf:value 21 .
+
+<#scale-22> rdfs:label "Bebop Minor" ; rdf:value 22 .
 
 <#genre>
     a lv2:InputPort , lv2:ControlPort ;
@@ -101,18 +147,42 @@
     jig:paramIndex 2 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
-        [ rdfs:label "Techno" ; rdf:value 0 ] ,
-        [ rdfs:label "Acid" ; rdf:value 1 ] ,
-        [ rdfs:label "House" ; rdf:value 2 ] ,
-        [ rdfs:label "Electro" ; rdf:value 3 ] ,
-        [ rdfs:label "Dub" ; rdf:value 4 ] ,
-        [ rdfs:label "Ambient" ; rdf:value 5 ] ,
-        [ rdfs:label "Funk" ; rdf:value 6 ] ,
-        [ rdfs:label "Sabbath" ; rdf:value 7 ] ,
-        [ rdfs:label "Jazz" ; rdf:value 8 ] ,
-        [ rdfs:label "Fugue" ; rdf:value 9 ] ,
-        [ rdfs:label "Rock" ; rdf:value 10 ] ,
-        [ rdfs:label "Moroder" ; rdf:value 11 ] .
+        <#genre-0> ,
+        <#genre-1> ,
+        <#genre-2> ,
+        <#genre-3> ,
+        <#genre-4> ,
+        <#genre-5> ,
+        <#genre-6> ,
+        <#genre-7> ,
+        <#genre-8> ,
+        <#genre-9> ,
+        <#genre-10> ,
+        <#genre-11> .
+
+<#genre-0> rdfs:label "Techno" ; rdf:value 0 .
+
+<#genre-1> rdfs:label "Acid" ; rdf:value 1 .
+
+<#genre-2> rdfs:label "House" ; rdf:value 2 .
+
+<#genre-3> rdfs:label "Electro" ; rdf:value 3 .
+
+<#genre-4> rdfs:label "Dub" ; rdf:value 4 .
+
+<#genre-5> rdfs:label "Ambient" ; rdf:value 5 .
+
+<#genre-6> rdfs:label "Funk" ; rdf:value 6 .
+
+<#genre-7> rdfs:label "Sabbath" ; rdf:value 7 .
+
+<#genre-8> rdfs:label "Jazz" ; rdf:value 8 .
+
+<#genre-9> rdfs:label "Fugue" ; rdf:value 9 .
+
+<#genre-10> rdfs:label "Rock" ; rdf:value 10 .
+
+<#genre-11> rdfs:label "Moroder" ; rdf:value 11 .
 
 <#length>
     a lv2:InputPort , lv2:ControlPort ;
@@ -127,10 +197,18 @@
     jig:paramIndex 4 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
-        [ rdfs:label "Eighth" ; rdf:value 0 ] ,
-        [ rdfs:label "Sixteenth" ; rdf:value 1 ] ,
-        [ rdfs:label "Sixteenth Triplet" ; rdf:value 2 ] ,
-        [ rdfs:label "Quarter" ; rdf:value 3 ] .
+        <#subdivision-0> ,
+        <#subdivision-1> ,
+        <#subdivision-2> ,
+        <#subdivision-3> .
+
+<#subdivision-0> rdfs:label "Eighth" ; rdf:value 0 .
+
+<#subdivision-1> rdfs:label "Sixteenth" ; rdf:value 1 .
+
+<#subdivision-2> rdfs:label "Sixteenth Triplet" ; rdf:value 2 .
+
+<#subdivision-3> rdfs:label "Quarter" ; rdf:value 3 .
 
 <#density>
     a lv2:InputPort , lv2:ControlPort ;

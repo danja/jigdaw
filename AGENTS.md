@@ -103,7 +103,10 @@ and real-time processing.
 - Model topology as explicit named arcs with named ports. Do not encode it as `rdf:List`.
 - No blank nodes for anything addressable. Skolemise as a fragment of the containing
   document's IRI. Blank nodes are not diffable, they duplicate themselves on re-ingest
-  rather than replacing, and they are awkward to query.
+  rather than replacing, and they are awkward to query. A fourth reason arrived with
+  signing: a blank node has no stable name, so a graph containing one has no canonical form
+  and cannot be signed. Checked by `tests/rdf/Canonical.test.js` over every tracked `.ttl`;
+  `vocabs/shapes.ttl` is the one exemption.
 - SPARQL queries live in files under `sparql/queries/<category>/<name>.sparql`, loaded by
   name. Do not inline SPARQL as a template literal in JavaScript, and do not add a second
   loader or syntax.
@@ -184,6 +187,14 @@ mistake before.
 broken, and nobody will notice until it has been broken many times. When adding one, ask
 what would notice it being violated. If the answer is "a careful reader", write the check
 instead.
+
+The worked example is in this file. "No blank nodes for anything addressable" has been stated
+here since phase 0, and `bin/write-profile.js` wrote every `lv2:scalePoint` as a blank node
+from phase 2 to phase 9b, three per enumerated port across every plugin and the reference
+example. Nothing read it, because nothing had needed a stable name for one, and it surfaced
+only when signing needed a canonical form and the first real plugin refused to canonicalise.
+`tests/rdf/Canonical.test.js` now canonicalises every tracked `.ttl`, which is the check that
+should have existed instead of the sentence.
 
 **A guard is only as wide as the list it walks**, and the list is the part nobody re-reads.
 Three separate guards here have been right about the rule and wrong about the population:

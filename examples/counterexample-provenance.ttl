@@ -1,0 +1,54 @@
+# examples/counterexample-provenance.ttl
+#
+# A deliberately broken provenance record. This file MUST NOT validate against
+# vocabs/shapes.ttl. It exists so that the shapes added for docs/plugin-bundles.md
+# sections 5 and 6 are known to fire: a shape that has never rejected anything is
+# indistinguishable from one that does not run, and this project has twice found
+# a constraint that was written and never ran.
+#
+# Every defect below is one a tool could plausibly emit, and each is marked with
+# the constraint that should catch it.
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix sec:     <https://w3id.org/security#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+<https://example.org/plugins/broken/provenance.ttl#bundle>
+    a jig:Bundle ;
+    # No prov:wasDerivedFrom, so the bundle does not say which plugin it copies.
+    # A zip is not one of the two forms a host has been told how to open.
+    jig:bundleForm jig:Zip ;
+    # Not a Subresource Integrity digest.
+    jig:canonicalDigest "md5-6f1ed002ab5595859014ebf0951522d9" ;
+    # No prov:wasGeneratedBy, so when and by whom are nowhere.
+    prov:used <https://example.org/plugins/broken/> .
+
+<https://example.org/plugins/broken/provenance.ttl#bundling>
+    a jig:Bundling ;
+    prov:used <https://example.org/plugins/broken/> ;
+    # No prov:endedAtTime, so the record says everything except the one fact
+    # that could not be worked out from the plugin.
+    # No prov:wasAssociatedWith, so nothing names the tool.
+    # Attribution to a string, which no signature can be checked against.
+    prov:wasAttributedTo "Somebody" .
+
+<https://example.org/plugins/broken/> sec:proof <https://example.org/plugins/broken/provenance.ttl#proof> .
+
+<https://example.org/plugins/broken/provenance.ttl#proof>
+    a sec:DataIntegrityProof ;
+    # A suite this host cannot check. Accepting it would be worse than refusing
+    # it, because an unchecked proof looks like a checked one.
+    sec:cryptosuite "eddsa-rdfc-2022" ;
+    sec:proofPurpose sec:assertionMethod ;
+    sec:verificationMethod <https://example.org/keys/broken#ed25519> ;
+    # Not multibase: no base prefix, so nothing says how to decode it.
+    sec:proofValue "3yZe8gFmPqTFPd1yWPD7WrVFsLJXpSw2" ;
+    # No dcterms:created.
+    dcterms:title "a proof of nothing" .
+
+<https://example.org/keys/broken#ed25519>
+    a sec:Multikey ;
+    # Base64 rather than a multibase Multikey, so the key type is a guess.
+    sec:publicKeyMultibase "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=" .

@@ -337,9 +337,47 @@ mirrors.
 Measured on the worked plugins: cascade is 227 kB of wasm, 314 kB flattened and 5 kB archived.
 The two forms are for two jobs and the numbers say why.
 
-Still open, and recorded in the document rather than invented: every file in a bundle is
-tamper evident because the profile digests it, and the profile itself is not. Closing that
-needs a digest published somewhere the bundle is not, and a decision about who is trusted.
+That left one thing open, recorded in the document rather than invented: every file in a
+bundle is tamper evident because the profile digests it, and the profile itself was not.
+Phase 9b closed it.
+
+## Phase 9b. Provenance and signing. Complete.
+
+A bundle arrives by hand, from somebody, and nothing in it said from whom. Every bundle now
+carries a `provenance.ttl`: what it is a copy of, who made it, when, with what, and a
+`jig:canonicalDigest` of the profile itself. Given a key, `bin/bundle.js` also signs.
+
+**The digest is over the graph, not the bytes,** which is the decision the rest follows from.
+The same plugin is legitimately three different byte sequences, flattened, archived and
+served, so a digest that changes between them tells a recipient nothing. The canonical form is
+RDFC-1.0 restricted to graphs with no blank nodes, which is sorted N-Triples, with every
+`jig:location` omitted. Omitting location is what makes one value hold across all three, and
+it is safe only because `jig:integrity` is not omitted: a rewritten location can point only at
+bytes the signature already covers.
+
+**Signing reuses `sec:` rather than inventing a parallel.** Data Integrity proofs and Multikey
+are what a signature over RDF is already written in. The suite is named `jigdaw-eddsa-2026`
+rather than `eddsa-rdfc-2022`, because ours omits `jig:location` and a proof that differs
+needs a name that differs. Ed25519 over WebCrypto, so the page and the command line verify
+with the same code. The signature is over two digests, the proof's own configuration and the
+document, which is how the proof's time and key are covered without a signature containing
+itself, and is what lets a second person countersign without breaking the first signature.
+
+**The report is three answers, never one tick.** Are these the files the profile names, is
+this the profile that was bundled, and who says so. A valid signature by an unknown key proves
+that one holder of that key made this and nothing about who they are, and `bin/verify.js`
+says that in those words. There is no trusted key list and there will not be one.
+
+**What it found.** `bin/write-profile.js` had been emitting `lv2:scalePoint` as blank nodes
+since phase 2, in a repository whose conventions have forbidden a blank node for anything
+addressable since phase 0. Nothing noticed until a signature needed a canonical form and the
+first real plugin refused to canonicalise. Both are now guarded: every Turtle file in the
+repository is canonicalised by `tests/rdf/Canonical.test.js`, and the panel each committed
+profile generates is checked against the scale points it declares, which nothing had ever
+read end to end. See MISTAKES.md.
+
+`bin/keys.js` refuses to write a private key inside a git working tree. No key material is
+committed and the tests generate theirs in memory.
 
 ## Phase 9. The graph the model already had. Complete.
 

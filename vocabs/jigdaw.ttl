@@ -25,6 +25,7 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix vann:    <http://purl.org/vocab/vann/> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix sec:     <https://w3id.org/security#> .
 
 <http://purl.org/stuff/jigdaw/>
     a owl:Ontology ;
@@ -495,3 +496,57 @@ jig:loopEnabled a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range 
 ## that moving a node on screen cannot invalidate a compiled audio graph.
 jig:x a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .
 jig:y a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .
+
+## -- Bundles and provenance --------------------------------------------------
+##
+## docs/plugin-bundles.md. A bundle is the same plugin as a file. These terms
+## describe the copy rather than the plugin, which is why none of them has
+## jig:WebPlugin as its domain: making a bundle says nothing new about the
+## plugin and must not appear to.
+##
+## Who made it is prov:, and the signature over it is sec:, the W3C security
+## vocabulary that Data Integrity proofs and Multikey are already written in.
+## Only the terms with no existing owner are minted here.
+
+jig:Bundle a owl:Class ;
+    rdfs:subClassOf prov:Entity ;
+    rdfs:label "Bundle" ;
+    rdfs:comment """One copy of a plugin as a file: a flattened profile or a .jig archive.
+        A bundle is a retrieval origin and not an identity, so it is a separate entity
+        from the plugin it carries and is linked to it with prov:wasDerivedFrom. Holding
+        a bundle does not make the holder the authority for the IRI inside it.""" .
+
+jig:Bundling a owl:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Bundling" ;
+    rdfs:comment """The act of making a bundle: when, by whom, with what tool, and from
+        where the bytes were read. Recorded because a bundle arrives by hand rather than
+        from the origin that minted its IRI, so the one thing a recipient cannot work out
+        for themselves is where it has been.""" .
+
+jig:BundleForm a owl:Class ;
+    rdfs:label "Bundle Form" ;
+    rdfs:comment "Which of the two forms in docs/plugin-bundles.md section 2 a bundle is." .
+
+jig:Archive a jig:BundleForm ;
+    rdfs:label "Archive" ;
+    rdfs:comment "A zip with profile.ttl at its root, which unpacks into a working plugin origin." .
+
+jig:FlattenedProfile a jig:BundleForm ;
+    rdfs:label "Flattened Profile" ;
+    rdfs:comment "A profile whose every jig:location is a data: URI holding the resource itself." .
+
+jig:bundleForm a owl:ObjectProperty ;
+    rdfs:domain jig:Bundle ; rdfs:range jig:BundleForm ;
+    rdfs:label "bundle form" .
+
+jig:canonicalDigest a owl:DatatypeProperty ;
+    rdfs:domain jig:Bundle ; rdfs:range xsd:string ;
+    rdfs:label "canonical digest" ;
+    rdfs:comment """A Subresource Integrity digest, as in sha384-<base64>, over the canonical
+        form of the profile rather than over its bytes. Every file a bundle carries is already
+        tamper evident because the profile states its digest; the profile itself was not, and
+        this is that digest. It is taken over the graph with jig:location omitted, so one
+        digest holds for the same plugin whether it arrived flattened, archived, or from its
+        origin, which is the same rule that makes a bundle a retrieval origin and not an
+        identity. See docs/plugin-bundles.md section 5.""" .

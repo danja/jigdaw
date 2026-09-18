@@ -35,13 +35,25 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  84 terms.
+  89 terms.
 </p>
 
 <h2>Classes</h2>
 <dl>
   <dt id="AutomationRate"><code>jig:AutomationRate</code> <span class="label">Automation Rate</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="Bundle"><code>jig:Bundle</code></dt>
+  <dd>One copy of a plugin as a file: a flattened profile or a .jig archive.
+        A bundle is a retrieval origin and not an identity, so it is a separate entity
+        from the plugin it carries and is linked to it with prov:wasDerivedFrom. Holding
+        a bundle does not make the holder the authority for the IRI inside it.</dd>
+  <dt id="BundleForm"><code>jig:BundleForm</code> <span class="label">Bundle Form</span></dt>
+  <dd>Which of the two forms in docs/plugin-bundles.md section 2 a bundle is.</dd>
+  <dt id="Bundling"><code>jig:Bundling</code></dt>
+  <dd>The act of making a bundle: when, by whom, with what tool, and from
+        where the bytes were read. Recorded because a bundle arrives by hand rather than
+        from the origin that minted its IRI, so the one thing a recipient cannot work out
+        for themselves is where it has been.</dd>
   <dt id="Capability"><code>jig:Capability</code></dt>
   <dd>Something a host either offers or does not. A plugin names one with
         trn:requires when it cannot run without it, or jig:prefers when it can. Both are
@@ -118,6 +130,8 @@
         because its control ports are block-rate by construction. Default is k-rate: a
         parameter is a-rate only when it is meant to be audio-modulated, and making every
         parameter a-rate costs a Float32Array per parameter per quantum.</dd>
+  <dt id="bundleForm"><code>jig:bundleForm</code> <span class="label">bundle form</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="connection"><code>jig:connection</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="endpointNode"><code>jig:endpointNode</code></dt>
@@ -178,6 +192,14 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="bpm"><code>jig:bpm</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="canonicalDigest"><code>jig:canonicalDigest</code> <span class="label">canonical digest</span></dt>
+  <dd>A Subresource Integrity digest, as in sha384-&lt;base64&gt;, over the canonical
+        form of the profile rather than over its bytes. Every file a bundle carries is already
+        tamper evident because the profile states its digest; the profile itself was not, and
+        this is that digest. It is taken over the graph with jig:location omitted, so one
+        digest holds for the same plugin whether it arrived flattened, archived, or from its
+        origin, which is the same rule that makes a bundle a retrieval origin and not an
+        identity. See docs/plugin-bundles.md section 5.</dd>
   <dt id="gain"><code>jig:gain</code></dt>
   <dd>Linear output gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean

@@ -2,6 +2,35 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-18 Every generated profile had blank nodes in it, for six phases
+
+**What happened.** The first attempt to sign a real plugin failed immediately:
+`cannot canonicalise a graph containing a blank node (_:b1)`. `bin/write-profile.js` had been
+writing every `lv2:scalePoint` as `[ rdfs:label "Saw" ; rdf:value 0 ]` since phase 2, so all
+three worked plugins and `examples/reference-profile.ttl` contained them. Three per enumerated
+port, and bassgen has thirty nine.
+
+**Root cause.** AGENTS.md has said since phase 0: no blank nodes for anything addressable,
+skolemise as a fragment of the containing document's IRI. Nothing checked it. A scale point is
+addressable, it is what the generated selector's options come from, and it was written as a
+blank node because that is what the shorthand makes easy.
+
+**Why it had not been noticed.** Nothing had ever needed a stable name for one. The reader
+reads objects of `lv2:scalePoint` and does not care what kind of node they are, the shapes had
+no constraint on them, and a blank node is invisible in a profile that is only ever read
+forwards. It became a defect the moment the profile had to serialise the same way twice.
+
+**Also found.** No test read a committed profile through `createPanel`. Every panel test built
+its ports by hand, so a change to the profile writer could have emptied every selector in the
+application and the suite would have stayed green. That is the recurring shape: the rule was
+right and the population it was checked against was smaller than the rule.
+
+**Prevention.** `tests/rdf/Canonical.test.js` walks every tracked `.ttl` and canonicalises it,
+which fails on any blank node anywhere. `vocabs/shapes.ttl` is the one exemption and says why.
+`tests/ui/Panel.test.js` now walks `plugins/` and asserts that the options in the generated
+panel are the scale points the profile declares. Both were mutation tested by breaking the
+thing they guard and watching them go red.
+
 ## 2026-09-18 Two instances of one plugin had one name between them
 
 **What happened.** The routing view listed two different connections as the same sentence:

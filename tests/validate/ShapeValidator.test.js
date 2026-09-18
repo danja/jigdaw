@@ -16,8 +16,10 @@ const EXPECTED = {
   'plugins/cascade/profile.ttl': 0,
   'plugins/pulse/profile.ttl': 0,
   'plugins/bassgen/profile.ttl': 0,
+  'examples/reference-provenance.ttl': 0,
   'examples/counterexample-profile.ttl': 9,
-  'examples/counterexample-project.ttl': 10
+  'examples/counterexample-project.ttl': 10,
+  'examples/counterexample-provenance.ttl': 11
 }
 
 describe('ShapeValidator', () => {

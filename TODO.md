@@ -5,6 +5,26 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [x] **Provenance and signing for bundles, 2026-09-18.** Done, and in
+      [docs/plugin-bundles.md](docs/plugin-bundles.md) sections 5 to 8 rather than here. Every
+      bundle carries a `provenance.ttl`; `bin/bundle.js --key` signs; `bin/verify.js` reports.
+      Phase 9b in [docs/plan.md](docs/plan.md) has the shape of it.
+
+      Three things are deliberately not done and are recorded as absent rather than as work.
+      **No revocation**: nothing can say a key was later withdrawn, which needs somewhere to
+      publish a withdrawal and a reason to believe that place. **No trusted key list**, ever:
+      whose signature means something is a question about people. **No countersigning tool**,
+      though the format allows it and the canonical form was built so that a second signature
+      cannot invalidate the first.
+
+- [ ] **A published key has nowhere to live.** `bin/keys.js publish` prints the Turtle to serve
+      at a verification method IRI, and `bin/verify.js --online` will dereference it, but
+      nothing in `deploy/` serves one and `strandz.it` has no key published. Until it does,
+      every JigDAW signature is checked against the copy inside the bundle, which proves self
+      consistency and not authorship. Serving one file fixes it; deciding which IRI is in
+      HUMANS.md.
+
+
 - [x] **CORS audited, 2026-09-17.** Measured through the real servers, not read from config.
 
       Clean: every route the page fetches returns exactly one `Access-Control-Allow-Origin: *`,

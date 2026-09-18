@@ -1,0 +1,46 @@
+# examples/reference-provenance.ttl
+#
+# The provenance record a bundle carries, worked through once. Serve this beside
+# a profile at <profile-iri>provenance.ttl, or let bin/bundle.js put it at the
+# root of a .jig archive; the flattened form appends the same triples to the
+# profile document itself, which is why every node here is named absolutely.
+#
+# See docs/plugin-bundles.md section 5. This one is unsigned, which is a real
+# and useful state rather than a half finished one: it carries the canonical
+# digest, so two people can compare the plugin they each have, and it says who
+# made the copy. What it does not do is prove any of that. Section 6 and
+# bin/keys.js are the other half.
+#
+# There is no signed example in this directory on purpose. A committed signature
+# would need a committed key to remake it, and AGENTS.md is unambiguous that a
+# private key is not a fixture. tests/host/Signature.test.js generates a key in
+# memory and signs this profile with it, so the signed case is exercised without
+# anything secret existing on disk.
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix prov:    <http://www.w3.org/ns/prov#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+
+# The bundle is a separate entity from the plugin. Holding a copy does not make
+# the holder the authority for the IRI inside it, so the copy gets its own name
+# and prov:wasDerivedFrom says what it is a copy of.
+<https://example.org/plugins/reference/provenance.ttl#bundle>
+    a jig:Bundle ;
+    prov:wasDerivedFrom <https://example.org/plugins/reference/> ;
+    jig:bundleForm jig:Archive ;
+    jig:canonicalDigest "sha384-GSXazEifn5veJx6af2m7ok7/4yy3ZTK+PuKJ68pK3vLUbg/RmgZ5OQ4OzlZYBJEl" ;
+    prov:wasGeneratedBy <https://example.org/plugins/reference/provenance.ttl#bundling> .
+
+# When, by whom, and with what. prov:atLocation is where the bytes were read
+# from, which is stated only when that is a place anybody else could read them
+# from too: a local directory path is somebody's filesystem and belongs in
+# nobody's published record.
+<https://example.org/plugins/reference/provenance.ttl#bundling>
+    a jig:Bundling ;
+    prov:used <https://example.org/plugins/reference/> ;
+    prov:endedAtTime "2026-09-18T11:00:00.000Z"^^xsd:dateTime ;
+    prov:atLocation <https://example.org/plugins/reference/> ;
+    prov:wasAttributedTo <https://example.org/people/reference#me> ;
+    rdfs:label "bin/bundle.js" ;
+    prov:wasAssociatedWith <http://purl.org/stuff/jigdaw/tool/bundle> .
