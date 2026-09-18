@@ -2,6 +2,32 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-18 Two instances of one plugin had one name between them
+
+**What happened.** The routing view listed two different connections as the same sentence:
+"Pulse out 1 to Cascade in 1", twice. Both disconnect buttons were announced identically to a
+screen reader. The two edges went to two different nodes.
+
+**Root cause.** A node's label comes from its plugin's profile, and the project format says in
+as many words that two instances of one plugin are two nodes with the same `jig:plugin`. So a
+duplicate label is the ordinary case, not an edge case, and every surface that named a node by
+its label alone was ambiguous the moment anybody loaded a second reverb.
+
+**Why it had not been noticed.** Nothing before this drew relationships *between* nodes. The
+rack listed them in order, where two identical titles read as two identical things rather than
+as a question about which was which. It became a defect the moment the interface started saying
+"from this one to that one".
+
+**Prevention.** The page numbers a name only where it is shared, so the common case stays
+"Cascade" and never becomes "Cascade 1" on its own. The rack title, the channel strip, the port
+bar and the connection list all take the resolved name, because two names for one node is the
+same bug wearing a different hat. `tests/ui/Routing.test.js` asserts that two edges to
+different nodes produce two distinct rows and two distinct button labels.
+
+**The general shape.** A name that is unique in practice is not a key. Ask what happens when
+two of the thing exist, and if the answer is "they look identical", the display needs something
+the model already has, which here was the node id.
+
 ## 2026-09-18 A saved mix was written, read, and thrown away in between
 
 **What happened.** Nodes gained a channel strip: gain, pan, mute, solo. The writer wrote it,

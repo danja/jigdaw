@@ -13,6 +13,8 @@ import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createStrip } from '../src/ui/Strip.js'
+import { createPortBar, createConnectionList } from '../src/ui/Routing.js'
+import { isMidi } from '../src/engine/EventRouter.js'
 import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
@@ -39,6 +41,11 @@ let playing = false
 let startedAt = 0
 const panels = new Map()
 const strips = new Map()
+
+// The output a person has chosen, while they choose an input. Held here rather
+// than in the rack because every node's ports have to know about it: an input
+// can only say whether it may take this output if it knows what the output is.
+let pending = null
 
 /** The catalogue, as reached from the page: the host's own endpoint, not SPARQL. */
 function browserCatalogue () {
@@ -231,6 +238,14 @@ function slot (title, kind, className) {
   return element
 }
 
+/** The space where a wire is not, so a stack does not imply a connection. */
+function gap () {
+  const element = document.createElement('div')
+  element.className = 'gap'
+  element.setAttribute('aria-hidden', 'true')
+  return element
+}
+
 function wire (label) {
   const element = document.createElement('div')
   element.className = 'wire'
@@ -251,6 +266,26 @@ function drawRack () {
   rack.textContent = ''
 
   const nodes = dispatcher?.project.nodes ?? []
+  const connections = dispatcher?.project.connections ?? []
+  // Two instances of one plugin are two nodes with the same label, which is
+  // ordinary and which made the connection list read "Pulse out 1 to Cascade
+  // in 1" twice for two different edges. A person cannot tell those apart and
+  // neither can a screen reader, which announces the disconnect buttons by the
+  // same name. Numbered only where a name is shared, so the common case stays
+  // "Cascade" rather than becoming "Cascade 1".
+  const seen = new Map()
+  const names = new Map()
+  for (const node of nodes) {
+    const base = node.label ?? node.pluginIri
+    const count = (seen.get(base) ?? 0) + 1
+    seen.set(base, count)
+    names.set(node.id, { base, count })
+  }
+  const labelFor = id => {
+    const found = names.get(id)
+    if (!found) return id
+    return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base
+  }
   if (nodes.length === 0) {
     const empty = document.createElement('div')
     empty.className = 'empty'
@@ -262,17 +297,29 @@ function drawRack () {
   rack.append(slot('Source', 'impulse or keyboard', 'source'))
 
   for (const node of nodes) {
-    rack.append(wire(node === nodes[0] ? '' : 'audio'))
+    // The wire is drawn only where a connection actually runs between these two
+    // in the order they are listed. It used to be drawn unconditionally, which
+    // made a branch, a parallel path and two unconnected plugins all look like a
+    // chain. Everything else is in the connection list, which is where a graph
+    // that is not a chain can be told the truth about.
+    const previous = nodes[nodes.indexOf(node) - 1]
+    const joining = previous && connections.find(c =>
+      c.from.node === previous.id && c.to.node === node.id)
+    if (previous) {
+      rack.append(joining
+        ? wire(isMidi(joining.signalKind) ? 'MIDI' : 'audio')
+        : gap())
+    }
 
     const entry = dispatcher.engineNode(node.id)
     const profile = entry?.profile
-    const element = slot(node.label ?? node.pluginIri, (profile?.roles ?? []).map(compact).join(', '), 'plugin')
+    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(', '), 'plugin')
 
     const remove = document.createElement('button')
     remove.className = 'remove'
     remove.type = 'button'
     remove.textContent = 'Remove'
-    remove.setAttribute('aria-label', `Remove ${node.label ?? 'plugin'}`)
+    remove.setAttribute('aria-label', `Remove ${labelFor(node.id)}`)
     remove.addEventListener('click', () => {
       // heal: rejoin what this node stood between, so removing from the middle
       // of a chain does not leave two fragments and no way to reconnect them.
@@ -289,11 +336,33 @@ function drawRack () {
       strip = createStrip(document, node.channel, change => {
         const result = dispatcher.setChannel(node.id, change)
         if (!result.ok) log(result.message, 'error')
-      }, { label: node.label ?? 'Plugin' })
+      }, { label: labelFor(node.id) })
       strips.set(node.id, strip)
     }
     strip.update(node.channel, { silent: audible.get(node.id) === false })
     element.append(strip.element)
+
+    element.append(createPortBar(document, {
+      node: { ...node, label: labelFor(node.id) },
+      profile,
+      pending,
+      onCancel: () => { pending = null; drawRack() },
+      onPick: (from, to) => {
+        if (from) { pending = from; drawRack(); return }
+        const result = dispatcher.apply([{
+          op: 'addConnection',
+          from: { node: pending.node, portIndex: pending.portIndex },
+          to: to.portSymbol !== undefined
+            ? { node: to.node, portSymbol: to.portSymbol }
+            : { node: to.node, portIndex: to.portIndex },
+          signalKind: pending.kind
+        }])
+        if (!result.ok) log(result.message, 'error')
+        else log(`connected ${labelFor(pending.node)} to ${labelFor(to.node)}`, 'ok')
+        pending = null
+        drawRack()
+      }
+    }))
 
     // Appended before the panel and keyboard are built, because both measure
     // the slot and an element outside the document has a clientWidth of zero.
@@ -342,6 +411,22 @@ function drawRack () {
   }
 
   rack.append(wire('audio'), slot('Output', 'speakers', 'output'))
+
+  // Derived from the connections, and the only place in the interface that can
+  // tell the truth about a graph that is not a chain. The stack above shows the
+  // nodes in the order they were loaded; this shows what is actually joined.
+  const heading = document.createElement('h3')
+  heading.className = 'connections-heading'
+  heading.textContent = 'Connections'
+  rack.append(heading, createConnectionList(document, {
+    connections,
+    labelFor,
+    onRemove: id => {
+      const result = dispatcher.apply([{ op: 'removeConnection', id }])
+      if (!result.ok) log(result.message, 'error')
+      drawRack()
+    }
+  }))
 }
 
 // ── Loading ────────────────────────────────────────────────────────────────

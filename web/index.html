@@ -39,6 +39,44 @@
   }
 
 
+/* Ports and connections. A connection list rather than a node canvas: a
+     drag between two points is hard to operate from a keyboard, and hit
+     testing a graph at phone width is a fight the layout loses. */
+  .ports { display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px;
+           border-bottom:1px solid var(--line); }
+  .port { min-height:32px; padding:5px 10px; font-size:12px; cursor:pointer;
+          border:1px solid var(--line); border-radius:4px;
+          background:var(--panel); color:var(--fg); }
+  .port:disabled { opacity:.4; cursor:not-allowed; }
+  .port-out { border-left:3px solid var(--accent); }
+  .port-in  { border-left:3px solid var(--dim); }
+  .port.pending { background:var(--accent); color:#111; border-color:var(--accent); }
+  .port-none { color:var(--dim); font-size:12px; }
+
+  .connections-heading { margin:18px 0 8px; font-size:13px; color:var(--dim);
+                         text-transform:uppercase; letter-spacing:.06em; }
+  .connections { display:flex; flex-direction:column; gap:6px; }
+  .connection { display:flex; align-items:center; gap:10px; padding:8px 12px;
+                border:1px solid var(--line); border-radius:5px; background:var(--panel); }
+  .connection-text { flex:1 1 auto; font-size:13px; min-width:0; }
+  /* Named, not only coloured: an audio edge and a host-routed MIDI edge are
+     handled by entirely different machinery. */
+  .connection-kind { flex:0 0 auto; font-size:11px; padding:2px 7px; border-radius:3px;
+                     border:1px solid var(--line); color:var(--dim); }
+  .connection-kind.MIDI { border-color:var(--ok); color:var(--ok); }
+  .connection-remove { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
+                       border:1px solid var(--line); border-radius:4px;
+                       background:transparent; color:var(--dim); cursor:pointer; }
+  /* A gap where a wire is not, so a stack of slots does not imply a chain. */
+  .gap { height:20px; }
+
+  @media (max-width: 760px) {
+    .port { min-height:44px; flex:1 1 auto; }
+    .connection { flex-wrap:wrap; }
+    .connection-remove { min-height:44px; }
+  }
+
+
   /* Transport */
   .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
     padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }

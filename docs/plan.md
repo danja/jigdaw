@@ -341,6 +341,42 @@ Still open, and recorded in the document rather than invented: every file in a b
 tamper evident because the profile digests it, and the profile itself is not. Closing that
 needs a digest published somewhere the bundle is not, and a decision about who is trusted.
 
+## Phase 9. The graph the model already had. Complete.
+
+The model has been an arbitrary directed multigraph since phase 3, with Tarjan SCC, cycle
+refusal and latency compensation over the condensation. Only the interface insisted on a chain,
+and five things underneath it were wrong in ways that had never been looked for.
+
+**The five.** Nothing in the compiled graph reached the speakers: `Engine` could resolve a
+destination of `output` and the dispatcher never passed it, so the page connected each plugin
+itself and an effect in the middle of a chain was heard twice. A connection to a parameter was
+wired to audio input zero, so modulation was expressible, validated, exposed by a tool, and
+delivered nowhere. `connectionKey` left out the signal kind, so an audio edge and a MIDI edge
+between the same two ports collided. Removing a node severed the path. And `setParameter` wrote
+the asked-for value and then the clamped one, which is two revisions for one movement of one
+slider.
+
+**The channel strip.** `jig:gain`, `jig:pan`, `jig:muted`, `jig:soloed` on `jig:Node`: host
+services rather than plugin parameters, because no `lv2:port` declares them and solo is a
+property of the whole graph. The dispatcher resolves solo and the engine never sees it.
+
+**Routing.** Ports on each slot and a connection list derived from `project.connections`,
+rather than a node canvas. A canvas loses on both of this project's stated constraints: a drag
+between two points is hard to operate from a keyboard, and hit testing a graph at phone width
+is a fight the layout loses. Choosing an output and then an input is two ordinary buttons. The
+wire between two slots is now drawn only where a connection runs, so a branch is no longer
+drawn as a chain.
+
+**Also.** Three of the tools `webmcp.md` specified and nothing had built, and a guard binding
+the tool list to that document in both directions. `tests/engine/Engine.test.js`, which did not
+exist: the engine had only indirect coverage through a fake that connects nothing, which is
+exactly where the parameter endpoint was being lost.
+
+Verified in a browser at each step, which found three defects no test had: a saved mix written
+and read correctly and dropped by `addPlugin` on the way back in, two instances of one plugin
+sharing one name, and the connection list never being appended at all. All three are in
+MISTAKES.md.
+
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads

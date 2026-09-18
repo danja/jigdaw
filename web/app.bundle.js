@@ -20716,6 +20716,125 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
   };
 }
 
+// src/ui/Routing.js
+var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
+var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
+var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
+function outputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
+  }
+  if ((profile?.produces ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
+  }
+  return found;
+}
+function inputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio in ${i2 + 1}` });
+  }
+  if ((profile?.accepts ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
+  }
+  for (const port of profile?.ports ?? []) {
+    found.push({
+      kind: AUDIO_SIGNAL,
+      portSymbol: port.symbol,
+      name: `${port.name || port.symbol} (modulate)`
+    });
+  }
+  return found;
+}
+function compatible(from, to) {
+  if (!from || !to) return false;
+  if (to.portSymbol !== void 0) return from.kind === AUDIO_SIGNAL;
+  return from.kind === to.kind;
+}
+function createPortBar(document2, { node, profile, pending: pending2, onPick, onCancel }) {
+  const element = document2.createElement("div");
+  element.className = "ports";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", `${node.label ?? "Plugin"} connections`);
+  const add = (port, direction) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.className = `port port-${direction}`;
+    button.textContent = port.name;
+    const isPending = direction === "out" && pending2 && pending2.node === node.id && pending2.portIndex === port.portIndex && pending2.kind === port.kind;
+    if (direction === "out") {
+      button.setAttribute("aria-pressed", String(Boolean(isPending)));
+      button.setAttribute(
+        "aria-label",
+        isPending ? `${port.name} of ${node.label}, selected. Choose an input, or press again to cancel.` : `Connect from ${port.name} of ${node.label}`
+      );
+      button.addEventListener("click", () => {
+        if (isPending) onCancel();
+        else onPick({ node: node.id, kind: port.kind, portIndex: port.portIndex });
+      });
+      if (isPending) button.classList.add("pending");
+    } else {
+      const canTake = pending2 && compatible(pending2, port) && pending2.node !== node.id;
+      if (pending2) {
+        button.disabled = !canTake;
+        button.setAttribute("aria-label", canTake ? `Connect to ${port.name} of ${node.label}` : `${port.name} of ${node.label}, which cannot take the selected output`);
+      } else {
+        button.disabled = true;
+        button.setAttribute("aria-label", `${port.name} of ${node.label}. Choose an output first.`);
+      }
+      button.addEventListener("click", () => {
+        if (canTake) onPick(null, { node: node.id, portIndex: port.portIndex, portSymbol: port.portSymbol });
+      });
+    }
+    element.append(button);
+  };
+  for (const port of outputsOf(profile)) add(port, "out");
+  for (const port of inputsOf(profile)) add(port, "in");
+  if (element.children.length === 0) {
+    const none = document2.createElement("span");
+    none.className = "port-none";
+    none.textContent = "No connectable ports";
+    element.append(none);
+  }
+  return element;
+}
+function createConnectionList(document2, { connections, labelFor, onRemove }) {
+  const element = document2.createElement("div");
+  element.className = "connections";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Connections");
+  if (connections.length === 0) {
+    const none = document2.createElement("p");
+    none.className = "empty";
+    none.textContent = "Nothing is connected. Choose an output, then an input.";
+    element.append(none);
+    return element;
+  }
+  for (const connection of connections) {
+    const row = document2.createElement("div");
+    row.className = "connection";
+    const kind = isMidiSignal(connection.signalKind) ? "MIDI" : "audio";
+    const to = connection.to.portSymbol !== void 0 ? `${labelFor(connection.to.node)} \xB7 ${connection.to.portSymbol}` : `${labelFor(connection.to.node)} in ${(connection.to.portIndex ?? 0) + 1}`;
+    const description = `${labelFor(connection.from.node)} out ${(connection.from.portIndex ?? 0) + 1} to ${to}`;
+    const text = document2.createElement("span");
+    text.className = "connection-text";
+    text.textContent = description;
+    const badge = document2.createElement("span");
+    badge.className = `connection-kind ${kind}`;
+    badge.textContent = kind;
+    const remove = document2.createElement("button");
+    remove.type = "button";
+    remove.className = "connection-remove";
+    remove.textContent = "Disconnect";
+    remove.setAttribute("aria-label", `Disconnect ${description}`);
+    remove.addEventListener("click", () => onRemove(connection.id));
+    row.append(badge, text, remove);
+    element.append(row);
+  }
+  return element;
+}
+
 // src/ui/Keyboard.js
 var WHITE = [0, 2, 4, 5, 7, 9, 11];
 var BLACK = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 };
@@ -21455,6 +21574,7 @@ var playing = false;
 var startedAt = 0;
 var panels = /* @__PURE__ */ new Map();
 var strips = /* @__PURE__ */ new Map();
+var pending = null;
 function browserCatalogue() {
   const ask = async (path, params) => {
     const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI));
@@ -21617,6 +21737,12 @@ function slot(title, kind, className) {
   element.append(header);
   return element;
 }
+function gap() {
+  const element = document.createElement("div");
+  element.className = "gap";
+  element.setAttribute("aria-hidden", "true");
+  return element;
+}
 function wire(label) {
   const element = document.createElement("div");
   element.className = "wire";
@@ -21634,6 +21760,20 @@ function drawRack() {
   const rack = $("rack");
   rack.textContent = "";
   const nodes = dispatcher?.project.nodes ?? [];
+  const connections = dispatcher?.project.connections ?? [];
+  const seen = /* @__PURE__ */ new Map();
+  const names = /* @__PURE__ */ new Map();
+  for (const node of nodes) {
+    const base = node.label ?? node.pluginIri;
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    names.set(node.id, { base, count });
+  }
+  const labelFor = (id) => {
+    const found = names.get(id);
+    if (!found) return id;
+    return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base;
+  };
   if (nodes.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty";
@@ -21643,15 +21783,19 @@ function drawRack() {
   }
   rack.append(slot("Source", "impulse or keyboard", "source"));
   for (const node of nodes) {
-    rack.append(wire(node === nodes[0] ? "" : "audio"));
+    const previous = nodes[nodes.indexOf(node) - 1];
+    const joining = previous && connections.find((c3) => c3.from.node === previous.id && c3.to.node === node.id);
+    if (previous) {
+      rack.append(joining ? wire(isMidi(joining.signalKind) ? "MIDI" : "audio") : gap());
+    }
     const entry = dispatcher.engineNode(node.id);
     const profile = entry?.profile;
-    const element = slot(node.label ?? node.pluginIri, (profile?.roles ?? []).map(compact).join(", "), "plugin");
+    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(", "), "plugin");
     const remove = document.createElement("button");
     remove.className = "remove";
     remove.type = "button";
     remove.textContent = "Remove";
-    remove.setAttribute("aria-label", `Remove ${node.label ?? "plugin"}`);
+    remove.setAttribute("aria-label", `Remove ${labelFor(node.id)}`);
     remove.addEventListener("click", () => {
       const result = dispatcher.apply([{ op: "removeNode", id: node.id, heal: true }]);
       if (!result.ok) log(result.message, "error");
@@ -21667,11 +21811,37 @@ function drawRack() {
       strip = createStrip(document, node.channel, (change) => {
         const result = dispatcher.setChannel(node.id, change);
         if (!result.ok) log(result.message, "error");
-      }, { label: node.label ?? "Plugin" });
+      }, { label: labelFor(node.id) });
       strips.set(node.id, strip);
     }
     strip.update(node.channel, { silent: audible.get(node.id) === false });
     element.append(strip.element);
+    element.append(createPortBar(document, {
+      node: { ...node, label: labelFor(node.id) },
+      profile,
+      pending,
+      onCancel: () => {
+        pending = null;
+        drawRack();
+      },
+      onPick: (from, to) => {
+        if (from) {
+          pending = from;
+          drawRack();
+          return;
+        }
+        const result = dispatcher.apply([{
+          op: "addConnection",
+          from: { node: pending.node, portIndex: pending.portIndex },
+          to: to.portSymbol !== void 0 ? { node: to.node, portSymbol: to.portSymbol } : { node: to.node, portIndex: to.portIndex },
+          signalKind: pending.kind
+        }]);
+        if (!result.ok) log(result.message, "error");
+        else log(`connected ${labelFor(pending.node)} to ${labelFor(to.node)}`, "ok");
+        pending = null;
+        drawRack();
+      }
+    }));
     rack.append(element);
     if (profile) {
       let panel = panels.get(node.id);
@@ -21702,6 +21872,18 @@ function drawRack() {
     }
   }
   rack.append(wire("audio"), slot("Output", "speakers", "output"));
+  const heading = document.createElement("h3");
+  heading.className = "connections-heading";
+  heading.textContent = "Connections";
+  rack.append(heading, createConnectionList(document, {
+    connections,
+    labelFor,
+    onRemove: (id) => {
+      const result = dispatcher.apply([{ op: "removeConnection", id }]);
+      if (!result.ok) log(result.message, "error");
+      drawRack();
+    }
+  }));
 }
 async function loadPlugin(input) {
   const d = await ensureRunning();
