@@ -23,6 +23,17 @@
              border:1px solid var(--err); color:var(--err); border-radius:3px;
              padding:1px 5px; margin-left:6px; vertical-align:middle; }
   .is-foreign { outline:1px dashed var(--err); outline-offset:2px; }
+  /* Contract section 12.4. Wide enough to read four statements, and the
+     refusal is the plain button while running it is the marked one. */
+  .consent { max-width:34rem; border:1px solid var(--rule,#3a4150); border-radius:8px;
+             background:#1a1d23; color:var(--fg,#e6e8ec); padding:1.25rem; }
+  .consent::backdrop { background:rgba(0,0,0,.6); }
+  .consent h2 { font-size:1.1rem; margin:0 0 .75rem; }
+  .consent ul { margin:0 0 1.25rem; padding-left:1.1rem; line-height:1.55; }
+  .consent li { margin-bottom:.4rem; }
+  .consent-buttons { display:flex; gap:10px; flex-wrap:wrap; }
+  .consent-buttons button { min-height:44px; font-size:16px; padding:8px 16px; }
+  .consent-buttons .danger { border-color:var(--err); color:var(--err); }
   .strip { display:flex; flex-direction:column; gap:6px; padding:10px 14px;
            border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
   .strip.silent { opacity:.55; }

@@ -377,3 +377,51 @@ describe('figures quoted about other systems', () => {
     expect(mentions.length, 'no document quotes a catalogue size').toBeGreaterThan(2)
   })
 })
+
+describe('a foreign plugin is marked wherever it appears', () => {
+  // Contract section 12.5 says "wherever it appears", which is three surfaces
+  // in different files with nothing connecting them: the generated panel, the
+  // rack entry, and the stylesheet that has to know the class names. A mark
+  // added to one and forgotten in another is the exact shape of failure
+  // AGENTS.md names, and no test of any single file would see it.
+  const SURFACES = ['src/ui/Panel.js', 'web/app.js']
+
+  it('is marked by every surface that renders a plugin', () => {
+    const missing = SURFACES.filter(file => !read(file).includes("=== 'foreign'"))
+    expect(missing, `no foreign check in: ${missing.join(', ')}`).toEqual([])
+  })
+
+  it('says it in words, not only in a class', () => {
+    // Section 12.5 forbids colour alone and requires it to reach assistive
+    // technology, so every surface must put the word somewhere readable.
+    for (const file of SURFACES) {
+      expect(read(file), file).toMatch(/textContent\s*=\s*'foreign'/)
+    }
+  })
+
+  it('uses class names the stylesheet actually defines', () => {
+    // The pair that drifts without anything noticing: the code adds a class and
+    // the stylesheet is somewhere else entirely.
+    const page = read('web/index.html')
+    const used = new Set()
+    for (const file of SURFACES) {
+      for (const m of read(file).matchAll(/classList\.add\('([\w-]+)'\)|className = '([\w-]+)'/g)) {
+        const name = m[1] ?? m[2]
+        if (name === 'foreign' || name === 'is-foreign') used.add(name)
+      }
+    }
+    expect([...used].sort(), 'neither surface adds a foreign class').toEqual(['foreign', 'is-foreign'])
+    for (const name of used) {
+      expect(page, `web/index.html has no .${name} rule`).toMatch(new RegExp(`\\.${name}\\s*[,{]`))
+    }
+  })
+
+  it('asks before running one, and renders the words it was given', () => {
+    // Section 12.4. The statements are frozen data from ForeignTrust precisely
+    // so the page cannot reword the thing being agreed to.
+    const page = read('web/app.js')
+    expect(page).toMatch(/askConsent/)
+    expect(page).toMatch(/request\.statements/)
+    expect(page, 'a dismissed dialog must count as a refusal').toMatch(/'cancel'/)
+  })
+})

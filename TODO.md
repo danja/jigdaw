@@ -5,6 +5,29 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [x] **Foreign plugins work in the application, 2026-09-18.** Contract section 12, end to
+      end in Chrome: a Web Audio Module fetched by IRI, classified as foreign, consented to
+      through the dialog, verified as a container, served from the worker, adapted, adopted by
+      the engine, drawn with a generated panel, marked FOREIGN in the rack, and **passing
+      audio to the speakers** with the impulse source feeding it. A native Cascade sits in the
+      same rack, unmarked, and a parameter set through the WebMCP surface returns its clamped
+      value from the range the plugin itself reported.
+
+      The earlier "hang" was the browser tab being hidden, which grants no user activation, so
+      `AudioContext.resume()` never settled. Recorded in `MISTAKES.md` and in `AGENTS.md`.
+
+- [ ] **A panel's readout does not follow a parameter set from outside it.** Setting a
+      parameter through the WebMCP surface updates the model and the `AudioParam`, and the
+      generated panel keeps showing the previous value: Cascade's Mix reads its declared 0.30
+      after being set to 0.83.
+
+      **Not foreign-specific**, which is the only reason it is recorded here rather than
+      treated as a defect in that work: it was measured on a native plugin and a foreign one
+      side by side in the same rack, and both behave the same. `messaging.md` section 2.3 says
+      a surface renders what it is told, so the missing half is the telling: `drawRack` reuses
+      a cached panel and never pushes the current settings into it. Whoever fixes it should
+      check the channel strip too.
+
 - [x] **Provenance and signing for bundles, 2026-09-18.** Done, and in
       [docs/plugin-bundles.md](docs/plugin-bundles.md) sections 5 to 8 rather than here. Every
       bundle carries a `provenance.ttl`; `bin/bundle.js --key` signs; `bin/verify.js` reports.

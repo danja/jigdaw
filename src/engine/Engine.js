@@ -76,7 +76,19 @@ export class Engine {
     const { profile, granted } = await this.#loader.loadProfile(iri)
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass })
+    return this.adopt({ iri, profile, node, ready, descriptors, granted })
+  }
 
+  /**
+   * Take an instantiated node into the graph.
+   *
+   * Everything after instantiation is the same whoever made the node: it needs
+   * driving if it has no audio, it gets a channel strip if it has, and it
+   * becomes an entry. A foreign plugin (contract section 12) is instantiated by
+   * its own adapter and arrives here rather than through addPlugin, and this is
+   * the seam that stops that being a second copy of the code below.
+   */
+  adopt ({ iri, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
     // Keep a plugin with no audio ports being rendered. See PluginLoader: it
     // asks for one input precisely so that something can be connected to it,
     // and a constant source of zero is the cheapest thing that pulls a node.

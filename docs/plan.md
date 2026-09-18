@@ -507,6 +507,38 @@ number of violations by way of a different constraint, and it was caught by aski
 fired rather than how many did. And the panel's mark was nearly a CSS class alone, which
 section 12.5 forbids and which no test that only counted elements would have noticed.
 
+## Phase 10c. Foreign plugins in the application. Complete.
+
+Everything section 12 requires of a host, rather than merely permits, now happens. The
+machinery existed and nothing in `src/ops`, `src/ui` or `web/app.js` referred to any of it, so
+nobody was asked for consent, nothing was marked, and the whole of Tier 2 worked in a probe
+and nowhere else.
+
+`Engine.adopt` is the seam: everything after instantiation is the same whoever made the node,
+so the foreign path is a branch in one dispatcher rather than a second loader.
+`ForeignSupport` is built only if a host asks for it, which is the whole of the decision to
+support foreign plugins at all. A `ConsentRequired` travels out of the dispatcher intact so
+the asking happens where a person is, and the dialog renders the statements `ForeignTrust`
+froze rather than wording them again.
+
+Verified in Chrome: a Web Audio Module fetched by IRI, classified, consented to, verified,
+served from the container worker, adapted, adopted, drawn from `getParameterInfo()`, marked
+FOREIGN in the rack and on its panel, and passing audio to the speakers beside a native
+Cascade that is not marked.
+
+**Two service worker faults on the way, both invisible to the probe**, which sits inside the
+worker's own path and so was the one page where neither can happen:
+`navigator.serviceWorker.ready` never resolves for a page outside the scope, and a worker only
+intercepts requests from clients it *controls*. Scope and prefix are different things.
+
+**And one thing reported as a defect that was not one.** After those were fixed the load
+stopped settling, and I wrote that into `MISTAKES.md` as an undiagnosed hang. The tab had
+become hidden, which grants no user activation, so `AudioContext.resume()` never returned.
+Proved by re-running the probe, which had passed 18 of 18 an hour before on the same code and
+then produced nothing at all. The correction is in `MISTAKES.md` and the rule is in
+`AGENTS.md`; `loadForeignPlugin` now names the stage on a hang, which is what should have
+answered it in one run.
+
 ## Phase 9. The graph the model already had. Complete.
 
 The model has been an arbitrary directed multigraph since phase 3, with Tarjan SCC, cycle

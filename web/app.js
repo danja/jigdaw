@@ -97,7 +97,14 @@ async function ensureRunning () {
     loader: new PluginLoader({ parse: parseText, validator, capabilities }),
     output: analyser
   })
-  dispatcher = new OpDispatcher({ engine })
+  // Contract section 12. Built here and nowhere else: a host that never
+  // constructs one loads no foreign plugins and conforms, so this line is the
+  // whole of the decision to support them.
+  const { ForeignSupport } = await import('../src/host/ForeignSupport.js')
+  dispatcher = new OpDispatcher({
+    engine,
+    foreign: new ForeignSupport({ validator })
+  })
 
   dispatcher.subscribe(event => {
     if (event.type === 'changed') {
@@ -315,6 +322,20 @@ function drawRack () {
     const profile = entry?.profile
     const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(', '), 'plugin')
 
+    // Contract section 12.5: a foreign plugin is marked wherever it appears,
+    // not only on its panel. Someone who consented last week and came back has
+    // no other way to tell, and the rack is where they look first. In words
+    // inside the heading, because the mark has to reach assistive technology
+    // and must not be carried by colour alone.
+    if (profile?.kind === 'foreign') {
+      const mark = document.createElement('span')
+      mark.className = 'foreign'
+      mark.textContent = 'foreign'
+      mark.title = 'Runs in this page with this page\'s privileges. It is not sandboxed.'
+      element.querySelector('header h3').append(' ', mark)
+      element.classList.add('is-foreign')
+    }
+
     const remove = document.createElement('button')
     remove.className = 'remove'
     remove.type = 'button'
@@ -431,12 +452,95 @@ function drawRack () {
 
 // ── Loading ────────────────────────────────────────────────────────────────
 
+/**
+ * Ask about a foreign plugin. Contract section 12.4.
+ *
+ * A dialog rather than confirm(), because the statements are four lines and the
+ * decision is whether to run somebody else's code in this page. Modal, focus
+ * moved into it, Escape and the backdrop both count as no, and the default
+ * button is the refusal: a person who presses Enter without reading has
+ * declined, which is the way round that costs least when it is wrong.
+ */
+function askConsent (request) {
+  return new Promise(resolve => {
+    const dialog = document.createElement('dialog')
+    dialog.className = 'consent'
+
+    const heading = document.createElement('h2')
+    heading.textContent = `Run ${request.label}?`
+    dialog.append(heading)
+
+    const list = document.createElement('ul')
+    for (const statement of request.statements) {
+      const item = document.createElement('li')
+      item.textContent = statement
+      list.append(item)
+    }
+    dialog.append(list)
+
+    const buttons = document.createElement('div')
+    buttons.className = 'consent-buttons'
+    const no = document.createElement('button')
+    no.type = 'button'
+    no.textContent = 'Do not run it'
+    const yes = document.createElement('button')
+    yes.type = 'button'
+    yes.className = 'danger'
+    yes.textContent = 'Run it with full access'
+    buttons.append(no, yes)
+    dialog.append(buttons)
+
+    let answered = false
+    const done = answer => {
+      if (answered) return
+      answered = true
+      dialog.close()
+      dialog.remove()
+      resolve(answer)
+    }
+    no.addEventListener('click', () => done(false))
+    yes.addEventListener('click', () => done(true))
+    // Escape fires cancel, and a dialog dismissed any other way is still a no.
+    dialog.addEventListener('cancel', () => done(false))
+    dialog.addEventListener('close', () => done(false))
+
+    document.body.append(dialog)
+    dialog.showModal()
+    no.focus()
+  })
+}
+
 async function loadPlugin (input) {
   const d = await ensureRunning()
   const iri = new URL(input, document.baseURI).href
   log(`GET ${iri}`)
 
-  const result = await d.addPlugin(iri)
+  // Contract section 12.4: a foreign plugin is never loaded without being asked
+  // for, so which kind this is has to be known before anything is loaded. The
+  // classification costs one fetch of the profile, and only on a host that
+  // supports foreign plugins at all.
+  let foreign = false
+  const support = d.foreignSupport
+  if (support) {
+    const seen = await support.classify(iri).catch(() => null)
+    foreign = seen?.kind === 'foreign'
+  }
+
+  let result = await d.addPlugin(iri, foreign ? { foreign: true } : {})
+
+  // The dispatcher refuses until this container has been consented to and hands
+  // back what a person must be asked. This is the only place in the application
+  // that asks, and it renders the statements it was given rather than wording
+  // them again, because they are the thing being agreed to.
+  if (!result.ok && result.kind === 'consent') {
+    if (!await askConsent(result.request)) {
+      log(`${result.request.label}: not loaded`, 'error')
+      return
+    }
+    d.foreignTrust?.consent(result.request.iri, result.request.digest)
+    result = await d.addPlugin(iri, { foreign: true })
+  }
+
   if (!result.ok) {
     log(`${result.step ? `[${result.step}] ` : ''}${result.message}`, 'error')
     return

@@ -123,6 +123,12 @@ and real-time processing.
 - Comments describe intent where it is not obvious, or an unusual API. Not effects.
 - Prefer deterministic offline audio tests over device-based ones. An `OfflineAudioContext`
   render is reproducible; a live context is not.
+- **A browser check needs the window in front.** Chrome grants no user activation to a tab
+  whose `document.visibilityState` is `hidden`, so `AudioContext.resume()` never settles and a
+  scripted click is not activation either. Anything needing audio then hangs with no error,
+  and the same page passes when the window is foreground. Read
+  `navigator.userActivation.hasBeenActive` before concluding anything from a browser hang:
+  false means the environment, not the code.
 - A source file past about 400 lines is worth a look and past about 600 usually wants
   splitting, along a seam that already exists rather than by line count. Keep the old module
   as the front door and re-export, so callers do not change. A split that edits its callers

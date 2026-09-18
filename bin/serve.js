@@ -234,6 +234,25 @@ const server = createServer(async (request, response) => {
     return serveCatalogue(request, response, url)
   }
 
+  // The container worker needs a scope above its own path. A service worker
+  // only intercepts requests from clients it controls, and a client is
+  // controlled when its own URL is in scope; the page is at / and the script is
+  // at /foreign/sw.js, so without this header the worker sees nothing the page
+  // asks for. It answers only for /foreign/<container>/ regardless.
+  if (path === '/foreign/sw.js') {
+    const file = safeResolve('/web/foreign/sw.js')
+    if (file) {
+      try {
+        const body = await readFile(file)
+        return send(response, 200, body, {
+          'content-type': TYPES['.js'],
+          'content-length': body.length,
+          'service-worker-allowed': '/'
+        })
+      } catch { /* fall through to the ordinary handler's 404 */ }
+    }
+  }
+
   // A signing key. docs/plugin-bundles.md section 6.3: a verification method is
   // an IRI a verifier dereferences, and the key inside a bundle is only a copy.
   //

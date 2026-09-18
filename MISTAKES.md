@@ -2,6 +2,54 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-18 The container worker worked only on the page that tested it
+
+**What happened.** Foreign plugins loaded perfectly in `web/foreign/probe.html` and not at all
+in the application. Two separate faults, both invisible to the probe.
+
+**First, the load hung forever with no error.** `ForeignOrigin.start()` awaited
+`navigator.serviceWorker.ready`, which resolves for the registration whose scope contains the
+*current page*. The worker is scoped for the container path and the application is at `/`, so
+nothing controlled it and that promise never settled. Fixed by waiting on the registration's
+own worker reaching `activated`, with a timeout, so a stall is reported rather than silent.
+
+**Then the entry point 404ed.** A service worker only intercepts requests from clients it
+**controls**, and a client is controlled when its own URL is inside the registration scope.
+Scoping to `/foreign/` meant the application's requests never reached the worker at all. Fixed
+by registering for the whole origin, with `Service-Worker-Allowed: /` from `bin/serve.js`, and
+keeping a fixed `/foreign/` prefix inside the worker to decide what it answers for. Scope and
+prefix are different things and conflating them was the bug.
+
+**Why the probe could not see either.** `web/foreign/probe.html` is itself inside `/foreign/`.
+It was controlled, `ready` resolved, and its imports were intercepted. **The only thing
+exercising this code was the one page where both faults are invisible**, which is the
+recurring shape in this file: a guard whose population is narrower than the thing it guards.
+
+**Prevention.** Neither is caught by a test in this repository, because neither a service
+worker nor a second page is reachable from vitest, and that is stated rather than papered
+over. What would catch them is a probe served from outside the container prefix, which is the
+configuration the application actually uses. Recorded in TODO.md.
+
+**A third thing, which was not a defect at all, and which I reported as one.** With both fixed,
+the application reached consent and then the load neither resolved nor rejected. I recorded
+that here and in TODO.md as an undiagnosed hang in the load path. It was not one.
+
+The browser tab had become `document.visibilityState === "hidden"`, and Chrome grants no user
+activation to a hidden tab: `navigator.userActivation.hasBeenActive` was false however many
+times it was clicked, so `AudioContext.resume()` never settled and everything downstream of it
+waited forever. Confirmed by re-running `web/foreign/probe.html`, which had passed 18 of 18
+an hour earlier on the same code and now produced no results at all, because the click never
+reached its handler.
+
+**The lesson is about reporting, not about audio.** I had a symptom, no error, and an
+unverified guess, and I wrote the guess into the permanent record as a defect in the code. A
+hang in a browser has an environment on one side of it as well as a program, and "not
+diagnosed" should have meant exactly that rather than an entry implying where the fault lay.
+
+`loadForeignPlugin` now wraps every stage in a named timeout, so a hang says which stage
+stopped instead of nothing at all. That is worth having either way, and it is what would have
+told me in one run that no stage was stuck.
+
 ## 2026-09-18 The live site served the whole repository, including .git
 
 **What happened.** `bin/serve.js` served any path from the repository root when it was not

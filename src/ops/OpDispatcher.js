@@ -24,9 +24,15 @@ export class OpDispatcher {
   #nodeIds = new Map()
   #router = null
 
-  constructor ({ project = new Project(), engine = null } = {}) {
+  #foreign
+
+  constructor ({ project = new Project(), engine = null, foreign = null } = {}) {
     this.#project = project
     this.#engine = engine
+    // Contract section 12. Absent by default: a host that supports no foreign
+    // plugins conforms, and refusing is the safe default, so this has to be
+    // handed in rather than assumed.
+    this.#foreign = foreign
     if (engine) {
       this.#router = new EventRouter({
         engine,
@@ -36,6 +42,16 @@ export class OpDispatcher {
   }
 
   get router () { return this.#router }
+
+  /**
+   * Where consent for foreign plugins is recorded, or null on a host that
+   * loads none. Exposed because contract section 12.4 requires a person to be
+   * asked, and the asking happens in a surface rather than in here.
+   */
+  get foreignTrust () { return this.#foreign?.trust ?? null }
+
+  /** The foreign side, or null on a host that loads none. */
+  get foreignSupport () { return this.#foreign ?? null }
 
   /** The musical clock, built from the project so the two cannot disagree. */
   transport (sampleRate = this.#engine?.context?.sampleRate ?? 48000) {
@@ -179,13 +195,25 @@ export class OpDispatcher {
    * strip that list was silently one field short: a saved mix was written
    * correctly, read correctly, and dropped on the way back in.
    */
-  async addPlugin (iri, { position, ...node } = {}) {
+  async addPlugin (iri, { position, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error('no engine: this dispatcher can edit a project but not play it')
 
     let entry
     try {
-      entry = await this.#engine.addPlugin(iri)
+      // One dispatcher, two load paths, and the branch is here rather than in
+      // two callers. A foreign plugin is instantiated by its own adapter and
+      // handed to the engine already built; everything after that, including
+      // the model edit and the links below, is identical.
+      entry = foreign
+        ? await this.#addForeign(iri)
+        : await this.#engine.addPlugin(iri)
     } catch (error) {
+      // A ConsentRequired carries what a person has to be asked, so it travels
+      // out intact rather than being flattened into a message. Contract section
+      // 12.4: the asking happens where a person is, not in here.
+      if (error.name === 'ConsentRequired') {
+        return { ok: false, kind: 'consent', request: error.request, message: error.message }
+      }
       return { ok: false, kind: 'load', step: error.step ?? null, message: error.message }
     }
 
@@ -215,6 +243,27 @@ export class OpDispatcher {
 
     this.#emit({ type: 'plugin-added', nodeId, entry })
     return { ...result, nodeId, entry }
+  }
+
+  /**
+   * Fetch a foreign profile, load it through its adapter, and adopt it.
+   *
+   * Private because there must be exactly one way into running foreign code,
+   * and it is the branch in addPlugin above.
+   */
+  async #addForeign (iri) {
+    if (!this.#foreign) {
+      throw new Error(
+        'this host does not load foreign plugins. Contract section 12 is optional and ' +
+        'supporting none of it conforms.')
+    }
+    const loaded = await this.#foreign.add(iri, this.#engine.context)
+    return this.#engine.adopt({
+      iri,
+      profile: loaded.profile,
+      node: loaded.node,
+      ready: loaded.ready
+    })
   }
 
   /**

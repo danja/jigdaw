@@ -15,6 +15,22 @@
 // here, which is what section 12.3 requires and what a review of this file
 // should check first.
 
+// The paths this worker answers for. Fixed rather than derived from the scope,
+// because the two are different things and conflating them was a bug.
+//
+// A service worker only intercepts requests from clients it CONTROLS, and a
+// client is controlled when its own URL is inside the registration scope. The
+// host page is at / and this worker was scoped to /foreign/, so the page was
+// never controlled and none of its requests reached here: the import of a
+// container's entry point went straight to the server and 404ed. Measured in
+// Chrome, 2026-09-18.
+//
+// So the scope is the whole origin, and this prefix is what decides whether a
+// request is ours. Everything outside it is passed through untouched, and
+// inside it an unknown container id is passed through too, so the only requests
+// this worker answers are for containers a page has installed.
+const PREFIX = '/foreign/'
+
 const containers = new Map()
 
 self.addEventListener('install', () => self.skipWaiting())
@@ -29,10 +45,9 @@ self.addEventListener('message', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url)
-  const scope = new URL('./', self.registration.scope).pathname
-  if (url.origin !== self.location.origin || !url.pathname.startsWith(scope)) return
+  if (url.origin !== self.location.origin || !url.pathname.startsWith(PREFIX)) return
 
-  const rest = url.pathname.slice(scope.length)
+  const rest = url.pathname.slice(PREFIX.length)
   const slash = rest.indexOf('/')
   if (slash < 0) return
 

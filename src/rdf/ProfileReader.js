@@ -133,6 +133,16 @@ export function findSubject (dataset) {
   const subjects = [...dataset.match(null, iri(rdfTerms.type), iri(jig.WebPlugin))]
     .map(q => q.subject)
   if (subjects.length === 0) {
+    // A foreign plugin is a common enough case to name. Contract section 12.4
+    // means a project never loads one on open, so this message is what a person
+    // sees when a saved session refers to one, and "no jig:WebPlugin" would send
+    // them looking for a defect in a profile that is correct.
+    const foreign = [...dataset.match(null, iri(rdfTerms.type), iri(jig.ForeignPlugin))]
+    if (foreign.length > 0) {
+      throw new Error(
+        'this is a foreign plugin (contract section 12). It runs with this page\'s privileges ' +
+        'and is not loaded without being asked for, and never on opening a project.')
+    }
     throw new Error('no jig:WebPlugin in this document. A profile that does not declare itself loadable is a valid catalogue entry, but it cannot be run here.')
   }
   if (subjects.length > 1) {
