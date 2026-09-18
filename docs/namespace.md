@@ -71,15 +71,14 @@ Individual terms dereference for nobody in this family today.
 `plugin-universe.com/supportedPlatform` and returns 404, because the override is a prefix
 replacement that maps the namespace root correctly and everything below it to the site root.
 
-More seriously, **`trn:` does not dereference at all.** It is the vocabulary all four
-projects share and the one JigDAW's profile format is built on, and every IRI in it is a
-dead link. `purl.org/stuff/transmissions/` has landed on a 404 for as long as anyone has
-been publishing profiles that use it.
+**`trn:` dereferences as of 2026-09-18.** It is the vocabulary all four projects share and the
+one JigDAW's profile format is built on, and for as long as anyone had been publishing
+profiles that use it, `purl.org/stuff/transmissions/` landed on a 404. It now answers 200 with
+208 terms, content negotiated, with `Access-Control-Allow-Origin` and a 303 from every term,
+served the same way this one is from `~/github/transmission/deploy/`.
 
-That is not a JigDAW defect and it is not JigDAW's to fix unilaterally, but it is worth
-stating plainly: profiles published by four projects, and by third parties following the
-published guide, identify their roles and signal types with IRIs that resolve to nothing.
-See `TODO.md`.
+So a JigDAW profile's `trn:role`, `trn:accepts` and `trn:produces` now resolve to definitions,
+which was the largest remaining dead link in anything this project publishes.
 
 ## Where things are served
 

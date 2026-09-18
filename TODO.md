@@ -110,18 +110,24 @@ complete. Review periodically.
 
       Needs the user: it is a deployment to a server.
 
-- [ ] **`trn:` does not dereference.** `purl.org/stuff/transmissions/` redirects to
-      `hyperdata.it/xmlns/transmissions/` and returns 404, measured 2026-09-16. It is the
-      vocabulary all four projects share and that JigDAW's profile format is built on, and
-      every IRI in it is a dead link, including in profiles that third parties have been
-      invited to publish.
+- [x] **`trn:` dereferences, 2026-09-18.** `purl.org/stuff/transmissions/` had returned 404 for
+      as long as anyone had been publishing profiles that use it. It now answers 200 with 208
+      terms, content negotiated, CORS on every response and a 303 from each term, served from
+      `~/github/transmission/deploy/` the same way `jig:` is. Measured against the live server,
+      including that `jig:` still resolves.
 
-      Related: individual terms dereference for nobody. Even
+      It took more than serving a file: 50 of the 81 `trn:` terms transmission's own code
+      writes into every saved project were declared nowhere, and the plugin format individuals
+      lived in plugin-universe. Both are now in `~/github/transmission/vocabs/`, with tests
+      binding the code to the declarations and the moved terms to plugin-universe's copy.
+
+- [ ] **Individual `pu:` terms dereference for nobody.**
       `purl.org/stuff/plugin-universe/supportedPlatform`, whose namespace root resolves
       correctly, lands on `plugin-universe.com/supportedPlatform` and 404s, because the
       override is a prefix replacement that does not account for sub-paths.
 
-      Needs the user: it spans the PURL configuration and at least one other repository.
+      The fix is now a worked example twice over, in `deploy/nginx/vocab.conf` here and in
+      transmission's. Needs the user: it is a deployment to a server, in another repository.
 
 ## Blocking, cross-repository
 
