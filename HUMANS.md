@@ -72,26 +72,57 @@ Turtle to serve at the verification method IRI. Two things only you can do:
 
 Nothing in the repository is blocked by this. Published bundles are weaker without it.
 
-## 4. Decide which repository owns `trn:`
+## 4. Confirm which repository owns `trn:`
 
-Unchanged, and now with a concrete instance. `trn:WebAudio` has been added to
-plugin-universe's `trn-extensions.ttl`, which is where `trn:format` and every other format
-individual already live, under a comment saying they should be proposed upstream to
-`transmission` rather than maintained there. The practice has gone one way and the stated rule
-the other, for long enough that the practice is the de facto answer.
+**Answered by item 5, unless you say otherwise.** `transmission` owns it. Its `vocabs/` is
+what `http://purl.org/stuff/transmissions/` will serve, and the format individuals including
+`trn:WebAudio` have been moved up into it from plugin-universe's `trn-extensions.ttl`, which
+is what that file's own header always said should happen.
 
-**Blocks:** nothing now. It is a question about where the next term goes.
+plugin-universe keeps its copy, because its SHACL shapes validate against it there. That makes
+the two a pair that can drift, so transmission's `tests/vocab/site.test.js` compares them when
+the sibling checkout is present and says so when it is not.
 
-## 5. Fix `trn:` dereferencing
+**Blocks:** nothing. The next `trn:` term goes in `~/github/transmission/vocabs/`. Say if you
+would rather it were somewhere else, because that is now written into a test.
 
-Now the conspicuous one. As of 2026-09-17 `jig:` resolves and `trn:` does not, and `trn:` is
-the vocabulary that actually carries the meaning: it is used by four projects and by every
-third party who followed the published guide at plugin-universe.com/about/profiles.
+## 5. Deploy `trn:` dereferencing
 
-`purl.org/stuff/transmissions/` redirects to `hyperdata.it/xmlns/transmissions/` and returns
-404, exactly as `jigdaw` did until today. The fix is the same shape and it is now a worked
-example: `deploy/nginx/vocab.conf` plus a generated directory. Say which repository should
-own the served copy and I will prepare it the same way.
+`trn:` is the vocabulary that carries the meaning: four projects use it, and so does every
+third party who followed the published guide at plugin-universe.com/about/profiles. Every one
+of those IRIs has always resolved to a 404.
+
+**Prepared, in `~/github/transmission`, and uncommitted.** Same shape as the JigDAW one,
+because the PURL side was already correct: `purl.org/stuff/<name>` maps to
+`hyperdata.it/xmlns/<name>` through the wildcard both share, so only the far end was missing.
+
+- `vocabs/ontology.ttl`, `project.ttl`, `parameters.ttl` and `formats.ttl`,
+  `scripts/build-vocab-site.js` and the generated `deploy/vocab/`: 208 terms from seven files
+  under `vocabs/`, merged into one document, plus a page.
+- `deploy/nginx/vocab.conf` and `deploy/nginx/check.sh`, adapted from this repository's.
+- `tests/vocab/site.test.js`, nine tests: `deploy/vocab/` drifting from `vocabs/`, the code
+  vocabulary drifting from the declarations, and the moved terms drifting from
+  plugin-universe's copy. All mutation tested. Its suite is 22 files and 93 tests passing.
+
+Verified with real requests against a container serving the real files, not just `nginx -t`:
+content negotiation both ways, 301 for the bare form, 303 for a term, CORS on every response,
+and the served Turtle parsed back to 321 triples over the wire.
+
+**Still needs you:** one `include` line in the `hyperdata.it` server block, beside the JigDAW
+one already there, then `git pull` on the server and `nginx -t && systemctl reload nginx`. The
+exact lines are at the top of `~/github/transmission/TODO.md` and in its `docs/namespace.md`.
+
+**The namespace is now complete**, since you said the `trn:` terms were yours to add. 208 terms
+across seven files in `vocabs/`, up from 115: the project format, downspout's parameter terms,
+and the plugin formats moved up from plugin-universe's `trn-extensions.ttl`, whose own header
+had been asking for that. Every `trn:` IRI named in transmission's `src/rdf/Vocabulary.js` is
+declared, which 50 of its 81 were not; a test binds the two now, and its suite is 93 tests.
+
+Worth knowing rather than doing: saved projects bind the **default** prefix to the vocabulary
+namespace, so 160 patch node names are minted in it too, `trn:pulse` through
+`trn:plugins/downspout/ambo`. They are data rather than terms, they 303 to the namespace rather
+than 404ing, and separating them means rewriting every committed project file. It is in
+transmission's `TODO.md`.
 
 Individual terms dereference for nobody. Even
 `purl.org/stuff/plugin-universe/supportedPlatform`, whose namespace root resolves correctly,
