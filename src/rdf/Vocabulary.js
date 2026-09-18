@@ -20,6 +20,7 @@ export const RDFS = 'http://www.w3.org/2000/01/rdf-schema#'
 export const FOAF = 'http://xmlns.com/foaf/0.1/'
 export const DCTERMS = 'http://purl.org/dc/terms/'
 export const XSD = 'http://www.w3.org/2001/XMLSchema#'
+export const DOAP = 'http://usefulinc.com/ns/doap#'
 export const PROV = 'http://www.w3.org/ns/prov#'
 export const SEC = 'https://w3id.org/security#'
 
@@ -41,6 +42,12 @@ export const vocabulary = Object.freeze({
 
   dcterms: Object.freeze({
     created: `${DCTERMS}created`
+  }),
+
+  // A plugin's version. DOAP rather than a jig: term, because LV2 describes a
+  // plugin project with DOAP and this vocabulary already follows LV2.
+  doap: Object.freeze({
+    revision: `${DOAP}revision`
   }),
 
   // Provenance. Reused unchanged: who made a bundle, when, and from what.

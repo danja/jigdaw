@@ -14,11 +14,15 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
 
 <>
     a jig:WebPlugin ;
     rdfs:label "Broken" ;
     rdfs:comment "Every constraint in vocabs/shapes.ttl, violated once." ;
+    # A version that is not a dotted release. "latest" tells a packager nothing
+    # and cannot be ordered against another version.
+    doap:revision "latest" ;
     foaf:homepage <> ;
     trn:role trn:Instrument ;
 

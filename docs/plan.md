@@ -395,6 +395,46 @@ read end to end. See MISTAKES.md.
 `bin/keys.js` refuses to write a private key inside a git working tree. No key material is
 committed and the tests generate theirs in memory.
 
+## Phase 10. Web Audio Modules. Complete one way.
+
+JigDAW was specified without a single mention of
+[Web Audio Modules](https://www.webaudiomodules.com/), the existing standard for exactly this.
+That was an omission, not a decision, and it was found by being asked to look at the API rather
+than by anything here noticing.
+
+`bin/wam.js` packages a plugin as a WAM: same profile, same WebAssembly, same processor, with
+`descriptor.json` and an `index.js` generated from the profile. 21 kB and standalone, because
+the profile is resolved at build time rather than parsed at load; a Turtle parser in a browser
+costs 1.7 MB and two shims. See [wam.md](wam.md).
+
+**It carries integrity into a format that has no concept of it.** No digest, no hash, nothing,
+across the whole of `@webaudiomodules/api`. The digests come from the profile and are checked
+before anything is registered.
+
+**It runs one way.** A WAM's file set is not knowable before running it, because its audio
+thread dependencies arrive through `addFunctionModule` rather than through anything a manifest
+lists, so it cannot be declared, digested or verified. JigDAW's format is a description and
+WAM's is a program, and one converts to the other only in that direction.
+
+**What it needed.** `doap:revision`, because `WamDescriptor.version` is required and no profile
+carried a version. Reused rather than minted as `jig:version`: DOAP is what LV2 uses to
+describe a plugin project, and this vocabulary already follows LV2.
+
+**What it found.** `PluginLoader` cannot be bundled for a browser at all: it reaches
+`ProfileReader` and therefore `@zazuko/env`, which reaches node's `stream` and `util`. Steps 4
+to 8 of contract section 3.1 are now `src/host/Instantiate.js`, which knows nothing about RDF,
+with `PluginLoader` still the front door. No caller changed and its 111 tests passed unedited,
+which is what says the split was a move rather than a rewrite.
+
+Three defects in the adapter were found by the offline test rather than by review: it assumed
+the node was an `EventTarget`, then that the port was, and the parameter typing inferred `int`
+from bounds that happened to be whole numbers, which would have quantised every cutoff in
+every WAM host to 1 Hz steps.
+
+Open: audio-thread `connectEvents`, which needs the shell to drive the module through
+[module-abi.md](module-abi.md) rather than wrapping the processor, the way
+`native/jigdaw-adapter` already does for VST3.
+
 ## Phase 9. The graph the model already had. Complete.
 
 The model has been an arbitrary directed multigraph since phase 3, with Tarjan SCC, cycle

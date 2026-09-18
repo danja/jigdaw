@@ -8,6 +8,7 @@ export default defineConfig({
     // run is the same as a suite that does not exist, and nothing reports it.
     include: [
       'tests/validate/**/*.test.js',
+      'tests/wam/**/*.test.js',
       'tests/rdf/**/*.test.js',
       'tests/docs/**/*.test.js',
       'tests/host/**/*.test.js',

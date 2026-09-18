@@ -10573,9 +10573,9 @@ var handleStreamEnd = async (stream, controller, state) => {
 var nodeImports = {};
 
 // node_modules/get-stream/source/contents.js
-var getStreamContents = async (stream, { init, convertChunk, getSize, truncateChunk, addChunk, getFinalChunk, finalize }, { maxBuffer = Number.POSITIVE_INFINITY } = {}) => {
+var getStreamContents = async (stream, { init: init2, convertChunk, getSize, truncateChunk, addChunk, getFinalChunk, finalize }, { maxBuffer = Number.POSITIVE_INFINITY } = {}) => {
   const asyncIterable = getAsyncIterable(stream);
-  const state = init();
+  const state = init2();
   state.length = 0;
   try {
     for await (const chunk of asyncIterable) {
@@ -13112,6 +13112,7 @@ var RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 var RDFS = "http://www.w3.org/2000/01/rdf-schema#";
 var FOAF = "http://xmlns.com/foaf/0.1/";
 var DCTERMS = "http://purl.org/dc/terms/";
+var DOAP = "http://usefulinc.com/ns/doap#";
 var PROV = "http://www.w3.org/ns/prov#";
 var SEC = "https://w3id.org/security#";
 var vocabulary = Object.freeze({
@@ -13129,6 +13130,11 @@ var vocabulary = Object.freeze({
   }),
   dcterms: Object.freeze({
     created: `${DCTERMS}created`
+  }),
+  // A plugin's version. DOAP rather than a jig: term, because LV2 describes a
+  // plugin project with DOAP and this vocabulary already follows LV2.
+  doap: Object.freeze({
+    revision: `${DOAP}revision`
   }),
   // Provenance. Reused unchanged: who made a bundle, when, and from what.
   prov: Object.freeze({
@@ -13479,6 +13485,31 @@ function explainMissing(profile, missing) {
   return `${profile.label ?? profile.iri} requires ${names}, which this host does not offer`;
 }
 
+// src/host/LoadError.js
+var LoadError = class extends Error {
+  constructor(step, message, { cause, iri: iri2 } = {}) {
+    super(message, { cause });
+    this.name = "LoadError";
+    this.step = step;
+    this.iri = iri2 ?? null;
+  }
+  toString() {
+    return `${this.name} [${this.step}]: ${this.message}`;
+  }
+};
+var STEPS = Object.freeze({
+  fetchProfile: "fetch-profile",
+  parseProfile: "parse-profile",
+  validateProfile: "validate-profile",
+  capabilities: "capabilities",
+  fetchResource: "fetch-resource",
+  integrity: "integrity",
+  compileModule: "compile-module",
+  registerProcessor: "register-processor",
+  constructNode: "construct-node",
+  ready: "ready"
+});
+
 // src/host/Parameters.js
 function parameterDescriptors(ports) {
   return ports.filter((p) => p.symbol !== null).map((port) => {
@@ -13506,30 +13537,105 @@ function parameterDescriptors(ports) {
   });
 }
 
-// src/host/LoadError.js
-var LoadError = class extends Error {
-  constructor(step, message, { cause, iri: iri2 } = {}) {
-    super(message, { cause });
-    this.name = "LoadError";
-    this.step = step;
-    this.iri = iri2 ?? null;
+// src/host/Instantiate.js
+async function instantiate(profile, granted, context, {
+  fetchVerified,
+  AudioWorkletNode = globalThis.AudioWorkletNode,
+  validate = (bytes) => WebAssembly.validate(bytes),
+  processorUrl = null
+} = {}) {
+  const processorBytes = await fetchVerified(profile.processor, { kind: "processor" });
+  let moduleBytes = null;
+  if (profile.module) {
+    moduleBytes = await fetchVerified(profile.module, { kind: "module" });
+    if (!validate(moduleBytes)) {
+      throw new LoadError(
+        STEPS.compileModule,
+        `the file at ${profile.module.location} is not valid WebAssembly`
+      );
+    }
   }
-  toString() {
-    return `${this.name} [${this.step}]: ${this.message}`;
+  const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
+  try {
+    await context.audioWorklet.addModule(url);
+  } catch (cause) {
+    throw new LoadError(
+      STEPS.registerProcessor,
+      `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
+      { cause }
+    );
   }
-};
-var STEPS = Object.freeze({
-  fetchProfile: "fetch-profile",
-  parseProfile: "parse-profile",
-  validateProfile: "validate-profile",
-  capabilities: "capabilities",
-  fetchResource: "fetch-resource",
-  integrity: "integrity",
-  compileModule: "compile-module",
-  registerProcessor: "register-processor",
-  constructNode: "construct-node",
-  ready: "ready"
-});
+  const name = profile.processor.registeredName;
+  if (!name) {
+    throw new LoadError(
+      STEPS.constructNode,
+      "the profile declares no jig:registeredName, and a worklet cannot be asked what it registered"
+    );
+  }
+  let node;
+  try {
+    const driven = profile.audioOutputs === 0 && profile.audioInputs === 0;
+    node = new AudioWorkletNode(context, name, {
+      numberOfInputs: driven ? 1 : profile.audioInputs,
+      numberOfOutputs: profile.audioOutputs,
+      outputChannelCount: profile.audioOutputs > 0 ? Array(profile.audioOutputs).fill(profile.outputChannels) : void 0,
+      parameterData: {},
+      processorOptions: {
+        capabilities: granted,
+        sampleRate: context.sampleRate,
+        quantum: profile.renderQuantum ?? 128
+      }
+    });
+    if (driven) node.jigdawNeedsDriving = true;
+  } catch (cause) {
+    throw new LoadError(
+      STEPS.constructNode,
+      `could not construct "${name}": ${cause.message}. The processor module may register a different name.`,
+      { cause }
+    );
+  }
+  const ready = await init(node, moduleBytes, granted, context, profile);
+  const descriptors = parameterDescriptors(profile.ports);
+  return { node, ready, descriptors };
+}
+function init(node, moduleBytes, granted, context, profile) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      node.port.onmessage = null;
+      reject(new LoadError(
+        STEPS.ready,
+        `"${profile.processor.registeredName}" did not report ready. A processor must post { type: "ready" } once its buffers exist.`
+      ));
+    }, 1e4);
+    node.port.onmessage = (event) => {
+      const message = event.data;
+      if (message?.type === "ready") {
+        clearTimeout(timeout);
+        node.port.onmessage = null;
+        resolve({ latencyFrames: message.latencyFrames ?? 0, tailFrames: message.tailFrames ?? null });
+      } else if (message?.type === "error") {
+        clearTimeout(timeout);
+        node.port.onmessage = null;
+        reject(new LoadError(STEPS.ready, `${message.phase ?? "instantiate"}: ${message.message}`));
+      }
+    };
+    const buffer = moduleBytes ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength) : null;
+    node.port.postMessage({
+      type: "init",
+      module: buffer,
+      capabilities: granted,
+      sampleRate: context.sampleRate,
+      quantum: profile.renderQuantum ?? 128
+    }, buffer ? [buffer] : []);
+  });
+}
+async function resolveProcessorUrl(bytes, originalUrl, override) {
+  if (override) return override(bytes, originalUrl);
+  if (typeof Blob === "undefined" || typeof URL.createObjectURL !== "function") {
+    return originalUrl;
+  }
+  return URL.createObjectURL(new Blob([bytes], { type: "text/javascript" }));
+}
 
 // src/host/PluginLoader.js
 var PROFILE_ACCEPT = "text/turtle, application/ld+json;q=0.9";
@@ -13645,108 +13751,18 @@ var PluginLoader = class {
    * The node is NOT connected to anything here. Contract section 3.1 forbids
    * connecting before ready, and this returns after ready, so the caller
    * connects. Doing it here would take the decision away from the graph.
-   */
-  async instantiate(profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
-    const processorBytes = await this.fetchVerified(profile.processor, { kind: "processor" });
-    let moduleBytes = null;
-    if (profile.module) {
-      moduleBytes = await this.fetchVerified(profile.module, { kind: "module" });
-      if (!this.#validate(moduleBytes)) {
-        throw new LoadError(
-          STEPS.compileModule,
-          `the file at ${profile.module.location} is not valid WebAssembly`
-        );
-      }
-    }
-    const processorUrl = await this.#processorUrl(processorBytes, profile.processor.location);
-    try {
-      await context.audioWorklet.addModule(processorUrl);
-    } catch (cause) {
-      throw new LoadError(
-        STEPS.registerProcessor,
-        `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
-        { cause }
-      );
-    }
-    const name = profile.processor.registeredName;
-    if (!name) {
-      throw new LoadError(
-        STEPS.constructNode,
-        "the profile declares no jig:registeredName, and a worklet cannot be asked what it registered"
-      );
-    }
-    let node;
-    try {
-      const driven = profile.audioOutputs === 0 && profile.audioInputs === 0;
-      node = new AudioWorkletNode(context, name, {
-        numberOfInputs: driven ? 1 : profile.audioInputs,
-        numberOfOutputs: profile.audioOutputs,
-        outputChannelCount: profile.audioOutputs > 0 ? Array(profile.audioOutputs).fill(profile.outputChannels) : void 0,
-        parameterData: {},
-        processorOptions: {
-          capabilities: granted,
-          sampleRate: context.sampleRate,
-          quantum: profile.renderQuantum ?? 128
-        }
-      });
-      if (driven) node.jigdawNeedsDriving = true;
-    } catch (cause) {
-      throw new LoadError(
-        STEPS.constructNode,
-        `could not construct "${name}": ${cause.message}. The processor module may register a different name.`,
-        { cause }
-      );
-    }
-    const ready = await this.#init(node, moduleBytes, granted, context, profile);
-    const descriptors = parameterDescriptors(profile.ports);
-    return { node, ready, descriptors };
-  }
-  /** Post init and await ready. Contract section 3.1 step 7. */
-  #init(node, moduleBytes, granted, context, profile) {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        node.port.onmessage = null;
-        reject(new LoadError(
-          STEPS.ready,
-          `"${profile.processor.registeredName}" did not report ready. A processor must post { type: "ready" } once its buffers exist.`
-        ));
-      }, 1e4);
-      node.port.onmessage = (event) => {
-        const message = event.data;
-        if (message?.type === "ready") {
-          clearTimeout(timeout);
-          node.port.onmessage = null;
-          resolve({ latencyFrames: message.latencyFrames ?? 0, tailFrames: message.tailFrames ?? null });
-        } else if (message?.type === "error") {
-          clearTimeout(timeout);
-          node.port.onmessage = null;
-          reject(new LoadError(STEPS.ready, `${message.phase ?? "instantiate"}: ${message.message}`));
-        }
-      };
-      const buffer = moduleBytes ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength) : null;
-      node.port.postMessage({
-        type: "init",
-        module: buffer,
-        capabilities: granted,
-        sampleRate: context.sampleRate,
-        quantum: profile.renderQuantum ?? 128
-      }, buffer ? [buffer] : []);
-    });
-  }
-  /**
-   * A URL addModule can load, with the verified bytes rather than a second
-   * fetch.
    *
-   * Contract section 3.2: where the browser does not support the integrity
-   * option on addModule, the host fetches and verifies itself and hands over a
-   * blob URL. Re-fetching by URL would verify one response and execute another.
+   * The work lives in Instantiate.js, which knows nothing about RDF so that a
+   * caller holding an already-resolved profile can use it without pulling a
+   * Turtle parser into a browser bundle. This stays the front door.
    */
-  async #processorUrl(bytes, originalUrl) {
-    if (this.#processorUrlFor) return this.#processorUrlFor(bytes, originalUrl);
-    if (typeof Blob === "undefined" || typeof URL.createObjectURL !== "function") {
-      return originalUrl;
-    }
-    return URL.createObjectURL(new Blob([bytes], { type: "text/javascript" }));
+  instantiate(profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
+    return instantiate(profile, granted, context, {
+      fetchVerified: (resource, options) => this.fetchVerified(resource, options),
+      AudioWorkletNode,
+      validate: this.#validate,
+      processorUrl: this.#processorUrlFor
+    });
   }
 };
 

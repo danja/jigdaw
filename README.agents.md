@@ -24,6 +24,7 @@ VST3, CLAP and LV2. Three worked plugins are in `plugins/`.
 | Architecture | `docs/architecture.md` | Layers, boundaries, and the decisions behind them |
 | Bundles | `docs/plugin-bundles.md` | A plugin as a file, its provenance record, and the signature over it |
 | Module ABI | `docs/module-abi.md` | The optional WebAssembly ABI, for a host with no JavaScript |
+| Web Audio Modules | `docs/wam.md` | Packaging a plugin for a WAM 2.0 host, and why the reverse does not work |
 | Worked example | `examples/reference-profile.ttl` | A complete profile that validates |
 | Worked project | `examples/session-project.ttl` | A complete session that validates |
 | Worked provenance | `examples/reference-provenance.ttl` | A complete bundle provenance record that validates |

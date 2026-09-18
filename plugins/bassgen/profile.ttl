@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 
@@ -20,6 +21,7 @@
     rdfs:label "BassGen" ;
     rdfs:comment "Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard." ;
     trn:vendor "danja" ;
+    doap:revision "1.0.0" ;
     foaf:homepage <> ;
     trn:role trn:MidiGenerator ;
     trn:accepts trn:Midi ;

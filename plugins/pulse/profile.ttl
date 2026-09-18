@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf:  <http://xmlns.com/foaf/0.1/> .
 
@@ -20,6 +21,7 @@
     rdfs:label "Pulse" ;
     rdfs:comment "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope." ;
     trn:vendor "danja" ;
+    doap:revision "1.0.0" ;
     foaf:homepage <> ;
     trn:role trn:Instrument , trn:AudioInstrument ;
     trn:accepts trn:Midi ;

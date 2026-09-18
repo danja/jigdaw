@@ -3,6 +3,7 @@
   "label": "Cascade",
   "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",
   "vendor": "danja",
+  "version": "1.0.0",
   "registeredName": "cascade",
   "roles": [
     "trn:AudioEffect"

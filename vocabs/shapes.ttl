@@ -47,6 +47,7 @@
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix sec:  <https://w3id.org/security#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
 ## -- The plugin itself -------------------------------------------------------
@@ -58,6 +59,12 @@ jig:WebPluginShape a sh:NodeShape ;
     sh:nodeKind sh:IRI ;
     sh:message "A plugin must be identified by an IRI. A blank node cannot be linked to, cached by identity, or re-ingested without duplicating itself." ;
 
+    sh:property [
+        sh:path doap:revision ;
+        sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^[0-9]+\\.[0-9]+\\.[0-9]+" ;
+        sh:message "A version is doap:revision, as a dotted string beginning major.minor.patch. Optional here, because a plugin served from one IRI can be versionless; required by anything that packages the plugin for a format that demands a version, such as bin/wam.js."
+    ] ;
     sh:property [
         sh:path rdfs:label ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;

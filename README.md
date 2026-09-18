@@ -124,7 +124,7 @@ and real-time processing never see each other's problems.
 ## Other hosts
 
 A format with one host is a format with an implementation, not a specification. There are
-three, and what each of them found is in [plan.md](docs/plan.md).
+three that run JigDAW plugins, and a fourth that can be packaged for.
 
 ### The native adapter
 
@@ -162,6 +162,23 @@ reads the decimal separator from the global C locale; GTK calls `setlocale(LC_AL
 under a comma-decimal locale every fractional `lv2:default`, `lv2:minimum` and `lv2:maximum`
 in every profile parsed as zero. Fixed here and recorded in [MISTAKES.md](MISTAKES.md). A
 host nobody here wrote is the only thing that was ever going to find that.
+
+### A WAM host
+
+```sh
+node bin/wam.js plugins/pulse
+```
+
+[Web Audio Modules](https://www.webaudiomodules.com/) is the existing standard for web-native
+plugins, and JigDAW was specified without reference to it. `bin/wam.js` packages a plugin as a
+WAM: same profile, same WebAssembly, same processor, with the packaging a WAM 2.0 host expects
+generated from the profile. 21 kB, standalone, and it carries the profile's digests, which the
+WAM API has no way to express at all.
+
+It runs one way. A WAM cannot be loaded by a JigDAW host, because a WAM's file set is not
+knowable before running it and so cannot be declared, digested or verified. That asymmetry is
+the difference between a format that is a description and one that is a program. See
+[wam.md](docs/wam.md).
 
 ## Status
 
