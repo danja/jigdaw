@@ -173,8 +173,32 @@ leaves the worker's scope and becomes an ordinary same-origin request. Contract 
 originally said a host MUST refuse any request resolving outside the container, which no host
 can do; it now says what is actually enforceable and states the limit.
 
-**The adapter itself.** Turning a `WamNode` into something the engine can drive is not
-written. `src/wam/WamModule.js` is the other direction and is not reusable here.
+**The adapter is written.** `src/wam/WamAdapter.js` is the exact mirror of
+`src/wam/WamModule.js`: that one puts a WAM face on a JigDAW plugin, this one puts a JigDAW
+face on a WAM, so everything above the engine works on one shape.
+
+The engine asks a node for four things and a `WamNode` answers none of them the same way.
+`connect` and `disconnect` come free, because a `WamNode` is an `AudioNode`. The other three
+are translated: `node.parameters.get(symbol)` returns an `AudioParam`-shaped view that calls
+`setParameterValues`, and `node.port` is a `MessagePort`-shaped translator turning `events`
+into `wam-midi`, `transport` into `wam-transport`, `stateRequest` into `getState`, and
+`dispose` into `destroy`, with a `wam-midi` the plugin emits coming back as an `events`
+message.
+
+The panel is drawn from `getParameterInfo()` rather than from the ports the profile declares,
+because the plugin is the authority on its own parameters and a profile is a claim about them.
+Widgets follow contract section 5.3's rule, so a foreign panel and a native one come out of one
+set of decisions.
+
+Measured in Chrome on 2026-09-18, in `web/foreign/probe.html`: 18 of 18, ending with a real
+Web Audio Module adopted as an engine node, four parameters found, a parameter moved through
+the engine's own path and read back from the plugin, and audio still passing through the
+adopted node.
+
+**What it cannot translate, said rather than hidden.** WAM's `setParameterValues` takes no time
+argument, so a JigDAW automation curve becomes a series of immediate writes:
+`linearRampToValueAtTime` lands now. That is the a-rate loss from the other direction, and it
+is asserted as a test rather than left as a comment.
 
 **Enforcement against a hostile plugin.** The boundary defeats substitution, which is the
 threat section 3.2 names. It does not defeat a plugin that wants out: code in the host's

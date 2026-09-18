@@ -312,6 +312,31 @@ describe('the foreign plugin probe', () => {
     expect(ignored).toHaveLength(2)
   })
 
+  it('has a module script that parses', async () => {
+    // An inline module in a published page is checked by nothing: a syntax
+    // error makes the page render, the button do nothing, and window.probe stay
+    // undefined. That happened, from an edit that shadowed a name, and the
+    // symptom was a blank log box rather than an error anywhere.
+    const { writeFile, rm, mkdtemp } = await import('node:fs/promises')
+    const { tmpdir } = await import('node:os')
+    const { execFileSync } = await import('node:child_process')
+
+    const page = read(probe)
+    const scripts = [...page.matchAll(/<script type="module">([\s\S]*?)<\/script>/g)].map(m => m[1])
+    expect(scripts.length, 'the probe has no module script, so this checked nothing').toBeGreaterThan(0)
+
+    const dir = await mkdtemp(join(tmpdir(), 'jig-probe-'))
+    try {
+      for (const [i, source] of scripts.entries()) {
+        const file = join(dir, `script-${i}.mjs`)
+        await writeFile(file, source)
+        execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' })
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
   it('never falls through to the network in its worker', () => {
     // Contract section 12.3. The single property that makes the container a
     // boundary rather than a cache, asserted on the worker's source because

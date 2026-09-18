@@ -173,10 +173,45 @@ async function run () {
   const peak = Math.max(...samples.map(Math.abs))
   osc.stop()
   record('passes audio through the plugin', peak > 0.001, `peak ${peak.toFixed(4)}`)
-  await context.close()
+
+  // Contract section 12: the plugin now has to look like any other node to the
+  // engine. This is the adapter, on a real Web Audio Module.
+  const { adoptWamNode, foreignProfile } = await import('/src/wam/WamAdapter.js')
+  const adopted = await adoptWamNode(wam)
+  record('adopts the WAM as an engine node', adopted.parameters instanceof Map,
+    `${adopted.parameters.size} parameters`)
+
+  const engineProfile = await foreignProfile({ iri: 'https://example.org/wam/pingpongdelay/' }, wam)
+  record('builds a profile from the plugin, not from a claim', engineProfile.ports.length > 0,
+    engineProfile.ports.map(p => `${p.symbol}:${p.widget}`).join(' '))
+
+  // A parameter moved the way the engine moves one.
+  const first = engineProfile.ports[0]
+  const param = adopted.parameters.get(first.symbol)
+  const target = (first.minimum + first.maximum) / 2
+  param.setValueAtTime(target, adopted.context.currentTime)
+  await new Promise(r => setTimeout(r, 120))
+  const readBack = await wam.audioNode.getParameterValues(false, first.symbol)
+  record('a parameter set through the engine path reaches the plugin',
+    Math.abs(readBack[first.symbol].value - target) < Math.max(1e-6, Math.abs(target) * 0.01),
+    `${first.symbol} asked ${target.toFixed(3)}, plugin says ${readBack[first.symbol].value.toFixed(3)}`)
+
+  // And it still makes a sound afterwards, through the adopted node.
+  const osc2 = new OscillatorNode(context, { frequency: 330 })
+  const analyser2 = new AnalyserNode(context, { fftSize: 2048 })
+  osc2.connect(adopted)
+  adopted.connect(analyser2)
+  osc2.start()
+  await new Promise(r => setTimeout(r, 400))
+  const after = new Float32Array(analyser2.fftSize)
+  analyser2.getFloatTimeDomainData(after)
+  const peak2 = Math.max(...after.map(Math.abs))
+  osc2.stop()
+  record('still passes audio once adopted', peak2 > 0.001, `peak ${peak2.toFixed(4)}`)
 
   const refused = origin.refusals.length
   record('recorded what the plugin could not reach', refused >= 0, `${refused} refusal(s)`)
+  await context.close()
 }
 
 async function digestOf (bytes) {

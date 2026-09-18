@@ -1,12 +1,74 @@
 # Deployment
 
-**Status:** planned. Nothing is deployed yet. This records the shape, so that when it is
-built it follows a pattern that is already running rather than one invented fresh.
+**Status:** deployed and running. `strandz.it/jigdaw/` is live, served by `bin/serve.js` under
+systemd on port 6011, loopback only, behind nginx. This document was written before any of
+that existed and said "planned, nothing is deployed yet" for some time after it was.
 
-The approach is plugin-universe's, which runs on the same host. Copying a working
-arrangement is worth more than a better one that has never been operated.
+## Redeploying
+
+Two commands, and which one you need depends on what changed.
+
+```sh
+cd /home/github/jigdaw && git pull
+sudo systemctl restart jigdaw          # only when bin/serve.js changed
+```
+
+**A pull is not a deploy.** Static files are read from disk on every request, so a pull
+changes the page, the browser bundle, the profiles and the WebAssembly the moment it lands.
+`bin/serve.js` is loaded once when the process starts, so **anything inside it needs the
+restart**: a new route, a changed header, a change to what is served.
+
+The failure mode when the restart is forgotten is the worst kind. The new page talks to the
+old server, so a feature looks broken rather than absent. It showed up once as
+`search failed: Unexpected token 'o', "not found: "... is not valid JSON`, which is the page
+parsing a plain-text 404 as JSON.
+
+Restarting when nothing needed it costs a few milliseconds of downtime, so when in doubt,
+restart.
+
+### Confirm it took
+
+Check the thing that changed, not that the site is up. A site that is up is what you had
+before.
+
+```sh
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/     # 200, the page
+curl -sS -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/pulse/ | head -1
+systemctl status jigdaw --no-pager | head -3
+```
+
+After the 2026-09-18 change to what the server will serve:
+
+```sh
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/.git/HEAD      # 404
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/package.json   # 404
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/app.bundle.js  # 200
+```
+
+### Regenerate before committing, never on the server
+
+```sh
+npm run build        # plugin index, vocabulary site, browser bundle
+npm test
+```
+
+`web/app.bundle.js`, the generated `profile.ttl` files and the `.wasm` binaries are committed
+on purpose, because the server has no build step and no toolchain. See
+[the runbook](#the-runbook-for-strandzit) for why, which is not tidiness: a build on the
+server is a second place for the bytes to differ from the digests that describe them.
+
+### The vocabulary is a separate pull
+
+`https://hyperdata.it/xmlns/jigdaw/` is served by nginx straight out of
+`/home/github/jigdaw/deploy/vocab/`, so it updates on the pull and needs no restart. The
+`trn:` vocabulary is the same arrangement in `/home/github/transmission`, and changing either
+one's nginx fragment needs `sudo nginx -t && sudo systemctl reload nginx` instead.
 
 ## Shape
+
+**Not yet built.** What runs today is one node process under systemd behind nginx, which is
+the `app` row below and none of the others. The store, and therefore the compose arrangement,
+arrives when there is something to put in it.
 
 Compose, each service doing one thing:
 
@@ -79,8 +141,8 @@ only pass if it were live.
 
 ## The runbook for strandz.it
 
-**The step-by-step list, with every command labelled by where it runs, is
-[HUMANS.md](../HUMANS.md) item 1.** This section is the reasoning behind it.
+The commands are under [Redeploying](#redeploying) at the top. This section is the reasoning
+behind them, and [HUMANS.md](../HUMANS.md) carries whatever is outstanding right now.
 
 `/` on that host is already taken by another application on port 6010, so JigDAW is served
 under `/jigdaw/` and listens on **6011**, loopback only.
@@ -109,11 +171,8 @@ things `nginx -t` cannot see.
 
 ## Three traps this configuration is built around
 
-**A pull is not a deploy.** Static files are read from disk on every request, so pulling
-changes the page, the bundle, the profiles and the WebAssembly at once. `bin/serve.js` is
-loaded when the process starts, so a new route in it needs `systemctl restart jigdaw`. The
-failure mode is the worst kind: a new interface talking to an old server, which looks like
-the new feature is broken rather than absent.
+**A pull is not a deploy.** At the top of this document, because it is the thing most often
+needed and was for a while the thing hardest to find in it.
 
 
 

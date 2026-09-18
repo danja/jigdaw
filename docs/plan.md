@@ -470,7 +470,21 @@ contained a MUST no host can satisfy: a `..` path is normalised by the browser b
 service worker sees it, so it leaves the scope and is never offered for refusal. The wording
 now says what is enforceable and states the limit.
 
-Still not written: the adapter that turns a `WamNode` into something the engine drives.
+**The adapter is written too.** `src/wam/WamAdapter.js` gives a `WamNode` the shape the engine
+expects: a parameter map over `setParameterValues`, and a port translating JigDAW's messages
+into WAM's methods and its events back. The panel comes from `getParameterInfo()` rather than
+from the declared ports, because the plugin is the authority on its own parameters, and
+widgets follow the same rule section 5.3 gives a native plugin.
+
+18 of 18 in the probe, ending with a real Web Audio Module adopted as an engine node, a
+parameter moved through the engine's own path and read back from the plugin, and audio still
+passing. What cannot be translated is a test rather than a comment: WAM takes no time with a
+parameter, so a ramp lands immediately.
+
+Two guards came out of doing it. The probe's inline module is now syntax checked, because an
+edit that shadowed a name made the page render, the button do nothing and `window.probe` stay
+undefined, with no error anywhere. And the run needs a real click: a scripted one is not user
+activation, so the `AudioContext` stays suspended and every audio check reads zero.
 
 **Measured against the real plugins**, once `~/wam-examples` existed, which turned three
 guesses into findings. `addFunctionModule` stringifies an already-loaded function and fetches

@@ -5,55 +5,19 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Commit and deploy
+## 1. Nothing outstanding here
 
-Since the last deployment: sessions save and reopen as RDF, in the project format that has
-been normative since phase 0 and that nothing had ever written. Verified in a browser, a chain
-of BassGen into Pulse with two parameters set, saved, cleared and reopened from the saved
-bytes: ids, plugin IRIs, settings and the MIDI connection all came back and it played.
+The exposure fix is deployed and measured on the live site, 2026-09-18:
+`/jigdaw/.git/HEAD`, `/jigdaw/.git/index`, `/jigdaw/package.json`, `/jigdaw/AGENTS.md` and
+`/jigdaw/.gitignore` all answer 404, and the page, the browser bundle, the plugin WebAssembly,
+the published docs and the foreign plugin worker all still answer 200.
 
-It found that removing a plugin never stopped it: the model forgot the node and the
-AudioWorkletNode kept running. Fixed and guarded, recorded in `MISTAKES.md`.
+What that was, and why a pull alone would not have fixed it, is in `MISTAKES.md`.
+[docs/deployment.md](docs/deployment.md) opens with the redeploy rule: a pull moves static
+files at once, and a change inside `bin/serve.js` is invisible until `systemctl restart
+jigdaw`.
 
-```sh
-# On your machine, in the repository
-npm run build
-npm test
-git add -A && git commit && git push
-```
-
-```sh
-# On the server, in /home/github/jigdaw
-git pull
-sudo systemctl restart jigdaw
-```
-
-## 2. Redeploy, for the exposure fix
-
-**Committed by you, deployed, and then found wanting.** The live site was serving the whole
-working tree: `/jigdaw/package.json`, `/jigdaw/AGENTS.md`, `/jigdaw/.gitignore`, and
-`/jigdaw/.git/HEAD` and `/jigdaw/.git/index`, which together are enough to reconstruct the
-repository. Measured on strandz.it, 2026-09-18.
-
-Nothing in the repository is secret, so nothing leaked. The defect is that the server's rule
-was "serve whatever is on disk", and gitignore is exactly where a key would be. It is in
-`MISTAKES.md`.
-
-Fixed here: `bin/serve.js` now serves `web/` plus an allowlist of `src`, `plugins`, `examples`,
-`vocabs` and `docs`, and refuses any path segment beginning with a dot.
-
-**Needs you:** the usual pull and restart. The restart is not optional, because this is a
-change inside `bin/serve.js` rather than a static file.
-
-```sh
-cd /home/github/jigdaw && git pull && sudo systemctl restart jigdaw
-curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/.git/HEAD   # expect 404
-curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/            # expect 200
-```
-
-The plugin-universe change you were reviewing here is committed.
-
-## 3. Make your signing key
+## 2. Make your signing key
 
 **The IRI is decided, and everything but the key itself is built.**
 
@@ -93,9 +57,9 @@ pull on the server, and `node bin/verify.js <bundle> --online` has something to 
 Verified end to end already, against a throwaway key served from this route: a signed bundle
 reports *checked against the key published at that IRI* rather than against its own copy.
 
-## 4. Confirm which repository owns `trn:`
+## 3. Confirm which repository owns `trn:`
 
-**Answered by item 5, unless you say otherwise.** `transmission` owns it. Its `vocabs/` is
+**Answered by item 4, unless you say otherwise.** `transmission` owns it. Its `vocabs/` is
 what `http://purl.org/stuff/transmissions/` will serve, and the format individuals including
 `trn:WebAudio` have been moved up into it from plugin-universe's `trn-extensions.ttl`, which
 is what that file's own header always said should happen.
@@ -107,7 +71,7 @@ the sibling checkout is present and says so when it is not.
 **Blocks:** nothing. The next `trn:` term goes in `~/github/transmission/vocabs/`. Say if you
 would rather it were somewhere else, because that is now written into a test.
 
-## 5. `trn:` dereferencing. Done.
+## 4. `trn:` dereferencing. Done.
 
 **Deployed 2026-09-18, by you.** `http://purl.org/stuff/transmissions/` resolves. It had always
 returned 404, and `trn:` is the vocabulary that carries the meaning: four projects use it, and
@@ -148,7 +112,7 @@ duplicate-header fault `deploy/nginx/jigdaw.conf` was built to avoid, and the sa
 
 JigDAW is not blocked by it, because its search proxies through its own origin.
 
-## 6. Confirm platforms are meaningless here
+## 5. Confirm platforms are meaningless here
 
 `pu:supportedPlatform` has no web value, a query for the predicate over the public endpoint
 returns nothing, and JigDAW's profiles declare none. They validate against plugin-universe's
@@ -161,42 +125,25 @@ it is now recorded as a comment in a second repository.
 
 **Blocks:** nothing.
 
-## 7. Tools that would help
+## 6. Tools that would help
 
 The Claude in Chrome extension is connected and working, which is what made the four fixes
 above possible. Nothing else is needed.
 
 ## Updating a deployment
 
-**This one needs the restart:** `bin/serve.js` gained directory-index handling, without which
-`/jigdaw/docs/` answers 404 even though the files are there.
-
-
-Regenerate artefacts on your machine, never on the server:
+**[docs/deployment.md](docs/deployment.md) opens with this**, including which changes need the
+restart and what to curl afterwards. The short form:
 
 ```sh
-npm run build        # index, vocabulary and browser bundle
-npm test
-git add -A && git commit && git push
+npm run build && npm test          # on your machine, then commit and push
+cd /home/github/jigdaw && git pull
+sudo systemctl restart jigdaw      # only when bin/serve.js changed
 ```
 
-
-```sh
-# On the server, in /home/github/jigdaw
-git pull
-sudo systemctl restart jigdaw
-```
-
-**The restart is not optional, and forgetting it fails in a confusing way.** Static files are
-read from disk on every request, so a pull changes the page, the bundle, the profiles and the
-WebAssembly immediately. `bin/serve.js` is loaded once when the process starts, so any new
-route in it does not exist until the service is restarted.
-
-The symptom is a new interface calling an endpoint the old server has never heard of. It
-showed up as `search failed: Unexpected token 'o', "not found: "... is not valid JSON`, which
-is the page trying to parse a plain-text 404 as JSON.
-
-If nginx configuration changed as well, reload nginx too. `nginx -t` first.
+A pull moves the page, the bundle, the profiles and the WebAssembly immediately, because they
+are read from disk per request. `bin/serve.js` is loaded once at startup, so a change inside
+it is invisible until the restart, and the symptom is a new page talking to an old server.
 
 ---
 
