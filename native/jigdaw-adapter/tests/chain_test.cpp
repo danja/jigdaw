@@ -85,6 +85,60 @@ int main(int argc, char** argv) {
     }
 
     {
+        // A block larger than the plugin will accept, which is every block a
+        // real DAW sends: every worked plugin reports 128 and a DAW runs at 256
+        // or more.
+        //
+        // Chain::process used to compute min(frames, maxFrames) and render that
+        // much, leaving the rest of the host's buffer exactly as it found it. At
+        // 512 that is three quarters of every block stale, and the transport and
+        // the MIDI were handled once for the whole block rather than per
+        // sub-block. Nothing caught it because every test here ran at 128.
+        std::cout << "a block bigger than the plugin takes\n";
+        jigdaw::Chain chain;
+        const auto error = chain.add(base + "/plugins/pulse/", rate);
+        check(error.empty(), error.empty() ? "loaded Pulse" : "load failed: " + error);
+        if (!error.empty()) return 1;
+
+        const uint32_t limit = chain.maxFrames();
+        const uint32_t n = 512;
+        check(n > limit, "the block really is bigger than the plugin's maximum");
+
+        std::vector<float> left(n, 0.0f), right(n, 0.0f);
+        float* audio[2] = {left.data(), right.data()};
+
+        chain.noteOn(69, 100);
+        // Let the envelope open, so the tail of a block is loud enough that
+        // silence there is a failure rather than an attack still rising.
+        for (int block = 0; block < 8; ++block) chain.process(audio, 2, n);
+
+        // A sentinel the chain must overwrite. Before the fix it survived in
+        // every frame past the first 128, which is precisely the defect.
+        std::fill(left.begin(), left.end(), 12345.0f);
+        std::fill(right.begin(), right.end(), 12345.0f);
+        chain.process(audio, 2, n);
+
+        uint32_t untouched = 0;
+        for (uint32_t i = 0; i < n; ++i) if (left[i] == 12345.0f) ++untouched;
+        check(untouched == 0, "every frame of the block was written, " +
+              std::to_string(untouched) + " left stale");
+
+        // Written is not the same as rendered: a memset would pass the check
+        // above, and so would leaving the sentinel in place, whose RMS is
+        // enormous. So the far end must carry signal AND be in a range audio
+        // can actually occupy. Mutation showed the first version of this check
+        // passing on the sentinel itself.
+        const float head = rms(left.data(), limit);
+        const float tail = rms(left.data() + n - limit, limit);
+        const auto audible = [](float value) { return value > 0.01f && value < 2.0f; };
+        check(audible(tail), "the last sub-block holds audio, not a leftover: " + std::to_string(tail));
+        check(audible(head), "so does the first: " + std::to_string(head));
+
+        chain.allNotesOff();
+        for (int block = 0; block < 400; ++block) chain.process(audio, 2, n);
+    }
+
+    {
         // The bytes a DAW actually sends. Until this existed the only way to
         // reach the decoding was a host and a keyboard, so the one part of the
         // adapter a person drives directly was the part nothing checked.

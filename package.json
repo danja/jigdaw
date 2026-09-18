@@ -18,6 +18,7 @@
     "build:index": "node bin/build-plugin-index.js",
     "bundle": "node bin/bundle.js",
     "wam": "node bin/wam.js",
+    "wam:fixtures": "node bin/wam-fixtures.js",
     "build": "npm run build:index && npm run build:vocab && npm run build:web"
   },
   "dependencies": {

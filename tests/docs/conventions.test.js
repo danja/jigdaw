@@ -266,3 +266,89 @@ describe('the published documentation', () => {
     }
   })
 })
+
+describe('the foreign plugin probe', () => {
+  // It is a published page whose inputs are deliberately not published: they
+  // are built from webaudiomodules/wam-examples, which is MIT and not ours to
+  // commit. That combination shipped once as a page returning 404 at its first
+  // fetch, on a live server, which is the "contact page that 404s" failure in
+  // miniature and exactly what these guards exist for.
+  const probe = 'web/foreign/probe.html'
+
+  it('exists and is served alongside its worker', () => {
+    expect(existsSync(join(root, probe))).toBe(true)
+    expect(existsSync(join(root, 'web/foreign/sw.js'))).toBe(true)
+  })
+
+  it('checks for its inputs before using them', () => {
+    // A HEAD before the first real fetch is what turns a 404 into an
+    // explanation. Asserted because the explanation is the only thing standing
+    // between a visitor and a page that looks broken.
+    const page = read(probe)
+    expect(page).toMatch(/method:\s*'HEAD'/)
+    expect(page.indexOf("method: 'HEAD'")).toBeLessThan(page.indexOf("await import(`${base}index.js`)"))
+  })
+
+  it('names the command that builds them, and that command exists', () => {
+    // The pair nothing else connects: the page tells a person what to run, and
+    // this is what stops that instruction going stale when the script is
+    // renamed.
+    const page = read(probe)
+    const named = [...page.matchAll(/npm run ([\w:]+)/g)].map(m => m[1])
+    expect(named.length, 'the probe names no build command').toBeGreaterThan(0)
+    const scripts = JSON.parse(read('package.json')).scripts
+    for (const script of named) {
+      expect(scripts[script], `the probe says "npm run ${script}" and package.json has no such script`).toBeDefined()
+    }
+    const target = scripts[named[0]].replace(/^node\s+/, '')
+    expect(existsSync(join(root, target)), `${target} is missing`).toBe(true)
+  })
+
+  it('keeps those inputs out of the repository', () => {
+    // If either is ever committed, it is a vendored third-party build artefact
+    // that will go stale silently, and the licence question becomes real.
+    const ignored = execFileSync('git', ['check-ignore', 'web/foreign/pingpongdelay.wam', 'web/foreign/wam-host.js'],
+      { cwd: root, encoding: 'utf8' }).split('\n').filter(Boolean)
+    expect(ignored).toHaveLength(2)
+  })
+
+  it('never falls through to the network in its worker', () => {
+    // Contract section 12.3. The single property that makes the container a
+    // boundary rather than a cache, asserted on the worker's source because
+    // nothing else in this repository can reach a service worker.
+    const worker = read('web/foreign/sw.js')
+    const code = worker.split('\n').filter(line => !line.trim().startsWith('//')).join('\n')
+    expect(code).not.toMatch(/\bfetch\s*\(/)
+    expect(code).toMatch(/respondWith/)
+  })
+})
+
+describe('figures quoted about other systems', () => {
+  // TODO.md has carried "re-measure every figure quoted in a document" for
+  // months, which is the shape of a task nothing performs. The plugin count was
+  // 758 in seven documents and 756 over the live endpoint, so it had been wrong
+  // in every one of them for a while and nothing said so.
+  //
+  // This does not query the network: a test that needs an endpoint is a test
+  // that gets disabled the first time the endpoint is down. It checks that the
+  // documents agree with each other and with one stated figure, so correcting
+  // the number is one edit and a stale copy is a failure.
+  const CATALOGUE_PLUGINS = 756   // plugin-universe, measured 2026-09-18
+
+  it('states one plugin-universe count, in every document that mentions it', () => {
+    const offenders = []
+    for (const file of byExt('.md')) {
+      for (const [i, line] of read(file).split('\n').entries()) {
+        for (const match of line.matchAll(/\b(\d{3})\s+(?:plugins|profiles)\b/g)) {
+          if (Number(match[1]) !== CATALOGUE_PLUGINS) offenders.push(`${file}:${i + 1} says ${match[1]}`)
+        }
+      }
+    }
+    expect(offenders, `disagree with the measured ${CATALOGUE_PLUGINS}:\n  ${offenders.join('\n  ')}`).toEqual([])
+  })
+
+  it('finds those mentions, so this is not vacuous', () => {
+    const mentions = byExt('.md').filter(f => /\b\d{3}\s+(?:plugins|profiles)\b/.test(read(f)))
+    expect(mentions.length, 'no document quotes a catalogue size').toBeGreaterThan(2)
+  })
+})

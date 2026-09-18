@@ -60,8 +60,10 @@ complete. Review periodically.
       because an author who follows the advice to dereference will hit this and conclude the
       vocabulary is broken.
 
-      Measured 2026-09-17. `hyperdata.it/xmlns/jigdaw/` serves the current vocabulary including
-      `jig:Abi2`, with one correct header.
+      Re-measured 2026-09-18 and still true: the `http://purl.org/stuff/jigdaw/` hop answers
+      302 with no `Access-Control-Allow-Origin` at all. Every later hop has it, and
+      `https://purl.org/stuff/jigdaw/` works end to end, so the guidance stands: a browser
+      based consumer dereferences the `https:` form.
 
 - [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
 
@@ -100,27 +102,9 @@ complete. Review periodically.
 
 ## Namespaces
 
-- [ ] **Serve the JigDAW vocabulary.** `http://purl.org/stuff/jigdaw/` already resolves,
-      via the existing wildcard, to `https://hyperdata.it/xmlns/jigdaw/`, which returns 404.
-      No PURL administration is needed: putting the vocabulary there is the whole job.
-
-      What it has to do is in `docs/namespace.md`: content negotiation on the namespace IRI,
-      `303 See Other` from each term to the vocabulary document, and
-      `Access-Control-Allow-Origin`.
-
-      Needs the user: it is a deployment to a server.
-
-- [x] **`trn:` dereferences, 2026-09-18.** `purl.org/stuff/transmissions/` had returned 404 for
-      as long as anyone had been publishing profiles that use it. It now answers 200 with 208
-      terms, content negotiated, CORS on every response and a 303 from each term, served from
-      `~/github/transmission/deploy/` the same way `jig:` is. Measured against the live server,
-      including that `jig:` still resolves.
-
-      It took more than serving a file: 50 of the 81 `trn:` terms transmission's own code
-      writes into every saved project were declared nowhere, and the plugin format individuals
-      lived in plugin-universe. Both are now in `~/github/transmission/vocabs/`, with tests
-      binding the code to the declarations and the moved terms to plugin-universe's copy.
-
+- [x] **JigDAW vocabulary served, and it resolves.** `http://purl.org/stuff/jigdaw/` reaches
+      `https://hyperdata.it/xmlns/jigdaw/` and answers 200, content negotiated, with CORS and a
+      303 from every term. `trn:` was done the same way on 2026-09-18 and now carries 208 terms.
 - [ ] **Individual `pu:` terms dereference for nobody.**
       `purl.org/stuff/plugin-universe/supportedPlatform`, whose namespace root resolves
       correctly, lands on `plugin-universe.com/supportedPlatform` and 404s, because the
@@ -149,19 +133,11 @@ complete. Review periodically.
       JigDAW says platform is meaningless for a plugin that runs in a browser and relies on
       the format term alone. The second is probably right.
 
-- [ ] **The `trn:` vocabulary has diverged from its own upstream.** `trn:format`,
-      `trn:MidiCC` and `trn:AudioSidechain` are declared in plugin-universe's
-      `vocabs/trn-profile.ttl` and `vocabs/trn-extensions.ttl`, and are absent from
-      `~/github/transmission/vocabs/profile.ttl`, which is the repository everything else
-      calls upstream. So "propose extensions upstream to transmission" is a rule that the
-      project stating it has already stepped around.
-
-      This matters to JigDAW because it decides where a web format term is proposed, and
-      because `examples/reference-profile.ttl` uses `trn:format`, which resolves in one of the
-      two places a reader might look. Worth settling before adding a third term to the pile.
-
-      Needs the user: it is a question about which repository owns the vocabulary.
-
+- [x] **`trn:` has converged on its upstream, 2026-09-18.** The format individuals and the
+      deprecations moved from plugin-universe's `trn-extensions.ttl` into
+      `~/github/transmission/vocabs/formats.ttl`, which its own header had been asking for.
+      Measured after: plugin-universe declares nothing upstream does not. A test in
+      transmission compares the two when that checkout is present.
 - [ ] **The inspection vocabulary still has no consumer.** `jig:Inspection`,
       `jig:inspectionOf`, `jig:inspectedAt`, `jig:hostVersion` and `jig:loadOutcome` are
       declared in `vocabs/jigdaw.ttl`, constrained by nothing in `vocabs/shapes.ttl`, written
@@ -172,23 +148,28 @@ complete. Review periodically.
 
 ## The native adapter
 
-- [ ] **`Chain::process` drops the tail of a block.** It processes
-      `min(frames, jig_max_frames())` and leaves the rest of the host's buffer as it found
-      it. Every worked plugin reports 128 frames, so a DAW at 256 or above gets one eighth
-      to one half of each block rendered and the remainder stale, and the MIDI and the
-      transport are handled once for the whole block rather than per sub-block. Transmission
-      drives `Module` directly and splits the block itself; `Chain` should do the same so the
-      adapter is right at any buffer size. Worth a test that runs a chain at 512 and checks
-      the second half of the buffer.
-- [ ] `docs/module-abi.md` does not say what a host must do when the block it is given is
-      larger than `jig_max_frames()`. It says a host must never pass more than that, which
-      leaves splitting implied rather than stated. Say it: a host processes in sub-blocks,
-      rebases event frames into each, and advances the transport across them.
+- [x] **`Chain::process` dropped the tail of every block, fixed 2026-09-18.** It rendered
+      `min(frames, jig_max_frames())` and left the rest of the host's buffer as it found it, so
+      a DAW at 512 got one sub-block rendered and three quarters stale, with the MIDI and the
+      transport handled once for the lot.
+
+      Now split properly: sub-blocks of at most `jig_max_frames()`, the transport advanced to
+      each sub-block's position through `Chain::transportAt`, incoming events rebased onto the
+      sub-block and outgoing ones rebased back onto the host's block.
+
+      `native/jigdaw-adapter/tests/chain_test.cpp` runs a chain at 512 with a sentinel in the
+      buffer and checks that nothing survives. Mutation tested: reverting the loop leaves 384
+      of 512 frames stale. The mutation also showed the first version of the second check
+      passing on the sentinel itself, whose RMS is enormous, so it now requires the tail to be
+      in a range audio can occupy.
+
+      `docs/module-abi.md` now states the splitting rule instead of implying it, which is what
+      let this through.
 
 ## Before there is code
 
-- [ ] `src/rdf/Vocabulary.js` as frozen constants, once there is code that names a term.
-      Nothing does yet, so it would be a constants file constraining nothing.
+- [x] `src/rdf/Vocabulary.js` exists, is frozen constants, and is bound to the ontology in
+      both directions by `tests/rdf/vocabulary.test.js`.
       `tests/rdf/vocabulary.test.js` already binds the vocabulary to the shapes and examples
       in both directions, which is the useful half of valis's ontology-to-registry symmetry
       test. The other half arrives with the code.
@@ -200,4 +181,6 @@ complete. Review periodically.
 - [ ] Read `MISTAKES.md` for anything systematic and promote it into `AGENTS.md`.
 - [ ] Re-measure every figure quoted in a document. The plugin count, the profile count and
       the format list all drift.
-- [ ] `wc -l src/**/*.js | sort -n | tail`, once there is a `src/`.
+- [x] Line counts checked, 2026-09-18. The largest is `src/ops/OpDispatcher.js` at 456, then
+      `bin/bundle.js` at 409. AGENTS.md says past about 400 is worth a look and past about 600
+      usually wants splitting, so nothing is due yet and two are worth watching.

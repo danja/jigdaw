@@ -5,7 +5,7 @@ musically, and what a browser needs in order to run it.
 
 JigDAW does not invent this format. It extends one that is already published and already in
 use, at [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles),
-over a catalogue of 758 plugins. A profile written for that catalogue stays valid here. A
+over a catalogue of 756 plugins. A profile written for that catalogue stays valid here. A
 profile written for JigDAW is also a valid catalogue entry. There is one format, and JigDAW
 adds the part about running in a browser.
 
@@ -66,7 +66,7 @@ up.
 A JigDAW-loadable plugin declares itself both `trn:PluginProfile` and `jig:WebPlugin`.
 
 The subclass matters. `vocabs/shapes.ttl` targets `jig:WebPlugin` and never
-`trn:PluginProfile`, so the 758 profiles already published are untouched by JigDAW's rules.
+`trn:PluginProfile`, so the 756 profiles already published are untouched by JigDAW's rules.
 An existing profile becomes loadable by adding statements, never by being rewritten, and a
 profile that describes a native-only plugin stays valid and stays findable. It is simply
 not installable here.

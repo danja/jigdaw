@@ -73,9 +73,13 @@ private:
     /// Hand one block's events to a slot, whichever ABI it speaks.
     void deliver(Slot& slot, const MidiEvent* events, uint32_t count);
 
+    /// The transport as it stands `offset` frames into the current block.
+    Transport transportAt(uint32_t offset) const;
+
     std::vector<std::unique_ptr<Slot>> slots_;
     std::vector<Port> flat_;
     uint32_t maxFrames_ = 128;
+    double sampleRate_ = 0.0;   ///< needed to advance the transport across sub-blocks
 
     Transport transport_;
 

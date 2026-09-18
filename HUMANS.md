@@ -28,49 +28,70 @@ git pull
 sudo systemctl restart jigdaw
 ```
 
-## 2. Review and commit the plugin-universe change
+## 2. Redeploy, for the exposure fix
 
-**Done, in `~/github/plugin-universe`, and uncommitted.** It needs your eye because it is a
-second repository and because one part of it is a judgement rather than an addition.
+**Committed by you, deployed, and then found wanting.** The live site was serving the whole
+working tree: `/jigdaw/package.json`, `/jigdaw/AGENTS.md`, `/jigdaw/.gitignore`, and
+`/jigdaw/.git/HEAD` and `/jigdaw/.git/index`, which together are enough to reconstruct the
+repository. Measured on strandz.it, 2026-09-18.
 
-What changed, and why:
+Nothing in the repository is secret, so nothing leaked. The defect is that the server's rule
+was "serve whatever is on disk", and gitignore is exactly where a key would be. It is in
+`MISTAKES.md`.
 
-- `vocabs/trn-extensions.ttl`: `trn:WebAudio a trn:PluginFormat`. The addition the format
-  list was missing, in the file that already holds every other format individual and already
-  says such things should be proposed upstream to `transmission`.
-- `vocabs/shapes.ttl`: `trn:WebAudio` added to the `sh:in` list on `trn:format`.
-- `src/contrib/Submissions.js`: `'WebAudio'` added to `PLUGIN_FORMATS`. This third file was
-  not expected. Its own test binds the submission form's list to the shapes and failed the
-  moment the other two changed, which is that repository's paired-file rule working.
-- `vocabs/shapes.ttl` again, and **this one is a judgement call**: `trn:requires` no longer
-  requires the `trn:` namespace. JigDAW declares `trn:requires jig:MidiEvents` and
-  `jig:MidiOut`, which are real terms in a published dereferenceable vocabulary and exactly
-  what `trn:requires` is for. The constraint refused them while reporting only that the
-  namespace was wrong. It still requires an IRI, which is the check that catches the actual
-  mistake. Say if you would rather JigDAW expressed capabilities some other way.
+Fixed here: `bin/serve.js` now serves `web/` plus an allowlist of `src`, `plugins`, `examples`,
+`vocabs` and `docs`, and refuses any path segment beginning with a dot.
 
-Measured after the change: all three JigDAW profiles conform to plugin-universe's shapes,
-where all three failed before. Its own suite is 1351 tests passing, and both changes were
-mutation tested.
+**Needs you:** the usual pull and restart. The restart is not optional, because this is a
+change inside `bin/serve.js` rather than a static file.
 
-**Still needs you:** committing it, and deploying it, before anything is harvested.
+```sh
+cd /home/github/jigdaw && git pull && sudo systemctl restart jigdaw
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/.git/HEAD   # expect 404
+curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/            # expect 200
+```
 
-## 3. Decide where your signing key is published
+The plugin-universe change you were reviewing here is committed.
 
-Bundles now carry provenance and can be signed, and `bin/keys.js create <iri>` prints the
-Turtle to serve at the verification method IRI. Two things only you can do:
+## 3. Make your signing key
 
-- **Choose the IRI and serve the file.** Something like
-  `https://strandz.it/jigdaw/keys/danja#ed25519`, served as `text/turtle` with
-  `Access-Control-Allow-Origin: *`. Until it exists, `bin/verify.js --online` has nothing to
-  dereference and every signature is checked only against the copy inside the bundle, which
-  proves the bundle is self consistent and nothing about who made it.
-- **Make the key and keep it.** `bin/keys.js` refuses to write one anywhere inside a git
-  working tree, so it will land in `~/.config/jigdaw/keys/` unless you say otherwise. Nothing
-  in this repository can back it up for you, and a lost key cannot sign as the same author
-  again.
+**The IRI is decided, and everything but the key itself is built.**
 
-Nothing in the repository is blocked by this. Published bundles are weaker without it.
+```
+https://strandz.it/jigdaw/keys/danja#ed25519
+```
+
+Three choices in that, each with a reason:
+
+**On `strandz.it`, not the PURL.** The namespace rule says mint under the PURL, and that rule
+is about vocabulary terms, whose identity must outlive any host. A key is the opposite: its
+whole value is that a verifier can fetch it from an origin and compare. `Signature.js` reports
+a signature as the origin signing its own work when the key's origin matches the plugin's, and
+the plugins are at `https://strandz.it/jigdaw/plugins/...`, so a key anywhere else makes every
+one of your own signatures read as a third party vouching. A PURL cannot serve content, only
+redirect, so it could not do this job.
+
+**No file extension.** The IRI is the identity and `.ttl` is a fact about a file.
+`bin/serve.js` now has a `/keys/<name>` route that serves `web/keys/<name>.ttl` as
+`text/turtle` with CORS, so the identity never carries the storage detail.
+
+**A fragment.** One document can then describe several keys, and rotating means adding
+`#ed25519-2027` rather than replacing an IRI that everything already signed with names.
+
+**Needs you**, because a signing identity should be created by the person who owns it and I
+should not generate yours:
+
+```sh
+node bin/keys.js create https://strandz.it/jigdaw/keys/danja#ed25519
+node bin/keys.js publish ~/.config/jigdaw/keys/ed25519.json > web/keys/danja.ttl
+```
+
+The first refuses to write anywhere inside a git working tree and lands in
+`~/.config/jigdaw/keys/`. The second writes only the public half. Commit `web/keys/danja.ttl`,
+pull on the server, and `node bin/verify.js <bundle> --online` has something to check against.
+
+Verified end to end already, against a throwaway key served from this route: a signed bundle
+reports *checked against the key published at that IRI* rather than against its own copy.
 
 ## 4. Confirm which repository owns `trn:`
 

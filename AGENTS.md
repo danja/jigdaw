@@ -246,4 +246,4 @@ JigDAW depends on none of them.
 - `~/github/downspout` gives 52 hand-written profiles, the format in real use
 - `~/github/valis` gives instruments as RDF, and the ontology to registry symmetry test
 - `~/github/plugin-universe` is live at plugin-universe.com, with a public SPARQL endpoint
-  and MCP endpoint over 758 plugins
+  and MCP endpoint over 756 plugins

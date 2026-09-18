@@ -2,6 +2,37 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-18 The live site served the whole repository, including .git
+
+**What happened.** `bin/serve.js` served any path from the repository root when it was not
+under `web/`. Measured against strandz.it: `/jigdaw/package.json`, `/jigdaw/AGENTS.md`,
+`/jigdaw/.gitignore` and `/jigdaw/.git/HEAD` all answered 200, and `/jigdaw/.git/index` with
+them, which is enough to reconstruct the repository.
+
+**Root cause.** The static fallback was `[safeResolve('/web' + path), safeResolve(path)]`. The
+second candidate is what makes `/src/host/ForeignLoader.js` and `/plugins/pulse/pulse.wasm`
+work, and it was written to serve exactly those. Nothing limited it to them, so it served
+everything else too.
+
+**Why it had not been noticed.** Nothing in this repository is secret, so no test asking "is
+this file served" would have looked wrong, and the deployment is a `git pull`, so `.git`
+being present on the server is the normal state rather than an accident. The exposure is not
+that today's tree leaks something; it is that the server's behaviour was "serve whatever is on
+disk", and gitignore is precisely where a key would be. `bin/keys.js` refuses to write a
+private key inside a git working tree, which was the only thing standing between that
+convention and this server.
+
+**How it was found.** By a test I wrote for something else. A new `/keys/<name>` route needed
+an assertion that it takes a name rather than a path, and `/keys/../package.json` returned 200.
+The route was fine; the fallback behind it was not.
+
+**Prevention.** An allowlist, `SERVED_FROM_ROOT`, rather than a denylist, because a denylist is
+a list of the mistakes somebody already thought of. Any segment beginning with a dot is
+refused wherever it appears. `tests/server/cors.test.js` asserts twelve specific paths are
+refused and that everything the page and the plugins need still works, because an allowlist
+that is too tight breaks the site quietly. Mutation tested: restoring the old line fails nine
+assertions.
+
 ## 2026-09-18 Every generated profile had blank nodes in it, for six phases
 
 **What happened.** The first attempt to sign a real plugin failed immediately:

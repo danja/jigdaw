@@ -87,6 +87,30 @@ a buffer that has moved.
 A host SHOULD set a parameter only when its value has changed. Some plugins retune delay
 lines on a parameter write, and doing that every block is wasteful at best.
 
+### A host splits a block that is too large
+
+Step 3 says a host never passes more than `jig_max_frames()`. That leaves what to do with a
+larger block implied, and implied was not enough: `Chain::process` in this repository rendered
+`min(frames, jig_max_frames())` and left the rest of the host's buffer as it found it. Every
+worked plugin reports 128 and a DAW runs at 256 or more, so three quarters of every block at
+512 was stale. So it is stated.
+
+**A host given a block larger than `jig_max_frames()` MUST process it in sub-blocks of at most
+that many frames, and MUST NOT render only part of it.** For each sub-block, in this order:
+
+1. Fill in the transport for the position that sub-block starts at, not for the block. A host
+   that writes the block's transport once has told the module the same wrong thing several
+   times.
+2. Deliver the events whose frames fall within that sub-block, **rebased onto it**. An event
+   carries its offset within the block it is being given, and after splitting that is no
+   longer its offset within the host's block.
+3. Write the input slice, call `jig_process(n)`, read the output slice.
+4. Read any outgoing events and rebase them **back** onto the host's block, by adding the
+   sub-block's offset, before handing them on.
+
+A host MUST advance only the transport fields it was given. Deriving a bar number from a beat
+the host never supplied invents one, and `valid` exists to say which fields are real.
+
 ## What version 1 does not carry
 
 No state serialisation, no host transport, no outgoing MIDI, no latency reporting. Those are

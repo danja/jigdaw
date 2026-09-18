@@ -2,6 +2,7 @@
 #include "jigdaw/Chain.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 #include "jigdaw/Fetch.hpp"
@@ -58,6 +59,7 @@ std::string Chain::add(const std::string& iri, double sampleRate) {
     slot->firstParameter = static_cast<int>(flat_.size());
     for (const auto& port : slot->ports) flat_.push_back(port);
 
+    sampleRate_ = sampleRate;
     maxFrames_ = slots_.empty() ? slot->module->maxFrames()
                                 : std::min(maxFrames_, slot->module->maxFrames());
     slots_.push_back(std::move(slot));
@@ -119,69 +121,131 @@ void Chain::deliver(Slot& slot, const MidiEvent* events, const uint32_t count) {
     }
 }
 
+/// The transport as it stands `offset` frames into the block.
+///
+/// A module is entitled to know where it is, and a host that fills the block in
+/// once and then runs eight sub-blocks has told it the same lie eight times.
+/// Only fields the host marked valid are advanced: deriving a bar number from a
+/// beat the host never gave us would be inventing one.
+Transport Chain::transportAt(uint32_t offset) const {
+    Transport at = transport_;
+    if (offset == 0 || sampleRate_ <= 0.0) return at;
+
+    const double seconds = static_cast<double>(offset) / sampleRate_;
+    if (at.valid & kTransportSeconds) at.seconds = transport_.seconds + seconds;
+    if (!(at.valid & kTransportBeat) || !(at.valid & kTransportBpm)) return at;
+
+    at.beat = transport_.beat + seconds * (transport_.bpm / 60.0);
+    if (!(at.valid & kTransportBbt) || !(at.valid & kTransportMeter)) return at;
+
+    // Walk whole bars rather than dividing, because the meter can only be
+    // trusted for the bar we were given and a block is never many bars long.
+    const double beatsPerBar = transport_.numerator > 0 ? transport_.numerator : 4;
+    while (at.beat >= at.barStartBeat + beatsPerBar) {
+        at.barStartBeat += beatsPerBar;
+        at.bar += 1;
+    }
+    const double intoBar = at.beat - at.barStartBeat;
+    at.beatInBar = static_cast<int32_t>(intoBar) + 1;
+    at.tick = at.ticksPerBeat > 0
+        ? static_cast<int32_t>((intoBar - std::floor(intoBar)) * at.ticksPerBeat)
+        : 0;
+    return at;
+}
+
 void Chain::process(float** audio, int channels, uint32_t frames,
                     const MidiEvent* in, uint32_t inCount) {
     emittedCount_ = 0;
     pendingCount_ = 0;
+    if (slots_.empty() || frames == 0) return;
 
-    if (!pending_.empty() && in != nullptr) {
-        pendingCount_ = std::min(inCount, kEventCapacity);
-        std::memcpy(pending_.data(), in, pendingCount_ * sizeof(MidiEvent));
-    }
+    // A module states the largest block it will accept and maxFrames_ is the
+    // smallest of those over the chain, so the host's block is processed in
+    // pieces that every plugin can take.
+    //
+    // This loop is the whole point. Before it existed the chain processed
+    // min(frames, maxFrames) once and left the rest of the host's buffer as it
+    // found it: at a 512 frame buffer, with every worked plugin reporting 128,
+    // three quarters of every block was stale, and the MIDI and the transport
+    // were handled once for the lot.
+    const uint32_t limit = maxFrames_ > 0 ? maxFrames_ : frames;
 
-    for (const auto& slot : slots_) {
-        Module& module = *slot->module;
-        const uint32_t block = std::min(frames, module.maxFrames());
+    for (uint32_t offset = 0; offset < frames; offset += limit) {
+        const uint32_t block = std::min(limit, frames - offset);
+        const Transport now = transportAt(offset);
 
-        if (Transport* into = module.transport()) *into = transport_;
+        // The host's events for this sub-block, rebased onto it. A module is
+        // told where an event falls within the block it is being given, and
+        // after splitting that is no longer where it falls in the host's.
+        pendingCount_ = 0;
+        for (uint32_t i = 0; i < inCount && in != nullptr; ++i) {
+            if (in[i].frame < offset || in[i].frame >= offset + block) continue;
+            if (pendingCount_ >= kEventCapacity) break;
+            MidiEvent rebased = in[i];
+            rebased.frame -= offset;
+            pending_[pendingCount_++] = rebased;
+        }
 
-        deliver(*slot, pending_.data(), pendingCount_);
+        for (const auto& slot : slots_) {
+            Module& module = *slot->module;
 
-        // An instrument takes no audio: it replaces what is there rather than
-        // adding to it, which is why the input copy is conditional.
-        if (slot->profile.audioInputs > 0) {
-            for (int channel = 0; channel < slot->profile.inputChannels; ++channel) {
-                float* into = module.input(static_cast<uint32_t>(channel));
-                if (into == nullptr) continue;
-                const int source = std::min(channel, channels - 1);
-                std::memcpy(into, audio[source], block * sizeof(float));
+            if (Transport* into = module.transport()) *into = now;
+
+            deliver(*slot, pending_.data(), pendingCount_);
+
+            // An instrument takes no audio: it replaces what is there rather
+            // than adding to it, which is why the input copy is conditional.
+            if (slot->profile.audioInputs > 0) {
+                for (int channel = 0; channel < slot->profile.inputChannels; ++channel) {
+                    float* into = module.input(static_cast<uint32_t>(channel));
+                    if (into == nullptr) continue;
+                    const int source = std::min(channel, channels - 1);
+                    std::memcpy(into, audio[source] + offset, block * sizeof(float));
+                }
             }
-        }
 
-        module.process(block);
+            module.process(block);
 
-        // A plugin with no audio output leaves what is passing through it
-        // untouched. A MIDI generator has nothing to write and version 2 lets
-        // it say so; writing silence instead would mute the whole chain.
-        if (slot->profile.audioOutputs > 0) {
-            for (int channel = 0; channel < channels; ++channel) {
-                const float* from = module.output(static_cast<uint32_t>(channel));
-                if (from == nullptr) continue;
-                std::memcpy(audio[channel], from, block * sizeof(float));
+            // A plugin with no audio output leaves what is passing through it
+            // untouched. A MIDI generator has nothing to write and version 2
+            // lets it say so; writing silence instead would mute the chain.
+            if (slot->profile.audioOutputs > 0) {
+                for (int channel = 0; channel < channels; ++channel) {
+                    const float* from = module.output(static_cast<uint32_t>(channel));
+                    if (from == nullptr) continue;
+                    std::memcpy(audio[channel] + offset, from, block * sizeof(float));
+                }
             }
+
+            if (!module.hasMidiOut()) continue;
+
+            uint32_t produced = 0;
+            const MidiEvent* fromModule = module.midiOut(produced);
+            if (fromModule == nullptr || produced == 0) continue;
+
+            for (uint32_t i = 0; i < produced; ++i) {
+                const MidiEvent& event = fromModule[i];
+                if (event.size < 1 || event.size > 3) continue;   // the ABI says ignore
+
+                // Out of the chain, for the host, in the host's own frames.
+                if (emittedCount_ < kEventCapacity) {
+                    MidiEvent out = event;
+                    out.frame += offset;
+                    emitted_[emittedCount_++] = out;
+                }
+                // And on to whatever comes next in this sub-block, so a
+                // generator can drive an instrument further down without the
+                // host routing it back round. Left sub-block relative, because
+                // that is the frame the next module will be given.
+                if (pendingCount_ < kEventCapacity) pending_[pendingCount_++] = event;
+            }
+
+            // The next plugin is entitled to events in ascending frame order,
+            // and what a generator emits is not necessarily later than what
+            // arrived.
+            std::sort(pending_.begin(), pending_.begin() + pendingCount_,
+                      [](const MidiEvent& a, const MidiEvent& b) { return a.frame < b.frame; });
         }
-
-        if (!module.hasMidiOut()) continue;
-
-        uint32_t produced = 0;
-        const MidiEvent* fromModule = module.midiOut(produced);
-        if (fromModule == nullptr || produced == 0) continue;
-
-        for (uint32_t i = 0; i < produced; ++i) {
-            const MidiEvent& event = fromModule[i];
-            if (event.size < 1 || event.size > 3) continue;   // the ABI says ignore
-
-            // Out of the chain, for the host.
-            if (emittedCount_ < kEventCapacity) emitted_[emittedCount_++] = event;
-            // And on to whatever comes next, so a generator can drive an
-            // instrument further down without the host routing it back round.
-            if (pendingCount_ < kEventCapacity) pending_[pendingCount_++] = event;
-        }
-
-        // The next plugin is entitled to events in ascending frame order, and
-        // what a generator emits is not necessarily later than what arrived.
-        std::sort(pending_.begin(), pending_.begin() + pendingCount_,
-                  [](const MidiEvent& a, const MidiEvent& b) { return a.frame < b.frame; });
     }
 }
 

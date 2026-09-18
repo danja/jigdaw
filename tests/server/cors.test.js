@@ -126,3 +126,117 @@ describe('the server, asked as a browser asks', () => {
     expect(res.valuesOf('access-control-allow-origin')).toEqual(['*'])
   })
 })
+
+/** The same, but keeping the body, which the key document needs. */
+function askBody (path) {
+  return new Promise((ok, fail) => {
+    const req = request({ host: '127.0.0.1', port: PORT, path, method: 'GET' }, res => {
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', chunk => { body += chunk })
+      res.on('end', () => ok({ status: res.statusCode, body }))
+    })
+    req.on('error', fail)
+    req.end()
+  })
+}
+
+describe('the signing key route', () => {
+  // docs/plugin-bundles.md section 6.3: a verification method is an IRI a
+  // verifier dereferences, and the key inside a bundle is only a copy. Until
+  // this route existed there was nowhere for the other copy to live, so every
+  // JigDAW signature could only ever be checked against itself.
+  //
+  // Served without a file extension, because the IRI is the identity and .ttl
+  // is a fact about a file.
+  const file = resolve(root, 'web/keys/route-test.ttl')
+  let multibase
+
+  beforeAll(async () => {
+    const { mkdir, writeFile } = await import('node:fs/promises')
+    const { generateKeyPair } = await import('../../src/host/Signature.js')
+    const { publicKeyDocument } = await import('../../bin/keys.js')
+    const pair = await generateKeyPair()
+    multibase = pair.publicKeyMultibase
+    await mkdir(resolve(root, 'web/keys'), { recursive: true })
+    await writeFile(file, publicKeyDocument({
+      verificationMethod: 'https://strandz.it/jigdaw/keys/route-test#ed25519',
+      publicKeyMultibase: multibase
+    }))
+  })
+
+  afterAll(async () => {
+    const { rm } = await import('node:fs/promises')
+    await rm(file, { force: true })
+  })
+
+  it('serves a published key as Turtle, with exactly one CORS header', async () => {
+    const response = await ask('/keys/route-test')
+    expect(response.status).toBe(200)
+    expect(response.valuesOf('content-type')).toEqual(['text/turtle; charset=utf-8'])
+    expect(response.valuesOf('access-control-allow-origin')).toEqual(['*'])
+  })
+
+  it('serves the key that was published, not a copy of something else', async () => {
+    const response = await askBody('/keys/route-test')
+    expect(response.body).toContain(multibase)
+    expect(response.body).toContain('sec:Multikey')
+  })
+
+  it('answers 404 for a key nobody published', async () => {
+    expect((await ask('/keys/nobody')).status).toBe(404)
+  })
+
+  it('takes a name, not a path', async () => {
+    // Anything else would be a file server rooted at web/keys, which is where a
+    // private key would eventually be read from by accident. /keys/../x is not
+    // tested here because the browser and node both normalise it away before it
+    // arrives; what happens to it afterwards is the allowlist's job, below.
+    // The .ttl form is still reachable through the ordinary web/ handler, which
+    // is untidy but harmless: it is a public document either way. What matters
+    // is that the route itself takes a name.
+    for (const path of ['/keys/a/b', '/keys/.hidden', '/keys/route%2Dtest/x']) {
+      expect((await ask(path)).status, path).not.toBe(200)
+    }
+  })
+})
+
+describe('what the server does not serve', () => {
+  // bin/serve.js runs the live site, and it used to serve the whole working
+  // tree: /package.json, /AGENTS.md, and /.git/HEAD and /.git/index, from which
+  // the repository can be reconstructed. Measured on strandz.it, 2026-09-18.
+  //
+  // Nothing in this repository is secret so nothing was leaked, but that is a
+  // property of today's tree rather than of the server. A gitignored file is
+  // still on the server's disk, and gitignore is exactly where a key lives.
+  const REFUSED = [
+    '/package.json', '/package-lock.json', '/AGENTS.md', '/TODO.md', '/MISTAKES.md',
+    '/.git/HEAD', '/.git/config', '/.git/index', '/.gitignore', '/install.sh',
+    '/node_modules/vitest/package.json', '/native/jigdaw-adapter/src/Chain.cpp'
+  ]
+
+  it.each(REFUSED)('refuses %s', async path => {
+    expect((await ask(path)).status).not.toBe(200)
+  })
+
+  it('still serves everything the page and the plugins need', async () => {
+    // The other half, and the one that makes this a change rather than a
+    // breakage. An allowlist that is too tight breaks the site quietly.
+    for (const path of ['/', '/app.bundle.js', '/src/host/ForeignLoader.js',
+      '/plugins/pulse/pulse.wasm', '/plugins/pulse/', '/docs/', '/foreign/probe.html']) {
+      expect((await ask(path)).status, path).toBe(200)
+    }
+  })
+
+  it('refuses a dotfile, and an escape that normalises somewhere unserved', async () => {
+    // `.` and `..` are normalised away before the check sees them, which is
+    // right: `/plugins/./pulse/` is `/plugins/pulse/` and not an escape. What
+    // stops `/src/../package.json` is the allowlist, after normalisation, and
+    // what stops a dotfile is the segment check.
+    for (const path of ['/src/../package.json', '/docs/.hidden', '/web/../.gitignore']) {
+      expect((await ask(path)).status, path).not.toBe(200)
+    }
+    expect((await ask('/plugins/./pulse/profile.ttl')).status,
+      'a . segment normalises away and is not an escape').toBe(200)
+  })
+})

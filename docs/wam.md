@@ -133,6 +133,20 @@ container from a scoped path and never calls `fetch`; `src/host/ForeignOrigin.js
 and installs a container. `web/foreign/probe.html` is the check, because none of this is
 reachable from a test in this repository: open it and press the button.
 
+Its two inputs are built rather than committed, because they come from
+`webaudiomodules/wam-examples`, which is MIT and not ours to ship, and a vendored build
+artefact goes stale silently. So the page is published and its inputs are not:
+
+```sh
+git clone --recurse-submodules https://github.com/webaudiomodules/wam-examples ~/wam-examples
+npm run wam:fixtures
+```
+
+The probe checks for them before it uses them and prints those two lines when they are
+absent. It shipped once without that check and answered 404 at its first fetch on the live
+server, which is the "contact page that 404s" failure this project has a guard against for
+every other page.
+
 Measured in Chrome on 2026-09-18, against `pingpongdelay` from `webaudiomodules/wam-examples`
 bundled and zipped into a 351 kB container: 14 of 14. The container verifies, the plugin is
 refused before consent, imports from the virtual origin, fetches its own `descriptor.json`

@@ -50,8 +50,15 @@ function send (response, status, body, headers = {}) {
 }
 
 /** Refuse any path that escapes the repository. */
+/// Directories served from the repository root, beside web/. Everything the
+/// page and the plugins need, and nothing else.
+const SERVED_FROM_ROOT = new Set(['src', 'plugins', 'examples', 'vocabs', 'docs'])
+
 function safeResolve (urlPath) {
   const clean = normalize(decodeURIComponent(urlPath)).replace(/^(\.\.[/\\])+/, '')
+  // A dot segment is either an escape attempt or a dotfile, and neither is
+  // something this server has any business handing out.
+  if (clean.split(/[/\\]/).some(segment => segment.startsWith('.') && segment !== '')) return null
   const full = resolve(root, '.' + (clean.startsWith('/') ? clean : `/${clean}`))
   return full.startsWith(root) ? full : null
 }
@@ -227,6 +234,20 @@ const server = createServer(async (request, response) => {
     return serveCatalogue(request, response, url)
   }
 
+  // A signing key. docs/plugin-bundles.md section 6.3: a verification method is
+  // an IRI a verifier dereferences, and the key inside a bundle is only a copy.
+  //
+  // Served without an extension, because the IRI is the identity and .ttl is a
+  // fact about a file. The document describes fragments of itself, so one
+  // document can carry several keys and a rotation adds one rather than
+  // replacing the IRI everything already signed with.
+  const key = /^\/keys\/([A-Za-z0-9_-]+)$/.exec(path)
+  if (key) {
+    const file = safeResolve(`/web/keys/${key[1]}.ttl`)
+    if (file && await serveFile(response, file)) return
+    return send(response, 404, `no key published at ${path}`)
+  }
+
   // A directory is served by its index. Without this, /docs/ answers 404 while
   // web/docs/index.html sits right there, which is the kind of gap a file
   // existence check cannot see: the file is present and the route is not.
@@ -246,8 +267,24 @@ const server = createServer(async (request, response) => {
     return send(response, 404, `no plugin at ${path}`)
   }
 
-  // web/ is served at the root so the page is at / rather than /web/.
-  const candidates = [safeResolve(join('/web', path)), safeResolve(path)].filter(Boolean)
+  // web/ is served at the root so the page is at / rather than /web/. A path
+  // that is not under web/ is served from the repository only if its first
+  // segment is on the list below.
+  //
+  // It used to be served from the repository unconditionally, which meant the
+  // live site served the whole working tree: `/package.json`, `/AGENTS.md`,
+  // and `/.git/HEAD` and `/.git/index`, from which the entire history can be
+  // reconstructed. Measured on strandz.it, 2026-09-18. Nothing in this
+  // repository is secret, so nothing was leaked, but "nothing secret is in the
+  // tree" is a property of today rather than a property of the server: a file
+  // that is gitignored is still on the server's disk and was still served, and
+  // gitignore is exactly where a key would be.
+  //
+  // An allowlist rather than a denylist, because a denylist is a list of the
+  // mistakes somebody has already thought of.
+  const first = path.split('/')[1] ?? ''
+  const fromRoot = SERVED_FROM_ROOT.has(first) ? safeResolve(path) : null
+  const candidates = [safeResolve(join('/web', path)), fromRoot].filter(Boolean)
   for (const candidate of candidates) {
     const info = await stat(candidate).catch(() => null)
     if (info?.isFile() && await serveFile(response, candidate)) return

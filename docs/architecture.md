@@ -77,7 +77,7 @@ A local SPARQL store holds profiles, alongside the DAW, in a compose stack.
 
 **It should not start empty.** `plugin-universe.com` already runs a public read-only SPARQL
 endpoint at `sparql.plugin-universe.com/public/query` and a public MCP endpoint at
-`mcp.plugin-universe.com/mcp`, over 758 plugins with `accepts` and `produces` facets, under
+`mcp.plugin-universe.com/mcp`, over 756 plugins with `accepts` and `produces` facets, under
 CC0. Federating with it, or mirroring it, is strictly better than building a second
 catalogue of the same things. The figures here were taken from `/health` and should be
 re-measured rather than trusted.

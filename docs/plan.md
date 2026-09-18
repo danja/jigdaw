@@ -22,7 +22,7 @@ This is not greenfield. Four sibling repositories already run the pattern, descr
 | `transmission` | the `trn:` vocabulary, the discovered and curated split, an RDF plugin catalogue with an MCP face |
 | `downspout` | 52 hand-written `profile.ttl` files, the format in real use |
 | `valis` | instruments as RDF documents, the ontology to registry symmetry test, one dispatcher with thin adapters |
-| `plugin-universe` | live at plugin-universe.com: 758 plugins, a published profile spec, a vocabulary at `/ns`, Fuseki, public SPARQL and MCP endpoints |
+| `plugin-universe` | live at plugin-universe.com: 756 plugins, a published profile spec, a vocabulary at `/ns`, Fuseki, public SPARQL and MCP endpoints |
 
 So the profile format is settled and already deployed. **JigDAW's job is to extend it for the
 web**: what a plugin's IRI serves, how WebAssembly and user interfaces are declared and

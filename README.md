@@ -46,7 +46,7 @@ first two are shared with other projects and only the third is ours.
 
 The format is not new. It extends the profile vocabulary published at
 [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already in
-use over 758 plugins, adding the terms a browser needs to fetch and run one. A profile written
+use over 756 plugins, adding the terms a browser needs to fetch and run one. A profile written
 for that catalogue stays valid here.
 
 ## The specification

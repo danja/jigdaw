@@ -57,6 +57,26 @@ async function run () {
   const { ForeignTrust } = await import('/src/host/ForeignTrust.js')
   const { ForeignOrigin } = await import('/src/host/ForeignOrigin.js')
 
+  // The container and the WAM runtime are built from somebody else's MIT code
+  // and are gitignored, so this page is published and its inputs are not. Say
+  // that plainly instead of failing at the first fetch with a 404, which is
+  // what it did when it was first deployed.
+  for (const [what, url] of [['the container', '/foreign/pingpongdelay.wam'], ['the WAM runtime', '/foreign/wam-host.js']]) {
+    const head = await fetch(url, { method: 'HEAD' })
+    if (!head.ok) {
+      say(`${what} is not here (${url} returned ${head.status}).`, 'bad')
+      say('', '')
+      say('These are built from webaudiomodules/wam-examples, which is MIT and not ours to', 'dim')
+      say('commit, so they are not in the repository. To build them:', 'dim')
+      say('', '')
+      say('  git clone --recurse-submodules https://github.com/webaudiomodules/wam-examples ~/wam-examples', 'dim')
+      say('  npm run wam:fixtures', 'dim')
+      say('', '')
+      say('Then reload this page. Nothing below has run.', 'dim')
+      return
+    }
+  }
+
   say('fetching the container…', 'dim')
   const response = await fetch('/foreign/pingpongdelay.wam')
   const bytes = new Uint8Array(await response.arrayBuffer())
