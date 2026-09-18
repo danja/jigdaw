@@ -1,12 +1,12 @@
 # JigDAW Agent Reference
 
-JigDAW is a web-native digital audio workstation and plugin format. The host and the plugins
-both run in the browser, plugins are identified by dereferenceable IRIs, and signal
-processing is WebAssembly.
+JigDAW is a plugin format native to the web. A plugin is a dereferenceable IRI, fetching it is
+installing it, and signal processing is WebAssembly. A digital audio workstation in the browser
+is the reference host: it exists to hold the format up rather than the other way round.
 
-This file is the entry point for linked-data discovery. The project is in its specification
-phase: the vocabulary, the shapes and the contract exist, along with a validator that
-enforces them. None of the DAW exists.
+This file is the entry point for documentation and linked data discovery. The specification is complete and
+normative, and two independent hosts implement it, one in the browser and one as a native
+VST3, CLAP and LV2. Three worked plugins are in `plugins/`.
 
 ## Resources
 
@@ -22,9 +22,12 @@ enforces them. None of the DAW exists.
 | Namespace | `docs/namespace.md` | What `http://purl.org/stuff/jigdaw/` serves, and how terms resolve |
 | Profile format | `docs/plugin-profiles.md` | How to write a profile, and how it extends the published one |
 | Architecture | `docs/architecture.md` | Layers, boundaries, and the decisions behind them |
+| Bundles | `docs/plugin-bundles.md` | A plugin as a file, its provenance record, and the signature over it |
+| Module ABI | `docs/module-abi.md` | The optional WebAssembly ABI, for a host with no JavaScript |
 | Worked example | `examples/reference-profile.ttl` | A complete profile that validates |
 | Worked project | `examples/session-project.ttl` | A complete session that validates |
-| Counterexamples | `examples/counterexample-profile.ttl`, `examples/counterexample-project.ttl` | Each violates every constraint once. Neither may validate |
+| Worked provenance | `examples/reference-provenance.ttl` | A complete bundle provenance record that validates |
+| Counterexamples | `examples/counterexample-*.ttl` | One per format. Each violates every constraint once, and none may validate |
 
 ## Vocabularies
 
@@ -37,6 +40,7 @@ JigDAW writes in three, and which statement belongs to which matters.
 | `lv2:` / `units:` | `http://lv2plug.in/ns/…` | parameters, ranges, units |
 | `pu:` | `http://purl.org/stuff/plugin-universe/` | catalogue metadata: licence, category |
 | `prov:` / `dcterms:` / `foaf:` | standard | provenance, metadata, homepages |
+| `sec:` | `https://w3id.org/security#` | Data Integrity proofs and Multikey, for a signed bundle |
 
 `trn:` is defined in `~/github/transmission/vocabs/profile.ttl` and published at
 [plugin-universe.com/ns](https://plugin-universe.com/ns). A term general enough to belong to
@@ -45,7 +49,7 @@ it is proposed upstream rather than forked into `jig:`.
 ## A plugin in one request
 
 ```sh
-curl -H "Accept: text/turtle" https://example.org/plugins/cascade/
+curl -H "Accept: text/turtle" https://strandz.it/jigdaw/plugins/pulse/
 ```
 
 The response is the profile. It says what the plugin is, and links to its WebAssembly

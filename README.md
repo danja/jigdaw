@@ -1,56 +1,184 @@
 # JigDAW
 
-Web-based music plugin system.
+**A plugin format native to the web.**
 
-A digital audio workstation and a plugin format, both native to the web. The host runs in a
-browser, plugins are identified by dereferenceable IRIs, and signal processing is
-WebAssembly. Finding a plugin and installing it are the same action: dereference the IRI and
-it is there.
+A plugin is a dereferenceable IRI. Fetching it is installing it. What comes back says what the
+plugin is, what signals it accepts and produces, what it needs from a host, and where its
+WebAssembly module, its AudioWorklet processor and its user interface are, each with an
+integrity digest. There is no registry, and no install step distinct from having fetched it.
 
-The project is in its specification phase. The vocabulary, the validation shapes and the
-normative host and plugin contract exist, along with a validator that enforces them
-(`npm run validate`). None of the DAW exists yet.
+The rest of this repository exists to support the specification: a host that runs the plugins in a
+browser, a second host that runs them as a VST3, three worked plugins, and a validator that
+enforces the specification on its own files.
 
-## Start here
-
-- [docs/host-plugin-contract.md](docs/host-plugin-contract.md) states what a host guarantees and
-  what a plugin must do. Normative.
-- [docs/plugin-profiles.md](docs/plugin-profiles.md) is how to describe a plugin,
-  [docs/plugin-bundles.md](docs/plugin-bundles.md) how to send one to somebody as a file, and
-  [docs/project-format.md](docs/project-format.md) how to describe a session. A session saves
-  and reopens as RDF in that format, carrying the plugin IRIs that make it portable.
-- [docs/messaging.md](docs/messaging.md), [docs/latency.md](docs/latency.md) and
-  [docs/webmcp.md](docs/webmcp.md) specify the message protocol, latency compensation and
-  the agent tool surface.
-- [docs/namespace.md](docs/namespace.md) says what the vocabulary IRIs serve.
-- [docs/architecture.md](docs/architecture.md) covers the layers, and why they are where they are.
-- [README.agents.md](README.agents.md) is the same, for machine consumers.
-- [docs/plan.md](docs/plan.md) has the phases and their status.
-- [docs/first-thoughts.md](docs/first-thoughts.md) is the original sketch the project was
-  built from, kept as written.
-
-## The idea
+## Try it
 
 ```sh
-curl -H "Accept: text/turtle" https://example.org/plugins/cascade/
+curl -H "Accept: text/turtle" https://strandz.it/jigdaw/plugins/pulse/
 ```
 
-That returns the plugin's profile: what it is, what signals it accepts and produces, what it
-needs from a host, and where its WebAssembly module, its AudioWorklet processor and its user
-interface are, each with an integrity digest. There is no registry and no install step
-distinct from having fetched it.
+That is the whole install path. The profile is Turtle, its subject is its own IRI, and every
+resource it names carries a `sha384` digest that a host MUST check before running anything.
 
-The profile format is not new. It extends the one published at
-[plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already
-in use over 758 plugins, adding what a browser needs. A profile written for that catalogue
-stays valid here.
+```turtle
+<>
+    a jig:WebPlugin , trn:PluginProfile ;
+    rdfs:label "Pulse" ;
+    trn:role trn:Instrument , trn:AudioInstrument ;
+    trn:accepts trn:Midi ;
+    trn:produces trn:Audio ;
+    trn:requires jig:MidiEvents ;
+    jig:audioOutputs 1 ; jig:outputChannels 2 ; jig:latencyFrames 0 ;
+    jig:module <#module> ;
+    jig:processor <#processor> ;
+    lv2:port <#waveform> , <#attack> , <#release> , <#cutoff> , <#gain> .
 
-## The native adapter
+<#module>
+    a jig:Module ;
+    jig:location <pulse.wasm> ;
+    jig:abi jig:Abi1 ;
+    jig:integrity "sha384-g3DvRxgIQlAOtAs4igRA3txWG2twyHsPR5zgZxM2iods9jcnIcPebid0qCDgohrE" .
+```
 
-`./install.sh` builds a VST3 that loads JigDAW plugins by IRI and installs it into `~/.vst3`.
-It exists as a sanity check on the specification, and found that the specification had made
-itself browser-only. See [native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md)
-and [docs/module-abi.md](docs/module-abi.md).
+`trn:` says what it is musically, `lv2:` describes its parameters, and `jig:` says what it
+takes to run it in a browser. Which vocabulary a statement belongs to is not a detail: the
+first two are shared with other projects and only the third is ours.
+
+The format is not new. It extends the profile vocabulary published at
+[plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already in
+use over 758 plugins, adding the terms a browser needs to fetch and run one. A profile written
+for that catalogue stays valid here.
+
+## The specification
+
+This is the deliverable, and it is normative. RFC 2119 throughout.
+
+| Document | What it governs |
+|---|---|
+| [host-plugin-contract.md](docs/host-plugin-contract.md) | What a host guarantees and what a plugin must do. The others hang off this one |
+| [plugin-profiles.md](docs/plugin-profiles.md) | How to describe a plugin, and how it extends the published format |
+| [messaging.md](docs/messaging.md) | The wire format between host, processor and user interface |
+| [latency.md](docs/latency.md) | Compensation, and what a graph with feedback does |
+| [module-abi.md](docs/module-abi.md) | The optional WebAssembly ABI, for a host with no JavaScript |
+| [plugin-bundles.md](docs/plugin-bundles.md) | Sending a plugin as a file, with provenance and signing |
+| [project-format.md](docs/project-format.md) | The session graph, which carries plugin IRIs and so stays portable |
+| [webmcp.md](docs/webmcp.md) | The tool surface an agent drives a host through |
+| [namespace.md](docs/namespace.md) | What `http://purl.org/stuff/jigdaw/` serves and how its terms resolve |
+
+The vocabulary is `vocabs/jigdaw.ttl`, in the namespace `http://purl.org/stuff/jigdaw/`. Every
+profile is validated against SHACL Core shapes in `vocabs/shapes.ttl`, which is a gate rather
+than a diagnostic: JigDAW ingests profiles from origins it does not control.
+
+```sh
+npm run validate -- examples/reference-profile.ttl
+```
+
+[examples/](examples/) holds a reference profile, a reference session and a reference
+provenance record, each of which validates, and a counterexample for each, each of which
+violates every constraint once and must not.
+
+## Writing a plugin
+
+Three worked plugins are in [plugins/](plugins/), written in Rust and compiled to
+WebAssembly: a subtractive synth, a reverb, and a transport-synced bass line generator.
+Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
+generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
+on the next build, silently.
+
+A plugin that ships no user interface is not degraded. Its panel is generated from its
+`lv2:port` declarations, which is why the accessibility rules in
+[AGENTS.md](AGENTS.md) are load bearing: one accessible generator makes every plugin
+accessible.
+
+[web/docs/plugins.html](web/docs/plugins.html) is the guide, and
+[web/docs/hosts.html](web/docs/hosts.html) is the same for anyone implementing the other side.
+
+### Sending one as a file
+
+```sh
+node bin/bundle.js plugins/pulse --by https://you.example/#me --key ~/.config/jigdaw/keys/ed25519.json
+node bin/verify.js plugins/pulse/pulse.jig --online
+```
+
+Two forms, both carrying the canonical IRI: a flattened profile whose locations are `data:`
+URIs, which any host already reads, and a `.jig` archive that unpacks into a working plugin
+origin. Both carry a provenance record and can carry an Ed25519 signature over a canonical
+form of the graph. See [plugin-bundles.md](docs/plugin-bundles.md).
+
+## The reference host
+
+There is a working digital audio workstation in the browser: a plugin rack, an arbitrary
+directed graph with cycle refusal and latency compensation, a channel strip, transport, a
+catalogue search, sessions that save and reopen as RDF, and a WebMCP surface an agent can
+drive. `npm run serve`, then open the page.
+
+**It is here to exercise the specification.** A normative document with no implementation is a
+claim about behaviour nobody has, and most of what this project has learned came from the host
+refusing to do what the specification said. It is a real DAW and it is not the point of the
+repository; if it disappeared, the format would still be the thing.
+
+[architecture.md](docs/architecture.md) covers the layers and why they are where they are. The
+separation that matters is that RDF persistence, the project model, the compiled audio graph
+and real-time processing never see each other's problems.
+
+## Other hosts
+
+A format with one host is a format with an implementation, not a specification. There are
+three, and what each of them found is in [plan.md](docs/plan.md).
+
+### The native adapter
+
+```sh
+./install.sh          # VST3 into ~/.vst3; --all for the CLAP and LV2 too
+```
+
+In this repository, C++ over [DPF](https://github.com/DISTRHO/DPF), loading JigDAW plugins by
+IRI so a desktop DAW can open them. It was built as a sanity check on the specification and
+earned its keep before it made a sound: it could not load a JigDAW plugin at all, because the
+only thing the contract guaranteed was a JavaScript `AudioWorklet`. The specification had
+accidentally made itself browser-only. [module-abi.md](docs/module-abi.md) is the answer, and
+all three worked plugins now declare an ABI. See
+[native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md).
+
+### Transmission
+
+[Transmission](https://danja.github.io/transmission/), a generative audio workstation for
+Linux, hosts JigDAW plugins alongside VST3 ones:
+[its JigDAW page](https://danja.github.io/transmission/jigdaw.html) is the documentation.
+Adding one to a project is a node typed `trn:JigdawPlugin` carrying a `trn:pluginIri`, and
+nothing else; both module ABIs are implemented, port counts are read from the profile rather
+than from what the project guessed, and a plugin declaring no `jig:abi` is refused with a
+message saying it is private to its JavaScript processor.
+
+It is a different kind of evidence from the adapter. Rather than reimplementing the contract
+it links `jigdaw_core`, the portable half of the adapter above, which is the first time
+anything outside this repository has consumed it. So it does not independently confirm the
+specification, and it does show that the code written to read a profile, verify a digest and
+call a module travels, and that a JigDAW plugin runs in an application written for something
+else.
+
+It has already sent one defect back. `Profile.cpp` parsed numbers with `std::stof`, which
+reads the decimal separator from the global C locale; GTK calls `setlocale(LC_ALL, "")`, so
+under a comma-decimal locale every fractional `lv2:default`, `lv2:minimum` and `lv2:maximum`
+in every profile parsed as zero. Fixed here and recorded in [MISTAKES.md](MISTAKES.md). A
+host nobody here wrote is the only thing that was ever going to find that.
+
+## Status
+
+The specification is complete and normative. The browser host implements it and runs all three
+worked plugins; the native adapter fetches, verifies, instantiates and sounds the two that
+produce audio, under its own tests; Transmission runs them in a workstation written for VST3. A session saves and reopens carrying the IRIs that make it
+portable.
+Phases and their state are in [plan.md](docs/plan.md); [TODO.md](TODO.md) is what is open and
+[HUMANS.md](HUMANS.md) is the short list of things only a person can do.
+
+```sh
+npm install && npm test
+```
+
+[README.agents.md](README.agents.md) is the entry point for machine consumers.
+[AGENTS.md](AGENTS.md) holds the conventions.
+[docs/first-thoughts.md](docs/first-thoughts.md) is the original sketch, kept as written.
 
 ## Licence
 

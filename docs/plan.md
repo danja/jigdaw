@@ -284,6 +284,22 @@ because a copy that succeeded says nothing about whether a host can open the res
 on the installed bundle: no unresolved libraries, the execute bit intact, and a factory
 returned.
 
+### A third host, written elsewhere
+
+[Transmission](https://danja.github.io/transmission/jigdaw.html) now hosts JigDAW plugins
+alongside VST3 ones. It does not reimplement the contract: its `native/CMakeLists.txt` adds
+`native/jigdaw-adapter` from a JigDAW checkout and links `jigdaw_core`, which is the first use
+of that library outside this repository and the vindication of separating it from the DPF
+shell. Both ABIs, port counts read from the profile rather than from the project, a panel
+generated from the same `lv2:port` declarations the browser host generates one from, and
+`file://` plugin IRIs for development.
+
+It is weaker evidence than an independent implementation would be, and it is a different kind
+of evidence from any test here: a JigDAW plugin runs in an application written for something
+else. It has already returned one defect, the locale-dependent number parsing in
+`Profile.cpp` in `MISTAKES.md`. Nothing in this repository would have found it, because no
+test here runs under a comma-decimal locale and no host here calls `setlocale`.
+
 ## Phase 8. Sessions. Complete.
 
 The project format has been normative since phase 0 and nothing wrote it, which made every

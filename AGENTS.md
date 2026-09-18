@@ -240,7 +240,9 @@ Where prose is a commitment, bind it with a test.
 Prior art and seed data, described in [docs/local-references.md](docs/local-references.md).
 JigDAW depends on none of them.
 
-- `~/github/transmission` gives the `trn:` vocabulary and the discovered/curated split
+- `~/github/transmission` gives the `trn:` vocabulary and the discovered/curated split, and
+  now hosts JigDAW plugins itself by linking `jigdaw_core`, which makes it the one place a
+  change to that library is felt outside this repository
 - `~/github/downspout` gives 52 hand-written profiles, the format in real use
 - `~/github/valis` gives instruments as RDF, and the ontology to registry symmetry test
 - `~/github/plugin-universe` is live at plugin-universe.com, with a public SPARQL endpoint

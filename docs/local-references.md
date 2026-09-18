@@ -5,7 +5,22 @@ dependency.
 
 ## `~/github/transmission`
 
-A VST3 host with an RDF plugin catalogue and an MCP face. The direct ancestor.
+A VST3 host with an RDF plugin catalogue and an MCP face. The direct ancestor, and now also a
+downstream consumer: it hosts JigDAW plugins alongside VST3 ones, documented at
+[danja.github.io/transmission/jigdaw.html](https://danja.github.io/transmission/jigdaw.html).
+
+Its `native/CMakeLists.txt` adds `native/jigdaw-adapter` from a JigDAW checkout and links
+`jigdaw_core`, so it does not reimplement the contract; it is the first thing outside this
+repository to use that code, and the reason the portable half was worth separating from the
+DPF shell. The feature is off by default and needs `-DTRANSMISSION_WITH_JIGDAW=ON`, a
+`JIGDAW_ROOT` and cpp-httplib, so nothing here is a dependency in either direction.
+
+It mints `trn:JigdawPlugin` and `trn:pluginIri` for the node type and its one setting, which
+is worth knowing before minting anything similar in `jig:`.
+
+It found the locale defect in `Profile.cpp` recorded in `MISTAKES.md`, which nothing inside
+this repository would have: no test here runs under a comma-decimal locale, and no host here
+calls `setlocale`.
 
 - `vocabs/profile.ttl` is the `trn:` vocabulary: `trn:PluginProfile`, the role taxonomy, the
   signal types, and the routing properties JigDAW reuses unchanged.
