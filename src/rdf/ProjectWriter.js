@@ -129,6 +129,19 @@ export function writeProject (project, { iri, created = null } = {}) {
     // values are settings and are deliberately not in here, because storing them
     // in both places means the two disagree on restore.
     if (node.state) lines.push(`    ${term(jig.nodeState)} ${string(node.state)} ;`)
+
+    // The channel strip, written only where it differs from the default. A
+    // project full of "gain 1.0, pan 0.0, not muted" says nothing and makes
+    // every diff longer, and a reader supplies the defaults anyway.
+    const channel = node.channel ?? {}
+    if (channel.gain !== undefined && channel.gain !== 1) {
+      lines.push(`    ${term(jig.gain)} ${decimal(channel.gain)} ;`)
+    }
+    if (channel.pan !== undefined && channel.pan !== 0) {
+      lines.push(`    ${term(jig.pan)} ${decimal(channel.pan)} ;`)
+    }
+    if (channel.muted) lines.push(`    ${term(jig.muted)} true ;`)
+    if (channel.soloed) lines.push(`    ${term(jig.soloed)} true ;`)
     lines.push(`    ${term(jig.plugin)} <${node.pluginIri}> .`)
 
     for (const symbol of settings) {

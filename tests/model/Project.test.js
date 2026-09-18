@@ -241,3 +241,90 @@ describe('which plugin IRIs are loadable', () => {
     }
   })
 })
+
+describe('removing a node from the middle', () => {
+  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+  const iri = n => `https://example.org/plugins/${n}/`
+
+  function chain () {
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', id: 'bc', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }
+    ])
+    return project
+  }
+
+  it('severs the path by default, because a changeset means what it says', () => {
+    const project = chain()
+    project.apply([{ op: 'removeNode', id: 'b' }])
+    expect(project.connections).toEqual([])
+  })
+
+  it('rejoins the neighbours when asked to heal', () => {
+    // Without this, pressing Remove on the middle of a chain leaves two
+    // fragments and nothing in the interface to put them back together.
+    const project = chain()
+    project.apply([{ op: 'removeNode', id: 'b', heal: true }])
+    expect(project.connections).toHaveLength(1)
+    expect(project.connections[0].from.node).toBe('a')
+    expect(project.connections[0].to.node).toBe('c')
+    expect(project.connections[0].signalKind).toBe(AUDIO)
+  })
+
+  it('heals each signal kind separately', () => {
+    // A MIDI path and an audio path through the same node are two paths.
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'gen', pluginIri: iri('gen') },
+      { op: 'addNode', id: 'mid', pluginIri: iri('mid') },
+      { op: 'addNode', id: 'out', pluginIri: iri('out') },
+      { op: 'addConnection', from: { node: 'gen', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: MIDI },
+      { op: 'addConnection', from: { node: 'mid', portIndex: 0 }, to: { node: 'out', portIndex: 0 }, signalKind: MIDI },
+      { op: 'addConnection', from: { node: 'gen', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'mid', portIndex: 0 }, to: { node: 'out', portIndex: 0 }, signalKind: AUDIO }
+    ])
+    project.apply([{ op: 'removeNode', id: 'mid', heal: true }])
+    expect(project.connections.map(c => c.signalKind).sort()).toEqual([AUDIO, MIDI].sort())
+    for (const c of project.connections) {
+      expect(c.from.node).toBe('gen')
+      expect(c.to.node).toBe('out')
+    }
+  })
+
+  it('does not guess when there is more than one answer', () => {
+    // Two inputs and one output: rejoining both would invent a mix nobody asked
+    // for, and picking one would be arbitrary.
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'mid', pluginIri: iri('mid') },
+      { op: 'addNode', id: 'out', pluginIri: iri('out') },
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'mid', portIndex: 1 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'mid', portIndex: 0 }, to: { node: 'out', portIndex: 0 }, signalKind: AUDIO }
+    ])
+    project.apply([{ op: 'removeNode', id: 'mid', heal: true }])
+    expect(project.connections).toEqual([])
+  })
+
+  it('leaves the ends joined when they were already joined directly', () => {
+    const project = chain()
+    project.apply([{ op: 'addConnection', id: 'ac', from: { node: 'a', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }])
+    const result = project.apply([{ op: 'removeNode', id: 'b', heal: true }])
+    expect(result.applied).toBe(true)
+    expect(project.connections).toHaveLength(1)
+    expect(project.connections[0].id).toBe('ac')
+  })
+
+  it('heals nothing at the end of a chain, where there is nothing to rejoin', () => {
+    const project = chain()
+    project.apply([{ op: 'removeNode', id: 'c', heal: true }])
+    expect(project.connections.map(c => c.id)).toEqual(['ab'])
+  })
+})

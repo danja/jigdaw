@@ -34,6 +34,8 @@ export class ChangeError extends Error {
   }
 }
 
+const DEFAULT_CHANNEL = Object.freeze({ gain: 1, pan: 0, muted: false, soloed: false })
+
 const DEFAULT_TRANSPORT = Object.freeze({
   playing: false,
   beatsPerBar: 4,
@@ -107,7 +109,7 @@ const connectionKey = c =>
   `->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
 
 const cloneState = state => ({
-  nodes: new Map([...state.nodes].map(([id, n]) => [id, { ...n, settings: new Map(n.settings) }])),
+  nodes: new Map([...state.nodes].map(([id, n]) => [id, { ...n, settings: new Map(n.settings), channel: { ...n.channel } }])),
   connections: new Map([...state.connections].map(([id, c]) => [id, { ...c, from: { ...c.from }, to: { ...c.to } }])),
   transport: { ...state.transport, tempoPoints: state.transport.tempoPoints.map(p => ({ ...p })) }
 })
@@ -128,13 +130,58 @@ const OPERATIONS = {
       pluginIri: change.pluginIri,
       label: change.label ?? null,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null
+      state: change.state ?? null,
+      // The channel strip. Host services rather than plugin parameters: no
+      // lv2:port declares them, and solo is a property of the graph rather
+      // than of one node. Defaults are unity, centre, heard.
+      channel: { ...DEFAULT_CHANNEL, ...(change.channel ?? {}) }
     })
     return id
   },
 
-  removeNode (state, change) {
+  /**
+   * Remove a node, and optionally rejoin what it stood between.
+   *
+   * `heal` is off by default, so a changeset means what it says. With it on, a
+   * node removed from the middle of a path is rejoined rather than leaving two
+   * fragments and no way in the interface to put them back together.
+   *
+   * It heals only where there is one obvious answer: exactly one incoming and
+   * exactly one outgoing edge of the same signal kind. That covers a chain,
+   * which is the case a person is looking at when they press Remove. Anything
+   * else, a node with several inputs or several outputs, has no single right
+   * answer and guessing at one would silently rewire a graph somebody built.
+   */
+  removeNode (state, change, counters) {
     if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`)
+
+    const rejoined = []
+    if (change.heal) {
+      const incoming = new Map()
+      const outgoing = new Map()
+      for (const connection of state.connections.values()) {
+        if (connection.to.node === change.id) {
+          const list = incoming.get(connection.signalKind) ?? []
+          list.push(connection)
+          incoming.set(connection.signalKind, list)
+        }
+        if (connection.from.node === change.id) {
+          const list = outgoing.get(connection.signalKind) ?? []
+          list.push(connection)
+          outgoing.set(connection.signalKind, list)
+        }
+      }
+      for (const [signalKind, before] of incoming) {
+        const after = outgoing.get(signalKind) ?? []
+        if (before.length !== 1 || after.length !== 1) continue
+        rejoined.push({
+          from: { ...before[0].from },
+          to: { ...after[0].to },
+          signalKind
+        })
+      }
+    }
+
     state.nodes.delete(change.id)
     // A connection to a node that is gone is not a connection. Removing them
     // here rather than leaving them dangling means the graph is always
@@ -144,6 +191,17 @@ const OPERATIONS = {
         state.connections.delete(key)
       }
     }
+
+    // After the deletion, so a rejoin cannot collide with an edge that is on its
+    // way out, and through addConnection so it is subject to the same checks as
+    // any other edge rather than written straight into the map.
+    for (const join of rejoined) {
+      try { OPERATIONS.addConnection(state, join, counters) } catch {
+        // The two ends were already joined directly, which is not a failure:
+        // the path is intact, which is all healing was for.
+      }
+    }
+
     return change.id
   },
 
@@ -184,6 +242,38 @@ const OPERATIONS = {
     if (!Number.isFinite(change.value)) throw new Error(`value is not a number: ${change.value}`)
     node.settings.set(change.symbol, change.value)
     return change.symbol
+  },
+
+  /**
+   * Set any of a node's channel strip.
+   *
+   * One operation for the four rather than one each, because a person moving a
+   * fader and a person pressing mute are the same kind of edit and a preset
+   * setting all four is one edit rather than four.
+   */
+  setChannel (state, change) {
+    const node = state.nodes.get(change.node)
+    if (!node) throw new Error(`no such node: ${change.node}`)
+
+    const next = { ...node.channel }
+    if (change.gain !== undefined) {
+      if (!Number.isFinite(change.gain) || change.gain < 0) {
+        // A negative gain is an inverted signal, which is a plugin's job.
+        throw new Error(`gain must be a number at or above zero: ${change.gain}`)
+      }
+      next.gain = change.gain
+    }
+    if (change.pan !== undefined) {
+      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
+        throw new Error(`pan must be between -1 and 1: ${change.pan}`)
+      }
+      next.pan = change.pan
+    }
+    if (change.muted !== undefined) next.muted = Boolean(change.muted)
+    if (change.soloed !== undefined) next.soloed = Boolean(change.soloed)
+
+    node.channel = next
+    return change.node
   },
 
   setNodeState (state, change) {
@@ -295,6 +385,7 @@ export class Project {
         label: n.label,
         settings: Object.fromEntries(n.settings),
         state: n.state,
+        channel: { ...n.channel },
         position: this.position(n.id)
       })),
       connections: this.connections.map(c => ({ ...c, from: { ...c.from }, to: { ...c.to } })),

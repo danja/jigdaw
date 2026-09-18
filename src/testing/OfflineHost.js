@@ -144,7 +144,26 @@ export class OfflineContext {
     this.currentTime = 0
     this.registry = new Map()
     this.registry.currentFrame = 0
-    this.destination = { connect () {}, disconnect () {} }
+    this.destination = { connect () {}, disconnect () {}, incoming: [] }
+    // Enough of a GainNode for the engine's master to exist offline. Without it
+    // the engine falls back to the destination and the path every sink takes to
+    // the speakers is never exercised by a test that runs real plugins.
+    this.gains = []
+    this.createGain = () => {
+      const gain = {
+        gain: { value: 1 },
+        connections: [],
+        incoming: [],
+        connect (destination, output = 0, input = 0) {
+          this.connections.push({ destination, output, input })
+          if (destination && Array.isArray(destination.incoming)) destination.incoming.push(this)
+          return destination
+        },
+        disconnect () { this.connections = []; return this }
+      }
+      this.gains.push(gain)
+      return gain
+    }
     // Enough of a DelayNode for latency compensation to be exercised offline.
     this.delays = []
     this.createDelay = max => {

@@ -114,13 +114,26 @@ export function readProject (dataset) {
       settings[symbol] = number(setting, `setting ${symbol} on ${id}`)
     }
 
+    // The channel strip. Absent means the default, which is what the writer
+    // relies on when it leaves an unchanged strip out.
+    const channel = {}
+    const gain = number(one(dataset, nodeIri, jig.gain), `gain on ${id}`)
+    const pan = number(one(dataset, nodeIri, jig.pan), `pan on ${id}`)
+    const muted = one(dataset, nodeIri, jig.muted)
+    const soloed = one(dataset, nodeIri, jig.soloed)
+    if (gain !== null) channel.gain = gain
+    if (pan !== null) channel.pan = pan
+    if (muted !== null) channel.muted = muted.value === 'true'
+    if (soloed !== null) channel.soloed = soloed.value === 'true'
+
     changes.push({
       op: 'addNode',
       id,
       pluginIri,
       label: value(one(dataset, nodeIri, RDFS_LABEL)),
       settings,
-      state: value(one(dataset, nodeIri, jig.nodeState))
+      state: value(one(dataset, nodeIri, jig.nodeState)),
+      ...(Object.keys(channel).length > 0 ? { channel } : {})
     })
   }
 

@@ -261,3 +261,106 @@ describe('registerTools', () => {
     expect(result.error).toContain('boom')
   })
 })
+
+describe('the tools webmcp.md specified and nothing had built', () => {
+  const AUDIO = `${T}Audio`
+  const addThree = () => dispatcher.apply([
+    { op: 'addNode', id: 'a', pluginIri: IRI },
+    { op: 'addNode', id: 'b', pluginIri: IRI },
+    { op: 'addNode', id: 'c', pluginIri: IRI }
+  ])
+
+  it('removes a node, and says how much of the graph went with it', async () => {
+    addNodes()
+    await call('connection_add', { from: 'a', to: 'b' })
+    const result = await call('node_remove', { nodeId: 'b' })
+    expect(result.ok).toBe(true)
+    expect(result.removed).toBe('b')
+    // The part an agent cannot see from the changeset it sent.
+    expect(result.connectionsRemoved).toBe(1)
+  })
+
+  it('heals the path when asked, so removing one plugin is not removing two edges', async () => {
+    addThree()
+    await call('connection_add', { from: 'a', to: 'b' })
+    await call('connection_add', { from: 'b', to: 'c' })
+    const result = await call('node_remove', { nodeId: 'b', heal: true })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.connections).toHaveLength(1)
+    expect(dispatcher.project.connections[0].from.node).toBe('a')
+    expect(dispatcher.project.connections[0].to.node).toBe('c')
+  })
+
+  it('severs by default, because a changeset means what it says', async () => {
+    addThree()
+    await call('connection_add', { from: 'a', to: 'b' })
+    await call('connection_add', { from: 'b', to: 'c' })
+    await call('node_remove', { nodeId: 'b' })
+    expect(dispatcher.project.connections).toEqual([])
+  })
+
+  it('reports a node that is not there', async () => {
+    const result = await call('node_remove', { nodeId: 'ghost' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/no such node/)
+  })
+
+  it('removes one connection by id', async () => {
+    addNodes()
+    const added = await call('connection_add', { from: 'a', to: 'b' })
+    const result = await call('connection_remove', { connectionId: added.connection })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.connections).toEqual([])
+  })
+
+  it('reports a connection that is not there rather than succeeding quietly', async () => {
+    const result = await call('connection_remove', { connectionId: 'conn-99' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/no such connection/)
+  })
+
+  it('sets several parameters as one edit', async () => {
+    // A preset is one edit. Thirty separate ones would be thirty undo entries
+    // and a sweep through intermediate states on the way.
+    addNodes()
+    const before = dispatcher.revision
+    const result = await call('parameters_set_batch', {
+      settings: [
+        { nodeId: 'a', symbol: 'mix', value: 0.25 },
+        { nodeId: 'b', symbol: 'mix', value: 0.75 }
+      ]
+    })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.revision - before).toBe(1)
+    expect(dispatcher.project.node('a').settings.get('mix')).toBe(0.25)
+    expect(dispatcher.project.node('b').settings.get('mix')).toBe(0.75)
+  })
+
+  it('applies none of a batch when one of them is wrong', async () => {
+    addNodes()
+    const before = dispatcher.revision
+    const result = await call('parameters_set_batch', {
+      settings: [
+        { nodeId: 'a', symbol: 'mix', value: 0.5 },
+        { nodeId: 'ghost', symbol: 'mix', value: 0.5 }
+      ]
+    })
+    expect(result.ok).toBe(false)
+    expect(dispatcher.revision).toBe(before)
+    expect(dispatcher.project.node('a').settings.get('mix')).toBeUndefined()
+  })
+
+  it('refuses an empty batch rather than reporting a successful no-op', async () => {
+    const result = await call('parameters_set_batch', { settings: [] })
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/non-empty/)
+  })
+
+  it('reports every value it applied, which is what a surface renders', async () => {
+    addNodes()
+    const result = await call('parameters_set_batch', {
+      settings: [{ nodeId: 'a', symbol: 'mix', value: 0.4 }]
+    })
+    expect(result.applied).toEqual([{ nodeId: 'a', symbol: 'mix', value: 0.4 }])
+  })
+})

@@ -15,6 +15,30 @@
   :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
+/* Channel strip. Not a plugin panel: these are host services. */
+  .strip { display:flex; flex-direction:column; gap:6px; padding:10px 14px;
+           border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
+  .strip.silent { opacity:.55; }
+  .strip-control { display:flex; align-items:center; gap:10px; }
+  .strip-control label { width:52px; flex:0 0 auto; color:var(--dim); font-size:12px; }
+  .strip-control input[type=range] { flex:1 1 auto; min-width:0; }
+  .strip-control .value { width:78px; flex:0 0 auto; text-align:right;
+                          font-variant-numeric:tabular-nums; font-size:12px; color:var(--dim); }
+  .strip-buttons { display:flex; gap:8px; }
+  /* State is said by aria-pressed as well as shown, because it must not be
+     signalled by colour alone. */
+  .strip-toggle { min-height:32px; min-width:64px; padding:6px 12px; font-size:12px;
+                  border:1px solid var(--line); border-radius:4px;
+                  background:var(--panel); color:var(--fg); cursor:pointer; }
+  .strip-toggle[aria-pressed="true"] { border-color:var(--accent); }
+  .strip-toggle.muted[aria-pressed="true"]  { background:var(--err); color:#111; }
+  .strip-toggle.soloed[aria-pressed="true"] { background:var(--ok);  color:#111; }
+  @media (max-width: 760px) {
+    .strip-control label { width:auto; }
+    .strip-toggle { flex:1 1 auto; min-height:44px; }
+  }
+
+
   /* Transport */
   .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
     padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }

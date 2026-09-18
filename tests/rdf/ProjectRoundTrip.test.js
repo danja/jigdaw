@@ -31,6 +31,8 @@ function builtProject () {
     { op: 'setSetting', node: 'verb', symbol: 'mix', value: 0.34 },
     { op: 'setSetting', node: 'verb', symbol: 'size', value: 31 },
     { op: 'setNodeState', node: 'verb', state: 'eyJtb2RlIjoicGxhdGUifQ' },
+    { op: 'setChannel', node: 'pad', gain: 0.8, pan: -0.5 },
+    { op: 'setChannel', node: 'verb', muted: true, soloed: true },
     {
       op: 'addConnection',
       id: 'c1',
@@ -67,6 +69,7 @@ const shapeOf = project => ({
     pluginIri: n.pluginIri,
     label: n.label,
     state: n.state,
+    channel: { ...n.channel },
     settings: Object.fromEntries([...n.settings].sort())
   })),
   connections: [...project.connections].sort((a, b) => a.id.localeCompare(b.id)).map(c => ({
@@ -233,5 +236,38 @@ describe('a document that is not a project', () => {
       <#c-t> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portIndex 0 .`
     const dataset = await parseText(turtle, IRI)
     expect(() => readProject(dataset)).toThrow(/exactly one of jig:portIndex or jig:portSymbol/)
+  })
+})
+
+describe('the channel strip survives the trip', () => {
+  it('comes back with the mix it was saved with', async () => {
+    const original = builtProject()
+    const { project } = await reopen(writeProject(original, { iri: IRI }))
+    expect(project.node('pad').channel).toEqual({ gain: 0.8, pan: -0.5, muted: false, soloed: false })
+    expect(project.node('verb').channel).toEqual({ gain: 1, pan: 0, muted: true, soloed: true })
+  })
+
+  it('writes nothing for a strip that is untouched', () => {
+    // A project full of "gain 1.0, pan 0.0, not muted" says nothing and makes
+    // every diff longer. The reader supplies the defaults.
+    const project = new Project()
+    project.apply([{ op: 'addNode', id: 'plain', pluginIri: 'https://example.org/plugins/pulse/' }])
+    const turtle = writeProject(project, { iri: IRI })
+    expect(turtle).not.toMatch(/jig:gain|jig:pan|jig:muted|jig:soloed/)
+  })
+
+  it('gives a node with no strip in the file the defaults', async () => {
+    const project = new Project()
+    project.apply([{ op: 'addNode', id: 'plain', pluginIri: 'https://example.org/plugins/pulse/' }])
+    const { project: reopened } = await reopen(writeProject(project, { iri: IRI }))
+    expect(reopened.node('plain').channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
+  })
+
+  it('still satisfies the shapes with a strip on it', async () => {
+    const validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
+    const report = await validator.validate(
+      await parseText(writeProject(builtProject(), { iri: IRI }), IRI))
+    const seen = report.violations.map(v => `${v.focusNode} ${v.path ?? '(node)'}: ${v.message}`)
+    expect(seen, `violations:\n  ${seen.join('\n  ')}`).toEqual([])
   })
 })

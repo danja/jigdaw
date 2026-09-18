@@ -33,6 +33,17 @@ const built = existsSync(resolve(pluginDir, 'cascade.wasm'))
 const suite = built ? describe : describe.skip
 if (!built) console.warn('run plugins/cascade/build.sh first')
 
+
+const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+
+/** An audio edge between two nodes, port 0 to port 0 unless told otherwise. */
+const edge = (from, to, toPort = 0) => ({
+  op: 'addConnection',
+  from: { node: from, portIndex: 0 },
+  to: { node: to, portIndex: toPort },
+  signalKind: AUDIO
+})
+
 function makeLoader (validator, over = {}) {
   return new PluginLoader({
     fetch: directoryFetch({ [CANONICAL]: pluginDir }),
@@ -160,13 +171,6 @@ suite('a graph of real plugins', () => {
     return { context, engine, dispatcher: new OpDispatcher({ engine }) }
   }
 
-  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
-  const edge = (from, to, toPort = 0) => ({
-    op: 'addConnection',
-    from: { node: from, portIndex: 0 },
-    to: { node: to, portIndex: toPort },
-    signalKind: AUDIO
-  })
 
   it('loads two real plugins and links them', async () => {
     const { engine, dispatcher } = dispatcherWithEngine()
@@ -176,8 +180,11 @@ suite('a graph of real plugins', () => {
 
     const result = dispatcher.apply([edge(a.nodeId, b.nodeId)])
     expect(result.ok).toBe(true)
-    expect(engine.links).toHaveLength(1)
-    expect(engine.links[0].delay).toBeNull()
+    // Every sink also reaches the speakers now, so an assertion about the edge
+    // between two nodes has to say that it means that edge.
+    const between = engine.links.filter(l => l.toId !== 'output')
+    expect(between).toHaveLength(1)
+    expect(between[0].delay).toBeNull()
   })
 
   it('refuses a feedback loop between two real plugins', async () => {
@@ -370,7 +377,81 @@ midiSuite('MIDI into a real instrument', () => {
     expect(result.ok).toBe(true)
 
     // No audio link was made for it.
-    expect(engine.links).toEqual([])
+    // A MIDI edge is not an audio edge and must not reach connect(). The link
+    // to the speakers is the instrument's own output and is not this edge.
+    expect(engine.links.filter(l => l.toId !== 'output')).toEqual([])
     expect(dispatcher.router.routes).toEqual([{ from: a.entry.id, to: b.entry.id }])
+  })
+})
+
+suite('what reaches the speakers, with real plugins', () => {
+  // The dispatcher, not the page, decides what is audible. Until this worked the
+  // page connected every plugin to the output as it loaded, so an effect in the
+  // middle of a chain was heard twice, once wet and once dry.
+  let validator
+  beforeAll(async () => {
+    validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
+  }, 30000)
+
+  const reaching = (engine, context) =>
+    engine.links.filter(l => l.toId === 'output').map(l => l.fromId).sort()
+
+  it('connects one plugin, through a master that is the only thing at the destination', async () => {
+    const context = new OfflineContext()
+    const engine = new Engine({
+      context,
+      loader: makeLoader(validator),
+      AudioWorkletNode: OfflineWorkletNode
+    })
+    const dispatcher = new OpDispatcher({ engine })
+    const only = await dispatcher.addPlugin(CANONICAL)
+
+    expect(reaching(engine, context)).toEqual([only.entry.id])
+    // Gains now exist per node too, for the channel strip, so the assertion is
+    // about which one the destination hears rather than how many there are.
+    expect(context.destination.incoming).toEqual([engine.master])
+    expect(context.gains).toContain(engine.master)
+  })
+
+  it('connects the end of a real chain and not its middle', async () => {
+    const context = new OfflineContext()
+    const engine = new Engine({
+      context,
+      loader: makeLoader(validator),
+      AudioWorkletNode: OfflineWorkletNode
+    })
+    const dispatcher = new OpDispatcher({ engine })
+    const first = await dispatcher.addPlugin(CANONICAL)
+    const second = await dispatcher.addPlugin(CANONICAL)
+
+    // Both are sinks until one feeds the other.
+    expect(reaching(engine, context)).toEqual([first.entry.id, second.entry.id].sort())
+
+    const wired = dispatcher.apply([edge(first.nodeId, second.nodeId)])
+    expect(wired.ok, wired.message).toBe(true)
+    expect(reaching(engine, context)).toEqual([second.entry.id])
+  })
+
+  it('puts the chain back together when the middle is removed', async () => {
+    const context = new OfflineContext()
+    const engine = new Engine({
+      context,
+      loader: makeLoader(validator),
+      AudioWorkletNode: OfflineWorkletNode
+    })
+    const dispatcher = new OpDispatcher({ engine })
+    const a = await dispatcher.addPlugin(CANONICAL)
+    const b = await dispatcher.addPlugin(CANONICAL)
+    const c = await dispatcher.addPlugin(CANONICAL)
+    dispatcher.apply([edge(a.nodeId, b.nodeId), edge(b.nodeId, c.nodeId)])
+    expect(reaching(engine, context)).toEqual([c.entry.id])
+
+    const removed = dispatcher.apply([{ op: 'removeNode', id: b.nodeId, heal: true }])
+    expect(removed.ok, removed.message).toBe(true)
+    // a still feeds c, so c is still the one thing you hear.
+    expect(dispatcher.project.connections).toHaveLength(1)
+    expect(reaching(engine, context)).toEqual([c.entry.id])
+    // And the plugin that was removed is not still playing into anything.
+    expect(engine.nodes().map(n => n.id)).not.toContain(b.entry.id)
   })
 })

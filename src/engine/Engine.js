@@ -12,6 +12,7 @@ const nextId = () => `node-${++counter}`
 
 export class Engine {
   #context
+  #master = null
   #loader
   #nodeClass
   #nodes = new Map()
@@ -23,7 +24,7 @@ export class Engine {
    * the global rather than off the context, so there is nowhere else to get it
    * from and no way to substitute it without this.
    */
-  constructor ({ context, loader, AudioWorkletNode = globalThis.AudioWorkletNode }) {
+  constructor ({ context, loader, output = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
     if (!context) throw new Error('Engine needs an AudioContext')
     if (!loader) throw new Error('Engine needs a PluginLoader')
     if (typeof AudioWorkletNode !== 'function') {
@@ -32,7 +33,29 @@ export class Engine {
     this.#context = context
     this.#loader = loader
     this.#nodeClass = AudioWorkletNode
+
+    // Everything the graph produces arrives here, and this is the only thing
+    // connected to the speakers. Before it existed the dispatcher had no path to
+    // the destination at all: Engine.link could resolve 'output', and nothing
+    // ever passed it, so the page reached around the model and connected each
+    // node itself. A single point also gives a master level somewhere to live
+    // and gives a meter one thing to measure.
+    // `output` is where the mix goes, defaulting to the speakers. A host that
+    // wants to measure or record the mix passes its own node rather than
+    // reaching in afterwards and rewiring what the engine built.
+    if (typeof context.createGain === 'function') {
+      this.#master = context.createGain()
+      this.#master.connect(output ?? context.destination)
+    }
   }
+
+  /**
+   * The node every sink reaches, and the only one wired to the destination.
+   *
+   * Exposed so a meter can tap the mix rather than each node separately, which
+   * is what a meter is for and what stops it reading one voice of many.
+   */
+  get master () { return this.#master ?? this.#context.destination }
 
   get context () { return this.#context }
 
@@ -65,8 +88,26 @@ export class Engine {
       driver.start()
     }
 
+    // The channel strip, on the node's first output. Gain then pan, which is the
+    // order a mixer works in: panning after the fader means the fader sets how
+    // much of the signal there is and the pan decides where it goes.
+    //
+    // Only output zero. A plugin with several outputs is not a channel, and
+    // giving each output its own strip would be inventing a mixer the project
+    // format does not describe. Connections from any other output bypass it.
+    let strip = null
+    if (profile.audioOutputs > 0 && typeof this.#context.createGain === 'function') {
+      const gain = this.#context.createGain()
+      const panner = typeof this.#context.createStereoPanner === 'function'
+        ? this.#context.createStereoPanner()
+        : null
+      node.connect(gain, 0)
+      if (panner) gain.connect(panner)
+      strip = { gain, panner, output: panner ?? gain }
+    }
+
     const id = nextId()
-    const entry = { id, iri, profile, node, ready, descriptors, granted, driver }
+    const entry = { id, iri, profile, node, ready, descriptors, granted, driver, strip }
     this.#nodes.set(id, entry)
     return entry
   }
@@ -76,6 +117,7 @@ export class Engine {
     const entry = this.get(id)
     try {
       if (entry.driver) { entry.driver.stop(); entry.driver.disconnect() }
+      if (entry.strip) { entry.strip.gain.disconnect(); entry.strip.panner?.disconnect() }
       entry.node.disconnect()
       entry.node.port.postMessage({ type: 'dispose' })
     } catch {
@@ -87,7 +129,7 @@ export class Engine {
 
   connect (fromId, toId, { fromOutput = 0, toInput = 0 } = {}) {
     const source = this.get(fromId).node
-    const destination = toId === 'output' ? this.#context.destination : this.get(toId).node
+    const destination = toId === 'output' ? this.master : this.get(toId).node
     source.connect(destination, fromOutput, toId === 'output' ? 0 : toInput)
   }
 
@@ -111,7 +153,13 @@ export class Engine {
    * A parameter takes no input index, so toInput is not consulted for one.
    */
   link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
-    const source = this.get(fromId).node
+    const from = this.get(fromId)
+    // Through the strip when there is one and the signal leaves by output zero,
+    // so a fader and a mute reach everything downstream rather than only the
+    // speakers. Anything else leaves the node directly.
+    const viaStrip = Boolean(from.strip) && fromOutput === 0
+    const source = viaStrip ? from.strip.output : from.node
+    if (viaStrip) fromOutput = 0
     let destination
     if (toParameter !== null) {
       const entry = this.get(toId)
@@ -120,7 +168,7 @@ export class Engine {
         throw new Error(`${entry.profile.label} has no parameter "${toParameter}" to modulate`)
       }
     } else {
-      destination = toId === 'output' ? this.#context.destination : this.get(toId).node
+      destination = toId === 'output' ? this.master : this.get(toId).node
     }
     const targetInput = toId === 'output' ? 0 : toInput
 
@@ -149,7 +197,11 @@ export class Engine {
     for (const link of this.#links) {
       try {
         if (link.delay) link.delay.disconnect()
-        this.get(link.fromId).node.disconnect()
+        const from = this.get(link.fromId)
+        // The strip is what was connected onward, so it is what has to let go.
+        // Disconnecting the node instead would tear it off its own fader.
+        if (from.strip) from.strip.output.disconnect()
+        else from.node.disconnect()
       } catch {
         // A node already removed is still worth clearing past.
       }
@@ -168,6 +220,21 @@ export class Engine {
    * contract section 5.1 and messaging.md section 1.5, because two paths for
    * one value arrive at different times with no defined precedence.
    */
+  /**
+   * Apply a node's channel strip.
+   *
+   * `muted` is given separately from the model's own flag because solo makes a
+   * node silent without it being muted: what a listener hears is a property of
+   * the whole graph, and the dispatcher is what can see the whole graph.
+   */
+  setChannel (id, { gain = 1, pan = 0, silent = false } = {}) {
+    const entry = this.get(id)
+    if (!entry.strip) return
+    const at = this.#context.currentTime
+    entry.strip.gain.gain.setValueAtTime(silent ? 0 : gain, at)
+    if (entry.strip.panner) entry.strip.panner.pan.setValueAtTime(pan, at)
+  }
+
   /**
    * What a value would become, without applying it.
    *

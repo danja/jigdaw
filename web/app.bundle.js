@@ -13200,6 +13200,10 @@ var vocabulary = Object.freeze({
     transport: `${JIG}transport`,
     plugin: `${JIG}plugin`,
     nodeState: `${JIG}nodeState`,
+    gain: `${JIG}gain`,
+    pan: `${JIG}pan`,
+    muted: `${JIG}muted`,
+    soloed: `${JIG}soloed`,
     setting: `${JIG}setting`,
     from: `${JIG}from`,
     to: `${JIG}to`,
@@ -19134,6 +19138,7 @@ var counter = 0;
 var nextId = () => `node-${++counter}`;
 var Engine = class {
   #context;
+  #master = null;
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -19144,7 +19149,7 @@ var Engine = class {
    * the global rather than off the context, so there is nowhere else to get it
    * from and no way to substitute it without this.
    */
-  constructor({ context, loader, AudioWorkletNode = globalThis.AudioWorkletNode }) {
+  constructor({ context, loader, output = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
     if (!context) throw new Error("Engine needs an AudioContext");
     if (!loader) throw new Error("Engine needs a PluginLoader");
     if (typeof AudioWorkletNode !== "function") {
@@ -19153,6 +19158,19 @@ var Engine = class {
     this.#context = context;
     this.#loader = loader;
     this.#nodeClass = AudioWorkletNode;
+    if (typeof context.createGain === "function") {
+      this.#master = context.createGain();
+      this.#master.connect(output ?? context.destination);
+    }
+  }
+  /**
+   * The node every sink reaches, and the only one wired to the destination.
+   *
+   * Exposed so a meter can tap the mix rather than each node separately, which
+   * is what a meter is for and what stops it reading one voice of many.
+   */
+  get master() {
+    return this.#master ?? this.#context.destination;
   }
   get context() {
     return this.#context;
@@ -19185,8 +19203,16 @@ var Engine = class {
       driver.connect(node, 0, 0);
       driver.start();
     }
+    let strip = null;
+    if (profile.audioOutputs > 0 && typeof this.#context.createGain === "function") {
+      const gain = this.#context.createGain();
+      const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
+      node.connect(gain, 0);
+      if (panner) gain.connect(panner);
+      strip = { gain, panner, output: panner ?? gain };
+    }
     const id = nextId();
-    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted, driver };
+    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted, driver, strip };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -19198,6 +19224,10 @@ var Engine = class {
         entry.driver.stop();
         entry.driver.disconnect();
       }
+      if (entry.strip) {
+        entry.strip.gain.disconnect();
+        entry.strip.panner?.disconnect();
+      }
       entry.node.disconnect();
       entry.node.port.postMessage({ type: "dispose" });
     } catch {
@@ -19206,7 +19236,7 @@ var Engine = class {
   }
   connect(fromId, toId, { fromOutput = 0, toInput = 0 } = {}) {
     const source2 = this.get(fromId).node;
-    const destination = toId === "output" ? this.#context.destination : this.get(toId).node;
+    const destination = toId === "output" ? this.master : this.get(toId).node;
     source2.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
   }
   /**
@@ -19216,9 +19246,33 @@ var Engine = class {
    * delay node is owned here and torn down with the link, so a recompile
    * cannot leave one behind feeding silence into a mix.
    */
-  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0 } = {}) {
-    const source2 = this.get(fromId).node;
-    const destination = toId === "output" ? this.#context.destination : this.get(toId).node;
+  /**
+   * Connect one node to another, or to one of its parameters.
+   *
+   * `toParameter` names an AudioParam by its lv2:symbol, and is what an endpoint
+   * carrying jig:portSymbol means. Web Audio sums a connection into a parameter
+   * on top of that parameter's own value, which is the modulation the project
+   * format has been able to express since it was written and which nothing
+   * honoured: the symbol was ignored and the signal was connected to audio input
+   * zero instead, silently and audibly.
+   *
+   * A parameter takes no input index, so toInput is not consulted for one.
+   */
+  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
+    const from = this.get(fromId);
+    const viaStrip = Boolean(from.strip) && fromOutput === 0;
+    const source2 = viaStrip ? from.strip.output : from.node;
+    if (viaStrip) fromOutput = 0;
+    let destination;
+    if (toParameter !== null) {
+      const entry = this.get(toId);
+      destination = entry.node.parameters?.get(toParameter);
+      if (!destination) {
+        throw new Error(`${entry.profile.label} has no parameter "${toParameter}" to modulate`);
+      }
+    } else {
+      destination = toId === "output" ? this.master : this.get(toId).node;
+    }
     const targetInput = toId === "output" ? 0 : toInput;
     if (delayFrames > 0) {
       if (typeof this.#context.createDelay !== "function") {
@@ -19228,11 +19282,13 @@ var Engine = class {
       const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
       delay.delayTime.value = seconds;
       source2.connect(delay, fromOutput, 0);
-      delay.connect(destination, 0, targetInput);
+      if (toParameter !== null) delay.connect(destination);
+      else delay.connect(destination, 0, targetInput);
       this.#links.push({ fromId, toId, delay });
       return;
     }
-    source2.connect(destination, fromOutput, targetInput);
+    if (toParameter !== null) source2.connect(destination, fromOutput);
+    else source2.connect(destination, fromOutput, targetInput);
     this.#links.push({ fromId, toId, delay: null });
   }
   /** Tear down every link, including the delay nodes this engine created. */
@@ -19240,7 +19296,9 @@ var Engine = class {
     for (const link of this.#links) {
       try {
         if (link.delay) link.delay.disconnect();
-        this.get(link.fromId).node.disconnect();
+        const from = this.get(link.fromId);
+        if (from.strip) from.strip.output.disconnect();
+        else from.node.disconnect();
       } catch {
       }
     }
@@ -19257,14 +19315,41 @@ var Engine = class {
    * contract section 5.1 and messaging.md section 1.5, because two paths for
    * one value arrive at different times with no defined precedence.
    */
+  /**
+   * Apply a node's channel strip.
+   *
+   * `muted` is given separately from the model's own flag because solo makes a
+   * node silent without it being muted: what a listener hears is a property of
+   * the whole graph, and the dispatcher is what can see the whole graph.
+   */
+  setChannel(id, { gain = 1, pan = 0, silent = false } = {}) {
+    const entry = this.get(id);
+    if (!entry.strip) return;
+    const at = this.#context.currentTime;
+    entry.strip.gain.gain.setValueAtTime(silent ? 0 : gain, at);
+    if (entry.strip.panner) entry.strip.panner.pan.setValueAtTime(pan, at);
+  }
+  /**
+   * What a value would become, without applying it.
+   *
+   * Separate from setParameter so a caller can record the value it is going to
+   * apply before applying it. Writing the asked-for value and then correcting it
+   * is two edits to the model for one edit by the person, which an undo stack
+   * then has to unpick.
+   */
+  clampParameter(id, symbol, value2) {
+    const entry = this.get(id);
+    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
+    return Math.min(port.maximum, Math.max(port.minimum, value2));
+  }
   setParameter(id, symbol, value2) {
     const entry = this.get(id);
     const param = entry.node.parameters.get(symbol);
     if (!param) {
       throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
     }
-    const port = entry.profile.ports.find((p) => p.symbol === symbol);
-    const clamped = port ? Math.min(port.maximum, Math.max(port.minimum, value2)) : value2;
+    const clamped = this.clampParameter(id, symbol, value2);
     param.setValueAtTime(clamped, this.#context.currentTime);
     return clamped;
   }
@@ -19338,6 +19423,7 @@ var ChangeError = class extends Error {
     this.op = op;
   }
 };
+var DEFAULT_CHANNEL = Object.freeze({ gain: 1, pan: 0, muted: false, soloed: false });
 var DEFAULT_TRANSPORT = Object.freeze({
   playing: false,
   beatsPerBar: 4,
@@ -19374,9 +19460,9 @@ function isLoadableIRI(value2) {
   if (url.protocol !== "http:") return false;
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
 }
-var connectionKey = (c3) => `${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
 var cloneState = (state) => ({
-  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
+  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings), channel: { ...n2.channel } }])),
   connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
   transport: { ...state.transport, tempoPoints: state.transport.tempoPoints.map((p) => ({ ...p })) }
 });
@@ -19394,16 +19480,65 @@ var OPERATIONS = {
       pluginIri: change.pluginIri,
       label: change.label ?? null,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null
+      state: change.state ?? null,
+      // The channel strip. Host services rather than plugin parameters: no
+      // lv2:port declares them, and solo is a property of the graph rather
+      // than of one node. Defaults are unity, centre, heard.
+      channel: { ...DEFAULT_CHANNEL, ...change.channel ?? {} }
     });
     return id;
   },
-  removeNode(state, change) {
+  /**
+   * Remove a node, and optionally rejoin what it stood between.
+   *
+   * `heal` is off by default, so a changeset means what it says. With it on, a
+   * node removed from the middle of a path is rejoined rather than leaving two
+   * fragments and no way in the interface to put them back together.
+   *
+   * It heals only where there is one obvious answer: exactly one incoming and
+   * exactly one outgoing edge of the same signal kind. That covers a chain,
+   * which is the case a person is looking at when they press Remove. Anything
+   * else, a node with several inputs or several outputs, has no single right
+   * answer and guessing at one would silently rewire a graph somebody built.
+   */
+  removeNode(state, change, counters) {
     if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
+    const rejoined = [];
+    if (change.heal) {
+      const incoming = /* @__PURE__ */ new Map();
+      const outgoing = /* @__PURE__ */ new Map();
+      for (const connection of state.connections.values()) {
+        if (connection.to.node === change.id) {
+          const list = incoming.get(connection.signalKind) ?? [];
+          list.push(connection);
+          incoming.set(connection.signalKind, list);
+        }
+        if (connection.from.node === change.id) {
+          const list = outgoing.get(connection.signalKind) ?? [];
+          list.push(connection);
+          outgoing.set(connection.signalKind, list);
+        }
+      }
+      for (const [signalKind, before] of incoming) {
+        const after = outgoing.get(signalKind) ?? [];
+        if (before.length !== 1 || after.length !== 1) continue;
+        rejoined.push({
+          from: { ...before[0].from },
+          to: { ...after[0].to },
+          signalKind
+        });
+      }
+    }
     state.nodes.delete(change.id);
     for (const [key, connection] of [...state.connections]) {
       if (connection.from.node === change.id || connection.to.node === change.id) {
         state.connections.delete(key);
+      }
+    }
+    for (const join of rejoined) {
+      try {
+        OPERATIONS.addConnection(state, join, counters);
+      } catch {
       }
     }
     return change.id;
@@ -19441,6 +19576,34 @@ var OPERATIONS = {
     if (!Number.isFinite(change.value)) throw new Error(`value is not a number: ${change.value}`);
     node.settings.set(change.symbol, change.value);
     return change.symbol;
+  },
+  /**
+   * Set any of a node's channel strip.
+   *
+   * One operation for the four rather than one each, because a person moving a
+   * fader and a person pressing mute are the same kind of edit and a preset
+   * setting all four is one edit rather than four.
+   */
+  setChannel(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    const next = { ...node.channel };
+    if (change.gain !== void 0) {
+      if (!Number.isFinite(change.gain) || change.gain < 0) {
+        throw new Error(`gain must be a number at or above zero: ${change.gain}`);
+      }
+      next.gain = change.gain;
+    }
+    if (change.pan !== void 0) {
+      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
+        throw new Error(`pan must be between -1 and 1: ${change.pan}`);
+      }
+      next.pan = change.pan;
+    }
+    if (change.muted !== void 0) next.muted = Boolean(change.muted);
+    if (change.soloed !== void 0) next.soloed = Boolean(change.soloed);
+    node.channel = next;
+    return change.node;
   },
   setNodeState(state, change) {
     const node = state.nodes.get(change.node);
@@ -19553,6 +19716,7 @@ var Project = class {
         label: n2.label,
         settings: Object.fromEntries(n2.settings),
         state: n2.state,
+        channel: { ...n2.channel },
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
@@ -20077,8 +20241,13 @@ var OpDispatcher = class {
    * they join, so a node that came back under a different name would be joined
    * to nothing. The model tracks ids it did not mint, so a later minted id
    * cannot collide with one restored here.
+   *
+   * Everything else is passed through to addNode rather than enumerated here.
+   * It used to list the fields it forwarded, and the day a node gained a channel
+   * strip that list was silently one field short: a saved mix was written
+   * correctly, read correctly, and dropped on the way back in.
    */
-  async addPlugin(iri2, { position, id, label } = {}) {
+  async addPlugin(iri2, { position, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
@@ -20086,26 +20255,47 @@ var OpDispatcher = class {
     } catch (error2) {
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    const result = this.apply([{ op: "addNode", id, pluginIri: iri2, label: label ?? entry.profile.label }]);
+    const result = this.apply([{
+      op: "addNode",
+      ...node,
+      pluginIri: iri2,
+      label: node.label ?? entry.profile.label
+    }]);
     if (!result.ok) {
       this.#engine.remove(entry.id);
       return result;
     }
     const nodeId = result.results[0];
     this.#nodeIds.set(nodeId, entry.id);
+    this.#rebuildLinks(this.compile());
     this.#router?.observe(entry.id);
     if (position) this.#project.moveNode(nodeId, position.x, position.y);
     this.#emit({ type: "plugin-added", nodeId, entry });
     return { ...result, nodeId, entry };
   }
-  /** Set a parameter. Goes to the model and the AudioParam, never a message. */
+  /**
+   * Set a parameter. Goes to the model and the AudioParam, never a message.
+   *
+   * The clamp is asked for before the write rather than corrected after it. The
+   * engine clamps to the declared range and the model must record what was
+   * actually applied, not what was asked for, per messaging.md 2.3: a surface
+   * renders what it is told, not what it requested. Writing the asked-for value
+   * and then writing the clamped one was two revisions for one edit, and the
+   * second went straight to the project, around this dispatcher's own gate.
+   */
   setParameter(nodeId, symbol, value2) {
-    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: value2 }]);
-    if (!result.ok) return result;
-    let applied = value2;
     const engineId = this.#nodeIds.get(nodeId);
-    if (engineId && this.#engine) applied = this.#engine.setParameter(engineId, symbol, value2);
-    if (applied !== value2) this.#project.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    let applied = value2;
+    if (engineId && this.#engine) {
+      try {
+        applied = this.#engine.clampParameter(engineId, symbol, value2);
+      } catch (error2) {
+        return { ok: false, kind: "change", message: error2.message };
+      }
+    }
+    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    if (!result.ok) return result;
+    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
     this.#emit({ type: "parameter", nodeId, symbol, value: applied });
     return { ...result, value: applied };
   }
@@ -20140,6 +20330,79 @@ var OpDispatcher = class {
       this.#nodeIds.delete(nodeId);
     }
   }
+  /**
+   * Push every node's channel strip to the engine.
+   *
+   * Solo is resolved here because it cannot be resolved anywhere else. Whether
+   * a node is heard depends on whether *any other* node is soloed, so it is a
+   * property of the graph rather than of the node, and the node is the only
+   * thing the engine can see one at a time.
+   *
+   * The rule is the one every mixer uses: if nothing is soloed, a node is heard
+   * unless it is muted. If anything is soloed, only soloed nodes are heard, and
+   * muting a soloed node still silences it, because a person who pressed mute
+   * meant it.
+   */
+  #applyChannels() {
+    if (!this.#engine) return;
+    const anySoloed = this.#project.nodes.some((n2) => n2.channel?.soloed);
+    for (const node of this.#project.nodes) {
+      const engineId = this.#nodeIds.get(node.id);
+      if (!engineId) continue;
+      const channel = node.channel ?? {};
+      const silent = channel.muted === true || anySoloed && channel.soloed !== true;
+      try {
+        this.#engine.setChannel(engineId, {
+          gain: channel.gain ?? 1,
+          pan: channel.pan ?? 0,
+          silent
+        });
+      } catch {
+      }
+    }
+  }
+  /** What a listener actually hears, node by node, after solo is resolved. */
+  audibility() {
+    const anySoloed = this.#project.nodes.some((n2) => n2.channel?.soloed);
+    return this.#project.nodes.map((node) => {
+      const channel = node.channel ?? {};
+      return {
+        nodeId: node.id,
+        gain: channel.gain ?? 1,
+        pan: channel.pan ?? 0,
+        silent: channel.muted === true || anySoloed && channel.soloed !== true
+      };
+    });
+  }
+  /**
+   * Connect everything that produces audio and feeds nothing to the speakers.
+   *
+   * A sink is where the signal has arrived, so it is what a person expects to
+   * hear. Deriving it from the connections rather than declaring it keeps the
+   * rule the project format already states for processing order: the graph
+   * answers the question, and a second answer written down beside it would have
+   * no rule for which wins.
+   *
+   * A node with no audio outputs is not a sink for this purpose even when
+   * nothing follows it. A MIDI generator ends a path and produces nothing to
+   * hear, and connecting it throws.
+   */
+  #linkSinksToMaster() {
+    if (!this.#engine) return;
+    const feedsSomething = /* @__PURE__ */ new Set();
+    for (const connection of this.#project.connections) {
+      if (isMidi(connection.signalKind)) continue;
+      feedsSomething.add(connection.from.node);
+    }
+    for (const node of this.#project.nodes) {
+      if (feedsSomething.has(node.id)) continue;
+      const engineId = this.#nodeIds.get(node.id);
+      if (!engineId) continue;
+      const entry = this.#engine.get(engineId);
+      if (!(entry?.node?.numberOfOutputs > 0)) continue;
+      this.#engine.link(engineId, "output", {});
+    }
+  }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
@@ -20156,10 +20419,54 @@ var OpDispatcher = class {
       this.#engine.link(from, to, {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
+        toParameter: connection.to.portSymbol ?? null,
         delayFrames: delayFor.get(connection.id) ?? 0
       });
     }
+    this.#linkSinksToMaster();
+    this.#applyChannels();
     this.#router?.setRoutes(midiRoutes);
+  }
+  /**
+   * Set several parameters as one edit.
+   *
+   * Not a loop over setParameter, which would be one revision and one compile
+   * per value: a preset of thirty parameters would arrive as thirty edits, be
+   * thirty entries in an undo stack, and be audible as a sweep through
+   * intermediate states. Clamped first, for the same reason as the single
+   * value, then written once, then pushed to the AudioParams.
+   */
+  setParameters(settings, { expectedRevision } = {}) {
+    if (!Array.isArray(settings) || settings.length === 0) {
+      return { ok: false, kind: "change", message: "needs a non-empty list of settings" };
+    }
+    const applied = [];
+    for (const { nodeId, symbol, value: value2 } of settings) {
+      const engineId = this.#nodeIds.get(nodeId);
+      let clamped = value2;
+      if (engineId && this.#engine) {
+        try {
+          clamped = this.#engine.clampParameter(engineId, symbol, value2);
+        } catch (error2) {
+          return { ok: false, kind: "change", message: error2.message };
+        }
+      }
+      applied.push({ nodeId, symbol, value: clamped, engineId });
+    }
+    const result = this.apply(
+      applied.map((a2) => ({ op: "setSetting", node: a2.nodeId, symbol: a2.symbol, value: a2.value })),
+      { expectedRevision }
+    );
+    if (!result.ok) return result;
+    for (const a2 of applied) {
+      if (a2.engineId && this.#engine) this.#engine.setParameter(a2.engineId, a2.symbol, a2.value);
+      this.#emit({ type: "parameter", nodeId: a2.nodeId, symbol: a2.symbol, value: a2.value });
+    }
+    return { ...result, applied: applied.map(({ nodeId, symbol, value: value2 }) => ({ nodeId, symbol, value: value2 })) };
+  }
+  /** Set any of a node's channel strip: gain, pan, mute, solo. */
+  setChannel(nodeId, change, { expectedRevision } = {}) {
+    return this.apply([{ op: "setChannel", node: nodeId, ...change }], { expectedRevision });
   }
   /** The engine node behind a model node, if it has been loaded. */
   engineNode(nodeId) {
@@ -20280,6 +20587,131 @@ function createPanel(document2, profile, onChange) {
     /** Called by the host when a value actually changed. */
     update(symbol, value2) {
       setters.get(symbol)?.(value2);
+    }
+  };
+}
+
+// src/ui/Strip.js
+function decibels(gain) {
+  if (!(gain > 0)) return "-inf";
+  const db = 20 * Math.log10(gain);
+  return `${db > 0 ? "+" : ""}${db.toFixed(1)}`;
+}
+function panPosition(pan) {
+  if (Math.abs(pan) < 5e-3) return "centre";
+  const side = pan < 0 ? "left" : "right";
+  return `${Math.round(Math.abs(pan) * 100)}% ${side}`;
+}
+function createStrip(document2, channel, onChange, { label = "" } = {}) {
+  const element = document2.createElement("div");
+  element.className = "strip";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", label ? `${label} channel` : "Channel");
+  const state = { gain: 1, pan: 0, muted: false, soloed: false, ...channel };
+  const gainRow = document2.createElement("div");
+  gainRow.className = "strip-control";
+  const gainLabel = document2.createElement("label");
+  gainLabel.textContent = "Level";
+  const gain = document2.createElement("input");
+  gain.type = "range";
+  gain.min = "0";
+  gain.max = "2";
+  gain.step = "0.01";
+  gain.value = String(state.gain);
+  const gainValue = document2.createElement("span");
+  gainValue.className = "value";
+  const showGain = () => {
+    gainValue.textContent = `${decibels(state.gain)} dB`;
+    gain.setAttribute("aria-valuetext", `${decibels(state.gain)} decibels`);
+  };
+  gain.id = `${label || "node"}-level`.replace(/\s+/g, "-").toLowerCase();
+  gainLabel.setAttribute("for", gain.id);
+  gain.addEventListener("input", () => {
+    state.gain = Number(gain.value);
+    showGain();
+    onChange({ gain: state.gain });
+  });
+  showGain();
+  gainRow.append(gainLabel, gain, gainValue);
+  const panRow = document2.createElement("div");
+  panRow.className = "strip-control";
+  const panLabel = document2.createElement("label");
+  panLabel.textContent = "Pan";
+  const pan = document2.createElement("input");
+  pan.type = "range";
+  pan.min = "-1";
+  pan.max = "1";
+  pan.step = "0.01";
+  pan.value = String(state.pan);
+  const panValue = document2.createElement("span");
+  panValue.className = "value";
+  const showPan = () => {
+    panValue.textContent = panPosition(state.pan);
+    pan.setAttribute("aria-valuetext", panPosition(state.pan));
+  };
+  pan.id = `${label || "node"}-pan`.replace(/\s+/g, "-").toLowerCase();
+  panLabel.setAttribute("for", pan.id);
+  pan.addEventListener("input", () => {
+    state.pan = Number(pan.value);
+    showPan();
+    onChange({ pan: state.pan });
+  });
+  showPan();
+  panRow.append(panLabel, pan, panValue);
+  const buttons = document2.createElement("div");
+  buttons.className = "strip-buttons";
+  const toggle = (name, key) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.className = `strip-toggle ${key}`;
+    button.textContent = name;
+    button.setAttribute("aria-pressed", String(Boolean(state[key])));
+    button.addEventListener("click", () => {
+      state[key] = !state[key];
+      button.setAttribute("aria-pressed", String(state[key]));
+      onChange({ [key]: state[key] });
+    });
+    return button;
+  };
+  const mute = toggle("Mute", "muted");
+  const solo = toggle("Solo", "soloed");
+  buttons.append(mute, solo);
+  element.append(gainRow, panRow, buttons);
+  return {
+    element,
+    /**
+     * Show what the host decided, which is not always what was asked for.
+     *
+     * `silent` is separate from `muted` because solo silences a node without
+     * muting it, and a strip that showed only its own flags would say a node was
+     * heard while it was not.
+     */
+    update(next = {}, { silent = null } = {}) {
+      if (next.gain !== void 0) {
+        state.gain = next.gain;
+        gain.value = String(next.gain);
+        showGain();
+      }
+      if (next.pan !== void 0) {
+        state.pan = next.pan;
+        pan.value = String(next.pan);
+        showPan();
+      }
+      if (next.muted !== void 0) {
+        state.muted = next.muted;
+        mute.setAttribute("aria-pressed", String(next.muted));
+      }
+      if (next.soloed !== void 0) {
+        state.soloed = next.soloed;
+        solo.setAttribute("aria-pressed", String(next.soloed));
+      }
+      if (silent !== null) {
+        element.classList.toggle("silent", silent);
+        element.setAttribute(
+          "aria-label",
+          `${label ? label + " channel" : "Channel"}${silent ? ", silent" : ""}`
+        );
+      }
     }
   };
 }
@@ -20595,6 +21027,70 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
       }
     },
     {
+      name: "node_remove",
+      description: "Remove a node and everything connected to it. With heal, a node taken out of the middle of a path has its neighbours rejoined, which is what a person means by removing one plugin from a chain.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeId: { type: "string" },
+          heal: { type: "boolean", description: "Rejoin what it stood between. Default false." },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["nodeId"]
+      },
+      async handler({ nodeId, heal = false, expectedRevision } = {}) {
+        const before = dispatcher2.project.connections.length;
+        const result = dispatcher2.apply([{ op: "removeNode", id: nodeId, heal }], { expectedRevision });
+        return result.ok ? ok({
+          revision: result.revision,
+          removed: nodeId,
+          // How much of the graph went with it, which is the part an agent
+          // cannot see from the changeset it sent.
+          connectionsRemoved: before - dispatcher2.project.connections.length
+        }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "connection_remove",
+      description: "Remove one connection by its id. project_get lists them.",
+      inputSchema: {
+        type: "object",
+        properties: { connectionId: { type: "string" }, expectedRevision: { type: "integer" } },
+        required: ["connectionId"]
+      },
+      async handler({ connectionId, expectedRevision } = {}) {
+        const result = dispatcher2.apply([{ op: "removeConnection", id: connectionId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: connectionId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "parameters_set_batch",
+      description: "Set several parameters at once. Atomic: all of them apply or none does, so a preset arrives as one edit rather than as a visible sweep through intermediate states.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          settings: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                nodeId: { type: "string" },
+                symbol: { type: "string" },
+                value: { type: "number" }
+              },
+              required: ["nodeId", "symbol", "value"]
+            }
+          },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["settings"]
+      },
+      async handler({ settings, expectedRevision } = {}) {
+        const result = dispatcher2.setParameters(settings, { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, applied: result.applied }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
       name: "parameter_set",
       description: "Set a parameter by its symbol. Returns the value actually applied, which may be clamped to the range the plugin declares.",
       inputSchema: {
@@ -20771,6 +21267,15 @@ function writeProject(project, { iri: iri2, created = null } = {}) {
       lines.push(`    ${term2(jig3.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
     if (node.state) lines.push(`    ${term2(jig3.nodeState)} ${string(node.state)} ;`);
+    const channel = node.channel ?? {};
+    if (channel.gain !== void 0 && channel.gain !== 1) {
+      lines.push(`    ${term2(jig3.gain)} ${decimal(channel.gain)} ;`);
+    }
+    if (channel.pan !== void 0 && channel.pan !== 0) {
+      lines.push(`    ${term2(jig3.pan)} ${decimal(channel.pan)} ;`);
+    }
+    if (channel.muted) lines.push(`    ${term2(jig3.muted)} true ;`);
+    if (channel.soloed) lines.push(`    ${term2(jig3.soloed)} true ;`);
     lines.push(`    ${term2(jig3.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
       lines.push(`<#${node.id}-${symbol}> a ${term2(jig3.ParameterSetting)} ; ${term2(jig3.symbol)} ${string(symbol)} ; ${term2(jig3.value)} ${decimal(node.settings.get(symbol))} .`);
@@ -20870,13 +21375,23 @@ function readProject(dataset2) {
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
       settings[symbol] = number(setting, `setting ${symbol} on ${id}`);
     }
+    const channel = {};
+    const gain = number(one2(dataset2, nodeIri, jig4.gain), `gain on ${id}`);
+    const pan = number(one2(dataset2, nodeIri, jig4.pan), `pan on ${id}`);
+    const muted = one2(dataset2, nodeIri, jig4.muted);
+    const soloed = one2(dataset2, nodeIri, jig4.soloed);
+    if (gain !== null) channel.gain = gain;
+    if (pan !== null) channel.pan = pan;
+    if (muted !== null) channel.muted = muted.value === "true";
+    if (soloed !== null) channel.soloed = soloed.value === "true";
     changes.push({
       op: "addNode",
       id,
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
       settings,
-      state: value(one2(dataset2, nodeIri, jig4.nodeState))
+      state: value(one2(dataset2, nodeIri, jig4.nodeState)),
+      ...Object.keys(channel).length > 0 ? { channel } : {}
     });
   }
   for (const connIri of objects2(dataset2, iri2, jig4.connection).map((t) => t.value).sort()) {
@@ -20939,6 +21454,7 @@ var source = null;
 var playing = false;
 var startedAt = 0;
 var panels = /* @__PURE__ */ new Map();
+var strips = /* @__PURE__ */ new Map();
 function browserCatalogue() {
   const ask = async (path, params) => {
     const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI));
@@ -20970,12 +21486,16 @@ async function ensureRunning() {
   await context.resume();
   const response = await fetch(new URL("vocabs/shapes.ttl", document.baseURI));
   const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
-  const capabilities = detectCapabilities(globalThis);
-  engine = new Engine({ context, loader: new PluginLoader({ parse: parseText, validator, capabilities }) });
-  dispatcher = new OpDispatcher({ engine });
   analyser = context.createAnalyser();
   analyser.fftSize = 256;
   analyser.connect(context.destination);
+  const capabilities = detectCapabilities(globalThis);
+  engine = new Engine({
+    context,
+    loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+    output: analyser
+  });
+  dispatcher = new OpDispatcher({ engine });
   dispatcher.subscribe((event) => {
     if (event.type === "changed") {
       $("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
@@ -21108,6 +21628,9 @@ function wire(label) {
   return element;
 }
 function drawRack() {
+  const audible = new Map(
+    (dispatcher?.audibility() ?? []).map((a2) => [a2.nodeId, !a2.silent])
+  );
   const rack = $("rack");
   rack.textContent = "";
   const nodes = dispatcher?.project.nodes ?? [];
@@ -21130,14 +21653,25 @@ function drawRack() {
     remove.textContent = "Remove";
     remove.setAttribute("aria-label", `Remove ${node.label ?? "plugin"}`);
     remove.addEventListener("click", () => {
-      const result = dispatcher.apply([{ op: "removeNode", id: node.id }]);
+      const result = dispatcher.apply([{ op: "removeNode", id: node.id, heal: true }]);
       if (!result.ok) log(result.message, "error");
       else {
         panels.delete(node.id);
+        strips.delete(node.id);
         log(`removed ${node.label}`);
       }
     });
     element.querySelector("header").append(remove);
+    let strip = strips.get(node.id);
+    if (!strip) {
+      strip = createStrip(document, node.channel, (change) => {
+        const result = dispatcher.setChannel(node.id, change);
+        if (!result.ok) log(result.message, "error");
+      }, { label: node.label ?? "Plugin" });
+      strips.set(node.id, strip);
+    }
+    strip.update(node.channel, { silent: audible.get(node.id) === false });
+    element.append(strip.element);
     rack.append(element);
     if (profile) {
       let panel = panels.get(node.id);
@@ -21192,9 +21726,6 @@ async function loadPlugin(input) {
       signalKind: kind
     }]);
     if (!chained.ok) log(chained.message, "error");
-  }
-  if (engine.get(entry.id).node.numberOfOutputs > 0) {
-    engine.get(entry.id).node.connect(analyser);
   }
   drawRack();
   window.__jigdaw = { dispatcher: d, engine };
@@ -21315,18 +21846,17 @@ async function openSession(text) {
     }
   }
   panels.clear();
+  strips.clear();
   const loaded = /* @__PURE__ */ new Set();
   for (const change of read.changes.filter((c3) => c3.op === "addNode")) {
     log(`GET ${change.pluginIri}`);
-    const result = await d.addPlugin(change.pluginIri, { id: change.id, label: change.label });
+    const { op, pluginIri, ...node } = change;
+    const result = await d.addPlugin(pluginIri, node);
     if (!result.ok) {
       log(`${change.id}: ${result.message}`, "error");
       continue;
     }
     loaded.add(change.id);
-    if (engine.get(result.entry.id).node.numberOfOutputs > 0) {
-      engine.get(result.entry.id).node.connect(analyser);
-    }
     for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
       const set = d.setParameter(change.id, symbol, value2);
       if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, "error");

@@ -417,6 +417,42 @@ jig:nodeState a owl:DatatypeProperty ;
         not state and do not belong here: they are settings, and storing them twice means
         the two disagree on restore with no defined winner.""" .
 
+## -- The channel strip ---------------------------------------------------------
+##
+## Level, position and silence are host services rather than plugin parameters.
+## They are not declared by any lv2:port, the host provides them with native
+## Web Audio nodes and no WebAssembly is involved, and solo is a property of the
+## whole graph rather than of one node: soloing one thing silences the others,
+## which nothing a single plugin declares could express. So they belong to the
+## node in the project, beside the plugin it instantiates, and not to the plugin.
+
+jig:gain a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:decimal ;
+    rdfs:label "gain" ;
+    rdfs:comment """Linear output gain, where 1.0 is unity. Linear rather than decibels
+        because that is what a GainNode takes and converting in the format would mean
+        converting back in every reader. Absent means unity.""" .
+
+jig:pan a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:decimal ;
+    rdfs:label "pan" ;
+    rdfs:comment """Stereo position from -1.0 at the left to 1.0 at the right, as
+        StereoPannerNode takes it. Absent means centre.""" .
+
+jig:muted a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
+    rdfs:label "muted" ;
+    rdfs:comment """Silenced by choice. Kept separate from a gain of zero so that
+        unmuting restores the level that was set, which is the whole reason a mixer has
+        both.""" .
+
+jig:soloed a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
+    rdfs:label "soloed" ;
+    rdfs:comment """Heard while anything is soloed. Stored per node and applied across the
+        graph: if any node is soloed then every node that is not is silent, so what a
+        listener hears is not a property of any one node's statements.""" .
+
 jig:setting a owl:ObjectProperty ; rdfs:domain jig:Node ; rdfs:range jig:ParameterSetting .
 
 jig:from a owl:ObjectProperty ; rdfs:domain jig:Connection ; rdfs:range jig:Endpoint .

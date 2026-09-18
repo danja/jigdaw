@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  80 terms.
+  84 terms.
 </p>
 
 <h2>Classes</h2>
@@ -178,6 +178,10 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="bpm"><code>jig:bpm</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="gain"><code>jig:gain</code></dt>
+  <dd>Linear output gain, where 1.0 is unity. Linear rather than decibels
+        because that is what a GainNode takes and converting in the format would mean
+        converting back in every reader. Absent means unity.</dd>
   <dt id="hostVersion"><code>jig:hostVersion</code> <span class="label">host version</span></dt>
   <dd>Which host produced this reading. Inspections from different host
         versions are not comparable, for the same reason plugin-universe refuses to
@@ -207,6 +211,10 @@
   <dd>The media type the resource is expected to be served as. A statement
         of intent that lets a host report a misconfigured server precisely, rather than a
         substitute for the Content-Type header, which still governs.</dd>
+  <dt id="muted"><code>jig:muted</code></dt>
+  <dd>Silenced by choice. Kept separate from a gain of zero so that
+        unmuting restores the level that was set, which is the whole reason a mixer has
+        both.</dd>
   <dt id="nodeState"><code>jig:nodeState</code> <span class="label">node state</span></dt>
   <dd>The plugin's own saved state, opaque to the host. Parameter values are
         not state and do not belong here: they are settings, and storing them twice means
@@ -215,6 +223,9 @@
   <dd>Channels per output. A host declaring outputChannelCount on the node
         must agree with this, and a plugin writing a different number of channels is a
         load-time error rather than a silent half-signal.</dd>
+  <dt id="pan"><code>jig:pan</code></dt>
+  <dd>Stereo position from -1.0 at the left to 1.0 at the right, as
+        StereoPannerNode takes it. Absent means centre.</dd>
   <dt id="paramIndex"><code>jig:paramIndex</code> <span class="label">parameter index</span></dt>
   <dd>Which index this parameter has in jig_set_param. Required on every port of a module declaring an ABI, because a host loading the module directly has no processor to hold the mapping and cannot infer it: a position in the profile is a property of the document, not of the module.</dd>
   <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>
@@ -237,6 +248,10 @@
   <dd>Increments on every committed change. A caller submitting a changeset
         names the revision it last saw and is rejected if the project has moved on. An agent
         and a person editing one project is the normal case here.</dd>
+  <dt id="soloed"><code>jig:soloed</code></dt>
+  <dd>Heard while anything is soloed. Stored per node and applied across the
+        graph: if any node is soloed then every node that is not is silent, so what a
+        listener hears is not a property of any one node's statements.</dd>
   <dt id="symbol"><code>jig:symbol</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="tailFrames"><code>jig:tailFrames</code> <span class="label">tail frames</span></dt>

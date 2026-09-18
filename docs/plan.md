@@ -223,7 +223,7 @@ find them. Neither is needed for search to work.
 
 ## Phase 6. WebMCP. Complete.
 
-- `src/mcp/tools.js`, eleven tools over the dispatcher: `status`, `project_get`,
+- `src/mcp/tools.js`, fourteen tools over the dispatcher: `status`, `project_get`,
   `plugins_search`, `plugin_describe`, `plugin_validate_chain`, `plugin_load`,
   `graph_apply_changes`, `connection_add`, `parameter_set`, `transport_configure`,
   `diagnostics`. Not one of them implements an operation of its own.

@@ -12,6 +12,7 @@ import { detectCapabilities, compact } from '../src/host/Capabilities.js'
 import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
+import { createStrip } from '../src/ui/Strip.js'
 import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
@@ -37,6 +38,7 @@ let source = null
 let playing = false
 let startedAt = 0
 const panels = new Map()
+const strips = new Map()
 
 /** The catalogue, as reached from the page: the host's own endpoint, not SPARQL. */
 function browserCatalogue () {
@@ -74,13 +76,21 @@ async function ensureRunning () {
   const response = await fetch(new URL('vocabs/shapes.ttl', document.baseURI))
   const validator = new ShapeValidator(await parseText(await response.text(), 'urn:jigdaw:shapes'))
 
-  const capabilities = detectCapabilities(globalThis)
-  engine = new Engine({ context, loader: new PluginLoader({ parse: parseText, validator, capabilities }) })
-  dispatcher = new OpDispatcher({ engine })
-
+  // The meter taps the mix, so it is built before the engine and handed to it.
+  // The engine connects its master through this on the way to the speakers,
+  // which means one meter measures what you actually hear rather than one voice
+  // of several.
   analyser = context.createAnalyser()
   analyser.fftSize = 256
   analyser.connect(context.destination)
+
+  const capabilities = detectCapabilities(globalThis)
+  engine = new Engine({
+    context,
+    loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+    output: analyser
+  })
+  dispatcher = new OpDispatcher({ engine })
 
   dispatcher.subscribe(event => {
     if (event.type === 'changed') {
@@ -233,6 +243,10 @@ function wire (label) {
 }
 
 function drawRack () {
+  // Solo makes a node silent without muting it, so whether each one is heard is
+  // computed across the whole graph before any strip is drawn.
+  const audible = new Map(
+    (dispatcher?.audibility() ?? []).map(a => [a.nodeId, !a.silent]))
   const rack = $('rack')
   rack.textContent = ''
 
@@ -260,11 +274,26 @@ function drawRack () {
     remove.textContent = 'Remove'
     remove.setAttribute('aria-label', `Remove ${node.label ?? 'plugin'}`)
     remove.addEventListener('click', () => {
-      const result = dispatcher.apply([{ op: 'removeNode', id: node.id }])
+      // heal: rejoin what this node stood between, so removing from the middle
+      // of a chain does not leave two fragments and no way to reconnect them.
+      const result = dispatcher.apply([{ op: 'removeNode', id: node.id, heal: true }])
       if (!result.ok) log(result.message, 'error')
-      else { panels.delete(node.id); log(`removed ${node.label}`) }
+      else { panels.delete(node.id); strips.delete(node.id); log(`removed ${node.label}`) }
     })
     element.querySelector('header').append(remove)
+
+    // The channel strip, above the plugin's own controls. Not drawn by Panel,
+    // because nothing the plugin declares describes it.
+    let strip = strips.get(node.id)
+    if (!strip) {
+      strip = createStrip(document, node.channel, change => {
+        const result = dispatcher.setChannel(node.id, change)
+        if (!result.ok) log(result.message, 'error')
+      }, { label: node.label ?? 'Plugin' })
+      strips.set(node.id, strip)
+    }
+    strip.update(node.channel, { silent: audible.get(node.id) === false })
+    element.append(strip.element)
 
     // Appended before the panel and keyboard are built, because both measure
     // the slot and an element outside the document has a clientWidth of zero.
@@ -346,13 +375,10 @@ async function loadPlugin (input) {
     if (!chained.ok) log(chained.message, 'error')
   }
 
-  // The last node in the chain reaches the speakers. A plugin with no audio
-  // output does not: connect() on it throws IndexSizeError, which is an
-  // uncaught exception in the middle of loading and leaves the rack undrawn.
-  // A MIDI generator is heard through whatever it drives, not by itself.
-  if (engine.get(entry.id).node.numberOfOutputs > 0) {
-    engine.get(entry.id).node.connect(analyser)
-  }
+  // Nothing here connects anything to the speakers. The dispatcher links every
+  // audio sink to the engine's master, which is the path this page used to make
+  // itself by reaching past the model, once per node, whether or not the model
+  // thought that node was the end of anything.
   drawRack()
   window.__jigdaw = { dispatcher: d, engine }
 }
@@ -500,16 +526,18 @@ async function openSession (text) {
     if (!cleared.ok) { log(cleared.message, 'error'); return }
   }
   panels.clear()
+  strips.clear()
 
   const loaded = new Set()
   for (const change of read.changes.filter(c => c.op === 'addNode')) {
     log(`GET ${change.pluginIri}`)
-    const result = await d.addPlugin(change.pluginIri, { id: change.id, label: change.label })
+    // The whole change, not a chosen few of its fields. The reader produces
+    // everything a node carries and picking some of them here is how a saved
+    // mix came back at unity.
+    const { op, pluginIri, ...node } = change
+    const result = await d.addPlugin(pluginIri, node)
     if (!result.ok) { log(`${change.id}: ${result.message}`, 'error'); continue }
     loaded.add(change.id)
-    if (engine.get(result.entry.id).node.numberOfOutputs > 0) {
-      engine.get(result.entry.id).node.connect(analyser)
-    }
     for (const [symbol, value] of Object.entries(change.settings ?? {})) {
       const set = d.setParameter(change.id, symbol, value)
       if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, 'error')

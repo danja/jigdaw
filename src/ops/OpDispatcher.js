@@ -173,8 +173,13 @@ export class OpDispatcher {
    * they join, so a node that came back under a different name would be joined
    * to nothing. The model tracks ids it did not mint, so a later minted id
    * cannot collide with one restored here.
+   *
+   * Everything else is passed through to addNode rather than enumerated here.
+   * It used to list the fields it forwarded, and the day a node gained a channel
+   * strip that list was silently one field short: a saved mix was written
+   * correctly, read correctly, and dropped on the way back in.
    */
-  async addPlugin (iri, { position, id, label } = {}) {
+  async addPlugin (iri, { position, ...node } = {}) {
     if (!this.#engine) throw new Error('no engine: this dispatcher can edit a project but not play it')
 
     let entry
@@ -184,7 +189,12 @@ export class OpDispatcher {
       return { ok: false, kind: 'load', step: error.step ?? null, message: error.message }
     }
 
-    const result = this.apply([{ op: 'addNode', id, pluginIri: iri, label: label ?? entry.profile.label }])
+    const result = this.apply([{
+      op: 'addNode',
+      ...node,
+      pluginIri: iri,
+      label: node.label ?? entry.profile.label
+    }])
     if (!result.ok) {
       // The model refused it, so the engine must not keep it either.
       this.#engine.remove(entry.id)
@@ -193,6 +203,12 @@ export class OpDispatcher {
 
     const nodeId = result.results[0]
     this.#nodeIds.set(nodeId, entry.id)
+    // The links were rebuilt inside that apply, when this node was in the model
+    // and not yet in #nodeIds, so nothing could be wired to it. For a connection
+    // that is harmless and expected, because the other end arrives later anyway.
+    // For the path to the speakers it is not: a plugin loaded on its own would
+    // be silent until some unrelated edit happened to rebuild the links.
+    this.#rebuildLinks(this.compile())
     // Listen from the moment it is loaded, not from the moment it is wired.
     this.#router?.observe(entry.id)
     if (position) this.#project.moveNode(nodeId, position.x, position.y)
@@ -260,6 +276,87 @@ export class OpDispatcher {
     }
   }
 
+  /**
+   * Push every node's channel strip to the engine.
+   *
+   * Solo is resolved here because it cannot be resolved anywhere else. Whether
+   * a node is heard depends on whether *any other* node is soloed, so it is a
+   * property of the graph rather than of the node, and the node is the only
+   * thing the engine can see one at a time.
+   *
+   * The rule is the one every mixer uses: if nothing is soloed, a node is heard
+   * unless it is muted. If anything is soloed, only soloed nodes are heard, and
+   * muting a soloed node still silences it, because a person who pressed mute
+   * meant it.
+   */
+  #applyChannels () {
+    if (!this.#engine) return
+    const anySoloed = this.#project.nodes.some(n => n.channel?.soloed)
+
+    for (const node of this.#project.nodes) {
+      const engineId = this.#nodeIds.get(node.id)
+      if (!engineId) continue
+      const channel = node.channel ?? {}
+      const silent = channel.muted === true || (anySoloed && channel.soloed !== true)
+      try {
+        this.#engine.setChannel(engineId, {
+          gain: channel.gain ?? 1,
+          pan: channel.pan ?? 0,
+          silent
+        })
+      } catch {
+        // A node quarantined or already gone is not a reason to stop setting
+        // the levels of the ones that are still playing.
+      }
+    }
+  }
+
+  /** What a listener actually hears, node by node, after solo is resolved. */
+  audibility () {
+    const anySoloed = this.#project.nodes.some(n => n.channel?.soloed)
+    return this.#project.nodes.map(node => {
+      const channel = node.channel ?? {}
+      return {
+        nodeId: node.id,
+        gain: channel.gain ?? 1,
+        pan: channel.pan ?? 0,
+        silent: channel.muted === true || (anySoloed && channel.soloed !== true)
+      }
+    })
+  }
+
+  /**
+   * Connect everything that produces audio and feeds nothing to the speakers.
+   *
+   * A sink is where the signal has arrived, so it is what a person expects to
+   * hear. Deriving it from the connections rather than declaring it keeps the
+   * rule the project format already states for processing order: the graph
+   * answers the question, and a second answer written down beside it would have
+   * no rule for which wins.
+   *
+   * A node with no audio outputs is not a sink for this purpose even when
+   * nothing follows it. A MIDI generator ends a path and produces nothing to
+   * hear, and connecting it throws.
+   */
+  #linkSinksToMaster () {
+    if (!this.#engine) return
+
+    const feedsSomething = new Set()
+    for (const connection of this.#project.connections) {
+      if (isMidi(connection.signalKind)) continue
+      feedsSomething.add(connection.from.node)
+    }
+
+    for (const node of this.#project.nodes) {
+      if (feedsSomething.has(node.id)) continue
+      const engineId = this.#nodeIds.get(node.id)
+      if (!engineId) continue
+      const entry = this.#engine.get(engineId)
+      if (!(entry?.node?.numberOfOutputs > 0)) continue
+      this.#engine.link(engineId, 'output', {})
+    }
+  }
+
   #rebuildLinks (compiled) {
     if (!this.#engine) return
 
@@ -294,7 +391,56 @@ export class OpDispatcher {
       })
     }
 
+    this.#linkSinksToMaster()
+    this.#applyChannels()
     this.#router?.setRoutes(midiRoutes)
+  }
+
+  /**
+   * Set several parameters as one edit.
+   *
+   * Not a loop over setParameter, which would be one revision and one compile
+   * per value: a preset of thirty parameters would arrive as thirty edits, be
+   * thirty entries in an undo stack, and be audible as a sweep through
+   * intermediate states. Clamped first, for the same reason as the single
+   * value, then written once, then pushed to the AudioParams.
+   */
+  setParameters (settings, { expectedRevision } = {}) {
+    if (!Array.isArray(settings) || settings.length === 0) {
+      return { ok: false, kind: 'change', message: 'needs a non-empty list of settings' }
+    }
+
+    const applied = []
+    for (const { nodeId, symbol, value } of settings) {
+      const engineId = this.#nodeIds.get(nodeId)
+      let clamped = value
+      if (engineId && this.#engine) {
+        try {
+          clamped = this.#engine.clampParameter(engineId, symbol, value)
+        } catch (error) {
+          return { ok: false, kind: 'change', message: error.message }
+        }
+      }
+      applied.push({ nodeId, symbol, value: clamped, engineId })
+    }
+
+    const result = this.apply(
+      applied.map(a => ({ op: 'setSetting', node: a.nodeId, symbol: a.symbol, value: a.value })),
+      { expectedRevision }
+    )
+    if (!result.ok) return result
+
+    for (const a of applied) {
+      if (a.engineId && this.#engine) this.#engine.setParameter(a.engineId, a.symbol, a.value)
+      this.#emit({ type: 'parameter', nodeId: a.nodeId, symbol: a.symbol, value: a.value })
+    }
+
+    return { ...result, applied: applied.map(({ nodeId, symbol, value }) => ({ nodeId, symbol, value })) }
+  }
+
+  /** Set any of a node's channel strip: gain, pan, mute, solo. */
+  setChannel (nodeId, change, { expectedRevision } = {}) {
+    return this.apply([{ op: 'setChannel', node: nodeId, ...change }], { expectedRevision })
   }
 
   /** The engine node behind a model node, if it has been loaded. */

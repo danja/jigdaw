@@ -254,6 +254,82 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null }
     },
 
     {
+      name: 'node_remove',
+      description:
+        'Remove a node and everything connected to it. With heal, a node taken out of the ' +
+        'middle of a path has its neighbours rejoined, which is what a person means by ' +
+        'removing one plugin from a chain.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nodeId: { type: 'string' },
+          heal: { type: 'boolean', description: 'Rejoin what it stood between. Default false.' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['nodeId']
+      },
+      async handler ({ nodeId, heal = false, expectedRevision } = {}) {
+        const before = dispatcher.project.connections.length
+        const result = dispatcher.apply([{ op: 'removeNode', id: nodeId, heal }], { expectedRevision })
+        return result.ok
+          ? ok({
+            revision: result.revision,
+            removed: nodeId,
+            // How much of the graph went with it, which is the part an agent
+            // cannot see from the changeset it sent.
+            connectionsRemoved: before - dispatcher.project.connections.length
+          })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'connection_remove',
+      description: 'Remove one connection by its id. project_get lists them.',
+      inputSchema: {
+        type: 'object',
+        properties: { connectionId: { type: 'string' }, expectedRevision: { type: 'integer' } },
+        required: ['connectionId']
+      },
+      async handler ({ connectionId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'removeConnection', id: connectionId }], { expectedRevision })
+        return result.ok
+          ? ok({ revision: result.revision, removed: connectionId })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'parameters_set_batch',
+      description:
+        'Set several parameters at once. Atomic: all of them apply or none does, so a ' +
+        'preset arrives as one edit rather than as a visible sweep through intermediate states.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          settings: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                nodeId: { type: 'string' }, symbol: { type: 'string' }, value: { type: 'number' }
+              },
+              required: ['nodeId', 'symbol', 'value']
+            }
+          },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['settings']
+      },
+      async handler ({ settings, expectedRevision } = {}) {
+        const result = dispatcher.setParameters(settings, { expectedRevision })
+        return result.ok
+          ? ok({ revision: result.revision, applied: result.applied })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
       name: 'parameter_set',
       description:
         'Set a parameter by its symbol. Returns the value actually applied, which may be clamped ' +

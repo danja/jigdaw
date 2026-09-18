@@ -2,6 +2,70 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-18 A saved mix was written, read, and thrown away in between
+
+**What happened.** Nodes gained a channel strip: gain, pan, mute, solo. The writer wrote it,
+the reader read it, the round trip test passed, and reopening a session in the browser brought
+every channel back at unity, centre, unmuted. The saved file was correct the whole time.
+
+**Root cause.** `OpDispatcher.addPlugin` enumerated the fields it forwarded to `addNode`:
+`{ position, id, label }`. The page's restore path goes through it, so the day a node gained a
+fifth field that list was silently one short. Nothing failed, because dropping a field looks
+exactly like a file that did not have one.
+
+**Why no test caught it.** Every test either built a node or read one. The round trip covered
+writer to reader, the dispatcher suite covered adding a plugin, and the path the page actually
+takes on reopen, reader to `addPlugin` to model, was the join between them and had no test at
+all. It is the same shape as the capability that was minted, required, enforced and never
+offered: each link checked, the chain not.
+
+**Prevention.** `addPlugin` passes the change through rather than listing its parts, so
+whatever `addNode` understands survives. The guard compares a node built directly against one
+built through `addPlugin` **field by field, over the keys the model produces**, so it covers
+the next field without anybody remembering to add it. Mutation tested by restoring the
+enumeration.
+
+**The general shape.** A function that lists the fields it forwards is a paired file with the
+structure it forwards them to, and nothing connects them. Prefer passing the thing through.
+Where that is not possible, compare against the structure rather than against a list.
+
+## 2026-09-18 Nothing in the compiled graph was connected to the speakers
+
+**What happened.** `Engine.connect` and `Engine.link` both resolved a destination of `output`
+to the audio context's destination, and nothing ever passed `output`. `OpDispatcher` only ever
+handed them ids from its own map of loaded nodes, so that branch was unreachable from the one
+place allowed to wire the graph. The page made itself audible instead, with
+`engine.get(entry.id).node.connect(analyser)` once per plugin as it loaded.
+
+It worked, which is why it lasted. The consequences were quieter than silence. Every node was
+connected to the output whether or not the model thought it was the end of anything, so an
+effect in the middle of a chain was heard twice, once wet and once dry. A meter measured one
+node rather than the mix. A plugin with no audio outputs threw `IndexSizeError` in the middle
+of loading. Removing a node left it connected. And the model was not in charge of what came
+out of the speakers, which is the property the whole layering exists to provide.
+
+**Root cause.** A capability was present and unreachable, so it looked implemented. The
+`output` branch in `Engine` reads as support for connecting to the destination, and the only
+caller could not express it. Searching for the feature found it; asking what reaches it did
+not happen.
+
+**Prevention.** The engine owns a master gain, the only thing connected to the destination, and
+the dispatcher links every audio sink to it after each rebuild. A sink is derived from the
+connections rather than declared, keeping the rule the project format already states for
+processing order. `tests/ops/OpDispatcher.test.js` has six tests for which nodes reach the
+speakers and `tests/engine/Engine.test.js` is new: the engine had no tests of its own, only
+coverage through a fake engine in the dispatcher's suite, which records the options it is
+handed and connects nothing.
+
+**And the bug that fix introduced, caught by its own test.** `#rebuildLinks` runs inside
+`apply`, and `addPlugin` records the new node in `#nodeIds` after the apply returns, so a
+freshly loaded plugin was not in the map when the links were rebuilt and never reached the
+speakers until some unrelated edit happened next. Harmless for a connection, whose other end
+arrives later anyway; not harmless for the output.
+
+**The general shape.** An unreachable branch is worse than a missing one. When a function
+handles a case, find the call that supplies it, and if there is none, that case does not exist.
+
 ## 2026-09-17 A removed plugin kept playing
 
 **What happened.** Removing a node from the model never removed the
