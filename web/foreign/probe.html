@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Foreign plugin probe</title>
+<meta name="description" content="Manual check of the container boundary and virtual origin that contract section 12.3 requires, which no test in this repository can reach.">
+<style>
+  body { margin:0 auto; padding:2rem 1rem; max-width:52rem; background:#14161a; color:#e6e8ec;
+         font:15px/1.6 system-ui, sans-serif; }
+  h1 { font-size:1.3rem; }
+  p.lede { color:#9aa2b1; }
+  button { min-height:44px; min-width:120px; font-size:16px; padding:8px 16px; border-radius:6px;
+           background:#222630; color:#e6e8ec; border:1px solid #3a4150; cursor:pointer; }
+  button:focus-visible { outline:2px solid #8ab4ff; outline-offset:2px; }
+  #log { white-space:pre-wrap; font:13px/1.5 ui-monospace, monospace; margin-top:1.5rem;
+         border:1px solid #2c313a; border-radius:6px; padding:1rem; }
+  .ok { color:#7ee787; } .bad { color:#ff7b72; } .dim { color:#9aa2b1; }
+</style>
+</head>
+<body>
+<h1>Foreign plugin probe</h1>
+<p class="lede">Contract section 12.3. This exercises the part no test in this repository can
+reach: a container served from a service worker, a real Web Audio Module imported from it, and
+every request that leaves the container refused.</p>
+<p><button id="run">Run the probe</button></p>
+<div id="log" role="log" aria-live="polite"></div>
+
+<script type="module">
+const log = document.getElementById('log')
+const say = (text, cls = '') => {
+  const line = document.createElement('div')
+  if (cls) line.className = cls
+  line.textContent = text
+  log.append(line)
+  return line
+}
+window.probe = { results: [], done: false }
+const record = (name, pass, detail) => {
+  window.probe.results.push({ name, pass, detail })
+  say(`${pass ? 'ok  ' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`, pass ? 'ok' : 'bad')
+}
+
+document.getElementById('run').addEventListener('click', async () => {
+  log.textContent = ''
+  window.probe = { results: [], done: false }
+  try { await run() } catch (error) {
+    record('the probe itself', false, error.message)
+    console.error(error)
+  }
+  window.probe.done = true
+  say(`\n${window.probe.results.filter(r => r.pass).length}/${window.probe.results.length} passed`, 'dim')
+})
+
+async function run () {
+  const { openForeign } = await import('/src/host/ForeignLoader.js')
+  const { ForeignTrust } = await import('/src/host/ForeignTrust.js')
+  const { ForeignOrigin } = await import('/src/host/ForeignOrigin.js')
+
+  say('fetching the container…', 'dim')
+  const response = await fetch('/foreign/pingpongdelay.wam')
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  const digest = await digestOf(bytes)
+  say(`container ${bytes.length} bytes, ${digest.slice(0, 26)}…`, 'dim')
+
+  const profile = {
+    kind: 'foreign',
+    iri: 'https://example.org/wam/pingpongdelay/',
+    label: 'PingPongDelay',
+    foreignFormat: 'http://purl.org/stuff/jigdaw/WebAudioModule',
+    entryPoint: 'index.js',
+    container: { location: '/foreign/pingpongdelay.wam', integrity: digest }
+  }
+
+  // Section 12.4: refused before consent, even here.
+  const trust = new ForeignTrust()
+  try {
+    await openForeign(profile, { trust })
+    record('refuses to open without consent', false, 'it opened')
+  } catch (error) {
+    record('refuses to open without consent', error.name === 'ConsentRequired', error.name)
+  }
+
+  trust.consent(profile.iri, digest)
+  const opened = await openForeign(profile, { trust })
+  record('verifies and unpacks the container', opened.origin.names.length > 0,
+    `${opened.origin.names.length} files`)
+
+  const origin = await ForeignOrigin.start()
+  record('registers the container worker', true, origin.scope)
+
+  const base = await origin.install(opened.origin, digest)
+  record('installs the container at a virtual origin', typeof base === 'string', base)
+
+  // The plugin's own descriptor, fetched through the worker the way the plugin
+  // will fetch it.
+  const descriptor = await (await fetch(`${base}descriptor.json`)).json()
+  record('serves a file the plugin will fetch of itself', descriptor.name === 'PingPongDelay',
+    `${descriptor.name} ${descriptor.version}`)
+
+  // Section 12.3, and the exact shape of what it can promise.
+  const missing = await fetch(`${base}not-in-here.js`)
+  record('refuses an in-scope file the container does not hold', missing.status === 404, `${missing.status}`)
+
+  // A path with .. in it never reaches the worker: the browser normalises the
+  // URL first, so it leaves the worker's scope and becomes an ordinary
+  // same-origin request. The container cannot mediate that, and a foreign
+  // plugin does not need .. to do it anyway because it can simply fetch an
+  // absolute path. This is the limit section 12.3 states in its last paragraph,
+  // observed rather than asserted away.
+  const escaped = await fetch(`${base}../../../package.json`)
+  say(`note  a ".." path normalises out of scope and is not mediated (${escaped.status}). ` +
+      'Section 12.3: the boundary defeats substitution, not a plugin that wants out.', 'dim')
+
+  // The whole point: a real WAM, imported from verified bytes.
+  const module = await import(`${base}index.js`)
+  const WAM = module.default
+  record('imports the plugin from the container', typeof WAM === 'function',
+    WAM?.name ?? typeof WAM)
+  record('is a WebAudioModule constructor', WAM?.isWebAudioModuleConstructor === true,
+    String(WAM?.isWebAudioModuleConstructor))
+
+  const context = new AudioContext()
+  if (context.state === 'suspended') {
+    await Promise.race([context.resume(), new Promise(r => setTimeout(r, 2000))])
+  }
+  record('has a running AudioContext', context.state === 'running', context.state)
+  // The WAM runtime must be in the host's own worklet before any WAM can be
+  // instantiated: WamEnv and a WamGroup, injected by the SDK's host side. It is
+  // NOT in the plugin's container and cannot be, because it is shared by every
+  // WAM in this context. So a host adapting WAMs carries this code itself, and
+  // it is a fourth thing that has to be pinned. Without it the plugin's own
+  // AudioWorkletNode fails with "node name ... is not defined", which is what
+  // this probe found.
+  const { default: initializeWamHost } = await import('/foreign/wam-host.js')
+  const [groupId] = await initializeWamHost(context)
+  record('initialises the WAM runtime in the host worklet', typeof groupId === 'string', groupId)
+
+  const wam = await WAM.createInstance(groupId, context)
+  record('instantiates', !!wam?.audioNode, wam?.descriptor?.name)
+  record('reports itself through the WAM interface', wam?.isWebAudioModule === true,
+    `${wam?.descriptor?.name} by ${wam?.descriptor?.vendor}`)
+
+  // It is an effect, so give it something to process and listen to the output.
+  const osc = new OscillatorNode(context, { frequency: 220 })
+  const analyser = new AnalyserNode(context, { fftSize: 2048 })
+  osc.connect(wam.audioNode)
+  wam.audioNode.connect(analyser)
+  osc.start()
+  await new Promise(r => setTimeout(r, 400))
+  const samples = new Float32Array(analyser.fftSize)
+  analyser.getFloatTimeDomainData(samples)
+  const peak = Math.max(...samples.map(Math.abs))
+  osc.stop()
+  record('passes audio through the plugin', peak > 0.001, `peak ${peak.toFixed(4)}`)
+  await context.close()
+
+  const refused = origin.refusals.length
+  record('recorded what the plugin could not reach', refused >= 0, `${refused} refusal(s)`)
+}
+
+async function digestOf (bytes) {
+  const hash = await crypto.subtle.digest('SHA-384', bytes)
+  return 'sha384-' + btoa(String.fromCharCode(...new Uint8Array(hash)))
+}
+</script>
+</body>
+</html>

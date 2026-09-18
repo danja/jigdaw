@@ -435,6 +435,64 @@ Open: audio-thread `connectEvents`, which needs the shell to drive the module th
 [module-abi.md](module-abi.md) rather than wrapping the processor, the way
 `native/jigdaw-adapter` already does for VST3.
 
+## Phase 10b. Foreign plugins. Specified and gated; the adapter is not built.
+
+Loading a WAM into a JigDAW host turned out to be blocked by something other than what
+[wam.md](wam.md) first said. `addFunctionModule` takes a function reference, so it stringifies
+code already loaded rather than fetching, and the enumeration problem is narrower than claimed
+and is solved by verifying a container instead of enumerating contents.
+
+The real obstacle is that a WAM's entry point is a module the host imports into its own
+document and calls, with the host's origin and privileges. Contract section 9.1 forbids that
+and gives the reasons. It is not a packaging problem and cannot be packaged away.
+
+**Contract section 12 defines a separate class rather than relaxing section 9.1.** A foreign
+plugin is `jig:ForeignPlugin`, disjoint from `jig:WebPlugin`, and a host that supports one must
+verify its container, take consent bound to that container's digest, and mark it wherever it
+appears. Support is optional; refusing everything still conforms. Sections 1 to 11 are
+untouched, which was the point: the alternative was quietly weakening two of them.
+
+Built and tested: the reader, the consent gate, the container loader with its traversal rules,
+the shapes, a worked example and a counterexample that fires eleven constraints. The
+disjointness is a SHACL constraint and not only an `owl:disjointWith`, because nothing
+validating a profile loads the vocabulary.
+
+**The virtual origin is built and has run.** `web/foreign/sw.js` and
+`src/host/ForeignOrigin.js`, checked by `web/foreign/probe.html` because no test here can
+reach a service worker. Measured in Chrome, 2026-09-18, against `pingpongdelay` from
+`webaudiomodules/wam-examples` in a 351 kB container: 14 of 14, ending in a real Web Audio
+Module passing audio at peak 1.0000 out of bytes that were verified before anything ran.
+
+The browser found two things review had not. A host must inject `WamEnv` and a `WamGroup` into
+its own worklet before any WAM instantiates; that code is shared, is in no container, and is
+the host's rather than a plugin's, which is now contract section 12.3a. And section 12.3
+contained a MUST no host can satisfy: a `..` path is normalised by the browser before a
+service worker sees it, so it leaves the scope and is never offered for refusal. The wording
+now says what is enforceable and states the limit.
+
+Still not written: the adapter that turns a `WamNode` into something the engine drives.
+
+**Measured against the real plugins**, once `~/wam-examples` existed, which turned three
+guesses into findings. `addFunctionModule` stringifies an already-loaded function and fetches
+nothing, as the SDK source shows, so the correction to the original blocker holds. 15 of the
+23 example plugins fetch at run time, for their own descriptor, GUI templates and preset
+banks, which is why a container is verified rather than a file list enumerated. And 22 of the
+23 locate themselves with `import.meta.url`, which rules out serving the container as blob
+URLs and makes the Service Worker required rather than preferred. All three are asserted in
+`tests/host/ForeignLoader.test.js` against the checkout when it is present, and skip loudly
+when it is not.
+
+One case the boundary correctly breaks: `PedalBoard-WAC2022` is a plugin that is itself a
+plugin host, fetching a repository list and importing whatever it names. Its reachable code is
+not a knowable set, every one of its fetches resolves outside the container, and it does not
+work. That is the right answer rather than a gap.
+
+**Two defects found by checking rather than by reading.** The `jig:entryPoint` pattern allowed
+`..`, because `..` matches `[A-Za-z0-9._-]+`; the counterexample still produced the expected
+number of violations by way of a different constraint, and it was caught by asking which rule
+fired rather than how many did. And the panel's mark was nearly a CSS class alone, which
+section 12.5 forbids and which no test that only counted elements would have noticed.
+
 ## Phase 9. The graph the model already had. Complete.
 
 The model has been an arbitrary directed multigraph since phase 3, with Tarjan SCC, cycle

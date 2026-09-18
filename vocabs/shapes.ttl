@@ -494,3 +494,83 @@ jig:MultikeyShape a sh:NodeShape ;
         sh:pattern "^z6Mk[1-9A-HJ-NP-Za-km-z]+$" ;
         sh:message "A public key is an Ed25519 Multikey: multibase base58btc of the key behind its multicodec prefix, which is what makes it begin z6Mk. A bare base64 key would be indistinguishable from a key of another kind."
     ] .
+
+## -- Foreign plugins ----------------------------------------------------------
+##
+## Contract section 12. These are NOT a relaxation of the native shapes: they are
+## a separate target, because jig:ForeignPlugin and jig:WebPlugin are disjoint.
+## A profile declaring both is refused by jig:NotBothKindsShape below, which is
+## the one rule here that matters most: it is what stops a foreign plugin being
+## presented as something that was sandboxed.
+
+jig:ForeignPluginShape a sh:NodeShape ;
+    sh:targetClass jig:ForeignPlugin ;
+    rdfs:label "Foreign plugin shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A foreign plugin must be identified by an IRI, like any other plugin." ;
+
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A foreign plugin needs a name, because a host must mark it wherever it appears and a mark with nothing to name is no use."
+    ] ;
+    sh:property [
+        sh:path jig:foreignFormat ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( jig:WebAudioModule ) ;
+        sh:message "A foreign plugin must name a format an adapter speaks. An unrecognised format is one no adapter can start, and a host must refuse it rather than guess."
+    ] ;
+    sh:property [
+        sh:path jig:container ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A foreign plugin must carry exactly one container. One is what makes a single digest meaningful; two would reintroduce the enumeration problem the container exists to answer."
+    ] ;
+    sh:property [
+        sh:path jig:entryPoint ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        # Every segment must begin with something that is not a dot, which is
+        # what rejects "..". The first version of this pattern allowed dots
+        # anywhere in a segment, so "../elsewhere/index.js" matched it happily
+        # and the counterexample still produced the expected number of
+        # violations, by way of a different constraint. Found by checking which
+        # rule fired rather than how many did.
+        sh:pattern "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$" ;
+        sh:message "The entry point is a relative path inside the container. An absolute path, or any segment beginning with a dot, could resolve outside the verified bytes, which contract section 12.3 forbids."
+    ] ;
+    sh:property [
+        sh:path jig:module ;
+        sh:maxCount 0 ;
+        sh:message "A foreign plugin has no jig:module. Its code is inside its container and the host does not know its shape."
+    ] ;
+    sh:property [
+        sh:path jig:processor ;
+        sh:maxCount 0 ;
+        sh:message "A foreign plugin has no jig:processor. It brings its own, inside the container."
+    ] .
+
+## The disjointness, as a constraint rather than only as an owl: axiom, because
+## nothing validating a profile loads the vocabulary.
+jig:NotBothKindsShape a sh:NodeShape ;
+    sh:targetClass jig:ForeignPlugin ;
+    rdfs:label "Not both kinds" ;
+    sh:not [ sh:class jig:WebPlugin ] ;
+    sh:message "A plugin is native or foreign and cannot be both. A native plugin's code cannot reach the host document and a foreign plugin's can; declaring both would claim a guarantee that does not hold." .
+
+## The container is an ordinary resource and is verified like one. Stated here
+## rather than left to jig:ResourceShape, because that shape is targeted at the
+## three native resource classes and a container is none of them.
+jig:ContainerShape a sh:NodeShape ;
+    sh:targetObjectsOf jig:container ;
+    rdfs:label "Container shape" ;
+    sh:property [
+        sh:path jig:location ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A container must say where it is fetched from."
+    ] ;
+    sh:property [
+        sh:path jig:integrity ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$" ;
+        sh:message "A container must carry a Subresource Integrity digest. It is the only thing verified about a foreign plugin, so a missing one is not a degraded check but no check at all."
+    ] .

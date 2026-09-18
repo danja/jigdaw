@@ -562,3 +562,50 @@ jig:canonicalDigest a owl:DatatypeProperty ;
 ## It is not declared here because it is not ours. It is listed in
 ## src/rdf/Vocabulary.js and constrained in vocabs/shapes.ttl, and this comment
 ## exists so that a reader looking for jig:version finds out why there is none.
+
+## -- Foreign plugins ----------------------------------------------------------
+##
+## Contract section 12. A plugin in a format this project does not define, loaded
+## through an adapter, running in the host's document with the host's privileges.
+##
+## jig:ForeignPlugin is deliberately NOT a subclass of jig:WebPlugin. They are
+## disjoint: a native plugin's code cannot reach the page and a foreign one's can,
+## which is the whole distinction, and a subclass would let every shape that
+## governs a loadable native plugin appear to have passed on one.
+
+jig:ForeignPlugin a owl:Class ;
+    owl:disjointWith jig:WebPlugin ;
+    rdfs:label "Foreign Plugin" ;
+    rdfs:comment """A plugin in a format JigDAW does not define, carried in one verified
+        container and started through an adapter. It is outside the guarantees of contract
+        sections 9.1 and 11, which is why it has a class of its own rather than a flag on
+        the native one: a reader who does not know what this class means must not be able
+        to mistake it for something that was sandboxed.""" .
+
+jig:ForeignFormat a owl:Class ;
+    rdfs:label "Foreign Format" ;
+    rdfs:comment "A plugin format an adapter can start. One per adapter, not one per plugin." .
+
+jig:WebAudioModule a jig:ForeignFormat ;
+    rdfs:label "Web Audio Module" ;
+    rdfs:seeAlso <https://www.webaudiomodules.com/> ;
+    rdfs:comment """The WAM 2.0 API. Its entry point is an ES module whose default export is
+        a constructor the host calls, so the plugin runs on the main thread in the host's
+        document. That is the reason foreign plugins are a separate class.""" .
+
+jig:foreignFormat a owl:ObjectProperty ;
+    rdfs:domain jig:ForeignPlugin ; rdfs:range jig:ForeignFormat ;
+    rdfs:label "foreign format" .
+
+jig:container a owl:ObjectProperty ;
+    rdfs:domain jig:ForeignPlugin ; rdfs:range jig:Resource ;
+    rdfs:label "container" ;
+    rdfs:comment """The one archive holding everything the plugin needs. It carries a
+        jig:integrity like any other resource, and it is the only thing verified, because a
+        foreign format has no manifest to enumerate. Everything the plugin loads afterwards
+        resolves inside these bytes or is refused. Contract section 12.3.""" .
+
+jig:entryPoint a owl:DatatypeProperty ;
+    rdfs:domain jig:ForeignPlugin ; rdfs:range xsd:string ;
+    rdfs:label "entry point" ;
+    rdfs:comment "The path inside the container the adapter starts at, such as index.js." .

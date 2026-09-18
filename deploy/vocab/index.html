@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  89 terms.
+  94 terms.
 </p>
 
 <h2>Classes</h2>
@@ -65,6 +65,14 @@
         picture of the dataflow rather than an encoding of one.</dd>
   <dt id="Endpoint"><code>jig:Endpoint</code></dt>
   <dd>One end of a connection: a node, and which of its ports.</dd>
+  <dt id="ForeignFormat"><code>jig:ForeignFormat</code> <span class="label">Foreign Format</span></dt>
+  <dd>A plugin format an adapter can start. One per adapter, not one per plugin.</dd>
+  <dt id="ForeignPlugin"><code>jig:ForeignPlugin</code> <span class="label">Foreign Plugin</span></dt>
+  <dd>A plugin in a format JigDAW does not define, carried in one verified
+        container and started through an adapter. It is outside the guarantees of contract
+        sections 9.1 and 11, which is why it has a class of its own rather than a flag on
+        the native one: a reader who does not know what this class means must not be able
+        to mistake it for something that was sandboxed.</dd>
   <dt id="Inspection"><code>jig:Inspection</code></dt>
   <dd>A record of what a host observed when it actually loaded a module:
         the exports it found, the port counts it read back, the features it needed. This
@@ -134,7 +142,14 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="connection"><code>jig:connection</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="container"><code>jig:container</code></dt>
+  <dd>The one archive holding everything the plugin needs. It carries a
+        jig:integrity like any other resource, and it is the only thing verified, because a
+        foreign format has no manifest to enumerate. Everything the plugin loads afterwards
+        resolves inside these bytes or is refused. Contract section 12.3.</dd>
   <dt id="endpointNode"><code>jig:endpointNode</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="foreignFormat"><code>jig:foreignFormat</code> <span class="label">foreign format</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="from"><code>jig:from</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
@@ -200,6 +215,8 @@
         digest holds for the same plugin whether it arrived flattened, archived, or from its
         origin, which is the same rule that makes a bundle a retrieval origin and not an
         identity. See docs/plugin-bundles.md section 5.</dd>
+  <dt id="entryPoint"><code>jig:entryPoint</code> <span class="label">entry point</span></dt>
+  <dd>The path inside the container the adapter starts at, such as index.js.</dd>
   <dt id="gain"><code>jig:gain</code></dt>
   <dd>Linear output gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean

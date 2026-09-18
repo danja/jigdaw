@@ -142,6 +142,75 @@ export function findSubject (dataset) {
 }
 
 /**
+ * Which kind of plugin a document describes, without reading either.
+ *
+ * A host has to choose a loading path before it can read anything, and the two
+ * paths are not interchangeable: contract section 12 makes the classes disjoint
+ * precisely so this question always has one answer. 'neither' is an ordinary
+ * catalogue entry, which is a valid thing to hold and not a loadable one.
+ */
+export function kindOf (dataset) {
+  const has = type => [...dataset.match(null, iri(rdfTerms.type), iri(type))].length > 0
+  const native = has(jig.WebPlugin)
+  const foreign = has(jig.ForeignPlugin)
+  if (native && foreign) {
+    throw new Error(
+      'this document declares both jig:WebPlugin and jig:ForeignPlugin. They are disjoint: ' +
+      'a native plugin cannot reach the host document and a foreign one can, so a profile ' +
+      'claiming both is claiming a guarantee it does not have. Contract section 12.2.')
+  }
+  return native ? 'native' : foreign ? 'foreign' : 'neither'
+}
+
+/**
+ * Read a foreign plugin. Contract section 12.
+ *
+ * Deliberately a separate function from readProfile rather than a branch inside
+ * it. The two describe different things: this one has no module, no processor
+ * and no capabilities, because none of those are knowable about code the host
+ * does not define the shape of.
+ */
+export function readForeignProfile (dataset, { baseIRI } = {}) {
+  const subjects = [...dataset.match(null, iri(rdfTerms.type), iri(jig.ForeignPlugin))].map(q => q.subject)
+  if (subjects.length === 0) throw new Error('no jig:ForeignPlugin in this document')
+  if (subjects.length > 1) throw new Error(`${subjects.length} jig:ForeignPlugin subjects in one document; expected one`)
+  const subject = subjects[0]
+  const base = baseIRI ?? subject.value
+
+  const containerTerm = one(dataset, subject, jig.container)
+  if (!containerTerm) throw new Error(`${subject.value} declares no jig:container, so there is nothing to verify`)
+
+  return {
+    kind: 'foreign',
+    iri: subject.value,
+    label: asString(one(dataset, subject, rdfs.label)),
+    comment: asString(one(dataset, subject, rdfs.comment)),
+    vendor: asString(one(dataset, subject, trn.vendor)),
+    homepage: asString(one(dataset, subject, foaf.homepage)),
+    roles: values(dataset, subject, trn.role),
+    accepts: values(dataset, subject, trn.accepts),
+    produces: values(dataset, subject, trn.produces),
+    genres: values(dataset, subject, trn.genre),
+    cautions: values(dataset, subject, trn.caution),
+
+    foreignFormat: one(dataset, subject, jig.foreignFormat)?.value ?? null,
+    entryPoint: asString(one(dataset, subject, jig.entryPoint)),
+    container: {
+      iri: containerTerm.value,
+      location: resolveLocation(one(dataset, containerTerm, jig.location)?.value, base),
+      mediaType: asString(one(dataset, containerTerm, jig.mediaType)),
+      integrity: asString(one(dataset, containerTerm, jig.integrity))
+    },
+
+    // Declared ports let a catalogue show the plugin before anything is
+    // fetched. What the host actually draws comes from the adapter at run time,
+    // because the plugin is the authority on its own parameters and these are
+    // a description of it written by whoever wrote the profile.
+    ports: objects(dataset, subject, lv2.port).map(term => readPort(dataset, term))
+  }
+}
+
+/**
  * Read a profile from a dataset.
  *
  * `baseIRI` is what relative locations resolve against, and defaults to the

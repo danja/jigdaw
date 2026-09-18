@@ -474,9 +474,125 @@ description and caution are strings written by someone else, and they reach a pa
 
 ---
 
-## 12. Conformance
+## 12. Foreign plugins
 
-A host conforms if it implements sections 1 through 11 as written.
+A **foreign plugin** is a plugin in a format this contract does not define, loaded through an
+adapter. The worked case is a [Web Audio Module](wam.md), and nothing here is specific to it.
+
+Support is OPTIONAL. A host that refuses every foreign plugin conforms fully, and refusing is
+the safe default.
+
+### 12.1 What is given up, stated rather than relaxed
+
+A native plugin never runs in the host's document. Its processor is an `AudioWorklet`, which
+has no `fetch` and no DOM, and its interface is cross-origin in a sandbox (section 9.1). That
+is what makes section 1.1 a reasonable thing to propose: install is a HTTP GET, and the thing
+installed cannot reach the page.
+
+**A foreign plugin's entry point is a JavaScript module the host imports into its own
+document and calls.** It runs with the host's origin and the host's privileges. It can read
+the project, the host's storage, any credentials present and every other plugin, and it can
+rewire the audio graph directly. That is exactly what section 9.1 exists to prevent, and it
+is not preventable for a format whose entry point is a main-thread object.
+
+So this section does not weaken sections 9.1 or 11. It defines a separate class that is
+outside them, and requires a host to say so.
+
+A host MUST NOT describe a foreign plugin as verified, sandboxed or isolated. A host MUST NOT
+claim to enforce section 2.2 against one: capability negotiation is a promise a foreign plugin
+never made and the host cannot hold it to.
+
+### 12.2 Declaration
+
+A foreign plugin is declared as `jig:ForeignPlugin` and MUST NOT be declared `jig:WebPlugin`.
+The two classes are disjoint so that no host can mistake one for the other, and so that the
+shapes that govern a loadable native plugin never appear to have passed on a foreign one.
+
+It MUST declare:
+
+- `jig:foreignFormat`, the format its adapter speaks;
+- `jig:container`, a single archive carrying everything it needs, with a `jig:integrity`;
+- `jig:entryPoint`, the path inside that archive the adapter starts at.
+
+### 12.3 The container is what is verified
+
+A host MUST fetch the container, verify it against its `jig:integrity`, and execute nothing
+until that succeeds. There is no skip path, exactly as in section 3.2.
+
+A host MUST serve the container's contents to the plugin from the bytes it verified, and MUST
+refuse any request **within the space it serves** that the container does not hold. The
+serving mechanism MUST NOT fall back to the network for such a request: a missing file is a
+refusal, never a fetch.
+
+A host MUST NOT claim more than that. A request that leaves the space the host serves is an
+ordinary request from the host's own document, because the plugin is running in it, and the
+host does not mediate it. Measured: a path containing `..` is normalised by the browser before
+any service worker sees it, so it leaves the worker's scope and is never offered for refusal.
+A plugin does not need `..` to do this and can simply fetch an absolute path.
+
+This replaces the enumeration section 3.2 relies on rather than abandoning it. A native plugin
+declares every file and each is verified; a foreign plugin declares one file and it is
+verified, and nothing else is reachable. Both answer the same question, which is whether the
+code about to run is the code that was published.
+
+A host cannot fully enforce the boundary against a hostile plugin, because a foreign plugin
+running in the host's document can reach the network by means the host does not mediate. It
+MUST still impose the boundary, because it defeats substitution, which is the threat section
+3.2 names, and because an ordinary plugin reaching outside its container is then visible. A
+host SHOULD record such attempts and MAY report them.
+
+### 12.3a The adapter's own runtime
+
+A foreign format may require host-side code in the host's own `AudioWorklet` before any of its
+plugins can be instantiated. A Web Audio Module does: its `WamEnv` and a `WamGroup` are
+injected by the host, are shared by every plugin in that context, and are not in any
+container.
+
+That code is part of the host, not part of a plugin. A host MUST obtain it the way it obtains
+its own code, MUST NOT fetch it from a plugin's origin, and MUST NOT allow a plugin to supply
+or replace it. A host SHOULD pin it by digest for the same reason it pins everything else.
+
+### 12.4 Consent is per plugin and per container
+
+A host MUST obtain explicit consent from the person before loading a foreign plugin for the
+first time, and that request MUST name the plugin, name its format, and state that the plugin
+will run with the host's privileges.
+
+Consent MUST be recorded against both the plugin's IRI and its container digest. A container
+whose digest has changed is a different body of code and MUST be consented to again.
+
+A host MUST NOT treat consent for one foreign plugin as consent for another, MUST NOT offer a
+blanket setting that consents to all of them, and MUST NOT consent on the person's behalf.
+
+A project that refers to a foreign plugin MUST NOT load it on open without consent. A stored
+project is data from wherever it came from, and treating it as authority to run code would
+make the consent meaningless.
+
+### 12.5 Visibly marked
+
+Wherever a foreign plugin appears, a host MUST mark it as foreign, and the mark MUST be
+available to assistive technology and MUST NOT be carried by colour alone.
+
+A person who consented once and comes back a week later has no other way to tell the
+difference, and the difference is the whole of this section.
+
+### 12.6 What still applies
+
+Sections 4, 6, 7 and 10 apply unchanged: the real-time rules, events located by stream
+position, transport, and a failed plugin leaving the rest of the graph playing. A foreign
+plugin that breaks these is a defect in the adapter, not a permitted variation.
+
+A host SHOULD generate the panel from the parameters the adapter reports rather than loading
+the foreign format's own interface. Once code is in the document that is not a security
+boundary, but a generated panel is consistent and accessible, which section 9.1 already says
+is the expected case rather than a degraded one.
+
+---
+
+## 13. Conformance
+
+A host conforms if it implements sections 1 through 11 as written. Section 12 is optional and
+a host that implements none of it conforms.
 
 A plugin conforms if its profile validates against `vocabs/shapes.ttl` and its processor
 obeys sections 3.3, 3.4, 4, 5.2, 6.2 and 8.

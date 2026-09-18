@@ -175,10 +175,16 @@ WAM: same profile, same WebAssembly, same processor, with the packaging a WAM 2.
 generated from the profile. 21 kB, standalone, and it carries the profile's digests, which the
 WAM API has no way to express at all.
 
-It runs one way. A WAM cannot be loaded by a JigDAW host, because a WAM's file set is not
-knowable before running it and so cannot be declared, digested or verified. That asymmetry is
-the difference between a format that is a description and one that is a program. See
-[wam.md](docs/wam.md).
+The other direction works too, under contract section 12, and costs something the contract
+states rather than hides. A WAM's entry point is a module the host imports into its own
+document, so it runs with the host's privileges and cannot be sandboxed. A foreign plugin is
+therefore a separate class, outside sections 9.1 and 11: its container is verified as one
+archive, consent is bound to that container's digest, and it is marked wherever it appears.
+Supporting none of it still conforms.
+
+`web/foreign/probe.html` is the check, since a service worker is not reachable from a test.
+Measured in Chrome: a real Web Audio Module, loaded from a verified container and passing
+audio. See [wam.md](docs/wam.md).
 
 ## Status
 

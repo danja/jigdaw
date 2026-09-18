@@ -71,6 +71,22 @@ export function createPanel (document, profile, onChange) {
   root.setAttribute('aria-labelledby', headingId)
   root.append(heading)
 
+  // Contract section 12.5. A foreign plugin runs in this document with this
+  // document's privileges, and a person who consented once and came back a
+  // week later has no other way to tell. The mark is text inside the heading
+  // rather than a class on the panel, because section 12.5 requires it to
+  // reach assistive technology and forbids carrying it by colour alone: a
+  // border a stylesheet draws is invisible to a screen reader and to anyone
+  // who cannot see the border.
+  if (profile.kind === 'foreign') {
+    const mark = document.createElement('span')
+    mark.className = 'foreign'
+    mark.textContent = 'foreign'
+    mark.title = 'Runs in this page with this page\'s privileges. It is not sandboxed.'
+    heading.append(' ', mark)
+    root.classList.add('is-foreign')
+  }
+
   if (profile.comment) {
     const description = document.createElement('p')
     description.className = 'description'

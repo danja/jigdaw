@@ -16,6 +16,13 @@
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
 /* Channel strip. Not a plugin panel: these are host services. */
+  /* Contract section 12.5. The word "foreign" in the heading is what carries
+     this; the outline is a second signal for a sighted reader and never the
+     only one, because section 12.5 forbids colour alone. */
+  .foreign { font-size:11px; letter-spacing:.04em; text-transform:uppercase;
+             border:1px solid var(--err); color:var(--err); border-radius:3px;
+             padding:1px 5px; margin-left:6px; vertical-align:middle; }
+  .is-foreign { outline:1px dashed var(--err); outline-offset:2px; }
   .strip { display:flex; flex-direction:column; gap:6px; padding:10px 14px;
            border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
   .strip.silent { opacity:.55; }

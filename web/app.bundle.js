@@ -13262,6 +13262,13 @@ var vocabulary = Object.freeze({
     loopEnabled: `${JIG}loopEnabled`,
     x: `${JIG}x`,
     y: `${JIG}y`,
+    // Foreign plugins. Contract section 12.
+    ForeignPlugin: `${JIG}ForeignPlugin`,
+    ForeignFormat: `${JIG}ForeignFormat`,
+    WebAudioModule: `${JIG}WebAudioModule`,
+    foreignFormat: `${JIG}foreignFormat`,
+    container: `${JIG}container`,
+    entryPoint: `${JIG}entryPoint`,
     // Bundles and provenance
     Bundle: `${JIG}Bundle`,
     Bundling: `${JIG}Bundling`,
@@ -20569,6 +20576,14 @@ function createPanel(document2, profile, onChange) {
   root.setAttribute("role", "group");
   root.setAttribute("aria-labelledby", headingId);
   root.append(heading);
+  if (profile.kind === "foreign") {
+    const mark = document2.createElement("span");
+    mark.className = "foreign";
+    mark.textContent = "foreign";
+    mark.title = "Runs in this page with this page's privileges. It is not sandboxed.";
+    heading.append(" ", mark);
+    root.classList.add("is-foreign");
+  }
   if (profile.comment) {
     const description = document2.createElement("p");
     description.className = "description";

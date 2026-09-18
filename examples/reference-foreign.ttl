@@ -1,0 +1,71 @@
+# examples/reference-foreign.ttl
+#
+# A foreign plugin, worked through once. Contract section 12.
+#
+# This describes a Web Audio Module so that a JigDAW host can find it, mark it,
+# ask the person about it, and start it from bytes it has verified. It is NOT a
+# jig:WebPlugin and must never be declared as one: a native plugin's code cannot
+# reach the host document and this plugin's can, and that is the whole reason
+# the class exists.
+#
+# Read section 12.1 before implementing against this. A host that loads one of
+# these is running somebody else's JavaScript in its own page with its own
+# origin. The container digest proves the code is the code that was published.
+# It proves nothing whatever about what that code does.
+
+@base <https://example.org/wam/pingpong/> .
+
+@prefix jig:   <http://purl.org/stuff/jigdaw/> .
+@prefix trn:   <http://purl.org/stuff/transmissions/> .
+@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf:  <http://xmlns.com/foaf/0.1/> .
+@prefix doap:  <http://usefulinc.com/ns/doap#> .
+
+<>
+    a jig:ForeignPlugin , trn:PluginProfile ;
+    rdfs:label "Ping Pong Delay" ;
+    rdfs:comment "A stereo delay whose repeats alternate between the channels." ;
+    trn:vendor "example" ;
+    doap:revision "2.1.0" ;
+    foaf:homepage <> ;
+
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+
+    # The adapter that can start it. One per adapter, not one per plugin.
+    jig:foreignFormat jig:WebAudioModule ;
+
+    # Everything it needs, in one archive, with the one digest that is checked.
+    # A foreign format has no manifest to enumerate, so the container is what is
+    # verified and nothing outside it is reachable. Section 12.3.
+    jig:container <#container> ;
+    jig:entryPoint "index.js" ;
+
+    # Declared so the host can generate a panel and mark the controls, rather
+    # than loading the plugin's own interface. The adapter reports the same
+    # parameters at run time and the host uses those; these let a catalogue show
+    # the plugin before anything has been fetched.
+    lv2:port <#time> , <#feedback> , <#mix> .
+
+<#container>
+    a jig:Resource ;
+    jig:location <pingpong-2.1.0.wam> ;
+    jig:mediaType "application/zip" ;
+    jig:integrity "sha384-DWQXrIkTGX7PeWFPsRnGlfBKMwLjWLkUxBgLjJMNKObuGDh1RihVc4c3rIS/QdTX" .
+
+<#time>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "time" ; lv2:name "Time" ;
+    lv2:default 375.0 ; lv2:minimum 10.0 ; lv2:maximum 2000.0 .
+
+<#feedback>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "feedback" ; lv2:name "Feedback" ;
+    lv2:default 0.4 ; lv2:minimum 0.0 ; lv2:maximum 0.95 .
+
+<#mix>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "mix" ; lv2:name "Mix" ;
+    lv2:default 0.3 ; lv2:minimum 0.0 ; lv2:maximum 1.0 .

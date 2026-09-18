@@ -185,6 +185,14 @@ export const vocabulary = Object.freeze({
     x: `${JIG}x`,
     y: `${JIG}y`,
 
+    // Foreign plugins. Contract section 12.
+    ForeignPlugin: `${JIG}ForeignPlugin`,
+    ForeignFormat: `${JIG}ForeignFormat`,
+    WebAudioModule: `${JIG}WebAudioModule`,
+    foreignFormat: `${JIG}foreignFormat`,
+    container: `${JIG}container`,
+    entryPoint: `${JIG}entryPoint`,
+
     // Bundles and provenance
     Bundle: `${JIG}Bundle`,
     Bundling: `${JIG}Bundling`,

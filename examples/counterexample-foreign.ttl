@@ -1,0 +1,44 @@
+# examples/counterexample-foreign.ttl
+#
+# A deliberately broken foreign plugin. This file MUST NOT validate against
+# vocabs/shapes.ttl. It exists so that the constraints contract section 12 adds
+# are known to fire, and the first defect below is the one that matters most: a
+# profile claiming to be both native and foreign would be claiming a sandbox it
+# does not have.
+
+@base <https://example.org/wam/broken/> .
+
+@prefix jig:   <http://purl.org/stuff/jigdaw/> .
+@prefix trn:   <http://purl.org/stuff/transmissions/> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    # Both kinds at once. A host reading this as a jig:WebPlugin would apply the
+    # native shapes, find them satisfied, and report a sandboxed plugin that is
+    # not one.
+    a jig:ForeignPlugin , jig:WebPlugin , trn:PluginProfile ;
+    # No rdfs:label, so a host has nothing to put in the mark section 12.5 requires.
+
+    # A format no adapter speaks.
+    jig:foreignFormat jig:SomeOtherFormat ;
+
+    jig:container <#container> ;
+
+    # Leaves the verified bytes, which section 12.3 forbids.
+    jig:entryPoint "../elsewhere/index.js" ;
+
+    # A foreign plugin has no native delivery: its code is inside the container
+    # and the host does not know its shape.
+    jig:processor <#processor> .
+
+<#container>
+    a jig:Resource ;
+    jig:location <broken.wam> .
+    # No jig:integrity, which for a foreign plugin is not a weaker check but no
+    # check at all: the container is the only thing verified.
+
+<#processor>
+    a jig:Processor ;
+    jig:location <broken-processor.js> ;
+    jig:registeredName "broken" ;
+    jig:integrity "sha384-DWQXrIkTGX7PeWFPsRnGlfBKMwLjWLkUxBgLjJMNKObuGDh1RihVc4c3rIS/QdTX" .

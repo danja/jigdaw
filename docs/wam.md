@@ -86,23 +86,99 @@ this means a second packaging route in which the WAM shell drives the module thr
 
 ## The other direction
 
-A WAM cannot be loaded by a JigDAW host, and the reason is structural rather than a rule
-anyone chose.
+A JigDAW host can load a WAM, under contract section 12, and what that costs is stated there
+rather than worked around.
 
-A JigDAW plugin declares every file it fetches, each with a digest. A WAM is an ESM that may
-import whatever it likes, and its audio-thread dependencies arrive through `addFunctionModule`
-and `getModuleScope`, which the WAM documentation describes as the alternative to `import`
-statements on the audio thread. **A WAM's file set is not knowable before running it**, so it
-cannot be profiled, digested, bundled or verified.
+### Why it needed a contract change
 
-JigDAW's format is declarative and WAM's is imperative: a profile describes the plugin
-exhaustively before any of its code runs, where a WAM is a constructor that tells you what it
-is once you call it. A description converts to another description. A program does not.
+The obstacle is not the one this document first claimed. `addFunctionModule` stringifies a
+function already in the loaded bundle and blobs it into the worklet, fetching nothing, which
+the SDK source confirms. The unenumerable part is a plugin's runtime assets, which is a
+narrower problem and a solvable one. **15 of the 23 example plugins fetch at run time**:
+their own `descriptor.json`, GUI templates, preset banks, `patches.json`. No manifest written
+beforehand would have listed those, which is exactly why the container is what gets verified. **Verify the container instead of enumerating the contents.** One archive, one digest,
+and everything the plugin loads afterwards resolves inside the verified bytes or is refused.
+That is the same answer section 2.2 of [plugin-bundles.md](plugin-bundles.md) already gives
+for a `.jig`.
 
-It remains possible per plugin, by writing a profile for one specific WAM and pinning its
-digests, which is what plugin-universe already does for VST3s. The trust then rests on
-whoever minted the profile rather than on the author.
+The real obstacle is that **a WAM's entry point is a module the host imports into its own
+document and calls.** It runs with the host's origin and the host's privileges. Contract
+section 9.1 forbids exactly that, for reasons it spells out, and no amount of packaging
+changes it: it is what a WAM is.
 
+So section 12 defines a separate class rather than relaxing section 9.1. A foreign plugin is
+declared `jig:ForeignPlugin`, never `jig:WebPlugin`, the two are disjoint, and a host must
+verify the container, obtain consent bound to that container's digest, and mark the plugin
+wherever it appears. Support is optional and refusing everything still conforms.
+
+### What is built
+
+| | |
+|---|---|
+| `src/rdf/ProfileReader.js` | `kindOf`, and `readForeignProfile` as a separate reader |
+| `src/host/ForeignTrust.js` | consent, bound to the plugin and the container digest |
+| `src/host/ForeignLoader.js` | fetch, verify, unpack, and the boundary |
+| `examples/reference-foreign.ttl` | a worked declaration, and a counterexample beside it |
+
+Consent is bound to the digest rather than to the plugin, because an IRI serves whatever is at
+it today and consenting to a plugin would consent once to everything its author ever publishes
+there. There is no blanket setting, and a stored project naming a foreign plugin does not load
+it on open: a project is data from wherever it came from, and treating it as authority to run
+code would make the consent meaningless.
+
+### What is not built, and is not verified
+
+**The virtual origin is built and has been run.** `web/foreign/sw.js` serves a verified
+container from a scoped path and never calls `fetch`; `src/host/ForeignOrigin.js` registers it
+and installs a container. `web/foreign/probe.html` is the check, because none of this is
+reachable from a test in this repository: open it and press the button.
+
+Measured in Chrome on 2026-09-18, against `pingpongdelay` from `webaudiomodules/wam-examples`
+bundled and zipped into a 351 kB container: 14 of 14. The container verifies, the plugin is
+refused before consent, imports from the virtual origin, fetches its own `descriptor.json`
+through the worker, instantiates, and passes audio at peak 1.0000.
+
+It must be a service worker and not blob URLs, and that is measured rather than preferred.
+**22 of the 23 plugins in `webaudiomodules/wam-examples` locate themselves with
+`import.meta.url`**, typically `new URL('.', import.meta.url)` to build a base and then fetch
+against it. A blob URL has no directory, so that base is useless and every one of those
+plugins breaks. `tests/host/ForeignLoader.test.js` asserts the count against the checkout
+when it is present, so the decision stays tied to the evidence.
+
+**Two things the browser found that review had not.**
+
+The host must inject the WAM runtime into its **own** worklet before any WAM can be
+instantiated: `WamEnv` and a `WamGroup`, through the SDK's `initializeWamHost`. It is shared
+by every plugin in the context and is in no container, so it is the host's code and not a
+plugin's. Without it the plugin's own `AudioWorkletNode` fails with *the node name … is not
+defined in AudioWorkletGlobalScope*, which is exactly how the probe failed first. Contract
+section 12.3a is that requirement.
+
+And a `..` path never reaches the worker at all: the browser normalises the URL first, so it
+leaves the worker's scope and becomes an ordinary same-origin request. Contract section 12.3
+originally said a host MUST refuse any request resolving outside the container, which no host
+can do; it now says what is actually enforceable and states the limit.
+
+**The adapter itself.** Turning a `WamNode` into something the engine can drive is not
+written. `src/wam/WamModule.js` is the other direction and is not reusable here.
+
+**Enforcement against a hostile plugin.** The boundary defeats substitution, which is the
+threat section 3.2 names. It does not defeat a plugin that wants out: code in the host's
+document can reach the network by means the host does not mediate. Section 12.3 says so.
+
+### One kind of plugin the boundary correctly breaks
+
+`PedalBoard-WAC2022` fetches `repositories.json`, fetches whatever URLs it finds there, and
+imports those as Web Audio Modules. It is a plugin that is itself a plugin host, and its
+reachable code is not a set anybody can know.
+
+Under section 12.3 every one of those fetches resolves outside the container and is refused,
+so the plugin does not work. That is the right outcome and not a gap to close: a container
+whose contents can load arbitrary remote code is not a container, and consenting to it would
+be consenting to whatever it decides to fetch later. A host should say that plainly rather
+than appear to support it.
+
+## Testing
 ## Testing
 
 `tests/wam/WamModule.test.js` instantiates the package through

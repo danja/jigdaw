@@ -251,3 +251,39 @@ describe('the panel each committed plugin actually generates', () => {
     expect(selectorsSeen, 'no plugin declares an enumerated port').toBeGreaterThan(0)
   })
 })
+
+describe('a foreign plugin is marked', () => {
+  // Contract section 12.5. A foreign plugin runs in this document with this
+  // document's privileges. Someone who consented a week ago has no other way to
+  // tell the difference, and the difference is the whole of section 12.
+  const foreign = ports => ({ ...profile(ports), kind: 'foreign' })
+
+  it('says so in words, not only in styling', () => {
+    // The rule that matters: an outline a stylesheet draws is invisible to a
+    // screen reader and to anyone who cannot see the outline, and section 12.5
+    // forbids carrying the mark by colour alone.
+    const { element } = createPanel(document, foreign([port()]), () => {})
+    expect(element.textContent).toMatch(/foreign/i)
+  })
+
+  it('puts the mark inside the heading that names the panel', () => {
+    // The panel is a group labelled by its heading, so a mark inside the
+    // heading is read out with the plugin's name rather than sitting somewhere
+    // a reader reaches separately, or never.
+    const { element } = createPanel(document, foreign([port()]), () => {})
+    const heading = element.querySelector('h3')
+    expect(heading.textContent).toMatch(/foreign/i)
+    expect(element.getAttribute('aria-labelledby')).toBe(heading.id)
+  })
+
+  it('says what being foreign means, for anyone who does not know', () => {
+    const { element } = createPanel(document, foreign([port()]), () => {})
+    expect(element.querySelector('.foreign').title).toMatch(/not sandboxed|privileges/i)
+  })
+
+  it('leaves a native plugin unmarked', () => {
+    const { element } = build([port()])
+    expect(element.textContent).not.toMatch(/foreign/i)
+    expect(element.querySelector('.foreign')).toBeNull()
+  })
+})
