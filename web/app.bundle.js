@@ -22652,7 +22652,9 @@ var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "Hz",
   "http://lv2plug.in/ns/extensions/units#ms": "ms",
   "http://lv2plug.in/ns/extensions/units#db": "dB",
-  "http://lv2plug.in/ns/extensions/units#s": "s"
+  "http://lv2plug.in/ns/extensions/units#s": "s",
+  "http://lv2plug.in/ns/extensions/units#pc": "%",
+  "http://lv2plug.in/ns/extensions/units#semitone12TET": "st"
 });
 var formatValue = (port, value2) => {
   const unit = UNIT_LABELS[port.unit];
@@ -22663,7 +22665,9 @@ var SPOKEN_UNITS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "hertz",
   "http://lv2plug.in/ns/extensions/units#ms": "milliseconds",
   "http://lv2plug.in/ns/extensions/units#db": "decibels",
-  "http://lv2plug.in/ns/extensions/units#s": "seconds"
+  "http://lv2plug.in/ns/extensions/units#s": "seconds",
+  "http://lv2plug.in/ns/extensions/units#pc": "percent",
+  "http://lv2plug.in/ns/extensions/units#semitone12TET": "semitones"
 });
 var spokenValue = (port, value2) => {
   const unit = SPOKEN_UNITS[port.unit];

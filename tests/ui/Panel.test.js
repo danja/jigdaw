@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
-import { createPanel } from '../../src/ui/Panel.js'
+import { createPanel, UNIT_LABELS, SPOKEN_UNITS } from '../../src/ui/Panel.js'
 
 const port = over => ({
   symbol: 'mix', name: 'Mix', defaultValue: 0.3, minimum: 0, maximum: 1,
@@ -249,6 +249,34 @@ describe('the panel each committed plugin actually generates', () => {
     // The assertion above is vacuously true for a plugin with no enumerated
     // port, so the population is checked as well as the rule.
     expect(selectorsSeen, 'no plugin declares an enumerated port').toBeGreaterThan(0)
+  })
+
+  // A port declares units:unit and the panel looks it up in a table. A unit
+  // missing from that table is not an error anywhere: the control renders the
+  // number with nothing after it, and a screen reader reads a bare figure. So
+  // the two lists are bound here rather than reviewed. The 8b8 arrived with
+  // units:pc and units:semitone12TET, neither of which the panel knew.
+  it('knows every unit any committed plugin declares', async () => {
+    const plugins = await walk()
+    const unknown = []
+    let unitsSeen = 0
+    for (const { name, profile } of plugins) {
+      for (const port of profile.ports) {
+        if (!port.unit) continue
+        unitsSeen++
+        if (!(port.unit in UNIT_LABELS)) unknown.push(`${name}/${port.symbol} shows ${port.unit}`)
+        if (!(port.unit in SPOKEN_UNITS)) unknown.push(`${name}/${port.symbol} speaks ${port.unit}`)
+      }
+    }
+    expect(unknown, `units the panel would drop:\n  ${unknown.join('\n  ')}`).toEqual([])
+    expect(unitsSeen, 'no committed plugin declares a unit, so this checked nothing').toBeGreaterThan(0)
+  })
+
+  // A unit a sighted user sees and a screen reader does not is the same bug
+  // in one table rather than in both, and the loop above would not catch a
+  // unit that no plugin happens to use yet.
+  it('shows and speaks the same set of units', () => {
+    expect(Object.keys(UNIT_LABELS).sort()).toEqual(Object.keys(SPOKEN_UNITS).sort())
   })
 })
 

@@ -1,0 +1,48 @@
+{
+  "note": "The hand-written head of the profile. make.js copies this and adds the ports, which come from params.json. Edit this, not profile.json.",
+  "iri": "https://strandz.it/jigdaw/plugins/8b8/",
+  "label": "8-Bit 8asterd",
+  "comment": "Three AY-3-8910 chips under the 8b8 firmware, running unmodified as WebAssembly. Nine voices across three chips, hardware envelopes, a percussion set on channel 10, and the firmware's own vibrato, tremolo, arpeggiator, buzzy bass, circuit bending and ten tuning temperaments.",
+  "vendor": "danja",
+  "version": "1.0.0",
+  "registeredName": "eightbit8asterd",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Chiptune",
+    "Electronic"
+  ],
+  "cautions": [
+    "Nine voices across three chips, and the tenth note steals the oldest rather than being refused. Percussion and pitched notes come out of the same nine.",
+    "Percussion is MIDI channel 10, notes 35 to 59. Pitched notes are 24 to 96 on any other channel, and anything outside that is ignored rather than transposed into range.",
+    "Every control answers to a MIDI CC as well, from CC 70 upward in parameter order, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight.",
+    "Roll and Retrigger are positions on an exponential curve from about 1.5Hz to 45Hz rather than a rate in hertz. The figure shown is the one the device's own panel shows.",
+    "The firmware's EEPROM is a scratch array that is never persisted. Its SAVE command has nowhere to write, and settings belong in the project graph instead."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "8b8.wasm",
+    "processor": "8b8-processor.js"
+  },
+  "abi": "jig:Abi2"
+}

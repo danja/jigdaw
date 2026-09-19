@@ -455,3 +455,123 @@ suite('what reaches the speakers, with real plugins', () => {
     expect(engine.nodes().map(n => n.id)).not.toContain(b.entry.id)
   })
 })
+
+const EIGHTBIT = 'https://strandz.it/jigdaw/plugins/8b8/'
+const eightbitDir = resolve(root, 'plugins/8b8')
+const eightbitBuilt = existsSync(resolve(eightbitDir, '8b8.wasm'))
+const eightbitSuite = eightbitBuilt ? describe : describe.skip
+if (!eightbitBuilt) console.warn('run plugins/8b8/build.sh first')
+
+// The 8-Bit 8asterd is the first plugin here that is somebody else's firmware
+// rather than DSP written for JigDAW, the first with a channel that means
+// something (percussion is 10), and by a wide margin the first with 42
+// parameters. Each of those is a way the path could work for the other three
+// and not for it, so it goes through the whole path rather than only through
+// its wasm, which tests/dsp/8b8.test.js already covers.
+eightbitSuite('a ported firmware, end to end', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0))
+  const rmsOf = channels => {
+    const channel = channels[0]
+    return Math.sqrt(channel.reduce((sum, v) => sum + v * v, 0) / channel.length)
+  }
+
+  async function load () {
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({
+      context,
+      loader: new PluginLoader({
+        fetch: directoryFetch({ [EIGHTBIT]: eightbitDir }),
+        parse: parseText,
+        validator,
+        capabilities: detectCapabilities({}),
+        processorUrl: () => pathToFileURL(resolve(eightbitDir, '8b8-processor.js')).href
+      }),
+      AudioWorkletNode: OfflineWorkletNode
+    })
+    const dispatcher = new OpDispatcher({ engine })
+    const added = await dispatcher.addPlugin(EIGHTBIT)
+    expect(added.ok, added.message).toBe(true)
+    return { context, engine, dispatcher, added }
+  }
+
+  it('loads, validates and registers all 42 of its controls', async () => {
+    // The parameters reach the node as AudioParams, which is what
+    // messaging.md 1.5 requires and what a worklet with a long descriptor
+    // list is the first real test of.
+    const { added } = await load()
+    expect(added.entry.profile.ports).toHaveLength(42)
+    expect(added.entry.node.parameters.size).toBe(42)
+    expect(added.entry.node.parameters.get('transpose').value).toBe(0)
+    expect(added.entry.node.parameters.get('temperament').value).toBe(0)
+  })
+
+  it('plays a pitched note through the whole path', async () => {
+    const { dispatcher, added } = await load()
+    const node = added.entry.node
+    expect(dispatcher.sendEvents(added.nodeId, [
+      { frame: 0, bytes: Uint8Array.from([0x90, 60, 100]) }
+    ])).toBe(true)
+    await settle()
+
+    let peak = 0
+    for (let i = 0; i < 40; i++) peak = Math.max(peak, rmsOf(node.render()))
+    expect(peak, 'the instrument made no sound').toBeGreaterThan(0.01)
+  })
+
+  it('plays percussion on channel 10, which only a whole MIDI message carries', async () => {
+    // The reason this plugin declares jig:Abi2. Version 1 hands a module a
+    // note number and a velocity, so a drum on channel 10 and a pitched note
+    // on channel 1 would be indistinguishable by the time they arrived.
+    const { dispatcher, added } = await load()
+    const node = added.entry.node
+    dispatcher.sendEvents(added.nodeId, [
+      { frame: 0, bytes: Uint8Array.from([0x99, 36, 110]) }
+    ])
+    await settle()
+
+    let peak = 0
+    for (let i = 0; i < 40; i++) peak = Math.max(peak, rmsOf(node.render()))
+    expect(peak, 'the drum made no sound').toBeGreaterThan(0.01)
+  })
+
+  it('is silent until something is played', async () => {
+    const { added } = await load()
+    for (let i = 0; i < 8; i++) expect(rmsOf(added.entry.node.render())).toBe(0)
+  })
+
+  it('changes what it plays when a control is moved', async () => {
+    // Through the AudioParam, as a host moves one, rather than through
+    // jig_set_param directly as the module test does.
+    //
+    // Measured after the level has settled rather than at the peak. The
+    // firmware applies its master mixer levels on its 100Hz tick, and a
+    // voice writes its own amplitude when it starts, so the first ten
+    // milliseconds of a note come out at full level whatever the mixer says.
+    // That is what the hardware does.
+    const held = async (over) => {
+      const { dispatcher, added } = await load()
+      const node = added.entry.node
+      for (const [name, value] of Object.entries(over)) node.parameters.get(name).value = value
+      dispatcher.sendEvents(added.nodeId, [
+        { frame: 0, bytes: Uint8Array.from([0x90, 60, 100]) }
+      ])
+      await settle()
+      for (let i = 0; i < 40; i++) node.render()      // past the attack
+      let peak = 0
+      for (let i = 0; i < 20; i++) peak = Math.max(peak, rmsOf(node.render()))
+      return peak
+    }
+
+    const full = await held({})
+    const down = await held({ mix_tone: 0 })
+    expect(full, 'the instrument made no sound').toBeGreaterThan(0.01)
+    // Not zero: the attack that came out before the mixer was applied is
+    // still decaying through the coupling filter. Two orders of magnitude
+    // down is the mixer working, and is not something a broken one reaches.
+    expect(down, `the tone mixer did nothing: ${down} against ${full}`)
+      .toBeLessThan(full / 30)
+  })
+})

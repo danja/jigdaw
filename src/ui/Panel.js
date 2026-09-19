@@ -15,11 +15,19 @@
 // generator makes every such plugin accessible, and one careless generator
 // makes every one of them unusable.
 
-const UNIT_LABELS = Object.freeze({
+// Every unit any committed plugin declares must appear here and in
+// SPOKEN_UNITS below. A unit this does not know is not an error anywhere: the
+// control renders a bare number and nothing reports the loss, which is the
+// difference between 4200 and 4200 Hz going missing in silence.
+// tests/ui/Panel.test.js walks plugins/ and fails on a unit neither table
+// knows.
+export const UNIT_LABELS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#hz': 'Hz',
   'http://lv2plug.in/ns/extensions/units#ms': 'ms',
   'http://lv2plug.in/ns/extensions/units#db': 'dB',
-  'http://lv2plug.in/ns/extensions/units#s': 's'
+  'http://lv2plug.in/ns/extensions/units#s': 's',
+  'http://lv2plug.in/ns/extensions/units#pc': '%',
+  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'st'
 })
 
 const formatValue = (port, value) => {
@@ -36,11 +44,13 @@ const formatValue = (port, value) => {
  * information. Units are spelled out because an abbreviation is read as
  * letters.
  */
-const SPOKEN_UNITS = Object.freeze({
+export const SPOKEN_UNITS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#hz': 'hertz',
   'http://lv2plug.in/ns/extensions/units#ms': 'milliseconds',
   'http://lv2plug.in/ns/extensions/units#db': 'decibels',
-  'http://lv2plug.in/ns/extensions/units#s': 'seconds'
+  'http://lv2plug.in/ns/extensions/units#s': 'seconds',
+  'http://lv2plug.in/ns/extensions/units#pc': 'percent',
+  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'semitones'
 })
 
 const spokenValue = (port, value) => {

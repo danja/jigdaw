@@ -125,10 +125,59 @@ it is now recorded as a comment in a second repository.
 
 **Blocks:** nothing.
 
-## 6. Tools that would help
+## 6. Confirm the 8-Bit 8asterd's licence upstream
+
+**Apache-2.0 for now, on your instruction, 2026-09-19.** `plugins/8b8/plugin.json` declares
+it and `profile.ttl` carries it, the same as Cascade, Pulse and BassGen.
+
+What is still open: `~/github/8bit8asterd` has **no licence file**, and its firmware header
+says the bulk of it comes from
+[dogemicrosystems' dual AY module](https://dogemicrosystems.ca/wiki/Dual_AY-3-8910_MIDI_module).
+`plugins/8b8/firmware/` is a verbatim snapshot of both. So there are two questions, and you
+said you would check: what 8bit8asterd is licensed under, and what the firmware it descends
+from is licensed under. Adding a licence file to your own repository settles the first and
+makes the declaration here a restatement rather than an assumption.
+
+Changing it later is one line in `plugins/8b8/plugin.json` and a `./build.sh`.
+
+**Blocks:** nothing now. It was blocking publication.
+
+## 7. Two 8b8 firmware bugs worth fixing upstream
+
+Both are worked around in `plugins/8b8/8b8.cpp`, both are in the firmware, and both happen on
+hardware. They are described in full in `plugins/8b8/README.md`, with the measurements.
+
+- **`softReset()` leaves every amplitude register at 0xFF**, which hands each channel's volume
+  to the envelope generator at a period of 0xFFFF. Sixteen seconds after an All Notes Off the
+  chips ramp to full scale: measured at 0.93 RMS with nothing playing. Boot does the same two
+  steps in the other order and is fine, so the fix is to reorder `softReset()`.
+- **`psg.invalidate()` assumes a flush happens before the shadow changes again.** A register
+  whose new value equals the complement it wrote is taken for already sent. On hardware the
+  ten milliseconds to the next flush are always free, so it never shows; a host that sets a
+  parameter and plays a note in the same millisecond gets middle C at under a hertz.
+
+**Needs you** only in the sense that it is your other repository, and nothing here asked for a
+change to it.
+
+**Blocks:** nothing. JigDAW works around both.
+
+## 8. Tools that would help
+
+**lld, for the WebAssembly build of `plugins/8b8/`.** Ubuntu's `clang` package ships no
+`wasm-ld`, so `plugins/8b8/build.sh` links through the `rust-lld` that rustup already
+installed for the Rust plugins, found by searching `~/.rustup` and symlinked under the name
+the clang driver looks for. It is the same linker and it produces a working module, but the
+fallback depends on a rust toolchain being present for a build that otherwise has nothing to
+do with rust, and on rustup's internal layout.
+
+```sh
+sudo apt install lld-18
+```
+
+`build.sh` uses `wasm-ld` directly when it is on the path and says nothing more about it.
 
 The Claude in Chrome extension is connected and working, which is what made the four fixes
-above possible. Nothing else is needed.
+above possible, and what confirmed `plugins/8b8/` in a real browser on 2026-09-19.
 
 ## Updating a deployment
 

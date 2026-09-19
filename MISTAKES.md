@@ -2,6 +2,45 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-19 A guard that compared a label to a directory name
+
+**What happened.** Adding `plugins/8b8/` broke two tests that had nothing to do with it, and
+both broke for the same reason: a list they walked was narrower than the thing they checked.
+
+`tests/catalogue/LocalCatalogue.test.js` asserted that the catalogue finds every plugin, and
+its own comment explains why it reads `plugins/` instead of naming them: "a list in a test
+that names the plugins is a list that goes stale the day one is added". It then compared
+`entry.label.toLowerCase()` against the directory name. That is a different claim, and it
+held for three plugins by coincidence: cascade, pulse and bassgen are each labelled after
+their directory. `plugins/8b8/` is labelled "8-Bit 8asterd". The guard was right about the
+population and wrong about the field, which is the same failure one level in. Fixed by
+comparing the IRI, read from each profile.
+
+`src/ui/Panel.js` knows four units, `hz`, `ms`, `db` and `s`, and looks a port's unit up in
+that table to print and to speak it. A unit missing from the table is not an error anywhere:
+the control renders a bare number, the screen reader reads a bare number, and nothing reports
+it. The 8b8 declares `units:pc` and `units:semitone12TET`. AGENTS.md's accessibility rule is
+explicit that "4200" and "4200 Hz" are different information, and there was no test binding
+the units any plugin declares to the units the panel knows.
+
+**Root cause.** Both are the shape already named twice in this file: a guard is only as wide
+as the list it walks. Adding the first plugin that is not like the others is what found them,
+and nothing else would have.
+
+**Prevention.** `tests/ui/Panel.test.js` now walks `plugins/` and fails on a unit neither
+table knows, and fails separately if the two tables disagree with each other. Both were
+mutation tested by deleting `units:pc` and watching them go red. `README.md` now states the
+number of worked plugins as a figure, and `tests/docs/conventions.test.js` counts the
+directories and fails on any document that disagrees, which found three more stale sentences
+in two files.
+
+**Also worth naming.** The port is of somebody else's firmware, and it surfaced two bugs in
+it that hardware hides: a register cache whose flush window is always free on a Leonardo and
+never free in a host, and a reset that leaves the chips ramping to full scale sixteen seconds
+later. Both are measured and worked around in `plugins/8b8/8b8.cpp`, described in
+`plugins/8b8/README.md`, and recorded for upstream in `HUMANS.md`. Neither is a mistake made
+here; they are here because the fix lives here.
+
 ## 2026-09-18 The container worker worked only on the page that tested it
 
 **What happened.** Foreign plugins loaded perfectly in `web/foreign/probe.html` and not at all

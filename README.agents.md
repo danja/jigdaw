@@ -6,7 +6,7 @@ is the reference host: it exists to hold the format up rather than the other way
 
 This file is the entry point for documentation and linked data discovery. The specification is complete and
 normative, and two independent hosts implement it, one in the browser and one as a native
-VST3, CLAP and LV2. Three worked plugins are in `plugins/`.
+VST3, CLAP and LV2. 4 worked plugins are in `plugins/`.
 
 ## Resources
 

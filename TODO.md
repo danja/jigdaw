@@ -5,6 +5,19 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [ ] **Read every document against the documentation rules, 2026-09-19.** The rules in
+      `AGENTS.md` now say plain technical English, no em dashes, no novel jargon, no large
+      language model cliches, and a structure that can be read in pieces. Only the em dash is
+      checked by anything (`tests/docs/conventions.test.js`), because the rest cannot be
+      checked mechanically without producing false positives on prose that is doing its job.
+
+      So it is a reading pass over `docs/`, `README.md`, `README.agents.md`, `HUMANS.md` and
+      the plugin READMEs, one document at a time, rewriting rather than annotating. The
+      normative documents come first, because a specification that is hard to read is a
+      specification that gets implemented wrong. Note in `MISTAKES.md` any cliche that turns
+      out to be frequent, so the pattern can be added to the guard if a safe check exists
+      for it.
+
 - [x] **Foreign plugins work in the application, 2026-09-18.** Contract section 12, end to
       end in Chrome: a Web Audio Module fetched by IRI, classified as foreign, consented to
       through the dialog, verified as a container, served from the worker, adapted, adopted by

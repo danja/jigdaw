@@ -4,4 +4,6 @@ Make a note in AGENTS.md to periodically read and integrate this.
 
 ## Items
 
-Nothing outstanding.
+
+* translate README.md into well-structured plain technical English. Avoid LLM cliches, jargon, no em-dashes.
+* add a Preset menu that will load particular configurations of plugins

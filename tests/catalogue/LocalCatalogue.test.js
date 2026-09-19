@@ -17,12 +17,21 @@ describe('the plugins this host serves', () => {
     // Taken from the directory rather than written out here. A list in a test
     // that names the plugins is a list that goes stale the day one is added,
     // and the failure looks like the catalogue being wrong.
-    const expected = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
-      .filter(e => e.isDirectory())
-      .map(e => e.name)
-      .sort()
-    const found = (await catalogue.search({})).map(e => e.label.toLowerCase()).sort()
-    expect(found).toEqual(expected)
+    //
+    // Compared by IRI, read from each profile. It used to compare the label
+    // against the directory name, which held for three plugins by coincidence
+    // and broke on the fourth: plugins/8b8/ is labelled "8-Bit 8asterd". A
+    // directory name is a path and a label is prose, and nothing requires
+    // them to agree.
+    const expected = []
+    for (const entry of await readdir(join(root, 'plugins'), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const file = join(root, 'plugins', entry.name, 'profile.ttl')
+      expected.push(readProfile(await parseTurtleFile(file)).iri)
+    }
+    const found = (await catalogue.search({})).map(e => e.iri)
+    expect(found.sort()).toEqual(expected.sort())
+    expect(found.length, 'no plugins found, so this checked nothing').toBeGreaterThan(0)
   })
 
   it('marks them loadable, because they are ours', async () => {
@@ -40,11 +49,12 @@ describe('the plugins this host serves', () => {
   it('filters by facet, including the ones whose field is named differently', async () => {
     // role and format are singular as facets and plural as fields. Reading the
     // entry by the facet name meant those two silently matched nothing.
-    expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label)).toEqual(['Pulse'])
+    expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
+      .toEqual(['8-Bit 8asterd', 'Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label)).toEqual(['Cascade'])
     // BassGen accepts MIDI too: it can be steered from a keyboard.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
-      .toEqual(['BassGen', 'Pulse'])
+      .toEqual(['8-Bit 8asterd', 'BassGen', 'Pulse'])
     expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen'])
   })
 

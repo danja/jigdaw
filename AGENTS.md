@@ -162,6 +162,12 @@ and real-time processing.
 ## Documentation rules
 
 - Technical plain English. No em dashes. No novel jargon.
+- No large language model cliches. Not "delve", "leverage", "robust", "seamless",
+  "it's not just X, it's Y", "let's dive in", or a sentence whose only content is that the
+  next sentence is coming. A document is read by someone deciding what to do, and a sentence
+  that carries no decision is a sentence that wastes theirs.
+- Structure a document so it can be read in pieces: a heading says what its section decides,
+  and the first sentence under it answers the question the heading asks.
 - Link anything that is not common knowledge.
 - The contract is normative and uses RFC 2119 keywords. Where it and the vocabulary
   disagree, the contract governs and the vocabulary is a defect.

@@ -7,7 +7,7 @@
 // files, so adding a document brings it into scope automatically. A guard that
 // names a file goes blind the moment the thing it guards moves.
 import { describe, it, expect } from 'vitest'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve, join, dirname, extname } from 'node:path'
 
@@ -375,6 +375,31 @@ describe('figures quoted about other systems', () => {
   it('finds those mentions, so this is not vacuous', () => {
     const mentions = byExt('.md').filter(f => /\b\d{3}\s+(?:plugins|profiles)\b/.test(read(f)))
     expect(mentions.length, 'no document quotes a catalogue size').toBeGreaterThan(2)
+  })
+
+  // The same shape, for a figure about this repository rather than another
+  // one, and counted rather than stated. README.md said "Three worked
+  // plugins... written in Rust" and stayed saying it while a fourth was added
+  // in C++: a sentence is a claim, and nothing tests sentences.
+  it('states the number of worked plugins there actually are', () => {
+    const count = readdirSync(join(root, 'plugins'), { withFileTypes: true })
+      .filter(e => e.isDirectory() && existsSync(join(root, 'plugins', e.name, 'profile.ttl')))
+      .length
+    const offenders = []
+    let mentions = 0
+    for (const file of byExt('.md')) {
+      // MISTAKES.md records what was true when each entry was written, and a
+      // log that is edited to agree with today is not a log.
+      if (file === 'MISTAKES.md') continue
+      for (const [i, line] of read(file).split('\n').entries()) {
+        for (const match of line.matchAll(/\b(\d+|one|two|three|four|five|six)\s+worked plugins?\b/gi)) {
+          mentions++
+          if (Number(match[1]) !== count) offenders.push(`${file}:${i + 1} says ${match[1]}, and there are ${count}`)
+        }
+      }
+    }
+    expect(offenders, offenders.join('\n  ')).toEqual([])
+    expect(mentions, 'no document says how many worked plugins there are').toBeGreaterThan(0)
   })
 })
 
