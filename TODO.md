@@ -471,12 +471,40 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       `tests/rdf/vocabulary.test.js` already binds the vocabulary to the shapes and examples
       in both directions, which is the useful half of valis's ontology-to-registry symmetry
       test. The other half arrives with the code.
-- [ ] A `/new-plugin` command scaffolding profile, processor, registry entry and test in one
-      pass, modelled on `~/github/valis/.claude/commands/new-element.md`.
+- [x] **A `/new-plugin` command, 2026-09-19.** `.claude/commands/new-plugin.md`, modelled on
+      `~/github/valis/.claude/commands/new-element.md`. Takes `<PluginName> <role>` where role
+      is `effect`, `instrument` or `generator`, and defaults to a plain-JavaScript plugin
+      (`plugins/tremolo/` copied as the shape) rather than templating a WebAssembly toolchain,
+      because that compiles and validates immediately with nothing installed; a plugin that
+      genuinely needs WebAssembly is pointed at `plugins/cascade/` to copy from instead rather
+      than templated, which is a different and larger job.
+
+      No registry step, unlike valis: JigDAW discovers plugins by walking `plugins/`, and
+      `npm run build:index` finds whatever validates there. The command's steps are profile,
+      processor, `build.sh`, validate, `build:index`, a test modelled on
+      `tests/host/tremolo.test.js` that loads the plugin through the real
+      `PluginLoader`/`Engine` path, then `npm test`.
+
+      Verified by actually running it, not by reading it: scaffolded a scratch effect plugin
+      by hand-following the command's own steps, confirmed `npm run validate` passed with
+      exactly the "no WebAssembly module" warning `jig:module`'s shape is supposed to give,
+      confirmed `npm run build:index` found it, and confirmed its own test passed a real
+      signal through the real host path unchanged. Deleted afterward, along with its test;
+      nothing from the scratch run was kept.
 
 ## Recurring, check periodically
 
-- [ ] Read `MISTAKES.md` for anything systematic and promote it into `AGENTS.md`.
+- [x] Read `MISTAKES.md` for anything systematic and promote it into `AGENTS.md`, 2026-09-19.
+      All 1029 lines, newest first. The three failures already stated there (files that need
+      to change together, rules with no test, guards narrower than their population) covered
+      most of the recurring shape; two more had 2+ occurrences and no home yet, now added:
+      hiding a control nobody can use rather than showing it disabled (the port bar, then a
+      channel strip on a MIDI-only node), and a test double more permissive than the real
+      platform turning a spec violation into a pass (a fake `MessagePort` accepting a
+      `WebAssembly.Module`, `PluginLoader`'s default `fetch` not enforcing a detached-call
+      error). Also fixed while in there: `AGENTS.md`'s opening said "None of the DAW exists,"
+      unchanged since phase 0, and "This project has not made its own mistakes yet" above a
+      file that is now 1029 lines of exactly that.
 - [ ] Re-measure every figure quoted in a document. The plugin count, the profile count and
       the format list all drift.
 - [x] Line counts checked, 2026-09-18. The largest is `src/ops/OpDispatcher.js` at 456, then

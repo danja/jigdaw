@@ -2,11 +2,12 @@
 
 A web-native digital audio workstation and a web-native plugin format. Everything runs in
 the browser, everything is identified by a dereferenceable IRI, and the signal processing is
-WebAssembly.
+usually WebAssembly: `jig:module` is optional, for a plugin simple enough that its
+AudioWorklet processor is plain JavaScript.
 
-The project is in its specification phase. The only code is the validator that enforces the
-specification on itself: `src/validate/`, `bin/validate.js` and the guards in `tests/`. None
-of the DAW exists. Read
+The specification is complete and normative, and a browser host implements it: 9 worked
+plugins, undo and redo, a catalogue search, a WebMCP surface, sessions that save and reopen
+as RDF. A second host, a native VST3/CLAP/LV2 adapter, implements it independently. Read
 [docs/architecture.md](docs/architecture.md) for the shape of the thing, then
 [docs/host-plugin-contract.md](docs/host-plugin-contract.md), which is normative and which
 the rest hang off, before making structural changes.
@@ -147,6 +148,13 @@ and real-time processing.
 - Keyboard before pointer. Anything reachable by mouse is reachable by tab, and the focus
   indicator is visible against the panel background.
 - Do not signal state by colour alone.
+- **A control nobody can use is left out, not shown disabled.** Found twice: a port bar
+  drawing 44 buttons where 43 were disabled modulation targets, and a channel strip's Level,
+  Pan, Mute and Solo on a node declaring `jig:audioOutputs 0`, where none of the four reached
+  anything with a signal to change. A disabled control looks identical to an enabled one
+  under a screen reader and under the pointer, so nothing about interacting with it says
+  whether it does anything; not drawing it is the version of this that is actually
+  accessible.
 - **Works on a phone.** A `viewport` meta tag, one column below 720px, no horizontal
   scrolling, touch targets of at least 44px, and a font size of at least 16px on any text
   input, because iOS zooms the page in when a smaller one takes focus. A plugin panel is
@@ -178,10 +186,13 @@ and real-time processing.
 - The contract is normative and uses RFC 2119 keywords. Where it and the vocabulary
   disagree, the contract governs and the vocabulary is a defect.
 
-## Two failures worth naming in advance
+## Three failures worth naming in advance
 
-This project has not made its own mistakes yet. These two are inherited from repositories
-that made them repeatedly, and both are already live here.
+This project has made plenty of its own mistakes since, recorded in full in
+[MISTAKES.md](MISTAKES.md), newest first. These three recur across bugs that otherwise share
+nothing: a UI control, a graph compiler, a native profile parser, a message channel. The
+first two were anticipated in advance, inherited from repositories that made them repeatedly;
+this project made them too.
 
 **A change in one file usually needs a second file to change with it, and nothing
 connects them.** When adding a runtime dependency on a path, a value or a list, find what
@@ -233,6 +244,23 @@ profile that violates every constraint once, and checking that each one fired.
 **A sentence about the system is a claim, and nothing tests sentences.** Take every figure
 from the system rather than from memory: a `curl` to `/health`, a SPARQL count, a `grep -c`.
 Where prose is a commitment, bind it with a test.
+
+**A fake that is more permissive than the real thing turns a specification error into a
+passing test.** A stand-in for a platform API is worth having only where it refuses what the
+real one refuses. When writing one, ask what the real API forbids, not only what it returns
+for ordinary input.
+
+Twice, and by a wide margin the more expensive failure in this project's own record.
+`src/testing/OfflineHost.js`'s fake `MessagePort` handed a `WebAssembly.Module` straight to a
+callback, so 288 passing tests, including an end-to-end one that rendered real audio, said
+nothing about `port.postMessage({ module })` being silently undeliverable in a real
+`AudioWorklet`: found on the first page load, ten seconds into a timeout that named nothing
+useful. `PluginLoader`'s default `fetch = globalThis.fetch`, called through a private field,
+passed 219 tests because node's `fetch` does not care what it is called on; a browser's
+throws `Illegal invocation` on a detached call, and the deployed page failed on its first
+real request with an error message that blamed CORS instead. Both fakes now refuse what the
+real thing refuses, mutation tested by reverting each fix and watching the suite fail the way
+the browser did.
 
 ## Working rules
 
