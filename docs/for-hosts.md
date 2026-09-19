@@ -6,6 +6,13 @@ what order, and which parts the browser will refuse outright.
 The normative version is [host-plugin-contract.md](host-plugin-contract.md). This page is
 the working summary, with the parts that cost real time called out.
 
+**Using an AI coding assistant to build this?** Point it at
+[README.agents.md](https://github.com/danja/jigdaw/blob/main/README.agents.md) first. It is
+the dense entry point: the vocabularies, the normative contract, a minimal profile, and where
+the SHACL shapes and the counterexample files live, so a generated host can be checked against
+something other than prose. `host-plugin-contract.md` is what actually governs; this page and
+`messaging.md` are the working detail under it.
+
 ## The sequence
 
 In this order, aborting at the first failure. The order is the specification, not a

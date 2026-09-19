@@ -7,6 +7,15 @@ the plugin simple enough to do without one.
 Publishing is putting them somewhere a browser can fetch them. There is no store, no review
 and nobody to ask.
 
+**Using an AI coding assistant to build this?** Point it at
+[README.agents.md](https://github.com/danja/jigdaw/blob/main/README.agents.md) first. It is
+the dense entry point: the vocabularies, a minimal profile, and `npm run validate --` against
+the real SHACL shapes. Hand it `examples/reference-profile.ttl`, which validates, and
+`examples/counterexample-profile.ttl`, which violates every constraint once and must not: a
+generated profile checked against both is a faster loop than describing the rules in prose.
+`host-plugin-contract.md` section 3 and [plugin-profiles.md](plugin-profiles.md) are what the
+shapes are actually enforcing.
+
 ## 1. The profile
 
 The subject is an IRI you control, normally the plugin's own page. That is the convention
