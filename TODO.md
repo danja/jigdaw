@@ -272,6 +272,28 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       **Needs a person**, in `HUMANS.md`: GitHub Pages is not turned on for the repository yet,
       so the workflow will build and have nowhere to deploy to until someone does.
 
+      **Redesigned the same day, once deployed and seen live.** The first version reused
+      `web/docs/`'s old single-column layout with all eighteen documents in one wrapping top
+      nav, which was the flat list `web/docs/` itself never had to carry (it named three
+      pages, this names every document there is). Now a grouped sidebar (Specification, Guides,
+      Background; a document not placed in `GROUP_OF` in `bin/build-docs-site.js` still appears,
+      filed under Background, rather than disappearing) that scrolls independently of the
+      article, and code blocks syntax highlighted at build time with `highlight.js` rather than
+      left as plain monochrome text. highlight.js ships no Turtle grammar, and Turtle is what
+      most of this documentation's own examples are written in, so `bin/highlight-turtle.js` is
+      a small one written for exactly what appears in `docs/*.md`: comments, `@prefix`/`@base`,
+      prefixed names, IRIs, strings, numbers and the bare `a` keyword.
+
+      `tests/docs/highlight-turtle.test.js` checks the case that would be easy to get wrong: `a`
+      must not fire inside a prefixed name (`trn:AudioEffect`) or inside a string that happens to
+      contain the word "a", both directly asserted and reasoned through highlight.js's own
+      leftmost-match engine (whichever rule's opening delimiter appears earliest in the
+      remaining text wins, so a string's opening quote, appearing before any `a` inside it, wins
+      the string the content belongs to before the keyword rule is ever consulted). Verified live
+      in Chrome, including the sidebar's collapse to a stacked layout at 375px width, measured in
+      a real iframe rather than reasoned about, the same discipline AGENTS.md already asks for
+      narrow layouts elsewhere.
+
 ## JSFX plugins
 
 - [x] **An adapter converting REAPER JSFX effects into native JigDAW plugins,

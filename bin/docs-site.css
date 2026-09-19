@@ -1,46 +1,143 @@
 /* bin/docs-site.css
  *
- * Copied into docs-site/ by bin/build-docs-site.js. Adapted from the styling
- * web/docs/ used before the specification moved to a rendering of docs/*.md,
- * so the published site keeps the same look.
+ * Copied into docs-site/ by bin/build-docs-site.js. A sidebar of grouped
+ * documents, generous type, and syntax highlighting for the Turtle, Rust,
+ * JavaScript and shell that fill the specification's own examples.
  */
 :root {
   color-scheme: dark;
-  --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
-  --line:#2a2f38; --accent:#6aa9e9; --ok:#7ddc8e; --warn:#ffcf70;
+  --bg:#0d0f13; --panel:#12151b; --panel-2:#161a22; --fg:#e8eaed; --dim:#8b93a1; --faint:#5c6472;
+  --line:#232833; --accent:#6aa9e9; --accent-soft:#6aa9e926; --ok:#7ddc8e; --warn:#ffcf70;
+  --code-keyword:#c792ea; --code-string:#c3e88d; --code-number:#f78c6c;
+  --code-fn:#82aaff; --code-type:#ffcb6b; --code-meta:#89ddff; --code-symbol:#7fd9c4;
 }
 * { box-sizing:border-box; }
-body { margin:0; font:16px/1.65 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
-:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-a { color:var(--accent); }
-a:hover { color:#9cc7f5; }
+html { scrollbar-color: var(--line) transparent; }
+body { margin:0; font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:underline; }
 
-.bar { border-bottom:1px solid var(--line); background:#14171d; }
-.bar .inner { max-width:56rem; margin:0 auto; padding:12px 20px; display:flex; flex-wrap:wrap; gap:16px; align-items:center; }
-.bar .brand { font-weight:700; letter-spacing:.5px; color:var(--fg); text-decoration:none; }
-.bar nav { display:flex; flex-wrap:wrap; gap:16px; font-size:14px; }
-.bar nav a[aria-current=page] { color:var(--fg); font-weight:600; }
+.shell { display:flex; min-height:100vh; align-items:stretch; }
 
-main { max-width:56rem; margin:0 auto; padding:28px 20px 72px; }
-main > h1:first-child { font-size:1.9rem; line-height:1.25; margin:0 0 20px; }
-h1 { font-size:1.9rem; line-height:1.25; margin:36px 0 12px; }
-h2 { font-size:1.28rem; margin:32px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line); }
-h3 { font-size:1.05rem; margin:24px 0 8px; }
+/* Sidebar. Its own scroll region, sticky only in the sense that it is a
+ * fixed-width flex column with its own viewport-height overflow: nothing
+ * ever overlays the article, which is what a position:sticky bar riding
+ * over the content would risk once the nav has this many links in it. */
+.sidebar {
+  flex:0 0 276px; width:276px; background:var(--panel); border-right:1px solid var(--line);
+  padding:28px 22px 24px; position:sticky; top:0; align-self:flex-start; height:100vh;
+  overflow-y:auto; display:flex; flex-direction:column; gap:4px;
+}
+.sidebar .brand {
+  font-size:1.15rem; font-weight:800; letter-spacing:.02em; color:var(--fg);
+  display:flex; align-items:center; gap:8px;
+}
+.sidebar .brand::before {
+  content:""; width:10px; height:10px; border-radius:3px;
+  background:linear-gradient(135deg, var(--accent), var(--code-symbol));
+  flex:none;
+}
+.sidebar .brand:hover { text-decoration:none; }
+.sidebar .tagline { margin:2px 0 22px; font-size:12.5px; color:var(--faint); }
+
+.sidebar nav { display:flex; flex-direction:column; gap:18px; flex:1; }
+.nav-group h2 {
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--faint); margin:0 0 6px; padding:0 10px;
+}
+.nav-group a {
+  display:block; padding:6px 10px; margin:1px 0; border-radius:6px; font-size:13.5px;
+  color:var(--dim); line-height:1.4;
+}
+.nav-group a:hover { background:var(--panel-2); color:var(--fg); text-decoration:none; }
+.nav-group a[aria-current=page] {
+  background:var(--accent-soft); color:var(--accent); font-weight:600;
+}
+
+.sidebar .github {
+  margin-top:16px; padding-top:16px; border-top:1px solid var(--line);
+  font-size:12.5px; color:var(--dim);
+}
+.sidebar .github:hover { color:var(--accent); }
+
+/* Content */
+main { flex:1; min-width:0; }
+article { max-width:46rem; margin:0 auto; padding:52px 40px 40px; }
+
+article > h1:first-child {
+  font-size:2rem; line-height:1.2; margin:0 0 8px; letter-spacing:-.01em;
+}
+/* The paragraph right after the title reads as the document's own lede. */
+article > h1:first-child + p {
+  font-size:1.1rem; color:var(--dim); margin:0 0 8px; max-width:40rem;
+}
+h1 { font-size:1.7rem; line-height:1.25; margin:40px 0 14px; letter-spacing:-.01em; }
+h2 {
+  font-size:1.28rem; margin:38px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line);
+  scroll-margin-top:20px;
+}
+h3 { font-size:1.05rem; margin:26px 0 8px; color:var(--fg); scroll-margin-top:20px; }
 p, li { max-width:42rem; }
-code { font-family:ui-monospace,monospace; font-size:.9em; background:#0c0e12; padding:1px 5px; border-radius:3px; }
-pre { background:#0c0e12; border:1px solid var(--line); border-radius:6px; padding:14px 16px; overflow-x:auto; font-size:13px; line-height:1.55; }
-pre code { background:none; padding:0; font-size:inherit; }
-table { border-collapse:collapse; width:100%; margin:14px 0; font-size:14px; }
-th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
-th { color:var(--dim); font-weight:600; }
-blockquote { margin:14px 0; padding:2px 16px; border-left:3px solid var(--line); color:var(--dim); }
-hr { border:none; border-top:1px solid var(--line); margin:32px 0; }
-footer { border-top:1px solid var(--line); margin-top:56px; }
-footer .inner { max-width:56rem; margin:0 auto; padding:20px 20px 40px; color:var(--dim); font-size:13px; }
+p { margin:12px 0; }
+strong { color:var(--fg); }
 
-@media (max-width:720px) {
-  main { padding:20px 16px 56px; }
-  h1 { font-size:1.55rem; }
+code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.87em;
+  background:var(--panel-2); padding:2px 6px; border-radius:4px; border:1px solid var(--line); }
+pre {
+  background:#0a0c10; border:1px solid var(--line); border-radius:8px; padding:16px 18px;
+  overflow-x:auto; font-size:13px; line-height:1.6; margin:16px 0;
+  box-shadow: inset 0 1px 0 0 rgba(255,255,255,.02);
+}
+pre code { background:none; padding:0; border:none; font-size:inherit; color:#c9d1d9; }
+
+table { border-collapse:collapse; width:100%; margin:16px 0; font-size:14px; }
+th, td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { color:var(--faint); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+tbody tr:hover { background:var(--panel-2); }
+
+blockquote {
+  margin:18px 0; padding:12px 18px; border-left:3px solid var(--accent);
+  background:var(--panel); border-radius:0 8px 8px 0; color:var(--dim);
+}
+blockquote p { margin:6px 0; }
+blockquote p:first-child { margin-top:0; }
+blockquote p:last-child { margin-bottom:0; }
+
+hr { border:none; border-top:1px solid var(--line); margin:36px 0; }
+ul, ol { padding-left:1.4em; }
+li { margin:4px 0; }
+li > p { margin:6px 0; }
+
+footer { border-top:1px solid var(--line); margin-top:56px; }
+footer p { max-width:46rem; margin:0 auto; padding:20px 40px 44px; color:var(--faint); font-size:12.5px; }
+
+/* Syntax highlighting: dark, keyed to the accent palette rather than a
+ * stock theme, so code sits with the rest of the page instead of looking
+ * like a pasted-in widget. */
+.hljs-comment { color:var(--faint); font-style:italic; }
+.hljs-keyword, .hljs-selector-tag { color:var(--code-keyword); }
+.hljs-string, .hljs-regexp { color:var(--code-string); }
+.hljs-number, .hljs-literal { color:var(--code-number); }
+.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-function .hljs-title { color:var(--code-fn); }
+.hljs-built_in, .hljs-type { color:var(--code-type); }
+.hljs-meta, .hljs-attr, .hljs-attribute { color:var(--code-meta); }
+.hljs-symbol, .hljs-tag, .hljs-name { color:var(--code-symbol); }
+.hljs-link { color:var(--accent); }
+.hljs-punctuation { color:var(--faint); }
+.hljs-variable, .hljs-params { color:var(--fg); }
+.hljs-deletion { color:#ff6b6b; }
+.hljs-addition { color:var(--code-string); }
+
+@media (max-width:900px) {
+  .shell { flex-direction:column; }
+  .sidebar { position:static; height:auto; width:auto; flex:none; border-right:none;
+    border-bottom:1px solid var(--line); }
+  .sidebar nav { flex-direction:row; flex-wrap:wrap; gap:8px 22px; }
+  .nav-group { flex:1 1 220px; }
+  article { padding:36px 20px 32px; }
+  footer p { padding:18px 20px 36px; }
+  article > h1:first-child { font-size:1.55rem; }
   pre { font-size:12px; }
   table { font-size:13px; }
 }
