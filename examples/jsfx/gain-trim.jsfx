@@ -1,0 +1,14 @@
+desc:JigDAW Gain Trim
+
+// A worked example for bin/jsfx-import.js: as small as a JSFX effect gets,
+// one slider and one multiply, proving the pipeline end to end before the
+// other two fixtures exercise persistent state and control flow.
+
+slider1:gain=0<-24,24,0.1>Gain (dB)
+
+@slider
+g = pow(10, gain / 20);
+
+@sample
+spl0 *= g;
+spl1 *= g;

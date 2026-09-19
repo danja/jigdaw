@@ -45,7 +45,7 @@ or a wall-clock time.
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `init` | `{ module, capabilities, sampleRate, quantum, state? }` | `module` is an `ArrayBuffer` of WebAssembly bytes, transferred. Sent once |
+| `init` | `{ module, assets, capabilities, sampleRate, quantum, state? }` | `module` is an `ArrayBuffer` of WebAssembly bytes, transferred. Sent once |
 | `events` | `{ events: [{ frame, bytes }] }` | `bytes` is a `Uint8Array` of one MIDI message |
 | `transport` | `{ playing, frame, beat, beatsPerFrame, tempo, timeSignature, loop? }` | Sent when anything in it changes, and at least once before playback |
 | `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token |
@@ -68,6 +68,15 @@ limit on synchronous compilation applies to the main thread, not to a worklet.
 `capabilities` is the resolved set from contract section 2, as an array of capability IRIs.
 A plugin that declared `jig:prefers` reads its fallback decision from here rather than
 probing for features.
+
+`assets` is an object keyed by the fragment of each declared `jig:asset` resource's own IRI
+(`<#script>` becomes `"script"`), each value an `ArrayBuffer`, transferred, of that asset's
+verified bytes. Present and empty when the profile declares none. Delivered the same way as
+`module` and for the same reason: `AudioWorkletGlobalScope` has no `fetch`, so a resource the
+host has already fetched and integrity-checked has no other path to the processor that needs
+it. The worked case is `plugins/_jsfx-runtime/`, whose processor writes a converted JSFX
+effect's compiled script into the module's memory from `assets.script` before running it; a
+future plugin wanting a wavetable or an impulse response uses the same field.
 
 ### 1.3 Processor to host
 

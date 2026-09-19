@@ -1,0 +1,53 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/jsfx-gain-trim/",
+  "label": "JigDAW Gain Trim",
+  "comment": "Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
+  "vendor": "danja",
+  "version": "1.0.0",
+  "registeredName": "jsfx-gain-trim",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "jsfx-runtime.wasm",
+    "processor": "jsfx-gain-trim-processor.js"
+  },
+  "assets": [
+    {
+      "key": "script",
+      "file": "script.jsfxb",
+      "mediaType": "application/octet-stream"
+    }
+  ],
+  "ports": [
+    {
+      "symbol": "slider1",
+      "name": "Gain (dB)",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "paramIndex": 0
+    }
+  ]
+}

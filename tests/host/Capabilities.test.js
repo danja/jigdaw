@@ -80,14 +80,14 @@ describe('the host offers what its own plugins ask for', () => {
   // all three and the host still refused BassGen, which was found by loading it
   // in a browser rather than by any of 341 tests.
   it('grants every capability the worked plugins require', async () => {
-    const { readdir, readFile } = await import('node:fs/promises')
+    const { readFile } = await import('node:fs/promises')
     const { resolve, join } = await import('node:path')
     const { parseTurtleFile } = await import('../../src/validate/files.js')
     const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const { pluginDirs } = await import('../../src/catalogue/PluginDirectories.js')
 
     const root = resolve(import.meta.dirname, '../..')
-    const plugins = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
-      .filter(e => e.isDirectory()).map(e => e.name)
+    const plugins = await pluginDirs(join(root, 'plugins'))
     expect(plugins.length, 'there should be plugins to check').toBeGreaterThan(0)
 
     const offered = detectCapabilities({})
@@ -119,11 +119,11 @@ describe('the transport message a processor receives', () => {
   })
 
   it('is read that way by every processor that reads it', async () => {
-    const { readdir, readFile } = await import('node:fs/promises')
+    const { readFile } = await import('node:fs/promises')
     const { resolve, join } = await import('node:path')
+    const { pluginDirs } = await import('../../src/catalogue/PluginDirectories.js')
     const root = resolve(import.meta.dirname, '../..')
-    const plugins = (await readdir(join(root, 'plugins'), { withFileTypes: true }))
-      .filter(e => e.isDirectory()).map(e => e.name)
+    const plugins = await pluginDirs(join(root, 'plugins'))
 
     for (const name of plugins) {
       const file = join(root, 'plugins', name, `${name}-processor.js`)

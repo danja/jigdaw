@@ -224,6 +224,48 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       turning a knob and undoing it moves the engine's `AudioParam`, not only the model;
       removing Pulse and undoing the removal reloads it with its settings intact.
 
+## JSFX plugins
+
+- [x] **An adapter converting REAPER JSFX effects into native JigDAW plugins,
+      2026-09-19.** A JSFX effect is EEL2 script, not compiled code, so this runs the script
+      inside a plugin's real-time sandbox rather than wrapping a binary. `src/jsfx/` parses a
+      restricted EEL2 subset (`Parser.js`), compiles it to a small bytecode format
+      (`Compiler.js`), and reads a JSFX file's header and sliders (`HeaderParser.js`);
+      `plugins/_jsfx-runtime/` is a `#![no_std]` Rust crate implementing the stack-based VM
+      that bytecode runs on, copied into every converted plugin's own directory rather than
+      shared across profiles, so nothing about how a plugin directory works had to change.
+      `bin/jsfx-import.js source.jsfx plugin-name` does the conversion end to end.
+
+      Proven on three original fixtures rather than claimed complete against arbitrary JSFX:
+      [examples/jsfx/](examples/jsfx/) has a gain trim, a one-pole lowpass filter (state
+      surviving across blocks) and a soft/hard clipper. What the restricted subset does not
+      cover, and why, is in `plugins/_jsfx-runtime/README.md`: user-defined `function`,
+      strings, `@gfx`/`@serialize`, `gmem`, the two-parenthesis form of `while`, and
+      case-insensitive identifiers.
+
+      Real-time rules hold the same way as every other plugin here: the compiled program, the
+      variable registers, the local memory array and the operand stack are fixed size and
+      preallocated, and a runaway script is bounded by one instruction budget per
+      `jig_process` call rather than by trusting the script to terminate.
+
+      This needed one real host-contract addition along the way: `jig:asset` had been
+      declared and read into `profile.assets` for a while but nothing delivered the bytes to a
+      running plugin. `src/host/Instantiate.js` now fetches and verifies every declared asset
+      the same way as the module and the processor, and posts them alongside the module bytes
+      in the `init` message (`docs/messaging.md` section 1.2), which is what
+      `plugins/_jsfx-runtime`'s processor uses to load a converted script. Generic rather than
+      JSFX-specific, so a future plugin wanting a wavetable or an impulse response gets it too.
+
+      `tests/dsp/jsfx-runtime.test.js` is the strongest check: real compiled bytecode run
+      through the real built VM, not the compiler checked against itself. Also
+      `tests/jsfx/HeaderParser.test.js`, `tests/catalogue/PluginDirectories.test.js` (a shared
+      helper five call sites now use, after `plugins/_jsfx-runtime/`, which has no
+      `profile.ttl`, broke two tests that walked `plugins/` independently), and the new asset
+      tests in `tests/host/PluginLoader.test.js`. Mutation tested: the short-circuit
+      compilation of `&&`/`||`, and asset delivery and verification in `Instantiate.js`.
+      Verified live in Chrome: all three converted plugins loaded, auto-chained, played real
+      audio, and a slider moved during playback with the console clean.
+
 ## The native adapter
 
 - [x] **`Chain::process` dropped the tail of every block, fixed 2026-09-18.** It rendered

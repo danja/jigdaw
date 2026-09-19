@@ -44,6 +44,22 @@ export async function instantiate (profile, granted, context, {
     }
   }
 
+  // jig:asset: any further file the plugin needs, verified the same way as
+  // its module and its processor because AudioWorkletGlobalScope has no
+  // fetch and nothing here trusts an unverified byte. Keyed by the fragment
+  // of the resource's own IRI (`<#script>` becomes "script"), which is
+  // already how a profile names one resource among several without a
+  // dedicated jig:name predicate. Declared and read into profile.assets for
+  // a while before anything actually delivered the bytes to a running
+  // plugin; this is that delivery, generic rather than specific to any one
+  // asset's purpose, so a future plugin wanting a wavetable or an impulse
+  // response gets it for free.
+  const assets = {}
+  for (const asset of profile.assets ?? []) {
+    const name = asset.iri?.split('#').pop() ?? asset.iri
+    assets[name] = await fetchVerified(asset, { kind: `asset "${name}"` })
+  }
+
   const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl)
   try {
     await context.audioWorklet.addModule(url)
@@ -88,7 +104,7 @@ export async function instantiate (profile, granted, context, {
       { cause })
   }
 
-  const ready = await init(node, moduleBytes, granted, context, profile)
+  const ready = await init(node, moduleBytes, assets, granted, context, profile)
 
   // Derived here so a descriptor mismatch is reported against the profile
   // rather than surfacing later as a missing AudioParam.
@@ -98,7 +114,7 @@ export async function instantiate (profile, granted, context, {
 }
 
 /** Post init and await ready. Contract section 3.1 step 7. */
-function init (node, moduleBytes, granted, context, profile) {
+function init (node, moduleBytes, assets, granted, context, profile) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null
@@ -127,13 +143,21 @@ function init (node, moduleBytes, granted, context, profile) {
       ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength)
       : null
 
+    // Same reasoning as the module buffer: a slice of its own, transferred
+    // rather than copied, so the worklet gets bytes it owns.
+    const assetBuffers = {}
+    for (const [name, bytes] of Object.entries(assets ?? {})) {
+      assetBuffers[name] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    }
+
     node.port.postMessage({
       type: 'init',
       module: buffer,
+      assets: assetBuffers,
       capabilities: granted,
       sampleRate: context.sampleRate,
       quantum: profile.renderQuantum ?? 128
-    }, buffer ? [buffer] : [])
+    }, buffer ? [buffer, ...Object.values(assetBuffers)] : Object.values(assetBuffers))
   })
 }
 

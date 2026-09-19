@@ -1,0 +1,61 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/jsfx-soft-clipper/",
+  "label": "JigDAW Soft Clipper",
+  "comment": "Converted by bin/jsfx-import.js from examples/jsfx/soft-clipper.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
+  "vendor": "danja",
+  "version": "1.0.0",
+  "registeredName": "jsfx-soft-clipper",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "jsfx-runtime.wasm",
+    "processor": "jsfx-soft-clipper-processor.js"
+  },
+  "assets": [
+    {
+      "key": "script",
+      "file": "script.jsfxb",
+      "mediaType": "application/octet-stream"
+    }
+  ],
+  "ports": [
+    {
+      "symbol": "slider1",
+      "name": "Drive",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 20,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "slider2",
+      "name": "Hard Mix",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 1
+    }
+  ]
+}

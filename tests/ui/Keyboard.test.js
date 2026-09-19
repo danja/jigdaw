@@ -22,18 +22,17 @@ describe('which plugins get a keyboard', () => {
   // scope by existing. A list in a test that names the plugins goes stale the
   // day one is added, and the failure looks like the rule being wrong.
   const walk = async () => {
-    const { readdirSync, readFileSync, existsSync } = await import('node:fs')
+    const { readFileSync } = await import('node:fs')
     const { resolve, join } = await import('node:path')
     const { parseText } = await import('../../src/rdf/parse.js')
     const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const { pluginDirs } = await import('../../src/catalogue/PluginDirectories.js')
     const root = resolve(import.meta.dirname, '../..')
     const found = []
-    for (const entry of readdirSync(join(root, 'plugins'), { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue
-      const file = join(root, 'plugins', entry.name, 'profile.ttl')
-      if (!existsSync(file)) continue
+    for (const name of await pluginDirs(join(root, 'plugins'))) {
+      const file = join(root, 'plugins', name, 'profile.ttl')
       found.push({
-        name: entry.name,
+        name,
         profile: readProfile(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
       })
     }
@@ -49,7 +48,7 @@ describe('which plugins get a keyboard', () => {
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
     expect(got).toEqual(['8b8', 'pulse'])
-    expect(not).toEqual(['bassgen', 'cascade', 'dynamix'])
+    expect(not).toEqual(['bassgen', 'cascade', 'dynamix', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper'])
   })
 
   it('asks whether it makes a sound, not only whether it takes a note', async () => {

@@ -17921,6 +17921,11 @@ async function instantiate(profile, granted, context, {
       );
     }
   }
+  const assets = {};
+  for (const asset of profile.assets ?? []) {
+    const name2 = asset.iri?.split("#").pop() ?? asset.iri;
+    assets[name2] = await fetchVerified(asset, { kind: `asset "${name2}"` });
+  }
   const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
   try {
     await context.audioWorklet.addModule(url);
@@ -17960,11 +17965,11 @@ async function instantiate(profile, granted, context, {
       { cause }
     );
   }
-  const ready = await init(node, moduleBytes, granted, context, profile);
+  const ready = await init(node, moduleBytes, assets, granted, context, profile);
   const descriptors = parameterDescriptors(profile.ports);
   return { node, ready, descriptors };
 }
-function init(node, moduleBytes, granted, context, profile) {
+function init(node, moduleBytes, assets, granted, context, profile) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null;
@@ -17986,13 +17991,18 @@ function init(node, moduleBytes, granted, context, profile) {
       }
     };
     const buffer = moduleBytes ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength) : null;
+    const assetBuffers = {};
+    for (const [name, bytes] of Object.entries(assets ?? {})) {
+      assetBuffers[name] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    }
     node.port.postMessage({
       type: "init",
       module: buffer,
+      assets: assetBuffers,
       capabilities: granted,
       sampleRate: context.sampleRate,
       quantum: profile.renderQuantum ?? 128
-    }, buffer ? [buffer] : []);
+    }, buffer ? [buffer, ...Object.values(assetBuffers)] : Object.values(assetBuffers));
   });
 }
 async function resolveProcessorUrl(bytes, originalUrl, override) {

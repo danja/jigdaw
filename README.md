@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 5 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 8 worked plugins, and a validator that
 enforces the specification on its own files.
 
 ## Try it
@@ -79,12 +79,15 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-5 worked plugins are in [plugins/](plugins/), compiled to WebAssembly: a subtractive synth,
+8 worked plugins are in [plugins/](plugins/), compiled to WebAssembly: a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
-bass line generator, all four written in Rust, and the
+bass line generator, all four written in Rust; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
 [Arduino driving three AY-3-8910 chips](https://github.com/danja/8bit8asterd) compiled
-unedited from C++ and driving a model of those chips.
+unedited from C++ and driving a model of those chips; and three REAPER JSFX effects converted
+by [bin/jsfx-import.js](bin/jsfx-import.js), which run under the shared bytecode interpreter in
+[plugins/_jsfx-runtime/](plugins/_jsfx-runtime/) rather than each compiling their own DSP to
+WebAssembly.
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.
@@ -141,7 +144,10 @@ IRI so a desktop DAW can open them. It was built as a sanity check on the specif
 earned its keep before it made a sound: it could not load a JigDAW plugin at all, because the
 only thing the contract guaranteed was a JavaScript `AudioWorklet`. The specification had
 accidentally made itself browser-only. [module-abi.md](docs/module-abi.md) is the answer, and
-all 5 worked plugins now declare an ABI. See
+every worked plugin whose module compiles per plugin now declares an ABI. The three converted
+from JSFX are the exception: their module is the shared interpreter in
+[plugins/_jsfx-runtime/](plugins/_jsfx-runtime/), and an ABI's fixed, no-payload calling
+sequence has nowhere to carry the compiled script a native host would need to run one. See
 [native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md).
 
 ### Transmission
@@ -192,7 +198,7 @@ audio. See [wam.md](docs/wam.md).
 
 ## Status
 
-The specification is complete and normative. The browser host implements it and runs all five
+The specification is complete and normative. The browser host implements it and runs all 8
 worked plugins; the native adapter fetches, verifies, instantiates and sounds the two that
 produce audio, under its own tests; Transmission runs them in a workstation written for VST3. A session saves and reopens carrying the IRIs that make it
 portable.

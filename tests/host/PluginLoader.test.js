@@ -208,18 +208,28 @@ describe('PluginLoader.instantiate', () => {
     return loader.loadProfile(PROFILE_IRI)
   }
 
+  // The reference profile's <#plate-ir> asset is illustrative: nothing on
+  // disk ever served plate.wav before instantiate() started fetching every
+  // declared asset, and its jig:integrity is a placeholder rather than the
+  // digest of any real bytes. These are real, servable bytes and the digest
+  // patched to match them, the same reasoning patchDigests already applies
+  // to the processor and the module below.
+  const ASSET_BYTES = new TextEncoder().encode('fake-impulse-response')
+
   async function routesFor () {
     return {
       [`${PROFILE_IRI}reference-processor.js`]: PROCESSOR_SOURCE,
-      [`${PROFILE_IRI}reference.wasm`]: MODULE_BYTES
+      [`${PROFILE_IRI}reference.wasm`]: MODULE_BYTES,
+      [`${PROFILE_IRI}plate.wav`]: ASSET_BYTES
     }
   }
 
-  function patchDigests (profile, processorIntegrity, moduleIntegrity) {
+  function patchDigests (profile, processorIntegrity, moduleIntegrity, assetIntegrity) {
     return {
       ...profile,
       processor: { ...profile.processor, integrity: processorIntegrity },
-      module: { ...profile.module, integrity: moduleIntegrity }
+      module: { ...profile.module, integrity: moduleIntegrity },
+      assets: profile.assets.map(asset => ({ ...asset, integrity: assetIntegrity ?? asset.integrity }))
     }
   }
 
@@ -231,7 +241,7 @@ describe('PluginLoader.instantiate', () => {
     const { profile, granted } = await loadedProfile()
     const patched = {
       ...patchDigests(profile,
-        await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES)),
+        await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES)),
       audioInputs: 0,
       audioOutputs: 0
     }
@@ -252,7 +262,7 @@ describe('PluginLoader.instantiate', () => {
   it('leaves a plugin that has audio ports alone', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })
@@ -264,7 +274,7 @@ describe('PluginLoader.instantiate', () => {
   it('constructs the node with the shape the profile declares, and awaits ready', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     const added = []
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse,
@@ -290,7 +300,7 @@ describe('PluginLoader.instantiate', () => {
     // Measured in Chrome on 2026-09-17.
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })
@@ -301,10 +311,47 @@ describe('PluginLoader.instantiate', () => {
     expect(init.sampleRate).toBe(48000)
   })
 
+  it('fetches, verifies and delivers every declared asset, keyed by its fragment', async () => {
+    // jig:asset was declared and read into profile.assets for a while before
+    // anything actually forwarded the bytes to a running plugin. This is that
+    // delivery: fetched and integrity-checked the same as the module and the
+    // processor (section 3.2, no skip path), and posted alongside the module
+    // bytes rather than left for a processor with no fetch of its own to go
+    // and get somehow.
+    const { profile, granted } = await loadedProfile()
+    const patched = patchDigests(profile,
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
+    const loader = new PluginLoader({
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
+    })
+    const { node } = await loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
+    const init = node.port.posted.find(m => m.type === 'init')
+    expect(init.assets['plate-ir']).toBeInstanceOf(ArrayBuffer)
+    expect(new Uint8Array(init.assets['plate-ir'])).toEqual(ASSET_BYTES)
+  })
+
+  it('refuses an asset that fails integrity, the same as the module or the processor', async () => {
+    const { profile, granted } = await loadedProfile()
+    // Deliberately NOT patched: the profile's placeholder digest for
+    // <#plate-ir> will not match the real bytes routesFor() serves.
+    const patched = {
+      ...profile,
+      processor: { ...profile.processor, integrity: await digestOf(bytesOf(PROCESSOR_SOURCE)) },
+      module: { ...profile.module, integrity: await digestOf(MODULE_BYTES) }
+    }
+    const loader = new PluginLoader({
+      fetch: fakeFetch(await routesFor()), parse, validate: () => true
+    })
+    const error = await loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: FakeNode })
+      .catch(e => e)
+    expect(error.step).toBe(STEPS.integrity)
+    expect(error.message).toContain('plate.wav')
+  })
+
   it('reports invalid WebAssembly against the module, not the processor', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse,
       validate: () => false
@@ -318,7 +365,7 @@ describe('PluginLoader.instantiate', () => {
   it('explains a registered-name mismatch, which is otherwise cryptic', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     patched.processor = { ...patched.processor, registeredName: 'wrong' }
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse, validate: () => true
@@ -332,7 +379,7 @@ describe('PluginLoader.instantiate', () => {
   it('surfaces an error message from the processor instead of hanging', async () => {
     const { profile, granted } = await loadedProfile()
     const patched = patchDigests(profile,
-      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES))
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
     const loader = new PluginLoader({
       fetch: fakeFetch(await routesFor()), parse, validate: () => true
     })

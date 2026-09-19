@@ -1,0 +1,22 @@
+desc:JigDAW One-Pole Filter
+
+// A worked example for bin/jsfx-import.js: a standard exponential one-pole
+// lowpass, proving that state a script assigns in @sample (z0, z1) survives
+// from one process() call to the next, the way plugins/_jsfx-runtime's VM
+// keeps every variable in its own register rather than resetting it per
+// block.
+
+slider1:cutoff=1000<20,20000,1>Cutoff (Hz)
+
+@init
+z0 = 0;
+z1 = 0;
+
+@slider
+a = 1 - exp(-2 * 3.14159265358979 * cutoff / srate);
+
+@sample
+z0 = z0 + a * (spl0 - z0);
+z1 = z1 + a * (spl1 - z1);
+spl0 = z0;
+spl1 = z1;

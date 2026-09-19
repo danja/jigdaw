@@ -11,12 +11,13 @@
 // which crashed it on a deployment that had no node_modules and took the site
 // down with a 502. tests/docs/conventions.test.js now fails if anything
 // reachable from bin/serve.js imports a package again.
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join } from 'node:path'
 import { parseText } from '../src/rdf/parse.js'
 import { readProfile } from '../src/rdf/ProfileReader.js'
 import { compactTerm } from '../src/catalogue/facets.js'
+import { pluginDirs } from '../src/catalogue/PluginDirectories.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const dir = join(root, 'plugins')
@@ -24,9 +25,8 @@ const dir = join(root, 'plugins')
 const entries = []
 const problems = []
 
-for (const item of await readdir(dir, { withFileTypes: true })) {
-  if (!item.isDirectory()) continue
-  const path = join(dir, item.name, 'profile.ttl')
+for (const name of await pluginDirs(dir)) {
+  const path = join(dir, name, 'profile.ttl')
   try {
     const profile = readProfile(await parseText(await readFile(path, 'utf8'), `file://${path}`))
     entries.push({
@@ -47,7 +47,7 @@ for (const item of await readdir(dir, { withFileTypes: true })) {
       parameters: profile.ports.map(p => p.symbol)
     })
   } catch (error) {
-    problems.push(`${item.name}: ${error.message}`)
+    problems.push(`${name}: ${error.message}`)
   }
 }
 

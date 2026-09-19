@@ -200,6 +200,91 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/jsfx-gain-trim/",
+      "label": "JigDAW Gain Trim",
+      "comment": "Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jsfx-gain-trim/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md."
+      ],
+      "parameters": [
+        "slider1"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/jsfx-one-pole-filter/",
+      "label": "JigDAW One-Pole Filter",
+      "comment": "Converted by bin/jsfx-import.js from examples/jsfx/one-pole-filter.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jsfx-one-pole-filter/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md."
+      ],
+      "parameters": [
+        "slider1"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/jsfx-soft-clipper/",
+      "label": "JigDAW Soft Clipper",
+      "comment": "Converted by bin/jsfx-import.js from examples/jsfx/soft-clipper.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jsfx-soft-clipper/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md."
+      ],
+      "parameters": [
+        "slider1",
+        "slider2"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/pulse/",
       "label": "Pulse",
       "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",

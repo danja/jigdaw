@@ -1,0 +1,23 @@
+[package]
+name = "jsfx-runtime"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "A small bytecode VM for a restricted EEL2 subset, the runtime a converted JSFX effect runs under"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# See src/lib.rs's module comment for why this crate, alone among the plugins
+# here, needs it: an EEL2 script calls real trigonometry and logarithms, and
+# no linear mapping or lookup table stands in for that generally. no_std,
+# allocation-free, deterministic.
+libm = { version = "0.2", default-features = false }
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

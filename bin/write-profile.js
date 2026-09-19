@@ -21,6 +21,15 @@ for (const [key, file] of Object.entries(template.resources)) {
   resources[key] = { file, integrity: await digestFor(file) }
 }
 
+// jig:asset: any further file beyond the module and the processor, such as
+// the compiled bytecode a converted JSFX plugin's script lives in
+// (bin/jsfx-import.js). Optional and plural, unlike module and processor,
+// so it stays a separate list rather than another key in template.resources.
+const assets = []
+for (const asset of template.assets ?? []) {
+  assets.push({ ...asset, integrity: await digestFor(asset.file) })
+}
+
 const lines = []
 const w = s => lines.push(s)
 
@@ -65,6 +74,7 @@ for (const [key, value] of Object.entries(template.shape)) w(`    jig:${key} ${v
 w('')
 w('    jig:module <#module> ;')
 w('    jig:processor <#processor> ;')
+if (assets.length > 0) w(`    jig:asset ${assets.map(a => `<#${a.key}>`).join(' , ')} ;`)
 w('')
 w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} .`)
 w('')
@@ -83,6 +93,15 @@ w(`    jig:location <${resources.processor.file}> ;`)
 w('    jig:mediaType "text/javascript" ;')
 w(`    jig:registeredName ${JSON.stringify(template.registeredName)} ;`)
 w(`    jig:integrity "${resources.processor.integrity}" .`)
+
+for (const asset of assets) {
+  w('')
+  w(`<#${asset.key}>`)
+  w('    a jig:Resource ;')
+  w(`    jig:location <${asset.file}> ;`)
+  if (asset.mediaType) w(`    jig:mediaType ${JSON.stringify(asset.mediaType)} ;`)
+  w(`    jig:integrity "${asset.integrity}" .`)
+}
 
 for (const port of template.ports) {
   w('')

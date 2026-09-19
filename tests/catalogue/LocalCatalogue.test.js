@@ -1,11 +1,12 @@
 // tests/catalogue/LocalCatalogue.test.js
 import { describe, it, expect, beforeAll } from 'vitest'
-import { readFile, readdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { readFile, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { LocalCatalogue } from '../../src/catalogue/LocalCatalogue.js'
 import { parseTurtleFile } from '../../src/validate/files.js'
 import { readProfile } from '../../src/rdf/ProfileReader.js'
+import { pluginDirs } from '../../src/catalogue/PluginDirectories.js'
 
 const root = resolve(import.meta.dirname, '../..')
 
@@ -24,9 +25,8 @@ describe('the plugins this host serves', () => {
     // directory name is a path and a label is prose, and nothing requires
     // them to agree.
     const expected = []
-    for (const entry of await readdir(join(root, 'plugins'), { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue
-      const file = join(root, 'plugins', entry.name, 'profile.ttl')
+    for (const name of await pluginDirs(join(root, 'plugins'))) {
+      const file = join(root, 'plugins', name, 'profile.ttl')
       expected.push(readProfile(await parseTurtleFile(file)).iri)
     }
     const found = (await catalogue.search({})).map(e => e.iri)
@@ -52,7 +52,7 @@ describe('the plugins this host serves', () => {
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
-      .toEqual(['Cascade', 'Dynamix'])
+      .toEqual(['Cascade', 'Dynamix', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper'])
     // BassGen accepts MIDI too: it can be steered from a keyboard.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'BassGen', 'Pulse'])
@@ -61,7 +61,8 @@ describe('the plugins this host serves', () => {
 
   it('takes a full IRI for a facet as well as a bare name', async () => {
     const full = await catalogue.search({ role: 'http://purl.org/stuff/transmissions/AudioEffect' })
-    expect(full.map(e => e.label).sort()).toEqual(['Cascade', 'Dynamix'])
+    expect(full.map(e => e.label).sort())
+      .toEqual(['Cascade', 'Dynamix', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper'])
   })
 
   it('returns nothing rather than everything when nothing matches', async () => {

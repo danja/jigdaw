@@ -1,0 +1,21 @@
+desc:JigDAW Soft Clipper
+
+// A worked example for bin/jsfx-import.js: a cubic soft clipper crossfaded
+// against a hard clip, exercising min/max, ||, and nested ternaries without
+// needing loop(), while() or the local memory array, which the other two
+// fixtures leave untouched.
+
+slider1:drive=1<1,20,0.1>Drive
+slider2:mix=0<0,1,0.01>Hard Mix
+
+@sample
+x0 = spl0 * drive;
+x1 = spl1 * drive;
+h0 = min(max(x0, -1), 1);
+h1 = min(max(x1, -1), 1);
+s0 = x0 - x0*x0*x0/3;
+s0 = (x0 > 1 || x0 < -1) ? (x0 > 0 ? 2/3 : -2/3) : s0;
+s1 = x1 - x1*x1*x1/3;
+s1 = (x1 > 1 || x1 < -1) ? (x1 > 0 ? 2/3 : -2/3) : s1;
+spl0 = s0 * (1 - mix) + h0 * mix;
+spl1 = s1 * (1 - mix) + h1 * mix;
