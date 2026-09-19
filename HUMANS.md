@@ -5,6 +5,20 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
+## 1. Turn on GitHub Pages
+
+**Everything else is built and waiting on one setting.** `.github/workflows/docs.yml`
+builds the specification from `docs/*.md` and deploys it on every push, but a repository's
+Pages target has to be pointed at Actions before that deploy step has anywhere to go.
+
+In the repository on GitHub: **Settings → Pages → Source: GitHub Actions.** No branch or
+folder to pick; the workflow supplies the build. The next push that touches `docs/` (or a
+manual run from the Actions tab) then publishes to `https://danja.github.io/jigdaw/`, which
+`web/index.html`'s Docs link and both READMEs already point at.
+
+**Blocks:** nothing else, but the workflow will keep building and discarding its own output
+until this is done.
+
 ## 2. Make your signing key
 
 **The IRI is decided, and everything but the key itself is built.**

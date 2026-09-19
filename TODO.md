@@ -18,6 +18,13 @@ complete. Review periodically.
       out to be frequent, so the pattern can be added to the guard if a safe check exists
       for it.
 
+      Not yet started on the documents that existed before this item was written. `docs/index.md`,
+      `docs/for-hosts.md` and `docs/for-plugin-authors.md`, written 2026-09-19 for the GitHub
+      Pages move below, were written in this style from the start rather than needing it applied
+      after, as was the addendum to `docs/plan.md` from the same day. `README.md` and
+      `README.agents.md` were checked mechanically (no em dashes, none of the obvious cliches)
+      but not given the full reading pass this item asks for.
+
 - [x] **Foreign plugins work in the application, 2026-09-18.** Contract section 12, end to
       end in Chrome: a Web Audio Module fetched by IRI, classified as foreign, consented to
       through the dialog, verified as a container, served from the worker, adapted, adopted by
@@ -192,6 +199,16 @@ complete. Review periodically.
 
 Behaving more like a real DAW, an open-ended direction rather than a phase with an end.
 
+- [ ] **A Preset menu, loading a particular configuration of plugins.** From the inbox,
+      2026-09-19. Not designed yet. The obvious shape given what already exists: a preset is a
+      project (`src/rdf/ProjectWriter.js`/`ProjectReader.js` already round-trip one), so this is
+      closer to a curated, named `openSession` than a new format. Open questions worth settling
+      before building: where presets live (bundled with the app under `web/`, or user-saved
+      alongside `Save`/`Open`), whether loading one should go through `OpDispatcher.undo()`'s
+      history the way `openSession` does (clearing it, since a preset is a different session,
+      not a further edit to the one open), and whether a preset names plugins by IRI, which
+      needs them reachable, or bundles them the way `bin/bundle.js` does for one plugin.
+
 - [x] **Undo and redo, 2026-09-19.** `OpDispatcher.undo()`/`redo()`, snapshot-based: every
       commit through `apply()` pushes the project as it was just before, and stepping back
       reconciles the live project to a snapshot through the same public methods a person or
@@ -223,6 +240,37 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       and the healed-connection reconciliation were mutation tested. Verified live in Chrome:
       turning a knob and undoing it moves the engine's `AudioParam`, not only the model;
       removing Pulse and undoing the removal reloads it with its settings intact.
+
+## Documentation
+
+- [x] **The specification publishes to GitHub Pages, built from the same markdown, 2026-09-19.**
+      `web/docs/` was a hand-written trio of HTML pages summarising the specification, and it had
+      gone stale the way a hand-kept copy of something else always does: it named two plugins
+      once there were eight and said there was no mixer once there was one. It is gone.
+
+      `bin/build-docs-site.js` renders every `docs/*.md` file into a static site, one page each,
+      with a nav built from the files that are actually in `docs/` rather than a curated list
+      that goes stale the day a document is added. `.github/workflows/docs.yml` builds and
+      deploys it on every push to `docs/`, through the standard `upload-pages-artifact`/
+      `deploy-pages` actions. `docs/index.md` (new), `docs/for-hosts.md` and
+      `docs/for-plugin-authors.md` (converted from the old HTML, content kept, counts and status
+      brought current) are the pages that used to be hand-written; every other normative document
+      publishes as a rendering of itself, unchanged.
+
+      `web/index.html`'s Docs link now points at the published site rather than a local path.
+      `tests/docs/conventions.test.js`'s published-documentation checks now build the site for
+      real (`docs-site/` is gitignored, built fresh by the workflow) and check its output:
+      every document gets a page, every internal link resolves, a link leaving `docs/` points at
+      the right GitHub `blob` or `tree` URL depending on whether it names a file or a directory,
+      and the repository is named correctly. That last check had to be narrowed while doing this:
+      it used to flag any `github.com` link that was not exactly `danja/jigdaw`, which was fine
+      against three curated pages and a false positive against eighteen, one of which links to
+      one of WAM's own example repositories. Narrowed to the actual historical mistake (the
+      account written as `jigdaw`, or `danja` pointed at some other repository) and mutation
+      tested against the original.
+
+      **Needs a person**, in `HUMANS.md`: GitHub Pages is not turned on for the repository yet,
+      so the workflow will build and have nowhere to deploy to until someone does.
 
 ## JSFX plugins
 
