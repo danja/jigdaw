@@ -34,13 +34,16 @@
   .consent-buttons { display:flex; gap:10px; flex-wrap:wrap; }
   .consent-buttons button { min-height:44px; font-size:16px; padding:8px 16px; }
   .consent-buttons .danger { border-color:var(--err); color:var(--err); }
-  .strip { display:flex; flex-direction:column; gap:6px; padding:10px 14px;
+  /* A row of knobs and the two buttons, rather than a column of full width
+     sliders. Wraps, so a narrow screen puts the buttons underneath instead of
+     pushing them off the side. */
+  .strip { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center;
+           gap:6px 18px; padding:10px 14px;
            border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
   .strip.silent { opacity:.55; }
-  .strip-control { display:flex; align-items:center; gap:10px; }
-  .strip-control label { width:52px; flex:0 0 auto; color:var(--dim); font-size:12px; }
-  .strip-control input[type=range] { flex:1 1 auto; min-width:0; }
-  .strip-control .value { width:78px; flex:0 0 auto; text-align:right;
+  .strip-control { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .strip-control label { color:var(--dim); font-size:11px; }
+  .strip-control .value { min-width:78px; text-align:center;
                           font-variant-numeric:tabular-nums; font-size:12px; color:var(--dim); }
   .strip-buttons { display:flex; gap:8px; }
   /* State is said by aria-pressed as well as shown, because it must not be
@@ -52,8 +55,7 @@
   .strip-toggle.muted[aria-pressed="true"]  { background:var(--err); color:#111; }
   .strip-toggle.soloed[aria-pressed="true"] { background:var(--ok);  color:#111; }
   @media (max-width: 760px) {
-    .strip-control label { width:auto; }
-    .strip-toggle { flex:1 1 auto; min-height:44px; }
+    .strip-toggle { min-height:44px; }
   }
 
 
@@ -158,13 +160,52 @@
   .wire span { position:absolute; left:10px; top:1px; font-size:10px; color:var(--dim); }
   .empty { color:var(--dim); text-align:center; padding:26px 14px; border:1px dashed var(--line); border-radius:7px; }
 
-  /* Controls */
-  .control { display:grid; grid-template-columns:104px 1fr 72px; gap:8px; align-items:center; margin-bottom:8px; }
-  .control label { color:var(--dim); font-size:12px; }
-  .control .value { font-family:ui-monospace,monospace; font-size:12px; text-align:right; }
-  input[type=range] { width:100%; min-width:0; height:40px; }
+  /* Controls.
+
+     A grid of knobs rather than a stack of sliders. A slider needs the width
+     of the panel and a knob needs about 50px, which is the difference between
+     a 42 control plugin being two thousand pixels of scrolling and being one
+     screen. auto-fill, so the number of columns comes from the width the
+     panel is given rather than from a count written here. */
+  .controls { display:grid; gap:12px 8px; align-items:start;
+    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
+  .control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+  .control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
+    overflow-wrap:anywhere; }
+  .control .value { font-family:ui-monospace,monospace; font-size:11px; text-align:center; }
+  /* A dropdown cannot be read at 84px, so it takes two cells and its own
+     control stretches to fill them. */
+  .control-selector { grid-column:span 2; }
+  .control-selector select { width:100%; }
+
+  /* The knob. The input is still the control: it is laid over the face,
+     invisible, and keeps the role, the value and every key. pointer-events
+     are off it so a drag reaches .dial, which turns vertical movement into
+     input events; Dial.js explains why that is not the native behaviour. */
+  .dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize;
+    border-radius:50%; }
+  /* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
+     so the ring goes on the wrapper. */
+  .dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+  .dial-face { display:block; width:100%; height:100%; }
+  .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
+  .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
+  .dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
+  /* Not display:none and not visibility:hidden: either takes it out of the
+     tab order, which is the whole thing this is trying not to lose. It keeps
+     its size so a pointer that does reach it lands where the knob is. */
+  .dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0;
+    opacity:0; pointer-events:none; }
+
+  /* :not, because input[type=range] is a more specific selector than
+     .dial-input and would otherwise give the knob's hidden input a 40px box
+     inside a 52px knob. Invisible today, since it is out of flow and takes no
+     pointer events, and exactly the kind of thing that is not invisible the
+     day one of those changes. */
+  input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
   input[type=checkbox] { width:22px; height:22px; }
-  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:8px; font-size:16px; min-height:40px; }
+  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
+    padding:8px; font-size:16px; min-height:40px; max-width:100%; }
 
   /* Keyboard */
   /* The keys divide the available width rather than each taking a fixed number
@@ -196,9 +237,10 @@
   @media (max-width: 760px) {
     main { grid-template-columns:1fr; }
     .browser { border-right:0; border-bottom:1px solid var(--line); }
-    .control { grid-template-columns:1fr auto; gap:2px 8px; }
-    .control label { grid-column:1; } .control .value { grid-column:2; }
-    .control input, .control select { grid-column:1 / -1; }
+    /* The knobs already wrap, so nothing about them changes on a phone: a
+       390px viewport gets four columns of 44px targets. Only the dropdowns
+       need the room, and they take the full width rather than two cells. */
+    .control-selector { grid-column:1 / -1; }
     .links { margin-left:0; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }

@@ -2,6 +2,50 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-19 Two faults a DOM without layout cannot have
+
+**What happened.** The generated panel's sliders became rotary knobs, to fit a 42 control
+plugin on a screen instead of on two thousand pixels. `tests/ui/Dial.test.js` passed with 20
+assertions, covering the range element, the drawing, the drag and the class names. The knob
+was then opened in Chrome and two things were wrong, neither of them reachable from vitest.
+
+**A drag tracked only to the edge of the knob.** `setPointerCapture` is the API for
+continuing a drag outside the element it started on, and it threw on the pointerId Chrome
+handed it. A throw inside the `pointerdown` handler takes the rest of the handler with it,
+so the focus call after it never ran either, and the symptom was a value that moved by a
+fifth of what the hand asked for. Fixed by not using capture: the move and the release are
+listened for on the document, which always has them.
+
+**One arrow key worked and the second went to the body.** Not the knob's fault and much
+older than it: `drawRack` in `web/app.js` empties the rack and rebuilds it on every project
+change, a parameter change is a project change, and emptying a container blurs whatever was
+focused inside it. Every generated control has been nudgeable exactly once by keyboard for
+as long as that has been true, which is WCAG 2.1.1 gone across the whole interface. A
+pointer never sees it. Fixed by `src/ui/Focus.js`, which notes what was focused and puts it
+back by id after the rebuild.
+
+**Root cause.** Both are properties of a real renderer. linkedom has no pointer capture to
+fail and no `activeElement` to lose, so the first was invisible and the second was not
+expressible. AGENTS.md already says to measure a narrow layout in a browser rather than
+reason about it; the same is true of anything to do with the pointer or the focus, and the
+knob happens to be made of both.
+
+**A third thing, which I stopped short of and was asked about.** The knobs went into
+`Panel.js`, which draws plugin parameters, and not into `Strip.js`, which draws the host's
+own level, pan, mute and solo. The distinction is real and is written at the top of both
+files: no `lv2:port` declares a channel strip. It is also not what anyone sees. The page had
+knobs for the plugin and full width sliders for the mixer directly above them, and read as
+two interfaces. Asked about, and fixed by sharing the widget while keeping the distinction:
+`Strip.js` now calls `createDial` and still is not a panel. The lesson is that an internal
+boundary is a reason to share carefully, not a reason to look inconsistent.
+
+**Prevention.** Both now have tests that would have caught them given the knowledge:
+`tests/ui/Dial.test.js` dispatches the move and the release on the document rather than on
+the knob, which is what a real drag does, and fails if the source reaches for pointer
+capture at all. `tests/ui/Focus.test.js` covers the helper and checks that `drawRack`
+captures before it empties and restores after it rebuilds. The wider lesson is in AGENTS.md:
+the browser check is not only for layout.
+
 ## 2026-09-19 A guard that compared a label to a directory name
 
 **What happened.** Adding `plugins/8b8/` broke two tests that had nothing to do with it, and

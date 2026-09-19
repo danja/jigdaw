@@ -11,6 +11,13 @@
 // "4200" and "4200 Hz" are different information, and so are "0.7" and "-3 dB".
 // Mute and solo are pressed buttons with aria-pressed rather than checkboxes,
 // because that is what they are, and neither signals its state by colour alone.
+//
+// Level and position are drawn by src/ui/Dial.js, the same rotary control the
+// generated panel uses. Not because the strip is a panel, which it is not,
+// but because a page with knobs for a plugin and sliders for the mixer beside
+// it reads as two interfaces. The control underneath is still the same native
+// range it always was.
+import { createDial } from './Dial.js'
 
 /** A gain as decibels, for a person. Linear is what the engine wants. */
 export function decibels (gain) {
@@ -46,26 +53,24 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
   gainRow.className = 'strip-control'
   const gainLabel = document.createElement('label')
   gainLabel.textContent = 'Level'
-  const gain = document.createElement('input')
-  gain.type = 'range'
-  gain.min = '0'
   // Above unity, because a quiet plugin has to be able to reach the mix. The
   // range is linear in gain and the readout is in decibels, which is the pair
-  // every mixer presents.
-  gain.max = '2'
-  gain.step = '0.01'
-  gain.value = String(state.gain)
+  // every mixer presents. Unity is not the middle of nought to two in
+  // decibels, so the arc grows from silence rather than from the centre.
+  const gainDial = createDial(document, { minimum: 0, maximum: 2, defaultValue: state.gain },
+    `${label || 'node'}-level`.replace(/\s+/g, '-').toLowerCase())
+  const gain = gainDial.input
   const gainValue = document.createElement('span')
   gainValue.className = 'value'
 
   const showGain = () => {
     gainValue.textContent = `${decibels(state.gain)} dB`
     gain.setAttribute('aria-valuetext', `${decibels(state.gain)} decibels`)
+    gainDial.render(state.gain)
   }
   // setAttribute rather than the htmlFor property: the property reflects in a
   // browser and does not in every DOM implementation, and a label that does not
   // point at its control is not a label.
-  gain.id = `${label || 'node'}-level`.replace(/\s+/g, '-').toLowerCase()
   gainLabel.setAttribute('for', gain.id)
   gain.addEventListener('input', () => {
     state.gain = Number(gain.value)
@@ -73,27 +78,27 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
     onChange({ gain: state.gain })
   })
   showGain()
-  gainRow.append(gainLabel, gain, gainValue)
+  gainRow.append(gainLabel, gainDial.element, gainValue)
 
   // ── Position ─────────────────────────────────────────────────────────────
   const panRow = document.createElement('div')
   panRow.className = 'strip-control'
   const panLabel = document.createElement('label')
   panLabel.textContent = 'Pan'
-  const pan = document.createElement('input')
-  pan.type = 'range'
-  pan.min = '-1'
-  pan.max = '1'
-  pan.step = '0.01'
-  pan.value = String(state.pan)
+  // Minus one to one, so Dial.js grows the arc from the middle: a centred pan
+  // draws nothing, which is what centred means, and a slider's thumb in the
+  // middle never said that.
+  const panDial = createDial(document, { minimum: -1, maximum: 1, defaultValue: state.pan },
+    `${label || 'node'}-pan`.replace(/\s+/g, '-').toLowerCase())
+  const pan = panDial.input
   const panValue = document.createElement('span')
   panValue.className = 'value'
 
   const showPan = () => {
     panValue.textContent = panPosition(state.pan)
     pan.setAttribute('aria-valuetext', panPosition(state.pan))
+    panDial.render(state.pan)
   }
-  pan.id = `${label || 'node'}-pan`.replace(/\s+/g, '-').toLowerCase()
   panLabel.setAttribute('for', pan.id)
   pan.addEventListener('input', () => {
     state.pan = Number(pan.value)
@@ -101,7 +106,7 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
     onChange({ pan: state.pan })
   })
   showPan()
-  panRow.append(panLabel, pan, panValue)
+  panRow.append(panLabel, panDial.element, panValue)
 
   // ── Mute and solo ────────────────────────────────────────────────────────
   const buttons = document.createElement('div')

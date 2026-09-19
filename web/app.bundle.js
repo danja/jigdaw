@@ -22647,6 +22647,107 @@ var OpDispatcher = class {
   }
 };
 
+// src/ui/Dial.js
+var START_DEGREES = 135;
+var SWEEP_DEGREES = 270;
+var RADIUS = 38;
+var CENTRE = 50;
+var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+var TRAVEL = 160;
+var FINE = 6;
+var SVG_NS = "http://www.w3.org/2000/svg";
+var round = (n2) => Math.round(n2 * 100) / 100;
+function facePoint(fraction, radius) {
+  const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180;
+  return [round(CENTRE + radius * Math.cos(radians)), round(CENTRE + radius * Math.sin(radians))];
+}
+function createDial(document2, port, id) {
+  const element = document2.createElement("div");
+  element.className = "dial";
+  const input = document2.createElement("input");
+  input.type = "range";
+  input.id = id;
+  input.className = "dial-input";
+  input.min = String(port.minimum);
+  input.max = String(port.maximum);
+  input.step = String((port.maximum - port.minimum) / 200);
+  input.value = String(port.defaultValue);
+  const svg = document2.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("class", "dial-face");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const arc = (className) => {
+    const circle = document2.createElementNS(SVG_NS, "circle");
+    circle.setAttribute("class", className);
+    circle.setAttribute("cx", String(CENTRE));
+    circle.setAttribute("cy", String(CENTRE));
+    circle.setAttribute("r", String(RADIUS));
+    circle.setAttribute("fill", "none");
+    circle.setAttribute("transform", `rotate(${START_DEGREES} ${CENTRE} ${CENTRE})`);
+    return circle;
+  };
+  const track = arc("dial-track");
+  setSweep(track, 0, 1);
+  const value2 = arc("dial-value");
+  const origin = port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
+  const pointer = document2.createElementNS(SVG_NS, "line");
+  pointer.setAttribute("class", "dial-pointer");
+  pointer.setAttribute("x1", String(CENTRE));
+  pointer.setAttribute("y1", String(CENTRE));
+  svg.append(track, value2, pointer);
+  element.append(svg, input);
+  function render(current) {
+    const span = port.maximum - port.minimum;
+    const fraction = span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span));
+    setSweep(value2, origin, fraction);
+    const [x, y] = facePoint(fraction, RADIUS);
+    pointer.setAttribute("x2", String(x));
+    pointer.setAttribute("y2", String(y));
+  }
+  attachDrag(element, input, port);
+  return { element, input, render };
+}
+function setSweep(circle, from, to) {
+  const sweep = CIRCUMFERENCE * (SWEEP_DEGREES / 360);
+  const low = Math.min(from, to);
+  const high = Math.max(from, to);
+  circle.setAttribute("stroke-dasharray", `${round((high - low) * sweep)} ${round(CIRCUMFERENCE)}`);
+  circle.setAttribute("stroke-dashoffset", String(round(-low * sweep)));
+}
+function attachDrag(element, input, port) {
+  const span = port.maximum - port.minimum;
+  const owner = element.ownerDocument;
+  const Event = owner.defaultView?.Event;
+  if (!Event) return;
+  let dragging = null;
+  const move = (event) => {
+    if (!dragging) return;
+    const sensitivity = event.shiftKey ? TRAVEL * FINE : TRAVEL;
+    const moved = (dragging.y - event.clientY) / sensitivity;
+    const next = Math.min(port.maximum, Math.max(port.minimum, dragging.from + moved * span));
+    if (Number(input.value) === next) return;
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const end = () => {
+    if (!dragging) return;
+    dragging = null;
+    owner.removeEventListener("pointermove", move);
+    owner.removeEventListener("pointerup", end);
+    owner.removeEventListener("pointercancel", end);
+  };
+  element.addEventListener("pointerdown", (event) => {
+    if (event.button !== void 0 && event.button !== 0) return;
+    dragging = { y: event.clientY, from: Number(input.value) };
+    input.focus?.();
+    event.preventDefault?.();
+    owner.addEventListener("pointermove", move);
+    owner.addEventListener("pointerup", end);
+    owner.addEventListener("pointercancel", end);
+  });
+}
+
 // src/ui/Panel.js
 var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "Hz",
@@ -22699,6 +22800,9 @@ function createPanel(document2, profile, onChange) {
     root.append(description);
   }
   const setters = /* @__PURE__ */ new Map();
+  const controls = document2.createElement("div");
+  controls.className = "controls";
+  root.append(controls);
   for (const port of profile.ports) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
@@ -22710,6 +22814,7 @@ function createPanel(document2, profile, onChange) {
     const readout = document2.createElement("span");
     readout.className = "value";
     let input;
+    let knob = null;
     if (port.widget === "switch") {
       input = document2.createElement("input");
       input.type = "checkbox";
@@ -22740,26 +22845,25 @@ function createPanel(document2, profile, onChange) {
         readout.textContent = port.scalePoints.find((p) => p.value === v)?.label ?? String(v);
       });
     } else {
-      input = document2.createElement("input");
-      input.type = "range";
-      input.min = String(port.minimum);
-      input.max = String(port.maximum);
-      input.step = String((port.maximum - port.minimum) / 200);
-      input.value = String(port.defaultValue);
+      const dial = createDial(document2, port, id);
+      input = dial.input;
       input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
       setters.set(port.symbol, (v) => {
         input.value = String(v);
         readout.textContent = formatValue(port, v);
         input.setAttribute("aria-valuetext", spokenValue(port, v));
+        dial.render(v);
       });
+      knob = dial.element;
     }
     input.id = id;
     const readoutId = `${id}-value`;
     readout.id = readoutId;
     input.setAttribute("aria-describedby", readoutId);
     if (port.comment) input.title = port.comment;
-    row.append(input, readout);
-    root.append(row);
+    else if (port.name) input.title = port.name;
+    row.append(knob ?? input, readout);
+    controls.append(row);
     setters.get(port.symbol)(port.defaultValue);
   }
   return {
@@ -22792,19 +22896,19 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
   gainRow.className = "strip-control";
   const gainLabel = document2.createElement("label");
   gainLabel.textContent = "Level";
-  const gain = document2.createElement("input");
-  gain.type = "range";
-  gain.min = "0";
-  gain.max = "2";
-  gain.step = "0.01";
-  gain.value = String(state.gain);
+  const gainDial = createDial(
+    document2,
+    { minimum: 0, maximum: 2, defaultValue: state.gain },
+    `${label || "node"}-level`.replace(/\s+/g, "-").toLowerCase()
+  );
+  const gain = gainDial.input;
   const gainValue = document2.createElement("span");
   gainValue.className = "value";
   const showGain = () => {
     gainValue.textContent = `${decibels(state.gain)} dB`;
     gain.setAttribute("aria-valuetext", `${decibels(state.gain)} decibels`);
+    gainDial.render(state.gain);
   };
-  gain.id = `${label || "node"}-level`.replace(/\s+/g, "-").toLowerCase();
   gainLabel.setAttribute("for", gain.id);
   gain.addEventListener("input", () => {
     state.gain = Number(gain.value);
@@ -22812,24 +22916,24 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
     onChange({ gain: state.gain });
   });
   showGain();
-  gainRow.append(gainLabel, gain, gainValue);
+  gainRow.append(gainLabel, gainDial.element, gainValue);
   const panRow = document2.createElement("div");
   panRow.className = "strip-control";
   const panLabel = document2.createElement("label");
   panLabel.textContent = "Pan";
-  const pan = document2.createElement("input");
-  pan.type = "range";
-  pan.min = "-1";
-  pan.max = "1";
-  pan.step = "0.01";
-  pan.value = String(state.pan);
+  const panDial = createDial(
+    document2,
+    { minimum: -1, maximum: 1, defaultValue: state.pan },
+    `${label || "node"}-pan`.replace(/\s+/g, "-").toLowerCase()
+  );
+  const pan = panDial.input;
   const panValue = document2.createElement("span");
   panValue.className = "value";
   const showPan = () => {
     panValue.textContent = panPosition(state.pan);
     pan.setAttribute("aria-valuetext", panPosition(state.pan));
+    panDial.render(state.pan);
   };
-  pan.id = `${label || "node"}-pan`.replace(/\s+/g, "-").toLowerCase();
   panLabel.setAttribute("for", pan.id);
   pan.addEventListener("input", () => {
     state.pan = Number(pan.value);
@@ -22837,7 +22941,7 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
     onChange({ pan: state.pan });
   });
   showPan();
-  panRow.append(panLabel, pan, panValue);
+  panRow.append(panLabel, panDial.element, panValue);
   const buttons = document2.createElement("div");
   buttons.className = "strip-buttons";
   const toggle = (name, key) => {
@@ -23102,6 +23206,19 @@ function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
     get held() {
       return [...held];
     }
+  };
+}
+
+// src/ui/Focus.js
+function preserveFocus(container) {
+  const document2 = container?.ownerDocument;
+  const active = document2?.activeElement;
+  const id = active && active !== document2.body && container.contains(active) ? active.id : null;
+  return () => {
+    if (!id) return null;
+    const again = document2.getElementById(id);
+    again?.focus?.({ preventScroll: true });
+    return again ?? null;
   };
 }
 
@@ -23944,6 +24061,7 @@ function drawRack() {
     (dispatcher?.audibility() ?? []).map((a2) => [a2.nodeId, !a2.silent])
   );
   const rack = $("rack");
+  const restoreFocus = preserveFocus(rack);
   rack.textContent = "";
   const nodes = dispatcher?.project.nodes ?? [];
   const connections = dispatcher?.project.connections ?? [];
@@ -24078,6 +24196,7 @@ function drawRack() {
       drawRack();
     }
   }));
+  restoreFocus();
 }
 function askConsent(request) {
   return new Promise((resolve) => {

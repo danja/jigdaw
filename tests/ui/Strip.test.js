@@ -89,6 +89,30 @@ describe('what a strip is, to a screen reader', () => {
   })
 })
 
+describe('the strip uses the same control as the panel', () => {
+  // A page with knobs for a plugin and sliders for the mixer beside it reads
+  // as two interfaces, which is what it was. The strip is still not a panel:
+  // no lv2:port declares its controls and Panel.js does not draw them. Only
+  // the widget is shared.
+  it('draws level and pan as rotary controls', () => {
+    const { element } = createStrip(document, {}, () => {}, { label: 'Pulse' })
+    expect(element.querySelectorAll('.dial')).toHaveLength(2)
+    // Still a native range underneath, which is where the keyboard and the
+    // announced value come from.
+    expect([...element.querySelectorAll('.dial input')].map(i => i.type)).toEqual(['range', 'range'])
+  })
+
+  it('grows the pan arc from the centre and the level arc from silence', () => {
+    // Centred is nothing, not half. Unity gain is not the middle of nought to
+    // two in decibels, so level has no centre to grow from.
+    const { element } = createStrip(document, { gain: 1, pan: 0 }, () => {}, { label: 'Pulse' })
+    const [level, pan] = [...element.querySelectorAll('.dial-value')]
+      .map(c => Number(c.getAttribute('stroke-dasharray').split(' ')[0]))
+    expect(pan).toBe(0)
+    expect(level).toBeGreaterThan(0)
+  })
+})
+
 describe('what a strip reports', () => {
   it('sends only what changed, so one movement is one operation', () => {
     const changes = []

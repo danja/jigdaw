@@ -158,6 +158,12 @@ and real-time processing.
   because there is no layout in a DOM without a renderer. Load the page into a narrow iframe
   in a real browser and compare `documentElement.scrollWidth` with `innerWidth`. Note that
   `clientWidth` includes padding, and that an element outside the document measures zero.
+- **The same is true of the pointer and the focus**, and it is easier to miss because the
+  code looks testable. A DOM without a renderer has no pointer capture to fail and no
+  `activeElement` to lose, so a drag that stops at the edge of its element and a control
+  that can be nudged once by keyboard both pass every unit test. Drive the real thing:
+  dispatch the move and the release on the document, count the arrow keys, and read
+  `document.activeElement` afterwards.
 
 ## Documentation rules
 

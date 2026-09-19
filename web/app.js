@@ -16,6 +16,7 @@ import { createStrip } from '../src/ui/Strip.js'
 import { createPortBar, createConnectionList } from '../src/ui/Routing.js'
 import { isMidi } from '../src/engine/EventRouter.js'
 import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
+import { preserveFocus } from '../src/ui/Focus.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
 import { writeProject } from '../src/rdf/ProjectWriter.js'
@@ -270,6 +271,15 @@ function drawRack () {
   const audible = new Map(
     (dispatcher?.audibility() ?? []).map(a => [a.nodeId, !a.silent]))
   const rack = $('rack')
+
+  // Emptying the rack blurs whatever was focused inside it, and every
+  // parameter change redraws the rack, so a control could be nudged once by
+  // keyboard and then lost the focus: one arrow key moved a knob one step and
+  // the second went to the body. That is WCAG 2.1.1 gone on every generated
+  // control, and it predates the knobs. The ids are stable, so the focus is
+  // put back on the same control after the rebuild.
+  const restoreFocus = preserveFocus(rack)
+
   rack.textContent = ''
 
   const nodes = dispatcher?.project.nodes ?? []
@@ -448,6 +458,8 @@ function drawRack () {
       drawRack()
     }
   }))
+
+  restoreFocus()
 }
 
 // ── Loading ────────────────────────────────────────────────────────────────

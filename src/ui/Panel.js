@@ -14,6 +14,12 @@
 // here: a plugin that ships no jig:ui gets exactly this. So one accessible
 // generator makes every such plugin accessible, and one careless generator
 // makes every one of them unusable.
+//
+// A continuous control is drawn as a rotary knob by src/ui/Dial.js, which is
+// where the pixels and the pointer live. The element underneath is still an
+// `<input type="range">`, so nothing about the keyboard or the screen reader
+// changed when the look did.
+import { createDial } from './Dial.js'
 
 // Every unit any committed plugin declares must appear here and in
 // SPOKEN_UNITS below. A unit this does not know is not an error anywhere: the
@@ -106,6 +112,13 @@ export function createPanel (document, profile, onChange) {
 
   const setters = new Map()
 
+  // The controls share one grid, so knobs pack across the width they are
+  // given instead of taking a row each. A panel of 42 controls was 2000
+  // pixels tall as sliders and is one screen as knobs.
+  const controls = document.createElement('div')
+  controls.className = 'controls'
+  root.append(controls)
+
   for (const port of profile.ports) {
     const row = document.createElement('div')
     row.className = `control control-${port.widget}`
@@ -123,6 +136,9 @@ export function createPanel (document, profile, onChange) {
     readout.className = 'value'
 
     let input
+    // What goes in the row: the input itself for a switch or a selector, and
+    // the knob that wraps the input for a dial.
+    let knob = null
     if (port.widget === 'switch') {
       input = document.createElement('input')
       input.type = 'checkbox'
@@ -156,14 +172,10 @@ export function createPanel (document, profile, onChange) {
         readout.textContent = port.scalePoints.find(p => p.value === v)?.label ?? String(v)
       })
     } else {
-      input = document.createElement('input')
-      input.type = 'range'
-      input.min = String(port.minimum)
-      input.max = String(port.maximum)
-      // 200 steps across any range, so a dial feels the same whether it spans
-      // 0 to 1 or 200 to 18000.
-      input.step = String((port.maximum - port.minimum) / 200)
-      input.value = String(port.defaultValue)
+      const dial = createDial(document, port, id)
+      input = dial.input
+      // One listener for both, because a drag dispatches the same event an
+      // arrow key does. Nothing here knows which happened.
       input.addEventListener('input', () => onChange(port.symbol, Number(input.value)))
       setters.set(port.symbol, v => {
         input.value = String(v)
@@ -171,7 +183,9 @@ export function createPanel (document, profile, onChange) {
         // aria-valuetext, because a range otherwise announces the raw number
         // and loses the unit entirely.
         input.setAttribute('aria-valuetext', spokenValue(port, v))
+        dial.render(v)
       })
+      knob = dial.element
     }
 
     input.id = id
@@ -181,8 +195,12 @@ export function createPanel (document, profile, onChange) {
     readout.id = readoutId
     input.setAttribute('aria-describedby', readoutId)
     if (port.comment) input.title = port.comment
-    row.append(input, readout)
-    root.append(row)
+    // The full name, because a knob's caption is narrow and a long one wraps
+    // or is read in pieces. The accessible name is the label and is never
+    // shortened; this is for a pointer.
+    else if (port.name) input.title = port.name
+    row.append(knob ?? input, readout)
+    controls.append(row)
 
     // Render the declared default through the same path a host update takes.
     setters.get(port.symbol)(port.defaultValue)
