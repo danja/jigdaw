@@ -267,14 +267,6 @@ const server = createServer(async (request, response) => {
     return send(response, 404, `no key published at ${path}`)
   }
 
-  // A directory is served by its index. Without this, /docs/ answers 404 while
-  // web/docs/index.html sits right there, which is the kind of gap a file
-  // existence check cannot see: the file is present and the route is not.
-  if (path.endsWith('/')) {
-    const index = safeResolve(join('/web', path, 'index.html'))
-    if (index && await serveFile(response, index)) return
-  }
-
   if (path === '/') {
     if (await serveFile(response, join(root, 'web/index.html'))) return
   }

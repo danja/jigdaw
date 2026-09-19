@@ -199,45 +199,38 @@ describe('the browser bundle', () => {
 })
 
 describe('the published documentation', () => {
-  const pages = ['web/docs/index.html', 'web/docs/hosts.html', 'web/docs/plugins.html']
+  // docs/*.md is authoritative and the site is a rendering of it
+  // (bin/build-docs-site.js, .github/workflows/docs.yml), not a second,
+  // hand-written copy: web/docs/ was that, and it went stale the way a
+  // hand-kept nav always does, naming two plugins once there were eight.
+  // Built here rather than checked as committed files, because docs-site/ is
+  // gitignored and built fresh on every push; checking a copy left over from
+  // a previous run would pass on a build the workflow can no longer produce.
+  const siteDir = join(root, 'docs-site')
+  const docNames = readdirSync(join(root, 'docs'))
+    .filter(f => f.endsWith('.md'))
+    .map(f => f.replace(/\.md$/, ''))
 
-  it('exists, and the front page links to it and to the repository', () => {
+  execFileSync(process.execPath, [join(root, 'bin/build-docs-site.js')], { cwd: root })
+  const pages = docNames.map(name => `docs-site/${name}.html`)
+  const siteRead = page => readFileSync(join(root, page), 'utf8')
+
+  it('builds a page for every document, and the front page links to it and to the repository', () => {
     for (const page of pages) expect(existsSync(join(root, page)), page).toBe(true)
     const front = read('web/index.html')
-    expect(front).toContain('href="docs/"')
+    expect(front).toContain('https://danja.github.io/jigdaw/')
     expect(front).toContain('https://github.com/danja/jigdaw')
   })
 
-  it('links only to pages and files that are there', () => {
+  it('links only to pages that exist in the site, or out to the repository', () => {
     // A published link that 404s is the failure this project has already made
     // once, by naming github.com/jigdaw when the repository is danja/jigdaw.
     const broken = []
-    for (const page of [...pages, 'web/index.html']) {
-      for (const match of read(page).matchAll(/(?:href|src)="([^"]+)"/g)) {
+    for (const page of pages) {
+      for (const match of siteRead(page).matchAll(/(?:href|src)="([^"]+)"/g)) {
         const target = match[1]
         if (/^(https?:|mailto:|#)/.test(target)) continue
-        const from = dirname(page)
-        const raw = join(from, target).replace(/\\/g, '/')
-
-        // A plugin IRI is not a file. bin/serve.js answers /plugins/<name>/ by
-        // negotiating that plugin's profile, so the check is whether the
-        // profile exists, which is exactly what the route requires.
-        const plugin = /(?:^|\/)plugins\/([^/]+)\/$/.exec(raw)
-        if (plugin) {
-          if (!existsSync(join(root, 'plugins', plugin[1], 'profile.ttl'))) {
-            broken.push(`${page} -> ${target} (no such plugin)`)
-          }
-          continue
-        }
-
-        // A directory reference resolves to its index, which bin/serve.js serves
-        // for any path ending in a slash. The file existing is not enough on
-        // its own: /docs/ answered 404 for a while with the file right there,
-        // because the server had no directory handling.
-        const resolved = target.endsWith('/') ? join(raw, 'index.html') : raw
-        // Paths that leave web/ are served from the repository root.
-        const candidates = [join(root, resolved), join(root, resolved.replace(/^web\//, ''))]
-        if (!candidates.some(existsSync)) broken.push(`${page} -> ${target}`)
+        if (!existsSync(join(siteDir, target.split('#')[0]))) broken.push(`${page} -> ${target}`)
       }
     }
     expect(broken, `broken links:\n  ${broken.join('\n  ')}`).toEqual([])
@@ -245,24 +238,28 @@ describe('the published documentation', () => {
 
   it('names the repository correctly everywhere', () => {
     // github.com/jigdaw is somebody's user account and returns 200, so a typo
-    // here would not even look broken.
+    // here would not even look broken. Narrow to that specific mistake
+    // (the account written as "jigdaw", or the right account pointed at
+    // some other repository) rather than flagging every github.com link
+    // that is not danja/jigdaw, which would also catch a legitimate
+    // reference to an unrelated repository such as one of WAM's examples.
     for (const page of pages) {
-      const wrong = [...read(page).matchAll(/github\.com\/([\w.-]+)(?:\/([\w.-]+))?/g)]
-        .filter(m => !(m[1] === 'danja' && m[2] === 'jigdaw'))
+      const wrong = [...siteRead(page).matchAll(/github\.com\/([\w.-]+)(?:\/([\w.-]+))?/g)]
+        .filter(m => m[1] === 'jigdaw' || (m[1] === 'danja' && m[2] && m[2] !== 'jigdaw'))
       expect(wrong.map(m => m[0]), `${page} links to the wrong repository`).toEqual([])
     }
   })
 
   it('declares a viewport on every page, since docs are read on phones', () => {
     for (const page of pages) {
-      expect(read(page), page).toMatch(/<meta\s+name="viewport"/)
+      expect(siteRead(page), page).toMatch(/<meta\s+name="viewport"/)
     }
   })
 
   it('gives every page a title and a description', () => {
     for (const page of pages) {
-      expect(read(page), `${page} title`).toMatch(/<title>[^<]{10,}<\/title>/)
-      expect(read(page), `${page} description`).toMatch(/name="description"/)
+      expect(siteRead(page), `${page} title`).toMatch(/<title>[^<]{10,}<\/title>/)
+      expect(siteRead(page), `${page} description`).toMatch(/name="description" content="[^"]{10,}"/)
     }
   })
 })

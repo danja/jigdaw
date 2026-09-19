@@ -5,18 +5,6 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Nothing outstanding here
-
-The exposure fix is deployed and measured on the live site, 2026-09-18:
-`/jigdaw/.git/HEAD`, `/jigdaw/.git/index`, `/jigdaw/package.json`, `/jigdaw/AGENTS.md` and
-`/jigdaw/.gitignore` all answer 404, and the page, the browser bundle, the plugin WebAssembly,
-the published docs and the foreign plugin worker all still answer 200.
-
-What that was, and why a pull alone would not have fixed it, is in `MISTAKES.md`.
-[docs/deployment.md](docs/deployment.md) opens with the redeploy rule: a pull moves static
-files at once, and a change inside `bin/serve.js` is invisible until `systemctl restart
-jigdaw`.
-
 ## 2. Make your signing key
 
 **The IRI is decided, and everything but the key itself is built.**
@@ -125,41 +113,7 @@ it is now recorded as a comment in a second repository.
 
 **Blocks:** nothing.
 
-## 6. Confirm the 8-Bit 8asterd's licence upstream
 
-**Apache-2.0 for now, on your instruction, 2026-09-19.** `plugins/8b8/plugin.json` declares
-it and `profile.ttl` carries it, the same as Cascade, Pulse and BassGen.
-
-What is still open: `~/github/8bit8asterd` has **no licence file**, and its firmware header
-says the bulk of it comes from
-[dogemicrosystems' dual AY module](https://dogemicrosystems.ca/wiki/Dual_AY-3-8910_MIDI_module).
-`plugins/8b8/firmware/` is a verbatim snapshot of both. So there are two questions, and you
-said you would check: what 8bit8asterd is licensed under, and what the firmware it descends
-from is licensed under. Adding a licence file to your own repository settles the first and
-makes the declaration here a restatement rather than an assumption.
-
-Changing it later is one line in `plugins/8b8/plugin.json` and a `./build.sh`.
-
-**Blocks:** nothing now. It was blocking publication.
-
-## 7. Two 8b8 firmware bugs worth fixing upstream
-
-Both are worked around in `plugins/8b8/8b8.cpp`, both are in the firmware, and both happen on
-hardware. They are described in full in `plugins/8b8/README.md`, with the measurements.
-
-- **`softReset()` leaves every amplitude register at 0xFF**, which hands each channel's volume
-  to the envelope generator at a period of 0xFFFF. Sixteen seconds after an All Notes Off the
-  chips ramp to full scale: measured at 0.93 RMS with nothing playing. Boot does the same two
-  steps in the other order and is fine, so the fix is to reorder `softReset()`.
-- **`psg.invalidate()` assumes a flush happens before the shadow changes again.** A register
-  whose new value equals the complement it wrote is taken for already sent. On hardware the
-  ten milliseconds to the next flush are always free, so it never shows; a host that sets a
-  parameter and plays a note in the same millisecond gets middle C at under a hertz.
-
-**Needs you** only in the sense that it is your other repository, and nothing here asked for a
-change to it.
-
-**Blocks:** nothing. JigDAW works around both.
 
 ## 8. Tools that would help
 

@@ -254,8 +254,9 @@ These are guides. The normative specifications stay in `docs/` and are linked fr
 which says plainly that they are the authority where the two disagree.
 
 `tests/docs/conventions.test.js` fails on a broken link, a link to the wrong repository, a
-missing viewport or a missing title. The repository check exists because `github.com/jigdaw`
-is somebody's account and returns 200, so that typo would not even have looked broken.
+missing viewport or a missing title. The repository check exists because leaving the account
+name `danja` out of a github.com link is somebody else's account and returns 200, so that
+typo would not even have looked broken.
 
 ## Phase 7. A native host. Complete.
 
@@ -574,6 +575,34 @@ Verified in a browser at each step, which found three defects no test had: a sav
 and read correctly and dropped by `addPlugin` on the way back in, two instances of one plugin
 sharing one name, and the connection list never being appended at all. All three are in
 MISTAKES.md.
+
+## Phase 11. Behaving like a real DAW. In progress.
+
+Not a phase with an end: the specification is complete and normative (phase 0), and this is
+the open-ended work of the browser host behaving like the instrument it claims to be, on top
+of it. Detail is in `TODO.md`'s "The application" and "JSFX plugins" sections rather than
+repeated here; this is the summary.
+
+Five more worked plugins beyond phase 2's Cascade and Pulse: BassGen, a transport-synced bass
+line generator; 8-Bit 8asterd, the firmware of a three-chip AY-3-8910 synthesiser compiled
+unedited from C++; Dynamix, a compressor/expander, limiter and clipper in series with a side
+chain input; and three REAPER JSFX effects converted by `bin/jsfx-import.js`, which runs a
+restricted EEL2 subset under a shared interpreter (`plugins/_jsfx-runtime/`) rather than
+compiling a module per effect. The last needed one real contract-adjacent addition: `jig:asset`
+had been declared and read for a while with nothing delivering its bytes to a running plugin,
+so `src/host/Instantiate.js` now fetches, verifies and posts every declared asset the same way
+as the module and the processor (`docs/messaging.md` section 1.2).
+
+The rack view split into a Tracks tab (unchanged) and a Mixer tab (one channel strip per
+audio-producing node, gathered rather than embedded per node), both built from
+`src/ui/Tabs.js` rather than a second implementation of tab switching. Undo and redo
+(`OpDispatcher.undo()`/`redo()`) reconcile the live project to a snapshot through the same
+`apply()`/`addPlugin()`/`setParameter()` calls a person or WebMCP would use, so the engine
+moves with the model exactly as it does for any other edit; a node removed since the snapshot
+is reloaded from its IRI, the same path reopening a session takes.
+
+Still thin: no timeline, no recording, no plugin user interfaces of their own. See
+[index.md](index.md) for the current honest summary, published alongside the specification.
 
 ## What it found
 

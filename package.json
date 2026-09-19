@@ -15,6 +15,7 @@
     "build:web": "node bin/build-web.js",
     "serve": "node bin/serve.js",
     "build:vocab": "node bin/build-vocab-site.js",
+    "build:docs": "node bin/build-docs-site.js",
     "build:index": "node bin/build-plugin-index.js",
     "bundle": "node bin/bundle.js",
     "wam": "node bin/wam.js",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "esbuild": "^0.28.2",
     "linkedom": "^0.18.13",
+    "marked": "^18.0.13",
     "vitest": "^3.0.0"
   }
 }

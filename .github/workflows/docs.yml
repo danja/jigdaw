@@ -1,0 +1,51 @@
+# .github/workflows/docs.yml
+#
+# Publishes the specification (docs/*.md) to GitHub Pages. The markdown in
+# docs/ is authoritative; this renders it with bin/build-docs-site.js rather
+# than keeping a second, hand-written copy of the same content, which is what
+# web/docs/ was before this workflow replaced it and is exactly the kind of
+# pair that drifts silently.
+name: Publish documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'bin/build-docs-site.js'
+      - 'bin/docs-site.css'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: node bin/build-docs-site.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs-site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

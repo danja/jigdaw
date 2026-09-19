@@ -74,8 +74,7 @@ const ROUTES = [
   '/plugins/pulse/pulse-processor.js',
   '/plugins/bassgen/',
   '/plugins/bassgen/bassgen.wasm',
-  '/catalogue/search?q=reverb',
-  '/docs/'
+  '/catalogue/search?q=reverb'
 ]
 
 describe('the server, asked as a browser asks', () => {
@@ -223,7 +222,7 @@ describe('what the server does not serve', () => {
     // The other half, and the one that makes this a change rather than a
     // breakage. An allowlist that is too tight breaks the site quietly.
     for (const path of ['/', '/app.bundle.js', '/src/host/ForeignLoader.js',
-      '/plugins/pulse/pulse.wasm', '/plugins/pulse/', '/docs/', '/foreign/probe.html']) {
+      '/plugins/pulse/pulse.wasm', '/plugins/pulse/', '/foreign/probe.html']) {
       expect((await ask(path)).status, path).toBe(200)
     }
   })

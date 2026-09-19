@@ -11,6 +11,9 @@ The rest of this repository exists to support the specification: a host that run
 browser, a second host that runs them as a VST3, 8 worked plugins, and a validator that
 enforces the specification on its own files.
 
+The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
+rendered from the markdown in [docs/](docs/), which is the authoritative copy.
+
 ## Try it
 
 ```sh

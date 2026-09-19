@@ -146,6 +146,12 @@ vite.config.ts.timestamp-*
 # purpose: the server runs it without a build step, and the repository is the
 # delivery mechanism. Regenerate and commit it whenever web/ or src/ changes.
 
+# The published documentation site, built from docs/*.md by
+# bin/build-docs-site.js and deployed by .github/workflows/docs.yml. Built
+# fresh on every push; there is nothing here that needs to be readable
+# without running the build.
+docs-site/
+
 # Build output for the native adapter (native/install.sh)
 native/build/
 
