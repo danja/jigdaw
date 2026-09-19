@@ -2,6 +2,90 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-19 A connection to a port that was not there
+
+**What happened.** Found while checking that BassGen no longer draws a keyboard. Loading
+four plugins in a row left the 8-Bit 8asterd with a header, a channel strip and no panel at
+all, and the next change threw:
+
+    IndexSizeError: Failed to execute 'connect' on 'AudioNode':
+    input index (0) exceeds number of inputs (0)
+
+**Root cause.** `web/app.js` chains each plugin to the one before it, so loading Cascade and
+then the 8b8 asked for an audio edge into a plugin that declares `jig:audioInputs 0`. The
+model accepted it: `checkEndpoint` in `src/model/Project.js` validates the shape of an
+endpoint and has no profiles to check it against, deliberately, because a project is
+loadable before its plugins are. The engine has the profiles and found out by throwing out
+of `AudioNode.connect` while rebuilding the links, after the change was committed. The
+throw escaped `loadPlugin` before its final `drawRack()`, which is why the slot was half
+drawn: the state was fine and the render had stopped halfway.
+
+**The question "which ports has this node got" existed in exactly one place**,
+`src/ui/Routing.js`, where it drew the buttons, and the dispatcher could not reach it. So
+the interface offered only edges that exist and the dispatcher accepted any edge at all,
+which is the same rule in one layer and not the next.
+
+**Prevention.** `outputsOf`, `inputsOf` and `compatible` moved to `src/model/Endpoints.js`,
+with `Routing.js` re-exporting them so nothing that draws a port bar changed. The
+dispatcher refuses an `addConnection` whose ends name ports the nodes have not got, before
+the model commits anything, with a message that says what the node does have.
+`web/app.js` chains only where both ends have a compatible port, which is not an error and
+is not logged as one.
+
+**Two tests were asserting the broken behaviour**, which is how far this had got. The
+compensation test in `tests/host/integration.test.js` connected into Cascade's audio input
+1, and Cascade has one input; the MIDI routing test connected a MIDI edge out of Pulse, and
+Pulse declares `trn:produces trn:Audio` and nothing else, so nothing would ever have been
+delivered along it. Both were rewritten to the shape they were describing, the second with
+BassGen as the source because BassGen is the plugin that produces MIDI.
+
+## 2026-09-19 A keyboard on a plugin that makes no sound
+
+**What happened.** BassGen was drawn with two octaves of on-screen keys. It produces MIDI
+and declares `jig:audioOutputs 0`, so pressing one made nothing happen.
+
+**Root cause.** `web/app.js` had the right intent written in a comment, "an instrument gets
+a keyboard, so it can be played", and the wrong test underneath it: `accepts` includes
+MIDI. BassGen accepts MIDI so that its `follow` parameter can take a root note from
+whatever is playing, which is a different thing from being played. The comment and the
+condition disagreed and the comment was correct, which is the least visible way for this to
+go wrong.
+
+**Prevention.** `src/ui/Keyboard.js` now exports `playable(profile)`, which asks both
+halves: does it take notes, and does it make a sound. `tests/ui/Keyboard.test.js` walks
+`plugins/` and checks the verdict for every committed profile, and separately checks that
+the verdict is the conjunction rather than either half, so a change that drops one fails
+with a reason instead of with a list. Steering BassGen from a keyboard still works, through
+a MIDI connection into its MIDI input, which is where a MIDI input's notes should come from.
+
+## 2026-09-19 Forty four buttons that could not be pressed
+
+**What happened.** The block between the mixer and the controls was the port bar: the
+outputs and inputs a connection can be made from and to. Asked to remove it as serving no
+purpose, which from the screen it did not, because on the 42 parameter instrument 43 of its
+44 buttons were modulation targets and every one of them was disabled. It is the only way
+to make a connection in the application, so removing it would have removed patching.
+
+**Root cause.** A comment in `src/ui/Routing.js` says the inputs are "disabled rather than
+hidden while something is selected, so the shape of what is possible does not change under
+the pointer". That is a good rule about a gesture in progress, and it had been applied to
+the resting state too, where there is no gesture and nothing can be pressed. The rule was
+right and its scope was wrong, which is the same shape as the guards further down this
+file.
+
+**What was done.** The inputs are drawn only while an output is chosen, which is the only
+time any of them can be used. At rest the bar is the one output button. The `rdfs:comment`
+paragraph went with it: the browser and the catalogue both show it where somebody is
+choosing a plugin, and the rack is where they are playing one. The slot header went from
+around 560 pixels to 57, and the page from 1940 to 1451.
+
+**Prevention.** `tests/ui/Routing.test.js` states the new rule, checks the inputs all appear
+the moment an output is picked, and checks that a plugin with inputs and no outputs is not
+reported as having no connectable ports, which counting the drawn buttons would have said.
+Picking an output also rebuilds the rack, so the port buttons were given stable ids and
+`src/ui/Focus.js` now keeps the keyboard on the button that was just pressed. Measured in
+Chrome: focus stays on the output across both the reveal and the cancel.
+
 ## 2026-09-19 Two faults a DOM without layout cannot have
 
 **What happened.** The generated panel's sliders became rotary knobs, to fit a 42 control

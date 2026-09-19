@@ -62,6 +62,9 @@
 /* Ports and connections. A connection list rather than a node canvas: a
      drag between two points is hard to operate from a keyboard, and hit
      testing a graph at phone width is a fight the layout loses. */
+  /* :empty, because the bar draws nothing at rest for a plugin with no
+     outputs and an empty box with padding is a gap nobody asked for. */
+  .ports:empty { display:none; }
   .ports { display:flex; flex-wrap:wrap; gap:6px; padding:8px 14px;
            border-bottom:1px solid var(--line); }
   .port { min-height:32px; padding:5px 10px; font-size:12px; cursor:pointer;

@@ -1,7 +1,7 @@
 // tests/ui/Keyboard.test.js
 import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
-import { createKeyboard, noteName, noteOn, noteOff } from '../../src/ui/Keyboard.js'
+import { createKeyboard, noteName, noteOn, noteOff, playable } from '../../src/ui/Keyboard.js'
 
 let document
 beforeEach(() => { ({ document } = parseHTML('<!doctype html><body></body>')) })
@@ -16,6 +16,60 @@ const pointer = (element, type) => {
   const Event = element.ownerDocument.defaultView.Event
   element.dispatchEvent(new Event(type))
 }
+
+describe('which plugins get a keyboard', () => {
+  // Walked from plugins/ rather than listed here, so a plugin comes into
+  // scope by existing. A list in a test that names the plugins goes stale the
+  // day one is added, and the failure looks like the rule being wrong.
+  const walk = async () => {
+    const { readdirSync, readFileSync, existsSync } = await import('node:fs')
+    const { resolve, join } = await import('node:path')
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const root = resolve(import.meta.dirname, '../..')
+    const found = []
+    for (const entry of readdirSync(join(root, 'plugins'), { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const file = join(root, 'plugins', entry.name, 'profile.ttl')
+      if (!existsSync(file)) continue
+      found.push({
+        name: entry.name,
+        profile: readProfile(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
+      })
+    }
+    return found
+  }
+
+  it('gives one to what a person plays and to nothing else', async () => {
+    // BassGen is why this exists. It accepts MIDI so that `follow` can take a
+    // root note from whatever is playing, it produces MIDI and no audio, and
+    // it was given two octaves of silent keys.
+    const plugins = await walk()
+    expect(plugins.length).toBeGreaterThan(0)
+    const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
+    const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
+    expect(got).toEqual(['8b8', 'pulse'])
+    expect(not).toEqual(['bassgen', 'cascade'])
+  })
+
+  it('asks whether it makes a sound, not only whether it takes a note', async () => {
+    // The two conditions, separated, so a change that dropped either half
+    // fails here with a reason rather than with a list.
+    for (const { name, profile } of await walk()) {
+      const takesNotes = profile.accepts.some(s => s.includes('Midi'))
+      const makesSound = profile.audioOutputs > 0
+      expect(playable(profile), name).toBe(takesNotes && makesSound)
+    }
+  })
+
+  it('refuses a profile it cannot read rather than guessing', () => {
+    expect(playable(null)).toBe(false)
+    expect(playable({})).toBe(false)
+    expect(playable({ accepts: ['http://purl.org/stuff/transmissions/Midi'] })).toBe(false)
+    expect(playable({ audioOutputs: 2, accepts: [] })).toBe(false)
+    expect(playable({ audioOutputs: 2, accepts: ['http://purl.org/stuff/transmissions/Midi'] })).toBe(true)
+  })
+})
 
 describe('noteName', () => {
   it('names middle C and the A above it as a musician would', () => {

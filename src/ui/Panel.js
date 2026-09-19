@@ -103,12 +103,11 @@ export function createPanel (document, profile, onChange) {
     root.classList.add('is-foreign')
   }
 
-  if (profile.comment) {
-    const description = document.createElement('p')
-    description.className = 'description'
-    description.textContent = profile.comment
-    root.append(description)
-  }
+  // No description. rdfs:comment is three lines of prose above the controls,
+  // it is the same three lines every time the plugin is loaded, and the
+  // browser and the catalogue both already show it where someone is choosing
+  // a plugin rather than playing one. Screen area is the scarce thing in a
+  // rack.
 
   const setters = new Map()
 

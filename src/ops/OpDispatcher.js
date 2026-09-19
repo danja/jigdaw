@@ -13,6 +13,7 @@
 // reaches the audio graph at all, and the graph that is playing is always one
 // the model describes.
 import { Project, RevisionConflict, ChangeError } from '../model/Project.js'
+import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi } from '../engine/EventRouter.js'
 import { Transport } from '../engine/Transport.js'
@@ -112,6 +113,19 @@ export class OpDispatcher {
    * is why this is the only way in.
    */
   apply (changes, { expectedRevision, dryRun = false } = {}) {
+    // Does every end of every new edge name a port that is there.
+    //
+    // The model checks the shape of an endpoint and cannot check more: it has
+    // no profiles, deliberately, because a project is loadable before its
+    // plugins are. The engine has the profiles and finds out too late, by
+    // throwing IndexSizeError out of AudioNode.connect in the middle of
+    // rebuilding the links, after the change was committed. So the check
+    // belongs here, which is the one layer holding both.
+    const unroutable = this.#unroutable(changes)
+    if (unroutable) {
+      return { ok: false, kind: 'change', revision: this.#project.revision, message: unroutable }
+    }
+
     try {
       // Validate the changes, without committing, so a bad change is reported
       // before anything is compiled.
@@ -144,6 +158,21 @@ export class OpDispatcher {
     this.#rebuildLinks(compiled)
     this.#emit({ type: 'changed', revision: result.revision, results: result.results, compiled })
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled }
+  }
+
+  /** The first end of a new connection that names a port its node has not got. */
+  #unroutable (changes) {
+    for (const change of changes ?? []) {
+      if (change?.op !== 'addConnection') continue
+      for (const direction of ['from', 'to']) {
+        const endpoint = change[direction]
+        if (!endpoint?.node) continue
+        const found = findPort(
+          this.engineNode(endpoint.node)?.profile, endpoint, direction, change.signalKind)
+        if (!found.ok) return found.message
+      }
+    }
+    return null
   }
 
   #failure (error) {

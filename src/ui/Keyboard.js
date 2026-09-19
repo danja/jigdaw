@@ -31,6 +31,28 @@ export function octavesForWidth (width, { max = 2, minKeyWidth = MIN_KEY_WIDTH }
   return 1
 }
 
+/**
+ * Whether a plugin is one a person plays.
+ *
+ * Accepting MIDI is not enough, which is what this used to be. BassGen
+ * accepts MIDI to be steered by it: `follow` takes the root note from
+ * whatever is playing, and the plugin itself produces MIDI and no audio. It
+ * was given two octaves of keys that made no sound, above a panel for a thing
+ * the transport drives.
+ *
+ * So the question is whether the plugin turns what you play into something
+ * you hear, and `jig:audioOutputs` is the structural fact that answers it. A
+ * role would answer it too and less reliably: `trn:Instrument` is a claim an
+ * author makes and an output count is a number a host already has to trust.
+ *
+ * Steering BassGen from a keyboard still works. The keys come from whatever
+ * is wired into its MIDI input, which is where a MIDI input's notes should
+ * come from.
+ */
+export const playable = profile =>
+  (profile?.audioOutputs ?? 0) > 0 &&
+  (profile?.accepts ?? []).some(signal => typeof signal === 'string' && signal.includes('Midi'))
+
 /** Note on and note off, as the three bytes a MIDI source sends. */
 export const noteOn = (note, velocity = 100) => Uint8Array.from([0x90, note, velocity])
 export const noteOff = note => Uint8Array.from([0x80, note, 0])

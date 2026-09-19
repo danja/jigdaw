@@ -212,7 +212,12 @@ suite('a graph of real plugins', () => {
 
     const result = dispatcher.apply([
       edge(src.nodeId, slow.nodeId), edge(src.nodeId, fast.nodeId),
-      edge(slow.nodeId, mix.nodeId), edge(fast.nodeId, mix.nodeId, 1)
+      // Both paths into input 0. Cascade has one audio input, and Web Audio
+      // sums what arrives at the same one, which is what a mixer is. This
+      // used to say index 1, which Cascade has not got: the dispatcher now
+      // refuses that, and the real engine would have thrown IndexSizeError
+      // out of connect() had the fake context been able to.
+      edge(slow.nodeId, mix.nodeId), edge(fast.nodeId, mix.nodeId, 0)
     ])
     expect(result.ok).toBe(true)
 
@@ -225,7 +230,10 @@ suite('a graph of real plugins', () => {
 
 const PULSE = 'https://strandz.it/jigdaw/plugins/pulse/'
 const pulseDir = resolve(root, 'plugins/pulse')
-const pulseBuilt = existsSync(resolve(pulseDir, 'pulse.wasm'))
+const BASSGEN = 'https://strandz.it/jigdaw/plugins/bassgen/'
+const bassgenDir = resolve(root, 'plugins/bassgen')
+const pulseBuilt = existsSync(resolve(pulseDir, 'pulse.wasm')) &&
+  existsSync(resolve(bassgenDir, 'bassgen.wasm'))
 const midiSuite = pulseBuilt ? describe : describe.skip
 
 midiSuite('MIDI into a real instrument', () => {
@@ -233,13 +241,18 @@ midiSuite('MIDI into a real instrument', () => {
   beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
 
   const loaderFor = () => new PluginLoader({
-    fetch: directoryFetch({ [PULSE]: pulseDir, [CANONICAL]: pluginDir }),
+    fetch: directoryFetch({ [PULSE]: pulseDir, [BASSGEN]: bassgenDir, [CANONICAL]: pluginDir }),
     parse: parseText,
     validator,
     capabilities: detectCapabilities({}),
-    processorUrl: (bytes, url) =>
-      pathToFileURL(resolve(url.includes('pulse') ? pulseDir : pluginDir,
-        url.includes('pulse') ? 'pulse-processor.js' : 'cascade-processor.js')).href
+    processorUrl: (bytes, url) => {
+      const [dir, file] = url.includes('pulse')
+        ? [pulseDir, 'pulse-processor.js']
+        : url.includes('bassgen')
+          ? [bassgenDir, 'bassgen-processor.js']
+          : [pluginDir, 'cascade-processor.js']
+      return pathToFileURL(resolve(dir, file)).href
+    }
   })
 
   // Message delivery hops through the ports, so let the queue drain on a real
@@ -361,11 +374,18 @@ midiSuite('MIDI into a real instrument', () => {
   it('routes MIDI from one node to another through the host', async () => {
     // A MIDI connection is not an audio edge: the host carries it between two
     // ports, which is why it must never reach connect().
+    //
+    // A generator into an instrument, which is the only shape this has. It
+    // used to be Pulse into Pulse, and Pulse declares trn:produces trn:Audio
+    // and nothing else: it has no MIDI output for an edge to leave by, so
+    // nothing would ever have been delivered along it. The dispatcher refuses
+    // that now, and finding out here is what said so.
     const context = new OfflineContext({ sampleRate: 48000 })
     const engine = new Engine({ context, loader: loaderFor(), AudioWorkletNode: OfflineWorkletNode })
     const dispatcher = new OpDispatcher({ engine })
 
-    const a = await dispatcher.addPlugin(PULSE)
+    const a = await dispatcher.addPlugin(BASSGEN)
+    expect(a.ok, a.message).toBe(true)
     const b = await dispatcher.addPlugin(PULSE)
 
     const result = dispatcher.apply([{
@@ -374,13 +394,32 @@ midiSuite('MIDI into a real instrument', () => {
       to: { node: b.nodeId, portIndex: 0 },
       signalKind: 'http://purl.org/stuff/transmissions/Midi'
     }])
-    expect(result.ok).toBe(true)
+    expect(result.ok, result.message).toBe(true)
 
     // No audio link was made for it.
     // A MIDI edge is not an audio edge and must not reach connect(). The link
     // to the speakers is the instrument's own output and is not this edge.
     expect(engine.links.filter(l => l.toId !== 'output')).toEqual([])
     expect(dispatcher.router.routes).toEqual([{ from: a.entry.id, to: b.entry.id }])
+  })
+
+  it('refuses a MIDI edge out of a plugin that produces no MIDI', async () => {
+    // The refusal the test above used to depend on not existing.
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: loaderFor(), AudioWorkletNode: OfflineWorkletNode })
+    const dispatcher = new OpDispatcher({ engine })
+    const a = await dispatcher.addPlugin(PULSE)
+    const b = await dispatcher.addPlugin(PULSE)
+
+    const refused = dispatcher.apply([{
+      op: 'addConnection',
+      from: { node: a.nodeId, portIndex: 0 },
+      to: { node: b.nodeId, portIndex: 0 },
+      signalKind: 'http://purl.org/stuff/transmissions/Midi'
+    }])
+    expect(refused.ok).toBe(false)
+    expect(refused.message).toMatch(/no MIDI output/)
+    expect(dispatcher.router.routes).toEqual([])
   })
 })
 

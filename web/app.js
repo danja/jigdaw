@@ -14,16 +14,15 @@ import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createStrip } from '../src/ui/Strip.js'
 import { createPortBar, createConnectionList } from '../src/ui/Routing.js'
+import { outputsOf, inputsOf, compatible } from '../src/model/Endpoints.js'
 import { isMidi } from '../src/engine/EventRouter.js'
-import { createKeyboard, octavesForWidth } from '../src/ui/Keyboard.js'
+import { createKeyboard, octavesForWidth, playable } from '../src/ui/Keyboard.js'
 import { preserveFocus } from '../src/ui/Focus.js'
 import { registerTools } from '../src/mcp/adapter.js'
 
 import { writeProject } from '../src/rdf/ProjectWriter.js'
 import { readProject } from '../src/rdf/ProjectReader.js'
 
-const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
-const MIDI = 'http://purl.org/stuff/transmissions/Midi'
 const $ = id => document.getElementById(id)
 
 const log = (message, kind = 'info') => {
@@ -414,8 +413,10 @@ function drawRack () {
       panel.element.querySelector('h3')?.remove()
       element.append(panel.element)
 
-      // An instrument gets a keyboard, so it can be played.
-      if ((profile.accepts ?? []).some(signal => signal.includes('Midi'))) {
+      // An instrument gets a keyboard, so it can be played. Only an
+      // instrument: see playable() for why accepting MIDI is not the same
+      // question.
+      if (playable(profile)) {
         // Fewer octaves on a narrow screen, so the keys stay big enough to hit.
         //
         // The width that matters is the slot's CONTENT box, not the viewport
@@ -562,18 +563,28 @@ async function loadPlugin (input) {
   log(`loaded ${entry.profile.label}`, 'ok')
 
   // Chain after the previous plugin, so loading twice builds a signal path.
+  //
+  // Only where there is a port at each end. This used to chain whatever came
+  // before to whatever came next, so loading a reverb and then an instrument
+  // asked to connect audio into a plugin with no audio input: the dispatcher
+  // now refuses that and says so, and before it did the refusal came out of
+  // Web Audio as an IndexSizeError in the middle of loading and left the slot
+  // half drawn. Not chaining is the ordinary case here rather than a failure,
+  // so it is not logged as one.
   const nodes = d.project.nodes
   const previous = nodes[nodes.length - 2]
   if (previous) {
-    const produces = dispatcher.engineNode(previous.id)?.profile.produces ?? []
-    const kind = produces.some(s => s.includes('Midi')) && !produces.includes(AUDIO) ? MIDI : AUDIO
-    const chained = d.apply([{
-      op: 'addConnection',
-      from: { node: previous.id, portIndex: 0 },
-      to: { node: nodeId, portIndex: 0 },
-      signalKind: kind
-    }])
-    if (!chained.ok) log(chained.message, 'error')
+    const from = outputsOf(dispatcher.engineNode(previous.id)?.profile)[0]
+    const to = inputsOf(entry.profile).find(port => port.portSymbol === undefined)
+    if (from && to && compatible(from, to)) {
+      const chained = d.apply([{
+        op: 'addConnection',
+        from: { node: previous.id, portIndex: from.portIndex },
+        to: { node: nodeId, portIndex: to.portIndex },
+        signalKind: from.kind
+      }])
+      if (!chained.ok) log(chained.message, 'error')
+    }
   }
 
   // Nothing here connects anything to the speakers. The dispatcher links every

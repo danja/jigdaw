@@ -21856,6 +21856,54 @@ var Project = class {
   }
 };
 
+// src/model/Endpoints.js
+var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
+var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
+var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
+function outputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
+  }
+  if ((profile?.produces ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
+  }
+  return found;
+}
+function inputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio in ${i2 + 1}` });
+  }
+  if ((profile?.accepts ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
+  }
+  for (const port of profile?.ports ?? []) {
+    found.push({
+      kind: AUDIO_SIGNAL,
+      portSymbol: port.symbol,
+      name: `${port.name || port.symbol} (modulate)`
+    });
+  }
+  return found;
+}
+function compatible(from, to) {
+  if (!from || !to) return false;
+  if (to.portSymbol !== void 0) return from.kind === AUDIO_SIGNAL;
+  return from.kind === to.kind;
+}
+function findPort(profile, endpoint2, direction, signalKind) {
+  if (!profile) return { ok: true, port: null };
+  const ports = direction === "from" ? outputsOf(profile) : inputsOf(profile);
+  const what = direction === "from" ? "output" : "input";
+  const label = profile.label ?? "the plugin";
+  const port = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? ports.find((p) => p.portSymbol === endpoint2.portSymbol) : ports.find((p) => p.portSymbol === void 0 && p.portIndex === endpoint2.portIndex && p.kind === signalKind);
+  if (port) return { ok: true, port };
+  const named = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? `parameter "${endpoint2.portSymbol}"` : `${signalKind === MIDI_SIGNAL ? "MIDI" : "audio"} ${what} at index ${endpoint2.portIndex}`;
+  const has = ports.length === 0 ? `${label} has nothing to connect ${direction === "from" ? "from" : "to"}.` : `It has: ${ports.map((p) => p.name).join(", ")}.`;
+  return { ok: false, message: `${label} has no ${named}. ${has}` };
+}
+
 // src/compiler/GraphCompiler.js
 var AUDIO = "http://purl.org/stuff/transmissions/Audio";
 var isAudio = (connection) => connection.signalKind === AUDIO;
@@ -22319,6 +22367,10 @@ var OpDispatcher = class {
    * is why this is the only way in.
    */
   apply(changes, { expectedRevision, dryRun = false } = {}) {
+    const unroutable = this.#unroutable(changes);
+    if (unroutable) {
+      return { ok: false, kind: "change", revision: this.#project.revision, message: unroutable };
+    }
     try {
       this.#project.apply(changes, { expectedRevision, dryRun: true });
     } catch (error2) {
@@ -22344,6 +22396,24 @@ var OpDispatcher = class {
     this.#rebuildLinks(compiled);
     this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
+  }
+  /** The first end of a new connection that names a port its node has not got. */
+  #unroutable(changes) {
+    for (const change of changes ?? []) {
+      if (change?.op !== "addConnection") continue;
+      for (const direction of ["from", "to"]) {
+        const endpoint2 = change[direction];
+        if (!endpoint2?.node) continue;
+        const found = findPort(
+          this.engineNode(endpoint2.node)?.profile,
+          endpoint2,
+          direction,
+          change.signalKind
+        );
+        if (!found.ok) return found.message;
+      }
+    }
+    return null;
   }
   #failure(error2) {
     if (error2 instanceof RevisionConflict) {
@@ -22793,12 +22863,6 @@ function createPanel(document2, profile, onChange) {
     heading.append(" ", mark);
     root.classList.add("is-foreign");
   }
-  if (profile.comment) {
-    const description = document2.createElement("p");
-    description.className = "description";
-    description.textContent = profile.comment;
-    root.append(description);
-  }
   const setters = /* @__PURE__ */ new Map();
   const controls = document2.createElement("div");
   controls.className = "controls";
@@ -23001,41 +23065,6 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
 }
 
 // src/ui/Routing.js
-var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
-var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
-var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
-function outputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
-  }
-  if ((profile?.produces ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
-  }
-  return found;
-}
-function inputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio in ${i2 + 1}` });
-  }
-  if ((profile?.accepts ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
-  }
-  for (const port of profile?.ports ?? []) {
-    found.push({
-      kind: AUDIO_SIGNAL,
-      portSymbol: port.symbol,
-      name: `${port.name || port.symbol} (modulate)`
-    });
-  }
-  return found;
-}
-function compatible(from, to) {
-  if (!from || !to) return false;
-  if (to.portSymbol !== void 0) return from.kind === AUDIO_SIGNAL;
-  return from.kind === to.kind;
-}
 function createPortBar(document2, { node, profile, pending: pending2, onPick, onCancel }) {
   const element = document2.createElement("div");
   element.className = "ports";
@@ -23046,6 +23075,8 @@ function createPortBar(document2, { node, profile, pending: pending2, onPick, on
     button.type = "button";
     button.className = `port port-${direction}`;
     button.textContent = port.name;
+    const key = port.portSymbol ?? `p${port.portIndex}`;
+    button.id = `${node.id}-${direction}-${key}`.replace(/[^\w-]/g, "_");
     const isPending = direction === "out" && pending2 && pending2.node === node.id && pending2.portIndex === port.portIndex && pending2.kind === port.kind;
     if (direction === "out") {
       button.setAttribute("aria-pressed", String(Boolean(isPending)));
@@ -23073,9 +23104,11 @@ function createPortBar(document2, { node, profile, pending: pending2, onPick, on
     }
     element.append(button);
   };
-  for (const port of outputsOf(profile)) add(port, "out");
-  for (const port of inputsOf(profile)) add(port, "in");
-  if (element.children.length === 0) {
+  const outputs = outputsOf(profile);
+  const inputs = inputsOf(profile);
+  for (const port of outputs) add(port, "out");
+  if (pending2) for (const port of inputs) add(port, "in");
+  if (outputs.length === 0 && inputs.length === 0) {
     const none = document2.createElement("span");
     none.className = "port-none";
     none.textContent = "No connectable ports";
@@ -23131,6 +23164,7 @@ function octavesForWidth(width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
   }
   return 1;
 }
+var playable = (profile) => (profile?.audioOutputs ?? 0) > 0 && (profile?.accepts ?? []).some((signal) => typeof signal === "string" && signal.includes("Midi"));
 var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
 var noteOff = (note) => Uint8Array.from([128, note, 0]);
 function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
@@ -23855,8 +23889,6 @@ function readProject(dataset2) {
 }
 
 // web/app.js
-var AUDIO2 = "http://purl.org/stuff/transmissions/Audio";
-var MIDI = "http://purl.org/stuff/transmissions/Midi";
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
   const line = document.createElement("div");
@@ -24166,7 +24198,7 @@ function drawRack() {
       }
       panel.element.querySelector("h3")?.remove();
       element.append(panel.element);
-      if ((profile.accepts ?? []).some((signal) => signal.includes("Midi"))) {
+      if (playable(profile)) {
         const style = getComputedStyle(element);
         const available = element.clientWidth ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : document.body.clientWidth;
         const keyboard = createKeyboard(document, {
@@ -24268,15 +24300,17 @@ async function loadPlugin(input) {
   const nodes = d.project.nodes;
   const previous = nodes[nodes.length - 2];
   if (previous) {
-    const produces = dispatcher.engineNode(previous.id)?.profile.produces ?? [];
-    const kind = produces.some((s) => s.includes("Midi")) && !produces.includes(AUDIO2) ? MIDI : AUDIO2;
-    const chained = d.apply([{
-      op: "addConnection",
-      from: { node: previous.id, portIndex: 0 },
-      to: { node: nodeId, portIndex: 0 },
-      signalKind: kind
-    }]);
-    if (!chained.ok) log(chained.message, "error");
+    const from = outputsOf(dispatcher.engineNode(previous.id)?.profile)[0];
+    const to = inputsOf(entry.profile).find((port) => port.portSymbol === void 0);
+    if (from && to && compatible(from, to)) {
+      const chained = d.apply([{
+        op: "addConnection",
+        from: { node: previous.id, portIndex: from.portIndex },
+        to: { node: nodeId, portIndex: to.portIndex },
+        signalKind: from.kind
+      }]);
+      if (!chained.ok) log(chained.message, "error");
+    }
   }
   drawRack();
   window.__jigdaw = { dispatcher: d, engine };

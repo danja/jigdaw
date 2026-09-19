@@ -27,7 +27,20 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
         iri,
         // numberOfOutputs is what decides whether a sink reaches the speakers.
         node: { numberOfOutputs: outputs, parameters: new Map([['mix', {}]]) },
-        profile: { label: 'Cascade', ports: [{ symbol: 'mix', minimum: 0, maximum: 1 }] },
+        // The port counts, because the dispatcher now refuses an edge to a
+        // port that is not there. They were missing and every test here
+        // connected audio through a plugin that declared none, which is the
+        // graph that threw IndexSizeError out of the real engine.
+        profile: {
+          label: 'Cascade',
+          // Two, because the suite builds a mixer: one test joins two paths
+          // into index 0 and index 1 of the same node.
+          audioInputs: 2,
+          audioOutputs: outputs,
+          accepts: [],
+          produces: [],
+          ports: [{ symbol: 'mix', minimum: 0, maximum: 1 }]
+        },
         ready: { latencyFrames: latency }
       }
       entries.set(id, entry)
@@ -346,6 +359,43 @@ describe('rebuilding the audio links', () => {
     ])
     expect(result.ok, result.message).toBe(true)
     expect(between(engine).map(l => l.toParameter)).toEqual([null, 'mix'])
+  })
+
+  it('refuses an edge to a port the node has not got, rather than throwing later', async () => {
+    // The model checks the shape of an endpoint and has no profiles to check
+    // it against. The engine has them and finds out by throwing IndexSizeError
+    // out of AudioNode.connect while rebuilding the links, after the change
+    // is committed, which escapes whatever was applying it and leaves the
+    // interface half drawn. Loading a reverb and then an instrument was
+    // enough: the application chains each plugin to the one before it, and an
+    // instrument has no audio input.
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const a = (await d.addPlugin(IRI)).nodeId
+    const b = (await d.addPlugin(IRI)).nodeId
+
+    const tooHigh = d.apply([edge(a, b, { to: { node: b, portIndex: 9 } })])
+    expect(tooHigh.ok).toBe(false)
+    expect(tooHigh.message).toMatch(/no audio input at index 9/)
+    // Nothing was committed, and nothing reached the engine.
+    expect(d.project.connections).toHaveLength(0)
+    expect(between(engine)).toHaveLength(0)
+
+    const noSuchParameter = d.apply([edge(a, b, { to: { node: b, portSymbol: 'nope' } })])
+    expect(noSuchParameter.ok).toBe(false)
+    expect(noSuchParameter.message).toMatch(/no parameter "nope"/)
+
+    // And the edge that is there is still allowed.
+    expect(d.apply([edge(a, b)]).ok).toBe(true)
+  })
+
+  it('says what the node does have, so the message is actionable', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const a = (await d.addPlugin(IRI)).nodeId
+    const b = (await d.addPlugin(IRI)).nodeId
+    const refused = d.apply([edge(a, b, { to: { node: b, portIndex: 9 } })])
+    expect(refused.message).toMatch(/It has: Audio in 1, Audio in 2, mix \(modulate\)\./)
   })
 
   it('applies compensation as a delay on the fast path', async () => {

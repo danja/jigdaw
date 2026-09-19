@@ -97,11 +97,32 @@ describe('the port bar', () => {
     expect(element.getAttribute('aria-label')).toBe('Cascade connections')
   })
 
-  it('disables every input until an output is chosen, and says why', () => {
+  it('shows only the outputs until an output is chosen', () => {
+    // An input cannot be pressed before an output has been picked, so at rest
+    // they are a row of dead buttons. On the 42 parameter instrument that was
+    // 44 of them, and the largest thing on the panel.
     const element = bar(effect)
-    const input = element.querySelector('.port-in')
-    expect(input.disabled).toBe(true)
-    expect(input.getAttribute('aria-label')).toMatch(/Choose an output first/)
+    expect(element.querySelectorAll('.port-in')).toHaveLength(0)
+    expect(element.querySelectorAll('.port-out').length).toBeGreaterThan(0)
+  })
+
+  it('shows every input the moment one is chosen, and says why each is or is not usable', () => {
+    const element = bar(effect, { node: 'other', kind: AUDIO, portIndex: 0 })
+    const inputs = [...element.querySelectorAll('.port-in')]
+    expect(inputs.length).toBe(inputsOf(effect).length)
+    expect(inputs.length).toBeGreaterThan(0)
+    for (const input of inputs) {
+      expect(input.getAttribute('aria-label')).toMatch(/Connect to|cannot take/)
+    }
+  })
+
+  it('still says so when a plugin has inputs and nothing to connect them from', () => {
+    // Drawn from what the plugin has, not from what is on screen: a plugin
+    // with inputs and no outputs draws nothing at rest and is not portless.
+    const sink = { label: 'Sink', audioInputs: 2, audioOutputs: 0, accepts: [], produces: [], ports: [] }
+    const element = bar(sink)
+    expect(element.querySelector('.port-none')).toBeNull()
+    expect(element.children).toHaveLength(0)
   })
 
   it('enables only the inputs that can take the chosen output', () => {
@@ -134,6 +155,27 @@ describe('the port bar', () => {
     const element = bar(effect, null, { onPick: (from, to) => picked.push({ from, to }) })
     element.querySelector('.port-out').click()
     expect(picked[0].from).toEqual({ node: 'n1', kind: AUDIO, portIndex: 0 })
+  })
+
+  it('gives every button a stable id, so the keyboard survives the redraw', () => {
+    // Picking an output rebuilds the rack, which is where the inputs appear.
+    // Without an id, src/ui/Focus.js cannot put the focus back and a keyboard
+    // user is dropped on the body at the moment they need the next button.
+    const first = bar(effect)
+    const again = bar(effect)
+    const ids = [...first.querySelectorAll('.port')].map(b => b.id)
+    expect(ids.length).toBeGreaterThan(0)
+    expect(new Set(ids).size).toBe(ids.length)
+    for (const id of ids) expect(id).toMatch(/^[A-Za-z][\w-]*$/)
+    // The same button has the same id next time it is drawn.
+    expect([...again.querySelectorAll('.port')].map(b => b.id)).toEqual(ids)
+  })
+
+  it('keeps an output id when the inputs appear beside it', () => {
+    const resting = [...bar(effect).querySelectorAll('.port-out')].map(b => b.id)
+    const picking = [...bar(effect, { node: 'n1', kind: AUDIO, portIndex: 0 })
+      .querySelectorAll('.port-out')].map(b => b.id)
+    expect(picking).toEqual(resting)
   })
 
   it('says so when a plugin has nothing to connect', () => {

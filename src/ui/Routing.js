@@ -16,57 +16,12 @@
 // an input is two ordinary buttons, which a keyboard, a screen reader and a
 // thumb all already know how to use.
 
-const MIDI_SIGNAL = 'http://purl.org/stuff/transmissions/Midi'
-const AUDIO_SIGNAL = 'http://purl.org/stuff/transmissions/Audio'
-
-const isMidiSignal = signal => typeof signal === 'string' && signal.includes('Midi')
-
-/** What a plugin can be connected from, read from its profile. */
-export function outputsOf (profile) {
-  const found = []
-  for (let i = 0; i < (profile?.audioOutputs ?? 0); i++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i, name: `Audio out ${i + 1}` })
-  }
-  if ((profile?.produces ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: 'MIDI out' })
-  }
-  return found
-}
-
-/**
- * What a plugin can be connected to.
- *
- * Parameters are targets as well as ports: an endpoint carries either a
- * jig:portIndex or a jig:portSymbol, and the symbol form is modulation. It is
- * listed here because it is now honoured, having been expressible and
- * undelivered for as long as the format has existed.
- */
-export function inputsOf (profile) {
-  const found = []
-  for (let i = 0; i < (profile?.audioInputs ?? 0); i++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i, name: `Audio in ${i + 1}` })
-  }
-  if ((profile?.accepts ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: 'MIDI in' })
-  }
-  for (const port of profile?.ports ?? []) {
-    found.push({
-      kind: AUDIO_SIGNAL,
-      portSymbol: port.symbol,
-      name: `${port.name || port.symbol} (modulate)`
-    })
-  }
-  return found
-}
-
-/** Whether two ends can be joined, so a refusal is visible before it is tried. */
-export function compatible (from, to) {
-  if (!from || !to) return false
-  // A modulation target takes a signal, not a message: a MIDI stream cannot
-  // drive an AudioParam, and connecting it would be connecting nothing.
-  if (to.portSymbol !== undefined) return from.kind === AUDIO_SIGNAL
-  return from.kind === to.kind
-}
+// The ports themselves are src/model/Endpoints.js, because the dispatcher has
+// to answer the same question when it accepts a connection and answering it
+// twice is how the interface comes to offer an edge the model refuses. Re-
+// exported here so nothing that draws a port bar has to know that.
+export { outputsOf, inputsOf, compatible } from '../model/Endpoints.js'
+import { outputsOf, inputsOf, compatible, isMidiSignal } from '../model/Endpoints.js'
 
 /**
  * The ports of one node, as buttons.
@@ -87,6 +42,13 @@ export function createPortBar (document, { node, profile, pending, onPick, onCan
     button.type = 'button'
     button.className = `port port-${direction}`
     button.textContent = port.name
+    // A stable id, so src/ui/Focus.js can put the keyboard back on the same
+    // button after the rack is rebuilt. Picking an output rebuilds it, and
+    // that is the moment the inputs appear: a keyboard user who lost the
+    // focus there would be dropped on the body at the exact point they need
+    // to move on to the next button.
+    const key = port.portSymbol ?? `p${port.portIndex}`
+    button.id = `${node.id}-${direction}-${key}`.replace(/[^\w-]/g, '_')
 
     const isPending = direction === 'out' && pending &&
       pending.node === node.id && pending.portIndex === port.portIndex &&
@@ -124,10 +86,29 @@ export function createPortBar (document, { node, profile, pending, onPick, onCan
     element.append(button)
   }
 
-  for (const port of outputsOf(profile)) add(port, 'out')
-  for (const port of inputsOf(profile)) add(port, 'in')
+  const outputs = outputsOf(profile)
+  const inputs = inputsOf(profile)
 
-  if (element.children.length === 0) {
+  for (const port of outputs) add(port, 'out')
+
+  // Inputs only while a connection is being made.
+  //
+  // Every input is disabled until an output has been chosen, so at rest they
+  // are a row of buttons that cannot be pressed. That is cheap on a reverb
+  // with two of them and not on an instrument with forty two parameters,
+  // where 44 dead buttons sat between the mixer and the controls and were the
+  // largest thing on the panel. They appear at the moment they can be used,
+  // which is also the moment a person is looking for them.
+  //
+  // Disabled rather than hidden still holds inside a gesture: once an output
+  // is chosen, every input of every node is drawn and the incompatible ones
+  // are disabled and say so, so the shape of what is possible does not change
+  // under the pointer while the pointer is moving.
+  if (pending) for (const port of inputs) add(port, 'in')
+
+  // From what the plugin has, not from what is drawn. A plugin with inputs
+  // and no outputs draws nothing at rest and is not portless.
+  if (outputs.length === 0 && inputs.length === 0) {
     const none = document.createElement('span')
     none.className = 'port-none'
     none.textContent = 'No connectable ports'
