@@ -5,25 +5,51 @@ complete. Review periodically.
 
 ## From the inbox
 
-- [ ] **Read every document against the documentation rules, 2026-09-19.** The rules in
-      `AGENTS.md` now say plain technical English, no em dashes, no novel jargon, no large
-      language model cliches, and a structure that can be read in pieces. Only the em dash is
-      checked by anything (`tests/docs/conventions.test.js`), because the rest cannot be
-      checked mechanically without producing false positives on prose that is doing its job.
+- [x] **Read every document against the documentation rules, 2026-09-19.** Normative documents
+      first, per the item's own instruction: `host-plugin-contract.md`, `plugin-profiles.md`,
+      `messaging.md`, `latency.md`, `project-format.md`, `webmcp.md`, `namespace.md`,
+      `module-abi.md`, `plugin-bundles.md`, `architecture.md`. Then `README.md`,
+      `README.agents.md`, `HUMANS.md`, the two plugin READMEs (`8b8`, `_jsfx-runtime`), and the
+      background docs (`plan.md`, `local-references.md`, `deployment.md`, `wam.md`).
+      `first-thoughts.md` was left alone, as the original sketch always is.
 
-      So it is a reading pass over `docs/`, `README.md`, `README.agents.md`, `HUMANS.md` and
-      the plugin READMEs, one document at a time, rewriting rather than annotating. The
-      normative documents come first, because a specification that is hard to read is a
-      specification that gets implemented wrong. Note in `MISTAKES.md` any cliche that turns
-      out to be frequent, so the pattern can be added to the guard if a safe check exists
-      for it.
+      No cliche turned out to be frequent: a grep for the usual list (delve, leverage,
+      seamless, robust, and about thirty more) found nothing anywhere in the set, so there is
+      nothing to promote into `MISTAKES.md` or the guard. Most of the normative documents
+      needed no changes at all; they already do what the rule asks, heading answering its own
+      question in the first sentence.
 
-      Not yet started on the documents that existed before this item was written. `docs/index.md`,
-      `docs/for-hosts.md` and `docs/for-plugin-authors.md`, written 2026-09-19 for the GitHub
-      Pages move below, were written in this style from the start rather than needing it applied
-      after, as was the addendum to `docs/plan.md` from the same day. `README.md` and
-      `README.agents.md` were checked mechanically (no em dashes, none of the obvious cliches)
-      but not given the full reading pass this item asks for.
+      What the pass actually found was a different, more concrete class of defect: sentences
+      that were true when written and are not any more, which is exactly the failure `AGENTS.md`
+      names ("a sentence is a claim, and nothing tests sentences"). Fixed:
+
+      - `plugin-profiles.md` and `README.md` leaked or pointed at things that no longer exist:
+        an absolute `/home/danny/...` filesystem path where every sibling document says
+        `~/github/...`, and two links to `web/docs/plugins.html` and `.../hosts.html`, a
+        directory removed by the GitHub Pages migration (`docs-site` note in this file, above).
+      - `module-abi.md` said "both worked plugins declare" the ABI. Five now do (Cascade, Pulse
+        and Dynamix at version 1; BassGen and the 8-Bit 8asterd at version 2), and its own link
+        to the removed `plugins.html` page needed the same fix as README's.
+      - `namespace.md` pointed at "`HUMANS.md` item 2" for a vocabulary-serving runbook that
+        item no longer is, because the numbering moved when today's earlier HUMANS.md tidy-up
+        closed out the two items that used to sit above it. Removed rather than repointed: the
+        deployment already happened and does not need a runbook entry any more.
+      - `architecture.md` opened with "None of the DAW is implemented," which stopped being
+        true phases ago, and its catalogue and deployment sections described the planned
+        Fuseki-backed store as though it were what runs, when what actually shipped is
+        `LocalCatalogue.js` reading `profile.ttl` files with no store at all and federating
+        plugin-universe's search live. Corrected to say what runs and what is still planned,
+        matching the framing `deployment.md` already had for the same fact.
+      - `deployment.md`'s own "not settled" list still said "the store," predating the decision
+        that there isn't one yet either.
+      - `wam.md` had a literal duplicated `## Testing` heading, and a stray double blank line
+        sat between two paragraphs in `deployment.md`.
+
+      None of this was a style problem the rule set out to catch; all of it was found by
+      reading each document against the current state of the repository rather than against
+      itself. `README.agents.md` got the two remaining mechanical misses (a doubled comma, the
+      same "signal processing is WebAssembly" absolute claim `for-plugin-authors.md` already
+      had softened for Tremolo) and otherwise needed nothing.
 
 - [x] **Foreign plugins work in the application, 2026-09-18.** Contract section 12, end to
       end in Chrome: a Web Audio Module fetched by IRI, classified as foreign, consented to
@@ -66,13 +92,13 @@ complete. Review periodically.
       though the format allows it and the canonical form was built so that a second signature
       cannot invalidate the first.
 
-- [ ] **A published key has nowhere to live.** `bin/keys.js publish` prints the Turtle to serve
-      at a verification method IRI, and `bin/verify.js --online` will dereference it, but
-      nothing in `deploy/` serves one and `strandz.it` has no key published. Until it does,
-      every JigDAW signature is checked against the copy inside the bundle, which proves self
-      consistency and not authorship. Serving one file fixes it; deciding which IRI is in
-      HUMANS.md.
-
+- [x] **A published key has a home, 2026-09-19.** `HUMANS.md` item 2, done by the user:
+      `https://strandz.it/jigdaw/keys/danja#ed25519` is live, `web/keys/danja.ttl` committed
+      and pulled. Measured against the server, not assumed: the IRI answers 200, `text/turtle`,
+      byte for byte the same as the committed file, so `node bin/verify.js <bundle> --online`
+      now has something real to check a signature against rather than only the copy inside the
+      bundle. No plugin has actually been bundled and signed with it yet; that is a separate,
+      smaller step whenever a bundle is wanted.
 
 - [x] **CORS audited, 2026-09-17.** Measured through the real servers, not read from config.
 
@@ -96,23 +122,16 @@ complete. Review periodically.
 
       Two findings, neither ours to fix, both recorded below.
 
-- [ ] **`http://purl.org/stuff/jigdaw/` cannot be dereferenced by a browser.** The namespace is
-      minted on `http:`, and that first hop redirects to `https://purl.org/...` **without**
-      `Access-Control-Allow-Origin`. Every later hop has it and the vocabulary itself answers
-      correctly, so only the opening redirect is the problem. From a page served over `https:`
-      it fails earlier still, as mixed content.
-
-      This does not make the IRI wrong: it is an identifier, and minting on `http:` is the
-      convention the sibling projects follow. It does mean **a browser based consumer must
-      dereference the `https://purl.org/stuff/jigdaw/` form**, which works end to end with CORS
-      all the way. Say so in `docs/namespace.md` and in the published plugin author guide,
-      because an author who follows the advice to dereference will hit this and conclude the
-      vocabulary is broken.
-
-      Re-measured 2026-09-18 and still true: the `http://purl.org/stuff/jigdaw/` hop answers
-      302 with no `Access-Control-Allow-Origin` at all. Every later hop has it, and
-      `https://purl.org/stuff/jigdaw/` works end to end, so the guidance stands: a browser
-      based consumer dereferences the `https:` form.
+- [x] **`http://purl.org/stuff/jigdaw/` cannot be dereferenced by a browser. Said so,
+      2026-09-19.** `docs/namespace.md`'s "Dereferencing it from a browser needs the https
+      form" section states it in full: the measured redirect chain, why the opening hop being
+      mixed-content-and-no-CORS is enough to stop the fetch on its own, and that a browser
+      based consumer MUST use the `https://purl.org/stuff/jigdaw/` form. Checked whether
+      `for-hosts.md` or `for-plugin-authors.md` needed the same note, since that was the
+      original worry (an author following advice to dereference hitting this and concluding the
+      vocabulary is broken): neither tells an author to dereference the namespace IRI at all,
+      only to write `jig:` terms into a profile, so there is no advice there that leads into the
+      trap. `docs/namespace.md` is itself published, on GitHub Pages as of today.
 
 - [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
 
@@ -176,11 +195,11 @@ complete. Review periodically.
       It needed a third file, `src/contrib/Submissions.js`, which its own test found. See the
       worked example in `AGENTS.md`.
 
-- [ ] **Decide whether platforms apply.** `pu:supportedPlatform` was assumed to have a
-      `pu:Web` value. It does not, and a query for the predicate over the public endpoint
-      returns nothing. Either a web platform term is added alongside the format term, or
-      JigDAW says platform is meaningless for a plugin that runs in a browser and relies on
-      the format term alone. The second is probably right.
+- [x] **Platforms decided: meaningless here, 2026-09-19.** The second option: no web platform
+      term was added. `plugin-universe/vocabs/trn-extensions.ttl` carries the reasoning as a
+      comment beside `trn:WebAudio` itself, checked present just now: "`pu:supportedPlatform`
+      does not apply to one... the platform is the browser... and this format term carries what
+      the platform list was carrying." Recorded as `HUMANS.md` item 5 in this repository too.
 
 - [x] **`trn:` has converged on its upstream, 2026-09-18.** The format individuals and the
       deprecations moved from plugin-universe's `trn-extensions.ttl` into

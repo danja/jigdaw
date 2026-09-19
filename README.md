@@ -109,8 +109,8 @@ A plugin that ships no user interface is not degraded. Its panel is generated fr
 [AGENTS.md](AGENTS.md) are load bearing: one accessible generator makes every plugin
 accessible.
 
-[web/docs/plugins.html](web/docs/plugins.html) is the guide, and
-[web/docs/hosts.html](web/docs/hosts.html) is the same for anyone implementing the other side.
+[docs/for-plugin-authors.md](docs/for-plugin-authors.md) is the guide, and
+[docs/for-hosts.md](docs/for-hosts.md) is the same for anyone implementing the other side.
 
 ### Sending one as a file
 

@@ -174,8 +174,6 @@ things `nginx -t` cannot see.
 **A pull is not a deploy.** At the top of this document, because it is the thing most often
 needed and was for a while the thing hardest to find in it.
 
-
-
 **The trailing slash on `proxy_pass`.** `proxy_pass http://127.0.0.1:6011/;` strips the
 `/jigdaw/` prefix, so the application serves at its own root and is identical in development
 and production. Without it every path 404s, and nothing says why.
@@ -193,7 +191,8 @@ curling through a real nginx rather than by reading the configuration.
 
 ## What is not settled
 
-- Whether the store federates with plugin-universe's public endpoint or mirrors it.
+- Whether a future store federates with plugin-universe's public endpoint or mirrors it, once
+  there is a store to build. Search already reaches it with live queries and needs neither.
 - Whether plugin resources are served by `app` or by nginx directly. Directly is faster and
   puts the CORS and media-type rules into nginx, where they are easier to get wrong and
   harder to test.

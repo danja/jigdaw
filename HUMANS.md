@@ -5,59 +5,45 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Turn on GitHub Pages
+## 1. GitHub Pages. Done.
 
-**Everything else is built and waiting on one setting.** `.github/workflows/docs.yml`
-builds the specification from `docs/*.md` and deploys it on every push, but a repository's
-Pages target has to be pointed at Actions before that deploy step has anywhere to go.
+**Turned on 2026-09-19, by you.** Settings → Pages → Source: GitHub Actions, so the deploy
+step `.github/workflows/docs.yml` was already running finally had somewhere to publish to.
+Measured afterwards rather than assumed: `https://danja.github.io/jigdaw/` answers 200, its
+title is "The JigDAW plugin system : JigDAW", and `host-plugin-contract.html` serves as
+`text/html` alongside it.
 
-In the repository on GitHub: **Settings → Pages → Source: GitHub Actions.** No branch or
-folder to pick; the workflow supplies the build. The next push that touches `docs/` (or a
-manual run from the Actions tab) then publishes to `https://danja.github.io/jigdaw/`, which
-`web/index.html`'s Docs link and both READMEs already point at.
+## 2. Signing key. Done.
 
-**Blocks:** nothing else, but the workflow will keep building and discarding its own output
-until this is done.
-
-## 2. Make your signing key
-
-**The IRI is decided, and everything but the key itself is built.**
+**Made and published 2026-09-19, by you**, at the IRI decided in advance:
 
 ```
 https://strandz.it/jigdaw/keys/danja#ed25519
 ```
-
-Three choices in that, each with a reason:
-
-**On `strandz.it`, not the PURL.** The namespace rule says mint under the PURL, and that rule
-is about vocabulary terms, whose identity must outlive any host. A key is the opposite: its
-whole value is that a verifier can fetch it from an origin and compare. `Signature.js` reports
-a signature as the origin signing its own work when the key's origin matches the plugin's, and
-the plugins are at `https://strandz.it/jigdaw/plugins/...`, so a key anywhere else makes every
-one of your own signatures read as a third party vouching. A PURL cannot serve content, only
-redirect, so it could not do this job.
-
-**No file extension.** The IRI is the identity and `.ttl` is a fact about a file.
-`bin/serve.js` now has a `/keys/<name>` route that serves `web/keys/<name>.ttl` as
-`text/turtle` with CORS, so the identity never carries the storage detail.
-
-**A fragment.** One document can then describe several keys, and rotating means adding
-`#ed25519-2027` rather than replacing an IRI that everything already signed with names.
-
-**Needs you**, because a signing identity should be created by the person who owns it and I
-should not generate yours:
 
 ```sh
 node bin/keys.js create https://strandz.it/jigdaw/keys/danja#ed25519
 node bin/keys.js publish ~/.config/jigdaw/keys/ed25519.json > web/keys/danja.ttl
 ```
 
-The first refuses to write anywhere inside a git working tree and lands in
-`~/.config/jigdaw/keys/`. The second writes only the public half. Commit `web/keys/danja.ttl`,
-pull on the server, and `node bin/verify.js <bundle> --online` has something to check against.
+The private half is on your machine, in `~/.config/jigdaw/keys/`, where `bin/keys.js` refused
+to let it land inside the git working tree. Only `web/keys/danja.ttl`, the public half, was
+committed and pulled onto the server. Measured against the live server afterwards: the IRI
+answers 200, `text/turtle`, and matches the committed file byte for byte, so
+`node bin/verify.js <bundle> --online` has something real to check a signature against.
 
-Verified end to end already, against a throwaway key served from this route: a signed bundle
-reports *checked against the key published at that IRI* rather than against its own copy.
+On `strandz.it` rather than the PURL, because a key's whole value is that a verifier can fetch
+it from the origin doing the signing and compare; the namespace rule about minting under the
+PURL is about vocabulary terms, whose identity has to outlive any one host, which is the
+opposite property. No file extension, because `bin/serve.js`'s `/keys/<name>` route serves the
+identity as `text/turtle` regardless of what the file on disk is called. A fragment, so
+rotating the key later is adding `#ed25519-2027` rather than replacing an IRI everything
+already signed with names.
+
+Not done: no plugin has actually been bundled and signed with it yet. `node bin/bundle.js
+plugins/pulse --by https://strandz.it/jigdaw/keys/danja#ed25519 --key
+~/.config/jigdaw/keys/ed25519.json` is the next step, whenever a bundle is wanted; nothing
+blocks it.
 
 ## 3. Confirm which repository owns `trn:`
 
@@ -127,9 +113,7 @@ it is now recorded as a comment in a second repository.
 
 **Blocks:** nothing.
 
-
-
-## 8. Tools that would help
+## 6. Tools that would help
 
 **lld, for the WebAssembly build of `plugins/8b8/`.** Ubuntu's `clang` package ships no
 `wasm-ld`, so `plugins/8b8/build.sh` links through the `rust-lld` that rustup already
@@ -164,4 +148,4 @@ it is invisible until the restart, and the symptom is a new page talking to an o
 
 ---
 
-Measured 2026-09-16. Re-check before acting; all of it drifts.
+Measured 2026-09-19. Re-check before acting; all of it drifts.

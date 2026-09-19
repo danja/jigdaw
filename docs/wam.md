@@ -217,7 +217,6 @@ be consenting to whatever it decides to fetch later. A host should say that plai
 than appear to support it.
 
 ## Testing
-## Testing
 
 `tests/wam/WamModule.test.js` instantiates the package through
 [src/testing/OfflineHost.js](../src/testing/OfflineHost.js), which registers the plugin's real

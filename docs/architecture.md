@@ -1,8 +1,10 @@
 # JigDAW architecture
 
-The specification phase. None of the DAW is implemented. This document says what the pieces
-are and where the boundaries fall, so that the normative
-[host-plugin-contract.md](host-plugin-contract.md) has something to be normative about.
+The specification is complete and normative, and a browser host implements it. This document
+says what the pieces are and where the boundaries fall, so that the normative
+[host-plugin-contract.md](host-plugin-contract.md) has something to be normative about. Where
+a section below describes something not yet built, it says so; everything else describes what
+runs today.
 
 The premise comes from [first-thoughts.md](first-thoughts.md), which is kept as written.
 
@@ -25,7 +27,7 @@ The premise comes from [first-thoughts.md](first-thoughts.md), which is kept as 
  └──────────────────────────────────────────────────────────┘
           │                              │
      plugin IRIs                    catalogue
-     anywhere on the web            SPARQL store
+     anywhere on the web            local today, a SPARQL store planned
 ```
 
 Two boundaries matter and they are not the same boundary.
@@ -73,24 +75,30 @@ are the price of the design and they shape the capability negotiation.
 
 ## The catalogue
 
-A local SPARQL store holds profiles, alongside the DAW, in a compose stack.
+**What runs today has no store.** `src/catalogue/LocalCatalogue.js` indexes the plugins this
+host serves by reading the same `profile.ttl` files it serves them from, in process, with no
+database and nothing to crawl. It searches its own plugins first and, by default, only those:
+a browser listing 756 plugins that none of them can run is a list rather than a browser.
 
-**It should not start empty.** `plugin-universe.com` already runs a public read-only SPARQL
+The rest of the catalogue is one checkbox away, dimmed and labelled, because hiding it
+entirely would misrepresent what exists. `plugin-universe.com` runs a public read-only SPARQL
 endpoint at `sparql.plugin-universe.com/public/query` and a public MCP endpoint at
 `mcp.plugin-universe.com/mcp`, over 756 plugins with `accepts` and `produces` facets, under
-CC0. Federating with it, or mirroring it, is strictly better than building a second
-catalogue of the same things. The figures here were taken from `/health` and should be
-re-measured rather than trusted.
+CC0, and JigDAW's search reaches it through the same query service rather than through a
+second implementation. Those figures were taken from `/health` and should be re-measured
+rather than trusted.
 
 Most of those plugins are native and not loadable here. That is fine and is the point of
 `jig:WebPlugin` being a subclass: the catalogue knows about every plugin, and the host can
 ask which of them it can actually run.
 
-**Named graph per source.** Every triple lives in a graph saying where it came from, with
-`prov:` metadata. Never a shared catch-all graph. Re-crawling a source is a DROP and reload
-of that graph alone. This is plugin-universe's rule and the reason is that a licence and a
-provenance are properties of a source, so one graph per source means one answer per
-question.
+**Not yet built: a local SPARQL store, crawling profiles into it, named graph per source.**
+The reasoning for the shape, when it is built, still holds: every triple in a graph saying
+where it came from, with `prov:` metadata, never a shared catch-all graph, so that
+re-crawling a source is a DROP and reload of that graph alone. This is plugin-universe's rule
+and the reason is that a licence and a provenance are properties of a source, so one graph
+per source means one answer per question. Neither a store nor crawling is needed for search
+to work, which is why search shipped without them.
 
 ## Discovered and curated
 
@@ -132,10 +140,12 @@ hosting does not break IRIs already written into other people's project files.
 
 ## Deployment
 
-Compose: the DAW, a Fuseki store, and nginx terminating TLS. Only nginx is published and
-everything else binds to loopback. Hosting is `strandz.it`, alongside `hyperdata.it` and
-`plugin-universe.com`, and the arrangement follows plugin-universe's because copying one that
-is already running beats inventing a better one that has never been operated.
+**What runs today is one node process under systemd behind nginx**, matching the catalogue
+above having no store yet: there is nothing to put in one. Planned, when there is: a compose
+stack adding a Fuseki store, with only nginx published and everything else bound to loopback.
+Hosting is `strandz.it`, alongside `hyperdata.it` and `plugin-universe.com`, and the
+arrangement follows plugin-universe's because copying one that is already running beats
+inventing a better one that has never been operated.
 
 The detail, including the headers a plugin origin must send and why an nginx `add_header`
 inside a `location` is a trap, is in [deployment.md](deployment.md).
@@ -152,5 +162,6 @@ inside a `location` is a trap, is in [deployment.md](deployment.md).
 
 ## What is not decided
 
-- Whether the local store federates with plugin-universe or mirrors it.
+- Whether a future local store, once built, caches plugin-universe's data or continues
+  federating with live queries the way search already does without one.
 - Clips, regions and an arrangement. The project format describes a patch, not a timeline.

@@ -31,7 +31,7 @@ A profile is written in three vocabularies, and it matters which statement belon
 `trn:PluginProfile`, the role taxonomy, the signal types, and the routing properties
 `trn:accepts`, `trn:produces`, `trn:requires`, `trn:recommendedBefore`,
 `trn:recommendedAfter`, `trn:companion`. Defined in
-`/home/danny/github/transmission/vocabs/profile.ttl` and published at
+`~/github/transmission/vocabs/profile.ttl` and published at
 [plugin-universe.com/ns](https://plugin-universe.com/ns).
 
 **What it takes to run it in a browser.** The JigDAW vocabulary, `jig:`: the WebAssembly
