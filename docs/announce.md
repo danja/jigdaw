@@ -1,7 +1,9 @@
 # JigDAW: a web-native plugin specification
 
-JigDAW is a specification for audio plugins that run natively in a browser. A plugin is
-identified by a single dereferenceable IRI. Fetching it returns a description of what the
+JigDAW is a specification for audio plugins that run natively in a browser but which is also 
+designed to build on the substantial ecosystem of tools and code targeting native/desktop
+DAWs. 
+A plugin is identified by a single dereferenceable IRI. Fetching it returns a description of what the
 plugin is, what it needs from a host, and where its code lives, each resource carrying an
 integrity digest a host verifies before running it. There is no separate installer and no
 registry; publishing a plugin is putting these files somewhere a browser can fetch them.

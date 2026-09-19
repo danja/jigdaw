@@ -3,7 +3,7 @@
 A JigDAW plugin that is the [8b8](https://github.com/danja/8bit8asterd) firmware itself,
 compiled to WebAssembly and driving three emulated AY-3-8910 chips.
 
-The 8b8 is an Arduino Leonardo with three AY-3-8910As on it, made by Semiotic Sounds, with
+The 8b8 is an Arduino Leonardo with three AY-3-8910As on it, made by The Key and Cable Company, with
 firmware descended from
 [dogemicrosystems' dual AY module](https://dogemicrosystems.ca/wiki/Dual_AY-3-8910_MIDI_module).
 Nine voices across the three chips, hardware envelopes, a percussion set on MIDI channel 10,

@@ -1,7 +1,7 @@
 /*
  * The bulk of this firmware comes from: https://dogemicrosystems.ca/wiki/Dual_AY-3-8910_MIDI_module
  * 
- * Firmware Version 2.2 for the 8-Bit 8asterd by Semiotic Sounds
+ * Firmware Version 2.2 for the 8-Bit 8asterd by The Key and Cable Company
  * 
  * Added:
  * Drum Polyphony
