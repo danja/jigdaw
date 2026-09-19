@@ -1,0 +1,12 @@
+# https://strandz.it/jigdaw/keys/danja#ed25519
+#
+# The public half of a JigDAW signing key. Serve this at the IRI above,
+# as text/turtle, with Access-Control-Allow-Origin: * so a browser can
+# read it. Nothing here is secret.
+
+@prefix sec: <https://w3id.org/security#> .
+
+<https://strandz.it/jigdaw/keys/danja#ed25519>
+    a sec:Multikey ;
+    sec:publicKeyMultibase "z6MkrVrFgf54d3kmFokJ7JDzJeMAzxpa8rZm4dvYkmiShLa3" .
+
