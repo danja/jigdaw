@@ -21,6 +21,11 @@ for (const [key, file] of Object.entries(template.resources)) {
   resources[key] = { file, integrity: await digestFor(file) }
 }
 
+// jig:module: optional (vocabs/shapes.ttl warns rather than refuses its
+// absence), for a plugin whose processing is plain JavaScript. Everything
+// below that touches resources.module guards on this the same way.
+const hasModule = Boolean(resources.module)
+
 // jig:asset: any further file beyond the module and the processor, such as
 // the compiled bytecode a converted JSFX plugin's script lives in
 // (bin/jsfx-import.js). Optional and plural, unlike module and processor,
@@ -72,21 +77,23 @@ for (const c of template.prefers ?? []) w(`    jig:prefers ${c} ;`)
 w('')
 for (const [key, value] of Object.entries(template.shape)) w(`    jig:${key} ${value} ;`)
 w('')
-w('    jig:module <#module> ;')
+if (hasModule) w('    jig:module <#module> ;')
 w('    jig:processor <#processor> ;')
 if (assets.length > 0) w(`    jig:asset ${assets.map(a => `<#${a.key}>`).join(' , ')} ;`)
 w('')
 w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} .`)
 w('')
-w('<#module>')
-w('    a jig:Module ;')
-w(`    jig:location <${resources.module.file}> ;`)
-w('    jig:mediaType "application/wasm" ;')
-// A declared ABI is what lets a host without a JavaScript engine load the
-// module directly, skipping the processor. See docs/module-abi.md.
-if (template.abi) w(`    jig:abi ${template.abi} ;`)
-w(`    jig:integrity "${resources.module.integrity}" .`)
-w('')
+if (hasModule) {
+  w('<#module>')
+  w('    a jig:Module ;')
+  w(`    jig:location <${resources.module.file}> ;`)
+  w('    jig:mediaType "application/wasm" ;')
+  // A declared ABI is what lets a host without a JavaScript engine load the
+  // module directly, skipping the processor. See docs/module-abi.md.
+  if (template.abi) w(`    jig:abi ${template.abi} ;`)
+  w(`    jig:integrity "${resources.module.integrity}" .`)
+  w('')
+}
 w('<#processor>')
 w('    a jig:Processor ;')
 w(`    jig:location <${resources.processor.file}> ;`)

@@ -97,9 +97,10 @@ jig:WebPluginShape a sh:NodeShape ;
         sh:minCount 1 ; sh:maxCount 1 ;
         sh:message "A plugin must name exactly one AudioWorklet processor module."
     ] ;
+    sh:property [ sh:path jig:module ; sh:maxCount 1 ] ;
     sh:property [
         sh:path jig:module ;
-        sh:maxCount 1 ;
+        sh:minCount 1 ;
         sh:severity sh:Warning ;
         sh:message "No WebAssembly module declared. Permitted, for a plugin whose processing is plain JavaScript, but unusual enough to be worth confirming."
     ] ;

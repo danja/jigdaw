@@ -1,0 +1,54 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/tremolo/",
+  "label": "Tremolo",
+  "comment": "Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one.",
+  "vendor": "danja",
+  "version": "1.0.0",
+  "registeredName": "tremolo",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "tremolo-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "rate",
+      "name": "Rate",
+      "default": 5,
+      "minimum": 0.1,
+      "maximum": 20,
+      "paramIndex": 0,
+      "unit": "hz"
+    },
+    {
+      "symbol": "depth",
+      "name": "Depth",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 1
+    }
+  ]
+}

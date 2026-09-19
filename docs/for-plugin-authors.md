@@ -1,7 +1,8 @@
 # Building and publishing a plugin
 
-Three files at a URL. A profile saying what it is, a processor that runs on the audio
-thread, and the WebAssembly that does the work.
+Files at a URL. A profile saying what it is, a processor that runs on the audio thread, and
+usually the WebAssembly that does the work: `jig:module` is optional, and section 3 covers
+the plugin simple enough to do without one.
 
 Publishing is putting them somewhere a browser can fetch them. There is no store, no review
 and nobody to ask.
@@ -166,6 +167,15 @@ interpreter for a restricted subset of the EEL2 language REAPER JSFX effects are
 `bin/jsfx-import.js yourplugin.jsfx a-name` parses the effect's sliders and script, compiles
 the script to the bytecode that interpreter runs, and writes the profile around a copy of
 it. See `plugins/_jsfx-runtime/README.md` for what the subset does and does not cover.
+
+**You do not have to have a module at all.** `jig:module` is optional: a plugin simple enough
+that plain JavaScript is the whole implementation declares none, and its processor is
+everything. The same real-time rules apply regardless, because they are Web Audio's rules,
+not WebAssembly's: no allocation in `process()`, and the same init/ready handshake before the
+host connects the node. `plugins/tremolo/` is the worked example, an amplitude modulator with
+no `.wasm` file in its directory at all. `bin/write-profile.js` leaves `jig:module` out of the
+generated profile when `profile.json`'s `resources` names no module, rather than it being
+something you edit into the Turtle by hand.
 
 ## 4. Digests
 

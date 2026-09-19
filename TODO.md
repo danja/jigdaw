@@ -294,6 +294,16 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       a real iframe rather than reasoned about, the same discipline AGENTS.md already asks for
       narrow layouts elsewhere.
 
+- [x] **Announcement draft, 2026-09-19.** From INBOX.md: "check docs/announce.md and draft the
+      sections - I will edit later to humanize." Filled in the outline (introduction and
+      security posture, the Linked Data description, relation to LV2/plugin-universe/WAM/JSFX/
+      VST3, a section each for host and plugin developers, and what is implemented) against the
+      normative documents and `README.md`'s own status section, in the same plain-English house
+      style as the rest of `docs/`. Deliberately not linked from `docs/index.md` or anywhere
+      else: it is a draft for the user to edit, not yet a published page, and `tests/docs/
+      conventions.test.js`'s orphan check already treats it as referenced because INBOX.md
+      names it by filename.
+
 ## JSFX plugins
 
 - [x] **An adapter converting REAPER JSFX effects into native JigDAW plugins,
@@ -335,6 +345,85 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       compilation of `&&`/`||`, and asset delivery and verification in `Instantiate.js`.
       Verified live in Chrome: all three converted plugins loaded, auto-chained, played real
       audio, and a slider moved during playback with the console clean.
+
+## The reference host
+
+- [x] **A minimal, standalone host, 2026-09-19.** Asked in a session on whether an SDK plus a
+      minimal cross-platform host existed for developers to build against: the SDK-shaped
+      pieces did (`PluginLoader.js`, the bundler, the signer, the JSFX importer), a real
+      headless host did not, and the closest thing, `src/testing/OfflineHost.js`, was filed
+      under `src/testing/` and every existing use of it rendered one node in isolation, never a
+      chain. This is that promoted: `src/host/ReferenceHost.js`'s `renderChain()` loads plugins
+      by IRI (or a local directory via `roots`, for one not yet published) and renders them, in
+      Node, no browser; `bin/host.js` is its CLI, writing a WAV file.
+
+      Deliberately a **chain, not a graph**: each plugin's output feeds the next, no branching,
+      no mixing. `OfflineContext`'s fake gain and delay nodes only record connections for a
+      test to inspect; they do not actually mix audio during a render. Building something that
+      does would duplicate `src/compiler/GraphCompiler.js`'s topological order and latency
+      compensation in a second implementation that can drift from the one the app itself uses,
+      exactly what AGENTS.md warns against. It is also **not built on `OpDispatcher`/`Engine`**:
+      it posts MIDI to a plugin's `port` directly, `{ type: 'events', events }` per
+      `messaging.md` section 6, the same shape a host written from scratch would use, which is
+      more useful as a reference than routing through this app's own convenience layer.
+
+      A real timing bug surfaced and got fixed while building it: `OfflinePort` delivers a
+      posted message via `queueMicrotask`, and `render()` runs synchronously right after
+      posting a note, so without a real turn of the event loop between the two the note was
+      still in flight and landed one quantum late. Mutation tested by removing the
+      `await new Promise(resolve => setTimeout(resolve, 0))` between them and confirming the
+      "delivered at the frame it is due" test catches it.
+
+      `src/host/Wav.js` is a hand-rolled WAV encoder (44 byte RIFF header, 16 bit PCM) rather
+      than a dependency for something this small to get right directly. `tests/host/Wav.test.js`
+      checks header fields and interleaving against a known buffer; `tests/host/
+      ReferenceHost.test.js` runs Cascade (fed a single-frame impulse, since a chain starting
+      with an effect has nothing feeding it otherwise, the same reason `web/app.js`'s own
+      `makeSource()` exists) and Pulse (given a MIDI note) for real, plus a Pulse-into-Cascade
+      chain proving one plugin's output actually reaches the next. Verified live: rendered
+      against a local plugin directory, against a two-plugin chain with a held note, and against
+      the real `strandz.it` deployment over the network, each producing a real, playable WAV.
+
+      Explicitly not attempted here, each a separate, larger decision: real-time playback
+      (needs a native audio binding this repository has never depended on); a packaged,
+      installable SDK (`npm install`, versioning); a non-Node (compiled native) reference host.
+
+## A pure-JavaScript plugin
+
+- [x] **Tremolo, 2026-09-19.** From INBOX.md: "Can we have a pure JS example, that doesn't
+      involve WASM?" `jig:module` has been optional since phase 0
+      (`vocabs/shapes.ttl`'s `jig:WebPluginShape` only warns about its absence), but every one
+      of the 8 existing plugins declared one anyway, so nothing had ever exercised that path.
+      `plugins/tremolo/` is an amplitude modulator, `rate` and `depth` into a sine LFO, whose
+      processor is the entire plugin: no `.wasm` file in its directory, no compile step in its
+      `build.sh`. The same real-time rules apply with no relaxation, because they are Web
+      Audio's rules rather than WebAssembly's: `process()` still allocates nothing, and
+      `src/host/Instantiate.js` still runs the full init/ready handshake before the host
+      connects the node, posting `module: null` rather than skipping the message.
+
+      `bin/write-profile.js` emitted `jig:module <#module> ;` unconditionally, so a profile
+      with no module resource would have written a triple pointing at nothing. Made
+      conditional on `template.resources.module` being present, the same shape as how
+      `jig:asset` is already optional there.
+
+      Found and fixed along the way: `jig:module`'s SHACL constraint was `sh:maxCount 1`
+      at warning severity, which a profile with **zero** modules satisfies trivially, so the
+      warning ("No WebAssembly module declared... worth confirming") could never fire for the
+      absence it names, and nothing had ever tested it. Split into a structural `sh:maxCount 1`
+      and a separate `sh:minCount 1` at warning severity so the absence case actually fires;
+      `tests/validate/ShapeValidator.test.js` now asserts the warning appears for Tremolo's
+      profile and not for Cascade's. Mutation tested: reverted the fix, confirmed the new test
+      fails, restored it.
+
+      `tests/host/tremolo.test.js` loads it through the real `PluginLoader`/`Engine` path
+      (`profile.module` is `null`, not a stub), confirms depth 0 passes a signal through
+      unchanged (proving the audio path is connected rather than faked), and confirms depth 1
+      modulates a steady tone's envelope down toward silence and back without ever inverting
+      it. Mutation tested: replaced the gain calculation with a constant 1, confirmed the
+      envelope test fails, restored it. Verified live in the browser (panel generates
+      correctly from `lv2:port`, plays with no console errors) and via
+      `bin/host.js --root ...=plugins/tremolo`, whose reported peak (0.750, at the default
+      depth 0.5 and an impulse at LFO phase 0) matches the DSP by hand.
 
 ## The native adapter
 

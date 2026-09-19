@@ -142,6 +142,24 @@ This host is one, and it is small enough to read.
 performs the sequence above with every dependency injected, so the same code runs against a
 real `AudioContext` and against an offline stand-in in the tests.
 
+**A minimal one you can run.**
+[`bin/host.js`](https://github.com/danja/jigdaw/blob/main/bin/host.js) is a standalone host in
+under a hundred lines: load a chain of plugins by IRI, in Node, no browser, and render real
+audio to a WAV file. It talks to `PluginLoader` and a plugin's own `port` directly, posting
+MIDI as `{ type: 'events', events }` per [messaging.md](messaging.md) section 6, the same way
+a host written from scratch would, rather than through this project's own DAW-specific
+convenience layer.
+
+```sh
+node bin/host.js https://strandz.it/jigdaw/plugins/cascade/ --out tail.wav
+node bin/host.js https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:0.3 --out note.wav
+```
+
+A chain, not a graph: each plugin's output feeds the next, with no branching and no mixing.
+[`src/host/ReferenceHost.js`](https://github.com/danja/jigdaw/blob/main/src/host/ReferenceHost.js)
+has the reasoning for why. Its `--root PREFIX=DIR` lets you point at a local plugin directory,
+so one you have not published yet renders the same way one already live does.
+
 ---
 
 [Back to the documentation index](index.md) &middot;

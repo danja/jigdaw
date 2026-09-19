@@ -88,10 +88,11 @@ Honestly, because a specification that overstates itself is worse than none.
 **Works.** Loading a plugin from its IRI, profile validation, integrity verification,
 WebAssembly instantiation, generated panels, parameter automation, MIDI routed by the host,
 transport, latency compensation, cycle refusal, undo and redo, a catalogue search, and an
-agent tool surface. Eight worked plugins: a subtractive synth, a bass line generator, a
+agent tool surface. 9 worked plugins: a subtractive synth, a bass line generator, a
 reverb, a compressor/expander/limiter/clipper with a side chain input, the firmware of a
-three-chip AY-3-8910 synthesiser compiled unedited from C++, and three REAPER JSFX effects
-converted by `bin/jsfx-import.js`. Foreign plugins (Web Audio Modules) load and play, marked
+three-chip AY-3-8910 synthesiser compiled unedited from C++, three REAPER JSFX effects
+converted by `bin/jsfx-import.js`, and a tremolo with no WebAssembly module, its signal path
+plain JavaScript. Foreign plugins (Web Audio Modules) load and play, marked
 and consented to, per contract section 12.
 
 **Exists but is thin.** The DAW itself: a rack view and a mixer view of the same signal

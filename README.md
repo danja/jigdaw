@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 8 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 9 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -47,6 +47,13 @@ resource it names carries a `sha384` digest that a host MUST check before runnin
 takes to run it in a browser. Which vocabulary a statement belongs to is not a detail: the
 first two are shared with other projects and only the third is ours.
 
+And it plays. `bin/host.js` is a minimal reference host, in Node, no browser: it loads a
+plugin by that same IRI and renders real audio to a WAV file.
+
+```sh
+node bin/host.js https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:0.5 --out note.wav
+```
+
 The format is not new. It extends the profile vocabulary published at
 [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already in
 use over 756 plugins, adding the terms a browser needs to fetch and run one. A profile written
@@ -82,15 +89,17 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-8 worked plugins are in [plugins/](plugins/), compiled to WebAssembly: a subtractive synth,
+9 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
-bass line generator, all four written in Rust; the
+bass line generator, all four written in Rust and compiled to WebAssembly; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
 [Arduino driving three AY-3-8910 chips](https://github.com/danja/8bit8asterd) compiled
-unedited from C++ and driving a model of those chips; and three REAPER JSFX effects converted
+unedited from C++ and driving a model of those chips; three REAPER JSFX effects converted
 by [bin/jsfx-import.js](bin/jsfx-import.js), which run under the shared bytecode interpreter in
 [plugins/_jsfx-runtime/](plugins/_jsfx-runtime/) rather than each compiling their own DSP to
-WebAssembly.
+WebAssembly; and [Tremolo](plugins/tremolo/), which declares no `jig:module` at all. Its whole
+signal path is the AudioWorklet processor, plain JavaScript, which `jig:module` has always
+permitted and which nothing exercised until this one.
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.
@@ -201,7 +210,7 @@ audio. See [wam.md](docs/wam.md).
 
 ## Status
 
-The specification is complete and normative. The browser host implements it and runs all 8
+The specification is complete and normative. The browser host implements it and runs all 9
 worked plugins; the native adapter fetches, verifies, instantiates and sounds the two that
 produce audio, under its own tests; Transmission runs them in a workstation written for VST3. A session saves and reopens carrying the IRIs that make it
 portable.

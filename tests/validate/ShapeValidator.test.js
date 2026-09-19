@@ -16,6 +16,7 @@ const EXPECTED = {
   'plugins/cascade/profile.ttl': 0,
   'plugins/pulse/profile.ttl': 0,
   'plugins/bassgen/profile.ttl': 0,
+  'plugins/tremolo/profile.ttl': 0,
   'examples/reference-provenance.ttl': 0,
   'examples/reference-foreign.ttl': 0,
   'examples/counterexample-profile.ttl': 10,
@@ -62,5 +63,22 @@ describe('ShapeValidator', () => {
     expect(report.warnings).toHaveLength(1)
     expect(report.violations).toHaveLength(0)
     expect(report.conforms).toBe(true)
+  })
+
+  it('warns about a plugin declaring no jig:module', async () => {
+    // The constraint used to be sh:maxCount 1 alone, which zero modules
+    // satisfies trivially: the warning could never fire for the absence it
+    // names. plugins/tremolo is the first real plugin with no module, and
+    // this is the regression that a profile like it keeps firing the warning.
+    const report = await validateFile(validator, at('plugins/tremolo/profile.ttl'))
+    const moduleWarnings = report.warnings.filter(w => w.path === 'http://purl.org/stuff/jigdaw/module')
+    expect(moduleWarnings).toHaveLength(1)
+    expect(report.violations).toHaveLength(0)
+  })
+
+  it('does not warn about jig:module for a plugin that declares one', async () => {
+    const report = await validateFile(validator, at('plugins/cascade/profile.ttl'))
+    const moduleWarnings = report.warnings.filter(w => w.path === 'http://purl.org/stuff/jigdaw/module')
+    expect(moduleWarnings).toHaveLength(0)
   })
 })

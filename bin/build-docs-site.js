@@ -102,7 +102,10 @@ function descriptionOf (markdown) {
     return t.length > 0 && !/^[#>`|-]/.test(t)
   }
   const block = blocks.slice(1).find(b => !isMeta(b) && isProse(b))
-  if (!block) return ''
+  // A document with no prose paragraph yet, such as one only just created
+  // and not written, still needs a page: the title on its own is a fine
+  // description of a document that is otherwise empty.
+  if (!block) return titleOf(markdown, 'A JigDAW specification document')
   const text = block.replace(/\n/g, ' ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_`]/g, '')
