@@ -18,6 +18,11 @@ import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi } from '../engine/EventRouter.js'
 import { Transport } from '../engine/Transport.js'
 
+// Bounded so a long session's history is not an unbounded array of full
+// project snapshots. 100 undoable edits is far past what anyone steps back
+// through in one sitting, and the oldest is dropped rather than the newest.
+const UNDO_LIMIT = 100
+
 export class OpDispatcher {
   #project
   #engine
@@ -26,6 +31,15 @@ export class OpDispatcher {
   #router = null
 
   #foreign
+
+  // A snapshot per undoable edit, taken before the edit and pushed after it
+  // commits, so the top of the stack is always "what to go back to". Nothing
+  // is recorded while #recording is false, which is how undo and redo call
+  // back into apply()/addPlugin() to do the actual work without recording
+  // their own reversal as a new edit.
+  #undoStack = []
+  #redoStack = []
+  #recording = true
 
   constructor ({ project = new Project(), engine = null, foreign = null } = {}) {
     this.#project = project
@@ -153,11 +167,175 @@ export class OpDispatcher {
       return { ok: true, applied: false, revision: this.#project.revision, compiled }
     }
 
+    // Taken before the commit, so it is what undo restores to. Not taken for a
+    // dry run, which never reaches here, and not recorded at all while
+    // #recording is false: undo and redo call back into this same apply()
+    // through #restoreTo, and their own reversal is not a new edit.
+    const before = this.#recording ? this.#project.snapshot() : null
+
     const result = this.#project.apply(changes, { expectedRevision })
     this.#releaseRemoved()
     this.#rebuildLinks(compiled)
+
+    if (before) {
+      this.#undoStack.push(before)
+      if (this.#undoStack.length > UNDO_LIMIT) this.#undoStack.shift()
+      this.#redoStack.length = 0
+    }
+
     this.#emit({ type: 'changed', revision: result.revision, results: result.results, compiled })
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled }
+  }
+
+  /** Whether there is an edit to step back from. */
+  canUndo () { return this.#undoStack.length > 0 }
+
+  /** Whether there is an edit undo last stepped back from to step forward to. */
+  canRedo () { return this.#redoStack.length > 0 }
+
+  /**
+   * Drop all undo and redo history.
+   *
+   * For a caller opening a different session into this dispatcher, such as
+   * web/app.js's openSession, which loads a project by clearing every node
+   * and adding back what the file says. Without this, undoing straight after
+   * opening a file would try to step back into whatever session was open
+   * before it, node by node, restoring plugins the person just replaced.
+   */
+  clearHistory () {
+    this.#undoStack.length = 0
+    this.#redoStack.length = 0
+  }
+
+  /**
+   * Step the project back to how it was before the last recorded edit.
+   *
+   * Async, unlike apply(): a node removed since the snapshot being restored to
+   * is not data the model can conjure back, it is an instantiated plugin, and
+   * bringing it back means reloading it, contract section 3.1 start to
+   * finish. Most edits touch no such node and this still returns a promise,
+   * so a caller does not need to know in advance which kind of edit it was
+   * undoing.
+   */
+  async undo () {
+    if (this.#undoStack.length === 0) return { ok: false, message: 'nothing to undo' }
+    const target = this.#undoStack.pop()
+    this.#redoStack.push(this.#project.snapshot())
+    await this.#restoreTo(target)
+    return { ok: true, revision: this.#project.revision }
+  }
+
+  /** The inverse of undo: step forward to whatever undo last stepped back from. */
+  async redo () {
+    if (this.#redoStack.length === 0) return { ok: false, message: 'nothing to redo' }
+    const target = this.#redoStack.pop()
+    this.#undoStack.push(this.#project.snapshot())
+    await this.#restoreTo(target)
+    return { ok: true, revision: this.#project.revision }
+  }
+
+  /**
+   * Bring the live project to match a snapshot, reusing the same paths a
+   * person or the WebMCP surface would use rather than writing the state in
+   * directly, so the engine (AudioParams, the channel strip, the links) moves
+   * with the model exactly as it does for any other edit. #recording is off
+   * throughout: every apply()/addPlugin()/setParameter() call this makes is
+   * the mechanism of the undo or redo, not a further edit to record one of.
+   *
+   * A node the target has and the present does not is reloaded from its
+   * plugin IRI, the same as reopening a saved session, with its id, settings,
+   * channel and state preserved so the graph below still recognises it. A
+   * node a reload could not restore is left out and reported nowhere further
+   * than the console: its connections are skipped rather than left dangling,
+   * which is one node's worth of undo history lost rather than the whole
+   * step refused for a plugin that may no longer be reachable.
+   */
+  async #restoreTo (target) {
+    this.#recording = false
+    try {
+      const current = this.#project.snapshot()
+      const currentIds = new Set(current.nodes.map(n => n.id))
+      const targetIds = new Set(target.nodes.map(n => n.id))
+
+      const toRemove = current.nodes.filter(n => !targetIds.has(n.id)).map(n => n.id)
+      if (toRemove.length > 0) {
+        this.apply(toRemove.map(id => ({ op: 'removeNode', id })))
+      }
+
+      for (const node of target.nodes) {
+        if (currentIds.has(node.id)) continue
+        const result = await this.addPlugin(node.pluginIri, {
+          id: node.id, label: node.label, settings: node.settings,
+          channel: node.channel, state: node.state
+        })
+        if (!result.ok) {
+          console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`)
+          continue
+        }
+        // addNode writes settings into the model; it does not push them to
+        // the engine's AudioParams, the same reason openSession pushes each
+        // one through setParameter after loading rather than trusting the op.
+        for (const [symbol, value] of Object.entries(node.settings ?? {})) {
+          this.setParameter(node.id, symbol, value)
+        }
+      }
+
+      const reconcile = []
+      for (const node of target.nodes) {
+        if (!currentIds.has(node.id)) continue // handled by the reload above
+        const live = this.#project.node(node.id)
+        if (!live) continue
+        for (const [symbol, value] of Object.entries(node.settings ?? {})) {
+          if (live.settings.get(symbol) !== value) this.setParameter(node.id, symbol, value)
+        }
+        // Always fully populated: Project.snapshot() copies a node's channel
+        // whole, and a node's channel is never partial from the moment it is
+        // created (Project.js merges DEFAULT_CHANNEL in on addNode).
+        const channel = node.channel ?? {}
+        const liveChannel = live.channel ?? {}
+        if (channel.gain !== liveChannel.gain || channel.pan !== liveChannel.pan ||
+            channel.muted !== liveChannel.muted || channel.soloed !== liveChannel.soloed) {
+          reconcile.push({ op: 'setChannel', node: node.id, ...channel })
+        }
+      }
+
+      // Connection identity is the connection's own id, stable across a
+      // project's history whether or not the connection itself survives, so
+      // diffing by id is exact rather than a comparison of shape.
+      const liveIds = new Set(this.#project.nodes.map(n => n.id))
+      const currentConnIds = new Set(this.#project.connections.map(c => c.id))
+      const targetConnIds = new Set(target.connections.map(c => c.id))
+      for (const id of currentConnIds) {
+        if (!targetConnIds.has(id)) reconcile.push({ op: 'removeConnection', id })
+      }
+      for (const connection of target.connections) {
+        if (currentConnIds.has(connection.id)) continue
+        // Both ends must actually be loaded, the same guard openSession
+        // applies: a connection to a node a reload could not restore would
+        // refuse the whole reconciliation for the sake of one plugin.
+        if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue
+        reconcile.push({
+          op: 'addConnection',
+          id: connection.id,
+          from: connection.from,
+          to: connection.to,
+          signalKind: connection.signalKind,
+          delayFrames: connection.delayFrames
+        })
+      }
+
+      if (JSON.stringify(this.#project.snapshot().transport) !== JSON.stringify(target.transport)) {
+        reconcile.push({ op: 'setTransport', ...target.transport })
+      }
+
+      // Applied even when empty, so a step that changed nothing else (every
+      // difference already handled by setParameter above) still commits,
+      // recompiles and emits 'changed': the UI redraws from this, not from
+      // undo()/redo() themselves.
+      this.apply(reconcile)
+    } finally {
+      this.#recording = true
+    }
   }
 
   /** The first end of a new connection that names a port its node has not got. */

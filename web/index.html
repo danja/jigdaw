@@ -108,6 +108,8 @@
     background:#242a33; color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
   .transport button:hover { background:#2d343f; }
   .transport button[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .transport button:disabled { opacity:.4; cursor:not-allowed; }
+  .transport button:disabled:hover { background:#242a33; }
   .tempo { display:flex; align-items:center; gap:6px; }
   .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
     background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
@@ -125,6 +127,16 @@
   .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
   .stage { padding:14px; display:flex; flex-direction:column; gap:12px; }
   h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
+
+  /* Tabs. src/ui/Tabs.js builds the buttons; this only draws them. The
+     selected tab is said by aria-selected, for a screen reader, and shown by
+     weight and an underline together, never by colour alone. */
+  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:2px; }
+  .tab { min-height:44px; padding:10px 18px; font-size:14px; font-weight:400;
+    background:transparent; color:var(--dim); border:0; border-bottom:2px solid transparent;
+    cursor:pointer; margin-bottom:-1px; }
+  .tab[aria-selected="true"] { color:var(--fg); font-weight:600; border-bottom-color:var(--accent); }
+  .tab:hover { color:var(--fg); }
 
   /* Browser */
   .searchbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
@@ -162,6 +174,16 @@
     border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid var(--wire); }
   .wire span { position:absolute; left:10px; top:1px; font-size:10px; color:var(--dim); }
   .empty { color:var(--dim); text-align:center; padding:26px 14px; border:1px dashed var(--line); border-radius:7px; }
+
+  /* Mixer. One channel below the next, the same orientation a strip already
+     has embedded in its track's slot, rather than a side-scrolling console:
+     that would need its own narrow-screen redesign, which this does not take
+     on. Each channel gets a heading the strip itself does not draw, because
+     nothing else on this tab says which track it belongs to. */
+  .mixer { display:flex; flex-direction:column; gap:10px; }
+  .mixer-channel { background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .mixer-channel h3 { margin:0; padding:10px 14px 0; font-size:14px; }
+  .mixer-channel .strip { border-bottom:0; }
 
   /* Controls.
 
@@ -261,6 +283,10 @@
     <span style="color:var(--dim);font-size:12px">BPM</span>
   </span>
   <span class="position" id="position" aria-live="off">1 . 1</span>
+  <span class="history">
+      <button id="undo" title="Undo the last edit" disabled>Undo</button>
+      <button id="redo" title="Redo the last undone edit" disabled>Redo</button>
+    </span>
   <span class="session">
       <button id="save" title="Save this session as RDF">Save</button>
       <button id="open" title="Open a saved session">Open</button>
@@ -302,9 +328,18 @@
     </form>
   </section>
 
-  <section class="stage" aria-label="Signal chain">
-    <h2>Chain</h2>
-    <div class="rack" id="rack"></div>
+  <section class="stage" aria-label="Tracks and mixer">
+    <div id="tabs-mount"></div>
+
+    <div class="tabpanel" id="tracks-panel">
+      <h2>Tracks</h2>
+      <div class="rack" id="rack"></div>
+    </div>
+
+    <div class="tabpanel" id="mixer-panel" hidden>
+      <h2>Mixer</h2>
+      <div class="mixer" id="mixer"></div>
+    </div>
   </section>
 </main>
 

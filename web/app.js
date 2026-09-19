@@ -13,6 +13,7 @@ import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createStrip } from '../src/ui/Strip.js'
+import { createTabs } from '../src/ui/Tabs.js'
 import { createPortBar, createConnectionList } from '../src/ui/Routing.js'
 import { outputsOf, inputsOf, compatible } from '../src/model/Endpoints.js'
 import { isMidi } from '../src/engine/EventRouter.js'
@@ -40,7 +41,21 @@ let source = null
 let playing = false
 let startedAt = 0
 const panels = new Map()
+// A node with an audio output gets two independent strip instances: one
+// embedded in its slot on the Tracks tab, one in the Mixer tab. They cannot
+// share a DOM element, so they are two Maps, kept in step by the three
+// functions below rather than by remembering all four call sites separately,
+// which is the shape of bug AGENTS.md warns about: a guard only as wide as
+// the list it walks.
 const strips = new Map()
+const mixerStrips = new Map()
+
+/** Drop a node's cached strips, on the Tracks tab and the Mixer tab alike. */
+const forgetStrips = id => { strips.delete(id); mixerStrips.delete(id) }
+/** Drop everything cached for one node: its panel and both its strips. */
+const forgetNode = id => { panels.delete(id); forgetStrips(id) }
+/** Drop every cache, for reopening a session over whatever was there before. */
+const forgetAllNodes = () => { panels.clear(); strips.clear(); mixerStrips.clear() }
 
 // The output a person has chosen, while they choose an input. Held here rather
 // than in the rack because every node's ports have to know about it: an input
@@ -111,6 +126,7 @@ async function ensureRunning () {
       $('state').textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ` +
         `${event.compiled.totalLatency} frames latency`
       drawRack()
+      updateHistoryButtons()
     }
   })
 
@@ -264,6 +280,13 @@ function wire (label) {
   return element
 }
 
+/** Undo and Redo are disabled rather than hidden, so a screen reader always
+ * finds the same two controls in the same place and reads which are live. */
+function updateHistoryButtons () {
+  $('undo').disabled = !(dispatcher?.canUndo() ?? false)
+  $('redo').disabled = !(dispatcher?.canRedo() ?? false)
+}
+
 function drawRack () {
   // Solo makes a node silent without muting it, so whether each one is heard is
   // computed across the whole graph before any strip is drawn.
@@ -302,6 +325,13 @@ function drawRack () {
     if (!found) return id
     return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base
   }
+
+  // Drawn from here rather than from a second call site, so the Mixer tab
+  // cannot fall out of step with the Tracks tab the way two independent lists
+  // walking the same nodes eventually do. Before the empty check below,
+  // because drawMixer answers its own empty case.
+  drawMixer(nodes, { labelFor, audible })
+
   if (nodes.length === 0) {
     const empty = document.createElement('div')
     empty.className = 'empty'
@@ -355,22 +385,41 @@ function drawRack () {
       // of a chain does not leave two fragments and no way to reconnect them.
       const result = dispatcher.apply([{ op: 'removeNode', id: node.id, heal: true }])
       if (!result.ok) log(result.message, 'error')
-      else { panels.delete(node.id); strips.delete(node.id); log(`removed ${node.label}`) }
+      else { forgetNode(node.id); log(`removed ${node.label}`) }
     })
     element.querySelector('header').append(remove)
 
     // The channel strip, above the plugin's own controls. Not drawn by Panel,
     // because nothing the plugin declares describes it.
-    let strip = strips.get(node.id)
-    if (!strip) {
-      strip = createStrip(document, node.channel, change => {
-        const result = dispatcher.setChannel(node.id, change)
-        if (!result.ok) log(result.message, 'error')
-      }, { label: labelFor(node.id) })
-      strips.set(node.id, strip)
+    //
+    // Omitted entirely for a plugin with no audio output, such as BassGen: a
+    // MIDI generator has no signal for Level or Pan to act on, and Mute and
+    // Solo are no better off. All four end up at Engine.setChannel, which
+    // already refuses to touch a node the engine built no gain stage for
+    // (`if (!entry.strip) return`, because audioOutputs was 0 when the node
+    // was adopted), so every one of the four is a control that visibly moves
+    // and audibly does nothing. AGENTS.md already settled the general case
+    // for the port bar: a control nobody can use is left out, not disabled.
+    //
+    // profile?.audioOutputs is read rather than re-derived, because it is the
+    // exact condition Engine.adopt used to decide whether to build a strip in
+    // the first place; a second test here could drift from that one. Unknown
+    // (no profile yet) defaults to showing the strip, since the question is
+    // only ever answered once a plugin has actually loaded.
+    if ((profile?.audioOutputs ?? 1) > 0) {
+      let strip = strips.get(node.id)
+      if (!strip) {
+        strip = createStrip(document, node.channel, change => {
+          const result = dispatcher.setChannel(node.id, change)
+          if (!result.ok) log(result.message, 'error')
+        }, { label: labelFor(node.id) })
+        strips.set(node.id, strip)
+      }
+      strip.update(node.channel, { silent: audible.get(node.id) === false })
+      element.append(strip.element)
+    } else {
+      forgetStrips(node.id)
     }
-    strip.update(node.channel, { silent: audible.get(node.id) === false })
-    element.append(strip.element)
 
     element.append(createPortBar(document, {
       node: { ...node, label: labelFor(node.id) },
@@ -409,6 +458,15 @@ function drawRack () {
         })
         panels.set(node.id, panel)
       }
+      // node.settings is the model's record of what was actually set, post
+      // clamp, and it is the only thing that changes when a parameter is set
+      // from outside the panel: WebMCP, a saved project reopening, or another
+      // surface entirely. A freshly created panel starts every control at its
+      // declared default (createPanel's own doing) and a reused one keeps
+      // whatever it last showed, so without this a panel drawn from the cache
+      // never learns that anything changed underneath it. Unconditional on
+      // every redraw, per messaging.md 2.3: a surface renders what it is told.
+      for (const [symbol, value] of node.settings) panel.update(symbol, value)
       // The generated panel brings its own heading, which the slot already has.
       panel.element.querySelector('h3')?.remove()
       element.append(panel.element)
@@ -459,6 +517,58 @@ function drawRack () {
       drawRack()
     }
   }))
+
+  restoreFocus()
+}
+
+/**
+ * The mixer: one channel strip per track that has one, gathered onto their
+ * own tab instead of interleaved with each plugin's own controls.
+ *
+ * A track that produces no audio has nothing here, the same rule and the
+ * same test as the strip drawRack does or does not embed in that track's own
+ * slot: Level, Pan, Mute and Solo all end at Engine.setChannel, which refuses
+ * a node the engine built no gain stage for.
+ */
+function drawMixer (nodes, { labelFor, audible }) {
+  const mixer = $('mixer')
+  const restoreFocus = preserveFocus(mixer)
+  mixer.textContent = ''
+
+  const mixable = nodes.filter(node =>
+    ((dispatcher.engineNode(node.id)?.profile?.audioOutputs) ?? 1) > 0)
+
+  if (mixable.length === 0) {
+    const empty = document.createElement('div')
+    empty.className = 'empty'
+    empty.textContent = nodes.length === 0
+      ? 'Nothing loaded. Search for a plugin, or press Load to add the synth.'
+      : 'Nothing in this chain has an audio output to mix.'
+    mixer.append(empty)
+    return
+  }
+
+  for (const node of mixable) {
+    let strip = mixerStrips.get(node.id)
+    if (!strip) {
+      strip = createStrip(document, node.channel, change => {
+        const result = dispatcher.setChannel(node.id, change)
+        if (!result.ok) log(result.message, 'error')
+      }, { label: labelFor(node.id) })
+      mixerStrips.set(node.id, strip)
+    }
+    strip.update(node.channel, { silent: audible.get(node.id) === false })
+
+    // The strip draws no visible heading of its own: embedded in a track's
+    // slot it sits under that track's own <h3>, and here there is no other
+    // heading to borrow, so one is added.
+    const channel = document.createElement('div')
+    channel.className = 'mixer-channel'
+    const heading = document.createElement('h3')
+    heading.textContent = labelFor(node.id)
+    channel.append(heading, strip.element)
+    mixer.append(channel)
+  }
 
   restoreFocus()
 }
@@ -737,8 +847,7 @@ async function openSession (text) {
     const cleared = d.apply(existing)
     if (!cleared.ok) { log(cleared.message, 'error'); return }
   }
-  panels.clear()
-  strips.clear()
+  forgetAllNodes()
 
   const loaded = new Set()
   for (const change of read.changes.filter(c => c.op === 'addNode')) {
@@ -770,7 +879,12 @@ async function openSession (text) {
 
   const bpm = d.project.transport.tempoPoints[0]?.bpm
   if (bpm) $('tempo').value = String(bpm)
+  // Loading a session is not itself an edit to undo, and stepping back across
+  // it would try to restore nodes from whatever was open before, so the
+  // history the clearing and the loading above just generated is dropped.
+  d.clearHistory()
   drawRack()
+  updateHistoryButtons()
   window.__jigdaw = { dispatcher: d, engine }
   log(`opened ${loaded.size} of ${read.changes.filter(c => c.op === 'addNode').length} nodes`, 'ok')
 }
@@ -794,12 +908,52 @@ $('tempo').addEventListener('change', async () => {
   if (!result.ok) log(result.message, 'error')
 })
 
+async function undo () {
+  if (!dispatcher?.canUndo()) return
+  const result = await dispatcher.undo()
+  if (!result.ok) log(result.message, 'error')
+}
+
+async function redo () {
+  if (!dispatcher?.canRedo()) return
+  const result = await dispatcher.redo()
+  if (!result.ok) log(result.message, 'error')
+}
+
+$('undo').addEventListener('click', () => undo())
+$('redo').addEventListener('click', () => redo())
+
+// Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z or +Y, the two redo conventions, both
+// honoured rather than picking one. Left alone while an input, a textarea or
+// anything contenteditable has focus, so editing the tempo field or an IRI
+// keeps the browser's own text undo rather than reaching past it to the
+// project's.
+document.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'z' && event.key.toLowerCase() !== 'y') return
+  const target = document.activeElement
+  if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
+  const key = event.key.toLowerCase()
+  if (key === 'y') { event.preventDefault(); redo(); return }
+  event.preventDefault()
+  if (event.shiftKey) redo(); else undo()
+})
+
 // Show the whole IRI, not a path. A plugin is identified by an absolute IRI,
 // and the box is the clearest place to say so: what goes in it is the same
 // thing that would be published, pasted into another host, or curled. It is
 // computed rather than written into the HTML because it depends on where this
 // host is served from.
 $('iri').value = new URL($('iri').value, document.baseURI).href
+
+// Tracks and Mixer. Built once, over the two panels already in the markup:
+// every redraw only ever changes what is inside them, never which one is
+// showing, so this does not belong inside drawRack with everything else that
+// runs on every change.
+const tabs = createTabs(document, [
+  { id: 'tracks', label: 'Tracks', panel: $('tracks-panel') },
+  { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') }
+])
+$('tabs-mount').append(tabs.element)
 
 drawRack()
 log('ready. Load the synth and press a key, or search for a plugin.')

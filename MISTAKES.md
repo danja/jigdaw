@@ -2,6 +2,73 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-19 A channel strip on a plugin with no channel to strip
+
+**What happened.** Every node in the rack got a Level knob, a Pan knob, a Mute button and a
+Solo button, including BassGen, which declares `jig:audioOutputs 0` and produces MIDI only.
+Asked whether a plugin that generates no audio needs Pan and Level; tracing where those two
+controls actually go found that none of the four did anything for such a node, not only the
+two that were asked about.
+
+**Root cause.** `Engine.adopt` only builds a gain and pan stage `if (profile.audioOutputs > 0
+...)`, so a MIDI-only node's engine entry has `strip: null`. `Engine.setChannel` already knows
+this and refuses politely, `if (!entry.strip) return`, before it touches gain, pan or the
+silence flag mute and solo turn into. So the strip's own state (`node.channel.gain`, `.pan`,
+`.muted`, `.soloed`) was tracked in the model, drawn in the interface and pressed by a person,
+and never reached anything with a signal to change. `drawRack` in `web/app.js` had no
+equivalent check: it built and appended the strip for every node unconditionally.
+
+**Why it had not been noticed.** The strip looks identical whether or not it does anything.
+Level and Pan report a number and move under the pointer regardless, and Mute and Solo flip
+`aria-pressed` regardless, so nothing about interacting with any of the four says whether the
+node they belong to can be heard at all, unlike everything else on that node's slot.
+
+**This is the second time a control has been shown that could not be used.** The port bar
+found the same shape a day earlier, forty four buttons of which forty three were disabled
+modulation targets, and the fix there was to stop drawing the ones that could not be pressed
+rather than disable them in place. The same rule now applies one control group over: a
+control nobody can use is left out, not shown inert.
+
+**Prevention.** `drawRack` now builds the strip only when `(profile?.audioOutputs ?? 1) > 0`,
+the same condition `Engine.adopt` already used to decide whether to build one, read rather
+than re-derived so the two cannot drift apart. `tests/ui/Strip.test.js` binds them: one
+assertion that the guard exists and is not inverted, one that it names the identical
+threshold Engine.js uses, one that a strip cached from before the fix is dropped rather than
+left showing. Mutation tested by removing the guard and by widening it to `>= 0`; both were
+caught. Verified in Chrome: BassGen and Pulse loaded into the same chain, BassGen's slot runs
+straight from its heading into its own parameters, and Pulse keeps its strip.
+
+## 2026-09-19 A panel that never heard about a change made anywhere but itself
+
+**What happened.** Setting a parameter through the WebMCP surface applied correctly to the
+model and the `AudioParam`, and the generated panel kept showing whatever it had shown before:
+Cascade's Mix read its declared 0.30 after being set to 0.83. Found earlier in this project
+and left as an open item rather than fixed at the time.
+
+**Root cause.** `drawRack` in `web/app.js` only ever told a panel about a new value through the
+panel's own `onChange` callback, which fires when a person moves the control. Nothing pushed
+the model's own record of a node's settings into the panel from the other direction, so a
+panel fetched from the `panels` cache on a later redraw showed whatever it had last been told
+directly, and a freshly created one showed the port's declared default. Neither is what the
+project actually has: `node.settings`, a `Map` the dispatcher updates on every successful
+`setParameter`, already carried the right answer and nothing read it back out.
+
+**Why it had not been noticed.** Every value change that had been tested came from the panel
+itself, which is self-consistent by construction: the control that changed a value is the same
+control asked to display it. The gap only shows up when something else changes a value the
+panel is already open on, which a saved project reopening, a MIDI mapping and WebMCP all do
+and a person turning a knob does not.
+
+**Prevention.** `drawRack` now iterates `node.settings` and calls `panel.update(symbol, value)`
+after the panel exists, cached or fresh, on every redraw. `tests/ui/Panel.test.js` checks the
+wiring in the source, the same way `tests/ui/Focus.test.js` already checks that `drawRack`
+calls `preserveFocus`: one assertion that the push exists, and a second, separate one that it
+sits outside the `if (!panel)` branch a freshly created panel takes, because a mutation that
+moved it inside that branch still passed the first assertion and is the exact shape the
+original bug had. Verified in Chrome afterward: the knob's position, its readout and its
+`aria-valuetext` all move together when a value is set from WebMCP. The channel strip was
+checked and needed nothing: `strip.update` already ran unconditionally on every redraw.
+
 ## 2026-09-19 A connection to a port that was not there
 
 **What happened.** Found while checking that BassGen no longer draws a keyboard. Loading

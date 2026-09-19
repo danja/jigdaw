@@ -29,17 +29,23 @@ complete. Review periodically.
       The earlier "hang" was the browser tab being hidden, which grants no user activation, so
       `AudioContext.resume()` never settled. Recorded in `MISTAKES.md` and in `AGENTS.md`.
 
-- [ ] **A panel's readout does not follow a parameter set from outside it.** Setting a
-      parameter through the WebMCP surface updates the model and the `AudioParam`, and the
-      generated panel keeps showing the previous value: Cascade's Mix reads its declared 0.30
-      after being set to 0.83.
+- [x] **A panel's readout did not follow a parameter set from outside it, fixed 2026-09-19.**
+      `drawRack` now pushes every entry of `node.settings`, the model's own record of what was
+      actually set, into the panel on every redraw, whether the panel was just created or
+      reused from the cache. Verified in Chrome: Cascade's Mix set to 0.83 through WebMCP now
+      moves the knob, the readout and `aria-valuetext` together, not only the model.
 
-      **Not foreign-specific**, which is the only reason it is recorded here rather than
-      treated as a defect in that work: it was measured on a native plugin and a foreign one
-      side by side in the same rack, and both behave the same. `messaging.md` section 2.3 says
-      a surface renders what it is told, so the missing half is the telling: `drawRack` reuses
-      a cached panel and never pushes the current settings into it. Whoever fixes it should
-      check the channel strip too.
+      The channel strip was checked and did not need the same fix: `strip.update(node.channel,
+      ...)` already runs unconditionally on every redraw, cached or fresh, so it was never
+      exposed to this. There is no `setChannel` WebMCP tool to demonstrate that live with, so
+      it stands on the source rather than on a browser run.
+
+      `tests/ui/Panel.test.js` binds the wiring in `web/app.js` the way
+      `tests/ui/Focus.test.js` already does for the focus fix: one assertion that the push
+      exists, one that it is not gated inside the `if (!panel)` branch that only a freshly
+      created panel takes. Mutation tested both ways: removing the push fails both, moving it
+      inside the creation branch leaves the first green and fails only the second, which is
+      what makes it the assertion that matters.
 
 - [x] **Provenance and signing for bundles, 2026-09-18.** Done, and in
       [docs/plugin-bundles.md](docs/plugin-bundles.md) sections 5 to 8 rather than here. Every
@@ -181,6 +187,42 @@ complete. Review periodically.
       same position. That is the state plugin-universe describes as invisible: terms
       written into the data and selected by no query, which is not a condition anything
       reports. Either Phase 5 uses them or they come out.
+
+## The application
+
+Behaving more like a real DAW, an open-ended direction rather than a phase with an end.
+
+- [x] **Undo and redo, 2026-09-19.** `OpDispatcher.undo()`/`redo()`, snapshot-based: every
+      commit through `apply()` pushes the project as it was just before, and stepping back
+      reconciles the live project to a snapshot through the same public methods a person or
+      the WebMCP surface would use (`apply()`, `addPlugin()`, `setParameter()`), never by
+      writing state in directly, so the engine's AudioParams, the channel strip and the links
+      move with the model exactly as they do for any other edit.
+
+      A node the target snapshot has and the present does not is reloaded from its plugin
+      IRI, the same path reopening a saved session takes, with its id, settings, channel and
+      state preserved; a node a reload could not restore is left out rather than refusing the
+      whole step. Connection identity is the connection's own id, stable across a project's
+      history, so restoring after a healed removal (Remove with `heal: true`, which bridges
+      the gap left in a chain) puts back exactly the two original connections and removes the
+      bridge, not both.
+
+      Wired to Undo and Redo buttons in the transport bar (disabled rather than hidden, so a
+      screen reader always finds the same two controls) and to Ctrl/Cmd+Z and
+      Ctrl/Cmd+Shift+Z or +Y, left alone while an input, a textarea or anything contenteditable
+      has focus so the browser's own text undo still works there. `OpDispatcher.clearHistory()`
+      is called after `openSession` loads a different project, so undoing right after opening
+      a file cannot try to step back into the session that was open before it.
+
+      `tests/ops/OpDispatcher.test.js` covers parameter, channel, connection and transport
+      edits, adding and removing a node (including the reload path and its engine calls), the
+      healed-removal case, that undo/redo do not themselves become undoable, and that a dry
+      run or a refused change is not recorded. `tests/ui/History.test.js` binds the button and
+      keyboard wiring in `web/app.js`, which has no `AudioContext` to run under vitest, the
+      same source-position pattern as `tests/ui/Focus.test.js`. Both the `#recording` guard
+      and the healed-connection reconciliation were mutation tested. Verified live in Chrome:
+      turning a knob and undoing it moves the engine's `AudioParam`, not only the model;
+      removing Pulse and undoing the removal reloads it with its settings intact.
 
 ## The native adapter
 

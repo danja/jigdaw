@@ -744,3 +744,183 @@ describe('loading a plugin carries everything a node holds', () => {
     }
   })
 })
+
+describe('undo and redo', () => {
+  it('starts with nothing to step through', () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    expect(d.canUndo()).toBe(false)
+    expect(d.canRedo()).toBe(false)
+  })
+
+  it('steps a parameter back to what it was, and forward again', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI, { settings: { mix: 0.2 } })
+    d.setParameter(nodeId, 'mix', 0.9)
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(0.9)
+
+    expect(d.canUndo()).toBe(true)
+    await d.undo()
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(0.2)
+    // Not only the model: the engine's AudioParam has to move with it, or an
+    // undone knob turn is silent about the sound not having moved.
+    expect(engine.calls.at(-1)).toEqual(['setParameter', 'engine-1', 'mix', 0.2])
+
+    expect(d.canRedo()).toBe(true)
+    await d.redo()
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(0.9)
+    expect(engine.calls.at(-1)).toEqual(['setParameter', 'engine-1', 'mix', 0.9])
+  })
+
+  it('steps a channel change back and forward', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI)
+    d.setChannel(nodeId, { muted: true, pan: -0.5 })
+
+    await d.undo()
+    expect(d.project.node(nodeId).channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
+    await d.redo()
+    expect(d.project.node(nodeId).channel).toEqual({ gain: 1, pan: -0.5, muted: true, soloed: false })
+  })
+
+  it('steps a connection back and forward', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    await d.addPlugin(IRI, { id: 'a' })
+    await d.addPlugin(IRI, { id: 'b' })
+    d.apply([edge('a', 'b')])
+    expect(between(engine)).toHaveLength(1)
+
+    await d.undo()
+    expect(d.project.connections).toEqual([])
+    expect(between(engine)).toHaveLength(0)
+
+    await d.redo()
+    expect(d.project.connections).toHaveLength(1)
+    expect(between(engine)).toHaveLength(1)
+  })
+
+  it('steps the tempo back and forward', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: 140 }] }])
+    await d.undo()
+    expect(d.project.transport.tempoPoints[0].bpm).toBe(120)
+    await d.redo()
+    expect(d.project.transport.tempoPoints[0].bpm).toBe(140)
+  })
+
+  it('steps adding a node back, releasing it from the engine, and forward again', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI)
+    expect(d.project.nodes).toHaveLength(1)
+
+    await d.undo()
+    expect(d.project.nodes).toEqual([])
+    expect(engine.calls.some(([name, id]) => name === 'remove' && id === 'engine-1')).toBe(true)
+
+    // Forward again reloads it: a project node is an instantiated plugin, not
+    // only a row of data, so redoing an add is a second load.
+    await d.redo()
+    expect(d.project.nodes).toHaveLength(1)
+    expect(d.project.node(nodeId)).not.toBeNull()
+    expect(engine.calls.filter(([name]) => name === 'addPlugin')).toHaveLength(2)
+  })
+
+  it('steps removing a node back by reloading it, with its settings and channel intact', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI, { settings: { mix: 0.42 } })
+    d.setChannel(nodeId, { gain: 0.3, soloed: true })
+    d.apply([{ op: 'removeNode', id: nodeId }])
+    expect(d.project.nodes).toEqual([])
+
+    await d.undo()
+    const restored = d.project.node(nodeId)
+    expect(restored).not.toBeNull()
+    expect(restored.settings.get('mix')).toBe(0.42)
+    expect(restored.channel).toEqual({ gain: 0.3, pan: 0, muted: false, soloed: true })
+    // Reloaded through the engine, not conjured: a second addPlugin call.
+    expect(engine.calls.filter(([name]) => name === 'addPlugin')).toHaveLength(2)
+    expect(engine.calls).toContainEqual(['setParameter', 'engine-2', 'mix', 0.42])
+  })
+
+  it('restores exactly the connections a healed removal replaced', async () => {
+    // heal:true bridges a→c when b is removed from a chain a→b→c. Undoing
+    // that removal must bring b back, restore a→b and b→c, and take the
+    // healed a→c back out, not leave both.
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    await d.addPlugin(IRI, { id: 'a' })
+    await d.addPlugin(IRI, { id: 'b' })
+    await d.addPlugin(IRI, { id: 'c' })
+    d.apply([edge('a', 'b'), edge('b', 'c')])
+
+    d.apply([{ op: 'removeNode', id: 'b', heal: true }])
+    expect(d.project.connections).toHaveLength(1)
+    expect(d.project.connections[0].from.node).toBe('a')
+    expect(d.project.connections[0].to.node).toBe('c')
+
+    await d.undo()
+    const pairs = d.project.connections.map(c => [c.from.node, c.to.node]).sort()
+    expect(pairs).toEqual([['a', 'b'], ['b', 'c']])
+  })
+
+  it('does not record undo or redo themselves as further edits', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    const { nodeId } = await d.addPlugin(IRI)
+    d.setParameter(nodeId, 'mix', 0.5)
+    expect(d.canUndo()).toBe(true)
+
+    await d.undo() // back to just the add
+    expect(d.canUndo()).toBe(true) // the add itself is still there to undo
+    await d.undo() // back to nothing
+    expect(d.canUndo()).toBe(false)
+  })
+
+  it('drops the redo stack once a fresh edit is made after undoing', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI, { settings: { mix: 0.2 } })
+    d.setParameter(nodeId, 'mix', 0.9)
+    await d.undo()
+    expect(d.canRedo()).toBe(true)
+
+    d.setParameter(nodeId, 'mix', 0.4) // a new edit, not a redo
+    expect(d.canRedo()).toBe(false)
+  })
+
+  it('reports rather than throwing when there is nothing to step through', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    expect(await d.undo()).toEqual({ ok: false, message: 'nothing to undo' })
+    expect(await d.redo()).toEqual({ ok: false, message: 'nothing to redo' })
+  })
+
+  it('does not record a dry run, or a refused change', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    await d.addPlugin(IRI, { id: 'a' })
+    d.apply([{ op: 'setSetting', node: 'a', symbol: 'mix', value: 0.5 }], { dryRun: true })
+    expect(d.canUndo()).toBe(true) // only the add so far
+
+    const before = d.canUndo()
+    d.apply([{ op: 'removeNode', id: 'ghost' }]) // refused: no such node
+    expect(d.canUndo()).toBe(before)
+  })
+
+  it('emits a changed event the redraw can key off, on both undo and redo', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    const seen = []
+    d.subscribe(event => seen.push(event.type))
+    const { nodeId } = await d.addPlugin(IRI)
+    d.setParameter(nodeId, 'mix', 0.5)
+    seen.length = 0
+
+    await d.undo()
+    expect(seen).toContain('changed')
+    seen.length = 0
+    await d.redo()
+    expect(seen).toContain('changed')
+  })
+})

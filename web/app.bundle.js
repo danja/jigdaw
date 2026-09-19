@@ -22272,6 +22272,7 @@ var Transport = class _Transport {
 };
 
 // src/ops/OpDispatcher.js
+var UNDO_LIMIT = 100;
 var OpDispatcher = class {
   #project;
   #engine;
@@ -22279,6 +22280,14 @@ var OpDispatcher = class {
   #nodeIds = /* @__PURE__ */ new Map();
   #router = null;
   #foreign;
+  // A snapshot per undoable edit, taken before the edit and pushed after it
+  // commits, so the top of the stack is always "what to go back to". Nothing
+  // is recorded while #recording is false, which is how undo and redo call
+  // back into apply()/addPlugin() to do the actual work without recording
+  // their own reversal as a new edit.
+  #undoStack = [];
+  #redoStack = [];
+  #recording = true;
   constructor({ project = new Project(), engine: engine2 = null, foreign = null } = {}) {
     this.#project = project;
     this.#engine = engine2;
@@ -22391,11 +22400,146 @@ var OpDispatcher = class {
     if (dryRun) {
       return { ok: true, applied: false, revision: this.#project.revision, compiled };
     }
+    const before = this.#recording ? this.#project.snapshot() : null;
     const result = this.#project.apply(changes, { expectedRevision });
     this.#releaseRemoved();
     this.#rebuildLinks(compiled);
+    if (before) {
+      this.#undoStack.push(before);
+      if (this.#undoStack.length > UNDO_LIMIT) this.#undoStack.shift();
+      this.#redoStack.length = 0;
+    }
     this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
+  }
+  /** Whether there is an edit to step back from. */
+  canUndo() {
+    return this.#undoStack.length > 0;
+  }
+  /** Whether there is an edit undo last stepped back from to step forward to. */
+  canRedo() {
+    return this.#redoStack.length > 0;
+  }
+  /**
+   * Drop all undo and redo history.
+   *
+   * For a caller opening a different session into this dispatcher, such as
+   * web/app.js's openSession, which loads a project by clearing every node
+   * and adding back what the file says. Without this, undoing straight after
+   * opening a file would try to step back into whatever session was open
+   * before it, node by node, restoring plugins the person just replaced.
+   */
+  clearHistory() {
+    this.#undoStack.length = 0;
+    this.#redoStack.length = 0;
+  }
+  /**
+   * Step the project back to how it was before the last recorded edit.
+   *
+   * Async, unlike apply(): a node removed since the snapshot being restored to
+   * is not data the model can conjure back, it is an instantiated plugin, and
+   * bringing it back means reloading it, contract section 3.1 start to
+   * finish. Most edits touch no such node and this still returns a promise,
+   * so a caller does not need to know in advance which kind of edit it was
+   * undoing.
+   */
+  async undo() {
+    if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
+    const target = this.#undoStack.pop();
+    this.#redoStack.push(this.#project.snapshot());
+    await this.#restoreTo(target);
+    return { ok: true, revision: this.#project.revision };
+  }
+  /** The inverse of undo: step forward to whatever undo last stepped back from. */
+  async redo() {
+    if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
+    const target = this.#redoStack.pop();
+    this.#undoStack.push(this.#project.snapshot());
+    await this.#restoreTo(target);
+    return { ok: true, revision: this.#project.revision };
+  }
+  /**
+   * Bring the live project to match a snapshot, reusing the same paths a
+   * person or the WebMCP surface would use rather than writing the state in
+   * directly, so the engine (AudioParams, the channel strip, the links) moves
+   * with the model exactly as it does for any other edit. #recording is off
+   * throughout: every apply()/addPlugin()/setParameter() call this makes is
+   * the mechanism of the undo or redo, not a further edit to record one of.
+   *
+   * A node the target has and the present does not is reloaded from its
+   * plugin IRI, the same as reopening a saved session, with its id, settings,
+   * channel and state preserved so the graph below still recognises it. A
+   * node a reload could not restore is left out and reported nowhere further
+   * than the console: its connections are skipped rather than left dangling,
+   * which is one node's worth of undo history lost rather than the whole
+   * step refused for a plugin that may no longer be reachable.
+   */
+  async #restoreTo(target) {
+    this.#recording = false;
+    try {
+      const current = this.#project.snapshot();
+      const currentIds = new Set(current.nodes.map((n2) => n2.id));
+      const targetIds = new Set(target.nodes.map((n2) => n2.id));
+      const toRemove = current.nodes.filter((n2) => !targetIds.has(n2.id)).map((n2) => n2.id);
+      if (toRemove.length > 0) {
+        this.apply(toRemove.map((id) => ({ op: "removeNode", id })));
+      }
+      for (const node of target.nodes) {
+        if (currentIds.has(node.id)) continue;
+        const result = await this.addPlugin(node.pluginIri, {
+          id: node.id,
+          label: node.label,
+          settings: node.settings,
+          channel: node.channel,
+          state: node.state
+        });
+        if (!result.ok) {
+          console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`);
+          continue;
+        }
+        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
+          this.setParameter(node.id, symbol, value2);
+        }
+      }
+      const reconcile = [];
+      for (const node of target.nodes) {
+        if (!currentIds.has(node.id)) continue;
+        const live = this.#project.node(node.id);
+        if (!live) continue;
+        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
+          if (live.settings.get(symbol) !== value2) this.setParameter(node.id, symbol, value2);
+        }
+        const channel = node.channel ?? {};
+        const liveChannel = live.channel ?? {};
+        if (channel.gain !== liveChannel.gain || channel.pan !== liveChannel.pan || channel.muted !== liveChannel.muted || channel.soloed !== liveChannel.soloed) {
+          reconcile.push({ op: "setChannel", node: node.id, ...channel });
+        }
+      }
+      const liveIds = new Set(this.#project.nodes.map((n2) => n2.id));
+      const currentConnIds = new Set(this.#project.connections.map((c3) => c3.id));
+      const targetConnIds = new Set(target.connections.map((c3) => c3.id));
+      for (const id of currentConnIds) {
+        if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
+      }
+      for (const connection of target.connections) {
+        if (currentConnIds.has(connection.id)) continue;
+        if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue;
+        reconcile.push({
+          op: "addConnection",
+          id: connection.id,
+          from: connection.from,
+          to: connection.to,
+          signalKind: connection.signalKind,
+          delayFrames: connection.delayFrames
+        });
+      }
+      if (JSON.stringify(this.#project.snapshot().transport) !== JSON.stringify(target.transport)) {
+        reconcile.push({ op: "setTransport", ...target.transport });
+      }
+      this.apply(reconcile);
+    } finally {
+      this.#recording = true;
+    }
   }
   /** The first end of a new connection that names a port its node has not got. */
   #unroutable(changes) {
@@ -23060,6 +23204,71 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
           `${label ? label + " channel" : "Channel"}${silent ? ", silent" : ""}`
         );
       }
+    }
+  };
+}
+
+// src/ui/Tabs.js
+function createTabs(document2, tabs2, { onSelect = () => {
+} } = {}) {
+  if (tabs2.length === 0) throw new Error("a tab list needs at least one tab");
+  const tablist = document2.createElement("div");
+  tablist.setAttribute("role", "tablist");
+  tablist.className = "tabs";
+  const buttons = tabs2.map((tab, index) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = `tab-${tab.id}`;
+    button.className = "tab";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-controls", tab.panel.id);
+    button.textContent = tab.label;
+    tablist.append(button);
+    tab.panel.setAttribute("role", "tabpanel");
+    tab.panel.setAttribute("aria-labelledby", button.id);
+    tab.panel.tabIndex = 0;
+    return button;
+  });
+  let current = 0;
+  const select = (index) => {
+    current = index;
+    buttons.forEach((button, i2) => {
+      const active = i2 === index;
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+      tabs2[i2].panel.hidden = !active;
+    });
+    onSelect(tabs2[index].id);
+  };
+  const MOVES = {
+    ArrowRight: (i2) => (i2 + 1) % buttons.length,
+    ArrowLeft: (i2) => (i2 - 1 + buttons.length) % buttons.length,
+    Home: () => 0,
+    End: () => buttons.length - 1
+  };
+  buttons.forEach((button, index) => {
+    button.addEventListener("click", () => select(index));
+    button.addEventListener("keydown", (event) => {
+      const move = MOVES[event.key];
+      if (!move) return;
+      event.preventDefault();
+      const next = move(index);
+      select(next);
+      buttons[next].focus();
+    });
+  });
+  select(0);
+  return {
+    element: tablist,
+    /** Select a tab by id, from outside a keypress or a click. */
+    select(id) {
+      const index = tabs2.findIndex((tab) => tab.id === id);
+      if (index === -1) throw new Error(`no such tab: ${id}`);
+      select(index);
+    },
+    /** The id of whichever tab is currently shown. */
+    selected() {
+      return tabs2[current].id;
     }
   };
 }
@@ -23905,6 +24114,20 @@ var playing = false;
 var startedAt = 0;
 var panels = /* @__PURE__ */ new Map();
 var strips = /* @__PURE__ */ new Map();
+var mixerStrips = /* @__PURE__ */ new Map();
+var forgetStrips = (id) => {
+  strips.delete(id);
+  mixerStrips.delete(id);
+};
+var forgetNode = (id) => {
+  panels.delete(id);
+  forgetStrips(id);
+};
+var forgetAllNodes = () => {
+  panels.clear();
+  strips.clear();
+  mixerStrips.clear();
+};
 var pending = null;
 function browserCatalogue() {
   const ask = async (path, params) => {
@@ -23955,6 +24178,7 @@ async function ensureRunning() {
     if (event.type === "changed") {
       $("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
       drawRack();
+      updateHistoryButtons();
     }
   });
   const registration = registerTools({
@@ -24088,6 +24312,10 @@ function wire(label) {
   }
   return element;
 }
+function updateHistoryButtons() {
+  $("undo").disabled = !(dispatcher?.canUndo() ?? false);
+  $("redo").disabled = !(dispatcher?.canRedo() ?? false);
+}
 function drawRack() {
   const audible = new Map(
     (dispatcher?.audibility() ?? []).map((a2) => [a2.nodeId, !a2.silent])
@@ -24110,6 +24338,7 @@ function drawRack() {
     if (!found) return id;
     return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base;
   };
+  drawMixer(nodes, { labelFor, audible });
   if (nodes.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty";
@@ -24144,22 +24373,25 @@ function drawRack() {
       const result = dispatcher.apply([{ op: "removeNode", id: node.id, heal: true }]);
       if (!result.ok) log(result.message, "error");
       else {
-        panels.delete(node.id);
-        strips.delete(node.id);
+        forgetNode(node.id);
         log(`removed ${node.label}`);
       }
     });
     element.querySelector("header").append(remove);
-    let strip = strips.get(node.id);
-    if (!strip) {
-      strip = createStrip(document, node.channel, (change) => {
-        const result = dispatcher.setChannel(node.id, change);
-        if (!result.ok) log(result.message, "error");
-      }, { label: labelFor(node.id) });
-      strips.set(node.id, strip);
+    if ((profile?.audioOutputs ?? 1) > 0) {
+      let strip = strips.get(node.id);
+      if (!strip) {
+        strip = createStrip(document, node.channel, (change) => {
+          const result = dispatcher.setChannel(node.id, change);
+          if (!result.ok) log(result.message, "error");
+        }, { label: labelFor(node.id) });
+        strips.set(node.id, strip);
+      }
+      strip.update(node.channel, { silent: audible.get(node.id) === false });
+      element.append(strip.element);
+    } else {
+      forgetStrips(node.id);
     }
-    strip.update(node.channel, { silent: audible.get(node.id) === false });
-    element.append(strip.element);
     element.append(createPortBar(document, {
       node: { ...node, label: labelFor(node.id) },
       profile,
@@ -24196,6 +24428,7 @@ function drawRack() {
         });
         panels.set(node.id, panel);
       }
+      for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
       panel.element.querySelector("h3")?.remove();
       element.append(panel.element);
       if (playable(profile)) {
@@ -24228,6 +24461,37 @@ function drawRack() {
       drawRack();
     }
   }));
+  restoreFocus();
+}
+function drawMixer(nodes, { labelFor, audible }) {
+  const mixer = $("mixer");
+  const restoreFocus = preserveFocus(mixer);
+  mixer.textContent = "";
+  const mixable = nodes.filter((node) => (dispatcher.engineNode(node.id)?.profile?.audioOutputs ?? 1) > 0);
+  if (mixable.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = nodes.length === 0 ? "Nothing loaded. Search for a plugin, or press Load to add the synth." : "Nothing in this chain has an audio output to mix.";
+    mixer.append(empty);
+    return;
+  }
+  for (const node of mixable) {
+    let strip = mixerStrips.get(node.id);
+    if (!strip) {
+      strip = createStrip(document, node.channel, (change) => {
+        const result = dispatcher.setChannel(node.id, change);
+        if (!result.ok) log(result.message, "error");
+      }, { label: labelFor(node.id) });
+      mixerStrips.set(node.id, strip);
+    }
+    strip.update(node.channel, { silent: audible.get(node.id) === false });
+    const channel = document.createElement("div");
+    channel.className = "mixer-channel";
+    const heading = document.createElement("h3");
+    heading.textContent = labelFor(node.id);
+    channel.append(heading, strip.element);
+    mixer.append(channel);
+  }
   restoreFocus();
 }
 function askConsent(request) {
@@ -24430,8 +24694,7 @@ async function openSession(text) {
       return;
     }
   }
-  panels.clear();
-  strips.clear();
+  forgetAllNodes();
   const loaded = /* @__PURE__ */ new Set();
   for (const change of read.changes.filter((c3) => c3.op === "addNode")) {
     log(`GET ${change.pluginIri}`);
@@ -24455,7 +24718,9 @@ async function openSession(text) {
   }
   const bpm = d.project.transport.tempoPoints[0]?.bpm;
   if (bpm) $("tempo").value = String(bpm);
+  d.clearHistory();
   drawRack();
+  updateHistoryButtons();
   window.__jigdaw = { dispatcher: d, engine };
   log(`opened ${loaded.size} of ${read.changes.filter((c3) => c3.op === "addNode").length} nodes`, "ok");
 }
@@ -24487,7 +24752,38 @@ $("tempo").addEventListener("change", async () => {
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);
   if (!result.ok) log(result.message, "error");
 });
+async function undo() {
+  if (!dispatcher?.canUndo()) return;
+  const result = await dispatcher.undo();
+  if (!result.ok) log(result.message, "error");
+}
+async function redo() {
+  if (!dispatcher?.canRedo()) return;
+  const result = await dispatcher.redo();
+  if (!result.ok) log(result.message, "error");
+}
+$("undo").addEventListener("click", () => undo());
+$("redo").addEventListener("click", () => redo());
+document.addEventListener("keydown", (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z" && event.key.toLowerCase() !== "y") return;
+  const target = document.activeElement;
+  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+  const key = event.key.toLowerCase();
+  if (key === "y") {
+    event.preventDefault();
+    redo();
+    return;
+  }
+  event.preventDefault();
+  if (event.shiftKey) redo();
+  else undo();
+});
 $("iri").value = new URL($("iri").value, document.baseURI).href;
+var tabs = createTabs(document, [
+  { id: "tracks", label: "Tracks", panel: $("tracks-panel") },
+  { id: "mixer", label: "Mixer", panel: $("mixer-panel") }
+]);
+$("tabs-mount").append(tabs.element);
 drawRack();
 log("ready. Load the synth and press a key, or search for a plugin.");
 window.__jigdawLoad = loadPlugin;

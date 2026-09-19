@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 4 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 5 worked plugins, and a validator that
 enforces the specification on its own files.
 
 ## Try it
@@ -79,8 +79,9 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-4 worked plugins are in [plugins/](plugins/), compiled to WebAssembly: a subtractive synth,
-a reverb and a transport-synced bass line generator, all three written in Rust, and the
+5 worked plugins are in [plugins/](plugins/), compiled to WebAssembly: a subtractive synth,
+a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
+bass line generator, all four written in Rust, and the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
 [Arduino driving three AY-3-8910 chips](https://github.com/danja/8bit8asterd) compiled
 unedited from C++ and driving a model of those chips.
@@ -140,7 +141,7 @@ IRI so a desktop DAW can open them. It was built as a sanity check on the specif
 earned its keep before it made a sound: it could not load a JigDAW plugin at all, because the
 only thing the contract guaranteed was a JavaScript `AudioWorklet`. The specification had
 accidentally made itself browser-only. [module-abi.md](docs/module-abi.md) is the answer, and
-all 4 worked plugins now declare an ABI. See
+all 5 worked plugins now declare an ABI. See
 [native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md).
 
 ### Transmission
@@ -191,7 +192,7 @@ audio. See [wam.md](docs/wam.md).
 
 ## Status
 
-The specification is complete and normative. The browser host implements it and runs all three
+The specification is complete and normative. The browser host implements it and runs all five
 worked plugins; the native adapter fetches, verifies, instantiates and sounds the two that
 produce audio, under its own tests; Transmission runs them in a workstation written for VST3. A session saves and reopens carrying the IRIs that make it
 portable.

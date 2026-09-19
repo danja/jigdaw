@@ -1,0 +1,172 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/dynamix/",
+  "label": "Dynamix",
+  "comment": "Compressor/expander, limiter and clipper/soft distortion in series. A second stereo input on channels 3 and 4 is an external key: when it is connected, the compressor/expander stage reads its level from that instead of the main signal, for sidechain ducking. When nothing is connected there, the stage detects on the main signal itself.",
+  "vendor": "danja",
+  "version": "1.0.0",
+  "registeredName": "dynamix",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Dynamics",
+    "Mastering"
+  ],
+  "cautions": [
+    "The limiter has no lookahead: it reacts within a fraction of a millisecond rather than before the transient, so a very sharp attack can still touch the ceiling briefly before the gain catches up. Leave a little headroom below the ceiling for material with hard transients.",
+    "The compressor/expander stage links its gain reduction across both channels from a single detected level, so it never shifts the stereo image, but it also means the side chain input's balance between its own two channels, not just its overall level, feeds the detector.",
+    "Disconnecting the side chain input mid-session returns the compressor/expander to detecting on the main signal on the next block, not instantly at the sample the cable was pulled."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 2,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "dynamix.wasm",
+    "processor": "dynamix-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "comp_enable",
+      "name": "Comp/Exp On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "comp_mode",
+      "name": "Comp/Exp Mode",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 1,
+      "scalePoints": [
+        { "label": "Compressor", "value": 0 },
+        { "label": "Expander", "value": 1 }
+      ]
+    },
+    {
+      "symbol": "threshold",
+      "name": "Threshold",
+      "default": -18.0,
+      "minimum": -60.0,
+      "maximum": 0.0,
+      "unit": "db",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "ratio",
+      "name": "Ratio",
+      "default": 4.0,
+      "minimum": 1.0,
+      "maximum": 20.0,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "attack",
+      "name": "Attack",
+      "default": 10.0,
+      "minimum": 0.1,
+      "maximum": 200.0,
+      "unit": "ms",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "release",
+      "name": "Release",
+      "default": 100.0,
+      "minimum": 5.0,
+      "maximum": 1000.0,
+      "unit": "ms",
+      "paramIndex": 5
+    },
+    {
+      "symbol": "knee",
+      "name": "Knee",
+      "default": 6.0,
+      "minimum": 0.0,
+      "maximum": 24.0,
+      "unit": "db",
+      "paramIndex": 6
+    },
+    {
+      "symbol": "makeup",
+      "name": "Makeup",
+      "default": 0.0,
+      "minimum": -12.0,
+      "maximum": 24.0,
+      "unit": "db",
+      "paramIndex": 7
+    },
+    {
+      "symbol": "limit_enable",
+      "name": "Limiter On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "ceiling",
+      "name": "Ceiling",
+      "default": -0.3,
+      "minimum": -12.0,
+      "maximum": 0.0,
+      "unit": "db",
+      "paramIndex": 9
+    },
+    {
+      "symbol": "limit_release",
+      "name": "Limiter Release",
+      "default": 50.0,
+      "minimum": 5.0,
+      "maximum": 500.0,
+      "unit": "ms",
+      "paramIndex": 10
+    },
+    {
+      "symbol": "clip_enable",
+      "name": "Clipper On",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "drive",
+      "name": "Drive",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 24.0,
+      "unit": "db",
+      "paramIndex": 12
+    },
+    {
+      "symbol": "shape",
+      "name": "Shape",
+      "default": 0.3,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 13
+    }
+  ],
+  "abi": "jig:Abi1"
+}

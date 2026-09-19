@@ -1,0 +1,16 @@
+[package]
+name = "dynamix"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Compressor/expander, limiter and clipper in series, with a sidechain key input"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

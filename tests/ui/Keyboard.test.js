@@ -49,7 +49,7 @@ describe('which plugins get a keyboard', () => {
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
     expect(got).toEqual(['8b8', 'pulse'])
-    expect(not).toEqual(['bassgen', 'cascade'])
+    expect(not).toEqual(['bassgen', 'cascade', 'dynamix'])
   })
 
   it('asks whether it makes a sound, not only whether it takes a note', async () => {

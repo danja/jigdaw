@@ -51,7 +51,8 @@ describe('the plugins this host serves', () => {
     // entry by the facet name meant those two silently matched nothing.
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'Pulse'])
-    expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label)).toEqual(['Cascade'])
+    expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
+      .toEqual(['Cascade', 'Dynamix'])
     // BassGen accepts MIDI too: it can be steered from a keyboard.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'BassGen', 'Pulse'])
@@ -60,7 +61,7 @@ describe('the plugins this host serves', () => {
 
   it('takes a full IRI for a facet as well as a bare name', async () => {
     const full = await catalogue.search({ role: 'http://purl.org/stuff/transmissions/AudioEffect' })
-    expect(full.map(e => e.label)).toEqual(['Cascade'])
+    expect(full.map(e => e.label).sort()).toEqual(['Cascade', 'Dynamix'])
   })
 
   it('returns nothing rather than everything when nothing matches', async () => {

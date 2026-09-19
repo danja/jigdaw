@@ -450,3 +450,43 @@ describe('a foreign plugin is marked wherever it appears', () => {
     expect(page, 'a dismissed dialog must count as a refusal').toMatch(/'cancel'/)
   })
 })
+
+describe('the ids web/app.js reaches with $() exist in web/index.html', () => {
+  // $ is document.getElementById, called throughout web/app.js on the
+  // assumption that the markup has whatever id is asked for. Nothing checks
+  // that assumption at either end: a renamed element in the HTML fails
+  // silently at runtime, null where an element was expected, and the first
+  // sign is usually a click that does nothing.
+  const app = read('web/app.js')
+  const page = read('web/index.html')
+
+  it('has a matching id="..." for every literal $(\'...\') call', () => {
+    const wanted = new Set([...app.matchAll(/\$\('([\w-]+)'\)/g)].map(m => m[1]))
+    expect(wanted.size, 'no $(...) calls found, so this checked nothing').toBeGreaterThan(10)
+    const missing = [...wanted].filter(id => !page.includes(`id="${id}"`))
+    expect(missing, `web/index.html has no element with these ids: ${missing.join(', ')}`).toEqual([])
+  })
+})
+
+describe('the Tracks and Mixer tabs', () => {
+  // Contract-free, unlike the foreign mark, but the same shape of risk: a tab
+  // panel that createTabs never learns about stays permanently hidden or
+  // permanently shown, and a mixer that forgets a node it should draw is
+  // silent in the same way a control that does nothing is silent.
+  const app = read('web/app.js')
+  const page = read('web/index.html')
+
+  it('builds exactly the two tabs the markup has panels for', () => {
+    const ids = [...app.matchAll(/\{ id: '(\w+)', label: '[^']+', panel: \$\('([\w-]+)'\) \}/g)]
+      .map(m => ({ tab: m[1], panel: m[2] }))
+    expect(ids.length, 'createTabs was not called with any tab definitions').toBeGreaterThan(0)
+    for (const { panel } of ids) {
+      expect(page, `web/index.html has no #${panel} for a tab that points at it`).toMatch(new RegExp(`id="${panel}"`))
+    }
+  })
+
+  it('mounts the tab list into the page, not only builds it', () => {
+    expect(app).toMatch(/createTabs\(/)
+    expect(app, 'the tablist is built but never appended anywhere').toMatch(/tabs-mount['"]\)\.append\(tabs\.element\)/)
+  })
+})

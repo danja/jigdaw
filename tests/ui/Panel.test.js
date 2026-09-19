@@ -131,6 +131,41 @@ describe('createPanel behaviour', () => {
   })
 })
 
+describe('the application keeps a panel current', () => {
+  // A panel that never hears about a change made anywhere but itself: Cascade's
+  // Mix read its declared 0.30 after being set to 0.83 through WebMCP, on a
+  // panel that was already on screen. drawRack is in the browser bundle, where
+  // there is no AudioContext to build a real Engine against, so the wiring is
+  // checked in the source, the same way tests/ui/Focus.test.js checks that
+  // drawRack calls preserveFocus.
+  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
+  const drawStart = app.indexOf('function drawRack')
+  const draw = app.slice(drawStart, app.indexOf('\n\nfunction ', drawStart))
+
+  it('pushes node.settings into the panel on every redraw', () => {
+    const push = draw.indexOf('for (const [symbol, value] of node.settings)')
+    const appended = draw.indexOf('element.append(panel.element)')
+    expect(push, 'drawRack does not push node.settings into the panel').toBeGreaterThan(-1)
+    expect(push, 'the panel must exist, cached or fresh, before its settings can be pushed')
+      .toBeGreaterThan(draw.indexOf('panels.set(node.id, panel)'))
+    expect(push, 'settings are pushed before the panel is shown, not after')
+      .toBeLessThan(appended)
+  })
+
+  it('is not gated behind creating a fresh panel', () => {
+    // The bug: a value applied from outside only ever reached the panel
+    // through the panel's own onChange, so a panel fetched from the cache
+    // never learned that anything had changed. The push must sit outside the
+    // `if (!panel)` branch that guards construction.
+    const ifNoPanel = draw.indexOf('if (!panel)')
+    const closeOfThatBlock = draw.indexOf('}', draw.indexOf('panels.set(node.id, panel)'))
+    const push = draw.indexOf('for (const [symbol, value] of node.settings)')
+    expect(ifNoPanel).toBeGreaterThan(-1)
+    expect(push, 'the settings push must run after the creation branch closes, on every redraw')
+      .toBeGreaterThan(closeOfThatBlock)
+  })
+})
+
 describe('the page on a phone', () => {
   // AGENTS.md says a rule worth stating is worth a test. These are the parts of
   // "works on a phone" that can be checked without a browser; the rest needs
