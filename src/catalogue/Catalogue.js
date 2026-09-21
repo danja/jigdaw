@@ -3,7 +3,7 @@
 // Finding a plugin.
 //
 // docs/architecture.md: the catalogue should not start empty. plugin-universe
-// already runs a public read-only SPARQL endpoint over 756 profiles under CC0,
+// already runs a public read-only SPARQL endpoint over its own large catalogue,
 // so this queries that rather than building a second catalogue of the same
 // things.
 //

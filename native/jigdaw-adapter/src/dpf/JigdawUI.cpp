@@ -184,6 +184,18 @@ protected:
         return true;
     }
 
+    bool onScroll(const ScrollEvent& event) override {
+        if (view_ == kListView) return false;
+        // event.delta.y is in "lines", one tick of a detented wheel; a smooth
+        // trackpad sends fractional values, so round toward the direction
+        // moved rather than truncate it to zero.
+        const int lines = static_cast<int>(std::round(event.delta.getY()));
+        if (lines == 0) return false;
+        scrollPanelBy(-lines, loaded_[view_].ports.size());
+        repaint();
+        return true;
+    }
+
     bool onCharacterInput(const CharacterInputEvent& event) override {
         if (!focused_ || view_ != kListView) return false;
         if (event.character < 32 || event.character == 127) return false;
@@ -347,6 +359,7 @@ private:
             if (contains(rowRects_[i], p) && loaded_[i].ok) {
                 view_ = static_cast<int>(i);
                 selected_ = 0;
+                panelScroll_ = 0;
                 focused_ = false;
                 repaint();
                 return true;
@@ -384,6 +397,12 @@ private:
             return;
         }
 
+        // How many rows the panel body has room for, so scrolling knows where
+        // to stop and the indicator below can say how many there are in all.
+        const int visible = std::max(1, static_cast<int>((h - top - kPadding - 14.0f) / kRowHeight));
+        const int total = static_cast<int>(entry.ports.size());
+        panelScroll_ = std::max(0, std::min(panelScroll_, std::max(0, total - visible)));
+
         // The label column is sized to the longest name, so a plugin with one
         // long parameter name does not push every bar off the panel.
         fontSize(12.5f);
@@ -399,9 +418,9 @@ private:
 
         barRects_.clear();
         float y = top + 14.0f;
-        for (size_t i = 0; i < entry.ports.size(); ++i) {
+        for (int i = panelScroll_; i < total; ++i) {
             const auto& port = entry.ports[i];
-            const int slot = entry.firstSlot - 1 + static_cast<int>(i);
+            const int slot = entry.firstSlot - 1 + i;
             const float span = port.maximum - port.minimum;
             const float normalised = slotValue(slot);
             const float real = port.minimum + normalised * span;
@@ -409,7 +428,7 @@ private:
             const Rectangle<float> bar(barLeft, y + 12.0f, barWidth, 16.0f);
             barRects_.push_back(bar);
 
-            const bool isSelected = static_cast<int>(i) == selected_;
+            const bool isSelected = i == selected_;
             if (isSelected) {
                 beginPath();
                 roundedRect(kPadding + 6.0f, y, w - kPadding * 2.0f - 12.0f, kRowHeight - 6.0f, 4.0f);
@@ -452,21 +471,47 @@ private:
             y += kRowHeight;
             if (y + kRowHeight > h - kPadding) break;
         }
+
+        // Say how many exist and where these sit among them, whenever there
+        // are more than fit at once: a cutoff with nothing said about it is
+        // indistinguishable from the rest not existing, which is the bug this
+        // whole panel exists to avoid one layer up.
+        if (total > visible) {
+            fontSize(11.0f); fillColor(c.dim); textAlign(ALIGN_RIGHT | ALIGN_TOP);
+            char range[32];
+            std::snprintf(range, sizeof(range), "%d-%d of %d", panelScroll_ + 1,
+                          panelScroll_ + static_cast<int>(barRects_.size()), total);
+            text(w - kPadding - 10.0f, top + 6.0f, range, nullptr);
+            textAlign(ALIGN_LEFT | ALIGN_TOP);
+
+            // A minimal scrollbar: a track down the panel's right edge, a
+            // thumb sized by how much of the list is showing and placed by
+            // how far into it the scroll has gone.
+            const float trackX = w - kPadding - 5.0f;
+            const float trackTop = top + 24.0f;
+            const float trackHeight = h - kPadding - trackTop - 4.0f;
+            beginPath(); rect(trackX, trackTop, 3.0f, trackHeight); fillColor(c.line); fill();
+            const float thumbHeight = std::max(16.0f, trackHeight * visible / total);
+            const float thumbY = trackTop + (trackHeight - thumbHeight) *
+                (float(panelScroll_) / float(std::max(1, total - visible)));
+            beginPath(); rect(trackX, thumbY, 3.0f, thumbHeight); fillColor(c.accent); fill();
+        }
     }
 
     bool pressPanel(const Point<double>& p) {
         if (contains(backRect_, p)) { view_ = kListView; repaint(); return true; }
         const auto& entry = loaded_[view_];
-        for (size_t i = 0; i < barRects_.size() && i < entry.ports.size(); ++i) {
+        for (size_t row = 0; row < barRects_.size() && panelScroll_ + row < entry.ports.size(); ++row) {
             // A generous band, so a control is grabbable without hitting a
             // 16 pixel bar exactly.
-            Rectangle<float> band = barRects_[i];
+            Rectangle<float> band = barRects_[row];
             band.setY(band.getY() - 14.0f);
             band.setHeight(band.getHeight() + 28.0f);
             if (contains(band, p)) {
-                selected_ = static_cast<int>(i);
-                dragging_ = static_cast<int>(i);
-                setFromX(entry, static_cast<int>(i), p.getX());
+                const int i = panelScroll_ + static_cast<int>(row);
+                selected_ = i;
+                dragging_ = i;
+                setFromX(entry, i, p.getX());
                 return true;
             }
         }
@@ -481,12 +526,34 @@ private:
         if (count == 0) return false;
 
         switch (event.key) {
-            case kKeyUp:    selected_ = (selected_ + count - 1) % count; repaint(); return true;
-            case kKeyDown:  selected_ = (selected_ + 1) % count; repaint(); return true;
+            case kKeyUp:    selected_ = (selected_ + count - 1) % count; revealSelected(count); return true;
+            case kKeyDown:  selected_ = (selected_ + 1) % count; revealSelected(count); return true;
             case kKeyLeft:  nudge(entry, selected_, -1, event.mod & kModifierShift); return true;
             case kKeyRight: nudge(entry, selected_, +1, event.mod & kModifierShift); return true;
             default: return false;
         }
+    }
+
+    /// Scroll just enough to bring the selected row into view, so arrowing
+    /// past the bottom of the window moves the list rather than the
+    /// selection disappearing off the edge.
+    void revealSelected (int total) {
+        const float top = kPadding + 54.0f;
+        const int visible = std::max(1, static_cast<int>((getHeight() - top - kPadding - 14.0f) / kRowHeight));
+        if (selected_ < panelScroll_) panelScroll_ = selected_;
+        else if (selected_ >= panelScroll_ + visible) panelScroll_ = selected_ - visible + 1;
+        panelScroll_ = std::max(0, std::min(panelScroll_, std::max(0, total - visible)));
+        repaint();
+    }
+
+    /// As revealSelected's clamp, but moving by a wheel delta rather than to
+    /// a specific row. Recomputes the visible count rather than caching it,
+    /// because a host can resize the window between one scroll and the next.
+    void scrollPanelBy (int lines, size_t total) {
+        const float top = kPadding + 54.0f;
+        const int visible = std::max(1, static_cast<int>((getHeight() - top - kPadding - 14.0f) / kRowHeight));
+        const int maxScroll = std::max(0, static_cast<int>(total) - visible);
+        panelScroll_ = std::max(0, std::min(maxScroll, panelScroll_ + lines));
     }
 
     // --------------------------------------------------------- values and wiring
@@ -525,8 +592,11 @@ private:
     }
 
     void setFromX(const jigdaw::LoadedPlugin& entry, int which, double x) {
-        if (which < 0 || which >= static_cast<int>(barRects_.size())) return;
-        const auto& bar = barRects_[which];
+        // which is an absolute port index; barRects_ holds only the rows
+        // currently drawn, so it is read at an offset from the scroll.
+        const int row = which - panelScroll_;
+        if (row < 0 || row >= static_cast<int>(barRects_.size())) return;
+        const auto& bar = barRects_[row];
         const auto& port = entry.ports[which];
         const float fraction = bar.getWidth() > 0.0f
             ? static_cast<float>((x - bar.getX()) / bar.getWidth()) : 0.0f;
@@ -634,6 +704,7 @@ private:
     bool loading_ = false;
     int view_ = kListView;       ///< kListView, or an index into loaded_
     int selected_ = 0;           ///< which control the keyboard is on
+    int panelScroll_ = 0;        ///< index of the topmost port drawn in the panel
     int dragging_ = -1;
     size_t hover_ = static_cast<size_t>(-1);
 

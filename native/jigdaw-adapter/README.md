@@ -35,7 +35,7 @@ https://strandz.it/jigdaw/plugins/cascade/
 That chain is a synthesiser into a reverb: MIDI reaches every plugin that accepts it, and
 each plugin's audio output feeds the next.
 
-Parameters appear as a flat list of 16 generic slots, filled in load order: a plugin's
+Parameters appear as a flat list of 128 generic slots, filled in load order: a plugin's
 parameters follow the previous plugin's. A DAW asks for the parameter list before anything is
 loaded, so the names cannot be the real ones. The editor says which slot is which.
 
@@ -106,11 +106,13 @@ the adapter routing MIDI between them.
 
 ### What a DAW shows alongside it
 
-In VST3 the adapter reports about 2098 parameters. 2080 of those are the MIDI CC controls DPF
-synthesises for any plugin that takes MIDI input, 130 per channel across 16 channels. DPF
-marks them hidden; REAPER shows hidden parameters anyway, as a long list beside the real 16.
-This is not particular to the adapter. Every DPF plugin with MIDI input does it, and it cannot
-be switched off without giving up MIDI input.
+In VST3 the adapter reports about 2210 parameters: 2080 MIDI CC controls DPF synthesises for
+any plugin that takes MIDI input (130 per channel across 16 channels) plus the 128 generic
+slots above plus a couple of DPF's own bookkeeping parameters. Not re-measured against a live
+host since the slot count changed from 16; the 2080 is independent of it and stays exact. DPF
+marks the MIDI CC controls hidden; REAPER shows hidden parameters anyway, as a long list
+beside the real 128. This is not particular to the adapter. Every DPF plugin with MIDI input
+does it, and it cannot be switched off without giving up MIDI input.
 
 If a DAW shows the generic slider panel rather than the editor, it is using a cached scan from
 an earlier build. Force a plugin rescan, or clear that DAW's VST3 cache, and reopen it.

@@ -108,8 +108,8 @@ npm run validate -- examples/reference-profile.ttl   # shapes, exits non-zero on
 
 ## Related catalogues
 
-[plugin-universe.com](https://plugin-universe.com) holds 756 plugins under CC0, counted over
-its public endpoint on 2026-09-18, with a public read-only SPARQL endpoint at
+[plugin-universe.com](https://plugin-universe.com) holds a large, growing catalogue of plugins
+under CC0, with a public read-only SPARQL endpoint at
 `sparql.plugin-universe.com/public/query` and a public MCP endpoint at
 `mcp.plugin-universe.com/mcp`, faceted on `accepts` and `produces`. JigDAW extends its profile
 format rather than competing with it.

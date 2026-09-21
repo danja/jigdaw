@@ -78,12 +78,12 @@ are the price of the design and they shape the capability negotiation.
 **What runs today has no store.** `src/catalogue/LocalCatalogue.js` indexes the plugins this
 host serves by reading the same `profile.ttl` files it serves them from, in process, with no
 database and nothing to crawl. It searches its own plugins first and, by default, only those:
-a browser listing 756 plugins that none of them can run is a list rather than a browser.
+a browser listing hundreds of plugins that none of them can run is a list rather than a browser.
 
 The rest of the catalogue is one checkbox away, dimmed and labelled, because hiding it
 entirely would misrepresent what exists. `plugin-universe.com` runs a public read-only SPARQL
 endpoint at `sparql.plugin-universe.com/public/query` and a public MCP endpoint at
-`mcp.plugin-universe.com/mcp`, over 756 plugins with `accepts` and `produces` facets, under
+`mcp.plugin-universe.com/mcp`, over its whole catalogue with `accepts` and `produces` facets, under
 CC0, and JigDAW's search reaches it through the same query service rather than through a
 second implementation. Those figures were taken from `/health` and should be re-measured
 rather than trusted.

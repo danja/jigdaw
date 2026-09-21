@@ -52,6 +52,14 @@ if(JIGDAW_BUILD_TESTS)
 
   add_test(NAME chain_file COMMAND test_chain "file://${JIGDAW_REPO}")
   set_tests_properties(chain_file PROPERTIES SKIP_RETURN_CODE 77)
+
+  # Binds JIGDAW_PARAMETER_COUNT, declared once in src/dpf/DistrhoPluginInfo.h,
+  # to the plugin with the most ports. file:// only: the count does not
+  # change with where the profile was fetched from.
+  add_executable(test_parameter_count tests/parameter_count_test.cpp)
+  target_link_libraries(test_parameter_count PRIVATE jigdaw_core)
+  add_test(NAME parameter_count COMMAND test_parameter_count "file://${JIGDAW_REPO}")
+  set_tests_properties(parameter_count PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 if(JIGDAW_BUILD_PLUGIN)

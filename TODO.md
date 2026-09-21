@@ -206,13 +206,32 @@ complete. Review periodically.
       `~/github/transmission/vocabs/formats.ttl`, which its own header had been asking for.
       Measured after: plugin-universe declares nothing upstream does not. A test in
       transmission compares the two when that checkout is present.
-- [ ] **The inspection vocabulary still has no consumer.** `jig:Inspection`,
-      `jig:inspectionOf`, `jig:inspectedAt`, `jig:hostVersion` and `jig:loadOutcome` are
-      declared in `vocabs/jigdaw.ttl`, constrained by nothing in `vocabs/shapes.ttl`, written
-      by nothing and read by nothing. `jig:Threads` and `jig:ExceptionHandling` are in the
-      same position. That is the state plugin-universe describes as invisible: terms
-      written into the data and selected by no query, which is not a condition anything
-      reports. Either Phase 5 uses them or they come out.
+- [x] **The inspection vocabulary now has a consumer, 2026-09-20.** Contract section 10.3
+      says a host SHOULD record load outcomes as `jig:Inspection` records, including
+      failures; nothing did. `src/host/Inspections.js` is the minimal thing that makes that
+      true: plain records shaped like the four predicates (`inspectionOf`, `inspectedAt`,
+      `hostVersion`, `loadOutcome`), kept in `localStorage` under a bounded, oldest-dropped
+      list, because nothing in a browser host writes RDF triples of its own and this is what
+      would serialise cleanly if something ever did.
+
+      Wired into the one place a load's outcome is actually known,
+      `OpDispatcher.addPlugin`: a record on success (`"loaded"`), a record on failure
+      (`"failed: <reason>"`, matching `jig:loadOutcome`'s own "loaded, refused, or failed,
+      with the reason"), neither for a `ConsentRequired` since nothing was attempted yet.
+      Present by default rather than opt-in, unlike foreign plugin support, because
+      recording is what the SHOULD asks for rather than a capability a host chooses to
+      offer; `web/app.js` needed no change to get it.
+
+      `tests/host/Inspections.test.js` covers the module (round trip, the 200-record bound,
+      no storage, corrupt storage, a storage that throws on access); two tests in
+      `tests/ops/OpDispatcher.test.js` bind the wiring with an injected fake. Verified live in
+      Chrome, not only in the suite: loaded Pulse, read `localStorage['jigdaw:inspections']`
+      back with `loadOutcome: "loaded"`; loaded a nonexistent IRI, read
+      `loadOutcome: "failed: ... returned 404"` appended beside it.
+
+      Not done, and deliberately smaller than this: `jig:Threads` and `jig:ExceptionHandling`
+      (WasmFeature individuals) are still declared and still unused by any profile or shape.
+      Separate question from Inspection, unrelated to Phase 5, not investigated this pass.
 
 ## The application
 
@@ -464,6 +483,19 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       `docs/module-abi.md` now states the splitting rule instead of implying it, which is what
       let this through.
 
+- [x] **`JIGDAW_PARAMETER_COUNT` too small for the 8b8, fixed 2026-09-19.** Reported by the
+      user: loading it through the JigDAW Adapter in Reaper, only a fraction of its 42
+      controls showed. Raised from 16 to 128; full account, including why it went unnoticed
+      and how it was reproduced natively without Reaper, in `MISTAKES.md`.
+
+- [x] **The adapter's own editor panel now scrolls, fixed 2026-09-19.** Found DPF at
+      `~/github/downspout/third_party/DPF`, per the user, which built the real VST3, CLAP,
+      LV2 and a standalone JACK executable. `panelScroll_`, mouse wheel, arrow-key auto-scroll
+      (`revealSelected`), and a "34-42 of 42" indicator with a minimal scrollbar. Verified
+      running on a virtual display with `xdotool` and screenshots, not just compiling: full
+      account, including confirming a click on a control still sets the right one once
+      scrolled, in `MISTAKES.md`.
+
 ## Before there is code
 
 - [x] `src/rdf/Vocabulary.js` exists, is frozen constants, and is bound to the ontology in
@@ -505,8 +537,17 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       error). Also fixed while in there: `AGENTS.md`'s opening said "None of the DAW exists,"
       unchanged since phase 0, and "This project has not made its own mistakes yet" above a
       file that is now 1029 lines of exactly that.
-- [ ] Re-measure every figure quoted in a document. The plugin count, the profile count and
-      the format list all drift.
-- [x] Line counts checked, 2026-09-18. The largest is `src/ops/OpDispatcher.js` at 456, then
-      `bin/bundle.js` at 409. AGENTS.md says past about 400 is worth a look and past about 600
-      usually wants splitting, so nothing is due yet and two are worth watching.
+- [x] **Re-measured, 2026-09-20, and the rule changed rather than the figure.** The
+      plugin-universe count had drifted again, 756 in nine places against 761 measured live,
+      two days after the last correction. Not a one-off: `/health` shows it was 756 on
+      2026-09-18 and 761 on 2026-09-20, real churn in a catalogue this project does not run.
+      Chasing it is a chore with no end. Reworded every mention to "hundreds of plugins" or
+      similar instead of a number, and replaced `tests/docs/conventions.test.js`'s "one stated
+      figure" check with one that asserts no document states an exact plugin-universe count at
+      all, so the next well-meaning correction of the number fails the build instead of
+      shipping. JigDAW's own worked-plugin count is unaffected by this: that one is ours to
+      keep exact, and its own test (`states the number of worked plugins there actually are`)
+      is unchanged.
+- [ ] `src/ops/OpDispatcher.js` is 712 lines, up from 456 on 2026-09-18, past the "600 usually
+      wants splitting" line in `AGENTS.md`. Noticed while re-measuring line counts for the
+      item above; not investigated further this pass. `bin/bundle.js` is still 409, unchanged.

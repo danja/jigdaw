@@ -22281,6 +22281,62 @@ var Transport = class _Transport {
   }
 };
 
+// src/host/Inspections.js
+var HOST_VERSION = "jigdaw-host/0.1.0";
+var STORAGE_KEY = "jigdaw:inspections";
+var MAX_RECORDS = 200;
+function defaultStorage() {
+  try {
+    return typeof localStorage !== "undefined" ? localStorage : null;
+  } catch {
+    return null;
+  }
+}
+var Inspections = class {
+  #storage;
+  // Storage is injected, never read from globalThis inside a method, so a
+  // host with none (private browsing, a test, a worker) gets a working
+  // no-op instead of a throw the first time a plugin loads.
+  constructor({ storage = defaultStorage() } = {}) {
+    this.#storage = storage ?? null;
+  }
+  /** Record what happened loading `iri`. `outcome` is free text, per
+   * jig:loadOutcome: "loaded", or "failed: <reason>". */
+  record({ iri: iri2, outcome }) {
+    if (!this.#storage) return;
+    const records = this.#read();
+    records.push({
+      inspectionOf: iri2,
+      inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      hostVersion: HOST_VERSION,
+      loadOutcome: outcome
+    });
+    while (records.length > MAX_RECORDS) records.shift();
+    try {
+      this.#storage.setItem(STORAGE_KEY, JSON.stringify(records));
+    } catch {
+    }
+  }
+  /** Every inspection recorded of one plugin, oldest first. */
+  forPlugin(iri2) {
+    return this.#read().filter((r) => r.inspectionOf === iri2);
+  }
+  /** Every inspection recorded, oldest first. */
+  all() {
+    return this.#read();
+  }
+  #read() {
+    if (!this.#storage) return [];
+    try {
+      const raw = this.#storage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+};
+
 // src/ops/OpDispatcher.js
 var UNDO_LIMIT = 100;
 var OpDispatcher = class {
@@ -22289,6 +22345,7 @@ var OpDispatcher = class {
   #listeners = /* @__PURE__ */ new Set();
   #nodeIds = /* @__PURE__ */ new Map();
   #router = null;
+  #inspections;
   #foreign;
   // A snapshot per undoable edit, taken before the edit and pushed after it
   // commits, so the top of the stack is always "what to go back to". Nothing
@@ -22298,10 +22355,11 @@ var OpDispatcher = class {
   #undoStack = [];
   #redoStack = [];
   #recording = true;
-  constructor({ project = new Project(), engine: engine2 = null, foreign = null } = {}) {
+  constructor({ project = new Project(), engine: engine2 = null, foreign = null, inspections = new Inspections() } = {}) {
     this.#project = project;
     this.#engine = engine2;
     this.#foreign = foreign;
+    this.#inspections = inspections;
     if (engine2) {
       this.#router = new EventRouter({
         engine: engine2,
@@ -22625,8 +22683,10 @@ var OpDispatcher = class {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
       }
+      this.#inspections.record({ iri: iri2, outcome: `failed: ${error2.message}` });
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
+    this.#inspections.record({ iri: iri2, outcome: "loaded" });
     const result = this.apply([{
       op: "addNode",
       ...node,

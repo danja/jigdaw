@@ -2,6 +2,61 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-19 Only sixteen of the 8-Bit 8asterd's 42 controls reached Reaper
+
+**What happened.** Reported by the user: loading the 8b8 through the JigDAW Adapter in
+Reaper, only a fraction of its controls showed.
+
+**Root cause.** `JIGDAW_PARAMETER_COUNT` in `src/dpf/DistrhoPluginInfo.h` is a compile-time
+constant declaring how many generic parameter slots the DPF wrapper offers a host, fixed at
+plugin construction, before any JigDAW chain is loaded: `Plugin(kParameterCount, 0, 2)`. It
+was 16, chosen when Cascade and Pulse (five parameters each) were the only worked plugins.
+`jigdaw::Chain::parameters()` flattens every loaded plugin's ports into one list with no
+bound of its own, so a host was told about slots 1 to 16 and the 8b8's ports 17 to 42 simply
+had no parameter to answer to: not dropped, not reported, just never asked about.
+
+**Why it had not been noticed.** Every native test loads Pulse, Cascade, BassGen and Dynamix,
+none of which reaches sixteen. The 8b8 is tested in `tests/dsp/8b8.test.js` (the WebAssembly
+module) and `tests/host/integration.test.js` (the browser host), both of which read every
+parameter by name and neither of which goes anywhere near the native adapter's own fixed
+slot count. Nothing connected the two: a bug specific to native hosting a plugin whose
+Rust/C++ module is fine, in the one layer the JavaScript tests cannot reach.
+
+**Prevention.** Raised to 128, which covers the 8b8 alone with room to spare and even covers
+every `jig:abi`-declaring plugin here loaded in one chain (79). `tests/
+parameter_count_test.cpp` loads the 8b8 through `jigdaw::Chain` over `file://` and asserts
+its parameter count fits within `JIGDAW_PARAMETER_COUNT`, so the next plugin that outgrows it
+fails a build instead of a user's session. Verified by running it against the unfixed
+constant first: "42 parameters, 16 slots declared to the host", failed as expected; passed
+after the fix.
+
+**Fixed the same day, once DPF was found.** The adapter's own NanoVG panel
+(`JigdawUI::drawPanel`) drew each loaded plugin's ports in a fixed-height list with no
+scrolling, breaking out once a row would fall outside the window: roughly ten fit in the
+default 760x560 size, and nothing said the other 32 of the 8b8's 42 existed. Left open at
+first because DPF was not checked out in this environment and a UI patch nobody has watched
+render is a worse risk than leaving the gap documented. The user pointed at
+`~/github/downspout/third_party/DPF`, which built the real VST3, CLAP, LV2 and a standalone
+JACK executable immediately.
+
+`panelScroll_` now tracks the topmost visible port; `onScroll` moves it by the wheel, arrow
+keys move it enough to keep the selection visible (`revealSelected`), and a clicked or
+dragged control maps back from its drawn row to the absolute port index it actually is
+(`row = which - panelScroll_` in `setFromX`, the reverse in `pressPanel`), which is the part
+a screenshot cannot check by itself: a control that moves the parameter next to the one you
+clicked is a worse bug than one that does not scroll at all. A "12-20 of 42" readout and a
+minimal scrollbar say what is not on screen, which the list view already had no equivalent
+gap to be caught missing.
+
+Verified running, not only compiling: launched the standalone JACK build on a virtual X
+display (`Xvfb`, kept separate from the real one so nothing opened on the user's actual
+desktop), loaded the 8b8 over the network, and drove it with `xdotool` and `import`
+screenshots. Confirmed the list now reports "params 1-42" where it read "params 1-16" before;
+confirmed the panel scrolls to "34-42 of 42" and clamps exactly there, not short and not past
+it; confirmed a click on "Tuning: Temperament" while scrolled to rows 34-42 set that control
+and not some other one; confirmed arrowing down past the visible window scrolls to follow the
+selection. `ctest` and `npm test` both still pass in full afterward.
+
 ## 2026-09-19 A channel strip on a plugin with no channel to strip
 
 **What happened.** Every node in the rack got a Level knob, a Pan knob, a Mute button and a

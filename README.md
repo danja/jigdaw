@@ -56,7 +56,7 @@ node bin/host.js https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:0.5 --out 
 
 The format is not new. It extends the profile vocabulary published at
 [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already in
-use over 756 plugins, adding the terms a browser needs to fetch and run one. A profile written
+use across hundreds of plugins, adding the terms a browser needs to fetch and run one. A profile written
 for that catalogue stays valid here.
 
 ## The specification

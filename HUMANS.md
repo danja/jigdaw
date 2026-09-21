@@ -131,6 +131,21 @@ sudo apt install lld-18
 The Claude in Chrome extension is connected and working, which is what made the four fixes
 above possible, and what confirmed `plugins/8b8/` in a real browser on 2026-09-19.
 
+**DPF. Found, 2026-09-19, by the user: `~/github/downspout/third_party/DPF`.** Not this
+repository's own; downspout already vendors a checkout, and pointing at it was enough.
+
+```sh
+cmake -DJIGDAW_BUILD_PLUGIN=ON -DJIGDAW_DPF_DIR=~/github/downspout/third_party/DPF native/ -B native/build
+```
+
+Builds the real VST3, CLAP, LV2 and a standalone JACK executable, `src/dpf/JigdawPlugin.cpp`
+and `JigdawUI.cpp` included, which `jigdaw_core`'s own tests alone do not touch. Used the same
+day to build and actually watch the editor's scrolling fix render: the standalone app on a
+separate `Xvfb` display, so nothing opened on the real desktop, driven with `xdotool` and
+`import` screenshots. That verification path (build here, run on `:99`, screenshot, compare)
+is now the one to reach for before claiming any change to `JigdawUI.cpp` works rather than
+only compiles.
+
 ## Updating a deployment
 
 **[docs/deployment.md](docs/deployment.md) opens with this**, including which changes need the

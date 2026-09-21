@@ -115,8 +115,8 @@ const catalogue = new Catalogue({
 })
 
 // This host's own plugins. Until they are harvested upstream, nothing else
-// knows they exist, and a browser that lists 756 plugins none of which can run
-// is a list rather than a browser.
+// knows they exist, and a browser that lists hundreds of plugins none of which
+// can run is a list rather than a browser.
 const local = new LocalCatalogue()
 
 // A small cache, because a person typing into a search box produces a request

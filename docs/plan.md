@@ -22,7 +22,7 @@ This is not greenfield. Four sibling repositories already run the pattern, descr
 | `transmission` | the `trn:` vocabulary, the discovered and curated split, an RDF plugin catalogue with an MCP face |
 | `downspout` | 52 hand-written `profile.ttl` files, the format in real use |
 | `valis` | instruments as RDF documents, the ontology to registry symmetry test, one dispatcher with thin adapters |
-| `plugin-universe` | live at plugin-universe.com: 756 plugins, a published profile spec, a vocabulary at `/ns`, Fuseki, public SPARQL and MCP endpoints |
+| `plugin-universe` | live at plugin-universe.com: hundreds of plugins, a published profile spec, a vocabulary at `/ns`, Fuseki, public SPARQL and MCP endpoints |
 
 So the profile format is settled and already deployed. **JigDAW's job is to extend it for the
 web**: what a plugin's IRI serves, how WebAssembly and user interfaces are declared and
@@ -197,8 +197,8 @@ because it needs a person.
 ## Phase 5. The catalogue. Search complete.
 
 Search works without a store of our own, because plugin-universe already runs a public
-read-only SPARQL endpoint over 756 CC0 profiles and building a second catalogue of the same
-things would be worse than querying that one.
+read-only SPARQL endpoint over its own large CC0 catalogue and building a second one of the
+same things would be worse than querying that one.
 
 - `src/catalogue/`: `QueryService` loading `.sparql` files by name, `terms.js` where a value
   becomes syntax and nowhere else, `facets.js` holding the one facet list, and `Catalogue`.
@@ -213,7 +213,7 @@ things would be worse than querying that one.
   reading the same `profile.ttl` files it serves. No store, and no second copy to drift.
 
 Search returns this host's own plugins first and, by default, only those. A browser listing
-756 plugins that none of them can run is a list rather than a browser. The rest of the
+hundreds of plugins that none of them can run is a list rather than a browser. The rest of the
 catalogue is one checkbox away, dimmed and labelled, because hiding it entirely would
 misrepresent what exists: those are real plugins, and `jig:WebPlugin` being a subclass is
 exactly what lets the catalogue hold both.

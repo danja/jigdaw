@@ -346,32 +346,26 @@ describe('the foreign plugin probe', () => {
 })
 
 describe('figures quoted about other systems', () => {
-  // TODO.md has carried "re-measure every figure quoted in a document" for
-  // months, which is the shape of a task nothing performs. The plugin count was
-  // 758 in seven documents and 756 over the live endpoint, so it had been wrong
-  // in every one of them for a while and nothing said so.
+  // TODO.md carried "re-measure every figure quoted in a document" for months,
+  // which is the shape of a task nothing performs. The plugin-universe count
+  // was 758 in seven documents and 756 over the live endpoint at one point,
+  // then 756 in nine places and 761 over the endpoint two days later: not a
+  // one-off drift but the ordinary rate of change for a catalogue somebody
+  // else runs. Keeping documents in step with it is a chore with no end, for
+  // a number none of them needs to be exact about.
   //
-  // This does not query the network: a test that needs an endpoint is a test
-  // that gets disabled the first time the endpoint is down. It checks that the
-  // documents agree with each other and with one stated figure, so correcting
-  // the number is one edit and a stale copy is a failure.
-  const CATALOGUE_PLUGINS = 756   // plugin-universe, measured 2026-09-18
-
-  it('states one plugin-universe count, in every document that mentions it', () => {
+  // So the rule changed rather than the figure: nothing here states plugin-
+  // universe's size as a count. "hundreds of plugins" is true for a long time
+  // without anyone re-measuring it. This checks the rule holds instead of
+  // checking the number does.
+  it('states no exact plugin-universe count', () => {
     const offenders = []
     for (const file of byExt('.md')) {
       for (const [i, line] of read(file).split('\n').entries()) {
-        for (const match of line.matchAll(/\b(\d{3})\s+(?:plugins|profiles)\b/g)) {
-          if (Number(match[1]) !== CATALOGUE_PLUGINS) offenders.push(`${file}:${i + 1} says ${match[1]}`)
-        }
+        if (/\b\d{3}\s+(?:plugins|profiles)\b/.test(line)) offenders.push(`${file}:${i + 1}: ${line.trim()}`)
       }
     }
-    expect(offenders, `disagree with the measured ${CATALOGUE_PLUGINS}:\n  ${offenders.join('\n  ')}`).toEqual([])
-  })
-
-  it('finds those mentions, so this is not vacuous', () => {
-    const mentions = byExt('.md').filter(f => /\b\d{3}\s+(?:plugins|profiles)\b/.test(read(f)))
-    expect(mentions.length, 'no document quotes a catalogue size').toBeGreaterThan(2)
+    expect(offenders, `states an exact count that will need re-measuring:\n  ${offenders.join('\n  ')}`).toEqual([])
   })
 
   // The same shape, for a figure about this repository rather than another

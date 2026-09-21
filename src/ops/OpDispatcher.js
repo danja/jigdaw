@@ -17,6 +17,7 @@ import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi } from '../engine/EventRouter.js'
 import { Transport } from '../engine/Transport.js'
+import { Inspections } from '../host/Inspections.js'
 
 // Bounded so a long session's history is not an unbounded array of full
 // project snapshots. 100 undoable edits is far past what anyone steps back
@@ -29,6 +30,7 @@ export class OpDispatcher {
   #listeners = new Set()
   #nodeIds = new Map()
   #router = null
+  #inspections
 
   #foreign
 
@@ -41,13 +43,18 @@ export class OpDispatcher {
   #redoStack = []
   #recording = true
 
-  constructor ({ project = new Project(), engine = null, foreign = null } = {}) {
+  constructor ({ project = new Project(), engine = null, foreign = null, inspections = new Inspections() } = {}) {
     this.#project = project
     this.#engine = engine
     // Contract section 12. Absent by default: a host that supports no foreign
     // plugins conforms, and refusing is the safe default, so this has to be
     // handed in rather than assumed.
     this.#foreign = foreign
+    // Contract section 10.3: a host SHOULD record load outcomes. Present by
+    // default, unlike #foreign, because recording is what the section asks
+    // for rather than an optional capability; Inspections itself no-ops
+    // where there is no storage to write to (a test, a worker).
+    this.#inspections = inspections
     if (engine) {
       this.#router = new EventRouter({
         engine,
@@ -421,8 +428,13 @@ export class OpDispatcher {
       if (error.name === 'ConsentRequired') {
         return { ok: false, kind: 'consent', request: error.request, message: error.message }
       }
+      // Contract section 10.3: a failed load is a recorded result, not only a
+      // rejected promise. Not for ConsentRequired above: nothing was actually
+      // attempted yet, so there is nothing to have observed.
+      this.#inspections.record({ iri, outcome: `failed: ${error.message}` })
       return { ok: false, kind: 'load', step: error.step ?? null, message: error.message }
     }
+    this.#inspections.record({ iri, outcome: 'loaded' })
 
     const result = this.apply([{
       op: 'addNode',

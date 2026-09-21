@@ -215,6 +215,22 @@ describe('addPlugin', () => {
     expect(d.project.nodes).toEqual([])
   })
 
+  it('records a successful load as an inspection, contract section 10.3', async () => {
+    const engine = fakeEngine()
+    const inspections = { record: vi.fn() }
+    const d = new OpDispatcher({ engine, inspections })
+    await d.addPlugin(IRI)
+    expect(inspections.record).toHaveBeenCalledWith({ iri: IRI, outcome: 'loaded' })
+  })
+
+  it('records a failed load as an inspection too, not only a successful one', async () => {
+    const engine = fakeEngine({ failWith: { message: 'no CORS header on the processor', step: 'fetch-resource' } })
+    const inspections = { record: vi.fn() }
+    const d = new OpDispatcher({ engine, inspections })
+    await d.addPlugin(IRI)
+    expect(inspections.record).toHaveBeenCalledWith({ iri: IRI, outcome: 'failed: no CORS header on the processor' })
+  })
+
   it('removes the loaded node from the engine if the model refuses it', async () => {
     // Otherwise a refused plugin keeps running, connected to nothing, audible
     // to nobody, and holding memory.
