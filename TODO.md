@@ -5,134 +5,6 @@ complete. Review periodically.
 
 ## From the inbox
 
-- [x] **Read every document against the documentation rules, 2026-09-19.** Normative documents
-      first, per the item's own instruction: `host-plugin-contract.md`, `plugin-profiles.md`,
-      `messaging.md`, `latency.md`, `project-format.md`, `webmcp.md`, `namespace.md`,
-      `module-abi.md`, `plugin-bundles.md`, `architecture.md`. Then `README.md`,
-      `README.agents.md`, `HUMANS.md`, the two plugin READMEs (`8b8`, `_jsfx-runtime`), and the
-      background docs (`plan.md`, `local-references.md`, `deployment.md`, `wam.md`).
-      `first-thoughts.md` was left alone, as the original sketch always is.
-
-      No cliche turned out to be frequent: a grep for the usual list (delve, leverage,
-      seamless, robust, and about thirty more) found nothing anywhere in the set, so there is
-      nothing to promote into `MISTAKES.md` or the guard. Most of the normative documents
-      needed no changes at all; they already do what the rule asks, heading answering its own
-      question in the first sentence.
-
-      What the pass actually found was a different, more concrete class of defect: sentences
-      that were true when written and are not any more, which is exactly the failure `AGENTS.md`
-      names ("a sentence is a claim, and nothing tests sentences"). Fixed:
-
-      - `plugin-profiles.md` and `README.md` leaked or pointed at things that no longer exist:
-        an absolute `/home/danny/...` filesystem path where every sibling document says
-        `~/github/...`, and two links to `web/docs/plugins.html` and `.../hosts.html`, a
-        directory removed by the GitHub Pages migration (`docs-site` note in this file, above).
-      - `module-abi.md` said "both worked plugins declare" the ABI. Five now do (Cascade, Pulse
-        and Dynamix at version 1; BassGen and the 8-Bit 8asterd at version 2), and its own link
-        to the removed `plugins.html` page needed the same fix as README's.
-      - `namespace.md` pointed at "`HUMANS.md` item 2" for a vocabulary-serving runbook that
-        item no longer is, because the numbering moved when today's earlier HUMANS.md tidy-up
-        closed out the two items that used to sit above it. Removed rather than repointed: the
-        deployment already happened and does not need a runbook entry any more.
-      - `architecture.md` opened with "None of the DAW is implemented," which stopped being
-        true phases ago, and its catalogue and deployment sections described the planned
-        Fuseki-backed store as though it were what runs, when what actually shipped is
-        `LocalCatalogue.js` reading `profile.ttl` files with no store at all and federating
-        plugin-universe's search live. Corrected to say what runs and what is still planned,
-        matching the framing `deployment.md` already had for the same fact.
-      - `deployment.md`'s own "not settled" list still said "the store," predating the decision
-        that there isn't one yet either.
-      - `wam.md` had a literal duplicated `## Testing` heading, and a stray double blank line
-        sat between two paragraphs in `deployment.md`.
-
-      None of this was a style problem the rule set out to catch; all of it was found by
-      reading each document against the current state of the repository rather than against
-      itself. `README.agents.md` got the two remaining mechanical misses (a doubled comma, the
-      same "signal processing is WebAssembly" absolute claim `for-plugin-authors.md` already
-      had softened for Tremolo) and otherwise needed nothing.
-
-- [x] **Foreign plugins work in the application, 2026-09-18.** Contract section 12, end to
-      end in Chrome: a Web Audio Module fetched by IRI, classified as foreign, consented to
-      through the dialog, verified as a container, served from the worker, adapted, adopted by
-      the engine, drawn with a generated panel, marked FOREIGN in the rack, and **passing
-      audio to the speakers** with the impulse source feeding it. A native Cascade sits in the
-      same rack, unmarked, and a parameter set through the WebMCP surface returns its clamped
-      value from the range the plugin itself reported.
-
-      The earlier "hang" was the browser tab being hidden, which grants no user activation, so
-      `AudioContext.resume()` never settled. Recorded in `MISTAKES.md` and in `AGENTS.md`.
-
-- [x] **A panel's readout did not follow a parameter set from outside it, fixed 2026-09-19.**
-      `drawRack` now pushes every entry of `node.settings`, the model's own record of what was
-      actually set, into the panel on every redraw, whether the panel was just created or
-      reused from the cache. Verified in Chrome: Cascade's Mix set to 0.83 through WebMCP now
-      moves the knob, the readout and `aria-valuetext` together, not only the model.
-
-      The channel strip was checked and did not need the same fix: `strip.update(node.channel,
-      ...)` already runs unconditionally on every redraw, cached or fresh, so it was never
-      exposed to this. There is no `setChannel` WebMCP tool to demonstrate that live with, so
-      it stands on the source rather than on a browser run.
-
-      `tests/ui/Panel.test.js` binds the wiring in `web/app.js` the way
-      `tests/ui/Focus.test.js` already does for the focus fix: one assertion that the push
-      exists, one that it is not gated inside the `if (!panel)` branch that only a freshly
-      created panel takes. Mutation tested both ways: removing the push fails both, moving it
-      inside the creation branch leaves the first green and fails only the second, which is
-      what makes it the assertion that matters.
-
-- [x] **Provenance and signing for bundles, 2026-09-18.** Done, and in
-      [docs/plugin-bundles.md](docs/plugin-bundles.md) sections 5 to 8 rather than here. Every
-      bundle carries a `provenance.ttl`; `bin/bundle.js --key` signs; `bin/verify.js` reports.
-      Phase 9b in [docs/plan.md](docs/plan.md) has the shape of it.
-
-      Three things are deliberately not done and are recorded as absent rather than as work.
-      **No revocation**: nothing can say a key was later withdrawn, which needs somewhere to
-      publish a withdrawal and a reason to believe that place. **No trusted key list**, ever:
-      whose signature means something is a question about people. **No countersigning tool**,
-      though the format allows it and the canonical form was built so that a second signature
-      cannot invalidate the first.
-
-- [x] **A published key has a home, 2026-09-19.** `HUMANS.md` item 2, done by the user:
-      `https://strandz.it/jigdaw/keys/danja#ed25519` is live, `web/keys/danja.ttl` committed
-      and pulled. Measured against the server, not assumed: the IRI answers 200, `text/turtle`,
-      byte for byte the same as the committed file, so `node bin/verify.js <bundle> --online`
-      now has something real to check a signature against rather than only the copy inside the
-      bundle. No plugin has actually been bundled and signed with it yet; that is a separate,
-      smaller step whenever a bundle is wanted.
-
-- [x] **CORS audited, 2026-09-17.** Measured through the real servers, not read from config.
-
-      Clean: every route the page fetches returns exactly one `Access-Control-Allow-Origin: *`,
-      on the live site and locally, and preflight answers 204 with the right headers. Now
-      guarded by `tests/server/cors.test.js`, which starts `bin/serve.js` and asks it, counting
-      `rawHeaders` because node joins duplicates with a comma and would turn the exact fault
-      into a plausible string. Mutation tested by adding a second header and by removing it.
-
-      **The cross-origin case was exercised for the first time.** A plugin served from
-      `localhost:6027` loaded into a page served from `127.0.0.1:6026`, a genuinely different
-      origin, and played a note: fetched, digest verified, worklet registered cross-origin,
-      WebAssembly instantiated, peak 0.2284 held and 0 released. The identity and retrieval
-      split held: the profile kept its canonical `https://strandz.it/...` IRI while its module
-      and processor were rebased onto the origin it was actually fetched from. This is the case
-      the whole design rests on and nothing had ever run it.
-
-      An origin that forgets the header fails correctly: *Failed to fetch. If the profile is on
-      another origin, it must be served with Access-Control-Allow-Origin.* The real error first
-      and CORS as a conditional suggestion, which is the corrected wording from `MISTAKES.md`.
-
-      Two findings, neither ours to fix, both recorded below.
-
-- [x] **`http://purl.org/stuff/jigdaw/` cannot be dereferenced by a browser. Said so,
-      2026-09-19.** `docs/namespace.md`'s "Dereferencing it from a browser needs the https
-      form" section states it in full: the measured redirect chain, why the opening hop being
-      mixed-content-and-no-CORS is enough to stop the fetch on its own, and that a browser
-      based consumer MUST use the `https://purl.org/stuff/jigdaw/` form. Checked whether
-      `for-hosts.md` or `for-plugin-authors.md` needed the same note, since that was the
-      original worry (an author following advice to dereference hitting this and concluding the
-      vocabulary is broken): neither tells an author to dereference the namespace IRI at all,
-      only to write `jig:` terms into a profile, so there is no advice there that leads into the
-      trap. `docs/namespace.md` is itself published, on GitHub Pages as of today.
-
 - [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
 
       **First, try inverting the direction.** The page already has everything: `registerTools`
@@ -170,9 +42,6 @@ complete. Review periodically.
 
 ## Namespaces
 
-- [x] **JigDAW vocabulary served, and it resolves.** `http://purl.org/stuff/jigdaw/` reaches
-      `https://hyperdata.it/xmlns/jigdaw/` and answers 200, content negotiated, with CORS and a
-      303 from every term. `trn:` was done the same way on 2026-09-18 and now carries 208 terms.
 - [ ] **Individual `pu:` terms dereference for nobody.**
       `purl.org/stuff/plugin-universe/supportedPlatform`, whose namespace root resolves
       correctly, lands on `plugin-universe.com/supportedPlatform` and 404s, because the
@@ -548,6 +417,32 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       shipping. JigDAW's own worked-plugin count is unaffected by this: that one is ours to
       keep exact, and its own test (`states the number of worked plugins there actually are`)
       is unchanged.
-- [ ] `src/ops/OpDispatcher.js` is 712 lines, up from 456 on 2026-09-18, past the "600 usually
-      wants splitting" line in `AGENTS.md`. Noticed while re-measuring line counts for the
-      item above; not investigated further this pass. `bin/bundle.js` is still 409, unchanged.
+- [x] **`OpDispatcher.js` split, 2026-09-21.** Was 724 lines, past the "600 usually wants
+      splitting" line in `AGENTS.md`. The seam was already drawn by the file's own comments:
+      "A snapshot per undoable edit..." through the end of `#restoreTo` touched only the undo
+      and redo stacks and called back into the dispatcher's own public `apply()`/
+      `addPlugin()`/`setParameter()`, never into its other private state. Moved whole into
+      `src/ops/UndoHistory.js` (175 lines): the stacks, `canUndo`/`canRedo`/`clear`/`record`,
+      and the snapshot-to-snapshot reconciliation, taking the dispatcher itself as the host it
+      calls back into. `OpDispatcher.js` is now 618 lines, still marginally over the line but
+      most of the way there, and the remaining bulk (model-to-engine sync: link rebuilding,
+      channel strips, sink routing) is a tighter unit that did not have as clean a seam to cut
+      along in this pass.
+
+      Public API unchanged: `undo()`, `redo()`, `canUndo()`, `canRedo()`, `clearHistory()` keep
+      their exact signatures and behaviour, now one-line delegations to a private
+      `UndoHistory` instance. One small new surface was needed rather than reaching into
+      private state from outside the class: `OpDispatcher.withoutRecording(fn)`, which
+      `UndoHistory` calls so the reconciliation's own `apply()`/`addPlugin()`/`setParameter()`
+      calls are not recorded as further undoable edits, replacing the inline `#recording =
+      false` / `finally` that used to sit directly in `#restoreTo`.
+
+      Verification: `npm test` unchanged before and after, 52 files, 855 tests, including the
+      existing 16-test `describe('undo and redo', ...)` block in
+      `tests/ops/OpDispatcher.test.js`, which already exercises the reload, healed-removal and
+      no-self-recording paths through the public API and needed no changes. `npm run build`
+      rebuilds `web/app.bundle.js` clean. Not done this pass: no live Chrome check, since the
+      extension was not connected in this session, so the wiring is verified by the test suite
+      and the build, not by a real undo/redo in the running app. No mutation test added,
+      because nothing in this change is new behaviour to mutation-test against; the existing
+      suite is the regression check for the exact logic moved unchanged.

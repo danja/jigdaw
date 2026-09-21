@@ -13,68 +13,8 @@ Measured afterwards rather than assumed: `https://danja.github.io/jigdaw/` answe
 title is "The JigDAW plugin system : JigDAW", and `host-plugin-contract.html` serves as
 `text/html` alongside it.
 
-## 2. Signing key. Done.
 
-**Made and published 2026-09-19, by you**, at the IRI decided in advance:
 
-```
-https://strandz.it/jigdaw/keys/danja#ed25519
-```
-
-```sh
-node bin/keys.js create https://strandz.it/jigdaw/keys/danja#ed25519
-node bin/keys.js publish ~/.config/jigdaw/keys/ed25519.json > web/keys/danja.ttl
-```
-
-The private half is on your machine, in `~/.config/jigdaw/keys/`, where `bin/keys.js` refused
-to let it land inside the git working tree. Only `web/keys/danja.ttl`, the public half, was
-committed and pulled onto the server. Measured against the live server afterwards: the IRI
-answers 200, `text/turtle`, and matches the committed file byte for byte, so
-`node bin/verify.js <bundle> --online` has something real to check a signature against.
-
-On `strandz.it` rather than the PURL, because a key's whole value is that a verifier can fetch
-it from the origin doing the signing and compare; the namespace rule about minting under the
-PURL is about vocabulary terms, whose identity has to outlive any one host, which is the
-opposite property. No file extension, because `bin/serve.js`'s `/keys/<name>` route serves the
-identity as `text/turtle` regardless of what the file on disk is called. A fragment, so
-rotating the key later is adding `#ed25519-2027` rather than replacing an IRI everything
-already signed with names.
-
-Not done: no plugin has actually been bundled and signed with it yet. `node bin/bundle.js
-plugins/pulse --by https://strandz.it/jigdaw/keys/danja#ed25519 --key
-~/.config/jigdaw/keys/ed25519.json` is the next step, whenever a bundle is wanted; nothing
-blocks it.
-
-## 3. Confirm which repository owns `trn:`
-
-**Answered by item 4, unless you say otherwise.** `transmission` owns it. Its `vocabs/` is
-what `http://purl.org/stuff/transmissions/` will serve, and the format individuals including
-`trn:WebAudio` have been moved up into it from plugin-universe's `trn-extensions.ttl`, which
-is what that file's own header always said should happen.
-
-plugin-universe keeps its copy, because its SHACL shapes validate against it there. That makes
-the two a pair that can drift, so transmission's `tests/vocab/site.test.js` compares them when
-the sibling checkout is present and says so when it is not.
-
-**Blocks:** nothing. The next `trn:` term goes in `~/github/transmission/vocabs/`. Say if you
-would rather it were somewhere else, because that is now written into a test.
-
-## 4. `trn:` dereferencing. Done.
-
-**Deployed 2026-09-18, by you.** `http://purl.org/stuff/transmissions/` resolves. It had always
-returned 404, and `trn:` is the vocabulary that carries the meaning: four projects use it, and
-so does every third party who followed the published guide at
-plugin-universe.com/about/profiles.
-
-Measured against the live server afterwards, not assumed: the PURL chain ends at 200,
-`text/turtle` when asked for and `text/html` for a browser, 42048 bytes matching the committed
-build byte for byte, parsing to 628 triples over the wire. Every term 303s to the namespace,
-including the hyphenated and slashed IRIs saved projects mint. CORS on every response. `jig:`
-still resolves, so the second `include` in that server block broke nothing.
-
-The namespace now defines 208 terms across seven files in `~/github/transmission/vocabs/`,
-including the plugin formats moved up from plugin-universe and the 50 project-format terms its
-own code had been writing into every saved project while declaring none of them.
 
 Two things remain, neither blocking:
 
