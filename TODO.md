@@ -42,13 +42,18 @@ complete. Review periodically.
 
 ## Namespaces
 
-- [ ] **Individual `pu:` terms dereference for nobody.**
-      `purl.org/stuff/plugin-universe/supportedPlatform`, whose namespace root resolves
-      correctly, lands on `plugin-universe.com/supportedPlatform` and 404s, because the
-      override is a prefix replacement that does not account for sub-paths.
+- [x] **Individual `pu:` terms now dereference, 2026-09-21.** Was 404ing because the nginx
+      override was a prefix replacement that did not account for sub-paths; fixed by the user
+      deploying `deploy/nginx/vocab.conf`'s pattern to plugin-universe's own server, the same
+      fix already applied to transmission's.
 
-      The fix is now a worked example twice over, in `deploy/nginx/vocab.conf` here and in
-      transmission's. Needs the user: it is a deployment to a server, in another repository.
+      Measured live, not assumed: `purl.org/stuff/plugin-universe/supportedPlatform` now
+      chains through the PURL, `purl.archive.org` and `hyperdata.it` hops to
+      `plugin-universe.com/ns/plugin-universe.ttl`, 200, `text/turtle`, `Access-Control-Allow-
+      Origin: *`. Checked against six real terms pulled from the vocabulary itself
+      (`architecture`, `category`, `blockSize`, `CpuLoad`, `Correction`, `downloadUrl`), all
+      200; a made-up term (`pluginId`) still 404s, which is correct rather than a sign the fix
+      is incomplete.
 
 ## Blocking, cross-repository
 

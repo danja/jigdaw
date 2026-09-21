@@ -16,11 +16,8 @@ title is "The JigDAW plugin system : JigDAW", and `host-plugin-contract.html` se
 
 
 
-Two things remain, neither blocking:
+One thing remains, not blocking:
 
-- **plugin-universe's own terms still do not dereference.** Its namespace root answers 200, but
-  `purl.org/stuff/plugin-universe/supportedPlatform` returns 404 with a JSON body. Same shape
-  as this was, and the fix is now a worked example twice over.
 - **Instance data sits in the `trn:` namespace.** Transmission's saved projects bind the default
   prefix to it, so 160 patch node names are minted there, `trn:pulse` through
   `trn:plugins/downspout/ambo`. They 303 rather than 404, which is ordinary slash-namespace
