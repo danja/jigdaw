@@ -19,7 +19,7 @@ const EXPECTED = {
   'plugins/tremolo/profile.ttl': 0,
   'examples/reference-provenance.ttl': 0,
   'examples/reference-foreign.ttl': 0,
-  'examples/counterexample-profile.ttl': 10,
+  'examples/counterexample-profile.ttl': 11,
   'examples/counterexample-project.ttl': 10,
   'examples/counterexample-provenance.ttl': 11,
   'examples/counterexample-foreign.ttl': 11

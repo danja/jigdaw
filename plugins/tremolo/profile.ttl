@@ -22,6 +22,7 @@
     rdfs:comment "Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;

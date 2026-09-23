@@ -22,6 +22,7 @@
     rdfs:comment "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:Instrument , trn:AudioInstrument ;
     trn:accepts trn:Midi ;

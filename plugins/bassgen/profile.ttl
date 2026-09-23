@@ -22,6 +22,7 @@
     rdfs:comment "Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:MidiGenerator ;
     trn:accepts trn:Midi ;

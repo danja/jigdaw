@@ -64,6 +64,7 @@ w(`    trn:vendor ${JSON.stringify(template.vendor)} ;`)
 // Optional in the profile and required by anything packaging the plugin for a
 // format that demands a version. bin/wam.js refuses a plugin without one.
 if (template.version) w(`    doap:revision ${JSON.stringify(template.version)} ;`)
+if (template.developer) w(`    doap:developer <${template.developer}> ;`)
 w('    foaf:homepage <> ;')
 w(`    trn:role ${template.roles.join(' , ')} ;`)
 if (template.accepts?.length) w(`    trn:accepts ${template.accepts.join(' , ')} ;`)

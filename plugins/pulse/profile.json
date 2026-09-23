@@ -3,6 +3,7 @@
   "label": "Pulse",
   "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",
   "vendor": "danja",
+  "developer": "http://danny.ayers.name",
   "version": "1.0.0",
   "registeredName": "pulse",
   "roles": [

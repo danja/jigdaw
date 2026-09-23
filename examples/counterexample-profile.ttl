@@ -23,6 +23,9 @@
     # A version that is not a dotted release. "latest" tells a packager nothing
     # and cannot be ordered against another version.
     doap:revision "latest" ;
+    # Who wrote this, as a plain string rather than the IRI doap:developer needs
+    # to be something a search or a signature can be checked against.
+    doap:developer "danja" ;
     foaf:homepage <> ;
     trn:role trn:Instrument ;
 

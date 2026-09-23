@@ -22,6 +22,7 @@
     rdfs:comment "Three AY-3-8910 chips under the 8b8 firmware, running unmodified as WebAssembly. Nine voices across three chips, hardware envelopes, a percussion set on channel 10, and the firmware's own vibrato, tremolo, arpeggiator, buzzy bass, circuit bending and ten tuning temperaments." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:Instrument , trn:AudioInstrument ;
     trn:accepts trn:Midi ;

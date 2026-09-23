@@ -552,16 +552,25 @@ jig:canonicalDigest a owl:DatatypeProperty ;
         origin, which is the same rule that makes a bundle a retrieval origin and not an
         identity. See docs/plugin-bundles.md section 5.""" .
 
-## -- Versioning ---------------------------------------------------------------
+## -- Versioning and authorship -------------------------------------------------
 ##
 ## A plugin's version is doap:revision, not a jig: term. DOAP is what LV2 itself
 ## uses to describe a plugin project, and JigDAW already reuses LV2's
 ## conventions for ports, so minting jig:version would be a second name for a
 ## thing that already has one.
 ##
-## It is not declared here because it is not ours. It is listed in
+## Who wrote it is doap:developer, an IRI rather than trn:vendor's plain string:
+## the two answer different questions. trn:vendor is a display name a catalogue
+## shows; doap:developer is meant to be followed, the way jig:Bundle's
+## prov:wasAttributedTo already is. A plugin served at its own canonical origin
+## carries no jig:Bundle (see "Bundles and provenance" above: that describes a
+## copy, and nothing here is one), so doap:developer on the plugin itself is
+## where "who made this" lives for a plugin that was never bundled.
+##
+## Neither is declared here because neither is ours. Both are listed in
 ## src/rdf/Vocabulary.js and constrained in vocabs/shapes.ttl, and this comment
-## exists so that a reader looking for jig:version finds out why there is none.
+## exists so that a reader looking for jig:version or a jig: authorship term
+## finds out why there is none.
 
 ## -- Foreign plugins ----------------------------------------------------------
 ##

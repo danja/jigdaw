@@ -5,6 +5,42 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [x] **Every plugin now says who wrote it, dereferenceably, 2026-09-23.** Surfaced by an
+      independent implementation, `~/github/diddums` (danbri, built against this project's
+      published spec), fetching `provenance.ttl` beside each served plugin and 404ing. Under
+      the model `docs/plugin-bundles.md` already states, that 404 is correct:
+      `jig:Bundle`/`jig:Bundling` describe a copy arriving by hand, and a plugin served at its
+      own canonical origin was never one, so it was never going to carry a `provenance.ttl`.
+      But the question underneath the 404 was real: nothing dereferenceable said who wrote a
+      plugin. `trn:vendor "danja"` was already on all nine profiles and had been since phase 2,
+      and it answers a different question, a display string for a catalogue rather than
+      something a tool can follow.
+
+      Fixed on the profile itself rather than by inventing a third `jig:BundleForm` for the
+      served-origin case: `doap:developer <http://danny.ayers.name>`, reusing DOAP the way
+      `doap:revision` already does rather than minting a jig: term, and an IRI rather than a
+      name for the same reason provenance attribution already insists on one, a name is not
+      something a search or a signature can be checked against. `src/rdf/Vocabulary.js`,
+      `vocabs/shapes.ttl` (optional, `sh:nodeKind sh:IRI`), `vocabs/jigdaw.ttl`'s comment
+      explaining why it is not declared there, `bin/write-profile.js`, and `bin/jsfx-import.js`
+      so a future JSFX conversion carries it without anyone remembering to add it by hand. All
+      nine `plugins/*/profile.json` gained the field and every `profile.ttl` was regenerated
+      from it, touching no digest, since digests are of the module and processor bytes, not
+      of the profile document.
+
+      `examples/counterexample-profile.ttl` gained a `doap:developer "danja"` literal to
+      exercise the new constraint, matching this file's own rule that a shape without a
+      counterexample is indistinguishable from one that never runs;
+      `tests/validate/ShapeValidator.test.js`'s expected count for that file went from 10 to
+      11. Mutation tested: removing the new `sh:property` block dropped the count back to 10
+      and failed the test, confirmed, then restored. `npm test`: 855 of 855.
+
+      Not done: publishing this to strandz.it, which is a `git pull` per
+      `docs/deployment.md` and needs no restart, since `bin/serve.js` already serves any
+      `.ttl` file under a plugin's directory generically (confirmed by reading its routing,
+      not assumed) and `provenance.ttl` was never in play, the field is inside `profile.ttl`
+      itself.
+
 - [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
 
       **First, try inverting the direction.** The page already has everything: `registerTools`
@@ -39,6 +75,78 @@ complete. Review periodically.
       leave the browser, so a model in node means the model and the engine are on opposite
       sides of a wire, which is two sources of truth for the thing `docs/architecture.md` keeps
       as one. Refuse that even though it is the obvious way to get a headless agent.
+
+- [ ] **A way to load a JigDAW plugin into REAPER without the native adapter.** From the
+      inbox, 2026-09-23. `native/jigdaw-adapter` already does this as a VST3/CLAP/LV2, built
+      once against `jigdaw_core`. The inbox item asks for an alternative that needs no such
+      build: either a JSFX wrapper, in the same restricted EEL2 the `src/jsfx/` toolchain
+      already parses one direction (JSFX into JigDAW), run the other way; or a script wrapper
+      that drives an external host process from REAPER's own scripting side. Neither is
+      designed. The JSFX direction is the harder of the two: EEL2 has no WebAssembly and no
+      way to call out to it, so a JSFX-hosted JigDAW plugin would need its module compiled to
+      EEL2 by a tool that does not exist, or would be limited to the plain-JavaScript-shaped
+      plugins Tremolo showed are legal, translated to EEL2 by hand or by a generator with its
+      own scope to define. The script-wrapper direction is closer to what
+      `bin/host.js`/`ReferenceHost.js` already does: a ReaScript could drive a small
+      persistent Node process hosting one JigDAW chain and pipe audio and MIDI across, which
+      is a second real-time boundary to get right rather than none. Worth settling before
+      building: whether "without the adapter VST" means without building native code at all,
+      which favours the wrapper, or without REAPER's own VST3 slot specifically, which the
+      JSFX route answers directly.
+
+- [ ] **JUCE, two different directions and both from the inbox, 2026-09-23.** The first: a
+      JUCE extension letting a JUCE developer add "JigDAW web plugin" as an export target
+      beside VST3/AU/CLAP, the way one JUCE project already offers several formats from one
+      `AudioProcessor`. The DSP side is plausible; `plugins/cascade`'s own `no_std`,
+      no-allocator discipline shows what the real-time rules ask of the code regardless of
+      where it started. The UI side is not designed: a `jig:ui` panel is generated from
+      `lv2:port` declarations by `src/ui/Panel.js` ([host-plugin-
+      contract.md](docs/host-plugin-contract.md) section 5), and a JUCE
+      `AudioProcessorEditor` is arbitrary drawn UI with no equivalent declaration to generate
+      one from, so a plugin exported this way would need either a hand-written `jig:ui` or
+      would ship with none and take the generated panel that `jig:module`-only plugins
+      already get.
+
+      The second, "DPF plugin, as JUCE": `native/jigdaw-adapter` is DPF, in downspout's own
+      shape, and the inbox asks whether a JUCE-based adapter of the same shape (loading a
+      JigDAW plugin by IRI into a JUCE-hosted VST3/AU/CLAP, the way `native/jigdaw-adapter`
+      already does for VST3/CLAP/LV2) is worth building alongside it, mainly for AU, which DPF
+      does not target and JUCE does. `native/jigdaw-adapter`'s portable core
+      (`src/Turtle.cpp`, `src/Profile.cpp`, `src/Integrity.cpp`, `src/Module.cpp`,
+      `src/Chain.cpp`) is already separate from `src/dpf/`, the thin shell over it, which is
+      what let Transmission add it as a library rather than reimplement the contract; a JUCE
+      shell over the same core would be the same shape of work Transmission already did, not
+      a new one. Neither direction is started.
+
+- [ ] **More ways of verifying a plugin, an open question from the inbox, 2026-09-23.** What
+      exists today: `jig:integrity` digest checks on every fetched resource
+      ([host-plugin-contract.md](docs/host-plugin-contract.md) section 3.2), SHACL shape
+      validation (`src/validate/ShapeValidator.js`), a signed provenance record over the
+      canonical profile (`bin/verify.js`, [plugin-bundles.md](docs/plugin-bundles.md) section
+      6), and a per-load outcome record (`src/host/Inspections.js`). All of those check what a
+      plugin *is* and where it came from; none of them check what it *does*. Candidates worth
+      weighing rather than building yet: an offline render through
+      `src/host/ReferenceHost.js` as a pre-publish check (does it produce audio at all, does
+      it stay within a peak bound, does it respond to MIDI); a static check of the compiled
+      WebAssembly for the operations the real-time rules forbid (a `memory.grow` import, an
+      import outside what the ABI declares); and a CPU load or wall-clock budget measured
+      against `jig:blockSize` rather than assumed. Each is a different kind of proof and none
+      replaces the others. Not scoped into a phase yet.
+
+- [ ] **A cabinet impulse response and neural amp modeler plugin.** From the inbox,
+      2026-09-23, referencing `/home/github/NeuralAmpModelerPlugin` as prior art: loads a
+      cabinet impulse response and a NAM neural model, processes two channels of audio.
+      Working name proposed, not committed to: **Ferrite**, after the material a speaker cone
+      and a length of tape have in common, one convolved through and the other inferred
+      through. Two `jig:asset`s rather than one, both delivered through the path
+      `src/host/Instantiate.js` already fetches, verifies and posts alongside the module,
+      built generic rather than JSFX-specific when the JSFX runtime needed it first. The IR
+      side is an ordinary block convolution, the kind of DSP the existing plugins already show
+      the shape of; the NAM side is a small neural network run per sample inside `process()`,
+      which is new here: nothing built so far runs inference in the real-time path, only
+      filters and oscillators, so this is also the first plugin that tests whether "never
+      allocate, never take an unpredictable lock" survives a model's own arithmetic and not
+      just this project's. Not designed further than that.
 
 ## Namespaces
 

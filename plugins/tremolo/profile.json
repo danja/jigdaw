@@ -3,6 +3,7 @@
   "label": "Tremolo",
   "comment": "Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one.",
   "vendor": "danja",
+  "developer": "http://danny.ayers.name",
   "version": "1.0.0",
   "registeredName": "tremolo",
   "roles": [

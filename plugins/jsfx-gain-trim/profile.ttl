@@ -22,6 +22,7 @@
     rdfs:comment "Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;

@@ -71,6 +71,7 @@ const profile = {
   label: header.desc || pluginName,
   comment: `Converted by bin/jsfx-import.js from ${sourcePath}, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.`,
   vendor: 'danja',
+  developer: 'http://danny.ayers.name',
   version: '1.0.0',
   registeredName,
   roles: ['trn:AudioEffect'],

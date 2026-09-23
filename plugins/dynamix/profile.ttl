@@ -22,6 +22,7 @@
     rdfs:comment "Compressor/expander, limiter and clipper/soft distortion in series. A second stereo input on channels 3 and 4 is an external key: when it is connected, the compressor/expander stage reads its level from that instead of the main signal, for sidechain ducking. When nothing is connected there, the stage detects on the main signal itself." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;

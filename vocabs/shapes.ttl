@@ -66,6 +66,11 @@ jig:WebPluginShape a sh:NodeShape ;
         sh:message "A version is doap:revision, as a dotted string beginning major.minor.patch. Optional here, because a plugin served from one IRI can be versionless; required by anything that packages the plugin for a format that demands a version, such as bin/wam.js."
     ] ;
     sh:property [
+        sh:path doap:developer ;
+        sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "Who wrote this is doap:developer, an IRI, never a name: a name is not something a signature or a search can be checked against. Optional, the way an anonymous provenance record is a real thing rather than a defect."
+    ] ;
+    sh:property [
         sh:path rdfs:label ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
         sh:message "A plugin needs exactly one name."

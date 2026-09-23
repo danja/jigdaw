@@ -3,6 +3,7 @@
   "label": "JigDAW One-Pole Filter",
   "comment": "Converted by bin/jsfx-import.js from examples/jsfx/one-pole-filter.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
   "vendor": "danja",
+  "developer": "http://danny.ayers.name",
   "version": "1.0.0",
   "registeredName": "jsfx-one-pole-filter",
   "roles": [

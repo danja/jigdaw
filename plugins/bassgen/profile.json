@@ -3,6 +3,7 @@
   "label": "BassGen",
   "comment": "Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard.",
   "vendor": "danja",
+  "developer": "http://danny.ayers.name",
   "version": "1.0.0",
   "registeredName": "bassgen",
   "roles": [

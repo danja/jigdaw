@@ -44,10 +44,14 @@ export const vocabulary = Object.freeze({
     created: `${DCTERMS}created`
   }),
 
-  // A plugin's version. DOAP rather than a jig: term, because LV2 describes a
-  // plugin project with DOAP and this vocabulary already follows LV2.
+  // A plugin's version and its developer. DOAP rather than jig: terms, because
+  // LV2 describes a plugin project with DOAP and this vocabulary already
+  // follows LV2. doap:developer is an IRI, never a name, the same rule
+  // provenance attribution already follows: a name is not something anything
+  // can be checked against.
   doap: Object.freeze({
-    revision: `${DOAP}revision`
+    revision: `${DOAP}revision`,
+    developer: `${DOAP}developer`
   }),
 
   // Provenance. Reused unchanged: who made a bundle, when, and from what.
