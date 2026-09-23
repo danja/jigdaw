@@ -1,2 +1,0 @@
-/usr/bin/ar qc libjigdaw_core.a CMakeFiles/jigdaw_core.dir/src/Turtle.cpp.o CMakeFiles/jigdaw_core.dir/src/Profile.cpp.o CMakeFiles/jigdaw_core.dir/src/Integrity.cpp.o CMakeFiles/jigdaw_core.dir/src/Module.cpp.o CMakeFiles/jigdaw_core.dir/src/Fetch.cpp.o CMakeFiles/jigdaw_core.dir/src/Chain.cpp.o CMakeFiles/jigdaw_core.dir/src/Report.cpp.o CMakeFiles/jigdaw_core.dir/src/Midi.cpp.o CMakeFiles/jigdaw_core.dir/src/Params.cpp.o
-/usr/bin/ranlib libjigdaw_core.a

@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test_parameter_count.dir/tests/parameter_count_test.cpp.o -o test_parameter_count  libjigdaw_core.a libm3.a /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

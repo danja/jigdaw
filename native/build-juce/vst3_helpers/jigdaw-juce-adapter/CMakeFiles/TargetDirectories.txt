@@ -1,3 +1,0 @@
-/home/danny/github/jigdaw/native/build-juce/vst3_helpers/jigdaw-juce-adapter/CMakeFiles/vst3_helper.dir
-/home/danny/github/jigdaw/native/build-juce/vst3_helpers/jigdaw-juce-adapter/CMakeFiles/edit_cache.dir
-/home/danny/github/jigdaw/native/build-juce/vst3_helpers/jigdaw-juce-adapter/CMakeFiles/rebuild_cache.dir

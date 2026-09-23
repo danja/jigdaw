@@ -1,8 +1,0 @@
-turtle 1 0.0040562
-integrity 1 0.00454448
-fetch 1 0.00503808
-profile 1 0.00310275
-chain 0 0
-chain_file 1 0.222397
-parameter_count 1 0.010682
----

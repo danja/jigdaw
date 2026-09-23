@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/vst3_helper.dir/home/danny/github/JUCE/modules/juce_audio_plugin_client/VST3/juce_VST3ManifestHelper.cpp.o -o vst3_helper 

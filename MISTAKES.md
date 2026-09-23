@@ -2,6 +2,31 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-23 A CMake build tree reached origin/main
+
+**What happened.** Building a JUCE-hosted second adapter alongside the DPF one
+(`native/jigdaw-adapter/src/juce/`), two scratch configure/build passes were run into
+`native/build-default/` and `native/build-juce/` to test the default (non-JUCE) path and the
+new JUCE path separately. Something then ran `git add -A && git commit` and pushed while both
+directories existed on disk, landing 621 build-tree files (CMake caches, object files, a 14MB
+Standalone executable, `.a` static libraries) in a single commit, "JUCE-based wrapper"
+(673a95c), already on `origin/main` by the time it was noticed.
+
+**Root cause.** `.gitignore` excluded exactly `native/build/`, the one name
+`native/install.sh` and every documented workflow ever produces. Naming the two scratch
+configurations `build-default` and `build-juce`, to keep them apart from a normal build and
+from each other, meant neither matched. A guard that names one path is a guard that ignores
+the population outside it, the same shape as every other guard-width mistake in this file:
+the rule that mattered was "nothing under `native/build` should ever be tracked", and the
+pattern only said "this one directory named exactly that".
+
+**Prevention.** `.gitignore`'s entry widened from `native/build/` to `native/build*/`, so a
+differently named scratch build is excluded by the same rule rather than needing its own
+line remembered in the moment. The 621 files were removed from tracking in a follow-up
+commit rather than by rewriting `673a95c`'s history, which would have needed a force-push to
+a branch already fetched elsewhere; the bloat stays in history, once, rather than the
+repository's public history being rewritten to remove it.
+
 ## 2026-09-19 Only sixteen of the 8-Bit 8asterd's 42 controls reached Reaper
 
 **What happened.** Reported by the user: loading the 8b8 through the JigDAW Adapter in

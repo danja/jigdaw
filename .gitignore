@@ -152,8 +152,12 @@ vite.config.ts.timestamp-*
 # without running the build.
 docs-site/
 
-# Build output for the native adapter (native/install.sh)
-native/build/
+# Build output for the native adapter (native/install.sh). A wildcard rather
+# than the exact name: native/build-default/ and native/build-juce/, two
+# scratch configurations tried once, reached origin/main in commit
+# 673a95c ("JUCE-based wrapper") because neither matched this pattern. See
+# MISTAKES.md.
+native/build*/
 
 # Signing keys. bin/keys.js refuses to write one inside a git working tree, so
 # this should never match anything. It is here as the second lock: a key is the

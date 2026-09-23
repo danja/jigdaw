@@ -1,3 +1,0 @@
-/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate.dir
-/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/edit_cache.dir
-/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/rebuild_cache.dir
