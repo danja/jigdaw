@@ -5,7 +5,9 @@ Two channels of audio in and out, MIDI in and out.
 
 Built with [DPF](https://github.com/DISTRHO/DPF), in the shape
 [downspout](https://github.com/danja/downspout) uses: a portable core with the plugin format
-as a thin shell over it.
+as a thin shell over it. A second shell, in JUCE, is built the same way: see
+[src/juce/README.md](src/juce/README.md), including the one thing that makes it different,
+which is its license.
 
 ## What it is for
 
@@ -144,6 +146,10 @@ is fetched. DPF is taken from a downspout checkout by default; point
 `-DJIGDAW_DPF_DIR=/path/to/DPF` elsewhere, or `-DJIGDAW_BUILD_PLUGIN=OFF` to build only the
 core and its tests.
 
+The JUCE-hosted adapter is a separate opt-in target, off by default: `-DJIGDAW_BUILD_JUCE_PLUGIN=ON
+-DJIGDAW_JUCE_DIR=/path/to/JUCE`. See [src/juce/README.md](src/juce/README.md) before turning
+it on, for what building it actually produces license-wise.
+
 The `chain` test fetches over HTTP and skips when nothing is serving. To run it:
 
 ```sh
@@ -164,6 +170,7 @@ cmake -S native -B build -DJIGDAW_TEST_BASE=https://strandz.it/jigdaw
 | `src/Fetch.cpp` | HTTPS, via cpp-httplib |
 | `src/Chain.cpp` | Several plugins in order, and a flat parameter list |
 | `src/dpf/` | The DPF wrapper. A shell, not the architecture |
+| `src/juce/` | The JUCE wrapper, the same shape. Apache-2.0 does not cover it; see its own README |
 
 Loading reaches the network, so it happens on the message thread and the finished chain is
 published by an atomic swap; the retired one is freed on the message thread too. `run()`

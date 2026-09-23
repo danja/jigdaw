@@ -301,6 +301,16 @@ else. It has already returned one defect, the locale-dependent number parsing in
 `Profile.cpp` in `MISTAKES.md`. Nothing in this repository would have found it, because no
 test here runs under a comma-decimal locale and no host here calls `setlocale`.
 
+### A second shell over the same core, in this repository
+
+`native/jigdaw-adapter/src/juce/`, 2026-09-23: `jigdaw_core` linked into a JUCE
+`AudioProcessor` rather than a DPF `Plugin`, verified live (Standalone, under a virtual
+display, a real fetch of `plugins/cascade/` loading and reporting correctly). Not
+Apache-2.0, unlike everything else here: JUCE's free tier is AGPLv3, and
+`native/jigdaw-adapter/src/juce/README.md` says so plainly, with the build option that
+produces it off by default. See `TODO.md`'s "A JUCE-hosted adapter" entry for what it took
+and what it found.
+
 ## Phase 8. Sessions. Complete.
 
 The project format has been normative since phase 0 and nothing wrote it, which made every

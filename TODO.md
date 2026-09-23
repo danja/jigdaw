@@ -156,29 +156,56 @@ complete. Review periodically.
       which favours the wrapper, or without REAPER's own VST3 slot specifically, which the
       JSFX route answers directly.
 
-- [ ] **JUCE, two different directions and both from the inbox, 2026-09-23.** The first: a
-      JUCE extension letting a JUCE developer add "JigDAW web plugin" as an export target
-      beside VST3/AU/CLAP, the way one JUCE project already offers several formats from one
-      `AudioProcessor`. The DSP side is plausible; `plugins/cascade`'s own `no_std`,
-      no-allocator discipline shows what the real-time rules ask of the code regardless of
-      where it started. The UI side is not designed: a `jig:ui` panel is generated from
-      `lv2:port` declarations by `src/ui/Panel.js` ([host-plugin-
-      contract.md](docs/host-plugin-contract.md) section 5), and a JUCE
-      `AudioProcessorEditor` is arbitrary drawn UI with no equivalent declaration to generate
-      one from, so a plugin exported this way would need either a hand-written `jig:ui` or
-      would ship with none and take the generated panel that `jig:module`-only plugins
-      already get.
+- [x] **A JUCE-hosted adapter, built alongside the DPF one, 2026-09-23.** The second of the
+      two JUCE directions from the inbox: whether a JUCE-based adapter of the same shape as
+      `native/jigdaw-adapter` (loading a JigDAW plugin by IRI, in a chain) was worth having,
+      mainly for AU, which DPF does not target and JUCE does. It was: `jigdaw_core`
+      (`Turtle`, `Profile`, `Integrity`, `Module`, `Chain`, `Params`) is already separate from
+      `src/dpf/`, the thin shell over it, which is what let Transmission add it as a library
+      rather than reimplement the contract, and a JUCE shell over the same core turned out to
+      be exactly that shape of work and no more.
 
-      The second, "DPF plugin, as JUCE": `native/jigdaw-adapter` is DPF, in downspout's own
-      shape, and the inbox asks whether a JUCE-based adapter of the same shape (loading a
-      JigDAW plugin by IRI into a JUCE-hosted VST3/AU/CLAP, the way `native/jigdaw-adapter`
-      already does for VST3/CLAP/LV2) is worth building alongside it, mainly for AU, which DPF
-      does not target and JUCE does. `native/jigdaw-adapter`'s portable core
-      (`src/Turtle.cpp`, `src/Profile.cpp`, `src/Integrity.cpp`, `src/Module.cpp`,
-      `src/Chain.cpp`) is already separate from `src/dpf/`, the thin shell over it, which is
-      what let Transmission add it as a library rather than reimplement the contract; a JUCE
-      shell over the same core would be the same shape of work Transmission already did, not
-      a new one. Neither direction is started.
+      **Not Apache-2.0.** JUCE's free tier is AGPLv3, not GPLv3 as first assumed; corrected
+      after actually reading the header rather than trusting memory. `native/jigdaw-adapter/
+      src/juce/README.md` states plainly that a binary built this way is AGPLv3 (or
+      commercially licensed, if built against a paid JUCE license) and that nothing else this
+      repository produces is affected. `JIGDAW_BUILD_JUCE_PLUGIN` defaults `OFF` in
+      `native/CMakeLists.txt` so building the rest of the project, DPF adapter included, never
+      depends on JUCE and never risks an AGPL-encumbered binary by accident. Not wired into
+      `install.sh`, for the same reason.
+
+      `src/juce/PluginProcessor.h`/`.cpp` mirrors `src/dpf/JigdawPlugin.cpp`: the same atomic
+      chain swap, the same sub-block loop against `Chain::maxFrames()`, the same real-time
+      rules. One genuine simplification rather than a port of DPF's own workaround: JUCE
+      reports host transport position in quarter notes directly
+      (`AudioPlayHead::PositionInfo::getPpqPosition()`), so filling in `jigdaw::Transport`
+      needs none of the ticks-per-beat conversion DPF's BBT block requires.
+      `src/juce/PluginEditor.h`/`.cpp` is a JUCE-native editor rather than a port of
+      `src/dpf/JigdawUI.cpp`'s 728-line NanoVG one: a `TextEditor` for the IRIs, a Load
+      button, and a read-only view of the load report, because JUCE gives a plugin real
+      widgets and the job DPF's UI does by hand (drawing a scrollable 128-slot parameter
+      picker) is a text box here instead.
+
+      Built and verified live on this machine (Linux, so VST3 and Standalone; AU needs macOS
+      and was not attempted here): `cmake -DJIGDAW_BUILD_JUCE_PLUGIN=ON
+      -DJIGDAW_JUCE_DIR=/path/to/JUCE`, both targets link clean. Running the Standalone under
+      Xvfb, typing `https://strandz.it/jigdaw/plugins/cascade/` into the editor and pressing
+      Load produced `ok Cascade params 1-5 mix size damping freeze mode` in the report field,
+      a real network fetch, a real digest verification and a real chain build, not a fake
+      standing in for one. The default, non-JUCE native build and its ctest suite (6 passed,
+      1 skipped without a server, as before) were re-run afterward to confirm the new,
+      off-by-default CMake option changes nothing about the existing path.
+
+      **Found while doing this, unrelated to the code and worth naming so it is not repeated:**
+      two scratch build directories from this same session reached `origin/main` in a
+      639-file commit, because `.gitignore` excluded `native/build/` exactly and these were
+      named `native/build-default/` and `native/build-juce/` to keep them apart. Untracked in
+      a follow-up commit and `.gitignore` widened to `native/build*/`. Full account in
+      `MISTAKES.md`, 2026-09-23.
+
+      Not built: the first JUCE direction (an export target letting a JUCE developer produce
+      a `jig:WebPlugin`), which is a much larger and separately scoped question about
+      compiling JUCE DSP to WebAssembly and has no `jig:ui` story yet either.
 
 - [ ] **More ways of verifying a plugin, an open question from the inbox, 2026-09-23.** What
       exists today: `jig:integrity` digest checks on every fetched resource
