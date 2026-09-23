@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 9 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 10 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -89,7 +89,7 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-9 worked plugins are in [plugins/](plugins/): a subtractive synth,
+10 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
 bass line generator, all four written in Rust and compiled to WebAssembly; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
@@ -97,9 +97,11 @@ bass line generator, all four written in Rust and compiled to WebAssembly; the
 unedited from C++ and driving a model of those chips; three REAPER JSFX effects converted
 by [bin/jsfx-import.js](bin/jsfx-import.js), which run under the shared bytecode interpreter in
 [plugins/_jsfx-runtime/](plugins/_jsfx-runtime/) rather than each compiling their own DSP to
-WebAssembly; and [Tremolo](plugins/tremolo/), which declares no `jig:module` at all. Its whole
-signal path is the AudioWorklet processor, plain JavaScript, which `jig:module` has always
-permitted and which nothing exercised until this one.
+WebAssembly; [Tremolo](plugins/tremolo/), which declares no `jig:module` at all, its whole
+signal path the AudioWorklet processor, plain JavaScript, which `jig:module` has always
+permitted and which nothing exercised until this one; and [Boost](plugins/boost/), a gain
+stage in C++ meant to be copied rather than shipped: the minimal starting point for a new
+WebAssembly plugin, everything in it beyond one line of DSP being ABI wiring.
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.

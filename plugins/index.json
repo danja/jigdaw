@@ -125,6 +125,33 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/boost/",
+      "label": "Boost",
+      "comment": "A gain stage in C++, the minimal starting point for a WebAssembly JigDAW plugin: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/boost/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect",
+        "Utility"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [],
+      "parameters": [
+        "gain"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/cascade/",
       "label": "Cascade",
       "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",

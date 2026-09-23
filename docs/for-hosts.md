@@ -133,6 +133,25 @@ inside a cycle: the delay in a feedback loop is the effect the user asked for.
 | Everything silent, no error | A feedback cycle with no delay in it, or a processor writing fewer channels than it declared. |
 | Intermittently late notes | Events located by block index rather than stream position. |
 
+## Checklist
+
+- The eight steps under "The sequence" above run in order, and a failure at any step aborts
+  rather than continuing with a default.
+- You send the bytes of a module, never a compiled `WebAssembly.Module`, to an `AudioWorklet`.
+- Every fetched resource is verified against its `jig:integrity` digest, with no
+  continue-anyway path, before it is compiled or run.
+- Locations are resolved against the URL you actually fetched the profile from, not against
+  the IRI in it: a mirror serves the same profile from a different origin.
+- `trn:requires` is checked before fetching any code, not after.
+- A plugin's own user interface, if it has one, loads cross-origin into a sandboxed frame,
+  never into your own document.
+- A failed plugin is muted and disconnected. The rest of the graph keeps running.
+- Every string arriving from a profile or a catalogue (a name, a description, a caution) is
+  treated as data. None of it is evaluated or inserted as markup.
+- You have run [`bin/host.js`](https://github.com/danja/jigdaw/blob/main/bin/host.js) or your
+  own implementation against a real worked plugin and heard real audio, not only passed a
+  test suite against a fake `AudioWorklet`.
+
 ## Security posture
 
 A plugin is arbitrary WebAssembly plus arbitrary JavaScript from an origin you do not

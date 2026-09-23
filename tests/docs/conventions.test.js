@@ -379,9 +379,10 @@ describe('figures quoted about other systems', () => {
     const offenders = []
     let mentions = 0
     for (const file of byExt('.md')) {
-      // MISTAKES.md records what was true when each entry was written, and a
-      // log that is edited to agree with today is not a log.
-      if (file === 'MISTAKES.md') continue
+      // MISTAKES.md and docs/revisions.md record what was true when each
+      // entry was written, and a log that is edited to agree with today is
+      // not a log.
+      if (file === 'MISTAKES.md' || file === 'docs/revisions.md') continue
       for (const [i, line] of read(file).split('\n').entries()) {
         for (const match of line.matchAll(/\b(\d+|one|two|three|four|five|six)\s+worked plugins?\b/gi)) {
           mentions++

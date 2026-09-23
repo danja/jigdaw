@@ -156,10 +156,10 @@ registerProcessor('cascade', CascadeProcessor)
 
 ## 3. The WebAssembly
 
-Any language that targets `wasm32`. Every plugin in this repository is Rust, `no_std` with
-no allocator at all, so nothing can allocate on the audio thread even by accident. Pulse is
-3 KB and avoids transcendental functions entirely: pitch comes from a twelve entry semitone
-table and an octave shift rather than `powf`.
+Any language that targets `wasm32`. Most plugins here are Rust, `no_std` with no allocator at
+all, so nothing can allocate on the audio thread even by accident. Pulse is 3 KB and avoids
+transcendental functions entirely: pitch comes from a twelve entry semitone table and an
+octave shift rather than `powf`.
 
 ```rust
 #[no_mangle] pub extern "C" fn jig_init(sample_rate: f32) { /* ... */ }
@@ -167,6 +167,15 @@ table and an octave shift rather than `powf`.
 #[no_mangle] pub extern "C" fn jig_set_param(index: u32, value: f32) { /* ... */ }
 #[no_mangle] pub extern "C" fn jig_process(frames: u32) { /* ... */ }
 ```
+
+**Starting from C++ instead, copy [plugins/boost/](../plugins/boost/).** It is a gain stage,
+deliberately: every line in `boost.cpp` past `jig_process` is ABI wiring rather than DSP, so
+copying it, renaming it and replacing one line is the whole job of starting a new
+WebAssembly plugin. `build.sh` is `clang++ --target=wasm32 -nostdlib`, no Emscripten and no
+sysroot, because a module declaring an ABI must instantiate with no imports
+([module-abi.md](module-abi.md)), and an Emscripten build brings a libc and its imports with
+it. `plugins/8b8/shim/` is what to copy from instead if your own DSP needs a libc function
+this minimal a module does not: `memcpy`, `memset`, the odd floating point intrinsic.
 
 That ABI is a convention between your module and your processor, not part of the host
 contract. The host only knows your processor module. Use whatever shape suits you.
@@ -255,7 +264,10 @@ indexes profiles in this format and holds several hundred already.
 
 ## Plugins you can read
 
-[Cascade](../plugins/cascade/) and [Pulse](../plugins/pulse/) are complete and small:
+[Boost](../plugins/boost/) is the one to start from, at about 60 lines of C++ and 120 of
+JavaScript, most of the latter identical to Cascade's own processor: it exists to be copied,
+not to be interesting. [Cascade](../plugins/cascade/) and [Pulse](../plugins/pulse/) are
+complete and small too, and show the same ABI doing something:
 [the reverb](https://github.com/danja/jigdaw/tree/main/plugins/cascade) is about 250 lines
 of Rust and 150 of JavaScript, and
 [the synth](https://github.com/danja/jigdaw/tree/main/plugins/pulse) is a little less.

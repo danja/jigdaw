@@ -1,0 +1,48 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/boost/",
+  "label": "Boost",
+  "comment": "A gain stage in C++, the minimal starting point for a WebAssembly JigDAW plugin: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "boost",
+  "roles": [
+    "trn:AudioEffect",
+    "trn:Utility"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [],
+  "cautions": [],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "boost.wasm",
+    "processor": "boost-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "gain",
+      "name": "Gain",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 2.0,
+      "paramIndex": 0
+    }
+  ],
+  "abi": "jig:Abi1"
+}

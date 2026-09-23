@@ -5,6 +5,98 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [x] **A C++/wasm boilerplate to copy, 2026-09-23.** Asked directly: "Do we have a
+      C++/wasm + JS boilerplate kind of SDK setup comparable to DPF that a developer of
+      JigDAW plugins could use as a starting point?" Not quite: every wasm plugin here was
+      Rust except the 8-Bit 8asterd, which is a real, large, ported firmware, not a template
+      anyone would want to copy to start from zero. `.claude/commands/new-plugin.md` already
+      pointed a WebAssembly-needing plugin at `plugins/cascade/`, a real reverb, for lack of
+      anything smaller.
+
+      `plugins/boost/` is that starting point: a gain stage in C++, `boost.cpp` about 60
+      lines, everything past `jig_process` being ABI wiring rather than DSP, so copying it,
+      renaming it and replacing one line is the whole job of starting a new WebAssembly
+      plugin. `build.sh` is `clang++ --target=wasm32 -nostdlib`, the same toolchain
+      `plugins/8b8/build.sh` already established, and needs no shim: the gain math calls
+      nothing a freestanding build leaves missing. `<stdint.h>` rather than `<cstdint>`, a
+      freestanding header clang always supplies, was the one thing that needed correcting by
+      actually trying it rather than assuming a C++17 flag was enough.
+
+      `tests/host/boost.test.js` (5 tests) loads it through the real
+      `PluginLoader`/`Engine` path, the same shape as `tests/host/tremolo.test.js`: the
+      profile parses, the init/ready handshake completes, the signal passes through unchanged
+      at the declared default gain of 1, a gain of 2 doubles a known input (proving
+      `jig_set_param` actually reaches the module rather than the parameter default coincidentally
+      matching), and silence stays silent at any gain. Validates clean against
+      `vocabs/shapes.ttl`.
+
+      Becoming the repository's 10th worked plugin moved a number five other documents state
+      (`README.md` twice, `README.agents.md`, `docs/index.md`) and found that
+      `docs/revisions.md`, a dated log opened this same day, needed the same exemption
+      `tests/docs/conventions.test.js` already gives `MISTAKES.md` from that check: a log
+      records what was true when it was written, and editing it to agree with today is not a
+      log. `.claude/commands/new-plugin.md` now recommends `plugins/boost/` over
+      `plugins/cascade/` unless Rust is specifically wanted, and
+      [docs/for-plugin-authors.md](docs/for-plugin-authors.md) section 3 does the same in
+      prose, including the correction that not every plugin here is Rust, which had gone
+      stale since the 8b8 was added and nothing had said so. `npm test`: 868 of 868.
+
+- [x] **A checklist for a host implementer, 2026-09-23.** From "suggest ways we can
+      potentially reduce the effort needed for the developer of a DAW or plugins to support
+      JigDAW": `docs/for-plugin-authors.md` already ends in a checklist and
+      `docs/for-hosts.md` did not, despite asking the harder question. Added, drawn from "The
+      sequence" already on the page and contract section 11 rather than invented: the eight
+      steps run in order and abort on the first failure, bytes never a compiled `Module`,
+      every digest verified with no continue-anyway path, locations resolved against the
+      fetched URL rather than the profile's own IRI, capabilities checked before any code is
+      fetched, plugin UI sandboxed, a failed plugin muted rather than taking the graph down,
+      every profile-sourced string treated as data, and a real render heard rather than only
+      a test suite passed.
+
+      **Other candidates, not built this pass**, roughly in order of expected effort against
+      value: a plain `bin/new-plugin.js` doing what `.claude/commands/new-plugin.md` currently
+      asks an agent to do, so scaffolding a plugin needs no AI assistant, only `node`; a
+      portable, host-agnostic conformance fixture set (worked plugin plus expected rendered
+      output) that an implementation in any language could run against, rather than each host
+      here proving itself only against its own test suite; and extracting
+      `docs/host-plugin-contract.md` section 11's security list and the load sequence into one
+      normative checklist section the contract itself carries, since `for-hosts.md` restating
+      it is a second copy that can drift from the first.
+
+- [ ] **JUCE spitting out a JigDAW bundle from the same build, reframed, 2026-09-23.** The
+      inbox asked for this "from a slightly different angle": when a JUCE developer builds
+      their VST3/AU/whatever, JUCE's own build system also produces a web-native `jig:`
+      bundle from the same source, tested against the planned Ferrite (impulse response and
+      neural amp modeler) plugin.
+
+      **Checked rather than assumed, and it does not exist.** JUCE 9's own CMake API
+      (`juce_add_plugin`'s `FORMATS`) has no WebAssembly target for a plugin's DSP; the only
+      `wasm` in the JUCE tree is HarfBuzz's unrelated font-shaping API and a `juce_core`
+      source file supporting a JUCE app itself compiled with Emscripten as a browser
+      standalone, not a plugin's audio code exported as a portable module. There is no
+      "spits out a bundle" button to wire up, because JUCE never learned to export a plugin's
+      DSP as anything but a plugin.
+
+      **What is actually true**, and it is a smaller claim than the inbox item made: an
+      `AudioProcessor`'s DSP *can* be made to compile to `wasm32` and expose `jig:Abi1`'s
+      exports, exactly as `native/jigdaw-adapter/src/juce/PluginProcessor.cpp` shows a JUCE
+      shell can wrap `jigdaw_core` rather than the other way round. What that needs is the
+      DSP written as a portable core with no JUCE dependency, `AudioBuffer`, `ValueTree`, or
+      anything else framework-specific reaching into it, which most JUCE projects are not
+      written as, because JUCE gives them no reason to be. This is the same shape of
+      separation `jigdaw_core` itself demonstrates, in the other direction: a portable core
+      wrapped by a DPF shell here, by a JUCE shell there.
+
+      **What would actually be worth building, if the appetite is still there**: not a JUCE
+      CMake export target, which the above rules out, but a documented recipe and a worked
+      example: write your DSP as a plain C/C++ core with no JUCE types crossing its
+      boundary, wrap it once in an `AudioProcessor` for JUCE and once in the `jig_init`/
+      `jig_process` shape for JigDAW, from the same `.cpp`. Ferrite (the IR/NAM plugin, still
+      unbuilt) is a reasonable test case for this precisely because its DSP (convolution, a
+      small neural network) has no obvious reason to touch JUCE at all, which is what would
+      make the separation easy to get right there and hard to argue against elsewhere.
+      Not started.
+
 - [x] **Every plugin now says who wrote it, dereferenceably, 2026-09-23.** Surfaced by an
       independent implementation, `~/github/diddums` (danbri, built against this project's
       published spec), fetching `provenance.ttl` beside each served plugin and 404ing. Under

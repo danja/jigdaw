@@ -40,9 +40,13 @@ needs Rust or clang installed before it can be tried. `plugins/tremolo/` is the 
 its shape rather than inventing a new one.
 
 If the plugin genuinely needs WebAssembly (real DSP state, a tight inner loop), say so rather
-than scaffolding it: point at `plugins/cascade/` (Rust, `cargo build --release --target
-wasm32-unknown-unknown`) as the worked example to copy from instead, and stop here. Templating
-a build toolchain is a different, larger job than this command does.
+than scaffolding it, and point at a worked example to copy from instead, and stop here.
+Templating a build toolchain is a different, larger job than this command does. Two starting
+points, by language: `plugins/boost/` (C++, `clang++ --target=wasm32 -nostdlib`) is the
+minimal one, built to be copied, everything past `jig_process` being ABI wiring rather than
+DSP; `plugins/cascade/` (Rust, `cargo build --release --target wasm32-unknown-unknown`) is a
+real reverb and shows the same ABI in a plugin that actually does something. Prefer
+`plugins/boost/` unless Rust is specifically wanted.
 
 ### 2. `plugins/<name>/profile.json`
 
