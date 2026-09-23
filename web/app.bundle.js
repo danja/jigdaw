@@ -13245,6 +13245,7 @@ var init_Vocabulary = __esm({
         mediaType: `${JIG}mediaType`,
         registeredName: `${JIG}registeredName`,
         wasmFeature: `${JIG}wasmFeature`,
+        userReplaceable: `${JIG}userReplaceable`,
         ModuleAbi: `${JIG}ModuleAbi`,
         Abi1: `${JIG}Abi1`,
         Abi2: `${JIG}Abi2`,
@@ -13357,6 +13358,12 @@ function objects(dataset2, subject, predicate) {
 function one(dataset2, subject, predicate) {
   return objects(dataset2, subject, predicate)[0] ?? null;
 }
+function asBoolean(term3) {
+  if (!term3) return false;
+  if (term3.value === "true" || term3.value === "1") return true;
+  if (term3.value === "false" || term3.value === "0") return false;
+  throw new Error(`not a boolean: ${term3.value}`);
+}
 function asNumber(term3) {
   if (!term3) return null;
   const n2 = Number(term3.value);
@@ -13380,7 +13387,8 @@ function readResource(dataset2, term3, baseIRI, canonical) {
     integrity: asString(one(dataset2, term3, jig.integrity)),
     mediaType: asString(one(dataset2, term3, jig.mediaType)),
     registeredName: asString(one(dataset2, term3, jig.registeredName)),
-    wasmFeatures: values(dataset2, term3, jig.wasmFeature)
+    wasmFeatures: values(dataset2, term3, jig.wasmFeature),
+    userReplaceable: asBoolean(one(dataset2, term3, jig.userReplaceable))
   };
 }
 function readScalePoints(dataset2, port) {
@@ -17912,7 +17920,8 @@ async function instantiate(profile, granted, context, {
   fetchVerified,
   AudioWorkletNode = globalThis.AudioWorkletNode,
   validate = (bytes) => WebAssembly.validate(bytes),
-  processorUrl = null
+  processorUrl = null,
+  state = null
 } = {}) {
   const processorBytes = await fetchVerified(profile.processor, { kind: "processor" });
   let moduleBytes = null;
@@ -17969,11 +17978,21 @@ async function instantiate(profile, granted, context, {
       { cause }
     );
   }
-  const ready = await init(node, moduleBytes, assets, granted, context, profile);
+  const ready = await init(node, moduleBytes, assets, granted, context, profile, state);
   const descriptors = parameterDescriptors(profile.ports);
   return { node, ready, descriptors };
 }
-function init(node, moduleBytes, assets, granted, context, profile) {
+function transferablesIn(value2, into = [], seen = /* @__PURE__ */ new Set()) {
+  if (value2 instanceof ArrayBuffer) {
+    into.push(value2);
+    return into;
+  }
+  if (value2 === null || typeof value2 !== "object" || seen.has(value2)) return into;
+  seen.add(value2);
+  for (const item of Array.isArray(value2) ? value2 : Object.values(value2)) transferablesIn(item, into, seen);
+  return into;
+}
+function init(node, moduleBytes, assets, granted, context, profile, state) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null;
@@ -17988,7 +18007,7 @@ function init(node, moduleBytes, assets, granted, context, profile) {
         clearTimeout(timeout);
         node.port.onmessage = null;
         resolve({ latencyFrames: message.latencyFrames ?? 0, tailFrames: message.tailFrames ?? null });
-      } else if (message?.type === "error") {
+      } else if (message?.type === "error" && message.fatal !== false) {
         clearTimeout(timeout);
         node.port.onmessage = null;
         reject(new LoadError(STEPS.ready, `${message.phase ?? "instantiate"}: ${message.message}`));
@@ -17999,14 +18018,20 @@ function init(node, moduleBytes, assets, granted, context, profile) {
     for (const [name, bytes] of Object.entries(assets ?? {})) {
       assetBuffers[name] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
+    const transfer = [
+      ...buffer ? [buffer] : [],
+      ...Object.values(assetBuffers),
+      ...transferablesIn(state)
+    ];
     node.port.postMessage({
       type: "init",
       module: buffer,
       assets: assetBuffers,
       capabilities: granted,
       sampleRate: context.sampleRate,
-      quantum: profile.renderQuantum ?? 128
-    }, buffer ? [buffer, ...Object.values(assetBuffers)] : Object.values(assetBuffers));
+      quantum: profile.renderQuantum ?? 128,
+      ...state !== null && state !== void 0 ? { state } : {}
+    }, transfer);
   });
 }
 async function resolveProcessorUrl(bytes, originalUrl, override) {
@@ -18136,12 +18161,13 @@ var PluginLoader = class {
    * caller holding an already-resolved profile can use it without pulling a
    * Turtle parser into a browser bundle. This stays the front door.
    */
-  instantiate(profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
+  instantiate(profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode, state = null } = {}) {
     return instantiate(profile, granted, context, {
       fetchVerified: (resource, options) => this.fetchVerified(resource, options),
       AudioWorkletNode,
       validate: this.#validate,
-      processorUrl: this.#processorUrlFor
+      processorUrl: this.#processorUrlFor,
+      state
     });
   }
 };
@@ -21321,13 +21347,13 @@ var Engine = class {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin(iri2) {
+  async addPlugin(iri2, { state = null } = {}) {
     const { profile, granted } = await this.#loader.loadProfile(iri2);
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile,
       granted,
       this.#context,
-      { AudioWorkletNode: this.#nodeClass }
+      { AudioWorkletNode: this.#nodeClass, state }
     );
     return this.adopt({ iri: iri2, profile, node, ready, descriptors, granted });
   }
@@ -21537,10 +21563,18 @@ var Engine = class {
     entry.handlers.add(handler2);
     return () => entry.handlers.delete(handler2);
   }
-  /** Watch a node for the errors a processor reports after loading. */
+  /**
+   * Watch a node for the errors a processor reports after loading.
+   *
+   * Only a fatal one quarantines. messaging.md 1.3 documents `fatal: false`
+   * for a problem the node survives, such as a `loadAsset` that failed to
+   * parse: contract 10.2 says a *plugin that throws* is what gets muted and
+   * disconnected, not every message a processor happens to send with type
+   * "error", and those are different populations.
+   */
   watch(id, onError) {
     return this.onMessage(id, (message) => {
-      if (message?.type !== "error") return;
+      if (message?.type !== "error" || message.fatal === false) return;
       this.quarantine(id, message.message);
       onError?.(new LoadError("process", `${this.get(id).profile.label}: ${message.message}`));
     });
@@ -21548,6 +21582,48 @@ var Engine = class {
   /** Post a message to a node's processor. */
   post(id, message) {
     this.get(id).node.port.postMessage(message);
+  }
+  /**
+   * Ask a node's processor for its current state (contract section 8,
+   * messaging.md 1.2's `stateRequest` and 1.3's `state`). Resolves with
+   * whatever it returns, or `null` if nothing answers before `timeoutMs`: a
+   * plugin with no state to report simply never replies, which is the
+   * ordinary case and not a failure, so a timeout resolves rather than
+   * rejects.
+   *
+   * A token round-trips with the request rather than trusting "the next
+   * `state` message must be the answer to this one", because `watch()` and
+   * any other `onMessage` listener share the same port and a message meant
+   * for one caller must not resolve another's promise.
+   */
+  requestState(id, { timeoutMs = 2e3 } = {}) {
+    const entry = this.get(id);
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return new Promise((resolve) => {
+      let settled = false;
+      const stop2 = this.onMessage(id, (message) => {
+        if (settled || message?.type !== "state" || message.token !== token) return;
+        settled = true;
+        stop2();
+        resolve(message.state ?? null);
+      });
+      entry.node.port.postMessage({ type: "stateRequest", token });
+      setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        stop2();
+        resolve(null);
+      }, timeoutMs);
+    });
+  }
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node, messaging.md
+   * 1.2's `loadAsset`: a person choosing a different file from the
+   * generated panel, after the plugin is already loaded. `bytes` is
+   * transferred, so the caller must not use it again afterward.
+   */
+  loadAsset(id, key, bytes) {
+    this.get(id).node.port.postMessage({ type: "loadAsset", key, bytes }, [bytes]);
   }
 };
 
@@ -22341,6 +22417,29 @@ var Inspections = class {
   }
 };
 
+// src/host/StateCodec.js
+var MARKER = "__jigdawArrayBuffer";
+function toBase642(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i2 = 0; i2 < bytes.length; i2++) binary += String.fromCharCode(bytes[i2]);
+  return btoa(binary);
+}
+function fromBase64(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i2 = 0; i2 < binary.length; i2++) bytes[i2] = binary.charCodeAt(i2);
+  return bytes.buffer;
+}
+function encodeState(state) {
+  if (state === null || state === void 0) return null;
+  return JSON.stringify(state, (_key, value2) => value2 instanceof ArrayBuffer ? { [MARKER]: toBase642(value2) } : value2);
+}
+function decodeState(text) {
+  if (text === null || text === void 0) return null;
+  return JSON.parse(text, (_key, value2) => value2 && typeof value2 === "object" && MARKER in value2 ? fromBase64(value2[MARKER]) : value2);
+}
+
 // src/ops/UndoHistory.js
 var UNDO_LIMIT = 100;
 var UndoHistory = class {
@@ -22739,7 +22838,7 @@ var OpDispatcher = class {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
-      entry = foreign ? await this.#addForeign(iri2) : await this.#engine.addPlugin(iri2);
+      entry = foreign ? await this.#addForeign(iri2) : await this.#engine.addPlugin(iri2, { state: decodeState(node.state ?? null) });
     } catch (error2) {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
@@ -22811,6 +22910,38 @@ var OpDispatcher = class {
     if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
     this.#emit({ type: "parameter", nodeId, symbol, value: applied });
     return { ...result, value: applied };
+  }
+  /**
+   * Ask a node's own processor for its current state, live, rather than
+   * whatever `jig:nodeState` last happened to hold in the model. Called
+   * before writing a session, per contract section 8: parameter values are
+   * never part of state, so this is the only way a saved project carries
+   * what a stateful plugin is actually doing.
+   *
+   * `null` for a node the engine has no entry for (not yet loaded, or a
+   * foreign plugin, whose own adapter this does not reach into) and for a
+   * plugin that never answers, which are both ordinary rather than errors.
+   */
+  async getNodeState(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return null;
+    return this.#engine.requestState(engineId);
+  }
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node: a person
+   * choosing a different file from the generated panel. Not routed through
+   * `apply()`: it changes neither the graph nor a parameter the model
+   * tracks, only bytes a processor holds, which is exactly what
+   * `jig:nodeState` exists to carry, and the next `getNodeState` reflects it
+   * without this needing to touch the project itself.
+   */
+  loadAsset(nodeId, key, bytes) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) {
+      return { ok: false, message: "no such node, or nothing to load an asset into" };
+    }
+    this.#engine.loadAsset(engineId, key, bytes);
+    return { ok: true };
   }
   /**
    * Rebuild the audio links to match the compiled graph.
@@ -23120,7 +23251,7 @@ var spokenValue = (port, value2) => {
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
   return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
-function createPanel(document2, profile, onChange) {
+function createPanel(document2, profile, onChange, onLoadAsset) {
   const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
@@ -23204,6 +23335,26 @@ function createPanel(document2, profile, onChange) {
     row.append(knob ?? input, readout);
     controls.append(row);
     setters.get(port.symbol)(port.defaultValue);
+  }
+  for (const asset of profile.assets ?? []) {
+    if (!asset.userReplaceable) continue;
+    const key = asset.iri.split("#").pop();
+    const row = document2.createElement("div");
+    row.className = "control control-asset";
+    const label = document2.createElement("label");
+    const id = `${profile.iri}#${key}-asset`.replace(/[^\w-]/g, "_");
+    label.setAttribute("for", id);
+    label.textContent = key;
+    row.append(label);
+    const input = document2.createElement("input");
+    input.type = "file";
+    input.id = id;
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (file) onLoadAsset?.(key, file);
+    });
+    row.append(input);
+    controls.append(row);
   }
   return {
     element: root,
@@ -24608,6 +24759,9 @@ function drawRack() {
         panel = createPanel(document, profile, (symbol, value2) => {
           const applied = dispatcher.setParameter(node.id, symbol, value2);
           if (applied.ok) panel.update(symbol, applied.value);
+        }, async (key, file) => {
+          const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
+          if (!result.ok) log(`${node.id}.${key}: ${result.message}`, "error");
         });
         panels.set(node.id, panel);
       }
@@ -24876,10 +25030,14 @@ async function askAgent() {
 function sessionIri() {
   return new URL(`sessions/${Date.now()}/`, document.baseURI).href;
 }
-function saveSession() {
+async function saveSession() {
   if (!dispatcher) {
     log("nothing to save yet", "error");
     return;
+  }
+  for (const node of dispatcher.project.nodes) {
+    const state = await dispatcher.getNodeState(node.id);
+    if (state !== null) dispatcher.apply([{ op: "setNodeState", node: node.id, state: encodeState(state) }]);
   }
   const turtle = writeProject(dispatcher.project, {
     iri: sessionIri(),
@@ -24926,7 +25084,6 @@ async function openSession(text) {
       const set = d.setParameter(change.id, symbol, value2);
       if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, "error");
     }
-    if (change.state) d.apply([{ op: "setNodeState", node: change.id, state: change.state }]);
   }
   const rest = read.changes.filter((c3) => c3.op !== "addNode" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)));
   if (rest.length > 0) {
@@ -24956,7 +25113,7 @@ $("loadbar").addEventListener("submit", (e) => {
 });
 $("play").addEventListener("click", () => play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", stop);
-$("save").addEventListener("click", saveSession);
+$("save").addEventListener("click", () => saveSession().catch((error2) => log(error2.message, "error")));
 $("open").addEventListener("click", () => $("openfile").click());
 $("openfile").addEventListener("change", async (event) => {
   const file = event.target.files?.[0];

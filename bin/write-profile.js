@@ -108,6 +108,7 @@ for (const asset of assets) {
   w('    a jig:Resource ;')
   w(`    jig:location <${asset.file}> ;`)
   if (asset.mediaType) w(`    jig:mediaType ${JSON.stringify(asset.mediaType)} ;`)
+  if (asset.userReplaceable) w(`    jig:userReplaceable true ;`)
   w(`    jig:integrity "${asset.integrity}" .`)
 }
 

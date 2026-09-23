@@ -40,8 +40,8 @@
     "processor": "ferrite-processor.js"
   },
   "assets": [
-    { "key": "nam", "file": "wavenet.nam", "mediaType": "application/json" },
-    { "key": "ir", "file": "cab.wav", "mediaType": "audio/wav" }
+    { "key": "nam", "file": "wavenet.nam", "mediaType": "application/json", "userReplaceable": true },
+    { "key": "ir", "file": "cab.wav", "mediaType": "audio/wav", "userReplaceable": true }
   ],
   "ports": [
     {

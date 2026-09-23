@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  94 terms.
+  95 terms.
 </p>
 
 <h2>Classes</h2>
@@ -296,6 +296,15 @@
   <dt id="tailFrames"><code>jig:tailFrames</code> <span class="label">tail frames</span></dt>
   <dd>Frames the plugin keeps producing after its input goes silent. A
         reverb that does not declare this is cut off at the end of an offline render.</dd>
+  <dt id="userReplaceable"><code>jig:userReplaceable</code> <span class="label">user replaceable</span></dt>
+  <dd>Whether a person can load a different file into this jig:asset at
+        runtime, from the generated panel (messaging.md section 1.2's loadAsset), rather
+        than only by rebuilding the plugin. Absent or false for an asset that is
+        implementation detail, such as a converted JSFX effect's compiled script:
+        replacing it means nothing to whoever is looking at the panel. The currently
+        loaded bytes are the plugin's own state (contract section 8), not a project
+        setting, so a session that saves and reopens carries whatever was loaded rather
+        than always falling back to the shipped default.</dd>
   <dt id="value"><code>jig:value</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="x"><code>jig:x</code></dt>

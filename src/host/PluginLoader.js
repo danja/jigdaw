@@ -151,12 +151,13 @@ export class PluginLoader {
    * caller holding an already-resolved profile can use it without pulling a
    * Turtle parser into a browser bundle. This stays the front door.
    */
-  instantiate (profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode } = {}) {
+  instantiate (profile, granted, context, { AudioWorkletNode = globalThis.AudioWorkletNode, state = null } = {}) {
     return instantiate(profile, granted, context, {
       fetchVerified: (resource, options) => this.fetchVerified(resource, options),
       AudioWorkletNode,
       validate: this.#validate,
-      processorUrl: this.#processorUrlFor
+      processorUrl: this.#processorUrlFor,
+      state
     })
   }
 }

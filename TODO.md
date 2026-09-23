@@ -429,6 +429,56 @@ complete. Review periodically.
 
       `npm test`: 884 of 884.
 
+- [x] **Loading your own model or impulse response into Ferrite, saved with the session,
+      2026-09-23.** Reported directly: "I see no way of loading IR files or NAM files into
+      the plugin." Ferrite shipped its two `jig:asset`s fixed at build time, and nothing in
+      the panel could change them. Asked whether a loaded file should survive a save, the
+      answer was that it should persist in the session.
+
+      **Contract section 8's plugin state had never been implemented by the web host.**
+      `messaging.md` specified `stateRequest`, `state` and `init`'s `state` field, and no code
+      sent or read any of them. Built generically rather than for Ferrite alone:
+      `Engine.requestState` (a token-correlated `stateRequest`, resolving `null` on timeout
+      rather than rejecting), `Engine.addPlugin(iri, { state })` threaded through
+      `PluginLoader` into `init`, with any `ArrayBuffer`s in the state transferred.
+      `src/host/StateCodec.js` turns a state holding `ArrayBuffer`s into a string and back,
+      because `jig:nodeState` is a literal in the saved graph. `OpDispatcher` decodes on the
+      way into the engine and `web/app.js`'s `saveSession` encodes on the way out, so the
+      model's `node.state` always holds the string form.
+
+      **A new host-to-processor message, `loadAsset` (`{ key, bytes }`)**, in
+      `messaging.md` section 1.2, for replacing an asset after `init`. A file that does not
+      parse is reported as `{ type: 'error', phase: 'asset', fatal: false }` and leaves the
+      previous asset playing. `Instantiate.js` and `Engine.watch` now treat only a fatal error
+      as fatal; `watch` had never checked, which went unnoticed because nothing called it.
+
+      **`jig:userReplaceable`**, a new boolean on `jig:Resource`, marks the assets a person
+      may replace. It is in `vocabs/jigdaw.ttl`, `vocabs/shapes.ttl` (datatype and
+      cardinality), `Vocabulary.js`, `ProfileReader.js` and `bin/write-profile.js`, and a
+      defect in `examples/counterexample-profile.ttl` takes the expected violations from 11
+      to 12. The constraint was mutation tested by removing it and watching the count drop.
+      `src/ui/Panel.js` draws one labelled file input per such asset, after the knobs, and
+      nothing at all for a profile that declares none.
+
+      **Restoring a saved state detached Ferrite's own audio views**, caught by the test
+      that restores into a fresh node: loading a second `.nam` can grow module memory, and
+      the views had already been taken. Ferrite's processor now applies state before
+      taking views and re-derives them after every load, including a runtime `loadAsset`.
+      Full account in `MISTAKES.md`.
+
+      `tests/host/ferrite.test.js` gains three tests: the reported state matches the shipped
+      files byte for byte, `loadAsset` changes both the output and the reported state, and a
+      state captured from one engine, run through `StateCodec` and given to a second engine
+      reproduces both the bytes and the sound. Verified live in Chrome through the real
+      interface: a WAV set on the panel's file input reached only its own node, and Save
+      followed by Open (which removes every node and instantiates each afresh) brought the
+      loaded impulse response back. The suite also caught the panel's file input at 12px,
+      under the 16px that stops iOS zooming.
+
+      `npm test`: 892 of 892. The machine was under a load average of about 15 at the
+      time, and some full runs failed a different test each time by timeout (tremolo) or
+      transiently (the em dash guard); each passed on its own and in the next full run.
+
 ## Namespaces
 
 - [x] **Individual `pu:` terms now dereference, 2026-09-21.** Was 404ing because the nginx
@@ -571,7 +621,10 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       tested against the original.
 
       **Needs a person**, in `HUMANS.md`: GitHub Pages is not turned on for the repository yet,
-      so the workflow will build and have nowhere to deploy to until someone does.
+      so the workflow will build and have nowhere to deploy to until someone does. Turned on
+      2026-09-19; measured live afterward, `https://danja.github.io/jigdaw/` answers 200 with
+      the right title. Removed from `HUMANS.md` once done, per that file's own rule of staying
+      a list of open actions rather than a record of closed ones.
 
       **Redesigned the same day, once deployed and seen live.** The first version reused
       `web/docs/`'s old single-column layout with all eighteen documents in one wrapping top

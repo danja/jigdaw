@@ -18,6 +18,7 @@ import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi } from '../engine/EventRouter.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
+import { decodeState } from '../host/StateCodec.js'
 import { UndoHistory } from './UndoHistory.js'
 
 export class OpDispatcher {
@@ -312,9 +313,16 @@ export class OpDispatcher {
       // two callers. A foreign plugin is instantiated by its own adapter and
       // handed to the engine already built; everything after that, including
       // the model edit and the links below, is identical.
+      // node.state, if this node came from a reopened session, is the
+      // string jig:nodeState holds; the engine wants the real
+      // structured-cloneable value a stateful plugin's own processor reads,
+      // which is what it was before saveSession stringified it for RDF.
+      // The model, just below, keeps the string form: writing it back out
+      // unchanged is what makes a session that is never touched again save
+      // byte for byte the same.
       entry = foreign
         ? await this.#addForeign(iri)
-        : await this.#engine.addPlugin(iri)
+        : await this.#engine.addPlugin(iri, { state: decodeState(node.state ?? null) })
     } catch (error) {
       // A ConsentRequired carries what a person has to be asked, so it travels
       // out intact rather than being flattened into a message. Contract section
@@ -407,6 +415,40 @@ export class OpDispatcher {
 
     this.#emit({ type: 'parameter', nodeId, symbol, value: applied })
     return { ...result, value: applied }
+  }
+
+  /**
+   * Ask a node's own processor for its current state, live, rather than
+   * whatever `jig:nodeState` last happened to hold in the model. Called
+   * before writing a session, per contract section 8: parameter values are
+   * never part of state, so this is the only way a saved project carries
+   * what a stateful plugin is actually doing.
+   *
+   * `null` for a node the engine has no entry for (not yet loaded, or a
+   * foreign plugin, whose own adapter this does not reach into) and for a
+   * plugin that never answers, which are both ordinary rather than errors.
+   */
+  async getNodeState (nodeId) {
+    const engineId = this.#nodeIds.get(nodeId)
+    if (!engineId || !this.#engine) return null
+    return this.#engine.requestState(engineId)
+  }
+
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node: a person
+   * choosing a different file from the generated panel. Not routed through
+   * `apply()`: it changes neither the graph nor a parameter the model
+   * tracks, only bytes a processor holds, which is exactly what
+   * `jig:nodeState` exists to carry, and the next `getNodeState` reflects it
+   * without this needing to touch the project itself.
+   */
+  loadAsset (nodeId, key, bytes) {
+    const engineId = this.#nodeIds.get(nodeId)
+    if (!engineId || !this.#engine) {
+      return { ok: false, message: 'no such node, or nothing to load an asset into' }
+    }
+    this.#engine.loadAsset(engineId, key, bytes)
+    return { ok: true }
   }
 
   /**

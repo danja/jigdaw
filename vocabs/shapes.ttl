@@ -225,7 +225,11 @@ jig:ResourceShape a sh:NodeShape ;
         sh:pattern "^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$" ;
         sh:message "Every resource needs a Subresource Integrity digest, as sha384-<base64>. The profile and the code it points at need not share an origin, and the whole install path is a host running code it found by following a link."
     ] ;
-    sh:property [ sh:path jig:mediaType ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+    sh:property [ sh:path jig:mediaType ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [
+        sh:path jig:userReplaceable ; sh:maxCount 1 ; sh:datatype xsd:boolean ;
+        sh:message "jig:userReplaceable is a boolean: whether a person can load a different file into this asset from the generated panel."
+    ] .
 
 jig:ProcessorShape a sh:NodeShape ;
     sh:targetClass jig:Processor ;

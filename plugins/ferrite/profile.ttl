@@ -58,18 +58,20 @@
     jig:location <ferrite-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "ferrite" ;
-    jig:integrity "sha384-suUEdvTw+Mpg5vh7nBrws+Q8I4u1YC1uLNmTg22bvkzpYcSReB7uorJvFE8IkmaY" .
+    jig:integrity "sha384-z6j6mDctRhuPTVbSa9WoLDv5iSmh7Ou8ZouJqpuBS323OsZElIPG0WSOnY3BI9Fn" .
 
 <#nam>
     a jig:Resource ;
     jig:location <wavenet.nam> ;
     jig:mediaType "application/json" ;
+    jig:userReplaceable true ;
     jig:integrity "sha384-8wi+iDxwmHA28cbtgjoNsPgLpum/BC9N+0Ltw2TBFi4FXmU+gElB5Z6EJBh9sUQ/" .
 
 <#ir>
     a jig:Resource ;
     jig:location <cab.wav> ;
     jig:mediaType "audio/wav" ;
+    jig:userReplaceable true ;
     jig:integrity "sha384-ro0B82vF2PR17Gk+kRU3OsRKJhDFUMTd6zMbYDtsnpaWuUzF0zhDt2v4z7VKWkV+" .
 
 <#input>

@@ -156,6 +156,18 @@ jig:registeredName a owl:DatatypeProperty ;
         needs it to construct the AudioWorkletNode, and there is no way to ask a worklet
         what it registered.""" .
 
+jig:userReplaceable a owl:DatatypeProperty ;
+    rdfs:domain jig:Resource ; rdfs:range xsd:boolean ;
+    rdfs:label "user replaceable" ;
+    rdfs:comment """Whether a person can load a different file into this jig:asset at
+        runtime, from the generated panel (messaging.md section 1.2's loadAsset), rather
+        than only by rebuilding the plugin. Absent or false for an asset that is
+        implementation detail, such as a converted JSFX effect's compiled script:
+        replacing it means nothing to whoever is looking at the panel. The currently
+        loaded bytes are the plugin's own state (contract section 8), not a project
+        setting, so a session that saves and reopens carries whatever was loaded rather
+        than always falling back to the shipped default.""" .
+
 ## -- Portable module ABI -----------------------------------------------------
 ##
 ## A plugin's processor is JavaScript, so a browser can always run it. Nothing

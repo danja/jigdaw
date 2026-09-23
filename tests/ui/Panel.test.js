@@ -169,7 +169,7 @@ describe('the application keeps a panel current', () => {
 describe('the page on a phone', () => {
   // AGENTS.md says a rule worth stating is worth a test. These are the parts of
   // "works on a phone" that can be checked without a browser; the rest needs
-  // someone to open it, which is HUMANS.md item 1.
+  // someone to open it on one.
   const page = () => readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
 
   it('declares a viewport, without which a phone renders at 980px and zooms out', () => {

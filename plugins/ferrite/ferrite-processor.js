@@ -7,12 +7,30 @@
 // jig_load_<name> call, the same shape plugins/_jsfx-runtime's compiled
 // script uses for its one asset.
 //
+// Both are also jig:userReplaceable: a person can load a different file for
+// either from the generated panel, at any time, and the currently loaded
+// bytes are this plugin's whole state (contract section 8), handed back
+// whenever the host asks and restored from init's `state` field when a
+// saved session provides one. Three call sites, one method, applyAsset
+// below, so "load a file" means the same thing whichever of the three asked
+// for it.
+//
 // jig_load_nam and jig_load_ir both return a status this module defines
 // itself (0 ok, 1 loaded but the file's own sample rate does not match the
 // host's, negative on a real parse failure): a convention between this
 // processor and its own module, not part of the host contract, exactly as
-// for-plugin-authors.md says that ABI is free to be.
+// for-plugin-authors.md says that ABI is free to be. Reported to the host
+// as messaging.md's own `error` with `fatal: false` for the negative case
+// and `fatal: false` again for the rate mismatch, never as a made up
+// message type nothing listens for.
 const PARAM_INDEX = Object.freeze({ input: 0, output: 1 })
+
+/** Which module exports each asset key loads through. Adding a third asset
+ * some day is one more entry here, not a third copy of applyAsset. */
+const ASSETS = Object.freeze({
+  nam: { label: 'the neural amp model', ptr: 'jig_nam_ptr', maxLen: 'jig_nam_max_len', load: 'jig_load_nam' },
+  ir: { label: 'the cabinet impulse response', ptr: 'jig_ir_ptr', maxLen: 'jig_ir_max_len', load: 'jig_load_ir' }
+})
 
 class FerriteProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors () {
@@ -29,13 +47,35 @@ class FerriteProcessor extends AudioWorkletProcessor {
     this.inputViews = []
     this.outputViews = []
     this.lastValues = new Float32Array(Object.keys(PARAM_INDEX).length).fill(NaN)
+    // The bytes currently applied for each asset, kept so a stateRequest can
+    // hand them back. Each is an ArrayBuffer this processor exclusively
+    // owns, transferred in rather than copied, because ownership passing
+    // once at the message boundary is the whole reason postMessage
+    // transfers rather than clones.
+    this.currentAssets = { nam: null, ir: null }
     this.port.onmessage = event => this.handle(event.data)
   }
 
   handle (message) {
-    if (message?.type !== 'init') return
+    switch (message?.type) {
+      case 'init': return this.onInit(message)
+      case 'loadAsset': return this.onLoadAsset(message)
+      case 'stateRequest': return this.onStateRequest(message)
+      default: return
+    }
+  }
+
+  onInit (message) {
     try {
-      this.instantiate(message.module, message.assets ?? {}, message.sampleRate ?? sampleRate)
+      // state, if any, is applied inside instantiate(), before input and
+      // output views are taken over the module's memory, never after: a
+      // restored .nam re-runs jig_load_nam, which can grow the module's own
+      // memory as nam-rs allocates the new model, and the ABI rule that
+      // views must not be taken until nothing will grow it again applies to
+      // a restore exactly as it does to the first load. Measured, not
+      // assumed: doing this after instantiate() returned a
+      // "detached ArrayBuffer" the first time it was tried.
+      this.instantiate(message.module, message.assets ?? {}, message.sampleRate ?? sampleRate, message.state)
       this.ready = true
       this.port.postMessage({ type: 'ready', latencyFrames: 0, tailFrames: null })
     } catch (error) {
@@ -47,27 +87,95 @@ class FerriteProcessor extends AudioWorkletProcessor {
     }
   }
 
-  /** Copy `bytes` into the module's buffer at `ptrExport()`, refusing rather
-   * than truncating if it does not fit, then call `loadExport(length)` and
-   * report what it says. */
-  loadAsset (exports, bytes, what, ptrName, maxLenName, loadName) {
-    if (!bytes) throw new Error(`init carried no "${what}" asset`)
-    const maxLen = exports[maxLenName]()
-    if (bytes.byteLength > maxLen) {
-      throw new Error(`${what} is ${bytes.byteLength} bytes, larger than this module's ${maxLen} byte buffer`)
-    }
-    new Uint8Array(exports.memory.buffer, exports[ptrName](), bytes.byteLength).set(new Uint8Array(bytes))
-    const status = exports[loadName](bytes.byteLength)
-    if (status < 0) throw new Error(`${what} did not parse (code ${status})`)
-    if (status > 0) {
-      // Not fatal: the model or the impulse response is real and loaded, it
-      // is just timed for a different sample rate than this session is
-      // running at. Reported so it is not mistaken for a normal load.
-      this.port.postMessage({ type: 'warning', message: `${what}'s own sample rate does not match this session's` })
+  /** messaging.md 1.2: a person choosing a different file from the
+   * generated panel, after the plugin is already running. Never fatal: the
+   * plugin keeps whatever it had loaded before if the new file does not
+   * parse.
+   *
+   * refreshViews() runs even on success alone, not on every message: a
+   * bigger .nam than any loaded so far can make nam-rs's own allocation
+   * grow the module's memory, which silently detaches the input and output
+   * views process() already holds. The ABI's "must not grow after init" is
+   * a rule for jig_process; a reload asked for from outside it is exactly
+   * the case that rule does not cover, so the host side has to assume
+   * growth is possible and re-take the views after every one, not just the
+   * first. */
+  onLoadAsset ({ key, bytes }) {
+    if (!this.ready) return
+    try {
+      this.applyAsset(key, bytes)
+      this.refreshViews()
+    } catch (error) {
+      this.port.postMessage({ type: 'error', phase: 'asset', fatal: false, message: String(error?.message ?? error) })
     }
   }
 
-  instantiate (moduleBytes, assets, rate) {
+  /** messaging.md 1.3: the state this plugin's whole contribution to a
+   * saved session is, the currently loaded bytes for each asset. Posted
+   * without transferring: transferring would detach this processor's own
+   * retained copy, and the next stateRequest needs it too. A structured
+   * clone copies instead, which is what "the host now has its own copy to
+   * write into jig:nodeState" actually requires. */
+  onStateRequest ({ token }) {
+    this.port.postMessage({ type: 'state', token, state: { ...this.currentAssets } })
+  }
+
+  /** Applied once per asset key at init from a saved session's state,
+   * exactly the same call applyAsset makes for a live loadAsset message:
+   * one path for "this plugin now has different bytes for this asset",
+   * whichever of the two asked for it. A key the state does not mention
+   * keeps whatever init's own assets already loaded.
+   *
+   * A key that fails to restore (a save from an incompatible version, a
+   * corrupted value) is reported and skipped rather than thrown: this runs
+   * inside instantiate(), before ready, and a bad saved value must not be a
+   * worse outcome than the save never having existed, which is what the
+   * shipped default it falls back to already is. */
+  restoreState (state) {
+    for (const key of Object.keys(ASSETS)) {
+      if (!(state[key] instanceof ArrayBuffer)) continue
+      try {
+        this.applyAsset(key, state[key])
+      } catch (error) {
+        this.port.postMessage({
+          type: 'error', phase: 'asset', fatal: false,
+          message: `restoring the saved ${ASSETS[key].label}: ${error.message}`
+        })
+      }
+    }
+  }
+
+  /** Copy `bytes` into the module's buffer for `key`, refusing rather than
+   * truncating if it does not fit, call the module's own loader, and keep a
+   * reference for the next stateRequest. Every one of the three ways this
+   * plugin's assets change (the shipped default, a loadAsset message, a
+   * restored state) goes through here, so the module and this.currentAssets
+   * cannot disagree about what is actually loaded. */
+  applyAsset (key, bytes) {
+    const shape = ASSETS[key]
+    if (!shape) throw new Error(`no such asset: ${key}`)
+    if (!bytes) throw new Error(`no bytes given for ${shape.label}`)
+    const exports = this.exports
+    const maxLen = exports[shape.maxLen]()
+    if (bytes.byteLength > maxLen) {
+      throw new Error(`${shape.label} is ${bytes.byteLength} bytes, larger than this module's ${maxLen} byte buffer`)
+    }
+    new Uint8Array(exports.memory.buffer, exports[shape.ptr](), bytes.byteLength).set(new Uint8Array(bytes))
+    const status = exports[shape.load](bytes.byteLength)
+    if (status < 0) throw new Error(`${shape.label} did not parse (code ${status})`)
+    this.currentAssets[key] = bytes
+    if (status > 0) {
+      // Not fatal: the model or the impulse response is real and loaded, it
+      // is just timed for a different sample rate than this session is
+      // running at.
+      this.port.postMessage({
+        type: 'error', phase: 'asset', fatal: false,
+        message: `${shape.label}'s own sample rate does not match this session's`
+      })
+    }
+  }
+
+  instantiate (moduleBytes, assets, rate, state) {
     if (!moduleBytes) throw new Error('init carried no WebAssembly bytes')
     const compiled = new WebAssembly.Module(moduleBytes)
     const instance = new WebAssembly.Instance(compiled, {})
@@ -82,22 +190,39 @@ class FerriteProcessor extends AudioWorkletProcessor {
       if (!(name in exports)) throw new Error(`the module does not export ${name}`)
     }
 
-    // The host's rate first: both loaders below compare a file's own
+    this.exports = exports
+
+    // The host's rate first: applyAsset's loaders compare a file's own
     // declared rate against it, and can only do that once it is known.
     exports.jig_init(rate)
 
-    this.loadAsset(exports, assets.nam, 'the neural amp model', 'jig_nam_ptr', 'jig_nam_max_len', 'jig_load_nam')
-    this.loadAsset(exports, assets.ir, 'the cabinet impulse response', 'jig_ir_ptr', 'jig_ir_max_len', 'jig_load_ir')
+    this.applyAsset('nam', assets.nam)
+    this.applyAsset('ir', assets.ir)
+    // A restored session's bytes, if any, override the shipped defaults
+    // just loaded, still before views are taken: restoring is exactly as
+    // capable of growing the module's memory as the first load was.
+    if (state) this.restoreState(state)
 
-    const maxFrames = exports.jig_max_frames()
+    this.refreshViews()
+  }
+
+  /** (Re)build inputViews/outputViews from the module's current memory and
+   * pointers. Never assumes a previous call is still valid: `jig_load_nam`
+   * or `jig_load_ir` may have grown the module's own linear memory since,
+   * which replaces `exports.memory.buffer` with a new object and detaches
+   * every view taken over the old one. The pointers themselves do not move
+   * when memory grows, only the buffer object they are read against does,
+   * which is why this re-reads the buffer on every call but not the module. */
+  refreshViews () {
+    const exports = this.exports
+    this.maxFrames = exports.jig_max_frames()
     const buffer = exports.memory.buffer
+    this.inputViews = []
+    this.outputViews = []
     for (let channel = 0; channel < 2; channel++) {
-      this.inputViews.push(new Float32Array(buffer, exports.jig_input_ptr(channel), maxFrames))
-      this.outputViews.push(new Float32Array(buffer, exports.jig_output_ptr(channel), maxFrames))
+      this.inputViews.push(new Float32Array(buffer, exports.jig_input_ptr(channel), this.maxFrames))
+      this.outputViews.push(new Float32Array(buffer, exports.jig_output_ptr(channel), this.maxFrames))
     }
-
-    this.exports = exports
-    this.maxFrames = maxFrames
   }
 
   process (inputs, outputs, parameters) {

@@ -49,6 +49,7 @@ or a wall-clock time.
 | `events` | `{ events: [{ frame, bytes }] }` | `bytes` is a `Uint8Array` of one MIDI message |
 | `transport` | `{ playing, frame, beat, beatsPerFrame, tempo, timeSignature, loop? }` | Sent when anything in it changes, and at least once before playback |
 | `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token |
+| `loadAsset` | `{ key, bytes }` | Replace a `jig:asset` the profile marked `jig:userReplaceable`, after `init`. `bytes` is an `ArrayBuffer`, transferred |
 | `dispose` | `{}` | Release everything. No further messages will be sent |
 
 `init` carries bytes rather than a compiled `WebAssembly.Module` or a URL.
@@ -78,12 +79,32 @@ it. The worked case is `plugins/_jsfx-runtime/`, whose processor writes a conver
 effect's compiled script into the module's memory from `assets.script` before running it; a
 future plugin wanting a wavetable or an impulse response uses the same field.
 
+`state`, when present, is whatever a `state` reply (section 1.3) most recently returned for
+this node, restored from a saved project's `jig:nodeState`. Absent on a plugin's first ever
+load, and on any load where nothing was saved. A processor that receives it applies it after
+`assets`, overriding whichever of a `jig:userReplaceable` asset's bytes it would otherwise
+default to, exactly as a value restored from a save overrides a fresh install's shipped one.
+
+`loadAsset` replaces one `jig:asset` the profile marked `jig:userReplaceable`, after the
+plugin is already running: a person choosing a different file from the generated panel
+(contract section 9.1), not part of the load sequence. `key` is the same fragment name
+`assets` in `init` uses. A processor MUST accept this at any time and MUST NOT require a
+reload to take effect. Contract section 8.2's rule about state applies here too: the new
+bytes belong in what a later `stateRequest` returns, not duplicated anywhere else, or a
+restore disagrees with what is actually loaded.
+
+A file that fails to parse is an `error` with `phase: "asset"` and `fatal: false`: the plugin
+keeps running on whatever it had loaded before, unlike a failure during `init`, because
+rejecting a bad file the person just chose is a smaller event than the plugin itself being
+broken and contract section 10.2's "does not stop the music" applies here at the scale of one
+asset rather than the whole node.
+
 ### 1.3 Processor to host
 
 | `type` | Payload | Notes |
 |---|---|---|
 | `ready` | `{ latencyFrames, tailFrames? }` | The plugin is instantiated and every buffer exists |
-| `error` | `{ phase, message, fatal }` | `phase` is one of `instantiate`, `process`, `state` |
+| `error` | `{ phase, message, fatal }` | `phase` is one of `instantiate`, `process`, `state`, `asset` |
 | `events` | `{ events: [{ frame, bytes }] }` | Outgoing MIDI |
 | `state` | `{ token, state }` | In reply to `stateRequest` |
 | `latency` | `{ latencyFrames, fromFrame }` | Latency changed. See [latency.md](latency.md) |

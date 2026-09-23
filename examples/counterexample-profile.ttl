@@ -45,7 +45,9 @@
     jig:location <broken-processor.js> ;
     # No jig:registeredName, so the host cannot construct the node.
     # Integrity digest is not a valid SRI string.
-    jig:integrity "md5-abcdef" .
+    jig:integrity "md5-abcdef" ;
+    # Not a boolean, so a host reading it cannot tell what was meant.
+    jig:userReplaceable "yes" .
 
 <#cutoff>
     a lv2:InputPort , lv2:ControlPort ;

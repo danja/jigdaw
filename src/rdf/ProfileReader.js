@@ -24,6 +24,17 @@ function one (dataset, subject, predicate) {
 
 const asString = term => (term ? term.value : null)
 
+/** Absent means false, which is the correct reading rather than a fallback
+ * masking one: jig:userReplaceable is a claim a profile makes about itself,
+ * and a profile that says nothing has made no claim. A present-but-garbage
+ * value is still an error, the same discipline asNumber holds resources to. */
+function asBoolean (term) {
+  if (!term) return false
+  if (term.value === 'true' || term.value === '1') return true
+  if (term.value === 'false' || term.value === '0') return false
+  throw new Error(`not a boolean: ${term.value}`)
+}
+
 function asNumber (term) {
   if (!term) return null
   const n = Number(term.value)
@@ -74,7 +85,8 @@ function readResource (dataset, term, baseIRI, canonical) {
     integrity: asString(one(dataset, term, jig.integrity)),
     mediaType: asString(one(dataset, term, jig.mediaType)),
     registeredName: asString(one(dataset, term, jig.registeredName)),
-    wasmFeatures: values(dataset, term, jig.wasmFeature)
+    wasmFeatures: values(dataset, term, jig.wasmFeature),
+    userReplaceable: asBoolean(one(dataset, term, jig.userReplaceable))
   }
 }
 

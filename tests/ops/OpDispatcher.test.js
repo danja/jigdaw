@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 import { Project } from '../../src/model/Project.js'
+import { encodeState } from '../../src/host/StateCodec.js'
 
 const IRI = 'https://strandz.it/jigdaw/plugins/cascade/'
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
@@ -717,19 +718,25 @@ describe('loading a plugin carries everything a node holds', () => {
   })
 
   it('keeps settings and state it is given', async () => {
+    // A real jig:nodeState string, per src/host/StateCodec.js: addPlugin
+    // decodes it for the engine, which this suite's fake ignores, and the
+    // model keeps the encoded form unchanged, exactly what a reopened
+    // session's string was and what a later save writes back out.
+    const state = encodeState({ a: 1 })
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
     const { nodeId } = await d.addPlugin(IRI, {
-      id: 'verb', settings: { mix: 0.34 }, state: 'eyJhIjoxfQ'
+      id: 'verb', settings: { mix: 0.34 }, state
     })
     expect(d.project.node(nodeId).settings.get('mix')).toBe(0.34)
-    expect(d.project.node(nodeId).state).toBe('eyJhIjoxfQ')
+    expect(d.project.node(nodeId).state).toBe(state)
   })
 
   it('forwards every field the model accepts, not a list of them', async () => {
     // The guard that makes the next field safe. Whatever addNode understands,
     // addPlugin must hand over, so this compares against the model rather than
     // against a list written here.
+    const state = encodeState('zzz')
     const engine = fakeEngine()
     const plain = new Project()
     plain.apply([{
@@ -738,7 +745,7 @@ describe('loading a plugin carries everything a node holds', () => {
       pluginIri: IRI,
       label: 'X',
       settings: { mix: 0.2 },
-      state: 'zzz',
+      state,
       channel: { gain: 0.5, pan: 1, muted: true, soloed: true }
     }])
 
@@ -747,7 +754,7 @@ describe('loading a plugin carries everything a node holds', () => {
       id: 'x',
       label: 'X',
       settings: { mix: 0.2 },
-      state: 'zzz',
+      state,
       channel: { gain: 0.5, pan: 1, muted: true, soloed: true }
     })
 

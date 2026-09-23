@@ -72,10 +72,10 @@ export class Engine {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin (iri) {
+  async addPlugin (iri, { state = null } = {}) {
     const { profile, granted } = await this.#loader.loadProfile(iri)
     const { node, ready, descriptors } = await this.#loader.instantiate(
-      profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass })
+      profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass, state })
     return this.adopt({ iri, profile, node, ready, descriptors, granted })
   }
 
@@ -310,10 +310,18 @@ export class Engine {
     return () => entry.handlers.delete(handler)
   }
 
-  /** Watch a node for the errors a processor reports after loading. */
+  /**
+   * Watch a node for the errors a processor reports after loading.
+   *
+   * Only a fatal one quarantines. messaging.md 1.3 documents `fatal: false`
+   * for a problem the node survives, such as a `loadAsset` that failed to
+   * parse: contract 10.2 says a *plugin that throws* is what gets muted and
+   * disconnected, not every message a processor happens to send with type
+   * "error", and those are different populations.
+   */
   watch (id, onError) {
     return this.onMessage(id, message => {
-      if (message?.type !== 'error') return
+      if (message?.type !== 'error' || message.fatal === false) return
       this.quarantine(id, message.message)
       onError?.(new LoadError('process', `${this.get(id).profile.label}: ${message.message}`))
     })
@@ -322,5 +330,49 @@ export class Engine {
   /** Post a message to a node's processor. */
   post (id, message) {
     this.get(id).node.port.postMessage(message)
+  }
+
+  /**
+   * Ask a node's processor for its current state (contract section 8,
+   * messaging.md 1.2's `stateRequest` and 1.3's `state`). Resolves with
+   * whatever it returns, or `null` if nothing answers before `timeoutMs`: a
+   * plugin with no state to report simply never replies, which is the
+   * ordinary case and not a failure, so a timeout resolves rather than
+   * rejects.
+   *
+   * A token round-trips with the request rather than trusting "the next
+   * `state` message must be the answer to this one", because `watch()` and
+   * any other `onMessage` listener share the same port and a message meant
+   * for one caller must not resolve another's promise.
+   */
+  requestState (id, { timeoutMs = 2000 } = {}) {
+    const entry = this.get(id)
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    return new Promise(resolve => {
+      let settled = false
+      const stop = this.onMessage(id, message => {
+        if (settled || message?.type !== 'state' || message.token !== token) return
+        settled = true
+        stop()
+        resolve(message.state ?? null)
+      })
+      entry.node.port.postMessage({ type: 'stateRequest', token })
+      setTimeout(() => {
+        if (settled) return
+        settled = true
+        stop()
+        resolve(null)
+      }, timeoutMs)
+    })
+  }
+
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node, messaging.md
+   * 1.2's `loadAsset`: a person choosing a different file from the
+   * generated panel, after the plugin is already loaded. `bytes` is
+   * transferred, so the caller must not use it again afterward.
+   */
+  loadAsset (id, key, bytes) {
+    this.get(id).node.port.postMessage({ type: 'loadAsset', key, bytes }, [bytes])
   }
 }

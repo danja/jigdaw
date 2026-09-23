@@ -27,7 +27,8 @@ export async function instantiate (profile, granted, context, {
   fetchVerified,
   AudioWorkletNode = globalThis.AudioWorkletNode,
   validate = bytes => WebAssembly.validate(bytes),
-  processorUrl = null
+  processorUrl = null,
+  state = null
 } = {}) {
   const processorBytes = await fetchVerified(profile.processor, { kind: 'processor' })
 
@@ -104,7 +105,7 @@ export async function instantiate (profile, granted, context, {
       { cause })
   }
 
-  const ready = await init(node, moduleBytes, assets, granted, context, profile)
+  const ready = await init(node, moduleBytes, assets, granted, context, profile, state)
 
   // Derived here so a descriptor mismatch is reported against the profile
   // rather than surfacing later as a missing AudioParam.
@@ -113,8 +114,21 @@ export async function instantiate (profile, granted, context, {
   return { node, ready, descriptors }
 }
 
+/** Every ArrayBuffer reachable through a structured-cloneable value's own
+ * plain objects and arrays, so it can be listed as a transfer rather than
+ * copied. `state` is shaped however the plugin that produced it likes, so
+ * this walks rather than assumes a shape the way the flat `assets` map does
+ * not need to. */
+function transferablesIn (value, into = [], seen = new Set()) {
+  if (value instanceof ArrayBuffer) { into.push(value); return into }
+  if (value === null || typeof value !== 'object' || seen.has(value)) return into
+  seen.add(value)
+  for (const item of Array.isArray(value) ? value : Object.values(value)) transferablesIn(item, into, seen)
+  return into
+}
+
 /** Post init and await ready. Contract section 3.1 step 7. */
-function init (node, moduleBytes, assets, granted, context, profile) {
+function init (node, moduleBytes, assets, granted, context, profile, state) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null
@@ -128,7 +142,11 @@ function init (node, moduleBytes, assets, granted, context, profile) {
         clearTimeout(timeout)
         node.port.onmessage = null
         resolve({ latencyFrames: message.latencyFrames ?? 0, tailFrames: message.tailFrames ?? null })
-      } else if (message?.type === 'error') {
+      } else if (message?.type === 'error' && message.fatal !== false) {
+        // A non-fatal error during init (messaging.md 1.3: an asset that
+        // failed to restore, for instance) is reported by the processor as
+        // a warning of its own choosing and does not stop it reaching
+        // ready; only a fatal one aborts the load.
         clearTimeout(timeout)
         node.port.onmessage = null
         reject(new LoadError(STEPS.ready, `${message.phase ?? 'instantiate'}: ${message.message}`))
@@ -150,14 +168,21 @@ function init (node, moduleBytes, assets, granted, context, profile) {
       assetBuffers[name] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
     }
 
+    const transfer = [
+      ...(buffer ? [buffer] : []),
+      ...Object.values(assetBuffers),
+      ...transferablesIn(state)
+    ]
+
     node.port.postMessage({
       type: 'init',
       module: buffer,
       assets: assetBuffers,
       capabilities: granted,
       sampleRate: context.sampleRate,
-      quantum: profile.renderQuantum ?? 128
-    }, buffer ? [buffer, ...Object.values(assetBuffers)] : Object.values(assetBuffers))
+      quantum: profile.renderQuantum ?? 128,
+      ...(state !== null && state !== undefined ? { state } : {})
+    }, transfer)
   })
 }
 

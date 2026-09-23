@@ -2,6 +2,40 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-23 Restoring Ferrite's saved state detached its own audio views
+
+**What happened.** Adding runtime asset loading and session-state restore to `plugins/
+ferrite/ferrite-processor.js`, a test that restored a saved `.nam` into a freshly instantiated
+node failed with `Cannot perform %TypedArray%.prototype.set on a detached ArrayBuffer`, thrown
+from inside `process()` itself, nowhere near the code that had just run.
+
+**Root cause.** `instantiate()` loaded the shipped default assets, took `inputViews` and
+`outputViews` over the module's memory, and only then applied a restored session's state as a
+separate step. Restoring a `.nam` calls `jig_load_nam` again, which asks `nam-rs` to allocate
+a second `Model`; if that allocation needs more than the module's current linear memory
+already has, the module grows its own memory, and `docs/module-abi.md` says exactly what that
+does: "growing invalidates every [view] the host is entitled to hold." The `Float32Array`s
+taken a few lines earlier were already invalid by the time `process()` next read them.
+
+**The same hazard exists after `ready`, not only during `init`.** `onLoadAsset`, a person
+loading a bigger model from the running plugin's own panel, calls `jig_load_nam` exactly the
+same way and can grow memory exactly the same way, at a point views were taken long ago and
+have been used correctly ever since. The ABI's "must not grow after init" is a rule for
+`jig_process`; a reload requested from outside it is precisely the case that rule does not
+cover, and nothing about it being requested later makes the JavaScript side's held views any
+safer.
+
+**Prevention.** State is now applied inside `instantiate()`, before views are taken rather
+than after, for the load path. For every path, `refreshViews()` re-reads
+`exports.memory.buffer` and every pointer after any call that might have grown memory,
+`instantiate()`'s own default-and-state loading and `onLoadAsset`'s runtime reload alike,
+rather than assuming a view taken once stays valid. Pointers themselves do not move when
+memory grows, only the buffer object they are read against does, which is what makes
+re-deriving the views cheap enough to do unconditionally rather than only when something
+detects growth actually happened. Caught by the test that exercises the restore path for
+real, not by reasoning about it: the fix was written, and confirmed, only after watching the
+exact failure the hazard predicts.
+
 ## 2026-09-23 A CMake build tree reached origin/main
 
 **What happened.** Building a JUCE-hosted second adapter alongside the DPF one

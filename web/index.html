@@ -202,6 +202,11 @@
      control stretches to fill them. */
   .control-selector { grid-column:span 2; }
   .control-selector select { width:100%; }
+  /* A file input is wider than 84px lets on and left-aligned reads more like
+     a form field than a knob, the same reasoning behind a selector's own
+     two-cell span. */
+  .control-asset { grid-column:span 2; align-items:flex-start; }
+  .control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
 
   /* The knob. The input is still the control: it is laid over the face,
      invisible, and keeps the role, the value and every key. pointer-events
@@ -276,6 +281,7 @@
        390px viewport gets four columns of 44px targets. Only the dropdowns
        need the room, and they take the full width rather than two cells. */
     .control-selector { grid-column:1 / -1; }
+    .control-asset { grid-column:1 / -1; }
     .links { margin-left:0; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }

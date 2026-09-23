@@ -24,6 +24,7 @@ import { runAgentTurn, ollamaChat } from '../src/mcp/LocalAgent.js'
 
 import { writeProject } from '../src/rdf/ProjectWriter.js'
 import { readProject } from '../src/rdf/ProjectReader.js'
+import { encodeState, decodeState } from '../src/host/StateCodec.js'
 
 const $ = id => document.getElementById(id)
 
@@ -458,6 +459,9 @@ function drawRack () {
         panel = createPanel(document, profile, (symbol, value) => {
           const applied = dispatcher.setParameter(node.id, symbol, value)
           if (applied.ok) panel.update(symbol, applied.value)
+        }, async (key, file) => {
+          const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer())
+          if (!result.ok) log(`${node.id}.${key}: ${result.message}`, 'error')
         })
         panels.set(node.id, panel)
       }
@@ -861,8 +865,17 @@ function sessionIri () {
   return new URL(`sessions/${Date.now()}/`, document.baseURI).href
 }
 
-function saveSession () {
+async function saveSession () {
   if (!dispatcher) { log('nothing to save yet', 'error'); return }
+  // The model's own node.state is whatever was last restored or never set;
+  // a stateful plugin's actual current state only lives in its own running
+  // processor. Asked for, live, per node, before writing: contract section
+  // 8 is what this is for, and skipping it would silently save whichever
+  // asset a session started with rather than whatever a person loaded since.
+  for (const node of dispatcher.project.nodes) {
+    const state = await dispatcher.getNodeState(node.id)
+    if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: node.id, state: encodeState(state) }])
+  }
   const turtle = writeProject(dispatcher.project, {
     iri: sessionIri(),
     created: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
@@ -917,7 +930,10 @@ async function openSession (text) {
       const set = d.setParameter(change.id, symbol, value)
       if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, 'error')
     }
-    if (change.state) d.apply([{ op: 'setNodeState', node: change.id, state: change.state }])
+    // change.state, if present, was already carried into the model by
+    // addPlugin's own addNode op above and into the running processor by
+    // OpDispatcher decoding it for the engine; a second setNodeState here
+    // would only reapply the same value the model already has.
   }
 
   // Only between nodes that actually loaded. A connection to a node that failed
@@ -948,7 +964,7 @@ $('agentbar').addEventListener('submit', e => { e.preventDefault(); askAgent() }
 $('loadbar').addEventListener('submit', e => { e.preventDefault(); loadPlugin($('iri').value.trim()).catch(() => {}) })
 $('play').addEventListener('click', () => play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', stop)
-$('save').addEventListener('click', saveSession)
+$('save').addEventListener('click', () => saveSession().catch(error => log(error.message, 'error')))
 $('open').addEventListener('click', () => $('openfile').click())
 $('openfile').addEventListener('change', async event => {
   const file = event.target.files?.[0]

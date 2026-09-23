@@ -118,6 +118,7 @@ export const vocabulary = Object.freeze({
     mediaType: `${JIG}mediaType`,
     registeredName: `${JIG}registeredName`,
     wasmFeature: `${JIG}wasmFeature`,
+    userReplaceable: `${JIG}userReplaceable`,
     ModuleAbi: `${JIG}ModuleAbi`,
     Abi1: `${JIG}Abi1`,
     Abi2: `${JIG}Abi2`,

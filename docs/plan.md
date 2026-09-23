@@ -632,7 +632,8 @@ one.
 
 ## Blocked on a person
 
-In `HUMANS.md`, and unchanged by any amount of building: serving the vocabulary, minting a
-web plugin format term, deciding which repository owns `trn:`, and fixing `trn:`
-dereferencing. The format term blocks publishing a JigDAW plugin to the catalogue; the rest
-block nothing here but leave published IRIs dead.
+In `HUMANS.md`, and unchanged by any amount of building: the deployment at strandz.it is
+several commits behind `main` and needs a `git pull`, and `lld-18` is missing for the
+WebAssembly builds of `plugins/8b8/` and `plugins/boost/`, which currently link through a
+rust-lld fallback that depends on a rust toolchain being present. Neither blocks work in this
+repository; the first leaves the live site stale and the second leaves a build fragile.

@@ -72,8 +72,15 @@ const spokenValue = (port, value) => {
  * That round trip is deliberate, per messaging.md section 2.3: a UI that
  * renders optimistically from its own input disagrees with the host the first
  * time a value is clamped, rejected, or overridden by automation.
+ *
+ * `onLoadAsset(key, file)` is called when a person picks a file for a
+ * `jig:userReplaceable` asset (messaging.md section 1.2's `loadAsset`), one
+ * per such asset the profile declares. Optional, and nothing is drawn for it
+ * when a profile declares none: most plugins have nothing a person loads at
+ * runtime, and this must cost them nothing, the same rule every other
+ * generated control here already follows.
  */
-export function createPanel (document, profile, onChange) {
+export function createPanel (document, profile, onChange, onLoadAsset) {
   const root = document.createElement('section')
   root.className = 'panel'
 
@@ -203,6 +210,34 @@ export function createPanel (document, profile, onChange) {
 
     // Render the declared default through the same path a host update takes.
     setters.get(port.symbol)(port.defaultValue)
+  }
+
+  // One file picker per jig:userReplaceable asset, after the parameters:
+  // loading a different model or impulse response is a rarer action than
+  // turning a knob, and the panel reads top to bottom in the order a person
+  // is most likely to want it.
+  for (const asset of profile.assets ?? []) {
+    if (!asset.userReplaceable) continue
+    const key = asset.iri.split('#').pop()
+
+    const row = document.createElement('div')
+    row.className = 'control control-asset'
+
+    const label = document.createElement('label')
+    const id = `${profile.iri}#${key}-asset`.replace(/[^\w-]/g, '_')
+    label.setAttribute('for', id)
+    label.textContent = key
+    row.append(label)
+
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.id = id
+    input.addEventListener('change', () => {
+      const file = input.files?.[0]
+      if (file) onLoadAsset?.(key, file)
+    })
+    row.append(input)
+    controls.append(row)
   }
 
   return {
