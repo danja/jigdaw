@@ -19,7 +19,9 @@ crate-type = ["cdylib"]
 nam-rs = "0.4"
 
 [profile.release]
-opt-level = "z"
+# Speed rather than size: measured 4.5 ms a quantum at "z" and 3.4 ms at 3 for
+# the same capture, before the model ran once instead of twice.
+opt-level = 3
 lto = true
 panic = "abort"
 codegen-units = 1

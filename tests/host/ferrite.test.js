@@ -32,7 +32,7 @@ function makeLoader (validator) {
     fetch: directoryFetch({ [CANONICAL]: pluginDir }),
     parse: parseText,
     validator,
-    capabilities: detectCapabilities({}),
+    capabilities: detectCapabilities({ WebAssembly }),
     processorUrl: () => pathToFileURL(resolve(pluginDir, 'ferrite-processor.js')).href
   })
 }
@@ -47,7 +47,7 @@ suite('ferrite, a neural amp model and a cabinet impulse response', () => {
     const { profile } = await makeLoader(validator).loadProfile(CANONICAL)
     expect(profile.label).toBe('Ferrite')
     expect(profile.assets.map(a => a.iri.split('#').pop()).sort()).toEqual(['ir', 'nam'])
-    expect(profile.ports.map(p => p.symbol)).toEqual(['input', 'output'])
+    expect(profile.ports.map(p => p.symbol).sort()).toEqual(['amp', 'input', 'mix', 'output'])
   })
 
   it('loads and reports ready, both assets fetched and verified alongside the module', async () => {
@@ -111,6 +111,125 @@ suite('ferrite, a neural amp model and a cabinet impulse response', () => {
     for (let i = 0; i < samples.length; i++) buf.writeFloatLE(samples[i], 44 + i * 4)
     return new Uint8Array(buf).buffer
   }
+
+  /** A PCM WAV of any channel count, 16 or 24 bit, interleaved `frames` of
+   * arrays, one value per channel. */
+  function pcmWav (frames, bits) {
+    const channels = frames[0].length
+    const width = bits / 8
+    const dataBytes = frames.length * channels * width
+    const buf = Buffer.alloc(44 + dataBytes)
+    buf.write('RIFF', 0); buf.writeUInt32LE(36 + dataBytes, 4); buf.write('WAVE', 8)
+    buf.write('fmt ', 12); buf.writeUInt32LE(16, 16); buf.writeUInt16LE(1, 20)
+    buf.writeUInt16LE(channels, 22); buf.writeUInt32LE(48000, 24); buf.writeUInt32LE(48000 * channels * width, 28)
+    buf.writeUInt16LE(channels * width, 32); buf.writeUInt16LE(bits, 34); buf.write('data', 36); buf.writeUInt32LE(dataBytes, 40)
+    let at = 44
+    for (const frame of frames) {
+      for (const v of frame) { buf.writeIntLE(Math.round(v * (2 ** (bits - 1) - 1)), at, width); at += width }
+    }
+    return new Uint8Array(buf).buffer
+  }
+
+  /** A deterministic generator, so a failure reproduces. */
+  function noise (seed) {
+    let s = seed
+    return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 2 ** 31 - 1 }
+  }
+
+  describe('convolution: a cabinet or a room, up to 2.7 seconds', () => {
+    async function convolverOnly (settings = {}) {
+      const context = new OfflineContext({ sampleRate: 48000 })
+      const engine = new Engine({ context, loader: makeLoader(validator), AudioWorkletNode: OfflineWorkletNode })
+      const entry = await engine.addPlugin(CANONICAL)
+      const errors = []
+      engine.onMessage(entry.id, m => { if (m?.type === 'error') errors.push(m.message) })
+      for (const [symbol, value] of Object.entries({ amp: 0, ...settings })) engine.setParameter(entry.id, symbol, value)
+      const load = async ir => { engine.loadAsset(entry.id, 'ir', ir); await new Promise(r => setTimeout(r, 0)) }
+      return { entry, errors, load }
+    }
+
+    it('matches a direct convolution sample for sample, across many partitions, both channels independently', async () => {
+      // 5000 taps: the 256 convolved directly and nineteen FFT partitions,
+      // the last one short. Left and right carry different noise, so a
+      // mix-up of the two halves of the packed transform shows.
+      const next = noise(7)
+      const raw = Array.from({ length: 5000 }, (_, i) => next() * Math.exp(-i / 1200))
+      const energy = Math.sqrt(raw.reduce((s, v) => s + v * v, 0))
+      const ir = raw.map(v => Math.fround(v) / energy)
+      const { entry, errors, load } = await convolverOnly()
+      await load(wavOf(raw))
+
+      const blocks = 80
+      const left = Float32Array.from({ length: blocks * 128 }, () => next() * 0.5)
+      const right = Float32Array.from({ length: blocks * 128 }, () => next() * 0.5)
+      const got = [new Float32Array(blocks * 128), new Float32Array(blocks * 128)]
+      for (let b = 0; b < blocks; b++) {
+        const out = entry.node.render([left.subarray(b * 128, b * 128 + 128), right.subarray(b * 128, b * 128 + 128)])
+        got[0].set(out[0], b * 128)
+        got[1].set(out[1], b * 128)
+      }
+
+      let worst = 0
+      for (const [channel, input] of [[0, left], [1, right]]) {
+        for (let t = 0; t < input.length; t++) {
+          let want = 0
+          for (let k = 0; k <= Math.min(t, ir.length - 1); k++) want += ir[k] * input[t - k]
+          worst = Math.max(worst, Math.abs(got[channel][t] - want))
+        }
+      }
+      expect(errors).toEqual([])
+      expect(worst).toBeLessThan(1e-4)
+    })
+
+    it('reads 24 bit stereo, the format room libraries ship in, and normalises it to unit energy', async () => {
+      // One tap per channel, 0.5 and 0.3: mixed to mono that is 0.4, and
+      // normalised it is 1, so the output is the input.
+      const { entry, errors, load } = await convolverOnly()
+      await load(pcmWav([[0.5, 0.3]], 24))
+      const signal = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i / 5) * 0.5)
+      const out = entry.node.render([signal, signal])
+      expect(errors).toEqual([])
+      for (let i = 0; i < 128; i++) expect(out[0][i]).toBeCloseTo(signal[i], 5)
+    })
+
+    it('loads a response of the full 131072 samples and refuses one sample more, by name, keeping the last one', async () => {
+      const { entry, errors, load } = await convolverOnly()
+      await load(pcmWav(Array.from({ length: 131072 }, (_, i) => [i === 0 ? 1 : 0]), 16))
+      expect(errors).toEqual([])
+      await load(pcmWav(Array.from({ length: 131073 }, (_, i) => [i === 0 ? 1 : 0]), 16))
+      expect(errors).toEqual(['the impulse response is longer than 131072 samples, 2.7 seconds at 48 kHz'])
+      const signal = Float32Array.from({ length: 128 }, (_, i) => Math.cos(i / 3) * 0.5)
+      const out = entry.node.render([signal, signal])
+      for (let i = 0; i < 128; i++) expect(out[0][i]).toBeCloseTo(signal[i], 5)
+    })
+
+    it('with the amp off and Mix at 0, passes the input through untouched', async () => {
+      const { entry, load } = await convolverOnly({ mix: 0 })
+      await load(wavOf([0.2, 0.9, -0.4]))
+      const signal = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i / 7) * 0.5)
+      expect(Array.from(entry.node.render([signal, signal])[0])).toEqual(Array.from(signal))
+    })
+
+    it('Mix blends linearly between the dry signal and the convolved one', async () => {
+      const ir = wavOf([0.2, 0.9, -0.4])
+      const signal = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i / 7) * 0.5)
+      const render = async mix => {
+        const { entry, load } = await convolverOnly({ mix })
+        await load(ir)
+        return entry.node.render([signal, signal])[0]
+      }
+      const [dry, wet, half] = [await render(0), await render(1), await render(0.5)]
+      for (let i = 0; i < 128; i++) expect(half[i]).toBeCloseTo((dry[i] + wet[i]) / 2, 5)
+    })
+
+    it('with the amp on, the model changes the sound; with it off, it does not', async () => {
+      const signal = Float32Array.from({ length: 128 }, (_, i) => Math.sin(2 * Math.PI * 220 * i / 48000) * 0.5)
+      const on = await convolverOnly({ amp: 1, mix: 0 })
+      const off = await convolverOnly({ amp: 0, mix: 0 })
+      expect(Array.from(off.entry.node.render([signal, signal])[0])).toEqual(Array.from(signal))
+      expect(Array.from(on.entry.node.render([signal, signal])[0])).not.toEqual(Array.from(signal))
+    })
+  })
 
   describe('state and loadAsset: a person loading their own model or impulse response', () => {
     it('reports its currently loaded assets when the host asks, matching the shipped defaults byte for byte', async () => {

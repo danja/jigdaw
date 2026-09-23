@@ -47,7 +47,9 @@
     # Integrity digest is not a valid SRI string.
     jig:integrity "md5-abcdef" ;
     # Not a boolean, so a host reading it cannot tell what was meant.
-    jig:userReplaceable "yes" .
+    jig:userReplaceable "yes" ;
+    # Not a WebAssembly feature the vocabulary defines.
+    jig:wasmFeature jig:Simd256 .
 
 <#cutoff>
     a lv2:InputPort , lv2:ControlPort ;

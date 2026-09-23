@@ -102,6 +102,13 @@ Rationale: the alternative is to load and instantiate a plugin, then discover it
 work. That wastes a download, runs untrusted code for no reason, and produces a failure
 whose cause is several steps removed from the thing that caused it.
 
+A module's `jig:wasmFeature` values are requirements in the same sense, evaluated at the
+same point. A host MUST NOT fetch a module declaring a WebAssembly feature its engine does
+not support, and MUST report which feature was missing. A browser host SHOULD find out by
+asking the engine to validate a minimal module using the feature, rather than by the
+browser's name or version. Without this, the same missing feature surfaces as a compile
+error from inside the worklet that names an opcode rather than a cause.
+
 ### 2.2 Capabilities
 
 | Capability | Meaning |

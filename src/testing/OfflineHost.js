@@ -13,7 +13,9 @@
 // and this is what makes one possible: a render is reproducible, a live context
 // is not.
 import { readFile } from 'node:fs/promises'
+import { readdirSync } from 'node:fs'
 import { resolve, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const QUANTUM = 128
 
@@ -30,6 +32,7 @@ export function directoryFetch (roots) {
           ok: true,
           status: 200,
           text: async () => body.toString('utf8'),
+          json: async () => JSON.parse(body.toString('utf8')),
           arrayBuffer: async () => body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength)
         }
       } catch {
@@ -37,6 +40,27 @@ export function directoryFetch (roots) {
       }
     }
     throw new TypeError('Failed to fetch')
+  }
+}
+
+/**
+ * Every plugin under `pluginsDir`, served as if at `<origin>plugins/<name>/`,
+ * for a test that loads a project naming several of them. Returns the two
+ * PluginLoader options that differ from a single-plugin test: a `fetch`, and a
+ * `processorUrl` mapping each verified processor back to the file it came
+ * from, because node cannot import a blob URL.
+ */
+export function sitePlugins (origin, pluginsDir) {
+  const prefix = new URL('plugins/', origin).href
+  const roots = Object.fromEntries(readdirSync(pluginsDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => [`${prefix}${entry.name}/`, join(pluginsDir, entry.name)]))
+  return {
+    fetch: directoryFetch(roots),
+    processorUrl: async (_bytes, url) => {
+      if (!url.startsWith(prefix)) throw new Error(`not a plugin on this site: ${url}`)
+      return pathToFileURL(join(pluginsDir, url.slice(prefix.length))).href
+    }
   }
 }
 

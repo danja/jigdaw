@@ -92,6 +92,9 @@ if (hasModule) {
   // A declared ABI is what lets a host without a JavaScript engine load the
   // module directly, skipping the processor. See docs/module-abi.md.
   if (template.abi) w(`    jig:abi ${template.abi} ;`)
+  // Contract section 2.1: a host refuses a module needing a feature its
+  // engine lacks, so the build that turned the feature on must say so.
+  if (template.wasmFeatures?.length) w(`    jig:wasmFeature ${template.wasmFeatures.join(' , ')} ;`)
   w(`    jig:integrity "${resources.module.integrity}" .`)
   w('')
 }

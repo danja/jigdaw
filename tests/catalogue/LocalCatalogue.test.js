@@ -39,7 +39,7 @@ describe('the plugins this host serves', () => {
   })
 
   it('matches text against name, description and vendor', async () => {
-    expect((await catalogue.search({ text: 'reverb' })).map(e => e.label)).toEqual(['Cascade'])
+    expect((await catalogue.search({ text: 'reverb' })).map(e => e.label)).toEqual(['Cascade', 'Ferrite'])
     expect((await catalogue.search({ text: 'synthesiser' })).map(e => e.label)).toEqual(['Pulse'])
     // Every plugin here is by the same vendor, so this matches all of them.
     expect((await catalogue.search({ text: 'danja' })).length)
@@ -52,7 +52,7 @@ describe('the plugins this host serves', () => {
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Squelch', 'Tremolo'])
     // BassGen accepts MIDI too: it can be steered from a keyboard.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'BassGen', 'Pulse'])
@@ -62,7 +62,7 @@ describe('the plugins this host serves', () => {
   it('takes a full IRI for a facet as well as a bare name', async () => {
     const full = await catalogue.search({ role: 'http://purl.org/stuff/transmissions/AudioEffect' })
     expect(full.map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Squelch', 'Tremolo'])
   })
 
   it('returns nothing rather than everything when nothing matches', async () => {

@@ -1,0 +1,8 @@
+# plugins/ferrite/.cargo/config.toml
+#
+# WebAssembly SIMD for this crate's own build, which roughly halves the time
+# nam-rs spends on a real capture (1.7 ms a quantum to 0.96). profile.json
+# declares jig:wasmFeature jig:Simd128 to match, so a host without SIMD refuses
+# Ferrite by name before fetching it (contract section 2.1).
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

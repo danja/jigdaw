@@ -1,6 +1,8 @@
 // tests/host/Capabilities.test.js
 import { describe, it, expect } from 'vitest'
-import { detectCapabilities, negotiate, explainMissing, compact } from '../../src/host/Capabilities.js'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { detectCapabilities, negotiate, explainMissing, compact, WASM_FEATURE_PROBES } from '../../src/host/Capabilities.js'
 import { vocabulary as v } from '../../src/rdf/Vocabulary.js'
 
 const { jig, trn } = v
@@ -26,6 +28,54 @@ describe('detectCapabilities', () => {
     const offered = detectCapabilities({ crossOriginIsolated: true, SharedArrayBuffer: function () {} })
     expect(offered.has(jig.SharedMemory)).toBe(true)
     expect(offered.has(jig.CrossOriginIsolation)).toBe(true)
+  })
+
+  it('asks the engine about every WebAssembly feature the shapes permit a module to declare', async () => {
+    // A feature the shapes allow and the host never asks about is a feature
+    // every host refuses: the reference profile's jig:BulkMemory was exactly
+    // that until this list and the shapes were bound.
+    const shapes = readFileSync(resolve(import.meta.dirname, '../../vocabs/shapes.ttl'), 'utf8')
+    const permitted = shapes.match(/sh:path jig:wasmFeature ;\s*sh:in \(([^)]*)\)/)[1]
+      .trim().split(/\s+/).map(name => jig[name.replace('jig:', '')])
+    expect(Object.keys(WASM_FEATURE_PROBES).sort()).toEqual(permitted.sort())
+  })
+
+  it('offers each feature the real engine validates, and each probe is a module the engine accepts', () => {
+    const offered = detectCapabilities({ WebAssembly })
+    for (const [feature, probe] of Object.entries(WASM_FEATURE_PROBES)) {
+      // A probe that failed to parse would make every engine look like it
+      // lacks the feature, and node's engine has all four.
+      expect(WebAssembly.validate(probe), compact(feature)).toBe(true)
+      expect(offered.has(feature), compact(feature)).toBe(true)
+    }
+  })
+
+  it('offers none where the engine validates none', () => {
+    const offered = detectCapabilities({ WebAssembly: { validate: () => false } })
+    for (const feature of Object.keys(WASM_FEATURE_PROBES)) expect(offered.has(feature)).toBe(false)
+  })
+
+  it('offers no WebAssembly feature where there is no WebAssembly', () => {
+    expect(detectCapabilities({}).has(jig.Simd128)).toBe(false)
+  })
+})
+
+describe('negotiate, for a module declaring jig:wasmFeature', () => {
+  const simd = profile({ module: { wasmFeatures: [jig.Simd128] } })
+
+  it('is satisfied where the feature is offered', () => {
+    expect(negotiate(simd, new Set([jig.Simd128])).satisfied).toBe(true)
+  })
+
+  it('refuses where it is not, naming the feature', () => {
+    const result = negotiate(simd, new Set())
+    expect(result.satisfied).toBe(false)
+    expect(result.missing).toEqual([jig.Simd128])
+    expect(explainMissing(simd, result.missing)).toMatch(/jig:Simd128/)
+  })
+
+  it('does not pass a WebAssembly feature to the processor as a granted capability', () => {
+    expect(negotiate(simd, new Set([jig.Simd128])).granted).not.toContain(jig.Simd128)
   })
 })
 
@@ -90,12 +140,14 @@ describe('the host offers what its own plugins ask for', () => {
     const plugins = await pluginDirs(join(root, 'plugins'))
     expect(plugins.length, 'there should be plugins to check').toBeGreaterThan(0)
 
-    const offered = detectCapabilities({})
+    // The real engine, because a module's jig:wasmFeature is a requirement
+    // too (contract section 2.1), and Ferrite declares one.
+    const offered = detectCapabilities({ WebAssembly })
     for (const name of plugins) {
       const file = join(root, 'plugins', name, 'profile.ttl')
       const iri = `https://strandz.it/jigdaw/plugins/${name}/`
       const profile = readProfile(await parseTurtleFile(file, iri), iri)
-      for (const required of profile.requires ?? []) {
+      for (const required of [...(profile.requires ?? []), ...(profile.module?.wasmFeatures ?? [])]) {
         expect(offered.has(required),
           `${profile.label} requires ${compact(required)}, which this host does not offer`)
           .toBe(true)

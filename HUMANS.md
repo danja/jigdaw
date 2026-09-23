@@ -5,23 +5,7 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Pull on strandz.it
-
-`plugins/ferrite/` is not live: `https://strandz.it/jigdaw/plugins/ferrite/` still 404s, while
-`plugins/boost/` (committed earlier the same day) already answers 200. Everything since
-Boost was last pulled, including Ferrite, the JUCE-hosted adapter, the local-agent panel and
-`docs/for-juce-developers.md`, is sitting on `main` and not yet on the server.
-
-Nothing in that range touched `bin/serve.js`, so no restart, just the pull:
-
-```sh
-cd /home/github/jigdaw && git pull
-```
-
-See [Updating a deployment](#updating-a-deployment) below for the general form and what to
-check afterward.
-
-## 2. Tools that would help
+## 1. Tools that would help
 
 **lld, for the WebAssembly build of `plugins/8b8/` and `plugins/boost/`.** Ubuntu's `clang`
 package ships no `wasm-ld`, so both plugins' `build.sh` link through the `rust-lld` that

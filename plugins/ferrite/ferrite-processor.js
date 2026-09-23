@@ -23,20 +23,32 @@
 // as messaging.md's own `error` with `fatal: false` for the negative case
 // and `fatal: false` again for the rate mismatch, never as a made up
 // message type nothing listens for.
-const PARAM_INDEX = Object.freeze({ input: 0, output: 1 })
+const PARAM_INDEX = Object.freeze({ input: 0, output: 1, amp: 2, mix: 3 })
 
 /** Which module exports each asset key loads through. Adding a third asset
  * some day is one more entry here, not a third copy of applyAsset. */
 const ASSETS = Object.freeze({
-  nam: { label: 'the neural amp model', ptr: 'jig_nam_ptr', maxLen: 'jig_nam_max_len', load: 'jig_load_nam' },
-  ir: { label: 'the cabinet impulse response', ptr: 'jig_ir_ptr', maxLen: 'jig_ir_max_len', load: 'jig_load_ir' }
+  nam: {
+    label: 'the neural amp model', ptr: 'jig_nam_ptr', maxLen: 'jig_nam_max_len', load: 'jig_load_nam',
+    failures: { '-1': 'is not UTF-8 text', '-2': 'is not a .nam model this plugin can read', '-3': 'could not be built' }
+  },
+  ir: {
+    label: 'the impulse response', ptr: 'jig_ir_ptr', maxLen: 'jig_ir_max_len', load: 'jig_load_ir',
+    failures: {
+      '-1': 'is not a WAV file this plugin can read: PCM 16, 24 or 32 bit, or 32 bit float',
+      '-2': 'is silent',
+      '-3': 'is longer than 131072 samples, 2.7 seconds at 48 kHz'
+    }
+  }
 })
 
 class FerriteProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors () {
     return [
       { name: 'input', defaultValue: 1.0, minValue: 0.0, maxValue: 4.0, automationRate: 'k-rate' },
-      { name: 'output', defaultValue: 1.0, minValue: 0.0, maxValue: 2.0, automationRate: 'k-rate' }
+      { name: 'output', defaultValue: 1.0, minValue: 0.0, maxValue: 2.0, automationRate: 'k-rate' },
+      { name: 'amp', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
+      { name: 'mix', defaultValue: 1.0, minValue: 0.0, maxValue: 1.0, automationRate: 'k-rate' }
     ]
   }
 
@@ -162,7 +174,7 @@ class FerriteProcessor extends AudioWorkletProcessor {
     }
     new Uint8Array(exports.memory.buffer, exports[shape.ptr](), bytes.byteLength).set(new Uint8Array(bytes))
     const status = exports[shape.load](bytes.byteLength)
-    if (status < 0) throw new Error(`${shape.label} did not parse (code ${status})`)
+    if (status < 0) throw new Error(`${shape.label} ${shape.failures[status] ?? `did not load (code ${status})`}`)
     this.currentAssets[key] = bytes
     if (status > 0) {
       // Not fatal: the model or the impulse response is real and loaded, it

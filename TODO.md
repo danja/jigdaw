@@ -550,15 +550,51 @@ complete. Review periodically.
 
 Behaving more like a real DAW, an open-ended direction rather than a phase with an end.
 
-- [ ] **A Preset menu, loading a particular configuration of plugins.** From the inbox,
-      2026-09-19. Not designed yet. The obvious shape given what already exists: a preset is a
-      project (`src/rdf/ProjectWriter.js`/`ProjectReader.js` already round-trip one), so this is
-      closer to a curated, named `openSession` than a new format. Open questions worth settling
-      before building: where presets live (bundled with the app under `web/`, or user-saved
-      alongside `Save`/`Open`), whether loading one should go through `OpDispatcher.undo()`'s
-      history the way `openSession` does (clearing it, since a preset is a different session,
-      not a further edit to the one open), and whether a preset names plugins by IRI, which
-      needs them reachable, or bundles them the way `bin/bundle.js` does for one plugin.
+- [x] **A Preset menu, loading a particular configuration of plugins, 2026-09-23.** From the
+      inbox, 2026-09-19. Settled as: bundled presets only, under `web/presets/`; opening one
+      replaces the session and clears the undo history the way Open does; plugins named by IRI,
+      not bundled.
+
+      A preset is an ordinary project file with **no `@base` and relative plugin IRIs**
+      (`<../plugins/ferrite/>`), so it resolves against wherever it was fetched from and loads
+      the plugins served beside it, on `127.0.0.1` and on strandz.it alike. A saved session
+      keeps its absolute IRIs, which is right for a session and wrong for something shipped
+      with the host. `web/presets/index.json` lists file names only; each file's own
+      `rdfs:label` is its name in the menu, so the name has one home. `src/ui/Presets.js`
+      fetches the list; the menu is a labelled select and an "Open preset" button, not a select
+      that acts on change (WCAG 3.2.2), and it is not drawn until the list has loaded.
+
+      Opening a saved file and opening a preset now share `src/ops/OpenProject.js`, moved out
+      of `web/app.js`'s `openSession`, so the tests drive the same sequence a click does rather
+      than a copy of it. `src/testing/OfflineHost.js` gained `sitePlugins`, serving every
+      plugin in `plugins/` as if from one site, and `directoryFetch` responses gained `json()`,
+      which a real `Response` has.
+
+      Three presets: an acid bass line (BassGen driving Pulse through Squelch and Cascade,
+      which plays on Play with nothing else to do), a square lead through Tremolo and a plate,
+      and Ferrite into a Cascade hall. `tests/ui/Presets.test.js` walks the directory: index
+      and directory agree both ways, no preset has an `@base`, each conforms to the shapes, and
+      each opens for real through `openProject` against the real plugins with every setting
+      landing unclamped and every connection made. Mutation tested: a setting out of range, a
+      plugin that is not there, a MIDI connection marked as audio, and a file missing from the
+      index each fail it. `tests/ops/OpenProject.test.js` covers a missing plugin costing one
+      node and one error, not two. Verified live in Chrome through the real controls: the menu
+      lists all three by label, the acid preset opens four nodes and three connections, and on
+      Play BassGen's notes reach Pulse and Squelch's output brightness rises and falls with
+      each note (spectral centroid from about 440 Hz to about 1700 Hz).
+
+- [x] **Squelch, a resonant lowpass for the acid preset, 2026-09-23.** Asked for directly:
+      "for an acid sound we also need a peaky LP filter". Pulse's own filter is one-pole with no
+      resonance. Built as a separate effect rather than changing Pulse, so Pulse sounds as it
+      did and the filter works on any source. Simper's trapezoidal state variable filter,
+      chosen because it stays stable while the cutoff moves every sample; an envelope follower
+      on the input moves it, which is the acid sweep without needing the notes. Resonance stops
+      short of self-oscillation and the output is soft clipped, because a generated panel lets
+      anyone turn resonance to the end. Plain JavaScript, no module, like Tremolo.
+      `tests/host/squelch.test.js` measures what is heard: lows pass and highs are cut, the
+      level at the cutoff rises more than five times with resonance, a loud signal opens the
+      filter, and nothing leaves plus or minus one. Each claim mutation tested, which found
+      that a mutated processor fails its digest before any assertion runs (`MISTAKES.md`).
 
 - [x] **Undo and redo, 2026-09-19.** `OpDispatcher.undo()`/`redo()`, snapshot-based: every
       commit through `apply()` pushes the project as it was just before, and stepping back

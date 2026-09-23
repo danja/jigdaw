@@ -2,6 +2,22 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-23 A mutation test of a plugin proved nothing, because the digest refused it first
+
+**What happened.** Mutation testing Squelch's tests, each of three edits to
+`plugins/squelch/squelch-processor.js` (no resonance, no envelope, no output clip) turned
+every DSP test red at once, which reads as a strong result and was not one. The profile
+declares the processor's sha384, so every mutated processor failed its integrity check and
+never loaded. The tests failed for a reason none of them was written to detect.
+
+**Root cause.** A mutation of a digested artefact changes two things, the behaviour and the
+digest, and only the first was the point.
+
+**Prevention.** After mutating anything a profile declares a digest for, regenerate the
+profile (`./build.sh`) before running the tests. The sign to look for is a mutation that fails
+every test rather than the one it targets: a good mutation fails exactly one. Rerun that way,
+each of the three failed exactly its own test.
+
 ## 2026-09-23 Restoring Ferrite's saved state detached its own audio views
 
 **What happened.** Adding runtime asset loading and session-state restore to `plugins/

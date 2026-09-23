@@ -62,8 +62,11 @@ describe('the Undo and Redo controls', () => {
   it('clears history when a different session is opened, not only when one is applied', () => {
     // Otherwise "Undo" right after opening a file tries to step back into
     // whatever was open before it, one restored node at a time.
+    // The clearing itself is openProject's, and tests/ops/OpenProject.test.js
+    // checks it by behaviour; this checks the page goes through it and then
+    // redraws the buttons, which is the half no behavioural test here reaches.
     const openSession = app.slice(app.indexOf('async function openSession'), app.indexOf('async function openSession') + app.slice(app.indexOf('async function openSession')).indexOf('\n}\n') + 3)
-    expect(openSession).toMatch(/d\.clearHistory\(\)/)
+    expect(openSession).toMatch(/await openProject\(d, /)
     expect(openSession).toMatch(/updateHistoryButtons\(\)/)
   })
 })

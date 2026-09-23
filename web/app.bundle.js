@@ -17839,6 +17839,155 @@ init_Integrity();
 init_Vocabulary();
 var { jig: jig2, trn: trn2 } = vocabulary;
 var PREFIXES = Object.freeze([["jig:", JIG], ["trn:", TRN]]);
+var WASM_FEATURE_PROBES = Object.freeze({
+  // A v128 from i8x16.splat, then i8x16.popcnt.
+  [jig2.Simd128]: Uint8Array.of(
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
+    1,
+    5,
+    1,
+    96,
+    0,
+    1,
+    123,
+    3,
+    2,
+    1,
+    0,
+    10,
+    10,
+    1,
+    8,
+    0,
+    65,
+    0,
+    253,
+    15,
+    253,
+    98,
+    11
+  ),
+  // memory.copy over a one page memory.
+  [jig2.BulkMemory]: Uint8Array.of(
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
+    1,
+    4,
+    1,
+    96,
+    0,
+    0,
+    3,
+    2,
+    1,
+    0,
+    5,
+    3,
+    1,
+    0,
+    1,
+    10,
+    14,
+    1,
+    12,
+    0,
+    65,
+    0,
+    65,
+    0,
+    65,
+    0,
+    252,
+    10,
+    0,
+    0,
+    11
+  ),
+  // An atomic load from a shared memory.
+  [jig2.Threads]: Uint8Array.of(
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
+    1,
+    4,
+    1,
+    96,
+    0,
+    0,
+    3,
+    2,
+    1,
+    0,
+    5,
+    4,
+    1,
+    3,
+    1,
+    1,
+    10,
+    11,
+    1,
+    9,
+    0,
+    65,
+    0,
+    254,
+    16,
+    2,
+    0,
+    26,
+    11
+  ),
+  // try with catch_all.
+  [jig2.ExceptionHandling]: Uint8Array.of(
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
+    1,
+    4,
+    1,
+    96,
+    0,
+    0,
+    3,
+    2,
+    1,
+    0,
+    10,
+    8,
+    1,
+    6,
+    0,
+    6,
+    64,
+    25,
+    11,
+    11
+  )
+});
 function compact(iri2) {
   for (const [prefix, namespace2] of PREFIXES) {
     if (iri2.startsWith(namespace2)) return prefix + iri2.slice(namespace2.length);
@@ -17857,6 +18006,11 @@ function detectCapabilities(env = globalThis) {
     jig2.Persistence,
     jig2.OfflineRender
   ]);
+  if (typeof env.WebAssembly?.validate === "function") {
+    for (const [feature, probe] of Object.entries(WASM_FEATURE_PROBES)) {
+      if (env.WebAssembly.validate(probe)) offered.add(feature);
+    }
+  }
   if (env.crossOriginIsolated === true) {
     offered.add(jig2.CrossOriginIsolation);
     if (typeof env.SharedArrayBuffer === "function") offered.add(jig2.SharedMemory);
@@ -17865,7 +18019,8 @@ function detectCapabilities(env = globalThis) {
 }
 function negotiate(profile, offered) {
   const available = offered instanceof Set ? offered : new Set(offered);
-  const missing = (profile.requires ?? []).filter((c3) => !available.has(c3));
+  const needed = [...profile.requires ?? [], ...profile.module?.wasmFeatures ?? []];
+  const missing = needed.filter((c3) => !available.has(c3));
   const granted = [
     ...profile.requires ?? [],
     ...(profile.prefers ?? []).filter((c3) => available.has(c3))
@@ -24429,6 +24584,59 @@ function readProject(dataset2) {
   };
 }
 
+// src/ops/OpenProject.js
+async function openProject(dispatcher2, read, { onLoading = () => {
+}, onCleared = () => {
+} } = {}) {
+  const existing = [...dispatcher2.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id }));
+  if (existing.length > 0) {
+    const cleared = dispatcher2.apply(existing);
+    if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
+  }
+  onCleared();
+  const errors = [];
+  const loaded = /* @__PURE__ */ new Set();
+  const additions = read.changes.filter((c3) => c3.op === "addNode");
+  for (const change of additions) {
+    onLoading(change.pluginIri);
+    const { op, pluginIri, ...node } = change;
+    const result = await dispatcher2.addPlugin(pluginIri, node);
+    if (!result.ok) {
+      errors.push(`${change.id}: ${result.message}`);
+      continue;
+    }
+    loaded.add(change.id);
+    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
+      const set = dispatcher2.setParameter(change.id, symbol, value2);
+      if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
+    }
+  }
+  const rest = read.changes.filter((c3) => c3.op !== "addNode" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)));
+  if (rest.length > 0) {
+    const applied = dispatcher2.apply(rest);
+    if (!applied.ok) errors.push(applied.message);
+  }
+  dispatcher2.clearHistory();
+  return { ok: true, loaded, total: additions.length, errors };
+}
+
+// src/ui/Presets.js
+async function fetchOk(fetch2, url) {
+  const response = await fetch2(url);
+  if (!response.ok) throw new Error(`${url}: ${response.status}`);
+  return response;
+}
+async function listPresets({ fetch: fetch2, index }) {
+  const { presets: presets2 } = await (await fetchOk(fetch2, index)).json();
+  return presets2.map(({ file, label }) => {
+    if (!file || !label) throw new Error(`${index}: every preset needs a file and a label`);
+    return { url: new URL(file, index).href, label };
+  });
+}
+async function fetchPreset({ fetch: fetch2, url }) {
+  return (await fetchOk(fetch2, url)).text();
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -25051,9 +25259,9 @@ async function saveSession() {
   setTimeout(() => URL.revokeObjectURL(url), 1e4);
   log(`saved ${dispatcher.project.nodes.length} nodes as Turtle`, "ok");
 }
-async function openSession(text) {
+async function openSession(text, base = document.baseURI) {
   const d = await ensureRunning();
-  const parsed = await parseText(text, document.baseURI);
+  const parsed = await parseText(text, base);
   let read;
   try {
     read = readProject(parsed);
@@ -25061,42 +25269,18 @@ async function openSession(text) {
     log(error2.message, "error");
     return;
   }
-  const existing = [...d.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id }));
-  if (existing.length > 0) {
-    const cleared = d.apply(existing);
-    if (!cleared.ok) {
-      log(cleared.message, "error");
-      return;
-    }
-  }
-  forgetAllNodes();
-  const loaded = /* @__PURE__ */ new Set();
-  for (const change of read.changes.filter((c3) => c3.op === "addNode")) {
-    log(`GET ${change.pluginIri}`);
-    const { op, pluginIri, ...node } = change;
-    const result = await d.addPlugin(pluginIri, node);
-    if (!result.ok) {
-      log(`${change.id}: ${result.message}`, "error");
-      continue;
-    }
-    loaded.add(change.id);
-    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
-      const set = d.setParameter(change.id, symbol, value2);
-      if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, "error");
-    }
-  }
-  const rest = read.changes.filter((c3) => c3.op !== "addNode" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)));
-  if (rest.length > 0) {
-    const applied = d.apply(rest);
-    if (!applied.ok) log(applied.message, "error");
-  }
+  const opened = await openProject(d, read, {
+    onLoading: (iri2) => log(`GET ${iri2}`),
+    onCleared: forgetAllNodes
+  });
+  for (const message of opened.errors) log(message, "error");
+  if (!opened.ok) return;
   const bpm = d.project.transport.tempoPoints[0]?.bpm;
   if (bpm) $("tempo").value = String(bpm);
-  d.clearHistory();
   drawRack();
   updateHistoryButtons();
   window.__jigdaw = { dispatcher: d, engine };
-  log(`opened ${loaded.size} of ${read.changes.filter((c3) => c3.op === "addNode").length} nodes`, "ok");
+  log(`opened ${opened.loaded.size} of ${opened.total} nodes`, "ok");
 }
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -25125,6 +25309,26 @@ $("openfile").addEventListener("change", async (event) => {
     log(error2.message, "error");
   }
 });
+var presets = [];
+$("presetbar").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const preset = presets[Number($("preset").value)];
+  log(`opening preset ${preset.label}`);
+  fetchPreset({ fetch: (url) => fetch(url), url: preset.url }).then((text) => openSession(text, preset.url)).catch((error2) => log(error2.message, "error"));
+});
+listPresets({
+  fetch: (url) => fetch(url),
+  index: new URL("presets/index.json", document.baseURI).href
+}).then((found) => {
+  presets = found;
+  $("preset").replaceChildren(...found.map(({ label }, i2) => {
+    const option = document.createElement("option");
+    option.value = String(i2);
+    option.textContent = label;
+    return option;
+  }));
+  $("presets").hidden = found.length === 0;
+}).catch((error2) => log(`presets: ${error2.message}`, "error"));
 $("tempo").addEventListener("change", async () => {
   const d = await ensureRunning();
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);

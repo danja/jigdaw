@@ -229,6 +229,11 @@ jig:ResourceShape a sh:NodeShape ;
     sh:property [
         sh:path jig:userReplaceable ; sh:maxCount 1 ; sh:datatype xsd:boolean ;
         sh:message "jig:userReplaceable is a boolean: whether a person can load a different file into this asset from the generated panel."
+    ] ;
+    sh:property [
+        sh:path jig:wasmFeature ;
+        sh:in ( jig:Simd128 jig:Threads jig:BulkMemory jig:ExceptionHandling ) ;
+        sh:message "jig:wasmFeature names a WebAssembly feature the vocabulary defines. A host refuses a module needing a feature it lacks (contract section 2.1), so a feature no host has heard of makes the plugin unloadable everywhere."
     ] .
 
 jig:ProcessorShape a sh:NodeShape ;

@@ -1,10 +1,10 @@
 {
   "iri": "https://strandz.it/jigdaw/plugins/ferrite/",
   "label": "Ferrite",
-  "comment": "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with a cabinet impulse response, direct time-domain convolution. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.",
+  "comment": "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with an impulse response, a cabinet or a room of up to 2.7 seconds, by partitioned FFT convolution. The amp can be switched off to use it as a convolution reverb, and Mix blends the convolved signal with the dry one. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.",
   "vendor": "danja",
   "developer": "http://danny.ayers.name",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "registeredName": "ferrite",
   "roles": [
     "trn:AudioEffect"
@@ -21,7 +21,10 @@
   ],
   "cautions": [
     "The neural model and the cabinet impulse response are both loaded at the sample rate they were captured or trained at, 48 kHz for the example model here. This plugin does not resample: a host running at a different rate gets a load that reports a mismatch (see the module's own jig_load_nam and jig_load_ir return codes) rather than silently wrong output.",
-    "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture."
+    "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture.",
+    "One amp model, run on the mean of both input channels: an amp is a mono device, and a real capture is too heavy to run twice.",
+    "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono.",
+    "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did."
   ],
   "format": "trn:WebAudio",
   "licenceId": "Apache-2.0",
@@ -40,26 +43,56 @@
     "processor": "ferrite-processor.js"
   },
   "assets": [
-    { "key": "nam", "file": "wavenet.nam", "mediaType": "application/json", "userReplaceable": true },
-    { "key": "ir", "file": "cab.wav", "mediaType": "audio/wav", "userReplaceable": true }
+    {
+      "key": "nam",
+      "file": "wavenet.nam",
+      "mediaType": "application/json",
+      "userReplaceable": true
+    },
+    {
+      "key": "ir",
+      "file": "cab.wav",
+      "mediaType": "audio/wav",
+      "userReplaceable": true
+    }
   ],
   "ports": [
     {
       "symbol": "input",
       "name": "Input",
-      "default": 1.0,
-      "minimum": 0.0,
-      "maximum": 4.0,
+      "default": 1,
+      "minimum": 0,
+      "maximum": 4,
       "paramIndex": 0
     },
     {
       "symbol": "output",
       "name": "Output",
-      "default": 1.0,
-      "minimum": 0.0,
-      "maximum": 2.0,
+      "default": 1,
+      "minimum": 0,
+      "maximum": 2,
       "paramIndex": 1
+    },
+    {
+      "symbol": "amp",
+      "name": "Amp",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "mix",
+      "name": "Mix",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 3
     }
   ],
-  "abi": "jig:Abi1"
+  "abi": "jig:Abi1",
+  "wasmFeatures": [
+    "jig:Simd128"
+  ]
 }

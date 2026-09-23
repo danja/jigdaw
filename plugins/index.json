@@ -229,7 +229,7 @@
     {
       "iri": "https://strandz.it/jigdaw/plugins/ferrite/",
       "label": "Ferrite",
-      "comment": "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with a cabinet impulse response, direct time-domain convolution. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.",
+      "comment": "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with an impulse response, a cabinet or a room of up to 2.7 seconds, by partitioned FFT convolution. The amp can be switched off to use it as a convolution reverb, and Mix blends the convolved signal with the dry one. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.",
       "vendor": "danja",
       "homepage": "https://strandz.it/jigdaw/plugins/ferrite/",
       "web": true,
@@ -249,10 +249,15 @@
       "requires": [],
       "cautions": [
         "The neural model and the cabinet impulse response are both loaded at the sample rate they were captured or trained at, 48 kHz for the example model here. This plugin does not resample: a host running at a different rate gets a load that reports a mismatch (see the module's own jig_load_nam and jig_load_ir return codes) rather than silently wrong output.",
-        "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture."
+        "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture.",
+        "One amp model, run on the mean of both input channels: an amp is a mono device, and a real capture is too heavy to run twice.",
+        "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono.",
+        "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did."
       ],
       "parameters": [
+        "amp",
         "input",
+        "mix",
         "output"
       ]
     },
@@ -374,6 +379,38 @@
         "gain",
         "release",
         "waveform"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/squelch/",
+      "label": "Squelch",
+      "comment": "A resonant lowpass filter whose cutoff an envelope follower pushes up on every note, for the acid bass sweep. Put it after a synth: each note opens the filter and Decay sets how fast it closes. Plain JavaScript, no WebAssembly module.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/squelch/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Resonance stops short of self-oscillation, and the output is soft clipped to keep a note on the resonant peak from being much louder than the rest.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "cutoff",
+        "decay",
+        "envelope",
+        "resonance"
       ]
     },
     {

@@ -342,6 +342,14 @@
       <input type="text" id="iri" value="plugins/pulse/" spellcheck="false" autocomplete="off">
       <button type="submit">Load</button>
     </form>
+    <div id="presets" hidden>
+      <h2 style="margin-top:18px">Presets</h2>
+      <form class="searchbar" id="presetbar">
+        <label class="visually-hidden" for="preset">Preset</label>
+        <select id="preset"></select>
+        <button type="submit" title="Replaces the current session">Open preset</button>
+      </form>
+    </div>
   </section>
 
   <section class="stage" aria-label="Tracks and mixer">

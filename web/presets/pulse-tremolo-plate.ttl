@@ -1,0 +1,67 @@
+# web/presets/pulse-tremolo-plate.ttl
+#
+# A bundled preset: a synth to play from the keyboard, through a tremolo and a
+# plate reverb. Relative IRIs and no @base, for the reason
+# web/presets/amp-into-room.ttl gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Square lead, tremolo and plate" ;
+    jig:revision 1 ;
+    jig:node <#synth> , <#wobble> , <#plate> ;
+    jig:connection <#c1> , <#c2> ;
+    jig:transport <#transport> .
+
+<#synth>
+    a jig:Node ;
+    rdfs:label "Synth" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#synth-waveform> , <#synth-cutoff> , <#synth-release> , <#synth-gain> .
+
+<#wobble>
+    a jig:Node ;
+    rdfs:label "Tremolo" ;
+    jig:plugin <../plugins/tremolo/> ;
+    jig:setting <#wobble-rate> , <#wobble-depth> .
+
+<#plate>
+    a jig:Node ;
+    rdfs:label "Plate" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#plate-mode> , <#plate-mix> .
+
+<#synth-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 1.0 .
+<#synth-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 2400.0 .
+<#synth-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 600.0 .
+<#synth-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.3 .
+<#wobble-rate>    a jig:ParameterSetting ; jig:symbol "rate"     ; jig:value 6.0 .
+<#wobble-depth>   a jig:ParameterSetting ; jig:symbol "depth"    ; jig:value 0.6 .
+<#plate-mode>     a jig:ParameterSetting ; jig:symbol "mode"     ; jig:value 0.0 .
+<#plate-mix>      a jig:ParameterSetting ; jig:symbol "mix"      ; jig:value 0.3 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Audio .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#synth>  ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#wobble> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#wobble> ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#plate>  ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 120.0 .

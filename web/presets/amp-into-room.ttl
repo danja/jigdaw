@@ -1,0 +1,51 @@
+# web/presets/amp-into-room.ttl
+#
+# A bundled preset: an ordinary project, docs/project-format.md, with no @base.
+# Every IRI in it is relative, so it resolves against wherever it was fetched
+# from and loads the plugins served beside it, on a local dev server and on the
+# deployment alike. tests/ui/Presets.test.js opens it for real.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Amp into a room" ;
+    jig:revision 1 ;
+    jig:node <#amp> , <#room> ;
+    jig:connection <#c1> ;
+    jig:transport <#transport> .
+
+<#amp>
+    a jig:Node ;
+    rdfs:label "Amp" ;
+    jig:plugin <../plugins/ferrite/> ;
+    jig:setting <#amp-input> , <#amp-output> .
+
+<#room>
+    a jig:Node ;
+    rdfs:label "Room" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#room-mode> , <#room-mix> , <#room-size> .
+
+<#amp-input>  a jig:ParameterSetting ; jig:symbol "input"  ; jig:value 2.0 .
+<#amp-output> a jig:ParameterSetting ; jig:symbol "output" ; jig:value 0.8 .
+<#room-mode>  a jig:ParameterSetting ; jig:symbol "mode"   ; jig:value 1.0 .
+<#room-mix>   a jig:ParameterSetting ; jig:symbol "mix"    ; jig:value 0.25 .
+<#room-size>  a jig:ParameterSetting ; jig:symbol "size"   ; jig:value 30.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Audio .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#amp>  ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#room> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 120.0 .

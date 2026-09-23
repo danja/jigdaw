@@ -19,9 +19,9 @@
 <>
     a jig:WebPlugin , trn:PluginProfile ;
     rdfs:label "Ferrite" ;
-    rdfs:comment "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with a cabinet impulse response, direct time-domain convolution. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own." ;
+    rdfs:comment "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with an impulse response, a cabinet or a room of up to 2.7 seconds, by partitioned FFT convolution. The amp can be switched off to use it as a convolution reverb, and Mix blends the convolved signal with the dry one. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own." ;
     trn:vendor "danja" ;
-    doap:revision "1.0.0" ;
+    doap:revision "1.1.0" ;
     doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
@@ -30,6 +30,9 @@
     trn:genre "Rock" , "Electronic" ;
     trn:caution "The neural model and the cabinet impulse response are both loaded at the sample rate they were captured or trained at, 48 kHz for the example model here. This plugin does not resample: a host running at a different rate gets a load that reports a mismatch (see the module's own jig_load_nam and jig_load_ir return codes) rather than silently wrong output." ;
     trn:caution "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture." ;
+    trn:caution "One amp model, run on the mean of both input channels: an amp is a mono device, and a real capture is too heavy to run twice." ;
+    trn:caution "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono." ;
+    trn:caution "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did." ;
     trn:format trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
@@ -44,21 +47,22 @@
     jig:processor <#processor> ;
     jig:asset <#nam> , <#ir> ;
 
-    lv2:port <#input> , <#output> .
+    lv2:port <#input> , <#output> , <#amp> , <#mix> .
 
 <#module>
     a jig:Module ;
     jig:location <ferrite.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi1 ;
-    jig:integrity "sha384-iGts9mOBdFuqA8A2DCnBys4RrVuHAYhyvG98QKqpgp/rID6f3y8jS2IGW9l3M3Rp" .
+    jig:wasmFeature jig:Simd128 ;
+    jig:integrity "sha384-xxym0XvQUpx9Py9vfGjH+TLE9yKN4ePIZ/XQ82vqQfyoetc41LnIpP8QNAumuNoA" .
 
 <#processor>
     a jig:Processor ;
     jig:location <ferrite-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "ferrite" ;
-    jig:integrity "sha384-z6j6mDctRhuPTVbSa9WoLDv5iSmh7Ou8ZouJqpuBS323OsZElIPG0WSOnY3BI9Fn" .
+    jig:integrity "sha384-02K0BqijijJue7izxA4+czPmL/MCqWKLwu6BUXx99pSCcucJ0kVz2mbmj90FMcgJ" .
 
 <#nam>
     a jig:Resource ;
@@ -85,3 +89,16 @@
     lv2:symbol "output" ; lv2:name "Output" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 2 ;
     jig:paramIndex 1 .
+
+<#amp>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "amp" ; lv2:name "Amp" ;
+    lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 2 ;
+    lv2:portProperty lv2:toggled .
+
+<#mix>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "mix" ; lv2:name "Mix" ;
+    lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 3 .

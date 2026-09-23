@@ -24,6 +24,8 @@ import { runAgentTurn, ollamaChat } from '../src/mcp/LocalAgent.js'
 
 import { writeProject } from '../src/rdf/ProjectWriter.js'
 import { readProject } from '../src/rdf/ProjectReader.js'
+import { openProject } from '../src/ops/OpenProject.js'
+import { listPresets, fetchPreset } from '../src/ui/Presets.js'
 import { encodeState, decodeState } from '../src/host/StateCodec.js'
 
 const $ = id => document.getElementById(id)
@@ -892,71 +894,29 @@ async function saveSession () {
 }
 
 /**
- * Reopen a session.
- *
- * Plugins first and connections after, because a connection names nodes that
- * have to exist, and each plugin has to be fetched and instantiated before the
- * node it belongs to means anything. A plugin that cannot be loaded is reported
- * and skipped rather than abandoning the rest: an unreachable origin should cost
- * one node, not the session.
+ * Replace the current session with one read from Turtle. `base` resolves any
+ * relative IRI in it: a saved file carries its own @base, and a bundled preset
+ * deliberately does not, so that its plugins are the ones served beside it.
  */
-async function openSession (text) {
+async function openSession (text, base = document.baseURI) {
   const d = await ensureRunning()
-  const parsed = await parseText(text, document.baseURI)
+  const parsed = await parseText(text, base)
   let read
   try { read = readProject(parsed) } catch (error) { log(error.message, 'error'); return }
 
-  // Clear the current session first. removeNode takes the engine node with it,
-  // through the dispatcher, so nothing is left playing underneath the one being
-  // opened.
-  const existing = [...d.project.nodes].map(n => ({ op: 'removeNode', id: n.id }))
-  if (existing.length > 0) {
-    const cleared = d.apply(existing)
-    if (!cleared.ok) { log(cleared.message, 'error'); return }
-  }
-  forgetAllNodes()
-
-  const loaded = new Set()
-  for (const change of read.changes.filter(c => c.op === 'addNode')) {
-    log(`GET ${change.pluginIri}`)
-    // The whole change, not a chosen few of its fields. The reader produces
-    // everything a node carries and picking some of them here is how a saved
-    // mix came back at unity.
-    const { op, pluginIri, ...node } = change
-    const result = await d.addPlugin(pluginIri, node)
-    if (!result.ok) { log(`${change.id}: ${result.message}`, 'error'); continue }
-    loaded.add(change.id)
-    for (const [symbol, value] of Object.entries(change.settings ?? {})) {
-      const set = d.setParameter(change.id, symbol, value)
-      if (!set.ok) log(`${change.id}.${symbol}: ${set.message}`, 'error')
-    }
-    // change.state, if present, was already carried into the model by
-    // addPlugin's own addNode op above and into the running processor by
-    // OpDispatcher decoding it for the engine; a second setNodeState here
-    // would only reapply the same value the model already has.
-  }
-
-  // Only between nodes that actually loaded. A connection to a node that failed
-  // would be refused by the model and reported as a second error about the same
-  // failure.
-  const rest = read.changes.filter(c =>
-    c.op !== 'addNode' &&
-    (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))))
-  if (rest.length > 0) {
-    const applied = d.apply(rest)
-    if (!applied.ok) log(applied.message, 'error')
-  }
+  const opened = await openProject(d, read, {
+    onLoading: iri => log(`GET ${iri}`),
+    onCleared: forgetAllNodes
+  })
+  for (const message of opened.errors) log(message, 'error')
+  if (!opened.ok) return
 
   const bpm = d.project.transport.tempoPoints[0]?.bpm
   if (bpm) $('tempo').value = String(bpm)
-  // Loading a session is not itself an edit to undo, and stepping back across
-  // it would try to restore nodes from whatever was open before, so the
-  // history the clearing and the loading above just generated is dropped.
-  d.clearHistory()
   drawRack()
   updateHistoryButtons()
   window.__jigdaw = { dispatcher: d, engine }
-  log(`opened ${loaded.size} of ${read.changes.filter(c => c.op === 'addNode').length} nodes`, 'ok')
+  log(`opened ${opened.loaded.size} of ${opened.total} nodes`, 'ok')
 }
 
 $('searchbar').addEventListener('submit', e => { e.preventDefault(); search() })
@@ -973,6 +933,32 @@ $('openfile').addEventListener('change', async event => {
   event.target.value = ''
   try { await openSession(await file.text()) } catch (error) { log(error.message, 'error') }
 })
+// Opened by a button rather than on change: choosing from a select must not
+// replace the whole session by itself (WCAG 3.2.2), and a keyboard user moving
+// through the options would otherwise open every one they passed.
+let presets = []
+$('presetbar').addEventListener('submit', event => {
+  event.preventDefault()
+  const preset = presets[Number($('preset').value)]
+  log(`opening preset ${preset.label}`)
+  fetchPreset({ fetch: url => fetch(url), url: preset.url })
+    .then(text => openSession(text, preset.url))
+    .catch(error => log(error.message, 'error'))
+})
+listPresets({
+  fetch: url => fetch(url),
+  index: new URL('presets/index.json', document.baseURI).href
+}).then(found => {
+  presets = found
+  $('preset').replaceChildren(...found.map(({ label }, i) => {
+    const option = document.createElement('option')
+    option.value = String(i)
+    option.textContent = label
+    return option
+  }))
+  $('presets').hidden = found.length === 0
+}).catch(error => log(`presets: ${error.message}`, 'error'))
+
 $('tempo').addEventListener('change', async () => {
   const d = await ensureRunning()
   const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: Number($('tempo').value) }] }])

@@ -1,0 +1,77 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/squelch/",
+  "label": "Squelch",
+  "comment": "A resonant lowpass filter whose cutoff an envelope follower pushes up on every note, for the acid bass sweep. Put it after a synth: each note opens the filter and Decay sets how fast it closes. Plain JavaScript, no WebAssembly module.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "squelch",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Electronic"
+  ],
+  "cautions": [
+    "Resonance stops short of self-oscillation, and the output is soft clipped to keep a note on the resonant peak from being much louder than the rest.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "squelch-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "cutoff",
+      "name": "Cutoff",
+      "default": 600,
+      "minimum": 40,
+      "maximum": 12000,
+      "paramIndex": 0,
+      "unit": "hz"
+    },
+    {
+      "symbol": "resonance",
+      "name": "Resonance",
+      "default": 75,
+      "minimum": 0,
+      "maximum": 100,
+      "paramIndex": 1,
+      "unit": "pc"
+    },
+    {
+      "symbol": "envelope",
+      "name": "Envelope (octaves)",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "decay",
+      "name": "Decay",
+      "default": 180,
+      "minimum": 10,
+      "maximum": 2000,
+      "paramIndex": 3,
+      "unit": "ms"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+# web/presets/acid-bassline.ttl
+#
+# A bundled preset that makes sound on Play with nothing else to do: BassGen
+# writes a bass line as MIDI, Pulse plays it as a bright saw, Squelch is the
+# resonant filter each note sweeps open, and Cascade adds a little room.
+# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Acid bass line" ;
+    jig:revision 1 ;
+    jig:node <#lines> , <#bass> , <#filter> , <#room> ;
+    jig:connection <#c1> , <#c2> , <#c3> ;
+    jig:transport <#transport> .
+
+<#lines>
+    a jig:Node ;
+    rdfs:label "Bass line" ;
+    jig:plugin <../plugins/bassgen/> ;
+    jig:setting <#lines-genre> , <#lines-scale> , <#lines-root> .
+
+<#bass>
+    a jig:Node ;
+    rdfs:label "Bass" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#bass-waveform> , <#bass-attack> , <#bass-release> , <#bass-cutoff> , <#bass-gain> .
+
+<#filter>
+    a jig:Node ;
+    rdfs:label "Filter" ;
+    jig:plugin <../plugins/squelch/> ;
+    jig:setting <#filter-cutoff> , <#filter-resonance> , <#filter-envelope> , <#filter-decay> .
+
+<#room>
+    a jig:Node ;
+    rdfs:label "Room" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#room-mix> , <#room-size> .
+
+<#lines-genre>   a jig:ParameterSetting ; jig:symbol "genre"    ; jig:value 1.0 .
+<#lines-scale>   a jig:ParameterSetting ; jig:symbol "scale"    ; jig:value 2.0 .
+<#lines-root>    a jig:ParameterSetting ; jig:symbol "root"     ; jig:value 36.0 .
+<#bass-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 0.0 .
+<#bass-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 2.0 .
+<#bass-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 150.0 .
+<#bass-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 12000.0 .
+<#bass-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.7 .
+<#filter-cutoff>    a jig:ParameterSetting ; jig:symbol "cutoff"    ; jig:value 350.0 .
+<#filter-resonance> a jig:ParameterSetting ; jig:symbol "resonance" ; jig:value 85.0 .
+<#filter-envelope>  a jig:ParameterSetting ; jig:symbol "envelope"  ; jig:value 4.5 .
+<#filter-decay>     a jig:ParameterSetting ; jig:symbol "decay"     ; jig:value 160.0 .
+<#room-mix>      a jig:ParameterSetting ; jig:symbol "mix"      ; jig:value 0.15 .
+<#room-size>     a jig:ParameterSetting ; jig:symbol "size"     ; jig:value 12.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#lines> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#bass>  ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#bass>   ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#filter> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Audio .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#filter> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#room>   ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 124.0 .

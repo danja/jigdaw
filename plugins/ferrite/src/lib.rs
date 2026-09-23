@@ -1,11 +1,15 @@
 // plugins/ferrite/src/lib.rs
 //
-// A cabinet impulse response and a neural amp model in series: input trim,
-// then nam-rs's WaveNet forward pass (the amp and preamp), then a direct
-// time-domain convolution against a loaded cabinet impulse response, then
-// output level. Two independent mono chains, one per channel, because
-// nam_rs::model_runtime::Model holds the WaveNet's own dilated-history
-// state and one instance cannot correctly process two unrelated signals.
+// A neural amp model and an impulse response in series: input trim, then
+// nam-rs's WaveNet forward pass (the amp and preamp), then convolution against
+// a loaded impulse response (src/convolver.rs), mixed with the dry signal, then
+// output level. The response can be a cabinet or a room: up to 2.7 seconds.
+//
+// One model, run once on the mean of both input channels, because an amp is a
+// mono device and a real capture is too heavy to run twice: a 295 kB
+// "standard" capture measured 3.4 ms a quantum run per channel, against a
+// budget of 2.67 ms, and 1.7 ms run once. The Amp switch skips it entirely,
+// for a Ferrite used only to convolve.
 //
 // This is the first plugin here with a real external dependency rather than
 // hand-written DSP throughout: nam-rs is MIT-licensed, ported from and
@@ -36,31 +40,22 @@
 #![allow(static_mut_refs)]
 use nam_rs::{Model, NamModel};
 
-const MAX_FRAMES: usize = 128;
-const IR_MAX_LEN: usize = 8192; // 170 ms at 48 kHz. Longer is refused, not truncated.
-const HIST_LEN: usize = IR_MAX_LEN + MAX_FRAMES;
-
-struct Chain {
-    nam: Option<Model>,
-    history: [f32; HIST_LEN],
-}
-
-impl Chain {
-    const fn new() -> Self {
-        Chain { nam: None, history: [0.0; HIST_LEN] }
-    }
-}
+mod convolver;
+use convolver::{IR_MAX_LEN, MAX_FRAMES};
 
 static mut INPUT: [[f32; MAX_FRAMES]; 2] = [[0.0; MAX_FRAMES]; 2];
 static mut OUTPUT: [[f32; MAX_FRAMES]; 2] = [[0.0; MAX_FRAMES]; 2];
-static mut AMP_SCRATCH: [f32; MAX_FRAMES] = [0.0; MAX_FRAMES];
-static mut CHAINS: [Chain; 2] = [Chain::new(), Chain::new()];
+static mut DRY: [[f32; MAX_FRAMES]; 2] = [[0.0; MAX_FRAMES]; 2];
+static mut MONO: [f32; MAX_FRAMES] = [0.0; MAX_FRAMES];
+static mut MODEL: Option<Model> = None;
 
 static mut IR: [f32; IR_MAX_LEN] = [0.0; IR_MAX_LEN];
-static mut IR_LEN: usize = 0;
+const TOO_LONG: &str = "impulse response is longer than IR_MAX_LEN";
 
 static mut INPUT_TRIM: f32 = 1.0;
 static mut OUTPUT_LEVEL: f32 = 1.0;
+static mut AMP_ON: bool = true;
+static mut MIX: f32 = 1.0;
 
 // Set once, in jig_init, and read by both loaders below: nam-rs's own
 // documentation is explicit that a rate mismatch "produces silently wrong
@@ -72,7 +67,7 @@ static mut HOST_SAMPLE_RATE: f32 = 0.0;
 
 const NAM_BUF_LEN: usize = 1 << 20; // 1 MiB: generous for a "standard"-size .nam JSON file.
 static mut NAM_BUF: [u8; NAM_BUF_LEN] = [0; NAM_BUF_LEN];
-const IR_FILE_BUF_LEN: usize = 1 << 20; // 1 MiB of WAV bytes, before decoding.
+const IR_FILE_BUF_LEN: usize = 4 << 20; // 4 MiB of WAV bytes: 2.7 s of 32-bit stereo is 1 MiB.
 static mut IR_FILE_BUF: [u8; IR_FILE_BUF_LEN] = [0; IR_FILE_BUF_LEN];
 
 /// One WAV sample decoded to f32, whichever of the two supported formats it
@@ -94,9 +89,10 @@ mod alloc_free_ir {
     fn u16le(b: &[u8], at: usize) -> u16 { u16::from_le_bytes([b[at], b[at + 1]]) }
     fn u32le(b: &[u8], at: usize) -> u32 { u32::from_le_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]]) }
 
-    /// Parses a PCM16 or IEEE-float32 WAV file, mixes every channel to mono
-    /// by averaging, and writes the result into `super::IR`. Returns the
-    /// sample rate the file declared and the number of samples written.
+    /// Parses a PCM16, PCM24, PCM32 or IEEE-float32 WAV file, mixes every
+    /// channel to mono by averaging, and writes the result into `super::IR`.
+    /// Returns the sample rate the file declared and the number of samples
+    /// written.
     pub fn decode(bytes: &[u8]) -> Result<Decoded, &'static str> {
         if bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
             return Err("not a RIFF/WAVE file");
@@ -131,9 +127,10 @@ mod alloc_free_ir {
         let data = data.ok_or("no data chunk")?;
         let (is_float, bytes_per_sample) = match (format, bits) {
             (1, 16) => (false, 2),
+            (1, 24) => (false, 3),
             (1, 32) => (false, 4),
             (3, 32) => (true, 4),
-            _ => return Err("only PCM16, PCM32 and float32 WAV are supported"),
+            _ => return Err("only PCM16, PCM24, PCM32 and float32 WAV are supported"),
         };
 
         let channels = channels as usize;
@@ -141,7 +138,7 @@ mod alloc_free_ir {
         if frame_bytes == 0 { return Err("zero-width frame"); }
         let frames = data.len() / frame_bytes;
         if frames > super::IR_MAX_LEN {
-            return Err("impulse response is longer than this plugin's buffer");
+            return Err(super::TOO_LONG);
         }
 
         let ir = unsafe { &mut super::IR };
@@ -153,6 +150,10 @@ mod alloc_free_ir {
                     f32::from_le_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]])
                 } else if bytes_per_sample == 2 {
                     i16::from_le_bytes([data[at], data[at + 1]]) as f32 / 32768.0
+                } else if bytes_per_sample == 3 {
+                    // Into the top three bytes of an i32, so the sign comes along.
+                    i32::from_le_bytes([0, data[at], data[at + 1], data[at + 2]]) as f32
+                        / 2147483648.0
                 } else {
                     i32::from_le_bytes([data[at], data[at + 1], data[at + 2], data[at + 3]]) as f32
                         / 2147483648.0
@@ -166,33 +167,10 @@ mod alloc_free_ir {
     }
 }
 
-/// A block of direct time-domain convolution against the loaded IR, reading
-/// and writing through a fixed-size shift buffer. O(IR_LEN) per output
-/// sample, which at IR_MAX_LEN is a bound this plugin's own README states
-/// the CPU cost of, not a claim that any length is free.
-fn convolve(history: &mut [f32; HIST_LEN], input: &[f32], output: &mut [f32], ir: &[f32]) {
-    let frames = input.len();
-    // Shift the window left by `frames` and append the new block at the end.
-    history.copy_within(frames.., 0);
-    history[HIST_LEN - frames..].copy_from_slice(input);
-
-    let ir_len = ir.len();
-    for n in 0..frames {
-        let end = HIST_LEN - frames + n + 1; // one past the sample aligned with ir[0]
-        let start = end.saturating_sub(ir_len);
-        let taps = &history[start..end];
-        let ir_taps = &ir[..taps.len()];
-        let mut acc = 0.0f32;
-        for (h, k) in taps.iter().rev().zip(ir_taps.iter()) {
-            acc += h * k;
-        }
-        output[n] = acc;
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn jig_init(sample_rate: f32) {
     unsafe { HOST_SAMPLE_RATE = sample_rate; }
+    convolver::prepare();
     // Otherwise nothing to do until a model and an impulse response actually
     // arrive; both loaders below reset every buffer they touch, so a
     // re-init before either asset is loaded is not a distinct state to
@@ -227,6 +205,8 @@ pub extern "C" fn jig_set_param(index: u32, value: f32) {
         match index {
             0 => INPUT_TRIM = value,
             1 => OUTPUT_LEVEL = value,
+            2 => AMP_ON = value >= 0.5,
+            3 => MIX = value.clamp(0.0, 1.0),
             _ => {}
         }
     }
@@ -246,8 +226,7 @@ pub extern "C" fn jig_ir_ptr() -> u32 { (&raw const IR_FILE_BUF).cast::<u8>() as
 #[no_mangle]
 pub extern "C" fn jig_ir_max_len() -> u32 { IR_FILE_BUF_LEN as u32 }
 
-/// Parse the .nam JSON already copied into NAM_BUF and build both channels'
-/// models from it. Allocates freely: this runs before the host takes any
+/// Parse the .nam JSON already copied into NAM_BUF and build the model. Allocates freely: this runs before the host takes any
 /// pointer or view, the same step src/jsfx/... 's jig_load_script runs at.
 /// Returns 0 on success, 1 if it loaded but the model's own declared sample
 /// rate does not match the host's (nam-rs does not resample, so this is a
@@ -266,7 +245,7 @@ pub extern "C" fn jig_load_nam(len: u32) -> i32 {
     };
     let matches_host = rate_matches(file.expected_sample_rate());
 
-    for chain in unsafe { CHAINS.iter_mut() } {
+    {
         let mut model = match Model::from_nam(&file) {
             Ok(m) => m,
             Err(_) => return -3,
@@ -283,26 +262,41 @@ pub extern "C" fn jig_load_nam(len: u32) -> i32 {
             model.process_buffer(&mut warmup[..n]);
             remaining -= n;
         }
-        chain.history = [0.0; HIST_LEN];
-        chain.nam = Some(model);
+        unsafe { MODEL = Some(model); }
     }
     if matches_host { 0 } else { 1 }
 }
 
-/// Parse the WAV bytes already copied into IR_FILE_BUF into the shared IR
-/// kernel. Returns 0 on success, 1 if it loaded but the WAV's own sample
+/// Parse the WAV bytes already copied into IR_FILE_BUF, normalise them, and
+/// hand them to the convolver.
+///
+/// Normalised to unit energy, so a response sets the tone and not the level.
+/// A cabinet response is roughly unit energy already. A room's is not: a
+/// second of reverberation at full scale sums to some twenty-five decibels
+/// of gain, which arrives all at once the moment the file is loaded. Returns 0 on success, 1 if it loaded but the WAV's own sample
 /// rate does not match the host's (a convolution's taps are timed in
 /// samples, so this is wrong for the same reason a mismatched .nam is), or
 /// a negative code on a format this plugin's small parser does not
-/// understand or an impulse response longer than IR_MAX_LEN.
+/// understand (-1), a response that is all zeros (-2), or one longer than
+/// IR_MAX_LEN (-3).
 #[no_mangle]
 pub extern "C" fn jig_load_ir(len: u32) -> i32 {
     let bytes = unsafe { &IR_FILE_BUF[..(len as usize).min(IR_FILE_BUF_LEN)] };
     match decode_wav(bytes) {
         Ok(decoded) => {
-            unsafe { IR_LEN = decoded.mono_len; }
+            let ir = unsafe { &mut IR[..decoded.mono_len] };
+            let energy: f64 = ir.iter().map(|&x| (x as f64) * (x as f64)).sum();
+            if energy <= 0.0 {
+                return -2;
+            }
+            let scale = (1.0 / energy.sqrt()) as f32;
+            for tap in ir.iter_mut() {
+                *tap *= scale;
+            }
+            convolver::load(ir);
             if rate_matches(decoded.sample_rate as f64) { 0 } else { 1 }
         }
+        Err(TOO_LONG) => -3,
         Err(_) => -1,
     }
 }
@@ -310,30 +304,42 @@ pub extern "C" fn jig_load_ir(len: u32) -> i32 {
 #[no_mangle]
 pub extern "C" fn jig_process(frames: u32) {
     let frames = (frames as usize).min(MAX_FRAMES);
-    let (input_trim, output_level, ir_len) = unsafe { (INPUT_TRIM, OUTPUT_LEVEL, IR_LEN) };
-    let ir: &[f32] = unsafe { &IR[..ir_len] };
+    let (trim, level, amp_on, mix) = unsafe { (INPUT_TRIM, OUTPUT_LEVEL, AMP_ON, MIX) };
+    let (input, dry, output) = unsafe { (&INPUT, &mut DRY, &mut OUTPUT) };
 
-    for channel in 0..2 {
-        let amp = unsafe { &mut AMP_SCRATCH[..frames] };
-        for (a, x) in amp.iter_mut().zip(unsafe { INPUT[channel][..frames].iter() }) {
-            *a = x * input_trim;
+    match unsafe { MODEL.as_mut() }.filter(|_| amp_on) {
+        Some(model) => {
+            let mono = unsafe { &mut MONO[..frames] };
+            for n in 0..frames {
+                mono[n] = 0.5 * (input[0][n] + input[1][n]) * trim;
+            }
+            model.process_buffer(mono);
+            dry[0][..frames].copy_from_slice(mono);
+            dry[1][..frames].copy_from_slice(mono);
         }
+        None => {
+            for channel in 0..2 {
+                for n in 0..frames {
+                    dry[channel][n] = input[channel][n] * trim;
+                }
+            }
+        }
+    }
 
-        let chain = unsafe { &mut CHAINS[channel] };
-        if let Some(model) = chain.nam.as_mut() {
-            model.process_buffer(amp);
+    if convolver::loaded() {
+        convolver::process(&dry[0][..frames], &dry[1][..frames], output, frames);
+        for channel in 0..2 {
+            for n in 0..frames {
+                output[channel][n] = (dry[channel][n] * (1.0 - mix) + output[channel][n] * mix) * level;
+            }
         }
-
-        let output = unsafe { &mut OUTPUT[channel][..frames] };
-        if ir_len > 0 {
-            convolve(&mut chain.history, amp, output, ir);
-        } else {
-            // No impulse response loaded yet: pass the amp stage through
-            // rather than producing silence for a reason nothing explains.
-            output.copy_from_slice(amp);
-        }
-        for o in output.iter_mut() {
-            *o *= output_level;
+    } else {
+        // No impulse response loaded yet: pass the amp stage through rather
+        // than producing silence for a reason nothing explains.
+        for channel in 0..2 {
+            for n in 0..frames {
+                output[channel][n] = dry[channel][n] * level;
+            }
         }
     }
 }
