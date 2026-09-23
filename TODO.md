@@ -35,11 +35,36 @@ complete. Review periodically.
       11. Mutation tested: removing the new `sh:property` block dropped the count back to 10
       and failed the test, confirmed, then restored. `npm test`: 855 of 855.
 
-      Not done: publishing this to strandz.it, which is a `git pull` per
-      `docs/deployment.md` and needs no restart, since `bin/serve.js` already serves any
-      `.ttl` file under a plugin's directory generically (confirmed by reading its routing,
-      not assumed) and `provenance.ttl` was never in play, the field is inside `profile.ttl`
-      itself.
+      **Deployed and verified live, 2026-09-23**: committed, pulled on strandz.it, no restart
+      needed since `bin/serve.js` reads `profile.ttl` from disk on every request; `curl -H
+      'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/` shows `doap:developer
+      <http://danny.ayers.name>` beside `doap:revision`.
+
+      **The normative docs needed the same fix as the code, and had not had it.** The first
+      pass changed the vocabulary and every plugin but left `docs/plugin-bundles.md` and
+      `docs/plugin-profiles.md` exactly as they were, which would have reproduced the whole
+      problem: a future implementer reading section 5's "beside a profile on a server" and
+      forming the same expectation diddums did, with `doap:developer` still undocumented in
+      prose anywhere, only in `vocabs/shapes.ttl` and a comment in `vocabs/jigdaw.ttl`. Caught
+      by being asked directly whether the spec had been updated, not found unprompted.
+
+      Fixed: `docs/plugin-bundles.md` section 5 now states plainly, in its second paragraph,
+      that provenance describes a copy and not the plugin, that a 404 for
+      `provenance.ttl` at a plugin's own canonical origin is the correct answer rather than a
+      gap, and points at where authorship actually lives. `docs/plugin-profiles.md` gained a
+      "Who wrote it" section distinguishing `trn:vendor` (a display string) from
+      `doap:developer` (an IRI meant to be followed), and documents `doap:revision` in prose
+      for the first time as well, which turned out to have the same gap since phase 10.
+
+      One near miss on the way: the first draft linked both new sections with
+      `plugin-bundles.md#5-provenance` and `plugin-profiles.md#who-wrote-it`.
+      `bin/build-docs-site.js` does not generate heading `id`s, so both anchors would have
+      been dead links in the published site, and `tests/docs/conventions.test.js`'s link
+      checker does not catch a broken fragment, only a broken file. No other document in
+      `docs/` links to another with a `#fragment`, which is what said this was the wrong
+      pattern rather than a bug in the checker; rewritten as plain file links with the
+      section named in prose instead. `npm run build:docs` and the full suite both clean
+      afterward, 855 of 855.
 
 - [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
 

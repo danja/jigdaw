@@ -78,8 +78,9 @@ authority where any other page, including this one, disagrees with them.
 
 Background rather than normative: [plan.md](plan.md) is the phased build log,
 [first-thoughts.md](first-thoughts.md) and [local-references.md](local-references.md) are
-where the design came from, and [deployment.md](deployment.md) and [wam.md](wam.md) cover
-running and interoperating with it.
+where the design came from, [deployment.md](deployment.md) and [wam.md](wam.md) cover
+running and interoperating with it, and [revisions.md](revisions.md) is a dated log of what
+has changed in the vocabulary and the specification since they were first published.
 
 ## Where this has got to
 

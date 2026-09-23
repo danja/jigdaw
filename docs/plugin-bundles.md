@@ -126,11 +126,20 @@ A bundle arrives by hand. It did not come from the origin that minted the IRI in
 that is the one fact about it the profile cannot state. So a bundle carries a record of its
 own making, and a tool that writes a bundle MUST write one.
 
+**This describes a copy, not the plugin.** A profile served at its own canonical origin was
+never bundled: nothing was copied, so there is no `jig:Bundle` to record and no
+`provenance.ttl` to look for. A crawler that fetches `<plugin-iri>provenance.ttl` from the
+origin that minted that IRI and gets a 404 has learned the correct thing, that this is the
+origin rather than a copy of it, not found a gap. Who wrote the plugin, as distinct from who
+copied it, is a different question and has a different answer: `doap:developer` on the
+profile itself, see [plugin-profiles.md](plugin-profiles.md), "Who wrote it".
+
 The record is a separate document, `provenance.ttl`, at the root of an archive or beside a
-profile on a server. The flattened form is one file by definition, so its record is appended
-to that file. Every node in it is named absolutely, so the same triples mean the same thing in
-all three places. [examples/reference-provenance.ttl](../examples/reference-provenance.ttl) is
-a worked one.
+profile on a server that is rehosting a copy it did not mint (a mirror, or a bundle unpacked
+into a directory) rather than serving its own. The flattened form is one file by definition,
+so its record is appended to that file. Every node in it is named absolutely, so the same
+triples mean the same thing in all three places.
+[examples/reference-provenance.ttl](../examples/reference-provenance.ttl) is a worked one.
 
 It says four things.
 

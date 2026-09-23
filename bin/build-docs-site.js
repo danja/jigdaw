@@ -54,7 +54,8 @@ const GROUP_OF = {
   plan: 'Background',
   'first-thoughts': 'Background',
   'local-references': 'Background',
-  deployment: 'Background'
+  deployment: 'Background',
+  revisions: 'Background'
 }
 const GROUP_ORDER = ['Specification', 'Guides', 'Background']
 

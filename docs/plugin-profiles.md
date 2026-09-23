@@ -61,6 +61,36 @@ needs: an IRI the author controls, that resolves, and that can be fetched. If yo
 your own namespace, use it, and keep the `foaf:homepage` statement so the two can be joined
 up.
 
+## Who wrote it
+
+`trn:vendor` is a plain string, a display name a catalogue shows beside a plugin. It is not
+an identity: nothing can be checked against a string, and two authors can share one.
+
+`doap:developer` is the IRI to use when that matters, reusing DOAP the way LV2 itself
+describes a plugin project rather than minting a `jig:` term:
+
+```turtle
+<https://example.org/plugins/cascade/>
+    trn:vendor "Example Author" ;
+    doap:developer <https://example.org/people/author> ;
+    doap:revision "1.0.0" .
+```
+
+Both are optional, and `doap:developer` is checked only for shape when present
+(`sh:nodeKind sh:IRI`), never dereferenced by a host. It exists so that a tool with a reason
+to follow authorship, rather than merely display it, has an IRI to follow.
+
+This lives on the profile itself, whether the plugin is served from its own canonical origin
+or found some other way, because it answers "who wrote this plugin", not "who copied this
+file". [plugin-bundles.md](plugin-bundles.md) section 5 covers the second question, which
+only a bundle or a mirror needs to answer: nothing is copied when a profile is served from
+the origin that minted its IRI, so nothing there says who wrote it, and a `doap:developer`
+statement is where that answer belongs instead.
+
+`doap:revision`, `major.minor.patch`, is also undeclared here for the same reason: optional
+on a plugin served from one IRI, which can be versionless, and required by anything that
+packages the plugin for a format that demands one, such as `bin/wam.js`.
+
 ## `jig:WebPlugin` is a subclass, not a replacement
 
 A JigDAW-loadable plugin declares itself both `trn:PluginProfile` and `jig:WebPlugin`.
