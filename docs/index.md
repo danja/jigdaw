@@ -106,7 +106,10 @@ implemented.
 
 ## Worked examples
 
-Built from this repository and served by this host.
+Built from this repository and served by this host. **[strandz.it/jigdaw](https://strandz.it/jigdaw/)**
+runs the DAW itself, live, the same code as in this repository. A second, independent host
+loads the same plugins as a VST3, CLAP or LV2; see
+[the JigDAW Adapter](../native/jigdaw-adapter/README.md) for what it is and how to build it.
 
 | Plugin | What it is |
 |---|---|

@@ -1,13 +1,5 @@
 # Revisions
 
-A dated log of changes to the published vocabulary and specification: what changed, why, and
-what it affects for somebody already relying on either. Not [MISTAKES.md](../MISTAKES.md),
-which is a post-mortem of what went wrong internally, and not [TODO.md](../TODO.md), which is
-what is still open. This is what has actually shipped, in the order it shipped, for anyone who
-fetched a profile or read a document last week and wants to know what is different now.
-
-Newest first.
-
 ## 2026-09-23. `doap:developer` added; provenance's scope stated explicitly
 
 An independent implementation, `diddums`, built against the published specification, fetched
