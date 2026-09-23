@@ -18,6 +18,7 @@ const EXPECTED = {
   'plugins/bassgen/profile.ttl': 0,
   'plugins/tremolo/profile.ttl': 0,
   'plugins/boost/profile.ttl': 0,
+  'plugins/ferrite/profile.ttl': 0,
   'examples/reference-provenance.ttl': 0,
   'examples/reference-foreign.ttl': 0,
   'examples/counterexample-profile.ttl': 11,

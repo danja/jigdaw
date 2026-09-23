@@ -27,6 +27,19 @@ commit rather than by rewriting `673a95c`'s history, which would have needed a f
 a branch already fetched elsewhere; the bloat stays in history, once, rather than the
 repository's public history being rewritten to remove it.
 
+**The same guard-width mistake was already sitting in the repository, older and wider.**
+Checking `plugins/*/build/` (added above) against every plugin directory while adding
+`plugins/ferrite/`, `git ls-files` turned up 86 already-committed files under
+`plugins/bassgen/target/`, `plugins/cascade/target/`, `plugins/dynamix/target/`,
+`plugins/pulse/target/` and `plugins/_jsfx-runtime/target/`: Cargo's own build directory,
+named `target` rather than `build`, which nothing in `.gitignore` excluded at all. Not new
+today, just never looked for: five real plugins had been carrying their build artifacts in
+git the whole time, silently, because nothing had ever measured tracked file counts against
+what should be there. `plugins/*/target/` added, the 86 files untracked in the same commit as
+the fix. The lesson generalises past this one repository: a `.gitignore` pass prompted by one
+incident is the moment to check siblings of the pattern that caused it, not only the exact
+path that did.
+
 ## 2026-09-19 Only sixteen of the 8-Bit 8asterd's 42 controls reached Reaper
 
 **What happened.** Reported by the user: loading the 8b8 through the JigDAW Adapter in

@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 10 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 11 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -89,7 +89,7 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-10 worked plugins are in [plugins/](plugins/): a subtractive synth,
+11 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
 bass line generator, all four written in Rust and compiled to WebAssembly; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
@@ -99,9 +99,12 @@ by [bin/jsfx-import.js](bin/jsfx-import.js), which run under the shared bytecode
 [plugins/_jsfx-runtime/](plugins/_jsfx-runtime/) rather than each compiling their own DSP to
 WebAssembly; [Tremolo](plugins/tremolo/), which declares no `jig:module` at all, its whole
 signal path the AudioWorklet processor, plain JavaScript, which `jig:module` has always
-permitted and which nothing exercised until this one; and [Boost](plugins/boost/), a gain
+permitted and which nothing exercised until this one; [Boost](plugins/boost/), a gain
 stage in C++ meant to be copied rather than shipped: the minimal starting point for a new
-WebAssembly plugin, everything in it beyond one line of DSP being ABI wiring.
+WebAssembly plugin, everything in it beyond one line of DSP being ABI wiring; and
+[Ferrite](plugins/ferrite/), a neural amp model and a cabinet impulse response in series, the
+first plugin here depending on a real external crate ([nam-rs](https://github.com/OpenSauce/nam-rs))
+rather than hand-writing every line of DSP.
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.

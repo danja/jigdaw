@@ -1,0 +1,26 @@
+[package]
+name = "ferrite"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Cabinet impulse response and neural amp model, the worked WebAssembly-with-a-real-dependency JigDAW plugin"
+
+[lib]
+crate-type = ["cdylib"]
+
+# nam-rs is a std crate (Vec, serde_json), not the no_std discipline
+# plugins/cascade and friends hold to. wasm32-unknown-unknown's std needs no
+# host imports for allocation (dlmalloc over the module's own linear memory),
+# measured directly against this crate before writing a line of glue: the
+# compiled module has an empty import section. The real-time rule that
+# matters, "process() never allocates", is independent of no_std and is what
+# jig_process below is written to, same as everywhere else in this project.
+[dependencies]
+nam-rs = "0.4"
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

@@ -345,20 +345,89 @@ complete. Review periodically.
       against `jig:blockSize` rather than assumed. Each is a different kind of proof and none
       replaces the others. Not scoped into a phase yet.
 
-- [ ] **A cabinet impulse response and neural amp modeler plugin.** From the inbox,
-      2026-09-23, referencing `/home/github/NeuralAmpModelerPlugin` as prior art: loads a
-      cabinet impulse response and a NAM neural model, processes two channels of audio.
-      Working name proposed, not committed to: **Ferrite**, after the material a speaker cone
-      and a length of tape have in common, one convolved through and the other inferred
-      through. Two `jig:asset`s rather than one, both delivered through the path
-      `src/host/Instantiate.js` already fetches, verifies and posts alongside the module,
-      built generic rather than JSFX-specific when the JSFX runtime needed it first. The IR
-      side is an ordinary block convolution, the kind of DSP the existing plugins already show
-      the shape of; the NAM side is a small neural network run per sample inside `process()`,
-      which is new here: nothing built so far runs inference in the real-time path, only
-      filters and oscillators, so this is also the first plugin that tests whether "never
-      allocate, never take an unpredictable lock" survives a model's own arithmetic and not
-      just this project's. Not designed further than that.
+- [x] **Ferrite, a cabinet impulse response and neural amp modeler plugin, 2026-09-23.**
+      The working name from the inbox item this grew from, committed to. `/home/
+      github/NeuralAmpModelerPlugin`, the referenced prior art, does not exist in this
+      environment; the actual `.nam` format and its reference implementations were read
+      directly from `sdatkinson/neural-amp-modeler`, `sdatkinson/NeuralAmpModelerCore` and
+      `OpenSauce/nam-rs` instead of assumed from memory.
+
+      **Reimplementing WaveNet inference from the format's documentation alone was the plan,
+      and it was the wrong one, found before writing DSP rather than after.** The `.nam`
+      schema has grown FiLM conditioning, a slimmable-width architecture and a packed layer
+      variant since first publication; the actual Python model classes run to hundreds of
+      lines with no single simple forward pass to port, and there was no reference input and
+      output to check a from-scratch port against. That is precisely the "confident but
+      unverified" shape `AGENTS.md` warns about, for code that would have sounded plausible
+      and been quietly wrong.
+
+      **Depended on `nam-rs` instead**, MIT-licensed, a from-scratch Rust port the crate's own
+      test suite validates against the reference Python and C++ implementations within
+      `1e-5` per sample. Attribution in `plugins/ferrite/README.md`, matching the crate's own
+      table. This is the first plugin here with a real external dependency rather than
+      hand-written DSP throughout, and the point of using one: an already-validated
+      implementation is not a shortcut around AGENTS.md's warning, it is the same discipline
+      pointed at a source of truth better than a format spec read once.
+
+      **Compiles to `wasm32-unknown-unknown` with zero imports, measured rather than
+      assumed**: `nam-rs` is a `std` crate (`serde_json`, `Vec`), not the `no_std` discipline
+      `plugins/cascade` and its siblings hold to, and this target's `std` needs no host
+      imports for heap allocation (a bump allocator over the module's own linear memory).
+      Checked directly: a throwaway crate depending on `nam-rs` alone, compiled, inspected with
+      `WebAssembly.Module.imports()` in Node, empty array. `plugins/ferrite/src/lib.rs`
+      inherits this rather than fighting it: plain Rust, not `no_std`, with the real-time rule
+      that actually matters, no allocation inside `jig_process`, upheld by fixed-size statics
+      throughout, exactly as `plugins/boost/boost.cpp`'s are, and by `nam-rs`'s own
+      documented and tested no-allocation contract for `process_buffer`.
+
+      **Two `jig:asset`s, not one**: the `.nam` model and a cabinet impulse response, both
+      delivered through the path `src/host/Instantiate.js` already fetches, verifies and posts
+      alongside the module, generic rather than JSFX-specific since the JSFX runtime needed it
+      first. Each has its own `jig_<name>_ptr`/`jig_<name>_max_len`/`jig_load_<name>` triplet,
+      the same shape `plugins/_jsfx-runtime`'s one asset already uses, extended to two rather
+      than invented fresh. Loading a `.nam` file also runs the WaveNet's warmup (`nam-rs`'s own
+      documented `receptive_field()` samples of silence) before any real audio reaches it,
+      inside `jig_load_nam`, not left to the processor.
+
+      **A cabinet IR is convolved by a hand-written direct time-domain FIR**, the one piece of
+      real DSP in this plugin that is not someone else's validated code, because it is simple
+      enough to reason about directly: `O(IR_LEN)` per sample through a fixed-size shift
+      buffer, capped at 8192 samples (170 ms at 48 kHz) and refused rather than truncated
+      above that. A small WAV parser (RIFF/fmt/data, PCM16, PCM32 or float32, any channel
+      count averaged to mono) reads a real IR file rather than requiring a raw-float
+      conversion step first.
+
+      **Sample rate mismatch is reported, not silently wrong.** `nam-rs`'s own documentation
+      states plainly that a `.nam` run at the wrong rate is silently wrong, because dilations
+      and recurrence are defined in samples, and a convolution's taps are timed the same way.
+      Neither loader resamples; both compare the file's own declared rate against the host's
+      and return 1 rather than 0 when they disagree, a status this plugin's own processor
+      convention defines rather than the host contract, exactly as `for-plugin-authors.md`
+      says that convention is free to be.
+
+      `tests/host/ferrite.test.js` (4 tests) loads it through the real `PluginLoader`/`Engine`
+      path with both assets served from disk, confirms finite output across ten blocks of a
+      real tone (state carrying correctly across calls in both the WaveNet history and the
+      convolution's shift buffer), and confirms the output level parameter scales every
+      sample by exactly the requested factor, the one numeric claim about the whole chain
+      simple enough to assert without a reference render to compare against. Verified live in
+      Chrome beyond the offline suite: the real profile fetched, both assets fetched and
+      verified over the network, the module compiled and instantiated in a real
+      `AudioWorklet`, `Play` ran with the console clean.
+
+      Shipped with a small MIT-attributed test `.nam` (`NeuralAmpModelerCore`'s own
+      `example_models/wavenet.nam`, 131 weights, not a captured amp) and a synthetic cabinet
+      IR generated for this example and stated as synthetic in both the profile's own
+      `trn:caution` and the README, never claimed to be a real capture.
+
+      **Found on the way, unrelated to the plugin's own code and worth naming so it does not
+      recur a third time:** `plugins/bassgen`, `cascade`, `dynamix`, `pulse` and
+      `_jsfx-runtime` all had Cargo's own `target/` build directory already committed, 86
+      files, because `.gitignore` had no rule for that name at all, the same shape of miss as
+      the `native/build*` incident earlier the same day just older and wider. Fixed alongside:
+      `plugins/*/target/` added, the 86 files untracked. Full account in `MISTAKES.md`.
+
+      `npm test`: 884 of 884.
 
 ## Namespaces
 

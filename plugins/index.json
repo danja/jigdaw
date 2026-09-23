@@ -227,6 +227,36 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/ferrite/",
+      "label": "Ferrite",
+      "comment": "A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with a cabinet impulse response, direct time-domain convolution. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/ferrite/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "The neural model and the cabinet impulse response are both loaded at the sample rate they were captured or trained at, 48 kHz for the example model here. This plugin does not resample: a host running at a different rate gets a load that reports a mismatch (see the module's own jig_load_nam and jig_load_ir return codes) rather than silently wrong output.",
+        "The shipped impulse response is synthetic, generated for this example, not a real cabinet capture."
+      ],
+      "parameters": [
+        "input",
+        "output"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/jsfx-gain-trim/",
       "label": "JigDAW Gain Trim",
       "comment": "Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",
