@@ -63,11 +63,11 @@ complete. Review periodically.
       normative checklist section the contract itself carries, since `for-hosts.md` restating
       it is a second copy that can drift from the first.
 
-- [ ] **JUCE spitting out a JigDAW bundle from the same build, reframed, 2026-09-23.** The
-      inbox asked for this "from a slightly different angle": when a JUCE developer builds
-      their VST3/AU/whatever, JUCE's own build system also produces a web-native `jig:`
-      bundle from the same source, tested against the planned Ferrite (impulse response and
-      neural amp modeler) plugin.
+- [x] **JUCE spitting out a JigDAW bundle from the same build, reframed, then the reframing
+      built, 2026-09-23.** The inbox asked for this "from a slightly different angle": when a
+      JUCE developer builds their VST3/AU/whatever, JUCE's own build system also produces a
+      web-native `jig:` bundle from the same source, tested against the planned Ferrite
+      (impulse response and neural amp modeler) plugin.
 
       **Checked rather than assumed, and it does not exist.** JUCE 9's own CMake API
       (`juce_add_plugin`'s `FORMATS`) has no WebAssembly target for a plugin's DSP; the only
@@ -87,15 +87,46 @@ complete. Review periodically.
       separation `jigdaw_core` itself demonstrates, in the other direction: a portable core
       wrapped by a DPF shell here, by a JUCE shell there.
 
-      **What would actually be worth building, if the appetite is still there**: not a JUCE
-      CMake export target, which the above rules out, but a documented recipe and a worked
-      example: write your DSP as a plain C/C++ core with no JUCE types crossing its
-      boundary, wrap it once in an `AudioProcessor` for JUCE and once in the `jig_init`/
-      `jig_process` shape for JigDAW, from the same `.cpp`. Ferrite (the IR/NAM plugin, still
-      unbuilt) is a reasonable test case for this precisely because its DSP (convolution, a
-      small neural network) has no obvious reason to touch JUCE at all, which is what would
-      make the separation easy to get right there and hard to argue against elsewhere.
-      Not started.
+      **Built the same day, asked directly: "how do we make this easy for someone experienced
+      in JUCE?"** Not a JUCE CMake export target, which the above rules out, but the
+      documented recipe and the part of the work that is genuinely mechanical rather than
+      judgement.
+
+      [docs/for-juce-developers.md](docs/for-juce-developers.md) states the recipe: extract
+      the DSP into a portable core by hand (no tool can safely decide which parts of a
+      `processBlock` are the algorithm and which are JUCE plumbing), wrap it once for JUCE and
+      once for JigDAW, `plugins/boost/` as the shape to copy for the JigDAW side.
+
+      The parameter layer is not judgement, and is automated.
+      `native/jigdaw-adapter/src/juce/tools/DumpParameters.h` is a header a JUCE developer
+      copies into their own project and calls once, reading the live
+      `AudioProcessorParameter` objects (needs only `juce_audio_processors_headless`, so no
+      GUI modules pulled in) rather than parsing the C++ that created them, since JUCE has
+      already resolved every range, default and choice list correctly. Verified against real
+      JUCE, not assumed: a throwaway `AudioProcessor` with a float, an int, a bool and a
+      choice parameter, compiled and run, produced exactly the JSON expected.
+      `bin/juce-params-to-profile.js` turns that JSON into a profile's `ports` array (written
+      in place, everything else in the file untouched), a `jig_set_param` C++ switch, and the
+      processor's `PARAM_INDEX`/`parameterDescriptors`, all three agreeing by construction
+      since they are read from the one file in the one order. Round-tripped for real: the
+      generated `ports` block was dropped into a copy of `plugins/boost/profile.json`,
+      regenerated with `bin/write-profile.js`, and validated clean against
+      `vocabs/shapes.ttl`. `tests/bin/juce-params-to-profile.test.js` (11 tests) covers the
+      mapping directly, including the `lv2:symbol` sanitising a JUCE parameter id might need
+      and the bool/choice/plain-range branches.
+
+      **Found while wiring the test in**: `tests/bin/` was a new suite directory and
+      `vitest.config.js`'s `include` list is exactly what `AGENTS.md` already warns a new
+      suite must be added to or it runs zero tests silently; `npm test`'s own
+      `bin/check-suites.js` step is what is supposed to catch that, and did, the moment `npm
+      test` was actually run instead of `vitest run <file>` directly against the one new file.
+      Fixed by adding the entry rather than by trusting that a passing single-file run meant
+      anything.
+
+      Not built: Ferrite itself, which would be the first real worked example of the "one
+      core, two shells" pattern this recipe asks for, since its DSP (convolution, a small
+      neural network) has no obvious reason to touch JUCE at all. `npm test`: 879 of 879, 55
+      files.
 
 - [x] **Every plugin now says who wrote it, dereferenceably, 2026-09-23.** Surfaced by an
       independent implementation, `~/github/diddums` (danbri, built against this project's

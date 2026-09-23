@@ -279,4 +279,5 @@ path instead of a hand-written module.
 ---
 
 [Back to the documentation index](index.md) &middot;
-[Writing a host instead](for-hosts.md)
+[Writing a host instead](for-hosts.md) &middot;
+[Coming from JUCE instead](for-juce-developers.md)

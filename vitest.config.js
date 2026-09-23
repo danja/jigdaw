@@ -7,6 +7,7 @@ export default defineConfig({
     // Every test directory must appear here. A suite that is written and never
     // run is the same as a suite that does not exist, and nothing reports it.
     include: [
+      'tests/bin/**/*.test.js',
       'tests/validate/**/*.test.js',
       'tests/wam/**/*.test.js',
       'tests/rdf/**/*.test.js',

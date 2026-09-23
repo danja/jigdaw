@@ -19,6 +19,9 @@ curl -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/
   plugins. What you must do, in what order, and what the browser will refuse.
 - **[for-plugin-authors.md](for-plugin-authors.md)**: you have some DSP and want it loadable
   anywhere. Writing a profile, building the WebAssembly, and publishing it so it can be found.
+- **[for-juce-developers.md](for-juce-developers.md)**: you already have a JUCE plugin and
+  want it loadable by IRI too. What has to be ported by hand, and what is generated from your
+  existing parameter layout instead.
 
 ## How a plugin is described
 

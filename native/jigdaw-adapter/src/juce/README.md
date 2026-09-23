@@ -7,6 +7,11 @@ than a DPF `Plugin`. Built to answer the question in `TODO.md`: whether a
 JUCE-based adapter of the same shape is worth having beside the DPF one,
 mainly for AU, which DPF does not target and JUCE does.
 
+The other direction, publishing a JUCE plugin's own DSP as a JigDAW plugin rather than hosting
+JigDAW plugins inside a JUCE application, is a different document:
+[docs/for-juce-developers.md](../../../../docs/for-juce-developers.md). `tools/
+DumpParameters.h` in this directory belongs to that side, not to the adapter below.
+
 ## This is not Apache-2.0
 
 The rest of this repository is Apache 2.0. This directory is not, because it

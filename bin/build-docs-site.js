@@ -51,6 +51,7 @@ const GROUP_OF = {
   wam: 'Specification',
   'for-hosts': 'Guides',
   'for-plugin-authors': 'Guides',
+  'for-juce-developers': 'Guides',
   plan: 'Background',
   'first-thoughts': 'Background',
   'local-references': 'Background',
