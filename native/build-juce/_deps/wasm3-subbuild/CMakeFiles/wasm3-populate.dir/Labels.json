@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate-complete.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-build.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-configure.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-download.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-install.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-mkdir.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-patch.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-test.rule"
+		},
+		{
+			"file" : "/chalet/github/jigdaw/native/build-juce/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"wasm3-populate"
+		],
+		"name" : "wasm3-populate"
+	}
+}

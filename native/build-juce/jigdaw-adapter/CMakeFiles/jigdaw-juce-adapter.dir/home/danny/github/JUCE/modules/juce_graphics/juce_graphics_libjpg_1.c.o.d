@@ -1,0 +1,96 @@
+jigdaw-adapter/CMakeFiles/jigdaw-juce-adapter.dir/home/danny/github/JUCE/modules/juce_graphics/juce_graphics_libjpg_1.c.o: \
+ /home/danny/github/JUCE/modules/juce_graphics/juce_graphics_libjpg_1.c \
+ /usr/include/stdc-predef.h \
+ /home/danny/github/JUCE/modules/juce_core/system/juce_CompilerWarnings.h \
+ /home/danny/github/JUCE/modules/juce_core/system/juce_TargetPlatform.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcapimin.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jinclude.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jconfig.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h /usr/include/stdlib.h \
+ /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+ /usr/include/features.h /usr/include/features-time64.h \
+ /usr/include/x86_64-linux-gnu/bits/wordsize.h \
+ /usr/include/x86_64-linux-gnu/bits/timesize.h \
+ /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+ /usr/include/x86_64-linux-gnu/bits/long-double.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
+ /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+ /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
+ /usr/include/x86_64-linux-gnu/sys/types.h \
+ /usr/include/x86_64-linux-gnu/bits/types.h \
+ /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+ /usr/include/x86_64-linux-gnu/bits/time64.h \
+ /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-intn.h /usr/include/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/endianness.h \
+ /usr/include/x86_64-linux-gnu/bits/byteswap.h \
+ /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
+ /usr/include/x86_64-linux-gnu/sys/select.h \
+ /usr/include/x86_64-linux-gnu/bits/select.h \
+ /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
+ /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+ /usr/include/x86_64-linux-gnu/bits/select2.h \
+ /usr/include/x86_64-linux-gnu/bits/select-decl.h \
+ /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
+ /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
+ /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
+ /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
+ /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
+ /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h /usr/include/alloca.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h /usr/include/stdio.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__FILE.h \
+ /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
+ /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
+ /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio2.h /usr/include/string.h \
+ /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
+ /usr/include/strings.h \
+ /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
+ /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jpeglib.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jmorecfg.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jpegint.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jerror.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcapistd.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jccoefct.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcinit.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcmainct.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcmarker.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcmaster.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcomapi.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcparam.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcprepct.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcsample.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jmemmgr.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jmemsys.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jmemnobs.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jquant2.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jutils.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jdinput.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jcarith.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jchuff.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jaricom.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jfdctint.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jdct.h \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jfdctflt.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jfdctfst.c \
+ /home/danny/github/JUCE/modules/juce_graphics/image_formats/jpglib/jdhuff.c

@@ -94,3 +94,44 @@ if(JIGDAW_BUILD_PLUGIN)
             DESTINATION clap OPTIONAL)
   endif()
 endif()
+
+if(JIGDAW_BUILD_JUCE_PLUGIN)
+  if(NOT EXISTS "${JIGDAW_JUCE_DIR}/CMakeLists.txt")
+    message(WARNING "JUCE not found at ${JIGDAW_JUCE_DIR}; skipping the JUCE-hosted adapter. "
+                    "Set -DJIGDAW_JUCE_DIR=/path/to/JUCE to build it.")
+  else()
+    add_subdirectory(${JIGDAW_JUCE_DIR} ${CMAKE_BINARY_DIR}/juce EXCLUDE_FROM_ALL)
+
+    juce_add_plugin(jigdaw-juce-adapter
+      COMPANY_NAME "danja"
+      # No parentheses: JUCE's post-build step passes this through /bin/sh
+      # unquoted somewhere along the way, and "(" is a syntax error there.
+      # Measured, not guessed: the build failed with exactly that error the
+      # one time this was "JigDAW Adapter (JUCE)".
+      PRODUCT_NAME "JigDAW JUCE Adapter"
+      PLUGIN_MANUFACTURER_CODE Jgdw
+      PLUGIN_CODE JgAJ
+      FORMATS VST3 Standalone
+      IS_SYNTH FALSE
+      NEEDS_MIDI_INPUT TRUE
+      NEEDS_MIDI_OUTPUT TRUE
+      NEEDS_WEB_BROWSER FALSE
+      NEEDS_CURL FALSE)
+
+    target_sources(jigdaw-juce-adapter PRIVATE
+      src/juce/PluginProcessor.cpp
+      src/juce/PluginEditor.cpp)
+    target_include_directories(jigdaw-juce-adapter PUBLIC include)
+    target_compile_definitions(jigdaw-juce-adapter PUBLIC
+      JUCE_WEB_BROWSER=0
+      JUCE_USE_CURL=0
+      JUCE_VST3_CAN_REPLACE_VST2=0)
+    target_link_libraries(jigdaw-juce-adapter
+      PRIVATE
+        jigdaw_core
+        juce::juce_audio_utils
+      PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags)
+  endif()
+endif()

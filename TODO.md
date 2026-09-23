@@ -66,40 +66,77 @@ complete. Review periodically.
       section named in prose instead. `npm run build:docs` and the full suite both clean
       afterward, 855 of 855.
 
-- [ ] **Let a local agent drive the DAW.** Two ways, and the cheap one is probably enough.
+- [x] **Let a local agent drive the DAW, 2026-09-23.** Built the cheap direction the item
+      already named: inverted, the page runs the loop itself, never the relay. `registerTools`
+      already returns a surface with the tools (14 now, not the eleven this item was written
+      against; `documented.test.js` binds the count to `docs/webmcp.md` so it will not go
+      stale again), their schemas, and `call(name, input)` that normalises a throw into a
+      result. `src/mcp/LocalAgent.js` reads that surface and runs a tool-calling loop against a
+      local model's chat API, in the page, with no new endpoint and no new listener: nothing
+      outside the browser tab can reach the session, which was the whole point of choosing this
+      direction over the relay.
 
-      **First, try inverting the direction.** The page already has everything: `registerTools`
-      returns a surface with the eleven tools, their schemas, and `call(name, input)` that
-      normalises a throw into a result. A local model with an HTTP API is reachable from the
-      page, so the page can run the agent loop itself: read `jigdaw.mcp.tools` as the tool
-      list, POST to the model, call `jigdaw.mcp.call` with what comes back. No new endpoint, no
-      new listener, and nothing outside the browser can reach the session. Ollama and llama.cpp
-      both answer on loopback and both send permissive CORS, so this works today.
+      `runAgentTurn({ surface, chat, model, prompt, onStep })` is the loop, with the network
+      call injected as `chat` so it is tested against a fixed sequence of fake responses rather
+      than a running model, the same discipline `OfflineHost.js` applies to the audio path. It
+      caps at `MAX_TURNS` (8) rather than trusting the model to stop calling tools, the same
+      reasoning the JSFX runtime bounds a script's own loop by. `ollamaChat` is the real network
+      call, against Ollama's native `/api/chat`, kept separate for exactly that reason.
 
-      **If the agent must be the caller**, a relay, never a second implementation. `bin/serve.js`
-      gains `GET /mcp/events` as an SSE stream and `POST /mcp/result`; the page connects,
-      receives `{id, name, input}`, calls `jigdaw.mcp.call`, and posts the result back. An MCP
-      client POSTs to `/mcp`, the server parks the request until the page answers. SSE and POST
-      rather than a WebSocket because node has a WebSocket client and no server, and
-      `bin/serve.js` is guarded to node builtins only: a dependency there breaks deployment.
-      The page posts its tool list on connect so `tools/list` needs no round trip.
+      **The response shape was measured against a running Ollama, not assumed.**
+      `message.tool_calls[].function.arguments` arrived as an object already, not the
+      JSON-encoded string OpenAI's API uses; `argumentsOf` accepts either, since a model that
+      does stringify them is a real, not hypothetical, case. A follow-up `{role: 'tool',
+      content}` with no id was enough for the model to use the result; confirmed by hand with
+      `curl` against `/api/chat` before writing a line of the loop.
 
-      **What it costs, which is the part to decide on.**
+      **The "both send permissive CORS" claim this item made was wrong, measured directly.**
+      Ollama on this machine returned `403` for `Origin: http://evil.example.com` and `200`
+      with the origin echoed back for `Origin: http://127.0.0.1:8748` (the dev server's own
+      origin): an allowlist, not "permissive", though one that happens to include loopback by
+      default, which is what makes this usable from `npm run serve` without configuration.
 
-      - It only works while a page is open. The DAW *is* the page, and there is no session
-        without one. An agent that should run unattended wants something else entirely.
-      - Two open pages are two sessions. Needs a session id, or first-one-wins stated plainly.
-      - **Security is the real objection.** A loopback endpoint that can drive the DAW is
-        reachable by every process on the machine, and by any website through DNS rebinding: a
-        public page resolving its own name to 127.0.0.1 can POST to it, and CORS blocking the
-        *response* does not help, because the edit has already happened. Bind to loopback,
-        require a bearer token printed at startup, and reject any request carrying an `Origin`
-        that is not the DAW's own. Doing this without a token would be a bad idea.
+      **A page loaded over `https:` cannot use this at all**, mixed content rather than CORS:
+      `https://strandz.it/jigdaw/` fetching `http://127.0.0.1:11434` is blocked before CORS is
+      ever evaluated. Stated in the panel's own copy in `web/index.html` rather than left for
+      someone to discover, since the deployment most people will meet this feature on is
+      exactly the one where it cannot work.
 
-      **What would be a bad idea: moving the model out of the page.** The audio graph cannot
-      leave the browser, so a model in node means the model and the engine are on opposite
-      sides of a wire, which is two sources of truth for the thing `docs/architecture.md` keeps
-      as one. Refuse that even though it is the obvious way to get a headless agent.
+      **UI**: a `<details class="agent">` disclosure, the same accessible pattern the existing
+      `<details class="log">` already uses, with an endpoint field, a model field, a prompt
+      field and a transcript (`renderAgentStep`, role written as text first, never colour
+      alone). Wired in `web/app.js`: `mcpSurface` is set where `registerTools` already runs,
+      and `askAgent()` follows `search()`'s own shape, `ensureRunning()` first, disable the
+      button, restore it in a `finally`.
+
+      `tests/mcp/LocalAgent.test.js` (7 tests): the tool schema mapping, answering directly
+      with no tool call, routing a tool call through `surface.call` and feeding the result
+      back (caught its own bug while writing it: `messages` is one array mutated in place
+      across turns, so a mock that records the reference rather than a snapshot sees every
+      call's argument as the array's *final* state; fixed by snapshotting with a spread on the
+      way in), stringified arguments parsed the same as an object, the `MAX_TURNS` cap firing
+      on a model that never stops calling tools, and `ollamaChat`'s request shape and its
+      error path.
+
+      **Verified live, twice over.** First in Node, the real `createTools`/`OpDispatcher`
+      surface against the real running Ollama (`qwen2.5:0.5b`): the model called `status`, got
+      a real result back, and answered from it correctly. Then in the actual browser, `npm run
+      serve` plus the Claude in Chrome extension: typed a prompt, watched the transcript render
+      through two full exchanges, `navigator.userActivation.hasBeenActive` true so
+      `AudioContext.resume()` was never in question, console clean. The smallest installed
+      model does not reliably choose to call the tool it was asked to (prose instead, twice, at
+      the default `qwen2.5:0.5b`); that is the model, not the loop, which is why the
+      network-level check above used the same model and did get a real tool call through it.
+      One exchange took 19s end to end under load, measured rather than guessed at, which is
+      why the panel calls this experimental rather than instant.
+
+      `npm test`: 862 of 862.
+
+      Not built: the relay (`GET /mcp/events`, `POST /mcp/result`), the second of the two
+      original options. Nothing here needed it, and the security cost the item itself named
+      (a loopback endpoint reachable by any process on the machine, and by DNS rebinding from
+      any website) is exactly what choosing the page-loop direction avoided. Left as a possible
+      future item if an agent that must be the caller, rather than the page, is ever wanted.
 
 - [ ] **A way to load a JigDAW plugin into REAPER without the native adapter.** From the
       inbox, 2026-09-23. `native/jigdaw-adapter` already does this as a VST3/CLAP/LV2, built

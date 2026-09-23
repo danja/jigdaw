@@ -1,0 +1,14 @@
+# Target labels
+ wasm3-populate
+# Source files and their labels
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/CMakeFiles/wasm3-populate-complete.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-build.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-configure.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-download.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-install.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-mkdir.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-patch.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-test.rule
+/chalet/github/jigdaw/native/build-default/_deps/wasm3-subbuild/wasm3-populate-prefix/src/wasm3-populate-stamp/wasm3-populate-update.rule

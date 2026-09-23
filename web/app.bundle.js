@@ -13176,10 +13176,14 @@ var init_Vocabulary = __esm({
       dcterms: Object.freeze({
         created: `${DCTERMS}created`
       }),
-      // A plugin's version. DOAP rather than a jig: term, because LV2 describes a
-      // plugin project with DOAP and this vocabulary already follows LV2.
+      // A plugin's version and its developer. DOAP rather than jig: terms, because
+      // LV2 describes a plugin project with DOAP and this vocabulary already
+      // follows LV2. doap:developer is an IRI, never a name, the same rule
+      // provenance attribution already follows: a name is not something anything
+      // can be checked against.
       doap: Object.freeze({
-        revision: `${DOAP}revision`
+        revision: `${DOAP}revision`,
+        developer: `${DOAP}developer`
       }),
       // Provenance. Reused unchanged: who made a bundle, when, and from what.
       prov: Object.freeze({
@@ -23983,6 +23987,56 @@ function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlu
   return { bound: "page", count: tools.length, surface };
 }
 
+// src/mcp/LocalAgent.js
+var MAX_TURNS = 8;
+function toolSchema(tools) {
+  return tools.map((t) => ({
+    type: "function",
+    function: { name: t.name, description: t.description, parameters: t.inputSchema }
+  }));
+}
+function argumentsOf(call) {
+  const raw = call.function.arguments;
+  return typeof raw === "string" ? JSON.parse(raw) : raw ?? {};
+}
+async function runAgentTurn({ surface, chat, model, prompt, onStep = () => {
+} }) {
+  const tools = toolSchema(surface.tools);
+  const messages = [{ role: "user", content: prompt }];
+  onStep({ role: "user", content: prompt });
+  for (let turn = 0; turn < MAX_TURNS; turn++) {
+    const response = await chat({ model, messages, tools });
+    const message = response.message;
+    messages.push(message);
+    if (!message.tool_calls?.length) {
+      onStep({ role: "assistant", content: message.content ?? "" });
+      return { messages, turns: turn + 1 };
+    }
+    if (message.content) onStep({ role: "assistant", content: message.content });
+    for (const call of message.tool_calls) {
+      const args = argumentsOf(call);
+      onStep({ role: "tool_call", name: call.function.name, arguments: args });
+      const result = await surface.call(call.function.name, args);
+      onStep({ role: "tool_result", name: call.function.name, result });
+      messages.push({ role: "tool", content: JSON.stringify(result) });
+    }
+  }
+  onStep({ role: "assistant", content: `stopped after ${MAX_TURNS} turns without a final answer` });
+  return { messages, turns: MAX_TURNS };
+}
+async function ollamaChat({ endpoint: endpoint2, model, messages, tools }) {
+  const response = await fetch(`${endpoint2.replace(/\/+$/, "")}/api/chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model, messages, tools, stream: false })
+  });
+  if (!response.ok) {
+    throw new Error(`${endpoint2} returned ${response.status}: ${await response.text()}`);
+  }
+  const data = await response.json();
+  return { message: data.message };
+}
+
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
 var { jig: jig3 } = vocabulary;
@@ -24237,6 +24291,7 @@ var dispatcher = null;
 var engine = null;
 var analyser = null;
 var source = null;
+var mcpSurface = null;
 var playing = false;
 var startedAt = 0;
 var panels = /* @__PURE__ */ new Map();
@@ -24313,6 +24368,7 @@ async function ensureRunning() {
     catalogue: browserCatalogue(),
     loadPlugin: (iri2) => dispatcher.addPlugin(iri2)
   });
+  mcpSurface = registration.surface;
   log(`host offers ${[...capabilities].map(compact).join(", ")}`);
   log(`${registration.count} agent tools via ${registration.bound}`);
   meterLoop();
@@ -24783,6 +24839,40 @@ async function search() {
     log(`search failed: ${error2.message}`, "error");
   }
 }
+function renderAgentStep(step) {
+  const line = document.createElement("div");
+  line.className = `agent-step ${step.role}`;
+  const text = step.role === "tool_call" ? `${step.name}(${JSON.stringify(step.arguments)})` : step.role === "tool_result" ? `${step.name} -> ${JSON.stringify(step.result)}` : step.content;
+  const role = document.createElement("span");
+  role.className = "role";
+  role.textContent = step.role;
+  line.append(role, document.createTextNode(text));
+  $("agent-log").append(line);
+  $("agent-log").scrollTop = $("agent-log").scrollHeight;
+}
+async function askAgent() {
+  const prompt = $("agent-prompt").value.trim();
+  if (!prompt) return;
+  const endpoint2 = $("agent-endpoint").value.trim();
+  const model = $("agent-model").value.trim();
+  const button = $("agentbar").querySelector("button");
+  await ensureRunning();
+  button.disabled = true;
+  try {
+    await runAgentTurn({
+      surface: mcpSurface,
+      chat: (args) => ollamaChat({ endpoint: endpoint2, ...args }),
+      model,
+      prompt,
+      onStep: renderAgentStep
+    });
+    $("agent-prompt").value = "";
+  } catch (error2) {
+    log(`local agent failed: ${error2.message}`, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
 function sessionIri() {
   return new URL(`sessions/${Date.now()}/`, document.baseURI).href;
 }
@@ -24854,6 +24944,10 @@ async function openSession(text) {
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
   search();
+});
+$("agentbar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  askAgent();
 });
 $("loadbar").addEventListener("submit", (e) => {
   e.preventDefault();

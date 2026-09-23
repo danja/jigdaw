@@ -20,6 +20,7 @@ import { isMidi } from '../src/engine/EventRouter.js'
 import { createKeyboard, octavesForWidth, playable } from '../src/ui/Keyboard.js'
 import { preserveFocus } from '../src/ui/Focus.js'
 import { registerTools } from '../src/mcp/adapter.js'
+import { runAgentTurn, ollamaChat } from '../src/mcp/LocalAgent.js'
 
 import { writeProject } from '../src/rdf/ProjectWriter.js'
 import { readProject } from '../src/rdf/ProjectReader.js'
@@ -38,6 +39,7 @@ let dispatcher = null
 let engine = null
 let analyser = null
 let source = null
+let mcpSurface = null
 let playing = false
 let startedAt = 0
 const panels = new Map()
@@ -135,6 +137,7 @@ async function ensureRunning () {
     catalogue: browserCatalogue(),
     loadPlugin: iri => dispatcher.addPlugin(iri)
   })
+  mcpSurface = registration.surface
   log(`host offers ${[...capabilities].map(compact).join(', ')}`)
   log(`${registration.count} agent tools via ${registration.bound}`)
 
@@ -795,6 +798,57 @@ async function search () {
   }
 }
 
+// ── Local agent ────────────────────────────────────────────────────────────
+//
+// TODO.md, "Let a local agent drive the DAW". The page runs the loop itself,
+// against a model server the person names, rather than exposing an endpoint
+// of its own: nothing outside this tab can reach the session, and the surface
+// it drives is the same jigdaw.mcp surface the console and WebMCP already use,
+// never a second implementation of an operation.
+
+/** One transcript entry. Colour is never the only signal WCAG-wise, so the
+ * role is also written as text, uppercase, first. */
+function renderAgentStep (step) {
+  const line = document.createElement('div')
+  line.className = `agent-step ${step.role}`
+  const text = step.role === 'tool_call'
+    ? `${step.name}(${JSON.stringify(step.arguments)})`
+    : step.role === 'tool_result'
+      ? `${step.name} -> ${JSON.stringify(step.result)}`
+      : step.content
+  const role = document.createElement('span')
+  role.className = 'role'
+  role.textContent = step.role
+  line.append(role, document.createTextNode(text))
+  $('agent-log').append(line)
+  $('agent-log').scrollTop = $('agent-log').scrollHeight
+}
+
+async function askAgent () {
+  const prompt = $('agent-prompt').value.trim()
+  if (!prompt) return
+  const endpoint = $('agent-endpoint').value.trim()
+  const model = $('agent-model').value.trim()
+  const button = $('agentbar').querySelector('button')
+
+  await ensureRunning()
+  button.disabled = true
+  try {
+    await runAgentTurn({
+      surface: mcpSurface,
+      chat: args => ollamaChat({ endpoint, ...args }),
+      model,
+      prompt,
+      onStep: renderAgentStep
+    })
+    $('agent-prompt').value = ''
+  } catch (error) {
+    log(`local agent failed: ${error.message}`, 'error')
+  } finally {
+    button.disabled = false
+  }
+}
+
 // ── Sessions ───────────────────────────────────────────────────────────────
 //
 // A project is RDF, per docs/project-format.md, and the plugin IRIs in it are
@@ -890,6 +944,7 @@ async function openSession (text) {
 }
 
 $('searchbar').addEventListener('submit', e => { e.preventDefault(); search() })
+$('agentbar').addEventListener('submit', e => { e.preventDefault(); askAgent() })
 $('loadbar').addEventListener('submit', e => { e.preventDefault(); loadPlugin($('iri').value.trim()).catch(() => {}) })
 $('play').addEventListener('click', () => play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', stop)

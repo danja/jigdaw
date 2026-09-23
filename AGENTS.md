@@ -270,6 +270,10 @@ the browser did.
 - Before creating a file, list the directory it is going into.
 - Run the program after any change to imports, wiring or startup. The test suite does not
   catch that class of failure.
+- When a tool that would make this easier or more certain appears unavailable, such as a
+  browser connection needed for a live check, ask before falling back to a workaround. The
+  tool may simply need to be started, and a workaround adopted silently can end up standing
+  in for a check that was never actually run.
 - A route or a tool is not reachable until a real request has reached it. Unit-testing a
   handler proves the handler and says nothing about the guard or the mounting order in front
   of it.

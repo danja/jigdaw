@@ -1,0 +1,37 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/juceaide.dir/Main.cpp.o"
+  "CMakeFiles/juceaide.dir/Main.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core_CompilationTime.cpp.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core_CompilationTime.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core_zlib.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core_zlib.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_1.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_1.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_2.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_2.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_3.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libjpg_3.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libpng.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_libpng.c.o.d"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_lunasvg.c.o"
+  "CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_lunasvg.c.o.d"
+  "CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.o"
+  "CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.o.d"
+  "juceaide_artefacts/Custom/juceaide"
+  "juceaide_artefacts/Custom/juceaide.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C CXX)
+  include(CMakeFiles/juceaide.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

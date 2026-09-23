@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+040721d3cb5dc81440808f2f766eedcb jigdaw-adapter/CMakeFiles/jigdaw-juce-adapter_vst3_helper
