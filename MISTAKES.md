@@ -2,6 +2,29 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-24 A browser check ran a bundle built before the last change
+
+**What happened.** Checking Ferrite in Chrome, the page offered only `jig:Simd128`, though
+`src/host/Capabilities.js` by then probed four WebAssembly features. `web/app.bundle.js` had
+been rebuilt after the first probe was added and not after the other three. The third time in
+two days this session has tested a stale bundle; the first two are in the Ferrite state entry.
+
+**Root cause.** The bundle is built by hand and nothing ties it to its sources, so "rebuilt"
+means "rebuilt at some point", not "rebuilt after the last edit".
+
+**Prevention.** Run `npm run build:web` immediately before any browser check, as part of the
+check rather than of the change. It was caught here only because the check read what the page
+offered rather than only whether the plugin loaded.
+
+## 2026-09-24 A test of ordering that the reader's own order already satisfied
+
+**What happened.** A test that sessions open in signal order listed the nodes in reverse and
+expected `a` before `b`. It passed with the ordering code removed, because the reader returns
+nodes alphabetically and `a` feeds `b`. Found by removing the code and watching nothing fail.
+
+**Prevention.** A test of an ordering has to start from an input where the naive order is the
+wrong one, and assert that it is before asserting the result.
+
 ## 2026-09-23 A mutation test of a plugin proved nothing, because the digest refused it first
 
 **What happened.** Mutation testing Squelch's tests, each of three edits to

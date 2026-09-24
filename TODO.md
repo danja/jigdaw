@@ -596,6 +596,84 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
       filter, and nothing leaves plus or minus one. Each claim mutation tested, which found
       that a mutated processor fails its digest before any assertion runs (`MISTAKES.md`).
 
+- [x] **Ferrite takes a room, and a real capture fits the budget, 2026-09-24.** Asked for as a
+      preset: a Ferrite running a real `.nam` capture into a Ferrite running a reverb impulse
+      response. Neither was possible. Every response in the library supplied was 0.84 to 7.1
+      seconds against Ferrite's 8192-sample limit, all of them 24 bit, which Ferrite did not
+      read, and the capture (a 1965 Fender Super Reverb, `SlimmableContainer`, `.nam` 0.7.0)
+      loaded but measured 4.5 ms a quantum against a budget of 2.67.
+
+      Speed, each step measured with the same capture: 4.5 ms at `opt-level = "z"`, 3.4 ms at
+      3, 1.7 ms with one model run on the mean of both channels instead of one per channel (an
+      amp is a mono device), 0.87 ms with WebAssembly SIMD. Convolution, `src/convolver.rs`:
+      the first 256 taps direct, the rest uniformly partitioned FFT convolution, both channels
+      packed into one complex transform, no added latency, up to 131072 samples (2.7 s at
+      48 kHz). A 1.16 s room with the amp off costs 0.11 ms; the capture and the room together
+      0.94 ms. Also: 24 bit WAV, responses normalised to unit energy (a second of room at full
+      scale is some 25 dB of gain), an Amp switch, a Mix control defaulting to fully wet so
+      existing sessions sound the same, and failure messages that say what was wrong.
+
+      SIMD needed the host to honour `jig:wasmFeature`, which only the vocabulary mentioned.
+      Contract section 2.1 now says a host refuses a module needing a feature its engine lacks,
+      before fetching it, and names the feature; `src/host/Capabilities.js` asks the engine
+      with a minimal module per feature, for all four the vocabulary defines, bound to the
+      shapes' new `sh:in` list by a test. Found on the way: the reference profile has declared
+      `jig:BulkMemory` all along, and a host checking only SIMD refused it.
+
+      `tests/host/ferrite.test.js` compares the FFT path with a direct convolution computed in
+      the test, sample for sample over nineteen partitions and both channels, and checks 24 bit
+      reading, normalisation, the length limit, Mix and the Amp switch. Mutation tested by
+      swapping the packed channels, offsetting the delay line by one partition and removing
+      the normalisation, each rebuilt and each caught. The native adapter's wasm3 interpreter
+      has no SIMD, so it now refuses Ferrite by name; it could not have run a real capture in
+      real time anyway.
+
+      The preset, `web/presets/fender-into-the-ropery.ttl`, embeds both Ferrites' files as
+      node state, 846 kB, so the preset index now carries each label and a preset is fetched
+      only when opened; a test holds each label to its file's `rdfs:label`, and another checks
+      that the embedded files are what each Ferrite actually has loaded after opening. The
+      capture and the impulse response library were bundled at the maintainer's direction; no
+      licence came with either. Verified in Chrome: the room's tail sounds between the source's
+      bursts while the amp is silent.
+
+- [x] **Opened sessions stack in signal order, 2026-09-24.** From the inbox: "the presets
+      make no sense, not connected in any rational order (except Acid)". RDF has no order, so
+      the rack stacked an opened session as the reader listed it, alphabetically: the square
+      lead preset showed Plate, Synth, Tremolo. `inSignalOrder` in `src/ops/OpenProject.js`
+      puts each node after the nodes feeding it, keeps the given order where the graph does not
+      decide, and appends what a feedback loop leaves rather than dropping it. With BassGen now
+      first in the acid preset, Play's test for feeding impulses changed from "not an
+      instrument" to "has an audio input", or it would have fed clicks into a MIDI generator.
+      Checked by every bundled preset opening with each connection's source above its
+      destination, and in Chrome.
+
+- [ ] **The interface is not yet usable and intuitive.** From the inbox, 2026-09-24: "a change
+      from a standard DAW visual interface is welcome, but only if it is usable and intuitive.
+      This isn't right now." Not designed. The four items below are the concrete parts of it
+      already named, and each moves the page toward a conventional DAW layout; what else is
+      unintuitive is worth asking the maintainer for directly rather than guessing.
+
+- [ ] **Rearrange plugins by dragging.** From the inbox, 2026-09-24. A drag in the rack that
+      reorders nodes. Open question before building: whether dragging changes only where a
+      node is drawn, which is editor metadata and must not touch the compiled graph
+      (AGENTS.md), or also rewires the chain, which is one Op through the dispatcher like any
+      other edit and needs a keyboard equivalent for WCAG 2.1.1.
+
+- [ ] **Tracks, with a mixer of faders governing them.** From the inbox, 2026-09-24: "there
+      needs to be the concept of multiple tracks, like in a DAW. The mixer should be sliders
+      to govern these." Today a mixer strip belongs to each node, and there is no track. Needs
+      a `jig:Track` in `vocabs/`, `docs/project-format.md` and the shapes first (code follows
+      the ontology): a track as a chain of nodes ending in a fader, pan and mute, the mixer
+      drawing one strip per track rather than per node.
+
+- [ ] **A MIDI timeline per track.** From the inbox, 2026-09-24. Recorded or drawn notes on a
+      track, played against the transport. Depends on tracks. Events already carry an absolute
+      stream position (contract section 6.2), which is what a timeline schedules by.
+
+- [ ] **An audio timeline per track.** From the inbox, 2026-09-24. Audio clips placed on a
+      track. Depends on tracks, and on deciding where clip audio lives in a saved session:
+      embedded as node state is, for the Fender preset, already 846 kB.
+
 - [x] **Undo and redo, 2026-09-19.** `OpDispatcher.undo()`/`redo()`, snapshot-based: every
       commit through `apply()` pushes the project as it was just before, and stepping back
       reconciles the live project to a snapshot through the same public methods a person or

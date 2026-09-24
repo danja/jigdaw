@@ -175,11 +175,11 @@ async function play () {
   startedAt = engine.context.currentTime
   $('play').setAttribute('aria-pressed', 'true')
 
-  // Only run the impulse source if the chain starts with an effect. An
-  // instrument makes its own sound and feeding it impulses is noise.
+  // Only run the impulse source if the chain starts with something that takes
+  // audio. An instrument or a MIDI generator makes its own signal, and
+  // feeding it impulses is noise, or nothing.
   const first = d.project.nodes[0]
-  const startsWithEffect = first && !(dispatcher.engineNode(first.id)?.profile.roles ?? [])
-    .some(role => role.includes('Instrument'))
+  const startsWithEffect = first && (dispatcher.engineNode(first.id)?.profile.audioInputs ?? 0) > 0
 
   if (startsWithEffect) {
     source = makeSource(engine.context)

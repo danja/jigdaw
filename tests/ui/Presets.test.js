@@ -100,8 +100,13 @@ describe('the bundled presets', () => {
           const settings = Object.fromEntries(dispatcher.project.node(change.id).settings)
           expect(settings, change.id).toEqual(change.settings)
         }
-        const connections = read.changes.filter(c => c.op === 'addConnection').length
-        expect(dispatcher.project.connections.length).toBe(connections)
+        const connections = read.changes.filter(c => c.op === 'addConnection')
+        expect(dispatcher.project.connections.length).toBe(connections.length)
+        // Stacked in the order signal flows, so the rack reads top to bottom.
+        const position = new Map(dispatcher.project.nodes.map((n, i) => [n.id, i]))
+        for (const c of connections) {
+          expect(position.get(c.from.node), `${c.from.node} above ${c.to.node}`).toBeLessThan(position.get(c.to.node))
+        }
         expect(dispatcher.canUndo()).toBe(false)
 
         // Embedded state is restored, not silently replaced by the plugin's

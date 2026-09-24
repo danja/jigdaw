@@ -1,7 +1,7 @@
 // tests/ops/OpenProject.test.js
 import { describe, it, expect, beforeAll } from 'vitest'
 import { resolve } from 'node:path'
-import { openProject } from '../../src/ops/OpenProject.js'
+import { openProject, inSignalOrder } from '../../src/ops/OpenProject.js'
 import { readProject } from '../../src/rdf/ProjectReader.js'
 import { parseText } from '../../src/rdf/parse.js'
 import { PluginLoader } from '../../src/host/PluginLoader.js'
@@ -71,9 +71,43 @@ describe('openProject', () => {
     expect(dispatcher.canUndo()).toBe(false)
   })
 
+  it('adds the nodes in signal order, whatever order the file lists them in', async () => {
+    // Renamed so that alphabetical order, which is what the reader returns,
+    // puts the node being fed first: zed feeds b, so zed must come first.
+    const renamed = readProject(await parseText(project.replaceAll('<#a>', '<#zed>'), `${SITE}sessions/one/`))
+    expect(renamed.changes.filter(c => c.op === 'addNode').map(c => c.id)[0]).not.toBe('zed')
+    await openProject(dispatcher, renamed)
+    expect(dispatcher.project.nodes.map(n => n.id)).toEqual(['zed', 'b'])
+  })
+
   it('names each plugin before fetching it', async () => {
     const seen = []
     await openProject(dispatcher, read, { onLoading: iri => seen.push(iri) })
     expect(seen.sort()).toEqual([`${SITE}plugins/nosuch/`, `${SITE}plugins/tremolo/`, `${SITE}plugins/tremolo/`])
+  })
+})
+
+describe('inSignalOrder', () => {
+  const node = id => ({ id })
+  const edge = (from, to) => ({ from: { node: from }, to: { node: to } })
+  const ids = list => list.map(n => n.id)
+
+  it('puts every node after the nodes feeding it', () => {
+    const nodes = ['room', 'lines', 'filter', 'bass'].map(node)
+    const edges = [edge('lines', 'bass'), edge('bass', 'filter'), edge('filter', 'room')]
+    expect(ids(inSignalOrder(nodes, edges))).toEqual(['lines', 'bass', 'filter', 'room'])
+  })
+
+  it('keeps the given order where the graph does not decide it', () => {
+    expect(ids(inSignalOrder(['b', 'a', 'c'].map(node), []))).toEqual(['b', 'a', 'c'])
+    // Two sources into one mixer: the sources stay in their given order.
+    expect(ids(inSignalOrder(['mix', 'y', 'x'].map(node), [edge('x', 'mix'), edge('y', 'mix')]))).toEqual(['y', 'x', 'mix'])
+  })
+
+  it('loses no node to a feedback loop, and ignores a connection to itself', () => {
+    const nodes = ['a', 'b', 'c'].map(node)
+    const ordered = ids(inSignalOrder(nodes, [edge('a', 'b'), edge('b', 'a'), edge('c', 'c')]))
+    expect(ordered[0]).toBe('c')
+    expect([...ordered].sort()).toEqual(['a', 'b', 'c'])
   })
 })

@@ -24585,6 +24585,28 @@ function readProject(dataset2) {
 }
 
 // src/ops/OpenProject.js
+function inSignalOrder(nodes, connections) {
+  const feeding = new Map(nodes.map((n2) => [n2.id, /* @__PURE__ */ new Set()]));
+  for (const c3 of connections) {
+    if (feeding.has(c3.to.node) && feeding.has(c3.from.node) && c3.from.node !== c3.to.node) {
+      feeding.get(c3.to.node).add(c3.from.node);
+    }
+  }
+  const placed = /* @__PURE__ */ new Set();
+  const ordered = [];
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const node of nodes) {
+      if (placed.has(node.id) || [...feeding.get(node.id)].some((id) => !placed.has(id))) continue;
+      placed.add(node.id);
+      ordered.push(node);
+      progress = true;
+      break;
+    }
+  }
+  return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
+}
 async function openProject(dispatcher2, read, { onLoading = () => {
 }, onCleared = () => {
 } } = {}) {
@@ -24596,7 +24618,10 @@ async function openProject(dispatcher2, read, { onLoading = () => {
   onCleared();
   const errors = [];
   const loaded = /* @__PURE__ */ new Set();
-  const additions = read.changes.filter((c3) => c3.op === "addNode");
+  const additions = inSignalOrder(
+    read.changes.filter((c3) => c3.op === "addNode"),
+    read.changes.filter((c3) => c3.op === "addConnection")
+  );
   for (const change of additions) {
     onLoading(change.pluginIri);
     const { op, pluginIri, ...node } = change;
@@ -24756,7 +24781,7 @@ async function play() {
   startedAt = engine.context.currentTime;
   $("play").setAttribute("aria-pressed", "true");
   const first = d.project.nodes[0];
-  const startsWithEffect = first && !(dispatcher.engineNode(first.id)?.profile.roles ?? []).some((role) => role.includes("Instrument"));
+  const startsWithEffect = first && (dispatcher.engineNode(first.id)?.profile.audioInputs ?? 0) > 0;
   if (startsWithEffect) {
     source = makeSource(engine.context);
     source.start();
