@@ -12,12 +12,14 @@ this tutorial uses" meant sending a list of URLs for someone to paste in one at 
   at one URL giving its name, a description, and the IRI and name of each plugin it includes.
   It carries no code and no digests, and each plugin's own profile governs where the two
   disagree.
-- `jig:PluginCollection`, a subclass of `dcmitype:Collection`, is the one new term.
-  Membership is `dcterms:hasPart` and names are `rdfs:label`, both reused unchanged. Declared
-  in `vocabs/jigdaw.ttl` and `src/rdf/Vocabulary.js`, constrained by
-  `jig:PluginCollectionShape` in `vocabs/shapes.ttl`, with
-  `examples/reference-collection.ttl` and `examples/counterexample-collection.ttl` beside
-  the other examples.
+- `jig:PluginCollection` is the one new term. Membership is `dcterms:hasPart` and names are
+  `rdfs:label`, both reused unchanged. Declared in `vocabs/jigdaw.ttl` and
+  `src/rdf/Vocabulary.js`, constrained by `jig:PluginCollectionShape` in `vocabs/shapes.ttl`,
+  with `examples/reference-collection.ttl` and `examples/counterexample-collection.ttl`
+  beside the other examples. Proposed upstream and, since 2026-09-24, a subclass of
+  `trn:PluginCollection` (`~/github/transmission/vocabs/profile.ttl`) rather than of
+  `dcmitype:Collection` directly, kept as a subclass so a collection already published under
+  `jig:PluginCollection` still validates against it.
 - Opening a collection runs contract section 3.1 steps 1 and 2 for each member: fetch the
   profile, parse and validate it, and check its required capabilities. It fetches no module,
   processor, user interface or asset. Those are fetched and checked against their digests

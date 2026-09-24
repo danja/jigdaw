@@ -7,10 +7,14 @@
 // a plugin": jig:integrity and SHACL check what a plugin is; this checks
 // what it does.
 //
+// --measure-budget adds checkRenderBudget's coarse real-time sanity check,
+// off by default because it renders the chain twice more, purely to time
+// it. See PluginCheck.js for what it can and cannot tell you.
+//
 // Usage:
 //   node bin/check-plugin.js [--root PREFIX=DIR]... [--seconds N]
 //                             [--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N]
-//                             [--no-validate] IRI...
+//                             [--measure-budget] [--no-validate] IRI...
 //
 // Examples:
 //   node bin/check-plugin.js https://strandz.it/jigdaw/plugins/cascade/
@@ -18,7 +22,7 @@
 //     https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:1
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkPlugin } from '../src/host/PluginCheck.js'
+import { checkPlugin, checkRenderBudget } from '../src/host/PluginCheck.js'
 import { shapeValidatorFromFile } from '../src/validate/files.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -31,6 +35,7 @@ function parseArgs (argv) {
   let sampleRate = 48000
   let peakBound = 1
   let validate = true
+  let measureBudget = false
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
@@ -49,6 +54,8 @@ function parseArgs (argv) {
       if (!Number.isFinite(peakBound) || peakBound <= 0) throw new Error('--peak-bound needs a positive number')
     } else if (arg === '--no-validate') {
       validate = false
+    } else if (arg === '--measure-budget') {
+      measureBudget = true
     } else if (arg === '--note') {
       const value = argv[++i]
       const match = /^(\d+)@([\d.]+)(?::([\d.]+))?$/.exec(value ?? '')
@@ -60,12 +67,12 @@ function parseArgs (argv) {
       iris.push(arg)
     }
   }
-  return { iris, roots, notes, seconds, sampleRate, peakBound, validate }
+  return { iris, roots, notes, seconds, sampleRate, peakBound, validate, measureBudget }
 }
 
 function usage () {
   console.error('usage: node bin/check-plugin.js [--root PREFIX=DIR]... [--seconds N] ' +
-    '[--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--no-validate] IRI...')
+    '[--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--measure-budget] [--no-validate] IRI...')
 }
 
 async function main () {
@@ -119,7 +126,17 @@ async function main () {
   console.log(`  within peak bound: ${report(result.checks.withinPeakBound)} (bound ${args.peakBound})`)
   console.log(`  responds to MIDI:  ${report(result.checks.respondsToMidi)}`)
 
-  process.exit(result.ok ? 0 : 1)
+  let ok = result.ok
+  if (args.measureBudget) {
+    const budget = await checkRenderBudget({
+      iris: args.iris, roots: args.roots, sampleRate: args.sampleRate, notes, validator
+    })
+    console.log(`  render budget:     ${report(budget.ok)} ` +
+      `(${budget.realTimeMultiple.toFixed(1)}x real time, ${budget.millisecondsPerSecond.toFixed(1)}ms per second of audio)`)
+    ok = ok && budget.ok
+  }
+
+  process.exit(ok ? 0 : 1)
 }
 
 main().catch(error => {

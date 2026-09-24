@@ -279,7 +279,10 @@ deliberate exception, for the reason that section explains.
   YOUR_IRI --note 69@0:1` (an instrument) or `-- YOUR_IRI` (an effect, fed
   `ReferenceHost`'s own impulse) renders it headless and reports whether it produced audio,
   stayed within a peak bound, and, for an instrument given notes, actually responded to
-  them. It runs the real code; it does not replace hearing it.
+  them. It runs the real code; it does not replace hearing it. Add `--measure-budget` for a
+  coarse sanity check that rendering keeps up with real time; it runs in Node, offline, so it
+  can only catch a plugin off by orders of magnitude, such as an unbounded loop, not one that
+  is merely tight on a slow device.
 
 ## Plugins you can read
 

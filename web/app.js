@@ -393,6 +393,65 @@ function drawRack () {
       element.classList.add('is-foreign')
     }
 
+    // Dragging a plugin in the rack rewires the chain, not only where it is
+    // drawn (TODO.md): reorderNode heals the gap it leaves, reconnecting
+    // what it stood between. It lands in its new position unwired, same as
+    // a freshly added node, for a person to connect deliberately: see
+    // Project.js's reorderNode for why it does not also guess a connection
+    // there. Move earlier/later buttons are the keyboard equivalent WCAG
+    // 2.1.1 requires, ordinary buttons rather than an arrow-key scheme, so
+    // nothing beyond Tab and Enter/Space needs learning.
+    const index = nodes.indexOf(node)
+    const reorderTo = target => {
+      const result = dispatcher.apply([{ op: 'reorderNode', id: node.id, index: target }])
+      if (!result.ok) log(result.message, 'error')
+      else log(`moved ${labelFor(node.id)}`)
+    }
+
+    // A span, not a button: it offers no capability a keyboard user does not
+    // already have through Move earlier/later, so it is hidden from
+    // assistive technology rather than a focusable control that does
+    // nothing when activated by anything but a mouse.
+    const grip = document.createElement('span')
+    grip.className = 'grip'
+    grip.textContent = '≡'
+    grip.setAttribute('aria-hidden', 'true')
+    grip.draggable = true
+    grip.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', node.id)
+      e.dataTransfer.effectAllowed = 'move'
+    })
+
+    const moveEarlier = document.createElement('button')
+    moveEarlier.type = 'button'
+    moveEarlier.className = 'reorder'
+    moveEarlier.textContent = '◀'
+    moveEarlier.setAttribute('aria-label', `Move ${labelFor(node.id)} earlier in the chain`)
+    moveEarlier.disabled = index === 0
+    moveEarlier.addEventListener('click', () => reorderTo(index - 1))
+
+    const moveLater = document.createElement('button')
+    moveLater.type = 'button'
+    moveLater.className = 'reorder'
+    moveLater.textContent = '▶'
+    moveLater.setAttribute('aria-label', `Move ${labelFor(node.id)} later in the chain`)
+    moveLater.disabled = index === nodes.length - 1
+    moveLater.addEventListener('click', () => reorderTo(index + 1))
+
+    element.addEventListener('dragover', e => {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      element.classList.add('drag-over')
+    })
+    element.addEventListener('dragleave', () => element.classList.remove('drag-over'))
+    element.addEventListener('drop', e => {
+      e.preventDefault()
+      element.classList.remove('drag-over')
+      const draggedId = e.dataTransfer.getData('text/plain')
+      if (!draggedId || draggedId === node.id) return
+      reorderTo(index)
+    })
+
     const remove = document.createElement('button')
     remove.className = 'remove'
     remove.type = 'button'
@@ -405,7 +464,7 @@ function drawRack () {
       if (!result.ok) log(result.message, 'error')
       else { forgetNode(node.id); log(`removed ${node.label}`) }
     })
-    element.querySelector('header').append(remove)
+    element.querySelector('header').append(grip, moveEarlier, moveLater, remove)
 
     // The channel strip, above the plugin's own controls. Not drawn by Panel,
     // because nothing the plugin declares describes it.

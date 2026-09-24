@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolve } from 'node:path'
 import { existsSync } from 'node:fs'
-import { checkPlugin } from '../../src/host/PluginCheck.js'
+import { checkPlugin, checkRenderBudget } from '../../src/host/PluginCheck.js'
 
 const root = resolve(import.meta.dirname, '../..')
 const cascadeDir = resolve(root, 'plugins/cascade')
@@ -66,4 +66,20 @@ suite('checkPlugin', () => {
     })
     expect(result.loaded.map(l => l.label)).toEqual(['Pulse', 'Cascade'])
   })
+})
+
+suite('checkRenderBudget', () => {
+  it('passes a real plugin comfortably, rendering far faster than real time', async () => {
+    const result = await checkRenderBudget({ iris: [CASCADE], roots })
+    expect(result.ok).toBe(true)
+    expect(result.realTimeMultiple).toBeGreaterThanOrEqual(0)
+    expect(result.realTimeMultiple).toBeLessThan(1) // an offline Node render, well under real time
+  }, 20000)
+
+  it('fails when the margin is set below what any render takes', async () => {
+    // Not a claim about the plugin: proves the check can fail at all, rather
+    // than a marginFactor that silently always passes.
+    const result = await checkRenderBudget({ iris: [CASCADE], roots, marginFactor: 0 })
+    expect(result.ok).toBe(false)
+  }, 20000)
 })

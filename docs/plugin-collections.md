@@ -64,10 +64,13 @@ Anything else in the document is permitted and ignored: `dcterms:creator`, `prov
 profile at each IRI is the only statement of what a plugin is, and a second copy is one that
 can be out of date.
 
-The terms are `jig:PluginCollection`, a subclass of
-[`dcmitype:Collection`](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/terms/Collection/),
+The terms are `jig:PluginCollection`, a subclass of `trn:PluginCollection`
+(`transmission/vocabs/profile.ttl`, itself a subclass of
+[`dcmitype:Collection`](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/terms/Collection/)),
 and [`dcterms:hasPart`](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/terms/hasPart/)
-and `rdfs:label`, reused unchanged. `vocabs/shapes.ttl` enforces this section as
+and `rdfs:label`, reused unchanged. `jig:PluginCollection` exists because nothing about a
+collection is specific to a web plugin; a native catalogue could publish one the same shape
+under `trn:PluginCollection` directly. `vocabs/shapes.ttl` enforces this section as
 `jig:PluginCollectionShape`, `examples/reference-collection.ttl` is a valid collection and
 `examples/counterexample-collection.ttl` breaks each constraint once.
 

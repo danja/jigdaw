@@ -89,10 +89,14 @@ describe('the jig: vocabulary', () => {
   it('does not use a trn: term that upstream does not declare, except known gaps', () => {
     // trn: is the shared vocabulary. Using a term it does not define means either
     // a typo or an extension that has to be proposed upstream rather than forked.
+    // $HOME rather than a hardcoded user, matching WamModule.test.js's own
+    // sibling-checkout check: this repository is not the only place that runs
+    // this suite.
+    const home = process.env.HOME ?? ''
     const upstream = [
-      '/home/danny/github/transmission/vocabs/profile.ttl',
-      '/home/danny/github/plugin-universe/vocabs/trn-profile.ttl',
-      '/home/danny/github/plugin-universe/vocabs/trn-extensions.ttl'
+      join(home, 'github/transmission/vocabs/profile.ttl'),
+      join(home, 'github/plugin-universe/vocabs/trn-profile.ttl'),
+      join(home, 'github/plugin-universe/vocabs/trn-extensions.ttl')
     ].filter(p => { try { readFileSync(p); return true } catch { return false } })
 
     if (upstream.length === 0) return // sibling repositories not present

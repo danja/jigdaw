@@ -170,6 +170,20 @@
   .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:#2a2f38;
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .slot .remove:hover { color:var(--err); border-color:var(--err); }
+  .slot .reorder { min-height:32px; min-width:32px; padding:4px 8px; font-size:12px;
+    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    cursor:pointer; }
+  .slot .reorder:hover:not(:disabled) { color:var(--fg); border-color:var(--accent); }
+  .slot .reorder:disabled { opacity:.4; cursor:default; }
+  /* Only this handle is draggable, not the slot: the slot holds knobs and
+     other controls with their own pointer-drag behaviour (Dial.js), and
+     making the whole thing an HTML5 drag source would fight them for the
+     same mousedown. */
+  .slot .grip { display:inline-flex; align-items:center; justify-content:center;
+    min-height:32px; min-width:32px; padding:4px 8px; font-size:14px;
+    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    cursor:grab; touch-action:none; }
+  .slot.drag-over { outline:2px dashed var(--accent); outline-offset:-2px; }
   .wire { height:20px; margin-left:26px; border-left:2px solid var(--wire); position:relative; }
   .wire::after { content:""; position:absolute; bottom:-1px; left:-5px;
     border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid var(--wire); }

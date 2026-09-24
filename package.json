@@ -12,6 +12,7 @@
     "test": "node bin/check-suites.js && vitest run",
     "validate": "node bin/validate.js",
     "check-plugin": "node bin/check-plugin.js",
+    "check-wasm-abi": "node bin/check-wasm-abi.js",
     "check-suites": "node bin/check-suites.js",
     "build:web": "node bin/build-web.js",
     "serve": "node bin/serve.js",

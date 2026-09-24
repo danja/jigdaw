@@ -73,6 +73,9 @@ Indices SHOULD be contiguous from zero. A host MUST NOT assume they are.
 ## The calling sequence
 
 1. Instantiate the module with no imports. A module declaring this ABI MUST NOT require any.
+   `npm run check-wasm-abi -- your.wasm` checks this statically, against the module's own
+   compiled bytes, before any host tries to instantiate it
+   ([src/validate/WasmAbi.js](https://github.com/danja/jigdaw/blob/main/src/validate/WasmAbi.js)).
 2. Call `jig_init(sampleRate)`.
 3. Read `jig_max_frames()` and never pass more than that to `jig_process`.
 4. Take the input and output pointers **once** and keep them.

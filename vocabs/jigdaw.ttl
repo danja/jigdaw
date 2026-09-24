@@ -27,7 +27,6 @@
 @prefix vann:    <http://purl.org/vocab/vann/> .
 @prefix prov:    <http://www.w3.org/ns/prov#> .
 @prefix sec:     <https://w3id.org/security#> .
-@prefix dcmitype: <http://purl.org/dc/dcmitype/> .
 
 <http://purl.org/stuff/jigdaw/>
     a owl:Ontology ;
@@ -638,13 +637,19 @@ jig:entryPoint a owl:DatatypeProperty ;
 ## file, so that a person can hand a host a single URL and get a set of plugins
 ## to choose from. Membership is dcterms:hasPart and names are rdfs:label, both
 ## reused unchanged, so the only term minted here is the class a host looks for.
+##
+## Proposed upstream and now a subclass of trn:PluginCollection
+## (transmission/vocabs/profile.ttl), since nothing about the shape is
+## specific to a web plugin. Kept as a subclass, TODO.md said, so no
+## collection already published under jig:PluginCollection breaks: it still
+## validates against jig:PluginCollectionShape and still is one, and is now
+## also a trn:PluginCollection for anything that only knows that class.
 
 jig:PluginCollection a owl:Class ;
-    rdfs:subClassOf dcmitype:Collection ;
+    rdfs:subClassOf trn:PluginCollection ;
     rdfs:label "Plugin Collection" ;
     rdfs:comment """A named set of plugins, each included by its IRI with dcterms:hasPart
         and named with rdfs:label in the collection document. A collection is one
         publisher's opinion about what is worth finding: it confers no trust, carries no
         code and no digests, and the profile each IRI returns governs wherever the two
-        disagree. Candidate for the transmissions vocabulary, since nothing about it is
-        specific to web plugins.""" .
+        disagree.""" .

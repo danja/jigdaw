@@ -140,6 +140,81 @@ const OPERATIONS = {
   },
 
   /**
+   * Move a node to a new position among the others, healing the direct
+   * link(s) it stood between the same way `removeNode`'s heal does. Node
+   * order is otherwise display only (the compiler reads connections, never
+   * this order), so this is the one place order and topology change
+   * together, on purpose: TODO.md decided a drag in the rack means the
+   * signal path moves, not only the drawing.
+   *
+   * Healing acts only on a direct link between exactly the two nodes
+   * involved, the same "one obvious answer" restriction `removeNode`'s heal
+   * uses, and for the same reason: a node with several inputs or outputs at
+   * that point has no single right rewiring and guessing at one would
+   * silently rewire a graph somebody built.
+   *
+   * Deliberately not attempted: splicing the node into whatever direct link
+   * joins its new neighbours. A first version guessed port 0 on the moved
+   * node for that, which is exactly the kind of guess this file otherwise
+   * refuses to make, and it broke on the first plugin with no such port: an
+   * uncaught IndexSizeError out of the real Web Audio graph, past every
+   * check `addConnection` normally goes through, because the model has no
+   * profile to check a guessed port against
+   * (OpDispatcher.apply's own comment says why: "the model checks the shape
+   * of an endpoint and cannot check more"). A node landing in a new
+   * position is simply unwired there, exactly like a freshly added one,
+   * for a person to connect deliberately.
+   */
+  reorderNode (state, change, counters) {
+    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`)
+    if (!Number.isInteger(change.index) || change.index < 0) throw new Error('needs a non-negative integer index')
+
+    const order = [...state.nodes.keys()]
+    const from = order.indexOf(change.id)
+    const oldPrev = order[from - 1] ?? null
+    const oldNext = order[from + 1] ?? null
+
+    const to = Math.min(change.index, order.length - 1)
+    order.splice(from, 1)
+    order.splice(to, 0, change.id)
+
+    state.nodes = new Map(order.map(id => [id, state.nodes.get(id)]))
+    if (from === to) return change.id
+
+    const linksBetween = (a, b) => a && b
+      ? [...state.connections.values()].filter(c => c.from.node === a && c.to.node === b)
+      : []
+    // Grouped by signal kind, and only acted on where a side has exactly
+    // one: the same restriction removeNode's heal uses, and for the same
+    // reason. A second connection of the same kind between the same two
+    // nodes (a stereo pair sent as two mono edges, say) has no single right
+    // rewiring to guess, so it is left exactly as it was instead.
+    const bySignalKind = links => {
+      const grouped = new Map()
+      for (const link of links) {
+        const list = grouped.get(link.signalKind) ?? []
+        list.push(link)
+        grouped.set(link.signalKind, list)
+      }
+      return grouped
+    }
+    const tryReconnect = join => { try { OPERATIONS.addConnection(state, join, counters) } catch { /* already joined */ } }
+
+    // Heal the gap this node leaves.
+    const oldIn = bySignalKind(linksBetween(oldPrev, change.id))
+    const oldOut = bySignalKind(linksBetween(change.id, oldNext))
+    for (const [signalKind, before] of oldIn) {
+      const after = oldOut.get(signalKind) ?? []
+      if (before.length === 1 && after.length === 1) {
+        tryReconnect({ from: { ...before[0].from }, to: { ...after[0].to }, signalKind })
+      }
+    }
+    for (const link of [...oldIn.values(), ...oldOut.values()].flat()) state.connections.delete(link.id)
+
+    return change.id
+  },
+
+  /**
    * Remove a node, and optionally rejoin what it stood between.
    *
    * `heal` is off by default, so a changeset means what it says. With it on, a

@@ -328,3 +328,118 @@ describe('removing a node from the middle', () => {
     expect(project.connections.map(c => c.id)).toEqual(['ab'])
   })
 })
+
+describe('reordering a node', () => {
+  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+  const iri = n => `https://example.org/plugins/${n}/`
+
+  function chain () {
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', id: 'bc', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }
+    ])
+    return project
+  }
+
+  it('moves the node and bumps the revision', () => {
+    const project = chain()
+    const before = project.revision
+    const result = project.apply([{ op: 'reorderNode', id: 'c', index: 0 }])
+    expect(result.applied).toBe(true)
+    expect(project.revision).toBe(before + 1)
+    expect(project.nodes.map(n => n.id)).toEqual(['c', 'a', 'b'])
+  })
+
+  it('refuses an unknown node, or a bad index', () => {
+    const project = chain()
+    expect(() => project.apply([{ op: 'reorderNode', id: 'nope', index: 0 }])).toThrow(/no such node/)
+    expect(() => project.apply([{ op: 'reorderNode', id: 'a', index: -1 }])).toThrow(/index/)
+    expect(() => project.apply([{ op: 'reorderNode', id: 'a' }])).toThrow(/index/)
+  })
+
+  it('does nothing to the wiring when the position does not actually change', () => {
+    const project = chain()
+    const result = project.apply([{ op: 'reorderNode', id: 'b', index: 1 }])
+    expect(result.applied).toBe(true)
+    expect(project.connections.map(c => c.id).sort()).toEqual(['ab', 'bc'])
+  })
+
+  it('heals the gap it leaves when moved out of the middle, same as removeNode', () => {
+    const project = chain()
+    project.apply([{ op: 'reorderNode', id: 'b', index: 2 }])
+    expect(project.nodes.map(n => n.id)).toEqual(['a', 'c', 'b'])
+    // a-b and b-c are gone; a is rejoined directly to c.
+    expect(project.connections).toHaveLength(1)
+    expect(project.connections[0]).toMatchObject({ from: { node: 'a' }, to: { node: 'c' }, signalKind: AUDIO })
+  })
+
+  it('does not splice into the direct link between its new neighbours', () => {
+    // A first version guessed port 0 on the moved node for this. The model
+    // has no profile to check a guessed port against (OpDispatcher.apply's
+    // own comment says why), and a wrong guess is an uncaught error out of
+    // the real Web Audio graph, not a caught, reported one: worse than
+    // leaving the node unwired in its new position, for a person to
+    // connect deliberately, same as a freshly added one.
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 3 }, signalKind: AUDIO }
+    ])
+    project.apply([{ op: 'reorderNode', id: 'c', index: 1 }])
+    expect(project.nodes.map(n => n.id)).toEqual(['a', 'c', 'b'])
+    expect(project.connections).toHaveLength(1)
+    expect(project.connections[0].id).toBe('ab')
+  })
+
+  it('heals each signal kind separately when moved out of the middle', () => {
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: MIDI },
+      { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: MIDI }
+    ])
+    project.apply([{ op: 'reorderNode', id: 'b', index: 2 }])
+    expect(project.nodes.map(n => n.id)).toEqual(['a', 'c', 'b'])
+    expect(project.connections.map(c => c.signalKind).sort()).toEqual([AUDIO, MIDI].sort())
+    for (const c of project.connections) {
+      expect(c.from.node).toBe('a')
+      expect(c.to.node).toBe('c')
+    }
+  })
+
+  it('leaves connections between its new neighbours alone, however many there are', () => {
+    const project = new Project()
+    project.apply([
+      { op: 'addNode', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'a', portIndex: 1 }, to: { node: 'b', portIndex: 1 }, signalKind: AUDIO }
+    ])
+    const before = project.connections.length
+    project.apply([{ op: 'reorderNode', id: 'c', index: 1 }])
+    expect(project.nodes.map(n => n.id)).toEqual(['a', 'c', 'b'])
+    expect(project.connections).toHaveLength(before)
+    for (const c of project.connections) expect(c.from.node).toBe('a')
+  })
+
+  it('leaves connections alone at either end, where there is nothing to inherit', () => {
+    const project = chain()
+    project.apply([{ op: 'reorderNode', id: 'a', index: 2 }])
+    expect(project.nodes.map(n => n.id)).toEqual(['b', 'c', 'a'])
+    // b-c is healed from having lost b's old predecessor (nothing, so no
+    // heal fires), and a lands after c with nothing to splice into.
+    expect(project.connections.map(c => c.id).sort()).toEqual(['bc'])
+  })
+})

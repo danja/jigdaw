@@ -22017,6 +22017,71 @@ var OPERATIONS = {
     return id;
   },
   /**
+   * Move a node to a new position among the others, healing the direct
+   * link(s) it stood between the same way `removeNode`'s heal does. Node
+   * order is otherwise display only (the compiler reads connections, never
+   * this order), so this is the one place order and topology change
+   * together, on purpose: TODO.md decided a drag in the rack means the
+   * signal path moves, not only the drawing.
+   *
+   * Healing acts only on a direct link between exactly the two nodes
+   * involved, the same "one obvious answer" restriction `removeNode`'s heal
+   * uses, and for the same reason: a node with several inputs or outputs at
+   * that point has no single right rewiring and guessing at one would
+   * silently rewire a graph somebody built.
+   *
+   * Deliberately not attempted: splicing the node into whatever direct link
+   * joins its new neighbours. A first version guessed port 0 on the moved
+   * node for that, which is exactly the kind of guess this file otherwise
+   * refuses to make, and it broke on the first plugin with no such port: an
+   * uncaught IndexSizeError out of the real Web Audio graph, past every
+   * check `addConnection` normally goes through, because the model has no
+   * profile to check a guessed port against
+   * (OpDispatcher.apply's own comment says why: "the model checks the shape
+   * of an endpoint and cannot check more"). A node landing in a new
+   * position is simply unwired there, exactly like a freshly added one,
+   * for a person to connect deliberately.
+   */
+  reorderNode(state, change, counters) {
+    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
+    if (!Number.isInteger(change.index) || change.index < 0) throw new Error("needs a non-negative integer index");
+    const order = [...state.nodes.keys()];
+    const from = order.indexOf(change.id);
+    const oldPrev = order[from - 1] ?? null;
+    const oldNext = order[from + 1] ?? null;
+    const to = Math.min(change.index, order.length - 1);
+    order.splice(from, 1);
+    order.splice(to, 0, change.id);
+    state.nodes = new Map(order.map((id) => [id, state.nodes.get(id)]));
+    if (from === to) return change.id;
+    const linksBetween = (a2, b) => a2 && b ? [...state.connections.values()].filter((c3) => c3.from.node === a2 && c3.to.node === b) : [];
+    const bySignalKind = (links) => {
+      const grouped = /* @__PURE__ */ new Map();
+      for (const link of links) {
+        const list = grouped.get(link.signalKind) ?? [];
+        list.push(link);
+        grouped.set(link.signalKind, list);
+      }
+      return grouped;
+    };
+    const tryReconnect = (join) => {
+      try {
+        OPERATIONS.addConnection(state, join, counters);
+      } catch {
+      }
+    };
+    const oldIn = bySignalKind(linksBetween(oldPrev, change.id));
+    const oldOut = bySignalKind(linksBetween(change.id, oldNext));
+    for (const [signalKind, before] of oldIn) {
+      const after = oldOut.get(signalKind) ?? [];
+      if (before.length === 1 && after.length === 1) {
+        tryReconnect({ from: { ...before[0].from }, to: { ...after[0].to }, signalKind });
+      }
+    }
+    for (const link of [...oldIn.values(), ...oldOut.values()].flat()) state.connections.delete(link.id);
+    return change.id;
+  },
+  /**
    * Remove a node, and optionally rejoin what it stood between.
    *
    * `heal` is off by default, so a changeset means what it says. With it on, a
@@ -25112,6 +25177,48 @@ function drawRack() {
       element.querySelector("header h3").append(" ", mark);
       element.classList.add("is-foreign");
     }
+    const index = nodes.indexOf(node);
+    const reorderTo = (target) => {
+      const result = dispatcher.apply([{ op: "reorderNode", id: node.id, index: target }]);
+      if (!result.ok) log(result.message, "error");
+      else log(`moved ${labelFor(node.id)}`);
+    };
+    const grip = document.createElement("span");
+    grip.className = "grip";
+    grip.textContent = "\u2261";
+    grip.setAttribute("aria-hidden", "true");
+    grip.draggable = true;
+    grip.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", node.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    const moveEarlier = document.createElement("button");
+    moveEarlier.type = "button";
+    moveEarlier.className = "reorder";
+    moveEarlier.textContent = "\u25C0";
+    moveEarlier.setAttribute("aria-label", `Move ${labelFor(node.id)} earlier in the chain`);
+    moveEarlier.disabled = index === 0;
+    moveEarlier.addEventListener("click", () => reorderTo(index - 1));
+    const moveLater = document.createElement("button");
+    moveLater.type = "button";
+    moveLater.className = "reorder";
+    moveLater.textContent = "\u25B6";
+    moveLater.setAttribute("aria-label", `Move ${labelFor(node.id)} later in the chain`);
+    moveLater.disabled = index === nodes.length - 1;
+    moveLater.addEventListener("click", () => reorderTo(index + 1));
+    element.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      element.classList.add("drag-over");
+    });
+    element.addEventListener("dragleave", () => element.classList.remove("drag-over"));
+    element.addEventListener("drop", (e) => {
+      e.preventDefault();
+      element.classList.remove("drag-over");
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if (!draggedId || draggedId === node.id) return;
+      reorderTo(index);
+    });
     const remove = document.createElement("button");
     remove.className = "remove";
     remove.type = "button";
@@ -25125,7 +25232,7 @@ function drawRack() {
         log(`removed ${node.label}`);
       }
     });
-    element.querySelector("header").append(remove);
+    element.querySelector("header").append(grip, moveEarlier, moveLater, remove);
     if ((profile?.audioOutputs ?? 1) > 0) {
       let strip = strips.get(node.id);
       if (!strip) {

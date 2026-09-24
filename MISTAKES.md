@@ -2,6 +2,36 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-24 A guessed port reached the real Web Audio graph as an uncaught exception
+
+**What happened.** The first version of `reorderNode` (dragging a plugin in the rack to a new
+position, rewiring the chain to match) spliced the moved node into whatever direct connection
+joined its new neighbours, guessing `portIndex: 0` on the moved node's own end because
+neither neighbour's port layout says anything about a third plugin's. Moving Pulse (an
+instrument, `audioInputs: 0`) into a position that fed it audio threw `IndexSizeError: Failed
+to execute 'connect' on 'AudioNode': input index (0) exceeds number of inputs (0)`, uncaught,
+from inside `OpDispatcher.apply`'s `#rebuildLinks`, on a real render, past every check
+`addConnection` normally goes through.
+
+**Root cause.** `OpDispatcher.apply`'s own comment already states the layering this violated:
+"the model checks the shape of an endpoint and cannot check more... The engine has the
+profiles... So the check belongs here." `reorderNode` lives in `Project.js`, the model layer,
+which has no profile and so cannot know whether port 0 is valid for the node it was guessing
+onto. The guessed connection reached `#rebuildLinks` and the real `AudioNode.connect` with no
+layer in between ever having the information needed to refuse it first. Found immediately by
+testing the feature end to end in a browser rather than only against `Project.test.js`, whose
+model-level assertions could not see the engine-level failure at all.
+
+**Prevention.** The splice was removed rather than guarded: a node moved to a new position is
+left unwired there, exactly like a freshly added one, for a person to connect deliberately.
+Healing the gap the node leaves (`reorderNode`'s other half) was never at risk the same way,
+because it only ever reuses a connection's own existing, already-validated endpoints, the same
+pattern `removeNode`'s heal already used safely. `tests/model/Project.test.js` now asserts the
+splice does not happen. A general fix, letting `OpDispatcher` catch an internally-synthesized
+connection's engine-level failure the way it already catches one from an external changeset,
+was not attempted; nothing else in the codebase currently has a way to manufacture a connection
+this route would need to guard against.
+
 ## 2026-09-24 A native adapter that loaded every plugin except the one using SIMD
 
 **What happened.** Ferrite, hosted in [transmission](https://github.com/danja/transmission),
