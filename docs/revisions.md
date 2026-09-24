@@ -1,5 +1,36 @@
 # Revisions
 
+## 2026-09-24. Plugin collections
+
+There was no way to hand a host a set of plugins. A plugin is one IRI and a session is a
+whole configuration, and nothing sat between the two: sharing "these reverbs" or "the plugins
+this tutorial uses" meant sending a list of URLs for someone to paste in one at a time.
+
+**What changed.**
+
+- [plugin-collections.md](plugin-collections.md), normative: a collection is one Turtle file
+  at one URL giving its name, a description, and the IRI and name of each plugin it includes.
+  It carries no code and no digests, and each plugin's own profile governs where the two
+  disagree.
+- `jig:PluginCollection`, a subclass of `dcmitype:Collection`, is the one new term.
+  Membership is `dcterms:hasPart` and names are `rdfs:label`, both reused unchanged. Declared
+  in `vocabs/jigdaw.ttl` and `src/rdf/Vocabulary.js`, constrained by
+  `jig:PluginCollectionShape` in `vocabs/shapes.ttl`, with
+  `examples/reference-collection.ttl` and `examples/counterexample-collection.ttl` beside
+  the other examples.
+- Opening a collection runs contract section 3.1 steps 1 and 2 for each member: fetch the
+  profile, parse and validate it, and check its required capabilities. It fetches no module,
+  processor, user interface or asset. Those are fetched and checked against their digests
+  when a person loads the plugin, which the host has to do at that point anyway.
+- The browser host opens collections from an "Open a collection" form and from
+  `?collection=<url>`. `web/collections/jigdaw.ttl` lists every plugin in this repository,
+  and `tests/catalogue/CollectionLoader.test.js` fails if it and `plugins/` disagree.
+
+**What it affects.** Nothing that already exists: no profile, project or bundle changes, and
+a host that never opens a collection still conforms. A host that does must refuse an invalid
+collection whole, report a failed member with the step and the reason rather than offer to
+load it, and still perform the whole of contract section 3.1 when a member is loaded.
+
 ## 2026-09-23. `doap:developer` added; provenance's scope stated explicitly
 
 An independent implementation, `diddums`, built against the published specification, fetched

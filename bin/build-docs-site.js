@@ -48,6 +48,7 @@ const GROUP_OF = {
   architecture: 'Specification',
   'module-abi': 'Specification',
   'plugin-bundles': 'Specification',
+  'plugin-collections': 'Specification',
   wam: 'Specification',
   'for-hosts': 'Guides',
   'for-plugin-authors': 'Guides',

@@ -611,6 +611,13 @@ audio-producing node, gathered rather than embedded per node), both built from
 moves with the model exactly as it does for any other edit; a node removed since the snapshot
 is reloaded from its IRI, the same path reopening a session takes.
 
+Plugin collections ([plugin-collections.md](plugin-collections.md)): a list of plugin IRIs
+with names, published as one Turtle file, so a person can hand the host one URL. Opening one
+performs contract section 3.1 steps 1 and 2 for every member (profile, validation,
+capabilities) and fetches no code, which is left to the ordinary load with its integrity
+checks. The page opens `web/collections/jigdaw.ttl`, or any collection named in
+`?collection=`.
+
 Still thin: no timeline, no recording, no plugin user interfaces of their own. See
 [index.md](index.md) for the current honest summary, published alongside the specification.
 

@@ -1,0 +1,36 @@
+# examples/counterexample-collection.ttl
+#
+# A deliberately broken collection. This file MUST NOT validate against
+# vocabs/shapes.ttl. It exists so the collection shapes are known to fire.
+#
+# Each defect is marked with the constraint that should catch it. Two
+# collections in one document, because some of the defects are the absence of
+# something the other one has.
+
+@base <https://example.org/collections/broken> .
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<#named-twice>
+    a jig:PluginCollection ;
+    # Two names, so a host cannot tell which to show.
+    rdfs:label "Delays" , "Echoes" ;
+    rdfs:comment "Everything that repeats." ;
+    # An http IRI off loopback, which no host served over TLS can reach.
+    dcterms:hasPart <http://example.org/plugins/tape/> ,
+    # Included but never named, so the collection cannot be listed until its
+    # profile arrives.
+                    <https://example.org/plugins/analog/> ,
+                    <https://example.org/plugins/digital/> .
+
+<http://example.org/plugins/tape/> rdfs:label "Tape" .
+<https://example.org/plugins/digital/> rdfs:label "Digital" .
+
+<#empty>
+    a jig:PluginCollection ;
+    # No name at all.
+    # Two descriptions.
+    rdfs:comment "Nothing yet." , "Still nothing." .
+    # No dcterms:hasPart, so it includes nothing.

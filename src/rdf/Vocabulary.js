@@ -41,7 +41,9 @@ export const vocabulary = Object.freeze({
   }),
 
   dcterms: Object.freeze({
-    created: `${DCTERMS}created`
+    created: `${DCTERMS}created`,
+    // A collection's members. docs/plugin-collections.md.
+    hasPart: `${DCTERMS}hasPart`
   }),
 
   // A plugin's version and its developer. DOAP rather than jig: terms, because
@@ -197,6 +199,9 @@ export const vocabulary = Object.freeze({
     foreignFormat: `${JIG}foreignFormat`,
     container: `${JIG}container`,
     entryPoint: `${JIG}entryPoint`,
+
+    // Collections. docs/plugin-collections.md.
+    PluginCollection: `${JIG}PluginCollection`,
 
     // Bundles and provenance
     Bundle: `${JIG}Bundle`,

@@ -1237,24 +1237,24 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const lo = first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
+      const lo = first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
       const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
       return BigInt(lo) + (BigInt(hi) << BigInt(32));
     });
     Buffer3.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const hi = first * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
+      const hi = first2 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
       return (BigInt(hi) << BigInt(32)) + BigInt(lo);
     });
@@ -1317,23 +1317,23 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
       const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-      return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
+      return (BigInt(val) << BigInt(32)) + BigInt(first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
     });
     Buffer3.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const val = (first << 24) + // Overflow
+      const val = (first2 << 24) + // Overflow
       this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
     });
@@ -8610,22 +8610,22 @@ var require_NQuads = __commonJS({
     var TYPE_DEFAULT_GRAPH = "DefaultGraph";
     var REGEX = {};
     (() => {
-      const iri2 = "(?:<([^:]+:[^>]*)>)";
+      const iri3 = "(?:<([^:]+:[^>]*)>)";
       const PN_CHARS_BASE = "A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD";
       const PN_CHARS_U = PN_CHARS_BASE + "_";
       const PN_CHARS = PN_CHARS_U + "0-9-\xB7\u0300-\u036F\u203F-\u2040";
       const BLANK_NODE_LABEL = "(_:(?:[" + PN_CHARS_U + "0-9])(?:(?:[" + PN_CHARS + ".])*(?:[" + PN_CHARS + "]))?)";
       const bnode = BLANK_NODE_LABEL;
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
-      const datatype = "(?:\\^\\^" + iri2 + ")";
+      const datatype = "(?:\\^\\^" + iri3 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
       const literal4 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
-      const subject = "(?:" + iri2 + "|" + bnode + ")" + ws;
-      const property = iri2 + ws;
-      const object = "(?:" + iri2 + "|" + bnode + "|" + literal4 + ")" + wso;
-      const graphName = "(?:\\.|(?:(?:" + iri2 + "|" + bnode + ")" + wso + "\\.))";
+      const subject = "(?:" + iri3 + "|" + bnode + ")" + ws;
+      const property = iri3 + ws;
+      const object = "(?:" + iri3 + "|" + bnode + "|" + literal4 + ")" + wso;
+      const graphName = "(?:\\.|(?:(?:" + iri3 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
       REGEX.quad = new RegExp(
@@ -9982,8 +9982,8 @@ var NamedNode, NamedNode_default;
 var init_NamedNode = __esm({
   "node_modules/@rdfjs/data-model/lib/NamedNode.js"() {
     NamedNode = class {
-      constructor(iri2) {
-        this.value = iri2;
+      constructor(iri3) {
+        this.value = iri3;
       }
       equals(other) {
         return !!other && other.termType === this.termType && other.value === this.value;
@@ -13174,7 +13174,9 @@ var init_Vocabulary = __esm({
         name: `${FOAF}name`
       }),
       dcterms: Object.freeze({
-        created: `${DCTERMS}created`
+        created: `${DCTERMS}created`,
+        // A collection's members. docs/plugin-collections.md.
+        hasPart: `${DCTERMS}hasPart`
       }),
       // A plugin's version and its developer. DOAP rather than jig: terms, because
       // LV2 describes a plugin project with DOAP and this vocabulary already
@@ -13319,6 +13321,8 @@ var init_Vocabulary = __esm({
         foreignFormat: `${JIG}foreignFormat`,
         container: `${JIG}container`,
         entryPoint: `${JIG}entryPoint`,
+        // Collections. docs/plugin-collections.md.
+        PluginCollection: `${JIG}PluginCollection`,
         // Bundles and provenance
         Bundle: `${JIG}Bundle`,
         Bundling: `${JIG}Bundling`,
@@ -13370,17 +13374,17 @@ function asNumber(term3) {
   if (!Number.isFinite(n2)) throw new Error(`not a number: ${term3.value}`);
   return n2;
 }
-function resolveLocation(location, baseIRI) {
-  return new URL(location, baseIRI).toString();
+function resolveLocation(location2, baseIRI) {
+  return new URL(location2, baseIRI).toString();
 }
-function rebaseLocation(location, canonical, retrieval) {
-  if (!location || !canonical || !retrieval || canonical === retrieval) return location;
-  return location.startsWith(canonical) ? retrieval + location.slice(canonical.length) : location;
+function rebaseLocation(location2, canonical, retrieval) {
+  if (!location2 || !canonical || !retrieval || canonical === retrieval) return location2;
+  return location2.startsWith(canonical) ? retrieval + location2.slice(canonical.length) : location2;
 }
 function readResource(dataset2, term3, baseIRI, canonical) {
   if (!term3) return null;
-  const location = one(dataset2, term3, jig.location);
-  const resolved = location ? resolveLocation(location.value, baseIRI) : null;
+  const location2 = one(dataset2, term3, jig.location);
+  const resolved = location2 ? resolveLocation(location2.value, baseIRI) : null;
   return {
     iri: term3.value,
     location: rebaseLocation(resolved, canonical, baseIRI),
@@ -13575,11 +13579,11 @@ var LoadError, STEPS;
 var init_LoadError = __esm({
   "src/host/LoadError.js"() {
     LoadError = class extends Error {
-      constructor(step, message, { cause, iri: iri2 } = {}) {
+      constructor(step, message, { cause, iri: iri3 } = {}) {
         super(message, { cause });
         this.name = "LoadError";
         this.step = step;
-        this.iri = iri2 ?? null;
+        this.iri = iri3 ?? null;
       }
       toString() {
         return `${this.name} [${this.step}]: ${this.message}`;
@@ -14243,8 +14247,8 @@ var init_N3Lexer = __esm({
 });
 
 // node_modules/n3/src/N3DataFactory.js
-function namedNode3(iri2) {
-  return new NamedNode2(iri2);
+function namedNode3(iri3) {
+  return new NamedNode2(iri3);
 }
 function blankNode3(name) {
   return new BlankNode2(name || `n3-${_blankNodeCounter++}`);
@@ -14362,8 +14366,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.namedNode(iri)`), so that term validation can be applied;
        * the constructor assumes an already-validated IRI.
        */
-      constructor(iri2) {
-        super(iri2);
+      constructor(iri3) {
+        super(iri3);
       }
       // ### The term type of this term
       get termType() {
@@ -14587,7 +14591,7 @@ var init_N3Parser = __esm({
         this._implicitEmptyPrefix = !!options.implicitEmptyPrefix;
         this._emptyFormulaAsTrue = !!options.emptyFormulaAsTrue;
         if (isLineMode)
-          this._resolveRelativeIRI = (iri2) => {
+          this._resolveRelativeIRI = (iri3) => {
             return null;
           };
         this._blankNodePrefix = typeof options.blankNodePrefix !== "string" ? "" : options.blankNodePrefix.replace(/^(?!_:)/, "_:");
@@ -14746,10 +14750,10 @@ var init_N3Parser = __esm({
           // Read a relative or absolute IRI
           case "IRI":
           case "typeIRI":
-            const iri2 = this._resolveIRI(token.value);
-            if (iri2 === null)
+            const iri3 = this._resolveIRI(token.value);
+            if (iri3 === null)
               return this._error("Invalid IRI", token);
-            value2 = this._factory.namedNode(iri2);
+            value2 = this._factory.namedNode(iri3);
             break;
           // Read a prefixed name
           case "type":
@@ -15025,20 +15029,20 @@ var init_N3Parser = __esm({
       }
       // ### `_readIriPropertyListId` replaces a property list's blank node with its IRI
       _readIriPropertyListId(token) {
-        const iri2 = this._readEntity(token);
-        if (iri2 === void 0)
+        const iri3 = this._readEntity(token);
+        if (iri3 === void 0)
           return;
-        if (iri2.termType !== "NamedNode")
+        if (iri3.termType !== "NamedNode")
           return this._error(`Expected IRI after id but got ${token.type}`, token);
         const placeholder = this._subject;
-        this._subject = iri2;
+        this._subject = iri3;
         const context = this._contextStack[this._contextStack.length - 1];
         if (context.subject === placeholder)
-          context.subject = iri2;
+          context.subject = iri3;
         if (context.predicate === placeholder)
-          context.predicate = iri2;
+          context.predicate = iri3;
         if (context.object === placeholder)
-          context.object = iri2;
+          context.object = iri3;
         this._predicate = null;
         return this._readIriPropertyListPredicate;
       }
@@ -15469,10 +15473,10 @@ var init_N3Parser = __esm({
       }
       // ### `_readBaseIRI` reads the IRI of a base declaration
       _readBaseIRI(token) {
-        const iri2 = token.type === "IRI" && this._resolveIRI(token.value);
-        if (!iri2)
+        const iri3 = token.type === "IRI" && this._resolveIRI(token.value);
+        if (!iri3)
           return this._error("Expected valid IRI to follow base declaration", token);
-        this._setBase(iri2);
+        this._setBase(iri3);
         return this._readDeclarationPunctuation;
       }
       // ### `_isValidVersion` checks if the given version is valid for this parser to handle.
@@ -15796,42 +15800,42 @@ var init_N3Parser = __esm({
         this._callback = noop;
       }
       // ### `_resolveIRI` resolves an IRI against the base path
-      _resolveIRI(iri2) {
-        return /^[a-z][a-z0-9+.-]*:/i.test(iri2) ? iri2 : this._resolveRelativeIRI(iri2);
+      _resolveIRI(iri3) {
+        return /^[a-z][a-z0-9+.-]*:/i.test(iri3) ? iri3 : this._resolveRelativeIRI(iri3);
       }
       // ### `_resolveRelativeIRI` resolves an IRI against the base path,
       // assuming that a base path has been set and that the IRI is indeed relative
-      _resolveRelativeIRI(iri2) {
-        if (!iri2.length)
+      _resolveRelativeIRI(iri3) {
+        if (!iri3.length)
           return this._base;
-        switch (iri2[0]) {
+        switch (iri3[0]) {
           // Resolve relative fragment IRIs against the base IRI
           case "#":
-            return this._base + iri2;
+            return this._base + iri3;
           // Resolve relative query string IRIs by replacing the query string
           case "?":
-            return this._base.replace(/(?:\?.*)?$/, iri2);
+            return this._base.replace(/(?:\?.*)?$/, iri3);
           // Resolve root-relative IRIs at the root of the base IRI
           case "/":
-            return (iri2[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri2);
+            return (iri3[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri3);
           // Resolve all other IRIs at the base IRI's path
           default:
-            return /^[^/:]*:/.test(iri2) ? null : this._removeDotSegments(this._basePath + iri2);
+            return /^[^/:]*:/.test(iri3) ? null : this._removeDotSegments(this._basePath + iri3);
         }
       }
       // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
-      _removeDotSegments(iri2) {
-        if (!/(^|\/)\.\.?($|[/#?])/.test(iri2))
-          return iri2;
-        const length = iri2.length;
+      _removeDotSegments(iri3) {
+        if (!/(^|\/)\.\.?($|[/#?])/.test(iri3))
+          return iri3;
+        const length = iri3.length;
         let result = "", i2 = -1, pathStart = -1, segmentStart = 0, next = "/";
         while (i2 < length) {
           switch (next) {
             // The path starts with the first slash after the authority
             case ":":
               if (pathStart < 0) {
-                if (iri2[++i2] === "/" && iri2[++i2] === "/")
-                  while ((pathStart = i2 + 1) < length && iri2[pathStart] !== "/")
+                if (iri3[++i2] === "/" && iri3[++i2] === "/")
+                  while ((pathStart = i2 + 1) < length && iri3[pathStart] !== "/")
                     i2 = pathStart;
               }
               break;
@@ -15842,36 +15846,36 @@ var init_N3Parser = __esm({
               break;
             // Handle '/.' or '/..' path segments
             case "/":
-              if (iri2[i2 + 1] === ".") {
-                next = iri2[++i2 + 1];
+              if (iri3[i2 + 1] === ".") {
+                next = iri3[++i2 + 1];
                 switch (next) {
                   // Remove a '/.' segment
                   case "/":
-                    result += iri2.substring(segmentStart, i2 - 1);
+                    result += iri3.substring(segmentStart, i2 - 1);
                     segmentStart = i2 + 1;
                     break;
                   // Remove a trailing '/.' segment
                   case void 0:
                   case "?":
                   case "#":
-                    return result + iri2.substring(segmentStart, i2) + iri2.substr(i2 + 1);
+                    return result + iri3.substring(segmentStart, i2) + iri3.substr(i2 + 1);
                   // Remove a '/..' segment
                   case ".":
-                    next = iri2[++i2 + 1];
+                    next = iri3[++i2 + 1];
                     if (next === void 0 || next === "/" || next === "?" || next === "#") {
-                      result += iri2.substring(segmentStart, i2 - 2);
+                      result += iri3.substring(segmentStart, i2 - 2);
                       if ((segmentStart = result.lastIndexOf("/")) >= pathStart)
                         result = result.substr(0, segmentStart);
                       if (next !== "/")
-                        return `${result}/${iri2.substr(i2 + 1)}`;
+                        return `${result}/${iri3.substr(i2 + 1)}`;
                       segmentStart = i2 + 1;
                     }
                 }
               }
           }
-          next = iri2[++i2];
+          next = iri3[++i2];
         }
-        return result + iri2.substring(segmentStart);
+        return result + iri3.substring(segmentStart);
       }
       // ## Public methods
       // ### `parse` parses the N3 input and emits each parsed quad through the onQuad callback.
@@ -17120,7 +17124,7 @@ var require_rdf_literal = __commonJS({
 var keyFor, ConsentRequired, ForeignTrust;
 var init_ForeignTrust = __esm({
   "src/host/ForeignTrust.js"() {
-    keyFor = (iri2, digest) => `${iri2}\0${digest}`;
+    keyFor = (iri3, digest) => `${iri3}\0${digest}`;
     ConsentRequired = class extends Error {
       constructor(request) {
         super(
@@ -17143,14 +17147,14 @@ var init_ForeignTrust = __esm({
        * The three statements are what section 12.4 requires: which plugin, which
        * format, and what privilege it gets.
        */
-      static request({ iri: iri2, label, format, digest }) {
+      static request({ iri: iri3, label, format, digest }) {
         return Object.freeze({
-          iri: iri2,
-          label: label ?? iri2,
+          iri: iri3,
+          label: label ?? iri3,
           format,
           digest,
           statements: Object.freeze([
-            `${label ?? iri2} is a ${format ?? "foreign"} plugin.`,
+            `${label ?? iri3} is a ${format ?? "foreign"} plugin.`,
             "It runs in this page, with this page's privileges. It can read this project, anything this page has stored, and every other plugin loaded here.",
             "It is not sandboxed and its capabilities cannot be limited.",
             `Only this exact copy is being agreed to (${(digest ?? "").slice(0, 19)}\u2026). If it is updated, you will be asked again.`
@@ -17158,9 +17162,9 @@ var init_ForeignTrust = __esm({
         });
       }
       /** True only for this plugin and only for this container. */
-      isConsented(iri2, digest) {
-        if (!iri2 || !digest) return false;
-        return this.#store.get(keyFor(iri2, digest)) === true;
+      isConsented(iri3, digest) {
+        if (!iri3 || !digest) return false;
+        return this.#store.get(keyFor(iri3, digest)) === true;
       }
       /**
        * Record a person's decision.
@@ -17168,13 +17172,13 @@ var init_ForeignTrust = __esm({
        * Takes the digest as an argument rather than reading it from anywhere later,
        * so that consenting to one body of code cannot be made to cover another.
        */
-      consent(iri2, digest) {
-        if (!iri2 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
-        this.#store.set(keyFor(iri2, digest), true);
+      consent(iri3, digest) {
+        if (!iri3 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
+        this.#store.set(keyFor(iri3, digest), true);
       }
       /** Withdraw it. The next load asks again. */
-      revoke(iri2, digest) {
-        this.#store.delete(keyFor(iri2, digest));
+      revoke(iri3, digest) {
+        this.#store.delete(keyFor(iri3, digest));
       }
       /**
        * Throws unless this exact container has been consented to.
@@ -17182,9 +17186,9 @@ var init_ForeignTrust = __esm({
        * Throws rather than returning false so that a caller cannot proceed by
        * forgetting to check, which is the same reason verifyIntegrity throws.
        */
-      require({ iri: iri2, label, format, digest }) {
-        if (!this.isConsented(iri2, digest)) {
-          throw new ConsentRequired(_ForeignTrust.request({ iri: iri2, label, format, digest }));
+      require({ iri: iri3, label, format, digest }) {
+        if (!this.isConsented(iri3, digest)) {
+          throw new ConsentRequired(_ForeignTrust.request({ iri: iri3, label, format, digest }));
         }
         return true;
       }
@@ -17786,19 +17790,19 @@ var init_ForeignSupport = __esm({
        * A surface uses this to decide whether it is about to ask a person a
        * question, before it asks.
        */
-      async classify(iri2) {
-        const response = await this.#fetch(iri2, { headers: { accept: PROFILE_ACCEPT2 } });
+      async classify(iri3) {
+        const response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT2 } });
         if (!response.ok) {
-          throw new LoadError(STEPS.fetchProfile, `${iri2} returned ${response.status}`);
+          throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`);
         }
-        const dataset2 = await parseText(await response.text(), iri2);
+        const dataset2 = await parseText(await response.text(), iri3);
         return { kind: kindOf(dataset2), dataset: dataset2 };
       }
       /** The profile of a foreign plugin, validated, without running anything. */
-      async profileOf(iri2) {
-        const { kind, dataset: dataset2 } = await this.classify(iri2);
+      async profileOf(iri3) {
+        const { kind, dataset: dataset2 } = await this.classify(iri3);
         if (kind !== "foreign") {
-          throw new LoadError(STEPS.parseProfile, `${iri2} is not a foreign plugin`);
+          throw new LoadError(STEPS.parseProfile, `${iri3} is not a foreign plugin`);
         }
         if (this.#validator) {
           const report = await this.#validator.validate(dataset2);
@@ -17806,12 +17810,12 @@ var init_ForeignSupport = __esm({
             const seen = report.violations.map((v) => `${v.focusNode} ${v.path ?? "(node)"}`);
             throw new LoadError(
               STEPS.validateProfile,
-              `${iri2} does not validate:
+              `${iri3} does not validate:
   - ${seen.join("\n  - ")}`
             );
           }
         }
-        return readForeignProfile(dataset2, { baseIRI: iri2 });
+        return readForeignProfile(dataset2, { baseIRI: iri3 });
       }
       /**
        * Everything the engine needs to adopt one.
@@ -17819,8 +17823,8 @@ var init_ForeignSupport = __esm({
        * Throws ConsentRequired when this container has not been agreed to, which
        * the dispatcher turns into a result a surface can act on.
        */
-      async add(iri2, context) {
-        const profile = await this.profileOf(iri2);
+      async add(iri3, context) {
+        const profile = await this.profileOf(iri3);
         return loadForeignPlugin(profile, context, {
           trust: this.trust,
           origin: this.#origin,
@@ -17988,11 +17992,11 @@ var WASM_FEATURE_PROBES = Object.freeze({
     11
   )
 });
-function compact(iri2) {
+function compact(iri3) {
   for (const [prefix, namespace2] of PREFIXES) {
-    if (iri2.startsWith(namespace2)) return prefix + iri2.slice(namespace2.length);
+    if (iri3.startsWith(namespace2)) return prefix + iri3.slice(namespace2.length);
   }
-  return iri2;
+  return iri3;
 }
 function detectCapabilities(env = globalThis) {
   const offered = /* @__PURE__ */ new Set([
@@ -18235,47 +18239,47 @@ var PluginLoader = class {
     this.#processorUrlFor = processorUrl;
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
-  async loadProfile(iri2) {
+  async loadProfile(iri3) {
     let response;
     try {
-      response = await this.#fetch(iri2, { headers: { accept: PROFILE_ACCEPT } });
+      response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT } });
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchProfile,
-        `could not fetch ${iri2}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
-        { cause, iri: iri2 }
+        `could not fetch ${iri3}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, iri: iri3 }
       );
     }
     if (!response.ok) {
-      throw new LoadError(STEPS.fetchProfile, `${iri2} returned ${response.status}`, { iri: iri2 });
+      throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`, { iri: iri3 });
     }
     const text = await response.text();
     let dataset2;
     try {
-      dataset2 = await this.#parse(text, iri2);
+      dataset2 = await this.#parse(text, iri3);
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, `${iri2} is not parseable RDF: ${cause.message}`, { cause, iri: iri2 });
+      throw new LoadError(STEPS.parseProfile, `${iri3} is not parseable RDF: ${cause.message}`, { cause, iri: iri3 });
     }
     if (this.#validator) {
       const report = await this.#validator.validate(dataset2);
       if (!report.conforms) {
-        const first = report.violations[0];
+        const first2 = report.violations[0];
         throw new LoadError(
           STEPS.validateProfile,
-          `${iri2} is not a valid profile: ${first.message} (at ${first.focusNode}${first.path ? ` ${first.path}` : ""})`,
-          { iri: iri2 }
+          `${iri3} is not a valid profile: ${first2.message} (at ${first2.focusNode}${first2.path ? ` ${first2.path}` : ""})`,
+          { iri: iri3 }
         );
       }
     }
     let profile;
     try {
-      profile = readProfile(dataset2, { baseIRI: iri2 });
+      profile = readProfile(dataset2, { baseIRI: iri3 });
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri2 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri3 });
     }
     const negotiation = negotiate(profile, this.#capabilities);
     if (!negotiation.satisfied) {
-      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri2 });
+      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri3 });
     }
     return { profile, granted: negotiation.granted };
   }
@@ -19897,8 +19901,8 @@ function extractPropertyPath(pathNode, ns2, allowNamedNodeInList) {
     return pathNode.term;
   }
   if (pathNode.term.termType === "BlankNode" || pathNode.term.termType === "NamedNode") {
-    const first = pathNode.out(ns2.rdf.first).term;
-    if (first) {
+    const first2 = pathNode.out(ns2.rdf.first).term;
+    if (first2) {
       const paths = [...pathNode.list()];
       return paths.map((path) => extractPropertyPath(path, ns2, allowNamedNodeInList));
     }
@@ -20015,7 +20019,7 @@ function* extractSourceShapeStructure(shape, dataset2, startNode, visited = new 
     return;
   }
   const { factory: factory3 } = shape.context;
-  const { sh, rdfs: rdfs2 } = shape.context.ns;
+  const { sh, rdfs: rdfs3 } = shape.context.ns;
   const inListSize = (term3) => {
     const inConstraint = shape.constraints.find((x) => term3.equals(x.paramValue));
     return inConstraint?.nodeSet.size || -1;
@@ -20024,7 +20028,7 @@ function* extractSourceShapeStructure(shape, dataset2, startNode, visited = new 
   for (const quad3 of dataset2.match(startNode, null, null)) {
     if (quad3.predicate.equals(sh.in) && inListSize(quad3.object) > 3) {
       const msg = `sh:in has ${inListSize(quad3.object)} elements and has been removed from the report for brevity. Please refer the original shape`;
-      yield factory3.quad(quad3.subject, rdfs2.comment, factory3.literal(msg));
+      yield factory3.quad(quad3.subject, rdfs3.comment, factory3.literal(msg));
     } else {
       yield quad3;
       yield* extractSourceShapeStructure(shape, dataset2, quad3.object, visited);
@@ -20108,9 +20112,9 @@ var ShapesGraph = class {
   }
   get shapesWithTarget() {
     const { $shapes, ns: ns2 } = this.context;
-    const { rdfs: rdfs2, sh } = ns2;
+    const { rdfs: rdfs3, sh } = ns2;
     if (!this._shapesWithTarget) {
-      this._shapesWithTarget = this.shapeNodesWithConstraints.filter((shapeNode) => isInstanceOf($shapes.node(shapeNode), $shapes.node(rdfs2.Class), ns2) || $shapes.node(shapeNode).out([
+      this._shapesWithTarget = this.shapeNodesWithConstraints.filter((shapeNode) => isInstanceOf($shapes.node(shapeNode), $shapes.node(rdfs3.Class), ns2) || $shapes.node(shapeNode).out([
         sh.targetClass,
         sh.targetNode,
         sh.targetSubjectsOf,
@@ -20283,9 +20287,9 @@ var Shape = class _Shape {
   }
   getTargetNodes(dataGraph) {
     const { $shapes, ns: ns2 } = this.context;
-    const { rdfs: rdfs2, sh } = ns2;
+    const { rdfs: rdfs3, sh } = ns2;
     const results = new node_set_default();
-    if (isInstanceOf($shapes.node(this.shapeNode), $shapes.node(rdfs2.Class), ns2)) {
+    if (isInstanceOf($shapes.node(this.shapeNode), $shapes.node(rdfs3.Class), ns2)) {
       results.addAll(getInstancesOf(dataGraph.node(this.shapeNode), ns2));
     }
     const targetClasses = [...$shapes.dataset.match(this.shapeNode, sh.targetClass, null)];
@@ -20409,8 +20413,8 @@ var ValidationEngine = class _ValidationEngine {
     try {
       this.initReport();
       let foundError = false;
-      const shapes = this.context.shapesGraph.shapesWithTarget;
-      for (const shape of shapes) {
+      const shapes2 = this.context.shapesGraph.shapesWithTarget;
+      for (const shape of shapes2) {
         const focusNodes = shape.getTargetNodes(dataGraph);
         for (const focusNode of focusNodes) {
           if (this.validateNodeAgainstShape(focusNode, shape, dataGraph)) {
@@ -20836,8 +20840,8 @@ var validateAnd = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const andNode = constraint.getParameterValue(sh.and);
-    const shapes = rdfListToArray(context.$shapes.node(andNode));
-    return shapes.every((shape) => {
+    const shapes2 = rdfListToArray(context.$shapes.node(andNode));
+    return shapes2.every((shape) => {
       if (constraint.shape.isPropertyShape) {
         return context.nodeConformsToShape(focusNode, shape, constraint.pathObject);
       }
@@ -21122,8 +21126,8 @@ var validateOr = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const orNode = constraint.getParameterValue(sh.or);
-    const shapes = rdfListToArray(context.$shapes.node(orNode));
-    return shapes.some((shape) => context.nodeConformsToShape(valueNode, shape));
+    const shapes2 = rdfListToArray(context.$shapes.node(orNode));
+    return shapes2.some((shape) => context.nodeConformsToShape(valueNode, shape));
   }
 };
 var validatePattern = {
@@ -21216,8 +21220,8 @@ var validateXone = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const xoneNode = constraint.getParameterValue(sh.xone);
-    const shapes = rdfListToArray(context.$shapes.node(xoneNode));
-    const conformsCount = shapes.map((shape) => context.nodeConformsToShape(valueNode, shape)).filter(Boolean).length;
+    const shapes2 = rdfListToArray(context.$shapes.node(xoneNode));
+    const conformsCount = shapes2.map((shape) => context.nodeConformsToShape(valueNode, shape)).filter(Boolean).length;
     return conformsCount === 1;
   }
 };
@@ -21313,12 +21317,12 @@ var SHACLValidator = class {
    * @param shapes - Dataset containing the SHACL shapes for validation
    * @param {object} [options] - Validator options
    */
-  constructor(shapes, options) {
+  constructor(shapes2, options) {
     options = options || {};
     this.factory = options.factory || defaultEnv_default;
     this.ns = prepareNamespaces(this.factory);
     this.allowNamedNodeInList = options.allowNamedNodeInList === void 0 ? false : options.allowNamedNodeInList;
-    const dataset2 = this.factory.dataset([...shapes]);
+    const dataset2 = this.factory.dataset([...shapes2]);
     this.$shapes = this.factory.clownface({ dataset: dataset2 });
     this.$data = this.factory.clownface();
     this.validators = this.factory.termMap(validators_registry_default);
@@ -21419,8 +21423,8 @@ var rdf_validate_shacl_default = SHACLValidator;
 var WARNING = "http://www.w3.org/ns/shacl#Warning";
 var ShapeValidator = class {
   #validator;
-  constructor(shapes) {
-    this.#validator = new rdf_validate_shacl_default(shapes, { factory: env_default });
+  constructor(shapes2) {
+    this.#validator = new rdf_validate_shacl_default(shapes2, { factory: env_default });
   }
   /**
    * Returns { conforms, violations, warnings, results }.
@@ -21443,6 +21447,154 @@ var ShapeValidator = class {
     const violations = results.filter((r) => r.severity !== WARNING);
     const warnings = results.filter((r) => r.severity === WARNING);
     return { conforms: violations.length === 0, violations, warnings, results };
+  }
+};
+
+// src/rdf/CollectionReader.js
+init_env();
+init_Vocabulary();
+var { jig: jig3, rdfs: rdfs2, dcterms, rdf: rdfTerms2 } = vocabulary;
+var iri2 = (value2) => env_default.namedNode(value2);
+var first = (dataset2, subject, predicate) => [...dataset2.match(subject, iri2(predicate), null)][0]?.object.value ?? null;
+function readCollection(dataset2) {
+  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.PluginCollection))].map((q) => q.subject);
+  if (subjects.length === 0) throw new Error("the document declares no jig:PluginCollection");
+  if (subjects.length > 1) {
+    throw new Error(`the document declares ${subjects.length} collections (${subjects.map((s) => s.value).join(", ")}); a collection document holds one`);
+  }
+  const subject = subjects[0];
+  const members = [...dataset2.match(subject, iri2(dcterms.hasPart), null)].map((q) => ({ iri: q.object.value, label: first(dataset2, q.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
+  return {
+    iri: subject.value,
+    label: first(dataset2, subject, rdfs2.label),
+    comment: first(dataset2, subject, rdfs2.comment),
+    members
+  };
+}
+
+// src/catalogue/CollectionLoader.js
+var COLLECTION_ACCEPT = "text/turtle";
+var COLLECTION_STEPS = Object.freeze({
+  fetch: "fetch-collection",
+  parse: "parse-collection",
+  validate: "validate-collection"
+});
+var CollectionError = class extends Error {
+  constructor(step, message, { cause, url } = {}) {
+    super(message, { cause });
+    this.name = "CollectionError";
+    this.step = step;
+    this.url = url ?? null;
+  }
+};
+var CollectionLoader = class {
+  #fetch;
+  #parse;
+  #validator;
+  #verify;
+  #concurrency;
+  /**
+   * @param fetch       fetch implementation
+   * @param parse       (text, baseIRI) => Promise<dataset>
+   * @param validator   ShapeValidator over vocabs/shapes.ttl
+   * @param verify      iri => Promise<{ profile }>, throwing a LoadError
+   * @param concurrency most member profiles fetched at once
+   */
+  constructor({
+    // Bound rather than taken by reference: see PluginLoader.
+    fetch: fetch2 = (...args) => globalThis.fetch(...args),
+    parse,
+    validator,
+    verify,
+    concurrency = 6
+  } = {}) {
+    if (typeof parse !== "function") throw new Error("CollectionLoader needs a parse function");
+    if (!validator) throw new Error("CollectionLoader needs a shape validator");
+    if (typeof verify !== "function") throw new Error("CollectionLoader needs a verify function");
+    if (!(Number.isInteger(concurrency) && concurrency > 0)) throw new Error(`concurrency must be a positive integer, not ${concurrency}`);
+    this.#fetch = fetch2;
+    this.#parse = parse;
+    this.#validator = validator;
+    this.#verify = verify;
+    this.#concurrency = concurrency;
+  }
+  /** Section 3.1: the document, refused whole at the first failure. */
+  async read(url) {
+    let response;
+    try {
+      response = await this.#fetch(url, { headers: { accept: COLLECTION_ACCEPT } });
+    } catch (cause) {
+      throw new CollectionError(
+        COLLECTION_STEPS.fetch,
+        `could not fetch ${url}: ${cause?.message ?? cause}. If the collection is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, url }
+      );
+    }
+    if (!response.ok) throw new CollectionError(COLLECTION_STEPS.fetch, `${url} returned ${response.status}`, { url });
+    let dataset2;
+    try {
+      dataset2 = await this.#parse(await response.text(), url);
+    } catch (cause) {
+      throw new CollectionError(COLLECTION_STEPS.parse, `${url} is not parseable Turtle: ${cause.message}`, { cause, url });
+    }
+    const report = await this.#validator.validate(dataset2);
+    if (!report.conforms) {
+      const v = report.violations[0];
+      throw new CollectionError(
+        COLLECTION_STEPS.validate,
+        `${url} is not a valid collection: ${v.message} (at ${v.focusNode}${v.path ? ` ${v.path}` : ""})`,
+        { url }
+      );
+    }
+    try {
+      return { collection: readCollection(dataset2), warnings: report.warnings };
+    } catch (cause) {
+      throw new CollectionError(COLLECTION_STEPS.validate, `${url}: ${cause.message}`, { cause, url });
+    }
+  }
+  /** Section 3.2: one member, never throwing. */
+  async check(member) {
+    try {
+      const { profile } = await this.#verify(member.iri);
+      const notes = [];
+      if (profile.iri !== member.iri) notes.push(`names itself ${profile.iri}`);
+      if (member.label !== null && profile.label !== member.label) {
+        notes.push(`listed as "${member.label}", named "${profile.label}" by its profile`);
+      }
+      return {
+        iri: member.iri,
+        listedLabel: member.label,
+        ok: true,
+        profile,
+        notes
+      };
+    } catch (error2) {
+      return {
+        iri: member.iri,
+        listedLabel: member.label,
+        ok: false,
+        step: error2.step ?? null,
+        message: error2.message
+      };
+    }
+  }
+  /**
+   * Read the collection, then check every member, at most `concurrency` at a
+   * time so a collection of hundreds does not open hundreds of requests.
+   * Members come back in the collection's order, sorted by listed name.
+   */
+  async load(url) {
+    const { collection, warnings } = await this.read(url);
+    const results = new Array(collection.members.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < collection.members.length) {
+        const i2 = next++;
+        results[i2] = await this.check(collection.members[i2]);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(this.#concurrency, collection.members.length) }, worker));
+    return { url, collection, warnings, members: results };
   }
 };
 
@@ -21502,15 +21654,15 @@ var Engine = class {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin(iri2, { state = null } = {}) {
-    const { profile, granted } = await this.#loader.loadProfile(iri2);
+  async addPlugin(iri3, { state = null } = {}) {
+    const { profile, granted } = await this.#loader.loadProfile(iri3);
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile,
       granted,
       this.#context,
       { AudioWorkletNode: this.#nodeClass, state }
     );
-    return this.adopt({ iri: iri2, profile, node, ready, descriptors, granted });
+    return this.adopt({ iri: iri3, profile, node, ready, descriptors, granted });
   }
   /**
    * Take an instantiated node into the graph.
@@ -21521,7 +21673,7 @@ var Engine = class {
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
-  adopt({ iri: iri2, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
+  adopt({ iri: iri3, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
     let driver = null;
     if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
       driver = this.#context.createConstantSource();
@@ -21538,7 +21690,7 @@ var Engine = class {
       strip = { gain, panner, output: panner ?? gain };
     }
     const id = nextId();
-    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted, driver, strip };
+    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver, strip };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -22537,11 +22689,11 @@ var Inspections = class {
   }
   /** Record what happened loading `iri`. `outcome` is free text, per
    * jig:loadOutcome: "loaded", or "failed: <reason>". */
-  record({ iri: iri2, outcome }) {
+  record({ iri: iri3, outcome }) {
     if (!this.#storage) return;
     const records = this.#read();
     records.push({
-      inspectionOf: iri2,
+      inspectionOf: iri3,
       inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
       hostVersion: HOST_VERSION,
       loadOutcome: outcome
@@ -22553,8 +22705,8 @@ var Inspections = class {
     }
   }
   /** Every inspection recorded of one plugin, oldest first. */
-  forPlugin(iri2) {
-    return this.#read().filter((r) => r.inspectionOf === iri2);
+  forPlugin(iri3) {
+    return this.#read().filter((r) => r.inspectionOf === iri3);
   }
   /** Every inspection recorded, oldest first. */
   all() {
@@ -22989,23 +23141,23 @@ var OpDispatcher = class {
    * strip that list was silently one field short: a saved mix was written
    * correctly, read correctly, and dropped on the way back in.
    */
-  async addPlugin(iri2, { position, foreign = false, ...node } = {}) {
+  async addPlugin(iri3, { position, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
-      entry = foreign ? await this.#addForeign(iri2) : await this.#engine.addPlugin(iri2, { state: decodeState(node.state ?? null) });
+      entry = foreign ? await this.#addForeign(iri3) : await this.#engine.addPlugin(iri3, { state: decodeState(node.state ?? null) });
     } catch (error2) {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
       }
-      this.#inspections.record({ iri: iri2, outcome: `failed: ${error2.message}` });
+      this.#inspections.record({ iri: iri3, outcome: `failed: ${error2.message}` });
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    this.#inspections.record({ iri: iri2, outcome: "loaded" });
+    this.#inspections.record({ iri: iri3, outcome: "loaded" });
     const result = this.apply([{
       op: "addNode",
       ...node,
-      pluginIri: iri2,
+      pluginIri: iri3,
       label: node.label ?? entry.profile.label
     }]);
     if (!result.ok) {
@@ -23026,15 +23178,15 @@ var OpDispatcher = class {
    * Private because there must be exactly one way into running foreign code,
    * and it is the branch in addPlugin above.
    */
-  async #addForeign(iri2) {
+  async #addForeign(iri3) {
     if (!this.#foreign) {
       throw new Error(
         "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
       );
     }
-    const loaded = await this.#foreign.add(iri2, this.#engine.context);
+    const loaded = await this.#foreign.add(iri3, this.#engine.context);
     return this.#engine.adopt({
-      iri: iri2,
+      iri: iri3,
       profile: loaded.profile,
       node: loaded.node,
       ready: loaded.ready
@@ -23813,7 +23965,7 @@ function octavesForWidth(width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
 var playable = (profile) => (profile?.audioOutputs ?? 0) > 0 && (profile?.accepts ?? []).some((signal) => typeof signal === "string" && signal.includes("Midi"));
 var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
 var noteOff = (note) => Uint8Array.from([128, note, 0]);
-function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
+function createKeyboard(document2, { first: first2 = 48, octaves = 2, onNote } = {}) {
   const root = document2.createElement("div");
   root.className = "keyboard";
   root.setAttribute("role", "group");
@@ -23863,13 +24015,13 @@ function createKeyboard(document2, { first = 48, octaves = 2, onNote } = {}) {
   blacks.className = "keys-black";
   for (let octave = 0; octave < octaves; octave++) {
     for (const [index, semitone] of WHITE.entries()) {
-      whites.append(key(first + octave * 12 + semitone, "key key-white"));
+      whites.append(key(first2 + octave * 12 + semitone, "key key-white"));
       void index;
     }
   }
   for (let octave = 0; octave < octaves; octave++) {
     for (const [semitone, after] of Object.entries(BLACK)) {
-      const element = key(first + octave * 12 + Number(semitone), "key key-black");
+      const element = key(first2 + octave * 12 + Number(semitone), "key key-black");
       const position = octave * 7 + after;
       element.style.left = `calc(${position + 1} * var(--white-width) - var(--black-width) / 2)`;
       blacks.append(element);
@@ -23986,12 +24138,12 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri2 } = {}) {
+      async handler({ iri: iri3 } = {}) {
         const unavailable2 = requireCatalogue();
         if (unavailable2) return unavailable2;
-        if (!iri2) return failed("plugin_describe needs an iri");
+        if (!iri3) return failed("plugin_describe needs an iri");
         try {
-          return ok(await catalogue.describe(iri2));
+          return ok(await catalogue.describe(iri3));
         } catch (error2) {
           return failed(`catalogue: ${error2.message}`);
         }
@@ -24010,11 +24162,11 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
         if (unavailable2) return unavailable2;
         if (iris.length < 2) return failed("a chain needs at least two plugins");
         const described = [];
-        for (const iri2 of iris) {
+        for (const iri3 of iris) {
           try {
-            described.push(await catalogue.describe(iri2));
+            described.push(await catalogue.describe(iri3));
           } catch (error2) {
-            return failed(`could not describe ${iri2}: ${error2.message}`);
+            return failed(`could not describe ${iri3}: ${error2.message}`);
           }
         }
         const problems = [];
@@ -24047,10 +24199,10 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri2 } = {}) {
-        if (!iri2) return failed("plugin_load needs an iri");
+      async handler({ iri: iri3 } = {}) {
+        if (!iri3) return failed("plugin_load needs an iri");
         if (!loadPlugin2) return failed("this host cannot load plugins");
-        const result = await loadPlugin2(iri2);
+        const result = await loadPlugin2(iri3);
         if (!result.ok) return failed(result.message, { step: result.step ?? null });
         return ok({
           nodeId: result.nodeId,
@@ -24345,7 +24497,7 @@ async function ollamaChat({ endpoint: endpoint2, model, messages, tools }) {
 
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
-var { jig: jig3 } = vocabulary;
+var { jig: jig4 } = vocabulary;
 var PREFIXES2 = [
   ["jig", JIG],
   ["trn", TRN],
@@ -24353,11 +24505,11 @@ var PREFIXES2 = [
   ["dcterms", "http://purl.org/dc/terms/"],
   ["xsd", "http://www.w3.org/2001/XMLSchema#"]
 ];
-function term2(iri2) {
+function term2(iri3) {
   for (const [prefix, namespace2] of PREFIXES2) {
-    if (iri2.startsWith(namespace2)) return `${prefix}:${iri2.slice(namespace2.length)}`;
+    if (iri3.startsWith(namespace2)) return `${prefix}:${iri3.slice(namespace2.length)}`;
   }
-  return `<${iri2}>`;
+  return `<${iri3}>`;
 }
 function string(value2) {
   return JSON.stringify(String(value2));
@@ -24379,80 +24531,80 @@ function endpoint(lines, base, id, e) {
   if (hasIndex === hasSymbol) {
     throw new Error(`endpoint ${id} must give exactly one of portIndex or portSymbol`);
   }
-  const port = hasIndex ? `${term2(jig3.portIndex)} ${integer(e.portIndex)}` : `${term2(jig3.portSymbol)} ${string(e.portSymbol)}`;
-  lines.push(`<#${id}> a ${term2(jig3.Endpoint)} ; ${term2(jig3.endpointNode)} <#${e.node}> ; ${port} .`);
+  const port = hasIndex ? `${term2(jig4.portIndex)} ${integer(e.portIndex)}` : `${term2(jig4.portSymbol)} ${string(e.portSymbol)}`;
+  lines.push(`<#${id}> a ${term2(jig4.Endpoint)} ; ${term2(jig4.endpointNode)} <#${e.node}> ; ${port} .`);
 }
-function writeProject(project, { iri: iri2, created = null } = {}) {
-  if (!iri2) throw new Error("writeProject needs the project IRI, which becomes the @base");
+function writeProject(project, { iri: iri3, created = null } = {}) {
+  if (!iri3) throw new Error("writeProject needs the project IRI, which becomes the @base");
   const nodes = [...project.nodes].sort(byId);
   const connections = [...project.connections].sort(byId);
   const transport = project.transport;
   const lines = [];
-  lines.push(`@base <${iri2}> .`);
+  lines.push(`@base <${iri3}> .`);
   lines.push("");
   for (const [prefix, namespace2] of PREFIXES2) lines.push(`@prefix ${prefix}: <${namespace2}> .`);
   lines.push("");
   lines.push("<>");
-  lines.push(`    a ${term2(jig3.Project)} ;`);
+  lines.push(`    a ${term2(jig4.Project)} ;`);
   if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
-  lines.push(`    ${term2(jig3.revision)} ${integer(project.revision)} ;`);
+  lines.push(`    ${term2(jig4.revision)} ${integer(project.revision)} ;`);
   if (nodes.length > 0) {
-    lines.push(`    ${term2(jig3.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term2(jig4.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
   }
   if (connections.length > 0) {
-    lines.push(`    ${term2(jig3.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term2(jig4.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
   }
-  lines.push(`    ${term2(jig3.transport)} <#transport> .`);
+  lines.push(`    ${term2(jig4.transport)} <#transport> .`);
   for (const node of nodes) {
     lines.push("");
     lines.push(`<#${node.id}>`);
-    lines.push(`    a ${term2(jig3.Node)} ;`);
+    lines.push(`    a ${term2(jig4.Node)} ;`);
     if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`);
     const settings = [...node.settings.keys()].sort();
     if (settings.length > 0) {
-      lines.push(`    ${term2(jig3.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
+      lines.push(`    ${term2(jig4.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
-    if (node.state) lines.push(`    ${term2(jig3.nodeState)} ${string(node.state)} ;`);
+    if (node.state) lines.push(`    ${term2(jig4.nodeState)} ${string(node.state)} ;`);
     const channel = node.channel ?? {};
     if (channel.gain !== void 0 && channel.gain !== 1) {
-      lines.push(`    ${term2(jig3.gain)} ${decimal(channel.gain)} ;`);
+      lines.push(`    ${term2(jig4.gain)} ${decimal(channel.gain)} ;`);
     }
     if (channel.pan !== void 0 && channel.pan !== 0) {
-      lines.push(`    ${term2(jig3.pan)} ${decimal(channel.pan)} ;`);
+      lines.push(`    ${term2(jig4.pan)} ${decimal(channel.pan)} ;`);
     }
-    if (channel.muted) lines.push(`    ${term2(jig3.muted)} true ;`);
-    if (channel.soloed) lines.push(`    ${term2(jig3.soloed)} true ;`);
-    lines.push(`    ${term2(jig3.plugin)} <${node.pluginIri}> .`);
+    if (channel.muted) lines.push(`    ${term2(jig4.muted)} true ;`);
+    if (channel.soloed) lines.push(`    ${term2(jig4.soloed)} true ;`);
+    lines.push(`    ${term2(jig4.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
-      lines.push(`<#${node.id}-${symbol}> a ${term2(jig3.ParameterSetting)} ; ${term2(jig3.symbol)} ${string(symbol)} ; ${term2(jig3.value)} ${decimal(node.settings.get(symbol))} .`);
+      lines.push(`<#${node.id}-${symbol}> a ${term2(jig4.ParameterSetting)} ; ${term2(jig4.symbol)} ${string(symbol)} ; ${term2(jig4.value)} ${decimal(node.settings.get(symbol))} .`);
     }
   }
   for (const c3 of connections) {
     lines.push("");
     lines.push(`<#${c3.id}>`);
-    lines.push(`    a ${term2(jig3.Connection)} ;`);
-    lines.push(`    ${term2(jig3.from)} <#${c3.id}-from> ; ${term2(jig3.to)} <#${c3.id}-to> ;`);
-    lines.push(`    ${term2(jig3.signalKind)} ${term2(c3.signalKind)} .`);
-    endpoint(lines, iri2, `${c3.id}-from`, c3.from);
-    endpoint(lines, iri2, `${c3.id}-to`, c3.to);
+    lines.push(`    a ${term2(jig4.Connection)} ;`);
+    lines.push(`    ${term2(jig4.from)} <#${c3.id}-from> ; ${term2(jig4.to)} <#${c3.id}-to> ;`);
+    lines.push(`    ${term2(jig4.signalKind)} ${term2(c3.signalKind)} .`);
+    endpoint(lines, iri3, `${c3.id}-from`, c3.from);
+    endpoint(lines, iri3, `${c3.id}-to`, c3.to);
   }
   const points = [...transport.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   lines.push("");
   lines.push("<#transport>");
-  lines.push(`    a ${term2(jig3.Transport)} ;`);
-  lines.push(`    ${term2(jig3.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term2(jig3.beatUnit)} ${integer(transport.beatUnit)} ;`);
-  lines.push(`    ${term2(jig3.loopStart)} ${decimal(transport.loopStart)} ; ${term2(jig3.loopEnd)} ${decimal(transport.loopEnd)} ; ${term2(jig3.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
-  lines.push(`    ${term2(jig3.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
+  lines.push(`    a ${term2(jig4.Transport)} ;`);
+  lines.push(`    ${term2(jig4.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term2(jig4.beatUnit)} ${integer(transport.beatUnit)} ;`);
+  lines.push(`    ${term2(jig4.loopStart)} ${decimal(transport.loopStart)} ; ${term2(jig4.loopEnd)} ${decimal(transport.loopEnd)} ; ${term2(jig4.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
+  lines.push(`    ${term2(jig4.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
   points.forEach((point, i2) => {
-    lines.push(`<#t${i2}> a ${term2(jig3.TempoPoint)} ; ${term2(jig3.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig3.bpm)} ${decimal(point.bpm)} .`);
+    lines.push(`<#t${i2}> a ${term2(jig4.TempoPoint)} ; ${term2(jig4.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig4.bpm)} ${decimal(point.bpm)} .`);
   });
   return lines.join("\n") + "\n";
 }
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
-var { jig: jig4 } = vocabulary;
+var { jig: jig5 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 function objects2(dataset2, subject, predicate) {
@@ -24475,7 +24627,7 @@ function number(term3, what) {
 function findProject(dataset2) {
   const found = [];
   for (const quad3 of dataset2) {
-    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig4.Project) {
+    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig5.Project) {
       found.push(quad3.subject.value);
     }
   }
@@ -24485,20 +24637,20 @@ function findProject(dataset2) {
   }
   return found[0];
 }
-function idOf(iri2, projectIri, what) {
-  if (!iri2) throw new Error(`${what} is missing`);
-  const hash = iri2.indexOf("#");
-  if (hash < 0 || !iri2.startsWith(projectIri.split("#")[0])) {
-    throw new Error(`${what} is not a fragment of the project: ${iri2}`);
+function idOf(iri3, projectIri, what) {
+  if (!iri3) throw new Error(`${what} is missing`);
+  const hash = iri3.indexOf("#");
+  if (hash < 0 || !iri3.startsWith(projectIri.split("#")[0])) {
+    throw new Error(`${what} is not a fragment of the project: ${iri3}`);
   }
-  return iri2.slice(hash + 1);
+  return iri3.slice(hash + 1);
 }
-function readEndpoint(dataset2, iri2, projectIri, what) {
-  if (!iri2) throw new Error(`${what} is missing`);
-  const node = value(one2(dataset2, iri2, jig4.endpointNode));
+function readEndpoint(dataset2, iri3, projectIri, what) {
+  if (!iri3) throw new Error(`${what} is missing`);
+  const node = value(one2(dataset2, iri3, jig5.endpointNode));
   if (!node) throw new Error(`${what} names no jig:endpointNode`);
-  const index = one2(dataset2, iri2, jig4.portIndex);
-  const symbol = one2(dataset2, iri2, jig4.portSymbol);
+  const index = one2(dataset2, iri3, jig5.portIndex);
+  const symbol = one2(dataset2, iri3, jig5.portSymbol);
   if (index === null === (symbol === null)) {
     throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
   }
@@ -24508,26 +24660,26 @@ function readEndpoint(dataset2, iri2, projectIri, what) {
   return endpoint2;
 }
 function readProject(dataset2) {
-  const iri2 = findProject(dataset2);
+  const iri3 = findProject(dataset2);
   const changes = [];
-  const nodeIris = objects2(dataset2, iri2, jig4.node).map((t) => t.value).sort();
+  const nodeIris = objects2(dataset2, iri3, jig5.node).map((t) => t.value).sort();
   for (const nodeIri of nodeIris) {
-    const id = idOf(nodeIri, iri2, "node");
-    const pluginIri = value(one2(dataset2, nodeIri, jig4.plugin));
+    const id = idOf(nodeIri, iri3, "node");
+    const pluginIri = value(one2(dataset2, nodeIri, jig5.plugin));
     if (!pluginIri) throw new Error(`node ${id} names no jig:plugin, so nothing says what to load`);
     const settings = {};
-    for (const settingIri of objects2(dataset2, nodeIri, jig4.setting).map((t) => t.value).sort()) {
-      const symbol = value(one2(dataset2, settingIri, jig4.symbol));
-      const setting = one2(dataset2, settingIri, jig4.value);
+    for (const settingIri of objects2(dataset2, nodeIri, jig5.setting).map((t) => t.value).sort()) {
+      const symbol = value(one2(dataset2, settingIri, jig5.symbol));
+      const setting = one2(dataset2, settingIri, jig5.value);
       if (!symbol) throw new Error(`a setting on ${id} names no jig:symbol`);
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
       settings[symbol] = number(setting, `setting ${symbol} on ${id}`);
     }
     const channel = {};
-    const gain = number(one2(dataset2, nodeIri, jig4.gain), `gain on ${id}`);
-    const pan = number(one2(dataset2, nodeIri, jig4.pan), `pan on ${id}`);
-    const muted = one2(dataset2, nodeIri, jig4.muted);
-    const soloed = one2(dataset2, nodeIri, jig4.soloed);
+    const gain = number(one2(dataset2, nodeIri, jig5.gain), `gain on ${id}`);
+    const pan = number(one2(dataset2, nodeIri, jig5.pan), `pan on ${id}`);
+    const muted = one2(dataset2, nodeIri, jig5.muted);
+    const soloed = one2(dataset2, nodeIri, jig5.soloed);
     if (gain !== null) channel.gain = gain;
     if (pan !== null) channel.pan = pan;
     if (muted !== null) channel.muted = muted.value === "true";
@@ -24538,36 +24690,36 @@ function readProject(dataset2) {
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
       settings,
-      state: value(one2(dataset2, nodeIri, jig4.nodeState)),
+      state: value(one2(dataset2, nodeIri, jig5.nodeState)),
       ...Object.keys(channel).length > 0 ? { channel } : {}
     });
   }
-  for (const connIri of objects2(dataset2, iri2, jig4.connection).map((t) => t.value).sort()) {
-    const id = idOf(connIri, iri2, "connection");
-    const signalKind = value(one2(dataset2, connIri, jig4.signalKind));
+  for (const connIri of objects2(dataset2, iri3, jig5.connection).map((t) => t.value).sort()) {
+    const id = idOf(connIri, iri3, "connection");
+    const signalKind = value(one2(dataset2, connIri, jig5.signalKind));
     if (!signalKind) {
       throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
     }
     changes.push({
       op: "addConnection",
       id,
-      from: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.from)), iri2, `connection ${id} from`),
-      to: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.to)), iri2, `connection ${id} to`),
+      from: readEndpoint(dataset2, value(one2(dataset2, connIri, jig5.from)), iri3, `connection ${id} from`),
+      to: readEndpoint(dataset2, value(one2(dataset2, connIri, jig5.to)), iri3, `connection ${id} to`),
       signalKind
     });
   }
-  const transportIri = value(one2(dataset2, iri2, jig4.transport));
+  const transportIri = value(one2(dataset2, iri3, jig5.transport));
   if (transportIri) {
-    const points = objects2(dataset2, transportIri, jig4.tempoPoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number(one2(dataset2, pointIri, jig4.atBeat), "atBeat") ?? 0,
-      bpm: number(one2(dataset2, pointIri, jig4.bpm), "bpm") ?? 120
+    const points = objects2(dataset2, transportIri, jig5.tempoPoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number(one2(dataset2, pointIri, jig5.atBeat), "atBeat") ?? 0,
+      bpm: number(one2(dataset2, pointIri, jig5.bpm), "bpm") ?? 120
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     const transport = {};
-    const beatsPerBar = number(one2(dataset2, transportIri, jig4.beatsPerBar), "beatsPerBar");
-    const beatUnit = number(one2(dataset2, transportIri, jig4.beatUnit), "beatUnit");
-    const loopStart = number(one2(dataset2, transportIri, jig4.loopStart), "loopStart");
-    const loopEnd = number(one2(dataset2, transportIri, jig4.loopEnd), "loopEnd");
-    const loopEnabled = one2(dataset2, transportIri, jig4.loopEnabled);
+    const beatsPerBar = number(one2(dataset2, transportIri, jig5.beatsPerBar), "beatsPerBar");
+    const beatUnit = number(one2(dataset2, transportIri, jig5.beatUnit), "beatUnit");
+    const loopStart = number(one2(dataset2, transportIri, jig5.loopStart), "loopStart");
+    const loopEnd = number(one2(dataset2, transportIri, jig5.loopEnd), "loopEnd");
+    const loopEnabled = one2(dataset2, transportIri, jig5.loopEnabled);
     if (beatsPerBar !== null) transport.beatsPerBar = beatsPerBar;
     if (beatUnit !== null) transport.beatUnit = beatUnit;
     if (loopStart !== null) transport.loopStart = loopStart;
@@ -24577,9 +24729,9 @@ function readProject(dataset2) {
     if (Object.keys(transport).length > 0) changes.push({ op: "setTransport", ...transport });
   }
   return {
-    iri: iri2,
-    label: value(one2(dataset2, iri2, RDFS_LABEL)),
-    revision: number(one2(dataset2, iri2, jig4.revision), "revision") ?? 0,
+    iri: iri3,
+    label: value(one2(dataset2, iri3, RDFS_LABEL)),
+    revision: number(one2(dataset2, iri3, jig5.revision), "revision") ?? 0,
     changes
   };
 }
@@ -24715,17 +24867,21 @@ function browserCatalogue() {
       if (!loadable) params.set("loadable", "false");
       return ask("search", params);
     },
-    async describe(iri2) {
-      return ask("describe", new URLSearchParams({ iri: iri2 }));
+    async describe(iri3) {
+      return ask("describe", new URLSearchParams({ iri: iri3 }));
     }
   };
+}
+var shapes = null;
+function shapeValidator() {
+  shapes ??= fetch(new URL("vocabs/shapes.ttl", document.baseURI)).then((response) => response.text()).then((text) => parseText(text, "urn:jigdaw:shapes")).then((dataset2) => new ShapeValidator(dataset2));
+  return shapes;
 }
 async function ensureRunning() {
   if (dispatcher) return dispatcher;
   const context = new AudioContext();
   await context.resume();
-  const response = await fetch(new URL("vocabs/shapes.ttl", document.baseURI));
-  const validator = new ShapeValidator(await parseText(await response.text(), "urn:jigdaw:shapes"));
+  const validator = await shapeValidator();
   analyser = context.createAnalyser();
   analyser.fftSize = 256;
   analyser.connect(context.destination);
@@ -24750,7 +24906,7 @@ async function ensureRunning() {
   const registration = registerTools({
     dispatcher,
     catalogue: browserCatalogue(),
-    loadPlugin: (iri2) => dispatcher.addPlugin(iri2)
+    loadPlugin: (iri3) => dispatcher.addPlugin(iri3)
   });
   mcpSurface = registration.surface;
   log(`host offers ${[...capabilities].map(compact).join(", ")}`);
@@ -24780,12 +24936,12 @@ async function play() {
   playing = true;
   startedAt = engine.context.currentTime;
   $("play").setAttribute("aria-pressed", "true");
-  const first = d.project.nodes[0];
-  const startsWithEffect = first && (dispatcher.engineNode(first.id)?.profile.audioInputs ?? 0) > 0;
+  const first2 = d.project.nodes[0];
+  const startsWithEffect = first2 && (dispatcher.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
   if (startsWithEffect) {
     source = makeSource(engine.context);
     source.start();
-    const entry = dispatcher.engineNode(first.id);
+    const entry = dispatcher.engineNode(first2.id);
     if (entry) source.connect(entry.node, 0, 0);
   }
   sendTransport();
@@ -25108,22 +25264,22 @@ function askConsent(request) {
 }
 async function loadPlugin(input) {
   const d = await ensureRunning();
-  const iri2 = new URL(input, document.baseURI).href;
-  log(`GET ${iri2}`);
+  const iri3 = new URL(input, document.baseURI).href;
+  log(`GET ${iri3}`);
   let foreign = false;
   const support = d.foreignSupport;
   if (support) {
-    const seen = await support.classify(iri2).catch(() => null);
+    const seen = await support.classify(iri3).catch(() => null);
     foreign = seen?.kind === "foreign";
   }
-  let result = await d.addPlugin(iri2, foreign ? { foreign: true } : {});
+  let result = await d.addPlugin(iri3, foreign ? { foreign: true } : {});
   if (!result.ok && result.kind === "consent") {
     if (!await askConsent(result.request)) {
       log(`${result.request.label}: not loaded`, "error");
       return;
     }
     d.foreignTrust?.consent(result.request.iri, result.request.digest);
-    result = await d.addPlugin(iri2, { foreign: true });
+    result = await d.addPlugin(iri3, { foreign: true });
   }
   if (!result.ok) {
     log(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
@@ -25196,6 +25352,77 @@ function renderResults(results, query) {
     }
     box.append(row);
   }
+}
+async function openCollection(input) {
+  const url = new URL(input, document.baseURI).href;
+  log(`GET ${url}`);
+  const box = $("results");
+  box.textContent = "";
+  const validator = await shapeValidator();
+  const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) });
+  const opened = await new CollectionLoader({
+    parse: parseText,
+    validator,
+    verify: (iri3) => verifier.loadProfile(iri3)
+  }).load(url).catch((error2) => {
+    log(`${error2.step ? `[${error2.step}] ` : ""}${error2.message}`, "error");
+    return null;
+  });
+  if (!opened) return;
+  renderCollection(opened);
+}
+function renderCollection({ collection, members, warnings }) {
+  const box = $("results");
+  box.textContent = "";
+  const heading = document.createElement("h3");
+  heading.className = "collection-name";
+  heading.textContent = collection.label;
+  box.append(heading);
+  if (collection.comment) {
+    const about = document.createElement("p");
+    about.className = "note";
+    about.textContent = collection.comment;
+    box.append(about);
+  }
+  const ready = members.filter((m) => m.ok);
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = ready.length === members.length ? `${members.length} plugin(s), all loadable here.` : `${members.length} plugin(s), ${ready.length} loadable here. The rest say why below.`;
+  box.append(note);
+  for (const member of members) {
+    const row = document.createElement("div");
+    row.className = member.ok ? "result" : "result native";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
+    row.append(name);
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
+    row.append(meta);
+    if (member.ok) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "Load";
+      button.setAttribute("aria-label", `Load ${member.profile.label}`);
+      button.addEventListener("click", () => loadPlugin(member.iri).catch(() => {
+      }));
+      row.append(button);
+    } else {
+      const why = document.createElement("div");
+      why.className = "native";
+      why.textContent = `Not loadable here: ${member.step ? `[${member.step}] ` : ""}${member.message}`;
+      row.append(why);
+    }
+    box.append(row);
+  }
+  for (const warning of warnings) log(`${collection.label}: ${warning.message}`);
+  const moved = members.filter((m) => m.ok && m.notes.length > 0);
+  for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join("; ")}`);
+  if (moved.length > 0) {
+    log(`${moved.length} plugin(s) differ from how the collection lists them, by IRI or by name. A mirror serves a plugin under another IRI; the details are in the console.`);
+  }
+  log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? "ok" : "error");
 }
 async function search() {
   const text = $("q").value.trim();
@@ -25295,7 +25522,7 @@ async function openSession(text, base = document.baseURI) {
     return;
   }
   const opened = await openProject(d, read, {
-    onLoading: (iri2) => log(`GET ${iri2}`),
+    onLoading: (iri3) => log(`GET ${iri3}`),
     onCleared: forgetAllNodes
   });
   for (const message of opened.errors) log(message, "error");
@@ -25319,6 +25546,10 @@ $("loadbar").addEventListener("submit", (e) => {
   e.preventDefault();
   loadPlugin($("iri").value.trim()).catch(() => {
   });
+});
+$("collectionbar").addEventListener("submit", (e) => {
+  e.preventDefault();
+  openCollection($("collection").value.trim()).catch((error2) => log(error2.message, "error"));
 });
 $("play").addEventListener("click", () => play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", stop);
@@ -25386,6 +25617,12 @@ document.addEventListener("keydown", (event) => {
   else undo();
 });
 $("iri").value = new URL($("iri").value, document.baseURI).href;
+$("collection").value = new URL($("collection").value, document.baseURI).href;
+var linked = new URLSearchParams(location.search).get("collection");
+if (linked) {
+  $("collection").value = new URL(linked, document.baseURI).href;
+  openCollection(linked).catch((error2) => log(error2.message, "error"));
+}
 var tabs = createTabs(document, [
   { id: "tracks", label: "Tracks", panel: $("tracks-panel") },
   { id: "mixer", label: "Mixer", panel: $("mixer-panel") }

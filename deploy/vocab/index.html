@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  95 terms.
+  96 terms.
 </p>
 
 <h2>Classes</h2>
@@ -92,6 +92,13 @@
   <dd>A parameter's value on one node. Addressed by lv2:symbol rather than by
         index, because an index is a property of a build and a symbol is a property of the
         plugin.</dd>
+  <dt id="PluginCollection"><code>jig:PluginCollection</code> <span class="label">Plugin Collection</span></dt>
+  <dd>A named set of plugins, each included by its IRI with dcterms:hasPart
+        and named with rdfs:label in the collection document. A collection is one
+        publisher's opinion about what is worth finding: it confers no trust, carries no
+        code and no digests, and the profile each IRI returns governs wherever the two
+        disagree. Candidate for the transmissions vocabulary, since nothing about it is
+        specific to web plugins.</dd>
   <dt id="Processor"><code>jig:Processor</code></dt>
   <dd>The JavaScript module passed to AudioWorklet.addModule. It calls
         registerProcessor and is the only plugin code that runs on the audio thread.</dd>

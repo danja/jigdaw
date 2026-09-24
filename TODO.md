@@ -496,6 +496,11 @@ complete. Review periodically.
 
 ## Blocking, cross-repository
 
+- [ ] **Propose `jig:PluginCollection` to the transmissions vocabulary.** Nothing about a named
+      set of plugin IRIs is specific to web plugins, and plugin-universe could publish its own
+      curated lists in the same form. Upstream as a `trn:` class, with `jig:PluginCollection`
+      kept as a subclass so no published collection breaks.
+
 - [x] **A web plugin format term, 2026-09-17.** `trn:WebAudio` added to plugin-universe's
       `vocabs/trn-extensions.ttl` and to the `sh:in` list on `trn:format` in its
       `vocabs/shapes.ttl`, and `trn:requires` there no longer insists on the `trn:` namespace,
@@ -549,6 +554,25 @@ complete. Review periodically.
 ## The application
 
 Behaving more like a real DAW, an open-ended direction rather than a phase with an end.
+
+- [x] **Plugin collections, 2026-09-24.** `docs/plugin-collections.md`, `jig:PluginCollection`
+      with `dcterms:hasPart` and `rdfs:label`, `jig:PluginCollectionShape`,
+      `src/catalogue/CollectionLoader.js`, and an "Open a collection" form plus
+      `?collection=` on the page. Opening checks each member's profile and capabilities and
+      fetches no code. `web/collections/jigdaw.ttl` is bound to `plugins/` by
+      `tests/catalogue/CollectionLoader.test.js`, mutation tested in both directions.
+- [ ] **A WebMCP tool to open a collection.** The page can and an agent cannot. It is a
+      catalogue read rather than an Op, so it sits beside the search tool, not in the
+      dispatcher, and `docs/webmcp.md` gains it in the same change.
+- [ ] **Generate `web/collections/jigdaw.ttl` in `bin/build-plugin-index.js`** rather than by
+      hand. The test catches drift today; generating it would stop the drift from happening.
+- [ ] **Loading a collection member, verified in a foreground window.** The collection form
+      was checked in a real browser on 2026-09-24 (12 of 12 verified, errors named by step, no
+      horizontal scroll), but the window was in the background, so the Load click that follows
+      could not start audio. It calls the same `loadPlugin` as "Load by IRI".
+- [ ] **Show collection notes more quietly on a local checkout.** Every shipped plugin names
+      itself by its strandz.it IRI, so opening the collection on localhost reports all twelve
+      as differing by identity. Correct, and noisy.
 
 - [x] **A Preset menu, loading a particular configuration of plugins, 2026-09-23.** From the
       inbox, 2026-09-19. Settled as: bundled presets only, under `web/presets/`; opening one

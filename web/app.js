@@ -9,6 +9,7 @@ import { PluginLoader } from '../src/host/PluginLoader.js'
 import { parseText } from '../src/rdf/parse.js'
 import { ShapeValidator } from '../src/validate/ShapeValidator.js'
 import { detectCapabilities, compact } from '../src/host/Capabilities.js'
+import { CollectionLoader } from '../src/catalogue/CollectionLoader.js'
 import { Engine } from '../src/engine/Engine.js'
 import { OpDispatcher } from '../src/ops/OpDispatcher.js'
 import { createPanel } from '../src/ui/Panel.js'
@@ -94,14 +95,24 @@ function browserCatalogue () {
   }
 }
 
+// The shapes, parsed once. Opening a collection needs them before anything has
+// asked for audio, and ensureRunning needs them after, so neither owns them.
+let shapes = null
+function shapeValidator () {
+  shapes ??= fetch(new URL('vocabs/shapes.ttl', document.baseURI))
+    .then(response => response.text())
+    .then(text => parseText(text, 'urn:jigdaw:shapes'))
+    .then(dataset => new ShapeValidator(dataset))
+  return shapes
+}
+
 async function ensureRunning () {
   if (dispatcher) return dispatcher
 
   const context = new AudioContext()
   await context.resume()
 
-  const response = await fetch(new URL('vocabs/shapes.ttl', document.baseURI))
-  const validator = new ShapeValidator(await parseText(await response.text(), 'urn:jigdaw:shapes'))
+  const validator = await shapeValidator()
 
   // The meter taps the mix, so it is built before the engine and handed to it.
   // The engine connects its master through this on the way to the speakers,
@@ -772,6 +783,99 @@ function renderResults (results, query) {
   }
 }
 
+// ── Collections ────────────────────────────────────────────────────────────
+//
+// docs/plugin-collections.md section 3. Opening one checks each member's
+// profile and capabilities and fetches no code, so it needs no AudioContext and
+// runs before the page has been asked to make a sound. Loading a member is the
+// ordinary loadPlugin path, which does the full contract section 3.1 again.
+
+async function openCollection (input) {
+  const url = new URL(input, document.baseURI).href
+  log(`GET ${url}`)
+  const box = $('results')
+  box.textContent = ''
+  const validator = await shapeValidator()
+  const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) })
+  const opened = await new CollectionLoader({
+    parse: parseText,
+    validator,
+    verify: iri => verifier.loadProfile(iri)
+  }).load(url).catch(error => {
+    log(`${error.step ? `[${error.step}] ` : ''}${error.message}`, 'error')
+    return null
+  })
+  if (!opened) return
+  renderCollection(opened)
+}
+
+function renderCollection ({ collection, members, warnings }) {
+  const box = $('results')
+  box.textContent = ''
+
+  const heading = document.createElement('h3')
+  heading.className = 'collection-name'
+  heading.textContent = collection.label
+  box.append(heading)
+  if (collection.comment) {
+    const about = document.createElement('p')
+    about.className = 'note'
+    about.textContent = collection.comment
+    box.append(about)
+  }
+
+  const ready = members.filter(m => m.ok)
+  const note = document.createElement('p')
+  note.className = 'note'
+  note.textContent = ready.length === members.length
+    ? `${members.length} plugin(s), all loadable here.`
+    : `${members.length} plugin(s), ${ready.length} loadable here. The rest say why below.`
+  box.append(note)
+
+  for (const member of members) {
+    const row = document.createElement('div')
+    row.className = member.ok ? 'result' : 'result native'
+    const name = document.createElement('div')
+    name.className = 'name'
+    // The profile governs the name once it has arrived.
+    name.textContent = member.ok ? member.profile.label : (member.listedLabel ?? member.iri)
+    row.append(name)
+
+    const meta = document.createElement('div')
+    meta.className = 'meta'
+    meta.textContent = member.ok
+      ? [member.profile.vendor, member.profile.roles.map(compact).join(', ')].filter(Boolean).join(' · ')
+      : member.iri
+    row.append(meta)
+
+    if (member.ok) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = 'Load'
+      button.setAttribute('aria-label', `Load ${member.profile.label}`)
+      button.addEventListener('click', () => loadPlugin(member.iri).catch(() => {}))
+      row.append(button)
+    } else {
+      // No Load button: a control nobody can use is left out, and the reason
+      // is written instead, so it is the same information by any means.
+      const why = document.createElement('div')
+      why.className = 'native'
+      why.textContent = `Not loadable here: ${member.step ? `[${member.step}] ` : ''}${member.message}`
+      row.append(why)
+    }
+    box.append(row)
+  }
+
+  for (const warning of warnings) log(`${collection.label}: ${warning.message}`)
+  const moved = members.filter(m => m.ok && m.notes.length > 0)
+  for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join('; ')}`)
+  if (moved.length > 0) {
+    log(`${moved.length} plugin(s) differ from how the collection lists them, by IRI or by name. ` +
+      'A mirror serves a plugin under another IRI; the details are in the console.')
+  }
+  log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? 'ok' : 'error')
+}
+
 async function search () {
   const text = $('q').value.trim()
   const facet = $('facet').value
@@ -922,6 +1026,10 @@ async function openSession (text, base = document.baseURI) {
 $('searchbar').addEventListener('submit', e => { e.preventDefault(); search() })
 $('agentbar').addEventListener('submit', e => { e.preventDefault(); askAgent() })
 $('loadbar').addEventListener('submit', e => { e.preventDefault(); loadPlugin($('iri').value.trim()).catch(() => {}) })
+$('collectionbar').addEventListener('submit', e => {
+  e.preventDefault()
+  openCollection($('collection').value.trim()).catch(error => log(error.message, 'error'))
+})
 $('play').addEventListener('click', () => play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', stop)
 $('save').addEventListener('click', () => saveSession().catch(error => log(error.message, 'error')))
@@ -1001,6 +1109,15 @@ document.addEventListener('keydown', event => {
 // computed rather than written into the HTML because it depends on where this
 // host is served from.
 $('iri').value = new URL($('iri').value, document.baseURI).href
+$('collection').value = new URL($('collection').value, document.baseURI).href
+
+// ?collection=<url> opens one on arrival, so a collection can be shared as a
+// link to this page rather than as a URL and an instruction.
+const linked = new URLSearchParams(location.search).get('collection')
+if (linked) {
+  $('collection').value = new URL(linked, document.baseURI).href
+  openCollection(linked).catch(error => log(error.message, 'error'))
+}
 
 // Tracks and Mixer. Built once, over the two panels already in the markup:
 // every redraw only ever changes what is inside them, never which one is

@@ -1,0 +1,28 @@
+# examples/reference-collection.ttl
+#
+# A plugin collection, docs/plugin-collections.md: a name, a description, and
+# the IRI and name of each plugin it includes. That is all a collection is. It
+# carries no code and no digests, and each plugin's own profile, fetched from
+# its IRI, governs wherever the two disagree.
+#
+# Served at https://example.org/collections/reverbs as text/turtle, with
+# Access-Control-Allow-Origin, a host given that one URL can list these plugins
+# and check each of them before a person chooses one.
+
+@base <https://example.org/collections/reverbs> .
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<>
+    a jig:PluginCollection ;
+    rdfs:label "Reverbs" ;
+    rdfs:comment "Rooms, plates and springs, from small to very large." ;
+    dcterms:hasPart <https://example.org/plugins/reference/> ,
+                    <https://plugins.example.net/plate/> .
+
+# Named here so a host can list the collection before any profile has arrived.
+# The profile's own rdfs:label is the one a host shows once it has.
+<https://example.org/plugins/reference/> rdfs:label "Reference" .
+<https://plugins.example.net/plate/> rdfs:label "Plate" .

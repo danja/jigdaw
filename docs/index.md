@@ -78,6 +78,7 @@ authority where any other page, including this one, disagrees with them.
 | [architecture.md](architecture.md) | The layers, and the reasoning behind each decision. |
 | [module-abi.md](module-abi.md) | The optional portable ABI a native host can load without a JavaScript engine. |
 | [plugin-bundles.md](plugin-bundles.md) | Packaging a plugin as one signed archive. |
+| [plugin-collections.md](plugin-collections.md) | Publishing a list of plugins at one URL, and what a host checks when opening it. |
 
 Background rather than normative: [plan.md](plan.md) is the phased build log,
 [first-thoughts.md](first-thoughts.md) and [local-references.md](local-references.md) are

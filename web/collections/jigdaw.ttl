@@ -1,0 +1,48 @@
+# web/collections/jigdaw.ttl
+#
+# The plugins this host serves, as a collection (docs/plugin-collections.md).
+# It is the collection the page offers to open, and a worked example of one
+# published at a URL.
+#
+# There is no @base, unlike a profile, and that is deliberate: the plugins sit
+# beside this file on whichever host serves it, so <../plugins/pulse/> resolves
+# to the Pulse served by that same host, on localhost and on the live site
+# alike. A collection of other people's plugins names them absolutely.
+#
+# tests/catalogue/CollectionLoader.test.js fails if this list and plugins/
+# disagree, in either direction.
+
+@prefix jig:     <http://purl.org/stuff/jigdaw/> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<>
+    a jig:PluginCollection ;
+    rdfs:label "JigDAW plugins" ;
+    rdfs:comment "Every plugin in the JigDAW repository: instruments, effects and the converted JSFX." ;
+    dcterms:hasPart
+        <../plugins/8b8/> ,
+        <../plugins/bassgen/> ,
+        <../plugins/boost/> ,
+        <../plugins/cascade/> ,
+        <../plugins/dynamix/> ,
+        <../plugins/ferrite/> ,
+        <../plugins/jsfx-gain-trim/> ,
+        <../plugins/jsfx-one-pole-filter/> ,
+        <../plugins/jsfx-soft-clipper/> ,
+        <../plugins/pulse/> ,
+        <../plugins/squelch/> ,
+        <../plugins/tremolo/> .
+
+<../plugins/8b8/> rdfs:label "8-Bit 8asterd" .
+<../plugins/bassgen/> rdfs:label "BassGen" .
+<../plugins/boost/> rdfs:label "Boost" .
+<../plugins/cascade/> rdfs:label "Cascade" .
+<../plugins/dynamix/> rdfs:label "Dynamix" .
+<../plugins/ferrite/> rdfs:label "Ferrite" .
+<../plugins/jsfx-gain-trim/> rdfs:label "JigDAW Gain Trim" .
+<../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
+<../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
+<../plugins/pulse/> rdfs:label "Pulse" .
+<../plugins/squelch/> rdfs:label "Squelch" .
+<../plugins/tremolo/> rdfs:label "Tremolo" .

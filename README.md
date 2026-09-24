@@ -71,6 +71,7 @@ This is the deliverable, and it is normative. RFC 2119 throughout.
 | [latency.md](docs/latency.md) | Compensation, and what a graph with feedback does |
 | [module-abi.md](docs/module-abi.md) | The optional WebAssembly ABI, for a host with no JavaScript |
 | [plugin-bundles.md](docs/plugin-bundles.md) | Sending a plugin as a file, with provenance and signing |
+| [plugin-collections.md](docs/plugin-collections.md) | A list of plugins as one Turtle file at one URL, and how a host opens it |
 | [project-format.md](docs/project-format.md) | The session graph, which carries plugin IRIs and so stays portable |
 | [webmcp.md](docs/webmcp.md) | The tool surface an agent drives a host through |
 | [namespace.md](docs/namespace.md) | What `http://purl.org/stuff/jigdaw/` serves and how its terms resolve |

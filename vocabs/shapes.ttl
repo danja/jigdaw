@@ -589,3 +589,55 @@ jig:ContainerShape a sh:NodeShape ;
         sh:pattern "^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$" ;
         sh:message "A container must carry a Subresource Integrity digest. It is the only thing verified about a foreign plugin, so a missing one is not a degraded check but no check at all."
     ] .
+
+## -- Collections ---------------------------------------------------------------
+##
+## docs/plugin-collections.md section 2. A collection is refused whole when it
+## fails these, before any of its members is fetched: a host that fetched
+## profiles for a document it could not read would be acting on a guess about
+## what the document meant.
+
+jig:PluginCollectionShape a sh:NodeShape ;
+    sh:targetClass jig:PluginCollection ;
+    rdfs:label "Plugin collection shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A collection must have an IRI: the document's own, or a fragment of it. A collection that cannot be named cannot be linked to." ;
+
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ;
+        sh:message "A collection must have exactly one name, as rdfs:label. It is what a host shows in place of the URL."
+    ] ;
+    sh:property [
+        sh:path rdfs:comment ;
+        sh:maxCount 1 ; sh:nodeKind sh:Literal ;
+        sh:message "A collection has at most one description, as rdfs:comment."
+    ] ;
+    sh:property [
+        sh:path rdfs:comment ;
+        sh:minCount 1 ;
+        sh:severity sh:Warning ;
+        sh:message "A collection should say what it is for, as rdfs:comment. The name alone rarely tells a person whether to open it."
+    ] ;
+    sh:property [
+        sh:path dcterms:hasPart ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        # Contract section 1.1: https, or http on loopback only.
+        sh:pattern "^(https://|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?/)" ;
+        sh:message "A collection must include at least one plugin, each by an https IRI, or an http IRI on loopback. Contract section 1.1."
+    ] ;
+    sh:property [
+        sh:path dcterms:hasPart ;
+        sh:node jig:CollectionMemberShape ;
+        sh:message "Every plugin in a collection must be named in the collection document."
+    ] .
+
+jig:CollectionMemberShape a sh:NodeShape ;
+    rdfs:label "Collection member shape" ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ;
+        sh:message "A plugin in a collection must have exactly one name there, as rdfs:label, so that a host can list the collection before any profile has arrived."
+    ] .
