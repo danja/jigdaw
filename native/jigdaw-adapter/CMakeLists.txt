@@ -1,5 +1,5 @@
 # native/jigdaw-adapter/CMakeLists.txt
-include(FindOrFetchWasm3)
+include(FindOrFetchWamr)
 find_package(OpenSSL REQUIRED)
 
 # The portable core: everything except the plugin format wrapper. Testable on
@@ -25,7 +25,7 @@ target_compile_definitions(jigdaw_core PRIVATE CPPHTTPLIB_OPENSSL_SUPPORT)
 # Threads because the editor builds its report on a worker: a load fetches
 # over the network and an editor that stops repainting looks like a hung DAW.
 find_package(Threads REQUIRED)
-target_link_libraries(jigdaw_core PUBLIC m3 Threads::Threads PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(jigdaw_core PUBLIC wamr_vmlib Threads::Threads PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 if(JIGDAW_BUILD_TESTS)
   # turtle, integrity and fetch need nothing. profile reads the worked plugins

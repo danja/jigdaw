@@ -42,6 +42,19 @@ struct Resource {
     std::string mediaType;
 };
 
+/// A `jig:asset` — a file the module loads at start-up and, when
+/// `jig:userReplaceable`, a person may load a different one into while the
+/// plugin runs (docs/plugin-profiles.md, docs/messaging.md section 1.2).
+/// Ferrite's neural amp model and cabinet impulse response are one of these
+/// each. `key` is the asset node's IRI fragment (`<#nam>` -> "nam"), which is
+/// also the ABI convention: a module wanting this loadable exports
+/// `jig_<key>_ptr`, `jig_<key>_max_len` and `jig_load_<key>`.
+struct Asset {
+    std::string key;
+    Resource resource;
+    bool userReplaceable = false;
+};
+
 /// What a native host needs from a plugin profile.
 ///
 /// Deliberately not everything a profile can say. This is the subset jig:Abi1
@@ -67,6 +80,7 @@ struct Profile {
     std::optional<Resource> module;
     std::string abi;          ///< jig:abi, empty when the module is processor-private
     std::vector<Port> ports;
+    std::vector<Asset> assets;   ///< jig:asset, in declaration order
 
     bool acceptsMidi() const;
     bool producesMidi() const;

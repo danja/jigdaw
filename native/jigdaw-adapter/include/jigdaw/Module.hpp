@@ -29,6 +29,22 @@ public:
     /// success, or why it failed.
     std::string load(const std::vector<uint8_t>& wasm, const Profile& profile, double sampleRate);
 
+    /// Write `bytes` into the module's buffer for `key` (a jig:asset's IRI
+    /// fragment, e.g. "nam") and call its jig_load_<key>. Control thread only:
+    /// like jig_init, a loader may allocate, and docs/for-hosts.md and
+    /// ferrite's own jig_load_nam both note it may grow the module's linear
+    /// memory, which this re-resolves every cached buffer pointer against
+    /// afterwards. Returns an empty string on success, or why not — a status
+    /// this plugin's own module declares nonzero is reported as failure the
+    /// same as an export that could not be called at all, since only the
+    /// plugin author's own docs (jig:comment) say what a particular nonzero
+    /// code means.
+    std::string loadAsset(const std::string& key, const std::vector<uint8_t>& bytes);
+
+    /// The jig:asset keys this module actually exports jig_load_<key> for —
+    /// the profile may declare more than the module implements.
+    std::vector<std::string> assetKeys() const;
+
     bool ready() const;
     uint32_t maxFrames() const;
 
@@ -68,8 +84,13 @@ public:
 
     void process(uint32_t frames);
 
-private:
+    // Opaque; only Module.cpp's own free functions and this class's members
+    // ever name it. Forward-declared outside `private` (rather than nested
+    // under it) purely so those free functions can take a `State&` — nothing
+    // about State's actual shape is visible outside Module.cpp regardless.
     struct State;
+
+private:
     std::unique_ptr<State> state_;
 };
 

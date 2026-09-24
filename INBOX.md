@@ -4,4 +4,9 @@ Make a note in AGENTS.md to periodically read and integrate this.
 
 ## Items
 
-* we need a standard way of representing collections of JigDAW plugins in a single Turtle file, which can be published at a URL. This should be relatively lightweight, maybe featuring just the name and description of the collection plus IRI and name of each included plugin. We also need to specify how a DAW might consume these files, with the DAW here being used as a testbed for the instructions. Basic verification of each plugin should probably take place at the time of collection loading - does that make sense?
+
+* Rename the test DAW application JigDAW to Jiggy to avoid confusion- update its UI and any references in the documentation
+
+* include information in the docs for potential host developers about the issue identified when attempting to run the Ferrite plugin in /home/danny/github/transmission that the wasm3 didn't support the necessary SIMD operations so WAMR had to be used
+
+* the docs need web links to the URL of published collection jigdaw.ttl also this file should contain absolute IRIs. This should be a recommendation in the docs somewhere - that plugins SHOULD always be referred to via their absolute IRIs  

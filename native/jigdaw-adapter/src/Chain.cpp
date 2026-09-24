@@ -54,6 +54,23 @@ std::string Chain::add(const std::string& iri, double sampleRate) {
         return profile.label + ": " + error;
     }
 
+    // docs/for-hosts.md: a jig:asset is fetched and verified exactly like the
+    // module, and loaded before the plugin sees any real audio — a default
+    // shipped by the profile's own author, not yet a person's replacement.
+    // Every one of them is control-thread work, same as everything above.
+    for (const auto& asset : profile.assets) {
+        const auto bytes = fetchUrl(asset.resource.location);
+        if (!bytes.ok) {
+            return profile.label + ": could not fetch \"" + asset.key + "\": " + bytes.error;
+        }
+        if (auto bad = verifyIntegrity(bytes.bytes, asset.resource.integrity); !bad.empty()) {
+            return profile.label + ": \"" + asset.key + "\": " + bad;
+        }
+        if (auto error = slot->module->loadAsset(asset.key, bytes.bytes); !error.empty()) {
+            return profile.label + ": \"" + asset.key + "\": " + error;
+        }
+    }
+
     slot->profile = profile;
     slot->ports = profile.portsByIndex();
     slot->firstParameter = static_cast<int>(flat_.size());

@@ -181,6 +181,17 @@ ParseResult parseProfile(const std::string& turtleText, const std::string& retri
             p.abi = first(moduleNode, jig("abi"));
         }
 
+        for (const auto& assetNode : objects(p.iri, jig("asset"))) {
+            Asset asset;
+            const auto hash = assetNode.find('#');
+            asset.key = hash == std::string::npos ? assetNode : assetNode.substr(hash + 1);
+            asset.resource.location = rebase(first(assetNode, jig("location")), p.iri, retrievalBase);
+            asset.resource.integrity = first(assetNode, jig("integrity"));
+            asset.resource.mediaType = first(assetNode, jig("mediaType"));
+            asset.userReplaceable = first(assetNode, jig("userReplaceable")) == "true";
+            if (!asset.resource.location.empty()) p.assets.push_back(std::move(asset));
+        }
+
         for (const auto& portNode : objects(p.iri, lv2("port"))) {
             Port port;
             port.symbol = first(portNode, lv2("symbol"));
