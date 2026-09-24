@@ -149,7 +149,8 @@ async function ensureRunning () {
   const registration = registerTools({
     dispatcher,
     catalogue: browserCatalogue(),
-    loadPlugin: iri => dispatcher.addPlugin(iri)
+    loadPlugin: iri => dispatcher.addPlugin(iri),
+    openCollection: iri => loadCollection(iri)
   })
   mcpSurface = registration.surface
   log(`host offers ${[...capabilities].map(compact).join(', ')}`)
@@ -790,18 +791,29 @@ function renderResults (results, query) {
 // runs before the page has been asked to make a sound. Loading a member is the
 // ordinary loadPlugin path, which does the full contract section 3.1 again.
 
-async function openCollection (input) {
+/**
+ * Section 3, without any DOM: fetch the collection, check every member's
+ * profile and capabilities, and return what CollectionLoader.load returns.
+ * Used by the page's own form below and by the collection_open agent tool,
+ * so an agent gets the same check a person opening the form does rather than
+ * a second implementation of it (AGENTS.md: one dispatcher, thin adapters).
+ */
+async function loadCollection (input) {
   const url = new URL(input, document.baseURI).href
-  log(`GET ${url}`)
-  const box = $('results')
-  box.textContent = ''
   const validator = await shapeValidator()
   const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) })
-  const opened = await new CollectionLoader({
+  return new CollectionLoader({
     parse: parseText,
     validator,
     verify: iri => verifier.loadProfile(iri)
-  }).load(url).catch(error => {
+  }).load(url)
+}
+
+async function openCollection (input) {
+  log(`GET ${new URL(input, document.baseURI).href}`)
+  const box = $('results')
+  box.textContent = ''
+  const opened = await loadCollection(input).catch(error => {
     log(`${error.step ? `[${error.step}] ` : ''}${error.message}`, 'error')
     return null
   })
@@ -869,9 +881,15 @@ function renderCollection ({ collection, members, warnings }) {
   for (const warning of warnings) log(`${collection.label}: ${warning.message}`)
   const moved = members.filter(m => m.ok && m.notes.length > 0)
   for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join('; ')}`)
-  if (moved.length > 0) {
-    log(`${moved.length} plugin(s) differ from how the collection lists them, by IRI or by name. ` +
-      'A mirror serves a plugin under another IRI; the details are in the console.')
+  // A plugin naming itself by another IRI (CollectionLoader's "names itself"
+  // note) is expected every time this collection is opened from anywhere but
+  // its canonical origin, section 3.3's mirror-or-local-checkout case, and is
+  // not worth a line in the visible log. A listed name the profile disagrees
+  // with usually means the collection is stale, so that one still is.
+  const renamed = members.filter(m => m.ok && m.notes.some(n => n.startsWith('listed as')))
+  if (renamed.length > 0) {
+    log(`${renamed.length} plugin(s) are named differently by their profile than by this collection. ` +
+      'The details are in the console.')
   }
   log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? 'ok' : 'error')
 }

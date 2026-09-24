@@ -63,11 +63,20 @@ A resource is a read. A read never changes anything and never needs a revision.
 | `plugins_search` | `role?`, `accepts?`, `produces?`, `requires?`, `text?`, `limit?` | Candidate IRIs with name, role, signals |
 | `plugin_describe` | `iri` | The full profile, plus any inspection |
 | `plugin_validate_chain` | `iris[]` | Per-adjacency verdict, pairings, cautions |
+| `collection_open` | `iri` | Every listed plugin, checked, with per-member notes and any load failure |
 | `plugin_load` | `iri` | Fetches, validates and instantiates. Returns the node id or a located failure |
 
 `plugin_load` is the one tool that reaches the network. It performs contract section 3 in
 order and reports which step failed, so an agent gets "no CORS header on the processor"
 rather than "could not load".
+
+`collection_open` is [plugin-collections.md](plugin-collections.md) section 3, the same read
+the page's own "Open a collection" form performs: it reaches the network to fetch the
+collection document and check each member's profile and capabilities, but fetches no module,
+processor or asset, and changes nothing. It is a catalogue read beside `plugins_search`, not
+an Op, for the same reason: an agent choosing between plugins should not need to load one
+first to find out whether it will run here. Load a chosen member afterwards with
+`plugin_load`.
 
 ### The graph
 

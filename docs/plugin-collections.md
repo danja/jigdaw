@@ -79,7 +79,9 @@ was fetched from, so a collection published next to its plugins names them as
 `<../plugins/pulse/>` and keeps working on every host that serves the pair, including
 `localhost`. `web/collections/jigdaw.ttl` is written this way.
 
-A collection of plugins served from somewhere else names them absolutely.
+A collection of plugins served from somewhere else names them absolutely. The same reasoning
+extends to referring to a plugin anywhere outside a collection document too: see
+[for-plugin-authors.md](for-plugin-authors.md), "Refer to it by its absolute IRI".
 
 ## 2. Publishing one
 

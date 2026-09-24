@@ -21,6 +21,13 @@ sudo apt install lld-18
 Both `build.sh` scripts use `wasm-ld` directly when it is on the path and say nothing more
 about it.
 
+**REAPER, to verify [`reaper/jigdaw-render.lua`](reaper/jigdaw-render.lua) actually runs.**
+None was available to check it against, so it was written against REAPER's documented
+ReaScript API (`ExecProcess`, `GetUserInputs`, `InsertMedia`) rather than a real load of the
+action. Install it (`reaper/README.md`), run it once against a disposable project, and see
+whether `ExecProcess`'s exit-code parsing and `InsertMedia`'s track-insert mode behave as
+documented; those are the two most likely to have moved between REAPER versions.
+
 ## Updating a deployment
 
 **[docs/deployment.md](docs/deployment.md) opens with this**, including which changes need the

@@ -140,6 +140,58 @@ describe('plugin_validate_chain', () => {
   })
 })
 
+describe('collection_open', () => {
+  const fakeResult = (over = {}) => ({
+    collection: { label: 'Reverbs', comment: 'Rooms and plates.' },
+    warnings: [],
+    members: [{ iri: IRI, ok: true, profile: { label: 'Cascade' }, notes: [] }],
+    ...over
+  })
+
+  it('needs an iri', async () => {
+    const tools = createTools({ dispatcher, openCollection: async () => fakeResult() })
+    const result = await tools.find(t => t.name === 'collection_open').handler({})
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('iri')
+  })
+
+  it('explains itself when this host cannot open collections, rather than vanishing', async () => {
+    const tools = createTools({ dispatcher })
+    const result = await tools.find(t => t.name === 'collection_open').handler({ iri: 'https://x/c' })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('cannot open collections')
+  })
+
+  it('reports the collection and each member, ok or not', async () => {
+    const tools = createTools({
+      dispatcher,
+      openCollection: async iri => fakeResult({
+        members: [
+          { iri: IRI, ok: true, profile: { label: 'Cascade' }, notes: ['names itself https://mirror/'] },
+          { iri: 'https://x/gone/', ok: false, listedLabel: 'Gone', step: 'fetch-profile', message: '410' }
+        ]
+      })
+    })
+    const result = await tools.find(t => t.name === 'collection_open').handler({ iri: 'https://x/c' })
+    expect(result.ok).toBe(true)
+    expect(result.label).toBe('Reverbs')
+    expect(result.members).toEqual([
+      { iri: IRI, label: 'Cascade', ok: true, notes: ['names itself https://mirror/'] },
+      { iri: 'https://x/gone/', label: 'Gone', ok: false, step: 'fetch-profile', message: '410' }
+    ])
+  })
+
+  it('reports a refused collection as a located failure, not a throw', async () => {
+    const tools = createTools({
+      dispatcher,
+      openCollection: async () => { const e = new Error('404'); e.step = 'fetch-collection'; throw e }
+    })
+    const result = await tools.find(t => t.name === 'collection_open').handler({ iri: 'https://x/c' })
+    expect(result.ok).toBe(false)
+    expect(result.step).toBe('fetch-collection')
+  })
+})
+
 describe('graph_apply_changes', () => {
   it('applies atomically and reports the revision', async () => {
     const result = await call('graph_apply_changes', {

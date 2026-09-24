@@ -24069,7 +24069,7 @@ var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) 
 // src/mcp/tools.js
 var ok = (data) => ({ ok: true, ...data });
 var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
-function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: loadPlugin2 = null }) {
+function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: loadPlugin2 = null, openCollection: openCollection2 = null }) {
   if (!dispatcher2) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -24189,6 +24189,30 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
           }
         }
         return ok({ valid: problems.length === 0, problems, cautions });
+      }
+    },
+    {
+      name: "collection_open",
+      description: "Open a plugin collection by IRI (docs/plugin-collections.md): fetch the document and check every listed plugin's profile and capabilities. A catalogue read, not an Op: it reaches the network but changes nothing, and fetches no module, processor or asset. Load a member afterwards with plugin_load, by the iri this tool reports for it.",
+      inputSchema: {
+        type: "object",
+        properties: { iri: { type: "string" } },
+        required: ["iri"]
+      },
+      async handler({ iri: iri3 } = {}) {
+        if (!iri3) return failed("collection_open needs an iri");
+        if (!openCollection2) return failed("this host cannot open collections");
+        try {
+          const { collection, warnings, members } = await openCollection2(iri3);
+          return ok({
+            label: collection.label,
+            comment: collection.comment ?? null,
+            warnings: warnings.map((w) => w.message),
+            members: members.map((m) => m.ok ? { iri: m.iri, label: m.profile.label, ok: true, notes: m.notes } : { iri: m.iri, label: m.listedLabel, ok: false, step: m.step, message: m.message })
+          });
+        } catch (error2) {
+          return failed(error2.message, { step: error2.step ?? null });
+        }
       }
     },
     {
@@ -24405,8 +24429,8 @@ function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: lo
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2 });
+function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, openCollection: openCollection2, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, openCollection: openCollection2 });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -24906,7 +24930,8 @@ async function ensureRunning() {
   const registration = registerTools({
     dispatcher,
     catalogue: browserCatalogue(),
-    loadPlugin: (iri3) => dispatcher.addPlugin(iri3)
+    loadPlugin: (iri3) => dispatcher.addPlugin(iri3),
+    openCollection: (iri3) => loadCollection(iri3)
   });
   mcpSurface = registration.surface;
   log(`host offers ${[...capabilities].map(compact).join(", ")}`);
@@ -25353,18 +25378,21 @@ function renderResults(results, query) {
     box.append(row);
   }
 }
-async function openCollection(input) {
+async function loadCollection(input) {
   const url = new URL(input, document.baseURI).href;
-  log(`GET ${url}`);
-  const box = $("results");
-  box.textContent = "";
   const validator = await shapeValidator();
   const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) });
-  const opened = await new CollectionLoader({
+  return new CollectionLoader({
     parse: parseText,
     validator,
     verify: (iri3) => verifier.loadProfile(iri3)
-  }).load(url).catch((error2) => {
+  }).load(url);
+}
+async function openCollection(input) {
+  log(`GET ${new URL(input, document.baseURI).href}`);
+  const box = $("results");
+  box.textContent = "";
+  const opened = await loadCollection(input).catch((error2) => {
     log(`${error2.step ? `[${error2.step}] ` : ""}${error2.message}`, "error");
     return null;
   });
@@ -25419,8 +25447,9 @@ function renderCollection({ collection, members, warnings }) {
   for (const warning of warnings) log(`${collection.label}: ${warning.message}`);
   const moved = members.filter((m) => m.ok && m.notes.length > 0);
   for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join("; ")}`);
-  if (moved.length > 0) {
-    log(`${moved.length} plugin(s) differ from how the collection lists them, by IRI or by name. A mirror serves a plugin under another IRI; the details are in the console.`);
+  const renamed = members.filter((m) => m.ok && m.notes.some((n2) => n2.startsWith("listed as")));
+  if (renamed.length > 0) {
+    log(`${renamed.length} plugin(s) are named differently by their profile than by this collection. The details are in the console.`);
   }
   log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? "ok" : "error");
 }

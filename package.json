@@ -11,6 +11,7 @@
   "scripts": {
     "test": "node bin/check-suites.js && vitest run",
     "validate": "node bin/validate.js",
+    "check-plugin": "node bin/check-plugin.js",
     "check-suites": "node bin/check-suites.js",
     "build:web": "node bin/build-web.js",
     "serve": "node bin/serve.js",

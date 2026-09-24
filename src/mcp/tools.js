@@ -24,7 +24,7 @@ const failed = (message, extra = {}) => ({ ok: false, error: message, ...extra }
  * vanishes is harder for an agent to reason about than one that explains
  * itself.
  */
-export function createTools ({ dispatcher, catalogue = null, loadPlugin = null }) {
+export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null }) {
   if (!dispatcher) throw new Error('the tool surface needs a dispatcher')
 
   const requireCatalogue = () =>
@@ -164,6 +164,37 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null }
           }
         }
         return ok({ valid: problems.length === 0, problems, cautions })
+      }
+    },
+
+    {
+      name: 'collection_open',
+      description:
+        'Open a plugin collection by IRI (docs/plugin-collections.md): fetch the document and ' +
+        'check every listed plugin\'s profile and capabilities. A catalogue read, not an Op: it ' +
+        'reaches the network but changes nothing, and fetches no module, processor or asset. ' +
+        'Load a member afterwards with plugin_load, by the iri this tool reports for it.',
+      inputSchema: {
+        type: 'object',
+        properties: { iri: { type: 'string' } },
+        required: ['iri']
+      },
+      async handler ({ iri } = {}) {
+        if (!iri) return failed('collection_open needs an iri')
+        if (!openCollection) return failed('this host cannot open collections')
+        try {
+          const { collection, warnings, members } = await openCollection(iri)
+          return ok({
+            label: collection.label,
+            comment: collection.comment ?? null,
+            warnings: warnings.map(w => w.message),
+            members: members.map(m => m.ok
+              ? { iri: m.iri, label: m.profile.label, ok: true, notes: m.notes }
+              : { iri: m.iri, label: m.listedLabel, ok: false, step: m.step, message: m.message })
+          })
+        } catch (error) {
+          return failed(error.message, { step: error.step ?? null })
+        }
       }
     },
 

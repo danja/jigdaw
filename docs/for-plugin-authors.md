@@ -251,6 +251,21 @@ Listing is separate from publishing: your plugin works the moment it is fetchabl
 findable, add it to [plugin-universe](https://plugin-universe.com/about/profiles), which
 indexes profiles in this format and holds several hundred already.
 
+### Refer to it by its absolute IRI
+
+`host-plugin-contract.md` section 1.1 already requires the plugin itself to be identified by
+an absolute IRI. The same discipline SHOULD extend to anyone writing *about* it: a README, a
+tutorial, a forum post, a shared link. Write `https://example.org/plugins/cascade/` in full,
+never a bare path or a name that only resolves relative to wherever the reader happens to be
+reading it.
+
+The reason is the one [plugin-collections.md](plugin-collections.md) section 1.1 already
+gives for a collection listing someone else's plugins: a relative reference means something
+different depending on where it is read from, and an absolute one means the same thing
+everywhere, including in a copy-pasted message with no surrounding context left to resolve
+it against. A collection you publish yourself, served beside your own plugins, is the one
+deliberate exception, for the reason that section explains.
+
 ## Checklist
 
 - The profile validates against the shapes.
@@ -260,7 +275,11 @@ indexes profiles in this format and holds several hundred already.
 - `process()` allocates nothing and never throws.
 - You write every output channel every quantum.
 - CORS headers are present, and there is exactly one of each.
-- Loading it in a host actually makes the sound you expect.
+- Loading it in a host actually makes the sound you expect. `npm run check-plugin --
+  YOUR_IRI --note 69@0:1` (an instrument) or `-- YOUR_IRI` (an effect, fed
+  `ReferenceHost`'s own impulse) renders it headless and reports whether it produced audio,
+  stayed within a peak bound, and, for an instrument given notes, actually responded to
+  them. It runs the real code; it does not replace hearing it.
 
 ## Plugins you can read
 
