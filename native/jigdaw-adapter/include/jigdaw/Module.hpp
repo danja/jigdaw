@@ -34,12 +34,23 @@ public:
     /// like jig_init, a loader may allocate, and docs/for-hosts.md and
     /// ferrite's own jig_load_nam both note it may grow the module's linear
     /// memory, which this re-resolves every cached buffer pointer against
-    /// afterwards. Returns an empty string on success, or why not — a status
-    /// this plugin's own module declares nonzero is reported as failure the
-    /// same as an export that could not be called at all, since only the
-    /// plugin author's own docs (jig:comment) say what a particular nonzero
-    /// code means.
-    std::string loadAsset(const std::string& key, const std::vector<uint8_t>& bytes);
+    /// afterwards.
+    ///
+    /// Returns an empty string on success, or why not. A negative status is
+    /// always a failure (the byte parse or build itself did not happen); a
+    /// non-negative, non-zero status is treated as success with a caveat
+    /// (ferrite's own jig_load_nam and jig_load_ir both return 1 for "loaded,
+    /// but this asset's own declared sample rate does not match the host's",
+    /// with the asset already applied either way — no other convention is
+    /// documented anywhere in this ABI, so 0-or-positive-succeeds is this
+    /// host's one working example generalised, not a guess). `statusOut`,
+    /// when given, receives the raw value jig_load_<key> returned whenever
+    /// that call itself completed, on success or failure alike, so a caller
+    /// that knows what a particular plugin's codes mean (only the plugin
+    /// author's own docs, e.g. jig:comment, say — this ABI does not) can
+    /// build a better message than the generic one returned here.
+    std::string loadAsset(const std::string& key, const std::vector<uint8_t>& bytes,
+                          int32_t* statusOut = nullptr);
 
     /// The jig:asset keys this module actually exports jig_load_<key> for —
     /// the profile may declare more than the module implements.

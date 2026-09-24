@@ -455,7 +455,9 @@ std::vector<std::string> Module::assetKeys() const {
     return keys;
 }
 
-std::string Module::loadAsset(const std::string& key, const std::vector<uint8_t>& bytes) {
+std::string Module::loadAsset(const std::string& key, const std::vector<uint8_t>& bytes,
+                              int32_t* statusOut) {
+    if (statusOut != nullptr) *statusOut = 0;
     if (!state_ || !state_->ready) return "the module is not loaded";
     auto& s = *state_;
 
@@ -487,9 +489,16 @@ std::string Module::loadAsset(const std::string& key, const std::vector<uint8_t>
     if (!callU32(s.execEnv, fns.load, status, 1, &lenArg))
         return "jig_load_" + key + " failed: " + wasm_runtime_get_exception(s.instance);
     const auto signedStatus = static_cast<int32_t>(status);
-    if (signedStatus != 0) {
+    if (statusOut != nullptr) *statusOut = signedStatus;
+    // Negative is always a failure. Ferrite's jig_load_nam/jig_load_ir (the
+    // one worked example this ABI has) return a positive status for "loaded,
+    // but something about it is worth a caveat" — the asset is already
+    // applied either way — so 0-or-positive is treated as success here too,
+    // generalised from that rather than guessed at.
+    if (signedStatus < 0) {
         return key + " was rejected (jig_load_" + key + " returned " +
-               std::to_string(signedStatus) + ")";
+               std::to_string(signedStatus) + "); " + std::to_string(bytes.size()) +
+               " bytes were submitted";
     }
 
     // ferrite-processor.js's own comment on this ABI: a loader may grow the
