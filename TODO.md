@@ -55,8 +55,6 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
 - [ ] **A WebMCP tool to open a collection.** The page can and an agent cannot. It is a
       catalogue read rather than an Op, so it sits beside the search tool, not in the
       dispatcher, and `docs/webmcp.md` gains it in the same change.
-- [ ] **Generate `web/collections/jigdaw.ttl` in `bin/build-plugin-index.js`** rather than by
-      hand. The test catches drift today; generating it would stop the drift from happening.
 - [ ] **Loading a collection member, verified in a foreground window.** The collection form
       was checked in a real browser on 2026-09-24 (12 of 12 verified, errors named by step, no
       horizontal scroll), but the window was in the background, so the Load click that follows
@@ -95,6 +93,26 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
 
 
 ## Documentation
+
+- [ ] **A "SHOULD refer to plugins by absolute IRI" recommendation, and whether
+      `web/collections/jigdaw.ttl` should stop being the exception.** From the inbox,
+      2026-09-24. `host-plugin-contract.md` section 1.1 already MUSTs absolute identity for a
+      plugin; what is missing is a recommendation, in prose docs and tutorials, to *write*
+      plugin references as absolute IRIs rather than relative ones, for the same reason a
+      collection of someone else's plugins already must
+      ([plugin-collections.md](docs/plugin-collections.md) section 1.1). That much is a small,
+      non-conflicting addition, worth placing in `for-hosts.md` or `for-plugin-authors.md`.
+      The inbox item goes further and asks that `web/collections/jigdaw.ttl` itself hold
+      absolute IRIs. That conflicts with a deliberate, documented and tested design: section
+      1.1 explains the file omits `@base` on purpose, so `<../plugins/pulse/>` resolves
+      against whichever host serves it and the same file works on `localhost` and on
+      strandz.it alike, and `tests/catalogue/CollectionLoader.test.js` checks it against
+      `plugins/` on disk under that assumption. Switching it to absolute IRIs would pin the
+      shipped collection to one origin and needs a maintainer decision, not a silent reversal
+      of a choice that was made and tested for a reason. Done in the meantime: docs now link
+      the published collection at
+      [strandz.it/jigdaw/collections/jigdaw.ttl](https://strandz.it/jigdaw/collections/jigdaw.ttl)
+      (`plugin-collections.md` section 4).
 
 ## JSFX plugins
 

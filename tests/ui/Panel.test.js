@@ -1,7 +1,7 @@
 // tests/ui/Panel.test.js
 //
 // AGENTS.md requires WCAG 2.2 AA, and says a rule worth stating is worth a
-// test. Almost every control in JigDAW comes out of createPanel, so these
+// test. Almost every control in Jiggy comes out of createPanel, so these
 // assertions are the difference between every generated plugin being usable
 // with a keyboard and a screen reader, and none of them being.
 import { describe, it, expect, beforeEach } from 'vitest'

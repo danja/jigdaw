@@ -1,13 +1,13 @@
 # JigDAW
 
-A web-native digital audio workstation and a web-native plugin format. Everything runs in
-the browser, everything is identified by a dereferenceable IRI, and the signal processing is
-usually WebAssembly: `jig:module` is optional, for a plugin simple enough that its
-AudioWorklet processor is plain JavaScript.
+JigDAW is a web-native plugin format. Everything runs in the browser, everything is
+identified by a dereferenceable IRI, and the signal processing is usually WebAssembly:
+`jig:module` is optional, for a plugin simple enough that its AudioWorklet processor is
+plain JavaScript.
 
-The specification is complete and normative, and a browser host implements it: 9 worked
-plugins, undo and redo, a catalogue search, a WebMCP surface, sessions that save and reopen
-as RDF. A second host, a native VST3/CLAP/LV2 adapter, implements it independently. Read
+The specification is complete and normative, and **Jiggy**, a browser host, implements it: 9
+worked plugins, undo and redo, a catalogue search, a WebMCP surface, sessions that save and
+reopen as RDF. A second host, a native VST3/CLAP/LV2 adapter, implements it independently. Read
 [docs/architecture.md](docs/architecture.md) for the shape of the thing, then
 [docs/host-plugin-contract.md](docs/host-plugin-contract.md), which is normative and which
 the rest hang off, before making structural changes.
@@ -138,7 +138,7 @@ and real-time processing.
 ## Interface rules
 
 - Follow [WCAG 2.2](https://www.w3.org/TR/WCAG22/) at AA. This is load bearing rather than
-  aspirational: almost every control a person touches in JigDAW is generated from an
+  aspirational: almost every control a person touches in Jiggy is generated from an
   `lv2:port` declaration by `src/ui/Panel.js`, so one accessible generator makes every
   plugin accessible and one careless one makes every plugin unusable. A plugin author who
   ships no `jig:ui` gets whatever that file does.

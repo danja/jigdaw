@@ -144,8 +144,8 @@ only pass if it were live.
 The commands are under [Redeploying](#redeploying) at the top. This section is the reasoning
 behind them, and [HUMANS.md](../HUMANS.md) carries whatever is outstanding right now.
 
-`/` on that host is already taken by another application on port 6010, so JigDAW is served
-under `/jigdaw/` and listens on **6011**, loopback only.
+`/` on that host is already taken by another application on port 6010, so Jiggy, the browser
+host, is served under `/jigdaw/` and listens on **6011**, loopback only.
 
 **The server needs only node 20 or later.** `bin/serve.js` imports nothing but node
 builtins, so there is no `npm install`. `tests/docs/conventions.test.js` fails if anything

@@ -103,7 +103,7 @@ here depending on a real external crate, and a resonant lowpass swept by an enve
 follower, also plain JavaScript. Foreign plugins (Web Audio Modules) load and play, marked
 and consented to, per contract section 12.
 
-**Exists but is thin.** The DAW itself: a rack view and a mixer view of the same signal
+**Exists but is thin.** Jiggy, the reference host: a rack view and a mixer view of the same signal
 chain, a transport, a keyboard. There is no timeline and no recording; a track is a plugin
 slot, not yet a place clips live.
 
@@ -114,7 +114,7 @@ implemented.
 ## Worked examples
 
 Built from this repository and served by this host. **[strandz.it/jigdaw](https://strandz.it/jigdaw/)**
-runs the DAW itself, live, the same code as in this repository. A second, independent host
+runs Jiggy live, the same code as in this repository. A second, independent host
 loads the same plugins as a VST3, CLAP or LV2; see
 [the JigDAW Adapter](../native/jigdaw-adapter/README.md) for what it is and how to build it.
 

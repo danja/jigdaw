@@ -14,7 +14,7 @@ enforces the specification on its own files.
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
 rendered from the markdown in [docs/](docs/), which is the authoritative copy.
 
-## Try it
+## Do a GET
 
 ```sh
 curl -H "Accept: text/turtle" https://strandz.it/jigdaw/plugins/pulse/
@@ -133,10 +133,10 @@ form of the graph. See [plugin-bundles.md](docs/plugin-bundles.md).
 
 ## The reference host
 
-There is a working digital audio workstation in the browser: a plugin rack, an arbitrary
-directed graph with cycle refusal and latency compensation, a channel strip, transport, a
-catalogue search, sessions that save and reopen as RDF, and a WebMCP surface an agent can
-drive. `npm run serve`, then open the page.
+There is a working digital audio workstation in the browser, called **Jiggy**: a plugin rack,
+an arbitrary directed graph with cycle refusal and latency compensation, a channel strip,
+transport, a catalogue search, sessions that save and reopen as RDF, and a WebMCP surface an
+agent can drive. `npm run serve`, then open the page.
 
 **It is here to exercise the specification.** A normative document with no implementation is a
 claim about behaviour nobody has, and most of what this project has learned came from the host

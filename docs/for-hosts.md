@@ -173,8 +173,7 @@ real `AudioContext` and against an offline stand-in in the tests.
 under a hundred lines: load a chain of plugins by IRI, in Node, no browser, and render real
 audio to a WAV file. It talks to `PluginLoader` and a plugin's own `port` directly, posting
 MIDI as `{ type: 'events', events }` per [messaging.md](messaging.md) section 6, the same way
-a host written from scratch would, rather than through this project's own DAW-specific
-convenience layer.
+a host written from scratch would, rather than through Jiggy's own convenience layer.
 
 ```sh
 node bin/host.js https://strandz.it/jigdaw/plugins/cascade/ --out tail.wav

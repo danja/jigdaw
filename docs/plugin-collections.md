@@ -178,9 +178,16 @@ https://strandz.it/jigdaw/?collection=https://example.org/collections/reverbs
 ```
 
 `web/collections/jigdaw.ttl` is the collection of every plugin in this repository, and is what
-the form offers by default. `tests/catalogue/CollectionLoader.test.js` opens it against the
-real profiles on disk, fails if it and `plugins/` disagree in either direction, and checks that
-opening it fetches the document and the profiles and nothing else.
+the form offers by default. Published, it is
+[strandz.it/jigdaw/collections/jigdaw.ttl](https://strandz.it/jigdaw/collections/jigdaw.ttl):
+
+```sh
+curl -H "Accept: text/turtle" https://strandz.it/jigdaw/collections/jigdaw.ttl
+```
+
+`tests/catalogue/CollectionLoader.test.js` opens it against the real profiles on disk, fails
+if it and `plugins/` disagree in either direction, and checks that opening it fetches the
+document and the profiles and nothing else.
 
 A foreign plugin (contract section 12) is refused by `loadProfile`, which reads native
 profiles only, so a collection that includes one shows it as not loadable here. Loading it

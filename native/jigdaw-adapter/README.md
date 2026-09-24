@@ -141,7 +141,7 @@ cmake --build build -j
 ctest --test-dir build --output-on-failure
 ```
 
-Artefacts land in `build/bin/`. Needs OpenSSL, CMake 3.20, and a compiler with C++20. wasm3
+Artefacts land in `build/bin/`. Needs OpenSSL, CMake 3.20, and a compiler with C++20. WAMR
 is fetched. DPF is taken from a downspout checkout by default; point
 `-DJIGDAW_DPF_DIR=/path/to/DPF` elsewhere, or `-DJIGDAW_BUILD_PLUGIN=OFF` to build only the
 core and its tests.
@@ -166,7 +166,7 @@ cmake -S native -B build -DJIGDAW_TEST_BASE=https://strandz.it/jigdaw
 | `src/Turtle.cpp` | The subset of Turtle a profile uses. About 300 lines, no dependency |
 | `src/Profile.cpp` | Turtle to the things a native host needs, including rebasing |
 | `src/Integrity.cpp` | sha384 verification, refusing anything that does not match |
-| `src/Module.cpp` | `jig:Abi1` through wasm3. The only file that knows which runtime |
+| `src/Module.cpp` | `jig:Abi1` through WAMR. The only file that knows which runtime |
 | `src/Fetch.cpp` | HTTPS, via cpp-httplib |
 | `src/Chain.cpp` | Several plugins in order, and a flat parameter list |
 | `src/dpf/` | The DPF wrapper. A shell, not the architecture |
@@ -184,6 +184,19 @@ generated panel belongs to the browser host. No transport, no outgoing MIDI from
 state saving inside a loaded plugin, and no latency reporting. Those are either profile
 statements or processor messages, and `jig:Abi1` version 1 deliberately carries none of them.
 A JigDAW plugin needing them is a plugin for a browser.
+
+## Why WAMR rather than wasm3
+
+`src/Module.cpp` ran on wasm3 through phase 9b, and was moved to WAMR after a module built
+from Ferrite (in [transmission](https://github.com/danja/transmission)) failed to load: the
+module used WebAssembly SIMD (`jig:Simd128`), and wasm3's interpreter does not implement the
+SIMD proposal, so instantiation failed rather than running slowly. A `jig:Abi1` module that
+declares `jig:Simd128` and passes every browser check can still be unloadable by a native
+adapter whose runtime does not implement the instructions it compiles to; the ABI does not
+name a runtime, so this is a property of the runtime choice, not of the module or the
+contract. If you are building a different native host against `jig:Abi1`, check your
+WebAssembly runtime's SIMD support before assuming a module that loads in Chrome will load in
+it.
 
 ## A Turtle parser, written rather than vendored
 

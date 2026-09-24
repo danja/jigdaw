@@ -10,7 +10,7 @@
 // declaration. Nothing here inspects lv2:toggled itself.
 //
 // This file carries the project's whole accessibility story. AGENTS.md requires
-// WCAG 2.2 AA, and almost every control a person touches in JigDAW is generated
+// WCAG 2.2 AA, and almost every control a person touches in Jiggy is generated
 // here: a plugin that ships no jig:ui gets exactly this. So one accessible
 // generator makes every such plugin accessible, and one careless generator
 // makes every one of them unusable.

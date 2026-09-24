@@ -2,6 +2,27 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-24 A native adapter that loaded every plugin except the one using SIMD
+
+**What happened.** Ferrite, hosted in [transmission](https://github.com/danja/transmission),
+loaded and ran in every browser host but failed to instantiate in the native
+`jigdaw-adapter`. The module declares `jig:Simd128` and passes every check up to
+instantiation; wasm3, the WebAssembly runtime `src/Module.cpp` used through phase 9b, does not
+implement the WebAssembly SIMD proposal, so a module compiled with SIMD instructions is not
+one it can run at all, not one it runs slowly.
+
+**Root cause.** `jig:Abi1` names an ABI, not a runtime, and nothing checked that the runtime
+behind the native adapter implemented every WebAssembly feature a conforming module might use.
+Capability negotiation (`jig:Simd128` among them) tells a browser host what to offer; it does
+nothing for a native host whose "WebAssembly support" turns out to be partial.
+
+**Prevention.** `src/Module.cpp` now runs modules through
+[WAMR](https://github.com/bytecodealliance/wasm-micro-runtime) instead of wasm3, which
+implements SIMD. Documented in
+[native/jigdaw-adapter/README.md](native/jigdaw-adapter/README.md) under "Why WAMR rather
+than wasm3", so a future native host developer checks their runtime's SIMD support before
+assuming a browser-verified module will load.
+
 ## 2026-09-24 A browser check ran a bundle built before the last change
 
 **What happened.** Checking Ferrite in Chrome, the page offered only `jig:Simd128`, though
