@@ -18,6 +18,11 @@
 // time with the session, and without this getTimePosition reports nothing.
 #define DISTRHO_PLUGIN_WANT_TIMEPOS     1
 
+// Latency reporting, for jig_latency_frames. A plugin that delays its output
+// has to say so or the host cannot place it: Quefrency's 2047 frames arrived
+// 43ms late with nothing told to the host.
+#define DISTRHO_PLUGIN_WANT_LATENCY     1
+
 // How many generic parameter slots the host is offered. Here rather than in the
 // plugin because the editor has to lay out exactly these slots, and two files
 // each holding their own count is how they come to disagree.

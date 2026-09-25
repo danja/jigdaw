@@ -12,7 +12,6 @@
 #include <atomic>
 #include <cstring>
 #include <memory>
-#include <mutex>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -21,6 +20,7 @@
 #include "jigdaw/Abi.hpp"
 #include "jigdaw/Midi.hpp"
 #include "jigdaw/Params.hpp"
+#include "jigdaw/Publish.hpp"
 #include "jigdaw/Report.hpp"
 
 START_NAMESPACE_DISTRHO
@@ -130,11 +130,13 @@ protected:
         report_ = jigdaw::describe(jigdaw::buildChain(*built, iris_, getSampleRate()));
         d_stdout("jigdaw-adapter:\n%s", report_.c_str());
 
-        // Published by an atomic swap. The retired chain is freed here, on the
-        // message thread, never on the audio thread.
+        // Published by an atomic swap. The retired chain is retired rather
+        // than freed: the audio thread may be mid-process on it, announced
+        // below, and freeing it here would be a use-after-free the next
+        // block trips over. The reap frees what is not announced.
         auto* previous = chain_.exchange(built.release(), std::memory_order_acq_rel);
-        std::lock_guard<std::mutex> guard(retiredLock_);
-        retired_.reset(previous);
+        jigdaw::retireChain(retired_, previous);
+        jigdaw::reapChains(retired_, announced_.load(std::memory_order_acquire));
 
         // Tell the editor what happened, where the format allows it. DPF wires
         // this callback under CLAP only: it is a null pointer in the VST3, VST2
@@ -154,6 +156,11 @@ protected:
         // reads back agrees, and the first move of that slider takes over.
         if (Chain* now = chain_.load(std::memory_order_acquire)) {
             jigdaw::applyParameters(*now, values_, touched_);
+            // Tell the host how far behind the output lags, so it can place
+            // it: an unreported 2047 frames is 43ms of late audio at 48kHz.
+            setLatency(now->latencyFrames());
+        } else {
+            setLatency(0);
         }
     }
 
@@ -253,11 +260,11 @@ protected:
         for (uint32_t i = 0; i < midiEventCount; ++i) writeMidiEvent(midiEvents[i]);
        #endif
 
-        Chain* chain = chain_.load(std::memory_order_acquire);
-        if (chain == nullptr) return;   // nothing loaded: pass the audio through
+        Chain* chain = jigdaw::acquireStable(chain_, announced_);
+        if (chain == nullptr) { jigdaw::releaseSlot(announced_); return; }   // nothing loaded: pass the audio through
 
         const uint32_t block = chain->maxFrames();
-        if (block == 0) return;   // a module claiming no frames would loop for ever
+        if (block == 0) { jigdaw::releaseSlot(announced_); return; }   // a module claiming no frames would loop for ever
 
         fillTransport(chain->transport(), frames);
 
@@ -327,14 +334,25 @@ protected:
             chain->process(outputs, 2, 0, incoming_ + next, incoming - next);
             collectMidi(*chain, frames > 0 ? frames - 1 : 0);
         }
+        jigdaw::releaseSlot(announced_);
     }
 
 private:
     using Chain = jigdaw::Chain;
 
+    ~JigdawAdapter() override {
+        // The teardown runs on the message thread with no audio in flight, so
+        // the published chain and whatever retires remain go together here.
+        delete chain_.load(std::memory_order_acquire);
+    }
+
     std::atomic<Chain*> chain_{nullptr};
-    std::unique_ptr<Chain> retired_;
-    std::mutex retiredLock_;
+    /// The chain the audio thread announced it is running, or nullptr.
+    /// Written by the audio thread, read by reaps. See Publish.hpp.
+    std::atomic<Chain*> announced_{nullptr};
+    /// Chains no longer published but possibly still running. Message thread
+    /// only; freed by reaps, never while announced.
+    std::vector<std::unique_ptr<Chain>> retired_;
 
     std::string iris_;
     std::string report_;

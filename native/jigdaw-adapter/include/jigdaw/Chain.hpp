@@ -1,6 +1,8 @@
 // native/jigdaw-adapter/include/jigdaw/Chain.hpp
 #pragma once
 
+#include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -64,6 +66,19 @@ public:
     size_t size() const { return slots_.size(); }
     const Slot& at(size_t i) const { return *slots_[i]; }
     uint32_t maxFrames() const { return maxFrames_; }
+
+    /// Frames by which the chain's output lags its input: the sum of what
+    /// each module reports, because they run in series and every one delays
+    /// what the next one hears. A module's jig_latency_frames export wins
+    /// where it exists; otherwise its profile's declared figure stands.
+    uint32_t latencyFrames() const {
+        uint32_t total = 0;
+        for (const auto& slot : slots_) {
+            const uint32_t reported = slot->module->latencyFrames();
+            total += reported > 0 ? reported : static_cast<uint32_t>(std::max(0, slot->profile.latencyFrames));
+        }
+        return total;
+    }
 
     /// Fetch and verify, without loading. Exposed so a caller can report each
     /// step separately, which is what makes a failure diagnosable.

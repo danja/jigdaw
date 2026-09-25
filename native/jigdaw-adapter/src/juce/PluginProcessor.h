@@ -14,7 +14,6 @@
 
 #include <atomic>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -68,12 +67,19 @@ public:
 private:
     using Chain = jigdaw::Chain;
 
-    // Published by an atomic swap; the retired chain is freed on the message
-    // thread, never the audio thread. Identical shape to the DPF wrapper's
-    // chain_/retired_/retiredLock_, for the identical reason.
+    ~JigdawJuceProcessor() override {
+        // Teardown runs on the message thread with no audio in flight, so the
+        // published chain and whatever retires remain go together here.
+        delete chain_.load(std::memory_order_acquire);
+    }
+
+    // Published by an atomic swap; the retired chain is retired rather than
+    // freed, because the audio thread may be mid-process on it, announced
+    // below. Identical shape to the DPF wrapper's members, for the identical
+    // reason. See jigdaw/Publish.hpp.
     std::atomic<Chain*> chain_{nullptr};
-    std::unique_ptr<Chain> retired_;
-    std::mutex retiredLock_;
+    std::atomic<Chain*> announced_{nullptr};
+    std::vector<std::unique_ptr<Chain>> retired_;
 
     juce::String iris_;
     std::string report_;

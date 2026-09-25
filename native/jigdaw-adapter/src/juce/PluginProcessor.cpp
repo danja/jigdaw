@@ -12,6 +12,7 @@
 
 #include "jigdaw/Midi.hpp"
 #include "jigdaw/Params.hpp"
+#include "jigdaw/Publish.hpp"
 #include "jigdaw/Report.hpp"
 
 JigdawJuceProcessor::JigdawJuceProcessor()
@@ -36,7 +37,9 @@ JigdawJuceProcessor::JigdawJuceProcessor()
     }
 }
 
-JigdawJuceProcessor::~JigdawJuceProcessor() = default;
+JigdawJuceProcessor::~JigdawJuceProcessor() {
+    delete chain_.load(std::memory_order_acquire);
+}
 
 void JigdawJuceProcessor::prepareToPlay(double, int) {
     // Nothing to preallocate here: incoming_ is a fixed member array and the
@@ -74,14 +77,19 @@ void JigdawJuceProcessor::loadIris(const juce::String& iris) {
     const double sampleRate = getSampleRate() > 0.0 ? getSampleRate() : 48000.0;
     report_ = jigdaw::describe(jigdaw::buildChain(*built, iris_.toStdString(), sampleRate));
 
-    // Published by an atomic swap; the retired chain is freed here, on the
-    // message thread, never on the audio thread.
+    // Published by an atomic swap; the retired chain is retired rather than
+    // freed, because the audio thread may be mid-process on it, announced
+    // below. See jigdaw/Publish.hpp.
     auto* previous = chain_.exchange(built.release(), std::memory_order_acq_rel);
-    std::lock_guard<std::mutex> guard(retiredLock_);
-    retired_.reset(previous);
+    jigdaw::retireChain(retired_, previous);
+    jigdaw::reapChains(retired_, announced_.load(std::memory_order_acquire));
 
     if (Chain* now = chain_.load(std::memory_order_acquire)) {
         jigdaw::applyParameters(*now, values_, touched_);
+        // Tell the host how far behind the output lags, so it can place it.
+        setLatencySamples(static_cast<int>(now->latencyFrames()));
+    } else {
+        setLatencySamples(0);
     }
 }
 
@@ -155,11 +163,11 @@ void JigdawJuceProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
         into.data[2] = size > 2 ? metadata.data[2] : 0;
     }
 
-    Chain* chain = chain_.load(std::memory_order_acquire);
-    if (chain == nullptr) return;   // nothing loaded: pass audio and MIDI through
+    Chain* chain = jigdaw::acquireStable(chain_, announced_);
+    if (chain == nullptr) { jigdaw::releaseSlot(announced_); return; }   // nothing loaded: pass audio and MIDI through
 
     const uint32_t block = chain->maxFrames();
-    if (block == 0) return;   // a module claiming no frames would loop for ever
+    if (block == 0) { jigdaw::releaseSlot(announced_); return; }   // a module claiming no frames would loop for ever
 
     // Polled rather than pushed by a parameter listener, because a listener
     // callback's thread is host defined and the audio thread must never wait
@@ -224,6 +232,7 @@ void JigdawJuceProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
         chain->process(channels, 2, 0, incoming_ + next, incomingCount - next);
         collectMidi(*chain, frames > 0 ? static_cast<int>(frames) - 1 : 0, midiMessages);
     }
+    jigdaw::releaseSlot(announced_);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() {

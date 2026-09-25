@@ -118,6 +118,7 @@ struct Module::State {
     wasm_function_inst_t midiOutCapacity = nullptr;
     wasm_function_inst_t midiOutCount = nullptr;
     wasm_function_inst_t transportPtr = nullptr;
+    wasm_function_inst_t latencyFn = nullptr;
 
     /// One entry per jig:asset the module actually exports the trio of
     /// exports for. Resolved once at load, the same as everything above.
@@ -140,6 +141,7 @@ struct Module::State {
     // hold these.
     std::vector<float*> inputs;
     std::vector<const float*> outputs;
+    uint32_t latency = 0;
     bool ready = false;
 
     ~State() {
@@ -224,6 +226,7 @@ Module& Module::operator=(Module&&) noexcept = default;
 
 bool Module::ready() const { return state_ && state_->ready; }
 uint32_t Module::maxFrames() const { return state_ ? state_->frames : 0; }
+uint32_t Module::latencyFrames() const { return state_ ? state_->latency : 0; }
 bool Module::hasMidi() const {
     return state_ && (state_->noteOn != nullptr || state_->midiInBuffer != nullptr);
 }
@@ -300,6 +303,7 @@ std::string Module::load(const std::vector<uint8_t>& wasm, const Profile& profil
         {"jig_midi_out_capacity", &s.midiOutCapacity, wantsMidiOut},
         {"jig_midi_out_count", &s.midiOutCount, wantsMidiOut},
         {"jig_transport_ptr", &s.transportPtr, wantsTransport},
+        {"jig_latency_frames", &s.latencyFn, false},
     };
 
     for (const auto& item : wanted) {
@@ -335,6 +339,9 @@ std::string Module::load(const std::vector<uint8_t>& wasm, const Profile& profil
         return "jig_max_frames failed: " + std::string(wasm_runtime_get_exception(s.instance));
     if (frames == 0) return "the module reports a maximum of zero frames";
     s.frames = frames;
+
+    // Optional: a module that stays silent about latency is taken at none.
+    if (s.latencyFn != nullptr) callU32(s.execEnv, s.latencyFn, s.latency);
 
     // A version 2 plugin with no audio output has nothing to resolve, and
     // calling jig_output_ptr on it is forbidden rather than merely pointless.

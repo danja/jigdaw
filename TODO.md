@@ -178,9 +178,6 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       path has to be delayed to line up with it. That drop from 8 to 4 segments under
       shift has not been explained; partials shifted past Nyquist are dropped, which
       accounts for some of it.
-- [ ] **Tell a native host Quefrency's latency.** ABI version 1 carries no latency, so the
-      adapter does not compensate for its 2047 frames. The module exports `jig_latency_frames`
-      already; module-abi.md would need to name it.
 - [ ] **Show a controller's value on the panel, and save it.** 2026-09-25: Quefrency takes
       MIDI control changes 70 to 80 (design doc, "MIDI control"), verified live in Jiggy by
       the master meter following CC 80. The panel's knob does not move, and the project does

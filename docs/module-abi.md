@@ -274,6 +274,18 @@ other than bar 1 beat 1, or that has a tempo map, will disagree.
 The order matters in one place: `jig_midi_in` before `jig_process`, and `jig_midi_out_count`
 after it.
 
+## Latency reporting
+
+| Export | Signature | Meaning |
+|---|---|---|
+| `jig_latency_frames` | `() -> u32` | Frames by which the module's output lags its input, at the rate `jig_init` was given |
+
+Optional, either ABI version. A browser host learns latency from the processor's `ready`
+message; a host with no JavaScript engine reads this export once at load instead. A module
+without it is taken at none, falling back to its profile's `jig:latencyFrames` where one is
+declared. A module whose latency moves with its settings cannot track it here, because this
+is a load-time figure, so it should declare the worst case in the profile.
+
 ## An implementation
 
 `native/jigdaw-adapter` is a VST3 that loads JigDAW plugins by IRI using this ABI, and it is

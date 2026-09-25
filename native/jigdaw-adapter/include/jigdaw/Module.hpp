@@ -59,6 +59,14 @@ public:
     bool ready() const;
     uint32_t maxFrames() const;
 
+    /// Frames by which this module's output lags its input, read from the
+    /// optional jig_latency_frames export at load (docs/module-abi.md) and 0
+    /// without it. The export reports for the rate jig_init was given, which
+    /// is what the host compensates against; a module whose latency moves
+    /// with its settings would need the messaging.md `latency` message this
+    /// ABI has no equivalent of, and reports its load-time figure.
+    uint32_t latencyFrames() const;
+
     /// Set a parameter by its jig:paramIndex. Cheap, but a plugin may retune on
     /// a write, so a host should only call it when the value changed.
     void setParam(uint32_t index, float value);

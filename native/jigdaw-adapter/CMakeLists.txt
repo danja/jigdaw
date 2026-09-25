@@ -32,7 +32,7 @@ if(JIGDAW_BUILD_TESTS)
   # from the repository. chain fetches over HTTP and skips when nothing is
   # serving; chain_file runs the same test over file:// against this checkout,
   # so the whole native path is covered with nothing running.
-  foreach(name turtle integrity fetch textfield)
+  foreach(name turtle integrity fetch textfield publish)
     add_executable(test_${name} tests/${name}_test.cpp)
     target_link_libraries(test_${name} PRIVATE jigdaw_core)
     add_test(NAME ${name} COMMAND test_${name})
@@ -68,6 +68,13 @@ if(JIGDAW_BUILD_TESTS)
   target_link_libraries(test_thread PRIVATE jigdaw_core)
   add_test(NAME thread COMMAND test_thread "file://${JIGDAW_REPO}")
   set_tests_properties(thread PROPERTIES SKIP_RETURN_CODE 77)
+
+  # What the host is told about delay: the chain sums its plugins'
+  # jig_latency_frames exports. file:// only, for the same reason as above.
+  add_executable(test_latency tests/latency_test.cpp)
+  target_link_libraries(test_latency PRIVATE jigdaw_core)
+  add_test(NAME latency COMMAND test_latency "file://${JIGDAW_REPO}")
+  set_tests_properties(latency PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 if(JIGDAW_BUILD_PLUGIN)

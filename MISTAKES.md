@@ -2,6 +2,25 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-25 The adapter freed a chain the audio thread was still running
+
+**What happened.** Loading a plugin while the transport ran crashed Reaper. Both native
+wrappers published the new chain by atomic swap and freed the retired one on the spot,
+so an audio thread mid-process on it was freed out from under itself. Found live, loading
+Quefrency; why that plugin and not the others is thread history, not the plugin, and the
+same swap would have crashed on any of them.
+
+**Root cause.** An atomic pointer is publication, not reclamation: the swap says which
+chain is current, and nothing in it says when the previous one stops being used. The
+comment claimed freeing on the message thread made it safe; the thread doing the freeing
+was never the question, the audio thread still holding the pointer was.
+
+**Prevention.** The audio thread announces the chain it runs (`jigdaw/Publish.hpp`:
+acquire/stable, release, retire, reap), the message thread retires rather than frees, and
+reaping frees only what is not announced. `tests/publish_test.cpp` scripts the rule
+deterministically: a retired chain held across a swap survives the reap and goes on the
+next one. Both wrappers use the same three calls, so the second one cannot drift.
+
 ## 2026-09-24 Undoing the first change to a parameter did not undo it
 
 **What happened.** Set Tremolo's Depth once, press Undo, and Depth stayed where it had been
