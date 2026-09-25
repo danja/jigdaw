@@ -1,8 +1,12 @@
-# web/presets/acid-bassline.ttl
+# web/presets/acid.ttl
 #
-# A bundled preset that makes sound on Play with nothing else to do: BassGen
-# writes a bass line as MIDI, Pulse plays it as a bright saw, Squelch is the
-# resonant filter each note sweeps open, and Cascade adds a little room.
+# A bundled preset that makes sound on Play with nothing else to do. The first
+# track is the bass: BassGen writes a bass line as MIDI, Pulse plays it as a
+# bright saw, Squelch is the resonant filter each note sweeps open, and Cascade
+# adds a little room. The second is the drums: DrumGen writes an electro
+# pattern as MIDI, DrumKit plays it, and Quefrency pulls the kit's formants
+# down while leaving its pitch alone. DrumGen's kit map is left at Flues
+# Drumkit, the note map DrumKit listens on.
 # Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
 # gives.
 
@@ -12,16 +16,20 @@
 
 <>
     a jig:Project ;
-    rdfs:label "Acid bass line" ;
+    rdfs:label "Acid" ;
     jig:revision 1 ;
-    jig:track <#track-1> ;
-    jig:node <#lines> , <#bass> , <#filter> , <#room> ;
-    jig:connection <#c1> , <#c2> , <#c3> ;
+    jig:track <#track-1> , <#track-2> ;
+    jig:node <#lines> , <#bass> , <#filter> , <#room> , <#beats> , <#kit> , <#formants> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> ;
     jig:transport <#transport> .
 
 <#track-1>
     a jig:Track ;
-    rdfs:label "Acid bass line" .
+    rdfs:label "Bass" .
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Drums" .
 
 <#lines>
     a jig:Node ;
@@ -51,6 +59,27 @@
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#room-mix> , <#room-size> .
 
+<#beats>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Beats" ;
+    jig:plugin <../plugins/drumgen/> ;
+    jig:setting <#beats-genre> , <#beats-resolution> .
+
+<#kit>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Kit" ;
+    jig:plugin <../plugins/drumkit/> ;
+    jig:setting <#kit-gain> .
+
+<#formants>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Formants" ;
+    jig:plugin <../plugins/quefrency/> ;
+    jig:setting <#formants-shift> .
+
 <#lines-genre>   a jig:ParameterSetting ; jig:symbol "genre"    ; jig:value 1.0 .
 <#lines-scale>   a jig:ParameterSetting ; jig:symbol "scale"    ; jig:value 2.0 .
 <#lines-root>    a jig:ParameterSetting ; jig:symbol "root"     ; jig:value 36.0 .
@@ -65,6 +94,10 @@
 <#filter-decay>     a jig:ParameterSetting ; jig:symbol "decay"     ; jig:value 160.0 .
 <#room-mix>      a jig:ParameterSetting ; jig:symbol "mix"      ; jig:value 0.15 .
 <#room-size>     a jig:ParameterSetting ; jig:symbol "size"     ; jig:value 12.0 .
+<#beats-genre>      a jig:ParameterSetting ; jig:symbol "genre"         ; jig:value 3.0 .
+<#beats-resolution> a jig:ParameterSetting ; jig:symbol "resolution"    ; jig:value 1.0 .
+<#kit-gain>         a jig:ParameterSetting ; jig:symbol "master_gain"   ; jig:value 0.6 .
+<#formants-shift>   a jig:ParameterSetting ; jig:symbol "formant_shift" ; jig:value -3.0 .
 
 <#c1>
     a jig:Connection ;
@@ -89,6 +122,22 @@
 
 <#c3-from> a jig:Endpoint ; jig:endpointNode <#filter> ; jig:portIndex 0 .
 <#c3-to>   a jig:Endpoint ; jig:endpointNode <#room>   ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Midi .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#beats> ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#kit>   ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Audio .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#kit>      ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#formants> ; jig:portIndex 0 .
 
 <#transport>
     a jig:Transport ;

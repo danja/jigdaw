@@ -1,7 +1,7 @@
 {
   "note": "The presets the page offers, in menu order. Each is a project file in this directory. The label is repeated here so the menu can be drawn without downloading every preset, some of which embed audio; tests/ui/Presets.test.js fails if a label here differs from the file's own rdfs:label, or if this list and the directory disagree.",
   "presets": [
-    { "file": "acid-bassline.ttl", "label": "Acid bass line" },
+    { "file": "acid.ttl", "label": "Acid" },
     { "file": "pulse-tremolo-plate.ttl", "label": "Square lead, tremolo and plate" },
     { "file": "amp-into-room.ttl", "label": "Amp into a room" },
     { "file": "fender-into-the-ropery.ttl", "label": "Fender into the Ropery" }
