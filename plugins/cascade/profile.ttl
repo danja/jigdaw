@@ -49,7 +49,7 @@
     jig:location <cascade.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi1 ;
-    jig:integrity "sha384-JFm3wWQJ1dWYFPyPpvGoO/I4QCQdI/8vuq9HatR3YqPnScqHaMiJhWJsD1Xf3Z1H" .
+    jig:integrity "sha384-aNRlkgWUaW5ERSKpBVjaiBcuUFQ1RoS+2kaQHP9751nPhjAxEIQcPfC51A3MQCR1" .
 
 <#processor>
     a jig:Processor ;

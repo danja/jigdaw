@@ -94,10 +94,36 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       takes `loadPlugin`. A page with no audio started would also need a person's click
       first: a browser starts no AudioContext without one.
 
+- [ ] **Move Hide Browser button functionality to a sidebar collapse/expand arrow.**
+      From the inbox, 2026-09-25. The button hides the browser panel; a small
+      collapse/expand arrow in the sidebar would carry the same function in less space.
+      UI-only: no model or contract change.
+
+- [ ] **A facility for Sends and Receives between tracks.** From the inbox, 2026-09-25.
+      Aux routing between tracks: a send taps a track's signal, a receive brings it back
+      elsewhere. Needs vocabulary before code, the way the master strip does (loose ends,
+      item 1 below): what a send/receive is in the project graph, and how the compiler
+      turns it into Web Audio connections without introducing a cycle the latency rules
+      refuse.
+
+- [ ] **Group controls in the plugin view.** From the inbox, 2026-09-25: the generated
+      panel lays controls out flat, and DrumGen's 21 and DrumKit's 75 make that haphazard.
+      LV2 has a port-groups extension worth reading before inventing a `jig:` term; either
+      way the grouping belongs in the profile so the generated panel, and any other
+      surface, share it.
+
+- [ ] **A desktop Jiggy built on Electron.** From the inbox, 2026-09-25. A large direction,
+      not a task: packaging, auto-update, native audio device handling, and what happens
+      to the dereferenceable-IRI premise when the host is an installed application. Kept
+      here so the option is visible, not started.
+
 - [ ] **Loose ends from tracks, clips and plugin editors, 2026-09-24.** Each is known and none
       is built:
       1. **No master strip.** The mixer has a strip per track and none for the master, because
-         the model has nowhere to keep a master level. It needs a term before code.
+         the model has nowhere to keep a master level. It needs a term before code. From
+         the inbox, 2026-09-25: this is also wanted as a master bus with controls in the
+         mixer view, not just a level - the same term-first rule applies to whatever
+         controls the bus carries.
       2. **Track order is the order tracks were made.** There is no reorder, because the place
          for it is the editor graph (`jig:lane` was drafted and withdrawn) and a session is a
          single Turtle file, which cannot hold a second graph. Needs a decision about how a
@@ -171,10 +197,6 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       `src/engine/EventRouter.js` and `src/rdf/Vocabulary.js`, but transmission defines no
       such term; its term for MIDI control changes is `trn:ControlMidi`, which Quefrency
       uses. Either propose `trn:MidiCC` upstream or drop it here.
-- [ ] **Shrink Cascade's wasm.** 2026-09-25: it is 228 KB against Pulse's 3 KB, most likely
-      because `State::new()` has non-zero defaults, which moves its static comb buffers from
-      `.bss` into the data section. Quefrency had the same cause and went from 380 KB to 21 KB
-      by making the static all zeros and setting the defaults in `jig_init`.
 
 ## JSFX plugins
 
@@ -186,5 +208,18 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
 
 ## Before there is code
 
+- [ ] **Determine what needs building for testbed.md's "What nothing exercises yet".**
+      From the inbox, 2026-09-25. Each entry in that section names a specified-but-unused
+      clause (latency changes, tails, shared memory, the opaque relay, a-rate parameters,
+      multi-plugin state, off-page MIDI). The output is a list of example plugins or host
+      behaviours covering them, worked back into this file as build items - not builds
+      themselves.
+
 ## Recurring, check periodically
+
+- [ ] **Check builds for warning messages, and fix what is fixable locally.** From the
+      inbox, 2026-09-25. The Rust plugins currently build with only the `private_interfaces`
+      notice on the ABI pointer exports, shared with every worked sibling; resolving it in
+      one plugin would diverge that plugin from the rest, so it stands until it is resolved
+      everywhere at once. Anything beyond that is a defect to fix where it appears.
 

@@ -49,8 +49,11 @@ struct Comb {
 }
 
 impl Comb {
+    // All zeros: the static State below must be entirely zero so the linker
+    // keeps it in .bss rather than emitting 200KB of delay buffers into
+    // .data. Real lengths arrive in jig_init via retune().
     const fn new() -> Self {
-        Self { buffer: [0.0; COMB_MAX], index: 0, length: 1000, filter_state: 0.0 }
+        Self { buffer: [0.0; COMB_MAX], index: 0, length: 0, filter_state: 0.0 }
     }
 
     #[inline]
@@ -75,7 +78,7 @@ struct Allpass {
 
 impl Allpass {
     const fn new() -> Self {
-        Self { buffer: [0.0; ALLPASS_MAX], index: 0, length: 500 }
+        Self { buffer: [0.0; ALLPASS_MAX], index: 0, length: 0 }
     }
 
     #[inline]
@@ -106,6 +109,9 @@ struct State {
 }
 
 impl State {
+    // Entirely zero for the linker's sake, as above. jig_init writes the
+    // real sample rate, parameter defaults and delay lengths before the
+    // first block, so nothing reads these zeros as settings.
     const fn new() -> Self {
         Self {
             input: [[0.0; MAX_FRAMES]; CHANNELS],
@@ -114,10 +120,10 @@ impl State {
                     [Comb::new(), Comb::new(), Comb::new(), Comb::new()]],
             allpasses: [[Allpass::new(), Allpass::new()],
                         [Allpass::new(), Allpass::new()]],
-            sample_rate: 44100.0,
-            mix: 0.3,
-            size: 24.0,
-            damping: 4200.0,
+            sample_rate: 0.0,
+            mix: 0.0,
+            size: 0.0,
+            damping: 0.0,
             freeze: 0.0,
             mode: 0.0,
         }
@@ -177,6 +183,13 @@ fn state() -> &'static mut State {
 pub extern "C" fn jig_init(sample_rate: f32) {
     let s = state();
     s.sample_rate = if sample_rate > 0.0 { sample_rate } else { 44100.0 };
+    // The defaults the static used to carry: with a zeroed static they are
+    // written here, before retune derives the delay lengths from them.
+    s.mix = 0.3;
+    s.size = 24.0;
+    s.damping = 4200.0;
+    s.freeze = 0.0;
+    s.mode = 0.0;
     s.retune();
 }
 
