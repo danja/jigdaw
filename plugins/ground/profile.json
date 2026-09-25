@@ -1,0 +1,1802 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/ground/",
+  "label": "Ground",
+  "comment": "Transport synced long-form bass generator. Form shapes and phrase roles plan a whole section that plays in time with the session, with arc tension and Conductor control including scene-driven role overrides.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "ground",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:ControlMidi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:BassMidi"
+  ],
+  "genres": [
+    "Dub",
+    "Jazz",
+    "Fugue",
+    "Rock"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+    "Pure MIDI, no audio: route its MIDI output to a bass instrument. New Form, New Phrase and Mutate Cell are triggers that fire on the rising edge, so each press is one action.",
+    "Monophonic by design. A new note ends the note before it rather than overlapping."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "ground.wasm",
+    "processor": "ground-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "root_note",
+      "name": "Root Note",
+      "default": 36,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "scale",
+      "name": "Scale",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 22,
+      "paramIndex": 1,
+      "scalePoints": [
+        {
+          "label": "Major",
+          "value": 0
+        },
+        {
+          "label": "Ionian",
+          "value": 1
+        },
+        {
+          "label": "Minor",
+          "value": 2
+        },
+        {
+          "label": "Harmonic Minor",
+          "value": 3
+        },
+        {
+          "label": "Melodic Minor",
+          "value": 4
+        },
+        {
+          "label": "Dorian",
+          "value": 5
+        },
+        {
+          "label": "Phrygian",
+          "value": 6
+        },
+        {
+          "label": "Lydian",
+          "value": 7
+        },
+        {
+          "label": "Mixolydian",
+          "value": 8
+        },
+        {
+          "label": "Locrian",
+          "value": 9
+        },
+        {
+          "label": "Phrygian Dominant",
+          "value": 10
+        },
+        {
+          "label": "Neapolitan Major",
+          "value": 11
+        },
+        {
+          "label": "Neapolitan Minor",
+          "value": 12
+        },
+        {
+          "label": "Pent Major",
+          "value": 13
+        },
+        {
+          "label": "Pent Minor",
+          "value": 14
+        },
+        {
+          "label": "Blues",
+          "value": 15
+        },
+        {
+          "label": "Whole Tone",
+          "value": 16
+        },
+        {
+          "label": "Altered",
+          "value": 17
+        },
+        {
+          "label": "Half Whole Diminished",
+          "value": 18
+        },
+        {
+          "label": "Whole Half Diminished",
+          "value": 19
+        },
+        {
+          "label": "Bebop Dominant",
+          "value": 20
+        },
+        {
+          "label": "Bebop Major",
+          "value": 21
+        },
+        {
+          "label": "Bebop Minor",
+          "value": 22
+        }
+      ]
+    },
+    {
+      "symbol": "style",
+      "name": "Style",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 11,
+      "paramIndex": 2,
+      "scalePoints": [
+        {
+          "label": "Grounded",
+          "value": 0
+        },
+        {
+          "label": "Ostinato",
+          "value": 1
+        },
+        {
+          "label": "March",
+          "value": 2
+        },
+        {
+          "label": "Pulse",
+          "value": 3
+        },
+        {
+          "label": "Drone",
+          "value": 4
+        },
+        {
+          "label": "Climb",
+          "value": 5
+        },
+        {
+          "label": "Dub",
+          "value": 6
+        },
+        {
+          "label": "Jazz",
+          "value": 7
+        },
+        {
+          "label": "Rock",
+          "value": 8
+        },
+        {
+          "label": "Descend",
+          "value": 9
+        },
+        {
+          "label": "Ascend",
+          "value": 10
+        }
+      ]
+    },
+    {
+      "symbol": "channel",
+      "name": "Channel",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "form_bars",
+      "name": "Form Bars",
+      "default": 16,
+      "minimum": 8,
+      "maximum": 64,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "phrase_bars",
+      "name": "Phrase Bars",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 12,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "density",
+      "name": "Density",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "motion",
+      "name": "Motion",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "tension",
+      "name": "Tension",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "cadence",
+      "name": "Cadence",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "register",
+      "name": "Register",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "paramIndex": 10,
+      "scalePoints": [
+        {
+          "label": "Sub",
+          "value": 0
+        },
+        {
+          "label": "Low",
+          "value": 1
+        },
+        {
+          "label": "Mid",
+          "value": 2
+        },
+        {
+          "label": "High",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "symbol": "register_arc",
+      "name": "Register Arc",
+      "default": 0.4,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "sequence",
+      "name": "Sequence",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 65535,
+      "paramIndex": 13
+    },
+    {
+      "symbol": "vary",
+      "name": "Vary",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "new_form",
+      "name": "New Form",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 15,
+      "toggled": true
+    },
+    {
+      "symbol": "new_phrase",
+      "name": "New Phrase",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 16,
+      "toggled": true
+    },
+    {
+      "symbol": "mutate_cell",
+      "name": "Mutate Cell",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 17,
+      "toggled": true
+    },
+    {
+      "symbol": "color",
+      "name": "Color",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 18
+    },
+    {
+      "symbol": "note_length",
+      "name": "Note Length",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 19
+    },
+    {
+      "symbol": "note_length_variation",
+      "name": "Note Length Variation",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 20
+    },
+    {
+      "symbol": "form_shape",
+      "name": "Form Shape",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 12,
+      "paramIndex": 21,
+      "scalePoints": [
+        {
+          "label": "Free",
+          "value": 0
+        },
+        {
+          "label": "12 Blues",
+          "value": 1
+        },
+        {
+          "label": "12 Blues Quick",
+          "value": 2
+        },
+        {
+          "label": "12 Minor Blues",
+          "value": 3
+        },
+        {
+          "label": "12 Jazz Blues",
+          "value": 4
+        },
+        {
+          "label": "16 Classical",
+          "value": 5
+        },
+        {
+          "label": "16 Fugue",
+          "value": 6
+        },
+        {
+          "label": "32 Jazz AABA",
+          "value": 7
+        },
+        {
+          "label": "32 Rhythm",
+          "value": 8
+        },
+        {
+          "label": "16 Techno",
+          "value": 9
+        },
+        {
+          "label": "16 Dub",
+          "value": 10
+        },
+        {
+          "label": "8 Ambient",
+          "value": 11
+        },
+        {
+          "label": "32 Rondo",
+          "value": 12
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_1",
+      "name": "Phrase Role 1",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 22,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_2",
+      "name": "Phrase Role 2",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 23,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_3",
+      "name": "Phrase Role 3",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 24,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_4",
+      "name": "Phrase Role 4",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 25,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_5",
+      "name": "Phrase Role 5",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 26,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_6",
+      "name": "Phrase Role 6",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 27,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_7",
+      "name": "Phrase Role 7",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 28,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_8",
+      "name": "Phrase Role 8",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 29,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_9",
+      "name": "Phrase Role 9",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 30,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_10",
+      "name": "Phrase Role 10",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 31,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_11",
+      "name": "Phrase Role 11",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 32,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_12",
+      "name": "Phrase Role 12",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 33,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_13",
+      "name": "Phrase Role 13",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 34,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_14",
+      "name": "Phrase Role 14",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 35,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_15",
+      "name": "Phrase Role 15",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 36,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_16",
+      "name": "Phrase Role 16",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 37,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_17",
+      "name": "Phrase Role 17",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 38,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_18",
+      "name": "Phrase Role 18",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 39,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_19",
+      "name": "Phrase Role 19",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 40,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_20",
+      "name": "Phrase Role 20",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 41,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_21",
+      "name": "Phrase Role 21",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 42,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_22",
+      "name": "Phrase Role 22",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 43,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_23",
+      "name": "Phrase Role 23",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 44,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_24",
+      "name": "Phrase Role 24",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 45,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_25",
+      "name": "Phrase Role 25",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 46,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_26",
+      "name": "Phrase Role 26",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 47,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_27",
+      "name": "Phrase Role 27",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 48,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_28",
+      "name": "Phrase Role 28",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 49,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_29",
+      "name": "Phrase Role 29",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 50,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_30",
+      "name": "Phrase Role 30",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 51,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_31",
+      "name": "Phrase Role 31",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 52,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "phrase_role_32",
+      "name": "Phrase Role 32",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "paramIndex": 53,
+      "scalePoints": [
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Statement",
+          "value": 1
+        },
+        {
+          "label": "Answer",
+          "value": 2
+        },
+        {
+          "label": "Climb",
+          "value": 3
+        },
+        {
+          "label": "Pedal",
+          "value": 4
+        },
+        {
+          "label": "Breakdown",
+          "value": 5
+        },
+        {
+          "label": "Cadence",
+          "value": 6
+        },
+        {
+          "label": "Release",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "symbol": "clamp",
+      "name": "Clamp",
+      "default": 12,
+      "minimum": 12,
+      "maximum": 48,
+      "paramIndex": 54
+    },
+    {
+      "symbol": "conductor_ch",
+      "name": "Conductor Ch",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 55
+    }
+  ]
+}

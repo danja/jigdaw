@@ -425,6 +425,96 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/ground/",
+      "label": "Ground",
+      "comment": "Transport synced long-form bass generator. Form shapes and phrase roles plan a whole section that plays in time with the session, with arc tension and Conductor control including scene-driven role overrides.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/ground/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "ControlMidi"
+      ],
+      "produces": [
+        "Midi",
+        "BassMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+        "Pure MIDI, no audio: route its MIDI output to a bass instrument. New Form, New Phrase and Mutate Cell are triggers that fire on the rising edge, so each press is one action.",
+        "Monophonic by design. A new note ends the note before it rather than overlapping."
+      ],
+      "parameters": [
+        "cadence",
+        "channel",
+        "clamp",
+        "color",
+        "conductor_ch",
+        "density",
+        "form_bars",
+        "form_shape",
+        "motion",
+        "mutate_cell",
+        "new_form",
+        "new_phrase",
+        "note_length",
+        "note_length_variation",
+        "phrase_bars",
+        "phrase_role_1",
+        "phrase_role_10",
+        "phrase_role_11",
+        "phrase_role_12",
+        "phrase_role_13",
+        "phrase_role_14",
+        "phrase_role_15",
+        "phrase_role_16",
+        "phrase_role_17",
+        "phrase_role_18",
+        "phrase_role_19",
+        "phrase_role_2",
+        "phrase_role_20",
+        "phrase_role_21",
+        "phrase_role_22",
+        "phrase_role_23",
+        "phrase_role_24",
+        "phrase_role_25",
+        "phrase_role_26",
+        "phrase_role_27",
+        "phrase_role_28",
+        "phrase_role_29",
+        "phrase_role_3",
+        "phrase_role_30",
+        "phrase_role_31",
+        "phrase_role_32",
+        "phrase_role_4",
+        "phrase_role_5",
+        "phrase_role_6",
+        "phrase_role_7",
+        "phrase_role_8",
+        "phrase_role_9",
+        "register",
+        "register_arc",
+        "root_note",
+        "scale",
+        "seed",
+        "sequence",
+        "style",
+        "tension",
+        "vary"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/jsfx-gain-trim/",
       "label": "JigDAW Gain Trim",
       "comment": "Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.",

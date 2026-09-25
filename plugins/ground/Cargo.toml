@@ -1,0 +1,16 @@
+[package]
+name = "ground"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Transport synced long-form bass generator, the worked JigDAW bass section planner"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

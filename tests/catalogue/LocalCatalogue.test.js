@@ -57,7 +57,7 @@ describe('the plugins this host serves', () => {
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'BassGen', 'DrumKit', 'MelGen', 'Pulse'])
-    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'DrumGen', 'MelGen'])
+    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'DrumGen', 'Ground', 'MelGen'])
   })
 
   it('takes a full IRI for a facet as well as a bare name', async () => {

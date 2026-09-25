@@ -65,6 +65,18 @@ complete. Review periodically.
          the sibling checkout is absent (skip loudly, or return early), which is the pattern
          AGENTS.md asks for; nothing to reduce there beyond the path fix above.
 
+## Downspout ports
+
+Ports of `~/github/downspout` plugins to JigDAW format (Rust `jig:Abi2`, profile,
+processor, host test, repo-list wiring), newest request first. Each follows the
+drumgen/drumkit/melgen precedent: controls and behavior kept, documented deviations only.
+
+- [ ] **Port `cadence`: harmony/comping generator.** From the inbox, 2026-09-25.
+      Transport-synced harmony with learned progressions, comping engine, AI state, and Color
+      tension bias toward ii-V-I on jazz scales. Note the signal vocabulary: harmony output
+      is `trn:HarmonyMidi`, already listed in `vocabs/shapes.ttl`, which no worked JigDAW
+      plugin produces yet.
+
 ## Namespaces
 
 ## Blocking, cross-repository
