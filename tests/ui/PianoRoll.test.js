@@ -140,6 +140,27 @@ describe('editing', () => {
   })
 })
 
+describe('with no clip open', () => {
+  it('is still there, and says how to open one, with nothing to close', () => {
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {} })
+    document.body.append(roll.element)
+    expect(roll.element.hidden).toBe(false)
+    expect(roll.element.querySelector('h3').textContent).toBe('Piano roll')
+    expect(roll.element.querySelector('.piano-roll-empty').hidden).toBe(false)
+    expect(roll.element.querySelector('.piano-roll-empty').textContent).toMatch(/Add clip/)
+    expect(roll.element.querySelector('header button').hidden).toBe(true)
+    expect(roll.element.querySelector('.piano-roll-scroll').hidden).toBe(true)
+  })
+
+  it('goes back to saying so when the clip is closed', () => {
+    const { roll } = build()
+    expect(roll.element.querySelector('.piano-roll-empty').hidden).toBe(true)
+    roll.hide()
+    expect(roll.element.querySelector('.piano-roll-empty').hidden).toBe(false)
+    expect(roll.clipId).toBeNull()
+  })
+})
+
 describe('the frame around it', () => {
   it('is a grid named by its heading, with a Close', () => {
     const { roll, closed } = build()

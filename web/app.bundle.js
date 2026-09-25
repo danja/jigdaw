@@ -26454,7 +26454,6 @@ function createPianoRoll(document2, { onChange, onClose }) {
   }
   const element = document2.createElement("section");
   element.className = "piano-roll";
-  element.hidden = true;
   const header = document2.createElement("header");
   const heading = document2.createElement("h3");
   heading.id = "piano-roll-heading";
@@ -26479,7 +26478,18 @@ function createPianoRoll(document2, { onChange, onClose }) {
   grid.setAttribute("aria-labelledby", "piano-roll-heading");
   grid.setAttribute("aria-describedby", "piano-roll-help");
   scroller.append(grid);
-  element.append(header, help, scroller, status);
+  const empty = document2.createElement("p");
+  empty.className = "note piano-roll-empty";
+  empty.textContent = "No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.";
+  element.append(header, empty, help, scroller, status);
+  function showOpen(open) {
+    empty.hidden = open;
+    help.hidden = !open;
+    scroller.hidden = !open;
+    close.hidden = !open;
+    if (!open) heading.textContent = "Piano roll";
+  }
+  showOpen(false);
   let clip = null;
   let options = null;
   let cursor = { pitch: 60, step: 0 };
@@ -26615,15 +26625,16 @@ function createPianoRoll(document2, { onChange, onClose }) {
       const first2 = next.notes[0];
       cursor = first2 ? { pitch: first2.pitch, step: Math.round(first2.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2);
-      element.hidden = false;
+      showOpen(true);
       draw(next);
       document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus();
     },
     draw,
+    /** Close the clip, leaving the note that says how to open one. */
     hide() {
       clip = null;
-      element.hidden = true;
       grid.textContent = "";
+      showOpen(false);
     }
   };
 }
@@ -27150,7 +27161,6 @@ function createBrowser(ctx2) {
       const body = await browserCatalogue(document2).search({
         text,
         limit: 25,
-        loadable: !$2("everything").checked,
         ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
       });
       renderResults(body.results, text || facet);
@@ -27158,7 +27168,7 @@ function createBrowser(ctx2) {
         log2(`the wider catalogue is unavailable: ${body.upstreamError}`, "error");
       }
       if (body.loadableOnly && body.results.length === 0) {
-        log2("nothing loadable matched. Tick the box to include native plugins.");
+        log2("nothing loadable matched.");
       }
       log2(`${body.results.length} result(s)`, "ok");
     } catch (error2) {
@@ -28107,6 +28117,33 @@ function createBridgeLink(ctx2) {
   return { mount };
 }
 
+// web/app/Layout.js
+var KEY = "jigdaw.browserHidden";
+function createLayout(ctx2) {
+  const { document: document2, window: window2, $: $2 } = ctx2;
+  function show(visible) {
+    $2("browser").hidden = !visible;
+    document2.querySelector("main").classList.toggle("no-browser", !visible);
+    const button = $2("toggle-browser");
+    button.setAttribute("aria-expanded", String(visible));
+    button.textContent = visible ? "Hide browser" : "Show browser";
+    try {
+      window2.localStorage.setItem(KEY, visible ? "0" : "1");
+    } catch {
+    }
+  }
+  function mount() {
+    let hidden = false;
+    try {
+      hidden = window2.localStorage.getItem(KEY) === "1";
+    } catch {
+    }
+    show(!hidden);
+    $2("toggle-browser").addEventListener("click", () => show($2("browser").hidden));
+  }
+  return { mount };
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -28145,6 +28182,7 @@ ctx.sessions = createSessions(ctx);
 ctx.history = createHistory(ctx);
 ctx.agent = createAgent(ctx);
 ctx.bridge = createBridgeLink(ctx);
+ctx.layout = createLayout(ctx);
 var { loading, browser, transport } = ctx;
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -28175,6 +28213,7 @@ ctx.history.mount();
 ctx.arrangement.mount();
 ctx.rack.mount();
 ctx.bridge.mount();
+ctx.layout.mount();
 $("iri").value = new URL($("iri").value, document.baseURI).href;
 $("collection").value = new URL($("collection").value, document.baseURI).href;
 var linked = new URLSearchParams(location.search).get("collection");

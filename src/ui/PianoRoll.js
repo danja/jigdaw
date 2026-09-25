@@ -53,9 +53,10 @@ export function createPianoRoll (document, { onChange, onClose }) {
   if (typeof onChange !== 'function' || typeof onClose !== 'function') {
     throw new Error('createPianoRoll needs onChange and onClose')
   }
+  // Always on the page, so it can be found: with no clip open it says how to
+  // open one, rather than being absent until somebody already knows it exists.
   const element = document.createElement('section')
   element.className = 'piano-roll'
-  element.hidden = true
 
   const header = document.createElement('header')
   const heading = document.createElement('h3')
@@ -85,7 +86,21 @@ export function createPianoRoll (document, { onChange, onClose }) {
   grid.setAttribute('aria-labelledby', 'piano-roll-heading')
   grid.setAttribute('aria-describedby', 'piano-roll-help')
   scroller.append(grid)
-  element.append(header, help, scroller, status)
+  const empty = document.createElement('p')
+  empty.className = 'note piano-roll-empty'
+  empty.textContent = 'No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.'
+  element.append(header, empty, help, scroller, status)
+
+  /** Open or closed: the grid and its controls, or the note saying how to open one. */
+  function showOpen (open) {
+    empty.hidden = open
+    help.hidden = !open
+    scroller.hidden = !open
+    // Close is left out with nothing to close, not shown disabled.
+    close.hidden = !open
+    if (!open) heading.textContent = 'Piano roll'
+  }
+  showOpen(false)
 
   let clip = null
   let options = null
@@ -219,15 +234,16 @@ export function createPianoRoll (document, { onChange, onClose }) {
       const first = next.notes[0]
       cursor = first ? { pitch: first.pitch, step: Math.round(first.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 }
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2)
-      element.hidden = false
+      showOpen(true)
       draw(next)
       document.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus()
     },
     draw,
+    /** Close the clip, leaving the note that says how to open one. */
     hide () {
       clip = null
-      element.hidden = true
       grid.textContent = ''
+      showOpen(false)
     }
   }
 }

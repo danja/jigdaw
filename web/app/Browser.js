@@ -204,12 +204,12 @@ export function createBrowser (ctx) {
   async function search () {
     const text = $('q').value.trim()
     const facet = $('facet').value
-    // An empty search lists what this host can run, which is the useful default
-    // for a browser: it answers "what have I got" without being asked twice.
+    // Only what this host can run: a native plugin the catalogue knows about
+    // is nothing a person here can load. An empty search lists all of it,
+    // which answers "what have I got" without being asked twice.
     try {
       const body = await browserCatalogue(document).search({
         text, limit: 25,
-        loadable: !$('everything').checked,
         ...(facet ? { [facet.split('=')[0]]: facet.split('=')[1] } : {})
       })
       renderResults(body.results, text || facet)
@@ -219,7 +219,7 @@ export function createBrowser (ctx) {
         log(`the wider catalogue is unavailable: ${body.upstreamError}`, 'error')
       }
       if (body.loadableOnly && body.results.length === 0) {
-        log('nothing loadable matched. Tick the box to include native plugins.')
+        log('nothing loadable matched.')
       }
       log(`${body.results.length} result(s)`, 'ok')
     } catch (error) {

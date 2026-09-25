@@ -127,6 +127,9 @@
      and a timeline or a piano roll is as wide as the music. They scroll in
      their own boxes, so the column must be allowed to be narrower than they are. */
   main { display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
+  /* The browser hidden: the stage takes the whole width. */
+  main.no-browser { grid-template-columns: minmax(0, 1fr); }
+  .browser[hidden] { display:none; }
   .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
   .stage { padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0; }
   h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
@@ -158,9 +161,6 @@
   .badge { font-size:10px; padding:1px 6px; border-radius:99px; background:var(--accent); color:#fff; vertical-align:middle; }
   .note { color:var(--dim); font-size:11px; margin:6px 0; }
   .collection-name { margin:4px 0 0; font-size:14px; }
-  .everything { flex:1 1 100%; display:flex; align-items:center; gap:8px;
-    color:var(--dim); font-size:12px; cursor:pointer; min-height:36px; }
-  .everything input { width:20px; height:20px; flex:none; }
   .result.native { opacity:.62; }
 
   /* Rack */
@@ -388,6 +388,7 @@
 
 <div class="transport">
   <span class="brand">Jiggy</span>
+  <button id="toggle-browser" aria-expanded="true" aria-controls="browser">Hide browser</button>
   <button id="play" aria-pressed="false">Play</button>
   <button id="stop">Stop</button>
   <span class="tempo">
@@ -414,7 +415,7 @@
 </div>
 
 <main>
-  <section class="browser" aria-label="Plugin browser">
+  <section class="browser" id="browser" aria-label="Plugin browser">
     <h2>Browser</h2>
     <!-- Every Load button below loads onto this track. Visible rather than a
          setting somewhere else, because where a plugin lands is the first thing
@@ -433,10 +434,6 @@
         <option value="role=AudioEffect">Effects</option>
         <option value="accepts=Midi">Accepts MIDI</option>
       </select>
-      <label class="everything">
-        <input type="checkbox" id="everything">
-        <span>Include plugins this host cannot run</span>
-      </label>
       <button type="submit">Search</button>
     </form>
     <div id="results" aria-live="polite"></div>

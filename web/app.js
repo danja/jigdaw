@@ -24,6 +24,7 @@ import { createSessions } from './app/Sessions.js'
 import { createHistory } from './app/History.js'
 import { createAgent } from './app/Agent.js'
 import { createBridgeLink } from './app/Bridge.js'
+import { createLayout } from './app/Layout.js'
 
 const $ = id => document.getElementById(id)
 
@@ -65,6 +66,7 @@ ctx.sessions = createSessions(ctx)
 ctx.history = createHistory(ctx)
 ctx.agent = createAgent(ctx)
 ctx.bridge = createBridgeLink(ctx)
+ctx.layout = createLayout(ctx)
 
 const { loading, browser, transport } = ctx
 
@@ -87,6 +89,7 @@ ctx.history.mount()
 ctx.arrangement.mount()
 ctx.rack.mount()
 ctx.bridge.mount()
+ctx.layout.mount()
 
 // Show the whole IRI, not a path. A plugin is identified by an absolute IRI,
 // and the box is the clearest place to say so: what goes in it is the same
