@@ -32,6 +32,7 @@
 #include "jigdaw/Chain.hpp"
 #include "jigdaw/Params.hpp"
 #include "jigdaw/Report.hpp"
+#include "jigdaw/TextField.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -221,6 +222,14 @@ protected:
                 if (event.mod & kModifierControl) load();
                 else { text_ += '\n'; repaint(); }
                 return true;
+            case 'v':
+            case 'V':
+                // Paste. Printable input arrives through onCharacterInput, but
+                // a control character does not: character 22 never reaches the
+                // field, so Ctrl+V has to be caught here, on the key path that
+                // backspace and enter already use.
+                if (event.mod & kModifierControl) { pasteClipboard(); repaint(); return true; }
+                return false;
             case kKeyEscape:
                 focused_ = false;
                 repaint();
@@ -258,17 +267,24 @@ private:
                  "https://strandz.it/jigdaw/plugins/pulse/", nullptr);
         } else {
             fillColor(c.text);
+            // The drawn lines and the caret below both read this list, so
+            // the two cannot disagree about which line is last. See
+            // include/jigdaw/TextField.hpp for why a trailing newline counts.
+            const std::vector<std::string> parts = jigdaw::fieldLines(text_);
+            const float limit = fieldRect_.getY() + fieldRect_.getHeight() - 14.0f;
             float y = fieldRect_.getY() + 9.0f;
-            std::istringstream lines(text_);
-            std::string line;
-            while (std::getline(lines, line) && y < fieldRect_.getY() + fieldRect_.getHeight() - 14.0f) {
-                text(fieldRect_.getX() + 10.0f, y, line.c_str(), nullptr);
+            for (const auto& part : parts) {
+                if (y >= limit) break;
+                text(fieldRect_.getX() + 10.0f, y, part.c_str(), nullptr);
                 y += kLineHeight;
             }
             if (focused_) {
-                beginPath();
-                rect(fieldRect_.getX() + 10.0f + measureLine(lastLine()), y - kLineHeight, 1.5f, 14.0f);
-                fillColor(c.accent); fill();
+                const float caretY = fieldRect_.getY() + 9.0f + (parts.size() - 1) * kLineHeight;
+                if (caretY < limit) {
+                    beginPath();
+                    rect(fieldRect_.getX() + 10.0f + measureLine(parts.back()), caretY, 1.5f, 14.0f);
+                    fillColor(c.accent); fill();
+                }
             }
         }
 
@@ -647,9 +663,16 @@ private:
                p.getY() >= r.getY() && p.getY() <= r.getY() + r.getHeight();
     }
 
-    std::string lastLine() const {
-        const auto at = text_.find_last_of('\n');
-        return at == std::string::npos ? text_ : text_.substr(at + 1);
+    /// Insert the system clipboard as text. DPF offers the clipboard
+    /// synchronously through the TopLevelWidget base; there is no paste
+    /// event, so Ctrl+V reads it directly. See normalisePastedText for the
+    /// line endings: a Windows \r\n pasted verbatim would leave \r at the
+    /// end of every IRI and fail every load with no visible cause.
+    void pasteClipboard() {
+        size_t size = 0;
+        const void* data = getClipboard(size);
+        if (data == nullptr || size == 0) return;
+        text_ += jigdaw::normalisePastedText(static_cast<const char*>(data), size);
     }
 
     float measureLine(const std::string& line) {

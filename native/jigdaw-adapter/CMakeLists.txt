@@ -32,7 +32,7 @@ if(JIGDAW_BUILD_TESTS)
   # from the repository. chain fetches over HTTP and skips when nothing is
   # serving; chain_file runs the same test over file:// against this checkout,
   # so the whole native path is covered with nothing running.
-  foreach(name turtle integrity fetch)
+  foreach(name turtle integrity fetch textfield)
     add_executable(test_${name} tests/${name}_test.cpp)
     target_link_libraries(test_${name} PRIVATE jigdaw_core)
     add_test(NAME ${name} COMMAND test_${name})
