@@ -24858,6 +24858,13 @@ function createTransport(ctx2) {
   let source = null;
   let scheduler = null;
   let schedulerTimer = null;
+  let playheadFrame = null;
+  function followPlayhead() {
+    if (!playing) return;
+    const position = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
+    ctx2.arrangement.playhead(position.beat);
+    playheadFrame = requestAnimationFrame(followPlayhead);
+  }
   function playAudioClip(clip, { when, offset, duration }) {
     const track = ctx2.dispatcher.project.track(clip.track);
     if (!track) return;
@@ -24900,6 +24907,7 @@ function createTransport(ctx2) {
     scheduler.start(startedAt);
     scheduler.tick();
     schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs);
+    followPlayhead();
     log2("playing", "ok");
   }
   function stop() {
@@ -24907,6 +24915,8 @@ function createTransport(ctx2) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
     scheduler?.stop();
+    cancelAnimationFrame(playheadFrame);
+    ctx2.arrangement.playhead(null);
     $2("play").setAttribute("aria-pressed", "false");
     if (source) {
       try {
@@ -25084,7 +25094,8 @@ var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#db": "dB",
   "http://lv2plug.in/ns/extensions/units#s": "s",
   "http://lv2plug.in/ns/extensions/units#pc": "%",
-  "http://lv2plug.in/ns/extensions/units#semitone12TET": "st"
+  "http://lv2plug.in/ns/extensions/units#semitone12TET": "st",
+  "http://lv2plug.in/ns/extensions/units#cent": "ct"
 });
 var formatValue = (port, value2) => {
   const unit = UNIT_LABELS[port.unit];
@@ -25097,7 +25108,8 @@ var SPOKEN_UNITS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#db": "decibels",
   "http://lv2plug.in/ns/extensions/units#s": "seconds",
   "http://lv2plug.in/ns/extensions/units#pc": "percent",
-  "http://lv2plug.in/ns/extensions/units#semitone12TET": "semitones"
+  "http://lv2plug.in/ns/extensions/units#semitone12TET": "semitones",
+  "http://lv2plug.in/ns/extensions/units#cent": "cents"
 });
 var spokenValue = (port, value2) => {
   const unit = SPOKEN_UNITS[port.unit];
@@ -25146,7 +25158,8 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       setters.set(port.symbol, (v) => {
         const on = v >= 0.5;
         input.checked = on;
-        readout.textContent = on ? "on" : "off";
+        const named = port.scalePoints?.find((p) => p.value === (on ? port.maximum : port.minimum))?.label;
+        readout.textContent = named ?? (on ? "on" : "off");
       });
     } else if (port.widget === "selector") {
       input = document2.createElement("select");
@@ -26285,8 +26298,13 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   scroller.setAttribute("role", "region");
   scroller.setAttribute("aria-label", "Arrangement, scrolls sideways");
   element.append(scroller);
+  const head = document2.createElement("div");
+  head.className = "playhead";
+  head.setAttribute("aria-hidden", "true");
+  head.hidden = true;
   function draw({ tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null }) {
     scroller.textContent = "";
+    scroller.append(head);
     const lastBeat = Math.max(0, ...clips.map((c3) => c3.startBeat + c3.lengthBeats));
     const bars = Math.ceil(lastBeat / beatsPerBar) + 4;
     const width = bars * beatsPerBar * PIXELS_PER_BEAT;
@@ -26314,8 +26332,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       row.className = "timeline-row";
       row.setAttribute("role", "group");
       row.setAttribute("aria-label", `Track ${label}`);
-      const head = document2.createElement("div");
-      head.className = "timeline-head";
+      const head2 = document2.createElement("div");
+      head2.className = "timeline-head";
       const name = document2.createElement("button");
       name.type = "button";
       name.className = "show-track";
@@ -26338,7 +26356,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       addAudio.textContent = "Add audio";
       addAudio.setAttribute("aria-label", `Add an audio file to ${label} at ${barBeat(at, beatsPerBar)}`);
       addAudio.addEventListener("click", () => onAddAudio(track.id, at));
-      head.append(name, add, addAudio);
+      head2.append(name, add, addAudio);
       const lane = document2.createElement("div");
       lane.className = "timeline-lane";
       lane.style.width = `${width}px`;
@@ -26351,7 +26369,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           problem: clip.kind === "audio" ? unplayable(clip) : null
         }));
       }
-      row.append(head, lane);
+      row.append(head2, lane);
       scroller.append(row);
     }
   }
@@ -26431,7 +26449,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     svg.append(path);
     return svg;
   }
-  return { element, draw };
+  function playhead(beat) {
+    head.hidden = beat === null;
+    if (beat !== null) head.style.left = `calc(var(--head) + ${beat * PIXELS_PER_BEAT}px)`;
+  }
+  return { element, draw, playhead };
 }
 
 // src/ui/PianoRoll.js
@@ -26448,7 +26470,8 @@ var beats = (n2) => `${n2} beat${n2 === 1 ? "" : "s"}`;
 function noteAt(notes, pitch, beat) {
   return notes.find((n2) => n2.pitch === pitch && n2.startBeat <= beat && beat < n2.startBeat + n2.lengthBeats) ?? null;
 }
-function createPianoRoll(document2, { onChange, onClose }) {
+function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
+}, now = () => Date.now() }) {
   if (typeof onChange !== "function" || typeof onClose !== "function") {
     throw new Error("createPianoRoll needs onChange and onClose");
   }
@@ -26465,7 +26488,7 @@ function createPianoRoll(document2, { onChange, onClose }) {
   const help = document2.createElement("p");
   help.className = "note";
   help.id = "piano-roll-help";
-  help.textContent = "Arrows move. Enter adds or removes a note. Shift with Left or Right changes its length, Alt with Up or Down its velocity. Page Up and Page Down move an octave.";
+  help.textContent = "Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, or its last square to change its length. Double-click a note, or press Delete, to remove it. Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave.";
   const status = document2.createElement("p");
   status.className = "visually-hidden";
   status.setAttribute("role", "status");
@@ -26477,6 +26500,10 @@ function createPianoRoll(document2, { onChange, onClose }) {
   grid.setAttribute("role", "grid");
   grid.setAttribute("aria-labelledby", "piano-roll-heading");
   grid.setAttribute("aria-describedby", "piano-roll-help");
+  const head = document2.createElement("div");
+  head.className = "playhead";
+  head.setAttribute("aria-hidden", "true");
+  head.hidden = true;
   scroller.append(grid);
   const empty = document2.createElement("p");
   empty.className = "note piano-roll-empty";
@@ -26494,12 +26521,17 @@ function createPianoRoll(document2, { onChange, onClose }) {
   let options = null;
   let cursor = { pitch: 60, step: 0 };
   let low = 48;
+  let preview = null;
+  let lastPress = null;
   const say = (message) => {
     status.textContent = message;
   };
-  const steps = () => Math.round(clip.lengthBeats * STEPS_PER_BEAT);
+  const clipSteps = () => Math.round(clip.lengthBeats * STEPS_PER_BEAT);
+  const steps = () => clipSteps() + options.beatsPerBar * STEPS_PER_BEAT;
   const beatOf = (step) => step / STEPS_PER_BEAT;
   const where = (step) => barBeat(beatOf(step), options.beatsPerBar);
+  const shown = () => preview ?? clip.notes;
+  const same = (a2, b) => a2.startBeat === b.startBeat && a2.pitch === b.pitch;
   function clampCursor() {
     cursor.pitch = Math.max(0, Math.min(127, cursor.pitch));
     cursor.step = Math.max(0, Math.min(steps() - 1, cursor.step));
@@ -26508,8 +26540,9 @@ function createPianoRoll(document2, { onChange, onClose }) {
     low = Math.max(0, Math.min(128 - VISIBLE_PITCHES, low));
   }
   function describe(pitch, step) {
-    const note = noteAt(clip.notes, pitch, beatOf(step));
-    const base = `${spokenName(pitch)}, ${where(step)}`;
+    const note = noteAt(shown(), pitch, beatOf(step));
+    const past = step >= clipSteps() ? ", past the end of the clip" : "";
+    const base = `${spokenName(pitch)}, ${where(step)}${past}`;
     if (!note) return base;
     const start = note.startBeat === beatOf(step) ? "note" : "inside a note";
     return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}`;
@@ -26519,6 +26552,8 @@ function createPianoRoll(document2, { onChange, onClose }) {
     if (!clip) return;
     const hadFocus = grid.contains(document2.activeElement);
     clampCursor();
+    const notes = shown();
+    const selected = noteAt(notes, cursor.pitch, beatOf(cursor.step));
     grid.textContent = "";
     grid.setAttribute("aria-rowcount", String(VISIBLE_PITCHES));
     grid.setAttribute("aria-colcount", String(steps()));
@@ -26535,35 +26570,49 @@ function createPianoRoll(document2, { onChange, onClose }) {
         const cell = document2.createElement("div");
         cell.setAttribute("role", "gridcell");
         cell.id = `roll-${pitch}-${step}`;
-        const note = noteAt(clip.notes, pitch, beatOf(step));
+        cell.dataset.pitch = String(pitch);
+        cell.dataset.step = String(step);
+        const note = noteAt(notes, pitch, beatOf(step));
         const starts = note && note.startBeat === beatOf(step);
-        cell.className = `piano-roll-cell${note ? " on" : ""}${starts ? " start" : ""}${step % STEPS_PER_BEAT === 0 ? " beat" : ""}`;
+        const ends = note && note.startBeat + note.lengthBeats === beatOf(step + 1);
+        const classes = ["piano-roll-cell"];
+        if (note) classes.push("on");
+        if (starts) classes.push("start");
+        if (ends) classes.push("end");
+        if (note && note === selected) classes.push("selected");
+        if (step % STEPS_PER_BEAT === 0) classes.push("beat");
+        if (step >= clipSteps()) classes.push("beyond");
+        cell.className = classes.join(" ");
         cell.textContent = starts ? "\u25A0" : note ? "\u2013" : "";
         cell.setAttribute("aria-label", describe(pitch, step));
         const here = pitch === cursor.pitch && step === cursor.step;
         cell.tabIndex = here ? 0 : -1;
         if (here) cell.classList.add("cursor");
-        cell.addEventListener("click", () => {
-          cursor = { pitch, step };
-          toggle();
-        });
         row.append(cell);
       }
       grid.append(row);
     }
-    if (hadFocus) document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: false });
+    grid.append(head);
+    if (hadFocus) document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
   }
   function send(notes, message) {
     say(message);
-    onChange(clip.id, notes);
+    const end = Math.max(0, ...notes.map((n2) => n2.startBeat + n2.lengthBeats));
+    const bar = options.beatsPerBar;
+    const lengthBeats = end > clip.lengthBeats ? Math.ceil(end / bar) * bar : void 0;
+    onChange(clip.id, notes, lengthBeats === void 0 ? {} : { lengthBeats });
+  }
+  function remove(note) {
+    send(clip.notes.filter((n2) => !same(n2, note)), `Removed ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}`);
   }
   function toggle() {
     const beat = beatOf(cursor.step);
     const here = noteAt(clip.notes, cursor.pitch, beat);
     if (here) {
-      send(clip.notes.filter((n2) => n2 !== here), `Removed ${spokenName(here.pitch)} at ${barBeat(here.startBeat, options.beatsPerBar)}`);
+      remove(here);
     } else {
       const note = { startBeat: beat, lengthBeats: 1, pitch: cursor.pitch, velocity: 100 };
+      onAudition(note.pitch, note.velocity);
       send([...clip.notes, note], `Added ${spokenName(note.pitch)} at ${where(cursor.step)}, 1 beat`);
     }
   }
@@ -26606,11 +26655,87 @@ function createPianoRoll(document2, { onChange, onClose }) {
     else if (key === "PageUp") move(12, 0);
     else if (key === "PageDown") move(-12, 0);
     else if (key === "Home") move(0, -cursor.step);
-    else if (key === "End") move(0, steps() - 1 - cursor.step);
+    else if (key === "End") move(0, clipSteps() - 1 - cursor.step);
     else if (key === "Enter" || key === " ") {
       event.preventDefault();
       toggle();
+    } else if (key === "Delete" || key === "Backspace") {
+      event.preventDefault();
+      const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
+      if (here) remove(here);
+      else say(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
     }
+  });
+  const cellOf = (target) => {
+    const cell = target?.closest?.("[data-step]");
+    return cell ? { pitch: Number(cell.dataset.pitch), step: Number(cell.dataset.step) } : null;
+  };
+  function dragged(kind, from, to, note) {
+    if (kind === "draw") {
+      const first2 = Math.min(from.step, to.step);
+      const last = Math.max(from.step, to.step);
+      const lengthBeats2 = first2 === last ? 1 : beatOf(last - first2 + 1);
+      return [...clip.notes, { startBeat: beatOf(first2), lengthBeats: lengthBeats2, pitch: from.pitch, velocity: 100 }];
+    }
+    if (kind === "move") {
+      const pitch = Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch));
+      const startBeat = Math.max(0, note.startBeat + beatOf(to.step - from.step));
+      if (pitch === note.pitch && startBeat === note.startBeat) return null;
+      return clip.notes.map((n2) => same(n2, note) ? { ...n2, pitch, startBeat } : n2);
+    }
+    const lengthBeats = Math.max(beatOf(1), beatOf(to.step + 1) - note.startBeat);
+    if (lengthBeats === note.lengthBeats) return null;
+    return clip.notes.map((n2) => same(n2, note) ? { ...n2, lengthBeats } : n2);
+  }
+  grid.addEventListener("pointerdown", (event) => {
+    if (!clip || event.button !== 0) return;
+    const from = cellOf(event.target);
+    if (!from) return;
+    event.preventDefault();
+    const note = noteAt(clip.notes, from.pitch, beatOf(from.step));
+    const at = now();
+    if (note && lastPress && same(lastPress.note, note) && at - lastPress.at < 400) {
+      lastPress = null;
+      remove(note);
+      return;
+    }
+    lastPress = note ? { note, at } : null;
+    const lastStep = note ? Math.round((note.startBeat + note.lengthBeats) * STEPS_PER_BEAT) - 1 : null;
+    const kind = !note ? "draw" : from.step === lastStep && note.lengthBeats > beatOf(1) ? "resize" : "move";
+    cursor = note ? { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) } : { ...from };
+    if (note) onAudition(note.pitch, note.velocity);
+    preview = kind === "draw" ? dragged("draw", from, from) : null;
+    draw();
+    document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
+    let to = from;
+    const over = (e) => {
+      const at2 = cellOf(e.target);
+      if (!at2 || at2.pitch === to.pitch && at2.step === to.step) return;
+      to = kind === "draw" ? { pitch: from.pitch, step: at2.step } : at2;
+      const next = dragged(kind, from, to, note);
+      if (kind === "move" && next && to.pitch !== from.pitch) onAudition(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)), note.velocity);
+      preview = next;
+      draw();
+    };
+    const up = () => {
+      grid.removeEventListener("pointerover", over);
+      document2.removeEventListener("pointerup", up);
+      const next = dragged(kind, from, to, note);
+      preview = null;
+      if (kind === "draw") {
+        const made = next.at(-1);
+        onAudition(made.pitch, made.velocity);
+        send(next, `Added ${spokenName(made.pitch)} at ${where(Math.min(from.step, to.step))}, ${beats(made.lengthBeats)}`);
+      } else if (next) {
+        const changed = next.find((n2) => !clip.notes.some((o2) => same(o2, n2) && o2.lengthBeats === n2.lengthBeats));
+        send(next, kind === "move" ? `Moved to ${spokenName(changed.pitch)} at ${barBeat(changed.startBeat, options.beatsPerBar)}` : `Length ${beats(changed.lengthBeats)}`);
+      } else {
+        draw();
+        say(`Selected ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}, ${beats(note.lengthBeats)}`);
+      }
+    };
+    grid.addEventListener("pointerover", over);
+    document2.addEventListener("pointerup", up);
   });
   return {
     element,
@@ -26630,10 +26755,25 @@ function createPianoRoll(document2, { onChange, onClose }) {
       document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus();
     },
     draw,
+    /**
+     * Show where the transport is, as a beat of the arrangement, or null to
+     * show nothing. Drawn only while it is inside this clip and its extra bar.
+     */
+    playhead(beat) {
+      if (!clip || beat === null) {
+        head.hidden = true;
+        return;
+      }
+      const step = (beat - clip.startBeat) * STEPS_PER_BEAT;
+      head.hidden = !(step >= 0 && step < steps());
+      head.style.setProperty("--at", String(step));
+    },
     /** Close the clip, leaving the note that says how to open one. */
     hide() {
       clip = null;
+      preview = null;
       grid.textContent = "";
+      head.hidden = true;
       showOpen(false);
     }
   };
@@ -26671,8 +26811,26 @@ function createArrangement(ctx2) {
       edit([{ op: "removeClip", id }]);
     }
   });
+  function audition(pitch, velocity) {
+    const { dispatcher, engine } = ctx2;
+    const clip = dispatcher?.project.clip(pianoRoll.clipId);
+    const nodeId = clip && dispatcher.project.track(clip.track)?.midiInput;
+    if (!nodeId || !engine) return;
+    const { currentTime, sampleRate } = engine.context;
+    const frame = Math.round(currentTime * sampleRate);
+    dispatcher.sendEvents(nodeId, [
+      { frame, bytes: Uint8Array.from([144, pitch, velocity]) },
+      { frame: frame + Math.round(0.25 * sampleRate), bytes: Uint8Array.from([128, pitch, 0]) }
+    ]);
+  }
   const pianoRoll = createPianoRoll(document2, {
-    onChange: (id, notes) => edit([{ op: "setClipNotes", id, notes }]),
+    // A note drawn past the clip's end brings the clip's new length with it,
+    // and both go as one edit, so one undo takes back both.
+    onChange: (id, notes, { lengthBeats } = {}) => edit([
+      ...lengthBeats === void 0 ? [] : [{ op: "setClip", id, lengthBeats }],
+      { op: "setClipNotes", id, notes }
+    ]),
+    onAudition: audition,
     onClose: () => {
       const id = pianoRoll.clipId;
       pianoRoll.hide();
@@ -26752,6 +26910,11 @@ function createArrangement(ctx2) {
   return {
     draw,
     mount,
+    /** Show where the transport is, as a beat, or null when it is stopped. */
+    playhead(beat) {
+      timeline.playhead(beat);
+      pianoRoll.playhead(beat);
+    },
     /** Forget what was drawn for the session being replaced. */
     reset() {
       pianoRoll.hide();

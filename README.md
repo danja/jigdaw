@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 12 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 13 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -90,7 +90,7 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-12 worked plugins are in [plugins/](plugins/): a subtractive synth,
+13 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, and a transport-synced
 bass line generator, all four written in Rust and compiled to WebAssembly; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
@@ -105,8 +105,11 @@ stage in C++ meant to be copied rather than shipped: the minimal starting point 
 WebAssembly plugin, everything in it beyond one line of DSP being ABI wiring;
 [Ferrite](plugins/ferrite/), a neural amp model and a cabinet impulse response in series, the
 first plugin here depending on a real external crate ([nam-rs](https://github.com/OpenSauce/nam-rs))
-rather than hand-writing every line of DSP; and [Squelch](plugins/squelch/), a resonant
-lowpass that an envelope follower sweeps open on every note, plain JavaScript like Tremolo.
+rather than hand-writing every line of DSP; [Squelch](plugins/squelch/), a resonant
+lowpass that an envelope follower sweeps open on every note, plain JavaScript like Tremolo;
+and [Quefrency](plugins/quefrency/), which splits its input through the cepstrum into formants
+and harmonics and shifts each independently, the first plugin here with latency to
+compensate ([its design](docs/plugins/quefrency-design.md)).
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.

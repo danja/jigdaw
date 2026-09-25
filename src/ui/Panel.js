@@ -33,7 +33,8 @@ export const UNIT_LABELS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#db': 'dB',
   'http://lv2plug.in/ns/extensions/units#s': 's',
   'http://lv2plug.in/ns/extensions/units#pc': '%',
-  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'st'
+  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'st',
+  'http://lv2plug.in/ns/extensions/units#cent': 'ct'
 })
 
 const formatValue = (port, value) => {
@@ -56,7 +57,8 @@ export const SPOKEN_UNITS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#db': 'decibels',
   'http://lv2plug.in/ns/extensions/units#s': 'seconds',
   'http://lv2plug.in/ns/extensions/units#pc': 'percent',
-  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'semitones'
+  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'semitones',
+  'http://lv2plug.in/ns/extensions/units#cent': 'cents'
 })
 
 const spokenValue = (port, value) => {
@@ -158,8 +160,11 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       setters.set(port.symbol, v => {
         const on = v >= 0.5
         input.checked = on
-        // WCAG 1.4.1: the readout is the non-colour signal for the state.
-        readout.textContent = on ? 'on' : 'off'
+        // WCAG 1.4.1: the readout is the non-colour signal for the state. A
+        // two-point enumeration is drawn as a switch too, and its points have
+        // names: "off" for Quefrency's "Cepstral" estimator said nothing true.
+        const named = port.scalePoints?.find(p => p.value === (on ? port.maximum : port.minimum))?.label
+        readout.textContent = named ?? (on ? 'on' : 'off')
       })
     } else if (port.widget === 'selector') {
       input = document.createElement('select')

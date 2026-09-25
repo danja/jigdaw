@@ -101,6 +101,20 @@ describe('the layout', () => {
   })
 })
 
+describe('the playhead', () => {
+  it('stands at the transport\'s beat, to scale, and survives a redraw', () => {
+    const { timeline } = build()
+    timeline.playhead(2.5)
+    const head = document.querySelector('.timeline .playhead')
+    expect(head.hidden).toBe(false)
+    expect(head.style.left).toBe(`calc(var(--head) + ${2.5 * PIXELS_PER_BEAT}px)`)
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
+    expect(document.querySelector('.timeline .playhead')).toBe(head)
+    timeline.playhead(null)
+    expect(head.hidden).toBe(true)
+  })
+})
+
 describe('the keyboard', () => {
   it('moves a clip a beat at a time, and not before the start', () => {
     const { calls, clip } = build()

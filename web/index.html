@@ -226,8 +226,12 @@
 
   /* Arrangement. The lanes scroll inside their own box, never the page. The
      track names stay put on the left while the lanes scroll under them. */
-  .timeline-scroll { overflow-x:auto; border:1px solid var(--line); border-radius:7px;
+  .timeline-scroll { position:relative; overflow-x:auto; border:1px solid var(--line); border-radius:7px;
     background:#13161b; padding-bottom:6px; }
+  /* Where the transport is, in the timeline and the piano roll. Drawn over,
+     never in the way of a press. */
+  .playhead { position:absolute; top:0; bottom:0; width:2px; background:#ffd166; z-index:3; pointer-events:none; }
+  .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
   .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
@@ -259,18 +263,30 @@
   .piano-roll header button { min-height:44px; padding:6px 12px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .piano-roll-scroll { overflow:auto; max-height:60vh; border:1px solid var(--line); }
-  .piano-roll-grid { width:max-content; }
+  .piano-roll-grid { position:relative; width:max-content; --key:3rem; --cell:28px; }
   .piano-roll-row { display:flex; }
   .piano-roll-row.black .piano-roll-cell { background:#15181d; }
-  .piano-roll-key { position:sticky; left:0; width:3rem; flex:none; font-size:11px; color:var(--dim);
+  .piano-roll-key { position:sticky; left:0; z-index:2; width:var(--key); flex:none; font-size:11px; color:var(--dim);
     background:#13161b; border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
-  .piano-roll-cell { width:28px; height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;
+  .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;
     background:#1a1e24; color:#fff; font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
   .piano-roll-cell.beat { border-left:1px solid var(--line); }
-  .piano-roll-cell.on { background:var(--accent); }
+  .piano-roll-cell.on { background:var(--accent); cursor:grab; }
+  /* A gap at each end of a note, so notes that touch still read as separate. */
+  .piano-roll-cell.on.start { box-shadow:inset 3px 0 0 #0e1013; border-top-left-radius:4px; border-bottom-left-radius:4px; }
+  .piano-roll-cell.on.end { box-shadow:inset -3px 0 0 #0e1013; border-top-right-radius:4px; border-bottom-right-radius:4px; }
+  .piano-roll-cell.on.start.end { box-shadow:inset 3px 0 0 #0e1013, inset -3px 0 0 #0e1013; }
+  /* The last square of a longer note is its handle. */
+  .piano-roll-cell.on.end:not(.start) { cursor:ew-resize; }
+  .piano-roll-cell.on.selected { background:#6aa6ff; }
+  /* The bar past the end of the clip: drawing into it makes the clip longer. */
+  .piano-roll-cell.beyond { opacity:.5; }
   .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
   .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
-  @media (pointer: coarse) { .piano-roll-cell { width:44px; height:44px; line-height:44px; } }
+  @media (pointer: coarse) {
+    .piano-roll-grid { --cell:44px; }
+    .piano-roll-cell { height:44px; line-height:44px; }
+  }
 
   /* Mixer. One channel below the next, the same orientation a strip already
      has embedded in its track's slot, rather than a side-scrolling console:

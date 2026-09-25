@@ -34,6 +34,7 @@
         <../plugins/jsfx-one-pole-filter/> ,
         <../plugins/jsfx-soft-clipper/> ,
         <../plugins/pulse/> ,
+        <../plugins/quefrency/> ,
         <../plugins/squelch/> ,
         <../plugins/tremolo/> .
 
@@ -47,5 +48,6 @@
 <../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
 <../plugins/pulse/> rdfs:label "Pulse" .
+<../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/squelch/> rdfs:label "Squelch" .
 <../plugins/tremolo/> rdfs:label "Tremolo" .

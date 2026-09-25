@@ -30,6 +30,16 @@ export function createTransport (ctx) {
   // Plays the tracks' clips while the transport runs, and its timer.
   let scheduler = null
   let schedulerTimer = null
+  // The playhead's animation, while the transport runs.
+  let playheadFrame = null
+
+  /** Move the playheads to the transport's beat, every frame while it runs. */
+  function followPlayhead () {
+    if (!playing) return
+    const position = ctx.dispatcher.transport().positionAtElapsed(elapsedFrames())
+    ctx.arrangement.playhead(position.beat)
+    playheadFrame = requestAnimationFrame(followPlayhead)
+  }
 
   /**
    * Start one audio clip, into its track's audio input if it names one and
@@ -91,6 +101,7 @@ export function createTransport (ctx) {
     scheduler.start(startedAt)
     scheduler.tick()
     schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs)
+    followPlayhead()
     log('playing', 'ok')
   }
 
@@ -100,6 +111,8 @@ export function createTransport (ctx) {
     clearInterval(schedulerTimer)
     schedulerTimer = null
     scheduler?.stop()
+    cancelAnimationFrame(playheadFrame)
+    ctx.arrangement.playhead(null)
     $('play').setAttribute('aria-pressed', 'false')
     if (source) { try { source.stop() } catch { /* already stopped */ } source.disconnect(); source = null }
     const { engine } = ctx

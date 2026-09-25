@@ -82,6 +82,21 @@ describe('createPanel accessibility', () => {
     expect(readout.textContent).toBe('off')
   })
 
+  it('names a two-point enumeration drawn as a switch by its points, not on and off', () => {
+    // The readout is the checkbox's accessible description, so this is also
+    // what a screen reader says.
+    const panel = build([port({
+      symbol: 'estimator', name: 'Envelope estimator', widget: 'switch', enumeration: true,
+      defaultValue: 0, minimum: 0, maximum: 1,
+      scalePoints: [{ label: 'Cepstral', value: 0 }, { label: 'True envelope', value: 1 }]
+    })])
+    const input = panel.element.querySelector('input')
+    const readout = panel.element.querySelector(`#${input.getAttribute('aria-describedby')}`)
+    expect(readout.textContent).toBe('Cepstral')
+    panel.update('estimator', 1)
+    expect(readout.textContent).toBe('True envelope')
+  })
+
   it('uses native controls, so keyboard support is not reimplemented', () => {
     // The cheapest way to satisfy 2.1.1 is not to leave the platform. A div
     // with a click handler is how a control stops being reachable by tab.

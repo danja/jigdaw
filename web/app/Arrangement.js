@@ -45,8 +45,33 @@ export function createArrangement (ctx) {
     }
   })
 
+  /**
+   * Sound a note through the open clip's track, as it is placed or chosen: a
+   * quarter of a second, at the stream position the clock has reached. Into
+   * the track's MIDI input, where the clip itself plays, and into nothing on a
+   * track without one, which is also what the clip would do.
+   */
+  function audition (pitch, velocity) {
+    const { dispatcher, engine } = ctx
+    const clip = dispatcher?.project.clip(pianoRoll.clipId)
+    const nodeId = clip && dispatcher.project.track(clip.track)?.midiInput
+    if (!nodeId || !engine) return
+    const { currentTime, sampleRate } = engine.context
+    const frame = Math.round(currentTime * sampleRate)
+    dispatcher.sendEvents(nodeId, [
+      { frame, bytes: Uint8Array.from([0x90, pitch, velocity]) },
+      { frame: frame + Math.round(0.25 * sampleRate), bytes: Uint8Array.from([0x80, pitch, 0]) }
+    ])
+  }
+
   const pianoRoll = createPianoRoll(document, {
-    onChange: (id, notes) => edit([{ op: 'setClipNotes', id, notes }]),
+    // A note drawn past the clip's end brings the clip's new length with it,
+    // and both go as one edit, so one undo takes back both.
+    onChange: (id, notes, { lengthBeats } = {}) => edit([
+      ...(lengthBeats === undefined ? [] : [{ op: 'setClip', id, lengthBeats }]),
+      { op: 'setClipNotes', id, notes }
+    ]),
+    onAudition: audition,
     onClose: () => {
       const id = pianoRoll.clipId
       pianoRoll.hide()
@@ -140,6 +165,8 @@ export function createArrangement (ctx) {
   return {
     draw,
     mount,
+    /** Show where the transport is, as a beat, or null when it is stopped. */
+    playhead (beat) { timeline.playhead(beat); pianoRoll.playhead(beat) },
     /** Forget what was drawn for the session being replaced. */
     reset () { pianoRoll.hide(); waveformsRequested.clear() }
   }

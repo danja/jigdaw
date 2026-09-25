@@ -62,6 +62,12 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   scroller.setAttribute('role', 'region')
   scroller.setAttribute('aria-label', 'Arrangement, scrolls sideways')
   element.append(scroller)
+  // Where the transport is. Drawn over the lanes, never read: the position
+  // readout in the transport bar says the same in words.
+  const head = document.createElement('div')
+  head.className = 'playhead'
+  head.setAttribute('aria-hidden', 'true')
+  head.hidden = true
 
   /**
    * `peaksFor(clip, count)` gives an audio clip's waveform as `count` peaks
@@ -70,6 +76,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
    */
   function draw ({ tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null }) {
     scroller.textContent = ''
+    scroller.append(head)
     const lastBeat = Math.max(0, ...clips.map(c => c.startBeat + c.lengthBeats))
     // Room for a few bars past the last clip, so there is always somewhere to put the next.
     const bars = Math.ceil(lastBeat / beatsPerBar) + 4
@@ -232,5 +239,11 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     return svg
   }
 
-  return { element, draw }
+  /** Show the transport at `beat`, or nothing for null. */
+  function playhead (beat) {
+    head.hidden = beat === null
+    if (beat !== null) head.style.left = `calc(var(--head) + ${beat * PIXELS_PER_BEAT}px)`
+  }
+
+  return { element, draw, playhead }
 }

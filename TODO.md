@@ -139,6 +139,27 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       origin and needs a maintainer decision, not a silent reversal of a choice that was made
       and tested for a reason.
 
+## Quefrency
+
+- [ ] **Listen to Quefrency, and check compensation against a parallel path.** 2026-09-25:
+      built to [docs/plugins/quefrency-design.md](docs/plugins/quefrency-design.md), with 23
+      tests. In Chrome's real AudioWorklet (`OfflineAudioContext`), `ready` reported 2047 at
+      48 kHz and 4095 at 96 kHz and an impulse arrived at exactly those offsets. In Jiggy,
+      live at 48 kHz, after Pulse on one track: the panel draws all 11 controls with units,
+      the engine holds latency 2047, the master meter reached 8 of 12 segments, dropped to
+      none at Output −24 dB, and reached 4 with pitch +7, formant −4 and the true envelope,
+      with no console errors. Not yet done: listening to it, and a graph where a parallel
+      path has to be delayed to line up with it. That drop from 8 to 4 segments under
+      shift has not been explained; partials shifted past Nyquist are dropped, which
+      accounts for some of it.
+- [ ] **Tell a native host Quefrency's latency.** ABI version 1 carries no latency, so the
+      adapter does not compensate for its 2047 frames. The module exports `jig_latency_frames`
+      already; module-abi.md would need to name it.
+- [ ] **Shrink Cascade's wasm.** 2026-09-25: it is 228 KB against Pulse's 3 KB, most likely
+      because `State::new()` has non-zero defaults, which moves its static comb buffers from
+      `.bss` into the data section. Quefrency had the same cause and went from 380 KB to 21 KB
+      by making the static all zeros and setting the defaults in `jig_init`.
+
 ## JSFX plugins
 
 ## The reference host

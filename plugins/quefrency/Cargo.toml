@@ -1,0 +1,22 @@
+[package]
+name = "quefrency"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Cepstral formant and harmonic shifter, a JigDAW plugin"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# log, exp and atan2 on every bin of every frame, which no linear mapping or
+# lookup table stands in for. no_std, allocation-free, deterministic, and it
+# imports nothing, so the module still instantiates with no imports.
+libm = { version = "0.2", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true
