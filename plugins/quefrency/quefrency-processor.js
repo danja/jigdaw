@@ -5,9 +5,13 @@
 // before ready is posted, and process() allocates nothing and never grows
 // memory.
 //
-// One difference: this plugin has latency, which depends on the sample rate,
+// Two differences. This plugin has latency, which depends on the sample rate,
 // so ready carries what the module reports for the rate it was given rather
-// than a constant.
+// than a constant. And it takes MIDI control changes, queued here the way
+// BassGen queues its notes: every event carries an absolute stream position
+// and is handed to the module in the quantum that contains it, compared by
+// range and never by equality with a block boundary. The queue is bounded,
+// preallocated, and says how much it dropped.
 
 // Hand-written from the same lv2:port declarations the host reads, because a
 // worklet cannot fetch its own profile. tests/dsp/quefrency.test.js binds the
@@ -28,6 +32,9 @@ const DESCRIPTORS = Object.freeze([
 
 const NAMES = Object.freeze(DESCRIPTORS.map(d => d.name))
 
+const QUEUE_CAPACITY = 512
+const EVENT_BYTES = 8 // docs/module-abi.md fixes the record at 8 bytes
+
 class QuefrencyProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors () {
     return DESCRIPTORS
@@ -43,10 +50,15 @@ class QuefrencyProcessor extends AudioWorkletProcessor {
     // rebuilt on every write to it.
     this.lastValues = new Float32Array(NAMES.length).fill(NaN)
 
+    this.queueFrames = new Float64Array(QUEUE_CAPACITY)
+    this.queueBytes = new Uint8Array(QUEUE_CAPACITY * 3)
+    this.queueCount = 0
+
     this.port.onmessage = event => this.handle(event.data)
   }
 
   handle (message) {
+    if (message?.type === 'events') return this.enqueue(message.events)
     if (message?.type !== 'init') return
     try {
       this.instantiate(message.module, message.sampleRate ?? sampleRate)
@@ -71,7 +83,8 @@ class QuefrencyProcessor extends AudioWorkletProcessor {
     const exports = new WebAssembly.Instance(compiled, {}).exports
 
     for (const name of ['jig_init', 'jig_process', 'jig_input_ptr', 'jig_output_ptr', 'jig_set_param',
-      'jig_max_frames', 'jig_latency_frames', 'memory']) {
+      'jig_max_frames', 'jig_latency_frames', 'jig_midi_in_ptr', 'jig_midi_in_capacity', 'jig_midi_in',
+      'memory']) {
       if (!(name in exports)) throw new Error(`the module does not export ${name}`)
     }
 
@@ -84,8 +97,58 @@ class QuefrencyProcessor extends AudioWorkletProcessor {
       this.outputViews.push(new Float32Array(buffer, exports.jig_output_ptr(channel), maxFrames))
     }
 
+    this.inCapacity = exports.jig_midi_in_capacity()
+    this.midiIn = new DataView(buffer, exports.jig_midi_in_ptr(), this.inCapacity * EVENT_BYTES)
+
     this.exports = exports
     this.maxFrames = maxFrames
+  }
+
+  enqueue (events) {
+    if (!events?.length) return
+    let dropped = 0
+    for (const event of events) {
+      if (this.queueCount >= QUEUE_CAPACITY) { dropped += 1; continue }
+      const slot = this.queueCount
+      this.queueFrames[slot] = event.frame
+      const bytes = event.bytes
+      this.queueBytes[slot * 3] = bytes[0] ?? 0
+      this.queueBytes[slot * 3 + 1] = bytes[1] ?? 0
+      this.queueBytes[slot * 3 + 2] = bytes[2] ?? 0
+      this.queueCount += 1
+    }
+    if (dropped > 0) this.port.postMessage({ type: 'dropped', count: dropped, since: currentFrame })
+  }
+
+  /** Hand the module every event due in this quantum, in the ABI's layout. */
+  deliverDue (blockStart, blockEnd) {
+    let written = 0
+    let kept = 0
+    for (let i = 0; i < this.queueCount; i++) {
+      const at = this.queueFrames[i]
+      if (at < blockEnd) {
+        if (written < this.inCapacity) {
+          // An event whose frame has already passed is applied now rather than
+          // dropped: moving it is better than losing it. messaging.md 1.4.
+          const offset = Math.max(0, Math.min(blockEnd - blockStart - 1, at - blockStart))
+          const base = written * EVENT_BYTES
+          this.midiIn.setUint32(base, offset, true)
+          this.midiIn.setUint8(base + 4, 3)
+          this.midiIn.setUint8(base + 5, this.queueBytes[i * 3])
+          this.midiIn.setUint8(base + 6, this.queueBytes[i * 3 + 1])
+          this.midiIn.setUint8(base + 7, this.queueBytes[i * 3 + 2])
+          written += 1
+        }
+        continue
+      }
+      this.queueFrames[kept] = at
+      this.queueBytes[kept * 3] = this.queueBytes[i * 3]
+      this.queueBytes[kept * 3 + 1] = this.queueBytes[i * 3 + 1]
+      this.queueBytes[kept * 3 + 2] = this.queueBytes[i * 3 + 2]
+      kept += 1
+    }
+    this.queueCount = kept
+    this.exports.jig_midi_in(written)
   }
 
   process (inputs, outputs, parameters) {
@@ -111,6 +174,10 @@ class QuefrencyProcessor extends AudioWorkletProcessor {
       }
     }
 
+    // Parameters first, then the events due: a host automating a parameter and
+    // a controller sending its CC in the same quantum, the controller wins.
+    // After that the module keeps the controller's value until the host's
+    // own value next changes, because a value is only written on a change.
     for (let index = 0; index < NAMES.length; index++) {
       const values = parameters[NAMES[index]]
       if (!values) continue
@@ -121,6 +188,7 @@ class QuefrencyProcessor extends AudioWorkletProcessor {
       }
     }
 
+    this.deliverDue(currentFrame, currentFrame + frames)
     this.exports.jig_process(frames)
 
     for (let channel = 0; channel < output.length; channel++) {

@@ -1,6 +1,7 @@
 // tests/engine/EventRouter.test.js
 import { describe, it, expect } from 'vitest'
-import { EventRouter, isMidi } from '../../src/engine/EventRouter.js'
+import { EventRouter, isMidi, carriesNotes } from '../../src/engine/EventRouter.js'
+import { vocabulary } from '../../src/rdf/Vocabulary.js'
 
 const T = 'http://purl.org/stuff/transmissions/'
 
@@ -178,5 +179,18 @@ describe('observing a node that has no routes', () => {
     router.observe('a')
     engine.emit('a', { type: 'events', events: [note(0)] })
     expect(engine.posts).toEqual([])
+  })
+})
+
+describe('carriesNotes', () => {
+  // A plugin taking only control changes must not be offered a keyboard or a
+  // clip: nothing played into it would sound. Quefrency is the case.
+  it('is true of MIDI that plays, and false of MIDI that only controls', () => {
+    expect(carriesNotes(vocabulary.trn.Midi)).toBe(true)
+    expect(carriesNotes('http://purl.org/stuff/transmissions/BassMidi')).toBe(true)
+    expect(carriesNotes(vocabulary.trn.ControlMidi)).toBe(false)
+    expect(carriesNotes(vocabulary.trn.MidiCC)).toBe(false)
+    expect(isMidi(vocabulary.trn.ControlMidi)).toBe(true)
+    expect(carriesNotes(vocabulary.trn.Audio)).toBe(false)
   })
 })

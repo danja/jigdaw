@@ -14,6 +14,8 @@
 // boundary means an event that is not exactly on one never fires at all. Both
 // halves of that are written twice in valis's MISTAKES.md.
 
+import { vocabulary } from '../rdf/Vocabulary.js'
+
 const MIDI_SIGNALS = new Set([
   'http://purl.org/stuff/transmissions/Midi',
   'http://purl.org/stuff/transmissions/BassMidi',
@@ -26,6 +28,14 @@ const MIDI_SIGNALS = new Set([
 ])
 
 export const isMidi = signalKind => MIDI_SIGNALS.has(signalKind)
+
+// MIDI that changes a plugin's settings and plays nothing: Quefrency takes
+// control changes and no notes. A keyboard, a clip or a "clips play into"
+// choice offered to it would be a control that reaches nothing.
+const CONTROL_ONLY = new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC])
+
+/** A MIDI signal kind that can carry notes, so something can be played into it. */
+export const carriesNotes = signalKind => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind)
 
 export class EventRouter {
   #engine

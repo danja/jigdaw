@@ -277,6 +277,7 @@ after it.
 ## An implementation
 
 `native/jigdaw-adapter` is a VST3 that loads JigDAW plugins by IRI using this ABI, and it is
-the reason the ABI exists. Five of the worked plugins declare it (Cascade, Pulse and Dynamix
+the reason the ABI exists. Six of the worked plugins declare it (Cascade, Pulse and Dynamix
 at version 1; BassGen and the 8-Bit 8asterd, which need the transport and MIDI version 2
-adds), and [for-plugin-authors.md](for-plugin-authors.md) recommends that yours does too.
+adds; Quefrency at version 2 for MIDI in alone, an audio effect steered by control
+changes), and [for-plugin-authors.md](for-plugin-authors.md) recommends that yours does too.

@@ -6,6 +6,7 @@
 // the host to route. It knows nothing about the instrument, the engine or the
 // audio graph, which is what lets the same events come from a real MIDI device
 // later without anything here changing.
+import { carriesNotes } from '../engine/EventRouter.js'
 
 const WHITE = [0, 2, 4, 5, 7, 9, 11]
 const BLACK = { 1: 0, 3: 1, 6: 3, 8: 4, 10: 5 }
@@ -51,7 +52,7 @@ export function octavesForWidth (width, { max = 2, minKeyWidth = MIN_KEY_WIDTH }
  */
 export const playable = profile =>
   (profile?.audioOutputs ?? 0) > 0 &&
-  (profile?.accepts ?? []).some(signal => typeof signal === 'string' && signal.includes('Midi'))
+  (profile?.accepts ?? []).some(carriesNotes)
 
 /** Note on and note off, as the three bytes a MIDI source sends. */
 export const noteOn = (note, velocity = 100) => Uint8Array.from([0x90, note, velocity])

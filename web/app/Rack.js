@@ -13,7 +13,7 @@ import { frameableOrigin } from '../../src/ui/PluginFrame.js'
 import { createPortBar, createConnectionList } from '../../src/ui/Routing.js'
 import { createKeyboard, octavesForWidth, playable } from '../../src/ui/Keyboard.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
-import { isMidi } from '../../src/engine/EventRouter.js'
+import { isMidi, carriesNotes } from '../../src/engine/EventRouter.js'
 import { compact } from '../../src/host/Capabilities.js'
 
 // Where Load puts a plugin: a track id, or NEW_TRACK for a track of its own.
@@ -243,7 +243,7 @@ export function createRack (ctx) {
 
     // Which plugin this track's MIDI clips play into. Only where a plugin on it
     // accepts MIDI: a menu with nothing to choose is a control nobody can use.
-    const takesMidi = nodes.filter(n => (dispatcher.engineNode(n.id)?.profile?.accepts ?? []).some(isMidi))
+    const takesMidi = nodes.filter(n => (dispatcher.engineNode(n.id)?.profile?.accepts ?? []).some(carriesNotes))
     if (takesMidi.length > 0) {
       const midi = document.createElement('select')
       midi.id = `midi-input-${track.id}`

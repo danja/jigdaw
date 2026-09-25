@@ -79,6 +79,20 @@ suite('quefrency through the host', () => {
     expect(out.every(Number.isFinite)).toBe(true)
   })
 
+  it('takes a MIDI control change posted by the host, at the frame it names', async () => {
+    const { engine, entry } = await add(48000)
+    engine.setParameter(entry.id, 'mix', 0)
+    const dc = new Float32Array(QUANTUM).fill(0.5)
+    for (let i = 0; i < 20; i++) entry.node.render([dc, dc])
+    // Output is parameter 10, so CC 80; value 0 is its minimum, -24 dB. The
+    // frame is an absolute stream position, 50 frames into the next quantum.
+    engine.post(entry.id, { type: 'events', events: [{ frame: entry.node.frame + 50, bytes: Uint8Array.from([0xb0, 80, 0]) }] })
+    await new Promise(resolve => queueMicrotask(resolve))
+    const out = Float32Array.from(entry.node.render([dc, dc])[0])
+    expect(out[49]).toBeCloseTo(0.5, 5)
+    expect(out[50]).toBeCloseTo(0.5 * 10 ** (-24 / 20), 5)
+  })
+
   it('takes a parameter from the engine by symbol', async () => {
     const { engine, entry } = await add(48000)
     engine.setParameter(entry.id, 'output', -6.0206)

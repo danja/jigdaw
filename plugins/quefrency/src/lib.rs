@@ -40,6 +40,56 @@ const PEAK_RANGE: f32 = 9.2;
 // Guard on any gain exponent, so no setting can produce an infinity.
 const EXPONENT_LIMIT: f32 = 40.0;
 
+// Minimum, default and maximum of each port, in jig:paramIndex order. The
+// defaults are applied by jig_init, and a controller maps onto these ranges.
+// tests/dsp/quefrency.test.js binds this table to the profile's ports.
+const PORTS: [(f32, f32, f32); 11] = [
+    (-12.0, 0.0, 12.0),     // formant_shift, semitones
+    (0.0, 100.0, 200.0),    // formant_depth, percent
+    (-6.0, 0.0, 6.0),       // formant_tilt, dB per octave
+    (-24.0, 0.0, 24.0),     // pitch_shift, semitones
+    (-100.0, 0.0, 100.0),   // pitch_fine, cents
+    (-1000.0, 0.0, 1000.0), // freq_shift, Hz
+    (0.0, 100.0, 200.0),    // harmonic_depth, percent
+    (0.5, 1.5, 5.0),        // lifter, ms
+    (0.0, 0.0, 1.0),        // estimator, 0 cepstral, 1 true envelope
+    (0.0, 1.0, 1.0),        // mix
+    (-24.0, 0.0, 12.0),     // output, dB
+];
+const PARAM_COUNT: usize = PORTS.len();
+
+// Control change 70 drives parameter 0, and so on up to 80, the 8-Bit
+// 8asterd's convention. 70 to 79 are the MIDI sound controllers, which is what
+// these are, and 80 is the first general purpose controller.
+const FIRST_CC: u8 = 70;
+const MIDI_IN_CAPACITY: usize = 64;
+
+/// One record of docs/module-abi.md's event layout: 8 bytes, little endian.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MidiEvent {
+    frame: u32,
+    size: u8,
+    data: [u8; 3],
+}
+
+/// A controller value, 0 to 127, as a value for a port. 64 is the port's
+/// default wherever the default lies strictly inside the range, so a centred
+/// knob on a controller means "unchanged"; otherwise the range is linear.
+fn controller_value(index: usize, cc: u8) -> f32 {
+    let (minimum, default, maximum) = PORTS[index];
+    let v = cc.min(127) as f32;
+    if minimum < default && default < maximum {
+        if v <= 64.0 {
+            minimum + (default - minimum) * v / 64.0
+        } else {
+            default + (maximum - default) * (v - 64.0) / 63.0
+        }
+    } else {
+        minimum + (maximum - minimum) * v / 127.0
+    }
+}
+
 /// Frame size for a sample rate: the same span of time at 44.1 and 96 kHz.
 fn frame_size(sample_rate: f32) -> usize {
     if sample_rate > 50000.0 { 4096 } else { 2048 }
@@ -211,23 +261,6 @@ impl Params {
             lifter_ms: 0.0, true_envelope: false, mix: 0.0, gain: 0.0,
         }
     }
-
-    const fn defaults() -> Self {
-        Self {
-            formant_ratio: 1.0,
-            formant_depth: 1.0,
-            formant_tilt: 0.0,
-            pitch_semitones: 0.0,
-            pitch_cents: 0.0,
-            pitch_ratio: 1.0,
-            freq_shift: 0.0,
-            harmonic_depth: 1.0,
-            lifter_ms: 1.5,
-            true_envelope: false,
-            mix: 1.0,
-            gain: 1.0,
-        }
-    }
 }
 
 struct State {
@@ -240,6 +273,10 @@ struct State {
     // Tilt as a natural-log gain per bin, rebuilt when tilt or rate changes.
     tilt: [f32; MAX_BINS],
     params: Params,
+    // Each port's value as last set, by the host or by a controller.
+    values: [f32; PARAM_COUNT],
+    midi_in: [MidiEvent; MIDI_IN_CAPACITY],
+    midi_in_count: u32,
     sample_rate: f32,
     n: usize,
     hop: usize,
@@ -259,6 +296,9 @@ impl State {
             window: [0.0; MAX_N],
             tilt: [0.0; MAX_BINS],
             params: Params::zero(),
+            values: [0.0; PARAM_COUNT],
+            midi_in: [MidiEvent { frame: 0, size: 0, data: [0; 3] }; MIDI_IN_CAPACITY],
+            midi_in_count: 0,
             sample_rate: 0.0,
             n: 0,
             hop: 0,
@@ -468,7 +508,6 @@ fn process_frame(ch: &mut Channel, sc: &mut Scratch, fft: &Fft, window: &[f32; M
 #[no_mangle]
 pub extern "C" fn jig_init(sample_rate: f32) {
     let s = state();
-    s.params = Params::defaults();
     s.sample_rate = if sample_rate > 0.0 { sample_rate } else { 48000.0 };
     s.n = frame_size(s.sample_rate);
     s.hop = s.n / 4;
@@ -481,7 +520,10 @@ pub extern "C" fn jig_init(sample_rate: f32) {
     for channel in s.channels.iter_mut() {
         channel.reset();
     }
-    s.rebuild_tilt();
+    s.midi_in_count = 0;
+    for (index, &(_, default, _)) in PORTS.iter().enumerate() {
+        set_param(s, index, default);
+    }
 }
 
 /// Frames by which the output lags the input at the rate given to jig_init.
@@ -509,7 +551,21 @@ pub extern "C" fn jig_max_frames() -> u32 {
 
 #[no_mangle]
 pub extern "C" fn jig_set_param(index: u32, value: f32) {
-    let s = state();
+    set_param(state(), index as usize, value);
+}
+
+/// A port's value as last set, by the host or by a controller. Not part of
+/// the ABI: tests read it to check a controller lands where the profile says.
+#[no_mangle]
+pub extern "C" fn quefrency_param(index: u32) -> f32 {
+    state().values.get(index as usize).copied().unwrap_or(f32::NAN)
+}
+
+fn set_param(s: &mut State, index: usize, value: f32) {
+    if index >= PARAM_COUNT {
+        return;
+    }
+    s.values[index] = value;
     let p = &mut s.params;
     match index {
         0 => p.formant_ratio = powf(2.0, value / 12.0),
@@ -533,9 +589,43 @@ pub extern "C" fn jig_set_param(index: u32, value: f32) {
 }
 
 #[no_mangle]
+pub extern "C" fn jig_midi_in_ptr() -> *mut MidiEvent {
+    state().midi_in.as_mut_ptr()
+}
+
+#[no_mangle]
+pub extern "C" fn jig_midi_in_capacity() -> u32 {
+    MIDI_IN_CAPACITY as u32
+}
+
+/// The host has written `count` events for the next jig_process.
+#[no_mangle]
+pub extern "C" fn jig_midi_in(count: u32) {
+    state().midi_in_count = count.min(MIDI_IN_CAPACITY as u32);
+}
+
+/// Apply one event if it is a control change this plugin answers to, on any
+/// channel. Everything else, notes included, is ignored.
+fn apply_event(s: &mut State, event: MidiEvent) {
+    if event.size != 3 || event.data[0] & 0xf0 != 0xb0 {
+        return;
+    }
+    let controller = event.data[1];
+    if controller < FIRST_CC || controller >= FIRST_CC + PARAM_COUNT as u8 {
+        return;
+    }
+    let index = (controller - FIRST_CC) as usize;
+    set_param(s, index, controller_value(index, event.data[2]));
+}
+
+#[no_mangle]
 pub extern "C" fn jig_process(frames: u32) {
     let s = state();
     let frames = (frames as usize).min(MAX_FRAMES);
+    // The events describe this block and nothing else: taken now, so a block
+    // with none never replays the last block's.
+    let count = s.midi_in_count as usize;
+    s.midi_in_count = 0;
     if s.n == 0 {
         // Not initialised: silence rather than a trap on an empty frame.
         for c in 0..CHANNELS {
@@ -543,12 +633,36 @@ pub extern "C" fn jig_process(frames: u32) {
         }
         return;
     }
+
+    // The block runs in segments, each ending where the next event is due, so
+    // an event changes the signal from its own frame. Mix and output act per
+    // sample; the spectral parameters are read per analysis frame, so they
+    // take effect at the next hop at or after the event.
+    let mut at = 0;
+    let mut next = 0;
+    while at < frames {
+        while next < count && s.midi_in[next].frame as usize <= at {
+            let event = s.midi_in[next];
+            apply_event(s, event);
+            next += 1;
+        }
+        let end = if next < count {
+            (s.midi_in[next].frame as usize).clamp(at + 1, frames)
+        } else {
+            frames
+        };
+        render(s, at, end);
+        at = end;
+    }
+}
+
+fn render(s: &mut State, from: usize, to: usize) {
     let (n, hop, latency) = (s.n, s.hop, s.latency());
     let (mix, gain) = (s.params.mix, s.params.gain);
 
     for c in 0..CHANNELS {
         let ch = &mut s.channels[c];
-        for i in 0..frames {
+        for i in from..to {
             let x = s.input[c][i];
             ch.in_fifo[n - hop + ch.filled] = x;
             ch.filled += 1;

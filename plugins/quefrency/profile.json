@@ -4,13 +4,14 @@
   "comment": "Separates its input through the cepstrum into a formant envelope and a harmonic structure, shifts and reshapes each independently, and multiplies them back together.",
   "vendor": "danja",
   "developer": "http://danny.ayers.name",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "registeredName": "quefrency",
   "roles": [
     "trn:AudioEffect"
   ],
   "accepts": [
-    "trn:Audio"
+    "trn:Audio",
+    "trn:ControlMidi"
   ],
   "produces": [
     "trn:Audio"
@@ -20,14 +21,18 @@
     "Experimental"
   ],
   "cautions": [
-    "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; a native host using ABI version 1 is not told it and will not compensate.",
+    "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; the module ABI carries no latency, so a native host is not told it and will not compensate.",
     "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone.",
     "Transients smear when pitch or frequency shift is set, as with any phase vocoder.",
-    "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it."
+    "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it.",
+    "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt per octave, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
+    "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins."
   ],
   "format": "trn:WebAudio",
   "licenceId": "Apache-2.0",
-  "requires": [],
+  "requires": [
+    "jig:MidiEvents"
+  ],
   "prefers": [],
   "shape": {
     "audioInputs": 1,
@@ -42,24 +47,113 @@
     "processor": "quefrency-processor.js"
   },
   "ports": [
-    { "symbol": "formant_shift", "name": "Formant shift", "default": 0, "minimum": -12, "maximum": 12, "unit": "semitone12TET", "paramIndex": 0 },
-    { "symbol": "formant_depth", "name": "Formant depth", "default": 100, "minimum": 0, "maximum": 200, "unit": "pc", "paramIndex": 1 },
-    { "symbol": "formant_tilt", "name": "Formant tilt per octave", "default": 0, "minimum": -6, "maximum": 6, "unit": "db", "paramIndex": 2 },
-    { "symbol": "pitch_shift", "name": "Pitch shift", "default": 0, "minimum": -24, "maximum": 24, "unit": "semitone12TET", "paramIndex": 3 },
-    { "symbol": "pitch_fine", "name": "Pitch fine", "default": 0, "minimum": -100, "maximum": 100, "unit": "cent", "paramIndex": 4 },
-    { "symbol": "freq_shift", "name": "Frequency shift", "default": 0, "minimum": -1000, "maximum": 1000, "unit": "hz", "paramIndex": 5 },
-    { "symbol": "harmonic_depth", "name": "Harmonic depth", "default": 100, "minimum": 0, "maximum": 200, "unit": "pc", "paramIndex": 6 },
-    { "symbol": "lifter", "name": "Lifter", "default": 1.5, "minimum": 0.5, "maximum": 5, "unit": "ms", "paramIndex": 7 },
     {
-      "symbol": "estimator", "name": "Envelope estimator", "default": 0, "minimum": 0, "maximum": 1,
+      "symbol": "formant_shift",
+      "name": "Formant shift",
+      "default": 0,
+      "minimum": -12,
+      "maximum": 12,
+      "unit": "semitone12TET",
+      "paramIndex": 0
+    },
+    {
+      "symbol": "formant_depth",
+      "name": "Formant depth",
+      "default": 100,
+      "minimum": 0,
+      "maximum": 200,
+      "unit": "pc",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "formant_tilt",
+      "name": "Formant tilt per octave",
+      "default": 0,
+      "minimum": -6,
+      "maximum": 6,
+      "unit": "db",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "pitch_shift",
+      "name": "Pitch shift",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "semitone12TET",
+      "paramIndex": 3
+    },
+    {
+      "symbol": "pitch_fine",
+      "name": "Pitch fine",
+      "default": 0,
+      "minimum": -100,
+      "maximum": 100,
+      "unit": "cent",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "freq_shift",
+      "name": "Frequency shift",
+      "default": 0,
+      "minimum": -1000,
+      "maximum": 1000,
+      "unit": "hz",
+      "paramIndex": 5
+    },
+    {
+      "symbol": "harmonic_depth",
+      "name": "Harmonic depth",
+      "default": 100,
+      "minimum": 0,
+      "maximum": 200,
+      "unit": "pc",
+      "paramIndex": 6
+    },
+    {
+      "symbol": "lifter",
+      "name": "Lifter",
+      "default": 1.5,
+      "minimum": 0.5,
+      "maximum": 5,
+      "unit": "ms",
+      "paramIndex": 7
+    },
+    {
+      "symbol": "estimator",
+      "name": "Envelope estimator",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
       "scalePoints": [
-        { "label": "Cepstral", "value": 0 },
-        { "label": "True envelope", "value": 1 }
+        {
+          "label": "Cepstral",
+          "value": 0
+        },
+        {
+          "label": "True envelope",
+          "value": 1
+        }
       ],
       "paramIndex": 8
     },
-    { "symbol": "mix", "name": "Mix", "default": 1, "minimum": 0, "maximum": 1, "paramIndex": 9 },
-    { "symbol": "output", "name": "Output", "default": 0, "minimum": -24, "maximum": 12, "unit": "db", "paramIndex": 10 }
+    {
+      "symbol": "mix",
+      "name": "Mix",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "output",
+      "name": "Output",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 12,
+      "unit": "db",
+      "paramIndex": 10
+    }
   ],
-  "abi": "jig:Abi1"
+  "abi": "jig:Abi2"
 }

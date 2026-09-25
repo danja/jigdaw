@@ -101,6 +101,10 @@ export const vocabulary = Object.freeze({
     HostTransport: `${TRN}HostTransport`,
     Audio: `${TRN}Audio`,
     Midi: `${TRN}Midi`,
+    // MIDI that reshapes a plugin rather than playing it. ControlMidi is
+    // transmission's term; MidiCC is one this project listed before checking.
+    ControlMidi: `${TRN}ControlMidi`,
+    MidiCC: `${TRN}MidiCC`,
     // A clip's and a note's placement, and a note itself. transmission's
     // arrangement terms, reused for the same purpose.
     startBeat: `${TRN}startBeat`,

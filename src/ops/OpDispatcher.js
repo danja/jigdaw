@@ -15,7 +15,7 @@
 import { Project, RevisionConflict, ChangeError, changesFor } from '../model/Project.js'
 import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
-import { EventRouter, isMidi } from '../engine/EventRouter.js'
+import { EventRouter, isMidi, carriesNotes } from '../engine/EventRouter.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
 import { decodeState } from '../host/StateCodec.js'
@@ -374,7 +374,7 @@ export class OpDispatcher {
     }
     const nodeId = node.id ?? this.#project.nextId('node')
     changes.push({ op: 'addNode', ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri, label })
-    if (newTrack && (entry.profile.accepts ?? []).some(isMidi)) {
+    if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
       changes.push({ op: 'setTrack', id: newTrack, midiInput: nodeId })
     }
 

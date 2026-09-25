@@ -112,6 +112,24 @@ const loudest = (mags, rate, size) => {
   return best * rate / size
 }
 
+/** Write ABI version 2 event records and announce them for the next block. */
+function sendMidi (e, events) {
+  const view = new DataView(e.memory.buffer, e.jig_midi_in_ptr(), e.jig_midi_in_capacity() * 8)
+  events.forEach(({ frame = 0, bytes }, i) => {
+    view.setUint32(i * 8, frame, true)
+    view.setUint8(i * 8 + 4, bytes.length)
+    bytes.forEach((b, j) => view.setUint8(i * 8 + 5 + j, b))
+  })
+  e.jig_midi_in(events.length)
+}
+
+/** Process one silent block, so pending events are applied. */
+function tick (e) {
+  e.jig_process(e.jig_max_frames())
+}
+
+const FIRST_CC = 70
+
 const rms = xs => Math.sqrt(xs.reduce((s, v) => s + v * v, 0) / xs.length)
 
 describeBuilt('quefrency wasm', () => {
@@ -121,7 +139,8 @@ describeBuilt('quefrency wasm', () => {
     expect(WebAssembly.Module.imports(compiled)).toEqual([])
     const e = await load()
     for (const name of ['jig_init', 'jig_process', 'jig_input_ptr', 'jig_output_ptr',
-      'jig_set_param', 'jig_max_frames', 'jig_latency_frames', 'memory']) {
+      'jig_set_param', 'jig_max_frames', 'jig_latency_frames', 'jig_midi_in_ptr',
+      'jig_midi_in_capacity', 'jig_midi_in', 'memory']) {
       expect(e[name], `missing export ${name}`).toBeDefined()
     }
     expect(e.jig_max_frames()).toBe(128)
@@ -307,5 +326,106 @@ describeBuilt('plugins/quefrency/profile.ttl', () => {
       expect(descriptor.minValue, `${descriptor.name} min`).toBe(port.minimum)
       expect(descriptor.maxValue, `${descriptor.name} max`).toBe(port.maximum)
     })
+  })
+})
+
+describeBuilt('quefrency under MIDI control', () => {
+  let ports
+  beforeAll(async () => {
+    const profile = readProfile(await parseTurtle(resolve(dir, 'profile.ttl'), 'urn:quefrency'))
+    const indices = new Map()
+    const dataset = await parseTurtle(resolve(dir, 'profile.ttl'), 'urn:quefrency')
+    for (const quad of dataset.match(null, null, null)) {
+      if (quad.predicate.value === vocabulary.jig.paramIndex) indices.set(quad.subject.value, Number(quad.object.value))
+    }
+    ports = profile.ports.map(port => ({ ...port, index: indices.get(port.iri) })).sort((a, b) => a.index - b.index)
+  })
+
+  it('starts every parameter at the default the profile declares', async () => {
+    const e = await load()
+    for (const port of ports) expect(e.quefrency_param(port.index), port.symbol).toBeCloseTo(port.defaultValue, 5)
+  })
+
+  // The module's range table is its own copy of the profile's ports. This is
+  // what binds the two: CC 0 and 127 must land on the declared ends.
+  it('maps CC 0 and 127 onto each port\'s declared minimum and maximum', async () => {
+    for (const port of ports) {
+      const e = await load()
+      sendMidi(e, [{ bytes: [0xb0, FIRST_CC + port.index, 0] }]); tick(e)
+      expect(e.quefrency_param(port.index), `${port.symbol} at 0`).toBeCloseTo(port.minimum, 4)
+      sendMidi(e, [{ bytes: [0xb0, FIRST_CC + port.index, 127] }]); tick(e)
+      expect(e.quefrency_param(port.index), `${port.symbol} at 127`).toBeCloseTo(port.maximum, 4)
+    }
+  })
+
+  it('puts CC 64 on the default wherever the default is inside the range', async () => {
+    for (const port of ports.filter(p => p.minimum < p.defaultValue && p.defaultValue < p.maximum)) {
+      const e = await load(48000, { [port.symbol]: port.maximum })
+      sendMidi(e, [{ bytes: [0xb0, FIRST_CC + port.index, 64] }]); tick(e)
+      expect(e.quefrency_param(port.index), port.symbol).toBeCloseTo(port.defaultValue, 4)
+    }
+  })
+
+  it('selects the true envelope from CC 64 upward', async () => {
+    const e = await load()
+    const estimator = ports.find(p => p.symbol === 'estimator')
+    sendMidi(e, [{ bytes: [0xb0, FIRST_CC + estimator.index, 63] }]); tick(e)
+    expect(e.quefrency_param(estimator.index)).toBeLessThan(0.5)
+    sendMidi(e, [{ bytes: [0xb0, FIRST_CC + estimator.index, 64] }]); tick(e)
+    expect(e.quefrency_param(estimator.index)).toBeGreaterThanOrEqual(0.5)
+  })
+
+  it('answers on every channel', async () => {
+    const e = await load()
+    sendMidi(e, [{ bytes: [0xbf, FIRST_CC + 3, 127] }]); tick(e)
+    expect(e.quefrency_param(3)).toBe(24)
+  })
+
+  it('ignores other controllers, notes and malformed records', async () => {
+    const e = await load()
+    sendMidi(e, [
+      { bytes: [0xb0, FIRST_CC - 1, 127] },
+      { bytes: [0xb0, FIRST_CC + ports.length, 127] },
+      { bytes: [0x90, FIRST_CC + 3, 127] },
+      { bytes: [0xb0, FIRST_CC + 3] }
+    ])
+    tick(e)
+    for (const port of ports) expect(e.quefrency_param(port.index), port.symbol).toBeCloseTo(port.defaultValue, 5)
+  })
+
+  it('changes the signal from the event\'s own frame, not the start of the block', async () => {
+    const e = await load(48000, { mix: 0 })
+    const frames = e.jig_max_frames()
+    const input = [0, 1].map(c => new Float32Array(e.memory.buffer, e.jig_input_ptr(c), frames))
+    const output = new Float32Array(e.memory.buffer, e.jig_output_ptr(0), frames)
+    const dc = 0.5
+    // Mix 0 is the dry path alone; after the latency it is a steady 0.5.
+    for (const view of input) view.fill(dc)
+    for (let i = 0; i < 20; i++) e.jig_process(frames)
+    sendMidi(e, [{ frame: 50, bytes: [0xb0, FIRST_CC + 10, 0] }])
+    e.jig_process(frames)
+    expect(output[49]).toBeCloseTo(dc, 5)
+    expect(output[50]).toBeCloseTo(dc * 10 ** (-24 / 20), 5)
+  })
+
+  it('applies events to one block only, so a later host value is not overwritten', async () => {
+    const e = await load()
+    sendMidi(e, [{ bytes: [0xb0, FIRST_CC + 10, 0] }]); tick(e)
+    expect(e.quefrency_param(10)).toBe(-24)
+    e.jig_set_param(10, 0)
+    tick(e)
+    expect(e.quefrency_param(10)).toBe(0)
+  })
+
+  // The profile tells a person which controller does what. A sentence nothing
+  // checks drifts, so this one is checked against the module.
+  it('names the controllers the module answers to, in the order it answers', async () => {
+    const profile = readProfile(await parseTurtle(resolve(dir, 'profile.ttl'), 'urn:quefrency'))
+    const caution = profile.cautions.find(c => c.includes('control changes'))
+    expect(caution).toContain(`control changes ${FIRST_CC} to ${FIRST_CC + ports.length - 1}`)
+    const named = ports.map(p => p.name)
+    const positions = named.map(name => caution.indexOf(name))
+    expect(positions.every(at => at >= 0), `every port named: ${named}`).toBe(true)
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
   })
 })

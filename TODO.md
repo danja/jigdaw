@@ -155,6 +155,22 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
 - [ ] **Tell a native host Quefrency's latency.** ABI version 1 carries no latency, so the
       adapter does not compensate for its 2047 frames. The module exports `jig_latency_frames`
       already; module-abi.md would need to name it.
+- [ ] **Show a controller's value on the panel, and save it.** 2026-09-25: Quefrency takes
+      MIDI control changes 70 to 80 (design doc, "MIDI control"), verified live in Jiggy by
+      the master meter following CC 80. The panel's knob does not move, and the project does
+      not save the value, because messaging.md has no processor-to-host message saying a
+      parameter changed. The 8-Bit 8asterd has the same gap. Needs a message in
+      messaging.md, the host updating its AudioParam and the model from it, and a guard so
+      that update is not written straight back to the processor.
+- [ ] **Declare CC bindings in RDF instead of a caution.** LV2's MIDI extension has
+      `midi:binding` and `midi:controllerNumber`. Declared per port (skolemised, not blank),
+      a host could label each control with its controller, and the Quefrency test that
+      checks the caution's wording would check the binding instead. Both the 8-Bit 8asterd
+      and Quefrency would move to it.
+- [ ] **Reconcile `trn:MidiCC` with upstream.** It is listed in `vocabs/shapes.ttl`,
+      `src/engine/EventRouter.js` and `src/rdf/Vocabulary.js`, but transmission defines no
+      such term; its term for MIDI control changes is `trn:ControlMidi`, which Quefrency
+      uses. Either propose `trn:MidiCC` upstream or drop it here.
 - [ ] **Shrink Cascade's wasm.** 2026-09-25: it is 228 KB against Pulse's 3 KB, most likely
       because `State::new()` has non-zero defaults, which moves its static comb buffers from
       `.bss` into the data section. Quefrency had the same cause and went from 380 KB to 21 KB

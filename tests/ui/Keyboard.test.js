@@ -55,7 +55,11 @@ describe('which plugins get a keyboard', () => {
     // The two conditions, separated, so a change that dropped either half
     // fails here with a reason rather than with a list.
     for (const { name, profile } of await walk()) {
-      const takesNotes = profile.accepts.some(s => s.includes('Midi'))
+      // Control changes alone play nothing: Quefrency takes MIDI and has no
+      // use for a keyboard. Written out here rather than calling carriesNotes,
+      // so this states the rule instead of repeating the implementation.
+      const controlOnly = ['http://purl.org/stuff/transmissions/ControlMidi', 'http://purl.org/stuff/transmissions/MidiCC']
+      const takesNotes = profile.accepts.some(s => s.includes('Midi') && !controlOnly.includes(s))
       const makesSound = profile.audioOutputs > 0
       expect(playable(profile), name).toBe(takesNotes && makesSound)
     }

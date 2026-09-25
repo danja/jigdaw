@@ -21,19 +21,22 @@
     rdfs:label "Quefrency" ;
     rdfs:comment "Separates its input through the cepstrum into a formant envelope and a harmonic structure, shifts and reshapes each independently, and multiplies them back together." ;
     trn:vendor "danja" ;
-    doap:revision "0.1.0" ;
+    doap:revision "0.2.0" ;
     doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
-    trn:accepts trn:Audio ;
+    trn:accepts trn:Audio , trn:ControlMidi ;
     trn:produces trn:Audio ;
     trn:genre "Electronic" , "Experimental" ;
-    trn:caution "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; a native host using ABI version 1 is not told it and will not compensate." ;
+    trn:caution "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; the module ABI carries no latency, so a native host is not told it and will not compensate." ;
     trn:caution "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone." ;
     trn:caution "Transients smear when pitch or frequency shift is set, as with any phase vocoder." ;
     trn:caution "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it." ;
+    trn:caution "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt per octave, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope." ;
+    trn:caution "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins." ;
     trn:format trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
+    trn:requires jig:MidiEvents ;
 
     jig:audioInputs 1 ;
     jig:inputChannels 2 ;
@@ -51,15 +54,15 @@
     a jig:Module ;
     jig:location <quefrency.wasm> ;
     jig:mediaType "application/wasm" ;
-    jig:abi jig:Abi1 ;
-    jig:integrity "sha384-gTUvJvcxwp5rQoaOSgY516YFpZ+3ILG1otfNh7/rUmaWRD7M5WM4ot/CzzYNzqf1" .
+    jig:abi jig:Abi2 ;
+    jig:integrity "sha384-twy166QDgRUW7zfeZk4c1ilBK+S5bVyYloClBSI/YXo15+iZyDkflA298lTO3p+J" .
 
 <#processor>
     a jig:Processor ;
     jig:location <quefrency-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "quefrency" ;
-    jig:integrity "sha384-8U5WmW0ZoCkim+QLxoclnjqTF4hBWDiE1Yp+W3ZFLYCYEp1SJODAL9Kjy047ql7y" .
+    jig:integrity "sha384-n7x3z5Eqx+F3sp/M5dblsTWGUrJQiurTl+egS+RKmUy3+Li7N+3gcXDhbsyTSOid" .
 
 <#formant_shift>
     a lv2:InputPort , lv2:ControlPort ;

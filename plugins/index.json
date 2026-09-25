@@ -396,17 +396,22 @@
         "WebAudio"
       ],
       "accepts": [
-        "Audio"
+        "Audio",
+        "ControlMidi"
       ],
       "produces": [
         "Audio"
       ],
-      "requires": [],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
       "cautions": [
-        "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; a native host using ABI version 1 is not told it and will not compensate.",
+        "Latency is 2047 frames at 50 kHz and below, and 4095 above. The processor reports the figure for the actual rate; the module ABI carries no latency, so a native host is not told it and will not compensate.",
         "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone.",
         "Transients smear when pitch or frequency shift is set, as with any phase vocoder.",
-        "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it."
+        "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it.",
+        "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
+        "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins."
       ],
       "parameters": [
         "estimator",

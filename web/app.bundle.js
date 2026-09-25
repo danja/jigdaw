@@ -13230,6 +13230,10 @@ var init_Vocabulary = __esm({
         HostTransport: `${TRN}HostTransport`,
         Audio: `${TRN}Audio`,
         Midi: `${TRN}Midi`,
+        // MIDI that reshapes a plugin rather than playing it. ControlMidi is
+        // transmission's term; MidiCC is one this project listed before checking.
+        ControlMidi: `${TRN}ControlMidi`,
+        MidiCC: `${TRN}MidiCC`,
         // A clip's and a note's placement, and a note itself. transmission's
         // arrangement terms, reused for the same purpose.
         startBeat: `${TRN}startBeat`,
@@ -22748,6 +22752,7 @@ function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
 }
 
 // src/engine/EventRouter.js
+init_Vocabulary();
 var MIDI_SIGNALS = /* @__PURE__ */ new Set([
   "http://purl.org/stuff/transmissions/Midi",
   "http://purl.org/stuff/transmissions/BassMidi",
@@ -22759,6 +22764,8 @@ var MIDI_SIGNALS = /* @__PURE__ */ new Set([
   "http://purl.org/stuff/transmissions/MidiCC"
 ]);
 var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
+var CONTROL_ONLY = /* @__PURE__ */ new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]);
+var carriesNotes = (signalKind) => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind);
 var EventRouter = class {
   #engine;
   #routes = /* @__PURE__ */ new Map();
@@ -23540,7 +23547,7 @@ var OpDispatcher = class {
     }
     const nodeId = node.id ?? this.#project.nextId("node");
     changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
-    if (newTrack && (entry.profile.accepts ?? []).some(isMidi)) {
+    if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
       changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
     }
     const result = this.apply(changes);
@@ -25651,7 +25658,7 @@ function octavesForWidth(width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
   }
   return 1;
 }
-var playable = (profile) => (profile?.audioOutputs ?? 0) > 0 && (profile?.accepts ?? []).some((signal) => typeof signal === "string" && signal.includes("Midi"));
+var playable = (profile) => (profile?.audioOutputs ?? 0) > 0 && (profile?.accepts ?? []).some(carriesNotes);
 var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
 var noteOff = (note) => Uint8Array.from([128, note, 0]);
 function createKeyboard(document2, { first: first2 = 48, octaves = 2, onNote } = {}) {
@@ -25901,7 +25908,7 @@ function createRack(ctx2) {
       if (!result.ok) log2(result.message, "error");
     });
     header.append(rename);
-    const takesMidi = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.accepts ?? []).some(isMidi));
+    const takesMidi = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.accepts ?? []).some(carriesNotes));
     if (takesMidi.length > 0) {
       const midi = document2.createElement("select");
       midi.id = `midi-input-${track.id}`;

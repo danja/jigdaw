@@ -3,7 +3,7 @@
 Quefrency is a stereo audio effect that separates each frame of its input into a formant
 envelope and a harmonic fine structure using the
 [cepstrum](https://en.wikipedia.org/wiki/Cepstrum), transforms the two independently, and
-multiplies them back together. It is WebAssembly written in Rust, declares `jig:Abi1`, and
+multiplies them back together. It is WebAssembly written in Rust, declares `jig:Abi2` for its MIDI input, and
 lives in [plugins/quefrency/](../../plugins/quefrency/). Its structure is copied from
 Cascade.
 
@@ -102,6 +102,46 @@ generates the controls.
 
 `cent` was not a unit `Panel.js` knew. It is added to both `UNIT_LABELS` and `SPOKEN_UNITS`,
 which `tests/ui/Panel.test.js` requires of any unit a plugin uses.
+
+## MIDI control
+
+**Control changes 70 to 80 drive parameters 0 to 10**, on any MIDI channel. This is the
+8-Bit 8asterd's convention, and 70 to 79 are the MIDI sound controllers. The plugin declares
+`trn:accepts trn:ControlMidi` and `trn:requires jig:MidiEvents`, and takes the events
+through ABI version 2's MIDI input, so the same module answers a controller in Jiggy and in
+the native adapter, which hands version 2 modules raw event records.
+
+**Value 64 is the port's default** wherever the default lies strictly inside the range: the
+mapping runs linearly from the minimum at 0 to the default at 64, then to the maximum at 127.
+A centred controller therefore changes nothing, which matters for the bipolar controls,
+where a plain linear map would put 64 at +0.19 semitones. Where the default is an end of the
+range (Mix, and the estimator), the map is linear, so the estimator switches to the true
+envelope at 64.
+
+**An event changes the signal from its own frame.** The block is processed in segments that
+end where each event falls. Mix and Output act on every sample, so they change at that
+frame; the spectral parameters are read once per analysis frame, so they take effect at the
+next hop at or after it.
+
+**The host's value and the controller's are the same parameter, and the last change wins.**
+The processor writes a parameter only when the host's value changes, so a controller's value
+holds until someone moves the knob, and within one quantum the controller is applied after
+the host. The panel does not show a controller's value and the project does not save it:
+the messaging protocol has no way for a processor to report a parameter it changed, so
+the profile says so in a `trn:caution`.
+
+**The mapping is stated in prose, in a `trn:caution`, and a test holds the prose to the
+module**: it checks that the caution names the controller range and every port, in index
+order. A machine-readable binding would be better; LV2's
+[MIDI extension](https://lv2plug.in/ns/ext/midi) has `midi:binding` with
+`midi:controllerNumber` for exactly this, and using it would let a host label each control
+with its controller.
+
+**Jiggy offers no keyboard or clip to it.** A plugin taking only control changes has nothing
+to play, so the keyboard, the default clip target for a new track, and the "clips play into"
+menu all ask `carriesNotes` from `src/engine/EventRouter.js`, which is false for
+`trn:ControlMidi` and `trn:MidiCC`. The routing panel still offers its MIDI input, so a
+plugin producing control changes can be wired to it.
 
 ## Frame size and latency
 
