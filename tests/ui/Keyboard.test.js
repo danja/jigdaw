@@ -47,7 +47,7 @@ describe('which plugins get a keyboard', () => {
     expect(plugins.length).toBeGreaterThan(0)
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
-    expect(got).toEqual(['8b8', 'pulse'])
+    expect(got).toEqual(['8b8', 'drumkit', 'pulse'])
     expect(not).toEqual(['bassgen', 'boost', 'cascade', 'drumgen', 'dynamix', 'ferrite', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'quefrency', 'squelch', 'tremolo'])
   })
 

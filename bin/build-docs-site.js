@@ -53,6 +53,7 @@ const GROUP_OF = {
   'for-hosts': 'Guides',
   'for-plugin-authors': 'Guides',
   'for-juce-developers': 'Guides',
+  testbed: 'Guides',
   plan: 'Background',
   'first-thoughts': 'Background',
   'local-references': 'Background',
@@ -60,6 +61,13 @@ const GROUP_OF = {
   revisions: 'Background'
 }
 const GROUP_ORDER = ['Specification', 'Guides', 'Background']
+
+// Linked above every group, with no heading of its own: the first thing a
+// newcomer should read, before the specification proper.
+const TOP = ['overview']
+// The sidebar label for a top link, where the document's own title is too
+// long for a sidebar.
+const TOP_LABEL = { overview: 'Overview' }
 
 marked.use({
   gfm: true,
@@ -147,7 +155,7 @@ function escapeHtml (s) {
 function sidebar (current) {
   const groups = new Map(GROUP_ORDER.map(g => [g, []]))
   for (const name of names) {
-    if (name === 'index') continue
+    if (name === 'index' || TOP.includes(name)) continue
     const group = GROUP_OF[name] ?? 'Background'
     groups.get(group).push(name)
   }
@@ -158,7 +166,14 @@ function sidebar (current) {
         `<a href="${name}.html"${name === current ? ' aria-current="page"' : ''}>${escapeHtml(titles.get(name))}</a>`
       ).join('\n      ')}
     </div>`
-  return GROUP_ORDER.map(g => section(g, groups.get(g))).join('\n')
+  const top = TOP.filter(name => names.includes(name))
+  const topLink = name =>
+    `<a href="${name}.html"${name === current ? ' aria-current="page"' : ''}>${escapeHtml(TOP_LABEL[name] ?? titles.get(name))}</a>`
+  const head = top.length === 0 ? '' : `
+    <div class="nav-group nav-top">
+      ${top.map(topLink).join('\n      ')}
+    </div>`
+  return head + GROUP_ORDER.map(g => section(g, groups.get(g))).join('\n')
 }
 
 function page ({ name, title, description, bodyHtml }) {

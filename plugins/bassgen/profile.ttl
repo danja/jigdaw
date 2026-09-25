@@ -51,7 +51,7 @@
     jig:location <bassgen.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi2 ;
-    jig:integrity "sha384-sZbqLUsaT35yISVYIDt/TSpXc78TAve4SYxwfN7CeP9TspmNwJ1JL47yp8+7gt7A" .
+    jig:integrity "sha384-saGDz2Auy0Mr/nLYiP9qY67p1mLxpghLnLROMKEOBtOVuk2H4pxVPrOxE/7wvFjY" .
 
 <#processor>
     a jig:Processor ;

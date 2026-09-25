@@ -182,10 +182,16 @@ struct State {
 
     /// Where playback had got to, so a step boundary is a change rather than a
     /// recomputation. -1 means nothing has played yet.
-    last_step: i64,
-    sounding: u8,          ///< 0 means nothing is sounding
+    last_step: i64,    sounding: u8,          ///< 0 means nothing is sounding
     off_at_beat: f64,
     was_playing: bool,
+    /// The beat at the end of the last processed block, advanced at the
+    /// supplied tempo between transport messages, with the last transport
+    /// beat seen alongside so a stale repeat is flown through and only a
+    /// changed value is compared against the clock. See process().
+    clock_beat: f64,
+    clock_on: bool,
+    last_t: f64,
 
     midi_in: [MidiEvent; MIDI_IN_CAPACITY],
     midi_in_count: u32,
@@ -217,6 +223,9 @@ impl State {
             sounding: 0,
             off_at_beat: 0.0,
             was_playing: false,
+            clock_beat: 0.0,
+            clock_on: false,
+            last_t: 0.0,
             midi_in: [MidiEvent { frame: 0, size: 0, data: [0; 3] }; MIDI_IN_CAPACITY],
             midi_in_count: 0,
             midi_out: [MidiEvent { frame: 0, size: 0, data: [0; 3] }; MIDI_OUT_CAPACITY],
@@ -374,17 +383,47 @@ impl State {
                 self.stop_sounding(0);
                 self.last_step = -1;
                 self.was_playing = false;
+                self.clock_on = false;
             }
             return;
         }
+
+        // The beat clock flywheels between transport messages. Jiggy tells
+        // the plugins where the transport is on a 100ms loop rather than
+        // every quantum, so the beat arriving with a block is routinely
+        // stale: scheduling purely from it replays the same step while it
+        // repeats, then skips ahead on the next update, quantising the line
+        // to the update grid. Instead the clock advances at the supplied
+        // tempo and the supplied beat only corrects it: a fresh beat a beat
+        // or more off the clock is a seek or a loop, and anything else - a
+        // stale repeat, or an ordinary lagging update - is flown through.
+        // This still derives timing from the supplied beat the way contract
+        // section 7 requires; counting process() calls would drift, and this
+        // cannot, because every real seek re-anchors it.
+        let t_beat = self.transport.beat;
+        let base = if !self.was_playing || !self.clock_on {
+            self.clock_on = true;
+            self.last_t = t_beat;
+            t_beat
+        } else if t_beat != self.last_t {
+            self.last_t = t_beat;
+            if t_beat < self.clock_beat - 1.0 || t_beat > self.clock_beat + 1.0 {
+                t_beat
+            } else {
+                self.clock_beat
+            }
+        } else {
+            self.clock_beat
+        };
         self.was_playing = true;
 
+        let frames = frames.min(MAX_FRAMES as u32);
         let per_beat = self.steps_per_beat() as f64;
         let beats_per_frame = self.transport.bpm / (60.0 * self.sample_rate);
         let step_beats = 1.0 / per_beat;
 
-        for frame in 0..frames.min(MAX_FRAMES as u32) {
-            let beat = self.transport.beat + beats_per_frame * frame as f64;
+        for frame in 0..frames {
+            let beat = base + beats_per_frame * frame as f64;
 
             if self.sounding != 0 && beat >= self.off_at_beat {
                 self.stop_sounding(frame);
@@ -410,6 +449,7 @@ impl State {
             self.sounding = step.note;
             self.off_at_beat = beat + step_beats * (0.15 + self.hold as f64 * 0.85);
         }
+        self.clock_beat = base + beats_per_frame * frames as f64;
     }
 }
 

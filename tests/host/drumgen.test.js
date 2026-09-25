@@ -174,4 +174,52 @@ describe('drumgen, a transport synced drum generator', () => {
     expect(wide).toBeGreaterThan(narrow)
     expect(narrow).toBeGreaterThan(0)
   })
+
+  it('spreads hits across blocks when transport updates are sparse', async () => {
+    // Jiggy tells the plugins where the transport is on a 100ms loop rather
+    // than every quantum, so the beat arriving with a block routinely spans
+    // many steps. Scheduling purely from it fires the whole span in the
+    // first block after each update and stays silent between: a flam every
+    // tenth of a second on eleven lanes, which is the bunch-pause-bunch
+    // this guards against. The clock flywheels through the gaps instead.
+    const sparse = async (node, blocks, every) => {
+      for (let b = 0; b < blocks; b++) {
+        if (b % every === 0) {
+          node.port.postMessage({
+            type: 'transport',
+            playing: true,
+            frame: node.frame,
+            beat: node.frame * BEATS_PER_FRAME,
+            beatsPerFrame: BEATS_PER_FRAME,
+            tempo: TEMPO,
+            timeSignature: { beatsPerBar: 4, beatUnit: 4 }
+          })
+          await settle()
+        }
+        node.render()
+      }
+      await settle()
+      return node.processor.port.posted
+        .filter(m => m.type === 'events')
+        .flatMap(m => m.events)
+    }
+
+    // An update every 150 blocks covers about three steps at this tempo: the
+    // old code flammed all three into the update block.
+    const dense = await drive((await makeEntry(validator)).node, 750)
+    const flown = await sparse((await makeEntry(validator)).node, 750, 150)
+
+    // Nothing is lost to the flywheel: the same steps sound at the same
+    // stream positions either way.
+    expect(signature(flown)).toEqual(signature(dense))
+
+    // And none of them pile up: no single block holds more than one step's
+    // lanes.
+    const perBlock = new Map()
+    for (const e of onsets(flown)) {
+      const block = Math.floor(e.frame / 128)
+      perBlock.set(block, (perBlock.get(block) ?? 0) + 1)
+    }
+    expect(Math.max(...perBlock.values())).toBeLessThanOrEqual(7)
+  })
 })

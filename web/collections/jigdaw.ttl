@@ -29,6 +29,7 @@
         <../plugins/boost/> ,
         <../plugins/cascade/> ,
         <../plugins/drumgen/> ,
+        <../plugins/drumkit/> ,
         <../plugins/dynamix/> ,
         <../plugins/ferrite/> ,
         <../plugins/jsfx-gain-trim/> ,
@@ -44,6 +45,7 @@
 <../plugins/boost/> rdfs:label "Boost" .
 <../plugins/cascade/> rdfs:label "Cascade" .
 <../plugins/drumgen/> rdfs:label "DrumGen" .
+<../plugins/drumkit/> rdfs:label "DrumKit" .
 <../plugins/dynamix/> rdfs:label "Dynamix" .
 <../plugins/ferrite/> rdfs:label "Ferrite" .
 <../plugins/jsfx-gain-trim/> rdfs:label "JigDAW Gain Trim" .

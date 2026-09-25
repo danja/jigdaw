@@ -15,6 +15,8 @@ curl -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/
 
 ## Where to go
 
+- **[overview.md](overview.md)**: start here. What JigDAW is, why it exists, and what has
+  been built.
 - **[for-hosts.md](for-hosts.md)**: you are writing a host and want to load other people's
   plugins. What you must do, in what order, and what the browser will refuse.
 - **[for-plugin-authors.md](for-plugin-authors.md)**: you have some DSP and want it loadable
@@ -22,6 +24,9 @@ curl -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/
 - **[for-juce-developers.md](for-juce-developers.md)**: you already have a JUCE plugin and
   want it loadable by IRI too. What has to be ported by hand, and what is generated from your
   existing parameter layout instead.
+- **[testbed.md](testbed.md)**: you want a worked example of a clause. Every host, plugin and
+  tool in this repository, what it is, which parts of the specification it exercises, and
+  which parts nothing exercises yet.
 
 ## How a plugin is described
 
@@ -93,7 +98,7 @@ Honestly, because a specification that overstates itself is worse than none.
 **Works.** Loading a plugin from its IRI, profile validation, integrity verification,
 WebAssembly instantiation, generated panels, parameter automation, MIDI routed by the host,
 transport, latency compensation, cycle refusal, undo and redo, a catalogue search, and an
-agent tool surface. 14 worked plugins: a subtractive synth, a bass line generator, a
+agent tool surface. 15 worked plugins: a subtractive synth, a bass line generator, a
 reverb, a compressor/expander/limiter/clipper with a side chain input, the firmware of a
 three-chip AY-3-8910 synthesiser compiled unedited from C++, three REAPER JSFX effects
 converted by `bin/jsfx-import.js`, a tremolo with no WebAssembly module, its signal path
@@ -101,7 +106,8 @@ plain JavaScript, a minimal gain stage in C++ meant to be copied as a starting p
 new one, a neural amp model in series with a cabinet impulse response, the first plugin
 here depending on a real external crate, and a resonant lowpass swept by an envelope
 follower, also plain JavaScript, a cepstral formant and pitch shifter, the first with
-latency, and a transport-synced drum pattern generator. Foreign plugins (Web Audio Modules) load and play, marked
+latency, a transport-synced drum pattern generator, and a synthesised drum instrument.
+Foreign plugins (Web Audio Modules) load and play, marked
 and consented to, per contract section 12.
 
 **Exists but is thin.** Jiggy, the reference host: tracks, each a chain of plugins ending in

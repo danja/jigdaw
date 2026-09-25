@@ -24,7 +24,7 @@ Four programs load JigDAW plugins, and a fifth packages them for someone else's 
 
 ## Plugins
 
-There are 14 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 15 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -35,13 +35,14 @@ written to cover different parts of the contract, and each one's row says which.
 | [Dynamix](../plugins/dynamix/) | A compressor/expander, limiter and clipper in series, in Rust, with an external key input. | Contract 4.2, two audio inputs, the second a sidechain that is optional when unconnected. 14 parameters under module ABI version 1. |
 | [BassGen](../plugins/bassgen/) | A bass line generator in time with the session, in Rust. MIDI in, MIDI out, no audio. | Module ABI version 2: MIDI out, the transport block and its `valid` bits, and zero audio outputs, which a browser host must keep rendered anyway. Contract 6 outgoing events (`jig:MidiOut`) and contract 7, transport. |
 | [DrumGen](../plugins/drumgen/) | A drum pattern generator in time with the session, in Rust, ported from the downspout VST3 of the same name. Control MIDI in, drum MIDI out, no audio. | Module ABI version 2 with MIDI in carrying control changes only (`trn:ControlMidi`, the Conductor CC map), 21 parameters with trigger ports fired on the rising edge, and loop-boundary mutation under transport. |
+| [DrumKit](../plugins/drumkit/) | A synthesised drum instrument in Rust, ported from the downspout VST3 of the same name. Drum MIDI in, stereo audio out. | Module ABI version 2 with MIDI in as whole frame-stamped event records interleaved per sample, 75 parameters, and the first instrument with per-voice mute switches drawn from `lv2:toggled`. |
 | [8-Bit 8asterd](../plugins/8b8/README.md) | Unmodified firmware for three AY-3-8910 chips, compiled from C++. | Module ABI version 2 MIDI in, as whole event records. 42 parameters, generated from the firmware's own list, with scale points and values shown as the device's panel shows them. Parameters that also answer to MIDI CCs. |
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/), [One-Pole Filter](../plugins/jsfx-one-pole-filter/), [Soft Clipper](../plugins/jsfx-soft-clipper/) | Three REAPER JSFX effects converted by `bin/jsfx-import.js`, run by the shared bytecode interpreter in [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md). | A module with no `jig:abi`, private to its processor, which module-abi.md says a native host must refuse. The compiled script carried as a `jig:asset`. Converting from another plugin format. |
 | [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The only plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. |
 | [Squelch](../plugins/squelch/) | A resonant lowpass swept by an envelope follower, in plain JavaScript. | A second plugin with no module, and the one the "acid bass line" preset chains after BassGen and Pulse. |
-| [Quefrency](../plugins/quefrency/) | A cepstral formant and pitch shifter, in Rust ([design](plugins/quefrency-design.md)). | [latency.md](latency.md) sections 1 and 3: the only plugin with latency, reported in `ready` for the actual sample rate. Module ABI version 2 MIDI in on an audio effect, taking `trn:ControlMidi`. The host's rule that a plugin taking only control changes gets no keyboard or clip. |
+| [Quefrency](../plugins/quefrency/) | A cepstral formant and pitch shifter, in Rust ([design](../docs/plugins/quefrency-design.md)). | [latency.md](latency.md) sections 1 and 3: the only plugin with latency, reported in `ready` for the actual sample rate. Module ABI version 2 MIDI in on an audio effect, taking `trn:ControlMidi`. The host's rule that a plugin taking only control changes gets no keyboard or clip. |
 
 [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md) is not a plugin itself: it is the
 interpreter the three converted JSFX plugins copy.

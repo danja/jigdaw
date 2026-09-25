@@ -101,6 +101,14 @@ struct State {
     flush_all: bool,
     last_step: i64,
     was_playing: bool,
+    /// The beat at the end of the last processed block, advanced at the
+    /// supplied tempo between transport messages. See process().
+    clock_beat: f64,
+    clock_on: bool,
+    /// The last transport beat seen. A repeat of the same value is a stale
+    /// message the clock flies through; only a changed value is compared
+    /// against the clock at all.
+    last_t: f64,
     midi_in: [MidiEvent; MIDI_IN_CAPACITY],
     midi_in_count: u32,
     midi_out: [MidiEvent; MIDI_OUT_CAPACITY],
@@ -122,6 +130,9 @@ impl State {
             flush_all: false,
             last_step: -1,
             was_playing: false,
+            clock_beat: 0.0,
+            clock_on: false,
+            last_t: 0.0,
             midi_in: [MidiEvent { frame: 0, size: 0, data: [0; 3] }; MIDI_IN_CAPACITY],
             midi_in_count: 0,
             midi_out: [MidiEvent { frame: 0, size: 0, data: [0; 3] }; MIDI_OUT_CAPACITY],
@@ -362,11 +373,48 @@ impl State {
         self.process_pending(frames);
 
         let playing = self.playing();
+
+        // The beat clock flywheels between transport messages. Jiggy tells
+        // the plugins where the transport is on a 100ms loop rather than
+        // every quantum, so the beat arriving with a block routinely spans
+        // many steps: scheduling purely from it fires the whole span in the
+        // first block after each update and stays silent between, which is a
+        // flam every tenth of a second on eleven lanes. Instead the clock
+        // advances at the supplied tempo and the supplied beat only corrects
+        // it: a fresh beat a beat or more behind the clock is a seek or a
+        // loop, a fresh beat a beat or more ahead is a seek forward, and
+        // anything else - a stale repeat, or an ordinary lagging update - is
+        // flown through. This still derives timing from the supplied beat
+        // the way contract section 7 requires; counting process() calls
+        // would drift, and this cannot, because every real seek re-anchors
+        // it.
+        let spb = self.pattern.steps_per_beat;
+        let beats_step = (frames as f64 * self.transport.bpm) / (60.0 * self.sample_rate);
+        let t_beat = self.transport.beat;
+        let mut seek_forward = false;
+        let base = if !playing {
+            t_beat
+        } else if !self.was_playing || !self.clock_on {
+            self.clock_on = true;
+            self.last_t = t_beat;
+            t_beat
+        } else if t_beat != self.last_t {
+            self.last_t = t_beat;
+            if t_beat < self.clock_beat - 1.0 {
+                t_beat
+            } else if t_beat > self.clock_beat + 1.0 {
+                seek_forward = true;
+                t_beat
+            } else {
+                self.clock_beat
+            }
+        } else {
+            self.clock_beat
+        };
+
         if fill_triggered && self.pattern_valid {
             if playing {
-                let spb = self.pattern.steps_per_beat;
-                let start = self.transport.beat * spb as f64;
-                let bar = self.fill_target_bar(start);
+                let bar = self.fill_target_bar(base * spb as f64);
                 refresh_fill_bar(&mut self.pattern, &self.controls, target_meter, bar);
             } else {
                 let last = self.pattern.bars - 1;
@@ -380,19 +428,25 @@ impl State {
             // held: a held note with no note off is a stuck note.
             self.clear_pending(0);
             self.was_playing = false;
+            self.clock_on = false;
             self.last_step = -1;
             return;
         }
 
-        let spb = self.pattern.steps_per_beat;
-        let abs_beats_start = self.transport.beat;
-        let abs_beats_step = (frames as f64 * self.transport.bpm) / (60.0 * self.sample_rate);
-        let abs_start = abs_beats_start * spb as f64;
-        let abs_end = (abs_beats_start + abs_beats_step) * spb as f64;
+        let abs_start = base * spb as f64;
+        let abs_end = (base + beats_step) * spb as f64;
         let samples_per_step = self.sample_rate * 60.0 / (self.transport.bpm * spb as f64);
         let start_floor = floor_i64(abs_start + 0.000000001);
 
-        if !self.was_playing || (self.last_step >= 0 && start_floor < self.last_step) {
+        if seek_forward {
+            // A forward seek lands on the current step rather than replaying
+            // the span it skipped: the missed steps are gone, and firing
+            // them all now would be the bunch this clock exists to prevent.
+            self.clear_pending(0);
+            let wrapped = Self::local_step(self.pattern.total_steps, abs_start);
+            let at = (floor_i64(wrapped + 0.000001) % self.pattern.total_steps as i64) as i32;
+            self.emit_step(at, 0, frames, samples_per_step);
+        } else if !self.was_playing || (self.last_step >= 0 && start_floor < self.last_step) {
             self.clear_pending(0);
             let wrapped = Self::local_step(self.pattern.total_steps, abs_start);
             let frac = wrapped - floor_i64(wrapped) as f64;
@@ -403,6 +457,7 @@ impl State {
         }
         self.was_playing = true;
         self.last_step = start_floor;
+        self.clock_beat = base + beats_step;
 
         let mut boundary = floor_i64(abs_start) + 1;
         let boundary_end = floor_i64(abs_end + 0.000000001);

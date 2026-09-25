@@ -52,7 +52,7 @@
     jig:location <drumgen.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi2 ;
-    jig:integrity "sha384-R+PvgcHcmbfLr7gWXCpV7OwBnVhxZMmDB0g8IJNi4ErbgVoIcx8fBHYGTnCsK4ee" .
+    jig:integrity "sha384-a4VFoCgnKnUDh2uptgQ/ps3V5yiyiLgec1R3Wk1OX/0KpWrSt5lZ5PbFSsvJEHqz" .
 
 <#processor>
     a jig:Processor ;
