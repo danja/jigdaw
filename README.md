@@ -8,7 +8,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 15 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 16 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -90,10 +90,10 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-15 worked plugins are in [plugins/](plugins/): a subtractive synth,
+16 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, a transport-synced
-bass line generator, a transport-synced drum pattern generator and a synthesised drum
-instrument, all six written in Rust
+bass line generator, a transport-synced drum pattern generator, a synthesised drum
+instrument and a phrase-aware melody generator, all seven written in Rust
 and compiled to WebAssembly; the
 [8-Bit 8asterd](plugins/8b8/README.md), which is the firmware of an
 [Arduino driving three AY-3-8910 chips](https://github.com/danja/8bit8asterd) compiled

@@ -510,6 +510,67 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/melgen/",
+      "label": "MelGen",
+      "comment": "Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/melgen/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi",
+        "ControlMidi"
+      ],
+      "produces": [
+        "Midi",
+        "MelodyMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+        "Pure MIDI, no audio: route its MIDI output to an instrument. New, Notes and Rhythm are triggers that fire on the rising edge, so each press is one action.",
+        "Monophonic by design. A new note ends the note before it rather than overlapping."
+      ],
+      "parameters": [
+        "accent",
+        "answer",
+        "cadence",
+        "channel",
+        "color",
+        "conductor_ch",
+        "contour",
+        "density",
+        "follow",
+        "hold",
+        "leap",
+        "length_beats",
+        "new",
+        "notes",
+        "period",
+        "phrase_bars",
+        "range",
+        "register",
+        "rest",
+        "rhythm",
+        "root_note",
+        "scale",
+        "seed",
+        "structure",
+        "subdivision",
+        "vary"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/pulse/",
       "label": "Pulse",
       "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",

@@ -35,6 +35,7 @@
         <../plugins/jsfx-gain-trim/> ,
         <../plugins/jsfx-one-pole-filter/> ,
         <../plugins/jsfx-soft-clipper/> ,
+        <../plugins/melgen/> ,
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
         <../plugins/squelch/> ,
@@ -51,6 +52,7 @@
 <../plugins/jsfx-gain-trim/> rdfs:label "JigDAW Gain Trim" .
 <../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
+<../plugins/melgen/> rdfs:label "MelGen" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/squelch/> rdfs:label "Squelch" .

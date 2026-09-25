@@ -18,6 +18,7 @@ const EXPECTED = {
   'plugins/bassgen/profile.ttl': 0,
   'plugins/drumgen/profile.ttl': 0,
   'plugins/drumkit/profile.ttl': 0,
+  'plugins/melgen/profile.ttl': 0,
   'plugins/tremolo/profile.ttl': 0,
   'plugins/boost/profile.ttl': 0,
   'plugins/ferrite/profile.ttl': 0,

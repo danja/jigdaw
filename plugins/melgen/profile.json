@@ -1,0 +1,312 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/melgen/",
+  "label": "MelGen",
+  "comment": "Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "melgen",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:Midi",
+    "trn:ControlMidi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:MelodyMidi"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+    "Pure MIDI, no audio: route its MIDI output to an instrument. New, Notes and Rhythm are triggers that fire on the rising edge, so each press is one action.",
+    "Monophonic by design. A new note ends the note before it rather than overlapping."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "melgen.wasm",
+    "processor": "melgen-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "root_note",
+      "name": "Root Note",
+      "default": 60,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "scale",
+      "name": "Scale",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 22,
+      "paramIndex": 1,
+      "scalePoints": [
+        { "label": "Major", "value": 0 },
+        { "label": "Ionian", "value": 1 },
+        { "label": "Minor", "value": 2 },
+        { "label": "Harmonic Minor", "value": 3 },
+        { "label": "Melodic Minor", "value": 4 },
+        { "label": "Dorian", "value": 5 },
+        { "label": "Phrygian", "value": 6 },
+        { "label": "Lydian", "value": 7 },
+        { "label": "Mixolydian", "value": 8 },
+        { "label": "Locrian", "value": 9 },
+        { "label": "Phrygian Dominant", "value": 10 },
+        { "label": "Neapolitan Major", "value": 11 },
+        { "label": "Neapolitan Minor", "value": 12 },
+        { "label": "Pent Major", "value": 13 },
+        { "label": "Pent Minor", "value": 14 },
+        { "label": "Blues", "value": 15 },
+        { "label": "Whole Tone", "value": 16 },
+        { "label": "Altered", "value": 17 },
+        { "label": "Half Whole Diminished", "value": 18 },
+        { "label": "Whole Half Diminished", "value": 19 },
+        { "label": "Bebop Dominant", "value": 20 },
+        { "label": "Bebop Major", "value": 21 },
+        { "label": "Bebop Minor", "value": 22 }
+      ]
+    },
+    {
+      "symbol": "channel",
+      "name": "Channel",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "length_beats",
+      "name": "Length Beats",
+      "default": 16,
+      "minimum": 4,
+      "maximum": 64,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "phrase_bars",
+      "name": "Phrase Bars",
+      "default": 2,
+      "minimum": 1,
+      "maximum": 8,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "subdivision",
+      "name": "Subdivision",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "paramIndex": 5,
+      "scalePoints": [
+        { "label": "Eighth", "value": 0 },
+        { "label": "Sixteenth", "value": 1 },
+        { "label": "Sixteenth Triplet", "value": 2 },
+        { "label": "Quarter", "value": 3 }
+      ]
+    },
+    {
+      "symbol": "period",
+      "name": "Period",
+      "default": 4,
+      "minimum": 0,
+      "maximum": 5,
+      "paramIndex": 6,
+      "scalePoints": [
+        { "label": "Free", "value": 0 },
+        { "label": "A A", "value": 1 },
+        { "label": "A B", "value": 2 },
+        { "label": "A A'", "value": 3 },
+        { "label": "Call Answer", "value": 4 },
+        { "label": "A B A", "value": 5 }
+      ]
+    },
+    {
+      "symbol": "contour",
+      "name": "Contour",
+      "default": 4,
+      "minimum": 0,
+      "maximum": 5,
+      "paramIndex": 7,
+      "scalePoints": [
+        { "label": "Wandering", "value": 0 },
+        { "label": "Flat", "value": 1 },
+        { "label": "Rising", "value": 2 },
+        { "label": "Falling", "value": 3 },
+        { "label": "Arch", "value": 4 },
+        { "label": "Inverted Arch", "value": 5 }
+      ]
+    },
+    {
+      "symbol": "answer",
+      "name": "Answer",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "paramIndex": 8,
+      "scalePoints": [
+        { "label": "Related", "value": 0 },
+        { "label": "Same", "value": 1 },
+        { "label": "Transpose", "value": 2 },
+        { "label": "Invert", "value": 3 },
+        { "label": "Compress", "value": 4 },
+        { "label": "Expand", "value": 5 }
+      ]
+    },
+    {
+      "symbol": "density",
+      "name": "Density",
+      "default": 0.48,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "register",
+      "name": "Register",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 4,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "hold",
+      "name": "Hold",
+      "default": 0.42,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "accent",
+      "name": "Accent",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "structure",
+      "name": "Structure",
+      "default": 0.62,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 13
+    },
+    {
+      "symbol": "range",
+      "name": "Range",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "leap",
+      "name": "Leap",
+      "default": 0.28,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 15
+    },
+    {
+      "symbol": "rest",
+      "name": "Rest",
+      "default": 0.24,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 16
+    },
+    {
+      "symbol": "cadence",
+      "name": "Cadence",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 17
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 65535,
+      "paramIndex": 18
+    },
+    {
+      "symbol": "vary",
+      "name": "Vary",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 19
+    },
+    {
+      "symbol": "new",
+      "name": "New",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 20,
+      "toggled": true
+    },
+    {
+      "symbol": "notes",
+      "name": "Notes",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 21,
+      "toggled": true
+    },
+    {
+      "symbol": "rhythm",
+      "name": "Rhythm",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 22,
+      "toggled": true
+    },
+    {
+      "symbol": "follow",
+      "name": "Follow",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 23
+    },
+    {
+      "symbol": "color",
+      "name": "Color",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 24
+    },
+    {
+      "symbol": "conductor_ch",
+      "name": "Conductor Ch",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 25
+    }
+  ]
+}
