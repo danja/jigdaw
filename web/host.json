@@ -1,0 +1,8 @@
+{
+  "note": "The page's own settings, read by src/host/HostConfig.js, and by bin/mcp-bridge.js for the bridge's. Every key is required; tests/host/HostConfig.test.js checks this file against the list there.",
+  "relayPerSecond": 60,
+  "schedulerLookaheadMs": 120,
+  "schedulerTickMs": 25,
+  "bridgePort": 8749,
+  "bridgeCallTimeoutMs": 30000
+}

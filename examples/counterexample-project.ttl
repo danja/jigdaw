@@ -15,7 +15,8 @@
     a jig:Project ;
     rdfs:label "Broken" ;
     # No jig:revision, so no changeset can be checked against it.
-    jig:node <#a> ;
+    jig:node <#a> , <#b> ;
+    jig:track <#track> ;
     jig:connection <#c> ;
     jig:transport <#transport> .
 
@@ -24,6 +25,47 @@
     # Plugin named by a relative reference that resolves to a non-https IRI, so
     # the project cannot be reopened anywhere else.
     jig:plugin <file:///home/danny/plugins/local.wasm> .
+    # On no track, so nothing says where its sound goes.
+
+# On two tracks, so its sound would be summed twice.
+<#b>
+    a jig:Node ;
+    jig:onTrack <#track> , <#other-track> ;
+    jig:plugin <https://example.org/plugins/pulse/> .
+
+<#other-track> a jig:Track .
+
+<#track>
+    a jig:Track ;
+    # An inverted fader, and a pan past the right-hand end.
+    jig:gain -0.5 ;
+    jig:pan 1.5 ;
+    # MIDI clips played into something that is not a node.
+    jig:midiInput <#track> ;
+    # Audio clips played into two nodes at once.
+    jig:audioInput <#a> , <#b> ;
+    jig:clip <#midi-clip> , <#audio-clip> .
+
+# Starts before the transport does, has no length, and holds a node as a note.
+<#midi-clip>
+    a jig:MidiClip ;
+    trn:startBeat -4.0 ;
+    jig:note <#note> , <#a> .
+
+# Plays no file, from before the start of the file it does not play.
+<#audio-clip>
+    a jig:AudioClip ;
+    trn:startBeat 0.0 ; trn:lengthBeats 4.0 ;
+    jig:offsetSeconds -1.0 .
+
+# Starts before its clip, lasts no time, has a pitch MIDI cannot send, and a
+# velocity MIDI reads as a note off.
+<#note>
+    a jig:Note ;
+    trn:startBeat -1.0 ;
+    trn:lengthBeats 0.0 ;
+    trn:pitch 128 ;
+    trn:velocity 0 .
 
 <#c>
     a jig:Connection ;

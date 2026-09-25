@@ -31,7 +31,8 @@
     "latencyFrames": 0
   },
   "resources": {
-    "processor": "tremolo-processor.js"
+    "processor": "tremolo-processor.js",
+    "ui": "ui/index.html"
   },
   "ports": [
     {

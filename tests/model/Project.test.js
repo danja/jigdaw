@@ -5,12 +5,21 @@ import { Project, RevisionConflict, ChangeError } from '../../src/model/Project.
 const IRI = 'https://strandz.it/jigdaw/plugins/cascade/'
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
 
+/** A project with the one track every node in these tests is on. */
+function withTrack () {
+  const p = new Project()
+  p.apply([{ op: 'addTrack', id: 't' }])
+  return p
+}
+
 let project
-beforeEach(() => { project = new Project() })
+// Every node is on a track, so every test starts with one. It costs one
+// revision, which the revision numbers below account for.
+beforeEach(() => { project = withTrack() })
 
 const addTwo = () => project.apply([
-  { op: 'addNode', id: 'a', pluginIri: IRI },
-  { op: 'addNode', id: 'b', pluginIri: IRI }
+  { op: 'addNode', track: 't', id: 'a', pluginIri: IRI },
+  { op: 'addNode', track: 't', id: 'b', pluginIri: IRI }
 ])
 
 const connect = (extra = {}) => ({
@@ -24,13 +33,13 @@ const connect = (extra = {}) => ({
 describe('changesets', () => {
   it('applies a set of changes and bumps the revision once', () => {
     const result = addTwo()
-    expect(result.revision).toBe(1)
+    expect(result.revision).toBe(2)
     expect(project.nodes).toHaveLength(2)
     expect(result.results).toEqual(['a', 'b'])
   })
 
   it('mints ids when none are given', () => {
-    const { results } = project.apply([{ op: 'addNode', pluginIri: IRI }])
+    const { results } = project.apply([{ op: 'addNode', track: 't', pluginIri: IRI }])
     expect(results[0]).toMatch(/^node-\d+$/)
   })
 
@@ -39,7 +48,7 @@ describe('changesets', () => {
     const before = project.revision
     // The second change is bad. The first must not survive.
     expect(() => project.apply([
-      { op: 'addNode', id: 'c', pluginIri: IRI },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: IRI },
       { op: 'addConnection', from: { node: 'c', portIndex: 0 }, to: { node: 'nope', portIndex: 0 }, signalKind: AUDIO }
     ])).toThrow(ChangeError)
     expect(project.node('c'), 'a half-applied changeset left a node behind').toBeNull()
@@ -62,16 +71,16 @@ describe('changesets', () => {
 describe('optimistic concurrency', () => {
   it('accepts a changeset naming the current revision', () => {
     addTwo()
-    expect(project.apply([connect()], { expectedRevision: 1 }).revision).toBe(2)
+    expect(project.apply([connect()], { expectedRevision: 2 }).revision).toBe(3)
   })
 
   it('refuses one naming a revision that has passed', () => {
     addTwo()
     project.apply([connect()])
-    const error = (() => { try { project.apply([], { expectedRevision: 1 }) } catch (e) { return e } })()
+    const error = (() => { try { project.apply([], { expectedRevision: 2 }) } catch (e) { return e } })()
     expect(error).toBeInstanceOf(RevisionConflict)
-    expect(error.expected).toBe(1)
-    expect(error.actual).toBe(2)
+    expect(error.expected).toBe(2)
+    expect(error.actual).toBe(3)
   })
 
   it('validates without committing under dryRun', () => {
@@ -79,7 +88,7 @@ describe('optimistic concurrency', () => {
     const result = project.apply([connect()], { dryRun: true })
     expect(result.applied).toBe(false)
     expect(project.connections).toHaveLength(0)
-    expect(project.revision).toBe(1)
+    expect(project.revision).toBe(2)
   })
 
   it('still reports a failure under dryRun', () => {
@@ -93,7 +102,7 @@ describe('nodes', () => {
     // What lets a project be reopened on a machine that has never seen it.
     // Loopback is covered separately below.
     for (const bad of ['cascade', 'file:///home/danny/cascade.wasm', 'http://insecure/p/']) {
-      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow(/https IRI/)
+      expect(() => project.apply([{ op: 'addNode', track: 't', pluginIri: bad }]), bad).toThrow(/https IRI/)
     }
   })
 
@@ -193,22 +202,22 @@ describe('minting ids alongside ids it was given', () => {
     // A project loaded from a file arrives carrying ids of the same shape the
     // counter produces. Without accounting for them the next minted id
     // collides, and the failure shows up on an unrelated later edit.
-    project.apply([{ op: 'addNode', id: 'node-1', pluginIri: IRI }])
-    const { results } = project.apply([{ op: 'addNode', pluginIri: IRI }])
+    project.apply([{ op: 'addNode', track: 't', id: 'node-1', pluginIri: IRI }])
+    const { results } = project.apply([{ op: 'addNode', track: 't', pluginIri: IRI }])
     expect(results[0]).not.toBe('node-1')
     expect(project.nodes).toHaveLength(2)
   })
 
   it('keeps minting past the highest id it was given', () => {
     project.apply([
-      { op: 'addNode', id: 'node-7', pluginIri: IRI },
-      { op: 'addNode', id: 'node-3', pluginIri: IRI }
+      { op: 'addNode', track: 't', id: 'node-7', pluginIri: IRI },
+      { op: 'addNode', track: 't', id: 'node-3', pluginIri: IRI }
     ])
-    expect(project.apply([{ op: 'addNode', pluginIri: IRI }]).results[0]).toBe('node-8')
+    expect(project.apply([{ op: 'addNode', track: 't', pluginIri: IRI }]).results[0]).toBe('node-8')
   })
 
   it('does the same for connections', () => {
-    project.apply([{ op: 'addNode', id: 'a', pluginIri: IRI }, { op: 'addNode', id: 'b', pluginIri: IRI }])
+    project.apply([{ op: 'addNode', track: 't', id: 'a', pluginIri: IRI }, { op: 'addNode', track: 't', id: 'b', pluginIri: IRI }])
     project.apply([connect({ id: 'conn-5' })])
     const { results } = project.apply([connect({ to: { node: 'b', portIndex: 1 } })])
     expect(results[0]).toBe('conn-6')
@@ -217,7 +226,7 @@ describe('minting ids alongside ids it was given', () => {
 
 describe('which plugin IRIs are loadable', () => {
   it('accepts https anywhere', () => {
-    expect(() => project.apply([{ op: 'addNode', pluginIri: 'https://strandz.it/jigdaw/plugins/pulse/' }])).not.toThrow()
+    expect(() => project.apply([{ op: 'addNode', track: 't', pluginIri: 'https://strandz.it/jigdaw/plugins/pulse/' }])).not.toThrow()
   })
 
   it('accepts http on loopback, which is how a plugin is developed', () => {
@@ -225,19 +234,19 @@ describe('which plugin IRIs are loadable', () => {
     // be intercepted. Refusing it would mean the only way to develop a plugin
     // is to deploy it.
     for (const host of ['localhost:6017', '127.0.0.1:8748', 'jigdaw.localhost']) {
-      expect(() => project.apply([{ op: 'addNode', pluginIri: `http://${host}/plugins/pulse/` }]), host).not.toThrow()
+      expect(() => project.apply([{ op: 'addNode', track: 't', pluginIri: `http://${host}/plugins/pulse/` }]), host).not.toThrow()
     }
   })
 
   it('refuses http anywhere else', () => {
     for (const bad of ['http://strandz.it/p/', 'http://192.168.1.10/p/', 'http://evil.com/localhost/p/']) {
-      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow(/https IRI/)
+      expect(() => project.apply([{ op: 'addNode', track: 't', pluginIri: bad }]), bad).toThrow(/https IRI/)
     }
   })
 
   it('refuses anything that is not a fetchable URL', () => {
     for (const bad of ['pulse', 'file:///home/danny/p.wasm', 'javascript:alert(1)', '']) {
-      expect(() => project.apply([{ op: 'addNode', pluginIri: bad }]), bad).toThrow()
+      expect(() => project.apply([{ op: 'addNode', track: 't', pluginIri: bad }]), bad).toThrow()
     }
   })
 })
@@ -248,11 +257,11 @@ describe('removing a node from the middle', () => {
   const iri = n => `https://example.org/plugins/${n}/`
 
   function chain () {
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: iri('c') },
       { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', id: 'bc', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }
     ])
@@ -278,11 +287,11 @@ describe('removing a node from the middle', () => {
 
   it('heals each signal kind separately', () => {
     // A MIDI path and an audio path through the same node are two paths.
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'gen', pluginIri: iri('gen') },
-      { op: 'addNode', id: 'mid', pluginIri: iri('mid') },
-      { op: 'addNode', id: 'out', pluginIri: iri('out') },
+      { op: 'addNode', track: 't', id: 'gen', pluginIri: iri('gen') },
+      { op: 'addNode', track: 't', id: 'mid', pluginIri: iri('mid') },
+      { op: 'addNode', track: 't', id: 'out', pluginIri: iri('out') },
       { op: 'addConnection', from: { node: 'gen', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: MIDI },
       { op: 'addConnection', from: { node: 'mid', portIndex: 0 }, to: { node: 'out', portIndex: 0 }, signalKind: MIDI },
       { op: 'addConnection', from: { node: 'gen', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: AUDIO },
@@ -299,12 +308,12 @@ describe('removing a node from the middle', () => {
   it('does not guess when there is more than one answer', () => {
     // Two inputs and one output: rejoining both would invent a mix nobody asked
     // for, and picking one would be arbitrary.
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'mid', pluginIri: iri('mid') },
-      { op: 'addNode', id: 'out', pluginIri: iri('out') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'mid', pluginIri: iri('mid') },
+      { op: 'addNode', track: 't', id: 'out', pluginIri: iri('out') },
       { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'mid', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'mid', portIndex: 1 }, signalKind: AUDIO },
       { op: 'addConnection', from: { node: 'mid', portIndex: 0 }, to: { node: 'out', portIndex: 0 }, signalKind: AUDIO }
@@ -335,11 +344,11 @@ describe('reordering a node', () => {
   const iri = n => `https://example.org/plugins/${n}/`
 
   function chain () {
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: iri('c') },
       { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', id: 'bc', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }
     ])
@@ -385,11 +394,11 @@ describe('reordering a node', () => {
     // the real Web Audio graph, not a caught, reported one: worse than
     // leaving the node unwired in its new position, for a person to
     // connect deliberately, same as a freshly added one.
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: iri('c') },
       { op: 'addConnection', id: 'ab', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 3 }, signalKind: AUDIO }
     ])
     project.apply([{ op: 'reorderNode', id: 'c', index: 1 }])
@@ -399,11 +408,11 @@ describe('reordering a node', () => {
   })
 
   it('heals each signal kind separately when moved out of the middle', () => {
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: iri('c') },
       { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: MIDI },
@@ -419,11 +428,11 @@ describe('reordering a node', () => {
   })
 
   it('leaves connections between its new neighbours alone, however many there are', () => {
-    const project = new Project()
+    const project = withTrack()
     project.apply([
-      { op: 'addNode', id: 'a', pluginIri: iri('a') },
-      { op: 'addNode', id: 'b', pluginIri: iri('b') },
-      { op: 'addNode', id: 'c', pluginIri: iri('c') },
+      { op: 'addNode', track: 't', id: 'a', pluginIri: iri('a') },
+      { op: 'addNode', track: 't', id: 'b', pluginIri: iri('b') },
+      { op: 'addNode', track: 't', id: 'c', pluginIri: iri('c') },
       { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
       { op: 'addConnection', from: { node: 'a', portIndex: 1 }, to: { node: 'b', portIndex: 1 }, signalKind: AUDIO }
     ])
@@ -441,5 +450,160 @@ describe('reordering a node', () => {
     // b-c is healed from having lost b's old predecessor (nothing, so no
     // heal fires), and a lands after c with nothing to splice into.
     expect(project.connections.map(c => c.id).sort()).toEqual(['bc'])
+  })
+})
+
+describe('tracks', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+
+  it('mints track ids and gives a new track the default strip', () => {
+    const { results } = project.apply([{ op: 'addTrack', label: 'Bass' }])
+    expect(results[0]).toMatch(/^track-\d+$/)
+    expect(project.track(results[0])).toEqual({
+      id: results[0], label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, midiInput: null, audioInput: null
+    })
+  })
+
+  it('says which id it will mint next without minting it', () => {
+    const next = project.nextId('track')
+    expect(project.nextId('track')).toBe(next)
+    expect(project.apply([{ op: 'addTrack' }]).results[0]).toBe(next)
+    expect(() => project.nextId('clip-of-nothing')).toThrow(/no ids/)
+  })
+
+  it('refuses a node on no track, or on a track that is not there', () => {
+    expect(() => project.apply([{ op: 'addNode', pluginIri: IRI }])).toThrow(/needs a track/)
+    expect(() => project.apply([{ op: 'addNode', track: 'nope', pluginIri: IRI }])).toThrow(/no such track: nope/)
+  })
+
+  it('sets and validates a track channel strip', () => {
+    project.apply([{ op: 'setTrackChannel', track: 't', gain: 0.5, pan: -1, muted: true }])
+    expect(project.track('t').channel).toEqual({ gain: 0.5, pan: -1, muted: true, soloed: false })
+    expect(() => project.apply([{ op: 'setTrackChannel', track: 't', gain: -0.1 }])).toThrow(/gain/)
+    expect(() => project.apply([{ op: 'setTrackChannel', track: 't', pan: 1.5 }])).toThrow(/pan/)
+    expect(() => project.apply([{ op: 'setTrackChannel', track: 'nope', gain: 1 }])).toThrow(/no such track/)
+    expect(() => project.apply([{ op: 'addTrack', channel: { gain: -1 } }])).toThrow(/gain/)
+  })
+
+  it('refuses a track input that is not a node on that track', () => {
+    addTwo()
+    project.apply([{ op: 'addTrack', id: 'u' }])
+    project.apply([{ op: 'setTrack', id: 't', midiInput: 'a', audioInput: 'b' }])
+    expect(project.track('t')).toMatchObject({ midiInput: 'a', audioInput: 'b' })
+    expect(() => project.apply([{ op: 'setTrack', id: 'u', midiInput: 'a' }])).toThrow(/not on track u/)
+    expect(() => project.apply([{ op: 'setTrack', id: 't', midiInput: 'ghost' }])).toThrow(/no such node/)
+    project.apply([{ op: 'setTrack', id: 't', midiInput: null, label: 'Keys' }])
+    expect(project.track('t')).toMatchObject({ midiInput: null, audioInput: 'b', label: 'Keys' })
+  })
+
+  it('forgets a node as an input when it leaves the track or the project', () => {
+    addTwo()
+    project.apply([{ op: 'addTrack', id: 'u' }])
+    project.apply([{ op: 'setTrack', id: 't', midiInput: 'a', audioInput: 'b' }])
+    project.apply([{ op: 'moveNodeToTrack', id: 'a', track: 'u' }])
+    expect(project.node('a').track).toBe('u')
+    expect(project.track('t').midiInput).toBeNull()
+    project.apply([{ op: 'removeNode', id: 'b' }])
+    expect(project.track('t').audioInput).toBeNull()
+  })
+
+  it('refuses to remove a track with nodes on it, unless told where they go', () => {
+    addTwo()
+    project.apply([{ op: 'addTrack', id: 'u' }])
+    expect(() => project.apply([{ op: 'removeTrack', id: 't' }])).toThrow(/still has 2 node/)
+    expect(() => project.apply([{ op: 'removeTrack', id: 't', moveNodesTo: 't' }])).toThrow(/no other track/)
+    project.apply([{ op: 'removeTrack', id: 't', moveNodesTo: 'u' }])
+    expect(project.track('t')).toBeNull()
+    expect(project.nodes.map(n => n.track)).toEqual(['u', 'u'])
+  })
+
+  it('snapshots tracks, and changesFor rebuilds the same project', async () => {
+    const { changesFor } = await import('../../src/model/Project.js')
+    addTwo()
+    project.apply([
+      connect({ signalKind: MIDI }),
+      { op: 'setTrack', id: 't', midiInput: 'b', label: 'Lead' },
+      { op: 'setTrackChannel', track: 't', gain: 0.25, soloed: true },
+      { op: 'setTransport', loopEnabled: true, loopEnd: 8 }
+    ])
+    const copy = new Project()
+    copy.apply(changesFor(project.snapshot()))
+    const strip = ({ revision, ...rest }) => rest
+    expect(strip(copy.snapshot())).toEqual(strip(project.snapshot()))
+  })
+})
+
+describe('clips', () => {
+  const note = (over = {}) => ({ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100, ...over })
+
+  it('adds a MIDI clip with its notes, sorted by start then pitch', () => {
+    const { results } = project.apply([{
+      op: 'addClip', track: 't', kind: 'midi', startBeat: 4, lengthBeats: 8,
+      notes: [note({ startBeat: 2, pitch: 64 }), note({ pitch: 67 }), note({ pitch: 60 })]
+    }])
+    expect(results[0]).toMatch(/^clip-\d+$/)
+    expect(project.clip(results[0]).notes.map(n => [n.startBeat, n.pitch])).toEqual([[0, 60], [0, 67], [2, 64]])
+  })
+
+  it('refuses a note MIDI cannot carry, or one with no length', () => {
+    const add = n => () => project.apply([{ op: 'addClip', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [n] }])
+    expect(add(note({ pitch: 128 }))).toThrow(/pitch/)
+    expect(add(note({ pitch: 60.5 }))).toThrow(/pitch/)
+    expect(add(note({ velocity: 0 }))).toThrow(/note off/)
+    expect(add(note({ lengthBeats: 0 }))).toThrow(/lengthBeats/)
+    expect(add(note({ startBeat: -1 }))).toThrow(/startBeat/)
+  })
+
+  it('refuses a clip with no length, before the start, or on no track', () => {
+    expect(() => project.apply([{ op: 'addClip', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 0 }])).toThrow(/lengthBeats/)
+    expect(() => project.apply([{ op: 'addClip', track: 't', kind: 'midi', startBeat: -1, lengthBeats: 1 }])).toThrow(/startBeat/)
+    expect(() => project.apply([{ op: 'addClip', track: 'nope', kind: 'midi', startBeat: 0, lengthBeats: 1 }])).toThrow(/no such track/)
+    expect(() => project.apply([{ op: 'addClip', track: 't', kind: 'video', startBeat: 0, lengthBeats: 1 }])).toThrow(/kind/)
+  })
+
+  it('adds an audio clip by reference, refusing one with no absolute source', () => {
+    const { results } = project.apply([{
+      op: 'addClip', track: 't', kind: 'audio', startBeat: 0, lengthBeats: 4, source: 'https://example.org/loop.wav', offsetSeconds: 0.5
+    }])
+    expect(project.clip(results[0])).toMatchObject({ source: 'https://example.org/loop.wav', offsetSeconds: 0.5 })
+    expect(() => project.apply([{ op: 'addClip', track: 't', kind: 'audio', startBeat: 0, lengthBeats: 4, source: 'loop.wav' }]))
+      .toThrow(/absolute IRI/)
+    expect(() => project.apply([{ op: 'setClip', id: results[0], offsetSeconds: -1 }])).toThrow(/offsetSeconds/)
+  })
+
+  it('moves, resizes and re-tracks a clip, and replaces its notes as one edit', () => {
+    project.apply([{ op: 'addTrack', id: 'u' }])
+    const id = project.apply([{ op: 'addClip', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4 }]).results[0]
+    project.apply([{ op: 'setClip', id, startBeat: 8, lengthBeats: 2, track: 'u' }])
+    expect(project.clip(id)).toMatchObject({ startBeat: 8, lengthBeats: 2, track: 'u' })
+    const before = project.revision
+    project.apply([{ op: 'setClipNotes', id, notes: [note(), note({ pitch: 64 })] }])
+    expect(project.revision).toBe(before + 1)
+    expect(project.clip(id).notes).toHaveLength(2)
+    expect(() => project.apply([{ op: 'setClip', id, offsetSeconds: 1 }])).toThrow(/only an audio clip/)
+  })
+
+  it('takes a track\'s clips with it, or moves them with its nodes', () => {
+    project.apply([{ op: 'addTrack', id: 'u' }])
+    project.apply([
+      { op: 'addClip', id: 'c1', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4 },
+      { op: 'addClip', id: 'c2', track: 'u', kind: 'midi', startBeat: 0, lengthBeats: 4 }
+    ])
+    project.apply([{ op: 'removeTrack', id: 'u' }])
+    expect(project.clips.map(c => c.id)).toEqual(['c1'])
+    project.apply([{ op: 'addTrack', id: 'v' }, { op: 'removeTrack', id: 't', moveNodesTo: 'v' }])
+    expect(project.clip('c1').track).toBe('v')
+  })
+
+  it('snapshots clips, and changesFor rebuilds them', async () => {
+    const { changesFor } = await import('../../src/model/Project.js')
+    project.apply([
+      { op: 'addClip', track: 't', kind: 'midi', startBeat: 1, lengthBeats: 4, notes: [note()] },
+      { op: 'addClip', track: 't', kind: 'audio', startBeat: 8, lengthBeats: 2, source: 'https://example.org/a.wav', offsetSeconds: 0 }
+    ])
+    const copy = new Project()
+    copy.apply(changesFor(project.snapshot()))
+    expect(copy.snapshot().clips).toEqual(project.snapshot().clips)
+    expect(copy.nextId('clip')).toBe(project.nextId('clip'))
   })
 })

@@ -49,8 +49,13 @@ function fakeContext () {
     destination: fakeNode(),
     createGain () {
       const gain = fakeNode()
-      gain.gain = { value: 1 }
+      gain.gain = { ...fakeParam(), value: 1 }
       return gain
+    },
+    createStereoPanner () {
+      const panner = fakeNode()
+      panner.pan = fakeParam()
+      return panner
     },
     createDelay (maxSeconds) {
       const delay = fakeNode()
@@ -220,5 +225,60 @@ describe('the master', () => {
     delete context.createGain
     const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorklet })
     expect(engine.master).toBe(context.destination)
+  })
+})
+
+describe('track strips', () => {
+  const noWorklet = class { }
+  const engineWith = () => {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorklet })
+    return { context, engine }
+  }
+
+  it('runs a fader into a panner into the master', () => {
+    const { engine } = engineWith()
+    engine.addTrack('t1')
+    const fader = engine.trackInput('t1')
+    const panner = fader.outgoing[0].destination
+    expect(panner.pan).toBeDefined()
+    expect(panner.outgoing.map(o => o.destination)).toEqual([engine.master])
+    expect(engine.trackIds()).toEqual(['t1'])
+  })
+
+  it('connects a node to its track, and lets go of it with the other links', () => {
+    const { engine } = engineWith()
+    engine.addTrack('t1')
+    const source = fakeNode()
+    engine.get = () => ({ id: 'a', node: source, profile: { label: 'A', ports: [] } })
+    engine.linkToTrack('a', 't1')
+    expect(source.outgoing[0].destination).toBe(engine.trackInput('t1'))
+    expect(engine.links).toEqual([{ fromId: 'a', toTrack: 't1', delay: null }])
+    engine.clearLinks()
+    expect(source.outgoing).toEqual([])
+    expect(engine.links).toEqual([])
+  })
+
+  it('sets level and position, and silences without forgetting the level', () => {
+    const { engine } = engineWith()
+    engine.addTrack('t1')
+    const fader = engine.trackInput('t1')
+    const panner = fader.outgoing[0].destination
+    engine.setTrackChannel('t1', { gain: 0.5, pan: -0.25, silent: false })
+    expect(fader.gain.value).toBe(0.5)
+    expect(panner.pan.value).toBe(-0.25)
+    engine.setTrackChannel('t1', { gain: 0.5, pan: -0.25, silent: true })
+    expect(fader.gain.value).toBe(0)
+  })
+
+  it('refuses a strip made twice, and one used or removed that was never made', () => {
+    const { engine } = engineWith()
+    engine.addTrack('t1')
+    expect(() => engine.addTrack('t1')).toThrow(/already exists/)
+    expect(() => engine.trackInput('t2')).toThrow(/no such track strip/)
+    expect(() => engine.setTrackChannel('t2', {})).toThrow(/no such track strip/)
+    expect(() => engine.removeTrack('t2')).toThrow(/no such track strip/)
+    engine.removeTrack('t1')
+    expect(engine.trackIds()).toEqual([])
   })
 })

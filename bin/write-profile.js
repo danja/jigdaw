@@ -26,6 +26,13 @@ for (const [key, file] of Object.entries(template.resources)) {
 // below that touches resources.module guards on this the same way.
 const hasModule = Boolean(resources.module)
 
+// jig:ui: optional, a plugin's own editor, loaded by a host into a sandboxed
+// cross-origin frame (contract section 9.1). One file, so the digest covers
+// all of it: a frame's document cannot be integrity checked by the browser the
+// way a script can, and a page that loaded further scripts of its own would be
+// running code this digest says nothing about.
+const hasUi = Boolean(resources.ui)
+
 // jig:asset: any further file beyond the module and the processor, such as
 // the compiled bytecode a converted JSFX plugin's script lives in
 // (bin/jsfx-import.js). Optional and plural, unlike module and processor,
@@ -80,6 +87,7 @@ for (const [key, value] of Object.entries(template.shape)) w(`    jig:${key} ${v
 w('')
 if (hasModule) w('    jig:module <#module> ;')
 w('    jig:processor <#processor> ;')
+if (hasUi) w('    jig:ui <#ui> ;')
 if (assets.length > 0) w(`    jig:asset ${assets.map(a => `<#${a.key}>`).join(' , ')} ;`)
 w('')
 w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} .`)
@@ -104,6 +112,15 @@ w(`    jig:location <${resources.processor.file}> ;`)
 w('    jig:mediaType "text/javascript" ;')
 w(`    jig:registeredName ${JSON.stringify(template.registeredName)} ;`)
 w(`    jig:integrity "${resources.processor.integrity}" .`)
+
+if (hasUi) {
+  w('')
+  w('<#ui>')
+  w('    a jig:UserInterface ;')
+  w(`    jig:location <${resources.ui.file}> ;`)
+  w('    jig:mediaType "text/html" ;')
+  w(`    jig:integrity "${resources.ui.integrity}" .`)
+}
 
 for (const asset of assets) {
   w('')

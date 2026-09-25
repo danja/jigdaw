@@ -2,6 +2,93 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-24 Undoing the first change to a parameter did not undo it
+
+**What happened.** Set Tremolo's Depth once, press Undo, and Depth stayed where it had been
+set. The model, the AudioParam, the generated panel and the plugin's own editor all agreed on
+the value being undone. Found by driving the new plugin editor in a browser. It predates the
+editor: any first change to any parameter behaved this way.
+
+**Root cause.** `UndoHistory.#restoreTo` walked the target snapshot's settings and set each one
+that differed. The snapshot from before the first change has no setting for that parameter at
+all, so nothing was walked, and the edit being undone was the one thing left alone. Every undo
+test changed a parameter that already had a setting, from `addPlugin(IRI, { settings })`.
+
+**Prevention.** A setting the live node has and the target lacks goes back to the plugin's
+default, through a new `clearSetting` operation and `OpDispatcher.resetParameter`, which also
+moves the AudioParam and tells every surface. The rack now draws an unset port at its default.
+`tests/ops/OpDispatcher.test.js` "steps the first change to a parameter back to its default"
+starts from a node with no settings, and was mutation tested by removing the reset.
+
+## 2026-09-24 The message protocol required two things no frame can do at once
+
+**What happened.** messaging.md 2.1 required the host to check `event.origin` and never to
+address a message to `"*"`, and contract 9.1 required a sandboxed frame. The obvious sandbox,
+`allow-scripts` alone, gives the frame the opaque origin `"null"`, and the only target a
+message to it can have is `"*"`. Found when building the first plugin editor. It had been
+normative since phase 0 without anything implementing it.
+
+**Root cause.** A specification written before any implementation, and one that stayed
+unimplemented, so nothing tested its claims.
+
+**Prevention.** Resolved in the documents and the code together: `allow-scripts
+allow-same-origin`, with the UI served from an origin other than the host's and refused when it
+is not (contract 9.1, messaging.md 2.1, `src/ui/PluginFrame.js`). The one message sent to `"*"`
+is the UI's contentless `ready`, which is now said explicitly. The frame's fake window in
+`tests/ui/PluginFrame.test.js` throws on `"*"`, so a host that reverted to it fails there,
+which was checked by making that change.
+
+## 2026-09-24 Every session saved before a loop was set was invalid against the shapes
+
+**What happened.** A new project's transport has `loopStart 0` and `loopEnd 0`, and
+`ProjectWriter` wrote both unconditionally. `TransportShape` says a loop starts before it ends
+(`sh:lessThan jig:loopEnd`), so every session saved from a page where nobody had set a loop
+failed validation. Found while adding tracks, by a new test that opens a session with no
+transport, writes it back and validates the result.
+
+**Root cause.** Every round-trip test built its project with a loop set, `loopEnd: 32`, so the
+writer's output was only ever validated for the one transport that was not the default. The
+default was the case a person actually saves.
+
+**Prevention.** The writer leaves the bounds out unless they describe a loop, and the reader
+already supplies the defaults. `tests/rdf/ProjectRoundTrip.test.js` "a session saved before
+tracks" validates a written project whose transport was never touched. A fixture that fills in
+every field tests the writer against the one case nobody meets first.
+
+## 2026-09-24 Two instances of one plugin gave every control an id the other also had
+
+**What happened.** `createPanel` built control ids from the plugin IRI and the port symbol.
+Two Pulse instances on one page, which tracks make ordinary, produced ten duplicate ids: each
+second label pointed at the first instance's knob, and `preserveFocus` could put the focus
+back on the wrong plugin. Found in a real browser by listing duplicate ids after loading Pulse
+twice. It predates tracks; loading one plugin twice had always done it.
+
+**Root cause.** An id is per element on a page, and the IRI is per plugin. The panel tests
+built one panel at a time, so no test ever had two panels on one page to collide.
+
+**Prevention.** `createPanel` takes a `scope`, and the page passes the node id.
+`tests/ui/Panel.test.js` builds two panels from one profile, checks no id repeats and checks
+every label still finds its control in its own panel, and checks that `drawSlot` passes the
+scope. Mixer strips take their ids from the track for the same reason, and
+`tests/ui/Mixer.test.js` checks two tracks with one name share no id.
+
+## 2026-09-24 A mixer that rebuilt itself on every edit took the focus from the button just pressed
+
+**What happened.** The first `src/ui/Mixer.js` emptied its container and appended the cached
+strips again on every draw. The strips were the same elements, so it looked like focus would
+survive. It did not: taking a focused element out of the document blurs it, so pressing Mute
+by keyboard left the focus on the body. Every unit test passed, because linkedom has no focus
+to lose.
+
+**Root cause.** "The same element is put back" was reasoned about rather than measured, which
+CLAUDE.md already warns about for the pointer and the focus.
+
+**Prevention.** The mixer only replaces its children when the list of tracks changes, and
+otherwise updates headings and strips in place. `tests/ui/Mixer.test.js` counts
+`replaceChildren` calls across a redraw that changes only a strip's state. The browser check
+read `document.activeElement` after a click on Mute. That check first gave a false failure,
+because the button was on the hidden Mixer tab and could not take focus at all.
+
 ## 2026-09-24 A guessed port reached the real Web Audio graph as an uncaught exception
 
 **What happened.** The first version of `reorderNode` (dragging a plugin in the rack to a new

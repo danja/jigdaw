@@ -24,6 +24,7 @@ import { detectCapabilities } from '../../src/host/Capabilities.js'
 import { Engine } from '../../src/engine/Engine.js'
 import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 import { OfflineContext, OfflineWorkletNode, directoryFetch } from '../../src/testing/OfflineHost.js'
+import { Scheduler, clipNotes } from '../../src/engine/Scheduler.js'
 
 const root = resolve(import.meta.dirname, '../..')
 const pluginDir = resolve(root, 'plugins/cascade')
@@ -182,7 +183,7 @@ suite('a graph of real plugins', () => {
     expect(result.ok).toBe(true)
     // Every sink also reaches the speakers now, so an assertion about the edge
     // between two nodes has to say that it means that edge.
-    const between = engine.links.filter(l => l.toId !== 'output')
+    const between = engine.links.filter(l => !l.toTrack)
     expect(between).toHaveLength(1)
     expect(between[0].delay).toBeNull()
   })
@@ -309,6 +310,41 @@ midiSuite('MIDI into a real instrument', () => {
     expect(rmsOf(node.render())).toBeLessThan(1e-6)
   })
 
+  it('plays a track\'s MIDI clip through the scheduler, sounding where its notes are and nowhere else', async () => {
+    // Stage 3 end to end: a clip in the model, the scheduler turning it into
+    // stream positions a little ahead of the clock, the router delivering
+    // them, and the real instrument sounding them in the right quanta.
+    const { dispatcher, added } = await loadPulse()
+    const node = added.entry.node
+    // Pulse accepts MIDI, so its new track took it as the MIDI input.
+    expect(dispatcher.project.track(added.trackId).midiInput).toBe(added.nodeId)
+    dispatcher.apply([{
+      op: 'addClip', track: added.trackId, kind: 'midi', startBeat: 1, lengthBeats: 4,
+      notes: [{ startBeat: 0, lengthBeats: 1, pitch: 69, velocity: 100 }]
+    }])
+
+    const scheduler = new Scheduler({
+      now: () => node.frame / 48000,
+      sampleRate: 48000,
+      lookahead: 0.05,
+      notes: () => clipNotes(dispatcher.project),
+      transport: () => dispatcher.transport(48000),
+      send: (nodeId, events) => dispatcher.sendEvents(nodeId, events)
+    })
+    scheduler.start(0)
+
+    // At 120 bpm beat 1 is frame 24000, quantum 187.5; the note ends at beat 2,
+    // frame 48000, quantum 375.
+    const levels = []
+    for (let q = 0; q < 900; q++) {
+      if (q % 8 === 0) { scheduler.tick(); await settle() }
+      levels.push(rmsOf(node.render()))
+    }
+    expect(Math.max(...levels.slice(0, 187)), 'sounded before the note').toBe(0)
+    expect(Math.max(...levels.slice(188, 375)), 'silent during the note').toBeGreaterThan(0.01)
+    expect(Math.max(...levels.slice(850)), 'still sounding long after the note').toBeLessThan(1e-4)
+  })
+
   it('applies a note in the quantum that contains its frame, not before', async () => {
     // Located by stream position. An event scheduled three quanta ahead must
     // not sound now, and must not be lost either.
@@ -399,7 +435,7 @@ midiSuite('MIDI into a real instrument', () => {
     // No audio link was made for it.
     // A MIDI edge is not an audio edge and must not reach connect(). The link
     // to the speakers is the instrument's own output and is not this edge.
-    expect(engine.links.filter(l => l.toId !== 'output')).toEqual([])
+    expect(engine.links.filter(l => !l.toTrack)).toEqual([])
     expect(dispatcher.router.routes).toEqual([{ from: a.entry.id, to: b.entry.id }])
   })
 
@@ -432,8 +468,9 @@ suite('what reaches the speakers, with real plugins', () => {
     validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
   }, 30000)
 
+  // What reaches a track's fader, and so the master through it.
   const reaching = (engine, context) =>
-    engine.links.filter(l => l.toId === 'output').map(l => l.fromId).sort()
+    engine.links.filter(l => l.toTrack).map(l => l.fromId).sort()
 
   it('connects one plugin, through a master that is the only thing at the destination', async () => {
     const context = new OfflineContext()
@@ -446,10 +483,14 @@ suite('what reaches the speakers, with real plugins', () => {
     const only = await dispatcher.addPlugin(CANONICAL)
 
     expect(reaching(engine, context)).toEqual([only.entry.id])
-    // Gains now exist per node too, for the channel strip, so the assertion is
+    // Gains now exist per track too, for the fader, so the assertion is
     // about which one the destination hears rather than how many there are.
     expect(context.destination.incoming).toEqual([engine.master])
     expect(context.gains).toContain(engine.master)
+    // And the plugin reaches the master through its track's fader, not around it.
+    const fader = engine.trackInput(only.trackId)
+    expect(only.entry.node.connections.map(c => c.destination)).toEqual([fader])
+    expect(engine.master.incoming).toEqual([fader])
   })
 
   it('connects the end of a real chain and not its middle', async () => {

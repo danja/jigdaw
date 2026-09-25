@@ -4109,22 +4109,22 @@ var require_legacy = __commonJS({
     ObjectSetPrototypeOf(Stream.prototype, EE.prototype);
     ObjectSetPrototypeOf(Stream, EE);
     Stream.prototype.pipe = function(dest, options) {
-      const source2 = this;
+      const source = this;
       function ondata(chunk) {
-        if (dest.writable && dest.write(chunk) === false && source2.pause) {
-          source2.pause();
+        if (dest.writable && dest.write(chunk) === false && source.pause) {
+          source.pause();
         }
       }
-      source2.on("data", ondata);
+      source.on("data", ondata);
       function ondrain() {
-        if (source2.readable && source2.resume) {
-          source2.resume();
+        if (source.readable && source.resume) {
+          source.resume();
         }
       }
       dest.on("drain", ondrain);
       if (!dest._isStdio && (!options || options.end !== false)) {
-        source2.on("end", onend);
-        source2.on("close", onclose);
+        source.on("end", onend);
+        source.on("close", onclose);
       }
       let didOnEnd = false;
       function onend() {
@@ -4143,23 +4143,23 @@ var require_legacy = __commonJS({
           this.emit("error", er);
         }
       }
-      prependListener(source2, "error", onerror);
+      prependListener(source, "error", onerror);
       prependListener(dest, "error", onerror);
       function cleanup() {
-        source2.removeListener("data", ondata);
+        source.removeListener("data", ondata);
         dest.removeListener("drain", ondrain);
-        source2.removeListener("end", onend);
-        source2.removeListener("close", onclose);
-        source2.removeListener("error", onerror);
+        source.removeListener("end", onend);
+        source.removeListener("close", onclose);
+        source.removeListener("error", onerror);
         dest.removeListener("error", onerror);
-        source2.removeListener("end", cleanup);
-        source2.removeListener("close", cleanup);
+        source.removeListener("end", cleanup);
+        source.removeListener("close", cleanup);
         dest.removeListener("close", cleanup);
       }
-      source2.on("end", cleanup);
-      source2.on("close", cleanup);
+      source.on("end", cleanup);
+      source.on("close", cleanup);
       dest.on("close", cleanup);
-      dest.emit("pipe", source2);
+      dest.emit("pipe", source);
       return dest;
     };
     function prependListener(emitter, event, fn) {
@@ -13229,7 +13229,13 @@ var init_Vocabulary = __esm({
         format: `${TRN}format`,
         HostTransport: `${TRN}HostTransport`,
         Audio: `${TRN}Audio`,
-        Midi: `${TRN}Midi`
+        Midi: `${TRN}Midi`,
+        // A clip's and a note's placement, and a note itself. transmission's
+        // arrangement terms, reused for the same purpose.
+        startBeat: `${TRN}startBeat`,
+        lengthBeats: `${TRN}lengthBeats`,
+        pitch: `${TRN}pitch`,
+        velocity: `${TRN}velocity`
       }),
       jig: Object.freeze({
         WebPlugin: `${JIG}WebPlugin`,
@@ -13279,6 +13285,7 @@ var init_Vocabulary = __esm({
         KRate: `${JIG}KRate`,
         // Projects
         Project: `${JIG}Project`,
+        Track: `${JIG}Track`,
         Node: `${JIG}Node`,
         Connection: `${JIG}Connection`,
         Endpoint: `${JIG}Endpoint`,
@@ -13287,6 +13294,7 @@ var init_Vocabulary = __esm({
         TempoPoint: `${JIG}TempoPoint`,
         revision: `${JIG}revision`,
         node: `${JIG}node`,
+        track: `${JIG}track`,
         connection: `${JIG}connection`,
         transport: `${JIG}transport`,
         plugin: `${JIG}plugin`,
@@ -13295,6 +13303,17 @@ var init_Vocabulary = __esm({
         pan: `${JIG}pan`,
         muted: `${JIG}muted`,
         soloed: `${JIG}soloed`,
+        onTrack: `${JIG}onTrack`,
+        midiInput: `${JIG}midiInput`,
+        audioInput: `${JIG}audioInput`,
+        Clip: `${JIG}Clip`,
+        MidiClip: `${JIG}MidiClip`,
+        AudioClip: `${JIG}AudioClip`,
+        Note: `${JIG}Note`,
+        clip: `${JIG}clip`,
+        note: `${JIG}note`,
+        source: `${JIG}source`,
+        offsetSeconds: `${JIG}offsetSeconds`,
         setting: `${JIG}setting`,
         from: `${JIG}from`,
         to: `${JIG}to`,
@@ -16062,20 +16081,20 @@ var require_ms = __commonJS({
     function fmtLong(ms) {
       var msAbs = Math.abs(ms);
       if (msAbs >= d) {
-        return plural(ms, msAbs, d, "day");
+        return plural2(ms, msAbs, d, "day");
       }
       if (msAbs >= h2) {
-        return plural(ms, msAbs, h2, "hour");
+        return plural2(ms, msAbs, h2, "hour");
       }
       if (msAbs >= m) {
-        return plural(ms, msAbs, m, "minute");
+        return plural2(ms, msAbs, m, "minute");
       }
       if (msAbs >= s) {
-        return plural(ms, msAbs, s, "second");
+        return plural2(ms, msAbs, s, "second");
       }
       return ms + " ms";
     }
-    function plural(ms, msAbs, n2, name) {
+    function plural2(ms, msAbs, n2, name) {
       var isPlural = msAbs >= n2 * 1.5;
       return Math.round(ms / n2) + " " + name + (isPlural ? "s" : "");
     }
@@ -16194,13 +16213,13 @@ var require_common = __commonJS({
           }
         }
       }
-      function matchesTemplate(search2, template) {
+      function matchesTemplate(search, template) {
         let searchIndex = 0;
         let templateIndex = 0;
         let starIndex = -1;
         let matchIndex = 0;
-        while (searchIndex < search2.length) {
-          if (templateIndex < template.length && (template[templateIndex] === search2[searchIndex] || template[templateIndex] === "*")) {
+        while (searchIndex < search.length) {
+          if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === "*")) {
             if (template[templateIndex] === "*") {
               starIndex = templateIndex;
               matchIndex = searchIndex;
@@ -17835,6 +17854,115 @@ var init_ForeignSupport = __esm({
   }
 });
 
+// src/ui/Tabs.js
+function createTabs(document2, tabs, { onSelect = () => {
+} } = {}) {
+  if (tabs.length === 0) throw new Error("a tab list needs at least one tab");
+  const tablist = document2.createElement("div");
+  tablist.setAttribute("role", "tablist");
+  tablist.className = "tabs";
+  const buttons = tabs.map((tab, index) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = `tab-${tab.id}`;
+    button.className = "tab";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-controls", tab.panel.id);
+    button.textContent = tab.label;
+    tablist.append(button);
+    tab.panel.setAttribute("role", "tabpanel");
+    tab.panel.setAttribute("aria-labelledby", button.id);
+    tab.panel.tabIndex = 0;
+    return button;
+  });
+  let current = 0;
+  const select = (index) => {
+    current = index;
+    buttons.forEach((button, i2) => {
+      const active = i2 === index;
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+      tabs[i2].panel.hidden = !active;
+    });
+    onSelect(tabs[index].id);
+  };
+  const MOVES = {
+    ArrowRight: (i2) => (i2 + 1) % buttons.length,
+    ArrowLeft: (i2) => (i2 - 1 + buttons.length) % buttons.length,
+    Home: () => 0,
+    End: () => buttons.length - 1
+  };
+  buttons.forEach((button, index) => {
+    button.addEventListener("click", () => select(index));
+    button.addEventListener("keydown", (event) => {
+      const move = MOVES[event.key];
+      if (!move) return;
+      event.preventDefault();
+      const next = move(index);
+      select(next);
+      buttons[next].focus();
+    });
+  });
+  select(0);
+  return {
+    element: tablist,
+    /** Select a tab by id, from outside a keypress or a click. */
+    select(id) {
+      const index = tabs.findIndex((tab) => tab.id === id);
+      if (index === -1) throw new Error(`no such tab: ${id}`);
+      select(index);
+    },
+    /** The id of whichever tab is currently shown. */
+    selected() {
+      return tabs[current].id;
+    }
+  };
+}
+
+// web/app/Media.js
+function createMedia(document2) {
+  let base = new URL(`sessions/${Date.now()}/`, document2.baseURI).href;
+  const files = /* @__PURE__ */ new Map();
+  return {
+    get base() {
+      return base;
+    },
+    /**
+     * Move to the session at `iri`: its directory, not the file, because a
+     * preset's IRI is the preset file and media imported afterwards goes
+     * beside it, under the base the session saves with.
+     */
+    rebase(iri3) {
+      base = new URL("./", iri3).href;
+    },
+    has(iri3) {
+      return files.has(iri3);
+    },
+    get(iri3) {
+      return files.get(iri3) ?? null;
+    },
+    /** Keep a file's bytes under its IRI. */
+    put(iri3, bytes, mediaType = null) {
+      files.set(iri3, { bytes, mediaType });
+    },
+    /** Where an imported file lives, named by its content. */
+    iriFor(hex, extension) {
+      return new URL(`media/${hex}.${extension}`, base).href;
+    },
+    /** The files a saved session carries: held here, and under its base. */
+    heldUnderBase(iris) {
+      return iris.filter((iri3) => files.has(iri3) && iri3.startsWith(base));
+    },
+    /** A file's bytes, from what is held or else the network. */
+    async fetchBytes(iri3) {
+      if (files.has(iri3)) return files.get(iri3).bytes.slice().buffer;
+      const response = await fetch(iri3);
+      if (!response.ok) throw new Error(`${iri3} answered ${response.status}`);
+      return response.arrayBuffer();
+    }
+  };
+}
+
 // src/host/PluginLoader.js
 init_ProfileReader();
 init_Integrity();
@@ -18331,7 +18459,7 @@ var PluginLoader = class {
   }
 };
 
-// web/app.js
+// web/app/Runtime.js
 init_parse();
 
 // src/validate/ShapeValidator.js
@@ -20413,8 +20541,8 @@ var ValidationEngine = class _ValidationEngine {
     try {
       this.initReport();
       let foundError = false;
-      const shapes2 = this.context.shapesGraph.shapesWithTarget;
-      for (const shape of shapes2) {
+      const shapes = this.context.shapesGraph.shapesWithTarget;
+      for (const shape of shapes) {
         const focusNodes = shape.getTargetNodes(dataGraph);
         for (const focusNode of focusNodes) {
           if (this.validateNodeAgainstShape(focusNode, shape, dataGraph)) {
@@ -20840,8 +20968,8 @@ var validateAnd = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const andNode = constraint.getParameterValue(sh.and);
-    const shapes2 = rdfListToArray(context.$shapes.node(andNode));
-    return shapes2.every((shape) => {
+    const shapes = rdfListToArray(context.$shapes.node(andNode));
+    return shapes.every((shape) => {
       if (constraint.shape.isPropertyShape) {
         return context.nodeConformsToShape(focusNode, shape, constraint.pathObject);
       }
@@ -21126,8 +21254,8 @@ var validateOr = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const orNode = constraint.getParameterValue(sh.or);
-    const shapes2 = rdfListToArray(context.$shapes.node(orNode));
-    return shapes2.some((shape) => context.nodeConformsToShape(valueNode, shape));
+    const shapes = rdfListToArray(context.$shapes.node(orNode));
+    return shapes.some((shape) => context.nodeConformsToShape(valueNode, shape));
   }
 };
 var validatePattern = {
@@ -21220,8 +21348,8 @@ var validateXone = {
   validate(context, focusNode, valueNode, constraint) {
     const { sh } = context.ns;
     const xoneNode = constraint.getParameterValue(sh.xone);
-    const shapes2 = rdfListToArray(context.$shapes.node(xoneNode));
-    const conformsCount = shapes2.map((shape) => context.nodeConformsToShape(valueNode, shape)).filter(Boolean).length;
+    const shapes = rdfListToArray(context.$shapes.node(xoneNode));
+    const conformsCount = shapes.map((shape) => context.nodeConformsToShape(valueNode, shape)).filter(Boolean).length;
     return conformsCount === 1;
   }
 };
@@ -21317,12 +21445,12 @@ var SHACLValidator = class {
    * @param shapes - Dataset containing the SHACL shapes for validation
    * @param {object} [options] - Validator options
    */
-  constructor(shapes2, options) {
+  constructor(shapes, options) {
     options = options || {};
     this.factory = options.factory || defaultEnv_default;
     this.ns = prepareNamespaces(this.factory);
     this.allowNamedNodeInList = options.allowNamedNodeInList === void 0 ? false : options.allowNamedNodeInList;
-    const dataset2 = this.factory.dataset([...shapes2]);
+    const dataset2 = this.factory.dataset([...shapes]);
     this.$shapes = this.factory.clownface({ dataset: dataset2 });
     this.$data = this.factory.clownface();
     this.validators = this.factory.termMap(validators_registry_default);
@@ -21362,21 +21490,21 @@ var SHACLValidator = class {
    * Exposed to be available from validation functions as `SHACL.nodeConformsToShape`
    */
   nodeConformsToShape(focusNode, shapeNode, propertyPathOrEngine) {
-    let engine2;
+    let engine;
     let shape = this.shapesGraph?.getShape(shapeNode);
     if (propertyPathOrEngine && "termType" in propertyPathOrEngine) {
-      engine2 = this.validationEngine.clone({
+      engine = this.validationEngine.clone({
         recordErrorsLevel: this.validationEngine.recordErrorsLevel
       });
       shape = shape.overridePath(propertyPathOrEngine);
     } else if (propertyPathOrEngine && "clone" in propertyPathOrEngine) {
-      engine2 = propertyPathOrEngine;
+      engine = propertyPathOrEngine;
     } else {
-      engine2 = this.validationEngine.clone();
+      engine = this.validationEngine.clone();
     }
     try {
       this.depth++;
-      const foundViolations = engine2.validateNodeAgainstShape(focusNode, shape, this.$data);
+      const foundViolations = engine.validateNodeAgainstShape(focusNode, shape, this.$data);
       return !foundViolations;
     } finally {
       this.depth--;
@@ -21423,8 +21551,8 @@ var rdf_validate_shacl_default = SHACLValidator;
 var WARNING = "http://www.w3.org/ns/shacl#Warning";
 var ShapeValidator = class {
   #validator;
-  constructor(shapes2) {
-    this.#validator = new rdf_validate_shacl_default(shapes2, { factory: env_default });
+  constructor(shapes) {
+    this.#validator = new rdf_validate_shacl_default(shapes, { factory: env_default });
   }
   /**
    * Returns { conforms, violations, warnings, results }.
@@ -21450,154 +21578,6 @@ var ShapeValidator = class {
   }
 };
 
-// src/rdf/CollectionReader.js
-init_env();
-init_Vocabulary();
-var { jig: jig3, rdfs: rdfs2, dcterms, rdf: rdfTerms2 } = vocabulary;
-var iri2 = (value2) => env_default.namedNode(value2);
-var first = (dataset2, subject, predicate) => [...dataset2.match(subject, iri2(predicate), null)][0]?.object.value ?? null;
-function readCollection(dataset2) {
-  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.PluginCollection))].map((q) => q.subject);
-  if (subjects.length === 0) throw new Error("the document declares no jig:PluginCollection");
-  if (subjects.length > 1) {
-    throw new Error(`the document declares ${subjects.length} collections (${subjects.map((s) => s.value).join(", ")}); a collection document holds one`);
-  }
-  const subject = subjects[0];
-  const members = [...dataset2.match(subject, iri2(dcterms.hasPart), null)].map((q) => ({ iri: q.object.value, label: first(dataset2, q.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
-  return {
-    iri: subject.value,
-    label: first(dataset2, subject, rdfs2.label),
-    comment: first(dataset2, subject, rdfs2.comment),
-    members
-  };
-}
-
-// src/catalogue/CollectionLoader.js
-var COLLECTION_ACCEPT = "text/turtle";
-var COLLECTION_STEPS = Object.freeze({
-  fetch: "fetch-collection",
-  parse: "parse-collection",
-  validate: "validate-collection"
-});
-var CollectionError = class extends Error {
-  constructor(step, message, { cause, url } = {}) {
-    super(message, { cause });
-    this.name = "CollectionError";
-    this.step = step;
-    this.url = url ?? null;
-  }
-};
-var CollectionLoader = class {
-  #fetch;
-  #parse;
-  #validator;
-  #verify;
-  #concurrency;
-  /**
-   * @param fetch       fetch implementation
-   * @param parse       (text, baseIRI) => Promise<dataset>
-   * @param validator   ShapeValidator over vocabs/shapes.ttl
-   * @param verify      iri => Promise<{ profile }>, throwing a LoadError
-   * @param concurrency most member profiles fetched at once
-   */
-  constructor({
-    // Bound rather than taken by reference: see PluginLoader.
-    fetch: fetch2 = (...args) => globalThis.fetch(...args),
-    parse,
-    validator,
-    verify,
-    concurrency = 6
-  } = {}) {
-    if (typeof parse !== "function") throw new Error("CollectionLoader needs a parse function");
-    if (!validator) throw new Error("CollectionLoader needs a shape validator");
-    if (typeof verify !== "function") throw new Error("CollectionLoader needs a verify function");
-    if (!(Number.isInteger(concurrency) && concurrency > 0)) throw new Error(`concurrency must be a positive integer, not ${concurrency}`);
-    this.#fetch = fetch2;
-    this.#parse = parse;
-    this.#validator = validator;
-    this.#verify = verify;
-    this.#concurrency = concurrency;
-  }
-  /** Section 3.1: the document, refused whole at the first failure. */
-  async read(url) {
-    let response;
-    try {
-      response = await this.#fetch(url, { headers: { accept: COLLECTION_ACCEPT } });
-    } catch (cause) {
-      throw new CollectionError(
-        COLLECTION_STEPS.fetch,
-        `could not fetch ${url}: ${cause?.message ?? cause}. If the collection is on another origin, it must be served with Access-Control-Allow-Origin.`,
-        { cause, url }
-      );
-    }
-    if (!response.ok) throw new CollectionError(COLLECTION_STEPS.fetch, `${url} returned ${response.status}`, { url });
-    let dataset2;
-    try {
-      dataset2 = await this.#parse(await response.text(), url);
-    } catch (cause) {
-      throw new CollectionError(COLLECTION_STEPS.parse, `${url} is not parseable Turtle: ${cause.message}`, { cause, url });
-    }
-    const report = await this.#validator.validate(dataset2);
-    if (!report.conforms) {
-      const v = report.violations[0];
-      throw new CollectionError(
-        COLLECTION_STEPS.validate,
-        `${url} is not a valid collection: ${v.message} (at ${v.focusNode}${v.path ? ` ${v.path}` : ""})`,
-        { url }
-      );
-    }
-    try {
-      return { collection: readCollection(dataset2), warnings: report.warnings };
-    } catch (cause) {
-      throw new CollectionError(COLLECTION_STEPS.validate, `${url}: ${cause.message}`, { cause, url });
-    }
-  }
-  /** Section 3.2: one member, never throwing. */
-  async check(member) {
-    try {
-      const { profile } = await this.#verify(member.iri);
-      const notes = [];
-      if (profile.iri !== member.iri) notes.push(`names itself ${profile.iri}`);
-      if (member.label !== null && profile.label !== member.label) {
-        notes.push(`listed as "${member.label}", named "${profile.label}" by its profile`);
-      }
-      return {
-        iri: member.iri,
-        listedLabel: member.label,
-        ok: true,
-        profile,
-        notes
-      };
-    } catch (error2) {
-      return {
-        iri: member.iri,
-        listedLabel: member.label,
-        ok: false,
-        step: error2.step ?? null,
-        message: error2.message
-      };
-    }
-  }
-  /**
-   * Read the collection, then check every member, at most `concurrency` at a
-   * time so a collection of hundreds does not open hundreds of requests.
-   * Members come back in the collection's order, sorted by listed name.
-   */
-  async load(url) {
-    const { collection, warnings } = await this.read(url);
-    const results = new Array(collection.members.length);
-    let next = 0;
-    const worker = async () => {
-      while (next < collection.members.length) {
-        const i2 = next++;
-        results[i2] = await this.check(collection.members[i2]);
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(this.#concurrency, collection.members.length) }, worker));
-    return { url, collection, warnings, members: results };
-  }
-};
-
 // src/engine/Engine.js
 init_LoadError();
 var counter = 0;
@@ -21609,6 +21589,9 @@ var Engine = class {
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
   #links = [];
+  // One strip per track, keyed by the model's track id. The engine holds no
+  // policy about what a track is; it is a named place for audio to arrive.
+  #tracks = /* @__PURE__ */ new Map();
   /**
    * `AudioWorkletNode` is injected rather than read from globals so the engine
    * can be driven by an offline host in a test. Web Audio hangs the class off
@@ -21668,8 +21651,7 @@ var Engine = class {
    * Take an instantiated node into the graph.
    *
    * Everything after instantiation is the same whoever made the node: it needs
-   * driving if it has no audio, it gets a channel strip if it has, and it
-   * becomes an entry. A foreign plugin (contract section 12) is instantiated by
+   * driving if it has no audio, and it becomes an entry. A foreign plugin (contract section 12) is instantiated by
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
@@ -21681,16 +21663,8 @@ var Engine = class {
       driver.connect(node, 0, 0);
       driver.start();
     }
-    let strip = null;
-    if (profile.audioOutputs > 0 && typeof this.#context.createGain === "function") {
-      const gain = this.#context.createGain();
-      const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
-      node.connect(gain, 0);
-      if (panner) gain.connect(panner);
-      strip = { gain, panner, output: panner ?? gain };
-    }
     const id = nextId();
-    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver, strip };
+    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -21702,10 +21676,6 @@ var Engine = class {
         entry.driver.stop();
         entry.driver.disconnect();
       }
-      if (entry.strip) {
-        entry.strip.gain.disconnect();
-        entry.strip.panner?.disconnect();
-      }
       entry.node.disconnect();
       entry.node.port.postMessage({ type: "dispose" });
     } catch {
@@ -21713,9 +21683,9 @@ var Engine = class {
     this.#nodes.delete(id);
   }
   connect(fromId, toId, { fromOutput = 0, toInput = 0 } = {}) {
-    const source2 = this.get(fromId).node;
+    const source = this.get(fromId).node;
     const destination = toId === "output" ? this.master : this.get(toId).node;
-    source2.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
+    source.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
   }
   /**
    * Link two nodes, inserting the delay the compiler asked for.
@@ -21737,10 +21707,7 @@ var Engine = class {
    * A parameter takes no input index, so toInput is not consulted for one.
    */
   link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
-    const from = this.get(fromId);
-    const viaStrip = Boolean(from.strip) && fromOutput === 0;
-    const source2 = viaStrip ? from.strip.output : from.node;
-    if (viaStrip) fromOutput = 0;
+    const source = this.get(fromId).node;
     let destination;
     if (toParameter !== null) {
       const entry = this.get(toId);
@@ -21759,14 +21726,14 @@ var Engine = class {
       const seconds = delayFrames / this.#context.sampleRate;
       const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
       delay.delayTime.value = seconds;
-      source2.connect(delay, fromOutput, 0);
+      source.connect(delay, fromOutput, 0);
       if (toParameter !== null) delay.connect(destination);
       else delay.connect(destination, 0, targetInput);
       this.#links.push({ fromId, toId, delay });
       return;
     }
-    if (toParameter !== null) source2.connect(destination, fromOutput);
-    else source2.connect(destination, fromOutput, targetInput);
+    if (toParameter !== null) source.connect(destination, fromOutput);
+    else source.connect(destination, fromOutput, targetInput);
     this.#links.push({ fromId, toId, delay: null });
   }
   /** Tear down every link, including the delay nodes this engine created. */
@@ -21774,9 +21741,7 @@ var Engine = class {
     for (const link of this.#links) {
       try {
         if (link.delay) link.delay.disconnect();
-        const from = this.get(link.fromId);
-        if (from.strip) from.strip.output.disconnect();
-        else from.node.disconnect();
+        this.get(link.fromId).node.disconnect();
       } catch {
       }
     }
@@ -21789,23 +21754,66 @@ var Engine = class {
     audioNode.connect(this.get(toId).node, 0, toInput);
   }
   /**
-   * Parameters are AudioParams, addressed by lv2:symbol. Never a message:
-   * contract section 5.1 and messaging.md section 1.5, because two paths for
-   * one value arrive at different times with no defined precedence.
-   */
-  /**
-   * Apply a node's channel strip.
+   * Make a track's strip: a fader then a panner, into the master.
    *
-   * `muted` is given separately from the model's own flag because solo makes a
-   * node silent without it being muted: what a listener hears is a property of
-   * the whole graph, and the dispatcher is what can see the whole graph.
+   * Gain then pan, which is the order a mixer works in: the fader sets how much
+   * of the signal there is and the pan decides where it goes.
    */
-  setChannel(id, { gain = 1, pan = 0, silent = false } = {}) {
-    const entry = this.get(id);
-    if (!entry.strip) return;
+  addTrack(trackId) {
+    if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`);
+    const gain = this.#context.createGain();
+    const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
+    if (panner) {
+      gain.connect(panner);
+      panner.connect(this.master);
+    } else gain.connect(this.master);
+    this.#tracks.set(trackId, { gain, panner, input: gain });
+  }
+  removeTrack(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    try {
+      strip.gain.disconnect();
+      strip.panner?.disconnect();
+    } catch {
+    }
+    this.#tracks.delete(trackId);
+  }
+  /** The track ids that have a strip. */
+  trackIds() {
+    return [...this.#tracks.keys()];
+  }
+  /**
+   * The node a track's audio arrives at: its fader. For a caller that plays
+   * something into a track from outside the plugin graph, such as an audio
+   * clip with nowhere else to go.
+   */
+  trackInput(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    return strip.input;
+  }
+  /**
+   * Connect a node's output to a track's fader. Recorded with the other links,
+   * so clearLinks takes it down with them.
+   */
+  linkToTrack(fromId, trackId, { fromOutput = 0 } = {}) {
+    this.get(fromId).node.connect(this.trackInput(trackId), fromOutput, 0);
+    this.#links.push({ fromId, toTrack: trackId, delay: null });
+  }
+  /**
+   * Apply a track's channel strip.
+   *
+   * `silent` is given separately from the model's own mute because solo makes
+   * a track silent without it being muted: what a listener hears is a property
+   * of the whole mix, and the dispatcher is what can see the whole mix.
+   */
+  setTrackChannel(trackId, { gain = 1, pan = 0, silent = false } = {}) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
     const at = this.#context.currentTime;
-    entry.strip.gain.gain.setValueAtTime(silent ? 0 : gain, at);
-    if (entry.strip.panner) entry.strip.panner.pan.setValueAtTime(pan, at);
+    strip.gain.gain.setValueAtTime(silent ? 0 : gain, at);
+    if (strip.panner) strip.panner.pan.setValueAtTime(pan, at);
   }
   /**
    * What a value would become, without applying it.
@@ -21820,6 +21828,13 @@ var Engine = class {
     const port = entry.profile.ports?.find((p) => p.symbol === symbol);
     if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
     return Math.min(port.maximum, Math.max(port.minimum, value2));
+  }
+  /** The value a parameter has before anything sets it, from the profile. */
+  defaultParameter(id, symbol) {
+    const entry = this.get(id);
+    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
+    return port.defaultValue;
   }
   setParameter(id, symbol, value2) {
     const entry = this.get(id);
@@ -21908,17 +21923,17 @@ var Engine = class {
     const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     return new Promise((resolve) => {
       let settled = false;
-      const stop2 = this.onMessage(id, (message) => {
+      const stop = this.onMessage(id, (message) => {
         if (settled || message?.type !== "state" || message.token !== token) return;
         settled = true;
-        stop2();
+        stop();
         resolve(message.state ?? null);
       });
       entry.node.port.postMessage({ type: "stateRequest", token });
       setTimeout(() => {
         if (settled) return;
         settled = true;
-        stop2();
+        stop();
         resolve(null);
       }, timeoutMs);
     });
@@ -21990,16 +22005,200 @@ function isLoadableIRI(value2) {
 }
 var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
 var cloneState = (state) => ({
-  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings), channel: { ...n2.channel } }])),
+  clips: new Map([...state.clips].map(([id, c3]) => [id, { ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) }])),
+  tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
+  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
   connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
   transport: { ...state.transport, tempoPoints: state.transport.tempoPoints.map((p) => ({ ...p })) }
 });
+function nextChannel(channel, change) {
+  const next = { ...channel };
+  if (change.gain !== void 0) {
+    if (!Number.isFinite(change.gain) || change.gain < 0) {
+      throw new Error(`gain must be a number at or above zero: ${change.gain}`);
+    }
+    next.gain = change.gain;
+  }
+  if (change.pan !== void 0) {
+    if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
+      throw new Error(`pan must be between -1 and 1: ${change.pan}`);
+    }
+    next.pan = change.pan;
+  }
+  if (change.muted !== void 0) next.muted = Boolean(change.muted);
+  if (change.soloed !== void 0) next.soloed = Boolean(change.soloed);
+  return next;
+}
+function checkTrackInput(state, trackId, nodeId, what) {
+  if (nodeId === null) return;
+  const node = state.nodes.get(nodeId);
+  if (!node) throw new Error(`${what} names no such node: ${nodeId}`);
+  if (node.track !== trackId) throw new Error(`${what} ${nodeId} is not on track ${trackId}`);
+}
+function checkNotes(notes) {
+  if (!Array.isArray(notes)) throw new Error("notes must be an array");
+  return notes.map((note, i2) => {
+    const { startBeat, lengthBeats, pitch, velocity } = note ?? {};
+    if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error(`note ${i2} needs a startBeat at or after zero`);
+    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error(`note ${i2} needs a lengthBeats above zero`);
+    if (!(Number.isInteger(pitch) && pitch >= 0 && pitch <= 127)) throw new Error(`note ${i2} needs a pitch from 0 to 127`);
+    if (!(Number.isInteger(velocity) && velocity >= 1 && velocity <= 127)) {
+      throw new Error(`note ${i2} needs a velocity from 1 to 127; MIDI reads 0 as a note off`);
+    }
+    return { startBeat, lengthBeats, pitch, velocity };
+  }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
+}
+function checkPlacement(startBeat, lengthBeats) {
+  if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a clip needs a startBeat at or after zero");
+  if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip needs a lengthBeats above zero");
+}
+function releaseInputs(state, nodeId) {
+  for (const track of state.tracks.values()) {
+    if (track.midiInput === nodeId) track.midiInput = null;
+    if (track.audioInput === nodeId) track.audioInput = null;
+  }
+}
 var OPERATIONS = {
+  addTrack(state, change, counters) {
+    const id = change.id ?? `track-${++counters.track}`;
+    if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`);
+    noteExplicitId(counters, "track", "track", id);
+    state.tracks.set(id, {
+      id,
+      label: change.label ?? null,
+      // The channel strip. Host services rather than plugin parameters: no
+      // lv2:port declares them, and solo is a property of the mix rather
+      // than of one track. Defaults are unity, centre, heard.
+      channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
+      midiInput: null,
+      audioInput: null
+    });
+    return id;
+  },
+  /** Rename a track, or name the nodes its clips play into. */
+  setTrack(state, change) {
+    const track = state.tracks.get(change.id);
+    if (!track) throw new Error(`no such track: ${change.id}`);
+    if (change.label !== void 0) track.label = change.label;
+    for (const key of ["midiInput", "audioInput"]) {
+      if (change[key] === void 0) continue;
+      checkTrackInput(state, change.id, change[key], key);
+      track[key] = change[key];
+    }
+    return change.id;
+  },
+  /**
+   * Remove a track.
+   *
+   * Refused while any node is still on it, unless `moveNodesTo` names the
+   * track they go to instead. Removing the nodes along with the track would be
+   * one click destroying a chain somebody built, and the undo of it would have
+   * to reload every plugin; a person who wants that removes the nodes first.
+   *
+   * Its clips go with it, or to `moveNodesTo` when that is given. A clip is
+   * data rather than an instantiated plugin, so taking it away costs undo
+   * nothing to restore.
+   */
+  removeTrack(state, change) {
+    if (!state.tracks.has(change.id)) throw new Error(`no such track: ${change.id}`);
+    const onIt = [...state.nodes.values()].filter((n2) => n2.track === change.id);
+    if (onIt.length > 0) {
+      if (change.moveNodesTo === void 0) {
+        throw new Error(`track ${change.id} still has ${onIt.length} node(s) on it; remove them or give moveNodesTo`);
+      }
+      if (change.moveNodesTo === change.id || !state.tracks.has(change.moveNodesTo)) {
+        throw new Error(`moveNodesTo names no other track: ${change.moveNodesTo}`);
+      }
+      for (const node of onIt) node.track = change.moveNodesTo;
+    }
+    for (const [id, clip] of [...state.clips]) {
+      if (clip.track !== change.id) continue;
+      if (change.moveNodesTo !== void 0 && state.tracks.has(change.moveNodesTo) && change.moveNodesTo !== change.id) {
+        clip.track = change.moveNodesTo;
+      } else {
+        state.clips.delete(id);
+      }
+    }
+    state.tracks.delete(change.id);
+    return change.id;
+  },
+  moveNodeToTrack(state, change) {
+    const node = state.nodes.get(change.id);
+    if (!node) throw new Error(`no such node: ${change.id}`);
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (node.track === change.track) return change.id;
+    releaseInputs(state, change.id);
+    node.track = change.track;
+    return change.id;
+  },
+  /**
+   * Add a clip to a track. A MIDI clip holds notes; an audio clip names the
+   * file it plays by `source`, never its bytes (project-format.md "Clips").
+   */
+  addClip(state, change, counters) {
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (change.kind !== "midi" && change.kind !== "audio") throw new Error("kind must be midi or audio");
+    checkPlacement(change.startBeat, change.lengthBeats);
+    const id = change.id ?? `clip-${++counters.clip}`;
+    if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`);
+    noteExplicitId(counters, "clip", "clip", id);
+    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats };
+    if (change.kind === "midi") {
+      clip.notes = checkNotes(change.notes ?? []);
+    } else {
+      if (typeof change.source !== "string" || !URL.canParse(change.source)) {
+        throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
+      }
+      const offset = change.offsetSeconds ?? 0;
+      if (!(Number.isFinite(offset) && offset >= 0)) throw new Error("offsetSeconds must be at or after zero");
+      clip.source = change.source;
+      clip.offsetSeconds = offset;
+      clip.notes = [];
+    }
+    state.clips.set(id, clip);
+    return id;
+  },
+  /** Move a clip in time or to another track, resize it, or change its offset. */
+  setClip(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    const startBeat = change.startBeat ?? clip.startBeat;
+    const lengthBeats = change.lengthBeats ?? clip.lengthBeats;
+    checkPlacement(startBeat, lengthBeats);
+    if (change.track !== void 0 && !state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (change.offsetSeconds !== void 0) {
+      if (clip.kind !== "audio") throw new Error("only an audio clip has an offset");
+      if (!(Number.isFinite(change.offsetSeconds) && change.offsetSeconds >= 0)) throw new Error("offsetSeconds must be at or after zero");
+      clip.offsetSeconds = change.offsetSeconds;
+    }
+    clip.startBeat = startBeat;
+    clip.lengthBeats = lengthBeats;
+    if (change.track !== void 0) clip.track = change.track;
+    return change.id;
+  },
+  /**
+   * Replace a MIDI clip's notes. The whole list at once, so one gesture in a
+   * piano roll, or one agent's phrase, is one edit and one undo.
+   */
+  setClipNotes(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
+    clip.notes = checkNotes(change.notes);
+    return change.id;
+  },
+  removeClip(state, change) {
+    if (!state.clips.has(change.id)) throw new Error(`no such clip: ${change.id}`);
+    state.clips.delete(change.id);
+    return change.id;
+  },
   addNode(state, change, counters) {
     if (!change.pluginIri) throw new Error("needs a pluginIri");
     if (!isLoadableIRI(change.pluginIri)) {
       throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`);
     }
+    if (!change.track) throw new Error("needs a track");
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
     const id = change.id ?? `node-${++counters.node}`;
     if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
     noteExplicitId(counters, "node", "node", id);
@@ -22007,12 +22206,9 @@ var OPERATIONS = {
       id,
       pluginIri: change.pluginIri,
       label: change.label ?? null,
+      track: change.track,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null,
-      // The channel strip. Host services rather than plugin parameters: no
-      // lv2:port declares them, and solo is a property of the graph rather
-      // than of one node. Defaults are unity, centre, heard.
-      channel: { ...DEFAULT_CHANNEL, ...change.channel ?? {} }
+      state: change.state ?? null
     });
     return id;
   },
@@ -22123,6 +22319,7 @@ var OPERATIONS = {
       }
     }
     state.nodes.delete(change.id);
+    releaseInputs(state, change.id);
     for (const [key, connection] of [...state.connections]) {
       if (connection.from.node === change.id || connection.to.node === change.id) {
         state.connections.delete(key);
@@ -22171,32 +22368,29 @@ var OPERATIONS = {
     return change.symbol;
   },
   /**
-   * Set any of a node's channel strip.
+   * Forget a parameter's setting, so it is at its plugin's default again. The
+   * model has no profiles and so no defaults; the setting is simply absent,
+   * which is what a node that was never touched has.
+   */
+  clearSetting(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    if (!change.symbol) throw new Error("needs a symbol");
+    node.settings.delete(change.symbol);
+    return change.symbol;
+  },
+  /**
+   * Set any of a track's channel strip.
    *
    * One operation for the four rather than one each, because a person moving a
    * fader and a person pressing mute are the same kind of edit and a preset
    * setting all four is one edit rather than four.
    */
-  setChannel(state, change) {
-    const node = state.nodes.get(change.node);
-    if (!node) throw new Error(`no such node: ${change.node}`);
-    const next = { ...node.channel };
-    if (change.gain !== void 0) {
-      if (!Number.isFinite(change.gain) || change.gain < 0) {
-        throw new Error(`gain must be a number at or above zero: ${change.gain}`);
-      }
-      next.gain = change.gain;
-    }
-    if (change.pan !== void 0) {
-      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
-        throw new Error(`pan must be between -1 and 1: ${change.pan}`);
-      }
-      next.pan = change.pan;
-    }
-    if (change.muted !== void 0) next.muted = Boolean(change.muted);
-    if (change.soloed !== void 0) next.soloed = Boolean(change.soloed);
-    node.channel = next;
-    return change.node;
+  setTrackChannel(state, change) {
+    const track = state.tracks.get(change.track);
+    if (!track) throw new Error(`no such track: ${change.track}`);
+    track.channel = nextChannel(track.channel, change);
+    return change.track;
   },
   setNodeState(state, change) {
     const node = state.nodes.get(change.node);
@@ -22226,10 +22420,38 @@ var OPERATIONS = {
     return "transport";
   }
 };
+function clipChange(c3) {
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, source: c3.source, offsetSeconds: c3.offsetSeconds };
+}
+function changesFor(snapshot) {
+  return [
+    ...snapshot.tracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })),
+    ...snapshot.nodes.map((n2) => ({
+      op: "addNode",
+      id: n2.id,
+      pluginIri: n2.pluginIri,
+      label: n2.label,
+      track: n2.track,
+      settings: n2.settings,
+      state: n2.state
+    })),
+    ...snapshot.tracks.filter((t) => t.midiInput !== null || t.audioInput !== null).map((t) => ({ op: "setTrack", id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
+    ...snapshot.connections.map((c3) => ({
+      op: "addConnection",
+      id: c3.id,
+      from: c3.from,
+      to: c3.to,
+      signalKind: c3.signalKind,
+      delayFrames: c3.delayFrames
+    })),
+    ...snapshot.clips.map(clipChange),
+    { op: "setTransport", ...snapshot.transport }
+  ];
+}
 var Project = class {
   #revision = 0;
-  #state = { nodes: /* @__PURE__ */ new Map(), connections: /* @__PURE__ */ new Map(), transport: { ...DEFAULT_TRANSPORT } };
-  #counters = { node: 0, connection: 0 };
+  #state = { tracks: /* @__PURE__ */ new Map(), nodes: /* @__PURE__ */ new Map(), connections: /* @__PURE__ */ new Map(), clips: /* @__PURE__ */ new Map(), transport: { ...DEFAULT_TRANSPORT } };
+  #counters = { track: 0, node: 0, connection: 0, clip: 0 };
   // Editor metadata, deliberately outside the state a revision covers.
   #positions = /* @__PURE__ */ new Map();
   #label = null;
@@ -22242,20 +22464,42 @@ var Project = class {
   set label(value2) {
     this.#label = value2;
   }
+  get tracks() {
+    return [...this.#state.tracks.values()];
+  }
   get nodes() {
     return [...this.#state.nodes.values()];
   }
   get connections() {
     return [...this.#state.connections.values()];
   }
+  get clips() {
+    return [...this.#state.clips.values()];
+  }
   get transport() {
     return this.#state.transport;
+  }
+  track(id) {
+    return this.#state.tracks.get(id) ?? null;
   }
   node(id) {
     return this.#state.nodes.get(id) ?? null;
   }
+  /**
+   * The id the next minted track, node or connection would get, without
+   * minting it. For a caller building one changeset whose later changes name
+   * something an earlier one creates: a new track and the first node on it.
+   */
+  nextId(kind) {
+    const key = { track: "track", node: "node", conn: "connection", clip: "clip" }[kind];
+    if (!key) throw new Error(`no ids are minted for ${kind}`);
+    return `${kind}-${this.#counters[key] + 1}`;
+  }
   connection(id) {
     return this.#state.connections.get(id) ?? null;
+  }
+  clip(id) {
+    return this.#state.clips.get(id) ?? null;
   }
   /** Position is editor metadata and never bumps the revision. */
   position(id) {
@@ -22303,16 +22547,18 @@ var Project = class {
     return {
       label: this.#label,
       revision: this.#revision,
+      tracks: this.tracks.map((t) => ({ ...t, channel: { ...t.channel } })),
       nodes: this.nodes.map((n2) => ({
         id: n2.id,
         pluginIri: n2.pluginIri,
         label: n2.label,
+        track: n2.track,
         settings: Object.fromEntries(n2.settings),
         state: n2.state,
-        channel: { ...n2.channel },
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
+      clips: this.clips.map((c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) })),
       transport: { ...this.#state.transport, tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })) }
     };
   }
@@ -22472,16 +22718,16 @@ function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
   for (const i2 of componentOrder) {
     let latest = 0;
     for (const connection of compIncoming[i2]) {
-      const source2 = componentIndex.get(connection.from.node);
-      latest = Math.max(latest, componentArrival[source2] + componentLatency[source2] + (connection.delayFrames ?? 0));
+      const source = componentIndex.get(connection.from.node);
+      latest = Math.max(latest, componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0));
     }
     componentArrival[i2] = latest;
   }
   const compensation = [];
   for (const i2 of componentOrder) {
     for (const connection of compIncoming[i2]) {
-      const source2 = componentIndex.get(connection.from.node);
-      const path = componentArrival[source2] + componentLatency[source2] + (connection.delayFrames ?? 0);
+      const source = componentIndex.get(connection.from.node);
+      const path = componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0);
       const needed = componentArrival[i2] - path;
       if (needed > 0) compensation.push({ connection: connection.id, delayFrames: needed });
     }
@@ -22519,9 +22765,9 @@ var EventRouter = class {
   #detach = /* @__PURE__ */ new Map();
   #dropped = /* @__PURE__ */ new Map();
   #onDropped;
-  constructor({ engine: engine2, onDropped = null }) {
-    if (!engine2) throw new Error("EventRouter needs an engine");
-    this.#engine = engine2;
+  constructor({ engine, onDropped = null }) {
+    if (!engine) throw new Error("EventRouter needs an engine");
+    this.#engine = engine;
     this.#onDropped = onDropped;
   }
   get routes() {
@@ -22683,9 +22929,9 @@ var Transport = class _Transport {
    * context did. The two differ after a stop and restart, and using the wrong
    * one is the class of bug contract section 7 exists to prevent.
    */
-  positionAtElapsed(elapsedFrames2, { startBeat = 0 } = {}) {
+  positionAtElapsed(elapsedFrames, { startBeat = 0 } = {}) {
     const startSeconds = this.secondsAtBeat(startBeat);
-    let absolute = startSeconds + elapsedFrames2 / this.#sampleRate;
+    let absolute = startSeconds + elapsedFrames / this.#sampleRate;
     if (this.#loop.enabled) {
       const loopStartSeconds = this.secondsAtBeat(this.#loop.start);
       const loopEndSeconds = this.secondsAtBeat(this.#loop.end);
@@ -22705,11 +22951,11 @@ var Transport = class _Transport {
     };
   }
   /** The message a processor receives each quantum. messaging.md section 1.2. */
-  messageAt(elapsedFrames2, { frame, playing: playing2 = true, startBeat = 0 } = {}) {
-    const position = this.positionAtElapsed(elapsedFrames2, { startBeat });
+  messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
     return {
       type: "transport",
-      playing: playing2,
+      playing,
       frame,
       beat: position.beat,
       beatsPerFrame: position.beatsPerFrame,
@@ -22854,20 +23100,20 @@ var UndoHistory = class {
    * so a caller does not need to know in advance which kind of edit it was
    * undoing.
    */
-  async undo(dispatcher2) {
+  async undo(dispatcher) {
     if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
     const target = this.#undoStack.pop();
-    this.#redoStack.push(dispatcher2.project.snapshot());
-    await this.#restoreTo(dispatcher2, target);
-    return { ok: true, revision: dispatcher2.project.revision };
+    this.#redoStack.push(dispatcher.project.snapshot());
+    await this.#restoreTo(dispatcher, target);
+    return { ok: true, revision: dispatcher.project.revision };
   }
   /** The inverse of undo: step forward to whatever undo last stepped back from. */
-  async redo(dispatcher2) {
+  async redo(dispatcher) {
     if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
     const target = this.#redoStack.pop();
-    this.#undoStack.push(dispatcher2.project.snapshot());
-    await this.#restoreTo(dispatcher2, target);
-    return { ok: true, revision: dispatcher2.project.revision };
+    this.#undoStack.push(dispatcher.project.snapshot());
+    await this.#restoreTo(dispatcher, target);
+    return { ok: true, revision: dispatcher.project.revision };
   }
   /**
    * Bring the live project to match a snapshot, reusing the same paths a
@@ -22878,30 +23124,40 @@ var UndoHistory = class {
    * addPlugin()/setParameter() call this makes is the mechanism of the undo
    * or redo, not a further edit to record one of.
    *
+   * Tracks are added before any node is reloaded, because a node names its
+   * track, and removed only after every node has moved off them or gone,
+   * because the model refuses to remove a track with nodes on it.
+   *
    * A node the target has and the present does not is reloaded from its
-   * plugin IRI, the same as reopening a saved session, with its id, settings,
-   * channel and state preserved so the graph below still recognises it. A
+   * plugin IRI, the same as reopening a saved session, with its id, track,
+   * settings and state preserved so the graph below still recognises it. A
    * node a reload could not restore is left out and reported nowhere further
    * than the console: its connections are skipped rather than left dangling,
    * which is one node's worth of undo history lost rather than the whole
    * step refused for a plugin that may no longer be reachable.
    */
-  async #restoreTo(dispatcher2, target) {
-    await dispatcher2.withoutRecording(async () => {
-      const current = dispatcher2.project.snapshot();
+  async #restoreTo(dispatcher, target) {
+    await dispatcher.withoutRecording(async () => {
+      const current = dispatcher.project.snapshot();
       const currentIds = new Set(current.nodes.map((n2) => n2.id));
       const targetIds = new Set(target.nodes.map((n2) => n2.id));
+      const currentTrackIds = new Set(current.tracks.map((t) => t.id));
+      const targetTrackIds = new Set(target.tracks.map((t) => t.id));
+      const toAddTracks = target.tracks.filter((t) => !currentTrackIds.has(t.id));
+      if (toAddTracks.length > 0) {
+        dispatcher.apply(toAddTracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })));
+      }
       const toRemove = current.nodes.filter((n2) => !targetIds.has(n2.id)).map((n2) => n2.id);
       if (toRemove.length > 0) {
-        dispatcher2.apply(toRemove.map((id) => ({ op: "removeNode", id })));
+        dispatcher.apply(toRemove.map((id) => ({ op: "removeNode", id })));
       }
       for (const node of target.nodes) {
         if (currentIds.has(node.id)) continue;
-        const result = await dispatcher2.addPlugin(node.pluginIri, {
+        const result = await dispatcher.addPlugin(node.pluginIri, {
           id: node.id,
           label: node.label,
+          track: node.track,
           settings: node.settings,
-          channel: node.channel,
           state: node.state
         });
         if (!result.ok) {
@@ -22909,25 +23165,43 @@ var UndoHistory = class {
           continue;
         }
         for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
-          dispatcher2.setParameter(node.id, symbol, value2);
+          dispatcher.setParameter(node.id, symbol, value2);
         }
       }
       const reconcile = [];
       for (const node of target.nodes) {
         if (!currentIds.has(node.id)) continue;
-        const live = dispatcher2.project.node(node.id);
+        const live = dispatcher.project.node(node.id);
         if (!live) continue;
         for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
-          if (live.settings.get(symbol) !== value2) dispatcher2.setParameter(node.id, symbol, value2);
+          if (live.settings.get(symbol) !== value2) dispatcher.setParameter(node.id, symbol, value2);
         }
-        const channel = node.channel ?? {};
-        const liveChannel = live.channel ?? {};
-        if (channel.gain !== liveChannel.gain || channel.pan !== liveChannel.pan || channel.muted !== liveChannel.muted || channel.soloed !== liveChannel.soloed) {
-          reconcile.push({ op: "setChannel", node: node.id, ...channel });
+        for (const symbol of [...live.settings.keys()]) {
+          if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol);
+        }
+        if (live.track !== node.track) reconcile.push({ op: "moveNodeToTrack", id: node.id, track: node.track });
+      }
+      const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
+      for (const track of target.tracks) {
+        const live = dispatcher.project.track(track.id);
+        const c3 = track.channel;
+        const l = live.channel;
+        if (c3.gain !== l.gain || c3.pan !== l.pan || c3.muted !== l.muted || c3.soloed !== l.soloed) {
+          reconcile.push({ op: "setTrackChannel", track: track.id, ...c3 });
+        }
+        const input = (id) => id !== null && liveIdsAfterReload.has(id) ? id : null;
+        if (live.label !== track.label || live.midiInput !== input(track.midiInput) || live.audioInput !== input(track.audioInput)) {
+          reconcile.push({
+            op: "setTrack",
+            id: track.id,
+            label: track.label,
+            midiInput: input(track.midiInput),
+            audioInput: input(track.audioInput)
+          });
         }
       }
-      const liveIds = new Set(dispatcher2.project.nodes.map((n2) => n2.id));
-      const currentConnIds = new Set(dispatcher2.project.connections.map((c3) => c3.id));
+      const liveIds = new Set(dispatcher.project.nodes.map((n2) => n2.id));
+      const currentConnIds = new Set(dispatcher.project.connections.map((c3) => c3.id));
       const targetConnIds = new Set(target.connections.map((c3) => c3.id));
       for (const id of currentConnIds) {
         if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
@@ -22944,10 +23218,23 @@ var UndoHistory = class {
           delayFrames: connection.delayFrames
         });
       }
-      if (JSON.stringify(dispatcher2.project.snapshot().transport) !== JSON.stringify(target.transport)) {
+      if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target.transport)) {
         reconcile.push({ op: "setTransport", ...target.transport });
       }
-      dispatcher2.apply(reconcile);
+      const liveClips = new Map(dispatcher.project.snapshot().clips.map((c3) => [c3.id, c3]));
+      const targetClips = new Map(target.clips.map((c3) => [c3.id, c3]));
+      for (const [id, clip] of liveClips) {
+        const wanted = targetClips.get(id);
+        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id });
+      }
+      for (const [id, clip] of targetClips) {
+        const live = liveClips.get(id);
+        if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip));
+      }
+      for (const id of currentTrackIds) {
+        if (!targetTrackIds.has(id)) reconcile.push({ op: "removeTrack", id });
+      }
+      dispatcher.apply(reconcile);
     });
   }
 };
@@ -22967,14 +23254,14 @@ var OpDispatcher = class {
   // without recording their own reversal as a new edit.
   #history = new UndoHistory();
   #recording = true;
-  constructor({ project = new Project(), engine: engine2 = null, foreign = null, inspections = new Inspections() } = {}) {
+  constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections() } = {}) {
     this.#project = project;
-    this.#engine = engine2;
+    this.#engine = engine;
     this.#foreign = foreign;
     this.#inspections = inspections;
-    if (engine2) {
+    if (engine) {
       this.#router = new EventRouter({
-        engine: engine2,
+        engine,
         onDropped: (report) => this.#emit({ type: "dropped", ...report })
       });
     }
@@ -23005,9 +23292,9 @@ var OpDispatcher = class {
    * counting process() calls, so the host has to supply it rather than leave a
    * plugin to infer it.
    */
-  sendTransport(elapsedFrames2, { frame, playing: playing2 = true, startBeat = 0 } = {}) {
+  sendTransport(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
     if (!this.#router) return null;
-    const message = this.transport().messageAt(elapsedFrames2, { frame, playing: playing2, startBeat });
+    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
     this.#router.broadcastTransport(message);
     return message;
   }
@@ -23017,6 +23304,30 @@ var OpDispatcher = class {
     if (!engineId || !this.#router) return false;
     this.#router.send(engineId, events);
     return true;
+  }
+  /**
+   * Relay an opaque payload from a plugin's own interface to its processor,
+   * docs/messaging.md 2.4. Not an operation: it changes nothing the project
+   * records, and the host does not read it. Throttling is the caller's, which
+   * is where the interface's messages arrive.
+   */
+  relayToPlugin(nodeId, payload) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return false;
+    this.#engine.post(engineId, { type: "plugin", payload });
+    return true;
+  }
+  /**
+   * Hear a processor's opaque payloads for its own interface. Returns an
+   * unsubscribe function, or null for a node the engine has not loaded. Only
+   * this node's payloads: 2.4 forbids one plugin's reaching another.
+   */
+  onPluginMessage(nodeId, handler2) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return null;
+    return this.#engine.onMessage(engineId, (message) => {
+      if (message?.type === "plugin") handler2(message.payload);
+    });
   }
   get project() {
     return this.#project;
@@ -23177,12 +23488,7 @@ var OpDispatcher = class {
   /** A copy of the project, for trying a changeset without committing it. */
   #clone() {
     const copy = new Project();
-    const snapshot = this.#project.snapshot();
-    copy.apply([
-      ...snapshot.nodes.map((n2) => ({ op: "addNode", id: n2.id, pluginIri: n2.pluginIri, label: n2.label, settings: n2.settings, state: n2.state })),
-      ...snapshot.connections.map((c3) => ({ op: "addConnection", id: c3.id, from: c3.from, to: c3.to, signalKind: c3.signalKind, delayFrames: c3.delayFrames })),
-      { op: "setTransport", ...snapshot.transport }
-    ]);
+    copy.apply(changesFor(this.#project.snapshot()));
     return copy;
   }
   /**
@@ -23205,6 +23511,12 @@ var OpDispatcher = class {
    * It used to list the fields it forwarded, and the day a node gained a channel
    * strip that list was silently one field short: a saved mix was written
    * correctly, read correctly, and dropped on the way back in.
+   *
+   * Without a `track` the plugin gets a new track of its own, named after it,
+   * in the same changeset, so dropping an instrument in makes a sound without a
+   * second step. A plugin that accepts MIDI becomes that new track's MIDI
+   * input, since it is the only node there for notes to go to. On an existing
+   * track nothing is guessed: which node takes the notes is a person's call.
    */
   async addPlugin(iri3, { position, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
@@ -23219,23 +23531,29 @@ var OpDispatcher = class {
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
     this.#inspections.record({ iri: iri3, outcome: "loaded" });
-    const result = this.apply([{
-      op: "addNode",
-      ...node,
-      pluginIri: iri3,
-      label: node.label ?? entry.profile.label
-    }]);
+    const label = node.label ?? entry.profile.label;
+    const changes = [];
+    let newTrack = null;
+    if (node.track === void 0 || node.track === null) {
+      newTrack = this.#project.nextId("track");
+      changes.push({ op: "addTrack", id: newTrack, label });
+    }
+    const nodeId = node.id ?? this.#project.nextId("node");
+    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
+    if (newTrack && (entry.profile.accepts ?? []).some(isMidi)) {
+      changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
+    }
+    const result = this.apply(changes);
     if (!result.ok) {
       this.#engine.remove(entry.id);
       return result;
     }
-    const nodeId = result.results[0];
     this.#nodeIds.set(nodeId, entry.id);
     this.#rebuildLinks(this.compile());
     this.#router?.observe(entry.id);
     if (position) this.#project.moveNode(nodeId, position.x, position.y);
-    this.#emit({ type: "plugin-added", nodeId, entry });
-    return { ...result, nodeId, entry };
+    this.#emit({ type: "plugin-added", nodeId, trackId: node.track ?? newTrack, entry });
+    return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
   }
   /**
    * Fetch a foreign profile, load it through its adapter, and adopt it.
@@ -23282,6 +23600,31 @@ var OpDispatcher = class {
     if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
     this.#emit({ type: "parameter", nodeId, symbol, value: applied });
     return { ...result, value: applied };
+  }
+  /**
+   * Put a parameter back to its plugin's default and forget its setting, so
+   * the model says what a node that was never touched says. What undo does
+   * for a parameter that had not been set before the edit being undone:
+   * restoring "no setting" in the model alone left the AudioParam, the panel
+   * and an open editor all at the value being undone.
+   */
+  resetParameter(nodeId, symbol) {
+    const engineId = this.#nodeIds.get(nodeId);
+    let value2 = null;
+    if (engineId && this.#engine) {
+      try {
+        value2 = this.#engine.defaultParameter(engineId, symbol);
+      } catch (error2) {
+        return { ok: false, kind: "change", message: error2.message };
+      }
+    }
+    const result = this.apply([{ op: "clearSetting", node: nodeId, symbol }]);
+    if (!result.ok) return result;
+    if (engineId && this.#engine && value2 !== null) {
+      this.#engine.setParameter(engineId, symbol, value2);
+      this.#emit({ type: "parameter", nodeId, symbol, value: value2 });
+    }
+    return { ...result, value: value2 };
   }
   /**
    * Ask a node's own processor for its current state, live, rather than
@@ -23347,51 +23690,53 @@ var OpDispatcher = class {
     }
   }
   /**
-   * Push every node's channel strip to the engine.
-   *
-   * Solo is resolved here because it cannot be resolved anywhere else. Whether
-   * a node is heard depends on whether *any other* node is soloed, so it is a
-   * property of the graph rather than of the node, and the node is the only
-   * thing the engine can see one at a time.
-   *
-   * The rule is the one every mixer uses: if nothing is soloed, a node is heard
-   * unless it is muted. If anything is soloed, only soloed nodes are heard, and
-   * muting a soloed node still silences it, because a person who pressed mute
-   * meant it.
+   * Make the engine's track strips match the model's tracks: one each, no
+   * more. Before the links, because the links end at them.
    */
-  #applyChannels() {
+  #syncTracks() {
     if (!this.#engine) return;
-    const anySoloed = this.#project.nodes.some((n2) => n2.channel?.soloed);
-    for (const node of this.#project.nodes) {
-      const engineId = this.#nodeIds.get(node.id);
-      if (!engineId) continue;
-      const channel = node.channel ?? {};
-      const silent = channel.muted === true || anySoloed && channel.soloed !== true;
-      try {
-        this.#engine.setChannel(engineId, {
-          gain: channel.gain ?? 1,
-          pan: channel.pan ?? 0,
-          silent
-        });
-      } catch {
-      }
+    const wanted = new Set(this.#project.tracks.map((t) => t.id));
+    for (const id of this.#engine.trackIds()) {
+      if (!wanted.has(id)) this.#engine.removeTrack(id);
+    }
+    const have = new Set(this.#engine.trackIds());
+    for (const id of wanted) {
+      if (!have.has(id)) this.#engine.addTrack(id);
     }
   }
-  /** What a listener actually hears, node by node, after solo is resolved. */
+  /**
+   * Whether each track is heard, after solo is resolved.
+   *
+   * Solo is resolved here because it cannot be resolved anywhere else. Whether
+   * a track is heard depends on whether *any other* track is soloed, so it is a
+   * property of the mix rather than of the track, and the track is the only
+   * thing the engine can see one at a time.
+   *
+   * The rule is the one every mixer uses: if nothing is soloed, a track is heard
+   * unless it is muted. If anything is soloed, only soloed tracks are heard, and
+   * muting a soloed track still silences it, because a person who pressed mute
+   * meant it.
+   */
   audibility() {
-    const anySoloed = this.#project.nodes.some((n2) => n2.channel?.soloed);
-    return this.#project.nodes.map((node) => {
-      const channel = node.channel ?? {};
-      return {
-        nodeId: node.id,
-        gain: channel.gain ?? 1,
-        pan: channel.pan ?? 0,
-        silent: channel.muted === true || anySoloed && channel.soloed !== true
-      };
-    });
+    const tracks = this.#project.tracks;
+    const anySoloed = tracks.some((t) => t.channel.soloed);
+    return tracks.map((track) => ({
+      trackId: track.id,
+      gain: track.channel.gain,
+      pan: track.channel.pan,
+      silent: track.channel.muted || anySoloed && !track.channel.soloed
+    }));
+  }
+  /** Push every track's channel strip to the engine. */
+  #applyChannels() {
+    if (!this.#engine) return;
+    for (const { trackId, gain, pan, silent } of this.audibility()) {
+      this.#engine.setTrackChannel(trackId, { gain, pan, silent });
+    }
   }
   /**
-   * Connect everything that produces audio and feeds nothing to the speakers.
+   * Connect everything that produces audio and feeds nothing to its track's
+   * fader.
    *
    * A sink is where the signal has arrived, so it is what a person expects to
    * hear. Deriving it from the connections rather than declaring it keeps the
@@ -23403,7 +23748,7 @@ var OpDispatcher = class {
    * nothing follows it. A MIDI generator ends a path and produces nothing to
    * hear, and connecting it throws.
    */
-  #linkSinksToMaster() {
+  #linkSinksToTracks() {
     if (!this.#engine) return;
     const feedsSomething = /* @__PURE__ */ new Set();
     for (const connection of this.#project.connections) {
@@ -23416,13 +23761,14 @@ var OpDispatcher = class {
       if (!engineId) continue;
       const entry = this.#engine.get(engineId);
       if (!(entry?.node?.numberOfOutputs > 0)) continue;
-      this.#engine.link(engineId, "output", {});
+      this.#engine.linkToTrack(engineId, node.track);
     }
   }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
     this.#engine.clearLinks();
+    this.#syncTracks();
     const midiRoutes = [];
     for (const connection of this.#project.connections) {
       const from = this.#nodeIds.get(connection.from.node);
@@ -23439,7 +23785,7 @@ var OpDispatcher = class {
         delayFrames: delayFor.get(connection.id) ?? 0
       });
     }
-    this.#linkSinksToMaster();
+    this.#linkSinksToTracks();
     this.#applyChannels();
     this.#router?.setRoutes(midiRoutes);
   }
@@ -23480,9 +23826,9 @@ var OpDispatcher = class {
     }
     return { ...result, applied: applied.map(({ nodeId, symbol, value: value2 }) => ({ nodeId, symbol, value: value2 })) };
   }
-  /** Set any of a node's channel strip: gain, pan, mute, solo. */
-  setChannel(nodeId, change, { expectedRevision } = {}) {
-    return this.apply([{ op: "setChannel", node: nodeId, ...change }], { expectedRevision });
+  /** Set any of a track's channel strip: gain, pan, mute, solo. */
+  setTrackChannel(trackId, change, { expectedRevision } = {}) {
+    return this.apply([{ op: "setTrackChannel", track: trackId, ...change }], { expectedRevision });
   }
   /** The engine node behind a model node, if it has been loaded. */
   engineNode(nodeId) {
@@ -23494,6 +23840,1141 @@ var OpDispatcher = class {
     return compileGraph(this.#project, { latencyOf: (id) => this.#latencyOf(id) });
   }
 };
+
+// src/engine/ClipPlayer.js
+var ClipPlayer = class {
+  #context;
+  #fetchBytes;
+  #buffers = /* @__PURE__ */ new Map();
+  #loading = /* @__PURE__ */ new Map();
+  #failures = /* @__PURE__ */ new Map();
+  #peaks = /* @__PURE__ */ new Map();
+  #playing = /* @__PURE__ */ new Set();
+  /**
+   * - `context`: the AudioContext, which decodes and plays.
+   * - `fetchBytes(iri)`: the file's bytes as an ArrayBuffer. The page gives it
+   *   a function that looks in the session's own media first, then the network.
+   */
+  constructor({ context, fetchBytes }) {
+    if (!context || typeof fetchBytes !== "function") throw new Error("ClipPlayer needs a context and fetchBytes");
+    this.#context = context;
+    this.#fetchBytes = fetchBytes;
+  }
+  /** The decoded audio, or null while it loads or if it failed. */
+  buffer(iri3) {
+    return this.#buffers.get(iri3) ?? null;
+  }
+  /** Why a source could not be loaded, or null. */
+  failure(iri3) {
+    return this.#failures.get(iri3) ?? null;
+  }
+  /**
+   * Decode a source, once. Resolves with the AudioBuffer, or with null if it
+   * cannot be had, in which case failure(iri) says why. Never rejects: one
+   * missing file is one silent clip, not a session that will not play.
+   */
+  load(iri3) {
+    if (this.#buffers.has(iri3)) return Promise.resolve(this.#buffers.get(iri3));
+    if (this.#loading.has(iri3)) return this.#loading.get(iri3);
+    const loading2 = (async () => {
+      try {
+        const bytes = await this.#fetchBytes(iri3);
+        const buffer = await this.#context.decodeAudioData(bytes);
+        this.#buffers.set(iri3, buffer);
+        this.#failures.delete(iri3);
+        return buffer;
+      } catch (error2) {
+        this.#failures.set(iri3, error2);
+        return null;
+      } finally {
+        this.#loading.delete(iri3);
+      }
+    })();
+    this.#loading.set(iri3, loading2);
+    return loading2;
+  }
+  /**
+   * The loudest sample in each of `count` equal stretches of the first
+   * channel, for drawing a waveform. Computed once per source and count.
+   */
+  peaks(iri3, count) {
+    const buffer = this.buffer(iri3);
+    if (!buffer || !(count > 0)) return null;
+    const key = `${count} ${iri3}`;
+    if (this.#peaks.has(key)) return this.#peaks.get(key);
+    const data = buffer.getChannelData(0);
+    const out = new Float32Array(count);
+    const per = data.length / count;
+    for (let i2 = 0; i2 < count; i2++) {
+      let peak = 0;
+      const end = Math.min(data.length, Math.floor((i2 + 1) * per));
+      for (let j = Math.floor(i2 * per); j < end; j++) {
+        const v = Math.abs(data[j]);
+        if (v > peak) peak = v;
+      }
+      out[i2] = peak;
+    }
+    this.#peaks.set(key, out);
+    return out;
+  }
+  /**
+   * Start a source at `when` (context seconds), `offset` seconds into the
+   * file, for `duration` seconds, into `destination`. Returns false, and
+   * starts nothing, when the source is not loaded.
+   */
+  start({ iri: iri3, when, offset, duration, destination }) {
+    const buffer = this.buffer(iri3);
+    if (!buffer) return false;
+    const source = this.#context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(destination);
+    const late = Math.max(0, this.#context.currentTime - when);
+    source.start(when + late, offset + late, Math.max(0, duration - late));
+    this.#playing.add(source);
+    source.onended = () => {
+      this.#playing.delete(source);
+      source.disconnect();
+    };
+    return true;
+  }
+  /** Stop everything this has started. */
+  stopAll() {
+    for (const source of this.#playing) {
+      try {
+        source.stop();
+      } catch {
+      }
+      source.disconnect();
+    }
+    this.#playing.clear();
+  }
+  /** How many sources are playing or scheduled, for a caller that wants to know. */
+  get active() {
+    return this.#playing.size;
+  }
+};
+
+// src/host/HostConfig.js
+var HOST_CONFIG_KEYS = Object.freeze({
+  // Plugin payloads relayed per second, in each direction, between a plugin's
+  // own interface and its processor (docs/messaging.md 2.4).
+  relayPerSecond: "a whole number of messages per second, at least 1",
+  // How far ahead of the audio clock the clip scheduler sends notes, and how
+  // often it looks. The lookahead must comfortably exceed the tick, or a
+  // late timer leaves a gap nothing was scheduled into. src/engine/Scheduler.js.
+  schedulerLookaheadMs: "a whole number of milliseconds, at least 1",
+  schedulerTickMs: "a whole number of milliseconds, at least 1",
+  // The local MCP bridge (bin/mcp-bridge.js), which reads this same file: the
+  // loopback port it listens on and the page connects to, and how long a tool
+  // call waits for the page. A plugin load can take seconds.
+  bridgePort: "a TCP port, 1 to 65535",
+  bridgeCallTimeoutMs: "a whole number of milliseconds, at least 1"
+});
+function readHostConfig(json) {
+  if (!json || typeof json !== "object") throw new Error("web/host.json is not a JSON object");
+  const settings = {};
+  for (const [key, what] of Object.entries(HOST_CONFIG_KEYS)) {
+    const value2 = json[key];
+    if (value2 === void 0) throw new Error(`web/host.json has no ${key}: it must be ${what}`);
+    if (!Number.isInteger(value2) || value2 < 1) throw new Error(`web/host.json ${key} is ${JSON.stringify(value2)}: it must be ${what}`);
+    settings[key] = value2;
+  }
+  if (settings.bridgePort > 65535) throw new Error(`web/host.json bridgePort is ${settings.bridgePort}: it must be ${HOST_CONFIG_KEYS.bridgePort}`);
+  if (settings.schedulerLookaheadMs <= settings.schedulerTickMs) {
+    throw new Error(`web/host.json schedulerLookaheadMs (${settings.schedulerLookaheadMs}) must exceed schedulerTickMs (${settings.schedulerTickMs}), or a tick that runs late leaves a gap no note was scheduled into`);
+  }
+  return Object.freeze(settings);
+}
+
+// src/catalogue/facets.js
+var TRN2 = "http://purl.org/stuff/transmissions/";
+var FACETS = Object.freeze({
+  role: `${TRN2}role`,
+  accepts: `${TRN2}accepts`,
+  produces: `${TRN2}produces`,
+  requires: `${TRN2}requires`,
+  format: `${TRN2}format`
+});
+var FACET_NAMES = Object.freeze(Object.keys(FACETS));
+var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
+
+// src/mcp/tools.js
+var ok = (data) => ({ ok: true, ...data });
+var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
+var NOTE_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    startBeat: { type: "number" },
+    lengthBeats: { type: "number" },
+    pitch: { type: "integer" },
+    velocity: { type: "integer" }
+  },
+  required: ["startBeat", "lengthBeats", "pitch", "velocity"]
+});
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null }) {
+  if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
+  const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
+  const tools = [
+    {
+      name: "status",
+      description: "The state of the session: revision, how many tracks and nodes, the transport, and whether anything is failing. Deliberately small and cheap. Call it before making changes.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const compiled = dispatcher.compile();
+        const project = dispatcher.project;
+        return ok({
+          revision: dispatcher.revision,
+          tracks: project.tracks.length,
+          clips: project.clips.length,
+          nodes: project.nodes.length,
+          connections: project.connections.length,
+          totalLatencyFrames: compiled.totalLatency,
+          compiles: compiled.ok,
+          problems: compiled.errors.map((e) => e.message),
+          transport: {
+            tempo: project.transport.tempoPoints[0]?.bpm ?? null,
+            beatsPerBar: project.transport.beatsPerBar,
+            loopEnabled: project.transport.loopEnabled
+          }
+        });
+      }
+    },
+    {
+      name: "project_get",
+      description: "The whole project as data: tracks, nodes, connections, parameter settings and transport.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        return ok({ project: dispatcher.project.snapshot() });
+      }
+    },
+    {
+      name: "plugins_search",
+      description: "Find candidate plugins by text and by what they do. Returns enough to choose between them; call plugin_describe for the few that matter. Results marked web:true can run in this host; the rest are native plugins the catalogue knows about but this host cannot load.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          q: { type: "string", description: "Text matched against name, description and vendor" },
+          role: { type: "string", description: "A role such as Instrument or AudioEffect" },
+          accepts: { type: "string", description: "A signal type the plugin takes, such as Audio or Midi" },
+          produces: { type: "string", description: "A signal type the plugin emits" },
+          limit: { type: "integer", description: "At most 200, default 25" }
+        }
+      },
+      async handler({ q = "", limit = 25, ...facets } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        const unknown = Object.keys(facets).filter((k) => !FACET_NAMES.includes(k));
+        if (unknown.length > 0) {
+          return failed(`unknown facet: ${unknown.join(", ")}`, { known: FACET_NAMES });
+        }
+        try {
+          return ok({ results: await catalogue.search({ text: q, limit, ...facets }) });
+        } catch (error2) {
+          return failed(`catalogue: ${error2.message}`);
+        }
+      }
+    },
+    {
+      name: "plugin_describe",
+      description: "Everything the catalogue holds about one plugin, by its IRI.",
+      inputSchema: {
+        type: "object",
+        properties: { iri: { type: "string" } },
+        required: ["iri"]
+      },
+      async handler({ iri: iri3 } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        if (!iri3) return failed("plugin_describe needs an iri");
+        try {
+          return ok(await catalogue.describe(iri3));
+        } catch (error2) {
+          return failed(`catalogue: ${error2.message}`);
+        }
+      }
+    },
+    {
+      name: "plugin_validate_chain",
+      description: "Given plugins in order, check that each one produces something the next one accepts. Reports the mismatches and any cautions. Does not change anything.",
+      inputSchema: {
+        type: "object",
+        properties: { iris: { type: "array", items: { type: "string" } } },
+        required: ["iris"]
+      },
+      async handler({ iris = [] } = {}) {
+        const unavailable2 = requireCatalogue();
+        if (unavailable2) return unavailable2;
+        if (iris.length < 2) return failed("a chain needs at least two plugins");
+        const described = [];
+        for (const iri3 of iris) {
+          try {
+            described.push(await catalogue.describe(iri3));
+          } catch (error2) {
+            return failed(`could not describe ${iri3}: ${error2.message}`);
+          }
+        }
+        const problems = [];
+        const cautions = [];
+        for (let i2 = 0; i2 < described.length - 1; i2++) {
+          const from = described[i2];
+          const to = described[i2 + 1];
+          const produces = from.properties.produces ?? [];
+          const accepts = to.properties.accepts ?? [];
+          for (const caution of from.properties.caution ?? []) {
+            cautions.push({ plugin: from.iri, caution });
+          }
+          if (produces.length === 0 || accepts.length === 0) continue;
+          if (!produces.some((signal) => accepts.includes(signal))) {
+            problems.push({
+              from: from.iri,
+              to: to.iri,
+              message: `${from.iri} produces ${produces.join(", ")} and ${to.iri} accepts ${accepts.join(", ")}`
+            });
+          }
+        }
+        return ok({ valid: problems.length === 0, problems, cautions });
+      }
+    },
+    {
+      name: "collection_open",
+      description: "Open a plugin collection by IRI (docs/plugin-collections.md): fetch the document and check every listed plugin's profile and capabilities. A catalogue read, not an Op: it reaches the network but changes nothing, and fetches no module, processor or asset. Load a member afterwards with plugin_load, by the iri this tool reports for it.",
+      inputSchema: {
+        type: "object",
+        properties: { iri: { type: "string" } },
+        required: ["iri"]
+      },
+      async handler({ iri: iri3 } = {}) {
+        if (!iri3) return failed("collection_open needs an iri");
+        if (!openCollection) return failed("this host cannot open collections");
+        try {
+          const { collection, warnings, members } = await openCollection(iri3);
+          return ok({
+            label: collection.label,
+            comment: collection.comment ?? null,
+            warnings: warnings.map((w) => w.message),
+            members: members.map((m) => m.ok ? { iri: m.iri, label: m.profile.label, ok: true, notes: m.notes } : { iri: m.iri, label: m.listedLabel, ok: false, step: m.step, message: m.message })
+          });
+        } catch (error2) {
+          return failed(error2.message, { step: error2.step ?? null });
+        }
+      }
+    },
+    {
+      name: "plugin_load",
+      description: "Fetch, validate and instantiate a plugin by IRI, adding it to the session. Without a track it gets a new track of its own, named after it. This is the only tool that reaches the network. Reports which step failed if it does.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          iri: { type: "string" },
+          track: { type: "string", description: "The id of an existing track to add it to" }
+        },
+        required: ["iri"]
+      },
+      async handler({ iri: iri3, track } = {}) {
+        if (!iri3) return failed("plugin_load needs an iri");
+        if (!loadPlugin) return failed("this host cannot load plugins");
+        const result = await loadPlugin(iri3, track ? { track } : {});
+        if (!result.ok) return failed(result.message, { step: result.step ?? null });
+        return ok({
+          nodeId: result.nodeId,
+          trackId: result.trackId,
+          label: result.entry.profile.label,
+          parameters: result.entry.profile.ports.map((p) => ({
+            symbol: p.symbol,
+            name: p.name,
+            min: p.minimum,
+            max: p.maximum,
+            default: p.defaultValue
+          })),
+          latencyFrames: result.entry.ready.latencyFrames,
+          revision: result.revision
+        });
+      }
+    },
+    {
+      name: "graph_apply_changes",
+      description: "Apply a changeset atomically: all of it applies or none does. Pass expectedRevision to be rejected if the project has moved on, and dryRun to see what would happen without committing.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          changes: { type: "array", items: { type: "object" } },
+          expectedRevision: { type: "integer" },
+          dryRun: { type: "boolean" }
+        },
+        required: ["changes"]
+      },
+      async handler({ changes = [], expectedRevision, dryRun = false } = {}) {
+        const result = dispatcher.apply(changes, { expectedRevision, dryRun });
+        if (!result.ok) {
+          return failed(result.message, {
+            kind: result.kind,
+            revision: result.revision,
+            ...result.expected !== void 0 ? { expected: result.expected } : {},
+            ...result.index !== void 0 ? { index: result.index } : {}
+          });
+        }
+        return ok({
+          revision: result.revision,
+          applied: result.applied,
+          totalLatencyFrames: result.compiled.totalLatency
+        });
+      }
+    },
+    {
+      name: "track_add",
+      description: "Add an empty track: a mixer strip and a line of the arrangement.",
+      inputSchema: {
+        type: "object",
+        properties: { label: { type: "string" }, expectedRevision: { type: "integer" } }
+      },
+      async handler({ label, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addTrack", label: label ?? null }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, trackId: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_remove",
+      description: "Remove a track. Refused while plugins are on it, unless moveNodesTo names the track they go to instead.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          trackId: { type: "string" },
+          moveNodesTo: { type: "string" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["trackId"]
+      },
+      async handler({ trackId, moveNodesTo, expectedRevision } = {}) {
+        const change = { op: "removeTrack", id: trackId, ...moveNodesTo ? { moveNodesTo } : {} };
+        const result = dispatcher.apply([change], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: trackId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_set",
+      description: "Rename a track, or name the plugins on it that its MIDI clips and audio clips play into. Pass null to clear an input.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          trackId: { type: "string" },
+          label: { type: ["string", "null"] },
+          midiInput: { type: ["string", "null"], description: "A node on this track" },
+          audioInput: { type: ["string", "null"], description: "A node on this track" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["trackId"]
+      },
+      async handler({ trackId, expectedRevision, ...fields } = {}) {
+        const change = { op: "setTrack", id: trackId };
+        for (const key of ["label", "midiInput", "audioInput"]) {
+          if (fields[key] !== void 0) change[key] = fields[key];
+        }
+        const result = dispatcher.apply([change], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_set_channel",
+      description: "Set any of a track's fader (linear gain, 1 is unity), pan (-1 to 1), mute and solo. If any track is soloed, every track that is not is silent.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          trackId: { type: "string" },
+          gain: { type: "number" },
+          pan: { type: "number" },
+          muted: { type: "boolean" },
+          soloed: { type: "boolean" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["trackId"]
+      },
+      async handler({ trackId, expectedRevision, ...change } = {}) {
+        const result = dispatcher.setTrackChannel(trackId, change, { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, channel: dispatcher.project.track(trackId).channel }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_move_to_track",
+      description: "Move a plugin to another track. It stops being the old track's clip input, if it was one.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeId: { type: "string" },
+          trackId: { type: "string" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["nodeId", "trackId"]
+      },
+      async handler({ nodeId, trackId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "moveNodeToTrack", id: nodeId, track: trackId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_add",
+      description: "Add a MIDI clip to a track, at a beat and for a number of beats, optionally with its notes. It plays into the track's MIDI input; track_set names that. Notes start relative to the clip.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          trackId: { type: "string" },
+          startBeat: { type: "number" },
+          lengthBeats: { type: "number" },
+          notes: { type: "array", items: NOTE_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["trackId", "startBeat", "lengthBeats"]
+      },
+      async handler({ trackId, startBeat, lengthBeats, notes = [], expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_add_audio",
+      description: "Add an audio clip to a track, playing a file by its absolute IRI. The file is referred to, never copied into the session. offsetSeconds is where in the file the clip begins.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          trackId: { type: "string" },
+          source: { type: "string", description: "The absolute IRI of the audio file" },
+          startBeat: { type: "number" },
+          lengthBeats: { type: "number" },
+          offsetSeconds: { type: "number" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["trackId", "source", "startBeat", "lengthBeats"]
+      },
+      async handler({ trackId, source, startBeat, lengthBeats, offsetSeconds = 0, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "audio", source, startBeat, lengthBeats, offsetSeconds }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_set_notes",
+      description: "Replace every note of a MIDI clip, as one edit. Each note has startBeat (from the clip start), lengthBeats, pitch (0 to 127, 60 is middle C) and velocity (1 to 127).",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          notes: { type: "array", items: NOTE_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId", "notes"]
+      },
+      async handler({ clipId, notes, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setClipNotes", id: clipId, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_move",
+      description: "Move a clip to another beat or another track, or change its length in beats.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          startBeat: { type: "number" },
+          lengthBeats: { type: "number" },
+          trackId: { type: "string" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId"]
+      },
+      async handler({ clipId, startBeat, lengthBeats, trackId, expectedRevision } = {}) {
+        const change = { op: "setClip", id: clipId };
+        if (startBeat !== void 0) change.startBeat = startBeat;
+        if (lengthBeats !== void 0) change.lengthBeats = lengthBeats;
+        if (trackId !== void 0) change.track = trackId;
+        const result = dispatcher.apply([change], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_remove",
+      description: "Remove a clip and its notes. The plugins on its track are untouched.",
+      inputSchema: {
+        type: "object",
+        properties: { clipId: { type: "string" }, expectedRevision: { type: "integer" } },
+        required: ["clipId"]
+      },
+      async handler({ clipId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "removeClip", id: clipId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: clipId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "connection_add",
+      description: "Connect one node to another. signalKind is Audio or Midi, or a full IRI.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          fromPort: { type: "integer" },
+          toPort: { type: "integer" },
+          toParameter: { type: "string", description: "Target a parameter by symbol instead of a port" },
+          signalKind: { type: "string" }
+        },
+        required: ["from", "to"]
+      },
+      async handler({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = "Audio" } = {}) {
+        const change = {
+          op: "addConnection",
+          from: { node: from, portIndex: fromPort },
+          to: toParameter ? { node: to, portSymbol: toParameter } : { node: to, portIndex: toPort },
+          signalKind: expandTerm(signalKind)
+        };
+        const result = dispatcher.apply([change]);
+        return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_remove",
+      description: "Remove a node and everything connected to it. With heal, a node taken out of the middle of a path has its neighbours rejoined, which is what a person means by removing one plugin from a chain.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeId: { type: "string" },
+          heal: { type: "boolean", description: "Rejoin what it stood between. Default false." },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["nodeId"]
+      },
+      async handler({ nodeId, heal = false, expectedRevision } = {}) {
+        const before = dispatcher.project.connections.length;
+        const result = dispatcher.apply([{ op: "removeNode", id: nodeId, heal }], { expectedRevision });
+        return result.ok ? ok({
+          revision: result.revision,
+          removed: nodeId,
+          // How much of the graph went with it, which is the part an agent
+          // cannot see from the changeset it sent.
+          connectionsRemoved: before - dispatcher.project.connections.length
+        }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "connection_remove",
+      description: "Remove one connection by its id. project_get lists them.",
+      inputSchema: {
+        type: "object",
+        properties: { connectionId: { type: "string" }, expectedRevision: { type: "integer" } },
+        required: ["connectionId"]
+      },
+      async handler({ connectionId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "removeConnection", id: connectionId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: connectionId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "parameters_set_batch",
+      description: "Set several parameters at once. Atomic: all of them apply or none does, so a preset arrives as one edit rather than as a visible sweep through intermediate states.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          settings: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                nodeId: { type: "string" },
+                symbol: { type: "string" },
+                value: { type: "number" }
+              },
+              required: ["nodeId", "symbol", "value"]
+            }
+          },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["settings"]
+      },
+      async handler({ settings, expectedRevision } = {}) {
+        const result = dispatcher.setParameters(settings, { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, applied: result.applied }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "parameter_set",
+      description: "Set a parameter by its symbol. Returns the value actually applied, which may be clamped to the range the plugin declares.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          node: { type: "string" },
+          symbol: { type: "string" },
+          value: { type: "number" }
+        },
+        required: ["node", "symbol", "value"]
+      },
+      async handler({ node, symbol, value: value2 } = {}) {
+        const result = dispatcher.setParameter(node, symbol, value2);
+        return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "transport_configure",
+      description: "Set the tempo, time signature or loop.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          tempo: { type: "number" },
+          beatsPerBar: { type: "integer" },
+          loopStart: { type: "number" },
+          loopEnd: { type: "number" },
+          loopEnabled: { type: "boolean" }
+        }
+      },
+      async handler({ tempo, ...rest } = {}) {
+        const change = { op: "setTransport", ...rest };
+        if (tempo !== void 0) change.tempoPoints = [{ atBeat: 0, bpm: tempo }];
+        const result = dispatcher.apply([change]);
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "diagnostics",
+      description: "Engine detail, including the compiled graph, any cycles, and per-node load state.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const compiled = dispatcher.compile();
+        return ok({
+          order: compiled.order,
+          cycles: compiled.cycles,
+          errors: compiled.errors,
+          compensation: compiled.compensation,
+          totalLatencyFrames: compiled.totalLatency,
+          nodes: dispatcher.project.nodes.map((n2) => {
+            const entry = dispatcher.engineNode(n2.id);
+            return {
+              id: n2.id,
+              plugin: n2.pluginIri,
+              loaded: Boolean(entry),
+              failed: entry?.failed ?? null,
+              latencyFrames: entry?.ready?.latencyFrames ?? null
+            };
+          })
+        });
+      }
+    }
+  ];
+  return tools;
+}
+
+// src/mcp/adapter.js
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection });
+  const surface = {
+    tools,
+    names: tools.map((t) => t.name),
+    async call(name, input = {}) {
+      const tool = tools.find((t) => t.name === name);
+      if (!tool) {
+        return { ok: false, error: `no such tool: ${name}`, known: tools.map((t) => t.name) };
+      }
+      try {
+        return await tool.handler(input);
+      } catch (error2) {
+        return { ok: false, error: `${name} threw: ${error2?.message ?? error2}` };
+      }
+    }
+  };
+  target.jigdaw = { ...target.jigdaw ?? {}, mcp: surface };
+  const navigatorContext = target.navigator?.modelContext;
+  if (navigatorContext && typeof navigatorContext.provideContext === "function") {
+    try {
+      navigatorContext.provideContext({
+        tools: tools.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          async execute(input) {
+            const result = await surface.call(tool.name, input ?? {});
+            return { content: [{ type: "text", text: JSON.stringify(result) }] };
+          }
+        }))
+      });
+      return { bound: "navigator.modelContext", count: tools.length, surface };
+    } catch (error2) {
+      return { bound: "page", count: tools.length, surface, warning: `modelContext refused: ${error2.message}` };
+    }
+  }
+  return { bound: "page", count: tools.length, surface };
+}
+
+// web/app/Runtime.js
+function createRuntime(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  let shapes = null;
+  function shapeValidator() {
+    shapes ??= fetch(new URL("vocabs/shapes.ttl", document2.baseURI)).then((response) => response.text()).then((text) => parseText(text, "urn:jigdaw:shapes")).then((dataset2) => new ShapeValidator(dataset2));
+    return shapes;
+  }
+  let starting = null;
+  function ensureRunning() {
+    starting ??= start().catch((error2) => {
+      starting = null;
+      throw error2;
+    });
+    return starting;
+  }
+  async function start() {
+    const context = new AudioContext();
+    await context.resume();
+    const validator = await shapeValidator();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.connect(context.destination);
+    ctx2.analyser = analyser;
+    const response = await fetch(new URL("host.json", document2.baseURI));
+    if (!response.ok) throw new Error(`web/host.json could not be read: ${response.status}`);
+    ctx2.hostConfig = readHostConfig(await response.json());
+    const capabilities = detectCapabilities(globalThis);
+    ctx2.hostCapabilities = capabilities;
+    ctx2.engine = new Engine({
+      context,
+      loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+      output: analyser
+    });
+    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3) });
+    const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
+    const dispatcher = new OpDispatcher({
+      engine: ctx2.engine,
+      foreign: new ForeignSupport2({ validator })
+    });
+    ctx2.dispatcher = dispatcher;
+    dispatcher.subscribe((event) => {
+      if (event.type === "parameter") ctx2.editors.parameter(event.nodeId, event.symbol, event.value);
+      if (event.type === "changed") {
+        $2("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
+        ctx2.rack.draw();
+        ctx2.history.updateButtons();
+        ctx2.transport.showTempo();
+      }
+    });
+    const registration = registerTools({
+      dispatcher,
+      catalogue: ctx2.browser.catalogue(),
+      loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
+      openCollection: (iri3) => ctx2.browser.loadCollection(iri3)
+    });
+    ctx2.mcpSurface = registration.surface;
+    log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
+    log2(`${registration.count} agent tools via ${registration.bound}`);
+    ctx2.transport.meterLoop();
+    ctx2.transport.positionLoop();
+    ctx2.expose();
+    return dispatcher;
+  }
+  return { ensureRunning, shapeValidator };
+}
+
+// src/engine/Scheduler.js
+var NOTE_ON = 144;
+var NOTE_OFF = 128;
+function clipNotes(project) {
+  const byNode = /* @__PURE__ */ new Map();
+  for (const track of project.tracks) {
+    if (!track.midiInput) continue;
+    for (const clip of project.clips) {
+      if (clip.track !== track.id || clip.kind !== "midi") continue;
+      const end = clip.startBeat + clip.lengthBeats;
+      for (const note of clip.notes) {
+        const on = clip.startBeat + note.startBeat;
+        if (on >= end) continue;
+        const off = Math.min(on + note.lengthBeats, end);
+        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
+        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
+      }
+    }
+  }
+  return byNode;
+}
+function clipAudio(project) {
+  return project.clips.filter((c3) => c3.kind === "audio").map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
+}
+function* segments(transport2, start, end) {
+  const loop = transport2.loop;
+  if (!loop.enabled) {
+    yield { from: 0, to: Infinity, lo: 0, hi: Infinity, shift: 0 };
+    return;
+  }
+  const loStart = transport2.secondsAtBeat(loop.start);
+  const loEnd = transport2.secondsAtBeat(loop.end);
+  const length = loEnd - loStart;
+  if (start < loEnd) yield { from: 0, to: loEnd, lo: 0, hi: loEnd, shift: 0 };
+  let k = start < loEnd ? 1 : 1 + Math.floor((start - loEnd) / length);
+  for (; ; k++) {
+    const from = loEnd + (k - 1) * length;
+    if (from >= end) return;
+    yield { from, to: from + length, lo: loStart, hi: loEnd, shift: from - loStart };
+  }
+}
+function notesBetween(transport2, notes, start, end) {
+  const found = [];
+  const timed = notes.map((n2) => ({ ...n2, onS: transport2.secondsAtBeat(n2.on), offS: transport2.secondsAtBeat(n2.off) }));
+  for (const seg of segments(transport2, start, end)) {
+    for (const note of timed) {
+      if (note.onS < seg.lo || note.onS >= seg.hi) continue;
+      const on = note.onS + seg.shift;
+      if (on < start || on >= end) continue;
+      const { onS, offS, ...rest } = note;
+      found.push({ ...rest, on, off: Math.min(offS, seg.hi) + seg.shift });
+    }
+  }
+  return found;
+}
+var Scheduler = class {
+  #now;
+  #sampleRate;
+  #lookahead;
+  #notes;
+  #transport;
+  #send;
+  #audio;
+  #playAudio;
+  #stopAudio;
+  #origin = null;
+  #until = 0;
+  // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
+  #sounding = [];
+  /**
+   * - `now()`: the audio clock in seconds, AudioContext.currentTime.
+   * - `lookahead`: seconds ahead of the clock each tick schedules to. From
+   *   configuration, never defaulted here.
+   * - `notes()`: clipNotes of the project as it is now, read every tick so an
+   *   edit is heard at the next one.
+   * - `transport()`: the Transport as it is now.
+   * - `send(nodeId, events)`: deliver events, `{ frame, bytes }`.
+   * - `audio()`, `playAudio(clip, { when, offset, duration })` and
+   *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
+   *   stop them. All three or none; a host that plays no audio clips gives none.
+   */
+  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio }) {
+    if (typeof now !== "function" || typeof notes !== "function" || typeof transport2 !== "function" || typeof send !== "function") {
+      throw new Error("Scheduler needs now, notes, transport and send");
+    }
+    if (!(sampleRate > 0)) throw new Error("Scheduler needs a sample rate");
+    if (!(lookahead > 0)) throw new Error("Scheduler needs a lookahead in seconds, from configuration");
+    this.#now = now;
+    this.#sampleRate = sampleRate;
+    this.#lookahead = lookahead;
+    this.#notes = notes;
+    this.#transport = transport2;
+    this.#send = send;
+    const given = [audio, playAudio, stopAudio].filter((f) => f !== void 0);
+    if (given.length !== 0 && (given.length !== 3 || given.some((f) => typeof f !== "function"))) {
+      throw new Error("Scheduler needs all of audio, playAudio and stopAudio, or none of them");
+    }
+    this.#audio = audio ?? null;
+    this.#playAudio = playAudio ?? null;
+    this.#stopAudio = stopAudio ?? null;
+  }
+  get running() {
+    return this.#origin !== null;
+  }
+  /** An absolute stream position, from elapsed seconds since the start. */
+  #frame(elapsed) {
+    return Math.round((this.#origin + elapsed) * this.#sampleRate);
+  }
+  /** Start at the clock time the transport's beat zero is heard. */
+  start(atTime) {
+    this.#origin = atTime;
+    this.#until = 0;
+    this.#sounding = [];
+  }
+  /** Schedule everything up to the lookahead. Call often; a tick with nothing new sends nothing. */
+  tick() {
+    if (!this.running) return;
+    const end = this.#now() - this.#origin + this.#lookahead;
+    const start = this.#until;
+    if (end <= start) return;
+    const transport2 = this.#transport();
+    const outgoing = /* @__PURE__ */ new Map();
+    const add = (nodeId, frame, bytes, order) => {
+      if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
+      outgoing.get(nodeId).push({ frame, bytes, order });
+    };
+    for (const [nodeId, notes] of this.#notes()) {
+      for (const note of notesBetween(transport2, notes, start, end)) {
+        const onFrame = this.#frame(note.on);
+        add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1);
+        this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame });
+      }
+    }
+    if (this.#audio) {
+      for (const clip of notesBetween(transport2, this.#audio(), start, end)) {
+        this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on });
+      }
+    }
+    this.#sounding = this.#sounding.filter((s) => {
+      if (s.off >= end) return true;
+      add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
+      return false;
+    });
+    this.#until = end;
+    this.#deliver(outgoing);
+  }
+  /** End everything still sounding, and stop. */
+  stop() {
+    if (!this.running) return;
+    const nowFrame = this.#frame(this.#now() - this.#origin);
+    const outgoing = /* @__PURE__ */ new Map();
+    for (const s of this.#sounding) {
+      if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, []);
+      outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 });
+    }
+    this.#sounding = [];
+    this.#origin = null;
+    this.#stopAudio?.();
+    this.#deliver(outgoing);
+  }
+  /** In time order, and at one frame an off before an on, so a repeated note is retriggered rather than cut. */
+  #deliver(outgoing) {
+    for (const [nodeId, events] of outgoing) {
+      events.sort((a2, b) => a2.frame - b.frame || a2.order - b.order);
+      this.#send(nodeId, events.map(({ frame, bytes }) => ({ frame, bytes })));
+    }
+  }
+};
+
+// web/app/Transport.js
+function makeSource(context) {
+  const length = Math.floor(context.sampleRate * 2);
+  const buffer = context.createBuffer(2, length, context.sampleRate);
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    for (let i2 = 0; i2 < length; i2++) {
+      const phase = i2 / context.sampleRate % 1;
+      data[i2] = phase < 4e-3 ? (Math.random() * 2 - 1) * Math.exp(-phase * 500) : 0;
+    }
+  }
+  const node = context.createBufferSource();
+  node.buffer = buffer;
+  node.loop = true;
+  return node;
+}
+function createTransport(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  let playing = false;
+  let startedAt = 0;
+  let source = null;
+  let scheduler = null;
+  let schedulerTimer = null;
+  function playAudioClip(clip, { when, offset, duration }) {
+    const track = ctx2.dispatcher.project.track(clip.track);
+    if (!track) return;
+    const destination = track.audioInput ? ctx2.dispatcher.engineNode(track.audioInput)?.node : ctx2.engine.trackInput(track.id);
+    if (!destination) return;
+    ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration, destination });
+  }
+  async function play() {
+    const d = await ctx2.runtime.ensureRunning();
+    const { engine, clipPlayer, hostConfig } = ctx2;
+    if (playing) return;
+    playing = true;
+    startedAt = engine.context.currentTime;
+    $2("play").setAttribute("aria-pressed", "true");
+    const first2 = d.project.nodes[0];
+    const startsWithEffect = first2 && (d.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
+    if (startsWithEffect) {
+      source = makeSource(engine.context);
+      source.start();
+      const entry = d.engineNode(first2.id);
+      if (entry) source.connect(entry.node, 0, 0);
+    }
+    sendTransport();
+    scheduler ??= new Scheduler({
+      now: () => engine.context.currentTime,
+      sampleRate: engine.context.sampleRate,
+      lookahead: hostConfig.schedulerLookaheadMs / 1e3,
+      notes: () => clipNotes(d.project),
+      transport: () => d.transport(),
+      send: (nodeId, events) => d.sendEvents(nodeId, events),
+      audio: () => clipAudio(d.project),
+      playAudio: (clip, at) => playAudioClip(clip, at),
+      stopAudio: () => clipPlayer.stopAll()
+    });
+    const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
+    await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
+    const failed2 = sources.filter((iri3) => clipPlayer.failure(iri3));
+    for (const iri3 of failed2) log2(`audio clip source ${iri3}: ${clipPlayer.failure(iri3).message}`, "error");
+    if (failed2.length > 0) ctx2.rack.draw();
+    scheduler.start(startedAt);
+    scheduler.tick();
+    schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs);
+    log2("playing", "ok");
+  }
+  function stop() {
+    playing = false;
+    clearInterval(schedulerTimer);
+    schedulerTimer = null;
+    scheduler?.stop();
+    $2("play").setAttribute("aria-pressed", "false");
+    if (source) {
+      try {
+        source.stop();
+      } catch {
+      }
+      source.disconnect();
+      source = null;
+    }
+    const { engine } = ctx2;
+    for (const entry of engine?.nodes() ?? []) {
+      engine.post(entry.id, { type: "events", events: [{ frame: 0, bytes: Uint8Array.from([176, 123, 0]) }] });
+    }
+    sendTransport();
+    log2("stopped");
+  }
+  function elapsedFrames() {
+    const { engine } = ctx2;
+    if (!engine || !playing) return 0;
+    return Math.max(0, Math.round((engine.context.currentTime - startedAt) * engine.context.sampleRate));
+  }
+  function sendTransport() {
+    const { dispatcher, engine } = ctx2;
+    if (!dispatcher) return;
+    dispatcher.sendTransport(elapsedFrames(), {
+      frame: Math.round((engine?.context.currentTime ?? 0) * (engine?.context.sampleRate ?? 48e3)),
+      playing
+    });
+  }
+  function positionLoop() {
+    const tick = () => {
+      if (ctx2.dispatcher) {
+        const position = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
+        const bar = Math.floor(position.bar) + 1;
+        const beat = Math.floor(position.beatInBar) + 1;
+        $2("position").textContent = `${bar} . ${beat}`;
+        if (playing) sendTransport();
+      }
+      setTimeout(tick, 100);
+    };
+    tick();
+  }
+  function meterLoop() {
+    const bars = 12;
+    const meter = $2("meter");
+    meter.textContent = "";
+    for (let i2 = 0; i2 < bars; i2++) meter.append(document2.createElement("i"));
+    const { analyser } = ctx2;
+    const data = new Float32Array(analyser.fftSize);
+    const frame = () => {
+      analyser.getFloatTimeDomainData(data);
+      let peak = 0;
+      for (const v of data) peak = Math.max(peak, Math.abs(v));
+      const lit = Math.round(Math.min(1, peak) * bars);
+      meter.querySelectorAll("i").forEach((bar, i2) => {
+        bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";
+      });
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  }
+  function showTempo() {
+    const bpm = ctx2.dispatcher?.project.transport.tempoPoints[0]?.bpm;
+    const field = $2("tempo");
+    if (bpm && document2.activeElement !== field) field.value = String(bpm);
+  }
+  return { play, stop, positionLoop, meterLoop, showTempo };
+}
 
 // src/ui/Dial.js
 var START_DEGREES = 135;
@@ -23623,12 +25104,12 @@ var spokenValue = (port, value2) => {
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
   return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
-function createPanel(document2, profile, onChange, onLoadAsset) {
+function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri } = {}) {
   const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
   heading.textContent = profile.label ?? profile.iri;
-  const headingId = `${profile.iri}-heading`.replace(/[^\w-]/g, "_");
+  const headingId = `${scope}-heading`.replace(/[^\w-]/g, "_");
   heading.id = headingId;
   root.setAttribute("role", "group");
   root.setAttribute("aria-labelledby", headingId);
@@ -23649,7 +25130,7 @@ function createPanel(document2, profile, onChange, onLoadAsset) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
     const label = document2.createElement("label");
-    const id = `${profile.iri}#${port.symbol}`.replace(/[^\w-]/g, "_");
+    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
     label.setAttribute("for", id);
     label.textContent = port.name ?? port.symbol;
     row.append(label);
@@ -23714,7 +25195,7 @@ function createPanel(document2, profile, onChange, onLoadAsset) {
     const row = document2.createElement("div");
     row.className = "control control-asset";
     const label = document2.createElement("label");
-    const id = `${profile.iri}#${key}-asset`.replace(/[^\w-]/g, "_");
+    const id = `${scope}#${key}-asset`.replace(/[^\w-]/g, "_");
     label.setAttribute("for", id);
     label.textContent = key;
     row.append(label);
@@ -23748,7 +25229,9 @@ function panPosition(pan) {
   const side = pan < 0 ? "left" : "right";
   return `${Math.round(Math.abs(pan) * 100)}% ${side}`;
 }
-function createStrip(document2, channel, onChange, { label = "" } = {}) {
+function createStrip(document2, channel, onChange, { label: initialLabel = "", id = null } = {}) {
+  let label = initialLabel;
+  const base = (id ?? `${initialLabel || "node"}`).replace(/\s+/g, "-").toLowerCase();
   const element = document2.createElement("div");
   element.className = "strip";
   element.setAttribute("role", "group");
@@ -23761,7 +25244,7 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
   const gainDial = createDial(
     document2,
     { minimum: 0, maximum: 2, defaultValue: state.gain },
-    `${label || "node"}-level`.replace(/\s+/g, "-").toLowerCase()
+    `${base}-level`
   );
   const gain = gainDial.input;
   const gainValue = document2.createElement("span");
@@ -23786,7 +25269,7 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
   const panDial = createDial(
     document2,
     { minimum: -1, maximum: 1, defaultValue: state.pan },
-    `${label || "node"}-pan`.replace(/\s+/g, "-").toLowerCase()
+    `${base}-pan`
   );
   const pan = panDial.input;
   const panValue = document2.createElement("span");
@@ -23810,6 +25293,7 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
     const button = document2.createElement("button");
     button.type = "button";
     button.className = `strip-toggle ${key}`;
+    button.id = `${base}-${key}`;
     button.textContent = name;
     button.setAttribute("aria-pressed", String(Boolean(state[key])));
     button.addEventListener("click", () => {
@@ -23828,11 +25312,13 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
     /**
      * Show what the host decided, which is not always what was asked for.
      *
-     * `silent` is separate from `muted` because solo silences a node without
-     * muting it, and a strip that showed only its own flags would say a node was
-     * heard while it was not.
+     * `silent` is separate from `muted` because solo silences a track without
+     * muting it, and a strip that showed only its own flags would say a track
+     * was heard while it was not. `label` renames the strip, for a track that
+     * was renamed after its strip was built.
      */
-    update(next = {}, { silent = null } = {}) {
+    update(next = {}, { silent = null, label: renamed = null } = {}) {
+      if (renamed !== null) label = renamed;
       if (next.gain !== void 0) {
         state.gain = next.gain;
         gain.value = String(next.gain);
@@ -23851,84 +25337,209 @@ function createStrip(document2, channel, onChange, { label = "" } = {}) {
         state.soloed = next.soloed;
         solo.setAttribute("aria-pressed", String(next.soloed));
       }
-      if (silent !== null) {
-        element.classList.toggle("silent", silent);
+      if (silent !== null) element.classList.toggle("silent", silent);
+      if (silent !== null || renamed !== null) {
         element.setAttribute(
           "aria-label",
-          `${label ? label + " channel" : "Channel"}${silent ? ", silent" : ""}`
+          `${label ? label + " channel" : "Channel"}${element.classList.contains("silent") ? ", silent" : ""}`
         );
       }
     }
   };
 }
 
-// src/ui/Tabs.js
-function createTabs(document2, tabs2, { onSelect = () => {
-} } = {}) {
-  if (tabs2.length === 0) throw new Error("a tab list needs at least one tab");
-  const tablist = document2.createElement("div");
-  tablist.setAttribute("role", "tablist");
-  tablist.className = "tabs";
-  const buttons = tabs2.map((tab, index) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.id = `tab-${tab.id}`;
-    button.className = "tab";
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-controls", tab.panel.id);
-    button.textContent = tab.label;
-    tablist.append(button);
-    tab.panel.setAttribute("role", "tabpanel");
-    tab.panel.setAttribute("aria-labelledby", button.id);
-    tab.panel.tabIndex = 0;
-    return button;
-  });
-  let current = 0;
-  const select = (index) => {
-    current = index;
-    buttons.forEach((button, i2) => {
-      const active = i2 === index;
-      button.setAttribute("aria-selected", String(active));
-      button.tabIndex = active ? 0 : -1;
-      tabs2[i2].panel.hidden = !active;
+// src/ui/Mixer.js
+function mixable(track, nodes, audioOutputsOf) {
+  const onTrack = nodes.filter((n2) => n2.track === track.id);
+  if (onTrack.length === 0) return true;
+  return onTrack.some((n2) => (audioOutputsOf(n2.id) ?? 1) > 0);
+}
+function createMixer(document2, { onChange }) {
+  if (typeof onChange !== "function") throw new Error("createMixer needs an onChange");
+  const element = document2.createElement("div");
+  element.className = "mixer";
+  const channels = /* @__PURE__ */ new Map();
+  function draw({ tracks, nodes, audibility, audioOutputsOf, labelFor }) {
+    const silent = new Map(audibility.map((a2) => [a2.trackId, a2.silent]));
+    const shown = tracks.filter((t) => mixable(t, nodes, audioOutputsOf));
+    for (const id of [...channels.keys()]) {
+      if (!shown.some((t) => t.id === id)) channels.delete(id);
+    }
+    if (shown.length === 0) {
+      const empty = document2.createElement("div");
+      empty.className = "empty";
+      empty.textContent = tracks.length === 0 ? "No tracks yet. Search for a plugin, or press Load to add the synth." : "No track here has an audio output to mix.";
+      element.replaceChildren(empty);
+      return;
+    }
+    const wanted = shown.map((track) => {
+      const label = labelFor(track);
+      let channel = channels.get(track.id);
+      if (!channel) {
+        const strip = createStrip(
+          document2,
+          track.channel,
+          (change) => onChange(track.id, change),
+          { label, id: `strip-${track.id}` }
+        );
+        const wrapper = document2.createElement("div");
+        wrapper.className = "mixer-channel";
+        const heading = document2.createElement("h3");
+        wrapper.append(heading, strip.element);
+        channel = { wrapper, heading, strip };
+        channels.set(track.id, channel);
+      }
+      channel.heading.textContent = label;
+      channel.strip.update(track.channel, { silent: silent.get(track.id) === true, label });
+      return channel.wrapper;
     });
-    onSelect(tabs2[index].id);
-  };
-  const MOVES = {
-    ArrowRight: (i2) => (i2 + 1) % buttons.length,
-    ArrowLeft: (i2) => (i2 - 1 + buttons.length) % buttons.length,
-    Home: () => 0,
-    End: () => buttons.length - 1
-  };
-  buttons.forEach((button, index) => {
-    button.addEventListener("click", () => select(index));
-    button.addEventListener("keydown", (event) => {
-      const move = MOVES[event.key];
-      if (!move) return;
-      event.preventDefault();
-      const next = move(index);
-      select(next);
-      buttons[next].focus();
-    });
-  });
-  select(0);
+    const current = [...element.children];
+    const same = current.length === wanted.length && current.every((child, i2) => child === wanted[i2]);
+    if (!same) element.replaceChildren(...wanted);
+  }
+  return { element, draw };
+}
+
+// src/ui/PluginFrame.js
+var FRAME_HEIGHT = Object.freeze({ minimum: 80, maximum: 900 });
+function frameableOrigin(location2, hostOrigin) {
+  let url;
+  try {
+    url = new URL(location2);
+  } catch {
+    return { ok: false, message: `not a URL: ${location2}` };
+  }
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return { ok: false, message: `a plugin interface is fetched over http or https, not ${url.protocol}` };
+  }
+  if (url.origin === hostOrigin) {
+    return {
+      ok: false,
+      message: `the interface at ${location2} is on this page's own origin, and contract section 9.1 forbids framing it there: it would run with this page's access. Serve the plugin from another origin.`
+    };
+  }
+  return { ok: true, origin: url.origin };
+}
+function rateLimit(limit, now) {
+  let windowStart = now();
+  let count = 0;
   return {
-    element: tablist,
-    /** Select a tab by id, from outside a keypress or a click. */
-    select(id) {
-      const index = tabs2.findIndex((tab) => tab.id === id);
-      if (index === -1) throw new Error(`no such tab: ${id}`);
-      select(index);
+    take() {
+      const t = now();
+      if (t - windowStart >= 1e3) {
+        windowStart = t;
+        count = 0;
+      }
+      if (count >= limit) return false;
+      count += 1;
+      return true;
+    }
+  };
+}
+function createPluginFrame(document2, {
+  ui,
+  label,
+  hostOrigin,
+  window: window2,
+  relayLimit,
+  init: init2,
+  onParameter,
+  onGesture = () => {
+  },
+  onRelay = () => {
+  },
+  onRefused = () => {
+  },
+  now = () => Date.now()
+}) {
+  if (!ui?.location) throw new Error("createPluginFrame needs the interface location");
+  if (!Number.isInteger(relayLimit) || relayLimit < 1) throw new Error("createPluginFrame needs a relayLimit of at least one per second");
+  if (typeof init2 !== "function" || typeof onParameter !== "function") {
+    throw new Error("createPluginFrame needs init and onParameter");
+  }
+  const allowed = frameableOrigin(ui.location, hostOrigin);
+  if (!allowed.ok) throw new Error(allowed.message);
+  const origin = allowed.origin;
+  const element = document2.createElement("iframe");
+  element.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  element.setAttribute("title", `${label} editor`);
+  element.setAttribute("referrerpolicy", "no-referrer");
+  element.className = "plugin-frame";
+  element.style.height = `${FRAME_HEIGHT.minimum * 2}px`;
+  element.src = ui.location;
+  let initialised = false;
+  let warned = false;
+  const inbound = rateLimit(relayLimit, now);
+  const outbound = rateLimit(relayLimit, now);
+  const post = (message) => {
+    element.contentWindow?.postMessage(message, origin);
+  };
+  const refuse = (direction) => {
+    if (warned) return;
+    warned = true;
+    onRefused(`${label}: plugin messages ${direction} are arriving faster than ${relayLimit} a second, and the excess is dropped`);
+  };
+  const listener = (event) => {
+    if (event.source !== element.contentWindow || event.origin !== origin) return;
+    const message = event.data;
+    if (!message || typeof message !== "object") return;
+    switch (message.type) {
+      case "ready":
+        initialised = true;
+        post({ type: "init", ...init2() });
+        return;
+      case "parameter":
+        if (!initialised) return;
+        if (typeof message.symbol !== "string" || !Number.isFinite(message.value)) return;
+        onParameter(message.symbol, message.value);
+        return;
+      case "gesture":
+        if (!initialised) return;
+        if (typeof message.symbol !== "string" || message.phase !== "begin" && message.phase !== "end") return;
+        onGesture(message.symbol, message.phase);
+        return;
+      case "resize": {
+        if (!Number.isFinite(message.height)) return;
+        const height = Math.min(FRAME_HEIGHT.maximum, Math.max(FRAME_HEIGHT.minimum, Math.round(message.height)));
+        element.style.height = `${height}px`;
+        return;
+      }
+      case "plugin":
+        if (!initialised) return;
+        if (!inbound.take()) {
+          refuse("from the interface");
+          return;
+        }
+        onRelay(message.payload);
+        return;
+      default:
+    }
+  };
+  window2.addEventListener("message", listener);
+  return {
+    element,
+    /** Tell the frame what a parameter is now, after the host applied it. */
+    parameter(symbol, value2) {
+      if (initialised) post({ type: "parameter", symbol, value: value2 });
     },
-    /** The id of whichever tab is currently shown. */
-    selected() {
-      return tabs2[current].id;
+    /** Relay a payload from the processor. */
+    relay(payload) {
+      if (!initialised) return;
+      if (!outbound.take()) {
+        refuse("from the processor");
+        return;
+      }
+      post({ type: "plugin", payload });
+    },
+    dispose() {
+      window2.removeEventListener("message", listener);
+      element.remove();
     }
   };
 }
 
 // src/ui/Routing.js
-function createPortBar(document2, { node, profile, pending: pending2, onPick, onCancel }) {
+function createPortBar(document2, { node, profile, pending, onPick, onCancel }) {
   const element = document2.createElement("div");
   element.className = "ports";
   element.setAttribute("role", "group");
@@ -23940,7 +25551,7 @@ function createPortBar(document2, { node, profile, pending: pending2, onPick, on
     button.textContent = port.name;
     const key = port.portSymbol ?? `p${port.portIndex}`;
     button.id = `${node.id}-${direction}-${key}`.replace(/[^\w-]/g, "_");
-    const isPending = direction === "out" && pending2 && pending2.node === node.id && pending2.portIndex === port.portIndex && pending2.kind === port.kind;
+    const isPending = direction === "out" && pending && pending.node === node.id && pending.portIndex === port.portIndex && pending.kind === port.kind;
     if (direction === "out") {
       button.setAttribute("aria-pressed", String(Boolean(isPending)));
       button.setAttribute(
@@ -23953,8 +25564,8 @@ function createPortBar(document2, { node, profile, pending: pending2, onPick, on
       });
       if (isPending) button.classList.add("pending");
     } else {
-      const canTake = pending2 && compatible(pending2, port) && pending2.node !== node.id;
-      if (pending2) {
+      const canTake = pending && compatible(pending, port) && pending.node !== node.id;
+      if (pending) {
         button.disabled = !canTake;
         button.setAttribute("aria-label", canTake ? `Connect to ${port.name} of ${node.label}` : `${port.name} of ${node.label}, which cannot take the selected output`);
       } else {
@@ -23970,7 +25581,7 @@ function createPortBar(document2, { node, profile, pending: pending2, onPick, on
   const outputs = outputsOf(profile);
   const inputs = inputsOf(profile);
   for (const port of outputs) add(port, "out");
-  if (pending2) for (const port of inputs) add(port, "in");
+  if (pending) for (const port of inputs) add(port, "in");
   if (outputs.length === 0 && inputs.length === 0) {
     const none = document2.createElement("span");
     none.className = "port-none";
@@ -24119,474 +25730,1450 @@ function preserveFocus(container) {
   };
 }
 
-// src/catalogue/facets.js
-var TRN2 = "http://purl.org/stuff/transmissions/";
-var FACETS = Object.freeze({
-  role: `${TRN2}role`,
-  accepts: `${TRN2}accepts`,
-  produces: `${TRN2}produces`,
-  requires: `${TRN2}requires`,
-  format: `${TRN2}format`
-});
-var FACET_NAMES = Object.freeze(Object.keys(FACETS));
-var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
-
-// src/mcp/tools.js
-var ok = (data) => ({ ok: true, ...data });
-var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
-function createTools({ dispatcher: dispatcher2, catalogue = null, loadPlugin: loadPlugin2 = null, openCollection: openCollection2 = null }) {
-  if (!dispatcher2) throw new Error("the tool surface needs a dispatcher");
-  const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
-  const tools = [
-    {
-      name: "status",
-      description: "The state of the session: revision, how many nodes, the transport, and whether anything is failing. Deliberately small and cheap. Call it before making changes.",
-      inputSchema: { type: "object", properties: {} },
-      async handler() {
-        const compiled = dispatcher2.compile();
-        const project = dispatcher2.project;
-        return ok({
-          revision: dispatcher2.revision,
-          nodes: project.nodes.length,
-          connections: project.connections.length,
-          totalLatencyFrames: compiled.totalLatency,
-          compiles: compiled.ok,
-          problems: compiled.errors.map((e) => e.message),
-          transport: {
-            tempo: project.transport.tempoPoints[0]?.bpm ?? null,
-            beatsPerBar: project.transport.beatsPerBar,
-            loopEnabled: project.transport.loopEnabled
-          }
-        });
-      }
-    },
-    {
-      name: "project_get",
-      description: "The whole project as data: nodes, connections, parameter settings and transport.",
-      inputSchema: { type: "object", properties: {} },
-      async handler() {
-        return ok({ project: dispatcher2.project.snapshot() });
-      }
-    },
-    {
-      name: "plugins_search",
-      description: "Find candidate plugins by text and by what they do. Returns enough to choose between them; call plugin_describe for the few that matter. Results marked web:true can run in this host; the rest are native plugins the catalogue knows about but this host cannot load.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          q: { type: "string", description: "Text matched against name, description and vendor" },
-          role: { type: "string", description: "A role such as Instrument or AudioEffect" },
-          accepts: { type: "string", description: "A signal type the plugin takes, such as Audio or Midi" },
-          produces: { type: "string", description: "A signal type the plugin emits" },
-          limit: { type: "integer", description: "At most 200, default 25" }
-        }
-      },
-      async handler({ q = "", limit = 25, ...facets } = {}) {
-        const unavailable2 = requireCatalogue();
-        if (unavailable2) return unavailable2;
-        const unknown = Object.keys(facets).filter((k) => !FACET_NAMES.includes(k));
-        if (unknown.length > 0) {
-          return failed(`unknown facet: ${unknown.join(", ")}`, { known: FACET_NAMES });
-        }
-        try {
-          return ok({ results: await catalogue.search({ text: q, limit, ...facets }) });
-        } catch (error2) {
-          return failed(`catalogue: ${error2.message}`);
-        }
-      }
-    },
-    {
-      name: "plugin_describe",
-      description: "Everything the catalogue holds about one plugin, by its IRI.",
-      inputSchema: {
-        type: "object",
-        properties: { iri: { type: "string" } },
-        required: ["iri"]
-      },
-      async handler({ iri: iri3 } = {}) {
-        const unavailable2 = requireCatalogue();
-        if (unavailable2) return unavailable2;
-        if (!iri3) return failed("plugin_describe needs an iri");
-        try {
-          return ok(await catalogue.describe(iri3));
-        } catch (error2) {
-          return failed(`catalogue: ${error2.message}`);
-        }
-      }
-    },
-    {
-      name: "plugin_validate_chain",
-      description: "Given plugins in order, check that each one produces something the next one accepts. Reports the mismatches and any cautions. Does not change anything.",
-      inputSchema: {
-        type: "object",
-        properties: { iris: { type: "array", items: { type: "string" } } },
-        required: ["iris"]
-      },
-      async handler({ iris = [] } = {}) {
-        const unavailable2 = requireCatalogue();
-        if (unavailable2) return unavailable2;
-        if (iris.length < 2) return failed("a chain needs at least two plugins");
-        const described = [];
-        for (const iri3 of iris) {
-          try {
-            described.push(await catalogue.describe(iri3));
-          } catch (error2) {
-            return failed(`could not describe ${iri3}: ${error2.message}`);
-          }
-        }
-        const problems = [];
-        const cautions = [];
-        for (let i2 = 0; i2 < described.length - 1; i2++) {
-          const from = described[i2];
-          const to = described[i2 + 1];
-          const produces = from.properties.produces ?? [];
-          const accepts = to.properties.accepts ?? [];
-          for (const caution of from.properties.caution ?? []) {
-            cautions.push({ plugin: from.iri, caution });
-          }
-          if (produces.length === 0 || accepts.length === 0) continue;
-          if (!produces.some((signal) => accepts.includes(signal))) {
-            problems.push({
-              from: from.iri,
-              to: to.iri,
-              message: `${from.iri} produces ${produces.join(", ")} and ${to.iri} accepts ${accepts.join(", ")}`
-            });
-          }
-        }
-        return ok({ valid: problems.length === 0, problems, cautions });
-      }
-    },
-    {
-      name: "collection_open",
-      description: "Open a plugin collection by IRI (docs/plugin-collections.md): fetch the document and check every listed plugin's profile and capabilities. A catalogue read, not an Op: it reaches the network but changes nothing, and fetches no module, processor or asset. Load a member afterwards with plugin_load, by the iri this tool reports for it.",
-      inputSchema: {
-        type: "object",
-        properties: { iri: { type: "string" } },
-        required: ["iri"]
-      },
-      async handler({ iri: iri3 } = {}) {
-        if (!iri3) return failed("collection_open needs an iri");
-        if (!openCollection2) return failed("this host cannot open collections");
-        try {
-          const { collection, warnings, members } = await openCollection2(iri3);
-          return ok({
-            label: collection.label,
-            comment: collection.comment ?? null,
-            warnings: warnings.map((w) => w.message),
-            members: members.map((m) => m.ok ? { iri: m.iri, label: m.profile.label, ok: true, notes: m.notes } : { iri: m.iri, label: m.listedLabel, ok: false, step: m.step, message: m.message })
-          });
-        } catch (error2) {
-          return failed(error2.message, { step: error2.step ?? null });
-        }
-      }
-    },
-    {
-      name: "plugin_load",
-      description: "Fetch, validate and instantiate a plugin by IRI, adding it to the session. This is the only tool that reaches the network. Reports which step failed if it does.",
-      inputSchema: {
-        type: "object",
-        properties: { iri: { type: "string" } },
-        required: ["iri"]
-      },
-      async handler({ iri: iri3 } = {}) {
-        if (!iri3) return failed("plugin_load needs an iri");
-        if (!loadPlugin2) return failed("this host cannot load plugins");
-        const result = await loadPlugin2(iri3);
-        if (!result.ok) return failed(result.message, { step: result.step ?? null });
-        return ok({
-          nodeId: result.nodeId,
-          label: result.entry.profile.label,
-          parameters: result.entry.profile.ports.map((p) => ({
-            symbol: p.symbol,
-            name: p.name,
-            min: p.minimum,
-            max: p.maximum,
-            default: p.defaultValue
-          })),
-          latencyFrames: result.entry.ready.latencyFrames,
-          revision: result.revision
-        });
-      }
-    },
-    {
-      name: "graph_apply_changes",
-      description: "Apply a changeset atomically: all of it applies or none does. Pass expectedRevision to be rejected if the project has moved on, and dryRun to see what would happen without committing.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          changes: { type: "array", items: { type: "object" } },
-          expectedRevision: { type: "integer" },
-          dryRun: { type: "boolean" }
-        },
-        required: ["changes"]
-      },
-      async handler({ changes = [], expectedRevision, dryRun = false } = {}) {
-        const result = dispatcher2.apply(changes, { expectedRevision, dryRun });
-        if (!result.ok) {
-          return failed(result.message, {
-            kind: result.kind,
-            revision: result.revision,
-            ...result.expected !== void 0 ? { expected: result.expected } : {},
-            ...result.index !== void 0 ? { index: result.index } : {}
-          });
-        }
-        return ok({
-          revision: result.revision,
-          applied: result.applied,
-          totalLatencyFrames: result.compiled.totalLatency
-        });
-      }
-    },
-    {
-      name: "connection_add",
-      description: "Connect one node to another. signalKind is Audio or Midi, or a full IRI.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          from: { type: "string" },
-          to: { type: "string" },
-          fromPort: { type: "integer" },
-          toPort: { type: "integer" },
-          toParameter: { type: "string", description: "Target a parameter by symbol instead of a port" },
-          signalKind: { type: "string" }
-        },
-        required: ["from", "to"]
-      },
-      async handler({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = "Audio" } = {}) {
-        const change = {
-          op: "addConnection",
-          from: { node: from, portIndex: fromPort },
-          to: toParameter ? { node: to, portSymbol: toParameter } : { node: to, portIndex: toPort },
-          signalKind: expandTerm(signalKind)
-        };
-        const result = dispatcher2.apply([change]);
-        return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
-      }
-    },
-    {
-      name: "node_remove",
-      description: "Remove a node and everything connected to it. With heal, a node taken out of the middle of a path has its neighbours rejoined, which is what a person means by removing one plugin from a chain.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          nodeId: { type: "string" },
-          heal: { type: "boolean", description: "Rejoin what it stood between. Default false." },
-          expectedRevision: { type: "integer" }
-        },
-        required: ["nodeId"]
-      },
-      async handler({ nodeId, heal = false, expectedRevision } = {}) {
-        const before = dispatcher2.project.connections.length;
-        const result = dispatcher2.apply([{ op: "removeNode", id: nodeId, heal }], { expectedRevision });
-        return result.ok ? ok({
-          revision: result.revision,
-          removed: nodeId,
-          // How much of the graph went with it, which is the part an agent
-          // cannot see from the changeset it sent.
-          connectionsRemoved: before - dispatcher2.project.connections.length
-        }) : failed(result.message, { kind: result.kind });
-      }
-    },
-    {
-      name: "connection_remove",
-      description: "Remove one connection by its id. project_get lists them.",
-      inputSchema: {
-        type: "object",
-        properties: { connectionId: { type: "string" }, expectedRevision: { type: "integer" } },
-        required: ["connectionId"]
-      },
-      async handler({ connectionId, expectedRevision } = {}) {
-        const result = dispatcher2.apply([{ op: "removeConnection", id: connectionId }], { expectedRevision });
-        return result.ok ? ok({ revision: result.revision, removed: connectionId }) : failed(result.message, { kind: result.kind });
-      }
-    },
-    {
-      name: "parameters_set_batch",
-      description: "Set several parameters at once. Atomic: all of them apply or none does, so a preset arrives as one edit rather than as a visible sweep through intermediate states.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          settings: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                nodeId: { type: "string" },
-                symbol: { type: "string" },
-                value: { type: "number" }
-              },
-              required: ["nodeId", "symbol", "value"]
-            }
-          },
-          expectedRevision: { type: "integer" }
-        },
-        required: ["settings"]
-      },
-      async handler({ settings, expectedRevision } = {}) {
-        const result = dispatcher2.setParameters(settings, { expectedRevision });
-        return result.ok ? ok({ revision: result.revision, applied: result.applied }) : failed(result.message, { kind: result.kind });
-      }
-    },
-    {
-      name: "parameter_set",
-      description: "Set a parameter by its symbol. Returns the value actually applied, which may be clamped to the range the plugin declares.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          node: { type: "string" },
-          symbol: { type: "string" },
-          value: { type: "number" }
-        },
-        required: ["node", "symbol", "value"]
-      },
-      async handler({ node, symbol, value: value2 } = {}) {
-        const result = dispatcher2.setParameter(node, symbol, value2);
-        return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
-      }
-    },
-    {
-      name: "transport_configure",
-      description: "Set the tempo, time signature or loop.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          tempo: { type: "number" },
-          beatsPerBar: { type: "integer" },
-          loopStart: { type: "number" },
-          loopEnd: { type: "number" },
-          loopEnabled: { type: "boolean" }
-        }
-      },
-      async handler({ tempo, ...rest } = {}) {
-        const change = { op: "setTransport", ...rest };
-        if (tempo !== void 0) change.tempoPoints = [{ atBeat: 0, bpm: tempo }];
-        const result = dispatcher2.apply([change]);
-        return result.ok ? ok({ revision: result.revision }) : failed(result.message);
-      }
-    },
-    {
-      name: "diagnostics",
-      description: "Engine detail, including the compiled graph, any cycles, and per-node load state.",
-      inputSchema: { type: "object", properties: {} },
-      async handler() {
-        const compiled = dispatcher2.compile();
-        return ok({
-          order: compiled.order,
-          cycles: compiled.cycles,
-          errors: compiled.errors,
-          compensation: compiled.compensation,
-          totalLatencyFrames: compiled.totalLatency,
-          nodes: dispatcher2.project.nodes.map((n2) => {
-            const entry = dispatcher2.engineNode(n2.id);
-            return {
-              id: n2.id,
-              plugin: n2.pluginIri,
-              loaded: Boolean(entry),
-              failed: entry?.failed ?? null,
-              latencyFrames: entry?.ready?.latencyFrames ?? null
-            };
-          })
-        });
-      }
+// web/app/Rack.js
+var NEW_TRACK = "";
+function createRack(ctx2) {
+  const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
+  const panels = /* @__PURE__ */ new Map();
+  let loadTarget = null;
+  let pending = null;
+  const mixer = createMixer(document2, {
+    onChange: (trackId, change) => {
+      const result = ctx2.dispatcher.setTrackChannel(trackId, change);
+      if (!result.ok) log2(result.message, "error");
     }
-  ];
-  return tools;
-}
-
-// src/mcp/adapter.js
-function registerTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, openCollection: openCollection2, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher: dispatcher2, catalogue, loadPlugin: loadPlugin2, openCollection: openCollection2 });
-  const surface = {
-    tools,
-    names: tools.map((t) => t.name),
-    async call(name, input = {}) {
-      const tool = tools.find((t) => t.name === name);
-      if (!tool) {
-        return { ok: false, error: `no such tool: ${name}`, known: tools.map((t) => t.name) };
+  });
+  const forgetNode = (id) => {
+    panels.delete(id);
+  };
+  function slot(title, kind, className) {
+    const element = document2.createElement("div");
+    element.className = `slot ${className}`;
+    const header = document2.createElement("header");
+    const heading = document2.createElement("h3");
+    heading.textContent = title;
+    const kindLabel = document2.createElement("span");
+    kindLabel.className = "kind";
+    kindLabel.textContent = kind;
+    header.append(heading, kindLabel);
+    element.append(header);
+    return element;
+  }
+  function gap() {
+    const element = document2.createElement("div");
+    element.className = "gap";
+    element.setAttribute("aria-hidden", "true");
+    return element;
+  }
+  function wire(label) {
+    const element = document2.createElement("div");
+    element.className = "wire";
+    if (label) {
+      const span = document2.createElement("span");
+      span.textContent = label;
+      element.append(span);
+    }
+    return element;
+  }
+  function trackLabel(track, index) {
+    return track.label ?? `Track ${index + 1}`;
+  }
+  function drawTargets() {
+    const select = $2("target");
+    const tracks = ctx2.dispatcher?.project.tracks ?? [];
+    const options = [
+      ...tracks.map((track, i2) => ({ value: track.id, label: trackLabel(track, i2) })),
+      { value: NEW_TRACK, label: "A new track" }
+    ];
+    select.replaceChildren(...options.map(({ value: value2, label }) => {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = label;
+      return option;
+    }));
+    select.value = loadTarget !== null && options.some((o2) => o2.value === loadTarget) ? loadTarget : tracks.at(-1)?.id ?? NEW_TRACK;
+  }
+  function drawRack() {
+    const rack = $2("rack");
+    const restoreFocus = preserveFocus(rack);
+    rack.textContent = "";
+    const { dispatcher } = ctx2;
+    const tracks = dispatcher?.project.tracks ?? [];
+    const nodes = dispatcher?.project.nodes ?? [];
+    const connections = dispatcher?.project.connections ?? [];
+    ctx2.editors.keepOnly(new Set(nodes.map((n2) => n2.id)));
+    const seen = /* @__PURE__ */ new Map();
+    const names = /* @__PURE__ */ new Map();
+    for (const node of nodes) {
+      const base = node.label ?? node.pluginIri;
+      const count = (seen.get(base) ?? 0) + 1;
+      seen.set(base, count);
+      names.set(node.id, { base, count });
+    }
+    const labelFor = (id) => {
+      const found = names.get(id);
+      if (!found) return id;
+      return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base;
+    };
+    const trackNames = tracks.map((t, i2) => trackLabel(t, i2));
+    const labelOfTrack = (track) => {
+      const i2 = tracks.indexOf(track);
+      const name = trackNames[i2];
+      const sharing = trackNames.filter((n2) => n2 === name).length;
+      return sharing > 1 ? `${name} ${trackNames.slice(0, i2 + 1).filter((n2) => n2 === name).length}` : name;
+    };
+    const restoreMixerFocus = preserveFocus(mixer.element);
+    mixer.draw({
+      tracks,
+      nodes,
+      audibility: dispatcher?.audibility() ?? [],
+      audioOutputsOf: (id) => dispatcher.engineNode(id)?.profile?.audioOutputs,
+      labelFor: labelOfTrack
+    });
+    restoreMixerFocus();
+    drawTargets();
+    ctx2.arrangement.draw(tracks, labelOfTrack);
+    if (tracks.length === 0) {
+      const empty = document2.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "Nothing loaded. Search for a plugin, or press Load to add the synth.";
+      rack.append(empty);
+      return;
+    }
+    for (const track of tracks) {
+      rack.append(drawTrack(track, {
+        tracks,
+        labelOfTrack,
+        labelFor,
+        connections,
+        nodes: nodes.filter((n2) => n2.track === track.id),
+        allNodes: nodes
+      }));
+    }
+    const heading = document2.createElement("h3");
+    heading.className = "connections-heading";
+    heading.textContent = "Connections";
+    rack.append(heading, createConnectionList(document2, {
+      connections,
+      labelFor,
+      onRemove: (id) => {
+        const result = dispatcher.apply([{ op: "removeConnection", id }]);
+        if (!result.ok) log2(result.message, "error");
+        drawRack();
       }
-      try {
-        return await tool.handler(input);
-      } catch (error2) {
-        return { ok: false, error: `${name} threw: ${error2?.message ?? error2}` };
+    }));
+    restoreFocus();
+  }
+  function drawTrack(track, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
+    const { dispatcher } = ctx2;
+    const group = document2.createElement("section");
+    group.className = "track";
+    group.id = `track-group-${track.id}`;
+    const title = labelOfTrack(track);
+    group.setAttribute("aria-label", `Track ${title}`);
+    const header = document2.createElement("div");
+    header.className = "track-header";
+    const heading = document2.createElement("h3");
+    heading.textContent = title;
+    header.append(heading);
+    const rename = document2.createElement("input");
+    rename.type = "text";
+    rename.id = `track-name-${track.id}`;
+    rename.value = track.label ?? "";
+    rename.placeholder = title;
+    rename.setAttribute("aria-label", `Name of track ${title}`);
+    rename.addEventListener("change", () => {
+      const label = rename.value.trim() || null;
+      const result = dispatcher.apply([{ op: "setTrack", id: track.id, label }]);
+      if (!result.ok) log2(result.message, "error");
+    });
+    header.append(rename);
+    const takesMidi = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.accepts ?? []).some(isMidi));
+    if (takesMidi.length > 0) {
+      const midi = document2.createElement("select");
+      midi.id = `midi-input-${track.id}`;
+      midi.setAttribute("aria-label", `Which plugin ${title}'s MIDI clips play into`);
+      for (const [value2, text] of [["", "Clips play into nothing"], ...takesMidi.map((n2) => [n2.id, `Clips play into ${labelFor(n2.id)}`])]) {
+        const option = document2.createElement("option");
+        option.value = value2;
+        option.textContent = text;
+        midi.append(option);
       }
+      midi.value = track.midiInput ?? "";
+      midi.addEventListener("change", () => {
+        const result = dispatcher.apply([{ op: "setTrack", id: track.id, midiInput: midi.value || null }]);
+        if (!result.ok) log2(result.message, "error");
+      });
+      header.append(midi);
+    }
+    if (nodes.length === 0) {
+      const remove = document2.createElement("button");
+      remove.type = "button";
+      remove.id = `track-remove-${track.id}`;
+      remove.textContent = "Remove track";
+      remove.setAttribute("aria-label", `Remove track ${title}`);
+      remove.addEventListener("click", () => {
+        const result = dispatcher.apply([{ op: "removeTrack", id: track.id }]);
+        if (!result.ok) log2(result.message, "error");
+        else log2(`removed track ${title}`);
+      });
+      header.append(remove);
+    }
+    group.append(header);
+    if (nodes.length === 0) {
+      const empty = document2.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No plugins on this track. Choose it under Load onto, then load one.";
+      group.append(empty);
+      return group;
+    }
+    for (const node of nodes) {
+      const previous = nodes[nodes.indexOf(node) - 1];
+      const joining = previous && connections.find((c3) => c3.from.node === previous.id && c3.to.node === node.id);
+      if (previous) {
+        group.append(joining ? wire(isMidi(joining.signalKind) ? "MIDI" : "audio") : gap());
+      }
+      drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track });
+    }
+    return group;
+  }
+  function drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track }) {
+    const { dispatcher, engine } = ctx2;
+    const entry = dispatcher.engineNode(node.id);
+    const profile = entry?.profile;
+    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(", "), "plugin");
+    if (profile?.kind === "foreign") {
+      const mark = document2.createElement("span");
+      mark.className = "foreign";
+      mark.textContent = "foreign";
+      mark.title = "Runs in this page with this page's privileges. It is not sandboxed.";
+      element.querySelector("header h3").append(" ", mark);
+      element.classList.add("is-foreign");
+    }
+    const index = nodes.indexOf(node);
+    const reorderTo = (neighbour) => {
+      const target = allNodes.indexOf(neighbour);
+      const result = dispatcher.apply([{ op: "reorderNode", id: node.id, index: target }]);
+      if (!result.ok) log2(result.message, "error");
+      else log2(`moved ${labelFor(node.id)}`);
+    };
+    const grip = document2.createElement("span");
+    grip.className = "grip";
+    grip.textContent = "\u2261";
+    grip.setAttribute("aria-hidden", "true");
+    grip.draggable = true;
+    grip.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", node.id);
+      e.dataTransfer.effectAllowed = "move";
+    });
+    const header = element.querySelector("header");
+    if (index > 0) {
+      const moveEarlier = document2.createElement("button");
+      moveEarlier.type = "button";
+      moveEarlier.className = "reorder";
+      moveEarlier.id = `earlier-${node.id}`;
+      moveEarlier.textContent = "\u25C0";
+      moveEarlier.setAttribute("aria-label", `Move ${labelFor(node.id)} earlier in the chain`);
+      moveEarlier.addEventListener("click", () => reorderTo(nodes[index - 1]));
+      header.append(moveEarlier);
+    }
+    if (index < nodes.length - 1) {
+      const moveLater = document2.createElement("button");
+      moveLater.type = "button";
+      moveLater.className = "reorder";
+      moveLater.id = `later-${node.id}`;
+      moveLater.textContent = "\u25B6";
+      moveLater.setAttribute("aria-label", `Move ${labelFor(node.id)} later in the chain`);
+      moveLater.addEventListener("click", () => reorderTo(nodes[index + 1]));
+      header.append(moveLater);
+    }
+    header.prepend(grip);
+    element.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      element.classList.add("drag-over");
+    });
+    element.addEventListener("dragleave", () => element.classList.remove("drag-over"));
+    element.addEventListener("drop", (e) => {
+      e.preventDefault();
+      element.classList.remove("drag-over");
+      const draggedId = e.dataTransfer.getData("text/plain");
+      if (!draggedId || draggedId === node.id) return;
+      const dragged = dispatcher.project.node(draggedId);
+      if (!dragged) return;
+      const changes = dragged.track === track.id ? [{ op: "reorderNode", id: draggedId, index: allNodes.indexOf(node) }] : [
+        { op: "moveNodeToTrack", id: draggedId, track: track.id },
+        { op: "reorderNode", id: draggedId, index: allNodes.indexOf(node) }
+      ];
+      const result = dispatcher.apply(changes);
+      if (!result.ok) log2(result.message, "error");
+    });
+    if (tracks.length > 1) {
+      const move = document2.createElement("select");
+      move.className = "move-track";
+      move.id = `track-of-${node.id}`;
+      move.setAttribute("aria-label", `Track for ${labelFor(node.id)}`);
+      for (const t of tracks) {
+        const option = document2.createElement("option");
+        option.value = t.id;
+        option.textContent = labelOfTrack(t);
+        move.append(option);
+      }
+      move.value = node.track;
+      move.addEventListener("change", () => {
+        const result = dispatcher.apply([{ op: "moveNodeToTrack", id: node.id, track: move.value }]);
+        if (!result.ok) log2(result.message, "error");
+        else log2(`moved ${labelFor(node.id)} to ${labelOfTrack(dispatcher.project.track(move.value))}`);
+      });
+      header.append(move);
+    }
+    if (profile?.ui && frameableOrigin(profile.ui.location, window2.location.origin).ok) {
+      const open = ctx2.editors.isOpen(node.id);
+      const toggle = document2.createElement("button");
+      toggle.type = "button";
+      toggle.className = "open-editor";
+      toggle.id = `editor-toggle-${node.id}`;
+      toggle.textContent = open ? "Close editor" : "Open editor";
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-controls", "editors");
+      toggle.setAttribute("aria-label", `${open ? "Close" : "Open"} the ${labelFor(node.id)} editor`);
+      toggle.addEventListener("click", () => {
+        if (ctx2.editors.isOpen(node.id)) ctx2.editors.close(node.id);
+        else ctx2.editors.open(node.id, profile, labelFor(node.id));
+        drawRack();
+      });
+      header.append(toggle);
+    }
+    const remove = document2.createElement("button");
+    remove.className = "remove";
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${labelFor(node.id)}`);
+    remove.addEventListener("click", () => {
+      const result = dispatcher.apply([{ op: "removeNode", id: node.id, heal: true }]);
+      if (!result.ok) log2(result.message, "error");
+      else {
+        forgetNode(node.id);
+        log2(`removed ${node.label}`);
+      }
+    });
+    header.append(remove);
+    element.append(createPortBar(document2, {
+      node: { ...node, label: labelFor(node.id) },
+      profile,
+      pending,
+      onCancel: () => {
+        pending = null;
+        drawRack();
+      },
+      onPick: (from, to) => {
+        if (from) {
+          pending = from;
+          drawRack();
+          return;
+        }
+        const result = dispatcher.apply([{
+          op: "addConnection",
+          from: { node: pending.node, portIndex: pending.portIndex },
+          to: to.portSymbol !== void 0 ? { node: to.node, portSymbol: to.portSymbol } : { node: to.node, portIndex: to.portIndex },
+          signalKind: pending.kind
+        }]);
+        if (!result.ok) log2(result.message, "error");
+        else log2(`connected ${labelFor(pending.node)} to ${labelFor(to.node)}`, "ok");
+        pending = null;
+        drawRack();
+      }
+    }));
+    group.append(element);
+    if (!profile) return;
+    let panel = panels.get(node.id);
+    if (!panel) {
+      panel = createPanel(document2, profile, (symbol, value2) => {
+        const applied = dispatcher.setParameter(node.id, symbol, value2);
+        if (applied.ok) panel.update(symbol, applied.value);
+      }, async (key, file) => {
+        const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
+        if (!result.ok) log2(`${node.id}.${key}: ${result.message}`, "error");
+      }, { scope: `panel-${node.id}` });
+      panels.set(node.id, panel);
+    }
+    for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
+    for (const port of profile.ports ?? []) {
+      if (!node.settings.has(port.symbol)) panel.update(port.symbol, port.defaultValue);
+    }
+    panel.element.querySelector("h3")?.remove();
+    element.append(panel.element);
+    if (playable(profile)) {
+      const style = getComputedStyle(element);
+      const available = element.clientWidth ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : document2.body.clientWidth;
+      const keyboard = createKeyboard(document2, {
+        first: 48,
+        octaves: octavesForWidth(available),
+        onNote: (bytes) => {
+          dispatcher.sendEvents(node.id, [{
+            frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
+            bytes
+          }]);
+        }
+      });
+      element.append(keyboard.element);
+    }
+  }
+  return {
+    draw: drawRack,
+    drawTargets,
+    trackLabel,
+    forgetNode,
+    /** Drop every cache, for reopening a session over whatever was there before. */
+    reset() {
+      panels.clear();
+      loadTarget = null;
+    },
+    /** The track the Load onto menu names, or null for a new one. */
+    targetTrack() {
+      return $2("target").value === NEW_TRACK ? null : $2("target").value;
+    },
+    /** Where the next Load goes: where this one went. */
+    loadedOnto(trackId) {
+      loadTarget = trackId;
+      drawTargets();
+    },
+    /** Put the mixer on the page and listen to the Load onto menu. */
+    mount() {
+      $2("mixer").replaceWith(mixer.element);
+      mixer.element.id = "mixer";
+      $2("target").addEventListener("change", () => {
+        loadTarget = $2("target").value;
+      });
     }
   };
-  target.jigdaw = { ...target.jigdaw ?? {}, mcp: surface };
-  const navigatorContext = target.navigator?.modelContext;
-  if (navigatorContext && typeof navigatorContext.provideContext === "function") {
-    try {
-      navigatorContext.provideContext({
-        tools: tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-          async execute(input) {
-            const result = await surface.call(tool.name, input ?? {});
-            return { content: [{ type: "text", text: JSON.stringify(result) }] };
-          }
-        }))
-      });
-      return { bound: "navigator.modelContext", count: tools.length, surface };
-    } catch (error2) {
-      return { bound: "page", count: tools.length, surface, warning: `modelContext refused: ${error2.message}` };
-    }
-  }
-  return { bound: "page", count: tools.length, surface };
 }
 
-// src/mcp/LocalAgent.js
-var MAX_TURNS = 8;
-function toolSchema(tools) {
-  return tools.map((t) => ({
-    type: "function",
-    function: { name: t.name, description: t.description, parameters: t.inputSchema }
-  }));
+// src/rdf/ProfileJsonLd.js
+init_Vocabulary();
+var CONTEXT = Object.freeze({
+  label: vocabulary.rdfs.label,
+  comment: vocabulary.rdfs.comment,
+  // A set, not a list: ports are keyed by symbol and have no order.
+  port: { "@id": vocabulary.lv2.port, "@container": "@set" },
+  symbol: vocabulary.lv2.symbol,
+  name: vocabulary.lv2.name,
+  minimum: vocabulary.lv2.minimum,
+  maximum: vocabulary.lv2.maximum,
+  default: vocabulary.lv2.default
+});
+function profileAsJsonLd(profile) {
+  if (!profile?.iri) throw new Error("profileAsJsonLd needs a profile with an iri");
+  return {
+    "@context": CONTEXT,
+    "@id": profile.iri,
+    label: profile.label ?? null,
+    comment: profile.comment ?? null,
+    port: (profile.ports ?? []).map((p) => ({
+      "@id": p.iri,
+      symbol: p.symbol,
+      name: p.name ?? p.symbol,
+      minimum: p.minimum,
+      maximum: p.maximum,
+      default: p.defaultValue
+    }))
+  };
 }
-function argumentsOf(call) {
-  const raw = call.function.arguments;
-  return typeof raw === "string" ? JSON.parse(raw) : raw ?? {};
-}
-async function runAgentTurn({ surface, chat, model, prompt, onStep = () => {
-} }) {
-  const tools = toolSchema(surface.tools);
-  const messages = [{ role: "user", content: prompt }];
-  onStep({ role: "user", content: prompt });
-  for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const response = await chat({ model, messages, tools });
-    const message = response.message;
-    messages.push(message);
-    if (!message.tool_calls?.length) {
-      onStep({ role: "assistant", content: message.content ?? "" });
-      return { messages, turns: turn + 1 };
+
+// web/app/Editors.js
+function createEditors(ctx2) {
+  const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
+  const open = /* @__PURE__ */ new Map();
+  function openEditor(nodeId, profile, label) {
+    const { dispatcher } = ctx2;
+    let frame;
+    try {
+      frame = createPluginFrame(document2, {
+        ui: profile.ui,
+        label,
+        hostOrigin: window2.location.origin,
+        window: window2,
+        relayLimit: ctx2.hostConfig.relayPerSecond,
+        init: () => ({
+          profile: profileAsJsonLd(profile),
+          parameters: Object.fromEntries(dispatcher.project.node(nodeId)?.settings ?? []),
+          capabilities: [...ctx2.hostCapabilities].map(compact)
+        }),
+        // A request, which goes through the dispatcher like any other edit and
+        // comes back to the frame as the value actually applied.
+        onParameter: (symbol, value2) => {
+          const result = dispatcher.setParameter(nodeId, symbol, value2);
+          if (!result.ok) log2(`${label}: ${result.message}`, "error");
+        },
+        onRelay: (payload) => dispatcher.relayToPlugin(nodeId, payload),
+        onRefused: (message) => log2(message, "error")
+      });
+    } catch (error2) {
+      log2(`${label} editor: ${error2.message}`, "error");
+      return;
     }
-    if (message.content) onStep({ role: "assistant", content: message.content });
-    for (const call of message.tool_calls) {
-      const args = argumentsOf(call);
-      onStep({ role: "tool_call", name: call.function.name, arguments: args });
-      const result = await surface.call(call.function.name, args);
-      onStep({ role: "tool_result", name: call.function.name, result });
-      messages.push({ role: "tool", content: JSON.stringify(result) });
+    const wrapper = document2.createElement("section");
+    wrapper.className = "editor";
+    wrapper.setAttribute("aria-label", `${label} editor`);
+    const header = document2.createElement("header");
+    const heading = document2.createElement("h3");
+    heading.textContent = `${label} editor`;
+    const close = document2.createElement("button");
+    close.type = "button";
+    close.textContent = "Close";
+    close.setAttribute("aria-label", `Close the ${label} editor`);
+    close.addEventListener("click", () => {
+      closeEditor(nodeId);
+      ctx2.rack.draw();
+    });
+    header.append(heading, close);
+    wrapper.append(header, frame.element);
+    const stopRelay = dispatcher.onPluginMessage(nodeId, (payload) => frame.relay(payload));
+    open.set(nodeId, { wrapper, frame, stopRelay });
+    $2("editors").append(wrapper);
+    $2("editors").hidden = false;
+  }
+  function closeEditor(nodeId) {
+    const editor = open.get(nodeId);
+    if (!editor) return;
+    editor.stopRelay?.();
+    editor.frame.dispose();
+    editor.wrapper.remove();
+    open.delete(nodeId);
+    $2("editors").hidden = open.size === 0;
+  }
+  return {
+    open: openEditor,
+    close: closeEditor,
+    isOpen: (nodeId) => open.has(nodeId),
+    /** Close every editor whose plugin is not in `nodeIds`: removed, or undone. */
+    keepOnly(nodeIds) {
+      for (const id of [...open.keys()]) if (!nodeIds.has(id)) closeEditor(id);
+    },
+    closeAll() {
+      for (const id of [...open.keys()]) closeEditor(id);
+    },
+    /** Tell an open editor what a parameter now is. */
+    parameter(nodeId, symbol, value2) {
+      open.get(nodeId)?.frame.parameter(symbol, value2);
+    }
+  };
+}
+
+// src/ui/Timeline.js
+var PIXELS_PER_BEAT = 24;
+function barBeat(beat, beatsPerBar) {
+  const bar = Math.floor(beat / beatsPerBar) + 1;
+  const within = beat - (bar - 1) * beatsPerBar + 1;
+  return `bar ${bar} beat ${Number.isInteger(within) ? within : within.toFixed(2).replace(/0+$/, "")}`;
+}
+var plural = (n2, word) => `${n2} ${word}${n2 === 1 ? "" : "s"}`;
+function describeClip(clip, { beatsPerBar, playsIntoNothing = false }) {
+  const what = clip.kind === "midi" ? `MIDI clip, ${plural(clip.notes.length, "note")}` : "Audio clip";
+  const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
+  return `${what}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
+}
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onShowTrack }) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onShowTrack })) {
+    if (typeof fn !== "function") throw new Error(`createTimeline needs ${name}`);
+  }
+  const element = document2.createElement("div");
+  element.className = "timeline";
+  const scroller = document2.createElement("div");
+  scroller.className = "timeline-scroll";
+  scroller.tabIndex = 0;
+  scroller.setAttribute("role", "region");
+  scroller.setAttribute("aria-label", "Arrangement, scrolls sideways");
+  element.append(scroller);
+  function draw({ tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null }) {
+    scroller.textContent = "";
+    const lastBeat = Math.max(0, ...clips.map((c3) => c3.startBeat + c3.lengthBeats));
+    const bars = Math.ceil(lastBeat / beatsPerBar) + 4;
+    const width = bars * beatsPerBar * PIXELS_PER_BEAT;
+    const ruler = document2.createElement("div");
+    ruler.className = "timeline-ruler";
+    ruler.setAttribute("aria-hidden", "true");
+    ruler.style.width = `${width}px`;
+    for (let bar = 0; bar < bars; bar++) {
+      const mark = document2.createElement("span");
+      mark.style.left = `${bar * beatsPerBar * PIXELS_PER_BEAT}px`;
+      mark.textContent = String(bar + 1);
+      ruler.append(mark);
+    }
+    scroller.append(ruler);
+    if (tracks.length === 0) {
+      const empty = document2.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No tracks yet. Load a plugin and its track appears here.";
+      scroller.append(empty);
+      return;
+    }
+    for (const track of tracks) {
+      const label = labelFor(track);
+      const row = document2.createElement("div");
+      row.className = "timeline-row";
+      row.setAttribute("role", "group");
+      row.setAttribute("aria-label", `Track ${label}`);
+      const head = document2.createElement("div");
+      head.className = "timeline-head";
+      const name = document2.createElement("button");
+      name.type = "button";
+      name.className = "show-track";
+      name.id = `show-track-${track.id}`;
+      name.textContent = label;
+      name.setAttribute("aria-label", `${label}: show its plugins`);
+      name.addEventListener("click", () => onShowTrack(track.id));
+      const own = clips.filter((c3) => c3.track === track.id);
+      const end = Math.max(0, ...own.map((c3) => c3.startBeat + c3.lengthBeats));
+      const at = Math.ceil(end / beatsPerBar) * beatsPerBar;
+      const add = document2.createElement("button");
+      add.type = "button";
+      add.id = `add-clip-${track.id}`;
+      add.textContent = "Add clip";
+      add.setAttribute("aria-label", `Add a MIDI clip to ${label} at ${barBeat(at, beatsPerBar)}`);
+      add.addEventListener("click", () => onAdd(track.id, at));
+      const addAudio = document2.createElement("button");
+      addAudio.type = "button";
+      addAudio.id = `add-audio-${track.id}`;
+      addAudio.textContent = "Add audio";
+      addAudio.setAttribute("aria-label", `Add an audio file to ${label} at ${barBeat(at, beatsPerBar)}`);
+      addAudio.addEventListener("click", () => onAddAudio(track.id, at));
+      head.append(name, add, addAudio);
+      const lane = document2.createElement("div");
+      lane.className = "timeline-lane";
+      lane.style.width = `${width}px`;
+      lane.style.backgroundSize = `${beatsPerBar * PIXELS_PER_BEAT}px 100%`;
+      for (const clip of own) {
+        lane.append(clipButton(clip, {
+          beatsPerBar,
+          playsIntoNothing: clip.kind === "midi" && playsIntoNothing(track),
+          peaks: clip.kind === "audio" ? peaksFor(clip, Math.max(1, Math.round(clip.lengthBeats * PIXELS_PER_BEAT / 3))) : null,
+          problem: clip.kind === "audio" ? unplayable(clip) : null
+        }));
+      }
+      row.append(head, lane);
+      scroller.append(row);
     }
   }
-  onStep({ role: "assistant", content: `stopped after ${MAX_TURNS} turns without a final answer` });
-  return { messages, turns: MAX_TURNS };
+  function clipButton(clip, { beatsPerBar, playsIntoNothing, peaks, problem }) {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = `clip-${clip.id}`;
+    button.className = `clip clip-${clip.kind}${playsIntoNothing ? " clip-orphan" : ""}`;
+    button.style.left = `${clip.startBeat * PIXELS_PER_BEAT}px`;
+    button.style.width = `${clip.lengthBeats * PIXELS_PER_BEAT}px`;
+    const description = describeClip(clip, { beatsPerBar, playsIntoNothing }) + (problem ? `, cannot play: ${problem}` : "");
+    button.setAttribute("aria-label", description);
+    button.title = description;
+    button.textContent = clip.kind === "midi" ? `${clip.notes.length}\u266A${playsIntoNothing ? " !" : ""}` : `\u223F${problem ? " !" : ""}`;
+    if (problem) button.classList.add("clip-orphan");
+    if (peaks) button.append(waveform(peaks));
+    button.addEventListener("keydown", (event) => {
+      const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      if (step !== 0) {
+        event.preventDefault();
+        if (event.shiftKey) {
+          const length = clip.lengthBeats + step;
+          if (length > 0) onResize(clip.id, length);
+        } else {
+          const start = clip.startBeat + step;
+          if (start >= 0) onMove(clip.id, start);
+        }
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        onRemove(clip.id);
+      }
+    });
+    button.addEventListener("click", () => {
+      if (!dragged) onOpen(clip.id);
+    });
+    const handle = document2.createElement("span");
+    handle.className = "clip-resize";
+    handle.setAttribute("aria-hidden", "true");
+    button.append(handle);
+    let dragged = false;
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const resizing = event.target === handle;
+      const originX = event.clientX;
+      dragged = false;
+      const beatsMoved = (e) => Math.round((e.clientX - originX) / PIXELS_PER_BEAT);
+      const move = (e) => {
+        const beats2 = beatsMoved(e);
+        if (beats2 !== 0) dragged = true;
+        if (resizing) button.style.width = `${Math.max(1, clip.lengthBeats + beats2) * PIXELS_PER_BEAT}px`;
+        else button.style.left = `${Math.max(0, clip.startBeat + beats2) * PIXELS_PER_BEAT}px`;
+      };
+      const up = (e) => {
+        document2.removeEventListener("pointermove", move);
+        document2.removeEventListener("pointerup", up);
+        const beats2 = beatsMoved(e);
+        if (beats2 === 0) return;
+        if (resizing) onResize(clip.id, Math.max(1, clip.lengthBeats + beats2));
+        else onMove(clip.id, Math.max(0, clip.startBeat + beats2));
+      };
+      document2.addEventListener("pointermove", move);
+      document2.addEventListener("pointerup", up);
+    });
+    return button;
+  }
+  function waveform(peaks) {
+    const ns2 = "http://www.w3.org/2000/svg";
+    const svg = document2.createElementNS(ns2, "svg");
+    svg.setAttribute("class", "clip-wave");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("viewBox", `0 -1 ${peaks.length} 2`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    const path = document2.createElementNS(ns2, "path");
+    let d = "";
+    for (let i2 = 0; i2 < peaks.length; i2++) d += `M${i2 + 0.5} ${-peaks[i2]}V${peaks[i2]}`;
+    path.setAttribute("d", d);
+    svg.append(path);
+    return svg;
+  }
+  return { element, draw };
 }
-async function ollamaChat({ endpoint: endpoint2, model, messages, tools }) {
-  const response = await fetch(`${endpoint2.replace(/\/+$/, "")}/api/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ model, messages, tools, stream: false })
+
+// src/ui/PianoRoll.js
+var STEPS_PER_BEAT = 4;
+var VISIBLE_PITCHES = 24;
+var NAMES2 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+function noteName2(pitch) {
+  return `${NAMES2[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
+}
+function spokenName(pitch) {
+  return noteName2(pitch).replace("#", " sharp ");
+}
+var beats = (n2) => `${n2} beat${n2 === 1 ? "" : "s"}`;
+function noteAt(notes, pitch, beat) {
+  return notes.find((n2) => n2.pitch === pitch && n2.startBeat <= beat && beat < n2.startBeat + n2.lengthBeats) ?? null;
+}
+function createPianoRoll(document2, { onChange, onClose }) {
+  if (typeof onChange !== "function" || typeof onClose !== "function") {
+    throw new Error("createPianoRoll needs onChange and onClose");
+  }
+  const element = document2.createElement("section");
+  element.className = "piano-roll";
+  element.hidden = true;
+  const header = document2.createElement("header");
+  const heading = document2.createElement("h3");
+  heading.id = "piano-roll-heading";
+  const close = document2.createElement("button");
+  close.type = "button";
+  close.textContent = "Close";
+  close.addEventListener("click", () => onClose());
+  header.append(heading, close);
+  const help = document2.createElement("p");
+  help.className = "note";
+  help.id = "piano-roll-help";
+  help.textContent = "Arrows move. Enter adds or removes a note. Shift with Left or Right changes its length, Alt with Up or Down its velocity. Page Up and Page Down move an octave.";
+  const status = document2.createElement("p");
+  status.className = "visually-hidden";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  const scroller = document2.createElement("div");
+  scroller.className = "piano-roll-scroll";
+  const grid = document2.createElement("div");
+  grid.className = "piano-roll-grid";
+  grid.setAttribute("role", "grid");
+  grid.setAttribute("aria-labelledby", "piano-roll-heading");
+  grid.setAttribute("aria-describedby", "piano-roll-help");
+  scroller.append(grid);
+  element.append(header, help, scroller, status);
+  let clip = null;
+  let options = null;
+  let cursor = { pitch: 60, step: 0 };
+  let low = 48;
+  const say = (message) => {
+    status.textContent = message;
+  };
+  const steps = () => Math.round(clip.lengthBeats * STEPS_PER_BEAT);
+  const beatOf = (step) => step / STEPS_PER_BEAT;
+  const where = (step) => barBeat(beatOf(step), options.beatsPerBar);
+  function clampCursor() {
+    cursor.pitch = Math.max(0, Math.min(127, cursor.pitch));
+    cursor.step = Math.max(0, Math.min(steps() - 1, cursor.step));
+    if (cursor.pitch < low) low = cursor.pitch;
+    if (cursor.pitch >= low + VISIBLE_PITCHES) low = cursor.pitch - VISIBLE_PITCHES + 1;
+    low = Math.max(0, Math.min(128 - VISIBLE_PITCHES, low));
+  }
+  function describe(pitch, step) {
+    const note = noteAt(clip.notes, pitch, beatOf(step));
+    const base = `${spokenName(pitch)}, ${where(step)}`;
+    if (!note) return base;
+    const start = note.startBeat === beatOf(step) ? "note" : "inside a note";
+    return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}`;
+  }
+  function draw(next = clip) {
+    clip = next;
+    if (!clip) return;
+    const hadFocus = grid.contains(document2.activeElement);
+    clampCursor();
+    grid.textContent = "";
+    grid.setAttribute("aria-rowcount", String(VISIBLE_PITCHES));
+    grid.setAttribute("aria-colcount", String(steps()));
+    for (let pitch = low + VISIBLE_PITCHES - 1; pitch >= low; pitch--) {
+      const row = document2.createElement("div");
+      row.className = `piano-roll-row${NAMES2[pitch % 12].includes("#") ? " black" : ""}`;
+      row.setAttribute("role", "row");
+      const label = document2.createElement("span");
+      label.className = "piano-roll-key";
+      label.setAttribute("role", "rowheader");
+      label.textContent = noteName2(pitch);
+      row.append(label);
+      for (let step = 0; step < steps(); step++) {
+        const cell = document2.createElement("div");
+        cell.setAttribute("role", "gridcell");
+        cell.id = `roll-${pitch}-${step}`;
+        const note = noteAt(clip.notes, pitch, beatOf(step));
+        const starts = note && note.startBeat === beatOf(step);
+        cell.className = `piano-roll-cell${note ? " on" : ""}${starts ? " start" : ""}${step % STEPS_PER_BEAT === 0 ? " beat" : ""}`;
+        cell.textContent = starts ? "\u25A0" : note ? "\u2013" : "";
+        cell.setAttribute("aria-label", describe(pitch, step));
+        const here = pitch === cursor.pitch && step === cursor.step;
+        cell.tabIndex = here ? 0 : -1;
+        if (here) cell.classList.add("cursor");
+        cell.addEventListener("click", () => {
+          cursor = { pitch, step };
+          toggle();
+        });
+        row.append(cell);
+      }
+      grid.append(row);
+    }
+    if (hadFocus) document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: false });
+  }
+  function send(notes, message) {
+    say(message);
+    onChange(clip.id, notes);
+  }
+  function toggle() {
+    const beat = beatOf(cursor.step);
+    const here = noteAt(clip.notes, cursor.pitch, beat);
+    if (here) {
+      send(clip.notes.filter((n2) => n2 !== here), `Removed ${spokenName(here.pitch)} at ${barBeat(here.startBeat, options.beatsPerBar)}`);
+    } else {
+      const note = { startBeat: beat, lengthBeats: 1, pitch: cursor.pitch, velocity: 100 };
+      send([...clip.notes, note], `Added ${spokenName(note.pitch)} at ${where(cursor.step)}, 1 beat`);
+    }
+  }
+  function adjust(change, message) {
+    const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
+    if (!here) {
+      say(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
+      return;
+    }
+    const next = change(here);
+    if (!next) return;
+    send(clip.notes.map((n2) => n2 === here ? next : n2), message(next));
+  }
+  grid.addEventListener("keydown", (event) => {
+    if (!clip) return;
+    const move = (pitch, step) => {
+      event.preventDefault();
+      cursor = { pitch: cursor.pitch + pitch, step: cursor.step + step };
+      draw();
+    };
+    const { key, shiftKey, altKey } = event;
+    if (altKey && (key === "ArrowUp" || key === "ArrowDown")) {
+      event.preventDefault();
+      const by = key === "ArrowUp" ? 10 : -10;
+      adjust((n2) => {
+        const velocity = Math.max(1, Math.min(127, n2.velocity + by));
+        return velocity === n2.velocity ? null : { ...n2, velocity };
+      }, (n2) => `Velocity ${n2.velocity}`);
+    } else if (shiftKey && (key === "ArrowLeft" || key === "ArrowRight")) {
+      event.preventDefault();
+      const by = (key === "ArrowRight" ? 1 : -1) / STEPS_PER_BEAT;
+      adjust((n2) => {
+        const lengthBeats = n2.lengthBeats + by;
+        return lengthBeats <= 0 ? null : { ...n2, lengthBeats };
+      }, (n2) => `Length ${beats(n2.lengthBeats)}`);
+    } else if (key === "ArrowUp") move(1, 0);
+    else if (key === "ArrowDown") move(-1, 0);
+    else if (key === "ArrowLeft") move(0, -1);
+    else if (key === "ArrowRight") move(0, 1);
+    else if (key === "PageUp") move(12, 0);
+    else if (key === "PageDown") move(-12, 0);
+    else if (key === "Home") move(0, -cursor.step);
+    else if (key === "End") move(0, steps() - 1 - cursor.step);
+    else if (key === "Enter" || key === " ") {
+      event.preventDefault();
+      toggle();
+    }
   });
-  if (!response.ok) {
-    throw new Error(`${endpoint2} returned ${response.status}: ${await response.text()}`);
-  }
-  const data = await response.json();
-  return { message: data.message };
+  return {
+    element,
+    get clipId() {
+      return clip?.id ?? null;
+    },
+    /** Open on a clip. The cursor starts on its first note, or middle C. */
+    show(next, { beatsPerBar, label }) {
+      options = { beatsPerBar };
+      heading.textContent = `Notes of the clip at ${barBeat(next.startBeat, beatsPerBar)} on ${label}`;
+      close.setAttribute("aria-label", `Close the notes of the clip on ${label}`);
+      const first2 = next.notes[0];
+      cursor = first2 ? { pitch: first2.pitch, step: Math.round(first2.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
+      low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2);
+      element.hidden = false;
+      draw(next);
+      document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus();
+    },
+    draw,
+    hide() {
+      clip = null;
+      element.hidden = true;
+      grid.textContent = "";
+    }
+  };
 }
+
+// web/app/Arrangement.js
+function createArrangement(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  const edit = (changes) => {
+    const result = ctx2.dispatcher.apply(changes);
+    if (!result.ok) log2(result.message, "error");
+    return result;
+  };
+  let pendingAudio = null;
+  const waveformsRequested = /* @__PURE__ */ new Set();
+  const timeline = createTimeline(document2, {
+    onAdd: (trackId, startBeat) => {
+      const result = edit([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats: ctx2.dispatcher.project.transport.beatsPerBar }]);
+      if (result.ok) openClip(result.results[0]);
+    },
+    onAddAudio: (trackId, startBeat) => {
+      pendingAudio = { trackId, startBeat };
+      $2("audiofile").click();
+    },
+    onMove: (id, startBeat) => edit([{ op: "setClip", id, startBeat }]),
+    onResize: (id, lengthBeats) => edit([{ op: "setClip", id, lengthBeats }]),
+    onOpen: (id) => openClip(id),
+    onShowTrack: (trackId) => {
+      ctx2.tabs.select("tracks");
+      document2.getElementById(`track-group-${trackId}`)?.scrollIntoView({ block: "start" });
+      document2.getElementById(`track-name-${trackId}`)?.focus({ preventScroll: true });
+    },
+    onRemove: (id) => {
+      if (pianoRoll.clipId === id) pianoRoll.hide();
+      edit([{ op: "removeClip", id }]);
+    }
+  });
+  const pianoRoll = createPianoRoll(document2, {
+    onChange: (id, notes) => edit([{ op: "setClipNotes", id, notes }]),
+    onClose: () => {
+      const id = pianoRoll.clipId;
+      pianoRoll.hide();
+      document2.getElementById(`clip-${id}`)?.focus();
+    }
+  });
+  function openClip(id) {
+    const { project } = ctx2.dispatcher;
+    const clip = project.clip(id);
+    if (!clip || clip.kind !== "midi") return;
+    const track = project.tracks.find((t) => t.id === clip.track);
+    pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx2.rack.trackLabel(track, project.tracks.indexOf(track)) });
+  }
+  function draw(tracks, labelOfTrack) {
+    const project = ctx2.dispatcher?.project;
+    const { clipPlayer } = ctx2;
+    const restore = preserveFocus(timeline.element);
+    timeline.draw({
+      tracks,
+      clips: project?.clips ?? [],
+      beatsPerBar: project?.transport.beatsPerBar ?? 4,
+      labelFor: labelOfTrack,
+      playsIntoNothing: (track) => !track.midiInput,
+      peaksFor: (clip, count) => {
+        if (!clipPlayer) return null;
+        const peaks = clipPlayer.peaks(clip.source, count);
+        if (!peaks && !waveformsRequested.has(clip.source)) {
+          waveformsRequested.add(clip.source);
+          clipPlayer.load(clip.source).then(() => ctx2.rack.draw());
+        }
+        return peaks;
+      },
+      unplayable: (clip) => clipPlayer?.failure(clip.source)?.message ?? null
+    });
+    restore();
+    if (pianoRoll.clipId) {
+      const clip = project?.clip(pianoRoll.clipId);
+      if (clip) pianoRoll.draw(clip);
+      else pianoRoll.hide();
+    }
+  }
+  async function importAudio(file, { trackId, startBeat }) {
+    await ctx2.runtime.ensureRunning();
+    if (!file.type.startsWith("audio/")) {
+      log2(`${file.name} is not an audio file`, "error");
+      return;
+    }
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+    const hex = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const extension = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? "audio").toLowerCase();
+    const iri3 = ctx2.media.iriFor(hex, extension);
+    ctx2.media.put(iri3, bytes, file.type);
+    const buffer = await ctx2.clipPlayer.load(iri3);
+    if (!buffer) {
+      log2(`${file.name}: ${ctx2.clipPlayer.failure(iri3).message}`, "error");
+      return;
+    }
+    const transport2 = ctx2.dispatcher.transport();
+    const from = transport2.secondsAtBeat(startBeat);
+    const lengthBeats = transport2.beatAtSeconds(from + buffer.duration) - startBeat;
+    const result = edit([{ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri3, offsetSeconds: 0 }]);
+    if (result.ok) log2(`added ${file.name}, ${buffer.duration.toFixed(2)} seconds`, "ok");
+  }
+  function mount() {
+    $2("audiofile").addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      const target = pendingAudio;
+      pendingAudio = null;
+      if (!file || !target) return;
+      importAudio(file, target).catch((error2) => log2(`${file.name}: ${error2.message}`, "error"));
+    });
+    $2("timeline-mount").append(timeline.element);
+    $2("piano-roll-mount").append(pianoRoll.element);
+  }
+  return {
+    draw,
+    mount,
+    /** Forget what was drawn for the session being replaced. */
+    reset() {
+      pianoRoll.hide();
+      waveformsRequested.clear();
+    }
+  };
+}
+
+// web/app/Loading.js
+function askConsent(document2, request) {
+  return new Promise((resolve) => {
+    const dialog = document2.createElement("dialog");
+    dialog.className = "consent";
+    const heading = document2.createElement("h2");
+    heading.textContent = `Run ${request.label}?`;
+    dialog.append(heading);
+    const list = document2.createElement("ul");
+    for (const statement of request.statements) {
+      const item = document2.createElement("li");
+      item.textContent = statement;
+      list.append(item);
+    }
+    dialog.append(list);
+    const buttons = document2.createElement("div");
+    buttons.className = "consent-buttons";
+    const no = document2.createElement("button");
+    no.type = "button";
+    no.textContent = "Do not run it";
+    const yes = document2.createElement("button");
+    yes.type = "button";
+    yes.className = "danger";
+    yes.textContent = "Run it with full access";
+    buttons.append(no, yes);
+    dialog.append(buttons);
+    let answered = false;
+    const done = (answer) => {
+      if (answered) return;
+      answered = true;
+      dialog.close();
+      dialog.remove();
+      resolve(answer);
+    };
+    no.addEventListener("click", () => done(false));
+    yes.addEventListener("click", () => done(true));
+    dialog.addEventListener("cancel", () => done(false));
+    dialog.addEventListener("close", () => done(false));
+    document2.body.append(dialog);
+    dialog.showModal();
+    no.focus();
+  });
+}
+function createLoading(ctx2) {
+  const { document: document2, log: log2 } = ctx2;
+  async function loadPlugin(input) {
+    const d = await ctx2.runtime.ensureRunning();
+    const iri3 = new URL(input, document2.baseURI).href;
+    log2(`GET ${iri3}`);
+    let foreign = false;
+    const support = d.foreignSupport;
+    if (support) {
+      const seen = await support.classify(iri3).catch(() => null);
+      foreign = seen?.kind === "foreign";
+    }
+    const track = ctx2.rack.targetTrack();
+    const where = { ...foreign ? { foreign: true } : {}, ...track ? { track } : {} };
+    let result = await d.addPlugin(iri3, where);
+    if (!result.ok && result.kind === "consent") {
+      if (!await askConsent(document2, result.request)) {
+        log2(`${result.request.label}: not loaded`, "error");
+        return;
+      }
+      d.foreignTrust?.consent(result.request.iri, result.request.digest);
+      result = await d.addPlugin(iri3, { ...where, foreign: true });
+    }
+    if (!result.ok) {
+      log2(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
+      return;
+    }
+    const { nodeId, entry, trackId } = result;
+    log2(`loaded ${entry.profile.label}`, "ok");
+    ctx2.rack.loadedOnto(trackId);
+    const nodes = d.project.nodes.filter((n2) => n2.track === trackId);
+    const previous = nodes[nodes.length - 2];
+    if (previous) {
+      const from = outputsOf(d.engineNode(previous.id)?.profile)[0];
+      const to = inputsOf(entry.profile).find((port) => port.portSymbol === void 0);
+      if (from && to && compatible(from, to)) {
+        const chained = d.apply([{
+          op: "addConnection",
+          from: { node: previous.id, portIndex: from.portIndex },
+          to: { node: nodeId, portIndex: to.portIndex },
+          signalKind: from.kind
+        }]);
+        if (!chained.ok) log2(chained.message, "error");
+      }
+    }
+    ctx2.rack.draw();
+    ctx2.expose();
+  }
+  return { loadPlugin };
+}
+
+// src/rdf/CollectionReader.js
+init_env();
+init_Vocabulary();
+var { jig: jig3, rdfs: rdfs2, dcterms, rdf: rdfTerms2 } = vocabulary;
+var iri2 = (value2) => env_default.namedNode(value2);
+var first = (dataset2, subject, predicate) => [...dataset2.match(subject, iri2(predicate), null)][0]?.object.value ?? null;
+function readCollection(dataset2) {
+  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.PluginCollection))].map((q) => q.subject);
+  if (subjects.length === 0) throw new Error("the document declares no jig:PluginCollection");
+  if (subjects.length > 1) {
+    throw new Error(`the document declares ${subjects.length} collections (${subjects.map((s) => s.value).join(", ")}); a collection document holds one`);
+  }
+  const subject = subjects[0];
+  const members = [...dataset2.match(subject, iri2(dcterms.hasPart), null)].map((q) => ({ iri: q.object.value, label: first(dataset2, q.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
+  return {
+    iri: subject.value,
+    label: first(dataset2, subject, rdfs2.label),
+    comment: first(dataset2, subject, rdfs2.comment),
+    members
+  };
+}
+
+// src/catalogue/CollectionLoader.js
+var COLLECTION_ACCEPT = "text/turtle";
+var COLLECTION_STEPS = Object.freeze({
+  fetch: "fetch-collection",
+  parse: "parse-collection",
+  validate: "validate-collection"
+});
+var CollectionError = class extends Error {
+  constructor(step, message, { cause, url } = {}) {
+    super(message, { cause });
+    this.name = "CollectionError";
+    this.step = step;
+    this.url = url ?? null;
+  }
+};
+var CollectionLoader = class {
+  #fetch;
+  #parse;
+  #validator;
+  #verify;
+  #concurrency;
+  /**
+   * @param fetch       fetch implementation
+   * @param parse       (text, baseIRI) => Promise<dataset>
+   * @param validator   ShapeValidator over vocabs/shapes.ttl
+   * @param verify      iri => Promise<{ profile }>, throwing a LoadError
+   * @param concurrency most member profiles fetched at once
+   */
+  constructor({
+    // Bound rather than taken by reference: see PluginLoader.
+    fetch: fetch2 = (...args) => globalThis.fetch(...args),
+    parse,
+    validator,
+    verify,
+    concurrency = 6
+  } = {}) {
+    if (typeof parse !== "function") throw new Error("CollectionLoader needs a parse function");
+    if (!validator) throw new Error("CollectionLoader needs a shape validator");
+    if (typeof verify !== "function") throw new Error("CollectionLoader needs a verify function");
+    if (!(Number.isInteger(concurrency) && concurrency > 0)) throw new Error(`concurrency must be a positive integer, not ${concurrency}`);
+    this.#fetch = fetch2;
+    this.#parse = parse;
+    this.#validator = validator;
+    this.#verify = verify;
+    this.#concurrency = concurrency;
+  }
+  /** Section 3.1: the document, refused whole at the first failure. */
+  async read(url) {
+    let response;
+    try {
+      response = await this.#fetch(url, { headers: { accept: COLLECTION_ACCEPT } });
+    } catch (cause) {
+      throw new CollectionError(
+        COLLECTION_STEPS.fetch,
+        `could not fetch ${url}: ${cause?.message ?? cause}. If the collection is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, url }
+      );
+    }
+    if (!response.ok) throw new CollectionError(COLLECTION_STEPS.fetch, `${url} returned ${response.status}`, { url });
+    let dataset2;
+    try {
+      dataset2 = await this.#parse(await response.text(), url);
+    } catch (cause) {
+      throw new CollectionError(COLLECTION_STEPS.parse, `${url} is not parseable Turtle: ${cause.message}`, { cause, url });
+    }
+    const report = await this.#validator.validate(dataset2);
+    if (!report.conforms) {
+      const v = report.violations[0];
+      throw new CollectionError(
+        COLLECTION_STEPS.validate,
+        `${url} is not a valid collection: ${v.message} (at ${v.focusNode}${v.path ? ` ${v.path}` : ""})`,
+        { url }
+      );
+    }
+    try {
+      return { collection: readCollection(dataset2), warnings: report.warnings };
+    } catch (cause) {
+      throw new CollectionError(COLLECTION_STEPS.validate, `${url}: ${cause.message}`, { cause, url });
+    }
+  }
+  /** Section 3.2: one member, never throwing. */
+  async check(member) {
+    try {
+      const { profile } = await this.#verify(member.iri);
+      const notes = [];
+      if (profile.iri !== member.iri) notes.push(`names itself ${profile.iri}`);
+      if (member.label !== null && profile.label !== member.label) {
+        notes.push(`listed as "${member.label}", named "${profile.label}" by its profile`);
+      }
+      return {
+        iri: member.iri,
+        listedLabel: member.label,
+        ok: true,
+        profile,
+        notes
+      };
+    } catch (error2) {
+      return {
+        iri: member.iri,
+        listedLabel: member.label,
+        ok: false,
+        step: error2.step ?? null,
+        message: error2.message
+      };
+    }
+  }
+  /**
+   * Read the collection, then check every member, at most `concurrency` at a
+   * time so a collection of hundreds does not open hundreds of requests.
+   * Members come back in the collection's order, sorted by listed name.
+   */
+  async load(url) {
+    const { collection, warnings } = await this.read(url);
+    const results = new Array(collection.members.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < collection.members.length) {
+        const i2 = next++;
+        results[i2] = await this.check(collection.members[i2]);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(this.#concurrency, collection.members.length) }, worker));
+    return { url, collection, warnings, members: results };
+  }
+};
+
+// web/app/Browser.js
+init_parse();
+function browserCatalogue(document2) {
+  const ask = async (path, params) => {
+    const response = await fetch(new URL(`catalogue/${path}?${params}`, document2.baseURI));
+    const isJson = (response.headers.get("content-type") ?? "").includes("json");
+    if (!isJson) {
+      throw new Error(response.status === 404 ? `the catalogue endpoint is not there (${response.status}). If the page was just updated, the server needs restarting.` : `the catalogue answered ${response.status}`);
+    }
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
+    return body;
+  };
+  return {
+    async search({ text = "", limit = 25, loadable = true, ...facets } = {}) {
+      const params = new URLSearchParams();
+      if (text) params.set("q", text);
+      for (const [k, v] of Object.entries(facets)) if (v) params.set(k, v);
+      params.set("limit", String(limit));
+      if (!loadable) params.set("loadable", "false");
+      return ask("search", params);
+    },
+    async describe(iri3) {
+      return ask("describe", new URLSearchParams({ iri: iri3 }));
+    }
+  };
+}
+function createBrowser(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  function renderResults(results, query) {
+    const box = $2("results");
+    box.textContent = "";
+    if (results.length === 0) {
+      const empty = document2.createElement("p");
+      empty.className = "note";
+      empty.textContent = `Nothing matched ${query}.`;
+      box.append(empty);
+      return;
+    }
+    const loadable = results.filter((r) => r.web).length;
+    const note = document2.createElement("p");
+    note.className = "note";
+    note.textContent = loadable === results.length ? `${results.length} loadable here.` : `${results.length} found, ${loadable} loadable here. The rest are native plugins the catalogue knows about but this host cannot run.`;
+    box.append(note);
+    for (const result of results) {
+      const row = document2.createElement("div");
+      row.className = result.web ? "result" : "result native";
+      const name = document2.createElement("div");
+      name.className = "name";
+      name.textContent = result.label ?? result.iri;
+      if (result.web) {
+        const badge = document2.createElement("span");
+        badge.className = "badge";
+        badge.textContent = " web";
+        name.append(" ", badge);
+      }
+      row.append(name);
+      const meta = document2.createElement("div");
+      meta.className = "meta";
+      meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
+      row.append(meta);
+      if (result.web) {
+        const button = document2.createElement("button");
+        button.type = "button";
+        button.textContent = "Load";
+        button.addEventListener("click", () => ctx2.loading.loadPlugin(result.homepage ?? result.iri).catch(() => {
+        }));
+        row.append(button);
+      } else {
+        const why = document2.createElement("div");
+        why.className = "native";
+        why.textContent = "native only";
+        row.append(why);
+      }
+      box.append(row);
+    }
+  }
+  async function loadCollection(input) {
+    const url = new URL(input, document2.baseURI).href;
+    const validator = await ctx2.runtime.shapeValidator();
+    const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) });
+    return new CollectionLoader({
+      parse: parseText,
+      validator,
+      verify: (iri3) => verifier.loadProfile(iri3)
+    }).load(url);
+  }
+  async function openCollection(input) {
+    log2(`GET ${new URL(input, document2.baseURI).href}`);
+    const box = $2("results");
+    box.textContent = "";
+    const opened = await loadCollection(input).catch((error2) => {
+      log2(`${error2.step ? `[${error2.step}] ` : ""}${error2.message}`, "error");
+      return null;
+    });
+    if (!opened) return;
+    renderCollection(opened);
+  }
+  function renderCollection({ collection, members, warnings }) {
+    const box = $2("results");
+    box.textContent = "";
+    const heading = document2.createElement("h3");
+    heading.className = "collection-name";
+    heading.textContent = collection.label;
+    box.append(heading);
+    if (collection.comment) {
+      const about = document2.createElement("p");
+      about.className = "note";
+      about.textContent = collection.comment;
+      box.append(about);
+    }
+    const ready = members.filter((m) => m.ok);
+    const note = document2.createElement("p");
+    note.className = "note";
+    note.textContent = ready.length === members.length ? `${members.length} plugin(s), all loadable here.` : `${members.length} plugin(s), ${ready.length} loadable here. The rest say why below.`;
+    box.append(note);
+    for (const member of members) {
+      const row = document2.createElement("div");
+      row.className = member.ok ? "result" : "result native";
+      const name = document2.createElement("div");
+      name.className = "name";
+      name.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
+      row.append(name);
+      const meta = document2.createElement("div");
+      meta.className = "meta";
+      meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
+      row.append(meta);
+      if (member.ok) {
+        const button = document2.createElement("button");
+        button.type = "button";
+        button.textContent = "Load";
+        button.setAttribute("aria-label", `Load ${member.profile.label}`);
+        button.addEventListener("click", () => ctx2.loading.loadPlugin(member.iri).catch(() => {
+        }));
+        row.append(button);
+      } else {
+        const why = document2.createElement("div");
+        why.className = "native";
+        why.textContent = `Not loadable here: ${member.step ? `[${member.step}] ` : ""}${member.message}`;
+        row.append(why);
+      }
+      box.append(row);
+    }
+    for (const warning of warnings) log2(`${collection.label}: ${warning.message}`);
+    const moved = members.filter((m) => m.ok && m.notes.length > 0);
+    for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join("; ")}`);
+    const renamed = members.filter((m) => m.ok && m.notes.some((n2) => n2.startsWith("listed as")));
+    if (renamed.length > 0) {
+      log2(`${renamed.length} plugin(s) are named differently by their profile than by this collection. The details are in the console.`);
+    }
+    log2(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? "ok" : "error");
+  }
+  async function search() {
+    const text = $2("q").value.trim();
+    const facet = $2("facet").value;
+    try {
+      const body = await browserCatalogue(document2).search({
+        text,
+        limit: 25,
+        loadable: !$2("everything").checked,
+        ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
+      });
+      renderResults(body.results, text || facet);
+      if (body.upstreamError) {
+        log2(`the wider catalogue is unavailable: ${body.upstreamError}`, "error");
+      }
+      if (body.loadableOnly && body.results.length === 0) {
+        log2("nothing loadable matched. Tick the box to include native plugins.");
+      }
+      log2(`${body.results.length} result(s)`, "ok");
+    } catch (error2) {
+      log2(`search failed: ${error2.message}`, "error");
+    }
+  }
+  return { search, openCollection, loadCollection, catalogue: () => browserCatalogue(document2) };
+}
+
+// web/app/Sessions.js
+init_parse();
 
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
-var { jig: jig4 } = vocabulary;
+var { jig: jig4, trn: trn3 } = vocabulary;
 var PREFIXES2 = [
   ["jig", JIG],
   ["trn", TRN],
@@ -24613,6 +27200,11 @@ function integer(value2) {
   if (!Number.isInteger(n2)) throw new Error(`not an integer: ${value2}`);
   return String(n2);
 }
+function relativeTo(source, base) {
+  if (!source.startsWith(base)) return source;
+  const rest = source.slice(base.length);
+  return rest === "" || rest.split("/")[0].includes(":") ? source : rest;
+}
 var byId = (a2, b) => a2.id < b.id ? -1 : a2.id > b.id ? 1 : 0;
 function endpoint(lines, base, id, e) {
   const hasIndex = e.portIndex !== void 0 && e.portIndex !== null;
@@ -24625,9 +27217,10 @@ function endpoint(lines, base, id, e) {
 }
 function writeProject(project, { iri: iri3, created = null } = {}) {
   if (!iri3) throw new Error("writeProject needs the project IRI, which becomes the @base");
+  const tracks = [...project.tracks].sort(byId);
   const nodes = [...project.nodes].sort(byId);
   const connections = [...project.connections].sort(byId);
-  const transport = project.transport;
+  const transport2 = project.transport;
   const lines = [];
   lines.push(`@base <${iri3}> .`);
   lines.push("");
@@ -24638,6 +27231,9 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
   if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
   lines.push(`    ${term2(jig4.revision)} ${integer(project.revision)} ;`);
+  if (tracks.length > 0) {
+    lines.push(`    ${term2(jig4.track)} ${tracks.map((t) => `<#${t.id}>`).join(" , ")} ;`);
+  }
   if (nodes.length > 0) {
     lines.push(`    ${term2(jig4.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
   }
@@ -24645,25 +27241,51 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     lines.push(`    ${term2(jig4.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
   }
   lines.push(`    ${term2(jig4.transport)} <#transport> .`);
+  for (const track of tracks) {
+    lines.push("");
+    lines.push(`<#${track.id}>`);
+    const statements = [`a ${term2(jig4.Track)}`];
+    if (track.label) statements.push(`rdfs:label ${string(track.label)}`);
+    const channel = track.channel;
+    if (channel.gain !== 1) statements.push(`${term2(jig4.gain)} ${decimal(channel.gain)}`);
+    if (channel.pan !== 0) statements.push(`${term2(jig4.pan)} ${decimal(channel.pan)}`);
+    if (channel.muted) statements.push(`${term2(jig4.muted)} true`);
+    if (channel.soloed) statements.push(`${term2(jig4.soloed)} true`);
+    if (track.midiInput) statements.push(`${term2(jig4.midiInput)} <#${track.midiInput}>`);
+    if (track.audioInput) statements.push(`${term2(jig4.audioInput)} <#${track.audioInput}>`);
+    const clips = (project.clips ?? []).filter((c3) => c3.track === track.id).sort(byId);
+    if (clips.length > 0) statements.push(`${term2(jig4.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
+    lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
+  }
+  for (const clip of [...project.clips ?? []].sort(byId)) {
+    lines.push("");
+    lines.push(`<#${clip.id}>`);
+    const statements = [
+      `a ${term2(clip.kind === "midi" ? jig4.MidiClip : jig4.AudioClip)}`,
+      `${term2(trn3.startBeat)} ${decimal(clip.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(clip.lengthBeats)}`
+    ];
+    if (clip.kind === "audio") {
+      statements.push(`${term2(jig4.source)} <${relativeTo(clip.source, iri3)}>`);
+      if (clip.offsetSeconds !== 0) statements.push(`${term2(jig4.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
+    } else if (clip.notes.length > 0) {
+      statements.push(`${term2(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+    }
+    lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
+    clip.notes.forEach((note, i2) => {
+      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term2(jig4.Note)} ; ${term2(trn3.startBeat)} ${decimal(note.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term2(trn3.pitch)} ${integer(note.pitch)} ; ${term2(trn3.velocity)} ${integer(note.velocity)} .`);
+    });
+  }
   for (const node of nodes) {
     lines.push("");
     lines.push(`<#${node.id}>`);
     lines.push(`    a ${term2(jig4.Node)} ;`);
     if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`);
+    lines.push(`    ${term2(jig4.onTrack)} <#${node.track}> ;`);
     const settings = [...node.settings.keys()].sort();
     if (settings.length > 0) {
       lines.push(`    ${term2(jig4.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
     if (node.state) lines.push(`    ${term2(jig4.nodeState)} ${string(node.state)} ;`);
-    const channel = node.channel ?? {};
-    if (channel.gain !== void 0 && channel.gain !== 1) {
-      lines.push(`    ${term2(jig4.gain)} ${decimal(channel.gain)} ;`);
-    }
-    if (channel.pan !== void 0 && channel.pan !== 0) {
-      lines.push(`    ${term2(jig4.pan)} ${decimal(channel.pan)} ;`);
-    }
-    if (channel.muted) lines.push(`    ${term2(jig4.muted)} true ;`);
-    if (channel.soloed) lines.push(`    ${term2(jig4.soloed)} true ;`);
     lines.push(`    ${term2(jig4.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
       lines.push(`<#${node.id}-${symbol}> a ${term2(jig4.ParameterSetting)} ; ${term2(jig4.symbol)} ${string(symbol)} ; ${term2(jig4.value)} ${decimal(node.settings.get(symbol))} .`);
@@ -24678,12 +27300,13 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     endpoint(lines, iri3, `${c3.id}-from`, c3.from);
     endpoint(lines, iri3, `${c3.id}-to`, c3.to);
   }
-  const points = [...transport.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
+  const points = [...transport2.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   lines.push("");
   lines.push("<#transport>");
   lines.push(`    a ${term2(jig4.Transport)} ;`);
-  lines.push(`    ${term2(jig4.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term2(jig4.beatUnit)} ${integer(transport.beatUnit)} ;`);
-  lines.push(`    ${term2(jig4.loopStart)} ${decimal(transport.loopStart)} ; ${term2(jig4.loopEnd)} ${decimal(transport.loopEnd)} ; ${term2(jig4.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
+  lines.push(`    ${term2(jig4.beatsPerBar)} ${integer(transport2.beatsPerBar)} ; ${term2(jig4.beatUnit)} ${integer(transport2.beatUnit)} ;`);
+  const loop = transport2.loopEnd > transport2.loopStart ? `${term2(jig4.loopStart)} ${decimal(transport2.loopStart)} ; ${term2(jig4.loopEnd)} ${decimal(transport2.loopEnd)} ; ` : "";
+  lines.push(`    ${loop}${term2(jig4.loopEnabled)} ${transport2.loopEnabled ? "true" : "false"} ;`);
   lines.push(`    ${term2(jig4.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
   points.forEach((point, i2) => {
     lines.push(`<#t${i2}> a ${term2(jig4.TempoPoint)} ; ${term2(jig4.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig4.bpm)} ${decimal(point.bpm)} .`);
@@ -24693,7 +27316,7 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
-var { jig: jig5 } = vocabulary;
+var { jig: jig5, trn: trn4 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 function objects2(dataset2, subject, predicate) {
@@ -24748,9 +27371,101 @@ function readEndpoint(dataset2, iri3, projectIri, what) {
   else endpoint2.portSymbol = symbol.value;
   return endpoint2;
 }
+function mintedOrder(a2, b) {
+  const split = (id) => {
+    const m = /^(.*?)(\d+)$/.exec(id);
+    return m ? [m[1], Number(m[2])] : [id, -1];
+  };
+  const [pa, na] = split(a2);
+  const [pb, nb] = split(b);
+  return pa < pb ? -1 : pa > pb ? 1 : na - nb;
+}
+function readChannel(dataset2, subject, id) {
+  const channel = {};
+  const gain = number(one2(dataset2, subject, jig5.gain), `gain on ${id}`);
+  const pan = number(one2(dataset2, subject, jig5.pan), `pan on ${id}`);
+  const muted = one2(dataset2, subject, jig5.muted);
+  const soloed = one2(dataset2, subject, jig5.soloed);
+  if (gain !== null) channel.gain = gain;
+  if (pan !== null) channel.pan = pan;
+  if (muted !== null) channel.muted = muted.value === "true";
+  if (soloed !== null) channel.soloed = soloed.value === "true";
+  return channel;
+}
+function foldIntoTracks(nodes, connections) {
+  const group = new Map(nodes.map((n2) => [n2.id, n2.id]));
+  const find = (id) => {
+    while (group.get(id) !== id) id = group.get(id);
+    return id;
+  };
+  for (const c3 of connections) {
+    if (!group.has(c3.from.node) || !group.has(c3.to.node)) continue;
+    const a2 = find(c3.from.node);
+    const b = find(c3.to.node);
+    if (a2 !== b) group.set(b, a2);
+  }
+  const feeds = new Set(connections.map((c3) => c3.from.node));
+  const members = /* @__PURE__ */ new Map();
+  for (const node of nodes) {
+    const root = find(node.id);
+    if (!members.has(root)) members.set(root, []);
+    members.get(root).push(node);
+  }
+  const tracks = [];
+  const trackOf = /* @__PURE__ */ new Map();
+  for (const list of members.values()) {
+    const id = `track-${tracks.length + 1}`;
+    const end = list.find((n2) => !feeds.has(n2.id)) ?? list[0];
+    tracks.push({ id, label: end.label, channel: end.channel });
+    for (const node of list) trackOf.set(node.id, id);
+  }
+  return { tracks, trackOf };
+}
 function readProject(dataset2) {
   const iri3 = findProject(dataset2);
   const changes = [];
+  const trackIris = objects2(dataset2, iri3, jig5.track).map((t) => t.value);
+  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri3, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
+    id,
+    label: value(one2(dataset2, trackIri, RDFS_LABEL)),
+    channel: readChannel(dataset2, trackIri, id),
+    midiInput: value(one2(dataset2, trackIri, jig5.midiInput)),
+    audioInput: value(one2(dataset2, trackIri, jig5.audioInput))
+  }));
+  const clips = [];
+  for (const trackIri of trackIris) {
+    const track = idOf(trackIri, iri3, "track");
+    for (const clipIri of objects2(dataset2, trackIri, jig5.clip).map((t) => t.value)) {
+      const id = idOf(clipIri, iri3, `clip of track ${track}`);
+      const types = objects2(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
+      const kind = types.includes(jig5.MidiClip) ? "midi" : types.includes(jig5.AudioClip) ? "audio" : null;
+      if (!kind) throw new Error(`clip ${id} is neither a jig:MidiClip nor a jig:AudioClip`);
+      const clip = {
+        op: "addClip",
+        id,
+        track,
+        kind,
+        startBeat: number(one2(dataset2, clipIri, trn4.startBeat), `startBeat of clip ${id}`),
+        lengthBeats: number(one2(dataset2, clipIri, trn4.lengthBeats), `lengthBeats of clip ${id}`)
+      };
+      if (kind === "midi") {
+        clip.notes = objects2(dataset2, clipIri, jig5.note).map((t) => t.value).map((noteIri) => ({
+          startBeat: number(one2(dataset2, noteIri, trn4.startBeat), `startBeat of a note in ${id}`),
+          lengthBeats: number(one2(dataset2, noteIri, trn4.lengthBeats), `lengthBeats of a note in ${id}`),
+          pitch: number(one2(dataset2, noteIri, trn4.pitch), `pitch of a note in ${id}`),
+          velocity: number(one2(dataset2, noteIri, trn4.velocity), `velocity of a note in ${id}`)
+        }));
+      } else {
+        const source = value(one2(dataset2, clipIri, jig5.source));
+        if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
+        clip.source = source;
+        clip.offsetSeconds = number(one2(dataset2, clipIri, jig5.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
+      }
+      clips.push(clip);
+    }
+  }
+  clips.sort((a2, b) => mintedOrder(a2.id, b.id));
+  const nodes = [];
   const nodeIris = objects2(dataset2, iri3, jig5.node).map((t) => t.value).sort();
   for (const nodeIri of nodeIris) {
     const id = idOf(nodeIri, iri3, "node");
@@ -24764,32 +27479,26 @@ function readProject(dataset2) {
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
       settings[symbol] = number(setting, `setting ${symbol} on ${id}`);
     }
-    const channel = {};
-    const gain = number(one2(dataset2, nodeIri, jig5.gain), `gain on ${id}`);
-    const pan = number(one2(dataset2, nodeIri, jig5.pan), `pan on ${id}`);
-    const muted = one2(dataset2, nodeIri, jig5.muted);
-    const soloed = one2(dataset2, nodeIri, jig5.soloed);
-    if (gain !== null) channel.gain = gain;
-    if (pan !== null) channel.pan = pan;
-    if (muted !== null) channel.muted = muted.value === "true";
-    if (soloed !== null) channel.soloed = soloed.value === "true";
-    changes.push({
-      op: "addNode",
+    const onTrack = value(one2(dataset2, nodeIri, jig5.onTrack));
+    nodes.push({
       id,
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
+      track: onTrack === null ? null : idOf(onTrack, iri3, `track of node ${id}`),
       settings,
       state: value(one2(dataset2, nodeIri, jig5.nodeState)),
-      ...Object.keys(channel).length > 0 ? { channel } : {}
+      // Only read to fold a session from before tracks, below.
+      channel: readChannel(dataset2, nodeIri, id)
     });
   }
+  const connections = [];
   for (const connIri of objects2(dataset2, iri3, jig5.connection).map((t) => t.value).sort()) {
     const id = idOf(connIri, iri3, "connection");
     const signalKind = value(one2(dataset2, connIri, jig5.signalKind));
     if (!signalKind) {
       throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
     }
-    changes.push({
+    connections.push({
       op: "addConnection",
       id,
       from: readEndpoint(dataset2, value(one2(dataset2, connIri, jig5.from)), iri3, `connection ${id} from`),
@@ -24797,25 +27506,45 @@ function readProject(dataset2) {
       signalKind
     });
   }
+  if (tracks.length === 0 && nodes.length > 0) {
+    const folded = foldIntoTracks(nodes, connections);
+    for (const t of folded.tracks) tracks.push({ ...t, midiInput: null, audioInput: null });
+    for (const node of nodes) node.track = folded.trackOf.get(node.id);
+  } else {
+    for (const node of nodes) {
+      if (node.track === null) throw new Error(`node ${node.id} names no jig:onTrack, so nothing says where its sound goes`);
+    }
+  }
+  for (const t of tracks) {
+    changes.push({ op: "addTrack", id: t.id, label: t.label, ...Object.keys(t.channel).length > 0 ? { channel: t.channel } : {} });
+  }
+  for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
+  for (const t of tracks) {
+    if (t.midiInput === null && t.audioInput === null) continue;
+    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri3, `${what} of track ${t.id}`);
+    changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
+  }
+  changes.push(...connections);
+  changes.push(...clips);
   const transportIri = value(one2(dataset2, iri3, jig5.transport));
   if (transportIri) {
     const points = objects2(dataset2, transportIri, jig5.tempoPoint).map((t) => t.value).map((pointIri) => ({
       atBeat: number(one2(dataset2, pointIri, jig5.atBeat), "atBeat") ?? 0,
       bpm: number(one2(dataset2, pointIri, jig5.bpm), "bpm") ?? 120
     })).sort((a2, b) => a2.atBeat - b.atBeat);
-    const transport = {};
+    const transport2 = {};
     const beatsPerBar = number(one2(dataset2, transportIri, jig5.beatsPerBar), "beatsPerBar");
     const beatUnit = number(one2(dataset2, transportIri, jig5.beatUnit), "beatUnit");
     const loopStart = number(one2(dataset2, transportIri, jig5.loopStart), "loopStart");
     const loopEnd = number(one2(dataset2, transportIri, jig5.loopEnd), "loopEnd");
     const loopEnabled = one2(dataset2, transportIri, jig5.loopEnabled);
-    if (beatsPerBar !== null) transport.beatsPerBar = beatsPerBar;
-    if (beatUnit !== null) transport.beatUnit = beatUnit;
-    if (loopStart !== null) transport.loopStart = loopStart;
-    if (loopEnd !== null) transport.loopEnd = loopEnd;
-    if (loopEnabled !== null) transport.loopEnabled = loopEnabled.value === "true";
-    if (points.length > 0) transport.tempoPoints = points;
-    if (Object.keys(transport).length > 0) changes.push({ op: "setTransport", ...transport });
+    if (beatsPerBar !== null) transport2.beatsPerBar = beatsPerBar;
+    if (beatUnit !== null) transport2.beatUnit = beatUnit;
+    if (loopStart !== null) transport2.loopStart = loopStart;
+    if (loopEnd !== null) transport2.loopEnd = loopEnd;
+    if (loopEnabled !== null) transport2.loopEnabled = loopEnabled.value === "true";
+    if (points.length > 0) transport2.tempoPoints = points;
+    if (Object.keys(transport2).length > 0) changes.push({ op: "setTransport", ...transport2 });
   }
   return {
     iri: iri3,
@@ -24848,15 +27577,23 @@ function inSignalOrder(nodes, connections) {
   }
   return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
 }
-async function openProject(dispatcher2, read, { onLoading = () => {
+async function openProject(dispatcher, read, { onLoading = () => {
 }, onCleared = () => {
 } } = {}) {
-  const existing = [...dispatcher2.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id }));
+  const existing = [
+    ...[...dispatcher.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id })),
+    ...[...dispatcher.project.tracks].map((t) => ({ op: "removeTrack", id: t.id }))
+  ];
   if (existing.length > 0) {
-    const cleared = dispatcher2.apply(existing);
+    const cleared = dispatcher.apply(existing);
     if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
   }
   onCleared();
+  const tracks = read.changes.filter((c3) => c3.op === "addTrack");
+  if (tracks.length > 0) {
+    const added = dispatcher.apply(tracks);
+    if (!added.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [added.message] };
+  }
   const errors = [];
   const loaded = /* @__PURE__ */ new Set();
   const additions = inSignalOrder(
@@ -24866,23 +27603,24 @@ async function openProject(dispatcher2, read, { onLoading = () => {
   for (const change of additions) {
     onLoading(change.pluginIri);
     const { op, pluginIri, ...node } = change;
-    const result = await dispatcher2.addPlugin(pluginIri, node);
+    const result = await dispatcher.addPlugin(pluginIri, node);
     if (!result.ok) {
       errors.push(`${change.id}: ${result.message}`);
       continue;
     }
     loaded.add(change.id);
     for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
-      const set = dispatcher2.setParameter(change.id, symbol, value2);
+      const set = dispatcher.setParameter(change.id, symbol, value2);
       if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
     }
   }
-  const rest = read.changes.filter((c3) => c3.op !== "addNode" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)));
+  const loadedOrNull = (id) => id === null || loaded.has(id) ? id : null;
+  const rest = read.changes.filter((c3) => c3.op !== "addNode" && c3.op !== "addTrack" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node))).map((c3) => c3.op === "setTrack" ? { ...c3, midiInput: loadedOrNull(c3.midiInput ?? null), audioInput: loadedOrNull(c3.audioInput ?? null) } : c3);
   if (rest.length > 0) {
-    const applied = dispatcher2.apply(rest);
+    const applied = dispatcher.apply(rest);
     if (!applied.ok) errors.push(applied.message);
   }
-  dispatcher2.clearHistory();
+  dispatcher.clearHistory();
   return { ok: true, loaded, total: additions.length, errors };
 }
 
@@ -24893,14 +27631,480 @@ async function fetchOk(fetch2, url) {
   return response;
 }
 async function listPresets({ fetch: fetch2, index }) {
-  const { presets: presets2 } = await (await fetchOk(fetch2, index)).json();
-  return presets2.map(({ file, label }) => {
+  const { presets } = await (await fetchOk(fetch2, index)).json();
+  return presets.map(({ file, label }) => {
     if (!file || !label) throw new Error(`${index}: every preset needs a file and a label`);
     return { url: new URL(file, index).href, label };
   });
 }
 async function fetchPreset({ fetch: fetch2, url }) {
   return (await fetchOk(fetch2, url)).text();
+}
+
+// src/host/Zip.js
+var LOCAL = 67324752;
+var CENTRAL = 33639248;
+var END = 101010256;
+var UTF8 = 2048;
+var DOS_DATE = 0 << 9 | 1 << 5 | 1;
+var DOS_TIME = 0;
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n2 = 0; n2 < 256; n2++) {
+      let c3 = n2;
+      for (let k = 0; k < 8; k++) c3 = c3 & 1 ? 3988292384 ^ c3 >>> 1 : c3 >>> 1;
+      crcTable[n2] = c3 >>> 0;
+    }
+  }
+  let crc = 4294967295;
+  for (let i2 = 0; i2 < bytes.length; i2++) crc = crcTable[(crc ^ bytes[i2]) & 255] ^ crc >>> 8;
+  return (crc ^ 4294967295) >>> 0;
+}
+function checkName(name) {
+  if (typeof name !== "string" || name === "") throw new Error("a zip entry needs a name");
+  if (name.startsWith("/") || name.includes("\\") || /^[a-z]:/i.test(name)) throw new Error(`a zip entry name must be relative: ${name}`);
+  if (name.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name}`);
+}
+function writeZip(entries) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  for (const { name, bytes } of entries) {
+    checkName(name);
+    const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (data.length > 4294967294) throw new Error(`${name} is too large for a zip without zip64`);
+    const nameBytes = encoder.encode(name);
+    const crc = crc32(data);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, LOCAL, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, UTF8, true);
+    local.setUint16(8, 0, true);
+    local.setUint16(10, DOS_TIME, true);
+    local.setUint16(12, DOS_DATE, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    local.setUint16(28, 0, true);
+    parts.push(new Uint8Array(local.buffer), nameBytes, data);
+    const entry = new DataView(new ArrayBuffer(46));
+    entry.setUint32(0, CENTRAL, true);
+    entry.setUint16(4, 20, true);
+    entry.setUint16(6, 20, true);
+    entry.setUint16(8, UTF8, true);
+    entry.setUint16(10, 0, true);
+    entry.setUint16(12, DOS_TIME, true);
+    entry.setUint16(14, DOS_DATE, true);
+    entry.setUint32(16, crc, true);
+    entry.setUint32(20, data.length, true);
+    entry.setUint32(24, data.length, true);
+    entry.setUint16(28, nameBytes.length, true);
+    entry.setUint32(42, offset, true);
+    central.push(new Uint8Array(entry.buffer), nameBytes);
+    offset += 30 + nameBytes.length + data.length;
+  }
+  const centralSize = central.reduce((n2, p) => n2 + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, END, true);
+  end.setUint16(8, entries.length, true);
+  end.setUint16(10, entries.length, true);
+  end.setUint32(12, centralSize, true);
+  end.setUint32(16, offset, true);
+  const all = [...parts, ...central, new Uint8Array(end.buffer)];
+  const out = new Uint8Array(all.reduce((n2, p) => n2 + p.length, 0));
+  let at = 0;
+  for (const p of all) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+async function inflate2(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function readZip(input) {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = -1;
+  for (let i2 = bytes.length - 22; i2 >= Math.max(0, bytes.length - 22 - 65535); i2--) {
+    if (view.getUint32(i2, true) === END) {
+      end = i2;
+      break;
+    }
+  }
+  if (end < 0) throw new Error("not a zip: no end of central directory");
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const decoder = new TextDecoder();
+  const files = /* @__PURE__ */ new Map();
+  for (let n2 = 0; n2 < count; n2++) {
+    if (view.getUint32(at, true) !== CENTRAL) throw new Error("not a zip: a central directory entry is damaged");
+    const flags = view.getUint16(at + 8, true);
+    const method = view.getUint16(at + 10, true);
+    const crc = view.getUint32(at + 16, true);
+    const compressedSize = view.getUint32(at + 20, true);
+    const nameLength = view.getUint16(at + 28, true);
+    const extraLength = view.getUint16(at + 30, true);
+    const commentLength = view.getUint16(at + 32, true);
+    const localOffset = view.getUint32(at + 42, true);
+    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    at += 46 + nameLength + extraLength + commentLength;
+    if (name.endsWith("/")) continue;
+    checkName(name);
+    if (flags & 1) throw new Error(`${name} is encrypted, which this host does not read`);
+    if (view.getUint32(localOffset, true) !== LOCAL) throw new Error(`${name}: its local header is damaged`);
+    const start = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
+    const raw = bytes.subarray(start, start + compressedSize);
+    let data;
+    if (method === 0) data = raw.slice();
+    else if (method === 8) data = await inflate2(raw);
+    else throw new Error(`${name} is compressed with method ${method}; only stored and deflated are read`);
+    if (crc32(data) !== crc) throw new Error(`${name} is damaged: its checksum does not match`);
+    files.set(name, data);
+  }
+  return files;
+}
+
+// web/app/Sessions.js
+function createSessions(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  async function saveSession() {
+    const { dispatcher, media } = ctx2;
+    if (!dispatcher) {
+      log2("nothing to save yet", "error");
+      return;
+    }
+    for (const node of dispatcher.project.nodes) {
+      const state = await dispatcher.getNodeState(node.id);
+      if (state !== null) dispatcher.apply([{ op: "setNodeState", node: node.id, state: encodeState(state) }]);
+    }
+    const turtle = writeProject(dispatcher.project, {
+      iri: media.base,
+      created: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d+Z$/, "Z")
+    });
+    const held = media.heldUnderBase([...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))]);
+    const blob = held.length === 0 ? new Blob([turtle], { type: "text/turtle" }) : new Blob([writeZip([
+      { name: "session.ttl", bytes: new TextEncoder().encode(turtle) },
+      ...held.map((iri3) => ({ name: iri3.slice(media.base.length), bytes: media.get(iri3).bytes }))
+    ])], { type: "application/zip" });
+    const url = URL.createObjectURL(blob);
+    const link = document2.createElement("a");
+    link.href = url;
+    link.download = held.length === 0 ? "session.ttl" : "session.zip";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1e4);
+    log2(held.length === 0 ? `saved ${dispatcher.project.nodes.length} nodes as Turtle` : `saved ${dispatcher.project.nodes.length} nodes and ${held.length} audio file(s) as a zip`, "ok");
+  }
+  async function openSession(text, base = document2.baseURI, { files = /* @__PURE__ */ new Map() } = {}) {
+    const d = await ctx2.runtime.ensureRunning();
+    const parsed = await parseText(text, base);
+    let read;
+    try {
+      read = readProject(parsed);
+    } catch (error2) {
+      log2(error2.message, "error");
+      return;
+    }
+    ctx2.media.rebase(read.iri);
+    for (const [name, bytes] of files) {
+      if (name === "session.ttl") continue;
+      ctx2.media.put(new URL(name, ctx2.media.base).href, bytes);
+    }
+    const opened = await openProject(d, read, {
+      onLoading: (iri3) => log2(`GET ${iri3}`),
+      onCleared: () => {
+        ctx2.rack.reset();
+        ctx2.editors.closeAll();
+        ctx2.arrangement.reset();
+      }
+    });
+    for (const message of opened.errors) log2(message, "error");
+    if (!opened.ok) return;
+    ctx2.transport.showTempo();
+    ctx2.rack.draw();
+    ctx2.history.updateButtons();
+    ctx2.expose();
+    log2(`opened ${opened.loaded.size} of ${opened.total} nodes`, "ok");
+  }
+  function mount() {
+    $2("save").addEventListener("click", () => saveSession().catch((error2) => log2(error2.message, "error")));
+    $2("open").addEventListener("click", () => $2("openfile").click());
+    $2("openfile").addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      event.target.value = "";
+      try {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        if (bytes[0] === 80 && bytes[1] === 75) {
+          const files = await readZip(bytes);
+          const session = files.get("session.ttl");
+          if (!session) throw new Error(`${file.name} holds no session.ttl`);
+          await openSession(new TextDecoder().decode(session), document2.baseURI, { files });
+        } else {
+          await openSession(new TextDecoder().decode(bytes));
+        }
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
+    });
+    let presets = [];
+    $2("presetbar").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const preset = presets[Number($2("preset").value)];
+      log2(`opening preset ${preset.label}`);
+      fetchPreset({ fetch: (url) => fetch(url), url: preset.url }).then((text) => openSession(text, preset.url)).catch((error2) => log2(error2.message, "error"));
+    });
+    listPresets({
+      fetch: (url) => fetch(url),
+      index: new URL("presets/index.json", document2.baseURI).href
+    }).then((found) => {
+      presets = found;
+      $2("preset").replaceChildren(...found.map(({ label }, i2) => {
+        const option = document2.createElement("option");
+        option.value = String(i2);
+        option.textContent = label;
+        return option;
+      }));
+      $2("presets").hidden = found.length === 0;
+    }).catch((error2) => log2(`presets: ${error2.message}`, "error"));
+  }
+  return { saveSession, openSession, mount };
+}
+
+// web/app/History.js
+function createHistory(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  function updateHistoryButtons() {
+    $2("undo").disabled = !(ctx2.dispatcher?.canUndo() ?? false);
+    $2("redo").disabled = !(ctx2.dispatcher?.canRedo() ?? false);
+  }
+  async function undo() {
+    const { dispatcher } = ctx2;
+    if (!dispatcher?.canUndo()) return;
+    const result = await dispatcher.undo();
+    if (!result.ok) log2(result.message, "error");
+  }
+  async function redo() {
+    const { dispatcher } = ctx2;
+    if (!dispatcher?.canRedo()) return;
+    const result = await dispatcher.redo();
+    if (!result.ok) log2(result.message, "error");
+  }
+  function mount() {
+    $2("undo").addEventListener("click", () => undo());
+    $2("redo").addEventListener("click", () => redo());
+    document2.addEventListener("keydown", (event) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z" && event.key.toLowerCase() !== "y") return;
+      const target = document2.activeElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const key = event.key.toLowerCase();
+      if (key === "y") {
+        event.preventDefault();
+        redo();
+        return;
+      }
+      event.preventDefault();
+      if (event.shiftKey) redo();
+      else undo();
+    });
+  }
+  return { updateButtons: updateHistoryButtons, undo, redo, mount };
+}
+
+// src/mcp/LocalAgent.js
+var MAX_TURNS = 8;
+function toolSchema(tools) {
+  return tools.map((t) => ({
+    type: "function",
+    function: { name: t.name, description: t.description, parameters: t.inputSchema }
+  }));
+}
+function argumentsOf(call) {
+  const raw = call.function.arguments;
+  return typeof raw === "string" ? JSON.parse(raw) : raw ?? {};
+}
+async function runAgentTurn({ surface, chat, model, prompt, onStep = () => {
+} }) {
+  const tools = toolSchema(surface.tools);
+  const messages = [{ role: "user", content: prompt }];
+  onStep({ role: "user", content: prompt });
+  for (let turn = 0; turn < MAX_TURNS; turn++) {
+    const response = await chat({ model, messages, tools });
+    const message = response.message;
+    messages.push(message);
+    if (!message.tool_calls?.length) {
+      onStep({ role: "assistant", content: message.content ?? "" });
+      return { messages, turns: turn + 1 };
+    }
+    if (message.content) onStep({ role: "assistant", content: message.content });
+    for (const call of message.tool_calls) {
+      const args = argumentsOf(call);
+      onStep({ role: "tool_call", name: call.function.name, arguments: args });
+      const result = await surface.call(call.function.name, args);
+      onStep({ role: "tool_result", name: call.function.name, result });
+      messages.push({ role: "tool", content: JSON.stringify(result) });
+    }
+  }
+  onStep({ role: "assistant", content: `stopped after ${MAX_TURNS} turns without a final answer` });
+  return { messages, turns: MAX_TURNS };
+}
+async function ollamaChat({ endpoint: endpoint2, model, messages, tools }) {
+  const response = await fetch(`${endpoint2.replace(/\/+$/, "")}/api/chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ model, messages, tools, stream: false })
+  });
+  if (!response.ok) {
+    throw new Error(`${endpoint2} returned ${response.status}: ${await response.text()}`);
+  }
+  const data = await response.json();
+  return { message: data.message };
+}
+
+// web/app/Agent.js
+function createAgent(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  function renderAgentStep(step) {
+    const line = document2.createElement("div");
+    line.className = `agent-step ${step.role}`;
+    const text = step.role === "tool_call" ? `${step.name}(${JSON.stringify(step.arguments)})` : step.role === "tool_result" ? `${step.name} -> ${JSON.stringify(step.result)}` : step.content;
+    const role = document2.createElement("span");
+    role.className = "role";
+    role.textContent = step.role;
+    line.append(role, document2.createTextNode(text));
+    $2("agent-log").append(line);
+    $2("agent-log").scrollTop = $2("agent-log").scrollHeight;
+  }
+  async function askAgent() {
+    const prompt = $2("agent-prompt").value.trim();
+    if (!prompt) return;
+    const endpoint2 = $2("agent-endpoint").value.trim();
+    const model = $2("agent-model").value.trim();
+    const button = $2("agentbar").querySelector("button");
+    await ctx2.runtime.ensureRunning();
+    button.disabled = true;
+    try {
+      await runAgentTurn({
+        surface: ctx2.mcpSurface,
+        chat: (args) => ollamaChat({ endpoint: endpoint2, ...args }),
+        model,
+        prompt,
+        onStep: renderAgentStep
+      });
+      $2("agent-prompt").value = "";
+    } catch (error2) {
+      log2(`local agent failed: ${error2.message}`, "error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+  return { askAgent };
+}
+
+// src/mcp/BridgeClient.js
+function connectBridge({ url, token, surface, EventSource, fetch: fetch2, onState = () => {
+}, onCall = () => {
+} }) {
+  if (!url || !token) throw new Error("connectBridge needs the bridge URL and its token");
+  if (typeof surface?.call !== "function") throw new Error("connectBridge needs the tool surface");
+  if (typeof EventSource !== "function" || typeof fetch2 !== "function") throw new Error("connectBridge needs EventSource and fetch");
+  let open = false;
+  const source = new EventSource(`${url}/tab?token=${encodeURIComponent(token)}`);
+  onState("connecting");
+  source.addEventListener("hello", () => {
+    open = true;
+    onState("connected");
+  });
+  source.addEventListener("call", async (event) => {
+    let call;
+    try {
+      call = JSON.parse(event.data);
+    } catch {
+      return;
+    }
+    const { id, name, input } = call;
+    onCall(name);
+    let result = await surface.call(name, input ?? {});
+    let body;
+    try {
+      body = JSON.stringify({ token, id, result });
+    } catch (error2) {
+      result = { ok: false, error: `${name} returned something that cannot be sent: ${error2.message}` };
+      body = JSON.stringify({ token, id, result });
+    }
+    await fetch2(`${url}/tab/result`, { method: "POST", headers: { "content-type": "text/plain" }, body }).catch((error2) => onState("retrying", error2.message));
+  });
+  source.addEventListener("error", () => {
+    if (source.readyState === 2) {
+      onState(open ? "closed" : "refused");
+      open = false;
+    } else {
+      onState("retrying");
+    }
+  });
+  return {
+    close() {
+      source.close();
+      open = false;
+      onState("closed");
+    }
+  };
+}
+
+// web/app/Bridge.js
+var SAID = Object.freeze({
+  connecting: "Connecting.",
+  connected: "Connected. An MCP client pointed at the bridge now drives this session.",
+  retrying: "Lost the bridge; trying again.",
+  refused: "Refused. Check the token, and that npm run mcp-bridge is running on this machine.",
+  closed: "Not connected."
+});
+function createBridgeLink(ctx2) {
+  const { window: window2, $: $2, log: log2 } = ctx2;
+  let link = null;
+  function show(state, detail) {
+    $2("bridge-status").textContent = detail ? `${SAID[state]} ${detail}` : SAID[state];
+    const live = state === "connecting" || state === "connected" || state === "retrying";
+    $2("bridge-connect").textContent = live ? "Disconnect" : "Connect";
+    if (!live) link = null;
+  }
+  async function connect() {
+    const token = $2("bridge-token").value.trim();
+    if (!token) {
+      show("refused", "There is no token.");
+      return;
+    }
+    await ctx2.runtime.ensureRunning();
+    link = connectBridge({
+      url: `http://127.0.0.1:${ctx2.hostConfig.bridgePort}`,
+      token,
+      surface: ctx2.mcpSurface,
+      EventSource: window2.EventSource,
+      // Bound: a detached fetch throws "Illegal invocation" in a browser.
+      fetch: window2.fetch.bind(window2),
+      onState: show,
+      onCall: (name) => log2(`agent: ${name}`)
+    });
+  }
+  function mount() {
+    $2("bridgebar").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (link) {
+        link.close();
+        return;
+      }
+      connect().catch((error2) => {
+        show("refused", error2.message);
+        log2(`bridge: ${error2.message}`, "error");
+      });
+    });
+  }
+  return { mount };
 }
 
 // web/app.js
@@ -24912,861 +28116,81 @@ var log = (message, kind = "info") => {
   $("log").prepend(line);
   console.log(`[jigdaw] ${message}`);
 };
-var dispatcher = null;
-var engine = null;
-var analyser = null;
-var source = null;
-var mcpSurface = null;
-var playing = false;
-var startedAt = 0;
-var panels = /* @__PURE__ */ new Map();
-var strips = /* @__PURE__ */ new Map();
-var mixerStrips = /* @__PURE__ */ new Map();
-var forgetStrips = (id) => {
-  strips.delete(id);
-  mixerStrips.delete(id);
+var ctx = {
+  document,
+  window,
+  $,
+  log,
+  dispatcher: null,
+  engine: null,
+  analyser: null,
+  hostConfig: null,
+  hostCapabilities: null,
+  clipPlayer: null,
+  mcpSurface: null,
+  /** For the console, and for a check driven from outside the page. */
+  expose() {
+    window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine };
+  }
 };
-var forgetNode = (id) => {
-  panels.delete(id);
-  forgetStrips(id);
-};
-var forgetAllNodes = () => {
-  panels.clear();
-  strips.clear();
-  mixerStrips.clear();
-};
-var pending = null;
-function browserCatalogue() {
-  const ask = async (path, params) => {
-    const response = await fetch(new URL(`catalogue/${path}?${params}`, document.baseURI));
-    const isJson = (response.headers.get("content-type") ?? "").includes("json");
-    if (!isJson) {
-      throw new Error(response.status === 404 ? `the catalogue endpoint is not there (${response.status}). If the page was just updated, the server needs restarting.` : `the catalogue answered ${response.status}`);
-    }
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? `catalogue returned ${response.status}`);
-    return body;
-  };
-  return {
-    async search({ text = "", limit = 25, loadable = true, ...facets } = {}) {
-      const params = new URLSearchParams();
-      if (text) params.set("q", text);
-      for (const [k, v] of Object.entries(facets)) if (v) params.set(k, v);
-      params.set("limit", String(limit));
-      if (!loadable) params.set("loadable", "false");
-      return ask("search", params);
-    },
-    async describe(iri3) {
-      return ask("describe", new URLSearchParams({ iri: iri3 }));
-    }
-  };
-}
-var shapes = null;
-function shapeValidator() {
-  shapes ??= fetch(new URL("vocabs/shapes.ttl", document.baseURI)).then((response) => response.text()).then((text) => parseText(text, "urn:jigdaw:shapes")).then((dataset2) => new ShapeValidator(dataset2));
-  return shapes;
-}
-async function ensureRunning() {
-  if (dispatcher) return dispatcher;
-  const context = new AudioContext();
-  await context.resume();
-  const validator = await shapeValidator();
-  analyser = context.createAnalyser();
-  analyser.fftSize = 256;
-  analyser.connect(context.destination);
-  const capabilities = detectCapabilities(globalThis);
-  engine = new Engine({
-    context,
-    loader: new PluginLoader({ parse: parseText, validator, capabilities }),
-    output: analyser
-  });
-  const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
-  dispatcher = new OpDispatcher({
-    engine,
-    foreign: new ForeignSupport2({ validator })
-  });
-  dispatcher.subscribe((event) => {
-    if (event.type === "changed") {
-      $("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
-      drawRack();
-      updateHistoryButtons();
-    }
-  });
-  const registration = registerTools({
-    dispatcher,
-    catalogue: browserCatalogue(),
-    loadPlugin: (iri3) => dispatcher.addPlugin(iri3),
-    openCollection: (iri3) => loadCollection(iri3)
-  });
-  mcpSurface = registration.surface;
-  log(`host offers ${[...capabilities].map(compact).join(", ")}`);
-  log(`${registration.count} agent tools via ${registration.bound}`);
-  meterLoop();
-  positionLoop();
-  return dispatcher;
-}
-function makeSource(context) {
-  const length = Math.floor(context.sampleRate * 2);
-  const buffer = context.createBuffer(2, length, context.sampleRate);
-  for (let channel = 0; channel < 2; channel++) {
-    const data = buffer.getChannelData(channel);
-    for (let i2 = 0; i2 < length; i2++) {
-      const phase = i2 / context.sampleRate % 1;
-      data[i2] = phase < 4e-3 ? (Math.random() * 2 - 1) * Math.exp(-phase * 500) : 0;
-    }
-  }
-  const node = context.createBufferSource();
-  node.buffer = buffer;
-  node.loop = true;
-  return node;
-}
-async function play() {
-  const d = await ensureRunning();
-  if (playing) return;
-  playing = true;
-  startedAt = engine.context.currentTime;
-  $("play").setAttribute("aria-pressed", "true");
-  const first2 = d.project.nodes[0];
-  const startsWithEffect = first2 && (dispatcher.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
-  if (startsWithEffect) {
-    source = makeSource(engine.context);
-    source.start();
-    const entry = dispatcher.engineNode(first2.id);
-    if (entry) source.connect(entry.node, 0, 0);
-  }
-  sendTransport();
-  log("playing", "ok");
-}
-function stop() {
-  playing = false;
-  $("play").setAttribute("aria-pressed", "false");
-  if (source) {
-    try {
-      source.stop();
-    } catch {
-    }
-    source.disconnect();
-    source = null;
-  }
-  for (const entry of engine?.nodes() ?? []) {
-    engine.post(entry.id, { type: "events", events: [{ frame: 0, bytes: Uint8Array.from([176, 123, 0]) }] });
-  }
-  sendTransport();
-  log("stopped");
-}
-function elapsedFrames() {
-  if (!engine || !playing) return 0;
-  return Math.max(0, Math.round((engine.context.currentTime - startedAt) * engine.context.sampleRate));
-}
-function sendTransport() {
-  if (!dispatcher) return;
-  dispatcher.sendTransport(elapsedFrames(), {
-    frame: Math.round((engine?.context.currentTime ?? 0) * (engine?.context.sampleRate ?? 48e3)),
-    playing
-  });
-}
-function positionLoop() {
-  const tick = () => {
-    if (dispatcher) {
-      const position = dispatcher.transport().positionAtElapsed(elapsedFrames());
-      const bar = Math.floor(position.bar) + 1;
-      const beat = Math.floor(position.beatInBar) + 1;
-      $("position").textContent = `${bar} . ${beat}`;
-      if (playing) sendTransport();
-    }
-    setTimeout(tick, 100);
-  };
-  tick();
-}
-function meterLoop() {
-  const bars = 12;
-  const meter = $("meter");
-  meter.textContent = "";
-  for (let i2 = 0; i2 < bars; i2++) meter.append(document.createElement("i"));
-  const data = new Float32Array(analyser.fftSize);
-  const frame = () => {
-    analyser.getFloatTimeDomainData(data);
-    let peak = 0;
-    for (const v of data) peak = Math.max(peak, Math.abs(v));
-    const lit = Math.round(Math.min(1, peak) * bars);
-    meter.querySelectorAll("i").forEach((bar, i2) => {
-      bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";
-    });
-    requestAnimationFrame(frame);
-  };
-  requestAnimationFrame(frame);
-}
-function slot(title, kind, className) {
-  const element = document.createElement("div");
-  element.className = `slot ${className}`;
-  const header = document.createElement("header");
-  const heading = document.createElement("h3");
-  heading.textContent = title;
-  const kindLabel = document.createElement("span");
-  kindLabel.className = "kind";
-  kindLabel.textContent = kind;
-  header.append(heading, kindLabel);
-  element.append(header);
-  return element;
-}
-function gap() {
-  const element = document.createElement("div");
-  element.className = "gap";
-  element.setAttribute("aria-hidden", "true");
-  return element;
-}
-function wire(label) {
-  const element = document.createElement("div");
-  element.className = "wire";
-  if (label) {
-    const span = document.createElement("span");
-    span.textContent = label;
-    element.append(span);
-  }
-  return element;
-}
-function updateHistoryButtons() {
-  $("undo").disabled = !(dispatcher?.canUndo() ?? false);
-  $("redo").disabled = !(dispatcher?.canRedo() ?? false);
-}
-function drawRack() {
-  const audible = new Map(
-    (dispatcher?.audibility() ?? []).map((a2) => [a2.nodeId, !a2.silent])
-  );
-  const rack = $("rack");
-  const restoreFocus = preserveFocus(rack);
-  rack.textContent = "";
-  const nodes = dispatcher?.project.nodes ?? [];
-  const connections = dispatcher?.project.connections ?? [];
-  const seen = /* @__PURE__ */ new Map();
-  const names = /* @__PURE__ */ new Map();
-  for (const node of nodes) {
-    const base = node.label ?? node.pluginIri;
-    const count = (seen.get(base) ?? 0) + 1;
-    seen.set(base, count);
-    names.set(node.id, { base, count });
-  }
-  const labelFor = (id) => {
-    const found = names.get(id);
-    if (!found) return id;
-    return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base;
-  };
-  drawMixer(nodes, { labelFor, audible });
-  if (nodes.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = "Nothing loaded. Search for a plugin, or press Load to add the synth.";
-    rack.append(empty);
-    return;
-  }
-  rack.append(slot("Source", "impulse or keyboard", "source"));
-  for (const node of nodes) {
-    const previous = nodes[nodes.indexOf(node) - 1];
-    const joining = previous && connections.find((c3) => c3.from.node === previous.id && c3.to.node === node.id);
-    if (previous) {
-      rack.append(joining ? wire(isMidi(joining.signalKind) ? "MIDI" : "audio") : gap());
-    }
-    const entry = dispatcher.engineNode(node.id);
-    const profile = entry?.profile;
-    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(", "), "plugin");
-    if (profile?.kind === "foreign") {
-      const mark = document.createElement("span");
-      mark.className = "foreign";
-      mark.textContent = "foreign";
-      mark.title = "Runs in this page with this page's privileges. It is not sandboxed.";
-      element.querySelector("header h3").append(" ", mark);
-      element.classList.add("is-foreign");
-    }
-    const index = nodes.indexOf(node);
-    const reorderTo = (target) => {
-      const result = dispatcher.apply([{ op: "reorderNode", id: node.id, index: target }]);
-      if (!result.ok) log(result.message, "error");
-      else log(`moved ${labelFor(node.id)}`);
-    };
-    const grip = document.createElement("span");
-    grip.className = "grip";
-    grip.textContent = "\u2261";
-    grip.setAttribute("aria-hidden", "true");
-    grip.draggable = true;
-    grip.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/plain", node.id);
-      e.dataTransfer.effectAllowed = "move";
-    });
-    const moveEarlier = document.createElement("button");
-    moveEarlier.type = "button";
-    moveEarlier.className = "reorder";
-    moveEarlier.textContent = "\u25C0";
-    moveEarlier.setAttribute("aria-label", `Move ${labelFor(node.id)} earlier in the chain`);
-    moveEarlier.disabled = index === 0;
-    moveEarlier.addEventListener("click", () => reorderTo(index - 1));
-    const moveLater = document.createElement("button");
-    moveLater.type = "button";
-    moveLater.className = "reorder";
-    moveLater.textContent = "\u25B6";
-    moveLater.setAttribute("aria-label", `Move ${labelFor(node.id)} later in the chain`);
-    moveLater.disabled = index === nodes.length - 1;
-    moveLater.addEventListener("click", () => reorderTo(index + 1));
-    element.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      element.classList.add("drag-over");
-    });
-    element.addEventListener("dragleave", () => element.classList.remove("drag-over"));
-    element.addEventListener("drop", (e) => {
-      e.preventDefault();
-      element.classList.remove("drag-over");
-      const draggedId = e.dataTransfer.getData("text/plain");
-      if (!draggedId || draggedId === node.id) return;
-      reorderTo(index);
-    });
-    const remove = document.createElement("button");
-    remove.className = "remove";
-    remove.type = "button";
-    remove.textContent = "Remove";
-    remove.setAttribute("aria-label", `Remove ${labelFor(node.id)}`);
-    remove.addEventListener("click", () => {
-      const result = dispatcher.apply([{ op: "removeNode", id: node.id, heal: true }]);
-      if (!result.ok) log(result.message, "error");
-      else {
-        forgetNode(node.id);
-        log(`removed ${node.label}`);
-      }
-    });
-    element.querySelector("header").append(grip, moveEarlier, moveLater, remove);
-    if ((profile?.audioOutputs ?? 1) > 0) {
-      let strip = strips.get(node.id);
-      if (!strip) {
-        strip = createStrip(document, node.channel, (change) => {
-          const result = dispatcher.setChannel(node.id, change);
-          if (!result.ok) log(result.message, "error");
-        }, { label: labelFor(node.id) });
-        strips.set(node.id, strip);
-      }
-      strip.update(node.channel, { silent: audible.get(node.id) === false });
-      element.append(strip.element);
-    } else {
-      forgetStrips(node.id);
-    }
-    element.append(createPortBar(document, {
-      node: { ...node, label: labelFor(node.id) },
-      profile,
-      pending,
-      onCancel: () => {
-        pending = null;
-        drawRack();
-      },
-      onPick: (from, to) => {
-        if (from) {
-          pending = from;
-          drawRack();
-          return;
-        }
-        const result = dispatcher.apply([{
-          op: "addConnection",
-          from: { node: pending.node, portIndex: pending.portIndex },
-          to: to.portSymbol !== void 0 ? { node: to.node, portSymbol: to.portSymbol } : { node: to.node, portIndex: to.portIndex },
-          signalKind: pending.kind
-        }]);
-        if (!result.ok) log(result.message, "error");
-        else log(`connected ${labelFor(pending.node)} to ${labelFor(to.node)}`, "ok");
-        pending = null;
-        drawRack();
-      }
-    }));
-    rack.append(element);
-    if (profile) {
-      let panel = panels.get(node.id);
-      if (!panel) {
-        panel = createPanel(document, profile, (symbol, value2) => {
-          const applied = dispatcher.setParameter(node.id, symbol, value2);
-          if (applied.ok) panel.update(symbol, applied.value);
-        }, async (key, file) => {
-          const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
-          if (!result.ok) log(`${node.id}.${key}: ${result.message}`, "error");
-        });
-        panels.set(node.id, panel);
-      }
-      for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
-      panel.element.querySelector("h3")?.remove();
-      element.append(panel.element);
-      if (playable(profile)) {
-        const style = getComputedStyle(element);
-        const available = element.clientWidth ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : document.body.clientWidth;
-        const keyboard = createKeyboard(document, {
-          first: 48,
-          octaves: octavesForWidth(available),
-          onNote: (bytes) => {
-            dispatcher.sendEvents(node.id, [{
-              frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
-              bytes
-            }]);
-          }
-        });
-        element.append(keyboard.element);
-      }
-    }
-  }
-  rack.append(wire("audio"), slot("Output", "speakers", "output"));
-  const heading = document.createElement("h3");
-  heading.className = "connections-heading";
-  heading.textContent = "Connections";
-  rack.append(heading, createConnectionList(document, {
-    connections,
-    labelFor,
-    onRemove: (id) => {
-      const result = dispatcher.apply([{ op: "removeConnection", id }]);
-      if (!result.ok) log(result.message, "error");
-      drawRack();
-    }
-  }));
-  restoreFocus();
-}
-function drawMixer(nodes, { labelFor, audible }) {
-  const mixer = $("mixer");
-  const restoreFocus = preserveFocus(mixer);
-  mixer.textContent = "";
-  const mixable = nodes.filter((node) => (dispatcher.engineNode(node.id)?.profile?.audioOutputs ?? 1) > 0);
-  if (mixable.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty";
-    empty.textContent = nodes.length === 0 ? "Nothing loaded. Search for a plugin, or press Load to add the synth." : "Nothing in this chain has an audio output to mix.";
-    mixer.append(empty);
-    return;
-  }
-  for (const node of mixable) {
-    let strip = mixerStrips.get(node.id);
-    if (!strip) {
-      strip = createStrip(document, node.channel, (change) => {
-        const result = dispatcher.setChannel(node.id, change);
-        if (!result.ok) log(result.message, "error");
-      }, { label: labelFor(node.id) });
-      mixerStrips.set(node.id, strip);
-    }
-    strip.update(node.channel, { silent: audible.get(node.id) === false });
-    const channel = document.createElement("div");
-    channel.className = "mixer-channel";
-    const heading = document.createElement("h3");
-    heading.textContent = labelFor(node.id);
-    channel.append(heading, strip.element);
-    mixer.append(channel);
-  }
-  restoreFocus();
-}
-function askConsent(request) {
-  return new Promise((resolve) => {
-    const dialog = document.createElement("dialog");
-    dialog.className = "consent";
-    const heading = document.createElement("h2");
-    heading.textContent = `Run ${request.label}?`;
-    dialog.append(heading);
-    const list = document.createElement("ul");
-    for (const statement of request.statements) {
-      const item = document.createElement("li");
-      item.textContent = statement;
-      list.append(item);
-    }
-    dialog.append(list);
-    const buttons = document.createElement("div");
-    buttons.className = "consent-buttons";
-    const no = document.createElement("button");
-    no.type = "button";
-    no.textContent = "Do not run it";
-    const yes = document.createElement("button");
-    yes.type = "button";
-    yes.className = "danger";
-    yes.textContent = "Run it with full access";
-    buttons.append(no, yes);
-    dialog.append(buttons);
-    let answered = false;
-    const done = (answer) => {
-      if (answered) return;
-      answered = true;
-      dialog.close();
-      dialog.remove();
-      resolve(answer);
-    };
-    no.addEventListener("click", () => done(false));
-    yes.addEventListener("click", () => done(true));
-    dialog.addEventListener("cancel", () => done(false));
-    dialog.addEventListener("close", () => done(false));
-    document.body.append(dialog);
-    dialog.showModal();
-    no.focus();
-  });
-}
-async function loadPlugin(input) {
-  const d = await ensureRunning();
-  const iri3 = new URL(input, document.baseURI).href;
-  log(`GET ${iri3}`);
-  let foreign = false;
-  const support = d.foreignSupport;
-  if (support) {
-    const seen = await support.classify(iri3).catch(() => null);
-    foreign = seen?.kind === "foreign";
-  }
-  let result = await d.addPlugin(iri3, foreign ? { foreign: true } : {});
-  if (!result.ok && result.kind === "consent") {
-    if (!await askConsent(result.request)) {
-      log(`${result.request.label}: not loaded`, "error");
-      return;
-    }
-    d.foreignTrust?.consent(result.request.iri, result.request.digest);
-    result = await d.addPlugin(iri3, { foreign: true });
-  }
-  if (!result.ok) {
-    log(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
-    return;
-  }
-  const { nodeId, entry } = result;
-  log(`loaded ${entry.profile.label}`, "ok");
-  const nodes = d.project.nodes;
-  const previous = nodes[nodes.length - 2];
-  if (previous) {
-    const from = outputsOf(dispatcher.engineNode(previous.id)?.profile)[0];
-    const to = inputsOf(entry.profile).find((port) => port.portSymbol === void 0);
-    if (from && to && compatible(from, to)) {
-      const chained = d.apply([{
-        op: "addConnection",
-        from: { node: previous.id, portIndex: from.portIndex },
-        to: { node: nodeId, portIndex: to.portIndex },
-        signalKind: from.kind
-      }]);
-      if (!chained.ok) log(chained.message, "error");
-    }
-  }
-  drawRack();
-  window.__jigdaw = { dispatcher: d, engine };
-}
-function renderResults(results, query) {
-  const box = $("results");
-  box.textContent = "";
-  if (results.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "note";
-    empty.textContent = `Nothing matched ${query}.`;
-    box.append(empty);
-    return;
-  }
-  const loadable = results.filter((r) => r.web).length;
-  const note = document.createElement("p");
-  note.className = "note";
-  note.textContent = loadable === results.length ? `${results.length} loadable here.` : `${results.length} found, ${loadable} loadable here. The rest are native plugins the catalogue knows about but this host cannot run.`;
-  box.append(note);
-  for (const result of results) {
-    const row = document.createElement("div");
-    row.className = result.web ? "result" : "result native";
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = result.label ?? result.iri;
-    if (result.web) {
-      const badge = document.createElement("span");
-      badge.className = "badge";
-      badge.textContent = " web";
-      name.append(" ", badge);
-    }
-    row.append(name);
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
-    row.append(meta);
-    if (result.web) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = "Load";
-      button.addEventListener("click", () => loadPlugin(result.homepage ?? result.iri).catch(() => {
-      }));
-      row.append(button);
-    } else {
-      const why = document.createElement("div");
-      why.className = "native";
-      why.textContent = "native only";
-      row.append(why);
-    }
-    box.append(row);
-  }
-}
-async function loadCollection(input) {
-  const url = new URL(input, document.baseURI).href;
-  const validator = await shapeValidator();
-  const verifier = new PluginLoader({ parse: parseText, validator, capabilities: detectCapabilities(globalThis) });
-  return new CollectionLoader({
-    parse: parseText,
-    validator,
-    verify: (iri3) => verifier.loadProfile(iri3)
-  }).load(url);
-}
-async function openCollection(input) {
-  log(`GET ${new URL(input, document.baseURI).href}`);
-  const box = $("results");
-  box.textContent = "";
-  const opened = await loadCollection(input).catch((error2) => {
-    log(`${error2.step ? `[${error2.step}] ` : ""}${error2.message}`, "error");
-    return null;
-  });
-  if (!opened) return;
-  renderCollection(opened);
-}
-function renderCollection({ collection, members, warnings }) {
-  const box = $("results");
-  box.textContent = "";
-  const heading = document.createElement("h3");
-  heading.className = "collection-name";
-  heading.textContent = collection.label;
-  box.append(heading);
-  if (collection.comment) {
-    const about = document.createElement("p");
-    about.className = "note";
-    about.textContent = collection.comment;
-    box.append(about);
-  }
-  const ready = members.filter((m) => m.ok);
-  const note = document.createElement("p");
-  note.className = "note";
-  note.textContent = ready.length === members.length ? `${members.length} plugin(s), all loadable here.` : `${members.length} plugin(s), ${ready.length} loadable here. The rest say why below.`;
-  box.append(note);
-  for (const member of members) {
-    const row = document.createElement("div");
-    row.className = member.ok ? "result" : "result native";
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
-    row.append(name);
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
-    row.append(meta);
-    if (member.ok) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = "Load";
-      button.setAttribute("aria-label", `Load ${member.profile.label}`);
-      button.addEventListener("click", () => loadPlugin(member.iri).catch(() => {
-      }));
-      row.append(button);
-    } else {
-      const why = document.createElement("div");
-      why.className = "native";
-      why.textContent = `Not loadable here: ${member.step ? `[${member.step}] ` : ""}${member.message}`;
-      row.append(why);
-    }
-    box.append(row);
-  }
-  for (const warning of warnings) log(`${collection.label}: ${warning.message}`);
-  const moved = members.filter((m) => m.ok && m.notes.length > 0);
-  for (const member of moved) console.log(`[jigdaw] ${member.iri}: ${member.notes.join("; ")}`);
-  const renamed = members.filter((m) => m.ok && m.notes.some((n2) => n2.startsWith("listed as")));
-  if (renamed.length > 0) {
-    log(`${renamed.length} plugin(s) are named differently by their profile than by this collection. The details are in the console.`);
-  }
-  log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? "ok" : "error");
-}
-async function search() {
-  const text = $("q").value.trim();
-  const facet = $("facet").value;
-  const params = new URLSearchParams();
-  if (text) params.set("q", text);
-  if (facet) {
-    const [k, v] = facet.split("=");
-    params.set(k, v);
-  }
-  params.set("limit", "25");
-  try {
-    const body = await browserCatalogue().search({
-      text,
-      limit: 25,
-      loadable: !$("everything").checked,
-      ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
-    });
-    renderResults(body.results, text || facet);
-    if (body.upstreamError) {
-      log(`the wider catalogue is unavailable: ${body.upstreamError}`, "error");
-    }
-    if (body.loadableOnly && body.results.length === 0) {
-      log("nothing loadable matched. Tick the box to include native plugins.");
-    }
-    log(`${body.results.length} result(s)`, "ok");
-  } catch (error2) {
-    log(`search failed: ${error2.message}`, "error");
-  }
-}
-function renderAgentStep(step) {
-  const line = document.createElement("div");
-  line.className = `agent-step ${step.role}`;
-  const text = step.role === "tool_call" ? `${step.name}(${JSON.stringify(step.arguments)})` : step.role === "tool_result" ? `${step.name} -> ${JSON.stringify(step.result)}` : step.content;
-  const role = document.createElement("span");
-  role.className = "role";
-  role.textContent = step.role;
-  line.append(role, document.createTextNode(text));
-  $("agent-log").append(line);
-  $("agent-log").scrollTop = $("agent-log").scrollHeight;
-}
-async function askAgent() {
-  const prompt = $("agent-prompt").value.trim();
-  if (!prompt) return;
-  const endpoint2 = $("agent-endpoint").value.trim();
-  const model = $("agent-model").value.trim();
-  const button = $("agentbar").querySelector("button");
-  await ensureRunning();
-  button.disabled = true;
-  try {
-    await runAgentTurn({
-      surface: mcpSurface,
-      chat: (args) => ollamaChat({ endpoint: endpoint2, ...args }),
-      model,
-      prompt,
-      onStep: renderAgentStep
-    });
-    $("agent-prompt").value = "";
-  } catch (error2) {
-    log(`local agent failed: ${error2.message}`, "error");
-  } finally {
-    button.disabled = false;
-  }
-}
-function sessionIri() {
-  return new URL(`sessions/${Date.now()}/`, document.baseURI).href;
-}
-async function saveSession() {
-  if (!dispatcher) {
-    log("nothing to save yet", "error");
-    return;
-  }
-  for (const node of dispatcher.project.nodes) {
-    const state = await dispatcher.getNodeState(node.id);
-    if (state !== null) dispatcher.apply([{ op: "setNodeState", node: node.id, state: encodeState(state) }]);
-  }
-  const turtle = writeProject(dispatcher.project, {
-    iri: sessionIri(),
-    created: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d+Z$/, "Z")
-  });
-  const url = URL.createObjectURL(new Blob([turtle], { type: "text/turtle" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "session.ttl";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1e4);
-  log(`saved ${dispatcher.project.nodes.length} nodes as Turtle`, "ok");
-}
-async function openSession(text, base = document.baseURI) {
-  const d = await ensureRunning();
-  const parsed = await parseText(text, base);
-  let read;
-  try {
-    read = readProject(parsed);
-  } catch (error2) {
-    log(error2.message, "error");
-    return;
-  }
-  const opened = await openProject(d, read, {
-    onLoading: (iri3) => log(`GET ${iri3}`),
-    onCleared: forgetAllNodes
-  });
-  for (const message of opened.errors) log(message, "error");
-  if (!opened.ok) return;
-  const bpm = d.project.transport.tempoPoints[0]?.bpm;
-  if (bpm) $("tempo").value = String(bpm);
-  drawRack();
-  updateHistoryButtons();
-  window.__jigdaw = { dispatcher: d, engine };
-  log(`opened ${opened.loaded.size} of ${opened.total} nodes`, "ok");
-}
+ctx.media = createMedia(document);
+ctx.runtime = createRuntime(ctx);
+ctx.transport = createTransport(ctx);
+ctx.editors = createEditors(ctx);
+ctx.arrangement = createArrangement(ctx);
+ctx.rack = createRack(ctx);
+ctx.loading = createLoading(ctx);
+ctx.browser = createBrowser(ctx);
+ctx.sessions = createSessions(ctx);
+ctx.history = createHistory(ctx);
+ctx.agent = createAgent(ctx);
+ctx.bridge = createBridgeLink(ctx);
+var { loading, browser, transport } = ctx;
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
-  search();
+  browser.search();
 });
 $("agentbar").addEventListener("submit", (e) => {
   e.preventDefault();
-  askAgent();
+  ctx.agent.askAgent();
 });
 $("loadbar").addEventListener("submit", (e) => {
   e.preventDefault();
-  loadPlugin($("iri").value.trim()).catch(() => {
+  loading.loadPlugin($("iri").value.trim()).catch(() => {
   });
 });
 $("collectionbar").addEventListener("submit", (e) => {
   e.preventDefault();
-  openCollection($("collection").value.trim()).catch((error2) => log(error2.message, "error"));
+  browser.openCollection($("collection").value.trim()).catch((error2) => log(error2.message, "error"));
 });
-$("play").addEventListener("click", () => play().catch((error2) => log(error2.message, "error")));
-$("stop").addEventListener("click", stop);
-$("save").addEventListener("click", () => saveSession().catch((error2) => log(error2.message, "error")));
-$("open").addEventListener("click", () => $("openfile").click());
-$("openfile").addEventListener("change", async (event) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  event.target.value = "";
-  try {
-    await openSession(await file.text());
-  } catch (error2) {
-    log(error2.message, "error");
-  }
-});
-var presets = [];
-$("presetbar").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const preset = presets[Number($("preset").value)];
-  log(`opening preset ${preset.label}`);
-  fetchPreset({ fetch: (url) => fetch(url), url: preset.url }).then((text) => openSession(text, preset.url)).catch((error2) => log(error2.message, "error"));
-});
-listPresets({
-  fetch: (url) => fetch(url),
-  index: new URL("presets/index.json", document.baseURI).href
-}).then((found) => {
-  presets = found;
-  $("preset").replaceChildren(...found.map(({ label }, i2) => {
-    const option = document.createElement("option");
-    option.value = String(i2);
-    option.textContent = label;
-    return option;
-  }));
-  $("presets").hidden = found.length === 0;
-}).catch((error2) => log(`presets: ${error2.message}`, "error"));
+$("play").addEventListener("click", () => transport.play().catch((error2) => log(error2.message, "error")));
+$("stop").addEventListener("click", transport.stop);
 $("tempo").addEventListener("change", async () => {
-  const d = await ensureRunning();
+  const d = await ctx.runtime.ensureRunning();
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);
   if (!result.ok) log(result.message, "error");
 });
-async function undo() {
-  if (!dispatcher?.canUndo()) return;
-  const result = await dispatcher.undo();
-  if (!result.ok) log(result.message, "error");
-}
-async function redo() {
-  if (!dispatcher?.canRedo()) return;
-  const result = await dispatcher.redo();
-  if (!result.ok) log(result.message, "error");
-}
-$("undo").addEventListener("click", () => undo());
-$("redo").addEventListener("click", () => redo());
-document.addEventListener("keydown", (event) => {
-  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z" && event.key.toLowerCase() !== "y") return;
-  const target = document.activeElement;
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
-  const key = event.key.toLowerCase();
-  if (key === "y") {
-    event.preventDefault();
-    redo();
-    return;
-  }
-  event.preventDefault();
-  if (event.shiftKey) redo();
-  else undo();
-});
+ctx.sessions.mount();
+ctx.history.mount();
+ctx.arrangement.mount();
+ctx.rack.mount();
+ctx.bridge.mount();
 $("iri").value = new URL($("iri").value, document.baseURI).href;
 $("collection").value = new URL($("collection").value, document.baseURI).href;
 var linked = new URLSearchParams(location.search).get("collection");
 if (linked) {
   $("collection").value = new URL(linked, document.baseURI).href;
-  openCollection(linked).catch((error2) => log(error2.message, "error"));
+  browser.openCollection(linked).catch((error2) => log(error2.message, "error"));
 }
-var tabs = createTabs(document, [
-  { id: "tracks", label: "Tracks", panel: $("tracks-panel") },
+ctx.tabs = createTabs(document, [
+  { id: "arrangement", label: "Arrangement", panel: $("arrangement-panel") },
+  { id: "tracks", label: "Plugins", panel: $("tracks-panel") },
   { id: "mixer", label: "Mixer", panel: $("mixer-panel") }
 ]);
-$("tabs-mount").append(tabs.element);
-drawRack();
+$("tabs-mount").append(ctx.tabs.element);
+ctx.rack.draw();
 log("ready. Load the synth and press a key, or search for a plugin.");
-window.__jigdawLoad = loadPlugin;
+window.__jigdawLoad = loading.loadPlugin;
 /*! Bundled license information:
 
 ieee754/index.js:

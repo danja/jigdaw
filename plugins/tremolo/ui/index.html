@@ -1,0 +1,137 @@
+<!doctype html>
+<!--
+  plugins/tremolo/ui/index.html
+
+  Tremolo's own editor, the worked example of a plugin user interface
+  (contract section 9, docs/messaging.md section 2). A host loads it into a
+  sandboxed frame on another origin and talks to it only by postMessage.
+
+  One file with its script inline, so the profile's jig:integrity digest
+  covers everything that runs here.
+
+  It renders from what the host says, never from its own input: a value it
+  asks for may come back clamped, and messaging.md 2.3 requires the frame to
+  show the value the host applied. So dragging a slider sends a request and
+  the slider moves to whatever comes back.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tremolo</title>
+<style>
+  :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --panel:#1a1e24; }
+  html { height:auto; }
+  body { margin:0; padding:12px; background:var(--panel); color:var(--fg);
+    font:16px/1.4 system-ui, sans-serif; }
+  h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
+  .row { display:grid; grid-template-columns:5rem 1fr 6rem; gap:10px; align-items:center; min-height:44px; }
+  label { color:var(--dim); }
+  input[type=range] { width:100%; min-width:0; height:44px; accent-color:var(--accent); }
+  input[type=range]:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  output { font-family:ui-monospace, monospace; text-align:right; }
+  .waiting { color:var(--dim); }
+  @media (max-width: 360px) { .row { grid-template-columns:1fr; } output { text-align:left; } }
+</style>
+</head>
+<body>
+<main id="root">
+<h1>Tremolo</h1>
+<div id="controls"><p class="waiting">Waiting for the host.</p></div>
+</main>
+<script>
+  'use strict'
+  // The host's origin, learnt from its init. Until then nothing is sent but
+  // ready, which carries nothing, and nothing received is trusted.
+  let host = null
+  const inputs = new Map()
+
+  // Units read aloud as well as shown: "5.0 Hz" and "5.0" are different things.
+  const format = (symbol, value) => symbol === 'rate'
+    ? { text: `${value.toFixed(1)} Hz`, spoken: `${value.toFixed(1)} hertz` }
+    : { text: `${Math.round(value * 100)}%`, spoken: `${Math.round(value * 100)} percent` }
+
+  function send (message) {
+    if (host) parent.postMessage(message, host)
+  }
+
+  function show (symbol, value) {
+    const control = inputs.get(symbol)
+    if (!control) return
+    control.input.value = String(value)
+    const { text, spoken } = format(symbol, value)
+    control.output.textContent = text
+    control.input.setAttribute('aria-valuetext', spoken)
+  }
+
+  function build (ports, parameters) {
+    const box = document.getElementById('controls')
+    box.replaceChildren()
+    for (const port of ports) {
+      const row = document.createElement('div')
+      row.className = 'row'
+      const id = `p-${port.symbol}`
+      const label = document.createElement('label')
+      label.setAttribute('for', id)
+      label.textContent = port.name
+      const input = document.createElement('input')
+      input.type = 'range'
+      input.id = id
+      input.min = String(port.minimum)
+      input.max = String(port.maximum)
+      input.step = String((port.maximum - port.minimum) / 200)
+      const output = document.createElement('output')
+      output.setAttribute('for', id)
+      output.setAttribute('aria-hidden', 'true')
+      row.append(label, input, output)
+      box.append(row)
+      inputs.set(port.symbol, { input, output })
+
+      // A drag is one gesture, so automation records it as one.
+      input.addEventListener('pointerdown', () => send({ type: 'gesture', symbol: port.symbol, phase: 'begin' }))
+      input.addEventListener('pointerup', () => send({ type: 'gesture', symbol: port.symbol, phase: 'end' }))
+      input.addEventListener('input', () => send({ type: 'parameter', symbol: port.symbol, value: Number(input.value) }))
+      show(port.symbol, parameters[port.symbol] ?? port.default)
+    }
+  }
+
+  // Ask for the height the content takes, whenever that changes. Measured by
+  // an observer rather than once after building, because a single measurement
+  // taken before layout settled asked for less than half the height needed.
+  const root = document.getElementById('root')
+  // The whole document's height, margins and padding included, which is what
+  // the frame has to be for nothing to scroll.
+  const wanted = () => Math.ceil(document.documentElement.getBoundingClientRect().height)
+  new ResizeObserver(() => {
+    send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+  }).observe(root)
+
+  // The ports, read from the profile the host sends as JSON-LD. Keys are the
+  // ones the host's context declares; anything else is ignored.
+  function portsOf (profile) {
+    return (profile?.port ?? []).map(p => ({
+      symbol: p.symbol, name: p.name ?? p.symbol,
+      minimum: Number(p.minimum), maximum: Number(p.maximum), default: Number(p.default)
+    }))
+  }
+
+  window.addEventListener('message', event => {
+    if (event.source !== parent) return
+    if (host === null) {
+      if (event.data?.type !== 'init') return
+      host = event.origin
+      build(portsOf(event.data.profile), event.data.parameters ?? {})
+      send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+      return
+    }
+    if (event.origin !== host) return
+    const message = event.data
+    if (message?.type === 'parameter') show(message.symbol, message.value)
+  })
+
+  // The host's origin is not known yet, so ready goes to any. It carries
+  // nothing, and every later message goes to the origin init came from.
+  parent.postMessage({ type: 'ready' }, '*')
+</script>
+</body>
+</html>

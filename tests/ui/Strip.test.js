@@ -9,10 +9,9 @@
 // rather than the one a person reads, and AGENTS.md is explicit that those are
 // different information.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
 import { createStrip, decibels, panPosition } from '../../src/ui/Strip.js'
+import { appSource, appFile } from './appSource.js'
 
 let document
 beforeEach(() => { document = parseHTML('<!doctype html><html><body></body></html>').document })
@@ -147,110 +146,35 @@ describe('what a strip reports', () => {
   })
 })
 
-describe('the application hides a strip nobody can use', () => {
-  // Level, Pan, Mute and Solo all end up at Engine.setChannel, which already
-  // refuses to touch a node the engine built no gain stage for
-  // (`if (!entry.strip) return`), and Engine.adopt only builds one
-  // `if (profile.audioOutputs > 0 ...)`. So a MIDI generator's strip was four
-  // controls that moved and never sounded: BassGen declares
-  // `jig:audioOutputs 0` and had a Level knob, a Pan knob, and working Mute and
-  // Solo buttons, none of which anything downstream ever heard.
-  //
-  // drawRack is in the browser bundle, where there is no AudioContext to build
-  // a real Engine against, so the wiring is checked in the source, the way
+describe('where the application draws strips', () => {
+  // A strip belongs to a track now, not to a plugin (docs/project-format.md
+  // "Tracks"), so the rack draws none and the mixer draws one per track. The
+  // mixer is src/ui/Mixer.js and tests/ui/Mixer.test.js drives it; what is
+  // left to check here is that the page uses it and nothing else. drawRack is
+  // in the browser bundle, where there is no AudioContext to build a real
+  // Engine against, so the wiring is checked in the source, the way
   // tests/ui/Focus.test.js already checks that drawRack calls preserveFocus.
-  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
-  const engine = readFileSync(resolve(import.meta.dirname, '../../src/engine/Engine.js'), 'utf8')
-  const drawStart = app.indexOf('function drawRack')
-  const draw = app.slice(drawStart, app.indexOf('\n\nfunction ', drawStart))
+  const app = appSource()
+  const rack = appFile('web/app/Rack.js')
+  const drawStart = rack.indexOf('function drawRack')
+  const draw = rack.slice(drawStart, rack.indexOf('\n  }\n', drawStart))
 
-  it('only builds a strip once it knows the profile has an audio output', () => {
-    const guard = draw.indexOf('if ((profile?.audioOutputs')
-    const createStripCall = draw.indexOf('createStrip(')
-    expect(guard, 'drawRack does not check audioOutputs before drawing a strip').toBeGreaterThan(-1)
-    expect(guard, 'the check must come before the strip is built').toBeLessThan(createStripCall)
-    // > 0, not === 0 or falsy: a profile with two audio outputs must still
-    // pass, and a mutation that inverted the sense of this check is exactly
-    // the shape of regression this exists to catch.
-    expect(draw.slice(guard, guard + 45)).toMatch(/audioOutputs\s*\?\?\s*1\)\s*>\s*0/)
+  it('builds no strip in the rack, where there is no longer one per plugin', () => {
+    expect(app).not.toMatch(/createStrip\(/)
+    expect(app).not.toMatch(/setChannel\(/)
   })
 
-  it('uses the same threshold Engine.adopt used to decide whether to build one', () => {
-    // Not the same test twice: Engine.js is what actually withholds the gain
-    // stage. A page that drew a strip under a different condition would show
-    // controls for exactly the nodes the engine had already decided not to
-    // wire one for, which is the bug this fixes, the other way round.
-    expect(engine).toMatch(/audioOutputs > 0/)
+  it('draws the mixer from drawRack, before deciding the rack is empty', () => {
+    // Before the empty check, because the mixer answers its own empty case and
+    // must not be skipped along with the rack's.
+    const call = draw.indexOf('mixer.draw(')
+    const emptyCheck = draw.indexOf('tracks.length === 0')
+    expect(call, 'drawRack never draws the mixer').toBeGreaterThan(-1)
+    expect(emptyCheck).toBeGreaterThan(-1)
+    expect(call, 'the mixer is drawn after the rack could already have returned').toBeLessThan(emptyCheck)
   })
 
-  it('drops a stale strip if one is cached from before this was fixed', () => {
-    // forgetStrips clears the Tracks-tab strip and the Mixer-tab strip
-    // together: both were built from the same audioOutputs question and a
-    // node that loses the answer to one loses it to both.
-    const guard = draw.indexOf('if ((profile?.audioOutputs')
-    const elseBranch = draw.slice(draw.indexOf('} else {', guard))
-    expect(elseBranch, 'the else branch does not clear cached strips for this node').toMatch(/forgetStrips\(node\.id\)/)
-  })
-})
-
-describe('the mixer', () => {
-  // A second strip instance per track, gathered on their own tab, because the
-  // same DOM element cannot sit in both the Tracks slot and the Mixer tab at
-  // once. Two instances of one widget is a place a fix can be made in one and
-  // missed in the other, so every assertion below checks the pair rather than
-  // either alone.
-  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
-  const drawStart = app.indexOf('function drawRack')
-  const draw = app.slice(drawStart, app.indexOf('\n\nfunction ', drawStart))
-  const mixerStart = app.indexOf('function drawMixer')
-  const mixer = app.slice(mixerStart, app.indexOf('\n\nfunction ', mixerStart))
-
-  it('exists, and drawRack calls it before deciding the rack is empty', () => {
-    // Before the empty check, because a track can exist in the mixer's sense
-    // while drawRack has nothing else to show, and because drawMixer answers
-    // its own empty case rather than being skipped along with the rack's.
-    expect(mixerStart, 'no drawMixer function').toBeGreaterThan(-1)
-    const call = draw.indexOf('drawMixer(')
-    const emptyCheck = draw.indexOf('nodes.length === 0')
-    expect(call, 'drawRack never calls drawMixer').toBeGreaterThan(-1)
-    expect(call, 'drawMixer is called after the rack could already have returned')
-      .toBeLessThan(emptyCheck)
-  })
-
-  it('excludes a track with no audio output, by the same threshold as the rack', () => {
-    // Not the same assertion copied twice: this is the second of the two
-    // places that question is asked, and a fix applied to one and not the
-    // other is exactly the failure a guard this narrow would miss.
-    expect(mixer).toMatch(/audioOutputs\s*\)\s*\?\?\s*1\)\s*>\s*0/)
-  })
-
-  it('caches its strip separately from the one embedded in the track slot', () => {
-    expect(mixer, 'drawMixer reads from the Tracks strip cache').not.toMatch(/\bstrips\.get\(/)
-    expect(mixer).toMatch(/mixerStrips\.get\(/)
-    expect(mixer).toMatch(/mixerStrips\.set\(/)
-  })
-
-  it('gives every channel a visible heading, which the strip itself has none of', () => {
-    expect(mixer).toMatch(/mixer-channel/)
-    const heading = mixer.indexOf("createElement('h3')")
-    expect(heading, 'no heading is created for a mixer channel').toBeGreaterThan(-1)
-  })
-})
-
-describe('caching a node is not scattered across the file', () => {
-  // AGENTS.md: a change in one file usually needs a second change with it, and
-  // nothing connects them unless a test does. panels, strips and mixerStrips
-  // are touched from three helpers and nowhere else, so adding a fourth cache
-  // later, or a Mixer tab that forgets to clear itself, is one function to
-  // edit rather than a search for every place that might need to know.
-  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
-
-  it('deletes or clears a strip only inside forgetStrips, forgetNode or forgetAllNodes', () => {
-    const helpers = app.slice(app.indexOf('const forgetStrips'), app.indexOf('const forgetAllNodes') + 200)
-    const outside = app.replace(helpers, '')
-    expect(outside).not.toMatch(/\bstrips\.delete\(/)
-    expect(outside).not.toMatch(/\bmixerStrips\.delete\(/)
-    expect(outside).not.toMatch(/\bstrips\.clear\(/)
-    expect(outside).not.toMatch(/\bmixerStrips\.clear\(/)
+  it('sends a strip change to the track it belongs to', () => {
+    expect(app).toMatch(/dispatcher\.setTrackChannel\(trackId, change\)/)
   })
 })

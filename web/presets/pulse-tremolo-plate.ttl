@@ -12,24 +12,33 @@
     a jig:Project ;
     rdfs:label "Square lead, tremolo and plate" ;
     jig:revision 1 ;
+    jig:track <#track-1> ;
     jig:node <#synth> , <#wobble> , <#plate> ;
     jig:connection <#c1> , <#c2> ;
     jig:transport <#transport> .
 
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Square lead" ;
+    jig:midiInput <#synth> .
+
 <#synth>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Synth" ;
     jig:plugin <../plugins/pulse/> ;
     jig:setting <#synth-waveform> , <#synth-cutoff> , <#synth-release> , <#synth-gain> .
 
 <#wobble>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Tremolo" ;
     jig:plugin <../plugins/tremolo/> ;
     jig:setting <#wobble-rate> , <#wobble-depth> .
 
 <#plate>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Plate" ;
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#plate-mode> , <#plate-mix> .

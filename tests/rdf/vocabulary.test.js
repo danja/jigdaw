@@ -95,6 +95,8 @@ describe('the jig: vocabulary', () => {
     const home = process.env.HOME ?? ''
     const upstream = [
       join(home, 'github/transmission/vocabs/profile.ttl'),
+      // The arrangement terms a project reuses: trn:startBeat and the rest.
+      join(home, 'github/transmission/vocabs/project.ttl'),
       join(home, 'github/plugin-universe/vocabs/trn-profile.ttl'),
       join(home, 'github/plugin-universe/vocabs/trn-extensions.ttl')
     ].filter(p => { try { readFileSync(p); return true } catch { return false } })

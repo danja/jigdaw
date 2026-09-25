@@ -123,9 +123,12 @@
   .meter i.hot { background:var(--err); }
 
   /* Layout */
-  main { display:grid; grid-template-columns: 300px 1fr; gap:0; min-height:calc(100vh - 62px); }
+  /* minmax(0, 1fr), not 1fr: a 1fr track grows to the widest thing in it,
+     and a timeline or a piano roll is as wide as the music. They scroll in
+     their own boxes, so the column must be allowed to be narrower than they are. */
+  main { display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
   .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
-  .stage { padding:14px; display:flex; flex-direction:column; gap:12px; }
+  .stage { padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0; }
   h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
 
   /* Tabs. src/ui/Tabs.js builds the buttons; this only draws them. The
@@ -164,8 +167,10 @@
   .rack { display:flex; flex-direction:column; gap:0; }
   .slot { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:12px 14px; }
   .slot.source, .slot.output { background:#161a20; border-style:dashed; color:var(--dim); }
-  .slot header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  .slot h3 { margin:0; font-size:15px; flex:1; }
+  /* Wraps, because a plugin's header holds a grip, its name, two move buttons,
+     a track menu and Remove, which is wider than a phone. */
+  .slot header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-bottom:8px; }
+  .slot h3 { margin:0; font-size:15px; flex:1 1 6rem; min-width:0; overflow-wrap:anywhere; }
   .slot .kind { font-size:11px; color:var(--dim); }
   .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:#2a2f38;
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
@@ -189,6 +194,83 @@
     border-left:4px solid transparent; border-right:4px solid transparent; border-top:6px solid var(--wire); }
   .wire span { position:absolute; left:10px; top:1px; font-size:10px; color:var(--dim); }
   .empty { color:var(--dim); text-align:center; padding:26px 14px; border:1px dashed var(--line); border-radius:7px; }
+
+  /* Tracks. A track's plugins are grouped under its header, and the group is
+     marked by a rule down its left edge as well as by the heading, so the
+     grouping does not rest on colour or on position alone. */
+  .track { border-left:3px solid var(--line); padding-left:10px; margin-bottom:22px; min-width:0; }
+  .track-header { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
+  .track-header h3 { margin:0; font-size:16px; flex:1 1 8rem; }
+  .track-header input { padding:8px 10px; font-size:16px; background:#0e1013; color:var(--fg);
+    border:1px solid var(--line); border-radius:4px; min-width:0; flex:1 1 8rem; }
+  .track-header button { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+    color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .track-header button:hover { color:var(--fg); border-color:var(--accent); }
+  .slot .move-track { flex:0 1 auto; min-width:0; }
+  .target { align-items:center; }
+  .target label { color:var(--dim); font-size:12px; flex:none; }
+  .target select { flex:1 1 8rem; }
+
+  /* Plugin editors. The frame takes the width it is given and the height it
+     asks for, within the bounds src/ui/PluginFrame.js allows. */
+  .editors { display:flex; flex-direction:column; gap:10px; }
+  .editor { background:var(--panel); border:1px solid var(--accent); border-radius:7px; overflow:hidden; }
+  .editor header { display:flex; align-items:center; gap:10px; padding:8px 12px; }
+  .editor h3 { margin:0; font-size:14px; flex:1; }
+  .editor button, .slot .open-editor { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+    color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  /* content-box: the height a frame asks for is for its document, and a
+     border counted inside it leaves the document a pixel short and scrolling. */
+  .plugin-frame { display:block; box-sizing:content-box; width:100%; border:0;
+    border-top:1px solid var(--line); background:var(--panel); }
+
+  /* Arrangement. The lanes scroll inside their own box, never the page. The
+     track names stay put on the left while the lanes scroll under them. */
+  .timeline-scroll { overflow-x:auto; border:1px solid var(--line); border-radius:7px;
+    background:#13161b; padding-bottom:6px; }
+  .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
+  .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
+  .timeline { --head:9rem; }
+  .timeline-row { display:flex; align-items:stretch; border-top:1px solid var(--line); width:max-content; }
+  .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
+    flex-direction:column; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
+  .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
+  .timeline-head .show-track { min-height:44px; text-align:left; background:none; border:0; color:var(--fg);
+    padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+  .timeline-head button { min-height:44px; font-size:12px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .timeline-lane { position:relative; min-height:56px;
+    background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); }
+  .clip { position:absolute; top:6px; bottom:6px; min-width:12px; min-height:44px; padding:0 14px 0 6px;
+    background:#23405f; color:var(--fg); border:1px solid var(--accent); border-radius:5px;
+    font-size:12px; text-align:left; cursor:grab; overflow:hidden; touch-action:none; }
+  .clip-audio { background:#2f3b27; border-color:var(--ok); }
+  .clip-orphan { border-style:dashed; }
+  .clip-wave { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
+  .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
+  .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
+    border-left:1px solid var(--accent); }
+
+  .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
+  .piano-roll header { display:flex; align-items:center; gap:10px; }
+  .piano-roll h3 { margin:0; font-size:14px; flex:1; }
+  .piano-roll header button { min-height:44px; padding:6px 12px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .piano-roll-scroll { overflow:auto; max-height:60vh; border:1px solid var(--line); }
+  .piano-roll-grid { width:max-content; }
+  .piano-roll-row { display:flex; }
+  .piano-roll-row.black .piano-roll-cell { background:#15181d; }
+  .piano-roll-key { position:sticky; left:0; width:3rem; flex:none; font-size:11px; color:var(--dim);
+    background:#13161b; border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
+  .piano-roll-cell { width:28px; height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;
+    background:#1a1e24; color:#fff; font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
+  .piano-roll-cell.beat { border-left:1px solid var(--line); }
+  .piano-roll-cell.on { background:var(--accent); }
+  .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
+  .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
+  @media (pointer: coarse) { .piano-roll-cell { width:44px; height:44px; line-height:44px; } }
 
   /* Mixer. One channel below the next, the same orientation a strip already
      has embedded in its track's slot, rather than a side-scrolling console:
@@ -290,7 +372,7 @@
   .agent-step.tool_call .role, .agent-step.tool_result .role { color:var(--accent); }
 
   @media (max-width: 760px) {
-    main { grid-template-columns:1fr; }
+    main { grid-template-columns:minmax(0, 1fr); }
     .browser { border-right:0; border-bottom:1px solid var(--line); }
     /* The knobs already wrap, so nothing about them changes on a phone: a
        390px viewport gets four columns of 44px targets. Only the dropdowns
@@ -321,7 +403,8 @@
   <span class="session">
       <button id="save" title="Save this session as RDF">Save</button>
       <button id="open" title="Open a saved session">Open</button>
-      <input type="file" id="openfile" accept=".ttl,text/turtle" class="visually-hidden">
+      <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
+      <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
     </span>
     <nav class="links" aria-label="Project">
     <a href="https://danja.github.io/jigdaw/">Docs</a>
@@ -333,6 +416,13 @@
 <main>
   <section class="browser" aria-label="Plugin browser">
     <h2>Browser</h2>
+    <!-- Every Load button below loads onto this track. Visible rather than a
+         setting somewhere else, because where a plugin lands is the first thing
+         a person needs to know about pressing Load. -->
+    <div class="searchbar target">
+      <label for="target">Load onto</label>
+      <select id="target"></select>
+    </div>
     <form class="searchbar" id="searchbar" role="search">
       <label class="visually-hidden" for="q">Search for plugins</label>
       <input type="search" id="q" placeholder="Search plugins">
@@ -375,11 +465,21 @@
   </section>
 
   <section class="stage" aria-label="Tracks and mixer">
+    <!-- Plugin editors, a plugin's own interface in a sandboxed frame. Outside
+         the tabs and never rebuilt, because moving a frame in the document
+         reloads it, and the rack is rebuilt on every edit. -->
+    <section class="editors" id="editors" aria-label="Plugin editors" hidden></section>
     <div id="tabs-mount"></div>
 
-    <div class="tabpanel" id="tracks-panel">
-      <h2>Tracks</h2>
+    <div class="tabpanel" id="tracks-panel" hidden>
+      <h2>Plugins, by track</h2>
       <div class="rack" id="rack"></div>
+    </div>
+
+    <div class="tabpanel" id="arrangement-panel">
+      <h2>Arrangement</h2>
+      <div id="timeline-mount"></div>
+      <div id="piano-roll-mount"></div>
     </div>
 
     <div class="tabpanel" id="mixer-panel" hidden>
@@ -410,6 +510,21 @@
     <button type="submit">Send</button>
   </form>
   <div id="agent-log" aria-live="polite"></div>
+</details>
+
+<details class="agent" id="bridge">
+  <summary>Agent bridge (local MCP)</summary>
+  <p class="note">
+    Lets an MCP client on this machine, such as Claude Code, drive this session. Run
+    <code>npm run mcp-bridge</code>, paste the token it prints here, and connect. Every tool
+    runs in this page, the same tools as WebMCP, and each call is written to the log below.
+  </p>
+  <form class="searchbar" id="bridgebar">
+    <label class="visually-hidden" for="bridge-token">Bridge token</label>
+    <input type="text" id="bridge-token" placeholder="Token from npm run mcp-bridge" spellcheck="false" autocomplete="off">
+    <button type="submit" id="bridge-connect">Connect</button>
+  </form>
+  <p class="note" id="bridge-status" role="status">Not connected.</p>
 </details>
 
 <details class="log">

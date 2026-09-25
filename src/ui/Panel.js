@@ -80,13 +80,18 @@ const spokenValue = (port, value) => {
  * runtime, and this must cost them nothing, the same rule every other
  * generated control here already follows.
  */
-export function createPanel (document, profile, onChange, onLoadAsset) {
+export function createPanel (document, profile, onChange, onLoadAsset, { scope = profile.iri } = {}) {
+  // What the control ids are made from. The plugin IRI by default, and a host
+  // showing two instances of one plugin passes something per instance: two
+  // panels built from one IRI gave every control an id the other also had, so
+  // a label pointed at the first instance's knob and focus came back to the
+  // wrong one after a redraw.
   const root = document.createElement('section')
   root.className = 'panel'
 
   const heading = document.createElement('h3')
   heading.textContent = profile.label ?? profile.iri
-  const headingId = `${profile.iri}-heading`.replace(/[^\w-]/g, '_')
+  const headingId = `${scope}-heading`.replace(/[^\w-]/g, '_')
   heading.id = headingId
   // A group per plugin, named by its own heading, so a panel is one landmark a
   // reader can skip rather than a flat run of controls from several plugins.
@@ -130,7 +135,7 @@ export function createPanel (document, profile, onChange, onLoadAsset) {
     row.className = `control control-${port.widget}`
 
     const label = document.createElement('label')
-    const id = `${profile.iri}#${port.symbol}`.replace(/[^\w-]/g, '_')
+    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, '_')
     // setAttribute rather than the htmlFor property: the property is an alias
     // that not every DOM implementation provides, and the association is the
     // whole point of the label.
@@ -224,7 +229,7 @@ export function createPanel (document, profile, onChange, onLoadAsset) {
     row.className = 'control control-asset'
 
     const label = document.createElement('label')
-    const id = `${profile.iri}#${key}-asset`.replace(/[^\w-]/g, '_')
+    const id = `${scope}#${key}-asset`.replace(/[^\w-]/g, '_')
     label.setAttribute('for', id)
     label.textContent = key
     row.append(label)

@@ -20,12 +20,18 @@
     a jig:Project ;
     rdfs:label "Fender into the Ropery" ;
     jig:revision 1 ;
+    jig:track <#track-1> ;
     jig:node <#amp> , <#room> ;
     jig:connection <#c1> ;
     jig:transport <#transport> .
 
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Fender into the Ropery" .
+
 <#amp>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Fender Super Reverb" ;
     jig:plugin <../plugins/ferrite/> ;
     jig:setting <#amp-output> ;
@@ -33,6 +39,7 @@
 
 <#room>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Ropery" ;
     jig:plugin <../plugins/ferrite/> ;
     jig:setting <#room-amp> , <#room-mix> ;

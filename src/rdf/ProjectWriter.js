@@ -8,8 +8,8 @@
 //
 // Three rules from the specification shape this file and each is load bearing.
 //
-// No blank nodes: every node, connection, endpoint, setting and tempo point is
-// skolemised as a fragment of the project IRI, so a project is diffable, can be
+// No blank nodes: every track, node, connection, endpoint, setting and tempo
+// point is skolemised as a fragment of the project IRI, so a project is diffable, can be
 // re-ingested without duplicating itself, and is queryable in one triple pattern.
 //
 // Deterministic: the same project produces byte-identical output. Everything is
@@ -21,7 +21,7 @@
 // `writePositions` serialises that second graph separately.
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
 
-const { jig } = v
+const { jig, trn } = v
 
 const PREFIXES = [
   ['jig', JIG],
@@ -63,6 +63,18 @@ function integer (value) {
   return String(n)
 }
 
+/**
+ * A source under the project's own IRI, written relative to it, so a session
+ * saved beside its media folder resolves wherever the folder is opened
+ * (project-format.md "Clips"). Anything else is written as it is.
+ */
+function relativeTo (source, base) {
+  if (!source.startsWith(base)) return source
+  const rest = source.slice(base.length)
+  // A first segment with a colon in it would read as a scheme.
+  return rest === '' || rest.split('/')[0].includes(':') ? source : rest
+}
+
 /** Sorted, because determinism is a rule of the format and not a nicety. */
 const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 
@@ -92,6 +104,7 @@ function endpoint (lines, base, id, e) {
 export function writeProject (project, { iri, created = null } = {}) {
   if (!iri) throw new Error('writeProject needs the project IRI, which becomes the @base')
 
+  const tracks = [...project.tracks].sort(byId)
   const nodes = [...project.nodes].sort(byId)
   const connections = [...project.connections].sort(byId)
   const transport = project.transport
@@ -107,6 +120,9 @@ export function writeProject (project, { iri, created = null } = {}) {
   if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`)
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`)
   lines.push(`    ${term(jig.revision)} ${integer(project.revision)} ;`)
+  if (tracks.length > 0) {
+    lines.push(`    ${term(jig.track)} ${tracks.map(t => `<#${t.id}>`).join(' , ')} ;`)
+  }
   if (nodes.length > 0) {
     lines.push(`    ${term(jig.node)} ${nodes.map(n => `<#${n.id}>`).join(' , ')} ;`)
   }
@@ -115,11 +131,57 @@ export function writeProject (project, { iri, created = null } = {}) {
   }
   lines.push(`    ${term(jig.transport)} <#transport> .`)
 
+  for (const track of tracks) {
+    lines.push('')
+    lines.push(`<#${track.id}>`)
+    const statements = [`a ${term(jig.Track)}`]
+    if (track.label) statements.push(`rdfs:label ${string(track.label)}`)
+    // The channel strip, written only where it differs from the default. A
+    // project full of "gain 1.0, pan 0.0, not muted" says nothing and makes
+    // every diff longer, and a reader supplies the defaults anyway.
+    const channel = track.channel
+    if (channel.gain !== 1) statements.push(`${term(jig.gain)} ${decimal(channel.gain)}`)
+    if (channel.pan !== 0) statements.push(`${term(jig.pan)} ${decimal(channel.pan)}`)
+    if (channel.muted) statements.push(`${term(jig.muted)} true`)
+    if (channel.soloed) statements.push(`${term(jig.soloed)} true`)
+    if (track.midiInput) statements.push(`${term(jig.midiInput)} <#${track.midiInput}>`)
+    if (track.audioInput) statements.push(`${term(jig.audioInput)} <#${track.audioInput}>`)
+    const clips = (project.clips ?? []).filter(c => c.track === track.id).sort(byId)
+    if (clips.length > 0) statements.push(`${term(jig.clip)} ${clips.map(c => `<#${c.id}>`).join(' , ')}`)
+    lines.push(statements.map(st => `    ${st}`).join(' ;\n') + ' .')
+  }
+
+  // Clips, keyed by beat and never listed in order (project-format.md
+  // "Clips"). A note is named by its place in the clip's notes, which the
+  // model keeps sorted by start and pitch, so the same notes always write the
+  // same names.
+  for (const clip of [...(project.clips ?? [])].sort(byId)) {
+    lines.push('')
+    lines.push(`<#${clip.id}>`)
+    const statements = [
+      `a ${term(clip.kind === 'midi' ? jig.MidiClip : jig.AudioClip)}`,
+      `${term(trn.startBeat)} ${decimal(clip.startBeat)} ; ${term(trn.lengthBeats)} ${decimal(clip.lengthBeats)}`
+    ]
+    if (clip.kind === 'audio') {
+      statements.push(`${term(jig.source)} <${relativeTo(clip.source, iri)}>`)
+      if (clip.offsetSeconds !== 0) statements.push(`${term(jig.offsetSeconds)} ${decimal(clip.offsetSeconds)}`)
+    } else if (clip.notes.length > 0) {
+      statements.push(`${term(jig.note)} ${clip.notes.map((_, i) => `<#${clip.id}-n${i + 1}>`).join(' , ')}`)
+    }
+    lines.push(statements.map(st => `    ${st}`).join(' ;\n') + ' .')
+    clip.notes.forEach((note, i) => {
+      lines.push(`<#${clip.id}-n${i + 1}> a ${term(jig.Note)} ; ` +
+        `${term(trn.startBeat)} ${decimal(note.startBeat)} ; ${term(trn.lengthBeats)} ${decimal(note.lengthBeats)} ; ` +
+        `${term(trn.pitch)} ${integer(note.pitch)} ; ${term(trn.velocity)} ${integer(note.velocity)} .`)
+    })
+  }
+
   for (const node of nodes) {
     lines.push('')
     lines.push(`<#${node.id}>`)
     lines.push(`    a ${term(jig.Node)} ;`)
     if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`)
+    lines.push(`    ${term(jig.onTrack)} <#${node.track}> ;`)
     const settings = [...node.settings.keys()].sort()
     if (settings.length > 0) {
       lines.push(`    ${term(jig.setting)} ` +
@@ -129,19 +191,6 @@ export function writeProject (project, { iri, created = null } = {}) {
     // values are settings and are deliberately not in here, because storing them
     // in both places means the two disagree on restore.
     if (node.state) lines.push(`    ${term(jig.nodeState)} ${string(node.state)} ;`)
-
-    // The channel strip, written only where it differs from the default. A
-    // project full of "gain 1.0, pan 0.0, not muted" says nothing and makes
-    // every diff longer, and a reader supplies the defaults anyway.
-    const channel = node.channel ?? {}
-    if (channel.gain !== undefined && channel.gain !== 1) {
-      lines.push(`    ${term(jig.gain)} ${decimal(channel.gain)} ;`)
-    }
-    if (channel.pan !== undefined && channel.pan !== 0) {
-      lines.push(`    ${term(jig.pan)} ${decimal(channel.pan)} ;`)
-    }
-    if (channel.muted) lines.push(`    ${term(jig.muted)} true ;`)
-    if (channel.soloed) lines.push(`    ${term(jig.soloed)} true ;`)
     lines.push(`    ${term(jig.plugin)} <${node.pluginIri}> .`)
 
     for (const symbol of settings) {
@@ -171,9 +220,14 @@ export function writeProject (project, { iri, created = null } = {}) {
   lines.push(`    a ${term(jig.Transport)} ;`)
   lines.push(`    ${term(jig.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ` +
     `${term(jig.beatUnit)} ${integer(transport.beatUnit)} ;`)
-  lines.push(`    ${term(jig.loopStart)} ${decimal(transport.loopStart)} ; ` +
-    `${term(jig.loopEnd)} ${decimal(transport.loopEnd)} ; ` +
-    `${term(jig.loopEnabled)} ${transport.loopEnabled ? 'true' : 'false'} ;`)
+  // The loop's bounds only when they describe a loop. A new project's are both
+  // zero, which the shapes reject (a loop must start before it ends), so every
+  // session saved before a loop was set was written invalid.
+  const loop = transport.loopEnd > transport.loopStart
+    ? `${term(jig.loopStart)} ${decimal(transport.loopStart)} ; ` +
+      `${term(jig.loopEnd)} ${decimal(transport.loopEnd)} ; `
+    : ''
+  lines.push(`    ${loop}${term(jig.loopEnabled)} ${transport.loopEnabled ? 'true' : 'false'} ;`)
   lines.push(`    ${term(jig.tempoPoint)} ` +
     points.map((_, i) => `<#t${i}>`).join(' , ') + ' .')
   points.forEach((point, i) => {

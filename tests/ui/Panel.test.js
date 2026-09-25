@@ -9,6 +9,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
 import { createPanel, UNIT_LABELS, SPOKEN_UNITS } from '../../src/ui/Panel.js'
+import { appFile } from './appSource.js'
 
 const port = over => ({
   symbol: 'mix', name: 'Mix', defaultValue: 0.3, minimum: 0, maximum: 1,
@@ -101,6 +102,24 @@ describe('createPanel accessibility', () => {
   })
 })
 
+describe('two instances of one plugin', () => {
+  it('share no id when each panel is given its own scope', () => {
+    const ports = [port(), port({ symbol: 'size', name: 'Size' })]
+    const a = createPanel(document, profile(ports), () => {}, undefined, { scope: 'panel-node-1' })
+    const b = createPanel(document, profile(ports), () => {}, undefined, { scope: 'panel-node-2' })
+    document.body.append(a.element, b.element)
+    const ids = [...document.querySelectorAll('[id]')].map(e => e.id)
+    expect(ids.length).toBeGreaterThan(4)
+    expect(new Set(ids).size).toBe(ids.length)
+    // And every label still points at its own control, in its own panel.
+    for (const panel of [a, b]) {
+      for (const label of panel.element.querySelectorAll('label[for]')) {
+        expect(panel.element.querySelector(`#${label.getAttribute('for')}`)).not.toBeNull()
+      }
+    }
+  })
+})
+
 describe('createPanel behaviour', () => {
   it('renders the declared default through the same path as a host update', () => {
     const { element } = build([port({ defaultValue: 0.75 })])
@@ -137,10 +156,28 @@ describe('the application keeps a panel current', () => {
   // panel that was already on screen. drawRack is in the browser bundle, where
   // there is no AudioContext to build a real Engine against, so the wiring is
   // checked in the source, the same way tests/ui/Focus.test.js checks that
-  // drawRack calls preserveFocus.
-  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
-  const drawStart = app.indexOf('function drawRack')
-  const draw = app.slice(drawStart, app.indexOf('\n\nfunction ', drawStart))
+  // drawRack calls preserveFocus. The panel is built in drawSlot, one plugin's
+  // part of the rack, and the slice ends at that function's closing brace.
+  const app = appFile('web/app/Rack.js')
+  const drawStart = app.indexOf('function drawSlot')
+  const draw = app.slice(drawStart, app.indexOf('\n  }\n', drawStart))
+
+  it('finds the function it checks', () => {
+    expect(drawStart).toBeGreaterThan(-1)
+    expect(draw).toMatch(/createPanel\(/)
+  })
+
+  it('shows the default for a port with no setting, such as one whose first change was undone', () => {
+    const settings = draw.indexOf('for (const [symbol, value] of node.settings)')
+    const defaults = draw.indexOf('panel.update(port.symbol, port.defaultValue)')
+    expect(defaults, 'an unset port is never put back to its default').toBeGreaterThan(-1)
+    expect(defaults).toBeGreaterThan(settings)
+    expect(defaults).toBeLessThan(draw.indexOf('element.append(panel.element)'))
+  })
+
+  it('scopes each panel to its node, so two instances of a plugin share no id', () => {
+    expect(draw).toMatch(/scope: `panel-\$\{node\.id\}`/)
+  })
 
   it('pushes node.settings into the panel on every redraw', () => {
     const push = draw.indexOf('for (const [symbol, value] of node.settings)')
@@ -179,7 +216,11 @@ describe('the page on a phone', () => {
   it('collapses to one column on a narrow screen', () => {
     const css = page()
     expect(css).toMatch(/@media\s*\(max-width:\s*\d+px\)/)
-    expect(css).toMatch(/grid-template-columns:\s*1fr\s*;/)
+    // minmax(0, 1fr) rather than 1fr: a 1fr column grows to its widest
+    // content, and the timeline and the piano roll are as wide as the music,
+    // which made a 390px phone 654px wide. They scroll in their own boxes.
+    expect(css).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)\s*;/)
+    expect(css).not.toMatch(/grid-template-columns:\s*[^;]*\b300px 1fr\b/)
   })
 
   it('does not zoom the page in when a text input takes focus on iOS', () => {
@@ -221,9 +262,7 @@ describe('the Load by IRI field', () => {
     // A plugin is identified by an absolute IRI, and the box should show the
     // thing that would be published or pasted into another host. It cannot be
     // written into the HTML because it depends on where this host is served.
-    const { readFileSync } = await import('node:fs')
-    const { resolve } = await import('node:path')
-    const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
+    const app = appFile('web/app.js')
     expect(app).toMatch(/\$\('iri'\)\.value\s*=\s*new URL\(\$\('iri'\)\.value,\s*document\.baseURI\)\.href/)
   })
 })

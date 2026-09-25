@@ -24,8 +24,9 @@ beforeEach(() => {
 })
 
 const addNodes = () => dispatcher.apply([
-  { op: 'addNode', id: 'a', pluginIri: IRI },
-  { op: 'addNode', id: 'b', pluginIri: IRI }
+  { op: 'addTrack', id: 't' },
+  { op: 'addNode', id: 'a', track: 't', pluginIri: IRI },
+  { op: 'addNode', id: 'b', track: 't', pluginIri: IRI }
 ])
 
 describe('the tool surface', () => {
@@ -195,7 +196,7 @@ describe('collection_open', () => {
 describe('graph_apply_changes', () => {
   it('applies atomically and reports the revision', async () => {
     const result = await call('graph_apply_changes', {
-      changes: [{ op: 'addNode', id: 'a', pluginIri: IRI }]
+      changes: [{ op: 'addTrack', id: 't' }, { op: 'addNode', id: 'a', track: 't', pluginIri: IRI }]
     })
     expect(result.ok).toBe(true)
     expect(result.revision).toBe(1)
@@ -317,9 +318,10 @@ describe('registerTools', () => {
 describe('the tools webmcp.md specified and nothing had built', () => {
   const AUDIO = `${T}Audio`
   const addThree = () => dispatcher.apply([
-    { op: 'addNode', id: 'a', pluginIri: IRI },
-    { op: 'addNode', id: 'b', pluginIri: IRI },
-    { op: 'addNode', id: 'c', pluginIri: IRI }
+    { op: 'addTrack', id: 't' },
+    { op: 'addNode', id: 'a', track: 't', pluginIri: IRI },
+    { op: 'addNode', id: 'b', track: 't', pluginIri: IRI },
+    { op: 'addNode', id: 'c', track: 't', pluginIri: IRI }
   ])
 
   it('removes a node, and says how much of the graph went with it', async () => {
@@ -414,5 +416,90 @@ describe('the tools webmcp.md specified and nothing had built', () => {
       settings: [{ nodeId: 'a', symbol: 'mix', value: 0.4 }]
     })
     expect(result.applied).toEqual([{ nodeId: 'a', symbol: 'mix', value: 0.4 }])
+  })
+})
+
+describe('tracks', () => {
+  it('adds a track and reports its id', async () => {
+    const result = await call('track_add', { label: 'Drums' })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.track(result.trackId).label).toBe('Drums')
+    expect((await call('status')).tracks).toBe(1)
+  })
+
+  it('sets a fader and reports the whole strip back', async () => {
+    const { trackId } = await call('track_add', {})
+    const result = await call('track_set_channel', { trackId, gain: 0.5, muted: true })
+    expect(result.channel).toEqual({ gain: 0.5, pan: 0, muted: true, soloed: false })
+    expect((await call('track_set_channel', { trackId, pan: 3 })).ok).toBe(false)
+  })
+
+  it('renames a track and names its MIDI input, refusing a node on another track', async () => {
+    addNodes()
+    const other = (await call('track_add', {})).trackId
+    expect((await call('track_set', { trackId: 't', label: 'Keys', midiInput: 'a' })).ok).toBe(true)
+    expect(dispatcher.project.track('t')).toMatchObject({ label: 'Keys', midiInput: 'a' })
+    const refused = await call('track_set', { trackId: other, midiInput: 'b' })
+    expect(refused.ok).toBe(false)
+    expect(refused.error).toMatch(/not on track/)
+  })
+
+  it('moves a node between tracks, and removes a track only once it is empty or told where they go', async () => {
+    addNodes()
+    const other = (await call('track_add', {})).trackId
+    expect((await call('node_move_to_track', { nodeId: 'a', trackId: other })).ok).toBe(true)
+    expect(dispatcher.project.node('a').track).toBe(other)
+    expect((await call('track_remove', { trackId: 't' })).ok).toBe(false)
+    expect((await call('track_remove', { trackId: 't', moveNodesTo: other })).ok).toBe(true)
+    expect(dispatcher.project.tracks.map(t => t.id)).toEqual([other])
+  })
+
+  it('passes a track through plugin_load', async () => {
+    const seen = []
+    const tools = createTools({
+      dispatcher,
+      catalogue: fakeCatalogue(),
+      loadPlugin: async (iri, options) => {
+        seen.push([iri, options])
+        return { ok: true, nodeId: 'n', trackId: options.track ?? 'new', entry: { profile: { label: 'X', ports: [] }, ready: { latencyFrames: 0 } }, revision: 1 }
+      }
+    })
+    const load = input => tools.find(t => t.name === 'plugin_load').handler(input)
+    expect((await load({ iri: IRI, track: 'track-9' })).trackId).toBe('track-9')
+    await load({ iri: IRI })
+    expect(seen).toEqual([[IRI, { track: 'track-9' }], [IRI, {}]])
+  })
+})
+
+describe('clips', () => {
+  const note = { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }
+
+  it('adds a clip with notes, replaces them, moves it and removes it', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 4, lengthBeats: 8, notes: [note] })
+    expect(added.ok).toBe(true)
+    expect((await call('status')).clips).toBe(1)
+    expect((await call('clip_set_notes', { clipId: added.clipId, notes: [note, { ...note, pitch: 64 }] })).ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).notes).toHaveLength(2)
+    expect((await call('clip_move', { clipId: added.clipId, startBeat: 12, lengthBeats: 2 })).ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId)).toMatchObject({ startBeat: 12, lengthBeats: 2 })
+    expect((await call('clip_remove', { clipId: added.clipId })).ok).toBe(true)
+    expect(dispatcher.project.clips).toEqual([])
+  })
+
+  it('refuses a note MIDI cannot carry, and says which', async () => {
+    const { trackId } = await call('track_add', {})
+    const refused = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [{ ...note, velocity: 0 }] })
+    expect(refused.ok).toBe(false)
+    expect(refused.error).toMatch(/note 0 needs a velocity/)
+  })
+})
+
+describe('audio clips', () => {
+  it('adds one by the IRI of its file, and refuses a relative one', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add_audio', { trackId, source: 'https://example.org/loop.wav', startBeat: 0, lengthBeats: 8, offsetSeconds: 1 })
+    expect(dispatcher.project.clip(added.clipId)).toMatchObject({ kind: 'audio', source: 'https://example.org/loop.wav', offsetSeconds: 1 })
+    expect((await call('clip_add_audio', { trackId, source: 'loop.wav', startBeat: 0, lengthBeats: 8 })).ok).toBe(false)
   })
 })

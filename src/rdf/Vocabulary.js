@@ -100,7 +100,13 @@ export const vocabulary = Object.freeze({
     format: `${TRN}format`,
     HostTransport: `${TRN}HostTransport`,
     Audio: `${TRN}Audio`,
-    Midi: `${TRN}Midi`
+    Midi: `${TRN}Midi`,
+    // A clip's and a note's placement, and a note itself. transmission's
+    // arrangement terms, reused for the same purpose.
+    startBeat: `${TRN}startBeat`,
+    lengthBeats: `${TRN}lengthBeats`,
+    pitch: `${TRN}pitch`,
+    velocity: `${TRN}velocity`
   }),
 
   jig: Object.freeze({
@@ -156,6 +162,7 @@ export const vocabulary = Object.freeze({
 
     // Projects
     Project: `${JIG}Project`,
+    Track: `${JIG}Track`,
     Node: `${JIG}Node`,
     Connection: `${JIG}Connection`,
     Endpoint: `${JIG}Endpoint`,
@@ -164,6 +171,7 @@ export const vocabulary = Object.freeze({
     TempoPoint: `${JIG}TempoPoint`,
     revision: `${JIG}revision`,
     node: `${JIG}node`,
+    track: `${JIG}track`,
     connection: `${JIG}connection`,
     transport: `${JIG}transport`,
     plugin: `${JIG}plugin`,
@@ -172,6 +180,17 @@ export const vocabulary = Object.freeze({
     pan: `${JIG}pan`,
     muted: `${JIG}muted`,
     soloed: `${JIG}soloed`,
+    onTrack: `${JIG}onTrack`,
+    midiInput: `${JIG}midiInput`,
+    audioInput: `${JIG}audioInput`,
+    Clip: `${JIG}Clip`,
+    MidiClip: `${JIG}MidiClip`,
+    AudioClip: `${JIG}AudioClip`,
+    Note: `${JIG}Note`,
+    clip: `${JIG}clip`,
+    note: `${JIG}note`,
+    source: `${JIG}source`,
+    offsetSeconds: `${JIG}offsetSeconds`,
     setting: `${JIG}setting`,
     from: `${JIG}from`,
     to: `${JIG}to`,

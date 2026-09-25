@@ -8,10 +8,10 @@ const IRI = 'https://strandz.it/jigdaw/plugins/cascade/'
 const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
 
 /** An engine that records what it was asked to do. */
-// Links between nodes, and links to the speakers, are different questions.
-// Every sink now reaches the master, so a test about one edge has to say which.
-const between = engine => engine.links.filter(l => l.to !== 'output')
-const toSpeakers = engine => engine.links.filter(l => l.to === 'output').map(l => l.from)
+// Links between nodes, and links to a track's fader, are different questions.
+// Every sink now reaches its track, so a test about one edge has to say which.
+const between = engine => engine.links.filter(l => l.to !== 'track')
+const toSpeakers = engine => engine.links.filter(l => l.to === 'track').map(l => l.from)
 
 function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
   const entries = new Map()
@@ -40,7 +40,7 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
           audioOutputs: outputs,
           accepts: [],
           produces: [],
-          ports: [{ symbol: 'mix', minimum: 0, maximum: 1 }]
+          ports: [{ symbol: 'mix', minimum: 0, maximum: 1, defaultValue: 0.3 }]
         },
         ready: { latencyFrames: latency }
       }
@@ -53,8 +53,27 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
       return entry
     },
     remove (id) { this.calls.push(['remove', id]); entries.delete(id) },
+    // Track strips. Each refuses what the real engine refuses: a strip made
+    // twice, and one used or removed that was never made.
+    tracks: new Set(),
+    addTrack (id) {
+      if (this.tracks.has(id)) throw new Error(`track strip already exists: ${id}`)
+      this.tracks.add(id)
+    },
+    removeTrack (id) {
+      if (!this.tracks.delete(id)) throw new Error(`no such track strip: ${id}`)
+      this.channels.delete(id)
+    },
+    trackIds () { return [...this.tracks] },
+    linkToTrack (from, track) {
+      if (!this.tracks.has(track)) throw new Error(`no such track strip: ${track}`)
+      this.links.push({ from, to: 'track', track })
+    },
     channels: new Map(),
-    setChannel (id, settings) { this.channels.set(id, settings) },
+    setTrackChannel (id, settings) {
+      if (!this.tracks.has(id)) throw new Error(`no such track strip: ${id}`)
+      this.channels.set(id, settings)
+    },
     links: [],
     handlers: new Map(),
     onMessage (id, handler) {
@@ -65,6 +84,11 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
     post (id, message) { this.calls.push(['post', id, message]) },
     clearLinks () { this.links = [] },
     link (from, to, options = {}) { this.links.push({ from, to, ...options }) },
+    defaultParameter (id, symbol) {
+      const port = this.get(id).profile.ports.find(p => p.symbol === symbol)
+      if (!port) throw new Error(`no parameter "${symbol}"`)
+      return port.defaultValue
+    },
     clampParameter (id, symbol, value) {
       const port = this.get(id).profile.ports.find(p => p.symbol === symbol)
       if (!port) throw new Error(`no parameter "${symbol}"`)
@@ -74,6 +98,18 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
       this.calls.push(['setParameter', id, symbol, value])
       return Math.min(1, Math.max(0, value))
     }
+  }
+}
+
+/** The track strip half of an engine, for the small fakes that need nothing else from it. */
+const trackStrips = () => {
+  const ids = new Set()
+  return {
+    addTrack: id => ids.add(id),
+    removeTrack: id => ids.delete(id),
+    trackIds: () => [...ids],
+    linkToTrack: () => {},
+    setTrackChannel: () => {}
   }
 }
 
@@ -89,8 +125,9 @@ let dispatcher
 beforeEach(() => { dispatcher = new OpDispatcher() })
 
 const addTwo = () => dispatcher.apply([
-  { op: 'addNode', id: 'a', pluginIri: IRI },
-  { op: 'addNode', id: 'b', pluginIri: IRI }
+  { op: 'addTrack', id: 't' },
+  { op: 'addNode', id: 'a', track: 't', pluginIri: IRI },
+  { op: 'addNode', id: 'b', track: 't', pluginIri: IRI }
 ])
 
 describe('apply', () => {
@@ -452,7 +489,7 @@ describe('rebuilding the audio links', () => {
     // instantiated yet, and that is not an error.
     const engine = fakeEngine()
     const { d, a } = await twoLoaded(engine)
-    d.apply([{ op: 'addNode', id: 'unloaded', pluginIri: IRI }])
+    d.apply([{ op: 'addNode', id: 'unloaded', track: d.project.tracks[0].id, pluginIri: IRI }])
     d.apply([edge(a, 'unloaded')])
     // No edge between nodes, because one end is not in the engine yet. The
     // loaded sink still reaches the speakers: that is not the connection under
@@ -481,6 +518,7 @@ describe('removing a node lets go of what was playing it', () => {
       remove: id => removed.push(id),
       clearLinks: () => {},
       link: () => {},
+      ...trackStrips(),
       get: () => ({ profile: { produces: [] } }),
       onMessage: () => () => {}
     }
@@ -520,7 +558,7 @@ describe('a node can be given its name, so a session can be reopened', () => {
     const engine = {
       nodes: () => [],
       addPlugin: async () => ({ id: 'e1', profile: { label: 'X', produces: [], latencyFrames: 0 }, node: {}, ready: {} }),
-      remove: () => {}, clearLinks: () => {}, link: () => {},
+      remove: () => {}, clearLinks: () => {}, link: () => {}, ...trackStrips(),
       get: () => ({ profile: { produces: [] } }), onMessage: () => () => {}
     }
     const d = new OpDispatcher({ engine })
@@ -605,81 +643,81 @@ describe('the channel strip', () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
     await d.addPlugin(IRI)
-    expect(strips(engine)).toEqual({ 'engine-1': '1/0/heard' })
+    expect(strips(engine)).toEqual({ 'track-1': '1/0/heard' })
   })
 
   it('carries a fader and a pan', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI)
-    d.setChannel(nodeId, { gain: 0.5, pan: -1 })
-    expect(strips(engine)).toEqual({ 'engine-1': '0.5/-1/heard' })
+    const { trackId } = await d.addPlugin(IRI)
+    d.setTrackChannel(trackId, { gain: 0.5, pan: -1 })
+    expect(strips(engine)).toEqual({ 'track-1': '0.5/-1/heard' })
   })
 
-  it('silences a muted node without losing its level', async () => {
+  it('silences a muted track without losing its level', async () => {
     // The reason a mixer has both: unmuting restores what was set.
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI)
-    d.setChannel(nodeId, { gain: 0.7 })
-    d.setChannel(nodeId, { muted: true })
-    expect(strips(engine)).toEqual({ 'engine-1': '0.7/0/silent' })
-    d.setChannel(nodeId, { muted: false })
-    expect(strips(engine)).toEqual({ 'engine-1': '0.7/0/heard' })
+    const { trackId } = await d.addPlugin(IRI)
+    d.setTrackChannel(trackId, { gain: 0.7 })
+    d.setTrackChannel(trackId, { muted: true })
+    expect(strips(engine)).toEqual({ 'track-1': '0.7/0/silent' })
+    d.setTrackChannel(trackId, { muted: false })
+    expect(strips(engine)).toEqual({ 'track-1': '0.7/0/heard' })
   })
 
   it('silences everything that is not soloed', async () => {
-    // Whether a node is heard depends on whether another node is soloed, which
+    // Whether a track is heard depends on whether another is soloed, which
     // is why this is resolved here and not in the engine.
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const a = (await d.addPlugin(IRI)).nodeId
+    const a = (await d.addPlugin(IRI)).trackId
     await d.addPlugin(IRI)
     await d.addPlugin(IRI)
-    d.setChannel(a, { soloed: true })
+    d.setTrackChannel(a, { soloed: true })
     expect(strips(engine)).toEqual({
-      'engine-1': '1/0/heard', 'engine-2': '1/0/silent', 'engine-3': '1/0/silent'
+      'track-1': '1/0/heard', 'track-2': '1/0/silent', 'track-3': '1/0/silent'
     })
   })
 
   it('brings everything back when the solo is released', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const a = (await d.addPlugin(IRI)).nodeId
+    const a = (await d.addPlugin(IRI)).trackId
     await d.addPlugin(IRI)
-    d.setChannel(a, { soloed: true })
-    d.setChannel(a, { soloed: false })
-    expect(strips(engine)).toEqual({ 'engine-1': '1/0/heard', 'engine-2': '1/0/heard' })
+    d.setTrackChannel(a, { soloed: true })
+    d.setTrackChannel(a, { soloed: false })
+    expect(strips(engine)).toEqual({ 'track-1': '1/0/heard', 'track-2': '1/0/heard' })
   })
 
-  it('still silences a soloed node that is also muted', async () => {
+  it('still silences a soloed track that is also muted', async () => {
     // Somebody pressed mute and meant it.
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const a = (await d.addPlugin(IRI)).nodeId
+    const a = (await d.addPlugin(IRI)).trackId
     await d.addPlugin(IRI)
-    d.setChannel(a, { soloed: true, muted: true })
-    expect(strips(engine)['engine-1']).toBe('1/0/silent')
+    d.setTrackChannel(a, { soloed: true, muted: true })
+    expect(strips(engine)['track-1']).toBe('1/0/silent')
   })
 
-  it('hears several soloed nodes together', async () => {
+  it('hears several soloed tracks together', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const a = (await d.addPlugin(IRI)).nodeId
-    const b = (await d.addPlugin(IRI)).nodeId
+    const a = (await d.addPlugin(IRI)).trackId
+    const b = (await d.addPlugin(IRI)).trackId
     await d.addPlugin(IRI)
-    d.setChannel(a, { soloed: true })
-    d.setChannel(b, { soloed: true })
+    d.setTrackChannel(a, { soloed: true })
+    d.setTrackChannel(b, { soloed: true })
     expect(strips(engine)).toEqual({
-      'engine-1': '1/0/heard', 'engine-2': '1/0/heard', 'engine-3': '1/0/silent'
+      'track-1': '1/0/heard', 'track-2': '1/0/heard', 'track-3': '1/0/silent'
     })
   })
 
   it('refuses a gain below zero, which is an inverted signal', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI)
-    const result = d.setChannel(nodeId, { gain: -1 })
+    const { trackId } = await d.addPlugin(IRI)
+    const result = d.setTrackChannel(trackId, { gain: -1 })
     expect(result.ok).toBe(false)
     expect(result.message).toMatch(/at or above zero/)
   })
@@ -687,17 +725,17 @@ describe('the channel strip', () => {
   it('refuses a pan outside the stereo field', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI)
-    expect(d.setChannel(nodeId, { pan: 2 }).ok).toBe(false)
+    const { trackId } = await d.addPlugin(IRI)
+    expect(d.setTrackChannel(trackId, { pan: 2 }).ok).toBe(false)
   })
 
-  it('reports what a listener hears, which is not what any node says', async () => {
+  it('reports what a listener hears, which is not what any track says', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const a = (await d.addPlugin(IRI)).nodeId
-    const b = (await d.addPlugin(IRI)).nodeId
-    d.setChannel(a, { soloed: true })
-    const heard = Object.fromEntries(d.audibility().map(x => [x.nodeId, x.silent]))
+    const a = (await d.addPlugin(IRI)).trackId
+    const b = (await d.addPlugin(IRI)).trackId
+    d.setTrackChannel(a, { soloed: true })
+    const heard = Object.fromEntries(d.audibility().map(x => [x.trackId, x.silent]))
     expect(heard).toEqual({ [a]: false, [b]: true })
   })
 })
@@ -707,14 +745,49 @@ describe('loading a plugin carries everything a node holds', () => {
   // and addPlugin forwarded a chosen few fields on the way back in. Found in a
   // browser, because every test either built a node or read one and none of
   // them did both through the path the page uses.
-  it('keeps the channel strip it is given', async () => {
+  it('gives a plugin a track of its own, named after it, when given none', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI, {
-      id: 'verb', label: 'Verb', channel: { gain: 0.6, pan: -0.5, muted: true }
-    })
-    expect(d.project.node(nodeId).channel)
-      .toEqual({ gain: 0.6, pan: -0.5, muted: true, soloed: false })
+    const { nodeId, trackId } = await d.addPlugin(IRI, { id: 'verb', label: 'Verb' })
+    expect(d.project.node(nodeId).track).toBe(trackId)
+    expect(d.project.track(trackId).label).toBe('Verb')
+    // One edit, so one undo takes both away.
+    expect(d.project.revision).toBe(1)
+    // Cascade accepts no MIDI, so nothing is named as the MIDI input.
+    expect(d.project.track(trackId).midiInput).toBeNull()
+  })
+
+  it('makes a plugin that accepts MIDI its new track\'s MIDI input', async () => {
+    const engine = fakeEngine()
+    const add = engine.addPlugin.bind(engine)
+    engine.addPlugin = async iri => {
+      const entry = await add(iri)
+      entry.profile.accepts = ['http://purl.org/stuff/transmissions/Midi']
+      return entry
+    }
+    const d = new OpDispatcher({ engine })
+    const { nodeId, trackId } = await d.addPlugin(IRI)
+    expect(d.project.track(trackId).midiInput).toBe(nodeId)
+
+    // On a track that already exists nothing is guessed.
+    const second = await d.addPlugin(IRI, { track: trackId })
+    expect(second.trackId).toBe(trackId)
+    expect(d.project.track(trackId).midiInput).toBe(nodeId)
+  })
+
+  it('puts a plugin on the track it is given, and refuses one that is not there', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const first = await d.addPlugin(IRI)
+    const second = await d.addPlugin(IRI, { track: first.trackId })
+    expect(d.project.node(second.nodeId).track).toBe(first.trackId)
+    expect(d.project.tracks).toHaveLength(1)
+
+    const refused = await d.addPlugin(IRI, { track: 'nope' })
+    expect(refused.ok).toBe(false)
+    expect(refused.message).toMatch(/no such track/)
+    // Refused by the model, so released by the engine too.
+    expect(engine.calls.at(-1)[0]).toBe('remove')
   })
 
   it('keeps settings and state it is given', async () => {
@@ -739,23 +812,24 @@ describe('loading a plugin carries everything a node holds', () => {
     const state = encodeState('zzz')
     const engine = fakeEngine()
     const plain = new Project()
-    plain.apply([{
+    plain.apply([{ op: 'addTrack', id: 't' }, {
       op: 'addNode',
       id: 'x',
+      track: 't',
       pluginIri: IRI,
       label: 'X',
       settings: { mix: 0.2 },
-      state,
-      channel: { gain: 0.5, pan: 1, muted: true, soloed: true }
+      state
     }])
 
     const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 't' }])
     await d.addPlugin(IRI, {
       id: 'x',
+      track: 't',
       label: 'X',
       settings: { mix: 0.2 },
-      state,
-      channel: { gain: 0.5, pan: 1, muted: true, soloed: true }
+      state
     })
 
     const direct = plain.node('x')
@@ -795,16 +869,71 @@ describe('undo and redo', () => {
     expect(engine.calls.at(-1)).toEqual(['setParameter', 'engine-1', 'mix', 0.9])
   })
 
-  it('steps a channel change back and forward', async () => {
+  it('steps the first change to a parameter back to its default, everywhere', async () => {
+    // Found in a browser: undoing the first change to a parameter left it where
+    // it was, because the snapshot being restored had no setting for it and
+    // undo only walked the settings the snapshot had.
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
     const { nodeId } = await d.addPlugin(IRI)
-    d.setChannel(nodeId, { muted: true, pan: -0.5 })
+    const told = []
+    d.subscribe(e => { if (e.type === 'parameter') told.push(e.value) })
+    d.setParameter(nodeId, 'mix', 0.9)
+    await d.undo()
+    expect(d.project.node(nodeId).settings.has('mix')).toBe(false)
+    expect(engine.calls.at(-1)).toEqual(['setParameter', 'engine-1', 'mix', 0.3])
+    expect(told).toEqual([0.9, 0.3])
+    await d.redo()
+    expect(d.project.node(nodeId).settings.get('mix')).toBe(0.9)
+  })
+
+  it('steps a channel change back and forward', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { trackId } = await d.addPlugin(IRI)
+    d.setTrackChannel(trackId, { muted: true, pan: -0.5 })
 
     await d.undo()
-    expect(d.project.node(nodeId).channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
+    expect(d.project.track(trackId).channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
+    expect(engine.channels.get(trackId)).toEqual({ gain: 1, pan: 0, silent: false })
     await d.redo()
-    expect(d.project.node(nodeId).channel).toEqual({ gain: 1, pan: -0.5, muted: true, soloed: false })
+    expect(d.project.track(trackId).channel).toEqual({ gain: 1, pan: -0.5, muted: true, soloed: false })
+    expect(engine.channels.get(trackId)).toEqual({ gain: 1, pan: -0.5, silent: true })
+  })
+
+  it('steps removing a track back, with its strip, label and inputs', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId, trackId } = await d.addPlugin(IRI, { label: 'Lead' })
+    d.apply([{ op: 'setTrack', id: trackId, midiInput: nodeId }])
+    d.setTrackChannel(trackId, { gain: 0.25 })
+    d.apply([{ op: 'removeNode', id: nodeId }, { op: 'removeTrack', id: trackId }])
+    expect(d.project.tracks).toEqual([])
+    expect(engine.trackIds()).toEqual([])
+
+    await d.undo()
+    expect(d.project.track(trackId)).toMatchObject({ label: 'Lead', midiInput: nodeId, channel: { gain: 0.25 } })
+    expect(d.project.node(nodeId).track).toBe(trackId)
+    expect(engine.trackIds()).toEqual([trackId])
+    expect(toSpeakers(engine)).toHaveLength(1)
+
+    await d.redo()
+    expect(d.project.tracks).toEqual([])
+  })
+
+  it('steps moving a node between tracks back and forward', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const a = await d.addPlugin(IRI)
+    const b = await d.addPlugin(IRI)
+    d.apply([{ op: 'moveNodeToTrack', id: a.nodeId, track: b.trackId }])
+    expect(engine.links.find(l => l.from === 'engine-1').track).toBe(b.trackId)
+
+    await d.undo()
+    expect(d.project.node(a.nodeId).track).toBe(a.trackId)
+    expect(engine.links.find(l => l.from === 'engine-1').track).toBe(a.trackId)
+    await d.redo()
+    expect(d.project.node(a.nodeId).track).toBe(b.trackId)
   })
 
   it('steps a connection back and forward', async () => {
@@ -851,19 +980,21 @@ describe('undo and redo', () => {
     expect(engine.calls.filter(([name]) => name === 'addPlugin')).toHaveLength(2)
   })
 
-  it('steps removing a node back by reloading it, with its settings and channel intact', async () => {
+  it('steps removing a node back by reloading it, with its settings and track intact', async () => {
     const engine = fakeEngine()
     const d = new OpDispatcher({ engine })
-    const { nodeId } = await d.addPlugin(IRI, { settings: { mix: 0.42 } })
-    d.setChannel(nodeId, { gain: 0.3, soloed: true })
+    const { nodeId, trackId } = await d.addPlugin(IRI, { settings: { mix: 0.42 } })
+    d.apply([{ op: 'setTrack', id: trackId, audioInput: nodeId }])
     d.apply([{ op: 'removeNode', id: nodeId }])
     expect(d.project.nodes).toEqual([])
+    expect(d.project.track(trackId).audioInput).toBeNull()
 
     await d.undo()
     const restored = d.project.node(nodeId)
     expect(restored).not.toBeNull()
     expect(restored.settings.get('mix')).toBe(0.42)
-    expect(restored.channel).toEqual({ gain: 0.3, pan: 0, muted: false, soloed: true })
+    expect(restored.track).toBe(trackId)
+    expect(d.project.track(trackId).audioInput).toBe(nodeId)
     // Reloaded through the engine, not conjured: a second addPlugin call.
     expect(engine.calls.filter(([name]) => name === 'addPlugin')).toHaveLength(2)
     expect(engine.calls).toContainEqual(['setParameter', 'engine-2', 'mix', 0.42])
@@ -945,5 +1076,72 @@ describe('undo and redo', () => {
     seen.length = 0
     await d.redo()
     expect(seen).toContain('changed')
+  })
+})
+
+describe('the opaque relay to a plugin\'s own interface', () => {
+  it('posts a payload to that node\'s processor only', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const a = await d.addPlugin(IRI)
+    await d.addPlugin(IRI)
+    expect(d.relayToPlugin(a.nodeId, { x: 1 })).toBe(true)
+    expect(engine.calls.filter(c => c[0] === 'post')).toEqual([['post', 'engine-1', { type: 'plugin', payload: { x: 1 } }]])
+    expect(d.relayToPlugin('ghost', {})).toBe(false)
+  })
+
+  it('hears only plugin payloads, and only from that node', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const a = await d.addPlugin(IRI)
+    const b = await d.addPlugin(IRI)
+    const heard = []
+    const stop = d.onPluginMessage(a.nodeId, payload => heard.push(payload))
+    const send = (engineId, message) => { for (const h of engine.handlers.get(engineId) ?? []) h(message) }
+    send('engine-1', { type: 'plugin', payload: 'mine' })
+    send('engine-1', { type: 'events', events: [] })
+    send('engine-2', { type: 'plugin', payload: 'theirs' })
+    expect(heard).toEqual(['mine'])
+    stop()
+    send('engine-1', { type: 'plugin', payload: 'after' })
+    expect(heard).toEqual(['mine'])
+    expect(d.onPluginMessage('ghost', () => {})).toBeNull()
+    expect(b.nodeId).toBeTruthy()
+  })
+})
+
+describe('undoing clips', () => {
+  const note = (startBeat, pitch) => ({ startBeat, lengthBeats: 1, pitch, velocity: 100 })
+
+  it('steps adding, editing and removing a clip back and forward', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    const { trackId } = await d.addPlugin(IRI)
+    const id = d.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat: 0, lengthBeats: 4 }]).results[0]
+    d.apply([{ op: 'setClipNotes', id, notes: [note(0, 60), note(1, 62)] }])
+    d.apply([{ op: 'setClip', id, startBeat: 8 }])
+    d.apply([{ op: 'removeClip', id }])
+    expect(d.project.clips).toEqual([])
+
+    await d.undo()
+    expect(d.project.clip(id)).toMatchObject({ startBeat: 8 })
+    await d.undo()
+    expect(d.project.clip(id).startBeat).toBe(0)
+    await d.undo()
+    expect(d.project.clip(id).notes).toEqual([])
+    await d.undo()
+    expect(d.project.clip(id)).toBeNull()
+
+    await d.redo(); await d.redo()
+    expect(d.project.clip(id).notes.map(n => n.pitch)).toEqual([60, 62])
+  })
+
+  it('brings a removed track back with its clips', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    const t = d.apply([{ op: 'addTrack', label: 'Loop' }]).results[0]
+    d.apply([{ op: 'addClip', id: 'c', track: t, kind: 'audio', startBeat: 0, lengthBeats: 4, source: 'https://example.org/a.wav' }])
+    d.apply([{ op: 'removeTrack', id: t }])
+    expect(d.project.clips).toEqual([])
+    await d.undo()
+    expect(d.project.clip('c')).toMatchObject({ track: t, source: 'https://example.org/a.wav' })
   })
 })

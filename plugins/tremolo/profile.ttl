@@ -39,6 +39,7 @@
     jig:latencyFrames 0 ;
 
     jig:processor <#processor> ;
+    jig:ui <#ui> ;
 
     lv2:port <#rate> , <#depth> .
 
@@ -48,6 +49,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "tremolo" ;
     jig:integrity "sha384-hcwCmhc88dE0bxghzK6h1W9Ok/ifW78f6j1rZmkJDARIqkSnXdCg0E1H5SNEVELS" .
+
+<#ui>
+    a jig:UserInterface ;
+    jig:location <ui/index.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-WKR+/GIV1heDtdQ0PEUycNEvKv5G5jv9isoa8gLHlBGmODSpXu6jOzR4FkSU7m0o" .
 
 <#rate>
     a lv2:InputPort , lv2:ControlPort ;

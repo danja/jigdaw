@@ -38,8 +38,8 @@ export function inSignalOrder (nodes, connections) {
 }
 
 /**
- * Plugins first and connections after, because a connection names nodes that
- * have to exist, and each plugin has to be fetched and instantiated before its
+ * Tracks first, because a node names its track. Then plugins, and connections
+ * after, because a connection names nodes that have to exist, and each plugin has to be fetched and instantiated before its
  * node means anything. A plugin that cannot be loaded is reported and skipped
  * rather than abandoning the rest: an unreachable origin should cost one node,
  * not the session.
@@ -54,12 +54,21 @@ export function inSignalOrder (nodes, connections) {
  * failed is in `errors` and does not make the whole open fail.
  */
 export async function openProject (dispatcher, read, { onLoading = () => {}, onCleared = () => {} } = {}) {
-  const existing = [...dispatcher.project.nodes].map(n => ({ op: 'removeNode', id: n.id }))
+  const existing = [
+    ...[...dispatcher.project.nodes].map(n => ({ op: 'removeNode', id: n.id })),
+    ...[...dispatcher.project.tracks].map(t => ({ op: 'removeTrack', id: t.id }))
+  ]
   if (existing.length > 0) {
     const cleared = dispatcher.apply(existing)
     if (!cleared.ok) return { ok: false, loaded: new Set(), total: 0, errors: [cleared.message] }
   }
   onCleared()
+
+  const tracks = read.changes.filter(c => c.op === 'addTrack')
+  if (tracks.length > 0) {
+    const added = dispatcher.apply(tracks)
+    if (!added.ok) return { ok: false, loaded: new Set(), total: 0, errors: [added.message] }
+  }
 
   const errors = []
   const loaded = new Set()
@@ -83,10 +92,15 @@ export async function openProject (dispatcher, read, { onLoading = () => {}, onC
 
   // Only between nodes that actually loaded. A connection to a node that failed
   // would be refused by the model and reported as a second error about the same
-  // failure.
-  const rest = read.changes.filter(c =>
-    c.op !== 'addNode' &&
-    (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))))
+  // failure, and so would a track input naming one.
+  const loadedOrNull = id => (id === null || loaded.has(id) ? id : null)
+  const rest = read.changes
+    .filter(c =>
+      c.op !== 'addNode' && c.op !== 'addTrack' &&
+      (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))))
+    .map(c => c.op === 'setTrack'
+      ? { ...c, midiInput: loadedOrNull(c.midiInput ?? null), audioInput: loadedOrNull(c.audioInput ?? null) }
+      : c)
   if (rest.length > 0) {
     const applied = dispatcher.apply(rest)
     if (!applied.ok) errors.push(applied.message)

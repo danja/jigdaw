@@ -376,7 +376,14 @@ jig:loadOutcome a owl:DatatypeProperty ;
 
 jig:Project a owl:Class ;
     rdfs:label "Project" ;
-    rdfs:comment "A session: nodes, connections, parameter settings and transport." .
+    rdfs:comment "A session: tracks, nodes, connections, parameter settings, clips and transport." .
+
+jig:Track a owl:Class ;
+    rdfs:label "Track" ;
+    rdfs:comment """A line of the arrangement and a strip of the mixer. Every node is on
+        exactly one track, and whatever a track's nodes produce that feeds nothing else
+        arrives at the track's fader, pan and mute before it reaches the master. A track
+        also holds clips: notes or audio placed against the transport.""" .
 
 jig:Node a owl:Class ;
     rdfs:label "Node" ;
@@ -414,6 +421,7 @@ jig:revision a owl:DatatypeProperty ;
         and a person editing one project is the normal case here.""" .
 
 jig:node a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Node .
+jig:track a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Track .
 jig:connection a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Connection .
 jig:transport a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Transport .
 
@@ -431,41 +439,118 @@ jig:nodeState a owl:DatatypeProperty ;
         not state and do not belong here: they are settings, and storing them twice means
         the two disagree on restore with no defined winner.""" .
 
-## -- The channel strip ---------------------------------------------------------
+## -- Tracks and the channel strip -----------------------------------------------
 ##
 ## Level, position and silence are host services rather than plugin parameters.
 ## They are not declared by any lv2:port, the host provides them with native
 ## Web Audio nodes and no WebAssembly is involved, and solo is a property of the
-## whole graph rather than of one node: soloing one thing silences the others,
+## whole mix rather than of one strip: soloing one thing silences the others,
 ## which nothing a single plugin declares could express. So they belong to the
-## node in the project, beside the plugin it instantiates, and not to the plugin.
+## track in the project, and not to the plugin.
+##
+## Before tracks existed these four were stated on a jig:Node. A reader MAY
+## still find them there in an older session, and docs/project-format.md section
+## "Open" says how such a session is folded into tracks. A writer MUST NOT put
+## them on a node.
+
+jig:onTrack a owl:ObjectProperty ;
+    rdfs:domain jig:Node ; rdfs:range jig:Track ;
+    rdfs:label "on track" ;
+    rdfs:comment """The track a node belongs to. Exactly one. Stated on the node rather
+        than listed on the track, so moving a node between tracks is one triple, and so
+        that nothing about membership is an ordering.""" .
+
+jig:midiInput a owl:ObjectProperty ;
+    rdfs:domain jig:Track ; rdfs:range jig:Node ;
+    rdfs:label "MIDI input" ;
+    rdfs:comment """The node a track's MIDI clips play into. Named rather than inferred
+        from the chain, because a track can hold a MIDI effect before an instrument, or
+        two instruments, and guessing which one the notes were meant for is a guess the
+        host would get wrong silently. The node MUST be on this track.""" .
+
+jig:audioInput a owl:ObjectProperty ;
+    rdfs:domain jig:Track ; rdfs:range jig:Node ;
+    rdfs:label "audio input" ;
+    rdfs:comment """The node a track's audio clips play into. Absent means the clips go
+        straight to the track's fader, which is the case for a track that only plays
+        back recorded audio. The node MUST be on this track.""" .
 
 jig:gain a owl:DatatypeProperty ;
-    rdfs:domain jig:Node ; rdfs:range xsd:decimal ;
+    rdfs:domain jig:Track ; rdfs:range xsd:decimal ;
     rdfs:label "gain" ;
-    rdfs:comment """Linear output gain, where 1.0 is unity. Linear rather than decibels
+    rdfs:comment """Linear fader gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean
         converting back in every reader. Absent means unity.""" .
 
 jig:pan a owl:DatatypeProperty ;
-    rdfs:domain jig:Node ; rdfs:range xsd:decimal ;
+    rdfs:domain jig:Track ; rdfs:range xsd:decimal ;
     rdfs:label "pan" ;
     rdfs:comment """Stereo position from -1.0 at the left to 1.0 at the right, as
         StereoPannerNode takes it. Absent means centre.""" .
 
 jig:muted a owl:DatatypeProperty ;
-    rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
+    rdfs:domain jig:Track ; rdfs:range xsd:boolean ;
     rdfs:label "muted" ;
     rdfs:comment """Silenced by choice. Kept separate from a gain of zero so that
         unmuting restores the level that was set, which is the whole reason a mixer has
         both.""" .
 
 jig:soloed a owl:DatatypeProperty ;
-    rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
+    rdfs:domain jig:Track ; rdfs:range xsd:boolean ;
     rdfs:label "soloed" ;
-    rdfs:comment """Heard while anything is soloed. Stored per node and applied across the
-        graph: if any node is soloed then every node that is not is silent, so what a
-        listener hears is not a property of any one node's statements.""" .
+    rdfs:comment """Heard while anything is soloed. Stored per track and applied across
+        the mix: if any track is soloed then every track that is not is silent, so what a
+        listener hears is not a property of any one track's statements.""" .
+
+## -- Clips ---------------------------------------------------------------------
+##
+## What a track plays against the transport. Placement reuses trn:startBeat and
+## trn:lengthBeats, and a note reuses trn:pitch and trn:velocity: musical
+## semantics are trn:'s, and transmission already declares these four for the
+## same purpose. transmission lists its clips and notes as rdf:List; here each is
+## a named resource reached by its own arc, the same rule as every other part of
+## a project, so an edit to one note is a change to that note's triples alone.
+
+jig:Clip a owl:Class ;
+    rdfs:label "Clip" ;
+    rdfs:comment """A span of a track's timeline, from trn:startBeat for
+        trn:lengthBeats, in beats of the transport.""" .
+
+jig:MidiClip a owl:Class ;
+    rdfs:subClassOf jig:Clip ;
+    rdfs:label "MIDI Clip" ;
+    rdfs:comment "A clip of notes, played into the track's jig:midiInput." .
+
+jig:AudioClip a owl:Class ;
+    rdfs:subClassOf jig:Clip ;
+    rdfs:label "Audio Clip" ;
+    rdfs:comment """A clip of recorded audio, played into the track's jig:audioInput or
+        straight to its fader. The audio itself is referred to by jig:source and never
+        embedded: a session is a description, and the same file placed on a timeline
+        ten times is one file.""" .
+
+jig:Note a owl:Class ;
+    rdfs:label "Note" ;
+    rdfs:comment """One note of a MIDI clip. Its trn:startBeat is relative to the start
+        of its clip, as transmission defines it, so moving a clip moves its notes without
+        touching them.""" .
+
+jig:clip a owl:ObjectProperty ; rdfs:domain jig:Track ; rdfs:range jig:Clip .
+jig:note a owl:ObjectProperty ; rdfs:domain jig:MidiClip ; rdfs:range jig:Note .
+
+jig:source a owl:ObjectProperty ;
+    rdfs:domain jig:AudioClip ;
+    rdfs:label "source" ;
+    rdfs:comment """The audio file this clip plays, by IRI. A relative IRI resolves
+        against the session document, which is how a session saved beside its media
+        folder stays portable.""" .
+
+jig:offsetSeconds a owl:DatatypeProperty ;
+    rdfs:domain jig:AudioClip ; rdfs:range xsd:decimal ;
+    rdfs:label "offset in seconds" ;
+    rdfs:comment """Where in the source the clip begins, in seconds of the file rather
+        than beats of the transport, because a recording does not change length when the
+        tempo does. Absent means the start of the file.""" .
 
 jig:setting a owl:ObjectProperty ; rdfs:domain jig:Node ; rdfs:range jig:ParameterSetting .
 

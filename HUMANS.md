@@ -5,7 +5,19 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Tools that would help
+## 1. Try the new interface and say what is still wrong
+
+Tracks, a mixer of one fader per track, an arrangement with a piano roll and audio clips, and
+plugin editors were built on 2026-09-24 against the "not usable and intuitive" item in
+TODO.md. Whether it is usable now is a judgement only a person using it can make. `npm run
+serve`, open `http://127.0.0.1:8748/`, open the "Square lead" preset, add a clip on the
+Arrangement tab, and play it. Do it with the window in front and with real keys: the
+automated check could only dispatch key events, because its browser window was in the
+background (TODO.md, loose end 5). To see a plugin's own editor, load
+`http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on
+the page's own origin is refused. Note what is wrong in INBOX.md.
+
+## 2. Tools that would help
 
 **lld, for the WebAssembly build of `plugins/8b8/` and `plugins/boost/`.** Ubuntu's `clang`
 package ships no `wasm-ld`, so both plugins' `build.sh` link through the `rust-lld` that

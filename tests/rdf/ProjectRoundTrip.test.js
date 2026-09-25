@@ -25,14 +25,33 @@ const { trn } = v
 function builtProject () {
   const project = new Project()
   project.apply([
-    { op: 'addNode', id: 'pad', pluginIri: 'https://example.org/plugins/pulse/', label: 'Pad' },
-    { op: 'addNode', id: 'verb', pluginIri: 'https://example.org/plugins/cascade/', label: 'Verb' },
+    { op: 'addTrack', id: 'track-1', label: 'Keys' },
+    // Ten, so that minted order and string order disagree: track-10 sorts
+    // before track-2 as a string.
+    { op: 'addTrack', id: 'track-10', label: 'Room' },
+    { op: 'addNode', id: 'pad', track: 'track-1', pluginIri: 'https://example.org/plugins/pulse/', label: 'Pad' },
+    { op: 'addNode', id: 'verb', track: 'track-10', pluginIri: 'https://example.org/plugins/cascade/', label: 'Verb' },
+    { op: 'setTrack', id: 'track-1', midiInput: 'pad' },
+    { op: 'setTrack', id: 'track-10', audioInput: 'verb' },
     { op: 'setSetting', node: 'pad', symbol: 'gain', value: 0.62 },
     { op: 'setSetting', node: 'verb', symbol: 'mix', value: 0.34 },
     { op: 'setSetting', node: 'verb', symbol: 'size', value: 31 },
     { op: 'setNodeState', node: 'verb', state: 'eyJtb2RlIjoicGxhdGUifQ' },
-    { op: 'setChannel', node: 'pad', gain: 0.8, pan: -0.5 },
-    { op: 'setChannel', node: 'verb', muted: true, soloed: true },
+    { op: 'setTrackChannel', track: 'track-1', gain: 0.8, pan: -0.5 },
+    { op: 'setTrackChannel', track: 'track-10', muted: true, soloed: true },
+    {
+      op: 'addClip', id: 'clip-2', track: 'track-1', kind: 'midi', startBeat: 0, lengthBeats: 8,
+      notes: [
+        { startBeat: 4, lengthBeats: 0.5, pitch: 64, velocity: 80 },
+        { startBeat: 0, lengthBeats: 2, pitch: 57, velocity: 96 }
+      ]
+    },
+    // An empty MIDI clip, and an audio clip with no offset: both write less.
+    { op: 'addClip', id: 'clip-10', track: 'track-1', kind: 'midi', startBeat: 16, lengthBeats: 4 },
+    { op: 'addClip', id: 'clip-3', track: 'track-10', kind: 'audio', startBeat: 8.5, lengthBeats: 4, source: 'https://example.org/media/loop.wav', offsetSeconds: 0.25 },
+    { op: 'addClip', id: 'clip-4', track: 'track-10', kind: 'audio', startBeat: 12, lengthBeats: 1, source: 'https://example.org/media/hit.wav' },
+    // Beside the session, so written relative to it.
+    { op: 'addClip', id: 'clip-5', track: 'track-10', kind: 'audio', startBeat: 16, lengthBeats: 1, source: 'https://example.org/sessions/test/media/abc.wav' },
     {
       op: 'addConnection',
       id: 'c1',
@@ -64,17 +83,23 @@ function builtProject () {
 /** Everything about a project that the format is supposed to carry. */
 const shapeOf = project => ({
   revision: project.revision,
+  // In the project's own order: the order tracks were made is their place in
+  // the arrangement, so it has to survive too.
+  tracks: project.tracks.map(t => ({ ...t, channel: { ...t.channel } })),
   nodes: [...project.nodes].sort((a, b) => a.id.localeCompare(b.id)).map(n => ({
     id: n.id,
     pluginIri: n.pluginIri,
     label: n.label,
+    track: n.track,
     state: n.state,
-    channel: { ...n.channel },
     settings: Object.fromEntries([...n.settings].sort())
   })),
   connections: [...project.connections].sort((a, b) => a.id.localeCompare(b.id)).map(c => ({
     id: c.id, from: c.from, to: c.to, signalKind: c.signalKind
   })),
+  // Sorted: a clip is placed by its beat, and the order clips are held in
+  // means nothing.
+  clips: [...project.clips].sort((a, b) => a.id.localeCompare(b.id)).map(c => ({ ...c, notes: c.notes.map(n => ({ ...n })) })),
   transport: {
     beatsPerBar: project.transport.beatsPerBar,
     beatUnit: project.transport.beatUnit,
@@ -100,8 +125,11 @@ describe('a project survives being written and read back', () => {
 
     // Ids included: a project whose nodes are renamed on every save has broken
     // every reference anyone kept to them.
+    expect(shapeOf(reopened).tracks).toEqual(shapeOf(original).tracks)
     expect(shapeOf(reopened).nodes).toEqual(shapeOf(original).nodes)
     expect(shapeOf(reopened).connections).toEqual(shapeOf(original).connections)
+    expect(shapeOf(reopened).clips).toEqual(shapeOf(original).clips)
+    expect(reopened.nextId('clip')).toBe(original.nextId('clip'))
     expect(shapeOf(reopened).transport).toEqual(shapeOf(original).transport)
   })
 
@@ -118,6 +146,15 @@ describe('a project survives being written and read back', () => {
     const { project: again } = await reopen(once)
     // Insertion order differs after a reload; sorted output must not.
     expect(writeProject(again, { iri: IRI })).toBe(once)
+  })
+
+  it('writes a source beside the session relative to it, and reads it back absolute', async () => {
+    const turtle = writeProject(builtProject(), { iri: IRI })
+    expect(turtle).toMatch(/jig:source <media\/abc\.wav>/)
+    expect(turtle).toMatch(/jig:source <https:\/\/example\.org\/media\/hit\.wav>/)
+    // Opened somewhere else entirely, it resolves against where it is now.
+    const { project } = await reopen(turtle.replace(`@base <${IRI}>`, '@base <https://elsewhere.example/s/>'))
+    expect(project.clip('clip-5').source).toBe('https://elsewhere.example/s/media/abc.wav')
   })
 
   it('keeps a float a float', async () => {
@@ -168,6 +205,20 @@ describe('the worked example in examples/ is readable', () => {
     const project = new Project()
     project.apply(read.changes)
     expect(project.nodes.map(n => n.id).sort()).toEqual(['pad', 'verb'])
+    expect(project.tracks.map(t => [t.id, t.label, t.midiInput])).toEqual([
+      ['track-1', 'Pad', 'pad'], ['track-2', 'Loop', null]
+    ])
+    expect(project.track('track-1').channel).toEqual({ gain: 0.8, pan: -0.25, muted: false, soloed: false })
+    expect(project.track('track-2').channel.muted).toBe(true)
+    expect(project.nodes.map(n => n.track)).toEqual(['track-1', 'track-1'])
+    expect(project.clips.map(c => [c.id, c.track, c.kind])).toEqual([
+      ['clip-1', 'track-1', 'midi'], ['clip-2', 'track-2', 'audio']
+    ])
+    expect(project.clip('clip-1').notes.map(n => n.pitch)).toEqual([57, 60])
+    // Relative in the file, absolute once read: resolved against the document.
+    expect(project.clip('clip-2')).toMatchObject({
+      source: 'https://example.org/sessions/first/media/loop.wav', offsetSeconds: 0.5
+    })
     expect(project.connections.map(c => c.id).sort()).toEqual(['c1', 'c2'])
     expect(project.node('verb').settings.get('mix')).toBe(0.34)
     expect(project.node('verb').state).toBe('eyJtb2RlIjoicGxhdGUiLCJzZWVkIjo0MTF9')
@@ -243,31 +294,91 @@ describe('the channel strip survives the trip', () => {
   it('comes back with the mix it was saved with', async () => {
     const original = builtProject()
     const { project } = await reopen(writeProject(original, { iri: IRI }))
-    expect(project.node('pad').channel).toEqual({ gain: 0.8, pan: -0.5, muted: false, soloed: false })
-    expect(project.node('verb').channel).toEqual({ gain: 1, pan: 0, muted: true, soloed: true })
+    expect(project.track('track-1').channel).toEqual({ gain: 0.8, pan: -0.5, muted: false, soloed: false })
+    expect(project.track('track-10').channel).toEqual({ gain: 1, pan: 0, muted: true, soloed: true })
   })
+
+  const plain = () => {
+    const project = new Project()
+    project.apply([
+      { op: 'addTrack', id: 'track-1' },
+      { op: 'addNode', id: 'plain', track: 'track-1', pluginIri: 'https://example.org/plugins/pulse/' }
+    ])
+    return project
+  }
 
   it('writes nothing for a strip that is untouched', () => {
     // A project full of "gain 1.0, pan 0.0, not muted" says nothing and makes
     // every diff longer. The reader supplies the defaults.
-    const project = new Project()
-    project.apply([{ op: 'addNode', id: 'plain', pluginIri: 'https://example.org/plugins/pulse/' }])
-    const turtle = writeProject(project, { iri: IRI })
+    const turtle = writeProject(plain(), { iri: IRI })
     expect(turtle).not.toMatch(/jig:gain|jig:pan|jig:muted|jig:soloed/)
   })
 
-  it('gives a node with no strip in the file the defaults', async () => {
-    const project = new Project()
-    project.apply([{ op: 'addNode', id: 'plain', pluginIri: 'https://example.org/plugins/pulse/' }])
-    const { project: reopened } = await reopen(writeProject(project, { iri: IRI }))
-    expect(reopened.node('plain').channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
+  it('gives a track with no strip in the file the defaults', async () => {
+    const { project: reopened } = await reopen(writeProject(plain(), { iri: IRI }))
+    expect(reopened.track('track-1').channel).toEqual({ gain: 1, pan: 0, muted: false, soloed: false })
   })
 
-  it('still satisfies the shapes with a strip on it', async () => {
+  it('never writes a strip on a node', () => {
+    // project-format.md: a writer MUST NOT write the form from before tracks.
+    const turtle = writeProject(builtProject(), { iri: IRI })
+    const pad = turtle.slice(turtle.indexOf('\n<#pad>\n'), turtle.indexOf('<#pad-gain> a'))
+    expect(pad).not.toMatch(/jig:gain|jig:pan|jig:muted|jig:soloed/)
+    expect(pad).toMatch(/jig:onTrack <#track-1>/)
+  })
+})
+
+describe('a session saved before tracks', () => {
+  // project-format.md "Opening a session saved before tracks". The shipped
+  // presets were all in this form until the day tracks arrived.
+  const legacy = `
+    @base <${IRI}> .
+    @prefix jig: <http://purl.org/stuff/jigdaw/> .
+    @prefix trn: <http://purl.org/stuff/transmissions/> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+    <> a jig:Project ; jig:revision 3 ;
+      jig:node <#gen> , <#synth> , <#verb> , <#lone> ;
+      jig:connection <#m> , <#a> .
+    <#gen> a jig:Node ; rdfs:label "Gen" ; jig:plugin <https://example.org/p/gen/> .
+    <#synth> a jig:Node ; rdfs:label "Synth" ; jig:gain 0.5 ; jig:plugin <https://example.org/p/synth/> .
+    <#verb> a jig:Node ; rdfs:label "Verb" ; jig:pan -0.5 ; jig:muted true ; jig:plugin <https://example.org/p/verb/> .
+    <#lone> a jig:Node ; rdfs:label "Lone" ; jig:soloed true ; jig:plugin <https://example.org/p/lone/> .
+    <#m> a jig:Connection ; jig:from <#m-f> ; jig:to <#m-t> ; jig:signalKind trn:Midi .
+    <#m-f> a jig:Endpoint ; jig:endpointNode <#gen> ; jig:portIndex 0 .
+    <#m-t> a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+    <#a> a jig:Connection ; jig:from <#a-f> ; jig:to <#a-t> ; jig:signalKind trn:Audio .
+    <#a-f> a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+    <#a-t> a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .`
+
+  it('folds each connected group into one track, with the strip from the end of its chain', async () => {
+    const { project } = await reopen(legacy)
+    expect(project.tracks).toEqual([
+      // Verb is the end of gen -> synth -> verb, so its strip was the one the
+      // whole chain was heard through. Synth's own gain is dropped.
+      { id: 'track-1', label: 'Verb', channel: { gain: 1, pan: -0.5, muted: true, soloed: false }, midiInput: null, audioInput: null },
+      { id: 'track-2', label: 'Lone', channel: { gain: 1, pan: 0, muted: false, soloed: true }, midiInput: null, audioInput: null }
+    ])
+    expect(Object.fromEntries(project.nodes.map(n => [n.id, n.track]))).toEqual({
+      gen: 'track-1', synth: 'track-1', verb: 'track-1', lone: 'track-2'
+    })
+  })
+
+  it('writes back out in the current form, which the shapes accept', async () => {
+    const { project } = await reopen(legacy)
+    const turtle = writeProject(project, { iri: IRI })
     const validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
-    const report = await validator.validate(
-      await parseText(writeProject(builtProject(), { iri: IRI }), IRI))
-    const seen = report.violations.map(v => `${v.focusNode} ${v.path ?? '(node)'}: ${v.message}`)
-    expect(seen, `violations:\n  ${seen.join('\n  ')}`).toEqual([])
+    const report = await validator.validate(await parseText(turtle, IRI))
+    expect(report.violations.map(x => `${x.focusNode} ${x.path}: ${x.message}`)).toEqual([])
+  })
+
+  it('refuses a node with no track in a session that has tracks', async () => {
+    const turtle = `
+      @base <${IRI}> .
+      @prefix jig: <http://purl.org/stuff/jigdaw/> .
+      <> a jig:Project ; jig:revision 1 ; jig:track <#t> ; jig:node <#a> .
+      <#t> a jig:Track .
+      <#a> a jig:Node ; jig:plugin <https://example.org/p/> .`
+    const dataset = await parseText(turtle, IRI)
+    expect(() => readProject(dataset)).toThrow(/names no jig:onTrack/)
   })
 })

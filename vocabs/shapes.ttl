@@ -291,6 +291,7 @@ jig:ProjectShape a sh:NodeShape ;
     sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path jig:transport ; sh:maxCount 1 ] ;
     sh:property [ sh:path jig:node ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path jig:track ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path jig:connection ; sh:nodeKind sh:IRI ] .
 
 jig:TransportShape a sh:NodeShape ;
@@ -325,7 +326,16 @@ jig:NodeShape_ a sh:NodeShape ;
         sh:message "A node must name the plugin it instantiates, by a dereferenceable https IRI. That is what lets a project be reopened on a machine that has never seen the plugin."
     ] ;
     sh:property [ sh:path jig:nodeState ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [
+        sh:path jig:onTrack ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Track ;
+        sh:message "A node must be on exactly one track. The track is where its sound goes: a node on none would be heard by nobody, and on two would be summed twice."
+    ] .
 
+jig:TrackShape a sh:NodeShape ;
+    sh:targetClass jig:Track ;
+    sh:nodeKind sh:IRI ;
+    sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [
         sh:path jig:gain ;
         sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ;
@@ -338,7 +348,82 @@ jig:NodeShape_ a sh:NodeShape ;
         sh:message "Pan runs from -1.0 to 1.0, as StereoPannerNode takes it."
     ] ;
     sh:property [ sh:path jig:muted  ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
-    sh:property [ sh:path jig:soloed ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .
+    sh:property [ sh:path jig:soloed ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [
+        sh:path jig:midiInput ;
+        sh:maxCount 1 ; sh:class jig:Node ;
+        sh:message "A track's MIDI clips play into one node, and it must be a node of the project."
+    ] ;
+    sh:property [
+        sh:path jig:audioInput ;
+        sh:maxCount 1 ; sh:class jig:Node ;
+        sh:message "A track's audio clips play into one node, and it must be a node of the project."
+    ] ;
+    sh:property [ sh:path jig:clip ; sh:nodeKind sh:IRI ] .
+
+# Placement, shared by both kinds of clip. Two targets rather than jig:Clip,
+# because a clip is typed by what it holds and the validator does not infer
+# rdfs:subClassOf.
+jig:ClipShape a sh:NodeShape ;
+    sh:targetClass jig:MidiClip , jig:AudioClip ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path trn:startBeat ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A clip starts at one beat, at or after the start of the transport."
+    ] ;
+    sh:property [
+        sh:path trn:lengthBeats ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
+        sh:message "A clip has a length greater than zero. A clip of no length is never heard and cannot be selected."
+    ] .
+
+jig:MidiClipShape a sh:NodeShape ;
+    sh:targetClass jig:MidiClip ;
+    sh:property [
+        sh:path jig:note ;
+        sh:nodeKind sh:IRI ; sh:class jig:Note ;
+        sh:message "A MIDI clip's notes are named jig:Note resources, never blank nodes or a list."
+    ] .
+
+jig:AudioClipShape a sh:NodeShape ;
+    sh:targetClass jig:AudioClip ;
+    sh:property [
+        sh:path jig:source ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "An audio clip names the file it plays by IRI. The audio is referred to, never embedded."
+    ] ;
+    sh:property [
+        sh:path jig:offsetSeconds ;
+        sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "An audio clip's offset into its source is at or after the start of the file."
+    ] .
+
+jig:NoteShape a sh:NodeShape ;
+    sh:targetClass jig:Note ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path trn:startBeat ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A note starts at one beat, relative to the start of its clip and not before it."
+    ] ;
+    sh:property [
+        sh:path trn:lengthBeats ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
+        sh:message "A note has a length greater than zero, or its note off arrives with its note on."
+    ] ;
+    sh:property [
+        sh:path trn:pitch ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 0 ; sh:maxInclusive 127 ;
+        sh:message "A note's pitch is a MIDI note number, 0 to 127."
+    ] ;
+    sh:property [
+        sh:path trn:velocity ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:minInclusive 1 ; sh:maxInclusive 127 ;
+        sh:message "A note's velocity is 1 to 127. MIDI reads a note on of velocity 0 as a note off."
+    ] .
 
 jig:ConnectionShape a sh:NodeShape ;
     sh:targetClass jig:Connection ;

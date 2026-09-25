@@ -210,6 +210,28 @@ describes the artefacts that exist. That is what
 [bin/write-profile.js](https://github.com/danja/jigdaw/blob/main/bin/write-profile.js) does
 here, and a test fails if a profile drifts from its files.
 
+### An editor of your own, if you want one
+
+You do not need one. A plugin with no `jig:ui` gets a panel the host draws from your
+`lv2:port` declarations, and that is the expected case: it is consistent with every other
+plugin and it is accessible.
+
+If you do ship one, it is a web page that the host loads into a sandboxed frame on your
+plugin's origin and talks to only by `postMessage`
+([messaging.md](messaging.md) section 2). Name it in `profile.json` as `resources.ui` and
+`bin/write-profile.js` adds the `jig:ui` and its digest. Keep it to one HTML file with its
+script inline, so the digest covers everything that runs.
+
+- Post `{ type: 'ready' }` to `parent`. Wait for `init`, which carries your profile as
+  JSON-LD and the current parameter values, and take the host's origin from that message.
+  Send everything after that to that origin only.
+- A slider moving sends `{ type: 'parameter', symbol, value }`, which is a request. Show the
+  value the host sends back in its own `parameter` message, not the one you asked for: it may
+  have been clamped.
+- Report your height with `resize` whenever it changes.
+- A host will not frame an editor served from its own origin, so it is only offered where the
+  plugin comes from another one. `plugins/tremolo/ui/index.html` is the worked example.
+
 ## 5. Publishing
 
 Put the files in one directory and serve it. The directory *is* the plugin.

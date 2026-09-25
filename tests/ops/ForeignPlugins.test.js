@@ -44,7 +44,11 @@ function stubEngine () {
     link () {},
     clampParameter (_id, _symbol, value) { return value },
     setParameter () {},
-    setChannel () {},
+    addTrack () {},
+    removeTrack () {},
+    trackIds () { return [] },
+    linkToTrack () {},
+    setTrackChannel () {},
     // EventRouter reaches these three, which the grep above does not show
     // because it calls them on its own reference rather than through
     // this.#engine.

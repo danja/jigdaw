@@ -1,7 +1,8 @@
 # examples/session-project.ttl
 #
-# A worked JigDAW project. Two plugins, wired in series, with parameters set and
-# a tempo map.
+# A worked JigDAW project. Two tracks: one holding two plugins wired in series,
+# with parameters set and a MIDI clip playing into the first, and one holding
+# only an audio clip. And a tempo map.
 #
 # Note what is not here. There is no rdf:List and no ordering property. The order
 # the plugins process in is derived from the connections, exactly as Web Audio
@@ -26,9 +27,49 @@
     rdfs:label "First" ;
     dcterms:created "2026-09-16T19:00:00Z"^^xsd:dateTime ;
     jig:revision 7 ;
+    jig:track <#track-1> , <#track-2> ;
     jig:node <#pad> , <#verb> ;
     jig:connection <#c1> , <#c2> ;
     jig:transport <#transport> .
+
+## Tracks. A track is a mixer strip and a line of the arrangement. Its nodes say
+## they are on it, rather than the track listing them, so moving a node between
+## tracks is one triple.
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Pad" ;
+    jig:gain 0.8 ; jig:pan -0.25 ;
+    jig:midiInput <#pad> ;
+    jig:clip <#clip-1> .
+
+## A track with no nodes. Its audio clips go straight to its fader.
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Loop" ;
+    jig:muted true ;
+    jig:clip <#clip-2> .
+
+## Clips. Placement is in beats of the transport. A note's start is relative to
+## its clip, so moving the clip moves the notes without touching them.
+
+<#clip-1>
+    a jig:MidiClip ;
+    trn:startBeat 0.0 ; trn:lengthBeats 8.0 ;
+    jig:note <#clip-1-n1> , <#clip-1-n2> .
+
+<#clip-1-n1> a jig:Note ; trn:startBeat 0.0 ; trn:lengthBeats 2.0 ; trn:pitch 57 ; trn:velocity 96 .
+<#clip-1-n2> a jig:Note ; trn:startBeat 4.0 ; trn:lengthBeats 2.0 ; trn:pitch 60 ; trn:velocity 80 .
+
+## The audio is referred to, never embedded. A relative source resolves against
+## this document, so a session saved beside its media folder stays portable.
+
+<#clip-2>
+    a jig:AudioClip ;
+    trn:startBeat 16.0 ; trn:lengthBeats 8.0 ;
+    jig:source <media/loop.wav> ;
+    jig:offsetSeconds 0.5 .
 
 ## Nodes. A node is an instance, not a plugin: two instances of one plugin are
 ## two nodes with the same jig:plugin and different settings.
@@ -36,12 +77,14 @@
 <#pad>
     a jig:Node ;
     rdfs:label "Pad" ;
+    jig:onTrack <#track-1> ;
     jig:plugin <https://example.org/plugins/driftgate/> ;
     jig:setting <#pad-drive> .
 
 <#verb>
     a jig:Node ;
     rdfs:label "Verb" ;
+    jig:onTrack <#track-1> ;
     jig:plugin <https://example.org/plugins/cascade/> ;
     jig:setting <#verb-mix> , <#verb-size> ;
     # Opaque to the host. Parameter values are settings, not state, and storing

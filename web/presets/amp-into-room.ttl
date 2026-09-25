@@ -13,18 +13,25 @@
     a jig:Project ;
     rdfs:label "Amp into a room" ;
     jig:revision 1 ;
+    jig:track <#track-1> ;
     jig:node <#amp> , <#room> ;
     jig:connection <#c1> ;
     jig:transport <#transport> .
 
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Amp into a room" .
+
 <#amp>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Amp" ;
     jig:plugin <../plugins/ferrite/> ;
     jig:setting <#amp-input> , <#amp-output> .
 
 <#room>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Room" ;
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#room-mode> , <#room-mix> , <#room-size> .

@@ -76,34 +76,50 @@ Behaving more like a real DAW, an open-ended direction rather than a phase with 
 
 Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
 
-- [ ] **The interface is not yet usable and intuitive.** From the inbox, 2026-09-24: "a change
-      from a standard DAW visual interface is welcome, but only if it is usable and intuitive.
-      This isn't right now." Not designed. The four items below are the concrete parts of it
-      already named, and each moves the page toward a conventional DAW layout. **Best guess,
-      2026-09-24, at the maintainer's instruction: nothing further beyond those four is
-      guessed at here** rather than inventing complaints nobody made; still worth asking the
-      maintainer directly if the four together turn out not to be enough.
+- [ ] **Is the interface usable and intuitive now?** A question for the maintainer, not a
+      task to guess at. From the inbox, 2026-09-24: "a change from a standard DAW visual
+      interface is welcome, but only if it is usable and intuitive. This isn't right now."
+      2026-09-24, the four items named under it are built and checked in a browser: tracks
+      with a mixer of one fader each, a MIDI timeline with a piano roll, an audio timeline,
+      and (at the maintainer's choice) a plugin's own editor in a sandboxed frame. The page now
+      opens on the Arrangement tab, a track's name there leads to its plugins, and the rack's
+      tab is called Plugins. No further layout change was guessed at, per this item's own
+      instruction. **Ask the maintainer to use it and say what is still wrong.**
 
-- [ ] **Tracks, with a mixer of faders governing them.** From the inbox, 2026-09-24: "there
-      needs to be the concept of multiple tracks, like in a DAW. The mixer should be sliders
-      to govern these." Today a mixer strip belongs to each node, and there is no track. Needs
-      a `jig:Track` in `vocabs/`, `docs/project-format.md` and the shapes first (code follows
-      the ontology): a track as a chain of nodes ending in a fader, pan and mute, the mixer
-      drawing one strip per track rather than per node. No open question was raised against
-      this shape, so it stands as the plan; not built yet.
+- [ ] **An agent cannot press Play.** Since 2026-09-25 an MCP client drives an open page
+      through `npm run mcp-bridge` (docs/webmcp.md "The local bridge"), and can build a whole
+      session but not hear it: `transport_play` and `transport_stop` are specified in
+      docs/webmcp.md and not built. The transport is the page's (`web/app/Transport.js`),
+      not the dispatcher's, so the tool surface needs it passed in the way `plugin_load`
+      takes `loadPlugin`. A page with no audio started would also need a person's click
+      first: a browser starts no AudioContext without one.
 
-- [ ] **A MIDI timeline per track.** From the inbox, 2026-09-24. Recorded or drawn notes on a
-      track, played against the transport. Depends on tracks. Events already carry an absolute
-      stream position (contract section 6.2), which is what a timeline schedules by.
-
-- [ ] **An audio timeline per track.** From the inbox, 2026-09-24. Audio clips placed on a
-      track. Depends on tracks. **Best guess, 2026-09-24, at the maintainer's instruction, for
-      where clip audio lives in a saved session:** by reference (an IRI or an uploaded blob's
-      URL), not embedded as node state is, the same way a plugin itself is a reference rather
-      than inline bytes (CLAUDE.md's own RDF conventions: mint identity, do not inline it). The
-      846 kB Fender preset is the concrete case this avoids repeating at timeline scale, where
-      it would recur once per clip rather than once per preset. Not designed further or built.
-
+- [ ] **Loose ends from tracks, clips and plugin editors, 2026-09-24.** Each is known and none
+      is built:
+      1. **No master strip.** The mixer has a strip per track and none for the master, because
+         the model has nowhere to keep a master level. It needs a term before code.
+      2. **Track order is the order tracks were made.** There is no reorder, because the place
+         for it is the editor graph (`jig:lane` was drafted and withdrawn) and a session is a
+         single Turtle file, which cannot hold a second graph. Needs a decision about how a
+         session carries its editor graph: TriG, a file beside it in the zip, or `jig:lane`
+         accepted into the project graph as a documented exception.
+      3. **A note or audio clip that starts before the loop start is not heard on a later
+         pass,** even when it is still sounding across the loop start. The scheduler plays
+         what starts inside each pass (`src/engine/Scheduler.js`). A DAW usually retriggers
+         it; deciding whether to is a musical choice, not a fix.
+      4. **A plugin editor's `jig:integrity` is not checked.** A browser cannot verify a
+         frame's document against a digest the way it can a script, and fetching it first to
+         check and then framing it is two fetches that can differ. The frame is sandboxed on
+         the plugin's own origin either way; the digest is a claim nothing tests.
+      5. **Real key presses into the piano roll were not driven in a browser.** The browser
+         window was in the background for the whole check, so the automation's key presses
+         never arrived; every keyboard path was exercised with dispatched KeyboardEvents
+         against real focus in a real renderer instead. Pointer paths were driven for real.
+         One pass with real keys, window in front, would close it.
+      6. **Clicks from the automation reach a cross-origin plugin frame only sometimes.** One
+         did, which proved the frame to host path; the undo check then drove the same
+         `setParameter` the frame's handler calls. Not a defect found in the code, but the
+         path from a real pointer through the frame was only seen once.
 
 ## Documentation
 

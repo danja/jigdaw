@@ -20,8 +20,41 @@ registered. When the API settles, one adapter module binds these tools to it, an
 else in the project changes. Treat any code that reaches past that adapter as a defect.
 
 Everything below is also reachable without WebMCP, because the tools are the dispatcher's
-operations. A conventional MCP server over HTTP could expose the identical surface, and
-transmission's already does for the native host.
+operations. transmission's MCP server exposes the same kind of surface for the native host,
+and Jiggy has a local bridge that exposes this one over ordinary MCP.
+
+## The local bridge
+
+**An MCP client on the same machine can drive an open Jiggy page through `npm run
+mcp-bridge`.** The session lives in the browser tab, with its audio, and a tab cannot accept a
+connection, so the bridge (`bin/mcp-bridge.js`, `src/mcp/BridgeServer.js`) holds a Streamable
+HTTP endpoint at `http://127.0.0.1:8749/mcp` and the page connects out to it
+(`src/mcp/BridgeClient.js`). Each tool call goes down to the tab over a server-sent event
+stream, runs through the same surface WebMCP and the console use, and its result comes back by
+POST. The bridge lists its tools from `src/mcp/tools.js` and implements none of them.
+
+```sh
+npm run mcp-bridge                     # prints a token
+claude mcp add --transport http jiggy http://127.0.0.1:8749/mcp
+```
+
+Paste the token into the page's Agent bridge section and press Connect. The page writes each
+call an agent makes to its log.
+
+It is local by construction, and each of these is checked by `tests/mcp/BridgeServer.test.js`:
+
+- It listens on loopback only, and refuses a request whose `Host` is not loopback, which is what
+  stops a web page reaching it by DNS rebinding.
+- It refuses a browser request from any page not itself on loopback, on both endpoints.
+- A tab must present the token the bridge printed when it started. Other pages on the machine
+  can reach loopback; they cannot know the token. A person pastes it, which is the pairing.
+- One tab at a time: a tab presenting the token replaces the one before, as a reload does.
+- A call waits `bridgeCallTimeoutMs` from `web/host.json` for the page, then fails and says so.
+  With no page connected, a call fails at once, saying how to connect one.
+
+It is a development tool and is never deployed: it needs the MCP SDK, a dev dependency, and the
+deployment runs no `npm install`. `bridgePort` in `web/host.json` is read by both ends, so they
+cannot disagree about where the bridge is.
 
 ## Search is demand-driven
 
@@ -64,11 +97,12 @@ A resource is a read. A read never changes anything and never needs a revision.
 | `plugin_describe` | `iri` | The full profile, plus any inspection |
 | `plugin_validate_chain` | `iris[]` | Per-adjacency verdict, pairings, cautions |
 | `collection_open` | `iri` | Every listed plugin, checked, with per-member notes and any load failure |
-| `plugin_load` | `iri` | Fetches, validates and instantiates. Returns the node id or a located failure |
+| `plugin_load` | `iri`, `track?` | Fetches, validates and instantiates. Returns the node id and its track id, or a located failure |
 
 `plugin_load` is the one tool that reaches the network. It performs contract section 3 in
 order and reports which step failed, so an agent gets "no CORS header on the processor"
-rather than "could not load".
+rather than "could not load". Without `track` the plugin gets a new track of its own, named
+after it, and a plugin that accepts MIDI becomes that new track's MIDI input.
 
 `collection_open` is [plugin-collections.md](plugin-collections.md) section 3, the same read
 the page's own "Open a collection" form performs: it reaches the network to fetch the
@@ -101,6 +135,38 @@ so the caller can retry against it.
 building a signal chain should use it before applying, because a graph that fails validation
 halfway is worse than one that was never touched.
 
+### Tracks
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `track_add` | `label?` | Track id |
+| `track_remove` | `trackId`, `moveNodesTo?` | |
+| `track_set` | `trackId`, `label?`, `midiInput?`, `audioInput?` | |
+| `track_set_channel` | `trackId`, `gain?`, `pan?`, `muted?`, `soloed?` | The whole strip, as applied |
+| `node_move_to_track` | `nodeId`, `trackId` | |
+
+### Clips
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?` | Clip id |
+| `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
+| `clip_set_notes` | `clipId`, `notes[]` | |
+| `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
+| `clip_remove` | `clipId` | |
+
+A note is `{ startBeat, lengthBeats, pitch, velocity }`, its start counted from the clip's.
+`clip_set_notes` replaces every note at once, so a phrase is one edit and one undo. A MIDI clip
+plays into its track's MIDI input and into nothing on a track with none. An audio clip names its
+file by absolute IRI and plays into the track's audio input, or straight to its fader.
+
+A track is a mixer strip and a line of the arrangement, per
+[project-format.md](project-format.md) "Tracks". Every plugin is on exactly one, and whatever
+a track's chain produces reaches its fader before the master. `track_remove` is refused while
+plugins are on the track unless `moveNodesTo` says where they go, so removing a track never
+removes plugins as a side effect. `track_set` names the node a track's MIDI clips or audio
+clips play into, and refuses one that is not on that track.
+
 ### Parameters and transport
 
 | Tool | Arguments | Returns |
@@ -126,7 +192,7 @@ round trips and twenty revisions.
 | `project_new` | | |
 | `project_open` | `source` | |
 | `project_save` | | |
-| `status` | | Revision, node count, transport, whether anything is failing |
+| `status` | | Revision, track, node and clip counts, transport, whether anything is failing |
 | `diagnostics` | | Engine detail, including the last error per node |
 
 `status` is deliberately small and cheap. An agent should call it before making changes,

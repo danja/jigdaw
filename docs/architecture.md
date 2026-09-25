@@ -164,4 +164,3 @@ inside a `location` is a trap, is in [deployment.md](deployment.md).
 
 - Whether a future local store, once built, caches plugin-universe's data or continues
   federating with live queries the way search already does without one.
-- Clips, regions and an arrangement. The project format describes a patch, not a timeline.

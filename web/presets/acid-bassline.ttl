@@ -14,30 +14,39 @@
     a jig:Project ;
     rdfs:label "Acid bass line" ;
     jig:revision 1 ;
+    jig:track <#track-1> ;
     jig:node <#lines> , <#bass> , <#filter> , <#room> ;
     jig:connection <#c1> , <#c2> , <#c3> ;
     jig:transport <#transport> .
 
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Acid bass line" .
+
 <#lines>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Bass line" ;
     jig:plugin <../plugins/bassgen/> ;
     jig:setting <#lines-genre> , <#lines-scale> , <#lines-root> .
 
 <#bass>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Bass" ;
     jig:plugin <../plugins/pulse/> ;
     jig:setting <#bass-waveform> , <#bass-attack> , <#bass-release> , <#bass-cutoff> , <#bass-gain> .
 
 <#filter>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Filter" ;
     jig:plugin <../plugins/squelch/> ;
     jig:setting <#filter-cutoff> , <#filter-resonance> , <#filter-envelope> , <#filter-decay> .
 
 <#room>
     a jig:Node ;
+    jig:onTrack <#track-1> ;
     rdfs:label "Room" ;
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#room-mix> , <#room-size> .

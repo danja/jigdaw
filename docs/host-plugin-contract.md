@@ -404,7 +404,10 @@ disagree and it is not defined which wins.
 
 A plugin's user interface MUST be loaded into an `iframe` with a `sandbox` attribute, and
 that frame MUST NOT be same-origin with the host document. A host MUST NOT load plugin UI
-code into its own document by any means.
+code into its own document by any means. A host MUST refuse to frame a user interface
+whose location is on the host's own origin, rather than framing it with an opaque origin,
+because [messaging.md](messaging.md) section 2.1 requires every message to be addressed to
+the frame's real origin.
 
 A plugin is code fetched from an origin the host does not control. Any UI script running in
 the host's document could read the project, the user's storage, any credentials present and

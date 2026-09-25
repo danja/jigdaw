@@ -51,6 +51,7 @@ or a wall-clock time.
 | `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token |
 | `loadAsset` | `{ key, bytes }` | Replace a `jig:asset` the profile marked `jig:userReplaceable`, after `init`. `bytes` is an `ArrayBuffer`, transferred |
 | `dispose` | `{}` | Release everything. No further messages will be sent |
+| `plugin` | `{ payload }` | Opaque, relayed from the plugin's own user interface. Section 2.4 |
 
 `init` carries bytes rather than a compiled `WebAssembly.Module` or a URL.
 
@@ -109,6 +110,7 @@ asset rather than the whole node.
 | `state` | `{ token, state }` | In reply to `stateRequest` |
 | `latency` | `{ latencyFrames, fromFrame }` | Latency changed. See [latency.md](latency.md) |
 | `dropped` | `{ count, since }` | Events discarded on queue overflow |
+| `plugin` | `{ payload }` | Opaque, for the plugin's own user interface. Section 2.4 |
 
 The host MUST NOT connect the node into the audio graph until `ready` arrives. Before then
 the processor MUST output silence.
@@ -161,6 +163,18 @@ received, and MUST pass an explicit `targetOrigin` on every message sent. It MUS
 The UI frame is cross-origin by construction, so `event.source` comparison is available and
 SHOULD also be used. A host that accepts a message from any origin has a sandbox that any
 page can reach into.
+
+The frame therefore keeps a real origin of its own. A frame sandboxed without
+`allow-same-origin` has the opaque origin `"null"`, and a message to it can only be
+addressed to `"*"`, which this section forbids. So the host sandboxes with
+`allow-scripts allow-same-origin` and loads the UI from an origin other than its own, and a
+host MUST refuse to frame a UI on its own origin: `allow-same-origin` on a same-origin frame
+would hand the plugin the host's document. Jiggy does both in `src/ui/PluginFrame.js`, and
+offers no editor for a plugin served from the page's own origin.
+
+The UI does not know the host's origin until `init` arrives, so it MAY address `ready` to
+`"*"`. `ready` carries nothing, and every later message from the UI goes to the origin the
+`init` came from.
 
 ### 2.2 Host to UI
 

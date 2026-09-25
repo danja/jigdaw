@@ -7,6 +7,8 @@
 // dispatcher's own public apply()/addPlugin()/setParameter(), never into its
 // private state directly.
 //
+import { clipChange } from '../model/Project.js'
+
 // Bounded so a long session's history is not an unbounded array of full
 // project snapshots. 100 undoable edits is far past what anyone steps back
 // through in one sitting, and the oldest is dropped rather than the newest.
@@ -80,9 +82,13 @@ export class UndoHistory {
    * addPlugin()/setParameter() call this makes is the mechanism of the undo
    * or redo, not a further edit to record one of.
    *
+   * Tracks are added before any node is reloaded, because a node names its
+   * track, and removed only after every node has moved off them or gone,
+   * because the model refuses to remove a track with nodes on it.
+   *
    * A node the target has and the present does not is reloaded from its
-   * plugin IRI, the same as reopening a saved session, with its id, settings,
-   * channel and state preserved so the graph below still recognises it. A
+   * plugin IRI, the same as reopening a saved session, with its id, track,
+   * settings and state preserved so the graph below still recognises it. A
    * node a reload could not restore is left out and reported nowhere further
    * than the console: its connections are skipped rather than left dangling,
    * which is one node's worth of undo history lost rather than the whole
@@ -93,6 +99,13 @@ export class UndoHistory {
       const current = dispatcher.project.snapshot()
       const currentIds = new Set(current.nodes.map(n => n.id))
       const targetIds = new Set(target.nodes.map(n => n.id))
+      const currentTrackIds = new Set(current.tracks.map(t => t.id))
+      const targetTrackIds = new Set(target.tracks.map(t => t.id))
+
+      const toAddTracks = target.tracks.filter(t => !currentTrackIds.has(t.id))
+      if (toAddTracks.length > 0) {
+        dispatcher.apply(toAddTracks.map(t => ({ op: 'addTrack', id: t.id, label: t.label, channel: t.channel })))
+      }
 
       const toRemove = current.nodes.filter(n => !targetIds.has(n.id)).map(n => n.id)
       if (toRemove.length > 0) {
@@ -102,8 +115,7 @@ export class UndoHistory {
       for (const node of target.nodes) {
         if (currentIds.has(node.id)) continue
         const result = await dispatcher.addPlugin(node.pluginIri, {
-          id: node.id, label: node.label, settings: node.settings,
-          channel: node.channel, state: node.state
+          id: node.id, label: node.label, track: node.track, settings: node.settings, state: node.state
         })
         if (!result.ok) {
           console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`)
@@ -125,14 +137,35 @@ export class UndoHistory {
         for (const [symbol, value] of Object.entries(node.settings ?? {})) {
           if (live.settings.get(symbol) !== value) dispatcher.setParameter(node.id, symbol, value)
         }
-        // Always fully populated: Project.snapshot() copies a node's channel
-        // whole, and a node's channel is never partial from the moment it is
-        // created (Project.js merges DEFAULT_CHANNEL in on addNode).
-        const channel = node.channel ?? {}
-        const liveChannel = live.channel ?? {}
-        if (channel.gain !== liveChannel.gain || channel.pan !== liveChannel.pan ||
-            channel.muted !== liveChannel.muted || channel.soloed !== liveChannel.soloed) {
-          reconcile.push({ op: 'setChannel', node: node.id, ...channel })
+        // A setting the target does not have was not set then, so it goes
+        // back to the default. Walking only the target's settings missed
+        // exactly the first change ever made to a parameter.
+        for (const symbol of [...live.settings.keys()]) {
+          if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol)
+        }
+        if (live.track !== node.track) reconcile.push({ op: 'moveNodeToTrack', id: node.id, track: node.track })
+      }
+
+      // Every track the target has now exists. Its channel is always fully
+      // populated: Project.js merges the default in on addTrack, so a field
+      // compared here is never missing on one side only.
+      const liveIdsAfterReload = new Set(dispatcher.project.nodes.map(n => n.id))
+      for (const track of target.tracks) {
+        const live = dispatcher.project.track(track.id)
+        const c = track.channel
+        const l = live.channel
+        if (c.gain !== l.gain || c.pan !== l.pan || c.muted !== l.muted || c.soloed !== l.soloed) {
+          reconcile.push({ op: 'setTrackChannel', track: track.id, ...c })
+        }
+        // An input naming a node a reload could not restore is dropped rather
+        // than refusing the whole step, the same as a connection to one.
+        const input = id => (id !== null && liveIdsAfterReload.has(id) ? id : null)
+        if (live.label !== track.label || live.midiInput !== input(track.midiInput) ||
+            live.audioInput !== input(track.audioInput)) {
+          reconcile.push({
+            op: 'setTrack', id: track.id, label: track.label,
+            midiInput: input(track.midiInput), audioInput: input(track.audioInput)
+          })
         }
       }
 
@@ -163,6 +196,25 @@ export class UndoHistory {
 
       if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target.transport)) {
         reconcile.push({ op: 'setTransport', ...target.transport })
+      }
+
+      // Clips are data, so a clip that differs is replaced whole under its own
+      // id: exact, and one rule rather than one per field. Before tracks are
+      // removed, which would take their clips with them.
+      const liveClips = new Map(dispatcher.project.snapshot().clips.map(c => [c.id, c]))
+      const targetClips = new Map(target.clips.map(c => [c.id, c]))
+      for (const [id, clip] of liveClips) {
+        const wanted = targetClips.get(id)
+        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: 'removeClip', id })
+      }
+      for (const [id, clip] of targetClips) {
+        const live = liveClips.get(id)
+        if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip))
+      }
+
+      // Last, once every node has moved off or gone.
+      for (const id of currentTrackIds) {
+        if (!targetTrackIds.has(id)) reconcile.push({ op: 'removeTrack', id })
       }
 
       // Applied even when empty, so a step that changed nothing else (every

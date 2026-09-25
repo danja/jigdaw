@@ -175,7 +175,10 @@ export class OfflineContext {
     this.gains = []
     this.createGain = () => {
       const gain = {
-        gain: { value: 1 },
+        // An AudioParam's scheduling method, which the track strips set their
+        // level through. The value is applied at once: offline time does not
+        // advance between setting a level and rendering.
+        gain: { value: 1, setValueAtTime (value) { this.value = value; return this } },
         connections: [],
         incoming: [],
         connect (destination, output = 0, input = 0) {

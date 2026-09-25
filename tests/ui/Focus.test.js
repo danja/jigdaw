@@ -9,10 +9,9 @@
 // directly. That is the one thing being stubbed: the reading and the putting
 // back are the real code.
 import { describe, it, expect, beforeEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
 import { preserveFocus } from '../../src/ui/Focus.js'
+import { appFile } from './appSource.js'
 
 let document, rack
 
@@ -77,10 +76,10 @@ describe('the application uses it', () => {
   // drawRack is in the browser bundle where there is no AudioContext to test
   // against. So the call is checked in the source, which is what the foreign
   // mark guards in tests/docs/conventions.test.js do for the same reason.
-  const app = readFileSync(resolve(import.meta.dirname, '../../web/app.js'), 'utf8')
+  const app = appFile('web/app/Rack.js')
 
   it('preserves the focus around the rack rebuild', () => {
-    expect(app).toMatch(/import \{ preserveFocus \}/)
+    expect(app).toMatch(/import \{ preserveFocus \} from/)
     const draw = app.slice(app.indexOf('function drawRack'))
     const captured = draw.indexOf('preserveFocus(rack)')
     const emptied = draw.indexOf("rack.textContent = ''")

@@ -618,8 +618,20 @@ capabilities) and fetches no code, which is left to the ordinary load with its i
 checks. The page opens `web/collections/jigdaw.ttl`, or any collection named in
 `?collection=`.
 
-Still thin: no timeline, no recording, no plugin user interfaces of their own. See
-[index.md](index.md) for the current honest summary, published alongside the specification.
+Tracks, an arrangement and plugin editors (2026-09-24). Every node is on exactly one
+`jig:Track`, whose fader, pan, mute and solo replace the per-node strip, and the mixer draws
+one strip per track (`src/ui/Mixer.js`). Tracks hold clips: MIDI clips of `jig:Note`s edited in
+a keyboard-first piano roll (`src/ui/PianoRoll.js`), and audio clips referring to their file by
+`jig:source`, all on a timeline (`src/ui/Timeline.js`). `src/engine/Scheduler.js` plays both
+against the transport, a lookahead ahead of the clock, located by stream position and wrapped
+at the loop. A session with imported audio saves as a zip with its media beside it
+(`src/host/Zip.js`), and one saved before tracks is folded into them on opening. A plugin's own
+`jig:ui` opens in a sandboxed frame on its own origin (`src/ui/PluginFrame.js`), resolving a
+contradiction the message protocol had carried since phase 0; Tremolo ships the worked example.
+The format is in [project-format.md](project-format.md) "Tracks" and "Clips".
+
+Still thin: no recording, no automation, no master strip. See [index.md](index.md) for the
+current honest summary, published alongside the specification.
 
 ## What it found
 

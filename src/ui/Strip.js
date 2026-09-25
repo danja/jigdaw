@@ -1,6 +1,6 @@
 // src/ui/Strip.js
 //
-// The channel strip for one node: level, position, mute and solo.
+// The channel strip for one track: level, position, mute and solo.
 //
 // These are not plugin parameters and are deliberately not drawn by Panel.js.
 // No lv2:port declares them, the host provides them with native Web Audio nodes,
@@ -40,7 +40,11 @@ export function panPosition (pan) {
  * caller sends one operation for one movement rather than re-sending values
  * nobody touched.
  */
-export function createStrip (document, channel, onChange, { label = '' } = {}) {
+export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null } = {}) {
+  let label = initialLabel
+  // The ids of the controls. From `id` when given, because a label is a name
+  // for people and two tracks can share one; from the label otherwise.
+  const base = (id ?? `${initialLabel || 'node'}`).replace(/\s+/g, '-').toLowerCase()
   const element = document.createElement('div')
   element.className = 'strip'
   element.setAttribute('role', 'group')
@@ -58,7 +62,7 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
   // every mixer presents. Unity is not the middle of nought to two in
   // decibels, so the arc grows from silence rather than from the centre.
   const gainDial = createDial(document, { minimum: 0, maximum: 2, defaultValue: state.gain },
-    `${label || 'node'}-level`.replace(/\s+/g, '-').toLowerCase())
+    `${base}-level`)
   const gain = gainDial.input
   const gainValue = document.createElement('span')
   gainValue.className = 'value'
@@ -89,7 +93,7 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
   // draws nothing, which is what centred means, and a slider's thumb in the
   // middle never said that.
   const panDial = createDial(document, { minimum: -1, maximum: 1, defaultValue: state.pan },
-    `${label || 'node'}-pan`.replace(/\s+/g, '-').toLowerCase())
+    `${base}-pan`)
   const pan = panDial.input
   const panValue = document.createElement('span')
   panValue.className = 'value'
@@ -116,6 +120,9 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = `strip-toggle ${key}`
+    // An id, so a redraw that does take the strip out of the document can put
+    // the focus back (src/ui/Focus.js restores by id).
+    button.id = `${base}-${key}`
     button.textContent = name
     button.setAttribute('aria-pressed', String(Boolean(state[key])))
     button.addEventListener('click', () => {
@@ -137,20 +144,22 @@ export function createStrip (document, channel, onChange, { label = '' } = {}) {
     /**
      * Show what the host decided, which is not always what was asked for.
      *
-     * `silent` is separate from `muted` because solo silences a node without
-     * muting it, and a strip that showed only its own flags would say a node was
-     * heard while it was not.
+     * `silent` is separate from `muted` because solo silences a track without
+     * muting it, and a strip that showed only its own flags would say a track
+     * was heard while it was not. `label` renames the strip, for a track that
+     * was renamed after its strip was built.
      */
-    update (next = {}, { silent = null } = {}) {
+    update (next = {}, { silent = null, label: renamed = null } = {}) {
+      if (renamed !== null) label = renamed
       if (next.gain !== undefined) { state.gain = next.gain; gain.value = String(next.gain); showGain() }
       if (next.pan !== undefined) { state.pan = next.pan; pan.value = String(next.pan); showPan() }
       if (next.muted !== undefined) { state.muted = next.muted; mute.setAttribute('aria-pressed', String(next.muted)) }
       if (next.soloed !== undefined) { state.soloed = next.soloed; solo.setAttribute('aria-pressed', String(next.soloed)) }
-      if (silent !== null) {
-        element.classList.toggle('silent', silent)
+      if (silent !== null) element.classList.toggle('silent', silent)
+      if (silent !== null || renamed !== null) {
         // Said, not only shown, because state must not be signalled by colour.
         element.setAttribute('aria-label',
-          `${label ? label + ' channel' : 'Channel'}${silent ? ', silent' : ''}`)
+          `${label ? label + ' channel' : 'Channel'}${element.classList.contains('silent') ? ', silent' : ''}`)
       }
     }
   }

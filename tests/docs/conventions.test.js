@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve, join, dirname, extname } from 'node:path'
+import { appSource } from '../ui/appSource.js'
 
 const root = resolve(import.meta.dirname, '../..')
 
@@ -401,7 +402,7 @@ describe('a foreign plugin is marked wherever it appears', () => {
   // rack entry, and the stylesheet that has to know the class names. A mark
   // added to one and forgotten in another is the exact shape of failure
   // AGENTS.md names, and no test of any single file would see it.
-  const SURFACES = ['src/ui/Panel.js', 'web/app.js']
+  const SURFACES = ['src/ui/Panel.js', 'web/app/Rack.js']
 
   it('is marked by every surface that renders a plugin', () => {
     const missing = SURFACES.filter(file => !read(file).includes("=== 'foreign'"))
@@ -436,20 +437,21 @@ describe('a foreign plugin is marked wherever it appears', () => {
   it('asks before running one, and renders the words it was given', () => {
     // Section 12.4. The statements are frozen data from ForeignTrust precisely
     // so the page cannot reword the thing being agreed to.
-    const page = read('web/app.js')
+    const page = read('web/app/Loading.js')
     expect(page).toMatch(/askConsent/)
     expect(page).toMatch(/request\.statements/)
     expect(page, 'a dismissed dialog must count as a refusal').toMatch(/'cancel'/)
   })
 })
 
-describe('the ids web/app.js reaches with $() exist in web/index.html', () => {
-  // $ is document.getElementById, called throughout web/app.js on the
+describe('the ids the page reaches with $() exist in web/index.html', () => {
+  // $ is document.getElementById, called throughout web/app.js and web/app/ on the
   // assumption that the markup has whatever id is asked for. Nothing checks
   // that assumption at either end: a renamed element in the HTML fails
   // silently at runtime, null where an element was expected, and the first
   // sign is usually a click that does nothing.
-  const app = read('web/app.js')
+  // Every file of the page, walked rather than named: tests/ui/appSource.js.
+  const app = appSource()
   const page = read('web/index.html')
 
   it('has a matching id="..." for every literal $(\'...\') call', () => {
@@ -468,7 +470,7 @@ describe('the Tracks and Mixer tabs', () => {
   const app = read('web/app.js')
   const page = read('web/index.html')
 
-  it('builds exactly the two tabs the markup has panels for', () => {
+  it('builds only tabs the markup has panels for', () => {
     const ids = [...app.matchAll(/\{ id: '(\w+)', label: '[^']+', panel: \$\('([\w-]+)'\) \}/g)]
       .map(m => ({ tab: m[1], panel: m[2] }))
     expect(ids.length, 'createTabs was not called with any tab definitions').toBeGreaterThan(0)
@@ -479,6 +481,6 @@ describe('the Tracks and Mixer tabs', () => {
 
   it('mounts the tab list into the page, not only builds it', () => {
     expect(app).toMatch(/createTabs\(/)
-    expect(app, 'the tablist is built but never appended anywhere').toMatch(/tabs-mount['"]\)\.append\(tabs\.element\)/)
+    expect(app, 'the tablist is built but never appended anywhere').toMatch(/tabs-mount['"]\)\.append\((ctx\.)?tabs\.element\)/)
   })
 })

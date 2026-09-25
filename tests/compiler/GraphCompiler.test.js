@@ -10,7 +10,7 @@ const MIDI = 'http://purl.org/stuff/transmissions/Midi'
 /** Build a project from ids and edges, so a test reads as a graph. */
 function graph (ids, edges) {
   const project = new Project()
-  project.apply(ids.map(id => ({ op: 'addNode', id, pluginIri: IRI })))
+  project.apply([{ op: 'addTrack', id: 't' }, ...ids.map(id => ({ op: 'addNode', id, track: 't', pluginIri: IRI }))])
   if (edges.length > 0) {
     project.apply(edges.map(([from, to, over = {}]) => ({
       op: 'addConnection',

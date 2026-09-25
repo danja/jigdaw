@@ -17,6 +17,9 @@ export class Engine {
   #nodeClass
   #nodes = new Map()
   #links = []
+  // One strip per track, keyed by the model's track id. The engine holds no
+  // policy about what a track is; it is a named place for audio to arrive.
+  #tracks = new Map()
 
   /**
    * `AudioWorkletNode` is injected rather than read from globals so the engine
@@ -83,8 +86,7 @@ export class Engine {
    * Take an instantiated node into the graph.
    *
    * Everything after instantiation is the same whoever made the node: it needs
-   * driving if it has no audio, it gets a channel strip if it has, and it
-   * becomes an entry. A foreign plugin (contract section 12) is instantiated by
+   * driving if it has no audio, and it becomes an entry. A foreign plugin (contract section 12) is instantiated by
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
@@ -100,26 +102,8 @@ export class Engine {
       driver.start()
     }
 
-    // The channel strip, on the node's first output. Gain then pan, which is the
-    // order a mixer works in: panning after the fader means the fader sets how
-    // much of the signal there is and the pan decides where it goes.
-    //
-    // Only output zero. A plugin with several outputs is not a channel, and
-    // giving each output its own strip would be inventing a mixer the project
-    // format does not describe. Connections from any other output bypass it.
-    let strip = null
-    if (profile.audioOutputs > 0 && typeof this.#context.createGain === 'function') {
-      const gain = this.#context.createGain()
-      const panner = typeof this.#context.createStereoPanner === 'function'
-        ? this.#context.createStereoPanner()
-        : null
-      node.connect(gain, 0)
-      if (panner) gain.connect(panner)
-      strip = { gain, panner, output: panner ?? gain }
-    }
-
     const id = nextId()
-    const entry = { id, iri, profile, node, ready, descriptors, granted, driver, strip }
+    const entry = { id, iri, profile, node, ready, descriptors, granted, driver }
     this.#nodes.set(id, entry)
     return entry
   }
@@ -129,7 +113,6 @@ export class Engine {
     const entry = this.get(id)
     try {
       if (entry.driver) { entry.driver.stop(); entry.driver.disconnect() }
-      if (entry.strip) { entry.strip.gain.disconnect(); entry.strip.panner?.disconnect() }
       entry.node.disconnect()
       entry.node.port.postMessage({ type: 'dispose' })
     } catch {
@@ -165,13 +148,7 @@ export class Engine {
    * A parameter takes no input index, so toInput is not consulted for one.
    */
   link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
-    const from = this.get(fromId)
-    // Through the strip when there is one and the signal leaves by output zero,
-    // so a fader and a mute reach everything downstream rather than only the
-    // speakers. Anything else leaves the node directly.
-    const viaStrip = Boolean(from.strip) && fromOutput === 0
-    const source = viaStrip ? from.strip.output : from.node
-    if (viaStrip) fromOutput = 0
+    const source = this.get(fromId).node
     let destination
     if (toParameter !== null) {
       const entry = this.get(toId)
@@ -209,11 +186,7 @@ export class Engine {
     for (const link of this.#links) {
       try {
         if (link.delay) link.delay.disconnect()
-        const from = this.get(link.fromId)
-        // The strip is what was connected onward, so it is what has to let go.
-        // Disconnecting the node instead would tear it off its own fader.
-        if (from.strip) from.strip.output.disconnect()
-        else from.node.disconnect()
+        this.get(link.fromId).node.disconnect()
       } catch {
         // A node already removed is still worth clearing past.
       }
@@ -228,23 +201,64 @@ export class Engine {
   }
 
   /**
-   * Parameters are AudioParams, addressed by lv2:symbol. Never a message:
-   * contract section 5.1 and messaging.md section 1.5, because two paths for
-   * one value arrive at different times with no defined precedence.
-   */
-  /**
-   * Apply a node's channel strip.
+   * Make a track's strip: a fader then a panner, into the master.
    *
-   * `muted` is given separately from the model's own flag because solo makes a
-   * node silent without it being muted: what a listener hears is a property of
-   * the whole graph, and the dispatcher is what can see the whole graph.
+   * Gain then pan, which is the order a mixer works in: the fader sets how much
+   * of the signal there is and the pan decides where it goes.
    */
-  setChannel (id, { gain = 1, pan = 0, silent = false } = {}) {
-    const entry = this.get(id)
-    if (!entry.strip) return
+  addTrack (trackId) {
+    if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`)
+    const gain = this.#context.createGain()
+    const panner = typeof this.#context.createStereoPanner === 'function'
+      ? this.#context.createStereoPanner()
+      : null
+    if (panner) { gain.connect(panner); panner.connect(this.master) } else gain.connect(this.master)
+    this.#tracks.set(trackId, { gain, panner, input: gain })
+  }
+
+  removeTrack (trackId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    try { strip.gain.disconnect(); strip.panner?.disconnect() } catch { /* already torn down */ }
+    this.#tracks.delete(trackId)
+  }
+
+  /** The track ids that have a strip. */
+  trackIds () { return [...this.#tracks.keys()] }
+
+  /**
+   * The node a track's audio arrives at: its fader. For a caller that plays
+   * something into a track from outside the plugin graph, such as an audio
+   * clip with nowhere else to go.
+   */
+  trackInput (trackId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    return strip.input
+  }
+
+  /**
+   * Connect a node's output to a track's fader. Recorded with the other links,
+   * so clearLinks takes it down with them.
+   */
+  linkToTrack (fromId, trackId, { fromOutput = 0 } = {}) {
+    this.get(fromId).node.connect(this.trackInput(trackId), fromOutput, 0)
+    this.#links.push({ fromId, toTrack: trackId, delay: null })
+  }
+
+  /**
+   * Apply a track's channel strip.
+   *
+   * `silent` is given separately from the model's own mute because solo makes
+   * a track silent without it being muted: what a listener hears is a property
+   * of the whole mix, and the dispatcher is what can see the whole mix.
+   */
+  setTrackChannel (trackId, { gain = 1, pan = 0, silent = false } = {}) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
     const at = this.#context.currentTime
-    entry.strip.gain.gain.setValueAtTime(silent ? 0 : gain, at)
-    if (entry.strip.panner) entry.strip.panner.pan.setValueAtTime(pan, at)
+    strip.gain.gain.setValueAtTime(silent ? 0 : gain, at)
+    if (strip.panner) strip.panner.pan.setValueAtTime(pan, at)
   }
 
   /**
@@ -263,6 +277,14 @@ export class Engine {
     const port = entry.profile.ports?.find(p => p.symbol === symbol)
     if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`)
     return Math.min(port.maximum, Math.max(port.minimum, value))
+  }
+
+  /** The value a parameter has before anything sets it, from the profile. */
+  defaultParameter (id, symbol) {
+    const entry = this.get(id)
+    const port = entry.profile.ports?.find(p => p.symbol === symbol)
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`)
+    return port.defaultValue
   }
 
   setParameter (id, symbol, value) {

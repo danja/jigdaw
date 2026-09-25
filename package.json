@@ -16,6 +16,7 @@
     "check-suites": "node bin/check-suites.js",
     "build:web": "node bin/build-web.js",
     "serve": "node bin/serve.js",
+    "mcp-bridge": "node bin/mcp-bridge.js",
     "build:vocab": "node bin/build-vocab-site.js",
     "build:docs": "node bin/build-docs-site.js",
     "build:index": "node bin/build-plugin-index.js",
@@ -30,6 +31,7 @@
     "rdf-validate-shacl": "^0.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.1",
     "esbuild": "^0.28.2",
     "highlight.js": "^11.12.0",
     "linkedom": "^0.18.13",

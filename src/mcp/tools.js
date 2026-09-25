@@ -24,6 +24,16 @@ const failed = (message, extra = {}) => ({ ok: false, error: message, ...extra }
  * vanishes is harder for an agent to reason about than one that explains
  * itself.
  */
+/** One note of a MIDI clip, as the clip tools take it. project-format.md "Clips". */
+const NOTE_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    startBeat: { type: 'number' }, lengthBeats: { type: 'number' },
+    pitch: { type: 'integer' }, velocity: { type: 'integer' }
+  },
+  required: ['startBeat', 'lengthBeats', 'pitch', 'velocity']
+})
+
 export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null }) {
   if (!dispatcher) throw new Error('the tool surface needs a dispatcher')
 
@@ -34,7 +44,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     {
       name: 'status',
       description:
-        'The state of the session: revision, how many nodes, the transport, and whether anything is failing. ' +
+        'The state of the session: revision, how many tracks and nodes, the transport, and whether anything is failing. ' +
         'Deliberately small and cheap. Call it before making changes.',
       inputSchema: { type: 'object', properties: {} },
       async handler () {
@@ -42,6 +52,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         const project = dispatcher.project
         return ok({
           revision: dispatcher.revision,
+          tracks: project.tracks.length,
+          clips: project.clips.length,
           nodes: project.nodes.length,
           connections: project.connections.length,
           totalLatencyFrames: compiled.totalLatency,
@@ -58,7 +70,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
 
     {
       name: 'project_get',
-      description: 'The whole project as data: nodes, connections, parameter settings and transport.',
+      description: 'The whole project as data: tracks, nodes, connections, parameter settings and transport.',
       inputSchema: { type: 'object', properties: {} },
       async handler () {
         return ok({ project: dispatcher.project.snapshot() })
@@ -202,19 +214,24 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       name: 'plugin_load',
       description:
         'Fetch, validate and instantiate a plugin by IRI, adding it to the session. ' +
+        'Without a track it gets a new track of its own, named after it. ' +
         'This is the only tool that reaches the network. Reports which step failed if it does.',
       inputSchema: {
         type: 'object',
-        properties: { iri: { type: 'string' } },
+        properties: {
+          iri: { type: 'string' },
+          track: { type: 'string', description: 'The id of an existing track to add it to' }
+        },
         required: ['iri']
       },
-      async handler ({ iri } = {}) {
+      async handler ({ iri, track } = {}) {
         if (!iri) return failed('plugin_load needs an iri')
         if (!loadPlugin) return failed('this host cannot load plugins')
-        const result = await loadPlugin(iri)
+        const result = await loadPlugin(iri, track ? { track } : {})
         if (!result.ok) return failed(result.message, { step: result.step ?? null })
         return ok({
           nodeId: result.nodeId,
+          trackId: result.trackId,
           label: result.entry.profile.label,
           parameters: result.entry.profile.ports.map(p => ({
             symbol: p.symbol, name: p.name, min: p.minimum, max: p.maximum, default: p.defaultValue
@@ -254,6 +271,212 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           applied: result.applied,
           totalLatencyFrames: result.compiled.totalLatency
         })
+      }
+    },
+
+    {
+      name: 'track_add',
+      description: 'Add an empty track: a mixer strip and a line of the arrangement.',
+      inputSchema: {
+        type: 'object',
+        properties: { label: { type: 'string' }, expectedRevision: { type: 'integer' } }
+      },
+      async handler ({ label, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addTrack', label: label ?? null }], { expectedRevision })
+        return result.ok
+          ? ok({ revision: result.revision, trackId: result.results[0] })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'track_remove',
+      description:
+        'Remove a track. Refused while plugins are on it, unless moveNodesTo names the track ' +
+        'they go to instead.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          trackId: { type: 'string' },
+          moveNodesTo: { type: 'string' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['trackId']
+      },
+      async handler ({ trackId, moveNodesTo, expectedRevision } = {}) {
+        const change = { op: 'removeTrack', id: trackId, ...(moveNodesTo ? { moveNodesTo } : {}) }
+        const result = dispatcher.apply([change], { expectedRevision })
+        return result.ok
+          ? ok({ revision: result.revision, removed: trackId })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'track_set',
+      description:
+        'Rename a track, or name the plugins on it that its MIDI clips and audio clips play into. ' +
+        'Pass null to clear an input.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          trackId: { type: 'string' },
+          label: { type: ['string', 'null'] },
+          midiInput: { type: ['string', 'null'], description: 'A node on this track' },
+          audioInput: { type: ['string', 'null'], description: 'A node on this track' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['trackId']
+      },
+      async handler ({ trackId, expectedRevision, ...fields } = {}) {
+        const change = { op: 'setTrack', id: trackId }
+        for (const key of ['label', 'midiInput', 'audioInput']) {
+          if (fields[key] !== undefined) change[key] = fields[key]
+        }
+        const result = dispatcher.apply([change], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'track_set_channel',
+      description:
+        'Set any of a track\'s fader (linear gain, 1 is unity), pan (-1 to 1), mute and solo. ' +
+        'If any track is soloed, every track that is not is silent.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          trackId: { type: 'string' },
+          gain: { type: 'number' }, pan: { type: 'number' },
+          muted: { type: 'boolean' }, soloed: { type: 'boolean' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['trackId']
+      },
+      async handler ({ trackId, expectedRevision, ...change } = {}) {
+        const result = dispatcher.setTrackChannel(trackId, change, { expectedRevision })
+        return result.ok
+          ? ok({ revision: result.revision, channel: dispatcher.project.track(trackId).channel })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'node_move_to_track',
+      description: 'Move a plugin to another track. It stops being the old track\'s clip input, if it was one.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nodeId: { type: 'string' }, trackId: { type: 'string' }, expectedRevision: { type: 'integer' }
+        },
+        required: ['nodeId', 'trackId']
+      },
+      async handler ({ nodeId, trackId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'moveNodeToTrack', id: nodeId, track: trackId }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_add',
+      description:
+        'Add a MIDI clip to a track, at a beat and for a number of beats, optionally with its notes. ' +
+        'It plays into the track\'s MIDI input; track_set names that. Notes start relative to the clip.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          trackId: { type: 'string' },
+          startBeat: { type: 'number' },
+          lengthBeats: { type: 'number' },
+          notes: { type: 'array', items: NOTE_SCHEMA },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['trackId', 'startBeat', 'lengthBeats']
+      },
+      async handler ({ trackId, startBeat, lengthBeats, notes = [], expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_add_audio',
+      description:
+        'Add an audio clip to a track, playing a file by its absolute IRI. The file is referred to, never ' +
+        'copied into the session. offsetSeconds is where in the file the clip begins.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          trackId: { type: 'string' },
+          source: { type: 'string', description: 'The absolute IRI of the audio file' },
+          startBeat: { type: 'number' },
+          lengthBeats: { type: 'number' },
+          offsetSeconds: { type: 'number' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['trackId', 'source', 'startBeat', 'lengthBeats']
+      },
+      async handler ({ trackId, source, startBeat, lengthBeats, offsetSeconds = 0, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'audio', source, startBeat, lengthBeats, offsetSeconds }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_set_notes',
+      description:
+        'Replace every note of a MIDI clip, as one edit. Each note has startBeat (from the clip start), ' +
+        'lengthBeats, pitch (0 to 127, 60 is middle C) and velocity (1 to 127).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' },
+          notes: { type: 'array', items: NOTE_SCHEMA },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId', 'notes']
+      },
+      async handler ({ clipId, notes, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'setClipNotes', id: clipId, notes }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_move',
+      description: 'Move a clip to another beat or another track, or change its length in beats.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' },
+          startBeat: { type: 'number' },
+          lengthBeats: { type: 'number' },
+          trackId: { type: 'string' },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId']
+      },
+      async handler ({ clipId, startBeat, lengthBeats, trackId, expectedRevision } = {}) {
+        const change = { op: 'setClip', id: clipId }
+        if (startBeat !== undefined) change.startBeat = startBeat
+        if (lengthBeats !== undefined) change.lengthBeats = lengthBeats
+        if (trackId !== undefined) change.track = trackId
+        const result = dispatcher.apply([change], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_remove',
+      description: 'Remove a clip and its notes. The plugins on its track are untouched.',
+      inputSchema: {
+        type: 'object',
+        properties: { clipId: { type: 'string' }, expectedRevision: { type: 'integer' } },
+        required: ['clipId']
+      },
+      async handler ({ clipId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'removeClip', id: clipId }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, removed: clipId }) : failed(result.message, { kind: result.kind })
       }
     },
 

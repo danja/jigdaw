@@ -12,7 +12,7 @@
 // UI never reaches the engine, so a change that the compiler refuses never
 // reaches the audio graph at all, and the graph that is playing is always one
 // the model describes.
-import { Project, RevisionConflict, ChangeError } from '../model/Project.js'
+import { Project, RevisionConflict, ChangeError, changesFor } from '../model/Project.js'
 import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi } from '../engine/EventRouter.js'
@@ -95,6 +95,32 @@ export class OpDispatcher {
     if (!engineId || !this.#router) return false
     this.#router.send(engineId, events)
     return true
+  }
+
+  /**
+   * Relay an opaque payload from a plugin's own interface to its processor,
+   * docs/messaging.md 2.4. Not an operation: it changes nothing the project
+   * records, and the host does not read it. Throttling is the caller's, which
+   * is where the interface's messages arrive.
+   */
+  relayToPlugin (nodeId, payload) {
+    const engineId = this.#nodeIds.get(nodeId)
+    if (!engineId || !this.#engine) return false
+    this.#engine.post(engineId, { type: 'plugin', payload })
+    return true
+  }
+
+  /**
+   * Hear a processor's opaque payloads for its own interface. Returns an
+   * unsubscribe function, or null for a node the engine has not loaded. Only
+   * this node's payloads: 2.4 forbids one plugin's reaching another.
+   */
+  onPluginMessage (nodeId, handler) {
+    const engineId = this.#nodeIds.get(nodeId)
+    if (!engineId || !this.#engine) return null
+    return this.#engine.onMessage(engineId, message => {
+      if (message?.type === 'plugin') handler(message.payload)
+    })
   }
 
   get project () { return this.#project }
@@ -274,12 +300,7 @@ export class OpDispatcher {
   /** A copy of the project, for trying a changeset without committing it. */
   #clone () {
     const copy = new Project()
-    const snapshot = this.#project.snapshot()
-    copy.apply([
-      ...snapshot.nodes.map(n => ({ op: 'addNode', id: n.id, pluginIri: n.pluginIri, label: n.label, settings: n.settings, state: n.state })),
-      ...snapshot.connections.map(c => ({ op: 'addConnection', id: c.id, from: c.from, to: c.to, signalKind: c.signalKind, delayFrames: c.delayFrames })),
-      { op: 'setTransport', ...snapshot.transport }
-    ])
+    copy.apply(changesFor(this.#project.snapshot()))
     return copy
   }
 
@@ -303,6 +324,12 @@ export class OpDispatcher {
    * It used to list the fields it forwarded, and the day a node gained a channel
    * strip that list was silently one field short: a saved mix was written
    * correctly, read correctly, and dropped on the way back in.
+   *
+   * Without a `track` the plugin gets a new track of its own, named after it,
+   * in the same changeset, so dropping an instrument in makes a sound without a
+   * second step. A plugin that accepts MIDI becomes that new track's MIDI
+   * input, since it is the only node there for notes to go to. On an existing
+   * track nothing is guessed: which node takes the notes is a person's call.
    */
   async addPlugin (iri, { position, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error('no engine: this dispatcher can edit a project but not play it')
@@ -338,19 +365,26 @@ export class OpDispatcher {
     }
     this.#inspections.record({ iri, outcome: 'loaded' })
 
-    const result = this.apply([{
-      op: 'addNode',
-      ...node,
-      pluginIri: iri,
-      label: node.label ?? entry.profile.label
-    }])
+    const label = node.label ?? entry.profile.label
+    const changes = []
+    let newTrack = null
+    if (node.track === undefined || node.track === null) {
+      newTrack = this.#project.nextId('track')
+      changes.push({ op: 'addTrack', id: newTrack, label })
+    }
+    const nodeId = node.id ?? this.#project.nextId('node')
+    changes.push({ op: 'addNode', ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri, label })
+    if (newTrack && (entry.profile.accepts ?? []).some(isMidi)) {
+      changes.push({ op: 'setTrack', id: newTrack, midiInput: nodeId })
+    }
+
+    const result = this.apply(changes)
     if (!result.ok) {
       // The model refused it, so the engine must not keep it either.
       this.#engine.remove(entry.id)
       return result
     }
 
-    const nodeId = result.results[0]
     this.#nodeIds.set(nodeId, entry.id)
     // The links were rebuilt inside that apply, when this node was in the model
     // and not yet in #nodeIds, so nothing could be wired to it. For a connection
@@ -362,8 +396,8 @@ export class OpDispatcher {
     this.#router?.observe(entry.id)
     if (position) this.#project.moveNode(nodeId, position.x, position.y)
 
-    this.#emit({ type: 'plugin-added', nodeId, entry })
-    return { ...result, nodeId, entry }
+    this.#emit({ type: 'plugin-added', nodeId, trackId: node.track ?? newTrack, entry })
+    return { ...result, nodeId, trackId: node.track ?? newTrack, entry }
   }
 
   /**
@@ -415,6 +449,32 @@ export class OpDispatcher {
 
     this.#emit({ type: 'parameter', nodeId, symbol, value: applied })
     return { ...result, value: applied }
+  }
+
+  /**
+   * Put a parameter back to its plugin's default and forget its setting, so
+   * the model says what a node that was never touched says. What undo does
+   * for a parameter that had not been set before the edit being undone:
+   * restoring "no setting" in the model alone left the AudioParam, the panel
+   * and an open editor all at the value being undone.
+   */
+  resetParameter (nodeId, symbol) {
+    const engineId = this.#nodeIds.get(nodeId)
+    let value = null
+    if (engineId && this.#engine) {
+      try {
+        value = this.#engine.defaultParameter(engineId, symbol)
+      } catch (error) {
+        return { ok: false, kind: 'change', message: error.message }
+      }
+    }
+    const result = this.apply([{ op: 'clearSetting', node: nodeId, symbol }])
+    if (!result.ok) return result
+    if (engineId && this.#engine && value !== null) {
+      this.#engine.setParameter(engineId, symbol, value)
+      this.#emit({ type: 'parameter', nodeId, symbol, value })
+    }
+    return { ...result, value }
   }
 
   /**
@@ -481,56 +541,56 @@ export class OpDispatcher {
   }
 
   /**
-   * Push every node's channel strip to the engine.
-   *
-   * Solo is resolved here because it cannot be resolved anywhere else. Whether
-   * a node is heard depends on whether *any other* node is soloed, so it is a
-   * property of the graph rather than of the node, and the node is the only
-   * thing the engine can see one at a time.
-   *
-   * The rule is the one every mixer uses: if nothing is soloed, a node is heard
-   * unless it is muted. If anything is soloed, only soloed nodes are heard, and
-   * muting a soloed node still silences it, because a person who pressed mute
-   * meant it.
+   * Make the engine's track strips match the model's tracks: one each, no
+   * more. Before the links, because the links end at them.
    */
-  #applyChannels () {
+  #syncTracks () {
     if (!this.#engine) return
-    const anySoloed = this.#project.nodes.some(n => n.channel?.soloed)
-
-    for (const node of this.#project.nodes) {
-      const engineId = this.#nodeIds.get(node.id)
-      if (!engineId) continue
-      const channel = node.channel ?? {}
-      const silent = channel.muted === true || (anySoloed && channel.soloed !== true)
-      try {
-        this.#engine.setChannel(engineId, {
-          gain: channel.gain ?? 1,
-          pan: channel.pan ?? 0,
-          silent
-        })
-      } catch {
-        // A node quarantined or already gone is not a reason to stop setting
-        // the levels of the ones that are still playing.
-      }
+    const wanted = new Set(this.#project.tracks.map(t => t.id))
+    for (const id of this.#engine.trackIds()) {
+      if (!wanted.has(id)) this.#engine.removeTrack(id)
+    }
+    const have = new Set(this.#engine.trackIds())
+    for (const id of wanted) {
+      if (!have.has(id)) this.#engine.addTrack(id)
     }
   }
 
-  /** What a listener actually hears, node by node, after solo is resolved. */
+  /**
+   * Whether each track is heard, after solo is resolved.
+   *
+   * Solo is resolved here because it cannot be resolved anywhere else. Whether
+   * a track is heard depends on whether *any other* track is soloed, so it is a
+   * property of the mix rather than of the track, and the track is the only
+   * thing the engine can see one at a time.
+   *
+   * The rule is the one every mixer uses: if nothing is soloed, a track is heard
+   * unless it is muted. If anything is soloed, only soloed tracks are heard, and
+   * muting a soloed track still silences it, because a person who pressed mute
+   * meant it.
+   */
   audibility () {
-    const anySoloed = this.#project.nodes.some(n => n.channel?.soloed)
-    return this.#project.nodes.map(node => {
-      const channel = node.channel ?? {}
-      return {
-        nodeId: node.id,
-        gain: channel.gain ?? 1,
-        pan: channel.pan ?? 0,
-        silent: channel.muted === true || (anySoloed && channel.soloed !== true)
-      }
-    })
+    const tracks = this.#project.tracks
+    const anySoloed = tracks.some(t => t.channel.soloed)
+    return tracks.map(track => ({
+      trackId: track.id,
+      gain: track.channel.gain,
+      pan: track.channel.pan,
+      silent: track.channel.muted || (anySoloed && !track.channel.soloed)
+    }))
+  }
+
+  /** Push every track's channel strip to the engine. */
+  #applyChannels () {
+    if (!this.#engine) return
+    for (const { trackId, gain, pan, silent } of this.audibility()) {
+      this.#engine.setTrackChannel(trackId, { gain, pan, silent })
+    }
   }
 
   /**
-   * Connect everything that produces audio and feeds nothing to the speakers.
+   * Connect everything that produces audio and feeds nothing to its track's
+   * fader.
    *
    * A sink is where the signal has arrived, so it is what a person expects to
    * hear. Deriving it from the connections rather than declaring it keeps the
@@ -542,7 +602,7 @@ export class OpDispatcher {
    * nothing follows it. A MIDI generator ends a path and produces nothing to
    * hear, and connecting it throws.
    */
-  #linkSinksToMaster () {
+  #linkSinksToTracks () {
     if (!this.#engine) return
 
     const feedsSomething = new Set()
@@ -557,7 +617,7 @@ export class OpDispatcher {
       if (!engineId) continue
       const entry = this.#engine.get(engineId)
       if (!(entry?.node?.numberOfOutputs > 0)) continue
-      this.#engine.link(engineId, 'output', {})
+      this.#engine.linkToTrack(engineId, node.track)
     }
   }
 
@@ -566,6 +626,7 @@ export class OpDispatcher {
 
     const delayFor = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
     this.#engine.clearLinks()
+    this.#syncTracks()
 
     const midiRoutes = []
 
@@ -595,7 +656,7 @@ export class OpDispatcher {
       })
     }
 
-    this.#linkSinksToMaster()
+    this.#linkSinksToTracks()
     this.#applyChannels()
     this.#router?.setRoutes(midiRoutes)
   }
@@ -642,9 +703,9 @@ export class OpDispatcher {
     return { ...result, applied: applied.map(({ nodeId, symbol, value }) => ({ nodeId, symbol, value })) }
   }
 
-  /** Set any of a node's channel strip: gain, pan, mute, solo. */
-  setChannel (nodeId, change, { expectedRevision } = {}) {
-    return this.apply([{ op: 'setChannel', node: nodeId, ...change }], { expectedRevision })
+  /** Set any of a track's channel strip: gain, pan, mute, solo. */
+  setTrackChannel (trackId, change, { expectedRevision } = {}) {
+    return this.apply([{ op: 'setTrackChannel', track: trackId, ...change }], { expectedRevision })
   }
 
   /** The engine node behind a model node, if it has been loaded. */
