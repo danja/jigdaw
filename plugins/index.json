@@ -184,6 +184,61 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/drumgen/",
+      "label": "DrumGen",
+      "comment": "Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/drumgen/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "ControlMidi"
+      ],
+      "produces": [
+        "Midi",
+        "DrumMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+        "Pure MIDI, no audio: route its MIDI output to a drum instrument. New, Mutate and Fill are triggers that fire on the rising edge, so each press is one action.",
+        "A held note with no note off is a stuck note, so stopping the transport sounds the ringing notes now rather than leaving them held."
+      ],
+      "parameters": [
+        "aux_amt",
+        "backbeat_amt",
+        "bars",
+        "channel",
+        "conductor_ch",
+        "density",
+        "fill",
+        "fill_amount",
+        "genre",
+        "hat_amt",
+        "kick_amt",
+        "kit_map",
+        "metal_amt",
+        "mutate",
+        "new",
+        "resolution",
+        "seed",
+        "style_mode",
+        "tom_amt",
+        "variation",
+        "vary"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/dynamix/",
       "label": "Dynamix",
       "comment": "Compressor/expander, limiter and clipper/soft distortion in series. A second stereo input on channels 3 and 4 is an external key: when it is connected, the compressor/expander stage reads its level from that instead of the main signal, for sidechain ducking. When nothing is connected there, the stage detects on the main signal itself.",
@@ -410,7 +465,7 @@
         "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone.",
         "Transients smear when pitch or frequency shift is set, as with any phase vocoder.",
         "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it.",
-        "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
+        "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt per octave, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
         "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins."
       ],
       "parameters": [

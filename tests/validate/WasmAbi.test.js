@@ -93,7 +93,7 @@ describe('against the real worked plugins', () => {
   const wasmFiles = [
     'plugins/pulse/pulse.wasm', 'plugins/cascade/cascade.wasm', 'plugins/ferrite/ferrite.wasm',
     'plugins/boost/boost.wasm', 'plugins/dynamix/dynamix.wasm', 'plugins/bassgen/bassgen.wasm',
-    'plugins/8b8/8b8.wasm'
+    'plugins/drumgen/drumgen.wasm', 'plugins/8b8/8b8.wasm'
   ].filter(f => existsSync(resolve(root, f)))
 
   if (wasmFiles.length === 0) console.warn('no built .wasm files found; run each plugin\'s build.sh first')

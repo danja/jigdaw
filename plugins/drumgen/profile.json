@@ -1,0 +1,261 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/drumgen/",
+  "label": "DrumGen",
+  "comment": "Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "drumgen",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:ControlMidi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:DrumMidi"
+  ],
+  "genres": [
+    "Breakbeat",
+    "Amen",
+    "Jungle",
+    "Hip Hop",
+    "Jazz",
+    "Rock",
+    "Dub",
+    "Fugue"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing.",
+    "Pure MIDI, no audio: route its MIDI output to a drum instrument. New, Mutate and Fill are triggers that fire on the rising edge, so each press is one action.",
+    "A held note with no note off is a stuck note, so stopping the transport sounds the ringing notes now rather than leaving them held."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "drumgen.wasm",
+    "processor": "drumgen-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "genre",
+      "name": "Genre",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 13,
+      "paramIndex": 0,
+      "scalePoints": [
+        { "label": "Rock", "value": 0 },
+        { "label": "Disco", "value": 1 },
+        { "label": "Shuffle", "value": 2 },
+        { "label": "Electro", "value": 3 },
+        { "label": "Dub", "value": 4 },
+        { "label": "Motorik", "value": 5 },
+        { "label": "Bossa", "value": 6 },
+        { "label": "Afro", "value": 7 },
+        { "label": "Breakbeat", "value": 8 },
+        { "label": "Amen", "value": 9 },
+        { "label": "Jungle", "value": 10 },
+        { "label": "Hip Hop", "value": 11 },
+        { "label": "Jazz", "value": 12 },
+        { "label": "Fugue", "value": 13 }
+      ]
+    },
+    {
+      "symbol": "style_mode",
+      "name": "Style",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 1,
+      "scalePoints": [
+        { "label": "Auto", "value": 0 },
+        { "label": "Straight", "value": 1 },
+        { "label": "Reel", "value": 2 },
+        { "label": "Waltz", "value": 3 },
+        { "label": "Jig", "value": 4 },
+        { "label": "Slip Jig", "value": 5 },
+        { "label": "Diddley", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "channel",
+      "name": "Channel",
+      "default": 10,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "kit_map",
+      "name": "Kit Map",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 3,
+      "scalePoints": [
+        { "label": "Flues Drumkit", "value": 0 },
+        { "label": "GM", "value": 1 }
+      ]
+    },
+    {
+      "symbol": "bars",
+      "name": "Bars",
+      "default": 2,
+      "minimum": 1,
+      "maximum": 4,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "resolution",
+      "name": "Resolution",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 3,
+      "paramIndex": 5,
+      "scalePoints": [
+        { "label": "Eighth", "value": 0 },
+        { "label": "Sixteenth", "value": 1 },
+        { "label": "Sixteenth Triplet", "value": 2 },
+        { "label": "Quarter", "value": 3 }
+      ]
+    },
+    {
+      "symbol": "density",
+      "name": "Density",
+      "default": 0.58,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "variation",
+      "name": "Variation",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "fill_amount",
+      "name": "Fill Amount",
+      "default": 0.3,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 65535,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "kick_amt",
+      "name": "Kick Amount",
+      "default": 0.78,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "backbeat_amt",
+      "name": "Backbeat Amount",
+      "default": 0.76,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "hat_amt",
+      "name": "Hat Amount",
+      "default": 0.82,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "aux_amt",
+      "name": "Perc Amount",
+      "default": 0.28,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 13
+    },
+    {
+      "symbol": "new",
+      "name": "New",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 14,
+      "toggled": true
+    },
+    {
+      "symbol": "mutate",
+      "name": "Mutate",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 15,
+      "toggled": true
+    },
+    {
+      "symbol": "fill",
+      "name": "Fill",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 16,
+      "toggled": true
+    },
+    {
+      "symbol": "tom_amt",
+      "name": "Tom Amount",
+      "default": 0.3,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 17
+    },
+    {
+      "symbol": "metal_amt",
+      "name": "Metal Amount",
+      "default": 0.26,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 18
+    },
+    {
+      "symbol": "vary",
+      "name": "Vary",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 19
+    },
+    {
+      "symbol": "conductor_ch",
+      "name": "Conductor Ch",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 20
+    }
+  ]
+}

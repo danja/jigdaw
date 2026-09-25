@@ -56,7 +56,7 @@ describe('the plugins this host serves', () => {
     // BassGen accepts MIDI too: it can be steered from a keyboard.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'BassGen', 'Pulse'])
-    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen'])
+    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'DrumGen'])
   })
 
   it('takes a full IRI for a facet as well as a bare name', async () => {
