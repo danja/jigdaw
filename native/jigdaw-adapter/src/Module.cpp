@@ -253,6 +253,15 @@ std::string Module::load(const std::vector<uint8_t>& wasm, const Profile& profil
     const bool wantsTransport = abi2 && profile.requiresTransport();
 
     ensureRuntimeInitialized();
+    // The calling thread is arbitrary here — an editor worker, the message
+    // thread at session restore — and WAMR answers a first call from a
+    // thread it did not create itself with "thread signal env not inited".
+    // Every other entry point below registers lazily for exactly this
+    // reason; load() is where a module is first touched, so it must too.
+    // Found live: Quefrency failed here while every previously loaded plugin
+    // had succeeded, because those loads had all run on threads something
+    // else had already registered and this one had not.
+    ensureThreadRegistered();
 
     s.wasm = wasm;
 
@@ -459,6 +468,9 @@ std::string Module::loadAsset(const std::string& key, const std::vector<uint8_t>
                               int32_t* statusOut) {
     if (statusOut != nullptr) *statusOut = 0;
     if (!state_ || !state_->ready) return "the module is not loaded";
+    // Same registration as load(): this runs wherever a file was picked,
+    // which is no thread in particular, and it calls into the module.
+    ensureThreadRegistered();
     auto& s = *state_;
 
     const auto found = s.assets.find(key);

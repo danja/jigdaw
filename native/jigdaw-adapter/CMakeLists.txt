@@ -60,6 +60,14 @@ if(JIGDAW_BUILD_TESTS)
   target_link_libraries(test_parameter_count PRIVATE jigdaw_core)
   add_test(NAME parameter_count COMMAND test_parameter_count "file://${JIGDAW_REPO}")
   set_tests_properties(parameter_count PROPERTIES SKIP_RETURN_CODE 77)
+
+  # Loads on a thread the runtime did not create, the editor worker case:
+  # WAMR answers that with "thread signal env not inited" unless the load
+  # registers the thread first. file:// only, for the same reason as above.
+  add_executable(test_thread tests/thread_test.cpp)
+  target_link_libraries(test_thread PRIVATE jigdaw_core)
+  add_test(NAME thread COMMAND test_thread "file://${JIGDAW_REPO}")
+  set_tests_properties(thread PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 if(JIGDAW_BUILD_PLUGIN)
