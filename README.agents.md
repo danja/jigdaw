@@ -8,7 +8,7 @@ the other way round.
 
 This file is the entry point for documentation and linked data discovery. The specification is complete and
 normative, and two independent hosts implement it, one in the browser and one as a native
-VST3, CLAP and LV2. 17 worked plugins are in `plugins/`. The rendered specification is at
+VST3, CLAP and LV2. 18 worked plugins are in `plugins/`. The rendered specification is at
 [danja.github.io/jigdaw](https://danja.github.io/jigdaw/); the markdown in `docs/` is
 authoritative.
 

@@ -56,8 +56,8 @@ describe('the plugins this host serves', () => {
     // BassGen accepts MIDI too: it can be steered from a keyboard. DrumKit
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
-      .toEqual(['8-Bit 8asterd', 'BassGen', 'DrumKit', 'MelGen', 'Pulse'])
-    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'DrumGen', 'Ground', 'MelGen'])
+      .toEqual(['8-Bit 8asterd', 'BassGen', 'Cadence', 'DrumKit', 'MelGen', 'Pulse'])
+    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'Cadence', 'DrumGen', 'Ground', 'MelGen'])
   })
 
   it('takes a full IRI for a facet as well as a bare name', async () => {

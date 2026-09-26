@@ -98,7 +98,7 @@ Honestly, because a specification that overstates itself is worse than none.
 **Works.** Loading a plugin from its IRI, profile validation, integrity verification,
 WebAssembly instantiation, generated panels, parameter automation, MIDI routed by the host,
 transport, latency compensation, cycle refusal, undo and redo, a catalogue search, and an
-agent tool surface. 17 worked plugins: a subtractive synth, a bass line generator, a
+agent tool surface. 18 worked plugins: a subtractive synth, a bass line generator, a
 reverb, a compressor/expander/limiter/clipper with a side chain input, the firmware of a
 three-chip AY-3-8910 synthesiser compiled unedited from C++, three REAPER JSFX effects
 converted by `bin/jsfx-import.js`, a tremolo with no WebAssembly module, its signal path
@@ -107,7 +107,8 @@ new one, a neural amp model in series with a cabinet impulse response, the first
 here depending on a real external crate, and a resonant lowpass swept by an envelope
 follower, also plain JavaScript, a cepstral formant and pitch shifter, the first with
 latency, a transport-synced drum pattern generator, a synthesised drum instrument,
-a phrase-aware melody generator, and a long-form bass section planner. Foreign plugins (Web Audio Modules) load and play, marked
+a phrase-aware melody generator, a long-form bass section planner, and a learning MIDI
+harmonizer. Foreign plugins (Web Audio Modules) load and play, marked
 and consented to, per contract section 12.
 
 **Exists but is thin.** Jiggy, the reference host: tracks, each a chain of plugins ending in

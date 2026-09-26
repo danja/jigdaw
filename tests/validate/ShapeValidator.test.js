@@ -19,6 +19,7 @@ const EXPECTED = {
   'plugins/drumgen/profile.ttl': 0,
   'plugins/drumkit/profile.ttl': 0,
   'plugins/ground/profile.ttl': 0,
+  'plugins/cadence/profile.ttl': 0,
   'plugins/melgen/profile.ttl': 0,
   'plugins/tremolo/profile.ttl': 0,
   'plugins/boost/profile.ttl': 0,

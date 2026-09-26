@@ -24,7 +24,7 @@ Four programs load JigDAW plugins, and a fifth packages them for someone else's 
 
 ## Plugins
 
-There are 17 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 18 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -38,6 +38,7 @@ written to cover different parts of the contract, and each one's row says which.
 | [DrumKit](../plugins/drumkit/) | A synthesised drum instrument in Rust, ported from the downspout VST3 of the same name. Drum MIDI in, stereo audio out. | Module ABI version 2 with MIDI in as whole frame-stamped event records interleaved per sample, 75 parameters, and the first instrument with per-voice mute switches drawn from `lv2:toggled`. |
 | [MelGen](../plugins/melgen/) | A phrase-aware melody generator in time with the session, in Rust, ported from the downspout VST3 of the same name. MIDI and control MIDI in, melody MIDI out, no audio. | Module ABI version 2 with MIDI in for follow notes and the Conductor CC map, period forms and answer derivations over 23 scales, and three trigger ports (New, Notes, Rhythm) separating full, note-only and rhythm-only regeneration. |
 | [Ground](../plugins/ground/) | A long-form bass section planner in time with the session, in Rust, ported from the downspout VST3 of the same name. Control MIDI in, bass MIDI out, no audio. | Module ABI version 2 with a 32-phrase form plan, per-phrase role override ports, in-place phrase surgery instead of a whole-form scratch buffer, and the beat flywheel the generator ports share. |
+| [Cadence](../plugins/cadence/) | A MIDI harmonizer that learns a chord cycle from what it hears, in Rust, ported from the downspout VST3 of the same name. MIDI in, MIDI and harmony MIDI out, no audio. | Module ABI version 2 with chord fitting by dynamic programming over scored candidates, comp hits planned from learned timing, the first `trn:HarmonyMidi` producer in the tree, and the DP tables in engine state rather than the WebAssembly stack. |
 | [8-Bit 8asterd](../plugins/8b8/README.md) | Unmodified firmware for three AY-3-8910 chips, compiled from C++. | Module ABI version 2 MIDI in, as whole event records. 42 parameters, generated from the firmware's own list, with scale points and values shown as the device's panel shows them. Parameters that also answer to MIDI CCs. |
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |

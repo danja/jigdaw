@@ -27,6 +27,7 @@
         <../plugins/8b8/> ,
         <../plugins/bassgen/> ,
         <../plugins/boost/> ,
+        <../plugins/cadence/> ,
         <../plugins/cascade/> ,
         <../plugins/drumgen/> ,
         <../plugins/drumkit/> ,
@@ -45,6 +46,7 @@
 <../plugins/8b8/> rdfs:label "8-Bit 8asterd" .
 <../plugins/bassgen/> rdfs:label "BassGen" .
 <../plugins/boost/> rdfs:label "Boost" .
+<../plugins/cadence/> rdfs:label "Cadence" .
 <../plugins/cascade/> rdfs:label "Cascade" .
 <../plugins/drumgen/> rdfs:label "DrumGen" .
 <../plugins/drumkit/> rdfs:label "DrumKit" .

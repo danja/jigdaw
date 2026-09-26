@@ -1,0 +1,93 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/cadence/",
+  "label": "Cadence",
+  "comment": "Transport synced MIDI harmonizer that learns a chord cycle from what it hears and plays voiced progressions with comping in time with the session.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "cadence",
+  "roles": [
+    "trn:MidiProcessor"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:HarmonyMidi"
+  ],
+  "cautions": [
+    "Silent until it has learned a cycle: play notes into it while the transport rolls, and it starts harmonizing at the next cycle boundary.",
+    "Pure MIDI, no audio: route its MIDI output to an instrument. Learn is a trigger that fires on the rising edge.",
+    "With pass_input on, incoming notes continue downstream alongside the harmony."
+  ],
+  "format": "trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "module": "cadence.wasm",
+    "processor": "cadence-processor.js"
+  },
+  "ports": [
+    { "symbol": "key", "name": "Key", "default": 0, "minimum": 0, "maximum": 11, "paramIndex": 0 },
+    {
+      "symbol": "scale", "name": "Scale", "default": 3, "minimum": 0, "maximum": 23, "paramIndex": 1,
+      "scalePoints": [
+        { "label": "Chromatic", "value": 0 }, { "label": "Major", "value": 1 },
+        { "label": "Ionian", "value": 2 }, { "label": "Natural Minor", "value": 3 },
+        { "label": "Harmonic Minor", "value": 4 }, { "label": "Melodic Minor", "value": 5 },
+        { "label": "Dorian", "value": 6 }, { "label": "Phrygian", "value": 7 },
+        { "label": "Lydian", "value": 8 }, { "label": "Mixolydian", "value": 9 },
+        { "label": "Locrian", "value": 10 }, { "label": "Phrygian Dominant", "value": 11 },
+        { "label": "Neo Major", "value": 12 }, { "label": "Neo Minor", "value": 13 },
+        { "label": "Pent Major", "value": 14 }, { "label": "Pent Minor", "value": 15 },
+        { "label": "Blues", "value": 16 }, { "label": "Whole Tone", "value": 17 },
+        { "label": "Altered", "value": 18 }, { "label": "Half Whole Dim", "value": 19 },
+        { "label": "Whole Half Dim", "value": 20 }, { "label": "Bebop Dominant", "value": 21 },
+        { "label": "Bebop Major", "value": 22 }, { "label": "Bebop Minor", "value": 23 }
+      ]
+    },
+    { "symbol": "cycle_bars", "name": "Cycle Bars", "default": 2, "minimum": 1, "maximum": 8, "paramIndex": 2 },
+    {
+      "symbol": "granularity", "name": "Granularity", "default": 1, "minimum": 0, "maximum": 2, "paramIndex": 3,
+      "scalePoints": [
+        { "label": "Beat", "value": 0 }, { "label": "Half Bar", "value": 1 }, { "label": "Bar", "value": 2 }
+      ]
+    },
+    { "symbol": "complexity", "name": "Complexity", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 4 },
+    { "symbol": "movement", "name": "Movement", "default": 0.65, "minimum": 0.0, "maximum": 1.0, "paramIndex": 5 },
+    {
+      "symbol": "chord_size", "name": "Chord Size", "default": 0, "minimum": 0, "maximum": 2, "paramIndex": 6,
+      "scalePoints": [
+        { "label": "Triads", "value": 0 }, { "label": "Sevenths", "value": 1 }, { "label": "Extended", "value": 2 }
+      ]
+    },
+    { "symbol": "note_length", "name": "Note Length", "default": 1.0, "minimum": 0.1, "maximum": 1.0, "paramIndex": 7 },
+    {
+      "symbol": "register", "name": "Register", "default": 1, "minimum": 0, "maximum": 2, "paramIndex": 8,
+      "scalePoints": [
+        { "label": "Low", "value": 0 }, { "label": "Mid", "value": 1 }, { "label": "High", "value": 2 }
+      ]
+    },
+    { "symbol": "spread", "name": "Spread", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 9 },
+    { "symbol": "pass_input", "name": "Pass Input", "default": 1, "minimum": 0, "maximum": 1, "paramIndex": 10, "toggled": true },
+    { "symbol": "output_channel", "name": "Output Channel", "default": 0, "minimum": 0, "maximum": 16, "paramIndex": 11 },
+    { "symbol": "learn", "name": "Learn", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 12, "toggled": true },
+    { "symbol": "vary", "name": "Vary", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 13 },
+    { "symbol": "comp", "name": "Comp", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 14 },
+    { "symbol": "color", "name": "Color", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 15 },
+    { "symbol": "arpeggio", "name": "Arpeggio", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 16 }
+  ]
+}

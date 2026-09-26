@@ -152,6 +152,57 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/cadence/",
+      "label": "Cadence",
+      "comment": "Transport synced MIDI harmonizer that learns a chord cycle from what it hears and plays voiced progressions with comping in time with the session.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/cadence/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiProcessor"
+      ],
+      "formats": [
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi",
+        "HarmonyMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until it has learned a cycle: play notes into it while the transport rolls, and it starts harmonizing at the next cycle boundary.",
+        "Pure MIDI, no audio: route its MIDI output to an instrument. Learn is a trigger that fires on the rising edge.",
+        "With pass_input on, incoming notes continue downstream alongside the harmony."
+      ],
+      "parameters": [
+        "arpeggio",
+        "chord_size",
+        "color",
+        "comp",
+        "complexity",
+        "cycle_bars",
+        "granularity",
+        "key",
+        "learn",
+        "movement",
+        "note_length",
+        "output_channel",
+        "pass_input",
+        "register",
+        "scale",
+        "spread",
+        "vary"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/cascade/",
       "label": "Cascade",
       "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",
