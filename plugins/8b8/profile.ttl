@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -22,7 +23,6 @@
     rdfs:comment "Three AY-3-8910 chips under the 8b8 firmware, running unmodified as WebAssembly. Nine voices across three chips, hardware envelopes, a percussion set on channel 10, and the firmware's own vibrato, tremolo, arpeggiator, buzzy bass, circuit bending and ten tuning temperaments." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
-    doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:Instrument , trn:AudioInstrument ;
     trn:accepts trn:Midi ;
@@ -30,7 +30,7 @@
     trn:genre "Chiptune" , "Electronic" ;
     trn:caution "Nine voices across three chips, and the tenth note steals the oldest rather than being refused. Percussion and pitched notes come out of the same nine." ;
     trn:caution "Percussion is MIDI channel 10, notes 35 to 59. Pitched notes are 24 to 96 on any other channel, and anything outside that is ignored rather than transposed into range." ;
-    trn:caution "Every control answers to a MIDI CC as well, from CC 70 upward in parameter order, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight." ;
+    trn:caution "Every control answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight." ;
     trn:caution "Roll and Retrigger are positions on an exponential curve from about 1.5Hz to 45Hz rather than a rate in hertz. The figure shown is the one the device's own panel shows." ;
     trn:caution "The firmware's EEPROM is a scratch array that is never persisted. Its SAVE command has nowhere to write, and settings belong in the project graph instead." ;
     trn:format trn:WebAudio ;
@@ -67,25 +67,35 @@
     lv2:symbol "buzz_enable" ; lv2:name "Buzzy Bass: Enable" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 0 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Buzzy Bass" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#buzz_enable-cc> .
+
+<#buzz_enable-cc> a midi:Controller ; midi:controllerNumber 70 .
 
 <#buzz_ratio>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "buzz_ratio" ; lv2:name "Buzzy Bass: Ratio" ;
     lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 8 ;
-    jig:paramIndex 1 .
+    jig:paramIndex 1 ;
+    jig:controlGroup "Buzzy Bass" ;
+    midi:binding <#buzz_ratio-cc> .
+
+<#buzz_ratio-cc> a midi:Controller ; midi:controllerNumber 71 .
 
 <#buzz_shape>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "buzz_shape" ; lv2:name "Buzzy Bass: Shape" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 3 ;
     jig:paramIndex 2 ;
+    jig:controlGroup "Buzzy Bass" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#buzz_shape-0> ,
         <#buzz_shape-1> ,
         <#buzz_shape-2> ,
-        <#buzz_shape-3> .
+        <#buzz_shape-3> ;
+    midi:binding <#buzz_shape-cc> .
 
 <#buzz_shape-0> rdfs:label "Saw ↓" ; rdf:value 0 .
 
@@ -95,17 +105,24 @@
 
 <#buzz_shape-3> rdfs:label "Tri ↑↓" ; rdf:value 3 .
 
+<#buzz_shape-cc> a midi:Controller ; midi:controllerNumber 72 .
+
 <#buzz_detune>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "buzz_detune" ; lv2:name "Buzzy Bass: Detune" ;
     lv2:default 0 ; lv2:minimum -32 ; lv2:maximum 32 ;
-    jig:paramIndex 3 .
+    jig:paramIndex 3 ;
+    jig:controlGroup "Buzzy Bass" ;
+    midi:binding <#buzz_detune-cc> .
+
+<#buzz_detune-cc> a midi:Controller ; midi:controllerNumber 73 .
 
 <#warp_mode>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "warp_mode" ; lv2:name "Warp Zone: Mode" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 8 ;
     jig:paramIndex 4 ;
+    jig:controlGroup "Warp Zone" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#warp_mode-0> ,
@@ -116,7 +133,8 @@
         <#warp_mode-5> ,
         <#warp_mode-6> ,
         <#warp_mode-7> ,
-        <#warp_mode-8> .
+        <#warp_mode-8> ;
+    midi:binding <#warp_mode-cc> .
 
 <#warp_mode-0> rdfs:label "Off" ; rdf:value 0 .
 
@@ -136,143 +154,226 @@
 
 <#warp_mode-8> rdfs:label "Ring" ; rdf:value 8 .
 
+<#warp_mode-cc> a midi:Controller ; midi:controllerNumber 74 .
+
 <#warp_rate>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "warp_rate" ; lv2:name "Warp Zone: Rate" ;
     lv2:default 30 ; lv2:minimum 1 ; lv2:maximum 120 ;
-    jig:paramIndex 5 .
+    jig:paramIndex 5 ;
+    jig:controlGroup "Warp Zone" ;
+    midi:binding <#warp_rate-cc> .
+
+<#warp_rate-cc> a midi:Controller ; midi:controllerNumber 75 .
 
 <#warp_depth>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "warp_depth" ; lv2:name "Warp Zone: Depth" ;
     lv2:default 20 ; lv2:minimum 1 ; lv2:maximum 63 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    jig:controlGroup "Warp Zone" ;
+    midi:binding <#warp_depth-cc> .
+
+<#warp_depth-cc> a midi:Controller ; midi:controllerNumber 76 .
 
 <#warp_motion>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "warp_motion" ; lv2:name "Warp Zone: Motion" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    jig:controlGroup "Warp Zone" ;
+    midi:binding <#warp_motion-cc> .
+
+<#warp_motion-cc> a midi:Controller ; midi:controllerNumber 77 .
 
 <#vib_enable>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vib_enable" ; lv2:name "Vibrato: Enable" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 8 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Vibrato" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#vib_enable-cc> .
+
+<#vib_enable-cc> a midi:Controller ; midi:controllerNumber 78 .
 
 <#vib_rate>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vib_rate" ; lv2:name "Vibrato: Rate" ;
     lv2:default 5 ; lv2:minimum 0.1 ; lv2:maximum 20 ;
     jig:paramIndex 9 ;
-    units:unit units:hz .
+    jig:controlGroup "Vibrato" ;
+    units:unit units:hz ;
+    midi:binding <#vib_rate-cc> .
+
+<#vib_rate-cc> a midi:Controller ; midi:controllerNumber 79 .
 
 <#vib_depth>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vib_depth" ; lv2:name "Vibrato: Depth" ;
     lv2:default 6 ; lv2:minimum 0 ; lv2:maximum 31 ;
-    jig:paramIndex 10 .
+    jig:paramIndex 10 ;
+    jig:controlGroup "Vibrato" ;
+    midi:binding <#vib_depth-cc> .
+
+<#vib_depth-cc> a midi:Controller ; midi:controllerNumber 80 .
 
 <#vib_delay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vib_delay" ; lv2:name "Vibrato: Delay" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2000 ;
     jig:paramIndex 11 ;
-    units:unit units:ms .
+    jig:controlGroup "Vibrato" ;
+    units:unit units:ms ;
+    midi:binding <#vib_delay-cc> .
+
+<#vib_delay-cc> a midi:Controller ; midi:controllerNumber 81 .
 
 <#trem_enable>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "trem_enable" ; lv2:name "Tremolo: Enable" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 12 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Tremolo" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#trem_enable-cc> .
+
+<#trem_enable-cc> a midi:Controller ; midi:controllerNumber 82 .
 
 <#trem_rate>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "trem_rate" ; lv2:name "Tremolo: Rate" ;
     lv2:default 4 ; lv2:minimum 0.1 ; lv2:maximum 20 ;
     jig:paramIndex 13 ;
-    units:unit units:hz .
+    jig:controlGroup "Tremolo" ;
+    units:unit units:hz ;
+    midi:binding <#trem_rate-cc> .
+
+<#trem_rate-cc> a midi:Controller ; midi:controllerNumber 83 .
 
 <#trem_depth>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "trem_depth" ; lv2:name "Tremolo: Depth" ;
     lv2:default 5 ; lv2:minimum 0 ; lv2:maximum 15 ;
-    jig:paramIndex 14 .
+    jig:paramIndex 14 ;
+    jig:controlGroup "Tremolo" ;
+    midi:binding <#trem_depth-cc> .
+
+<#trem_depth-cc> a midi:Controller ; midi:controllerNumber 84 .
 
 <#noise_enable>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "noise_enable" ; lv2:name "Noise Blend: Enable" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 15 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Noise Blend" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#noise_enable-cc> .
+
+<#noise_enable-cc> a midi:Controller ; midi:controllerNumber 85 .
 
 <#noise_period>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "noise_period" ; lv2:name "Noise Blend: Period" ;
     lv2:default 8 ; lv2:minimum 0 ; lv2:maximum 15 ;
-    jig:paramIndex 16 .
+    jig:paramIndex 16 ;
+    jig:controlGroup "Noise Blend" ;
+    midi:binding <#noise_period-cc> .
+
+<#noise_period-cc> a midi:Controller ; midi:controllerNumber 86 .
 
 <#drum_tune>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_tune" ; lv2:name "Drums: Tune" ;
     lv2:default 100 ; lv2:minimum 50 ; lv2:maximum 200 ;
     jig:paramIndex 17 ;
-    units:unit units:pc .
+    jig:controlGroup "Drums" ;
+    units:unit units:pc ;
+    midi:binding <#drum_tune-cc> .
+
+<#drum_tune-cc> a midi:Controller ; midi:controllerNumber 87 .
 
 <#drum_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_decay" ; lv2:name "Drums: Decay" ;
     lv2:default 100 ; lv2:minimum 50 ; lv2:maximum 200 ;
     jig:paramIndex 18 ;
-    units:unit units:pc .
+    jig:controlGroup "Drums" ;
+    units:unit units:pc ;
+    midi:binding <#drum_decay-cc> .
+
+<#drum_decay-cc> a midi:Controller ; midi:controllerNumber 88 .
 
 <#drum_bend>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_bend" ; lv2:name "Drums: Bend" ;
     lv2:default 100 ; lv2:minimum 0 ; lv2:maximum 200 ;
     jig:paramIndex 19 ;
-    units:unit units:pc .
+    jig:controlGroup "Drums" ;
+    units:unit units:pc ;
+    midi:binding <#drum_bend-cc> .
+
+<#drum_bend-cc> a midi:Controller ; midi:controllerNumber 89 .
 
 <#drum_noise>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_noise" ; lv2:name "Drums: Noise" ;
     lv2:default 0 ; lv2:minimum -7 ; lv2:maximum 7 ;
-    jig:paramIndex 20 .
+    jig:paramIndex 20 ;
+    jig:controlGroup "Drums" ;
+    midi:binding <#drum_noise-cc> .
+
+<#drum_noise-cc> a midi:Controller ; midi:controllerNumber 90 .
 
 <#drum_roll>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_roll" ; lv2:name "Drum FX: Roll" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 50 ;
     jig:paramIndex 21 ;
-    units:unit units:hz .
+    jig:controlGroup "Drum FX" ;
+    units:unit units:hz ;
+    midi:binding <#drum_roll-cc> .
+
+<#drum_roll-cc> a midi:Controller ; midi:controllerNumber 91 .
 
 <#drum_flam>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_flam" ; lv2:name "Drum FX: Flam" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 300 ;
     jig:paramIndex 22 ;
-    units:unit units:ms .
+    jig:controlGroup "Drum FX" ;
+    units:unit units:ms ;
+    midi:binding <#drum_flam-cc> .
+
+<#drum_flam-cc> a midi:Controller ; midi:controllerNumber 92 .
 
 <#drum_reverse>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_reverse" ; lv2:name "Drum FX: Reverse" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 23 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Drum FX" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#drum_reverse-cc> .
+
+<#drum_reverse-cc> a midi:Controller ; midi:controllerNumber 93 .
 
 <#drum_chaos>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "drum_chaos" ; lv2:name "Drum FX: Chaos" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 63 ;
-    jig:paramIndex 24 .
+    jig:paramIndex 24 ;
+    jig:controlGroup "Drum FX" ;
+    midi:binding <#drum_chaos-cc> .
+
+<#drum_chaos-cc> a midi:Controller ; midi:controllerNumber 94 .
 
 <#arp_mode>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "arp_mode" ; lv2:name "Auto FX: Arp" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 6 ;
     jig:paramIndex 25 ;
+    jig:controlGroup "Auto FX" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#arp_mode-0> ,
@@ -281,7 +382,8 @@
         <#arp_mode-3> ,
         <#arp_mode-4> ,
         <#arp_mode-5> ,
-        <#arp_mode-6> .
+        <#arp_mode-6> ;
+    midi:binding <#arp_mode-cc> .
 
 <#arp_mode-0> rdfs:label "Off" ; rdf:value 0 .
 
@@ -297,100 +399,155 @@
 
 <#arp_mode-6> rdfs:label "Wide" ; rdf:value 6 .
 
+<#arp_mode-cc> a midi:Controller ; midi:controllerNumber 95 .
+
 <#arp_rate>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "arp_rate" ; lv2:name "Auto FX: Arp Rate" ;
     lv2:default 17 ; lv2:minimum 1 ; lv2:maximum 50 ;
     jig:paramIndex 26 ;
-    units:unit units:hz .
+    jig:controlGroup "Auto FX" ;
+    units:unit units:hz ;
+    midi:binding <#arp_rate-cc> .
+
+<#arp_rate-cc> a midi:Controller ; midi:controllerNumber 96 .
 
 <#sweep_amount>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "sweep_amount" ; lv2:name "Auto FX: Sweep" ;
     lv2:default 0 ; lv2:minimum -32 ; lv2:maximum 32 ;
-    jig:paramIndex 27 .
+    jig:paramIndex 27 ;
+    jig:controlGroup "Auto FX" ;
+    midi:binding <#sweep_amount-cc> .
+
+<#sweep_amount-cc> a midi:Controller ; midi:controllerNumber 97 .
 
 <#retrig_rate>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "retrig_rate" ; lv2:name "Auto FX: Retrigger" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 50 ;
     jig:paramIndex 28 ;
-    units:unit units:hz .
+    jig:controlGroup "Auto FX" ;
+    units:unit units:hz ;
+    midi:binding <#retrig_rate-cc> .
+
+<#retrig_rate-cc> a midi:Controller ; midi:controllerNumber 98 .
 
 <#env_mode>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "env_mode" ; lv2:name "Envelope: Mode" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 29 ;
+    jig:controlGroup "Envelope" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#env_mode-0> ,
-        <#env_mode-1> .
+        <#env_mode-1> ;
+    midi:binding <#env_mode-cc> .
 
 <#env_mode-0> rdfs:label "MIDI ch presets" ; rdf:value 0 .
 
 <#env_mode-1> rdfs:label "Custom ADSR" ; rdf:value 1 .
 
+<#env_mode-cc> a midi:Controller ; midi:controllerNumber 99 .
+
 <#env_attack>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "env_attack" ; lv2:name "Envelope: Attack" ;
     lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 32 ;
-    jig:paramIndex 30 .
+    jig:paramIndex 30 ;
+    jig:controlGroup "Envelope" ;
+    midi:binding <#env_attack-cc> .
+
+<#env_attack-cc> a midi:Controller ; midi:controllerNumber 100 .
 
 <#env_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "env_decay" ; lv2:name "Envelope: Decay" ;
     lv2:default 8 ; lv2:minimum 1 ; lv2:maximum 32 ;
-    jig:paramIndex 31 .
+    jig:paramIndex 31 ;
+    jig:controlGroup "Envelope" ;
+    midi:binding <#env_decay-cc> .
+
+<#env_decay-cc> a midi:Controller ; midi:controllerNumber 101 .
 
 <#env_sustain>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "env_sustain" ; lv2:name "Envelope: Sustain" ;
     lv2:default 32 ; lv2:minimum 0 ; lv2:maximum 32 ;
-    jig:paramIndex 32 .
+    jig:paramIndex 32 ;
+    jig:controlGroup "Envelope" ;
+    midi:binding <#env_sustain-cc> .
+
+<#env_sustain-cc> a midi:Controller ; midi:controllerNumber 102 .
 
 <#env_release>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "env_release" ; lv2:name "Envelope: Release" ;
     lv2:default 32 ; lv2:minimum 1 ; lv2:maximum 32 ;
-    jig:paramIndex 33 .
+    jig:paramIndex 33 ;
+    jig:controlGroup "Envelope" ;
+    midi:binding <#env_release-cc> .
+
+<#env_release-cc> a midi:Controller ; midi:controllerNumber 103 .
 
 <#glide>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "glide" ; lv2:name "Pitch & Response: Glide" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 100 ;
-    jig:paramIndex 34 .
+    jig:paramIndex 34 ;
+    jig:controlGroup "Pitch & Response" ;
+    midi:binding <#glide-cc> .
+
+<#glide-cc> a midi:Controller ; midi:controllerNumber 104 .
 
 <#transpose>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "transpose" ; lv2:name "Pitch & Response: Transpose" ;
     lv2:default 0 ; lv2:minimum -24 ; lv2:maximum 24 ;
     jig:paramIndex 35 ;
-    units:unit units:semitone12TET .
+    jig:controlGroup "Pitch & Response" ;
+    units:unit units:semitone12TET ;
+    midi:binding <#transpose-cc> .
+
+<#transpose-cc> a midi:Controller ; midi:controllerNumber 105 .
 
 <#mix_noise>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mix_noise" ; lv2:name "Mixer: Noise" ;
     lv2:default 15 ; lv2:minimum 0 ; lv2:maximum 15 ;
-    jig:paramIndex 36 .
+    jig:paramIndex 36 ;
+    jig:controlGroup "Mixer" ;
+    midi:binding <#mix_noise-cc> .
+
+<#mix_noise-cc> a midi:Controller ; midi:controllerNumber 106 .
 
 <#mix_tone>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mix_tone" ; lv2:name "Mixer: Tone" ;
     lv2:default 15 ; lv2:minimum 0 ; lv2:maximum 15 ;
-    jig:paramIndex 37 .
+    jig:paramIndex 37 ;
+    jig:controlGroup "Mixer" ;
+    midi:binding <#mix_tone-cc> .
+
+<#mix_tone-cc> a midi:Controller ; midi:controllerNumber 107 .
 
 <#mix_drum>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mix_drum" ; lv2:name "Mixer: Drums" ;
     lv2:default 15 ; lv2:minimum 0 ; lv2:maximum 15 ;
-    jig:paramIndex 38 .
+    jig:paramIndex 38 ;
+    jig:controlGroup "Mixer" ;
+    midi:binding <#mix_drum-cc> .
+
+<#mix_drum-cc> a midi:Controller ; midi:controllerNumber 108 .
 
 <#temperament>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "temperament" ; lv2:name "Tuning: Temperament" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 9 ;
     jig:paramIndex 39 ;
+    jig:controlGroup "Tuning" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#temperament-0> ,
@@ -402,7 +559,8 @@
         <#temperament-6> ,
         <#temperament-7> ,
         <#temperament-8> ,
-        <#temperament-9> .
+        <#temperament-9> ;
+    midi:binding <#temperament-cc> .
 
 <#temperament-0> rdfs:label "Equal" ; rdf:value 0 .
 
@@ -424,11 +582,14 @@
 
 <#temperament-9> rdfs:label "1/6 Mean" ; rdf:value 9 .
 
+<#temperament-cc> a midi:Controller ; midi:controllerNumber 109 .
+
 <#temper_root>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "temper_root" ; lv2:name "Tuning: Root" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 11 ;
     jig:paramIndex 40 ;
+    jig:controlGroup "Tuning" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#temper_root-0> ,
@@ -442,7 +603,8 @@
         <#temper_root-8> ,
         <#temper_root-9> ,
         <#temper_root-10> ,
-        <#temper_root-11> .
+        <#temper_root-11> ;
+    midi:binding <#temper_root-cc> .
 
 <#temper_root-0> rdfs:label "C" ; rdf:value 0 .
 
@@ -468,9 +630,15 @@
 
 <#temper_root-11> rdfs:label "B" ; rdf:value 11 .
 
+<#temper_root-cc> a midi:Controller ; midi:controllerNumber 110 .
+
 <#vel_sense>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vel_sense" ; lv2:name "Pitch & Response: Velocity" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 41 ;
-    lv2:portProperty lv2:toggled .
+    jig:controlGroup "Pitch & Response" ;
+    lv2:portProperty lv2:toggled ;
+    midi:binding <#vel_sense-cc> .
+
+<#vel_sense-cc> a midi:Controller ; midi:controllerNumber 111 .

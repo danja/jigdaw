@@ -106,10 +106,14 @@ which `tests/ui/Panel.test.js` requires of any unit a plugin uses.
 ## MIDI control
 
 **Control changes 70 to 80 drive parameters 0 to 10**, on any MIDI channel. This is the
-8-Bit 8asterd's convention, and 70 to 79 are the MIDI sound controllers. The plugin declares
-`trn:accepts trn:ControlMidi` and `trn:requires jig:MidiEvents`, and takes the events
-through ABI version 2's MIDI input, so the same module answers a controller in Jiggy and in
-the native adapter, which hands version 2 modules raw event records.
+8-Bit 8asterd's convention, and 70 to 79 are the MIDI sound controllers. Each port declares
+its controller in the profile, as LV2's [MIDI extension](https://lv2plug.in/ns/ext/midi)
+has it: a `midi:binding` to a skolemised `midi:Controller` carrying
+`midi:controllerNumber`. The generated panel labels each control with its controller from
+the binding. The plugin declares `trn:accepts trn:ControlMidi` and `trn:requires
+jig:MidiEvents`, and takes the events through ABI version 2's MIDI input, so the same
+module answers a controller in Jiggy and in the native adapter, which hands version 2
+modules raw event records.
 
 **Value 64 is the port's default** wherever the default lies strictly inside the range: the
 mapping runs linearly from the minimum at 0 to the default at 64, then to the maximum at 127.
@@ -130,12 +134,9 @@ the host. The panel does not show a controller's value and the project does not 
 the messaging protocol has no way for a processor to report a parameter it changed, so
 the profile says so in a `trn:caution`.
 
-**The mapping is stated in prose, in a `trn:caution`, and a test holds the prose to the
-module**: it checks that the caution names the controller range and every port, in index
-order. A machine-readable binding would be better; LV2's
-[MIDI extension](https://lv2plug.in/ns/ext/midi) has `midi:binding` with
-`midi:controllerNumber` for exactly this, and using it would let a host label each control
-with its controller.
+**The bindings are checked against the module**: each port's declared controller must be
+the one the module answers to for that port's own index, so a profile re-derived without
+its bindings fails here rather than mislabelling the panel.
 
 **Jiggy offers no keyboard or clip to it.** A plugin taking only control changes has nothing
 to play, so the keyboard, the default clip target for a new track, and the "clips play into"

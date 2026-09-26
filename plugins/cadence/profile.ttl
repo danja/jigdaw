@@ -30,7 +30,7 @@
     trn:caution "Silent until it has learned a cycle: play notes into it while the transport rolls, and it starts harmonizing at the next cycle boundary." ;
     trn:caution "Pure MIDI, no audio: route its MIDI output to an instrument. Learn is a trigger that fires on the rising edge." ;
     trn:caution "With pass_input on, incoming notes continue downstream alongside the harmony." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
     trn:requires jig:MidiOut ;

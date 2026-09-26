@@ -23,7 +23,7 @@
   "cautions": [
     "Eight voices. A ninth note steals the oldest voice rather than being refused."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "requires": [
     "jig:MidiEvents"

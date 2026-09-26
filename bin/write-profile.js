@@ -57,6 +57,7 @@ w('@prefix jig:   <http://purl.org/stuff/jigdaw/> .')
 w('@prefix trn:   <http://purl.org/stuff/transmissions/> .')
 w('@prefix pu:    <http://purl.org/stuff/plugin-universe/> .')
 w('@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .')
+w('@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .')
 w('@prefix units: <http://lv2plug.in/ns/extensions/units#> .')
 w('@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .')
 w('@prefix doap:  <http://usefulinc.com/ns/doap#> .')
@@ -142,6 +143,9 @@ for (const port of template.ports) {
   // holding the symbol to index mapping, and position in this file is a
   // property of the document rather than of the module.
   if (port.paramIndex !== undefined) line += ` ;\n    jig:paramIndex ${port.paramIndex}`
+  // The panel section this control belongs under. A plain label: groups are
+  // per-plugin display hints, never addressed across documents.
+  if (port.group) line += ` ;\n    jig:controlGroup ${JSON.stringify(port.group)}`
   if (port.unit) line += ` ;\n    units:unit units:${port.unit}`
   if (port.toggled) line += ' ;\n    lv2:portProperty lv2:toggled'
   if (port.scalePoints) {
@@ -150,6 +154,11 @@ for (const port of template.ports) {
       .map((sp, i) => `        <#${port.symbol}-${i}>`)
       .join(' ,\n')
   }
+  // A MIDI controller driving this port, as LV2's own MIDI extension has it:
+  // the port binds a midi:Controller carrying the controller number. The
+  // binding is skolemised under the port for the same reason a scale point
+  // is: a hyphen cannot appear in an lv2:symbol, so this cannot collide.
+  if (port.controller !== undefined) line += ` ;\n    midi:binding <#${port.symbol}-cc>`
   w(`${line} .`)
 
   // Skolemised, not blank. AGENTS.md forbids a blank node for anything
@@ -161,6 +170,11 @@ for (const port of template.ports) {
   for (const [i, sp] of (port.scalePoints ?? []).entries()) {
     w('')
     w(`<#${port.symbol}-${i}> rdfs:label ${JSON.stringify(sp.label)} ; rdf:value ${sp.value} .`)
+  }
+
+  if (port.controller !== undefined) {
+    w('')
+    w(`<#${port.symbol}-cc> a midi:Controller ; midi:controllerNumber ${port.controller} .`)
   }
 }
 

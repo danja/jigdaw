@@ -18,7 +18,7 @@
   "cautions": [
     "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

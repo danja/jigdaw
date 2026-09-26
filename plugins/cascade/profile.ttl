@@ -29,7 +29,7 @@
     trn:produces trn:Audio ;
     trn:genre "Ambient" , "Electronic" ;
     trn:caution "Freeze holds the tail at unity feedback. Following it with a limiter is wise when several instances are frozen at once." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

@@ -56,6 +56,12 @@ const ports = params.map(p => {
     default: display(p.default, p),
     minimum: display(p.min, p),
     maximum: display(p.max, p),
+    // Every control answers to a MIDI CC from 70 upward in parameter order,
+    // which is what the hardware does.
+    controller: 70 + p.index,
+    // The hardware's own section, so the 42 controls render grouped rather
+    // than flat.
+    group: p.group,
     paramIndex: p.index
   }
 

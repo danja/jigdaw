@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  109 terms.
+  110 terms.
 </p>
 
 <h2>Classes</h2>
@@ -263,6 +263,13 @@
         digest holds for the same plugin whether it arrived flattened, archived, or from its
         origin, which is the same rule that makes a bundle a retrieval origin and not an
         identity. See docs/plugin-bundles.md section 5.</dd>
+  <dt id="controlGroup"><code>jig:controlGroup</code> <span class="label">control group</span></dt>
+  <dd>The section of the generated panel this control belongs under, so
+        a plugin with dozens of ports reads as groups rather than a flat list. A
+        plain label, not a reference: groups are per-plugin display hints,
+        never addressed across documents. LV2's port-groups extension was read
+        first and not reused: pg:Group combines ports carrying one stream, such
+        as stereo channels, and says nothing about control layout.</dd>
   <dt id="entryPoint"><code>jig:entryPoint</code> <span class="label">entry point</span></dt>
   <dd>The path inside the container the adapter starts at, such as index.js.</dd>
   <dt id="gain"><code>jig:gain</code></dt>

@@ -27,7 +27,7 @@
     trn:role trn:AudioEffect , trn:Utility ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

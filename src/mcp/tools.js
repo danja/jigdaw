@@ -34,7 +34,7 @@ const NOTE_SCHEMA = Object.freeze({
   required: ['startBeat', 'lengthBeats', 'pitch', 'velocity']
 })
 
-export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null }) {
+export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null }) {
   if (!dispatcher) throw new Error('the tool surface needs a dispatcher')
 
   const requireCatalogue = () =>
@@ -600,6 +600,39 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         return result.ok
           ? ok({ value: result.value, revision: result.revision })
           : failed(result.message)
+      }
+    },
+
+    {
+      name: 'transport_play',
+      description:
+        'Start the transport, so clips play and plugins receive transport position. ' +
+        'Needs audio already started by a person: a browser starts no AudioContext without a click.',
+      inputSchema: { type: 'object', properties: {} },
+      async handler () {
+        if (!onPlay) return failed('this host cannot play: no transport is connected')
+        try {
+          await onPlay()
+          return ok({})
+        } catch (error) {
+          return failed(`play failed: ${error?.message ?? error}`)
+        }
+      }
+    },
+
+    {
+      name: 'transport_stop',
+      description:
+        'Stop the transport. Notes sounding are given their ends, the same as the page Stop button.',
+      inputSchema: { type: 'object', properties: {} },
+      async handler () {
+        if (!onStop) return failed('this host cannot stop: no transport is connected')
+        try {
+          await onStop()
+          return ok({})
+        } catch (error) {
+          return failed(`stop failed: ${error?.message ?? error}`)
+        }
       }
     },
 

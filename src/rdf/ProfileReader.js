@@ -9,7 +9,7 @@
 import rdf from '@zazuko/env'
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
 
-const { jig, trn, lv2, rdfs, foaf, units, rdf: rdfTerms } = v
+const { jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = v
 
 const iri = value => rdf.namedNode(value)
 
@@ -100,6 +100,17 @@ function readScalePoints (dataset, port) {
 }
 
 /**
+ * The MIDI controller number bound to a port, or null. The binding node is
+ * part of the profile document, so a garbage value is a defect in the profile
+ * and throws rather than reading as no binding.
+ */
+function readController (dataset, port) {
+  const binding = one(dataset, port, midi.binding)
+  if (!binding) return null
+  return asNumber(one(dataset, binding, midi.controllerNumber))
+}
+
+/**
  * The control a port implies.
  *
  * Decided by the shape of the declaration and never by the profile naming a
@@ -126,6 +137,13 @@ function readPort (dataset, term) {
     toggled: properties.includes(lv2.toggled),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset, term),
+    // The MIDI controller driving this port, if the profile binds one. Absent
+    // means no claim, the same discipline as userReplaceable: a port the
+    // profile does not bind answers to no controller.
+    controller: readController(dataset, term),
+    // The panel section this control belongs under, if the profile groups
+    // its ports. Absent means ungrouped, which renders as today.
+    group: asString(one(dataset, term, jig.controlGroup)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset, term, jig.automationRate)?.value === jig.ARate ? 'a-rate' : 'k-rate'

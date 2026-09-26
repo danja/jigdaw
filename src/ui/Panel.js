@@ -125,14 +125,20 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
 
   const setters = new Map()
 
-  // The controls share one grid, so knobs pack across the width they are
-  // given instead of taking a row each. A panel of 42 controls was 2000
-  // pixels tall as sliders and is one screen as knobs.
-  const controls = document.createElement('div')
-  controls.className = 'controls'
-  root.append(controls)
-
+  // Ports render in sections: ungrouped ports first, exactly as a plugin with
+  // no groups renders today, then one named section per group in order of
+  // first appearance. A fieldset names its controls to assistive technology;
+  // a visible heading alone would name them only to sight.
+  const ungrouped = profile.ports.filter(p => p.group == null)
+  const groups = []
   for (const port of profile.ports) {
+    if (port.group == null) continue
+    const group = groups.find(g => g.label === port.group)
+    if (group) group.ports.push(port)
+    else groups.push({ label: port.group, ports: [port] })
+  }
+
+  function addControl (grid, port) {
     const row = document.createElement('div')
     row.className = `control control-${port.widget}`
 
@@ -142,7 +148,12 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     // that not every DOM implementation provides, and the association is the
     // whole point of the label.
     label.setAttribute('for', id)
-    label.textContent = port.name ?? port.symbol
+    // A bound controller is part of the control's name, so a person matching
+    // a hardware knob to the panel finds it by reading: the declaration is
+    // per port, and the accessible name is the label.
+    label.textContent = port.controller == null
+      ? (port.name ?? port.symbol)
+      : `${port.name ?? port.symbol} (CC ${port.controller})`
     row.append(label)
 
     const readout = document.createElement('span')
@@ -216,18 +227,47 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     // shortened; this is for a pointer.
     else if (port.name) input.title = port.name
     row.append(knob ?? input, readout)
-    controls.append(row)
+    grid.append(row)
 
     // Render the declared default through the same path a host update takes.
     setters.get(port.symbol)(port.defaultValue)
+  }
+
+  // The controls share one grid per section, so knobs pack across the width
+  // they are given instead of taking a row each. A panel of 42 controls was
+  // 2000 pixels tall as sliders and is one screen as knobs.
+  function addGrid (parent, ports) {
+    const controls = document.createElement('div')
+    controls.className = 'controls'
+    parent.append(controls)
+    for (const port of ports) addControl(controls, port)
+  }
+
+  if (ungrouped.length > 0) addGrid(root, ungrouped)
+  for (const group of groups) {
+    const field = document.createElement('fieldset')
+    field.className = 'control-group'
+    const legend = document.createElement('legend')
+    legend.textContent = group.label
+    field.append(legend)
+    root.append(field)
+    addGrid(field, group.ports)
   }
 
   // One file picker per jig:userReplaceable asset, after the parameters:
   // loading a different model or impulse response is a rarer action than
   // turning a knob, and the panel reads top to bottom in the order a person
   // is most likely to want it.
+  let assetGrid = null
   for (const asset of profile.assets ?? []) {
     if (!asset.userReplaceable) continue
+    // Its own grid, trailing the sections: the per-section grids above are
+    // owned by their ports, and an asset picker belongs to neither.
+    if (!assetGrid) {
+      assetGrid = document.createElement('div')
+      assetGrid.className = 'controls'
+      root.append(assetGrid)
+    }
     const key = asset.iri.split('#').pop()
 
     const row = document.createElement('div')
@@ -247,7 +287,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       if (file) onLoadAsset?.(key, file)
     })
     row.append(input)
-    controls.append(row)
+    assetGrid.append(row)
   }
 
   return {

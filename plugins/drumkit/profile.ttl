@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -30,7 +31,7 @@
     trn:caution "One-shot voices: note-offs do nothing, and a hit cannot be choked except the open hat, which a closed hat cuts short." ;
     trn:caution "CC 120 and 123 reset every voice and the master bus, like an all-notes-off." ;
     trn:caution "The eleven trig outputs the native wrapper exposes as UI LEDs are not parameters here and have no panel control." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 
@@ -63,235 +64,274 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_pitch" ; lv2:name "Kick Pitch" ;
     lv2:default 0.35 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 0 .
+    jig:paramIndex 0 ;
+    jig:controlGroup "Kick" .
 
 <#kick_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_decay" ; lv2:name "Kick Decay" ;
     lv2:default 0.4 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 1 .
+    jig:paramIndex 1 ;
+    jig:controlGroup "Kick" .
 
 <#kick_drive>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_drive" ; lv2:name "Kick Drive" ;
     lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 2 .
+    jig:paramIndex 2 ;
+    jig:controlGroup "Kick" .
 
 <#kick_punch>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_punch" ; lv2:name "Kick Punch" ;
     lv2:default 0.15 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 3 .
+    jig:paramIndex 3 ;
+    jig:controlGroup "Kick" .
 
 <#kick_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_level" ; lv2:name "Kick Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 4 .
+    jig:paramIndex 4 ;
+    jig:controlGroup "Kick" .
 
 <#snare_tone>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "snare_tone" ; lv2:name "Snare Tone" ;
     lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 5 .
+    jig:paramIndex 5 ;
+    jig:controlGroup "Snare" .
 
 <#snare_snap>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "snare_snap" ; lv2:name "Snare Snap" ;
     lv2:default 0.6 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    jig:controlGroup "Snare" .
 
 <#snare_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "snare_level" ; lv2:name "Snare Level" ;
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    jig:controlGroup "Snare" .
 
 <#clap_density>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clap_density" ; lv2:name "Clap Density" ;
     lv2:default 0.55 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 8 .
+    jig:paramIndex 8 ;
+    jig:controlGroup "Clap" .
 
 <#clap_tone>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clap_tone" ; lv2:name "Clap Tone" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    jig:controlGroup "Clap" .
 
 <#clap_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clap_level" ; lv2:name "Clap Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 10 .
+    jig:paramIndex 10 ;
+    jig:controlGroup "Clap" .
 
 <#tom1_pitch>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom1_pitch" ; lv2:name "Tom 1 Pitch" ;
     lv2:default 0.4 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    jig:controlGroup "Tom 1" .
 
 <#tom1_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom1_decay" ; lv2:name "Tom 1 Decay" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 12 .
+    jig:paramIndex 12 ;
+    jig:controlGroup "Tom 1" .
 
 <#tom1_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom1_level" ; lv2:name "Tom 1 Level" ;
     lv2:default 0.74 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 13 .
+    jig:paramIndex 13 ;
+    jig:controlGroup "Tom 1" .
 
 <#tom2_pitch>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom2_pitch" ; lv2:name "Tom 2 Pitch" ;
     lv2:default 0.55 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 14 .
+    jig:paramIndex 14 ;
+    jig:controlGroup "Tom 2" .
 
 <#tom2_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom2_decay" ; lv2:name "Tom 2 Decay" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 15 .
+    jig:paramIndex 15 ;
+    jig:controlGroup "Tom 2" .
 
 <#tom2_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom2_level" ; lv2:name "Tom 2 Level" ;
     lv2:default 0.72 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 16 .
+    jig:paramIndex 16 ;
+    jig:controlGroup "Tom 2" .
 
 <#hh_closed_brightness>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_closed_brightness" ; lv2:name "Closed HH Brightness" ;
     lv2:default 0.6 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 17 .
+    jig:paramIndex 17 ;
+    jig:controlGroup "Closed HH" .
 
 <#hh_closed_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_closed_decay" ; lv2:name "Closed HH Decay" ;
     lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 18 .
+    jig:paramIndex 18 ;
+    jig:controlGroup "Closed HH" .
 
 <#hh_closed_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_closed_level" ; lv2:name "Closed HH Level" ;
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 19 .
+    jig:paramIndex 19 ;
+    jig:controlGroup "Closed HH" .
 
 <#hh_open_brightness>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_open_brightness" ; lv2:name "Open HH Brightness" ;
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 20 .
+    jig:paramIndex 20 ;
+    jig:controlGroup "Open HH" .
 
 <#hh_open_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_open_decay" ; lv2:name "Open HH Decay" ;
     lv2:default 0.55 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 21 .
+    jig:paramIndex 21 ;
+    jig:controlGroup "Open HH" .
 
 <#hh_open_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_open_level" ; lv2:name "Open HH Level" ;
     lv2:default 1.02 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 22 .
+    jig:paramIndex 22 ;
+    jig:controlGroup "Open HH" .
 
 <#crash_brightness>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "crash_brightness" ; lv2:name "Crash Brightness" ;
     lv2:default 0.65 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 23 .
+    jig:paramIndex 23 ;
+    jig:controlGroup "Crash" .
 
 <#crash_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "crash_decay" ; lv2:name "Crash Decay" ;
     lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 24 .
+    jig:paramIndex 24 ;
+    jig:controlGroup "Crash" .
 
 <#crash_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "crash_level" ; lv2:name "Crash Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 25 .
+    jig:paramIndex 25 ;
+    jig:controlGroup "Crash" .
 
 <#cowbell_tone>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cowbell_tone" ; lv2:name "Cowbell Tone" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 26 .
+    jig:paramIndex 26 ;
+    jig:controlGroup "Cowbell" .
 
 <#cowbell_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cowbell_decay" ; lv2:name "Cowbell Decay" ;
     lv2:default 0.35 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 27 .
+    jig:paramIndex 27 ;
+    jig:controlGroup "Cowbell" .
 
 <#cowbell_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cowbell_level" ; lv2:name "Cowbell Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 28 .
+    jig:paramIndex 28 ;
+    jig:controlGroup "Cowbell" .
 
 <#clave_tone>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clave_tone" ; lv2:name "Clave Tone" ;
     lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 29 .
+    jig:paramIndex 29 ;
+    jig:controlGroup "Clave" .
 
 <#clave_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clave_decay" ; lv2:name "Clave Decay" ;
     lv2:default 0.25 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 30 .
+    jig:paramIndex 30 ;
+    jig:controlGroup "Clave" .
 
 <#clave_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clave_level" ; lv2:name "Clave Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 31 .
+    jig:paramIndex 31 ;
+    jig:controlGroup "Clave" .
 
 <#bash_size>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_size" ; lv2:name "Bash Size" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 32 .
+    jig:paramIndex 32 ;
+    jig:controlGroup "Bash" .
 
 <#bash_spread>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_spread" ; lv2:name "Bash Spread" ;
     lv2:default 0.55 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 33 .
+    jig:paramIndex 33 ;
+    jig:controlGroup "Bash" .
 
 <#bash_decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_decay" ; lv2:name "Bash Decay" ;
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 34 .
+    jig:paramIndex 34 ;
+    jig:controlGroup "Bash" .
 
 <#bash_drive>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_drive" ; lv2:name "Bash Drive" ;
     lv2:default 0.65 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 35 .
+    jig:paramIndex 35 ;
+    jig:controlGroup "Bash" .
 
 <#bash_noise>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_noise" ; lv2:name "Bash Noise" ;
     lv2:default 0.6 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 36 .
+    jig:paramIndex 36 ;
+    jig:controlGroup "Bash" .
 
 <#bash_edge>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_edge" ; lv2:name "Bash Edge" ;
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 37 .
+    jig:paramIndex 37 ;
+    jig:controlGroup "Bash" .
 
 <#bash_level>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_level" ; lv2:name "Bash Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
-    jig:paramIndex 38 .
+    jig:paramIndex 38 ;
+    jig:controlGroup "Bash" .
 
 <#bit_crush>
     a lv2:InputPort , lv2:ControlPort ;
@@ -303,25 +343,29 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "master_drive" ; lv2:name "Master Drive" ;
     lv2:default 0.25 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 40 .
+    jig:paramIndex 40 ;
+    jig:controlGroup "Master" .
 
 <#master_reverb>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "master_reverb" ; lv2:name "Master Reverb" ;
     lv2:default 0.2 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 41 .
+    jig:paramIndex 41 ;
+    jig:controlGroup "Master" .
 
 <#master_gain>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "master_gain" ; lv2:name "Master Gain" ;
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 42 .
+    jig:paramIndex 42 ;
+    jig:controlGroup "Master" .
 
 <#kick_mute>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_mute" ; lv2:name "Kick Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 43 ;
+    jig:controlGroup "Kick" ;
     lv2:portProperty lv2:toggled .
 
 <#clap_mute>
@@ -329,6 +373,7 @@
     lv2:symbol "clap_mute" ; lv2:name "Clap Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 44 ;
+    jig:controlGroup "Clap" ;
     lv2:portProperty lv2:toggled .
 
 <#snare_mute>
@@ -336,6 +381,7 @@
     lv2:symbol "snare_mute" ; lv2:name "Snare Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 45 ;
+    jig:controlGroup "Snare" ;
     lv2:portProperty lv2:toggled .
 
 <#crash_mute>
@@ -343,6 +389,7 @@
     lv2:symbol "crash_mute" ; lv2:name "Crash Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 46 ;
+    jig:controlGroup "Crash" ;
     lv2:portProperty lv2:toggled .
 
 <#hh_closed_mute>
@@ -350,6 +397,7 @@
     lv2:symbol "hh_closed_mute" ; lv2:name "Closed HH Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 47 ;
+    jig:controlGroup "Closed HH" ;
     lv2:portProperty lv2:toggled .
 
 <#tom1_mute>
@@ -357,6 +405,7 @@
     lv2:symbol "tom1_mute" ; lv2:name "Tom 1 Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 48 ;
+    jig:controlGroup "Tom 1" ;
     lv2:portProperty lv2:toggled .
 
 <#hh_open_mute>
@@ -364,6 +413,7 @@
     lv2:symbol "hh_open_mute" ; lv2:name "Open HH Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 49 ;
+    jig:controlGroup "Open HH" ;
     lv2:portProperty lv2:toggled .
 
 <#tom2_mute>
@@ -371,6 +421,7 @@
     lv2:symbol "tom2_mute" ; lv2:name "Tom 2 Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 50 ;
+    jig:controlGroup "Tom 2" ;
     lv2:portProperty lv2:toggled .
 
 <#bash_mute>
@@ -378,6 +429,7 @@
     lv2:symbol "bash_mute" ; lv2:name "Bash Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 51 ;
+    jig:controlGroup "Bash" ;
     lv2:portProperty lv2:toggled .
 
 <#cowbell_mute>
@@ -385,6 +437,7 @@
     lv2:symbol "cowbell_mute" ; lv2:name "Cowbell Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 52 ;
+    jig:controlGroup "Cowbell" ;
     lv2:portProperty lv2:toggled .
 
 <#clave_mute>
@@ -392,130 +445,152 @@
     lv2:symbol "clave_mute" ; lv2:name "Clave Mute" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 53 ;
+    jig:controlGroup "Clave" ;
     lv2:portProperty lv2:toggled .
 
 <#kick_transient>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_transient" ; lv2:name "Kick Transient" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 54 .
+    jig:paramIndex 54 ;
+    jig:controlGroup "Kick" .
 
 <#clap_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clap_metal" ; lv2:name "Clap Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 55 .
+    jig:paramIndex 55 ;
+    jig:controlGroup "Clap" .
 
 <#snare_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "snare_metal" ; lv2:name "Snare Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 56 .
+    jig:paramIndex 56 ;
+    jig:controlGroup "Snare" .
 
 <#crash_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "crash_metal" ; lv2:name "Crash Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 57 .
+    jig:paramIndex 57 ;
+    jig:controlGroup "Crash" .
 
 <#hh_closed_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_closed_metal" ; lv2:name "Closed HH Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 58 .
+    jig:paramIndex 58 ;
+    jig:controlGroup "Closed HH" .
 
 <#tom1_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom1_metal" ; lv2:name "Tom 1 Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 59 .
+    jig:paramIndex 59 ;
+    jig:controlGroup "Tom 1" .
 
 <#hh_open_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_open_metal" ; lv2:name "Open HH Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 60 .
+    jig:paramIndex 60 ;
+    jig:controlGroup "Open HH" .
 
 <#tom2_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom2_metal" ; lv2:name "Tom 2 Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 61 .
+    jig:paramIndex 61 ;
+    jig:controlGroup "Tom 2" .
 
 <#cowbell_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cowbell_metal" ; lv2:name "Cowbell Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 62 .
+    jig:paramIndex 62 ;
+    jig:controlGroup "Cowbell" .
 
 <#clave_metal>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clave_metal" ; lv2:name "Clave Metal" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 63 .
+    jig:paramIndex 63 ;
+    jig:controlGroup "Clave" .
 
 <#kick_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_pan" ; lv2:name "Kick Pan" ;
     lv2:default 0 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 64 .
+    jig:paramIndex 64 ;
+    jig:controlGroup "Kick" .
 
 <#clap_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clap_pan" ; lv2:name "Clap Pan" ;
     lv2:default 0.16 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 65 .
+    jig:paramIndex 65 ;
+    jig:controlGroup "Clap" .
 
 <#snare_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "snare_pan" ; lv2:name "Snare Pan" ;
     lv2:default -0.08 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 66 .
+    jig:paramIndex 66 ;
+    jig:controlGroup "Snare" .
 
 <#crash_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "crash_pan" ; lv2:name "Crash Pan" ;
     lv2:default -0.44 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 67 .
+    jig:paramIndex 67 ;
+    jig:controlGroup "Crash" .
 
 <#hh_closed_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_closed_pan" ; lv2:name "Closed HH Pan" ;
     lv2:default -0.52 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 68 .
+    jig:paramIndex 68 ;
+    jig:controlGroup "Closed HH" .
 
 <#tom1_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom1_pan" ; lv2:name "Tom 1 Pan" ;
     lv2:default 0.22 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 69 .
+    jig:paramIndex 69 ;
+    jig:controlGroup "Tom 1" .
 
 <#hh_open_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hh_open_pan" ; lv2:name "Open HH Pan" ;
     lv2:default 0.32 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 70 .
+    jig:paramIndex 70 ;
+    jig:controlGroup "Open HH" .
 
 <#tom2_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "tom2_pan" ; lv2:name "Tom 2 Pan" ;
     lv2:default -0.16 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 71 .
+    jig:paramIndex 71 ;
+    jig:controlGroup "Tom 2" .
 
 <#bash_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "bash_pan" ; lv2:name "Bash Pan" ;
     lv2:default 0.42 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 72 .
+    jig:paramIndex 72 ;
+    jig:controlGroup "Bash" .
 
 <#cowbell_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cowbell_pan" ; lv2:name "Cowbell Pan" ;
     lv2:default 0.14 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 73 .
+    jig:paramIndex 73 ;
+    jig:controlGroup "Cowbell" .
 
 <#clave_pan>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "clave_pan" ; lv2:name "Clave Pan" ;
     lv2:default -0.24 ; lv2:minimum -1 ; lv2:maximum 1 ;
-    jig:paramIndex 74 .
+    jig:paramIndex 74 ;
+    jig:controlGroup "Clave" .

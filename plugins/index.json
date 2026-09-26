@@ -29,7 +29,7 @@
       "cautions": [
         "Nine voices across three chips, and the tenth note steals the oldest rather than being refused. Percussion and pitched notes come out of the same nine.",
         "Percussion is MIDI channel 10, notes 35 to 59. Pitched notes are 24 to 96 on any other channel, and anything outside that is ignored rather than transposed into range.",
-        "Every control answers to a MIDI CC as well, from CC 70 upward in parameter order, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight.",
+        "Every control answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight.",
         "Roll and Retrigger are positions on an exponential curve from about 1.5Hz to 45Hz rather than a rate in hertz. The figure shown is the one the device's own panel shows.",
         "The firmware's EEPROM is a scratch array that is never persisted. Its SAVE command has nowhere to write, and settings belong in the project graph instead."
       ],
@@ -90,6 +90,7 @@
         "MidiGenerator"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -137,6 +138,7 @@
         "Utility"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -163,6 +165,7 @@
         "MidiProcessor"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -214,6 +217,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -246,6 +250,7 @@
         "MidiGenerator"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -302,6 +307,7 @@
         "DrumInstrument"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -409,6 +415,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -452,6 +459,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -487,6 +495,7 @@
         "MidiGenerator"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -577,6 +586,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -605,6 +615,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -633,6 +644,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -662,6 +674,7 @@
         "MidiGenerator"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -724,6 +737,7 @@
         "AudioInstrument"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -758,6 +772,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -775,7 +790,7 @@
         "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone.",
         "Transients smear when pitch or frequency shift is set, as with any phase vocoder.",
         "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it.",
-        "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt per octave, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
+        "MIDI control changes drive the parameters, one controller per port as the profile's midi:binding declarations say, on any channel. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope.",
         "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins."
       ],
       "parameters": [
@@ -804,6 +819,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [
@@ -836,6 +852,7 @@
         "AudioEffect"
       ],
       "formats": [
+        "Jig",
         "WebAudio"
       ],
       "accepts": [

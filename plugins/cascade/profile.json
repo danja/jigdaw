@@ -22,7 +22,7 @@
   "cautions": [
     "Freeze holds the tail at unity feedback. Following it with a limiter is wise when several instances are frozen at once."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

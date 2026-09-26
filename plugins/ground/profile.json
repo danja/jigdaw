@@ -27,7 +27,7 @@
     "Pure MIDI, no audio: route its MIDI output to a bass instrument. New Form, New Phrase and Mutate Cell are triggers that fire on the rising edge, so each press is one action.",
     "Monophonic by design. A new note ends the note before it rather than overlapping."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "abi": "jig:Abi2",
   "requires": [

@@ -15,7 +15,11 @@ Arrangement tab, and play it. Do it with the window in front and with real keys:
 automated check could only dispatch key events, because its browser window was in the
 background (TODO.md, loose end 5). To see a plugin's own editor, load
 `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on
-the page's own origin is refused. Note what is wrong in INBOX.md.
+the page's own origin is refused. While there, collapse the browser with the arrow in the
+sidebar header and check the rail at phone width: the automated check covers classes and
+names only, and AGENTS.md requires `documentElement.scrollWidth` compared against
+`innerWidth` in a narrow iframe in a real browser before the layout half is claimed
+(TODO.md, sidebar arrow item). Note what is wrong in INBOX.md.
 
 ## 2. Tools that would help
 

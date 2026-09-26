@@ -18,8 +18,8 @@ import { createTools } from './tools.js'
  * to nothing is a normal outcome in a browser without the API, not an error:
  * the tools still work, they are simply only reachable from the page.
  */
-export function registerTools ({ dispatcher, catalogue, loadPlugin, openCollection, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection })
+export function registerTools ({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop })
 
   // Always available, whatever else happens. This is what the page's own
   // console can drive, and what a test can call.

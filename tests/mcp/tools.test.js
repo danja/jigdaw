@@ -269,6 +269,36 @@ describe('transport_configure', () => {
   })
 })
 
+describe('transport_play and transport_stop', () => {
+  it('drives the transport passed in, the way plugin_load takes loadPlugin', async () => {
+    const played = []
+    const tools = createTools({
+      dispatcher,
+      onPlay: async () => { played.push('play') },
+      onStop: async () => { played.push('stop') }
+    })
+    const play = input => tools.find(t => t.name === 'transport_play').handler(input)
+    const stop = input => tools.find(t => t.name === 'transport_stop').handler(input)
+    expect((await play()).ok).toBe(true)
+    expect((await stop()).ok).toBe(true)
+    expect(played).toEqual(['play', 'stop'])
+  })
+
+  it('explains itself when no transport is connected, rather than vanishing', async () => {
+    const tools = createTools({ dispatcher })
+    expect((await tools.find(t => t.name === 'transport_play').handler()).ok).toBe(false)
+    expect((await tools.find(t => t.name === 'transport_play').handler()).error).toContain('cannot play')
+    expect((await tools.find(t => t.name === 'transport_stop').handler()).error).toContain('cannot stop')
+  })
+
+  it('reports a transport failure as a result, not a throw', async () => {
+    const tools = createTools({ dispatcher, onPlay: async () => { throw new Error('no audio') } })
+    const result = await tools.find(t => t.name === 'transport_play').handler()
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('no audio')
+  })
+})
+
 describe('registerTools', () => {
   it('always exposes the surface on the page, whatever else it finds', () => {
     const target = {}

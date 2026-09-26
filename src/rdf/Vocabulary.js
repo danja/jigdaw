@@ -14,6 +14,7 @@
 export const JIG = 'http://purl.org/stuff/jigdaw/'
 export const TRN = 'http://purl.org/stuff/transmissions/'
 export const LV2 = 'http://lv2plug.in/ns/lv2core#'
+export const MIDI = 'http://lv2plug.in/ns/ext/midi#'
 export const UNITS = 'http://lv2plug.in/ns/extensions/units#'
 export const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 export const RDFS = 'http://www.w3.org/2000/01/rdf-schema#'
@@ -101,8 +102,9 @@ export const vocabulary = Object.freeze({
     HostTransport: `${TRN}HostTransport`,
     Audio: `${TRN}Audio`,
     Midi: `${TRN}Midi`,
-    // MIDI that reshapes a plugin rather than playing it. ControlMidi is
-    // transmission's term; MidiCC is one this project listed before checking.
+    // MIDI that reshapes a plugin rather than playing it. ControlMidi covers
+    // CCs and scene notes; MidiCC is the narrower CCs-alone term. Both are
+    // upstream-defined in plugin-universe's vocabs/trn-profile.ttl.
     ControlMidi: `${TRN}ControlMidi`,
     MidiCC: `${TRN}MidiCC`,
     // A clip's and a note's placement, and a note itself. transmission's
@@ -163,6 +165,9 @@ export const vocabulary = Object.freeze({
     automationRate: `${JIG}automationRate`,
     ARate: `${JIG}ARate`,
     KRate: `${JIG}KRate`,
+    // The panel section a control belongs under. A plain label: groups are
+    // per-plugin display hints, never addressed across documents.
+    controlGroup: `${JIG}controlGroup`,
 
     // Projects
     Project: `${JIG}Project`,
@@ -251,6 +256,15 @@ export const vocabulary = Object.freeze({
     OutputPort: `${LV2}OutputPort`,
     ControlPort: `${LV2}ControlPort`,
     AudioPort: `${LV2}AudioPort`
+  }),
+
+  // MIDI controller bindings on ports. LV2's own MIDI extension, reused rather
+  // than invented: a port's midi:binding names a midi:Controller carrying the
+  // controller number that drives it.
+  midi: Object.freeze({
+    binding: `${MIDI}binding`,
+    Controller: `${MIDI}Controller`,
+    controllerNumber: `${MIDI}controllerNumber`
   }),
 
   units: Object.freeze({

@@ -5,6 +5,39 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [ ] **A keyframe time-stretch plugin from the DAFx26 extrema-sampling paper.**
+      From the inbox, 2026-09-26. The paper is at `/chalet/github/dafx26-paper`
+      (Nielsen, DAFx26, CC BY 4.0, credit required): a content-adaptive
+      overlap-add where the spacing between local extrema drives both when a
+      splice happens and how long its crossfade lasts. Analysis is a 4-tap
+      B-spline derivative with a deadband threshold and subsample refinement;
+      reconstruction is smoothstep interpolation between timestamped extrema;
+      stretching tracks reference, play and temporary playheads with a leash of
+      K keyframes. Output is sample by sample with no block latency in
+      principle; live block processing needs boundary keyframes (paper section
+      2.7, e.g. a 512-sample delay, declared as `jig:latencyFrames`). Likely
+      parameters: time rate, pitch rate, splice threshold K, maximum splice
+      duration, analysis threshold epsilon. Rust, `no_std`, Abi1 audio effect.
+      Design doc goes in `docs/plugins/` before code. Not started.
+
+- [ ] **An additive resynthesis effect that builds harmonics from the input.**
+      From the inbox, 2026-09-26 (r/synthesizers idea): pitch-shift the input
+      to 2x, 3x and 5x, then use feedback to supply the intermediate non-prime
+      harmonics (4x from 2x fed back, 6x from 2x and 3x combined, and so on).
+      Needs design before code: what the pitch shifters are, what the feedback
+      network is, and how gains stay bounded. Any cycle needs an explicit
+      delay by the latency rules, and latency inside a cycle is never
+      compensated. Probably Rust, Abi1. Not started.
+
+- [ ] **A panning effect with non-linear motion.** From the inbox, 2026-09-26
+      (a Reddit comment asking what potential the "panning fuckery" genre still
+      has). Proposed answer: an auto-panner where the position follows
+      non-linear trajectories rather than a single LFO, with modes for circular
+      motion, random walk and envelope-follower-driven jumps, plus per-band
+      panning so low and high content can move independently. Needs design
+      before code: the trajectory set, the parameter list with units, and a
+      mono-compatibility rule. Not started.
+
 - [ ] **Verify `reaper/jigdaw-render.lua` against a real REAPER install.** **Parked
       2026-09-24: the maintainer will do this when there is more time**, not blocked on
       anything else. From the inbox,
@@ -89,15 +122,24 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
 - [ ] **An agent cannot press Play.** Since 2026-09-25 an MCP client drives an open page
       through `npm run mcp-bridge` (docs/webmcp.md "The local bridge"), and can build a whole
       session but not hear it: `transport_play` and `transport_stop` are specified in
-      docs/webmcp.md and not built. The transport is the page's (`web/app/Transport.js`),
-      not the dispatcher's, so the tool surface needs it passed in the way `plugin_load`
-      takes `loadPlugin`. A page with no audio started would also need a person's click
-      first: a browser starts no AudioContext without one.
+      docs/webmcp.md and not built. 2026-09-26: built. `createTools` takes `onPlay`
+      and `onStop` the way `plugin_load` takes `loadPlugin`, and the page passes
+      its transport's `play` and `stop` in `src/host/Runtime` wiring
+      (`web/app/Runtime.js`). With no hooks the tools explain that this host
+      cannot play instead of vanishing. A page with no audio started still needs
+      a person's click first: a browser starts no AudioContext without one.
 
 - [ ] **Move Hide Browser button functionality to a sidebar collapse/expand arrow.**
-      From the inbox, 2026-09-25. The button hides the browser panel; a small
-      collapse/expand arrow in the sidebar would carry the same function in less space.
-      UI-only: no model or contract change.
+      **Done 2026-09-26, unreviewed in a real browser.** From the inbox,
+      2026-09-25. The transport bar's Hide browser button is gone; a 44px arrow
+      in the sidebar header carries the function (`web/app/Layout.js`,
+      `tests/ui/Layout.test.js`). Collapsed, the sidebar is a 48px rail holding
+      only the arrow, and the panel's contents leave the accessibility tree;
+      the arrow keeps `aria-expanded`, `aria-controls` and a Hide/Show name,
+      and the choice is still remembered per browser. UI-only: no model or
+      contract change, bundle rebuilt. Not yet measured in a narrow iframe in a
+      real browser, which AGENTS.md requires before the layout half of this is
+      claimed; see HUMANS.md.
 
 - [ ] **A facility for Sends and Receives between tracks.** From the inbox, 2026-09-25.
       Aux routing between tracks: a send taps a track's signal, a receive brings it back
@@ -106,11 +148,23 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       turns it into Web Audio connections without introducing a cycle the latency rules
       refuse.
 
-- [ ] **Group controls in the plugin view.** From the inbox, 2026-09-25: the generated
-      panel lays controls out flat, and DrumGen's 21 and DrumKit's 75 make that haphazard.
-      LV2 has a port-groups extension worth reading before inventing a `jig:` term; either
-      way the grouping belongs in the profile so the generated panel, and any other
-      surface, share it.
+- [ ] **Group controls in the plugin view.** **Done 2026-09-26.** From the inbox,
+      2026-09-25. LV2's port-groups extension was read first and not reused: `pg:Group`
+      combines ports carrying one stream (stereo channels, surround layouts), verified
+      against the extension's published page, and says nothing about control layout. So
+      ports carry a plain `jig:controlGroup` label instead (`vocabs/jigdaw.ttl`,
+      `src/rdf/Vocabulary.js`), declared in the profile by `bin/write-profile.js` and read
+      by `src/rdf/ProfileReader.js`. The generated panel renders ungrouped controls first,
+      exactly as before, then one `fieldset`/`legend` section per group in first-appearance
+      order. The 8-Bit 8asterd groups by the hardware's own sections from `params.json`
+      (12 groups over 42 controls, via `make.js`); DrumKit groups by voice (12 groups over
+      74 controls, Bit Crush standing alone, which exercises the ungrouped path); DrumGen
+      stays flat, having no natural grouping to declare. Tests bind 8b8's groups to its
+      parameter definition and DrumKit's to its symbol prefixes, and the panel suite checks
+      section order, ungrouped-first, and the no-groups backwards case. The
+      document-order change required reworking the committed-panel selector test to match
+      by label. Both profiles validate and canonicalise; vocab site, index, and bundle
+      rebuilt.
 
 - [ ] **A desktop Jiggy built on Electron.** From the inbox, 2026-09-25. A large direction,
       not a task: packaging, auto-update, native audio device handling, and what happens
@@ -185,15 +239,33 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       parameter changed. The 8-Bit 8asterd has the same gap. Needs a message in
       messaging.md, the host updating its AudioParam and the model from it, and a guard so
       that update is not written straight back to the processor.
-- [ ] **Declare CC bindings in RDF instead of a caution.** LV2's MIDI extension has
-      `midi:binding` and `midi:controllerNumber`. Declared per port (skolemised, not blank),
-      a host could label each control with its controller, and the Quefrency test that
-      checks the caution's wording would check the binding instead. Both the 8-Bit 8asterd
-      and Quefrency would move to it.
-- [ ] **Reconcile `trn:MidiCC` with upstream.** It is listed in `vocabs/shapes.ttl`,
-      `src/engine/EventRouter.js` and `src/rdf/Vocabulary.js`, but transmission defines no
-      such term; its term for MIDI control changes is `trn:ControlMidi`, which Quefrency
-      uses. Either propose `trn:MidiCC` upstream or drop it here.
+- [ ] **Declare CC bindings in RDF instead of a caution.** **Done 2026-09-26.**
+      LV2's MIDI extension (`midi:binding` to a skolemised `midi:Controller`
+      carrying `midi:controllerNumber`, verified against the extension's own
+      page) is reused, not invented. `bin/write-profile.js` emits bindings from
+      a `controller` field per port, `src/rdf/ProfileReader.js` reads them onto
+      `port.controller` (null where unbound), and the generated panel names the
+      controller on each bound control. Quefrency binds 70 to 80 and the 8-Bit
+      8asterd 70 upward in parameter order; both cautions now point at the
+      bindings, keeping only the value-64 and last-wins semantics that are
+      still prose. The Quefrency test checks each declared binding against the
+      module instead of the caution's wording. Both profiles validate and
+      canonicalise; bundle rebuilt.
+- [ ] **Reconcile `trn:MidiCC` with upstream.** **Decided 2026-09-26: keep both
+      terms, comment corrected.** Both are upstream-defined, in different files:
+      transmission's `vocabs/profile.ttl` defines `trn:ControlMidi` (CCs and
+      scene notes that reshape other generators), and plugin-universe's
+      `vocabs/trn-profile.ttl` defines both that term and the narrower
+      `trn:MidiCC` (continuous controller messages alone, without note data).
+      The `tests/rdf/vocabulary.test.js` upstream check already covers both
+      files, so the suite passes either way. `src/rdf/Vocabulary.js` said
+      MidiCC was listed before checking; that comment is now corrected to name
+      both definitions. No profile declares `trn:MidiCC` yet; Quefrency takes
+      CCs 70 to 80 with no notes, which matches the narrower term, but its
+      profile declares `trn:ControlMidi` and both terms behave identically in
+      `src/engine/EventRouter.js` (`isMidi` true, `carriesNotes` false), so no
+      profile change was made here. A future plugin taking CCs alone may
+      declare `trn:MidiCC`.
 
 ## JSFX plugins
 
@@ -205,12 +277,60 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
 
 ## Before there is code
 
-- [ ] **Determine what needs building for testbed.md's "What nothing exercises yet".**
-      From the inbox, 2026-09-25. Each entry in that section names a specified-but-unused
-      clause (latency changes, tails, shared memory, the opaque relay, a-rate parameters,
-      multi-plugin state, off-page MIDI). The output is a list of example plugins or host
-      behaviours covering them, worked back into this file as build items - not builds
-      themselves.
+Determined 2026-09-26 from testbed.md's "What nothing exercises yet". Each item
+below is the smallest plugin or host behaviour covering one unused clause.
+Build items, not builds: none is started.
+
+- [ ] **A plugin that changes its latency, and a host that acts on it.** Covers
+      latency.md section 2. Smallest plugin: a two-position latency, such as a
+      switchable FFT size or lookahead amount, reporting the actual figure in
+      `ready` and sending `latency` with `fromFrame` on change, with the worst
+      case in the profile as module-abi.md requires. The host half is the larger
+      one: Jiggy must observe the message, update the node, and recompile
+      compensation scheduled against `fromFrame`, not against message arrival
+      (only `src/wam/WamModule.js` reads the message today). Test: a parallel
+      path re-aligned after the change takes effect.
+
+- [ ] **Tails on Cascade, and tail-aware offline renders.** Covers latency.md
+      section 5. Cascade declares `jig:tailFrames` and reports it in `ready`;
+      the reference host extends the render past the last input event by the
+      greatest tail in the graph. Test renders a note through Cascade and checks
+      the tail is not cut. An unbounded tail (a freeze, which must declare
+      nothing) is a second plugin, not this item.
+
+- [ ] **A plugin that prefers shared memory, and an isolated host mode to run
+      it in.** Covers contract section 2.3. Smallest plugin: declares
+      `jig:prefers jig:SharedMemory` with the mandated fallback to port
+      transfer. Host side: an opt-in isolated serve mode, since the baseline
+      must not require isolation of itself. Test both paths: the capability
+      offered in isolated mode, the fallback elsewhere.
+
+- [ ] **Tremolo's own interface showing processor data through the opaque
+      relay.** Covers messaging.md section 2.4. Tremolo is already the only
+      custom `jig:ui`, so no new plugin is needed: its frame displays
+      something only the processor knows (LFO phase or current gain) via
+      `plugin` messages in both directions, exercising the host relay including
+      its rate limiting.
+
+- [ ] **One a-rate parameter, audio-modulated.** Covers contract section 5.2.
+      Smallest: a single `jig:ARate` port on a plain-JavaScript plugin
+      (Tremolo's rate or Squelch's cutoff), driven by an audio-to-parameter
+      connection over the path phase 9 repaired, with the processor handling
+      length-1 and length-128 arrays as the contract requires. Test asserts
+      per-sample modulation lands.
+
+- [ ] **A second plugin answering state requests.** Covers contract section 8.
+      Ferrite is the only one, so token correlation and ordering with two
+      stateful nodes is untested. Smallest: a plugin with genuine
+      non-parameter state (parameters are not state by contract section 8.2,
+      so this cannot be bolted onto Tremolo), plus a round-trip test with
+      Ferrite loaded alongside proving two `state` replies route to the right
+      nodes by token.
+
+- [ ] **Web MIDI input into the selected track.** Covers testbed.md "MIDI from
+      outside the page". Host behaviour only, no plugin needed:
+      permission-gated device input with notes delivered to the track's MIDI
+      input, behind the same user-activation story as audio start.
 
 ## Recurring, check periodically
 

@@ -31,7 +31,7 @@
     trn:caution "Silent until the host transport is rolling and reports a tempo and a beat position. A generator with no idea what time it is would be guessing, and this one says so by producing nothing." ;
     trn:caution "Pure MIDI, no audio: route its MIDI output to a drum instrument. New, Mutate and Fill are triggers that fire on the rising edge, so each press is one action." ;
     trn:caution "A held note with no note off is a stuck note, so stopping the transport sounds the ringing notes now rather than leaving them held." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
     trn:requires jig:MidiOut ;

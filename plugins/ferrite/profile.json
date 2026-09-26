@@ -26,7 +26,7 @@
     "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono.",
     "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

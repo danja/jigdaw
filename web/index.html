@@ -127,10 +127,25 @@
      and a timeline or a piano roll is as wide as the music. They scroll in
      their own boxes, so the column must be allowed to be narrower than they are. */
   main { display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
-  /* The browser hidden: the stage takes the whole width. */
-  main.no-browser { grid-template-columns: minmax(0, 1fr); }
-  .browser[hidden] { display:none; }
+  /* The browser collapsed: a 48px rail holding only the expand arrow, the
+     stage taking the rest. The panel's contents are display:none, so they
+     leave the accessibility tree exactly as hidden would. */
+  main.no-browser { grid-template-columns: 48px minmax(0, 1fr); }
+  main.no-browser .browser { padding:14px 2px; }
+  main.no-browser .browser > :not(.browser-head) { display:none; }
+  main.no-browser .browser-head { margin:0; }
+  main.no-browser .browser-head h2 { display:none; }
   .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
+  /* The collapse arrow. A 44px target that lives in the sidebar header, so the
+     transport bar keeps only Play, Stop and the session controls. The glyph
+     points at the sidebar it collapses, and the accessible name says what
+     pressing it does; aria-expanded says which it is. */
+  .browser-head { display:flex; align-items:center; gap:8px; margin:0 0 10px; }
+  .browser-head h2 { margin:0; flex:1 1 auto; }
+  #toggle-browser { flex:none; width:44px; height:44px; font-size:20px; line-height:1;
+    background:transparent; color:var(--dim); border:1px solid var(--line);
+    border-radius:4px; cursor:pointer; }
+  #toggle-browser:hover { color:var(--fg); border-color:var(--accent); }
   .stage { padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0; }
   h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
 
@@ -307,6 +322,12 @@
      panel is given rather than from a count written here. */
   .controls { display:grid; gap:12px 8px; align-items:start;
     grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
+  /* One named section per control group. A fieldset names its controls to
+     assistive technology; the legend is the visible section heading. */
+  .control-group { border:1px solid var(--line); border-radius:7px;
+    padding:10px 12px 12px; margin:0 0 12px; min-width:0; }
+  .control-group:last-child { margin-bottom:0; }
+  .control-group legend { font-size:12px; color:var(--dim); padding:0 6px; }
   .control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
   .control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
     overflow-wrap:anywhere; }
@@ -389,6 +410,8 @@
 
   @media (max-width: 760px) {
     main { grid-template-columns:minmax(0, 1fr); }
+    main.no-browser { grid-template-columns:minmax(0, 1fr); }
+    main.no-browser .browser { padding:8px 14px; }
     .browser { border-right:0; border-bottom:1px solid var(--line); }
     /* The knobs already wrap, so nothing about them changes on a phone: a
        390px viewport gets four columns of 44px targets. Only the dropdowns
@@ -404,7 +427,6 @@
 
 <div class="transport">
   <span class="brand">Jiggy</span>
-  <button id="toggle-browser" aria-expanded="true" aria-controls="browser">Hide browser</button>
   <button id="play" aria-pressed="false">Play</button>
   <button id="stop">Stop</button>
   <span class="tempo">
@@ -432,7 +454,10 @@
 
 <main>
   <section class="browser" id="browser" aria-label="Plugin browser">
-    <h2>Browser</h2>
+    <div class="browser-head">
+      <button id="toggle-browser" aria-expanded="true" aria-controls="browser" aria-label="Hide browser panel">&#8249;</button>
+      <h2>Browser</h2>
+    </div>
     <!-- Every Load button below loads onto this track. Visible rather than a
          setting somewhere else, because where a plugin lands is the first thing
          a person needs to know about pressing Load. -->

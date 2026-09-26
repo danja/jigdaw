@@ -51,6 +51,45 @@ describe('createPanel accessibility', () => {
     }
   })
 
+  it('names the bound controller on the control it drives', () => {
+    // The binding is per port in the profile, so a person matching a hardware
+    // knob to the panel finds it by reading rather than by trying each one.
+    const { element } = build([
+      port({ symbol: 'mix', name: 'Mix', controller: 79 }),
+      port({ symbol: 'size', name: 'Size' })
+    ])
+    const labels = [...element.querySelectorAll('label')].map(l => l.textContent)
+    expect(labels).toEqual(['Mix (CC 79)', 'Size'])
+  })
+
+  it('groups controls under named sections, ungrouped first', () => {
+    // DrumKit's 75 controls flat are haphazard; grouped by voice each section
+    // reads alone. A fieldset names its controls to assistive technology,
+    // which a visible heading alone would not.
+    const { element } = build([
+      port({ symbol: 'bit_crush', name: 'Bit Crush' }),
+      port({ symbol: 'kick_pitch', name: 'Kick Pitch', group: 'Kick' }),
+      port({ symbol: 'kick_level', name: 'Kick Level', group: 'Kick' }),
+      port({ symbol: 'snare_tone', name: 'Snare Tone', group: 'Snare' })
+    ])
+    const legends = [...element.querySelectorAll('fieldset.control-group > legend')]
+      .map(l => l.textContent)
+    expect(legends).toEqual(['Kick', 'Snare'])
+    const topGrids = [...element.children].filter(c => c.className === 'controls')
+    expect(topGrids).toHaveLength(1)
+    expect([...topGrids[0].querySelectorAll('label')].map(l => l.textContent)).toEqual(['Bit Crush'])
+    const kick = [...element.querySelectorAll('fieldset.control-group')]
+      .find(f => f.querySelector('legend').textContent === 'Kick')
+    expect([...kick.querySelectorAll('label')].map(l => l.textContent))
+      .toEqual(['Kick Pitch', 'Kick Level'])
+  })
+
+  it('renders no sections for a plugin with no groups, exactly as before', () => {
+    const { element } = build([port(), port({ symbol: 'size', name: 'Size' })])
+    expect(element.querySelector('fieldset')).toBeNull()
+    expect(element.querySelectorAll('.controls')).toHaveLength(1)
+  })
+
   it('gives every control ids that are unique and valid', () => {
     // The IRI is sanitised into the id, so a colliding or malformed id here
     // would silently break every label association on the panel.
@@ -328,12 +367,19 @@ describe('the panel each committed plugin actually generates', () => {
         const row = element.querySelector(`.control-selector select`)
         expect(row, `${name}/${port.symbol} generated no selector`).not.toBeNull()
       }
-      const options = [...element.querySelectorAll('select')]
-        .map(select => [...select.children].map(o => o.textContent))
-      const declared = profile.ports
-        .filter(p => p.widget === 'selector')
-        .map(p => p.scalePoints.map(s => s.label))
-      expect(options, name).toEqual(declared)
+      // By label rather than document order: a grouped panel orders controls
+      // by section, so the nth select is not the nth declared port. The CC
+      // suffix a bound control carries is stripped for the match.
+      const shown = new Map()
+      for (const row of element.querySelectorAll('.control-selector')) {
+        const label = row.querySelector('label').textContent.replace(/ \(CC \d+\)$/, '')
+        shown.set(label, [...row.querySelectorAll('option')].map(o => o.textContent))
+      }
+      const declared = profile.ports.filter(p => p.widget === 'selector')
+      for (const port of declared) {
+        expect(shown.get(port.name), `${name}/${port.symbol} options`).toEqual(port.scalePoints.map(s => s.label))
+      }
+      expect(shown.size, `${name} draws a selector nothing declares`).toBe(declared.length)
     }
     // The assertion above is vacuously true for a plugin with no enumerated
     // port, so the population is checked as well as the rule.

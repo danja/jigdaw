@@ -95,6 +95,12 @@ describe('the profile describes the parameters the firmware has', () => {
     expect(profile.ports.map(p => p.paramIndex)).toEqual(params.map(p => p.index))
   })
 
+  it('groups the ports under the hardware\'s own sections', () => {
+    // The 42 controls flat are not navigable; the generated panel sections
+    // them by the group each parameter carries in the definition.
+    expect(profile.ports.map(p => p.group)).toEqual(params.map(p => p.group))
+  })
+
   it('declares the displayed range of each one', () => {
     for (const p of params) {
       const port = profile.ports[p.index]
@@ -481,5 +487,15 @@ describeBuilt('the committed profile describes the files on disk', () => {
       .toBe(await digestOf(new Uint8Array(await readFile(wasmPath))))
     expect(parsed.processor.integrity)
       .toBe(await digestOf(new Uint8Array(await readFile(resolve(dir, '8b8-processor.js')))))
+  })
+
+  it('binds one controller per port, from CC 70 upward in parameter order', async () => {
+    // What the hardware does, declared per port so a host can label each
+    // control with its controller instead of reading the caution.
+    const parsed = readProfile(await parseText(read('profile.ttl'), 'urn:jigdaw:test'))
+    for (const p of params) {
+      const port = parsed.ports.find(q => q.symbol === p.key)
+      expect(port.controller, p.key).toBe(70 + p.index)
+    }
   })
 })

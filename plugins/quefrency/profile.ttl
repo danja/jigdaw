@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -32,9 +33,9 @@
     trn:caution "The formant envelope of a chord is the envelope of the whole mixture. Pitch shift moves every spectral peak, so chords stay chords, but it cannot act on one note of a chord alone." ;
     trn:caution "Transients smear when pitch or frequency shift is set, as with any phase vocoder." ;
     trn:caution "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it." ;
-    trn:caution "MIDI control changes 70 to 80, on any channel, drive the parameters in the order Formant shift, Formant depth, Formant tilt per octave, Pitch shift, Pitch fine, Frequency shift, Harmonic depth, Lifter, Envelope estimator, Mix, Output. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope." ;
+    trn:caution "MIDI control changes drive the parameters, one controller per port as the profile's midi:binding declarations say, on any channel. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope." ;
     trn:caution "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 
@@ -69,56 +70,80 @@
     lv2:symbol "formant_shift" ; lv2:name "Formant shift" ;
     lv2:default 0 ; lv2:minimum -12 ; lv2:maximum 12 ;
     jig:paramIndex 0 ;
-    units:unit units:semitone12TET .
+    units:unit units:semitone12TET ;
+    midi:binding <#formant_shift-cc> .
+
+<#formant_shift-cc> a midi:Controller ; midi:controllerNumber 70 .
 
 <#formant_depth>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "formant_depth" ; lv2:name "Formant depth" ;
     lv2:default 100 ; lv2:minimum 0 ; lv2:maximum 200 ;
     jig:paramIndex 1 ;
-    units:unit units:pc .
+    units:unit units:pc ;
+    midi:binding <#formant_depth-cc> .
+
+<#formant_depth-cc> a midi:Controller ; midi:controllerNumber 71 .
 
 <#formant_tilt>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "formant_tilt" ; lv2:name "Formant tilt per octave" ;
     lv2:default 0 ; lv2:minimum -6 ; lv2:maximum 6 ;
     jig:paramIndex 2 ;
-    units:unit units:db .
+    units:unit units:db ;
+    midi:binding <#formant_tilt-cc> .
+
+<#formant_tilt-cc> a midi:Controller ; midi:controllerNumber 72 .
 
 <#pitch_shift>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "pitch_shift" ; lv2:name "Pitch shift" ;
     lv2:default 0 ; lv2:minimum -24 ; lv2:maximum 24 ;
     jig:paramIndex 3 ;
-    units:unit units:semitone12TET .
+    units:unit units:semitone12TET ;
+    midi:binding <#pitch_shift-cc> .
+
+<#pitch_shift-cc> a midi:Controller ; midi:controllerNumber 73 .
 
 <#pitch_fine>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "pitch_fine" ; lv2:name "Pitch fine" ;
     lv2:default 0 ; lv2:minimum -100 ; lv2:maximum 100 ;
     jig:paramIndex 4 ;
-    units:unit units:cent .
+    units:unit units:cent ;
+    midi:binding <#pitch_fine-cc> .
+
+<#pitch_fine-cc> a midi:Controller ; midi:controllerNumber 74 .
 
 <#freq_shift>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "freq_shift" ; lv2:name "Frequency shift" ;
     lv2:default 0 ; lv2:minimum -1000 ; lv2:maximum 1000 ;
     jig:paramIndex 5 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    midi:binding <#freq_shift-cc> .
+
+<#freq_shift-cc> a midi:Controller ; midi:controllerNumber 75 .
 
 <#harmonic_depth>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "harmonic_depth" ; lv2:name "Harmonic depth" ;
     lv2:default 100 ; lv2:minimum 0 ; lv2:maximum 200 ;
     jig:paramIndex 6 ;
-    units:unit units:pc .
+    units:unit units:pc ;
+    midi:binding <#harmonic_depth-cc> .
+
+<#harmonic_depth-cc> a midi:Controller ; midi:controllerNumber 76 .
 
 <#lifter>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "lifter" ; lv2:name "Lifter" ;
     lv2:default 1.5 ; lv2:minimum 0.5 ; lv2:maximum 5 ;
     jig:paramIndex 7 ;
-    units:unit units:ms .
+    units:unit units:ms ;
+    midi:binding <#lifter-cc> .
+
+<#lifter-cc> a midi:Controller ; midi:controllerNumber 77 .
 
 <#estimator>
     a lv2:InputPort , lv2:ControlPort ;
@@ -128,21 +153,30 @@
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#estimator-0> ,
-        <#estimator-1> .
+        <#estimator-1> ;
+    midi:binding <#estimator-cc> .
 
 <#estimator-0> rdfs:label "Cepstral" ; rdf:value 0 .
 
 <#estimator-1> rdfs:label "True envelope" ; rdf:value 1 .
 
+<#estimator-cc> a midi:Controller ; midi:controllerNumber 78 .
+
 <#mix>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mix" ; lv2:name "Mix" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    midi:binding <#mix-cc> .
+
+<#mix-cc> a midi:Controller ; midi:controllerNumber 79 .
 
 <#output>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "output" ; lv2:name "Output" ;
     lv2:default 0 ; lv2:minimum -24 ; lv2:maximum 12 ;
     jig:paramIndex 10 ;
-    units:unit units:db .
+    units:unit units:db ;
+    midi:binding <#output-cc> .
+
+<#output-cc> a midi:Controller ; midi:controllerNumber 80 .

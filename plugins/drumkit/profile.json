@@ -22,7 +22,7 @@
     "CC 120 and 123 reset every voice and the master bus, like an all-notes-off.",
     "The eleven trig outputs the native wrapper exposes as UI LEDs are not parameters here and have no panel control."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "abi": "jig:Abi2",
   "requires": [
@@ -41,80 +41,690 @@
     "processor": "drumkit-processor.js"
   },
   "ports": [
-    { "symbol": "kick_pitch", "name": "Kick Pitch", "default": 0.35, "minimum": 0.0, "maximum": 1.0, "paramIndex": 0 },
-    { "symbol": "kick_decay", "name": "Kick Decay", "default": 0.4, "minimum": 0.0, "maximum": 1.0, "paramIndex": 1 },
-    { "symbol": "kick_drive", "name": "Kick Drive", "default": 0.3, "minimum": 0.0, "maximum": 1.0, "paramIndex": 2 },
-    { "symbol": "kick_punch", "name": "Kick Punch", "default": 0.15, "minimum": 0.0, "maximum": 1.0, "paramIndex": 3 },
-    { "symbol": "kick_level", "name": "Kick Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 4 },
-    { "symbol": "snare_tone", "name": "Snare Tone", "default": 0.5, "minimum": 0.0, "maximum": 1.0, "paramIndex": 5 },
-    { "symbol": "snare_snap", "name": "Snare Snap", "default": 0.6, "minimum": 0.0, "maximum": 1.0, "paramIndex": 6 },
-    { "symbol": "snare_level", "name": "Snare Level", "default": 1.05, "minimum": 0.0, "maximum": 1.5, "paramIndex": 7 },
-    { "symbol": "clap_density", "name": "Clap Density", "default": 0.55, "minimum": 0.0, "maximum": 1.0, "paramIndex": 8 },
-    { "symbol": "clap_tone", "name": "Clap Tone", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 9 },
-    { "symbol": "clap_level", "name": "Clap Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 10 },
-    { "symbol": "tom1_pitch", "name": "Tom 1 Pitch", "default": 0.4, "minimum": 0.0, "maximum": 1.0, "paramIndex": 11 },
-    { "symbol": "tom1_decay", "name": "Tom 1 Decay", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 12 },
-    { "symbol": "tom1_level", "name": "Tom 1 Level", "default": 0.74, "minimum": 0.0, "maximum": 1.5, "paramIndex": 13 },
-    { "symbol": "tom2_pitch", "name": "Tom 2 Pitch", "default": 0.55, "minimum": 0.0, "maximum": 1.0, "paramIndex": 14 },
-    { "symbol": "tom2_decay", "name": "Tom 2 Decay", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 15 },
-    { "symbol": "tom2_level", "name": "Tom 2 Level", "default": 0.72, "minimum": 0.0, "maximum": 1.5, "paramIndex": 16 },
-    { "symbol": "hh_closed_brightness", "name": "Closed HH Brightness", "default": 0.6, "minimum": 0.0, "maximum": 1.0, "paramIndex": 17 },
-    { "symbol": "hh_closed_decay", "name": "Closed HH Decay", "default": 0.3, "minimum": 0.0, "maximum": 1.0, "paramIndex": 18 },
-    { "symbol": "hh_closed_level", "name": "Closed HH Level", "default": 1.05, "minimum": 0.0, "maximum": 1.5, "paramIndex": 19 },
-    { "symbol": "hh_open_brightness", "name": "Open HH Brightness", "default": 0.7, "minimum": 0.0, "maximum": 1.0, "paramIndex": 20 },
-    { "symbol": "hh_open_decay", "name": "Open HH Decay", "default": 0.55, "minimum": 0.0, "maximum": 1.0, "paramIndex": 21 },
-    { "symbol": "hh_open_level", "name": "Open HH Level", "default": 1.02, "minimum": 0.0, "maximum": 1.5, "paramIndex": 22 },
-    { "symbol": "crash_brightness", "name": "Crash Brightness", "default": 0.65, "minimum": 0.0, "maximum": 1.0, "paramIndex": 23 },
-    { "symbol": "crash_decay", "name": "Crash Decay", "default": 0.5, "minimum": 0.0, "maximum": 1.0, "paramIndex": 24 },
-    { "symbol": "crash_level", "name": "Crash Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 25 },
-    { "symbol": "cowbell_tone", "name": "Cowbell Tone", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 26 },
-    { "symbol": "cowbell_decay", "name": "Cowbell Decay", "default": 0.35, "minimum": 0.0, "maximum": 1.0, "paramIndex": 27 },
-    { "symbol": "cowbell_level", "name": "Cowbell Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 28 },
-    { "symbol": "clave_tone", "name": "Clave Tone", "default": 0.5, "minimum": 0.0, "maximum": 1.0, "paramIndex": 29 },
-    { "symbol": "clave_decay", "name": "Clave Decay", "default": 0.25, "minimum": 0.0, "maximum": 1.0, "paramIndex": 30 },
-    { "symbol": "clave_level", "name": "Clave Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 31 },
-    { "symbol": "bash_size", "name": "Bash Size", "default": 0.45, "minimum": 0.0, "maximum": 1.0, "paramIndex": 32 },
-    { "symbol": "bash_spread", "name": "Bash Spread", "default": 0.55, "minimum": 0.0, "maximum": 1.0, "paramIndex": 33 },
-    { "symbol": "bash_decay", "name": "Bash Decay", "default": 0.7, "minimum": 0.0, "maximum": 1.0, "paramIndex": 34 },
-    { "symbol": "bash_drive", "name": "Bash Drive", "default": 0.65, "minimum": 0.0, "maximum": 1.0, "paramIndex": 35 },
-    { "symbol": "bash_noise", "name": "Bash Noise", "default": 0.6, "minimum": 0.0, "maximum": 1.0, "paramIndex": 36 },
-    { "symbol": "bash_edge", "name": "Bash Edge", "default": 0.7, "minimum": 0.0, "maximum": 1.0, "paramIndex": 37 },
-    { "symbol": "bash_level", "name": "Bash Level", "default": 1.0, "minimum": 0.0, "maximum": 1.5, "paramIndex": 38 },
-    { "symbol": "bit_crush", "name": "Bit Crush", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 39 },
-    { "symbol": "master_drive", "name": "Master Drive", "default": 0.25, "minimum": 0.0, "maximum": 1.0, "paramIndex": 40 },
-    { "symbol": "master_reverb", "name": "Master Reverb", "default": 0.2, "minimum": 0.0, "maximum": 1.0, "paramIndex": 41 },
-    { "symbol": "master_gain", "name": "Master Gain", "default": 0.7, "minimum": 0.0, "maximum": 1.0, "paramIndex": 42 },
-    { "symbol": "kick_mute", "name": "Kick Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 43, "toggled": true },
-    { "symbol": "clap_mute", "name": "Clap Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 44, "toggled": true },
-    { "symbol": "snare_mute", "name": "Snare Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 45, "toggled": true },
-    { "symbol": "crash_mute", "name": "Crash Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 46, "toggled": true },
-    { "symbol": "hh_closed_mute", "name": "Closed HH Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 47, "toggled": true },
-    { "symbol": "tom1_mute", "name": "Tom 1 Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 48, "toggled": true },
-    { "symbol": "hh_open_mute", "name": "Open HH Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 49, "toggled": true },
-    { "symbol": "tom2_mute", "name": "Tom 2 Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 50, "toggled": true },
-    { "symbol": "bash_mute", "name": "Bash Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 51, "toggled": true },
-    { "symbol": "cowbell_mute", "name": "Cowbell Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 52, "toggled": true },
-    { "symbol": "clave_mute", "name": "Clave Mute", "default": 0, "minimum": 0, "maximum": 1, "paramIndex": 53, "toggled": true },
-    { "symbol": "kick_transient", "name": "Kick Transient", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 54 },
-    { "symbol": "clap_metal", "name": "Clap Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 55 },
-    { "symbol": "snare_metal", "name": "Snare Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 56 },
-    { "symbol": "crash_metal", "name": "Crash Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 57 },
-    { "symbol": "hh_closed_metal", "name": "Closed HH Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 58 },
-    { "symbol": "tom1_metal", "name": "Tom 1 Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 59 },
-    { "symbol": "hh_open_metal", "name": "Open HH Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 60 },
-    { "symbol": "tom2_metal", "name": "Tom 2 Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 61 },
-    { "symbol": "cowbell_metal", "name": "Cowbell Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 62 },
-    { "symbol": "clave_metal", "name": "Clave Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 63 },
-    { "symbol": "kick_pan", "name": "Kick Pan", "default": 0.0, "minimum": -1.0, "maximum": 1.0, "paramIndex": 64 },
-    { "symbol": "clap_pan", "name": "Clap Pan", "default": 0.16, "minimum": -1.0, "maximum": 1.0, "paramIndex": 65 },
-    { "symbol": "snare_pan", "name": "Snare Pan", "default": -0.08, "minimum": -1.0, "maximum": 1.0, "paramIndex": 66 },
-    { "symbol": "crash_pan", "name": "Crash Pan", "default": -0.44, "minimum": -1.0, "maximum": 1.0, "paramIndex": 67 },
-    { "symbol": "hh_closed_pan", "name": "Closed HH Pan", "default": -0.52, "minimum": -1.0, "maximum": 1.0, "paramIndex": 68 },
-    { "symbol": "tom1_pan", "name": "Tom 1 Pan", "default": 0.22, "minimum": -1.0, "maximum": 1.0, "paramIndex": 69 },
-    { "symbol": "hh_open_pan", "name": "Open HH Pan", "default": 0.32, "minimum": -1.0, "maximum": 1.0, "paramIndex": 70 },
-    { "symbol": "tom2_pan", "name": "Tom 2 Pan", "default": -0.16, "minimum": -1.0, "maximum": 1.0, "paramIndex": 71 },
-    { "symbol": "bash_pan", "name": "Bash Pan", "default": 0.42, "minimum": -1.0, "maximum": 1.0, "paramIndex": 72 },
-    { "symbol": "cowbell_pan", "name": "Cowbell Pan", "default": 0.14, "minimum": -1.0, "maximum": 1.0, "paramIndex": 73 },
-    { "symbol": "clave_pan", "name": "Clave Pan", "default": -0.24, "minimum": -1.0, "maximum": 1.0, "paramIndex": 74 }
+    {
+      "symbol": "kick_pitch",
+      "name": "Kick Pitch",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 0,
+      "group": "Kick"
+    },
+    {
+      "symbol": "kick_decay",
+      "name": "Kick Decay",
+      "default": 0.4,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 1,
+      "group": "Kick"
+    },
+    {
+      "symbol": "kick_drive",
+      "name": "Kick Drive",
+      "default": 0.3,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 2,
+      "group": "Kick"
+    },
+    {
+      "symbol": "kick_punch",
+      "name": "Kick Punch",
+      "default": 0.15,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 3,
+      "group": "Kick"
+    },
+    {
+      "symbol": "kick_level",
+      "name": "Kick Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 4,
+      "group": "Kick"
+    },
+    {
+      "symbol": "snare_tone",
+      "name": "Snare Tone",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 5,
+      "group": "Snare"
+    },
+    {
+      "symbol": "snare_snap",
+      "name": "Snare Snap",
+      "default": 0.6,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 6,
+      "group": "Snare"
+    },
+    {
+      "symbol": "snare_level",
+      "name": "Snare Level",
+      "default": 1.05,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 7,
+      "group": "Snare"
+    },
+    {
+      "symbol": "clap_density",
+      "name": "Clap Density",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 8,
+      "group": "Clap"
+    },
+    {
+      "symbol": "clap_tone",
+      "name": "Clap Tone",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 9,
+      "group": "Clap"
+    },
+    {
+      "symbol": "clap_level",
+      "name": "Clap Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 10,
+      "group": "Clap"
+    },
+    {
+      "symbol": "tom1_pitch",
+      "name": "Tom 1 Pitch",
+      "default": 0.4,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 11,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "tom1_decay",
+      "name": "Tom 1 Decay",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 12,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "tom1_level",
+      "name": "Tom 1 Level",
+      "default": 0.74,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 13,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "tom2_pitch",
+      "name": "Tom 2 Pitch",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 14,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "tom2_decay",
+      "name": "Tom 2 Decay",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 15,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "tom2_level",
+      "name": "Tom 2 Level",
+      "default": 0.72,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 16,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "hh_closed_brightness",
+      "name": "Closed HH Brightness",
+      "default": 0.6,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 17,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "hh_closed_decay",
+      "name": "Closed HH Decay",
+      "default": 0.3,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 18,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "hh_closed_level",
+      "name": "Closed HH Level",
+      "default": 1.05,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 19,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "hh_open_brightness",
+      "name": "Open HH Brightness",
+      "default": 0.7,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 20,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "hh_open_decay",
+      "name": "Open HH Decay",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 21,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "hh_open_level",
+      "name": "Open HH Level",
+      "default": 1.02,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 22,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "crash_brightness",
+      "name": "Crash Brightness",
+      "default": 0.65,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 23,
+      "group": "Crash"
+    },
+    {
+      "symbol": "crash_decay",
+      "name": "Crash Decay",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 24,
+      "group": "Crash"
+    },
+    {
+      "symbol": "crash_level",
+      "name": "Crash Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 25,
+      "group": "Crash"
+    },
+    {
+      "symbol": "cowbell_tone",
+      "name": "Cowbell Tone",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 26,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "cowbell_decay",
+      "name": "Cowbell Decay",
+      "default": 0.35,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 27,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "cowbell_level",
+      "name": "Cowbell Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 28,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "clave_tone",
+      "name": "Clave Tone",
+      "default": 0.5,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 29,
+      "group": "Clave"
+    },
+    {
+      "symbol": "clave_decay",
+      "name": "Clave Decay",
+      "default": 0.25,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 30,
+      "group": "Clave"
+    },
+    {
+      "symbol": "clave_level",
+      "name": "Clave Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 31,
+      "group": "Clave"
+    },
+    {
+      "symbol": "bash_size",
+      "name": "Bash Size",
+      "default": 0.45,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 32,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_spread",
+      "name": "Bash Spread",
+      "default": 0.55,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 33,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_decay",
+      "name": "Bash Decay",
+      "default": 0.7,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 34,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_drive",
+      "name": "Bash Drive",
+      "default": 0.65,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 35,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_noise",
+      "name": "Bash Noise",
+      "default": 0.6,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 36,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_edge",
+      "name": "Bash Edge",
+      "default": 0.7,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 37,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bash_level",
+      "name": "Bash Level",
+      "default": 1.0,
+      "minimum": 0.0,
+      "maximum": 1.5,
+      "paramIndex": 38,
+      "group": "Bash"
+    },
+    {
+      "symbol": "bit_crush",
+      "name": "Bit Crush",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 39
+    },
+    {
+      "symbol": "master_drive",
+      "name": "Master Drive",
+      "default": 0.25,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 40,
+      "group": "Master"
+    },
+    {
+      "symbol": "master_reverb",
+      "name": "Master Reverb",
+      "default": 0.2,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 41,
+      "group": "Master"
+    },
+    {
+      "symbol": "master_gain",
+      "name": "Master Gain",
+      "default": 0.7,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 42,
+      "group": "Master"
+    },
+    {
+      "symbol": "kick_mute",
+      "name": "Kick Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 43,
+      "toggled": true,
+      "group": "Kick"
+    },
+    {
+      "symbol": "clap_mute",
+      "name": "Clap Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 44,
+      "toggled": true,
+      "group": "Clap"
+    },
+    {
+      "symbol": "snare_mute",
+      "name": "Snare Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 45,
+      "toggled": true,
+      "group": "Snare"
+    },
+    {
+      "symbol": "crash_mute",
+      "name": "Crash Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 46,
+      "toggled": true,
+      "group": "Crash"
+    },
+    {
+      "symbol": "hh_closed_mute",
+      "name": "Closed HH Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 47,
+      "toggled": true,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "tom1_mute",
+      "name": "Tom 1 Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 48,
+      "toggled": true,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "hh_open_mute",
+      "name": "Open HH Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 49,
+      "toggled": true,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "tom2_mute",
+      "name": "Tom 2 Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 50,
+      "toggled": true,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "bash_mute",
+      "name": "Bash Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 51,
+      "toggled": true,
+      "group": "Bash"
+    },
+    {
+      "symbol": "cowbell_mute",
+      "name": "Cowbell Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 52,
+      "toggled": true,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "clave_mute",
+      "name": "Clave Mute",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 53,
+      "toggled": true,
+      "group": "Clave"
+    },
+    {
+      "symbol": "kick_transient",
+      "name": "Kick Transient",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 54,
+      "group": "Kick"
+    },
+    {
+      "symbol": "clap_metal",
+      "name": "Clap Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 55,
+      "group": "Clap"
+    },
+    {
+      "symbol": "snare_metal",
+      "name": "Snare Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 56,
+      "group": "Snare"
+    },
+    {
+      "symbol": "crash_metal",
+      "name": "Crash Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 57,
+      "group": "Crash"
+    },
+    {
+      "symbol": "hh_closed_metal",
+      "name": "Closed HH Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 58,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "tom1_metal",
+      "name": "Tom 1 Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 59,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "hh_open_metal",
+      "name": "Open HH Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 60,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "tom2_metal",
+      "name": "Tom 2 Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 61,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "cowbell_metal",
+      "name": "Cowbell Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 62,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "clave_metal",
+      "name": "Clave Metal",
+      "default": 0.0,
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "paramIndex": 63,
+      "group": "Clave"
+    },
+    {
+      "symbol": "kick_pan",
+      "name": "Kick Pan",
+      "default": 0.0,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 64,
+      "group": "Kick"
+    },
+    {
+      "symbol": "clap_pan",
+      "name": "Clap Pan",
+      "default": 0.16,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 65,
+      "group": "Clap"
+    },
+    {
+      "symbol": "snare_pan",
+      "name": "Snare Pan",
+      "default": -0.08,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 66,
+      "group": "Snare"
+    },
+    {
+      "symbol": "crash_pan",
+      "name": "Crash Pan",
+      "default": -0.44,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 67,
+      "group": "Crash"
+    },
+    {
+      "symbol": "hh_closed_pan",
+      "name": "Closed HH Pan",
+      "default": -0.52,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 68,
+      "group": "Closed HH"
+    },
+    {
+      "symbol": "tom1_pan",
+      "name": "Tom 1 Pan",
+      "default": 0.22,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 69,
+      "group": "Tom 1"
+    },
+    {
+      "symbol": "hh_open_pan",
+      "name": "Open HH Pan",
+      "default": 0.32,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 70,
+      "group": "Open HH"
+    },
+    {
+      "symbol": "tom2_pan",
+      "name": "Tom 2 Pan",
+      "default": -0.16,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 71,
+      "group": "Tom 2"
+    },
+    {
+      "symbol": "bash_pan",
+      "name": "Bash Pan",
+      "default": 0.42,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 72,
+      "group": "Bash"
+    },
+    {
+      "symbol": "cowbell_pan",
+      "name": "Cowbell Pan",
+      "default": 0.14,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 73,
+      "group": "Cowbell"
+    },
+    {
+      "symbol": "clave_pan",
+      "name": "Clave Pan",
+      "default": -0.24,
+      "minimum": -1.0,
+      "maximum": 1.0,
+      "paramIndex": 74,
+      "group": "Clave"
+    }
   ]
 }

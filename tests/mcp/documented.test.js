@@ -42,7 +42,7 @@ describe('the agent surface and the document that specifies it', () => {
     // Not a failure: the document is a design and the phases are real. It is a
     // failure for the list to be wrong, because then nobody knows what is left.
     // Remove a name here in the same change that builds it.
-    const notYet = ['node_add', 'transport_play', 'transport_stop',
+    const notYet = ['node_add',
       'project_new', 'project_open', 'project_save']
     const actuallyMissing = [...mentioned].filter(name => !built.includes(name)).sort()
     expect(actuallyMissing).toEqual([...notYet].sort())

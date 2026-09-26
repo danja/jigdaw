@@ -417,15 +417,16 @@ describeBuilt('quefrency under MIDI control', () => {
     expect(e.quefrency_param(10)).toBe(0)
   })
 
-  // The profile tells a person which controller does what. A sentence nothing
-  // checks drifts, so this one is checked against the module.
-  it('names the controllers the module answers to, in the order it answers', async () => {
-    const profile = readProfile(await parseTurtle(resolve(dir, 'profile.ttl'), 'urn:quefrency'))
-    const caution = profile.cautions.find(c => c.includes('control changes'))
-    expect(caution).toContain(`control changes ${FIRST_CC} to ${FIRST_CC + ports.length - 1}`)
-    const named = ports.map(p => p.name)
-    const positions = named.map(name => caution.indexOf(name))
-    expect(positions.every(at => at >= 0), `every port named: ${named}`).toBe(true)
-    expect([...positions].sort((a, b) => a - b)).toEqual(positions)
+  // The profile tells a person and a host which controller drives what. A
+  // sentence nothing checks drifts, so each port declares its controller and
+  // the declarations are checked against the module: the controller a port
+  // names must be the one the module answers to for that port's own index.
+  it('binds one controller per port, in order, and the module answers to those bindings', async () => {
+    ports.forEach((port, i) => expect(port.controller, port.symbol).toBe(FIRST_CC + i))
+    const e = await load()
+    for (const port of ports) {
+      sendMidi(e, [{ bytes: [0xb0, port.controller, 0] }]); tick(e)
+      expect(e.quefrency_param(port.index), port.symbol).toBeCloseTo(port.minimum, 4)
+    }
   })
 })

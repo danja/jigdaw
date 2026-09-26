@@ -13146,12 +13146,13 @@ var init_env = __esm({
 });
 
 // src/rdf/Vocabulary.js
-var JIG, TRN, LV2, UNITS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
+var JIG, TRN, LV2, MIDI, UNITS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
 var init_Vocabulary = __esm({
   "src/rdf/Vocabulary.js"() {
     JIG = "http://purl.org/stuff/jigdaw/";
     TRN = "http://purl.org/stuff/transmissions/";
     LV2 = "http://lv2plug.in/ns/lv2core#";
+    MIDI = "http://lv2plug.in/ns/ext/midi#";
     UNITS = "http://lv2plug.in/ns/extensions/units#";
     RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     RDFS = "http://www.w3.org/2000/01/rdf-schema#";
@@ -13230,8 +13231,9 @@ var init_Vocabulary = __esm({
         HostTransport: `${TRN}HostTransport`,
         Audio: `${TRN}Audio`,
         Midi: `${TRN}Midi`,
-        // MIDI that reshapes a plugin rather than playing it. ControlMidi is
-        // transmission's term; MidiCC is one this project listed before checking.
+        // MIDI that reshapes a plugin rather than playing it. ControlMidi covers
+        // CCs and scene notes; MidiCC is the narrower CCs-alone term. Both are
+        // upstream-defined in plugin-universe's vocabs/trn-profile.ttl.
         ControlMidi: `${TRN}ControlMidi`,
         MidiCC: `${TRN}MidiCC`,
         // A clip's and a note's placement, and a note itself. transmission's
@@ -13287,6 +13289,9 @@ var init_Vocabulary = __esm({
         automationRate: `${JIG}automationRate`,
         ARate: `${JIG}ARate`,
         KRate: `${JIG}KRate`,
+        // The panel section a control belongs under. A plain label: groups are
+        // per-plugin display hints, never addressed across documents.
+        controlGroup: `${JIG}controlGroup`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13371,6 +13376,14 @@ var init_Vocabulary = __esm({
         ControlPort: `${LV2}ControlPort`,
         AudioPort: `${LV2}AudioPort`
       }),
+      // MIDI controller bindings on ports. LV2's own MIDI extension, reused rather
+      // than invented: a port's midi:binding names a midi:Controller carrying the
+      // controller number that drives it.
+      midi: Object.freeze({
+        binding: `${MIDI}binding`,
+        Controller: `${MIDI}Controller`,
+        controllerNumber: `${MIDI}controllerNumber`
+      }),
       units: Object.freeze({
         unit: `${UNITS}unit`
       })
@@ -13424,6 +13437,11 @@ function readScalePoints(dataset2, port) {
     value: asNumber(one(dataset2, point, rdfTerms.value))
   })).sort((a2, b) => a2.value - b.value);
 }
+function readController(dataset2, port) {
+  const binding = one(dataset2, port, midi.binding);
+  if (!binding) return null;
+  return asNumber(one(dataset2, binding, midi.controllerNumber));
+}
 function widgetFor(port) {
   const twoScalePoints = port.scalePoints.length === 2;
   if (port.toggled || port.enumeration && twoScalePoints) return "switch";
@@ -13443,6 +13461,13 @@ function readPort(dataset2, term3) {
     toggled: properties.includes(lv2.toggled),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset2, term3),
+    // The MIDI controller driving this port, if the profile binds one. Absent
+    // means no claim, the same discipline as userReplaceable: a port the
+    // profile does not bind answers to no controller.
+    controller: readController(dataset2, term3),
+    // The panel section this control belongs under, if the profile groups
+    // its ports. Absent means ungrouped, which renders as today.
+    group: asString(one(dataset2, term3, jig.controlGroup)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset2, term3, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
@@ -13546,12 +13571,12 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ports: objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)).sort((a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""))
   };
 }
-var jig, trn, lv2, rdfs, foaf, units, rdfTerms, iri, asString, values;
+var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;
 var init_ProfileReader = __esm({
   "src/rdf/ProfileReader.js"() {
     init_env();
     init_Vocabulary();
-    ({ jig, trn, lv2, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
+    ({ jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
     iri = (value2) => env_default.namedNode(value2);
     asString = (term3) => term3 ? term3.value : null;
     values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
@@ -24018,7 +24043,7 @@ var NOTE_SCHEMA = Object.freeze({
   },
   required: ["startBeat", "lengthBeats", "pitch", "velocity"]
 });
-function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null }) {
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null }) {
   if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -24517,6 +24542,34 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "transport_play",
+      description: "Start the transport, so clips play and plugins receive transport position. Needs audio already started by a person: a browser starts no AudioContext without a click.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        if (!onPlay) return failed("this host cannot play: no transport is connected");
+        try {
+          await onPlay();
+          return ok({});
+        } catch (error2) {
+          return failed(`play failed: ${error2?.message ?? error2}`);
+        }
+      }
+    },
+    {
+      name: "transport_stop",
+      description: "Stop the transport. Notes sounding are given their ends, the same as the page Stop button.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        if (!onStop) return failed("this host cannot stop: no transport is connected");
+        try {
+          await onStop();
+          return ok({});
+        } catch (error2) {
+          return failed(`stop failed: ${error2?.message ?? error2}`);
+        }
+      }
+    },
+    {
       name: "transport_configure",
       description: "Set the tempo, time signature or loop.",
       inputSchema: {
@@ -24566,8 +24619,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection });
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -24660,7 +24713,11 @@ function createRuntime(ctx2) {
       dispatcher,
       catalogue: ctx2.browser.catalogue(),
       loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
-      openCollection: (iri3) => ctx2.browser.loadCollection(iri3)
+      openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
+      onPlay: () => ctx2.transport.play(),
+      onStop: async () => {
+        ctx2.transport.stop();
+      }
     });
     ctx2.mcpSurface = registration.surface;
     log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
@@ -25142,16 +25199,21 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     root.classList.add("is-foreign");
   }
   const setters = /* @__PURE__ */ new Map();
-  const controls = document2.createElement("div");
-  controls.className = "controls";
-  root.append(controls);
+  const ungrouped = profile.ports.filter((p) => p.group == null);
+  const groups = [];
   for (const port of profile.ports) {
+    if (port.group == null) continue;
+    const group = groups.find((g) => g.label === port.group);
+    if (group) group.ports.push(port);
+    else groups.push({ label: port.group, ports: [port] });
+  }
+  function addControl(grid, port) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
     const label = document2.createElement("label");
     const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
     label.setAttribute("for", id);
-    label.textContent = port.name ?? port.symbol;
+    label.textContent = port.controller == null ? port.name ?? port.symbol : `${port.name ?? port.symbol} (CC ${port.controller})`;
     row.append(label);
     const readout = document2.createElement("span");
     readout.className = "value";
@@ -25206,11 +25268,33 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     if (port.comment) input.title = port.comment;
     else if (port.name) input.title = port.name;
     row.append(knob ?? input, readout);
-    controls.append(row);
+    grid.append(row);
     setters.get(port.symbol)(port.defaultValue);
   }
+  function addGrid(parent, ports) {
+    const controls = document2.createElement("div");
+    controls.className = "controls";
+    parent.append(controls);
+    for (const port of ports) addControl(controls, port);
+  }
+  if (ungrouped.length > 0) addGrid(root, ungrouped);
+  for (const group of groups) {
+    const field = document2.createElement("fieldset");
+    field.className = "control-group";
+    const legend = document2.createElement("legend");
+    legend.textContent = group.label;
+    field.append(legend);
+    root.append(field);
+    addGrid(field, group.ports);
+  }
+  let assetGrid = null;
   for (const asset of profile.assets ?? []) {
     if (!asset.userReplaceable) continue;
+    if (!assetGrid) {
+      assetGrid = document2.createElement("div");
+      assetGrid.className = "controls";
+      root.append(assetGrid);
+    }
     const key = asset.iri.split("#").pop();
     const row = document2.createElement("div");
     row.className = "control control-asset";
@@ -25227,7 +25311,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       if (file) onLoadAsset?.(key, file);
     });
     row.append(input);
-    controls.append(row);
+    assetGrid.append(row);
   }
   return {
     element: root,
@@ -25910,21 +25994,21 @@ function createRack(ctx2) {
     header.append(rename);
     const takesMidi = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.accepts ?? []).some(carriesNotes));
     if (takesMidi.length > 0) {
-      const midi = document2.createElement("select");
-      midi.id = `midi-input-${track.id}`;
-      midi.setAttribute("aria-label", `Which plugin ${title}'s MIDI clips play into`);
+      const midi2 = document2.createElement("select");
+      midi2.id = `midi-input-${track.id}`;
+      midi2.setAttribute("aria-label", `Which plugin ${title}'s MIDI clips play into`);
       for (const [value2, text] of [["", "Clips play into nothing"], ...takesMidi.map((n2) => [n2.id, `Clips play into ${labelFor(n2.id)}`])]) {
         const option = document2.createElement("option");
         option.value = value2;
         option.textContent = text;
-        midi.append(option);
+        midi2.append(option);
       }
-      midi.value = track.midiInput ?? "";
-      midi.addEventListener("change", () => {
-        const result = dispatcher.apply([{ op: "setTrack", id: track.id, midiInput: midi.value || null }]);
+      midi2.value = track.midiInput ?? "";
+      midi2.addEventListener("change", () => {
+        const result = dispatcher.apply([{ op: "setTrack", id: track.id, midiInput: midi2.value || null }]);
         if (!result.ok) log2(result.message, "error");
       });
-      header.append(midi);
+      header.append(midi2);
     }
     if (nodes.length === 0) {
       const remove = document2.createElement("button");
@@ -28292,11 +28376,12 @@ var KEY = "jigdaw.browserHidden";
 function createLayout(ctx2) {
   const { document: document2, window: window2, $: $2 } = ctx2;
   function show(visible) {
-    $2("browser").hidden = !visible;
+    $2("browser").classList.toggle("rail", !visible);
     document2.querySelector("main").classList.toggle("no-browser", !visible);
     const button = $2("toggle-browser");
     button.setAttribute("aria-expanded", String(visible));
-    button.textContent = visible ? "Hide browser" : "Show browser";
+    button.setAttribute("aria-label", visible ? "Hide browser panel" : "Show browser panel");
+    button.textContent = visible ? "\u2039" : "\u203A";
     try {
       window2.localStorage.setItem(KEY, visible ? "0" : "1");
     } catch {
@@ -28309,7 +28394,7 @@ function createLayout(ctx2) {
     } catch {
     }
     show(!hidden);
-    $2("toggle-browser").addEventListener("click", () => show($2("browser").hidden));
+    $2("toggle-browser").addEventListener("click", () => show($2("browser").classList.contains("rail")));
   }
   return { mount };
 }

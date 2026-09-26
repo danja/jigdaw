@@ -336,6 +336,16 @@ jig:AutomationRate a owl:Class ; rdfs:label "Automation Rate" .
 jig:ARate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "a-rate" .
 jig:KRate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "k-rate" .
 
+jig:controlGroup a owl:DatatypeProperty ;
+    rdfs:domain lv2:Port ; rdfs:range xsd:string ;
+    rdfs:label "control group" ;
+    rdfs:comment """The section of the generated panel this control belongs under, so
+        a plugin with dozens of ports reads as groups rather than a flat list. A
+        plain label, not a reference: groups are per-plugin display hints,
+        never addressed across documents. LV2's port-groups extension was read
+        first and not reused: pg:Group combines ports carrying one stream, such
+        as stereo channels, and says nothing about control layout.""" .
+
 ## -- Inspection --------------------------------------------------------------
 
 jig:inspectionOf a owl:ObjectProperty ;

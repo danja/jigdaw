@@ -28,7 +28,7 @@
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
     trn:caution "Converted from JSFX by a restricted EEL2 subset: no user-defined function, no strings, no gmem, and while()/loop() are bounded so a runaway script goes silent rather than missing the audio thread's deadline. See plugins/_jsfx-runtime/README.md." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

@@ -95,6 +95,8 @@ describe('the jig: vocabulary', () => {
     const home = process.env.HOME ?? ''
     const upstream = [
       join(home, 'github/transmission/vocabs/profile.ttl'),
+      // The plugin formats, including trn:Jig and trn:WebAudio.
+      join(home, 'github/transmission/vocabs/formats.ttl'),
       // The arrangement terms a project reuses: trn:startBeat and the rest.
       join(home, 'github/transmission/vocabs/project.ttl'),
       join(home, 'github/plugin-universe/vocabs/trn-profile.ttl'),
@@ -105,9 +107,6 @@ describe('the jig: vocabulary', () => {
 
     const declared = new Set(upstream.flatMap(p => [...terms(p, TRN, 'trn')]))
     const used = new Set([shapesFile, ...allExamples].flatMap(f => [...terms(f, TRN, 'trn')]))
-
-    // Known gap, tracked in TODO.md: there is no web plugin format term upstream.
-    used.delete('WebAudio')
 
     const missing = [...used].filter(t => !declared.has(t)).sort()
     expect(missing, `trn: terms not declared upstream: ${missing.join(', ')}`).toEqual([])

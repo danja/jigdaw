@@ -29,7 +29,7 @@
     trn:produces trn:Audio ;
     trn:genre "Electronic" , "Ambient" ;
     trn:caution "Eight voices. A ninth note steals the oldest voice rather than being refused." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 

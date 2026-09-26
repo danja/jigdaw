@@ -31,7 +31,7 @@
     trn:caution "The limiter has no lookahead: it reacts within a fraction of a millisecond rather than before the transient, so a very sharp attack can still touch the ceiling briefly before the gain catches up. Leave a little headroom below the ceiling for material with hard transients." ;
     trn:caution "The compressor/expander stage links its gain reduction across both channels from a single detected level, so it never shifts the stereo image, but it also means the side chain input's balance between its own two channels, not just its overall level, feeds the detector." ;
     trn:caution "Disconnecting the side chain input mid-session returns the compressor/expander to detecting on the main signal on the next block, not instantly at the sample the cable was pulled." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 2 ;

@@ -52,16 +52,12 @@
     trn:recommendedAfter <https://example.org/plugins/driftgate/> ;
     pu:licenceId "Apache-2.0" ;
 
-    ## trn:WebAudio is a proposed term. The formats currently in the shared
-    ## vocabulary are VST2, VST3, CLAP, AudioUnit, LV2, AAX and Standalone, none
-    ## of which describes a plugin that runs in a browser. It is named here in
-    ## trn: rather than invented in jig: because a plugin format belongs to the
-    ## shared vocabulary, and forking it would leave two answers to one question.
-    ##
-    ## Until it is accepted upstream, a profile carrying it is refused by
-    ## plugin-universe's pu:PluginShape, whose sh:in list enumerates the formats
-    ## above. See TODO.md: the vocabulary and that list have to change together.
-    trn:format trn:WebAudio ;
+    ## trn:Jig names the format and trn:WebAudio the generic technology it is
+    ## built on, so a catalogue can say "Jig" the way it says "VST3". Both live
+    ## in trn: rather than being invented in jig: because a plugin format
+    ## belongs to the shared vocabulary, and forking it would leave two answers
+    ## to one question.
+    trn:format trn:Jig , trn:WebAudio ;
 
     ## What it needs from the host. trn:requires is the transmissions property
     ## that already carries trn:HostTransport; the capabilities named here are

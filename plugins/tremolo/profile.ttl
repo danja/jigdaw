@@ -28,7 +28,7 @@
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

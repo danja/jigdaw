@@ -33,7 +33,7 @@
     trn:caution "One amp model, run on the mean of both input channels: an amp is a mono device, and a real capture is too heavy to run twice." ;
     trn:caution "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono." ;
     trn:caution "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

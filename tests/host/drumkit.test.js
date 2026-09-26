@@ -106,6 +106,28 @@ describe('drumkit, a synthesised drum instrument', () => {
     }
   })
 
+  it('groups the voices, so 75 controls read as sections', async () => {
+    // One group per drum voice, from the symbol prefix the profile assigns;
+    // the generated panel sections by it. Bit Crush stands alone, which also
+    // exercises the panel's ungrouped path on a real plugin.
+    const { profile } = await makeLoader(validator).loadProfile(CANONICAL)
+    const groups = new Map()
+    for (const port of profile.ports) {
+      const voice = port.symbol.startsWith('hh_closed') ? 'hh_closed'
+        : port.symbol.startsWith('hh_open') ? 'hh_open' : port.symbol.split('_')[0]
+      if (voice === 'bit') {
+        expect(port.group, port.symbol).toBeNull()
+        continue
+      }
+      expect(port.group, port.symbol).not.toBeNull()
+      if (!groups.has(voice)) groups.set(voice, port.group)
+      else expect(port.group, port.symbol).toBe(groups.get(voice))
+    }
+    expect([...groups.values()].sort()).toEqual(
+      ['Bash', 'Clap', 'Clave', 'Closed HH', 'Cowbell', 'Crash',
+        'Kick', 'Master', 'Open HH', 'Snare', 'Tom 1', 'Tom 2'].sort())
+  })
+
   it('runs the init/ready handshake and reports ready', async () => {
     const { entry } = await makeEntry(validator)
     expect(entry.ready.latencyFrames).toBe(0)

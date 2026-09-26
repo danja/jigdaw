@@ -68,6 +68,31 @@ describe('readProfile', () => {
     expect(profile.ports.find(p => p.symbol === 'mix').automationRate).toBe('a-rate')
     expect(profile.ports.find(p => p.symbol === 'size').automationRate).toBe('k-rate')
   })
+
+  it('reads no controller where the profile binds none', () => {
+    // Absent means no claim: a port the profile does not bind answers to no
+    // controller, and the reader must not invent one.
+    for (const port of profile.ports) expect(port.controller, port.symbol).toBeNull()
+  })
+
+  it('reads a bound controller number off the port\'s binding', async () => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText([
+      '@prefix jig: <http://purl.org/stuff/jigdaw/> .',
+      '@prefix lv2: <http://lv2plug.in/ns/lv2core#> .',
+      '@prefix midi: <http://lv2plug.in/ns/ext/midi#> .',
+      '<> a jig:WebPlugin ; lv2:port <#mix> .',
+      '<#mix> a lv2:InputPort , lv2:ControlPort ;',
+      '  lv2:symbol "mix" ; lv2:name "Mix" ;',
+      '  lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;',
+      '  jig:controlGroup "Master" ;',
+      '  midi:binding <#mix-cc> .',
+      '<#mix-cc> a midi:Controller ; midi:controllerNumber 79 .'
+    ].join('\n'), 'urn:test')
+    const bound = readProfile(dataset).ports.find(p => p.symbol === 'mix')
+    expect(bound.controller).toBe(79)
+    expect(bound.group).toBe('Master')
+  })
 })
 
 describe('widgetFor', () => {

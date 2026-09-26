@@ -18,7 +18,7 @@
   ],
   "genres": [],
   "cautions": [],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig , trn:WebAudio",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

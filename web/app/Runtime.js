@@ -94,7 +94,9 @@ export function createRuntime (ctx) {
       dispatcher,
       catalogue: ctx.browser.catalogue(),
       loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options),
-      openCollection: iri => ctx.browser.loadCollection(iri)
+      openCollection: iri => ctx.browser.loadCollection(iri),
+      onPlay: () => ctx.transport.play(),
+      onStop: async () => { ctx.transport.stop() }
     })
     ctx.mcpSurface = registration.surface
     log(`host offers ${[...capabilities].map(compact).join(', ')}`)
