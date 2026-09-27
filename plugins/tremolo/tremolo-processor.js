@@ -28,6 +28,12 @@ class TremoloProcessor extends AudioWorkletProcessor {
     this.ready = false
     this.phase = 0
     this.sampleRate = sampleRate
+    this.quanta = 0
+    // The snapshot for the plugin's own interface, messaging.md 2.4: one
+    // object for the life of the processor, mutated and reposted, so the
+    // per-quantum path allocates nothing. What the host does with it is the
+    // host's business; the payload is data the interface draws.
+    this.snapshot = { type: 'plugin', payload: { gain: 1 } }
     this.port.onmessage = event => this.handle(event.data)
   }
 
@@ -76,6 +82,17 @@ class TremoloProcessor extends AudioWorkletProcessor {
 
       this.phase += rate / this.sampleRate
       if (this.phase >= 1) this.phase -= 1
+      this.gain = gain
+    }
+
+    // A snapshot for the interface every 32nd quantum, about 12 a second at
+    // 48 kHz: live enough to watch, far under the host's relay limit, and
+    // gated on ready like the audio. The object is the constructor's, mutated
+    // in place; only the structured clone copies.
+    this.quanta += 1
+    if (this.quanta % 32 === 0) {
+      this.snapshot.payload.gain = this.gain ?? 1
+      this.port.postMessage(this.snapshot)
     }
 
     return true

@@ -353,11 +353,18 @@ Build items, not builds: none is started.
       offered in isolated mode, the fallback elsewhere.
 
 - [ ] **Tremolo's own interface showing processor data through the opaque
-      relay.** Covers messaging.md section 2.4. Tremolo is already the only
-      custom `jig:ui`, so no new plugin is needed: its frame displays
-      something only the processor knows (LFO phase or current gain) via
-      `plugin` messages in both directions, exercising the host relay including
-      its rate limiting.
+      relay.** **Done 2026-09-27 for the processor-to-interface direction.**
+      Covers messaging.md section 2.4. The host relay and both dispatcher ends already
+      existed and were fake-tested; no real plugin used either. Tremolo's processor now posts a gain snapshot every 32nd quantum (about 12 a
+      second, far under the 60/s relay limit) from one object mutated in place, so the
+      per-quantum path allocates nothing, and its editor draws the level as text plus
+      an aria-hidden bar under a polite live region, never as markup. Tests drive the
+      real processor: snapshot rate with LFO tracking, object identity across quanta,
+      and silence before the handshake; the frame file is structure-checked as text (no
+      script executes headlessly), including the no-innerHTML rule. The
+      interface-to-processor direction still has no real user beyond the fakes.
+      Profile regenerated
+      for the new digests. testbed.md updated.
 
 - [ ] **One a-rate parameter, audio-modulated.** **Done 2026-09-27.** Covers contract
       section 5.2. Tremolo's rate is declared `jig:ARate` (emitted by

@@ -135,8 +135,7 @@ describe('tremolo rate is an audio-rate parameter', () => {
     expect(registered.find(d => d.name === 'depth').automationRate).toBe('k-rate')
   })
 
-  it('reads the rate per sample, not once per quantum', async () => {
-    // Contract 5.2: a processor takes a length-1 array for a steady value and
+  it('reads the rate per sample, not once per quantum', async () => {    // Contract 5.2: a processor takes a length-1 array for a steady value and
     // a length-128 one for a modulated one. A processor that read only the
     // first element would sound identical under both; the ramp must differ.
     const context = new OfflineContext({ sampleRate: 48000 })
@@ -165,5 +164,81 @@ describe('tremolo rate is an audio-rate parameter', () => {
     let difference = 0
     for (let i = 0; i < 128; i++) difference = Math.max(difference, Math.abs(swept[i] - steady[i]))
     expect(difference).toBeGreaterThan(0.01)
+  })
+})
+
+describe('tremolo reports its level to its own interface', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  it('posts one gain snapshot per 32 quanta, tracking the LFO', async () => {
+    // messaging.md 2.4, processor to interface: the payload a plugin's own
+    // display draws. Through the real processor and the offline port, which
+    // records what was posted the way a frame would receive it. Gains are
+    // read per segment, as they arrive: every snapshot is the one reused
+    // object, so reading them all at the end would read the last value three
+    // times.
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: makeLoader(validator), AudioWorkletNode: OfflineWorkletNode })
+    const entry = await engine.addPlugin(CANONICAL)
+    engine.setParameter(entry.id, 'depth', 1)
+    engine.setParameter(entry.id, 'rate', 5)
+
+    const tone = new Float32Array(128).fill(0.5)
+    const gains = []
+    for (let segment = 0; segment < 3; segment++) {
+      for (let b = 0; b < 32; b++) entry.node.render([tone, tone])
+      const snapshots = entry.node.processor.port.posted.filter(m => m.type === 'plugin')
+      expect(snapshots).toHaveLength(segment + 1)
+      const gain = snapshots[segment].payload.gain
+      expect(Number.isFinite(gain)).toBe(true)
+      expect(gain).toBeGreaterThanOrEqual(0)
+      expect(gain).toBeLessThanOrEqual(1)
+      gains.push(gain)
+    }
+    expect(new Set(gains).size).toBeGreaterThan(1)
+  })
+
+  it('reuses one snapshot object rather than allocating per quantum', async () => {
+    // The real-time rules bind the processor, not only the DSP: a snapshot
+    // per quantum is twelve small allocations a second the audio thread never
+    // makes, because only the structured clone copies.
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: makeLoader(validator), AudioWorkletNode: OfflineWorkletNode })
+    const entry = await engine.addPlugin(CANONICAL)
+    const tone = new Float32Array(128).fill(0.5)
+    for (let b = 0; b < 64; b++) entry.node.render([tone, tone])
+    const snapshots = entry.node.processor.port.posted.filter(m => m.type === 'plugin')
+    expect(snapshots.length).toBeGreaterThan(1)
+    for (const snapshot of snapshots) expect(snapshot).toBe(snapshots[0])
+  })
+
+  it('sends nothing before the handshake completes', async () => {
+    const context = new OfflineContext({ sampleRate: 48000 })
+    await context.audioWorklet.addModule(pathToFileURL(resolve(pluginDir, 'tremolo-processor.js')).href)
+    const posted = []
+    const processor = new (context.registry.get('tremolo').ctor)({
+      port: { postMessage: message => posted.push(message), onmessage: null }
+    })
+    const input = [[new Float32Array(128).fill(0.5)]]
+    for (let b = 0; b < 40; b++) {
+      processor.process(input, [[new Float32Array(128)]], { rate: new Float32Array([5]), depth: new Float32Array([1]) })
+    }
+    expect(posted).toEqual([])
+  })
+
+  it('draws the snapshot as text in its own editor, never as markup', async () => {
+    // Read out of the source rather than run: no script executes headlessly,
+    // so this checks the structure the way tests/dsp/8b8.test.js checks the
+    // processor's descriptor list, and a mutation of either end breaks it.
+    const { readFile } = await import('node:fs/promises')
+    const source = await readFile(resolve(pluginDir, 'ui/index.html'), 'utf8')
+    expect(source).toContain("message?.type === 'plugin'")
+    expect(source).toContain('level-output')
+    expect(source).toContain('role')
+    expect(source).toContain('status')
+    // messaging.md 2.4: the payload is data, and a host that inserts any part
+    // of it into a document has made the sandbox pointless.
+    expect(source).not.toContain('innerHTML')
   })
 })

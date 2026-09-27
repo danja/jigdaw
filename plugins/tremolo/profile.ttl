@@ -49,13 +49,13 @@
     jig:location <tremolo-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "tremolo" ;
-    jig:integrity "sha384-SWk98EScLLXPV/MKn32UcdJAI24RG0CL40ArvpZr07F4Jsezn583LONtYpMwVewI" .
+    jig:integrity "sha384-jhaxkZ7ajVOH9eer+Us3AspYXpAnmOwmJLVDaVSQfWlIlcUNrzEpRYztDi4IN0YM" .
 
 <#ui>
     a jig:UserInterface ;
     jig:location <ui/index.html> ;
     jig:mediaType "text/html" ;
-    jig:integrity "sha384-WKR+/GIV1heDtdQ0PEUycNEvKv5G5jv9isoa8gLHlBGmODSpXu6jOzR4FkSU7m0o" .
+    jig:integrity "sha384-PZ/mqZmBm4jrjGYK4hmRuDT9uELPfEkmTfLob/WDqkrMQJ8eX/uVs+dNJ1UmH0HH" .
 
 <#rate>
     a lv2:InputPort , lv2:ControlPort ;

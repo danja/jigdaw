@@ -31,6 +31,9 @@
   input[type=range]:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   output { font-family:ui-monospace, monospace; text-align:right; }
   .waiting { color:var(--dim); }
+  .meter { height:10px; border-radius:5px; background:#0e1116; margin-top:10px; overflow:hidden; }
+  .meter i { display:block; height:100%; width:0; background:var(--accent); }
+  #level { margin-top:10px; }
   @media (max-width: 360px) { .row { grid-template-columns:1fr; } output { text-align:left; } }
 </style>
 </head>
@@ -64,6 +67,21 @@
     control.input.setAttribute('aria-valuetext', spoken)
   }
 
+  // The live output level, from the processor's snapshots (messaging.md 2.4).
+  // Text first, so it reads without sight; the bar is decoration and hidden
+  // from assistive technology. Announced politely: twelve updates a second
+  // shouted assertively would drown the panel.
+  function showGain (gain) {
+    if (!Number.isFinite(gain)) return
+    const readout = document.getElementById('level-output')
+    const bar = document.getElementById('level-bar')
+    if (!readout || !bar) return
+    const percent = Math.round(Math.max(0, Math.min(1, gain)) * 100)
+    readout.textContent = `Output ${percent}%`
+    readout.setAttribute('aria-label', `Output level ${percent} percent`)
+    bar.style.width = `${percent}%`
+  }
+
   function build (ports, parameters) {
     const box = document.getElementById('controls')
     box.replaceChildren()
@@ -93,6 +111,20 @@
       input.addEventListener('input', () => send({ type: 'parameter', symbol: port.symbol, value: Number(input.value) }))
       show(port.symbol, parameters[port.symbol] ?? port.default)
     }
+    const level = document.createElement('div')
+    level.id = 'level'
+    const readout = document.createElement('div')
+    readout.id = 'level-output'
+    readout.setAttribute('role', 'status')
+    readout.textContent = 'Output 100%'
+    const meter = document.createElement('div')
+    meter.className = 'meter'
+    meter.setAttribute('aria-hidden', 'true')
+    const bar = document.createElement('i')
+    bar.id = 'level-bar'
+    meter.append(bar)
+    level.append(readout, meter)
+    box.append(level)
   }
 
   // Ask for the height the content takes, whenever that changes. Measured by
@@ -127,6 +159,7 @@
     if (event.origin !== host) return
     const message = event.data
     if (message?.type === 'parameter') show(message.symbol, message.value)
+    else if (message?.type === 'plugin') showGain(message.payload?.gain)
   })
 
   // The host's origin is not known yet, so ready goes to any. It carries

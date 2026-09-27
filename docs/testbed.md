@@ -43,7 +43,7 @@ written to cover different parts of the contract, and each one's row says which.
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/), [One-Pole Filter](../plugins/jsfx-one-pole-filter/), [Soft Clipper](../plugins/jsfx-soft-clipper/) | Three REAPER JSFX effects converted by `bin/jsfx-import.js`, run by the shared bytecode interpreter in [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md). | A module with no `jig:abi`, private to its processor, which module-abi.md says a native host must refuse. The compiled script carried as a `jig:asset`. Converting from another plugin format. |
-| [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The only plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. Contract 5.2: the only plugin declaring an a-rate port, read per sample. |
+| [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The only plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. Contract 5.2: the only plugin declaring an a-rate port, read per sample. Messaging.md 2.4: the only interface drawing the processor's own snapshots, a live gain readout. |
 | [Squelch](../plugins/squelch/) | A resonant lowpass swept by an envelope follower, in plain JavaScript. | A second plugin with no module, and the one the "Acid" preset chains after BassGen and Pulse. |
 | [Quefrency](../plugins/quefrency/) | A cepstral formant and pitch shifter, in Rust ([design](../docs/plugins/quefrency-design.md)). | [latency.md](latency.md) sections 1 and 3: the only plugin with latency, reported in `ready` for the actual sample rate. Module ABI version 2 MIDI in on an audio effect, taking `trn:ControlMidi`. The host's rule that a plugin taking only control changes gets no keyboard or clip. |
 
@@ -196,7 +196,6 @@ acts on them. Each is a place where the specification is untested by use.
   Jiggy does not act on a `latency` message: it compensates from `ready` alone. Only
   [WamModule.js](../src/wam/WamModule.js) reads one.
 - **Shared memory** (contract 2.3). The host offers `jig:SharedMemory`; no plugin requires it.
-- **The opaque relay** (messaging.md 2.4). The host side exists; no plugin's interface uses it.
 - **State from more than one plugin** (contract 8). Ferrite is the only plugin that answers a
   state request.
 - **MIDI from outside the page.** Jiggy has no Web MIDI input, so notes come from the on-screen
