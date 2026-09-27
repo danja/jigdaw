@@ -25836,6 +25836,11 @@ function preserveFocus(container) {
 
 // web/app/Rack.js
 var NEW_TRACK = "";
+function slotTitle(node, profile, name) {
+  const plugin = profile?.label ?? null;
+  if (plugin && node.label && node.label !== plugin) return `${plugin}: ${name}`;
+  return name;
+}
 function createRack(ctx2) {
   const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
   const panels = /* @__PURE__ */ new Map();
@@ -26045,7 +26050,7 @@ function createRack(ctx2) {
     const { dispatcher, engine } = ctx2;
     const entry = dispatcher.engineNode(node.id);
     const profile = entry?.profile;
-    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(", "), "plugin");
+    const element = slot(slotTitle(node, profile, labelFor(node.id)), (profile?.roles ?? []).map(compact).join(", "), "plugin");
     if (profile?.kind === "foreign") {
       const mark = document2.createElement("span");
       mark.className = "foreign";

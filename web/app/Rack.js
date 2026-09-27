@@ -19,6 +19,20 @@ import { compact } from '../../src/host/Capabilities.js'
 // Where Load puts a plugin: a track id, or NEW_TRACK for a track of its own.
 export const NEW_TRACK = ''
 
+/**
+ * What a plugin's slot is headed. A node named for its purpose ("Subject")
+ * is headed by the plugin in use first ("MelGen: Subject"), because the
+ * purpose alone never says what is making the sound. A node still carrying
+ * the profile's own name reads unchanged, never "Pulse: Pulse". `name` is the
+ * display form, already disambiguated where it is shared; the comparison is
+ * against the node's own label, which is what carrying the profile name means.
+ */
+export function slotTitle (node, profile, name) {
+  const plugin = profile?.label ?? null
+  if (plugin && node.label && node.label !== plugin) return `${plugin}: ${name}`
+  return name
+}
+
 export function createRack (ctx) {
   const { document, window, $, log } = ctx
   // Each node's generated panel, kept across redraws so a control keeps its
@@ -309,7 +323,7 @@ export function createRack (ctx) {
     const { dispatcher, engine } = ctx
     const entry = dispatcher.engineNode(node.id)
     const profile = entry?.profile
-    const element = slot(labelFor(node.id), (profile?.roles ?? []).map(compact).join(', '), 'plugin')
+    const element = slot(slotTitle(node, profile, labelFor(node.id)), (profile?.roles ?? []).map(compact).join(', '), 'plugin')
 
     // Contract section 12.5: a foreign plugin is marked wherever it appears,
     // not only on its panel. Someone who consented last week and came back has
