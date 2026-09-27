@@ -238,6 +238,18 @@ export class Engine {
   }
 
   /**
+   * The node a track sounds through: after its fader and panner, on the way
+   * to the master. For a caller that captures what a track sounds like, such
+   * as a take recorder: mute and solo record as heard, because they act
+   * upstream of here.
+   */
+  trackTap (trackId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    return strip.panner ?? strip.gain
+  }
+
+  /**
    * Connect a node's output to a track's fader. Recorded with the other links,
    * so clearLinks takes it down with them.
    */

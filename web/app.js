@@ -15,6 +15,7 @@ import { createTabs } from '../src/ui/Tabs.js'
 import { createMedia } from './app/Media.js'
 import { createRuntime } from './app/Runtime.js'
 import { createTransport } from './app/Transport.js'
+import { createRecord } from './app/Record.js'
 import { createRack } from './app/Rack.js'
 import { createEditors } from './app/Editors.js'
 import { createArrangement } from './app/Arrangement.js'
@@ -57,6 +58,7 @@ const ctx = {
 ctx.media = createMedia(document)
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
+ctx.record = createRecord(ctx)
 ctx.editors = createEditors(ctx)
 ctx.arrangement = createArrangement(ctx)
 ctx.rack = createRack(ctx)
@@ -78,7 +80,14 @@ $('collectionbar').addEventListener('submit', e => {
   browser.openCollection($('collection').value.trim()).catch(error => log(error.message, 'error'))
 })
 $('play').addEventListener('click', () => transport.play().catch(error => log(error.message, 'error')))
-$('stop').addEventListener('click', transport.stop)
+$('stop').addEventListener('click', () => {
+  // The take first, so nothing after the last captured quantum trails in,
+  // then the transport. Idle when nothing records: still just stopping.
+  ctx.record.finishTake()
+    .catch(error => log(error.message, 'error'))
+    .finally(() => transport.stop())
+})
+$('record').addEventListener('click', () => ctx.record.toggle().catch(error => log(error.message, 'error')))
 $('tempo').addEventListener('change', async () => {
   const d = await ctx.runtime.ensureRunning()
   const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: Number($('tempo').value) }] }])

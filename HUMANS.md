@@ -19,7 +19,9 @@ the page's own origin is refused. While there, collapse the browser with the arr
 sidebar header and check the rail at phone width: the automated check covers classes and
 names only, and AGENTS.md requires `documentElement.scrollWidth` compared against
 `innerWidth` in a narrow iframe in a real browser before the layout half is claimed
-(TODO.md, sidebar arrow item). Note what is wrong in INBOX.md.
+(TODO.md, sidebar arrow item). While there, press Rec with the window in front,
+play, Stop, remove every plugin, and play the takes: the automated check proves takes
+are kept and placed, but no headless check has heard one. Note what is wrong in INBOX.md.
 
 ## 2. Tools that would help
 

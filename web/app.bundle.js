@@ -21823,6 +21823,17 @@ var Engine = class {
     return strip.input;
   }
   /**
+   * The node a track sounds through: after its fader and panner, on the way
+   * to the master. For a caller that captures what a track sounds like, such
+   * as a take recorder: mute and solo record as heard, because they act
+   * upstream of here.
+   */
+  trackTap(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    return strip.panner ?? strip.gain;
+  }
+  /**
    * Connect a node's output to a track's fader. Recorded with the other links,
    * so clearLinks takes it down with them.
    */
@@ -25047,7 +25058,301 @@ function createTransport(ctx2) {
     const field = $2("tempo");
     if (bpm && document2.activeElement !== field) field.value = String(bpm);
   }
-  return { play, stop, positionLoop, meterLoop, showTempo };
+  return { play, stop, positionLoop, meterLoop, showTempo, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+}
+
+// src/host/Wav.js
+var HEADER_BYTES = 44;
+var BITS_PER_SAMPLE = 16;
+var BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
+function toInt16(sample) {
+  const clamped = Math.max(-1, Math.min(1, sample));
+  return Math.round(clamped * (clamped < 0 ? 32768 : 32767));
+}
+function writeAscii(view, offset, text) {
+  for (let i2 = 0; i2 < text.length; i2++) view.setUint8(offset + i2, text.charCodeAt(i2));
+}
+function encodeWav(channels, sampleRate) {
+  if (channels.length === 0) throw new Error("encodeWav needs at least one channel");
+  const frames = channels[0].length;
+  for (const channel of channels) {
+    if (channel.length !== frames) throw new Error("every channel must be the same length");
+  }
+  const numChannels = channels.length;
+  const blockAlign = numChannels * BYTES_PER_SAMPLE;
+  const dataBytes = frames * blockAlign;
+  const bytes = new Uint8Array(HEADER_BYTES + dataBytes);
+  const view = new DataView(bytes.buffer);
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, BITS_PER_SAMPLE, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataBytes, true);
+  let offset = HEADER_BYTES;
+  for (let frame = 0; frame < frames; frame++) {
+    for (let c3 = 0; c3 < numChannels; c3++) {
+      view.setInt16(offset, toInt16(channels[c3][frame]), true);
+      offset += BYTES_PER_SAMPLE;
+    }
+  }
+  return bytes;
+}
+
+// src/engine/TrackRecorder.js
+var CAPTURE_FRAMES = 128;
+var POOL_BUFFERS = 8;
+function floatToInt16(samples) {
+  const out = new Int16Array(samples.length);
+  for (let i2 = 0; i2 < samples.length; i2++) {
+    const clamped = Math.max(-1, Math.min(1, samples[i2]));
+    out[i2] = Math.round(clamped * (clamped < 0 ? 32768 : 32767));
+  }
+  return out;
+}
+function int16ToFloat(samples) {
+  const out = new Float32Array(samples.length);
+  for (let i2 = 0; i2 < samples.length; i2++) out[i2] = samples[i2] / 32768;
+  return out;
+}
+var TakeBuilder = class {
+  #tracks = /* @__PURE__ */ new Map();
+  /** Keep one chunk for a track. A chunk short of a full quantum is padded. */
+  addChunk(trackId, chunk) {
+    let track = this.#tracks.get(trackId);
+    if (!track) {
+      track = { chunks: [], frames: 0 };
+      this.#tracks.set(trackId, track);
+    }
+    const stereo = new Float32Array(CAPTURE_FRAMES * 2);
+    stereo.set(chunk.subarray(0, stereo.length));
+    track.chunks.push(floatToInt16(stereo));
+    track.frames += CAPTURE_FRAMES;
+  }
+  trackIds() {
+    return [...this.#tracks.keys()];
+  }
+  frames(trackId) {
+    return this.#tracks.get(trackId)?.frames ?? 0;
+  }
+  /** True when every captured sample is digital zero: a muted track, or one
+   * with nothing on it, makes no clip rather than a silent one. */
+  isSilent(trackId) {
+    const track = this.#tracks.get(trackId);
+    if (!track) return true;
+    return track.chunks.every((chunk) => chunk.every((v) => v === 0));
+  }
+  /** The take as float channel pairs, deinterleaved. */
+  take(trackId) {
+    const track = this.#tracks.get(trackId);
+    if (!track) throw new Error(`no take for track: ${trackId}`);
+    const left = new Float32Array(track.frames);
+    const right = new Float32Array(track.frames);
+    let at = 0;
+    for (const chunk of track.chunks) {
+      const floats = int16ToFloat(chunk);
+      for (let i2 = 0; i2 < CAPTURE_FRAMES; i2++) {
+        left[at + i2] = floats[i2 * 2];
+        right[at + i2] = floats[i2 * 2 + 1];
+      }
+      at += CAPTURE_FRAMES;
+    }
+    return { left, right };
+  }
+  /** The take encoded, ready to store. */
+  encode(trackId, sampleRate) {
+    const { left, right } = this.take(trackId);
+    return encodeWav([left, right], sampleRate);
+  }
+};
+var TrackRecorder = class {
+  #engine;
+  #context;
+  #processorUrl;
+  #WorkletNode;
+  #poolBuffers;
+  #module = null;
+  #sessions = /* @__PURE__ */ new Map();
+  constructor({ engine, context, processorUrl, WorkletNode = globalThis.AudioWorkletNode, poolBuffers = POOL_BUFFERS }) {
+    if (!engine || !context || !processorUrl) throw new Error("TrackRecorder needs an engine, a context and a processor URL");
+    this.#engine = engine;
+    this.#context = context;
+    this.#processorUrl = processorUrl;
+    this.#WorkletNode = WorkletNode;
+    this.#poolBuffers = poolBuffers;
+  }
+  get recording() {
+    return this.#sessions.size > 0;
+  }
+  async addModule() {
+    if (!this.#module) this.#module = await this.#context.audioWorklet.addModule(this.#processorUrl);
+    return this.#module;
+  }
+  /**
+   * Capture every listed track from after its strip. Refused with nothing
+   * recording rather than starting a take of no tracks. Resolves with the
+   * takes builder and the live capture nodes, the latter for tests driving
+   * renders and for teardown inspection.
+   */
+  async start(trackIds) {
+    if (this.recording) throw new Error("already recording");
+    if (!trackIds || trackIds.length === 0) throw new Error("nothing to record");
+    await this.addModule();
+    const takes = new TakeBuilder();
+    for (const trackId of trackIds) {
+      const node = new this.#WorkletNode(this.#context, "jigdaw-capture", {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2]
+      });
+      const sink = this.#context.createGain();
+      sink.gain.value = 0;
+      node.connect(sink);
+      sink.connect(this.#context.destination);
+      this.#engine.trackTap(trackId).connect(node, 0, 0);
+      const session = { node, sink, takes, dropped: 0, stopped: null };
+      session.stopped = new Promise((resolve) => {
+        session.finish = resolve;
+      });
+      node.port.onmessage = (event) => {
+        const message = event?.data ?? event;
+        if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
+          takes.addChunk(trackId, new Float32Array(message.buffer ?? message, message.byteOffset ?? 0, CAPTURE_FRAMES * 2));
+          const fresh = new ArrayBuffer(CAPTURE_FRAMES * 2 * 4);
+          node.port.postMessage({ type: "return", buffer: fresh }, [fresh]);
+        } else if (message?.type === "stopped" && !session.done) {
+          session.done = true;
+          session.dropped = message.dropped ?? 0;
+          session.finish();
+        }
+      };
+      const buffers = [];
+      const transfer = [];
+      for (let i2 = 0; i2 < this.#poolBuffers; i2++) {
+        const buffer = new ArrayBuffer(CAPTURE_FRAMES * 2 * 4);
+        buffers.push(buffer);
+        transfer.push(buffer);
+      }
+      node.port.postMessage({ type: "start", buffers }, transfer);
+      this.#sessions.set(trackId, session);
+    }
+    return { takes, nodes: new Map([...this.#sessions.entries()].map(([id, s]) => [id, s.node])) };
+  }
+  /**
+   * Stop every capture and resolve with the takes and per-track drop counts.
+   * The graph is unwired first so nothing further arrives while stopping.
+   */
+  async stop() {
+    const entries = [...this.#sessions.entries()];
+    this.#sessions.clear();
+    const takes = entries.length > 0 ? entries[0][1].takes : new TakeBuilder();
+    for (const [, session] of entries) {
+      try {
+        session.node.port.postMessage({ type: "stop" });
+      } catch {
+      }
+    }
+    await Promise.all(entries.map(([, s]) => s.stopped));
+    for (const [, session] of entries) {
+      try {
+        session.node.disconnect();
+      } catch {
+      }
+      try {
+        session.sink.disconnect();
+      } catch {
+      }
+    }
+    return { takes, dropped: new Map(entries.map(([trackId, s]) => [trackId, s.dropped])) };
+  }
+};
+
+// web/app/Record.js
+async function sha256hex(bytes) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function createRecord(ctx2, { processorUrl = null, WorkletNode = globalThis.AudioWorkletNode } = {}) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  const resolvedUrl = processorUrl ?? new URL("src/engine/capture-processor.js", document2.baseURI).href;
+  let recorder = null;
+  let recording = null;
+  function show(active) {
+    const button = $2("record");
+    button.setAttribute("aria-pressed", String(active));
+    button.textContent = active ? "Stop take" : "Rec";
+  }
+  function isRecording() {
+    return recording !== null;
+  }
+  async function toggle() {
+    if (isRecording()) {
+      await finishTake();
+      return;
+    }
+    await ctx2.runtime.ensureRunning();
+    const { dispatcher, engine } = ctx2;
+    const trackIds = engine.trackIds();
+    if (trackIds.length === 0) {
+      log2("nothing to record: there are no tracks", "error");
+      return;
+    }
+    recorder ??= new TrackRecorder({ engine, context: engine.context, processorUrl: resolvedUrl, WorkletNode });
+    const started = ctx2.transport.playing();
+    if (!started) await ctx2.transport.play();
+    const startBeat = ctx2.transport.position().beat;
+    await recorder.start(trackIds);
+    recording = { trackIds, startBeat };
+    show(true);
+    log2(started ? `recording ${trackIds.length} track(s) from beat ${startBeat.toFixed(2)}` : `playing and recording ${trackIds.length} track(s) from the top`);
+  }
+  async function finishTake() {
+    if (!isRecording()) return;
+    const { trackIds, startBeat } = recording;
+    recording = null;
+    show(false);
+    const { dispatcher, engine } = ctx2;
+    const { takes, dropped } = await recorder.stop();
+    for (const trackId of trackIds) {
+      const count = dropped.get(trackId) ?? 0;
+      if (count > 0) log2(`track ${trackId} dropped ${count} quanta while recording`, "error");
+    }
+    const transport2 = dispatcher.transport();
+    const sampleRate = engine.context.sampleRate;
+    const changes = [];
+    for (const trackId of takes.trackIds()) {
+      if (takes.isSilent(trackId)) {
+        log2(`track ${trackId} was silent: no take kept`);
+        continue;
+      }
+      const frames = takes.frames(trackId);
+      const bytes = takes.encode(trackId, sampleRate);
+      const iri3 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+      ctx2.media.put(iri3, bytes, "audio/wav");
+      const buffer = await ctx2.clipPlayer.load(iri3);
+      if (!buffer) {
+        log2(`take for track ${trackId}: ${ctx2.clipPlayer.failure(iri3)?.message ?? "could not be decoded"}`, "error");
+        continue;
+      }
+      const lengthBeats = transport2.beatAtSeconds(transport2.secondsAtBeat(startBeat) + frames / sampleRate) - startBeat;
+      changes.push({ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri3, offsetSeconds: 0 });
+    }
+    if (changes.length === 0) {
+      log2("nothing recorded");
+      return;
+    }
+    const result = dispatcher.apply(changes);
+    if (result.ok) log2(`kept ${changes.length} take(s) from beat ${startBeat.toFixed(2)}`, "ok");
+    else log2(`takes could not be placed: ${result.message}`, "error");
+  }
+  return { toggle, finishTake, isRecording };
 }
 
 // src/ui/Dial.js
@@ -28433,6 +28738,7 @@ var ctx = {
 ctx.media = createMedia(document);
 ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
+ctx.record = createRecord(ctx);
 ctx.editors = createEditors(ctx);
 ctx.arrangement = createArrangement(ctx);
 ctx.rack = createRack(ctx);
@@ -28462,7 +28768,10 @@ $("collectionbar").addEventListener("submit", (e) => {
   browser.openCollection($("collection").value.trim()).catch((error2) => log(error2.message, "error"));
 });
 $("play").addEventListener("click", () => transport.play().catch((error2) => log(error2.message, "error")));
-$("stop").addEventListener("click", transport.stop);
+$("stop").addEventListener("click", () => {
+  ctx.record.finishTake().catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
+});
+$("record").addEventListener("click", () => ctx.record.toggle().catch((error2) => log(error2.message, "error")));
 $("tempo").addEventListener("change", async () => {
   const d = await ctx.runtime.ensureRunning();
   const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);

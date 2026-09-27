@@ -129,7 +129,6 @@ export function createTransport (ctx) {
     if (!engine || !playing) return 0
     return Math.max(0, Math.round((engine.context.currentTime - startedAt) * engine.context.sampleRate))
   }
-
   function sendTransport () {
     const { dispatcher, engine } = ctx
     if (!dispatcher) return
@@ -185,5 +184,5 @@ export function createTransport (ctx) {
     if (bpm && document.activeElement !== field) field.value = String(bpm)
   }
 
-  return { play, stop, positionLoop, meterLoop, showTempo }
+  return { play, stop, positionLoop, meterLoop, showTempo, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
 }

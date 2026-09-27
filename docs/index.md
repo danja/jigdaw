@@ -113,10 +113,12 @@ and consented to, per contract section 12.
 
 **Exists but is thin.** Jiggy, the reference host: tracks, each a chain of plugins ending in
 a fader, with a mixer of one strip per track; an arrangement of MIDI clips edited in a piano
-roll and audio clips imported from disk, played against a looping transport; a plugin's own
+roll and audio clips imported from disk, played against a looping transport; recording each
+track to an audio clip while the transport plays, so a pass with the plugins removed plays
+back what was heard; a plugin's own
 editor in a sandboxed frame on its own origin, beside the panel generated from its parameters;
-sessions saved as Turtle, or as a zip with their audio beside them. There is no recording and
-no automation yet.
+sessions saved as Turtle, or as a zip with their audio beside them. There is no automation
+yet.
 
 ## Worked examples
 

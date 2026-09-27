@@ -215,6 +215,22 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
       emit onsets at 66 BPM, Cadence passes what it hears, and all four Pulse voices
       render signal. A preset edit that silences a voice fails there.
 
+- [ ] **Record each track to an audio clip while the transport plays.** **Done
+      2026-09-27.** Rec plays (if stopped) and captures every track after its strip;
+      Stop, or Rec again, keeps each sounding track as an audio clip where it was
+      recorded, in one atomic changeset. Takes are WAV takes under the session's IRI by
+      SHA-256, exactly like imported audio, so playback with the plugins removed, zip
+      saving, and one-step undo all reuse proven paths. Capture is per-track
+      AudioWorklet sinks on a lent-buffer pool (`src/engine/capture-processor.js`,
+      `src/engine/TrackRecorder.js`), so the audio thread never allocates and starved
+      quanta count as dropped rather than stalling; silent tracks keep no clip.
+      `src/host/Wav.js` is ported to DataView so the one encoder runs in the page and
+      in node. Verified headlessly throughout: real processor and strip in
+      `tests/engine/TrackRecorder.test.js`, orchestration against the real dispatcher
+      and model in `tests/ui/Record.test.js`. Not yet heard by a person in a browser;
+      press Rec with the window in front, play, Stop, remove the plugins, and play the
+      takes (HUMANS.md).
+
 ## Documentation
 
 - [ ] **Whether `web/collections/jigdaw.ttl` should stop being the exception and hold absolute

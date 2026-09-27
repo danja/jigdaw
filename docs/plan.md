@@ -630,7 +630,7 @@ at the loop. A session with imported audio saves as a zip with its media beside 
 contradiction the message protocol had carried since phase 0; Tremolo ships the worked example.
 The format is in [project-format.md](project-format.md) "Tracks" and "Clips".
 
-Still thin: no recording, no automation, no master strip. See [index.md](index.md) for the
+Still thin: no automation, no master strip. See [index.md](index.md) for the
 current honest summary, published alongside the specification.
 
 ## What it found
