@@ -94,7 +94,14 @@ class PulseProcessor extends AudioWorkletProcessor {
       this.exports = exports
       this.maxFrames = maxFrames
       this.ready = true
-      this.port.postMessage({ type: 'ready', latencyFrames: 0, tailFrames: null })
+      // The worst case, not the current release setting: a voice still
+      // ringing from a long release when the setting shortens must not be cut
+      // by an offline render planned against the shorter figure. 4000 is the
+      // release maximum the profile declares, and tests/host/pulse.test.js
+      // holds the two together. The rate comes from the init message, not the
+      // bare sampleRate global, which is undefined outside a real worklet.
+      const rate = message.sampleRate ?? sampleRate
+      this.port.postMessage({ type: 'ready', latencyFrames: 0, tailFrames: Math.ceil(4000 * rate / 1000) })
     } catch (error) {
       this.port.postMessage({
         type: 'error', phase: 'instantiate', fatal: true, message: String(error?.message ?? error)

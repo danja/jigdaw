@@ -104,3 +104,66 @@ describe('tremolo, a plugin with no WebAssembly module', () => {
     }
   })
 })
+
+describe('tremolo rate is an audio-rate parameter', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  it('is declared a-rate in the profile and k-rate nowhere it matters', async () => {
+    // Contract 5.2: a-rate only for parameters meant to be audio-modulated.
+    // Rate is the LFO speed; depth is a plain level.
+    const { profile } = await makeLoader(validator).loadProfile(CANONICAL)
+    expect(profile.ports.find(p => p.symbol === 'rate').automationRate).toBe('a-rate')
+    expect(profile.ports.find(p => p.symbol === 'depth').automationRate).toBe('k-rate')
+  })
+
+  it('reaches the processor as an a-rate AudioParam from the one declaration', async () => {
+    // Contract 5.1: the profile is the declaration, and the host derives the
+    // descriptors from it while the processor registers its own copy. Three
+    // lists, one source of truth, bound here rather than reviewed.
+    const { parameterDescriptors } = await import('../../src/host/Parameters.js')
+    const { profile } = await makeLoader(validator).loadProfile(CANONICAL)
+    const derived = parameterDescriptors(profile.ports)
+
+    const context = new OfflineContext({ sampleRate: 48000 })
+    await context.audioWorklet.addModule(pathToFileURL(resolve(pluginDir, 'tremolo-processor.js')).href)
+    const registered = context.registry.get('tremolo').parameterDescriptors
+
+    expect(derived.find(d => d.name === 'rate')).toMatchObject(
+      registered.find(d => d.name === 'rate'))
+    expect(registered.find(d => d.name === 'rate').automationRate).toBe('a-rate')
+    expect(registered.find(d => d.name === 'depth').automationRate).toBe('k-rate')
+  })
+
+  it('reads the rate per sample, not once per quantum', async () => {
+    // Contract 5.2: a processor takes a length-1 array for a steady value and
+    // a length-128 one for a modulated one. A processor that read only the
+    // first element would sound identical under both; the ramp must differ.
+    const context = new OfflineContext({ sampleRate: 48000 })
+    await context.audioWorklet.addModule(pathToFileURL(resolve(pluginDir, 'tremolo-processor.js')).href)
+    const run = (rate, depth) => {
+      const processor = new (context.registry.get('tremolo').ctor)({
+        port: { postMessage () {}, onmessage: null }
+      })
+      processor.port.onmessage({ data: { type: 'init', sampleRate: 48000 } })
+      // One input and one output of one channel each, the nesting a real
+      // worklet calls process with: outputs[0] is the channel list, not a
+      // channel.
+      const input = [[new Float32Array(128).fill(0.5)]]
+      const output = [[new Float32Array(128)]]
+      processor.process(input, output, { rate, depth })
+      expect(output[0][0].every(Number.isFinite)).toBe(true)
+      return output[0][0]
+    }
+    const steady = run(new Float32Array([5]), new Float32Array([1]))
+    const constant128 = run(new Float32Array(128).fill(5), new Float32Array([1]))
+    expect(Array.from(constant128)).toEqual(Array.from(steady))
+    // Starting at the steady value, so a processor that read only the first
+    // element would render exactly steady and fail below.
+    const ramp = Float32Array.from({ length: 128 }, (_, i) => 5 + (20 - 5) * i / 127)
+    const swept = run(ramp, new Float32Array([1]))
+    let difference = 0
+    for (let i = 0; i < 128; i++) difference = Math.max(difference, Math.abs(swept[i] - steady[i]))
+    expect(difference).toBeGreaterThan(0.01)
+  })
+})

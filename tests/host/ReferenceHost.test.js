@@ -32,7 +32,11 @@ suite('renderChain', () => {
     const { channels, loaded } = await renderChain({
       iris: [CASCADE], roots, seconds: 0.5, sampleRate: 48000
     })
-    expect(loaded).toEqual([{ iri: CASCADE, label: 'Cascade', audioInputs: 1 }])
+    // Cascade declares no tail: its freeze can ring for ever, and a plugin
+    // whose tail is unbounded declares none (latency.md section 5). The
+    // render is exactly the requested duration.
+    expect(loaded).toEqual([{ iri: CASCADE, label: 'Cascade', audioInputs: 1, tailFrames: 0 }])
+    expect(channels[0]).toHaveLength(Math.ceil(0.5 * 48000))
     // Cascade's own default mix is 0.3: some tail, not silence, and not the
     // raw impulse passed straight through either.
     expect(rms(channels[0])).toBeGreaterThan(0)
@@ -50,6 +54,26 @@ suite('renderChain', () => {
   it('renders silence for an instrument given no notes, not an impulse meant for an effect', async () => {
     const { channels } = await renderChain({ iris: [PULSE], roots, seconds: 0.1 })
     expect(rms(channels[0])).toBe(0)
+  })
+
+  it('renders past the requested duration by the greatest tail, not cut at it', async () => {
+    // Pulse declares the worst case for its release (192000 frames, bound to
+    // the release maximum in tests/host/pulse.test.js). The note ends at
+    // frame 20000 of a 24000 frame render, so without the extension the decay
+    // would stop at 24000 with energy still in it.
+    const { channels, loaded } = await renderChain({
+      iris: [PULSE], roots, seconds: 0.5, sampleRate: 48000,
+      notes: [{ frame: 0, note: 69, velocity: 100 }, { frame: 20000, note: 69, off: true }]
+    })
+    expect(loaded[0].tailFrames).toBe(192000)
+    expect(channels[0]).toHaveLength(24000 + 192000)
+    const window = (from, to) => {
+      let s = 0
+      for (let i = from; i < to; i++) s += channels[0][i] ** 2
+      return Math.sqrt(s / (to - from))
+    }
+    expect(window(24000, 25000)).toBeGreaterThan(0.01)
+    expect(window(channels[0].length - 128, channels[0].length)).toBeLessThan(1e-6)
   })
 
   it('chains an instrument into an effect, the output of one becoming the input of the next', async () => {

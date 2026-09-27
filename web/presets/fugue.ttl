@@ -1,0 +1,261 @@
+# web/presets/fugue.ttl
+#
+# A bundled preset that makes sound on Play with nothing else to do. A fugue
+# in D minor for four generative voices: MelGen states the subject on the
+# first track, a second MelGen answers a fifth below on the second, Ground
+# plans the long bass form under both on the third, and Cadence learns its
+# chord cycle from the subject and comps beneath on the fourth. Each voice has
+# its own Pulse instrument and its own room, and nothing here is a clip: every
+# generator plays off the transport, so the piece is as long as the form
+# Ground plans.
+# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Fugue" ;
+    jig:revision 1 ;
+    jig:track <#track-1> , <#track-2> , <#track-3> , <#track-4> ;
+    jig:node <#subject> , <#violins> , <#nave> , <#answer> , <#violas> , <#chamber> , <#bassline> , <#cellos> , <#hall> , <#chords> , <#organ> , <#chapel> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> , <#c7> , <#c8> , <#c9> ;
+    jig:transport <#transport> .
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Subject" .
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Answer" .
+
+<#track-3>
+    a jig:Track ;
+    rdfs:label "Bass" .
+
+<#track-4>
+    a jig:Track ;
+    rdfs:label "Continuo" .
+
+<#subject>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Subject" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#subject-root> , <#subject-scale> , <#subject-length> , <#subject-phrase> , <#subject-density> , <#subject-register> , <#subject-seed> .
+
+<#violins>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Violins" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#violins-waveform> , <#violins-attack> , <#violins-release> , <#violins-cutoff> , <#violins-gain> .
+
+<#nave>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Nave" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#nave-mix> , <#nave-size> , <#nave-mode> .
+
+<#answer>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Answer" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#answer-root> , <#answer-scale> , <#answer-length> , <#answer-phrase> , <#answer-density> , <#answer-register> , <#answer-seed> .
+
+<#violas>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Violas" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#violas-waveform> , <#violas-attack> , <#violas-release> , <#violas-cutoff> , <#violas-gain> .
+
+<#chamber>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Chamber" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#chamber-mix> , <#chamber-size> , <#chamber-mode> .
+
+<#bassline>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Bass line" ;
+    jig:plugin <../plugins/ground/> ;
+    jig:setting <#bassline-root> , <#bassline-scale> , <#bassline-form> , <#bassline-phrase> , <#bassline-density> , <#bassline-register> , <#bassline-seed> .
+
+<#cellos>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Cellos" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#cellos-waveform> , <#cellos-attack> , <#cellos-release> , <#cellos-cutoff> , <#cellos-gain> .
+
+<#hall>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Hall" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#hall-mix> , <#hall-size> , <#hall-mode> .
+
+<#chords>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Chords" ;
+    jig:plugin <../plugins/cadence/> ;
+    jig:setting <#chords-key> , <#chords-scale> , <#chords-cycle> .
+
+<#organ>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Organ" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#organ-waveform> , <#organ-attack> , <#organ-release> , <#organ-cutoff> , <#organ-gain> .
+
+<#chapel>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Chapel" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#chapel-mix> , <#chapel-size> , <#chapel-mode> .
+
+<#subject-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 62.0 .
+<#subject-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
+<#subject-length>   a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 32.0 .
+<#subject-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars"  ; jig:value 4.0 .
+<#subject-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.55 .
+<#subject-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 2.0 .
+<#subject-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 7.0 .
+<#violins-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 0.0 .
+<#violins-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 30.0 .
+<#violins-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 300.0 .
+<#violins-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 9000.0 .
+<#violins-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.5 .
+<#nave-mix>  a jig:ParameterSetting ; jig:symbol "mix"  ; jig:value 0.2 .
+<#nave-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 30.0 .
+<#nave-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#answer-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 57.0 .
+<#answer-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
+<#answer-length>   a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 32.0 .
+<#answer-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars"  ; jig:value 4.0 .
+<#answer-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.5 .
+<#answer-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 1.0 .
+<#answer-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 21.0 .
+<#violas-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 2.0 .
+<#violas-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 60.0 .
+<#violas-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 350.0 .
+<#violas-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 5000.0 .
+<#violas-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.45 .
+<#chamber-mix>  a jig:ParameterSetting ; jig:symbol "mix"  ; jig:value 0.2 .
+<#chamber-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 26.0 .
+<#chamber-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#bassline-root>     a jig:ParameterSetting ; jig:symbol "root_note"   ; jig:value 38.0 .
+<#bassline-scale>    a jig:ParameterSetting ; jig:symbol "scale"       ; jig:value 2.0 .
+<#bassline-form>     a jig:ParameterSetting ; jig:symbol "form_bars"   ; jig:value 32.0 .
+<#bassline-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars" ; jig:value 4.0 .
+<#bassline-density>  a jig:ParameterSetting ; jig:symbol "density"     ; jig:value 0.4 .
+<#bassline-register> a jig:ParameterSetting ; jig:symbol "register"    ; jig:value 0.0 .
+<#bassline-seed>     a jig:ParameterSetting ; jig:symbol "seed"        ; jig:value 3.0 .
+<#cellos-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 0.0 .
+<#cellos-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 120.0 .
+<#cellos-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 400.0 .
+<#cellos-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 2500.0 .
+<#cellos-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.5 .
+<#hall-mix>  a jig:ParameterSetting ; jig:symbol "mix"  ; jig:value 0.18 .
+<#hall-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 34.0 .
+<#hall-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#chords-key>   a jig:ParameterSetting ; jig:symbol "key"        ; jig:value 2.0 .
+<#chords-scale> a jig:ParameterSetting ; jig:symbol "scale"      ; jig:value 3.0 .
+<#chords-cycle> a jig:ParameterSetting ; jig:symbol "cycle_bars" ; jig:value 4.0 .
+<#organ-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 2.0 .
+<#organ-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 80.0 .
+<#organ-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 500.0 .
+<#organ-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 4000.0 .
+<#organ-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.35 .
+<#chapel-mix>  a jig:ParameterSetting ; jig:symbol "mix"  ; jig:value 0.15 .
+<#chapel-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 20.0 .
+<#chapel-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 0.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#subject> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#violins> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#violins> ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#nave>    ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Midi .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#answer> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#violas> ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Audio .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#violas>  ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#chamber> ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Midi .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#bassline> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#cellos>   ; jig:portIndex 0 .
+
+<#c6>
+    a jig:Connection ;
+    jig:from <#c6-from> ; jig:to <#c6-to> ;
+    jig:signalKind trn:Audio .
+
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#cellos> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#hall>   ; jig:portIndex 0 .
+
+<#c7>
+    a jig:Connection ;
+    jig:from <#c7-from> ; jig:to <#c7-to> ;
+    jig:signalKind trn:Midi .
+
+<#c7-from> a jig:Endpoint ; jig:endpointNode <#subject> ; jig:portIndex 0 .
+<#c7-to>   a jig:Endpoint ; jig:endpointNode <#chords>  ; jig:portIndex 0 .
+
+<#c8>
+    a jig:Connection ;
+    jig:from <#c8-from> ; jig:to <#c8-to> ;
+    jig:signalKind trn:Midi .
+
+<#c8-from> a jig:Endpoint ; jig:endpointNode <#chords> ; jig:portIndex 0 .
+<#c8-to>   a jig:Endpoint ; jig:endpointNode <#organ>  ; jig:portIndex 0 .
+
+<#c9>
+    a jig:Connection ;
+    jig:from <#c9-from> ; jig:to <#c9-to> ;
+    jig:signalKind trn:Audio .
+
+<#c9-from> a jig:Endpoint ; jig:endpointNode <#organ>  ; jig:portIndex 0 .
+<#c9-to>   a jig:Endpoint ; jig:endpointNode <#chapel> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 66.0 .

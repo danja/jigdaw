@@ -34,7 +34,8 @@
     "audioOutputs": 1,
     "outputChannels": 2,
     "renderQuantum": 128,
-    "latencyFrames": 0
+    "latencyFrames": 0,
+    "tailFrames": 192000
   },
   "resources": {
     "module": "pulse.wasm",

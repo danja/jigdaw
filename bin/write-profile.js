@@ -143,6 +143,10 @@ for (const port of template.ports) {
   // holding the symbol to index mapping, and position in this file is a
   // property of the document rather than of the module.
   if (port.paramIndex !== undefined) line += ` ;\n    jig:paramIndex ${port.paramIndex}`
+  // Audio-rate parameters cost a Float32Array per quantum whether or not
+  // anything modulates them, so k-rate is the default and a-rate is declared
+  // per port, for parameters meant to be audio-modulated (contract 5.2).
+  if (port.automationRate === 'a-rate') line += ' ;\n    jig:automationRate jig:ARate'
   // The panel section this control belongs under. A plain label: groups are
   // per-plugin display hints, never addressed across documents.
   if (port.group) line += ` ;\n    jig:controlGroup ${JSON.stringify(port.group)}`

@@ -2,4 +2,5 @@ This file will contain things that are later thoughts, they will need accommodat
 
 ## Items
 
-* consider the potential for plugins to be nested so meta-plugins can be built from simpler components, eg. a guitar effects rack
+*None. Previous items moved to TODO.md 2026-09-26: a "Fugue" preset of generative
+plugins, and nested meta-plugins.*

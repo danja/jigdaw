@@ -42,7 +42,8 @@
       "minimum": 0.1,
       "maximum": 20,
       "paramIndex": 0,
-      "unit": "hz"
+      "unit": "hz",
+      "automationRate": "a-rate"
     },
     {
       "symbol": "depth",

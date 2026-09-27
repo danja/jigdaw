@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -38,6 +39,7 @@
     jig:outputChannels 2 ;
     jig:renderQuantum 128 ;
     jig:latencyFrames 0 ;
+    jig:tailFrames 192000 ;
 
     jig:module <#module> ;
     jig:processor <#processor> ;
@@ -56,7 +58,7 @@
     jig:location <pulse-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "pulse" ;
-    jig:integrity "sha384-fZtQJjxQJqbNP/ksoVliyrPmWTLZFNt1kK5zNatone/A4HU/cXI0gfQ3kJn9ff7k" .
+    jig:integrity "sha384-eIftoBHnGNZu4nAgpHQrndU93gpBWLYDsN1NYhwqG61BEZD5mqHFvr2zjpXB+wyq" .
 
 <#waveform>
     a lv2:InputPort , lv2:ControlPort ;

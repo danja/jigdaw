@@ -13,8 +13,12 @@
 
 class TremoloProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors () {
+    // Rate is a-rate: it is meant to be audio-modulated, and the processor
+    // reads it per sample. This mirrors the profile's jig:automationRate, and
+    // tests/host/tremolo.test.js holds the two together, because contract
+    // section 5.1 declares a parameter once and derives both from it.
     return [
-      { name: 'rate', defaultValue: 5, minValue: 0.1, maxValue: 20, automationRate: 'k-rate' },
+      { name: 'rate', defaultValue: 5, minValue: 0.1, maxValue: 20, automationRate: 'a-rate' },
       { name: 'depth', defaultValue: 0.5, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
     ]
   }

@@ -2,6 +2,26 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-26 A NaN tail read as null and rendered nothing
+
+**What happened.** Pulse's processor reported its new `tailFrames` from the bare
+`sampleRate` global. Outside a real worklet that global is undefined (the offline
+harness restores it after import), so the report was NaN. JSON printed it as null,
+which looked like "no tail". The frame arithmetic downstream then produced a
+zero-length render. Found by probing the render, not by any test: every existing
+check passed with a NaN tail in place.
+
+**Root cause.** A fake that is more permissive than the real thing in one
+direction is stricter in another: a real `AudioWorkletGlobalScope` defines
+`sampleRate`, the harness only lends it during import. The processor already knew
+this once, reading `message.sampleRate ?? sampleRate` for `jig_init`, and the
+new line did not follow the same path.
+
+**Prevention.** The rate comes from the init message (`plugins/pulse/pulse-processor.js`),
+and `tests/host/pulse.test.js` instantiates at two rates and asserts the exact
+reported figure at each, which is red for NaN at both. The render test then asserts
+a nonzero extended length, which a NaN tail cannot produce.
+
 ## 2026-09-25 The adapter freed a chain the audio thread was still running
 
 **What happened.** Loading a plugin while the transport ran crashed Reaper. Both native

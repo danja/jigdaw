@@ -201,6 +201,20 @@ Read /home/danny/github/OpenStudio/docs/implemented_features.md for ideas.
          `setParameter` the frame's handler calls. Not a defect found in the code, but the
          path from a real pointer through the frame was only seen once.
 
+- [ ] **A "Fugue" preset: a long-form orchestral fugue from the existing plugins.**
+      **Done 2026-09-26.** From the inbox, 2026-09-26. `web/presets/fugue.ttl` ("Fugue",
+      in the index): D minor at 66 BPM for four generative voices, no clips, everything
+      off the transport. MelGen states the subject (D4, seed 7), a second MelGen answers
+      a fifth below (A3, seed 21), Ground plans the 32-bar bass form (D2, seed 3), and
+      Cadence (D natural minor) learns its cycle from the subject line and comps beneath;
+      each voice has its own Pulse timbre and Cascade room. Scale choices verified against
+      the DSP sources (melgen/ground index 2 minor, cadence index 3 natural minor, key 2
+      D). Passes the standard preset bar (listed, no `@base`, conforms, opens for real
+      with all 12 nodes and 9 connections), plus `tests/ui/Fugue.test.js`, which drives
+      every voice with the preset's own settings read from the file: all three generators
+      emit onsets at 66 BPM, Cadence passes what it hears, and all four Pulse voices
+      render signal. A preset edit that silences a voice fails there.
+
 ## Documentation
 
 - [ ] **Whether `web/collections/jigdaw.ttl` should stop being the exception and hold absolute
@@ -281,6 +295,14 @@ Determined 2026-09-26 from testbed.md's "What nothing exercises yet". Each item
 below is the smallest plugin or host behaviour covering one unused clause.
 Build items, not builds: none is started.
 
+- [ ] **Nested plugins: meta-plugins built from simpler components.** From the
+      inbox, 2026-09-26 (e.g. a guitar effects rack assembled from existing
+      effects). Needs design before code: what nesting is in the project graph
+      (a node holding a subgraph, or a profile listing member plugins), how the
+      compiler flattens it and accounts latency through it, how state and
+      presets address the inside, and whether a nested graph can itself nest.
+      Not started.
+
 - [ ] **A plugin that changes its latency, and a host that acts on it.** Covers
       latency.md section 2. Smallest plugin: a two-position latency, such as a
       switchable FFT size or lookahead amount, reporting the actual figure in
@@ -291,12 +313,21 @@ Build items, not builds: none is started.
       (only `src/wam/WamModule.js` reads the message today). Test: a parallel
       path re-aligned after the change takes effect.
 
-- [ ] **Tails on Cascade, and tail-aware offline renders.** Covers latency.md
-      section 5. Cascade declares `jig:tailFrames` and reports it in `ready`;
-      the reference host extends the render past the last input event by the
-      greatest tail in the graph. Test renders a note through Cascade and checks
-      the tail is not cut. An unbounded tail (a freeze, which must declare
-      nothing) is a second plugin, not this item.
+- [ ] **Tails on Pulse, and tail-aware offline renders.** **Done 2026-09-26.** Covers
+      latency.md section 5. Implemented on Pulse rather than the Cascade first proposed:
+      Cascade's freeze can ring for ever, and a plugin whose tail is unbounded must
+      declare none, while Pulse's release is finite. The profile declares the worst case
+      (192000 frames: the 4000 ms release maximum at 48 kHz, bound to the release port in
+      `tests/host/pulse.test.js`), the processor reports the worst case for the actual
+      rate in `ready`, and the reference host renders past the last input by the greatest
+      tail in the chain. `tests/host/ReferenceHost.test.js` renders a note ending near
+      the duration end and checks the decay is present past it and silent by the close;
+      Cascade is the negative control (no tail declared, length unchanged). Two real
+      catches on the way, both in MISTAKES.md pattern: the processor first read the bare
+      `sampleRate` global, which is undefined outside a real worklet and produced a NaN
+      tail that JSON printed as null and poisoned the frame count to zero (fixed to the
+      init message's rate), and the edited processor tripped the integrity check until
+      the profile was regenerated. testbed.md updated.
 
 - [ ] **A plugin that prefers shared memory, and an isolated host mode to run
       it in.** Covers contract section 2.3. Smallest plugin: declares
@@ -312,12 +343,17 @@ Build items, not builds: none is started.
       `plugin` messages in both directions, exercising the host relay including
       its rate limiting.
 
-- [ ] **One a-rate parameter, audio-modulated.** Covers contract section 5.2.
-      Smallest: a single `jig:ARate` port on a plain-JavaScript plugin
-      (Tremolo's rate or Squelch's cutoff), driven by an audio-to-parameter
-      connection over the path phase 9 repaired, with the processor handling
-      length-1 and length-128 arrays as the contract requires. Test asserts
-      per-sample modulation lands.
+- [ ] **One a-rate parameter, audio-modulated.** **Done 2026-09-27.** Covers contract
+      section 5.2. Tremolo's rate is declared `jig:ARate` (emitted by
+      `bin/write-profile.js` from an `automationRate` field, read by the profile reader
+      that already knew the term) and registered a-rate in its own descriptors, with the
+      profile, the host derivation (`src/host/Parameters.js`) and the registration bound
+      in one test per contract 5.1. The processor already read per-sample arrays; a new
+      test drives `process()` directly with steady, constant-128 and ramped rate arrays
+      and is mutation tested against a read-first-element-only variant (difference
+      exactly 0 there). Depth stays k-rate. Per-sample signal flow itself is Web Audio's
+      work in a real host; offline fakes hold scalars only, which is stated, not worked
+      around. testbed.md updated.
 
 - [ ] **A second plugin answering state requests.** Covers contract section 8.
       Ferrite is the only one, so token correlation and ordering with two

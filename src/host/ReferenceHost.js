@@ -64,7 +64,9 @@ function fileProcessorUrl (dir, index) {
  * the second's input, and so on. `notes`, MIDI events for the first plugin,
  * are posted to its port at the exact frame they are due, contract section
  * 6's stream-position rule rather than a block index, so a note due mid
- * quantum still lands in the quantum that contains it.
+ * quantum still lands in the quantum that contains it. The render continues
+ * past the requested duration by the greatest tailFrames in the chain
+ * (latency.md section 5), so a release or a reverb tail is rendered, not cut.
  *
  * Returns `{ channels: [Float32Array, Float32Array], loaded }`, stereo,
  * `loaded` naming what was actually instantiated in case a caller wants to
@@ -98,19 +100,27 @@ export async function renderChain ({
         processorUrl: fileProcessorUrl(tmp, index)
       })
       const { profile, granted } = await loader.loadProfile(iri)
-      const { node } = await loader.instantiate(profile, granted, context, {
+      const { node, ready } = await loader.instantiate(profile, granted, context, {
         AudioWorkletNode: OfflineWorkletNode
       })
       nodes.push(node)
-      loaded.push({ iri, label: profile.label, audioInputs: profile.audioInputs })
+      // The actual tail for this rate where the processor reports one, else
+      // the declared figure, else none. latency.md section 5: an offline
+      // render continues past the last input by the greatest tail, or every
+      // reverb is cut off at the end of the bounce.
+      const tailFrames = ready.tailFrames ?? profile.tailFrames ?? 0
+      loaded.push({ iri, label: profile.label, audioInputs: profile.audioInputs, tailFrames })
     }
 
     const sortedNotes = [...notes].sort((a, b) => a.frame - b.frame)
     let nextNote = 0
 
     const frames = Math.ceil(seconds * sampleRate)
-    const outLeft = new Float32Array(frames)
-    const outRight = new Float32Array(frames)
+    const lastInput = sortedNotes.length > 0 ? Math.max(frames, sortedNotes[sortedNotes.length - 1].frame) : frames
+    const tail = Math.max(0, ...loaded.map(l => l.tailFrames))
+    const total = lastInput + tail
+    const outLeft = new Float32Array(total)
+    const outRight = new Float32Array(total)
 
     // A chain starting with an audio effect rather than an instrument has
     // nothing feeding it on its own, the same reason web/app.js's own
@@ -121,7 +131,7 @@ export async function renderChain ({
     const startsWithEffect = (loaded[0]?.audioInputs ?? 0) > 0 && notes.length === 0
     let impulsePending = startsWithEffect
 
-    for (let start = 0; start < frames; start += QUANTUM) {
+    for (let start = 0; start < total; start += QUANTUM) {
       const blockEnd = start + QUANTUM
       // Deliver every note due in this quantum before it runs, located by
       // its own absolute frame, not by which iteration this is: a note due
@@ -163,7 +173,7 @@ export async function renderChain ({
         signal = output
       }
 
-      const used = Math.min(QUANTUM, frames - start)
+      const used = Math.min(QUANTUM, total - start)
       for (let i = 0; i < used; i++) {
         outLeft[start + i] = signal?.[0]?.[i] ?? 0
         outRight[start + i] = signal?.[1]?.[i] ?? signal?.[0]?.[i] ?? 0
