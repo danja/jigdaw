@@ -147,7 +147,7 @@ export class Engine {
    *
    * A parameter takes no input index, so toInput is not consulted for one.
    */
-  link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
+  link (fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null, connection = null } = {}) {
     const source = this.get(fromId).node
     let destination
     if (toParameter !== null) {
@@ -172,13 +172,61 @@ export class Engine {
       source.connect(delay, fromOutput, 0)
       if (toParameter !== null) delay.connect(destination)
       else delay.connect(destination, 0, targetInput)
-      this.#links.push({ fromId, toId, delay })
+      this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay })
       return
     }
 
     if (toParameter !== null) source.connect(destination, fromOutput)
     else source.connect(destination, fromOutput, targetInput)
-    this.#links.push({ fromId, toId, delay: null })
+    this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay: null })
+  }
+
+  /**
+   * The audio time for an absolute stream position, never in the past.
+   *
+   * A latency message names the frame its figure applies from
+   * (docs/latency.md section 2), and a frame already past means already in
+   * effect: scheduling it then is immediate rather than an error.
+   */
+  frameTime (frame) {
+    return Math.max(frame / this.#context.sampleRate, this.#context.currentTime)
+  }
+
+  /**
+   * Change one compensated link's delay, scheduled at an audio time.
+   *
+   * Compensation is re-applied without rebuilding the graph: tearing every
+   * link down and remaking it would itself be audible, which is what
+   * scheduling against fromFrame exists to avoid. An existing delay node is
+   * driven with setValueAtTime; a newly needed one is inserted passing
+   * through and switched at the same time. A delay that falls to zero stays
+   * in the graph as a passthrough until the next full rebuild: removing a
+   * node cannot be scheduled, and a zero delay node changes nothing audible.
+   */
+  retime (connection, delayFrames, { atTime } = {}) {
+    const link = this.#links.find(l => l.connection === connection && l.toId !== undefined)
+    if (!link) throw new Error(`no compensated link for connection "${connection}"`)
+    const when = Math.max(atTime ?? this.#context.currentTime, this.#context.currentTime)
+    const seconds = delayFrames / this.#context.sampleRate
+    if (link.delay) {
+      link.delay.delayTime.setValueAtTime(seconds, when)
+      return
+    }
+    if (seconds <= 0) return
+    if (typeof this.#context.createDelay !== 'function') {
+      throw new Error('this context cannot create a delay, so latency cannot be compensated')
+    }
+    const delay = this.#context.createDelay(Math.max(seconds * 2, 1))
+    const source = this.get(link.fromId).node
+    const destination = link.toParameter != null
+      ? this.get(link.toId).node.parameters.get(link.toParameter)
+      : (link.toId === 'output' ? this.master : this.get(link.toId).node)
+    const targetInput = link.toId === 'output' ? 0 : link.toInput
+    source.connect(delay, link.fromOutput, 0)
+    if (link.toParameter != null) delay.connect(destination)
+    else delay.connect(destination, 0, targetInput)
+    delay.delayTime.setValueAtTime(seconds, when)
+    link.delay = delay
   }
 
   /** Tear down every link, including the delay nodes this engine created. */

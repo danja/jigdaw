@@ -37,6 +37,7 @@
         <../plugins/jsfx-gain-trim/> ,
         <../plugins/jsfx-one-pole-filter/> ,
         <../plugins/jsfx-soft-clipper/> ,
+        <../plugins/lookahead/> ,
         <../plugins/melgen/> ,
         <../plugins/mop/> ,
         <../plugins/pulse/> ,
@@ -57,6 +58,7 @@
 <../plugins/jsfx-gain-trim/> rdfs:label "JigDAW Gain Trim" .
 <../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
+<../plugins/lookahead/> rdfs:label "Lookahead" .
 <../plugins/melgen/> rdfs:label "MelGen" .
 <../plugins/mop/> rdfs:label "Mop" .
 <../plugins/pulse/> rdfs:label "Pulse" .

@@ -319,15 +319,17 @@ Build items, not builds: none is started.
       presets address the inside, and whether a nested graph can itself nest.
       Not started.
 
-- [ ] **A plugin that changes its latency, and a host that acts on it.** Covers
-      latency.md section 2. Smallest plugin: a two-position latency, such as a
-      switchable FFT size or lookahead amount, reporting the actual figure in
-      `ready` and sending `latency` with `fromFrame` on change, with the worst
-      case in the profile as module-abi.md requires. The host half is the larger
-      one: Jiggy must observe the message, update the node, and recompile
-      compensation scheduled against `fromFrame`, not against message arrival
-      (only `src/wam/WamModule.js` reads the message today). Test: a parallel
-      path re-aligned after the change takes effect.
+- [ ] **A plugin that changes its latency, and a host that acts on it.** **Done
+      2026-09-29.** Covers latency.md section 2 ([design](docs/plugins/lookahead-design.md)).
+      Plugin: Lookahead (`plugins/lookahead/`), a two-position lookahead delay in plain
+      JavaScript, direct or held back by 512 frames. Worst case in the profile, actual
+      figure in `ready`, `latency` with `fromFrame` on change
+      (`tests/host/lookahead.test.js`). Host: `OpDispatcher` observes each natively
+      loaded node's messages (foreign excluded: a WAM speaks its own latency protocol,
+      already consumed by `WamModule`), updates the entry, recompiles the unchanged
+      project, and retimes moved compensation delays via `Engine.retime` scheduled
+      against `fromFrame`, never arrival. Not an edit: no revision, no history
+      (`tests/ops/latency.test.js`, `tests/engine/Engine.test.js`). testbed.md updated.
 
 - [ ] **Tails on Pulse, and tail-aware offline renders.** **Done 2026-09-26.** Covers
       latency.md section 5. Implemented on Pulse rather than the Cascade first proposed:

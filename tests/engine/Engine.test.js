@@ -59,7 +59,7 @@ function fakeContext () {
     },
     createDelay (maxSeconds) {
       const delay = fakeNode()
-      delay.delayTime = { value: 0 }
+      delay.delayTime = { ...fakeParam(), value: 0 }
       delay.maxDelayTime = maxSeconds
       return delay
     }
@@ -280,5 +280,86 @@ describe('track strips', () => {
     expect(() => engine.removeTrack('t2')).toThrow(/no such track strip/)
     engine.removeTrack('t1')
     expect(engine.trackIds()).toEqual([])
+  })
+})
+
+describe('Engine.retime', () => {
+  // A latency message names the frame its figure applies from
+  // (docs/latency.md section 2), and the compensation moves there rather
+  // than at the message's arrival. These drive retime through the same seam
+  // as the link tests above: stubbed entries, fake nodes recording.
+  function compensated () {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    const source = fakeNode()
+    const target = fakeNode()
+    const entries = new Map([
+      ['a', { id: 'a', node: source, profile: { label: 'A', ports: [] } }],
+      ['b', { id: 'b', node: target, profile: { label: 'B', ports: [] } }]
+    ])
+    engine.get = id => {
+      const entry = entries.get(id)
+      if (!entry) throw new Error(`no such node: ${id}`)
+      return entry
+    }
+    engine.link('a', 'b', { connection: 'e1', delayFrames: 480 })
+    const delay = source.outgoing[0].destination
+    return { engine, context, source, target, delay }
+  }
+
+  it('moves an existing delay to the scheduled time, not to now', () => {
+    const { engine, delay, context } = compensated()
+    context.currentTime = 5
+    engine.retime('e1', 960, { atTime: 7 })
+    expect(delay.delayTime.scheduled).toEqual([{ value: 960 / context.sampleRate, at: 7 }])
+  })
+
+  it('inserts a newly needed delay as a passthrough and switches it at the time', () => {
+    const { engine, source, target, context } = compensated()
+    engine.link('a', 'b', { connection: 'e2' })
+    const direct = source.outgoing.find(o => o.destination === target)
+    expect(direct).toBeDefined()
+    const before = source.outgoing.length
+    engine.retime('e2', 480, { atTime: 3 })
+    const delay = source.outgoing[before].destination
+    expect(delay.delayTime.scheduled).toEqual([{ value: 480 / context.sampleRate, at: 3 }])
+    expect(delay.outgoing).toEqual([{ destination: target, output: 0, input: 0 }])
+  })
+
+  it('leaves a delay that falls to zero in place, as a passthrough', () => {
+    // Removing a node cannot be scheduled, and a zero delay node changes
+    // nothing audible. The next full rebuild clears it.
+    const { engine, delay } = compensated()
+    engine.retime('e1', 0, { atTime: 9 })
+    expect(delay.delayTime.scheduled).toEqual([{ value: 0, at: 9 }])
+    expect(engine.links.find(l => l.connection === 'e1').delay).toBe(delay)
+  })
+
+  it('does nothing where no delay is needed and none exists', () => {
+    const { engine, source, target } = compensated()
+    engine.link('a', 'b', { connection: 'e2' })
+    engine.retime('e2', 0, { atTime: 1 })
+    expect(source.outgoing.filter(o => o.destination === target)).toHaveLength(1)
+  })
+
+  it('refuses a connection with no link in the running graph', () => {
+    const { engine } = compensated()
+    expect(() => engine.retime('nope', 480, { atTime: 1 })).toThrow(/no compensated link/)
+  })
+})
+
+describe('Engine.frameTime', () => {
+  const engineAt = now => {
+    const context = fakeContext()
+    context.currentTime = now
+    return new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+  }
+
+  it('reads an absolute stream position as an audio time', () => {
+    expect(engineAt(0).frameTime(96000)).toBe(2)
+  })
+
+  it('never schedules in the past: a passed frame means already in effect', () => {
+    expect(engineAt(5).frameTime(48000)).toBe(5)
   })
 })

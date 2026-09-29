@@ -1,0 +1,57 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/lookahead/",
+  "label": "Lookahead",
+  "comment": "A switchable lookahead delay for time-aligning parallel paths: direct, or held back by 512 frames. Changing position changes the plugin's latency, which the host compensates.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "lookahead",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+    "Changing position changes latency while audio flows. The host recompensates from the reported frame, and the switch itself is audible as a jump: latency.md says a plugin that can pad to its worst case should, and this one exists to exercise the other path."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 512
+  },
+  "resources": {
+    "processor": "lookahead-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "position",
+      "name": "Position",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 512,
+      "paramIndex": 0,
+      "scalePoints": [
+        {
+          "label": "Direct",
+          "value": 0
+        },
+        {
+          "label": "512 frames",
+          "value": 512
+        }
+      ]
+    }
+  ]
+}

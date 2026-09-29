@@ -21,7 +21,9 @@ names only, and AGENTS.md requires `documentElement.scrollWidth` compared agains
 `innerWidth` in a narrow iframe in a real browser before the layout half is claimed
 (TODO.md, sidebar arrow item). While there, press Rec with the window in front,
 play, Stop, remove every plugin, and play the takes: the automated check proves takes
-are kept and placed, but no headless check has heard one. Note what is wrong in INBOX.md.
+are kept and placed, but no headless check has heard one. Move Lookahead's Position
+while a parallel dry path plays beside it: the automated check proves the dry path is
+delayed from the reported frame, but no headless check has heard the realignment. Note what is wrong in INBOX.md.
 
 ## 2. Tools that would help
 

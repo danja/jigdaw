@@ -29,6 +29,11 @@ export class OpDispatcher {
   #router = null
   #inspections
 
+  // The compensation delays the running graph holds, by project connection
+  // id. Rebuilt with the links, and moved by a latency message without
+  // rebuilding them (docs/latency.md section 2).
+  #compensation = new Map()
+
   #foreign
 
   // The stacks and the snapshot-to-snapshot reconciliation live in
@@ -394,6 +399,14 @@ export class OpDispatcher {
     this.#rebuildLinks(this.compile())
     // Listen from the moment it is loaded, not from the moment it is wired.
     this.#router?.observe(entry.id)
+    // Hear latency changes the same way. Foreign nodes are excluded: a WAM
+    // speaks its own latency protocol over the same port (no fromFrame), and
+    // WamModule already consumes it.
+    if (!foreign) {
+      this.#engine.onMessage(entry.id, message => {
+        if (message?.type === 'latency') this.#onLatency(nodeId, entry.id, message)
+      })
+    }
     if (position) this.#project.moveNode(nodeId, position.x, position.y)
 
     this.#emit({ type: 'plugin-added', nodeId, trackId: node.track ?? newTrack, entry })
@@ -419,6 +432,66 @@ export class OpDispatcher {
       node: loaded.node,
       ready: loaded.ready
     })
+  }
+
+  /**
+   * A processor reporting a new latency (docs/latency.md section 2).
+   *
+   * Not an operation: nothing the project records changed, so there is no
+   * revision, no history entry, and nothing to undo. The node's figure is
+   * updated, the unchanged project is recompiled, and each compensation delay
+   * that moved is retimed against the message's fromFrame rather than against
+   * this arrival. A handler that throws must not take down the fan-out, so a
+   * connection that is not in the running graph yet (one end still loading)
+   * is reported and skipped: the next full rebuild wires it with the current
+   * figures.
+   */
+  #onLatency (nodeId, engineId, message) {
+    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return
+    let entry
+    try {
+      entry = this.#engine.get(engineId)
+    } catch {
+      return
+    }
+    const label = entry?.profile?.label ?? nodeId
+    const { latencyFrames, fromFrame } = message ?? {}
+    if (!Number.isFinite(latencyFrames) || latencyFrames < 0) {
+      console.error(`${label} reported an unusable latency: ${JSON.stringify(latencyFrames)}. A latency message carries a non-negative latencyFrames in frames.`)
+      return
+    }
+    if (!Number.isFinite(fromFrame) || fromFrame < 0) {
+      console.error(`${label} reported an unusable fromFrame: ${JSON.stringify(fromFrame)}. A latency message carries the absolute stream position its figure applies from.`)
+      return
+    }
+
+    entry.ready = { ...(entry.ready ?? {}), latencyFrames }
+    const compiled = this.compile()
+    if (!compiled.ok) {
+      console.error(`${label} changed its latency to ${latencyFrames} frames and the graph no longer compiles: ${compiled.errors[0].message}. Keeping the previous compensation.`)
+      return
+    }
+
+    const atTime = this.#engine.frameTime(fromFrame)
+    const after = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
+    for (const [connection, delayFrames] of after) {
+      if (this.#compensation.get(connection) === delayFrames) continue
+      try {
+        this.#engine.retime(connection, delayFrames, { atTime })
+      } catch (error) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error.message}`)
+      }
+    }
+    for (const connection of this.#compensation.keys()) {
+      if (after.has(connection)) continue
+      try {
+        this.#engine.retime(connection, 0, { atTime })
+      } catch (error) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error.message}`)
+      }
+    }
+    this.#compensation = after
+    this.#emit({ type: 'latency', nodeId, latencyFrames, fromFrame, compiled })
   }
 
   /**
@@ -625,6 +698,7 @@ export class OpDispatcher {
     if (!this.#engine) return
 
     const delayFor = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
+    this.#compensation = delayFor
     this.#engine.clearLinks()
     this.#syncTracks()
 
@@ -652,7 +726,8 @@ export class OpDispatcher {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
         toParameter: connection.to.portSymbol ?? null,
-        delayFrames: delayFor.get(connection.id) ?? 0
+        delayFrames: delayFor.get(connection.id) ?? 0,
+        connection: connection.id
       })
     }
 

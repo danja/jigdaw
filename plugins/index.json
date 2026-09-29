@@ -663,6 +663,36 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/lookahead/",
+      "label": "Lookahead",
+      "comment": "A switchable lookahead delay for time-aligning parallel paths: direct, or held back by 512 frames. Changing position changes the plugin's latency, which the host compensates.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/lookahead/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+        "Changing position changes latency while audio flows. The host recompensates from the reported frame, and the switch itself is audible as a jump: latency.md says a plugin that can pad to its worst case should, and this one exists to exercise the other path."
+      ],
+      "parameters": [
+        "position"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/melgen/",
       "label": "MelGen",
       "comment": "Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.",

@@ -2,6 +2,23 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-29 The retime path knew the connection and the rebuild did not pass it
+
+**What happened.** `Engine.link` grew a `connection` option so `retime` could find
+the link a latency message moved, and the first end-to-end run failed with "no
+compensated link": `#rebuildLinks` never passed `connection.id` through, so every
+link in the running graph carried `connection: null`. The unit tests passed
+throughout, because they hand the id to `link` directly; only the dispatcher
+path was untested at that point.
+
+**Root cause.** A change in one file needing a second file to change with it,
+with nothing connecting them: the option and its only production caller.
+
+**Prevention.** The e2e test that failed here
+(`tests/ops/latency.test.js`, "through the real graph") now binds them: a
+`connection` that `link` records and `#rebuildLinks` does not pass fails there
+instead of in the browser.
+
 ## 2026-09-29 Gallery cards linked above the application, not beside it
 
 **What happened.** Every Profile link in `web/gallery.html` pointed at

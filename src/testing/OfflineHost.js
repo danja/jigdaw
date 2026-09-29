@@ -196,7 +196,11 @@ export class OfflineContext {
     this.createDelay = max => {
       const delay = {
         maxDelayTime: max,
-        delayTime: { value: 0 },
+        // Scheduled changes are recorded, never applied: offline renders do
+        // not route audio through delay nodes at all (they only record
+        // connections for a test to inspect), so there is nothing to apply
+        // them to. The schedule is the assertion.
+        delayTime: { value: 0, scheduled: [], setValueAtTime (value, time) { this.scheduled.push({ value, time }) } },
         connections: [],
         connect (destination, output = 0, input = 0) { this.connections.push({ destination, output, input }); return destination },
         disconnect () { this.connections = []; return this }

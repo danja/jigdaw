@@ -21735,7 +21735,7 @@ var Engine = class {
    *
    * A parameter takes no input index, so toInput is not consulted for one.
    */
-  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null } = {}) {
+  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null, connection = null } = {}) {
     const source = this.get(fromId).node;
     let destination;
     if (toParameter !== null) {
@@ -21758,12 +21758,56 @@ var Engine = class {
       source.connect(delay, fromOutput, 0);
       if (toParameter !== null) delay.connect(destination);
       else delay.connect(destination, 0, targetInput);
-      this.#links.push({ fromId, toId, delay });
+      this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay });
       return;
     }
     if (toParameter !== null) source.connect(destination, fromOutput);
     else source.connect(destination, fromOutput, targetInput);
-    this.#links.push({ fromId, toId, delay: null });
+    this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay: null });
+  }
+  /**
+   * The audio time for an absolute stream position, never in the past.
+   *
+   * A latency message names the frame its figure applies from
+   * (docs/latency.md section 2), and a frame already past means already in
+   * effect: scheduling it then is immediate rather than an error.
+   */
+  frameTime(frame) {
+    return Math.max(frame / this.#context.sampleRate, this.#context.currentTime);
+  }
+  /**
+   * Change one compensated link's delay, scheduled at an audio time.
+   *
+   * Compensation is re-applied without rebuilding the graph: tearing every
+   * link down and remaking it would itself be audible, which is what
+   * scheduling against fromFrame exists to avoid. An existing delay node is
+   * driven with setValueAtTime; a newly needed one is inserted passing
+   * through and switched at the same time. A delay that falls to zero stays
+   * in the graph as a passthrough until the next full rebuild: removing a
+   * node cannot be scheduled, and a zero delay node changes nothing audible.
+   */
+  retime(connection, delayFrames, { atTime } = {}) {
+    const link = this.#links.find((l) => l.connection === connection && l.toId !== void 0);
+    if (!link) throw new Error(`no compensated link for connection "${connection}"`);
+    const when = Math.max(atTime ?? this.#context.currentTime, this.#context.currentTime);
+    const seconds = delayFrames / this.#context.sampleRate;
+    if (link.delay) {
+      link.delay.delayTime.setValueAtTime(seconds, when);
+      return;
+    }
+    if (seconds <= 0) return;
+    if (typeof this.#context.createDelay !== "function") {
+      throw new Error("this context cannot create a delay, so latency cannot be compensated");
+    }
+    const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
+    const source = this.get(link.fromId).node;
+    const destination = link.toParameter != null ? this.get(link.toId).node.parameters.get(link.toParameter) : link.toId === "output" ? this.master : this.get(link.toId).node;
+    const targetInput = link.toId === "output" ? 0 : link.toInput;
+    source.connect(delay, link.fromOutput, 0);
+    if (link.toParameter != null) delay.connect(destination);
+    else delay.connect(destination, 0, targetInput);
+    delay.delayTime.setValueAtTime(seconds, when);
+    link.delay = delay;
   }
   /** Tear down every link, including the delay nodes this engine created. */
   clearLinks() {
@@ -23290,6 +23334,10 @@ var OpDispatcher = class {
   #nodeIds = /* @__PURE__ */ new Map();
   #router = null;
   #inspections;
+  // The compensation delays the running graph holds, by project connection
+  // id. Rebuilt with the links, and moved by a latency message without
+  // rebuilding them (docs/latency.md section 2).
+  #compensation = /* @__PURE__ */ new Map();
   #foreign;
   // The stacks and the snapshot-to-snapshot reconciliation live in
   // UndoHistory. Nothing is recorded while #recording is false, which is how
@@ -23594,6 +23642,11 @@ var OpDispatcher = class {
     this.#nodeIds.set(nodeId, entry.id);
     this.#rebuildLinks(this.compile());
     this.#router?.observe(entry.id);
+    if (!foreign) {
+      this.#engine.onMessage(entry.id, (message) => {
+        if (message?.type === "latency") this.#onLatency(nodeId, entry.id, message);
+      });
+    }
     if (position) this.#project.moveNode(nodeId, position.x, position.y);
     this.#emit({ type: "plugin-added", nodeId, trackId: node.track ?? newTrack, entry });
     return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
@@ -23617,6 +23670,63 @@ var OpDispatcher = class {
       node: loaded.node,
       ready: loaded.ready
     });
+  }
+  /**
+   * A processor reporting a new latency (docs/latency.md section 2).
+   *
+   * Not an operation: nothing the project records changed, so there is no
+   * revision, no history entry, and nothing to undo. The node's figure is
+   * updated, the unchanged project is recompiled, and each compensation delay
+   * that moved is retimed against the message's fromFrame rather than against
+   * this arrival. A handler that throws must not take down the fan-out, so a
+   * connection that is not in the running graph yet (one end still loading)
+   * is reported and skipped: the next full rebuild wires it with the current
+   * figures.
+   */
+  #onLatency(nodeId, engineId, message) {
+    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return;
+    let entry;
+    try {
+      entry = this.#engine.get(engineId);
+    } catch {
+      return;
+    }
+    const label = entry?.profile?.label ?? nodeId;
+    const { latencyFrames, fromFrame } = message ?? {};
+    if (!Number.isFinite(latencyFrames) || latencyFrames < 0) {
+      console.error(`${label} reported an unusable latency: ${JSON.stringify(latencyFrames)}. A latency message carries a non-negative latencyFrames in frames.`);
+      return;
+    }
+    if (!Number.isFinite(fromFrame) || fromFrame < 0) {
+      console.error(`${label} reported an unusable fromFrame: ${JSON.stringify(fromFrame)}. A latency message carries the absolute stream position its figure applies from.`);
+      return;
+    }
+    entry.ready = { ...entry.ready ?? {}, latencyFrames };
+    const compiled = this.compile();
+    if (!compiled.ok) {
+      console.error(`${label} changed its latency to ${latencyFrames} frames and the graph no longer compiles: ${compiled.errors[0].message}. Keeping the previous compensation.`);
+      return;
+    }
+    const atTime = this.#engine.frameTime(fromFrame);
+    const after = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
+    for (const [connection, delayFrames] of after) {
+      if (this.#compensation.get(connection) === delayFrames) continue;
+      try {
+        this.#engine.retime(connection, delayFrames, { atTime });
+      } catch (error2) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
+      }
+    }
+    for (const connection of this.#compensation.keys()) {
+      if (after.has(connection)) continue;
+      try {
+        this.#engine.retime(connection, 0, { atTime });
+      } catch (error2) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
+      }
+    }
+    this.#compensation = after;
+    this.#emit({ type: "latency", nodeId, latencyFrames, fromFrame, compiled });
   }
   /**
    * Set a parameter. Goes to the model and the AudioParam, never a message.
@@ -23810,6 +23920,7 @@ var OpDispatcher = class {
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
+    this.#compensation = delayFor;
     this.#engine.clearLinks();
     this.#syncTracks();
     const midiRoutes = [];
@@ -23825,7 +23936,8 @@ var OpDispatcher = class {
         fromOutput: connection.from.portIndex ?? 0,
         toInput: connection.to.portIndex ?? 0,
         toParameter: connection.to.portSymbol ?? null,
-        delayFrames: delayFor.get(connection.id) ?? 0
+        delayFrames: delayFor.get(connection.id) ?? 0,
+        connection: connection.id
       });
     }
     this.#linkSinksToTracks();
