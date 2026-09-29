@@ -1,6 +1,6 @@
 # JigDAW
 
-JigDAW is a web-native plugin format. Everything runs in the browser, everything is
+JigDAW is a web-native plugin format. A Jig is a plugin conforming to it. Everything runs in the browser, everything is
 identified by a dereferenceable IRI, and the signal processing is usually WebAssembly:
 `jig:module` is optional, for a plugin simple enough that its AudioWorklet processor is
 plain JavaScript.
@@ -291,7 +291,7 @@ Prior art and seed data, described in [docs/local-references.md](docs/local-refe
 JigDAW depends on none of them.
 
 - `~/github/transmission` gives the `trn:` vocabulary and the discovered/curated split, and
-  now hosts JigDAW plugins itself by linking `jigdaw_core`, which makes it the one place a
+  now hosts Jigs itself by linking `jigdaw_core`, which makes it the one place a
   change to that library is felt outside this repository
 - `~/github/downspout` gives 52 hand-written profiles, the format in real use
 - `~/github/valis` gives instruments as RDF, and the ontology to registry symmetry test

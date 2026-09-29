@@ -175,7 +175,7 @@ jig:userReplaceable a owl:DatatypeProperty ;
 ## contract deliberately leaves what the processor and the module say to each
 ## other as the plugin author's business.
 ##
-## That makes a JigDAW plugin browser-only, which was not the intention. A
+## That makes a Jig browser-only, which was not the intention. A
 ## module MAY therefore declare that it implements a published ABI, and a host
 ## with a WebAssembly runtime can then load it directly and skip the processor
 ## entirely. The processor remains what a browser uses, so declaring an ABI

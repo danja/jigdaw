@@ -1,7 +1,7 @@
 # Web Audio Modules
 
 **Status:** describes `bin/wam.js` and `src/wam/WamModule.js`. Not normative: the normative
-document for a JigDAW plugin is [host-plugin-contract.md](host-plugin-contract.md), and
+document for a Jig is [host-plugin-contract.md](host-plugin-contract.md), and
 nothing here changes it.
 
 [Web Audio Modules](https://www.webaudiomodules.com/) is the existing standard for web-native
@@ -174,7 +174,7 @@ originally said a host MUST refuse any request resolving outside the container, 
 can do; it now says what is actually enforceable and states the limit.
 
 **The adapter is written.** `src/wam/WamAdapter.js` is the exact mirror of
-`src/wam/WamModule.js`: that one puts a WAM face on a JigDAW plugin, this one puts a JigDAW
+`src/wam/WamModule.js`: that one puts a WAM face on a Jig, this one puts a JigDAW
 face on a WAM, so everything above the engine works on one shape.
 
 The engine asks a node for four things and a `WamNode` answers none of them the same way.

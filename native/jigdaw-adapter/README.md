@@ -1,6 +1,6 @@
 # JigDAW Adapter
 
-A VST3, CLAP and LV2 plugin that loads JigDAW plugins by their IRI and runs them in a chain.
+A VST3, CLAP and LV2 plugin that loads Jigs by their IRI and runs them in a chain.
 Two channels of audio in and out, MIDI in and out.
 
 Built with [DPF](https://github.com/DISTRHO/DPF), in the shape
@@ -14,7 +14,7 @@ which is its license.
 It was written as a sanity check on the JigDAW specification, and it earned its keep before
 it played a note.
 
-**A native host could not load a JigDAW plugin at all.** The only thing
+**A native host could not load a Jig at all.** The only thing
 [the contract](../../docs/host-plugin-contract.md) guarantees is a JavaScript
 `AudioWorkletProcessor`, and the WebAssembly ABI is explicitly private to the plugin. The
 specification had made itself browser-only without anyone noticing, because everything that
@@ -183,7 +183,7 @@ No plugin user interfaces: a native host has no way to show a sandboxed web fram
 generated panel belongs to the browser host. No transport, no outgoing MIDI from a plugin, no
 state saving inside a loaded plugin, and no latency reporting. Those are either profile
 statements or processor messages, and `jig:Abi1` version 1 deliberately carries none of them.
-A JigDAW plugin needing them is a plugin for a browser.
+A Jig needing them is a plugin for a browser.
 
 ## Why WAMR rather than wasm3
 

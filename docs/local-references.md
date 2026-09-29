@@ -6,7 +6,7 @@ dependency.
 ## `~/github/transmission`
 
 A VST3 host with an RDF plugin catalogue and an MCP face. The direct ancestor, and now also a
-downstream consumer: it hosts JigDAW plugins alongside VST3 ones, documented at
+downstream consumer: it hosts Jigs alongside VST3 ones, documented at
 [danja.github.io/transmission/jigdaw.html](https://danja.github.io/transmission/jigdaw.html).
 
 Its `native/CMakeLists.txt` adds `native/jigdaw-adapter` from a JigDAW checkout and links

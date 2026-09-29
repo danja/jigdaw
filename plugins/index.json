@@ -128,7 +128,7 @@
     {
       "iri": "https://strandz.it/jigdaw/plugins/boost/",
       "label": "Boost",
-      "comment": "A gain stage in C++, the minimal starting point for a WebAssembly JigDAW plugin: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.",
+      "comment": "A gain stage in C++, the minimal starting point for a WebAssembly Jig: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.",
       "vendor": "danja",
       "homepage": "https://strandz.it/jigdaw/plugins/boost/",
       "web": true,

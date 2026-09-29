@@ -2,6 +2,8 @@
 
 **A plugin format native to the web.**
 
+A Jig is a plugin conforming to this specification.
+
 A plugin is a dereferenceable IRI. Fetching it is installing it. What comes back says what the
 plugin is, what signals it accepts and produces, what it needs from a host, and where its
 WebAssembly module, its AudioWorklet processor and its user interface are, each with an
@@ -156,7 +158,7 @@ and real-time processing never see each other's problems.
 ## Other hosts
 
 A format with one host is a format with an implementation, not a specification. There are
-three that run JigDAW plugins, and a fourth that can be packaged for.
+three that run Jigs, and a fourth that can be packaged for.
 
 ### The native adapter
 
@@ -164,9 +166,9 @@ three that run JigDAW plugins, and a fourth that can be packaged for.
 ./install.sh          # VST3 into ~/.vst3; --all for the CLAP and LV2 too
 ```
 
-In this repository, C++ over [DPF](https://github.com/DISTRHO/DPF), loading JigDAW plugins by
+In this repository, C++ over [DPF](https://github.com/DISTRHO/DPF), loading Jigs by
 IRI so a desktop DAW can open them. It was built as a sanity check on the specification and
-earned its keep before it made a sound: it could not load a JigDAW plugin at all, because the
+earned its keep before it made a sound: it could not load a Jig at all, because the
 only thing the contract guaranteed was a JavaScript `AudioWorklet`. The specification had
 accidentally made itself browser-only. [module-abi.md](docs/module-abi.md) is the answer, and
 every worked plugin whose module compiles per plugin now declares an ABI. The three converted
@@ -178,7 +180,7 @@ sequence has nowhere to carry the compiled script a native host would need to ru
 ### Transmission
 
 [Transmission](https://danja.github.io/transmission/), a generative audio workstation for
-Linux, hosts JigDAW plugins alongside VST3 ones:
+Linux, hosts Jigs alongside VST3 ones:
 [its JigDAW page](https://danja.github.io/transmission/jigdaw.html) is the documentation.
 Adding one to a project is a node typed `trn:JigdawPlugin` carrying a `trn:pluginIri`, and
 nothing else; both module ABIs are implemented, port counts are read from the profile rather
@@ -189,7 +191,7 @@ It is a different kind of evidence from the adapter. Rather than reimplementing 
 it links `jigdaw_core`, the portable half of the adapter above, which is the first time
 anything outside this repository has consumed it. So it does not independently confirm the
 specification, and it does show that the code written to read a profile, verify a digest and
-call a module travels, and that a JigDAW plugin runs in an application written for something
+call a module travels, and that a Jig runs in an application written for something
 else.
 
 It has already sent one defect back. `Profile.cpp` parsed numbers with `std::stof`, which

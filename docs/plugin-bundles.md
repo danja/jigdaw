@@ -3,7 +3,7 @@
 **Status:** normative for a host that opens a bundle and for a tool that makes one.
 **Extends:** [plugin-profiles.md](plugin-profiles.md), [host-plugin-contract.md](host-plugin-contract.md) section 1.
 
-A JigDAW plugin is a dereferenceable IRI, and installing it is a HTTP GET. That works for as
+A Jig is a dereferenceable IRI, and installing it is a HTTP GET. That works for as
 long as somebody is serving it, which is not the same as for ever, and not the same as right
 now on a machine with no network.
 

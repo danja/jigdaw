@@ -3,12 +3,12 @@
 **Versions:** 1 (`jig:Abi1`) and 2 (`jig:Abi2`)
 **Status:** normative for a module that declares one. Declaring one is optional.
 
-A JigDAW plugin's processor is JavaScript. A browser can therefore always run one, and
+A Jig's processor is JavaScript. A browser can therefore always run one, and
 nothing else can: a native host has no `AudioWorklet` and no JavaScript engine, and
 [host-plugin-contract.md](host-plugin-contract.md) deliberately leaves what the processor and
 the module say to each other as the plugin author's business.
 
-That made a JigDAW plugin browser-only, which was never the intention. It was found by
+That made a Jig browser-only, which was never the intention. It was found by
 writing a VST3 host and discovering there was no way in.
 
 A module MAY therefore declare that it implements a published ABI:
@@ -167,7 +167,7 @@ between records:
 | 7 | `u8` | `data2` |
 
 Events with `size` outside 1 to 3 MUST be ignored. System exclusive is not carried: it does
-not fit in three bytes and no JigDAW plugin has needed it. A later version may add it.
+not fit in three bytes and no Jig has needed it. A later version may add it.
 
 `frame` is an offset within the block being processed, and is meaningless once that block has
 passed. It is not a stream position. A host MUST NOT hand over an event whose `frame` is
@@ -288,7 +288,7 @@ is a load-time figure, so it should declare the worst case in the profile.
 
 ## An implementation
 
-`native/jigdaw-adapter` is a VST3 that loads JigDAW plugins by IRI using this ABI, and it is
+`native/jigdaw-adapter` is a VST3 that loads Jigs by IRI using this ABI, and it is
 the reason the ABI exists. Six of the worked plugins declare it (Cascade, Pulse and Dynamix
 at version 1; BassGen and the 8-Bit 8asterd, which need the transport and MIDI version 2
 adds; Quefrency at version 2 for MIDI in alone, an audio effect steered by control

@@ -1,6 +1,6 @@
 # 8-Bit 8asterd
 
-A JigDAW plugin that is the [8b8](https://github.com/danja/8bit8asterd) firmware itself,
+A Jig that is the [8b8](https://github.com/danja/8bit8asterd) firmware itself,
 compiled to WebAssembly and driving three emulated AY-3-8910 chips.
 
 The 8b8 is an Arduino Leonardo with three AY-3-8910As on it, made by The Key and Cable Company, with

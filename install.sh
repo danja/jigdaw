@@ -145,7 +145,7 @@ cat <<EOF
 
 Installed. $(du -sh "$installed" | cut -f1) at $installed
 
-To use it, add a JigDAW plugin IRI to the plugin's "iris" state, one per line:
+To use it, add a Jig IRI to the plugin's "iris" state, one per line:
 
   https://strandz.it/jigdaw/plugins/pulse/
   https://strandz.it/jigdaw/plugins/cascade/

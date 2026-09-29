@@ -97,7 +97,7 @@ async function servePluginIRI (request, response, dir) {
 <style>body{font:14px/1.6 system-ui;margin:40px auto;max-width:44rem;background:#14161a;color:#e6e6e6}
 pre{background:#0e1013;padding:16px;border-radius:6px;overflow:auto;font-size:12px}</style>
 <h1>${label}</h1>
-<p>A JigDAW plugin. This is the human-readable view; ask for <code>text/turtle</code> to get the profile.</p>
+<p>A Jig. This is the human-readable view; ask for <code>text/turtle</code> to get the profile.</p>
 <pre>${profile.replace(/[<&]/g, c => ({ '<': '&lt;', '&': '&amp;' }[c]))}</pre>`,
     { 'content-type': TYPES['.html'] })
     return true

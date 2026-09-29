@@ -1,4 +1,6 @@
-# JigDAW plugin profiles
+# Jig profiles
+
+A Jig is a plugin conforming to the JigDAW specification.
 
 A plugin profile is a machine-readable description of a plugin: what it is, what it does
 musically, and what a browser needs in order to run it.
@@ -6,7 +8,7 @@ musically, and what a browser needs in order to run it.
 JigDAW does not invent this format. It extends one that is already published and already in
 use, at [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles),
 over a catalogue of hundreds of plugins. A profile written for that catalogue stays valid here. A
-profile written for JigDAW is also a valid catalogue entry. There is one format, and JigDAW
+profile written for a Jig is also a valid catalogue entry. There is one format, and JigDAW
 adds the part about running in a browser.
 
 The vocabulary is `vocabs/jigdaw.ttl`. The rules are `vocabs/shapes.ttl`. The behaviour a
@@ -93,7 +95,7 @@ packages the plugin for a format that demands one, such as `bin/wam.js`.
 
 ## `jig:WebPlugin` is a subclass, not a replacement
 
-A JigDAW-loadable plugin declares itself both `trn:PluginProfile` and `jig:WebPlugin`.
+A Jig declares itself both `trn:PluginProfile` and `jig:WebPlugin`.
 
 The subclass matters. `vocabs/shapes.ttl` targets `jig:WebPlugin` and never
 `trn:PluginProfile`, so the profiles already published there are untouched by JigDAW's rules.

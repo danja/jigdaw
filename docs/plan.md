@@ -262,7 +262,7 @@ typo would not even have looked broken.
 
 `native/jigdaw-adapter` is a VST3, CLAP and LV2 built with DPF, in the shape downspout uses:
 a portable core with the plugin format as a thin shell over it. Two channels of audio in and
-out, MIDI in and out, and a chain of JigDAW plugins loaded by IRI.
+out, MIDI in and out, and a chain of Jigs loaded by IRI.
 
 - `src/Turtle.cpp`, the subset of Turtle a profile uses, about 300 lines and no dependency.
 - `src/Profile.cpp`, including the rebasing that keeps identity canonical while retrieval
@@ -287,7 +287,7 @@ returned.
 
 ### A third host, written elsewhere
 
-[Transmission](https://danja.github.io/transmission/jigdaw.html) now hosts JigDAW plugins
+[Transmission](https://danja.github.io/transmission/jigdaw.html) now hosts Jigs
 alongside VST3 ones. It does not reimplement the contract: its `native/CMakeLists.txt` adds
 `native/jigdaw-adapter` from a JigDAW checkout and links `jigdaw_core`, which is the first use
 of that library outside this repository and the vindication of separating it from the DPF
@@ -296,7 +296,7 @@ generated from the same `lv2:port` declarations the browser host generates one f
 `file://` plugin IRIs for development.
 
 It is weaker evidence than an independent implementation would be, and it is a different kind
-of evidence from any test here: a JigDAW plugin runs in an application written for something
+of evidence from any test here: a Jig runs in an application written for something
 else. It has already returned one defect, the locale-dependent number parsing in
 `Profile.cpp` in `MISTAKES.md`. Nothing in this repository would have found it, because no
 test here runs under a comma-decimal locale and no host here calls `setlocale`.
@@ -636,10 +636,10 @@ current honest summary, published alongside the specification.
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads
-JigDAW plugins by IRI.
+Jigs by IRI.
 
 It was proposed as a sanity check on the specification and it worked as one immediately: a
-native host could not load a JigDAW plugin at all. The only thing the contract guarantees is
+native host could not load a Jig at all. The only thing the contract guarantees is
 a JavaScript `AudioWorklet` module, and the WebAssembly ABI is explicitly private to the
 plugin. The specification had accidentally made itself browser-only.
 

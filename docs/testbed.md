@@ -12,15 +12,15 @@ the tests directory answers it.
 
 ## Hosts
 
-Four programs load JigDAW plugins, and a fifth packages them for someone else's host.
+Four programs load Jigs, and a fifth packages them for someone else's host.
 
 | Host | What it is | Exercises |
 |---|---|---|
 | **Jiggy** ([web/app/](../web/app/), [src/](../src/)) | The browser host: tracks and a mixer, a plugin rack with generated panels, an arrangement of MIDI and audio clips against a looping transport, undo and redo, sessions saved as Turtle or zip, a catalogue search, an agent surface. | Most of the contract, sections 1 to 12. [messaging.md](messaging.md) in both directions. [latency.md](latency.md) sections 1, 3 and 4. [project-format.md](project-format.md). [webmcp.md](webmcp.md). [plugin-collections.md](plugin-collections.md) section 3. [wam.md](wam.md), loading a WAM as a foreign plugin. |
 | **Reference host** ([bin/host.js](../bin/host.js), [src/host/ReferenceHost.js](../src/host/ReferenceHost.js)) | Loads a chain of plugins by IRI, or from a local directory, in Node, and renders it to a WAV file. No browser. | Contract 3.1 end to end, including integrity (3.2) and compiling inside the processor (3.3), through [src/testing/OfflineHost.js](../src/testing/OfflineHost.js), which runs the real processor code. |
-| **JigDAW Adapter** ([native/jigdaw-adapter/](../native/jigdaw-adapter/README.md)) | A VST3, CLAP and LV2 plugin, built with DPF, with a second shell in JUCE. It loads a chain of JigDAW plugins by IRI and runs their WebAssembly directly, with no JavaScript. | [module-abi.md](module-abi.md) versions 1 and 2, including splitting a block larger than `jig_max_frames` and `jig_latency_frames` reporting, checked by `latency_test.cpp` against Quefrency's 2047 frames. Contract 1.1 and 1.2 (fetch by IRI), 3.2 (integrity). It is an independent reading of the profile format, with its own Turtle parser. |
+| **JigDAW Adapter** ([native/jigdaw-adapter/](../native/jigdaw-adapter/README.md)) | A VST3, CLAP and LV2 plugin, built with DPF, with a second shell in JUCE. It loads a chain of Jigs by IRI and runs their WebAssembly directly, with no JavaScript. | [module-abi.md](module-abi.md) versions 1 and 2, including splitting a block larger than `jig_max_frames` and `jig_latency_frames` reporting, checked by `latency_test.cpp` against Quefrency's 2047 frames. Contract 1.1 and 1.2 (fetch by IRI), 3.2 (integrity). It is an independent reading of the profile format, with its own Turtle parser. |
 | **REAPER render script** ([reaper/jigdaw-render.lua](../reaper/README.md)) | A ReaScript that asks for plugin IRIs and notes, drives the reference host, and drops the rendered WAV onto a new track. Not yet run against a real REAPER. | Nothing beyond the reference host; it is a route into it. |
-| **WAM export** ([bin/wam.js](../bin/wam.js), [src/wam/WamModule.js](../src/wam/WamModule.js)) | Packages a JigDAW plugin as a Web Audio Module 2.0, so a WAM host can load it. | [wam.md](wam.md), "The other direction". Contract 3.1, 3.2 and 9.1 as a WAM host sees them. |
+| **WAM export** ([bin/wam.js](../bin/wam.js), [src/wam/WamModule.js](../src/wam/WamModule.js)) | Packages a Jig as a Web Audio Module 2.0, so a WAM host can load it. | [wam.md](wam.md), "The other direction". Contract 3.1, 3.2 and 9.1 as a WAM host sees them. |
 
 ## Plugins
 
@@ -171,7 +171,7 @@ These are the modules the hosts are built from, in the layers
 | `npm run serve` ([bin/serve.js](../bin/serve.js)) | A development server that serves what a host and a plugin origin must, including CORS. | Contract 1.3. |
 | [bin/build-vocab-site.js](../bin/build-vocab-site.js), [deploy/](../deploy/) | The vocabulary's human-readable page, and the nginx configuration that serves the namespace. | [namespace.md](namespace.md). |
 | `npm run mcp-bridge` ([bin/mcp-bridge.js](../bin/mcp-bridge.js)) | An MCP endpoint on loopback whose tools run in an open Jiggy page. | [webmcp.md](webmcp.md), "The local bridge". |
-| [bin/jsfx-import.js](../bin/jsfx-import.js) | Converts a JSFX effect into a JigDAW plugin. | Contract 3.1 for a generated processor. |
+| [bin/jsfx-import.js](../bin/jsfx-import.js) | Converts a JSFX effect into a Jig. | Contract 3.1 for a generated processor. |
 | [bin/wam-fixtures.js](../bin/wam-fixtures.js) | Builds what the foreign plugin probe page needs. | Contract 12, in a real browser. |
 | [bin/check-suites.js](../bin/check-suites.js) | Fails when a test directory is missing from the vitest include list. | A guard on the tests themselves. |
 

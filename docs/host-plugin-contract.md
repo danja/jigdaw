@@ -7,8 +7,8 @@
 Requirement keywords (MUST, MUST NOT, SHOULD, SHOULD NOT, MAY) are used in the
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) sense.
 
-This document specifies what a JigDAW host guarantees and what a JigDAW plugin must do
-in return. It is the web-native equivalent of a plugin API such as
+This document specifies what a JigDAW host guarantees and what a Jig must do
+in return. A Jig is a plugin conforming to this specification. JigDAW is the specification. It is the web-native equivalent of a plugin API such as
 [VST3](https://steinbergmedia.github.io/vst3_dev_portal/) or
 [LV2](https://lv2plug.in/), and it assumes the
 [Web Audio API](https://www.w3.org/TR/webaudio/) and

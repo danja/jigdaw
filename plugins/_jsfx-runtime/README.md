@@ -8,7 +8,7 @@ three worked examples, [examples/jsfx/](../../examples/jsfx/).
 ## What this runs
 
 REAPER JSFX effects are EEL2 script, not compiled code, so converting one means running its
-`@init`/`@slider`/`@block`/`@sample` sections inside a JigDAW plugin's real-time sandbox
+`@init`/`@slider`/`@block`/`@sample` sections inside a Jig's real-time sandbox
 rather than wrapping a binary. `src/jsfx/HeaderParser.js` reads the file's header and splits
 its sections apart; `src/jsfx/Parser.js` parses each section's EEL2 into an AST; the compiler,
 `src/jsfx/Compiler.js`, walks that AST into the bytecode `src/lib.rs`'s VM executes. The two

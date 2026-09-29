@@ -3,7 +3,7 @@ name = "ferrite"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Cabinet impulse response and neural amp model, the worked WebAssembly-with-a-real-dependency JigDAW plugin"
+description = "Cabinet impulse response and neural amp model, the worked WebAssembly-with-a-real-dependency Jig"
 
 [lib]
 crate-type = ["cdylib"]

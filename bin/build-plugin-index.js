@@ -107,7 +107,7 @@ function renderCollection (members) {
     '',
     '<>',
     '    a jig:PluginCollection ;',
-    '    rdfs:label "JigDAW plugins" ;',
+    '    rdfs:label "Jigs" ;',
     '    rdfs:comment "Every plugin in the JigDAW repository: instruments, effects and the converted JSFX." ;',
     '    dcterms:hasPart',
     '        ' + members.map(m => `<${m.relativeIri}>`).join(' ,\n        ') + ' .',

@@ -1,6 +1,6 @@
-# /new-plugin: scaffold a new JigDAW plugin
+# /new-plugin: scaffold a new Jig
 
-Creates a new JigDAW plugin end to end: profile, processor, generated `profile.ttl`, and a
+Creates a new Jig end to end: profile, processor, generated `profile.ttl`, and a
 test that loads it through the real host path. Provide a name and a role, e.g.:
 
 ```

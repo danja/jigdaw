@@ -1,5 +1,7 @@
 # JigDAW: a web-native plugin specification
 
+A Jig is a plugin conforming to this specification.
+
 JigDAW is a specification for audio plugins that run natively in a browser but which is also 
 designed to build on the substantial ecosystem of tools and code targeting native/desktop
 DAWs. 
@@ -29,7 +31,7 @@ cross-origin frame rather than the host's own document.
 
 A profile is RDF. Its musical description (role, the signals it accepts and produces) is
 written in the `trn:` vocabulary already published by the plugin-universe catalogue, so a
-JigDAW plugin is a valid entry there without translation. Its parameters are plain LV2
+Jig is a valid entry there without translation. Its parameters are plain LV2
 (`lv2:`), so an existing LV2 plugin's port descriptions carry over unchanged. Only the terms
 specific to running a plugin in a browser, `jig:`, belong to JigDAW, published at
 [http://purl.org/stuff/jigdaw/](http://purl.org/stuff/jigdaw/) and dereferenceable like
@@ -41,15 +43,15 @@ everything else here.
 - **plugin-universe / transmissions (`trn:`)**: the musical vocabulary, shared rather than
   forked. `jig:WebPlugin` is a subclass of `trn:PluginProfile`, so an existing catalogue entry
   becomes loadable by extension, not by being rewritten.
-- **Web Audio Modules**: a JigDAW plugin can be packaged as a WAM 2.0 module, and JigDAW can
+- **Web Audio Modules**: a Jig can be packaged as a WAM 2.0 module, and JigDAW can
   host a foreign WAM under stricter isolation and explicit user consent than the WAM API
   itself requires.
 - **REAPER JSFX**: an importer converts a JSFX effect's script to bytecode run by a shared
-  WebAssembly interpreter, so an existing JSFX effect becomes a JigDAW plugin without being
+  WebAssembly interpreter, so an existing JSFX effect becomes a Jig without being
   rewritten by hand.
 - **VST3 / CLAP / LV2 (native)**: an optional portable module ABI lets a plugin with no
   JavaScript engine around it be loaded directly by a native host. A reference adapter built
-  on it loads JigDAW plugins into a desktop DAW.
+  on it loads Jigs into a desktop DAW.
 
 ## For DAW developers
 
@@ -67,7 +69,7 @@ processing; [for-plugin-authors.md](for-plugin-authors.md) covers writing all th
 real-time rules a processor must follow, and generating integrity digests as part of a build
 rather than by hand. The module is optional: a plugin simple enough for plain JavaScript
 declares none. Two shortcuts exist for a plugin that already exists elsewhere: one importer
-converts a REAPER JSFX effect, another packages a JigDAW plugin for a WAM 2.0 host.
+converts a REAPER JSFX effect, another packages a Jig for a WAM 2.0 host.
 
 ## What is implemented
 

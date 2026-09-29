@@ -46,7 +46,7 @@ public:
 protected:
     const char* getLabel() const override { return "JigDAW Adapter"; }
     const char* getDescription() const override {
-        return "Loads JigDAW plugins by IRI and runs them in a chain. A JigDAW plugin is a URL: "
+        return "Loads Jigs by IRI and runs them in a chain. A Jig is a URL: "
                "the adapter fetches its profile, verifies the declared digest, and runs the "
                "WebAssembly module through the published ABI.";
     }
@@ -80,7 +80,7 @@ protected:
             state.defaultValue = "";
             state.hints = kStateIsHostWritable;
             state.description =
-                "One JigDAW plugin IRI per line, loaded in order. For example "
+                "One Jig IRI per line, loaded in order. For example "
                 "https://strandz.it/jigdaw/plugins/pulse/";
             return;
         }

@@ -1,4 +1,4 @@
-# Publishing a JUCE plugin's DSP as a JigDAW plugin
+# Publishing a JUCE plugin's DSP as a Jig
 
 For someone who already has a working JUCE plugin and wants it loadable by IRI as well,
 without starting from nothing. Read [for-plugin-authors.md](for-plugin-authors.md) first for
@@ -7,9 +7,9 @@ replacement for it.
 
 ## Two different things share the word "JUCE" here
 
-**Hosting** JigDAW plugins inside a JUCE-based application is the other direction, and a
+**Hosting** Jigs inside a JUCE-based application is the other direction, and a
 different document: [native/jigdaw-adapter/src/juce/](https://github.com/danja/jigdaw/blob/main/native/jigdaw-adapter/src/juce/README.md)
-is a JUCE `AudioProcessor` that loads JigDAW plugins by IRI and runs them, for a JUCE
+is a JUCE `AudioProcessor` that loads Jigs by IRI and runs them, for a JUCE
 developer building a DAW or a plugin host. This page is the reverse: publishing your own
 plugin's DSP so a JigDAW host can load it.
 

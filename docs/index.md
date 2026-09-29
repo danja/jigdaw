@@ -1,4 +1,6 @@
-# The JigDAW plugin system
+# The JigDAW system
+
+A Jig is a plugin conforming to the JigDAW specification.
 
 A plugin is a URL. Dereference it and it runs, in a browser, with no installation step
 distinct from having fetched it.
@@ -41,7 +43,7 @@ without any of them agreeing in advance.
 | `lv2:` | Its *parameters*: symbols, ranges, units, scale points | `lv2:minimum 0.0` |
 
 The musical half is the [transmissions vocabulary](https://plugin-universe.com/ns), shared
-with several native projects, so a JigDAW plugin is a valid entry in an existing catalogue
+with several native projects, so a Jig is a valid entry in an existing catalogue
 rather than a new kind of thing. The parameters are plain
 [LV2](https://lv2plug.in/ns/lv2core), which is why an LV2 plugin's port descriptions map in
 without translation. Only the middle row is ours, and it is published at

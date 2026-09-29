@@ -51,7 +51,7 @@ complete. Review periodically.
       `ReferenceHost.js` is a chain with no audio input. No REAPER install was available to
       actually run this against, so it is written against REAPER's documented ReaScript API
       (`ExecProcess`, `GetUserInputs`, `InsertMedia`) and unverified; see HUMANS.md. A live,
-      playable JigDAW plugin in REAPER (a JSFX in EEL2, which cannot call WebAssembly, or a
+      playable Jig in REAPER (a JSFX in EEL2, which cannot call WebAssembly, or a
       persistent external process piped in real time) is a separate, larger piece of work and
       was not attempted here.
 

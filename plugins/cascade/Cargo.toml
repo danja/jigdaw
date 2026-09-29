@@ -3,7 +3,7 @@ name = "cascade"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Multiband plate reverb, the worked JigDAW plugin"
+description = "Multiband plate reverb, the worked Jig"
 
 [lib]
 crate-type = ["cdylib"]

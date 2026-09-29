@@ -1,6 +1,6 @@
-# A JigDAW plugin in REAPER, without the adapter
+# A Jig in REAPER, without the adapter
 
-`native/jigdaw-adapter/` loads a JigDAW plugin into REAPER as a compiled VST3, CLAP or LV2.
+`native/jigdaw-adapter/` loads a Jig into REAPER as a compiled VST3, CLAP or LV2.
 This is the alternative that needs no build: a REAPER ReaScript that drives the project's own
 Node reference host and drops the result into the timeline as audio.
 
@@ -12,13 +12,13 @@ WAV file, no browser: see [docs/for-hosts.md](../docs/for-hosts.md)), and insert
 file as a new track in the current project.
 
 This is an offline bounce, the same shape as freezing a track. It is not a live, playable
-instrument and not a way to run a JigDAW effect over REAPER's own audio: `bin/host.js` renders
+instrument and not a way to run a Jig effect over REAPER's own audio: `bin/host.js` renders
 from silence and MIDI only, because
 [`src/host/ReferenceHost.js`](../src/host/ReferenceHost.js) is a chain, not a graph, and takes
 no audio input. So this reaches an instrument, or an instrument feeding effects placed after
 it in the same IRI list, but never a bare effect on its own.
 
-A live, playable JigDAW plugin on REAPER's actual audio thread needs something compiled into
+A live, playable Jig on REAPER's actual audio thread needs something compiled into
 that slot: a JSFX (REAPER's own scripting plugin format, EEL2) or a persistent external
 process REAPER pipes audio to and from in real time. Both are a different, larger piece of
 work than this, not attempted here. See `TODO.md` for what each would take.
