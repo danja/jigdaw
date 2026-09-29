@@ -24,7 +24,7 @@ Four programs load Jigs, and a fifth packages them for someone else's host.
 
 ## Plugins
 
-There are 18 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 19 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -40,6 +40,7 @@ written to cover different parts of the contract, and each one's row says which.
 | [Ground](../plugins/ground/) | A long-form bass section planner in time with the session, in Rust, ported from the downspout VST3 of the same name. Control MIDI in, bass MIDI out, no audio. | Module ABI version 2 with a 32-phrase form plan, per-phrase role override ports, in-place phrase surgery instead of a whole-form scratch buffer, and the beat flywheel the generator ports share. |
 | [Cadence](../plugins/cadence/) | A MIDI harmonizer that learns a chord cycle from what it hears, in Rust, ported from the downspout VST3 of the same name. MIDI in, MIDI and harmony MIDI out, no audio. | Module ABI version 2 with chord fitting by dynamic programming over scored candidates, comp hits planned from learned timing, the first `trn:HarmonyMidi` producer in the tree, and the DP tables in engine state rather than the WebAssembly stack. |
 | [8-Bit 8asterd](../plugins/8b8/README.md) | Unmodified firmware for three AY-3-8910 chips, compiled from C++. | Module ABI version 2 MIDI in, as whole event records. 42 parameters, generated from the firmware's own list, with scale points and values shown as the device's panel shows them. Parameters that also answer to MIDI CCs. |
+| [Mop](../plugins/mop/README.md) | An OPL3 FM General MIDI instrument in C, with its AdLib bank embedded. MIDI in, stereo audio out, drums on channel 10. | Module ABI version 2 MIDI in, as whole event records released per sample. 128 General MIDI programs as one enumeration, a voice cap defaulting to eight of the eighteen the chip has, and every other parameter answering to a MIDI CC. |
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/), [One-Pole Filter](../plugins/jsfx-one-pole-filter/), [Soft Clipper](../plugins/jsfx-soft-clipper/) | Three REAPER JSFX effects converted by `bin/jsfx-import.js`, run by the shared bytecode interpreter in [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md). | A module with no `jig:abi`, private to its processor, which module-abi.md says a native host must refuse. The compiled script carried as a `jig:asset`. Converting from another plugin format. |

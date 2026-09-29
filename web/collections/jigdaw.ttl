@@ -38,6 +38,7 @@
         <../plugins/jsfx-one-pole-filter/> ,
         <../plugins/jsfx-soft-clipper/> ,
         <../plugins/melgen/> ,
+        <../plugins/mop/> ,
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
         <../plugins/squelch/> ,
@@ -57,6 +58,7 @@
 <../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
 <../plugins/melgen/> rdfs:label "MelGen" .
+<../plugins/mop/> rdfs:label "Mop" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/squelch/> rdfs:label "Squelch" .

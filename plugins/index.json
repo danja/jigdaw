@@ -725,6 +725,47 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/mop/",
+      "label": "Mop",
+      "comment": "Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop's own bank, a drum kit on channel 10, and every control answering to a MIDI CC.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/mop/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "Eight voices by default out of the eighteen the chip has. A ninth note steals the oldest voice rather than being refused; raise Voices toward eighteen for dense arrangements.",
+        "Percussion is MIDI channel 10, notes 35 to 81. Pitched notes play on any other channel.",
+        "The Program control sets the instrument on every melodic channel at once, which is how presets are auditioned. An incoming program change overrides a single channel without moving the panel.",
+        "Every control but Program answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say. A host automating a parameter and a controller sending its CC will fight.",
+        "Channel volume, expression, pan, sustain and pitch bend arrive as MIDI on each channel and are not panel controls: CC 7, 11, 10 and 64 behave as mop does."
+      ],
+      "parameters": [
+        "bend_range",
+        "gain",
+        "program",
+        "tuning",
+        "vel_sense",
+        "voices"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/pulse/",
       "label": "Pulse",
       "comment": "Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.",

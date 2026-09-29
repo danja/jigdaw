@@ -1,0 +1,626 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/mop/",
+  "label": "Mop",
+  "comment": "Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop's own bank, a drum kit on channel 10, and every control answering to a MIDI CC.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "mop",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Electronic",
+    "Chiptune",
+    "Soundtrack"
+  ],
+  "cautions": [
+    "Eight voices by default out of the eighteen the chip has. A ninth note steals the oldest voice rather than being refused; raise Voices toward eighteen for dense arrangements.",
+    "Percussion is MIDI channel 10, notes 35 to 81. Pitched notes play on any other channel.",
+    "The Program control sets the instrument on every melodic channel at once, which is how presets are auditioned. An incoming program change overrides a single channel without moving the panel.",
+    "Every control but Program answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say. A host automating a parameter and a controller sending its CC will fight.",
+    "Channel volume, expression, pan, sustain and pitch bend arrive as MIDI on each channel and are not panel controls: CC 7, 11, 10 and 64 behave as mop does."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Zlib",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "tailFrames": 96000
+  },
+  "resources": {
+    "module": "mop.wasm",
+    "processor": "mop-processor.js"
+  },
+  "abi": "jig:Abi2",
+  "ports": [
+    {
+      "symbol": "program",
+      "name": "Instrument: Program",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Instrument",
+      "paramIndex": 0,
+      "scalePoints": [
+        {
+          "label": "Acoustic Grand Piano",
+          "value": 0
+        },
+        {
+          "label": "Bright Acoustic Piano",
+          "value": 1
+        },
+        {
+          "label": "Electric Grand Piano",
+          "value": 2
+        },
+        {
+          "label": "Honky-tonk Piano",
+          "value": 3
+        },
+        {
+          "label": "Electric Piano 1",
+          "value": 4
+        },
+        {
+          "label": "Electric Piano 2",
+          "value": 5
+        },
+        {
+          "label": "Harpsichord",
+          "value": 6
+        },
+        {
+          "label": "Clavinet",
+          "value": 7
+        },
+        {
+          "label": "Celesta",
+          "value": 8
+        },
+        {
+          "label": "Glockenspiel",
+          "value": 9
+        },
+        {
+          "label": "Music Box",
+          "value": 10
+        },
+        {
+          "label": "Vibraphone",
+          "value": 11
+        },
+        {
+          "label": "Marimba",
+          "value": 12
+        },
+        {
+          "label": "Xylophone",
+          "value": 13
+        },
+        {
+          "label": "Tubular Bells",
+          "value": 14
+        },
+        {
+          "label": "Dulcimer",
+          "value": 15
+        },
+        {
+          "label": "Drawbar Organ",
+          "value": 16
+        },
+        {
+          "label": "Percussive Organ",
+          "value": 17
+        },
+        {
+          "label": "Rock Organ",
+          "value": 18
+        },
+        {
+          "label": "Church Organ",
+          "value": 19
+        },
+        {
+          "label": "Reed Organ",
+          "value": 20
+        },
+        {
+          "label": "Accordion",
+          "value": 21
+        },
+        {
+          "label": "Harmonica",
+          "value": 22
+        },
+        {
+          "label": "Tango Accordion",
+          "value": 23
+        },
+        {
+          "label": "Acoustic Guitar (nylon)",
+          "value": 24
+        },
+        {
+          "label": "Acoustic Guitar (steel)",
+          "value": 25
+        },
+        {
+          "label": "Electric Guitar (jazz)",
+          "value": 26
+        },
+        {
+          "label": "Electric Guitar (clean)",
+          "value": 27
+        },
+        {
+          "label": "Electric Guitar (muted)",
+          "value": 28
+        },
+        {
+          "label": "Overdriven Guitar",
+          "value": 29
+        },
+        {
+          "label": "Distortion Guitar",
+          "value": 30
+        },
+        {
+          "label": "Guitar Harmonics",
+          "value": 31
+        },
+        {
+          "label": "Acoustic Bass",
+          "value": 32
+        },
+        {
+          "label": "Electric Bass (finger)",
+          "value": 33
+        },
+        {
+          "label": "Electric Bass (pick)",
+          "value": 34
+        },
+        {
+          "label": "Fretless Bass",
+          "value": 35
+        },
+        {
+          "label": "Slap Bass 1",
+          "value": 36
+        },
+        {
+          "label": "Slap Bass 2",
+          "value": 37
+        },
+        {
+          "label": "Synth Bass 1",
+          "value": 38
+        },
+        {
+          "label": "Synth Bass 2",
+          "value": 39
+        },
+        {
+          "label": "Violin",
+          "value": 40
+        },
+        {
+          "label": "Viola",
+          "value": 41
+        },
+        {
+          "label": "Cello",
+          "value": 42
+        },
+        {
+          "label": "Contrabass",
+          "value": 43
+        },
+        {
+          "label": "Tremolo Strings",
+          "value": 44
+        },
+        {
+          "label": "Pizzicato Strings",
+          "value": 45
+        },
+        {
+          "label": "Orchestral Harp",
+          "value": 46
+        },
+        {
+          "label": "Timpani",
+          "value": 47
+        },
+        {
+          "label": "String Ensemble 1",
+          "value": 48
+        },
+        {
+          "label": "String Ensemble 2",
+          "value": 49
+        },
+        {
+          "label": "Synth Strings 1",
+          "value": 50
+        },
+        {
+          "label": "Synth Strings 2",
+          "value": 51
+        },
+        {
+          "label": "Choir Aahs",
+          "value": 52
+        },
+        {
+          "label": "Voice Oohs",
+          "value": 53
+        },
+        {
+          "label": "Synth Voice",
+          "value": 54
+        },
+        {
+          "label": "Orchestra Hit",
+          "value": 55
+        },
+        {
+          "label": "Trumpet",
+          "value": 56
+        },
+        {
+          "label": "Trombone",
+          "value": 57
+        },
+        {
+          "label": "Tuba",
+          "value": 58
+        },
+        {
+          "label": "Muted Trumpet",
+          "value": 59
+        },
+        {
+          "label": "French Horn",
+          "value": 60
+        },
+        {
+          "label": "Brass Section",
+          "value": 61
+        },
+        {
+          "label": "Synth Brass 1",
+          "value": 62
+        },
+        {
+          "label": "Synth Brass 2",
+          "value": 63
+        },
+        {
+          "label": "Soprano Sax",
+          "value": 64
+        },
+        {
+          "label": "Alto Sax",
+          "value": 65
+        },
+        {
+          "label": "Tenor Sax",
+          "value": 66
+        },
+        {
+          "label": "Baritone Sax",
+          "value": 67
+        },
+        {
+          "label": "Oboe",
+          "value": 68
+        },
+        {
+          "label": "English Horn",
+          "value": 69
+        },
+        {
+          "label": "Bassoon",
+          "value": 70
+        },
+        {
+          "label": "Clarinet",
+          "value": 71
+        },
+        {
+          "label": "Piccolo",
+          "value": 72
+        },
+        {
+          "label": "Flute",
+          "value": 73
+        },
+        {
+          "label": "Recorder",
+          "value": 74
+        },
+        {
+          "label": "Pan Flute",
+          "value": 75
+        },
+        {
+          "label": "Blown Bottle",
+          "value": 76
+        },
+        {
+          "label": "Shakuhachi",
+          "value": 77
+        },
+        {
+          "label": "Whistle",
+          "value": 78
+        },
+        {
+          "label": "Ocarina",
+          "value": 79
+        },
+        {
+          "label": "Lead 1 (square)",
+          "value": 80
+        },
+        {
+          "label": "Lead 2 (sawtooth)",
+          "value": 81
+        },
+        {
+          "label": "Lead 3 (calliope)",
+          "value": 82
+        },
+        {
+          "label": "Lead 4 (chiff)",
+          "value": 83
+        },
+        {
+          "label": "Lead 5 (charang)",
+          "value": 84
+        },
+        {
+          "label": "Lead 6 (voice)",
+          "value": 85
+        },
+        {
+          "label": "Lead 7 (fifths)",
+          "value": 86
+        },
+        {
+          "label": "Lead 8 (bass + lead)",
+          "value": 87
+        },
+        {
+          "label": "Pad 1 (new age)",
+          "value": 88
+        },
+        {
+          "label": "Pad 2 (warm)",
+          "value": 89
+        },
+        {
+          "label": "Pad 3 (polysynth)",
+          "value": 90
+        },
+        {
+          "label": "Pad 4 (choir)",
+          "value": 91
+        },
+        {
+          "label": "Pad 5 (bowed)",
+          "value": 92
+        },
+        {
+          "label": "Pad 6 (metallic)",
+          "value": 93
+        },
+        {
+          "label": "Pad 7 (halo)",
+          "value": 94
+        },
+        {
+          "label": "Pad 8 (sweep)",
+          "value": 95
+        },
+        {
+          "label": "FX 1 (rain)",
+          "value": 96
+        },
+        {
+          "label": "FX 2 (soundtrack)",
+          "value": 97
+        },
+        {
+          "label": "FX 3 (crystal)",
+          "value": 98
+        },
+        {
+          "label": "FX 4 (atmosphere)",
+          "value": 99
+        },
+        {
+          "label": "FX 5 (brightness)",
+          "value": 100
+        },
+        {
+          "label": "FX 6 (goblins)",
+          "value": 101
+        },
+        {
+          "label": "FX 7 (echoes)",
+          "value": 102
+        },
+        {
+          "label": "FX 8 (sci-fi)",
+          "value": 103
+        },
+        {
+          "label": "Sitar",
+          "value": 104
+        },
+        {
+          "label": "Banjo",
+          "value": 105
+        },
+        {
+          "label": "Shamisen",
+          "value": 106
+        },
+        {
+          "label": "Koto",
+          "value": 107
+        },
+        {
+          "label": "Kalimba",
+          "value": 108
+        },
+        {
+          "label": "Bagpipe",
+          "value": 109
+        },
+        {
+          "label": "Fiddle",
+          "value": 110
+        },
+        {
+          "label": "Shanai",
+          "value": 111
+        },
+        {
+          "label": "Tinkle Bell",
+          "value": 112
+        },
+        {
+          "label": "Agogo",
+          "value": 113
+        },
+        {
+          "label": "Steel Drums",
+          "value": 114
+        },
+        {
+          "label": "Woodblock",
+          "value": 115
+        },
+        {
+          "label": "Taiko Drum",
+          "value": 116
+        },
+        {
+          "label": "Melodic Tom",
+          "value": 117
+        },
+        {
+          "label": "Synth Drum",
+          "value": 118
+        },
+        {
+          "label": "Reverse Cymbal",
+          "value": 119
+        },
+        {
+          "label": "Guitar Fret Noise",
+          "value": 120
+        },
+        {
+          "label": "Breath Noise",
+          "value": 121
+        },
+        {
+          "label": "Seashore",
+          "value": 122
+        },
+        {
+          "label": "Bird Tweet",
+          "value": 123
+        },
+        {
+          "label": "Telephone Ring",
+          "value": 124
+        },
+        {
+          "label": "Helicopter",
+          "value": 125
+        },
+        {
+          "label": "Applause",
+          "value": 126
+        },
+        {
+          "label": "Gunshot",
+          "value": 127
+        }
+      ]
+    },
+    {
+      "symbol": "voices",
+      "name": "Instrument: Voices",
+      "default": 8,
+      "minimum": 1,
+      "maximum": 18,
+      "controller": 70,
+      "group": "Instrument",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "gain",
+      "name": "Output: Gain",
+      "default": 0.8,
+      "minimum": 0,
+      "maximum": 1,
+      "controller": 71,
+      "group": "Output",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "bend_range",
+      "name": "Pitch: Bend Range",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 12,
+      "controller": 72,
+      "group": "Pitch",
+      "paramIndex": 3,
+      "unit": "semitone12TET"
+    },
+    {
+      "symbol": "tuning",
+      "name": "Pitch: Tuning",
+      "default": 0,
+      "minimum": -100,
+      "maximum": 100,
+      "controller": 73,
+      "group": "Pitch",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "vel_sense",
+      "name": "Response: Velocity",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "controller": 74,
+      "group": "Response",
+      "paramIndex": 5
+    }
+  ]
+}
