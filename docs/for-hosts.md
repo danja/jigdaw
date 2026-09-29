@@ -185,6 +185,25 @@ A chain, not a graph: each plugin's output feeds the next, with no branching and
 has the reasoning for why. Its `--root PREFIX=DIR` lets you point at a local plugin directory,
 so one you have not published yet renders the same way one already live does.
 
+**A jalv equivalent.**
+[`bin/jig.js`](https://github.com/danja/jigdaw/blob/main/bin/jig.js) lists the local plugins,
+shows one plugin's ports, draws its generated panel, renders audio, and screenshots the
+panel, the way `jalv -l` lists LV2 plugins and `jalv <URI>` runs one. Rendering delegates
+to the same `renderChain` `bin/host.js` uses, so the two cannot disagree about what a
+render means.
+
+```sh
+node bin/jig.js list
+node bin/jig.js info pulse
+node bin/jig.js panel pulse --out panel.html
+node bin/jig.js render https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:0.3 --out note.wav
+node bin/jig.js shot pulse --out pulse.png
+```
+
+`node bin/build-gallery.js` runs `shot` over every local plugin and writes
+`web/gallery.html`, a downspout-style catalogue page grouped into Generative, MIDI,
+Instruments and Processors, served by `npm run serve` at `/gallery.html`.
+
 ---
 
 [Back to the documentation index](index.md) &middot;

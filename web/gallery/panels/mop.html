@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jiggy</title>
+<title>Mop panel</title>
 <style>
   :root {
     color-scheme: dark;
@@ -422,156 +422,13 @@
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
 </style>
+<style>body{max-width:900px;margin:24px auto;padding:0 16px}</style>
 </head>
 <body>
-
-<div class="transport">
-  <span class="brand">Jiggy</span>
-  <button id="play" aria-pressed="false">Play</button>
-  <button id="stop">Stop</button>
-  <button id="record" aria-pressed="false" title="Play and keep each track as an audio clip">Rec</button>
-  <span class="tempo">
-    <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
-    <input type="number" id="tempo" value="120" min="20" max="300" step="1">
-    <span style="color:var(--dim);font-size:12px">BPM</span>
-  </span>
-  <span class="position" id="position" aria-live="off">1 . 1</span>
-  <span class="history">
-      <button id="undo" title="Undo the last edit" disabled>Undo</button>
-      <button id="redo" title="Redo the last undone edit" disabled>Redo</button>
-    </span>
-  <span class="session">
-      <button id="save" title="Save this session as RDF">Save</button>
-      <button id="open" title="Open a saved session">Open</button>
-      <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
-      <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
-    </span>
-    <nav class="links" aria-label="Project">
-    <a href="/gallery.html">Plugins</a>
-    <a href="https://danja.github.io/jigdaw/">Docs</a>
-    <a href="https://github.com/danja/jigdaw">GitHub</a>
-  </nav>
-  <span class="meter" id="meter" role="img" aria-label="Output level"></span>
-</div>
-
-<main>
-  <section class="browser" id="browser" aria-label="Plugin browser">
-    <div class="browser-head">
-      <button id="toggle-browser" aria-expanded="true" aria-controls="browser" aria-label="Hide browser panel">&#8249;</button>
-      <h2>Browser</h2>
-    </div>
-    <!-- Every Load button below loads onto this track. Visible rather than a
-         setting somewhere else, because where a plugin lands is the first thing
-         a person needs to know about pressing Load. -->
-    <div class="searchbar target">
-      <label for="target">Load onto</label>
-      <select id="target"></select>
-    </div>
-    <form class="searchbar" id="searchbar" role="search">
-      <label class="visually-hidden" for="q">Search for plugins</label>
-      <input type="search" id="q" placeholder="Search plugins">
-      <label class="visually-hidden" for="facet">Filter by kind</label>
-      <select id="facet">
-        <option value="">Anything</option>
-        <option value="role=Instrument">Instruments</option>
-        <option value="role=AudioEffect">Effects</option>
-        <option value="accepts=Midi">Accepts MIDI</option>
-      </select>
-      <button type="submit">Search</button>
-    </form>
-    <div id="results" aria-live="polite"></div>
-    <h2 style="margin-top:18px">Load by IRI</h2>
-    <form class="searchbar" id="loadbar">
-      <label class="visually-hidden" for="iri">Plugin IRI</label>
-      <!-- Rewritten to the absolute IRI on load; this is the fallback. -->
-      <input type="text" id="iri" value="plugins/pulse/" spellcheck="false" autocomplete="off">
-      <button type="submit">Load</button>
-    </form>
-    <h2 style="margin-top:18px">Open a collection</h2>
-    <form class="searchbar" id="collectionbar">
-      <label class="visually-hidden" for="collection">Collection URL</label>
-      <!-- Rewritten to the absolute URL on load; this is the fallback. -->
-      <input type="text" id="collection" value="collections/jigdaw.ttl" spellcheck="false" autocomplete="off">
-      <button type="submit">Open collection</button>
-    </form>
-    <div id="presets" hidden>
-      <h2 style="margin-top:18px">Presets</h2>
-      <form class="searchbar" id="presetbar">
-        <label class="visually-hidden" for="preset">Preset</label>
-        <select id="preset"></select>
-        <button type="submit" title="Replaces the current session">Open preset</button>
-      </form>
-    </div>
-  </section>
-
-  <section class="stage" aria-label="Tracks and mixer">
-    <!-- Plugin editors, a plugin's own interface in a sandboxed frame. Outside
-         the tabs and never rebuilt, because moving a frame in the document
-         reloads it, and the rack is rebuilt on every edit. -->
-    <section class="editors" id="editors" aria-label="Plugin editors" hidden></section>
-    <div id="tabs-mount"></div>
-
-    <div class="tabpanel" id="tracks-panel" hidden>
-      <h2>Plugins, by track</h2>
-      <div class="rack" id="rack"></div>
-    </div>
-
-    <div class="tabpanel" id="arrangement-panel">
-      <h2>Arrangement</h2>
-      <div id="timeline-mount"></div>
-      <div id="piano-roll-mount"></div>
-    </div>
-
-    <div class="tabpanel" id="mixer-panel" hidden>
-      <h2>Mixer</h2>
-      <div class="mixer" id="mixer"></div>
-    </div>
-  </section>
-</main>
-
-<details class="agent">
-  <summary>Local agent (experimental)</summary>
-  <p class="note">
-    Runs a tool-calling loop against a local model's chat API, in this page. Nothing new
-    listens for a connection: the loop reads <code>jigdaw.mcp.tools</code> and calls
-    <code>jigdaw.mcp.call</code> itself, the same surface the console already has. Tested
-    against <a href="https://ollama.com/">Ollama</a> on <code>127.0.0.1:11434</code>. A page
-    loaded over <code>https:</code>, such as the strandz.it deployment, cannot reach an
-    <code>http:</code> endpoint at all, mixed content; this only works loaded over
-    <code>http:</code>, such as the local dev server <code>npm run serve</code> starts.
-  </p>
-  <form class="searchbar" id="agentbar">
-    <label class="visually-hidden" for="agent-endpoint">Model endpoint</label>
-    <input type="text" id="agent-endpoint" value="http://127.0.0.1:11434" spellcheck="false" autocomplete="off">
-    <label class="visually-hidden" for="agent-model">Model name</label>
-    <input type="text" id="agent-model" value="qwen2.5:0.5b" spellcheck="false" autocomplete="off">
-    <label class="visually-hidden" for="agent-prompt">Prompt</label>
-    <input type="text" id="agent-prompt" placeholder="e.g. &quot;load the Cascade reverb&quot;">
-    <button type="submit">Send</button>
-  </form>
-  <div id="agent-log" aria-live="polite"></div>
-</details>
-
-<details class="agent" id="bridge">
-  <summary>Agent bridge (local MCP)</summary>
-  <p class="note">
-    Lets an MCP client on this machine, such as Claude Code, drive this session. Run
-    <code>npm run mcp-bridge</code>, paste the token it prints here, and connect. Every tool
-    runs in this page, the same tools as WebMCP, and each call is written to the log below.
-  </p>
-  <form class="searchbar" id="bridgebar">
-    <label class="visually-hidden" for="bridge-token">Bridge token</label>
-    <input type="text" id="bridge-token" placeholder="Token from npm run mcp-bridge" spellcheck="false" autocomplete="off">
-    <button type="submit" id="bridge-connect">Connect</button>
-  </form>
-  <p class="note" id="bridge-status" role="status">Not connected.</p>
-</details>
-
-<details class="log">
-  <summary>Log <span id="state" style="color:var(--dim)"></span></summary>
-  <div id="log"></div>
-</details>
-
-<script type="module" src="./app.bundle.js"></script>
+<p><a href="/">Jiggy</a> / <a href="/gallery.html">plugin gallery</a></p>
+<h1>Mop</h1>
+<p>Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop&#39;s own bank, a drum kit on channel 10, and every control answering to a MIDI CC.</p>
+<p>https://strandz.it/jigdaw/plugins/mop/ . 6 controls.</p>
+<section aria-labelledby="https___strandz_it_jigdaw_plugins_mop_-heading" role="group" class="panel"><h3 id="https___strandz_it_jigdaw_plugins_mop_-heading">Mop</h3><fieldset class="control-group"><legend>Pitch</legend><div class="controls"><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_mop__bend_range">Pitch: Bend Range (CC 72)</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="29.85 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="50" x2="12" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="2.00 semitones" title="Pitch: Bend Range" aria-describedby="https___strandz_it_jigdaw_plugins_mop__bend_range-value" value="2" class="dial-input" id="https___strandz_it_jigdaw_plugins_mop__bend_range" type="range"></div><span id="https___strandz_it_jigdaw_plugins_mop__bend_range-value" class="value">2.00 st</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_mop__tuning">Pitch: Tuning (CC 73)</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="-89.54" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="12" x2="50" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0" title="Pitch: Tuning" aria-describedby="https___strandz_it_jigdaw_plugins_mop__tuning-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_mop__tuning" type="range"></div><span id="https___strandz_it_jigdaw_plugins_mop__tuning-value" class="value">0</span></div></div></fieldset><fieldset class="control-group"><legend>Output</legend><div class="controls"><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_mop__gain">Output: Gain (CC 71)</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="143.26 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="44.06" x2="87.53" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.80" title="Output: Gain" aria-describedby="https___strandz_it_jigdaw_plugins_mop__gain-value" value="0.8" class="dial-input" id="https___strandz_it_jigdaw_plugins_mop__gain" type="range"></div><span id="https___strandz_it_jigdaw_plugins_mop__gain-value" class="value">0.80</span></div></div></fieldset><fieldset class="control-group"><legend>Instrument</legend><div class="controls"><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_mop__program">Instrument: Program</label><select title="Instrument: Program" aria-describedby="https___strandz_it_jigdaw_plugins_mop__program-value" id="https___strandz_it_jigdaw_plugins_mop__program"><option value="0">Acoustic Grand Piano</option><option value="1">Bright Acoustic Piano</option><option value="2">Electric Grand Piano</option><option value="3">Honky-tonk Piano</option><option value="4">Electric Piano 1</option><option value="5">Electric Piano 2</option><option value="6">Harpsichord</option><option value="7">Clavinet</option><option value="8">Celesta</option><option value="9">Glockenspiel</option><option value="10">Music Box</option><option value="11">Vibraphone</option><option value="12">Marimba</option><option value="13">Xylophone</option><option value="14">Tubular Bells</option><option value="15">Dulcimer</option><option value="16">Drawbar Organ</option><option value="17">Percussive Organ</option><option value="18">Rock Organ</option><option value="19">Church Organ</option><option value="20">Reed Organ</option><option value="21">Accordion</option><option value="22">Harmonica</option><option value="23">Tango Accordion</option><option value="24">Acoustic Guitar (nylon)</option><option value="25">Acoustic Guitar (steel)</option><option value="26">Electric Guitar (jazz)</option><option value="27">Electric Guitar (clean)</option><option value="28">Electric Guitar (muted)</option><option value="29">Overdriven Guitar</option><option value="30">Distortion Guitar</option><option value="31">Guitar Harmonics</option><option value="32">Acoustic Bass</option><option value="33">Electric Bass (finger)</option><option value="34">Electric Bass (pick)</option><option value="35">Fretless Bass</option><option value="36">Slap Bass 1</option><option value="37">Slap Bass 2</option><option value="38">Synth Bass 1</option><option value="39">Synth Bass 2</option><option value="40">Violin</option><option value="41">Viola</option><option value="42">Cello</option><option value="43">Contrabass</option><option value="44">Tremolo Strings</option><option value="45">Pizzicato Strings</option><option value="46">Orchestral Harp</option><option value="47">Timpani</option><option value="48">String Ensemble 1</option><option value="49">String Ensemble 2</option><option value="50">Synth Strings 1</option><option value="51">Synth Strings 2</option><option value="52">Choir Aahs</option><option value="53">Voice Oohs</option><option value="54">Synth Voice</option><option value="55">Orchestra Hit</option><option value="56">Trumpet</option><option value="57">Trombone</option><option value="58">Tuba</option><option value="59">Muted Trumpet</option><option value="60">French Horn</option><option value="61">Brass Section</option><option value="62">Synth Brass 1</option><option value="63">Synth Brass 2</option><option value="64">Soprano Sax</option><option value="65">Alto Sax</option><option value="66">Tenor Sax</option><option value="67">Baritone Sax</option><option value="68">Oboe</option><option value="69">English Horn</option><option value="70">Bassoon</option><option value="71">Clarinet</option><option value="72">Piccolo</option><option value="73">Flute</option><option value="74">Recorder</option><option value="75">Pan Flute</option><option value="76">Blown Bottle</option><option value="77">Shakuhachi</option><option value="78">Whistle</option><option value="79">Ocarina</option><option value="80">Lead 1 (square)</option><option value="81">Lead 2 (sawtooth)</option><option value="82">Lead 3 (calliope)</option><option value="83">Lead 4 (chiff)</option><option value="84">Lead 5 (charang)</option><option value="85">Lead 6 (voice)</option><option value="86">Lead 7 (fifths)</option><option value="87">Lead 8 (bass + lead)</option><option value="88">Pad 1 (new age)</option><option value="89">Pad 2 (warm)</option><option value="90">Pad 3 (polysynth)</option><option value="91">Pad 4 (choir)</option><option value="92">Pad 5 (bowed)</option><option value="93">Pad 6 (metallic)</option><option value="94">Pad 7 (halo)</option><option value="95">Pad 8 (sweep)</option><option value="96">FX 1 (rain)</option><option value="97">FX 2 (soundtrack)</option><option value="98">FX 3 (crystal)</option><option value="99">FX 4 (atmosphere)</option><option value="100">FX 5 (brightness)</option><option value="101">FX 6 (goblins)</option><option value="102">FX 7 (echoes)</option><option value="103">FX 8 (sci-fi)</option><option value="104">Sitar</option><option value="105">Banjo</option><option value="106">Shamisen</option><option value="107">Koto</option><option value="108">Kalimba</option><option value="109">Bagpipe</option><option value="110">Fiddle</option><option value="111">Shanai</option><option value="112">Tinkle Bell</option><option value="113">Agogo</option><option value="114">Steel Drums</option><option value="115">Woodblock</option><option value="116">Taiko Drum</option><option value="117">Melodic Tom</option><option value="118">Synth Drum</option><option value="119">Reverse Cymbal</option><option value="120">Guitar Fret Noise</option><option value="121">Breath Noise</option><option value="122">Seashore</option><option value="123">Bird Tweet</option><option value="124">Telephone Ring</option><option value="125">Helicopter</option><option value="126">Applause</option><option value="127">Gunshot</option></select><span id="https___strandz_it_jigdaw_plugins_mop__program-value" class="value">Acoustic Grand Piano</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_mop__voices">Instrument: Voices (CC 70)</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="73.74 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="15.24" x2="34.65" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="8.00" title="Instrument: Voices" aria-describedby="https___strandz_it_jigdaw_plugins_mop__voices-value" value="8" class="dial-input" id="https___strandz_it_jigdaw_plugins_mop__voices" type="range"></div><span id="https___strandz_it_jigdaw_plugins_mop__voices-value" class="value">8.00</span></div></div></fieldset><fieldset class="control-group"><legend>Response</legend><div class="controls"><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_mop__vel_sense">Response: Velocity (CC 74)</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="76.87" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="1.00" title="Response: Velocity" aria-describedby="https___strandz_it_jigdaw_plugins_mop__vel_sense-value" value="1" class="dial-input" id="https___strandz_it_jigdaw_plugins_mop__vel_sense" type="range"></div><span id="https___strandz_it_jigdaw_plugins_mop__vel_sense-value" class="value">1.00</span></div></div></fieldset></section>
 </body>
 </html>

@@ -2,6 +2,20 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-29 A fixed viewport cropped the tallest panel screenshots
+
+**What happened.** The first gallery build screenshotted every panel at one fixed
+window height. DrumKit's 75 controls run well past it, so its shot ended mid-way
+through the Master section while the page it was taken from held the whole panel.
+Found by reading the PNG, not by any test: the HTML is complete either way.
+
+**Root cause.** A guard (the screenshot) that does not know the population (panel
+heights from 5 to 75 controls) it walks. Fixed viewport, variable content.
+
+**Prevention.** `bin/build-gallery.js` sizes the viewport per plugin from its port
+count (520 + 22 per port, clamped 800 to 2600), unless `--height` is passed
+explicitly. The committed shots are the check: rebuild and look at the tallest.
+
 ## 2026-09-26 A NaN tail read as null and rendered nothing
 
 **What happened.** Pulse's processor reported its new `tailFrames` from the bare

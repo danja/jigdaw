@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Jiggy</title>
+<title>DrumGen panel</title>
 <style>
   :root {
     color-scheme: dark;
@@ -422,156 +422,13 @@
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
 </style>
+<style>body{max-width:900px;margin:24px auto;padding:0 16px}</style>
 </head>
 <body>
-
-<div class="transport">
-  <span class="brand">Jiggy</span>
-  <button id="play" aria-pressed="false">Play</button>
-  <button id="stop">Stop</button>
-  <button id="record" aria-pressed="false" title="Play and keep each track as an audio clip">Rec</button>
-  <span class="tempo">
-    <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
-    <input type="number" id="tempo" value="120" min="20" max="300" step="1">
-    <span style="color:var(--dim);font-size:12px">BPM</span>
-  </span>
-  <span class="position" id="position" aria-live="off">1 . 1</span>
-  <span class="history">
-      <button id="undo" title="Undo the last edit" disabled>Undo</button>
-      <button id="redo" title="Redo the last undone edit" disabled>Redo</button>
-    </span>
-  <span class="session">
-      <button id="save" title="Save this session as RDF">Save</button>
-      <button id="open" title="Open a saved session">Open</button>
-      <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
-      <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
-    </span>
-    <nav class="links" aria-label="Project">
-    <a href="/gallery.html">Plugins</a>
-    <a href="https://danja.github.io/jigdaw/">Docs</a>
-    <a href="https://github.com/danja/jigdaw">GitHub</a>
-  </nav>
-  <span class="meter" id="meter" role="img" aria-label="Output level"></span>
-</div>
-
-<main>
-  <section class="browser" id="browser" aria-label="Plugin browser">
-    <div class="browser-head">
-      <button id="toggle-browser" aria-expanded="true" aria-controls="browser" aria-label="Hide browser panel">&#8249;</button>
-      <h2>Browser</h2>
-    </div>
-    <!-- Every Load button below loads onto this track. Visible rather than a
-         setting somewhere else, because where a plugin lands is the first thing
-         a person needs to know about pressing Load. -->
-    <div class="searchbar target">
-      <label for="target">Load onto</label>
-      <select id="target"></select>
-    </div>
-    <form class="searchbar" id="searchbar" role="search">
-      <label class="visually-hidden" for="q">Search for plugins</label>
-      <input type="search" id="q" placeholder="Search plugins">
-      <label class="visually-hidden" for="facet">Filter by kind</label>
-      <select id="facet">
-        <option value="">Anything</option>
-        <option value="role=Instrument">Instruments</option>
-        <option value="role=AudioEffect">Effects</option>
-        <option value="accepts=Midi">Accepts MIDI</option>
-      </select>
-      <button type="submit">Search</button>
-    </form>
-    <div id="results" aria-live="polite"></div>
-    <h2 style="margin-top:18px">Load by IRI</h2>
-    <form class="searchbar" id="loadbar">
-      <label class="visually-hidden" for="iri">Plugin IRI</label>
-      <!-- Rewritten to the absolute IRI on load; this is the fallback. -->
-      <input type="text" id="iri" value="plugins/pulse/" spellcheck="false" autocomplete="off">
-      <button type="submit">Load</button>
-    </form>
-    <h2 style="margin-top:18px">Open a collection</h2>
-    <form class="searchbar" id="collectionbar">
-      <label class="visually-hidden" for="collection">Collection URL</label>
-      <!-- Rewritten to the absolute URL on load; this is the fallback. -->
-      <input type="text" id="collection" value="collections/jigdaw.ttl" spellcheck="false" autocomplete="off">
-      <button type="submit">Open collection</button>
-    </form>
-    <div id="presets" hidden>
-      <h2 style="margin-top:18px">Presets</h2>
-      <form class="searchbar" id="presetbar">
-        <label class="visually-hidden" for="preset">Preset</label>
-        <select id="preset"></select>
-        <button type="submit" title="Replaces the current session">Open preset</button>
-      </form>
-    </div>
-  </section>
-
-  <section class="stage" aria-label="Tracks and mixer">
-    <!-- Plugin editors, a plugin's own interface in a sandboxed frame. Outside
-         the tabs and never rebuilt, because moving a frame in the document
-         reloads it, and the rack is rebuilt on every edit. -->
-    <section class="editors" id="editors" aria-label="Plugin editors" hidden></section>
-    <div id="tabs-mount"></div>
-
-    <div class="tabpanel" id="tracks-panel" hidden>
-      <h2>Plugins, by track</h2>
-      <div class="rack" id="rack"></div>
-    </div>
-
-    <div class="tabpanel" id="arrangement-panel">
-      <h2>Arrangement</h2>
-      <div id="timeline-mount"></div>
-      <div id="piano-roll-mount"></div>
-    </div>
-
-    <div class="tabpanel" id="mixer-panel" hidden>
-      <h2>Mixer</h2>
-      <div class="mixer" id="mixer"></div>
-    </div>
-  </section>
-</main>
-
-<details class="agent">
-  <summary>Local agent (experimental)</summary>
-  <p class="note">
-    Runs a tool-calling loop against a local model's chat API, in this page. Nothing new
-    listens for a connection: the loop reads <code>jigdaw.mcp.tools</code> and calls
-    <code>jigdaw.mcp.call</code> itself, the same surface the console already has. Tested
-    against <a href="https://ollama.com/">Ollama</a> on <code>127.0.0.1:11434</code>. A page
-    loaded over <code>https:</code>, such as the strandz.it deployment, cannot reach an
-    <code>http:</code> endpoint at all, mixed content; this only works loaded over
-    <code>http:</code>, such as the local dev server <code>npm run serve</code> starts.
-  </p>
-  <form class="searchbar" id="agentbar">
-    <label class="visually-hidden" for="agent-endpoint">Model endpoint</label>
-    <input type="text" id="agent-endpoint" value="http://127.0.0.1:11434" spellcheck="false" autocomplete="off">
-    <label class="visually-hidden" for="agent-model">Model name</label>
-    <input type="text" id="agent-model" value="qwen2.5:0.5b" spellcheck="false" autocomplete="off">
-    <label class="visually-hidden" for="agent-prompt">Prompt</label>
-    <input type="text" id="agent-prompt" placeholder="e.g. &quot;load the Cascade reverb&quot;">
-    <button type="submit">Send</button>
-  </form>
-  <div id="agent-log" aria-live="polite"></div>
-</details>
-
-<details class="agent" id="bridge">
-  <summary>Agent bridge (local MCP)</summary>
-  <p class="note">
-    Lets an MCP client on this machine, such as Claude Code, drive this session. Run
-    <code>npm run mcp-bridge</code>, paste the token it prints here, and connect. Every tool
-    runs in this page, the same tools as WebMCP, and each call is written to the log below.
-  </p>
-  <form class="searchbar" id="bridgebar">
-    <label class="visually-hidden" for="bridge-token">Bridge token</label>
-    <input type="text" id="bridge-token" placeholder="Token from npm run mcp-bridge" spellcheck="false" autocomplete="off">
-    <button type="submit" id="bridge-connect">Connect</button>
-  </form>
-  <p class="note" id="bridge-status" role="status">Not connected.</p>
-</details>
-
-<details class="log">
-  <summary>Log <span id="state" style="color:var(--dim)"></span></summary>
-  <div id="log"></div>
-</details>
-
-<script type="module" src="./app.bundle.js"></script>
+<p><a href="/">Jiggy</a> / <a href="/gallery.html">plugin gallery</a></p>
+<h1>DrumGen</h1>
+<p>Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.</p>
+<p>https://strandz.it/jigdaw/plugins/drumgen/ . 21 controls.</p>
+<section aria-labelledby="https___strandz_it_jigdaw_plugins_drumgen_-heading" role="group" class="panel"><h3 id="https___strandz_it_jigdaw_plugins_drumgen_-heading">DrumGen</h3><div class="controls"><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__aux_amt">Perc Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="50.14 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="30.66" x2="17.29" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.28" title="Perc Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" value="0.28" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" class="value">0.28</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt">Backbeat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="136.09 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="37.13" x2="85.75" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.76" title="Backbeat Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value" value="0.76" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value" class="value">0.76</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__bars">Bars</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="59.69 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="23.13" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="2.00" title="Bars" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__bars-value" value="2" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__bars" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__bars-value" class="value">2.00</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__channel">Channel</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="107.44 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="16.14" x2="67.25" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="10.00" title="Channel" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__channel-value" value="10" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__channel" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__channel-value" class="value">10.00</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch">Conductor Ch</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Conductor Ch" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" class="value">0.00</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__density">Density</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="103.86 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="14.67" x2="63.99" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.58" title="Density" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__density-value" value="0.58" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__density" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__density-value" class="value">0.58</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill">Fill</label><input title="Fill" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill-value" id="https___strandz_it_jigdaw_plugins_drumgen__fill" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__fill-value" class="value">off</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill_amount">Fill Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Fill Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" class="value">0.30</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__genre">Genre</label><select title="Genre" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__genre-value" id="https___strandz_it_jigdaw_plugins_drumgen__genre"><option value="0">Rock</option><option value="1">Disco</option><option value="2">Shuffle</option><option value="3">Electro</option><option value="4">Dub</option><option value="5">Motorik</option><option value="6">Bossa</option><option value="7">Afro</option><option value="8">Breakbeat</option><option value="9">Amen</option><option value="10">Jungle</option><option value="11">Hip Hop</option><option value="12">Jazz</option><option value="13">Fugue</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__genre-value" class="value">Rock</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__hat_amt">Hat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="146.84 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="47.61" x2="87.93" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.82" title="Hat Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value" value="0.82" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value" class="value">0.82</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__kick_amt">Kick Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="139.68 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="40.55" x2="86.81" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.78" title="Kick Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value" value="0.78" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value" class="value">0.78</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__kit_map">Kit Map</label><input title="Kit Map" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" id="https___strandz_it_jigdaw_plugins_drumgen__kit_map" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" class="value">Flues Drumkit</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__metal_amt">Metal Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="46.56 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="33.82" x2="15.62" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.26" title="Metal Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" value="0.26" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" class="value">0.26</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__mutate">Mutate</label><input title="Mutate" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" id="https___strandz_it_jigdaw_plugins_drumgen__mutate" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" class="value">off</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__new">New</label><input title="New" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__new-value" id="https___strandz_it_jigdaw_plugins_drumgen__new" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__new-value" class="value">off</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__resolution">Resolution</label><select title="Resolution" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" id="https___strandz_it_jigdaw_plugins_drumgen__resolution"><option value="0">Eighth</option><option value="1">Sixteenth</option><option value="2">Sixteenth Triplet</option><option value="3">Quarter</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" class="value">Sixteenth</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__seed">Seed</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="1" title="Seed" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__seed-value" value="1" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__seed" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__seed-value" class="value">1</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__style_mode">Style</label><select title="Style" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" id="https___strandz_it_jigdaw_plugins_drumgen__style_mode"><option value="0">Auto</option><option value="1">Straight</option><option value="2">Reel</option><option value="3">Waltz</option><option value="4">Jig</option><option value="5">Slip Jig</option><option value="6">Diddley</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" class="value">Auto</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__tom_amt">Tom Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Tom Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" class="value">0.30</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__variation">Variation</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="62.67 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="21.1" x2="25.32" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.35" title="Variation" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__variation-value" value="0.35" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__variation" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__variation-value" class="value">0.35</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__vary">Vary</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Vary" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__vary-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__vary" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__vary-value" class="value">0.00</span></div></div></section>
 </body>
 </html>
