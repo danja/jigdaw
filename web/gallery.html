@@ -27,7 +27,7 @@ h2{font-size:20px;margin:40px 0 4px}
 </head>
 <body>
 <main>
-<p><a href="/">Jiggy</a> / plugin gallery</p>
+<p><a href="./">Jiggy</a> / plugin gallery</p>
 <h1>Jigs</h1>
 <p>Every plugin in this repository, with its generated control panel. Panels are drawn by the same generator the host uses, so what you see here is what you get in Jiggy. Screenshots are refreshed by <code>node bin/build-gallery.js</code>; panels by <code>node bin/jig.js panel &lt;name&gt;</code>.</p>
 <nav aria-label="Sections"><a href="#generative">Generative</a> <a href="#midi">MIDI</a> <a href="#instruments">Instruments</a> <a href="#processors">Processors</a></nav>
@@ -39,28 +39,28 @@ h2{font-size:20px;margin:40px 0 4px}
 <h3>BassGen</h3>
 <p>Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard.</p>
 <p class="meta">MidiGenerator . 13 controls . accepts Midi &rarr; produces Midi, BassMidi</p>
-<p class="links"><a href="../plugins/bassgen/">Profile</a> <a href="../plugins/bassgen/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/bassgen/">Profile</a> <a href="plugins/bassgen/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/drumgen.png" alt="DrumGen panel" loading="lazy">
 <h3>DrumGen</h3>
 <p>Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.</p>
 <p class="meta">MidiGenerator . 21 controls . accepts ControlMidi &rarr; produces Midi, DrumMidi</p>
-<p class="links"><a href="../plugins/drumgen/">Profile</a> <a href="../plugins/drumgen/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/drumgen/">Profile</a> <a href="plugins/drumgen/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/ground.png" alt="Ground panel" loading="lazy">
 <h3>Ground</h3>
 <p>Transport synced long-form bass generator. Form shapes and phrase roles plan a whole section that plays in time with the session, with arc tension and Conductor control including scene-driven role overrides.</p>
 <p class="meta">MidiGenerator . 56 controls . accepts ControlMidi &rarr; produces Midi, BassMidi</p>
-<p class="links"><a href="../plugins/ground/">Profile</a> <a href="../plugins/ground/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/ground/">Profile</a> <a href="plugins/ground/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/melgen.png" alt="MelGen panel" loading="lazy">
 <h3>MelGen</h3>
 <p>Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.</p>
 <p class="meta">MidiGenerator . 26 controls . accepts Midi, ControlMidi &rarr; produces Midi, MelodyMidi</p>
-<p class="links"><a href="../plugins/melgen/">Profile</a> <a href="../plugins/melgen/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/melgen/">Profile</a> <a href="plugins/melgen/profile.ttl">Turtle</a></p>
 </article>
 </div>
 <h2 id="midi">MIDI</h2>
@@ -71,7 +71,7 @@ h2{font-size:20px;margin:40px 0 4px}
 <h3>Cadence</h3>
 <p>Transport synced MIDI harmonizer that learns a chord cycle from what it hears and plays voiced progressions with comping in time with the session.</p>
 <p class="meta">MidiProcessor . 17 controls . accepts Midi &rarr; produces Midi, HarmonyMidi</p>
-<p class="links"><a href="../plugins/cadence/">Profile</a> <a href="../plugins/cadence/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/cadence/">Profile</a> <a href="plugins/cadence/profile.ttl">Turtle</a></p>
 </article>
 </div>
 <h2 id="instruments">Instruments</h2>
@@ -82,28 +82,28 @@ h2{font-size:20px;margin:40px 0 4px}
 <h3>8-Bit 8asterd</h3>
 <p>Three AY-3-8910 chips under the 8b8 firmware, running unmodified as WebAssembly. Nine voices across three chips, hardware envelopes, a percussion set on channel 10, and the firmware&#39;s own vibrato, tremolo, arpeggiator, buzzy bass, circuit bending and ten tuning temperaments.</p>
 <p class="meta">Instrument, AudioInstrument . 42 controls . accepts Midi &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/8b8/">Profile</a> <a href="../plugins/8b8/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/8b8/">Profile</a> <a href="plugins/8b8/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/drumkit.png" alt="DrumKit panel" loading="lazy">
 <h3>DrumKit</h3>
 <p>Eleven voice synthesised drum instrument. MIDI notes trigger the voices, the master bus adds crush, drive and room, and per-instrument mutes cut voices immediately.</p>
 <p class="meta">Instrument, DrumInstrument . 75 controls . accepts Midi, DrumMidi &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/drumkit/">Profile</a> <a href="../plugins/drumkit/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/drumkit/">Profile</a> <a href="plugins/drumkit/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/mop.png" alt="Mop panel" loading="lazy">
 <h3>Mop</h3>
 <p>Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop&#39;s own bank, a drum kit on channel 10, and every control answering to a MIDI CC.</p>
 <p class="meta">Instrument, AudioInstrument . 6 controls . accepts Midi &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/mop/">Profile</a> <a href="../plugins/mop/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/mop/">Profile</a> <a href="plugins/mop/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/pulse.png" alt="Pulse panel" loading="lazy">
 <h3>Pulse</h3>
 <p>Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.</p>
 <p class="meta">Instrument, AudioInstrument . 5 controls . accepts Midi &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/pulse/">Profile</a> <a href="../plugins/pulse/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/pulse/">Profile</a> <a href="plugins/pulse/profile.ttl">Turtle</a></p>
 </article>
 </div>
 <h2 id="processors">Processors</h2>
@@ -114,70 +114,70 @@ h2{font-size:20px;margin:40px 0 4px}
 <h3>Boost</h3>
 <p>A gain stage in C++, the minimal starting point for a WebAssembly Jig: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.</p>
 <p class="meta">AudioEffect, Utility . 1 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/boost/">Profile</a> <a href="../plugins/boost/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/boost/">Profile</a> <a href="plugins/boost/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/cascade.png" alt="Cascade panel" loading="lazy">
 <h3>Cascade</h3>
 <p>Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.</p>
 <p class="meta">AudioEffect . 5 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/cascade/">Profile</a> <a href="../plugins/cascade/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/cascade/">Profile</a> <a href="plugins/cascade/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/dynamix.png" alt="Dynamix panel" loading="lazy">
 <h3>Dynamix</h3>
 <p>Compressor/expander, limiter and clipper/soft distortion in series. A second stereo input on channels 3 and 4 is an external key: when it is connected, the compressor/expander stage reads its level from that instead of the main signal, for sidechain ducking. When nothing is connected there, the stage detects on the main signal itself.</p>
 <p class="meta">AudioEffect . 14 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/dynamix/">Profile</a> <a href="../plugins/dynamix/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/dynamix/">Profile</a> <a href="plugins/dynamix/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/ferrite.png" alt="Ferrite panel" loading="lazy">
 <h3>Ferrite</h3>
 <p>A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with an impulse response, a cabinet or a room of up to 2.7 seconds, by partitioned FFT convolution. The amp can be switched off to use it as a convolution reverb, and Mix blends the convolved signal with the dry one. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.</p>
 <p class="meta">AudioEffect . 4 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/ferrite/">Profile</a> <a href="../plugins/ferrite/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/ferrite/">Profile</a> <a href="plugins/ferrite/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/jsfx-gain-trim.png" alt="JigDAW Gain Trim panel" loading="lazy">
 <h3>JigDAW Gain Trim</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 1 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/jsfx-gain-trim/">Profile</a> <a href="../plugins/jsfx-gain-trim/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/jsfx-gain-trim/">Profile</a> <a href="plugins/jsfx-gain-trim/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/jsfx-one-pole-filter.png" alt="JigDAW One-Pole Filter panel" loading="lazy">
 <h3>JigDAW One-Pole Filter</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/one-pole-filter.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 1 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/jsfx-one-pole-filter/">Profile</a> <a href="../plugins/jsfx-one-pole-filter/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/jsfx-one-pole-filter/">Profile</a> <a href="plugins/jsfx-one-pole-filter/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/jsfx-soft-clipper.png" alt="JigDAW Soft Clipper panel" loading="lazy">
 <h3>JigDAW Soft Clipper</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/soft-clipper.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 2 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/jsfx-soft-clipper/">Profile</a> <a href="../plugins/jsfx-soft-clipper/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/jsfx-soft-clipper/">Profile</a> <a href="plugins/jsfx-soft-clipper/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/quefrency.png" alt="Quefrency panel" loading="lazy">
 <h3>Quefrency</h3>
 <p>Separates its input through the cepstrum into a formant envelope and a harmonic structure, shifts and reshapes each independently, and multiplies them back together.</p>
 <p class="meta">AudioEffect . 11 controls . accepts Audio, ControlMidi &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/quefrency/">Profile</a> <a href="../plugins/quefrency/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/quefrency/">Profile</a> <a href="plugins/quefrency/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/squelch.png" alt="Squelch panel" loading="lazy">
 <h3>Squelch</h3>
 <p>A resonant lowpass filter whose cutoff an envelope follower pushes up on every note, for the acid bass sweep. Put it after a synth: each note opens the filter and Decay sets how fast it closes. Plain JavaScript, no WebAssembly module.</p>
 <p class="meta">AudioEffect . 4 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/squelch/">Profile</a> <a href="../plugins/squelch/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/squelch/">Profile</a> <a href="plugins/squelch/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <img src="gallery/shots/tremolo.png" alt="Tremolo panel" loading="lazy">
 <h3>Tremolo</h3>
 <p>Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one.</p>
 <p class="meta">AudioEffect . 2 controls . accepts Audio &rarr; produces Audio</p>
-<p class="links"><a href="../plugins/tremolo/">Profile</a> <a href="../plugins/tremolo/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/tremolo/">Profile</a> <a href="plugins/tremolo/profile.ttl">Turtle</a></p>
 </article>
 </div>
 </main>

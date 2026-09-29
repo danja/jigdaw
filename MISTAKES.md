@@ -2,6 +2,25 @@
 
 What happened, root cause, prevention. Newest first.
 
+## 2026-09-29 Gallery cards linked above the application, not beside it
+
+**What happened.** Every Profile link in `web/gallery.html` pointed at
+`strandz.it/plugins/<name>/` and 404d. The gallery sits at the application root,
+so `../plugins/mop/` climbs above it; the correct target is the sibling
+`plugins/mop/`. The same build also drew root-absolute breadcrumbs (`href="/"`,
+`href="/gallery.html"`) and a root-absolute nav link, which work in development
+but escape the application in production, where it is served under `/jigdaw/`.
+
+**Root cause.** The `../plugins/` pattern was copied from
+`web/collections/jigdaw.ttl`, where it is correct: that file lives one directory
+deeper. A relative link is only right at its own depth, and nothing bound the
+gallery's links to the gallery's location.
+
+**Prevention.** `tests/bin/gallery.test.js` now asserts cards, standalone panels
+and the page nav carry no root-absolute link, and that a card points at
+`plugins/<name>/`. A rule about deployment shape (docs/deployment.md: served
+under `/jigdaw/`, prefix stripped) is now a test rather than a sentence.
+
 ## 2026-09-29 A fixed viewport cropped the tallest panel screenshots
 
 **What happened.** The first gallery build screenshotted every panel at one fixed

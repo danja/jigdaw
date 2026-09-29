@@ -4,8 +4,10 @@
 // section assignment to the roles the index actually declares, so a plugin
 // with a role no section covers lands in Other loudly rather than vanishing.
 import { describe, it, expect } from 'vitest'
-import { categoryFor, CATEGORIES } from '../../bin/build-gallery.js'
-import { listLocalPlugins } from '../../bin/jig.js'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { categoryFor, CATEGORIES, card } from '../../bin/build-gallery.js'
+import { listLocalPlugins, renderPanelHTML, resolveProfile } from '../../bin/jig.js'
 
 describe('categoryFor', () => {
   it('covers every plugin in the index with a named section', async () => {
@@ -34,5 +36,44 @@ describe('categoryFor', () => {
     expect(categoryFor(entry(['DrumInstrument']))).toBe('Instruments')
     expect(categoryFor(entry(['AudioEffect']))).toBe('Processors')
     expect(categoryFor(entry(['SomethingNew']))).toBe('Other')
+  })
+})
+
+describe('gallery links survive a subpath deployment', () => {
+  // Production serves the app under /jigdaw/ with the prefix stripped by the
+  // proxy (docs/deployment.md), so a root-absolute href="/plugins/..." escapes
+  // the application and 404s. Every link these pages draw therefore stays
+  // relative. Found when the gallery's Profile cards pointed at
+  // strandz.it/plugins/mop/ instead of strandz.it/jigdaw/plugins/mop/.
+  const entry = {
+    iri: 'https://strandz.it/jigdaw/plugins/mop/',
+    label: 'Mop',
+    comment: 'An instrument.',
+    roles: ['Instrument'],
+    accepts: ['Midi'],
+    produces: ['Audio'],
+    parameters: ['gain']
+  }
+
+  it('points cards at plugins beside the gallery, not above it', () => {
+    const html = card(entry, true)
+    expect(html).toContain('href="plugins/mop/"')
+    expect(html).toContain('href="plugins/mop/profile.ttl"')
+    expect(html).not.toContain('../plugins')
+  })
+
+  it('draws no root-absolute link in a card', () => {
+    expect(card(entry, false)).not.toMatch(/(href|src)="\//)
+  })
+
+  it('draws no root-absolute link in a standalone panel', async () => {
+    const { profile } = await resolveProfile('pulse')
+    expect(await renderPanelHTML(profile)).not.toMatch(/(href|src)="\//)
+  })
+
+  it('reaches the gallery from the page by a relative link', () => {
+    const page = readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+    expect(page).toContain('href="gallery.html"')
+    expect(page).not.toContain('href="/gallery.html"')
   })
 })

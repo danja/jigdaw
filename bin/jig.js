@@ -142,7 +142,7 @@ export async function renderPanelHTML (profile) {
 <style>body{max-width:900px;margin:24px auto;padding:0 16px}</style>
 </head>
 <body>
-<p><a href="/">Jiggy</a> / <a href="/gallery.html">plugin gallery</a></p>
+<p><a href="../../">Jiggy</a> / <a href="../../gallery.html">plugin gallery</a></p>
 <h1>${escapeHtml(profile.label ?? profile.iri)}</h1>
 <p>${escapeHtml(profile.comment ?? '')}</p>
 <p>${escapeHtml(profile.iri)} . ${ports} control${ports === 1 ? '' : 's'}.</p>

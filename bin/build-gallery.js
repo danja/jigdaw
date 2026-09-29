@@ -58,7 +58,7 @@ async function loadEntry (name) {
   return profile
 }
 
-function card (entry, shot) {
+export function card (entry, shot) {
   const name = dirNameOf(entry.iri)
   const img = shot
     ? `<img src="gallery/shots/${name}.png" alt="${escapeHtml(entry.label)} panel" loading="lazy">`
@@ -68,7 +68,7 @@ ${img}
 <h3>${escapeHtml(entry.label)}</h3>
 <p>${escapeHtml(entry.comment ?? '')}</p>
 <p class="meta">${escapeHtml((entry.roles ?? []).join(', '))} . ${(entry.parameters ?? []).length} controls . accepts ${escapeHtml((entry.accepts ?? []).join(', ') || 'nothing')} &rarr; produces ${escapeHtml((entry.produces ?? []).join(', ') || 'nothing')}</p>
-<p class="links"><a href="../plugins/${name}/">Profile</a> <a href="../plugins/${name}/profile.ttl">Turtle</a></p>
+<p class="links"><a href="plugins/${name}/">Profile</a> <a href="plugins/${name}/profile.ttl">Turtle</a></p>
 </article>`
 }
 
@@ -147,7 +147,7 @@ h2{font-size:20px;margin:40px 0 4px}
 </head>
 <body>
 <main>
-<p><a href="/">Jiggy</a> / plugin gallery</p>
+<p><a href="./">Jiggy</a> / plugin gallery</p>
 <h1>Jigs</h1>
 <p>Every plugin in this repository, with its generated control panel. Panels are drawn by the same generator the host uses, so what you see here is what you get in Jiggy. Screenshots are refreshed by <code>node bin/build-gallery.js</code>; panels by <code>node bin/jig.js panel &lt;name&gt;</code>.</p>
 <nav aria-label="Sections">${nav}</nav>
