@@ -214,7 +214,8 @@ here, and a test fails if a profile drifts from its files.
 
 You do not need one. A plugin with no `jig:ui` gets a panel the host draws from your
 `lv2:port` declarations, and that is the expected case: it is consistent with every other
-plugin and it is accessible.
+plugin and it is accessible. Preview yours with `node bin/jig.js panel <name>`, or see all
+of them on the [plugin gallery](https://strandz.it/jigdaw/gallery.html).
 
 If you do ship one, it is a web page that the host loads into a sandboxed frame on your
 plugin's origin and talks to only by `postMessage`

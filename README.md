@@ -56,6 +56,11 @@ plugin by that same IRI and renders real audio to a WAV file.
 node bin/host.js https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:0.5 --out note.wav
 ```
 
+`bin/jig.js` is the same host with a jalv-like surface: `list` the local plugins, `info`
+one plugin's ports, `panel` to draw its generated control surface, `render` for audio,
+and `shot` to screenshot the panel. Every plugin drawn that way is on the
+[plugin gallery](https://strandz.it/jigdaw/gallery.html).
+
 The format is not new. It extends the profile vocabulary published at
 [plugin-universe.com/about/profiles](https://plugin-universe.com/about/profiles) and already in
 use across hundreds of plugins, adding the terms a browser needs to fetch and run one. A profile written

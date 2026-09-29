@@ -126,7 +126,9 @@ yet.
 ## Worked examples
 
 Built from this repository and served by this host. **[strandz.it/jigdaw](https://strandz.it/jigdaw/)**
-runs Jiggy live, the same code as in this repository. A second, independent host
+runs Jiggy live, the same code as in this repository. Every plugin with its generated
+panel is on the **[plugin gallery](https://strandz.it/jigdaw/gallery.html)**, grouped into
+generative, MIDI, instruments and processors. A second, independent host
 loads the same plugins as a VST3, CLAP or LV2; see
 [the JigDAW Adapter](../native/jigdaw-adapter/README.md) for what it is and how to build it.
 

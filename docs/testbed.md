@@ -12,11 +12,12 @@ the tests directory answers it.
 
 ## Hosts
 
-Four programs load Jigs, and a fifth packages them for someone else's host.
+Five programs load Jigs, and a sixth packages them for someone else's host.
 
 | Host | What it is | Exercises |
 |---|---|---|
 | **Jiggy** ([web/app/](../web/app/), [src/](../src/)) | The browser host: tracks and a mixer, a plugin rack with generated panels, an arrangement of MIDI and audio clips against a looping transport, undo and redo, sessions saved as Turtle or zip, a catalogue search, an agent surface. | Most of the contract, sections 1 to 12. [messaging.md](messaging.md) in both directions. [latency.md](latency.md) sections 1, 3 and 4. [project-format.md](project-format.md). [webmcp.md](webmcp.md). [plugin-collections.md](plugin-collections.md) section 3. [wam.md](wam.md), loading a WAM as a foreign plugin. |
+| **jig, the jalv equivalent** ([bin/jig.js](../bin/jig.js)) | Lists the local plugins, shows one plugin's ports, draws its generated panel, renders audio, and screenshots the panel. Rendering delegates to the reference host's chain, so the two cannot disagree. | Contract 3.1 through the shared render, 5.1 and 5.3 through the generated panel, which is the same `createPanel` the browser host uses. |
 | **Reference host** ([bin/host.js](../bin/host.js), [src/host/ReferenceHost.js](../src/host/ReferenceHost.js)) | Loads a chain of plugins by IRI, or from a local directory, in Node, and renders it to a WAV file. No browser. | Contract 3.1 end to end, including integrity (3.2) and compiling inside the processor (3.3), through [src/testing/OfflineHost.js](../src/testing/OfflineHost.js), which runs the real processor code. |
 | **JigDAW Adapter** ([native/jigdaw-adapter/](../native/jigdaw-adapter/README.md)) | A VST3, CLAP and LV2 plugin, built with DPF, with a second shell in JUCE. It loads a chain of Jigs by IRI and runs their WebAssembly directly, with no JavaScript. | [module-abi.md](module-abi.md) versions 1 and 2, including splitting a block larger than `jig_max_frames` and `jig_latency_frames` reporting, checked by `latency_test.cpp` against Quefrency's 2047 frames. Contract 1.1 and 1.2 (fetch by IRI), 3.2 (integrity). It is an independent reading of the profile format, with its own Turtle parser. |
 | **REAPER render script** ([reaper/jigdaw-render.lua](../reaper/README.md)) | A ReaScript that asks for plugin IRIs and notes, drives the reference host, and drops the rendered WAV onto a new track. Not yet run against a real REAPER. | Nothing beyond the reference host; it is a route into it. |
@@ -169,6 +170,7 @@ These are the modules the hosts are built from, in the layers
 | `npm run check-plugin` ([bin/check-plugin.js](../bin/check-plugin.js)) | Renders a plugin and reports whether it produced bounded audio. | What validation cannot: that the code does something. |
 | [bin/bundle.js](../bin/bundle.js), [bin/verify.js](../bin/verify.js), [bin/keys.js](../bin/keys.js) | Make a flattened profile and a `.jig` archive, open one and say what is known about it, and manage a signing key. | [plugin-bundles.md](plugin-bundles.md) sections 2, 4, 5 and 6. |
 | `npm run build:index` ([bin/build-plugin-index.js](../bin/build-plugin-index.js)) | Generates `plugins/index.json` and the collection [web/collections/jigdaw.ttl](../web/collections/jigdaw.ttl) from the profiles on disk. | [plugin-collections.md](plugin-collections.md) section 2. |
+| `npm run build:gallery` ([bin/build-gallery.js](../bin/build-gallery.js)) | Screenshots every plugin's generated panel and writes the gallery page at [web/gallery.html](../web/gallery.html), served at `/gallery.html`. | Contract 9.1: the generated panel is the expected case, and this is every one of them. |
 | `npm run serve` ([bin/serve.js](../bin/serve.js)) | A development server that serves what a host and a plugin origin must, including CORS. | Contract 1.3. |
 | [bin/build-vocab-site.js](../bin/build-vocab-site.js), [deploy/](../deploy/) | The vocabulary's human-readable page, and the nginx configuration that serves the namespace. | [namespace.md](namespace.md). |
 | `npm run mcp-bridge` ([bin/mcp-bridge.js](../bin/mcp-bridge.js)) | An MCP endpoint on loopback whose tools run in an open Jiggy page. | [webmcp.md](webmcp.md), "The local bridge". |

@@ -190,6 +190,11 @@ the form offers by default. Published, it is
 curl -H "Accept: text/turtle" https://strandz.it/jigdaw/collections/jigdaw.ttl
 ```
 
+The same set with screenshots instead of triples is the
+[plugin gallery](https://strandz.it/jigdaw/gallery.html), built by
+[bin/build-gallery.js](../bin/build-gallery.js): one headless screenshot per generated
+panel, grouped into generative, MIDI, instruments and processors.
+
 `tests/catalogue/CollectionLoader.test.js` opens it against the real profiles on disk, fails
 if it and `plugins/` disagree in either direction, and checks that opening it fetches the
 document and the profiles and nothing else.

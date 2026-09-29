@@ -60,7 +60,10 @@ Loading a plugin you did not write is an ordered sequence, documented in
 SHACL shapes, check what the plugin requires against what the host offers, fetch and verify
 its resources, register and construct its `AudioWorkletNode`, then send `init` and wait for
 `ready` before connecting it into the graph. A minimal, standalone reference host renders real
-audio from a plugin's IRI to a WAV file with no browser at all.
+audio from a plugin's IRI to a WAV file with no browser at all, and
+[bin/jig.js](../bin/jig.js) puts a jalv-like surface on the same machinery: list the local
+plugins, show one plugin's ports, draw its generated panel, render audio, and screenshot
+the panel.
 
 ## For plugin developers
 
