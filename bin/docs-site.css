@@ -6,8 +6,13 @@
  */
 :root {
   color-scheme: dark;
-  --bg:#0d0f13; --panel:#12151b; --panel-2:#161a22; --fg:#e8eaed; --dim:#8b93a1; --faint:#5c6472;
-  --line:#232833; --accent:#6aa9e9; --accent-soft:#6aa9e926; --ok:#7ddc8e; --warn:#ffcf70;
+  /* Brand palette (docs/images/jigdaw-brand/generate.py): ink #10183A,
+   * cobalt #2A44D0, signal #FFC93C, paper #EEF1F8. Cobalt is too dark to
+   * read as text on ink, so links use a tint of it and cobalt itself only
+   * fills shapes. */
+  --bg:#10183A; --panel:#0c1230; --panel-2:#192252; --fg:#EEF1F8; --dim:#aab3d6; --faint:#8791bd;
+  --line:#26316b; --accent:#FFC93C; --accent-soft:#FFC93C26; --link:#9fb2ff; --cobalt:#2A44D0;
+  --ok:#7ddc8e; --warn:#ffcf70;
   --code-keyword:#c792ea; --code-string:#c3e88d; --code-number:#f78c6c;
   --code-fn:#82aaff; --code-type:#ffcb6b; --code-meta:#89ddff; --code-symbol:#7fd9c4;
 }
@@ -15,7 +20,7 @@
 html { scrollbar-color: var(--line) transparent; }
 body { margin:0; font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--fg); }
 :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
-a { color:var(--accent); text-decoration:none; }
+a { color:var(--link); text-decoration:none; }
 a:hover { text-decoration:underline; }
 
 .shell { display:flex; min-height:100vh; align-items:stretch; }
@@ -30,14 +35,9 @@ a:hover { text-decoration:underline; }
   overflow-y:auto; display:flex; flex-direction:column; gap:4px;
 }
 .sidebar .brand {
-  font-size:1.15rem; font-weight:800; letter-spacing:.02em; color:var(--fg);
-  display:flex; align-items:center; gap:8px;
+  display:block; margin:0 0 4px -6px;
 }
-.sidebar .brand::before {
-  content:""; width:10px; height:10px; border-radius:3px;
-  background:linear-gradient(135deg, var(--accent), var(--code-symbol));
-  flex:none;
-}
+.sidebar .brand img { display:block; width:190px; max-width:100%; height:auto; }
 .sidebar .brand:hover { text-decoration:none; }
 .sidebar .tagline { margin:2px 0 22px; font-size:12.5px; color:var(--faint); }
 
@@ -85,7 +85,7 @@ strong { color:var(--fg); }
 code { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.87em;
   background:var(--panel-2); padding:2px 6px; border-radius:4px; border:1px solid var(--line); }
 pre {
-  background:#0a0c10; border:1px solid var(--line); border-radius:8px; padding:16px 18px;
+  background:#0a0f2a; border:1px solid var(--line); border-radius:8px; padding:16px 18px;
   overflow-x:auto; font-size:13px; line-height:1.6; margin:16px 0;
   box-shadow: inset 0 1px 0 0 rgba(255,255,255,.02);
 }
@@ -123,7 +123,7 @@ footer p { max-width:46rem; margin:0 auto; padding:20px 40px 44px; color:var(--f
 .hljs-built_in, .hljs-type { color:var(--code-type); }
 .hljs-meta, .hljs-attr, .hljs-attribute { color:var(--code-meta); }
 .hljs-symbol, .hljs-tag, .hljs-name { color:var(--code-symbol); }
-.hljs-link { color:var(--accent); }
+.hljs-link { color:var(--link); }
 .hljs-punctuation { color:var(--faint); }
 .hljs-variable, .hljs-params { color:var(--fg); }
 .hljs-deletion { color:#ff6b6b; }

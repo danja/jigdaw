@@ -29,6 +29,16 @@ const docsDir = join(root, 'docs')
 const outDir = join(root, 'docs-site')
 
 const REPO = 'https://github.com/danja/jigdaw'
+const SITE = 'https://danja.github.io/jigdaw/'
+
+// Brand files copied beside the pages, from docs/images/jigdaw-brand/. Pages
+// refer to them relatively, so the site works under /jigdaw/ and from a
+// local file alike; only the Open Graph tags need absolute URLs.
+const brandDir = join(docsDir, 'images', 'jigdaw-brand')
+const BRAND_FILES = [
+  'favicon.ico', 'favicon.svg', 'apple-touch-icon.png',
+  'jigdaw-logo-dark.svg', 'jigdaw-social-card.png'
+]
 
 hljs.registerLanguage('turtle', turtle)
 hljs.registerAliases(['ttl'], { languageName: 'turtle' })
@@ -184,12 +194,25 @@ function page ({ name, title, description, bodyHtml }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} : JigDAW</title>
 <meta name="description" content="${escapeHtml(description)}">
+<meta name="theme-color" content="#10183A">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:title" content="${escapeHtml(title)} : JigDAW">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:image" content="${SITE}jigdaw-social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="${SITE}${name}.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${SITE}jigdaw-social-card.png">
+<meta name="twitter:image:alt" content="JigDAW: A plugin is a URL. A row of interlocking jigsaw pieces with waveform edges, one yellow piece lifting out.">
 <link rel="stylesheet" href="docs.css">
 </head>
 <body>
 <div class="shell">
   <aside class="sidebar">
-    <a class="brand" href="index.html"${name === 'index' ? ' aria-current="page"' : ''}>JigDAW</a>
+    <a class="brand" href="index.html"${name === 'index' ? ' aria-current="page"' : ''}><img src="jigdaw-logo-dark.svg" alt="JigDAW" width="574" height="200"></a>
     <p class="tagline">A plugin format native to the web</p>
     <nav aria-label="Documentation">
 ${sidebar(name)}
@@ -220,6 +243,7 @@ for (const name of names) {
   await writeFile(join(outDir, `${name}.html`), html)
 }
 
+for (const file of BRAND_FILES) await copyFile(join(brandDir, file), join(outDir, file))
 await copyFile(join(root, 'bin/docs-site.css'), join(outDir, 'docs.css'))
 await writeFile(join(outDir, '.nojekyll'), '')
 
