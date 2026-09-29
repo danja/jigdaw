@@ -15,14 +15,21 @@ h1{font-size:28px;margin:8px 0}
 h2{font-size:20px;margin:40px 0 4px}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:hidden}
-.card img{width:100%;height:220px;object-fit:cover;object-position:top;border-radius:4px;border:1px solid var(--line);background:#0e1013}
+.shot{display:block;padding:0;border:1px solid var(--line);border-radius:4px;background:#0e1013;cursor:zoom-in}
+.shot img{display:block;width:100%;height:220px;object-fit:cover;object-position:top;border:0}
 .card h3{margin:10px 0 4px;font-size:16px}
 .card p{margin:6px 0}
 .meta{color:var(--dim);font-size:12px}
 .links{display:flex;gap:12px;font-size:13px}
 .links a{color:var(--accent)}
 .no-shot{height:220px;display:flex;align-items:center;justify-content:center;color:var(--dim);border:1px dashed var(--line);border-radius:4px;text-align:center;padding:12px}
-@media (max-width:720px){main{padding:16px 12px 48px}.card img{height:180px}}
+#shot-viewer{max-width:min(1100px,96vw);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:16px}
+#shot-viewer::backdrop{background:rgba(0,0,0,.7)}
+#shot-viewer h2{margin:0 0 8px;font-size:18px}
+.viewer-img{display:block;width:100%;height:auto;max-height:76vh;object-fit:contain;background:#0e1013}
+#shot-viewer form{margin:12px 0 0;text-align:right}
+#shot-viewer button{min-height:44px;padding:8px 18px;font-size:15px;background:#242a33;color:var(--fg);border:1px solid var(--line);border-radius:5px;cursor:pointer}
+@media (max-width:720px){main{padding:16px 12px 48px}.shot img{height:180px}}
 </style>
 </head>
 <body>
@@ -35,28 +42,28 @@ h2{font-size:20px;margin:40px 0 4px}
 <p>Sources of musical material: melody, bass, drum and harmony generators playing in time with the session.</p>
 <div class="grid">
 <article class="card">
-<img src="gallery/shots/bassgen.png" alt="BassGen panel" loading="lazy">
+<a class="shot" href="gallery/shots/bassgen.png" data-full="gallery/shots/bassgen.png" data-label="BassGen" aria-haspopup="dialog" aria-label="View full-size BassGen panel"><img src="gallery/shots/bassgen.png" alt="BassGen panel" loading="lazy"></a>
 <h3>BassGen</h3>
 <p>Transport synced bass line generator. Scale, genre and subdivision shape a seeded pattern that plays in time with the session and can be steered from a keyboard.</p>
 <p class="meta">MidiGenerator . 13 controls . accepts Midi &rarr; produces Midi, BassMidi</p>
 <p class="links"><a href="plugins/bassgen/">Profile</a> <a href="plugins/bassgen/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/drumgen.png" alt="DrumGen panel" loading="lazy">
+<a class="shot" href="gallery/shots/drumgen.png" data-full="gallery/shots/drumgen.png" data-label="DrumGen" aria-haspopup="dialog" aria-label="View full-size DrumGen panel"><img src="gallery/shots/drumgen.png" alt="DrumGen panel" loading="lazy"></a>
 <h3>DrumGen</h3>
 <p>Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.</p>
 <p class="meta">MidiGenerator . 21 controls . accepts ControlMidi &rarr; produces Midi, DrumMidi</p>
 <p class="links"><a href="plugins/drumgen/">Profile</a> <a href="plugins/drumgen/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/ground.png" alt="Ground panel" loading="lazy">
+<a class="shot" href="gallery/shots/ground.png" data-full="gallery/shots/ground.png" data-label="Ground" aria-haspopup="dialog" aria-label="View full-size Ground panel"><img src="gallery/shots/ground.png" alt="Ground panel" loading="lazy"></a>
 <h3>Ground</h3>
 <p>Transport synced long-form bass generator. Form shapes and phrase roles plan a whole section that plays in time with the session, with arc tension and Conductor control including scene-driven role overrides.</p>
 <p class="meta">MidiGenerator . 56 controls . accepts ControlMidi &rarr; produces Midi, BassMidi</p>
 <p class="links"><a href="plugins/ground/">Profile</a> <a href="plugins/ground/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/melgen.png" alt="MelGen panel" loading="lazy">
+<a class="shot" href="gallery/shots/melgen.png" data-full="gallery/shots/melgen.png" data-label="MelGen" aria-haspopup="dialog" aria-label="View full-size MelGen panel"><img src="gallery/shots/melgen.png" alt="MelGen panel" loading="lazy"></a>
 <h3>MelGen</h3>
 <p>Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.</p>
 <p class="meta">MidiGenerator . 26 controls . accepts Midi, ControlMidi &rarr; produces Midi, MelodyMidi</p>
@@ -67,7 +74,7 @@ h2{font-size:20px;margin:40px 0 4px}
 <p>Processors shaping MIDI before it reaches an instrument.</p>
 <div class="grid">
 <article class="card">
-<img src="gallery/shots/cadence.png" alt="Cadence panel" loading="lazy">
+<a class="shot" href="gallery/shots/cadence.png" data-full="gallery/shots/cadence.png" data-label="Cadence" aria-haspopup="dialog" aria-label="View full-size Cadence panel"><img src="gallery/shots/cadence.png" alt="Cadence panel" loading="lazy"></a>
 <h3>Cadence</h3>
 <p>Transport synced MIDI harmonizer that learns a chord cycle from what it hears and plays voiced progressions with comping in time with the session.</p>
 <p class="meta">MidiProcessor . 17 controls . accepts Midi &rarr; produces Midi, HarmonyMidi</p>
@@ -78,28 +85,28 @@ h2{font-size:20px;margin:40px 0 4px}
 <p>Playable sound sources: synths and drum instruments.</p>
 <div class="grid">
 <article class="card">
-<img src="gallery/shots/8b8.png" alt="8-Bit 8asterd panel" loading="lazy">
+<a class="shot" href="gallery/shots/8b8.png" data-full="gallery/shots/8b8.png" data-label="8-Bit 8asterd" aria-haspopup="dialog" aria-label="View full-size 8-Bit 8asterd panel"><img src="gallery/shots/8b8.png" alt="8-Bit 8asterd panel" loading="lazy"></a>
 <h3>8-Bit 8asterd</h3>
 <p>Three AY-3-8910 chips under the 8b8 firmware, running unmodified as WebAssembly. Nine voices across three chips, hardware envelopes, a percussion set on channel 10, and the firmware&#39;s own vibrato, tremolo, arpeggiator, buzzy bass, circuit bending and ten tuning temperaments.</p>
 <p class="meta">Instrument, AudioInstrument . 42 controls . accepts Midi &rarr; produces Audio</p>
 <p class="links"><a href="plugins/8b8/">Profile</a> <a href="plugins/8b8/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/drumkit.png" alt="DrumKit panel" loading="lazy">
+<a class="shot" href="gallery/shots/drumkit.png" data-full="gallery/shots/drumkit.png" data-label="DrumKit" aria-haspopup="dialog" aria-label="View full-size DrumKit panel"><img src="gallery/shots/drumkit.png" alt="DrumKit panel" loading="lazy"></a>
 <h3>DrumKit</h3>
 <p>Eleven voice synthesised drum instrument. MIDI notes trigger the voices, the master bus adds crush, drive and room, and per-instrument mutes cut voices immediately.</p>
 <p class="meta">Instrument, DrumInstrument . 75 controls . accepts Midi, DrumMidi &rarr; produces Audio</p>
 <p class="links"><a href="plugins/drumkit/">Profile</a> <a href="plugins/drumkit/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/mop.png" alt="Mop panel" loading="lazy">
+<a class="shot" href="gallery/shots/mop.png" data-full="gallery/shots/mop.png" data-label="Mop" aria-haspopup="dialog" aria-label="View full-size Mop panel"><img src="gallery/shots/mop.png" alt="Mop panel" loading="lazy"></a>
 <h3>Mop</h3>
 <p>Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop&#39;s own bank, a drum kit on channel 10, and every control answering to a MIDI CC.</p>
 <p class="meta">Instrument, AudioInstrument . 6 controls . accepts Midi &rarr; produces Audio</p>
 <p class="links"><a href="plugins/mop/">Profile</a> <a href="plugins/mop/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/pulse.png" alt="Pulse panel" loading="lazy">
+<a class="shot" href="gallery/shots/pulse.png" data-full="gallery/shots/pulse.png" data-label="Pulse" aria-haspopup="dialog" aria-label="View full-size Pulse panel"><img src="gallery/shots/pulse.png" alt="Pulse panel" loading="lazy"></a>
 <h3>Pulse</h3>
 <p>Eight voice subtractive synthesiser with saw, square and triangle oscillators, a one-pole lowpass and an attack-release envelope.</p>
 <p class="meta">Instrument, AudioInstrument . 5 controls . accepts Midi &rarr; produces Audio</p>
@@ -110,70 +117,70 @@ h2{font-size:20px;margin:40px 0 4px}
 <p>Audio effects shaping sound.</p>
 <div class="grid">
 <article class="card">
-<img src="gallery/shots/boost.png" alt="Boost panel" loading="lazy">
+<a class="shot" href="gallery/shots/boost.png" data-full="gallery/shots/boost.png" data-label="Boost" aria-haspopup="dialog" aria-label="View full-size Boost panel"><img src="gallery/shots/boost.png" alt="Boost panel" loading="lazy"></a>
 <h3>Boost</h3>
 <p>A gain stage in C++, the minimal starting point for a WebAssembly Jig: everything in boost.cpp beyond jig_process is ABI wiring, meant to be copied.</p>
 <p class="meta">AudioEffect, Utility . 1 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/boost/">Profile</a> <a href="plugins/boost/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/cascade.png" alt="Cascade panel" loading="lazy">
+<a class="shot" href="gallery/shots/cascade.png" data-full="gallery/shots/cascade.png" data-label="Cascade" aria-haspopup="dialog" aria-label="View full-size Cascade panel"><img src="gallery/shots/cascade.png" alt="Cascade panel" loading="lazy"></a>
 <h3>Cascade</h3>
 <p>Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.</p>
 <p class="meta">AudioEffect . 5 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/cascade/">Profile</a> <a href="plugins/cascade/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/dynamix.png" alt="Dynamix panel" loading="lazy">
+<a class="shot" href="gallery/shots/dynamix.png" data-full="gallery/shots/dynamix.png" data-label="Dynamix" aria-haspopup="dialog" aria-label="View full-size Dynamix panel"><img src="gallery/shots/dynamix.png" alt="Dynamix panel" loading="lazy"></a>
 <h3>Dynamix</h3>
 <p>Compressor/expander, limiter and clipper/soft distortion in series. A second stereo input on channels 3 and 4 is an external key: when it is connected, the compressor/expander stage reads its level from that instead of the main signal, for sidechain ducking. When nothing is connected there, the stage detects on the main signal itself.</p>
 <p class="meta">AudioEffect . 14 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/dynamix/">Profile</a> <a href="plugins/dynamix/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/ferrite.png" alt="Ferrite panel" loading="lazy">
+<a class="shot" href="gallery/shots/ferrite.png" data-full="gallery/shots/ferrite.png" data-label="Ferrite" aria-haspopup="dialog" aria-label="View full-size Ferrite panel"><img src="gallery/shots/ferrite.png" alt="Ferrite panel" loading="lazy"></a>
 <h3>Ferrite</h3>
 <p>A neural amp model (nam-rs, MIT, ported from and validated against the reference Python and C++ implementations) in series with an impulse response, a cabinet or a room of up to 2.7 seconds, by partitioned FFT convolution. The amp can be switched off to use it as a convolution reverb, and Mix blends the convolved signal with the dry one. Ships a small example .nam and a synthetic (not captured) cabinet IR; both jig:asset resources are meant to be replaced with your own.</p>
 <p class="meta">AudioEffect . 4 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/ferrite/">Profile</a> <a href="plugins/ferrite/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/jsfx-gain-trim.png" alt="JigDAW Gain Trim panel" loading="lazy">
+<a class="shot" href="gallery/shots/jsfx-gain-trim.png" data-full="gallery/shots/jsfx-gain-trim.png" data-label="JigDAW Gain Trim" aria-haspopup="dialog" aria-label="View full-size JigDAW Gain Trim panel"><img src="gallery/shots/jsfx-gain-trim.png" alt="JigDAW Gain Trim panel" loading="lazy"></a>
 <h3>JigDAW Gain Trim</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/gain-trim.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 1 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/jsfx-gain-trim/">Profile</a> <a href="plugins/jsfx-gain-trim/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/jsfx-one-pole-filter.png" alt="JigDAW One-Pole Filter panel" loading="lazy">
+<a class="shot" href="gallery/shots/jsfx-one-pole-filter.png" data-full="gallery/shots/jsfx-one-pole-filter.png" data-label="JigDAW One-Pole Filter" aria-haspopup="dialog" aria-label="View full-size JigDAW One-Pole Filter panel"><img src="gallery/shots/jsfx-one-pole-filter.png" alt="JigDAW One-Pole Filter panel" loading="lazy"></a>
 <h3>JigDAW One-Pole Filter</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/one-pole-filter.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 1 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/jsfx-one-pole-filter/">Profile</a> <a href="plugins/jsfx-one-pole-filter/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/jsfx-soft-clipper.png" alt="JigDAW Soft Clipper panel" loading="lazy">
+<a class="shot" href="gallery/shots/jsfx-soft-clipper.png" data-full="gallery/shots/jsfx-soft-clipper.png" data-label="JigDAW Soft Clipper" aria-haspopup="dialog" aria-label="View full-size JigDAW Soft Clipper panel"><img src="gallery/shots/jsfx-soft-clipper.png" alt="JigDAW Soft Clipper panel" loading="lazy"></a>
 <h3>JigDAW Soft Clipper</h3>
 <p>Converted by bin/jsfx-import.js from examples/jsfx/soft-clipper.jsfx, a REAPER JSFX effect, and run under the shared interpreter in plugins/_jsfx-runtime/.</p>
 <p class="meta">AudioEffect . 2 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/jsfx-soft-clipper/">Profile</a> <a href="plugins/jsfx-soft-clipper/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/quefrency.png" alt="Quefrency panel" loading="lazy">
+<a class="shot" href="gallery/shots/quefrency.png" data-full="gallery/shots/quefrency.png" data-label="Quefrency" aria-haspopup="dialog" aria-label="View full-size Quefrency panel"><img src="gallery/shots/quefrency.png" alt="Quefrency panel" loading="lazy"></a>
 <h3>Quefrency</h3>
 <p>Separates its input through the cepstrum into a formant envelope and a harmonic structure, shifts and reshapes each independently, and multiplies them back together.</p>
 <p class="meta">AudioEffect . 11 controls . accepts Audio, ControlMidi &rarr; produces Audio</p>
 <p class="links"><a href="plugins/quefrency/">Profile</a> <a href="plugins/quefrency/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/squelch.png" alt="Squelch panel" loading="lazy">
+<a class="shot" href="gallery/shots/squelch.png" data-full="gallery/shots/squelch.png" data-label="Squelch" aria-haspopup="dialog" aria-label="View full-size Squelch panel"><img src="gallery/shots/squelch.png" alt="Squelch panel" loading="lazy"></a>
 <h3>Squelch</h3>
 <p>A resonant lowpass filter whose cutoff an envelope follower pushes up on every note, for the acid bass sweep. Put it after a synth: each note opens the filter and Decay sets how fast it closes. Plain JavaScript, no WebAssembly module.</p>
 <p class="meta">AudioEffect . 4 controls . accepts Audio &rarr; produces Audio</p>
 <p class="links"><a href="plugins/squelch/">Profile</a> <a href="plugins/squelch/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
-<img src="gallery/shots/tremolo.png" alt="Tremolo panel" loading="lazy">
+<a class="shot" href="gallery/shots/tremolo.png" data-full="gallery/shots/tremolo.png" data-label="Tremolo" aria-haspopup="dialog" aria-label="View full-size Tremolo panel"><img src="gallery/shots/tremolo.png" alt="Tremolo panel" loading="lazy"></a>
 <h3>Tremolo</h3>
 <p>Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one.</p>
 <p class="meta">AudioEffect . 2 controls . accepts Audio &rarr; produces Audio</p>
@@ -181,5 +188,27 @@ h2{font-size:20px;margin:40px 0 4px}
 </article>
 </div>
 </main>
+<dialog id="shot-viewer" aria-labelledby="shot-viewer-title">
+<h2 id="shot-viewer-title"></h2>
+<img class="viewer-img" src="" alt="">
+<form method="dialog"><button value="close">Close</button></form>
+</dialog>
+<script>
+document.querySelector('main').addEventListener('click', event => {
+  const link = event.target.closest('a.shot');
+  if (!link) return;
+  const viewer = document.getElementById('shot-viewer');
+  if (!viewer || typeof viewer.showModal !== 'function') return;
+  event.preventDefault();
+  const img = viewer.querySelector('img');
+  img.src = link.dataset.full;
+  img.alt = link.dataset.label + ' panel, full size';
+  viewer.querySelector('h2').textContent = link.dataset.label;
+  viewer.showModal();
+});
+document.getElementById('shot-viewer').addEventListener('click', event => {
+  if (event.target.id === 'shot-viewer') event.target.close();
+});
+</script>
 </body>
 </html>

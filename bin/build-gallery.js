@@ -61,7 +61,7 @@ async function loadEntry (name) {
 export function card (entry, shot) {
   const name = dirNameOf(entry.iri)
   const img = shot
-    ? `<img src="gallery/shots/${name}.png" alt="${escapeHtml(entry.label)} panel" loading="lazy">`
+    ? `<a class="shot" href="gallery/shots/${name}.png" data-full="gallery/shots/${name}.png" data-label="${escapeHtml(entry.label)}" aria-haspopup="dialog" aria-label="View full-size ${escapeHtml(entry.label)} panel"><img src="gallery/shots/${name}.png" alt="${escapeHtml(entry.label)} panel" loading="lazy"></a>`
     : `<div class="no-shot">No screenshot yet. Run <code>node bin/build-gallery.js</code>.</div>`
   return `<article class="card">
 ${img}
@@ -70,6 +70,38 @@ ${img}
 <p class="meta">${escapeHtml((entry.roles ?? []).join(', '))} . ${(entry.parameters ?? []).length} controls . accepts ${escapeHtml((entry.accepts ?? []).join(', ') || 'nothing')} &rarr; produces ${escapeHtml((entry.produces ?? []).join(', ') || 'nothing')}</p>
 <p class="links"><a href="plugins/${name}/">Profile</a> <a href="plugins/${name}/profile.ttl">Turtle</a></p>
 </article>`
+}
+
+/**
+ * The full-size viewer: one dialog for the whole page, filled in from the
+ * thumbnail's data attributes when it opens. A thumbnail is a plain link to
+ * its PNG, so without script it still opens the image; with script the click
+ * is intercepted and the dialog shows it in place instead. Escape and the
+ * Close button are native dialog behaviour, not reimplemented.
+ */
+export function lightboxMarkup () {
+  return `<dialog id="shot-viewer" aria-labelledby="shot-viewer-title">
+<h2 id="shot-viewer-title"></h2>
+<img class="viewer-img" src="" alt="">
+<form method="dialog"><button value="close">Close</button></form>
+</dialog>
+<script>
+document.querySelector('main').addEventListener('click', event => {
+  const link = event.target.closest('a.shot');
+  if (!link) return;
+  const viewer = document.getElementById('shot-viewer');
+  if (!viewer || typeof viewer.showModal !== 'function') return;
+  event.preventDefault();
+  const img = viewer.querySelector('img');
+  img.src = link.dataset.full;
+  img.alt = link.dataset.label + ' panel, full size';
+  viewer.querySelector('h2').textContent = link.dataset.label;
+  viewer.showModal();
+});
+document.getElementById('shot-viewer').addEventListener('click', event => {
+  if (event.target.id === 'shot-viewer') event.target.close();
+});
+</script>`
 }
 
 export async function buildGallery ({ shots = true, width = 1100, height = null } = {}) {
@@ -135,14 +167,21 @@ h1{font-size:28px;margin:8px 0}
 h2{font-size:20px;margin:40px 0 4px}
 .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));margin-top:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:hidden}
-.card img{width:100%;height:220px;object-fit:cover;object-position:top;border-radius:4px;border:1px solid var(--line);background:#0e1013}
+.shot{display:block;padding:0;border:1px solid var(--line);border-radius:4px;background:#0e1013;cursor:zoom-in}
+.shot img{display:block;width:100%;height:220px;object-fit:cover;object-position:top;border:0}
 .card h3{margin:10px 0 4px;font-size:16px}
 .card p{margin:6px 0}
 .meta{color:var(--dim);font-size:12px}
 .links{display:flex;gap:12px;font-size:13px}
 .links a{color:var(--accent)}
 .no-shot{height:220px;display:flex;align-items:center;justify-content:center;color:var(--dim);border:1px dashed var(--line);border-radius:4px;text-align:center;padding:12px}
-@media (max-width:720px){main{padding:16px 12px 48px}.card img{height:180px}}
+#shot-viewer{max-width:min(1100px,96vw);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:16px}
+#shot-viewer::backdrop{background:rgba(0,0,0,.7)}
+#shot-viewer h2{margin:0 0 8px;font-size:18px}
+.viewer-img{display:block;width:100%;height:auto;max-height:76vh;object-fit:contain;background:#0e1013}
+#shot-viewer form{margin:12px 0 0;text-align:right}
+#shot-viewer button{min-height:44px;padding:8px 18px;font-size:15px;background:#242a33;color:var(--fg);border:1px solid var(--line);border-radius:5px;cursor:pointer}
+@media (max-width:720px){main{padding:16px 12px 48px}.shot img{height:180px}}
 </style>
 </head>
 <body>
@@ -153,6 +192,7 @@ h2{font-size:20px;margin:40px 0 4px}
 <nav aria-label="Sections">${nav}</nav>
 ${body}
 </main>
+${lightboxMarkup()}
 </body>
 </html>
 `
