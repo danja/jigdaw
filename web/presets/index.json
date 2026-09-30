@@ -6,8 +6,8 @@
       "label": "Acid"
     },
     {
-      "file": "pulse-tremolo-plate.ttl",
-      "label": "Square lead, tremolo and plate"
+      "file": "generative-fx.ttl",
+      "label": "Generative, through effects"
     },
     {
       "file": "amp-into-room.ttl",

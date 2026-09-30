@@ -1,0 +1,310 @@
+# web/presets/generative-fx.ttl
+#
+# A bundled preset that makes sound on Play with nothing else to do. One
+# generated line (MelGen) feeds two things: a chance gate (Dice) into a square
+# synth that runs through Squelch, Tremolo, Dynamix and a plate reverb, and a
+# chord cycle (Cadence) that voices a glass pad through a formant shifter
+# (Quefrency) and a frozen hall. DrumGen plays a kit through a crushing
+# compressor and a small room. Nothing here is a clip: every generator plays
+# off the transport. Relative IRIs and no @base, for the reason
+# web/presets/amp-into-room.ttl gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Generative, through effects" ;
+    jig:revision 1 ;
+    jig:track <#track-1> , <#track-2> , <#track-3> ;
+    jig:node <#lead> , <#gate> , <#synth> , <#acid> , <#wobble> , <#press> , <#plate> , <#chords> , <#pad> , <#formant> , <#hall> , <#beat> , <#kit> , <#smash> , <#room> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> , <#c7> , <#c8> , <#c9> , <#c10> , <#c11> , <#c12> , <#c13> ;
+    jig:transport <#transport> .
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Lead" .
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Pad" .
+
+<#track-3>
+    a jig:Track ;
+    rdfs:label "Drums" .
+
+<#lead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Lead line" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#lead-root_note> , <#lead-scale> , <#lead-length_beats> , <#lead-phrase_bars> , <#lead-subdivision> , <#lead-density> , <#lead-register> , <#lead-seed> .
+
+<#gate>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Chance gate" ;
+    jig:plugin <../plugins/dice/> ;
+    jig:setting <#gate-probability> , <#gate-seed> .
+
+<#synth>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Square synth" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#synth-waveform> , <#synth-attack> , <#synth-release> , <#synth-cutoff> , <#synth-gain> .
+
+<#acid>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Squelch" ;
+    jig:plugin <../plugins/squelch/> ;
+    jig:setting <#acid-cutoff> , <#acid-resonance> , <#acid-envelope> , <#acid-decay> .
+
+<#wobble>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Tremolo" ;
+    jig:plugin <../plugins/tremolo/> ;
+    jig:setting <#wobble-rate> , <#wobble-depth> .
+
+<#press>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Crunch" ;
+    jig:plugin <../plugins/dynamix/> ;
+    jig:setting <#press-threshold> , <#press-ratio> , <#press-makeup> , <#press-clip_enable> , <#press-drive> .
+
+<#plate>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Plate" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#plate-mode> , <#plate-mix> , <#plate-size> .
+
+<#chords>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Chord cycle" ;
+    jig:plugin <../plugins/cadence/> ;
+    jig:setting <#chords-key> , <#chords-scale> , <#chords-cycle_bars> , <#chords-granularity> , <#chords-register> , <#chords-spread> , <#chords-arpeggio> .
+
+<#pad>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Glass pad" ;
+    jig:plugin <../plugins/canticle/> ;
+    jig:setting <#pad-model> , <#pad-ensemble> .
+
+<#formant>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Formant shifter" ;
+    jig:plugin <../plugins/quefrency/> ;
+    jig:setting <#formant-formant_shift> , <#formant-formant_depth> , <#formant-pitch_shift> , <#formant-mix> .
+
+<#hall>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Frozen hall" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#hall-mode> , <#hall-mix> , <#hall-size> , <#hall-damping> .
+
+<#beat>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Beat" ;
+    jig:plugin <../plugins/drumgen/> ;
+    jig:setting <#beat-genre> , <#beat-resolution> , <#beat-density> , <#beat-bars> , <#beat-seed> .
+
+<#kit>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Drum kit" ;
+    jig:plugin <../plugins/drumkit/> .
+
+<#smash>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Smash" ;
+    jig:plugin <../plugins/dynamix/> ;
+    jig:setting <#smash-threshold> , <#smash-ratio> , <#smash-makeup> , <#smash-clip_enable> , <#smash-drive> .
+
+<#room>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Room" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#room-mode> , <#room-mix> , <#room-size> .
+
+<#lead-root_note> a jig:ParameterSetting ; jig:symbol "root_note" ; jig:value 69.0 .
+<#lead-scale> a jig:ParameterSetting ; jig:symbol "scale" ; jig:value 2.0 .
+<#lead-length_beats> a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 16.0 .
+<#lead-phrase_bars> a jig:ParameterSetting ; jig:symbol "phrase_bars" ; jig:value 2.0 .
+<#lead-subdivision> a jig:ParameterSetting ; jig:symbol "subdivision" ; jig:value 1.0 .
+<#lead-density> a jig:ParameterSetting ; jig:symbol "density" ; jig:value 0.55 .
+<#lead-register> a jig:ParameterSetting ; jig:symbol "register" ; jig:value 2.0 .
+<#lead-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 23.0 .
+<#gate-probability> a jig:ParameterSetting ; jig:symbol "probability" ; jig:value 0.8 .
+<#gate-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 7.0 .
+<#synth-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 1.0 .
+<#synth-attack> a jig:ParameterSetting ; jig:symbol "attack" ; jig:value 4.0 .
+<#synth-release> a jig:ParameterSetting ; jig:symbol "release" ; jig:value 350.0 .
+<#synth-cutoff> a jig:ParameterSetting ; jig:symbol "cutoff" ; jig:value 2600.0 .
+<#synth-gain> a jig:ParameterSetting ; jig:symbol "gain" ; jig:value 0.25 .
+<#acid-cutoff> a jig:ParameterSetting ; jig:symbol "cutoff" ; jig:value 500.0 .
+<#acid-resonance> a jig:ParameterSetting ; jig:symbol "resonance" ; jig:value 70.0 .
+<#acid-envelope> a jig:ParameterSetting ; jig:symbol "envelope" ; jig:value 3.0 .
+<#acid-decay> a jig:ParameterSetting ; jig:symbol "decay" ; jig:value 220.0 .
+<#wobble-rate> a jig:ParameterSetting ; jig:symbol "rate" ; jig:value 5.0 .
+<#wobble-depth> a jig:ParameterSetting ; jig:symbol "depth" ; jig:value 0.5 .
+<#press-threshold> a jig:ParameterSetting ; jig:symbol "threshold" ; jig:value -24.0 .
+<#press-ratio> a jig:ParameterSetting ; jig:symbol "ratio" ; jig:value 6.0 .
+<#press-makeup> a jig:ParameterSetting ; jig:symbol "makeup" ; jig:value 0.0 .
+<#press-clip_enable> a jig:ParameterSetting ; jig:symbol "clip_enable" ; jig:value 1.0 .
+<#press-drive> a jig:ParameterSetting ; jig:symbol "drive" ; jig:value 6.0 .
+<#plate-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 0.0 .
+<#plate-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.35 .
+<#plate-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 30.0 .
+<#chords-key> a jig:ParameterSetting ; jig:symbol "key" ; jig:value 9.0 .
+<#chords-scale> a jig:ParameterSetting ; jig:symbol "scale" ; jig:value 3.0 .
+<#chords-cycle_bars> a jig:ParameterSetting ; jig:symbol "cycle_bars" ; jig:value 2.0 .
+<#chords-granularity> a jig:ParameterSetting ; jig:symbol "granularity" ; jig:value 1.0 .
+<#chords-register> a jig:ParameterSetting ; jig:symbol "register" ; jig:value 1.0 .
+<#chords-spread> a jig:ParameterSetting ; jig:symbol "spread" ; jig:value 0.4 .
+<#chords-arpeggio> a jig:ParameterSetting ; jig:symbol "arpeggio" ; jig:value 1.0 .
+<#pad-model> a jig:ParameterSetting ; jig:symbol "model" ; jig:value 3.0 .
+<#pad-ensemble> a jig:ParameterSetting ; jig:symbol "ensemble" ; jig:value 2.0 .
+<#formant-formant_shift> a jig:ParameterSetting ; jig:symbol "formant_shift" ; jig:value 5.0 .
+<#formant-formant_depth> a jig:ParameterSetting ; jig:symbol "formant_depth" ; jig:value 140.0 .
+<#formant-pitch_shift> a jig:ParameterSetting ; jig:symbol "pitch_shift" ; jig:value 0.0 .
+<#formant-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.7 .
+<#hall-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 2.0 .
+<#hall-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.5 .
+<#hall-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 50.0 .
+<#hall-damping> a jig:ParameterSetting ; jig:symbol "damping" ; jig:value 6000.0 .
+<#beat-genre> a jig:ParameterSetting ; jig:symbol "genre" ; jig:value 3.0 .
+<#beat-resolution> a jig:ParameterSetting ; jig:symbol "resolution" ; jig:value 1.0 .
+<#beat-density> a jig:ParameterSetting ; jig:symbol "density" ; jig:value 0.6 .
+<#beat-bars> a jig:ParameterSetting ; jig:symbol "bars" ; jig:value 2.0 .
+<#beat-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 9.0 .
+<#smash-threshold> a jig:ParameterSetting ; jig:symbol "threshold" ; jig:value -30.0 .
+<#smash-ratio> a jig:ParameterSetting ; jig:symbol "ratio" ; jig:value 10.0 .
+<#smash-makeup> a jig:ParameterSetting ; jig:symbol "makeup" ; jig:value 0.0 .
+<#smash-clip_enable> a jig:ParameterSetting ; jig:symbol "clip_enable" ; jig:value 1.0 .
+<#smash-drive> a jig:ParameterSetting ; jig:symbol "drive" ; jig:value 6.0 .
+<#room-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#room-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.2 .
+<#room-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 16.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#lead> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#gate> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Midi .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#gate> ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Audio .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#acid> ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Audio .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#acid> ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#wobble> ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Audio .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#wobble> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#press> ; jig:portIndex 0 .
+
+<#c6>
+    a jig:Connection ;
+    jig:from <#c6-from> ; jig:to <#c6-to> ;
+    jig:signalKind trn:Audio .
+
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#press> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#plate> ; jig:portIndex 0 .
+
+<#c7>
+    a jig:Connection ;
+    jig:from <#c7-from> ; jig:to <#c7-to> ;
+    jig:signalKind trn:Midi .
+
+<#c7-from> a jig:Endpoint ; jig:endpointNode <#lead> ; jig:portIndex 0 .
+<#c7-to>   a jig:Endpoint ; jig:endpointNode <#chords> ; jig:portIndex 0 .
+
+<#c8>
+    a jig:Connection ;
+    jig:from <#c8-from> ; jig:to <#c8-to> ;
+    jig:signalKind trn:Midi .
+
+<#c8-from> a jig:Endpoint ; jig:endpointNode <#chords> ; jig:portIndex 0 .
+<#c8-to>   a jig:Endpoint ; jig:endpointNode <#pad> ; jig:portIndex 0 .
+
+<#c9>
+    a jig:Connection ;
+    jig:from <#c9-from> ; jig:to <#c9-to> ;
+    jig:signalKind trn:Audio .
+
+<#c9-from> a jig:Endpoint ; jig:endpointNode <#pad> ; jig:portIndex 0 .
+<#c9-to>   a jig:Endpoint ; jig:endpointNode <#formant> ; jig:portIndex 0 .
+
+<#c10>
+    a jig:Connection ;
+    jig:from <#c10-from> ; jig:to <#c10-to> ;
+    jig:signalKind trn:Audio .
+
+<#c10-from> a jig:Endpoint ; jig:endpointNode <#formant> ; jig:portIndex 0 .
+<#c10-to>   a jig:Endpoint ; jig:endpointNode <#hall> ; jig:portIndex 0 .
+
+<#c11>
+    a jig:Connection ;
+    jig:from <#c11-from> ; jig:to <#c11-to> ;
+    jig:signalKind trn:Midi .
+
+<#c11-from> a jig:Endpoint ; jig:endpointNode <#beat> ; jig:portIndex 0 .
+<#c11-to>   a jig:Endpoint ; jig:endpointNode <#kit> ; jig:portIndex 0 .
+
+<#c12>
+    a jig:Connection ;
+    jig:from <#c12-from> ; jig:to <#c12-to> ;
+    jig:signalKind trn:Audio .
+
+<#c12-from> a jig:Endpoint ; jig:endpointNode <#kit> ; jig:portIndex 0 .
+<#c12-to>   a jig:Endpoint ; jig:endpointNode <#smash> ; jig:portIndex 0 .
+
+<#c13>
+    a jig:Connection ;
+    jig:from <#c13-from> ; jig:to <#c13-to> ;
+    jig:signalKind trn:Audio .
+
+<#c13-from> a jig:Endpoint ; jig:endpointNode <#smash> ; jig:portIndex 0 .
+<#c13-to>   a jig:Endpoint ; jig:endpointNode <#room> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 104.0 .
