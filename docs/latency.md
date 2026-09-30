@@ -60,6 +60,17 @@ Compensation is delay added to the fast paths. It cannot remove delay from the s
 A graph containing a plugin with 4096 frames of latency has at least 4096 frames of latency,
 and a host that claims otherwise is wrong.
 
+## Between tracks
+
+Compensation in section 3 aligns the paths inside one graph, joined by connections. Tracks are
+not joined by connections: each track's output goes to its own fader and then to the master.
+Jiggy therefore does not align one track to another. A track holding a plugin that declares
+2047 frames of latency sounds 2047 frames later at the master than a track with none, and
+nothing corrects it. The header of each track says its latency in frames and milliseconds, so
+this is visible, and `OpDispatcher.trackLatencies()` reports it. Whether a host should also delay
+the faster tracks is an open decision, listed in TODO.md, because it changes what a person
+hears and this document has not yet said it MUST.
+
 ## 4. Feedback
 
 A path that returns to its own source has no accumulated latency, because the computation

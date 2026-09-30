@@ -173,11 +173,12 @@ describe('editor metadata', () => {
     expect(project.position('a')).toEqual({ x: 120, y: 40 })
   })
 
-  it('is discarded when the node is', () => {
+  it('is kept when the node goes, so undo can bring it back to where it was, and not written while it is gone', () => {
     addTwo()
     project.moveNode('a', 1, 2)
     project.apply([{ op: 'removeNode', id: 'a' }])
-    expect(project.position('a')).toEqual({ x: 0, y: 0 })
+    expect(project.position('a')).toEqual({ x: 1, y: 2 })
+    expect(project.hasEditorState).toBe(false)
   })
 
   it('refuses to move a node that is not there', () => {
@@ -460,7 +461,7 @@ describe('tracks', () => {
     const { results } = project.apply([{ op: 'addTrack', label: 'Bass' }])
     expect(results[0]).toMatch(/^track-\d+$/)
     expect(project.track(results[0])).toEqual({
-      id: results[0], label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, midiInput: null, audioInput: null
+      id: results[0], label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, midiInput: null, audioInput: null, output: null
     })
   })
 
@@ -605,5 +606,43 @@ describe('clips', () => {
     copy.apply(changesFor(project.snapshot()))
     expect(copy.snapshot().clips).toEqual(project.snapshot().clips)
     expect(copy.nextId('clip')).toBe(project.nextId('clip'))
+  })
+})
+
+describe('the arrangement order', () => {
+  it('shows tracks as they were made until one is moved, and a moved track does not bump the revision', () => {
+    const p = new Project()
+    p.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }, { op: 'addTrack', id: 'c' }])
+    expect(p.orderedTracks.map(t => t.id)).toEqual(['a', 'b', 'c'])
+    const revision = p.revision
+    expect(p.moveTrack('c', -2)).toBe(true)
+    expect(p.orderedTracks.map(t => t.id)).toEqual(['c', 'a', 'b'])
+    expect(p.tracks.map(t => t.id)).toEqual(['a', 'b', 'c'])
+    expect(p.revision).toBe(revision)
+    expect(() => p.moveTrack('ghost', 1)).toThrow(/no such track/)
+  })
+
+  it('a removed track leaves the order, and a new one comes last', () => {
+    const p = new Project()
+    p.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+    p.moveTrack('b', -1)
+    p.apply([{ op: 'removeTrack', id: 'a' }, { op: 'addTrack', id: 'c' }])
+    expect(p.orderedTracks.map(t => t.id)).toEqual(['b', 'c'])
+  })
+})
+
+describe('layout across removing a track', () => {
+  it('keeps a removed track\'s layout, so undo can bring it back under its own id with its place', () => {
+    const p = new Project()
+    p.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+    p.setTrackLayout('b', { color: '#3e8ef7' })
+    p.moveTrack('b', -1)
+    expect(p.hasEditorState).toBe(true)
+    p.apply([{ op: 'removeTrack', id: 'b' }])
+    // 'a' was given a place by the move, so there is still something to save.
+    expect(p.hasEditorState).toBe(true)
+    p.apply([{ op: 'addTrack', id: 'b' }])
+    expect(p.trackLayout('b').color).toBe('#3e8ef7')
+    expect(p.orderedTracks.map(t => t.id)).toEqual(['b', 'a'])
   })
 })

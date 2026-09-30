@@ -77,6 +77,9 @@ export function createRuntime (ctx) {
     })
     ctx.dispatcher = dispatcher
 
+    // Track order, colour and lane size are not edits and raise no 'changed', so
+    // the editor graph says when to draw again.
+    dispatcher.project.editor.subscribe(() => ctx.rack.draw())
     dispatcher.subscribe(event => {
       // What was applied, told to an open editor, whoever applied it: the editor
       // itself, the panel, undo, a session opening or an agent. messaging.md 2.3.
@@ -86,7 +89,7 @@ export function createRuntime (ctx) {
           `${event.compiled.totalLatency} frames latency`
         ctx.rack.draw()
         ctx.history.updateButtons()
-        ctx.transport.showTempo()
+        ctx.transport.showTransport()
       }
     })
 

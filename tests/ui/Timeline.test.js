@@ -6,6 +6,8 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { createTimeline, describeClip, barBeat, PIXELS_PER_BEAT } from '../../src/ui/Timeline.js'
+import { TimeView } from '../../src/ui/TimeView.js'
+import { Selection } from '../../src/model/Selection.js'
 
 let document
 let window
@@ -28,7 +30,7 @@ function build () {
   const calls = []
   const record = name => (...args) => calls.push([name, ...args])
   const timeline = createTimeline(document, {
-    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onShowTrack: record('show')
+    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
   })
   document.body.append(timeline.element)
   timeline.draw({
@@ -67,14 +69,6 @@ describe('the layout', () => {
     expect(document.querySelectorAll('.timeline-row')).toHaveLength(2)
     expect(clip('c1').style.left).toBe(`${4 * PIXELS_PER_BEAT}px`)
     expect(clip('c1').style.width).toBe(`${8 * PIXELS_PER_BEAT}px`)
-  })
-
-  it('leads from a track\'s name to its plugins', () => {
-    const { calls } = build()
-    const name = document.getElementById('show-track-t2')
-    expect(name.getAttribute('aria-label')).toBe('Loop: show its plugins')
-    name.dispatchEvent(event('click'))
-    expect(calls).toEqual([['show', 't2']])
   })
 
   it('scrolls inside its own region, which the keyboard can reach', () => {
@@ -166,5 +160,355 @@ describe('the pointer', () => {
     document.dispatchEvent(event('pointerup', { clientX: PIXELS_PER_BEAT }))
     document.dispatchEvent(event('pointerup', { clientX: 5 * PIXELS_PER_BEAT }))
     expect(calls).toEqual([['move', 'c1', 5]])
+  })
+})
+
+describe('zoom and snap, from a TimeView the page can share', () => {
+  const buildWith = view => {
+    const calls = []
+    const record = name => (...args) => calls.push([name, ...args])
+    const timeline = createTimeline(document, {
+      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+    }, { view })
+    document.body.append(timeline.element)
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: t => !t.midiInput })
+    return { timeline, calls, clip: id => document.getElementById(`clip-${id}`) }
+  }
+  const button = name => [...document.querySelectorAll('.timeline-tools button')].find(b => b.textContent === name)
+
+  it('redraws to the new scale when zoomed from its own buttons, and says so', () => {
+    const view = new TimeView()
+    const { clip } = buildWith(view)
+    button('Zoom in').dispatchEvent(event('click'))
+    expect(view.pixelsPerBeat).toBe(36)
+    expect(clip('c1').style.left).toBe(`${4 * 36}px`)
+    expect(document.querySelector('.timeline-zoom').textContent).toBe('Zoom 150%')
+    button('Zoom out').dispatchEvent(event('click'))
+    expect(clip('c1').style.left).toBe(`${4 * 24}px`)
+  })
+
+  it('redraws when something else zooms the shared view', () => {
+    const view = new TimeView()
+    const { clip } = buildWith(view)
+    view.zoomBy(2)
+    expect(clip('c1').style.width).toBe(`${8 * 48}px`)
+  })
+
+  it('thins the bar numbers when zoomed out, and draws beat ticks only when zoomed in', () => {
+    const view = new TimeView()
+    buildWith(view)
+    const marks = () => document.querySelectorAll('.timeline-ruler span').length
+    const ticks = () => document.querySelectorAll('.timeline-ruler i').length
+    expect(ticks()).toBeGreaterThan(0)
+    const full = marks()
+    view.zoomBy(0.25)
+    expect(marks()).toBeLessThan(full)
+    expect(ticks()).toBe(0)
+  })
+
+  it('moves and sizes on the chosen grid, and Alt bypasses it', () => {
+    const view = new TimeView()
+    const { calls, clip } = buildWith(view)
+    view.setGrid('1/2')
+    clip('c1').dispatchEvent(event('pointerdown', { button: 0, clientX: 0 }))
+    document.dispatchEvent(event('pointerup', { clientX: 1.4 * 24 }))
+    expect(calls.at(-1)).toEqual(['move', 'c1', 5.5])
+    clip('c1').dispatchEvent(event('pointerdown', { button: 0, clientX: 0 }))
+    document.dispatchEvent(event('pointerup', { clientX: 1.3 * 24, altKey: true }))
+    expect(calls.at(-1)[0]).toBe('move')
+    expect(calls.at(-1)[2]).toBeCloseTo(5.3)
+    view.setGrid('bar')
+    clip('c1').querySelector('.clip-resize').dispatchEvent(event('pointerdown', { button: 0, clientX: 0 }))
+    document.dispatchEvent(event('pointerup', { clientX: 3 * 24 }))
+    expect(calls.at(-1)).toEqual(['resize', 'c1', 12])
+  })
+
+  it('changes the grid from its select, and shows it', () => {
+    const view = new TimeView()
+    buildWith(view)
+    const select = document.querySelector('.timeline-tools select')
+    // linkedom's select has no value, which a browser's does: what the person chose.
+    Object.defineProperty(select, 'value', { value: '1/4', configurable: true })
+    select.dispatchEvent(event('change'))
+    expect(view.grid).toBe('1/4')
+    // That a grid set elsewhere is what the select shows is not testable here:
+    // linkedom does not implement option.selected. Checked in a browser instead.
+  })
+
+  it('steps the keyboard by the grid, and by a beat when snapping is off', () => {
+    const view = new TimeView()
+    const { calls, clip } = buildWith(view)
+    view.setGrid('1/4')
+    clip('c1').dispatchEvent(event('keydown', { key: 'ArrowRight' }))
+    view.setGrid('off')
+    clip('c1').dispatchEvent(event('keydown', { key: 'ArrowRight' }))
+    view.setGrid('bar')
+    clip('c1').dispatchEvent(event('keydown', { key: 'ArrowRight' }))
+    expect(calls).toEqual([['move', 'c1', 4.25], ['move', 'c1', 5], ['move', 'c1', 8]])
+  })
+
+  it('does not take a small click for a drag', () => {
+    const { calls, clip } = build()
+    clip('c1').dispatchEvent(event('pointerdown', { button: 0, clientX: 10 }))
+    document.dispatchEvent(event('pointermove', { clientX: 12 }))
+    document.dispatchEvent(event('pointerup', { clientX: 12 }))
+    clip('c1').dispatchEvent(event('click'))
+    expect(calls).toEqual([['open', 'c1']])
+  })
+
+  it('zooms with plus and minus on the scroller, and leaves keys inside a clip alone', () => {
+    const view = new TimeView()
+    buildWith(view)
+    const scroller = document.querySelector('.timeline-scroll')
+    scroller.dispatchEvent(event('keydown', { key: '+' }))
+    expect(view.pixelsPerBeat).toBe(36)
+    scroller.dispatchEvent(event('keydown', { key: '-' }))
+    expect(view.pixelsPerBeat).toBe(24)
+    document.getElementById('clip-c1').dispatchEvent(event('keydown', { key: '+' }))
+    expect(view.pixelsPerBeat).toBe(24)
+  })
+})
+
+describe('rows are kept across a redraw', () => {
+  const draw = timeline => timeline.draw({
+    tracks: tracks.map(t => ({ ...t, channel: { gain: 1, pan: 0, muted: false, soloed: false } })),
+    clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false
+  })
+
+  it('reuses a track header, so a slider being dragged is not taken out of the document', () => {
+    const { timeline } = build()
+    draw(timeline)
+    const before = document.getElementById('head-t1-gain')
+    draw(timeline)
+    expect(document.getElementById('head-t1-gain')).toBe(before)
+    expect(before.isConnected).toBe(true)
+  })
+
+  it('forwards a channel change with the track it is for', () => {
+    const { timeline, calls } = build()
+    draw(timeline)
+    document.getElementById('head-t2-soloed').dispatchEvent(event('click'))
+    expect(calls.at(-1)).toEqual(['channel', 't2', { soloed: true }])
+  })
+
+  it('draws a track that was added, and forgets one that went', () => {
+    const { timeline } = build()
+    timeline.draw({ tracks: [tracks[0]], clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
+    expect(document.querySelectorAll('.timeline-row')).toHaveLength(1)
+    timeline.draw({ tracks, clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
+    expect(document.querySelectorAll('.timeline-row')).toHaveLength(2)
+    timeline.draw({ tracks: [], clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
+    expect(document.querySelectorAll('.timeline-row')).toHaveLength(0)
+    expect(document.querySelector('.empty')).not.toBeNull()
+  })
+})
+
+describe('selection', () => {
+  const buildSel = selection => {
+    const calls = []
+    const record = name => (...args) => calls.push([name, ...args])
+    const timeline = createTimeline(document, {
+      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
+      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+    }, { selection })
+    document.body.append(timeline.element)
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
+    return { calls, clip: id => document.getElementById(`clip-${id}`) }
+  }
+
+  it('a plain click selects the clip and opens it', () => {
+    const selection = new Selection()
+    const { calls, clip } = buildSel(selection)
+    clip('c1').dispatchEvent(event('click'))
+    expect(selection.has('clip', 'c1')).toBe(true)
+    expect(calls).toEqual([['open', 'c1']])
+  })
+
+  it('a click with Shift adds to the selection and opens nothing', () => {
+    const selection = new Selection()
+    const { calls, clip } = buildSel(selection)
+    clip('c1').dispatchEvent(event('click'))
+    clip('c2').dispatchEvent(event('click', { shiftKey: true }))
+    expect(selection.ids).toEqual(['c1', 'c2'])
+    expect(calls).toEqual([['open', 'c1']])
+  })
+
+  it('marks selected clips in words and style, without rebuilding them', () => {
+    const selection = new Selection()
+    const { clip } = buildSel(selection)
+    const before = clip('c1')
+    expect(before.getAttribute('aria-current')).toBe('false')
+    selection.set('clip', ['c1'])
+    expect(clip('c1')).toBe(before)
+    expect(before.getAttribute('aria-current')).toBe('true')
+    expect(before.classList.contains('selected')).toBe(true)
+    selection.set('track', ['t1'])
+    expect(before.getAttribute('aria-current')).toBe('false')
+  })
+
+  it('a track name selects the track, and the header says so', () => {
+    const selection = new Selection()
+    buildSel(selection)
+    const name = document.getElementById('show-track-t2')
+    name.dispatchEvent(event('click'))
+    expect(selection.has('track', 't2')).toBe(true)
+    expect(name.getAttribute('aria-pressed')).toBe('true')
+    expect(document.getElementById('show-track-t1').getAttribute('aria-pressed')).toBe('false')
+  })
+})
+
+describe('the loop', () => {
+  const buildLoop = (loop, view = new TimeView()) => {
+    const calls = []
+    const record = name => (...args) => calls.push([name, ...args])
+    const timeline = createTimeline(document, {
+      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
+      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+    }, { view })
+    document.body.append(timeline.element)
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, loop })
+    return { calls, timeline, view, $: id => document.getElementById(id) }
+  }
+
+  it('says whether the loop is set and on, in text and in the group name', () => {
+    const { $ } = buildLoop({ start: 4, end: 12, enabled: true })
+    expect(document.querySelector('.timeline-loop').getAttribute('aria-label')).toBe('Loop, on')
+    expect(document.querySelector('.loop-brace span').textContent).toBe('Loop on')
+    expect($('loop-start').getAttribute('aria-label')).toMatch(/^Loop start, bar 2 beat 1/)
+    expect($('loop-end').getAttribute('aria-label')).toMatch(/^Loop end, bar 4 beat 1/)
+    expect(document.querySelector('.loop-brace').style.left).toBe(`${4 * 24}px`)
+    expect(document.querySelector('.loop-brace').style.width).toBe(`${8 * 24}px`)
+  })
+
+  it('leaves out the brace and handles when no loop is set, rather than drawing dead ones', () => {
+    const { $ } = buildLoop({ start: 0, end: 0, enabled: false })
+    expect(document.querySelector('.timeline-loop').getAttribute('aria-label')).toBe('Loop, not set')
+    expect($('loop-start').hidden).toBe(true)
+    expect(document.querySelector('.loop-brace').hidden).toBe(true)
+  })
+
+  it('says a loop that is set but off is off', () => {
+    buildLoop({ start: 4, end: 8, enabled: false })
+    expect(document.querySelector('.loop-brace span').textContent).toBe('Loop off')
+  })
+
+  it('moves an end by the grid from the keyboard, a bar with Shift, and refuses to cross', () => {
+    const { calls, $ } = buildLoop({ start: 4, end: 12, enabled: true })
+    $('loop-end').dispatchEvent(event('keydown', { key: 'ArrowRight' }))
+    $('loop-end').dispatchEvent(event('keydown', { key: 'ArrowLeft', shiftKey: true }))
+    $('loop-start').dispatchEvent(event('keydown', { key: 'ArrowLeft' }))
+    expect(calls).toEqual([['loop', { start: 4, end: 13 }], ['loop', { start: 4, end: 8 }], ['loop', { start: 3, end: 12 }]])
+    calls.length = 0
+    // Pulling the end back past the start would make it the start: it is kept ordered.
+    $('loop-end').dispatchEvent(event('keydown', { key: 'ArrowLeft', shiftKey: true }))
+    $('loop-end').dispatchEvent(event('keydown', { key: 'ArrowLeft', shiftKey: true }))
+    expect(calls.every(([, r]) => r.end > r.start)).toBe(true)
+  })
+
+  it('moves an edge with the pointer, following the drag onto the document, on the grid', () => {
+    const { calls, $ } = buildLoop({ start: 4, end: 12, enabled: true })
+    $('loop-end').dispatchEvent(event('pointerdown', { button: 0, clientX: 300 }))
+    document.dispatchEvent(event('pointermove', { clientX: 300 + 2.4 * 24 }))
+    document.dispatchEvent(event('pointerup', { clientX: 300 + 2.4 * 24 }))
+    expect(calls).toEqual([['loop', { start: 4, end: 14 }]])
+    document.dispatchEvent(event('pointerup', { clientX: 900 }))
+    expect(calls).toHaveLength(1)
+  })
+
+  it('draws a new loop by dragging on the empty row', () => {
+    const { calls } = buildLoop({ start: 0, end: 0, enabled: false })
+    const row = document.querySelector('.timeline-loop')
+    row.dispatchEvent(event('pointerdown', { button: 0, clientX: 2 * 24 }))
+    document.dispatchEvent(event('pointermove', { clientX: 6 * 24 }))
+    document.dispatchEvent(event('pointerup', { clientX: 6 * 24 }))
+    expect(calls).toEqual([['loop', { start: 2, end: 6 }]])
+  })
+
+  it('draws it the right way round when dragged backwards, and ignores a click', () => {
+    const { calls } = buildLoop({ start: 0, end: 0, enabled: false })
+    const row = document.querySelector('.timeline-loop')
+    row.dispatchEvent(event('pointerdown', { button: 0, clientX: 8 * 24 }))
+    document.dispatchEvent(event('pointerup', { clientX: 3 * 24 }))
+    row.dispatchEvent(event('pointerdown', { button: 0, clientX: 5 * 24 }))
+    document.dispatchEvent(event('pointerup', { clientX: 5 * 24 }))
+    expect(calls).toEqual([['loop', { start: 3, end: 8 }]])
+  })
+})
+
+describe('follow', () => {
+  const scrolling = () => {
+    const { timeline } = build()
+    const scroller = document.querySelector('.timeline-scroll')
+    Object.defineProperty(scroller, 'clientWidth', { value: 500, configurable: true })
+    scroller.scrollLeft = 0
+    const follow = [...document.querySelectorAll('.timeline-tools button')].find(b => b.textContent === 'Follow')
+    return { timeline, scroller, follow }
+  }
+
+  it('is on by default, and says so', () => {
+    expect(scrolling().follow.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('brings the playhead back into view, a little in from the left, and stays put while it is visible', () => {
+    const { timeline, scroller } = scrolling()
+    timeline.playhead(10)
+    expect(scroller.scrollLeft).toBe(0)
+    timeline.playhead(40)
+    expect(scroller.scrollLeft).toBe(40 * 24 - 500 * 0.15)
+  })
+
+  it('does nothing when Follow is off', () => {
+    const { timeline, scroller, follow } = scrolling()
+    follow.dispatchEvent(event('click'))
+    expect(follow.getAttribute('aria-pressed')).toBe('false')
+    timeline.playhead(40)
+    expect(scroller.scrollLeft).toBe(0)
+  })
+
+  it('turns itself off when the person scrolls, and not for its own scrolling', () => {
+    const { timeline, scroller, follow } = scrolling()
+    timeline.playhead(40)
+    scroller.dispatchEvent(event('scroll'))
+    expect(follow.getAttribute('aria-pressed')).toBe('true')
+    scroller.scrollLeft += 200
+    scroller.dispatchEvent(event('scroll'))
+    expect(follow.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('a scroll while the transport is stopped is not the person leaving it', () => {
+    const { timeline, scroller, follow } = scrolling()
+    timeline.playhead(null)
+    scroller.scrollLeft = 300
+    scroller.dispatchEvent(event('scroll'))
+    expect(follow.getAttribute('aria-pressed')).toBe('true')
+  })
+})
+
+describe('an empty arrangement', () => {
+  it('says what to do and offers it as buttons that run the given requests', () => {
+    const ran = []
+    const timeline = createTimeline(document, {
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}
+    })
+    document.body.append(timeline.element)
+    timeline.draw({
+      tracks: [], clips: [], beatsPerBar: 4, labelFor: () => '', playsIntoNothing: () => false,
+      empty: { text: 'Start here.', actions: [{ label: 'One', run: () => ran.push('one') }, { label: 'Two', run: () => ran.push('two') }] }
+    })
+    expect(document.querySelector('.empty p').textContent).toBe('Start here.')
+    const buttons = [...document.querySelectorAll('.empty button')]
+    expect(buttons.map(b => b.textContent)).toEqual(['One', 'Two'])
+    buttons[1].dispatchEvent(event('click'))
+    expect(ran).toEqual(['two'])
+  })
+
+  it('still says something with no actions given', () => {
+    const timeline = createTimeline(document, {
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}
+    })
+    document.body.append(timeline.element)
+    timeline.draw({ tracks: [], clips: [], beatsPerBar: 4, labelFor: () => '', playsIntoNothing: () => false })
+    expect(document.querySelector('.empty p').textContent).toMatch(/No tracks yet/)
+    expect(document.querySelectorAll('.empty button')).toHaveLength(0)
   })
 })

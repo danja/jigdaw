@@ -104,9 +104,10 @@ export function createRack (ctx) {
    */
   function drawTargets () {
     const select = $('target')
-    const tracks = ctx.dispatcher?.project.tracks ?? []
+    const made = ctx.dispatcher?.project.tracks ?? []
+    const tracks = ctx.dispatcher?.project.orderedTracks ?? []
     const options = [
-      ...tracks.map((track, i) => ({ value: track.id, label: trackLabel(track, i) })),
+      ...tracks.map(track => ({ value: track.id, label: trackLabel(track, made.indexOf(track)) })),
       { value: NEW_TRACK, label: 'A new track' }
     ]
     select.replaceChildren(...options.map(({ value, label }) => {
@@ -134,7 +135,10 @@ export function createRack (ctx) {
     rack.textContent = ''
 
     const { dispatcher } = ctx
-    const tracks = dispatcher?.project.tracks ?? []
+    // In the order the arrangement shows them. A default name is numbered by the
+    // order tracks were made, so moving one never renames another.
+    const tracks = dispatcher?.project.orderedTracks ?? []
+    const made = dispatcher?.project.tracks ?? []
     const nodes = dispatcher?.project.nodes ?? []
     const connections = dispatcher?.project.connections ?? []
     // An editor whose plugin has gone, by removal or undo, goes with it.
@@ -161,7 +165,7 @@ export function createRack (ctx) {
     // The same rule for tracks: a plugin loaded twice onto new tracks names both
     // after itself, and two mixer channels both headed "Pulse" cannot be told
     // apart. Numbered only where the name is shared.
-    const trackNames = tracks.map((t, i) => trackLabel(t, i))
+    const trackNames = tracks.map(t => trackLabel(t, made.indexOf(t)))
     const labelOfTrack = track => {
       const i = tracks.indexOf(track)
       const name = trackNames[i]

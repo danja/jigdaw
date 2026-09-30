@@ -464,6 +464,23 @@ describe('tracks', () => {
     expect((await call('track_set_channel', { trackId, pan: 3 })).ok).toBe(false)
   })
 
+  it('lays a track out: place, colour and lane size, as editor metadata that bumps no revision', async () => {
+    const a = (await call('track_add', {})).trackId
+    const b = (await call('track_add', {})).trackId
+    const revision = dispatcher.project.revision
+    const result = await call('track_layout', { trackId: b, move: -1, color: '#3e8ef7', laneSize: 'large' })
+    expect(result).toMatchObject({ trackId: b, position: 1, of: 2, layout: { color: '#3e8ef7', laneSize: 'large' } })
+    expect(dispatcher.project.orderedTracks.map(t => t.id)).toEqual([b, a])
+    expect(dispatcher.project.revision).toBe(revision)
+  })
+
+  it('refuses a layout the editor graph refuses, and a track that is not there', async () => {
+    const { trackId } = await call('track_add', {})
+    expect((await call('track_layout', { trackId, color: 'red' })).ok).toBe(false)
+    expect((await call('track_layout', { trackId, laneSize: 'huge' })).ok).toBe(false)
+    expect((await call('track_layout', { trackId: 'ghost', move: 1 })).ok).toBe(false)
+  })
+
   it('renames a track and names its MIDI input, refusing a node on another track', async () => {
     addNodes()
     const other = (await call('track_add', {})).trackId

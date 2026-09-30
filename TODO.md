@@ -97,6 +97,458 @@ complete. Review periodically.
 ## Blocking, cross-repository
 
 
+## The track view
+
+What Jiggy builds next, derived 2026-09-30 from a graph index of this repository and of
+`~/github/openDAW` (30162 nodes, TypeScript plus a Rust/WASM engine), `~/github/webdaw`
+(683 nodes, React) and `~/github/daw` (GridSound). Caveat on the last: its `daw-core` and
+`gs-*` directories are empty submodule checkouts, so only its README and `src/` (3 files) were
+readable, and its column below is from that plus general knowledge of the product, not from
+its source.
+
+### What the three have in common
+
+Every one of them is built around one screen: a track-oriented arrange view.
+
+| Element | openDAW | webdaw | GridSound | Jiggy today |
+|---|---|---|---|---|
+| Transport bar with tempo, time, loop, metronome | yes | yes | yes | partial |
+| Track header column: name, mute, solo, arm, colour, level, pan | yes | yes | yes | no, split across three tabs |
+| Ruler, zoom, scroll, snap on a shared time axis | yes | yes | yes | ruler and scroll only, no zoom or snap |
+| Clips or regions as blocks on lanes, with content preview | yes | yes | yes | clips, waveform; no note preview |
+| A bottom editor that follows the selection (notes, audio, devices) | yes | yes | yes | piano roll below timeline, no device row |
+| Browser side panel for samples, plugins, presets | yes | yes | yes | plugin browser |
+| Mixer of channel strips, sends, buses | yes | planned | yes | strips, no sends or buses |
+| Automation drawn as lanes on the timeline | yes | yes | yes | none |
+| Undo and redo | yes | yes | yes | yes |
+
+Where they differ, and what Jiggy takes from each:
+
+- **openDAW** (`packages/app/studio/src/ui/timeline`): an audio unit owns its instrument
+  track, its automation tracks and its effect chain, with a fixed sort order and a
+  de-duplicated header (`plans/timeline-layout.md`). Also markers, a signature track, tempo
+  automation, groove, freeze, consolidate, effect composites (parallel FX stacks), aux sends,
+  modulators, a spotlight search, per-context shortcuts, DAWproject import and export, and
+  live collaboration.
+- **webdaw** (`notes/milestones.md`): the plainest statement of the order to build in.
+  Arrangement first, then project management, effects and automation, instruments, MIDI,
+  recording, plugin modules, mixer view, clip launcher, DAWproject.
+- **GridSound**: pattern-based composition (a pattern is reusable and placed many times),
+  a sampler and drum grid, a per-channel mixer, and cloud save. The pattern idea is the one
+  thing here Jiggy does not have an answer for yet.
+
+### Where Jiggy should be better
+
+The core does not change. Two things none of the three do, and both are Jiggy's already:
+
+1. **Routing is the model, not a menu.** In the others a track is a fixed chain and routing
+   is a send knob. In Jiggy a track holds nodes joined by named arcs, audio and MIDI both,
+   with latency accounted through them. The track view should show that graph in place, on
+   the track, rather than sending the person to a separate tab.
+2. **A plugin is a dereferenceable IRI with a machine-readable profile.** Browsing, loading,
+   parameter names, units and ports all come from the profile, so the view needs no
+   per-plugin code and an agent can drive all of it through the same Ops.
+
+The bar for "better": every feature below is one Op, undoable, keyboard reachable, named to
+a screen reader, and usable at phone width, per CLAUDE.md. The three examples are pointer
+first; that is the gap to keep.
+
+The detailed arrangement, MIDI, mixing, plugin, render, project and workflow items already
+sit under "The application" as Phases A to G. The phases here, T0 to T8, are the order to
+build them in around the new view. Where a task is already an item there, it says so rather
+than repeating it.
+
+### Phase T0. Decisions and vocabulary
+
+Goal: the questions that block the view are answered before any drawing code exists.
+
+- [x] **Where editor state lives.** Decided 2026-09-30: `editor.ttl` beside
+      `session.ttl` in the session's zip, a bare `.ttl` when the editor state is all
+      defaults. Built: `src/model/EditorState.js` (positions, track `jig:order`,
+      `jig:color`, `jig:laneSize`), `writeEditor`/`readEditor`, `src/host/SessionArchive.js`,
+      Save and Open in `web/app/Sessions.js`, `docs/project-format.md` ("The editor graph in
+      a saved session"), `vocabs/jigdaw.ttl`. Unit and round-trip tests pass. Not yet done:
+      an editor-graph shape in `vocabs/shapes.ttl` (the editor document types no subject,
+      so the existing target-class shapes do not reach it). Checked in Chrome on
+      2026-09-30 with the window in front: a preset opened, a track's layout set, Save
+      produced a zip holding `session.ttl` and `editor.ttl`, and opening that zip restored
+      the order, colour and lane size; opening a preset afterwards showed default layout
+      (that check found the previous session's layout leaking onto reused track ids, since
+      fixed). Also seen: the first Save after opening a preset took about ten seconds
+      to produce its file (a slow `getNodeState` round, not lost); not investigated. Nothing
+      yet sets order, colour or size: that is T2.
+- [x] **Vocabulary for the terms the view needs.** Accepted 2026-09-30 as recommended in
+      [docs/track-view-terms.md](docs/track-view-terms.md) (with three small corrections,
+      listed there). Built: master, sends, bus outputs, markers, regions, signature points
+      and envelopes in `vocabs/jigdaw.ttl`, `Vocabulary.js`, `vocabs/shapes.ttl` (13 new
+      violations in `counterexample-project.ttl`), `src/model/ArrangementOps.js`, writer and
+      reader, undo and redo through `UndoHistory`, and `openProject`; documented in
+      `docs/project-format.md`. Tested at the model, round trip, shapes, dispatcher undo and
+      opening levels, driven in Chrome on the Acid preset (apply, a refused loop of sends, undo and redo all correct, no console errors), and the `setTrack` guard in `openProject` was mutation checked. Not
+      done, each its own item below: the compiler and engine acting on sends, bus outputs and
+      the master (T3, T6); the scheduler rendering envelopes and signature changes (T5, and
+      `barBeat` in `Timeline.js` still assumes one signature); dedicated WebMCP tools (the
+      generic changeset tool accepts the new Ops today); marker and region colour in the
+      editor graph; folders (`jig:parent`, editor graph, T2).
+- [x] **Selection model.** `src/model/Selection.js`: one kind at a time (track, clip, note,
+      node, lane), subscribe, prune against the project, outside the revision. 6 tests. Not
+      yet used by any view or by WebMCP.
+- [x] **Time and zoom model.** `src/ui/TimeView.js`: pixels per beat, scroll, zoom about a
+      pointer, fit, and a snap grid (bar, beat, 1/2, 1/4, 1/8, off) with a bypass. 8 tests.
+      Not yet replacing `PIXELS_PER_BEAT` in `src/ui/Timeline.js`: that is T1.
+- [ ] **Layout decision for the main view**, recorded with its rejected alternatives:
+      header column, lane area, bottom dock, side browser, top transport. Measured at
+      phone width before it is accepted (see T8).
+
+### Phase T1. The main view shell
+
+Goal: one page that is the project, replacing the Plugins, Arrangement and Mixer tabs as
+the place work happens. The tabs stay as focused views until T8.
+
+- [ ] **A view module of its own.** `src/ui/Arrange.js` with a header column and a lane
+      area sharing one vertical scroll, built from the existing `Timeline.js`, `Strip.js`
+      and `Panel.js` rather than a rewrite. Split along those seams if it passes 400 lines.
+- [x] **Sticky transport bar.** Was already fixed at the top with Play, Stop, Rec, tempo and
+      position. Added: a time signature field ("3/4", parsed, refused with the reason and
+      reset when malformed) and a Loop toggle, both showing whatever changed them (undo,
+      opening a session, an agent) through `showTransport`. Driven in Chrome: typing 3/4
+      set the model and the position readout then counted three beats to a bar; Loop
+      toggled and said so in text. Not done: the metronome (needs the scheduler to unroll a
+      click source through the loop the way it does notes, and a count-in with it), a
+      tap-tempo button, seconds or SMPTE readout, and the transport buttons are 40px tall
+      where the interface rules ask for 44.
+- [x] **Playhead, follow and loop brace.** In `src/ui/Timeline.js`: a loop row under the
+      ruler with a brace and two handles that move by pointer (snapped, Alt bypasses) or by
+      arrow keys (a grid step; Shift a bar), a drag on the empty row that draws a new loop
+      and turns it on, and the state said in text ("Loop on", "Loop off", "Loop, not set");
+      handles are left out until a loop exists. Follow, on by default, brings the playhead
+      back into view a little in from the left, and turns itself off when the person
+      scrolls. 20 new tests. Driven in Chrome with real input and the window in front: a
+      drag drew 2 to 10, an end-handle drag made it 2 to 12, two Left presses moved the
+      start to 0 with the handle keeping focus; playing at 3/4 with the loop on, the
+      position wrapped 4 . 3 to 1 . 1, the playhead wrapped with it, and Follow scrolled to
+      keep it visible then back after the wrap; a real wheel scroll turned Follow off and
+      the lanes stayed where the person put them. Found on the way: the loop row had no
+      style and was 0px tall until the browser showed it. Not done: seeking by clicking the
+      ruler, dragging the whole loop, loop range from a selection or a region, and follow
+      for the piano roll.
+- [x] **Track header column.** `src/ui/TrackHeader.js`, drawn at the left of each lane in
+      the timeline: name (opens the track's plugins), mute, solo, level, pan, add clip and
+      add audio. Built once per track and updated in place, because every edit redraws the
+      arrangement and a slider taken out of the document loses the drag; `Timeline.js` now
+      keeps its rows and ruler and redraws only lanes. Level, pan, mute and solo are left
+      out (not disabled) for a track with nothing to hear, using the Mixer's own `mixable`
+      test, and a track silenced by solo says "silent" in text and in its group name.
+      Sliders speak dB and pan position as text. 12 new tests. Driven in Chrome with a real
+      pointer: a drag on Level moved the model to 0.05 (-26.0 dB) with the slider still in
+      the document and focused; Solo on one track set it, marked the other silent and kept
+      focus; at a 375px iframe there is no horizontal scroll and every header control is
+      44px. Not done: editable name and colour (T2), the row is still tall at 249px per
+      track until the lane sizes of T2 exist, and one thing not re-seen: the compact layout
+      was measured but not looked at, because Chrome's window went to the background
+      (`visibilityState` hidden) and a click that needs audio stopped working, as CLAUDE.md
+      warns.
+- [x] **Shared ruler with zoom.** Built in `src/ui/Timeline.js` over `TimeView`: Zoom out,
+      Zoom in and Fit buttons, plus and minus on the focused lanes, Ctrl with the wheel about
+      the pointer, a status line ("Zoom 225%"), bar numbers that thin out when zoomed out and
+      beat ticks when zoomed in. 9 new tests. Driven in Chrome: two real clicks on Zoom in
+      scaled the clip to 432px and kept focus on the button; no horizontal scroll at 1280
+      or at a 375px iframe; every control 44px, the select 16px. Not done: pinch on touch,
+      zoom to selection, seconds as an alternative ruler, and the piano roll reading the same
+      `TimeView` (it has its own scale still).
+- [x] **Snap.** Grid select (bar, beat, 1/2, 1/4, 1/8, off) drives move and resize by pointer
+      and the arrow keys (one grid step, a beat when off); Alt bypasses during a drag. Driven
+      in Chrome with a real drag: 2.4 beats snapped to 2 on Beat and to 2.5 on 1/4, and the
+      select changed by keyboard kept its focus. Fixed on the way: a click with a pixel of
+      jitter must still open the clip, so "dragged" now means the clip actually moved. Not
+      done: snapping to other clips' edges, and the grid following signature changes.
+- [ ] **Playhead, follow and loop brace.** Follow-playhead scrolling that stops when the
+      person scrolls, and a draggable loop range on the ruler that writes the transport.
+- [x] **Bottom dock.** `src/ui/Dock.js` (frame and a WAI-ARIA window splitter: Up, Down,
+      Home, End and a pointer drag followed on the document, height remembered in this
+      browser), `AudioClipPanel.js` (start, length and offset as typed numbers, one edit and
+      one undo each, refused with a reason when not a number), `ChainSummary.js` (a track's
+      plugins in signal order, and Show plugins), and `web/app/Dock.js`, which shows what
+      `ctx.selection` calls for: a MIDI clip opens the piano roll, an audio clip its panel, a
+      track its chain, several clips a count. The timeline writes the selection (click,
+      Shift or Ctrl click to add, a track's name), marks selected clips and tracks with
+      `aria-current` and `aria-pressed` and an outline without rebuilding them, and the
+      dock reads it. A track's name now selects it rather than jumping to the Plugins tab;
+      that jump is Show plugins in the dock. 35 new tests. Driven in Chrome with the window
+      in front and real input: a click on a MIDI clip opened the roll, on an audio clip the
+      panel (a typed 6 moved the clip to beat 6 and kept the field's focus), on a track's
+      name its chain (Beats, Kit, Formants), Shift-click gave "2 clips selected", Show
+      plugins switched tab and focused the track, Close cleared the selection and returned
+      focus to the clip, a splitter drag of 72px and two Down presses moved the height
+      320, 392, 344 and were saved. That run found the dock was not following selection
+      changes the timeline made (unit tests could not see it), now subscribed. Splitter
+      raised to 44px after the 375px check. Not done: Escape does not close the piano roll
+      (it never did; Close does); a dock view for a selected node or an envelope (T3, T5);
+      keyboard selection of a track other than by its name; and a selected clip is not yet
+      moved, copied or deleted as a group.
+- [x] **Empty-state and first-run.** With no tracks the timeline says what to do and offers
+      two buttons that make the page's own requests: Open the Chiptune preset
+      (`ctx.sessions.openPreset`) and Load the Pulse synth. Driven in Chrome with a real
+      click: the Chiptune button opened six tracks, ten nodes and 140 BPM; in a 375px frame
+      the Pulse button loaded one track. Not done: a guided tour, and a hint for the second
+      step (add a clip).
+- [x] **Measured narrow layout.** At a 375px frame with a preset loaded: no horizontal scroll
+      (360 of 375), every header, tool and transport control 44px (the transport buttons
+      were 40 and are now 44), header 168px so about 177px of lane is visible and scrolls.
+      The empty state was crammed into 92px by the header's margin until measured; it now
+      uses the width. Not done: focus order was not read from `activeElement` this time, the
+      header does not collapse to icons, and the lane is narrow enough at this width that a
+      per-track collapse (T2) would help.
+
+- [x] **The Browser starts closed.** From the user, 2026-09-30. The plugin browser is now a
+      panel opened by a Browser button in the transport bar (with aria-expanded and
+      aria-controls), closed on load, hidden from layout and from the accessibility tree
+      when closed, with no rail. Opening puts the focus on the search box; Close, the same
+      button, and Escape from inside it close it and return the focus. The empty
+      arrangement offers Browse plugins. The remembered state is a new key, so an old
+      "hidden" choice does not carry over. On a phone the transport bar (about 233px when
+      wrapped) is no longer sticky, and an idle dock is a line of text with no splitter.
+      Driven in Chrome: closed on load with the stage at full width (1265px), a real click
+      opened it (stage at x 240) with focus on the search box, Escape closed it and
+      returned focus to the button, Browse plugins opened it; at 375px no horizontal
+      scroll, Close 44px, the open panel stacked above the stage. Not done: a compact
+      phone transport bar (Play, Stop, Loop, then a menu), and Load onto following the
+      selected track.
+
+### Phase T2. Tracks as first-class objects
+
+Goal: everything a person does to a track is available in the header and the menu, undoable.
+
+- [x] **Rename, colour and delete a track.** Built in the dock's track panel
+      (`src/ui/TrackPanel.js`), shown when a track is selected: name (an emptied name
+      restores the default), eight named colours plus none, lane size, Move up and Move
+      down (left out at the ends), and Delete track and its plugins in one changeset so one
+      undo brings all of it back. Rename is the existing `setTrack` Op; colour and size are
+      editor metadata. Also a `track_layout` WebMCP tool (28 tools now, `docs/usp.md`
+      updated and its count test still binds it). Driven in Chrome with real input:
+      typed a new name, chose Blue, set the lane small, deleted a track with two plugins,
+      and Ctrl+Z brought it back under its own id with its name, its two plugins, its place,
+      colour and size. That run found layout being discarded with the track (undo lost the
+      colour and put the track last), so editor metadata for a removed track is now kept and
+      simply not written while the track is gone. Not done: **duplicate** (needs one
+      composite Op that loads each plugin, copies settings and state, and remaps the
+      connections and track inputs, or undo would take one step per plugin), and adding an
+      empty track from the header.
+- [x] **Reorder tracks** by keyboard (Alt with Up or Down on a track's name) and by the
+      panel's Move buttons, stored in the editor graph as `jig:order`, so the timeline,
+      mixer, rack and Load onto menu all follow. Default names are numbered by creation
+      order so moving a track never renames another. Driven in Chrome: Alt+Up moved a track
+      to the top, focus stayed on it, the mixer followed. Not done: drag to reorder, and
+      order is not part of undo (layout is not an edit and raises no revision).
+- [ ] **Track types visible in the header.** Instrument (MIDI in, audio out), audio, MIDI
+      only, bus. Drawn from the node ports, not a flag the person sets.
+- [x] **Lane size.** Small (name, mute and solo only, 105px against 249), medium and large
+      (320px of lane), from the track panel, saved in `editor.ttl`. Checked in Chrome. Not
+      done: collapse to a thin bar, show and hide by folder, and keyboard resizing from the
+      header itself.
+- [ ] **Folders and groups.** Editor-only folder first (no compiler change), then bus
+      tracks that sum other tracks (compiler work, latency through the sum). Same
+      distinction as Phase C "Buses, folder tracks, groups".
+- [ ] **Multi-select and bulk edit.** Select several tracks; mute, solo, colour, level
+      apply to all through one changeset.
+- [ ] **Track input and monitoring.** Choose the MIDI input and the audio input per track,
+      arm, and monitor. Web MIDI permission and refusal shown as state (see Web MIDI item
+      under "Before there is code").
+- [x] **Latency shown per track.** `OpDispatcher.trackLatencies()` (the longest declared
+      latency along each track's chain, counting what the compiler found ahead of each
+      node) and a line in the header, "Latency 2047 frames, 42.6 ms", left out when zero.
+      Tested against the fake engine. Not seen in a live page. **Finding while building it:**
+      tracks are not aligned to one another. Compensation is only between connected nodes,
+      and each track goes to its own fader and then the master, so a track with 2047 frames
+      of latency sounds that much later than one with none. Now stated in `docs/latency.md`
+      ("Between tracks"). Decision needed, see the item below.
+- [ ] **Align tracks at the master.** Delay the faster tracks by the difference to the
+      slowest, at the track's output, so parallel tracks line up as parallel paths in one
+      graph do. Needs a decision first because it changes what is heard and adds a rule to
+      `docs/latency.md`. Engine work: a delay in each strip and its retiming when a plugin's
+      latency changes (the dispatcher already retimes connection delays this way). Clips
+      and live MIDI input are scheduled ahead of the clock and would need the same offset.
+
+### Phase T3. Routing in the track view (the differentiator)
+
+Goal: signal and MIDI routing is visible and editable on the track, in the timeline page.
+
+- [ ] **Chain strip on each track.** A row under the header showing the track's nodes in
+      order, each with its name, bypass, and a state marker (loading, failed, foreign
+      code). Click or Enter opens the panel in the dock. Reorder by drag and keys
+      (Phase D "Bypass, reorder, safe mode").
+- [ ] **Signal and MIDI cables in place.** For a node with a MIDI output or a side chain,
+      show where it goes, as text and as a drawn line, with the port names from the
+      profile. Never only colour: audio and MIDI differ by label and pattern as well.
+- [ ] **Routing matrix.** One table of every source port against every destination port,
+      across tracks, driven by the same connection Op and refusing the same cycles.
+      Screen reader friendly by construction; the drawn graph is the extra.
+- [ ] **Cross-track connections.** Send audio or MIDI from a node on one track to a node on
+      another (a MIDI track driving another track's synth; a side chain from a kick track).
+      Depends on the sends vocabulary in T0.
+- [ ] **Sends, returns and buses in the header.** Aux level per send, pre and post tap,
+      return tracks. Same item as Phase C "Sends and receives".
+- [ ] **Sidechain as a routable port.** Phase C item, surfaced on the chain strip.
+- [ ] **MIDI routing tools.** Channel filter and map, transpose, split by range, merge
+      several sources into one input, all as nodes or as connection properties, chosen in
+      T0. A MIDI monitor per connection showing recent events (bounded, message thread only).
+- [ ] **Parallel chains and layers.** Two chains from one input mixed back, openDAW's
+      "effect composite". Do only after nested plugins design (see "Before there is code").
+- [ ] **Failed load stays isolated.** A node that fails to load draws as failed and the rest
+      of the track keeps playing, verified through the real page, per the real-time rules.
+
+### Phase T4. Clips, regions and the editors in the dock
+
+Goal: content editing at the level of the reference DAWs, in the order webdaw's milestones
+give. The detail is in Phases A and B; these are the view-side tasks.
+
+- [ ] **Clip preview on the lane.** Note clips draw their notes as a miniature roll; audio
+      clips draw the waveform (exists). Both are labelled for a screen reader as now.
+- [ ] **Selection, multi-select, rubber band, lasso.** On lanes, by pointer and by keys.
+- [ ] **Clip operations from Phase A**: split, trim, duplicate, copy and paste, delete,
+      nudge, fades, mute, lock, colour, takes, slip edit. Build in that order, each one Op.
+- [ ] **Loop a clip.** Content repeats inside the clip bounds, with the loop end draggable
+      (openDAW's `loopDuration`). Decide whether it needs vocabulary; it probably does.
+- [ ] **Overlap behaviour.** A stated rule for clips that overlap on a lane: clip the
+      older, push to a new lane, or refuse. openDAW made this a preference
+      (`docs/overlapping-regions-behaviour.md`) after getting it wrong twice; state the rule
+      and test it before shipping move.
+- [ ] **Piano roll in the dock** with zoom and scroll bound to the shared time model, plus
+      velocity and controller lanes (Phase B).
+- [ ] **Drum grid.** Step editor for a track whose target is a kit, using DrumKit.
+- [ ] **Audio editor.** Waveform view with start, end, gain and fade handles for one clip.
+- [ ] **Markers and a tempo and signature lane** on the ruler (Phase A items).
+- [ ] **Pattern clips** (GridSound's model): a reusable MIDI pattern placed on several
+      tracks or times, edit once, all instances follow. Needs a design note first; only
+      build if the note shows it earns its cost over copy and paste.
+
+### Phase T5. Automation
+
+Goal: parameters move over time, drawn on the timeline, for any plugin.
+
+- [ ] **Vocabulary and scheduler design** for an envelope in the project graph, the same
+      item as Phase C "Automation lanes". Points, curve shape, target as a plugin IRI plus
+      parameter path (the paths already exist for presets).
+- [ ] **Scheduler renders automation by stream position**, never by block index, and never
+      by equality with a block boundary (CLAUDE.md real-time rules). Offline test that an
+      envelope point between two blocks still fires once.
+- [ ] **Lanes under each track.** One lane per automated parameter, added from any
+      control in the panel, named from the profile with its unit.
+- [ ] **Draw, edit, move, delete points** by pointer and by keys; range select; scale.
+- [ ] **Write, touch, latch, read modes.** openDAW records any write while the transport
+      runs and latches until stop; that is the model to copy, because a gate on one control
+      type left every other control unrecordable (`docs/automation.md`).
+- [ ] **A manual change while automated** suspends the lane until the next stop or restore,
+      rather than fighting it.
+- [ ] **Tempo and master automation** on the same lane machinery.
+- [ ] **MIDI learn** writes into the same lanes (Phase D).
+- [ ] **Modulation sources** (LFO, step, random, macro) as nodes with routable outputs,
+      the way openDAW sums depth times source onto a parameter. Jiggy's answer is a Jig
+      with a control output port, which keeps it a plugin and not a host feature.
+
+### Phase T6. Mixer, aligned with the track view
+
+Goal: the mixer is the same tracks seen as strips, not a second model.
+
+- [ ] **Mixer as a dock or a page** built from the same track list and selection.
+- [ ] **Master strip and bus**, sends section, output selector, meters with clip hold
+      (Phase C).
+- [ ] **Insert slots on the strip** mirroring the chain strip from T3, so both views edit
+      one list.
+- [ ] **Snapshots, freeze, render in place, consolidate** (Phase C, and share the bounce
+      path in Phase E).
+- [ ] **Metering and correlation as displays**, with no loudness-compliance claims.
+
+### Phase T7. Session, clip launcher and interchange
+
+- [ ] **Recent projects, autosave, recovery, templates** (Phase F).
+- [ ] **Undo history panel** (Phase F), listing the existing `OpDispatcher` steps.
+- [ ] **Clip launcher (session grid).** Scenes and slots that trigger clips on the same
+      tracks, quantised launch, follow actions later. Last on this list on purpose: webdaw
+      leaves it to milestone 9 and it needs the arrangement solid first.
+- [ ] **Standard MIDI file import and export** (Phase B).
+- [ ] **DAWproject import and export.** Bitwig's open format is in openDAW
+      (`packages/studio/core/src/dawproject`) and on webdaw's list. It gives Jiggy sessions
+      an escape route to and from other DAWs. Track, clip, note, level, pan and tempo map
+      first; plugin state only for a Jig with an equivalent on the other side.
+- [ ] **Stems and bounce in the page** (Phase E).
+- [ ] **Sample and preset libraries.** A browser tab for audio files with preview, folder
+      tree and drag onto a lane (openDAW's `browse/`), next to the plugin browser.
+
+### Phase T8. Workflow, access and the surfaces around it
+
+- [ ] **Command palette** over the dispatcher (Phase G). openDAW's spotlight is the model.
+- [ ] **Shortcuts scoped by context** (global, lanes, dock, piano roll), from one binding
+      store, with a searchable list and conflict checks (Phase G). openDAW splits its keys
+      by context in exactly this way.
+- [ ] **Screen reader pass over the whole view.** A lane is a labelled region, a clip a
+      button with its position and length, a header a group with named controls. Announce
+      selection and playhead position on request, not continuously. Test with a real
+      screen reader and record what was and was not tested.
+- [ ] **High-contrast theme and reduced motion** checked against the new view.
+- [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, drag handles of at
+      least 44px. Measured on a real phone width (interface rules).
+- [ ] **WebMCP parity.** Every T-phase Op appears in the tool surface with no second
+      implementation, and a test walks the dispatcher's Op list against the tool list so a
+      new Op that is not exposed fails a check.
+- [ ] **Agent-driven arrangement.** With profiles available, an agent can build a track:
+      choose plugins by role, connect them, write a clip. Regress with a scripted session
+      against the real dispatcher.
+- [ ] **Live collaboration, considered.** openDAW runs Yjs sync and a peer-to-peer room
+      (`packages/studio/p2p`, `ysync`). Jiggy already has revisions and `expectedRevision`
+      changesets, which is a better base for merge. Design note only; not started.
+- [ ] **PWA install and offline.** Cache the host and plugins already opened, with the
+      integrity checks intact.
+- [ ] **Retire the three tabs** once the main view covers each of them and the measured
+      checks pass, keeping the plugin rack as the dock's chain view.
+
+### Suggested order
+
+T0 first and in full, since T1 and T2 both wait on the editor-graph decision. Then T1, T2,
+and the first half of T4 (clip operations) together. T3 next, because it is what makes the
+view Jiggy's own. T5 before T6, since master and send automation depend on it. T7 and T8
+run alongside from T3 onward, and the launcher waits for the rest.
+
+## Web-native Jiggy, and a mobile PWA
+
+From the inbox, 2026-09-30. Two directions, neither started. Each needs a design note in
+`docs/` before code, since both touch the "host is a page, plugins are IRIs" premise.
+
+- [ ] **Investigate what would make Jiggy more Web-native.** Questions to answer in a
+      design note, each with what the answer would cost:
+      1. *Discovery.* Can the browser search plugin-universe.com's public SPARQL and MCP
+         endpoints directly and offer Jigs the catalogue marks as compatible? Needs CORS on
+         those endpoints (check, do not assume) and a rule for trusting what it returns:
+         a catalogue entry is a claim, and the profile at the plugin's own IRI is the
+         authority. The existing Browser search already takes a catalogue; this widens it.
+      2. *Sync between instances.* Two or more Jiggy pages sharing one session live.
+         Peer to peer first (WebRTC data channels), with a signalling step that needs a
+         minimal server or a copy-and-paste offer; then failing that a small relay. Jiggy
+         already has revisions and `expectedRevision` changesets, so the wire could be
+         changesets over a channel, with the revision as the conflict check. Decide what
+         does not sync (the transport clock, the audio itself, editor state) before any code.
+      3. *Other ideas to weigh:* Web Share Target and File Handling so a session or a
+         plugin bundle opens straight from the system; the origin private file system for
+         media and recovery; Web MIDI and Web Bluetooth MIDI for controllers; Web Locks and
+         BroadcastChannel for two tabs of one session; installable plugin collections by URL.
+      Output is a document ranking these by cost and by how well each fits the premise.
+- [ ] **A Jiggy PWA for phones, built around generative plugins.** Installable, offline
+      once loaded (service worker caching the host and every plugin already opened, with
+      the integrity checks intact), and a separate front page on the same model and Ops,
+      not a second implementation. Requirements as given:
+      - simple enough for an eight year old, with the advanced controls one step away;
+      - primary surface is the generative plugins (MelGen, DrumGen, Cadence, Ground and the
+        rest), started from presets, the first being the Chiptune preset;
+      - each plugin's own parameters reachable while a piece plays, by the generated panel;
+      - recording from the microphone, and export to MP3, both easy.
+      Open points to settle in the design note: MP3 needs an encoder in the page (WebCodecs
+      does not encode MP3 in every browser, so a WASM encoder may be required; see Phase E
+      "Formats and options"); microphone recording exists (`TrackRecorder`) and needs a
+      one-button front; the interface rules already require touch targets of 44px and a
+      single column below 720px, so this is a different front page and not a different
+      layout system. Depends on the Web-native item above only for sharing, not for
+      playing.
+
 ## The application
 
 Behaving more like a real DAW, an open-ended direction rather than a phase with an end. Plugin-related parts should have most attention.

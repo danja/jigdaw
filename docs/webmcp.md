@@ -141,6 +141,7 @@ halfway is worse than one that was never touched.
 |---|---|---|
 | `track_add` | `label?` | Track id |
 | `track_remove` | `trackId`, `moveNodesTo?` | |
+| `track_layout` | `trackId`, `move?`, `color?`, `laneSize?` | The track's layout and place. Editor metadata: no revision, no undo |
 | `track_set` | `trackId`, `label?`, `midiInput?`, `audioInput?` | |
 | `track_set_channel` | `trackId`, `gain?`, `pan?`, `muted?`, `soloed?` | The whole strip, as applied |
 | `node_move_to_track` | `nodeId`, `trackId` | |

@@ -592,18 +592,123 @@ jig:symbol a owl:DatatypeProperty ; rdfs:domain jig:ParameterSetting ; rdfs:rang
 jig:value a owl:DatatypeProperty ; rdfs:domain jig:ParameterSetting ; rdfs:range xsd:decimal .
 
 jig:tempoPoint a owl:ObjectProperty ; rdfs:domain jig:Transport ; rdfs:range jig:TempoPoint .
-jig:atBeat a owl:DatatypeProperty ; rdfs:domain jig:TempoPoint ; rdfs:range xsd:decimal .
+## No domain: a tempo point, a signature point, a marker and an envelope point are all
+## keyed by the beat they take effect at, and a domain per class would say they are one.
+jig:atBeat a owl:DatatypeProperty ; rdfs:range xsd:decimal .
 jig:bpm a owl:DatatypeProperty ; rdfs:domain jig:TempoPoint ; rdfs:range xsd:decimal .
-jig:beatsPerBar a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:integer .
-jig:beatUnit a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:integer .
+## Domain jig:Transport or jig:SignaturePoint, stated in words: see jig:SignaturePoint.
+jig:beatsPerBar a owl:DatatypeProperty ; rdfs:range xsd:integer .
+jig:beatUnit a owl:DatatypeProperty ; rdfs:range xsd:integer .
 jig:loopStart a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:decimal .
 jig:loopEnd a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:decimal .
 jig:loopEnabled a owl:DatatypeProperty ; rdfs:domain jig:Transport ; rdfs:range xsd:boolean .
+
+## -- The track view: master, sends, markers, envelopes ------------------------
+##
+## docs/track-view-terms.md. Facts about the sound, so they are in the project
+## graph and bump its revision. The model and the file format carry them; the
+## compiler and scheduler do not yet act on sends, buses or envelopes.
+
+jig:Master a owl:Class ;
+    rdfs:label "Master" ;
+    rdfs:comment """The last gain, pan and mute before the destination. At most one per
+        project. Absent means unity, centred, unmuted.""" .
+jig:master a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Master .
+
+jig:Send a owl:Class ;
+    rdfs:label "Send" ;
+    rdfs:comment """A copy of one track's signal, at a level and a tap point, into another
+        track. A return is an ordinary track that is the target of a send; nothing marks
+        it. Joins tracks, where a jig:Connection joins ports on nodes.""" .
+jig:send a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Send .
+jig:sendFrom a owl:ObjectProperty ; rdfs:domain jig:Send ; rdfs:range jig:Track .
+jig:sendTo a owl:ObjectProperty ; rdfs:domain jig:Send ; rdfs:range jig:Track .
+jig:level a owl:DatatypeProperty ;
+    rdfs:domain jig:Send ; rdfs:range xsd:decimal ;
+    rdfs:label "level" ;
+    rdfs:comment "Linear, as jig:gain: zero or more." .
+jig:TapPoint a owl:Class ; rdfs:label "Tap point" .
+jig:PreFader a owl:NamedIndividual , jig:TapPoint ;
+    rdfs:label "pre-fader" ;
+    rdfs:comment "The send takes the signal before the track's fader, pan and mute." .
+jig:PostFader a owl:NamedIndividual , jig:TapPoint ;
+    rdfs:label "post-fader" ;
+    rdfs:comment "The send takes the signal after the track's fader, pan and mute." .
+jig:tap a owl:ObjectProperty ; rdfs:domain jig:Send ; rdfs:range jig:TapPoint .
+
+jig:output a owl:ObjectProperty ;
+    rdfs:domain jig:Track ; rdfs:range jig:Track ;
+    rdfs:label "output" ;
+    rdfs:comment """The track this track's output goes to instead of the master. Makes the
+        target a bus. Absent means the master. Cycles are refused.""" .
+
+jig:Marker a owl:Class ;
+    rdfs:label "Marker" ;
+    rdfs:comment "A named position in the arrangement, at jig:atBeat." .
+jig:marker a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Marker .
+jig:Region a owl:Class ;
+    rdfs:label "Region" ;
+    rdfs:comment "A named range of the arrangement, from trn:startBeat for trn:lengthBeats." .
+jig:region a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Region .
+
+jig:SignaturePoint a owl:Class ;
+    rdfs:label "Signature point" ;
+    rdfs:comment """A time signature from a given beat onward, which MUST fall on a bar line
+        of the signature before it and after beat zero. The transport's own
+        jig:beatsPerBar and jig:beatUnit hold before the first point.""" .
+jig:signaturePoint a owl:ObjectProperty ; rdfs:domain jig:Transport ; rdfs:range jig:SignaturePoint .
+
+jig:Envelope a owl:Class ;
+    rdfs:label "Envelope" ;
+    rdfs:comment """A parameter's value over time: a target and points keyed by beat. Targets
+        one parameter of one node, or one of three project-level targets.""" .
+jig:envelope a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Envelope .
+jig:targetNode a owl:ObjectProperty ; rdfs:domain jig:Envelope ; rdfs:range jig:Node .
+jig:targetSymbol a owl:DatatypeProperty ;
+    rdfs:domain jig:Envelope ; rdfs:range xsd:string ;
+    rdfs:comment "The lv2:symbol of the parameter on jig:targetNode." .
+jig:TargetKind a owl:Class ; rdfs:label "Target kind" .
+jig:MasterGain a owl:NamedIndividual , jig:TargetKind ; rdfs:label "master gain" .
+jig:MasterPan a owl:NamedIndividual , jig:TargetKind ; rdfs:label "master pan" .
+jig:Tempo a owl:NamedIndividual , jig:TargetKind ; rdfs:label "tempo" .
+jig:targetKind a owl:ObjectProperty ; rdfs:domain jig:Envelope ; rdfs:range jig:TargetKind .
+jig:EnvelopePoint a owl:Class ; rdfs:label "Envelope point" .
+jig:envelopePoint a owl:ObjectProperty ; rdfs:domain jig:Envelope ; rdfs:range jig:EnvelopePoint .
+jig:pointValue a owl:DatatypeProperty ;
+    rdfs:domain jig:EnvelopePoint ; rdfs:range xsd:decimal ;
+    rdfs:comment "In the target parameter's own units." .
+jig:Curve a owl:Class ; rdfs:label "Curve" .
+jig:Step a owl:NamedIndividual , jig:Curve ; rdfs:label "step" ;
+    rdfs:comment "Holds the value until the next point." .
+jig:Linear a owl:NamedIndividual , jig:Curve ; rdfs:label "linear" ;
+    rdfs:comment "Straight line to the next point." .
+jig:Smooth a owl:NamedIndividual , jig:Curve ; rdfs:label "smooth" ;
+    rdfs:comment "Smoothstep to the next point." .
+jig:curve a owl:ObjectProperty ; rdfs:domain jig:EnvelopePoint ; rdfs:range jig:Curve .
 
 ## Editor metadata. Kept in a separate named graph from execution metadata, so
 ## that moving a node on screen cannot invalidate a compiled audio graph.
 jig:x a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .
 jig:y a owl:DatatypeProperty ; rdfs:domain jig:Node ; rdfs:range xsd:decimal .
+
+jig:order a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:integer ;
+    rdfs:label "order" ;
+    rdfs:comment """Where a person has placed a track in the arrangement, counting from
+        zero. Editor metadata: stated only in the editor graph. A track with none
+        follows the placed ones, in the order it was made.""" .
+
+jig:color a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:string ;
+    rdfs:label "colour" ;
+    rdfs:comment """A track's colour as lower case #rrggbb. Editor metadata. Never the
+        only way a track is told apart: its name is always shown.""" .
+
+jig:laneSize a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:string ;
+    rdfs:label "lane size" ;
+    rdfs:comment """How tall the track's lane is drawn: small, medium or large. Editor
+        metadata. Medium when absent.""" .
 
 ## -- Bundles and provenance --------------------------------------------------
 ##

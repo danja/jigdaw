@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  110 terms.
+  148 terms.
 </p>
 
 <h2>Classes</h2>
@@ -71,8 +71,15 @@
   <dd>A directed link between two endpoints. Topology is modelled as explicit
         connections with named endpoints, never as a list, so the graph is a faithful
         picture of the dataflow rather than an encoding of one.</dd>
+  <dt id="Curve"><code>jig:Curve</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="Endpoint"><code>jig:Endpoint</code></dt>
   <dd>One end of a connection: a node, and which of its ports.</dd>
+  <dt id="Envelope"><code>jig:Envelope</code></dt>
+  <dd>A parameter's value over time: a target and points keyed by beat. Targets
+        one parameter of one node, or one of three project-level targets.</dd>
+  <dt id="EnvelopePoint"><code>jig:EnvelopePoint</code> <span class="label">Envelope point</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="ForeignFormat"><code>jig:ForeignFormat</code> <span class="label">Foreign Format</span></dt>
   <dd>A plugin format an adapter can start. One per adapter, not one per plugin.</dd>
   <dt id="ForeignPlugin"><code>jig:ForeignPlugin</code> <span class="label">Foreign Plugin</span></dt>
@@ -88,6 +95,11 @@
         Inspection is authoritative for technical facts and the curated profile is
         authoritative for what the signals mean, because the two answer different
         questions and the second cannot be derived from the first.</dd>
+  <dt id="Marker"><code>jig:Marker</code></dt>
+  <dd>A named position in the arrangement, at jig:atBeat.</dd>
+  <dt id="Master"><code>jig:Master</code></dt>
+  <dd>The last gain, pan and mute before the destination. At most one per
+        project. Absent means unity, centred, unmuted.</dd>
   <dt id="MidiClip"><code>jig:MidiClip</code> <span class="label">MIDI Clip</span></dt>
   <dd>A clip of notes, played into the track's jig:midiInput.</dd>
   <dt id="Module"><code>jig:Module</code></dt>
@@ -117,10 +129,24 @@
         registerProcessor and is the only plugin code that runs on the audio thread.</dd>
   <dt id="Project"><code>jig:Project</code></dt>
   <dd>A session: tracks, nodes, connections, parameter settings, clips and transport.</dd>
+  <dt id="Region"><code>jig:Region</code></dt>
+  <dd>A named range of the arrangement, from trn:startBeat for trn:lengthBeats.</dd>
   <dt id="Resource"><code>jig:Resource</code></dt>
   <dd>A fetchable file belonging to a plugin. Its jig:location is resolved
         against the profile's own IRI, so a profile that moves keeps working and a plugin
         can be served from a directory copied anywhere.</dd>
+  <dt id="Send"><code>jig:Send</code></dt>
+  <dd>A copy of one track's signal, at a level and a tap point, into another
+        track. A return is an ordinary track that is the target of a send; nothing marks
+        it. Joins tracks, where a jig:Connection joins ports on nodes.</dd>
+  <dt id="SignaturePoint"><code>jig:SignaturePoint</code> <span class="label">Signature point</span></dt>
+  <dd>A time signature from a given beat onward, which MUST fall on a bar line
+        of the signature before it and after beat zero. The transport's own
+        jig:beatsPerBar and jig:beatUnit hold before the first point.</dd>
+  <dt id="TapPoint"><code>jig:TapPoint</code> <span class="label">Tap point</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="TargetKind"><code>jig:TargetKind</code> <span class="label">Target kind</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="TempoPoint"><code>jig:TempoPoint</code> <span class="label">Tempo Point</span></dt>
   <dd>A tempo, from a given beat onward. Ordered by jig:atBeat, not by position in a list.</dd>
   <dt id="Track"><code>jig:Track</code></dt>
@@ -178,7 +204,13 @@
         jig:integrity like any other resource, and it is the only thing verified, because a
         foreign format has no manifest to enumerate. Everything the plugin loads afterwards
         resolves inside these bytes or is refused. Contract section 12.3.</dd>
+  <dt id="curve"><code>jig:curve</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="endpointNode"><code>jig:endpointNode</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="envelope"><code>jig:envelope</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="envelopePoint"><code>jig:envelopePoint</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="foreignFormat"><code>jig:foreignFormat</code> <span class="label">foreign format</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
@@ -189,6 +221,10 @@
   <dt id="location"><code>jig:location</code></dt>
   <dd>Where the file is fetched from. Normally relative to the profile,
         which is what makes a plugin directory portable.</dd>
+  <dt id="marker"><code>jig:marker</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="master"><code>jig:master</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="midiInput"><code>jig:midiInput</code> <span class="label">MIDI input</span></dt>
   <dd>The node a track's MIDI clips play into. Named rather than inferred
         from the chain, because a track can hold a MIDI effect before an instrument, or
@@ -204,6 +240,9 @@
   <dd>The track a node belongs to. Exactly one. Stated on the node rather
         than listed on the track, so moving a node between tracks is one triple, and so
         that nothing about membership is an ordering.</dd>
+  <dt id="output"><code>jig:output</code></dt>
+  <dd>The track this track's output goes to instead of the master. Makes the
+        target a bus. Absent means the master. Cycles are refused.</dd>
   <dt id="plugin"><code>jig:plugin</code></dt>
   <dd>The plugin IRI this node instantiates. Dereferenceable, so a project
         carries everything needed to reconstruct itself on a machine that has never seen
@@ -215,16 +254,32 @@
         plugin at instantiation so it can choose its own fallback.</dd>
   <dt id="processor"><code>jig:processor</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="region"><code>jig:region</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="send"><code>jig:send</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="sendFrom"><code>jig:sendFrom</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="sendTo"><code>jig:sendTo</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="setting"><code>jig:setting</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="signalKind"><code>jig:signalKind</code> <span class="label">signal kind</span></dt>
   <dd>What travels along this connection, as a trn: signal type. Audio
         connections are Web Audio edges; MIDI connections are host-routed message traffic,
         which is why the kind has to be stated rather than inferred from the endpoints.</dd>
+  <dt id="signaturePoint"><code>jig:signaturePoint</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="source"><code>jig:source</code></dt>
   <dd>The audio file this clip plays, by IRI. A relative IRI resolves
         against the session document, which is how a session saved beside its media
         folder stays portable.</dd>
+  <dt id="tap"><code>jig:tap</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="targetKind"><code>jig:targetKind</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="targetNode"><code>jig:targetNode</code></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="tempoPoint"><code>jig:tempoPoint</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="to"><code>jig:to</code></dt>
@@ -263,6 +318,9 @@
         digest holds for the same plugin whether it arrived flattened, archived, or from its
         origin, which is the same rule that makes a bundle a retrieval origin and not an
         identity. See docs/plugin-bundles.md section 5.</dd>
+  <dt id="color"><code>jig:color</code> <span class="label">colour</span></dt>
+  <dd>A track's colour as lower case #rrggbb. Editor metadata. Never the
+        only way a track is told apart: its name is always shown.</dd>
   <dt id="controlGroup"><code>jig:controlGroup</code> <span class="label">control group</span></dt>
   <dd>The section of the generated panel this control belongs under, so
         a plugin with dozens of ports reads as groups rather than a flat list. A
@@ -289,8 +347,13 @@
         every resource, because the profile and the code it points at need not come from
         the same origin and the whole install story is that a host runs code it found by
         following a link.</dd>
+  <dt id="laneSize"><code>jig:laneSize</code> <span class="label">lane size</span></dt>
+  <dd>How tall the track's lane is drawn: small, medium or large. Editor
+        metadata. Medium when absent.</dd>
   <dt id="latencyFrames"><code>jig:latencyFrames</code> <span class="label">latency frames</span></dt>
   <dd>Frames of delay the plugin introduces, for the host to compensate.</dd>
+  <dt id="level"><code>jig:level</code></dt>
+  <dd>Linear, as jig:gain: zero or more.</dd>
   <dt id="loadOutcome"><code>jig:loadOutcome</code> <span class="label">load outcome</span></dt>
   <dd>What happened: loaded, refused, or failed, with the reason. A plugin
         that fails to load is a recorded result, not an error, so that a catalogue can
@@ -317,6 +380,10 @@
   <dd>Where in the source the clip begins, in seconds of the file rather
         than beats of the transport, because a recording does not change length when the
         tempo does. Absent means the start of the file.</dd>
+  <dt id="order"><code>jig:order</code></dt>
+  <dd>Where a person has placed a track in the arrangement, counting from
+        zero. Editor metadata: stated only in the editor graph. A track with none
+        follows the placed ones, in the order it was made.</dd>
   <dt id="outputChannels"><code>jig:outputChannels</code> <span class="label">output channels</span></dt>
   <dd>Channels per output. A host declaring outputChannelCount on the node
         must agree with this, and a plugin writing a different number of channels is a
@@ -326,6 +393,8 @@
         StereoPannerNode takes it. Absent means centre.</dd>
   <dt id="paramIndex"><code>jig:paramIndex</code> <span class="label">parameter index</span></dt>
   <dd>Which index this parameter has in jig_set_param. Required on every port of a module declaring an ABI, because a host loading the module directly has no processor to hold the mapping and cannot infer it: a position in the profile is a property of the document, not of the module.</dd>
+  <dt id="pointValue"><code>jig:pointValue</code></dt>
+  <dd>In the target parameter's own units.</dd>
   <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>
   <dd>Which audio input or output, zero-based, as Web Audio numbers them.</dd>
   <dt id="portSymbol"><code>jig:portSymbol</code> <span class="label">port symbol</span></dt>
@@ -355,6 +424,8 @@
   <dt id="tailFrames"><code>jig:tailFrames</code> <span class="label">tail frames</span></dt>
   <dd>Frames the plugin keeps producing after its input goes silent. A
         reverb that does not declare this is cut off at the end of an offline render.</dd>
+  <dt id="targetSymbol"><code>jig:targetSymbol</code></dt>
+  <dd>The lv2:symbol of the parameter on jig:targetNode.</dd>
   <dt id="userReplaceable"><code>jig:userReplaceable</code> <span class="label">user replaceable</span></dt>
   <dd>Whether a person can load a different file into this jig:asset at
         runtime, from the generated panel (messaging.md section 1.2's loadAsset), rather
@@ -394,6 +465,12 @@ emit through and no transport to be in time with.</dd>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="KRate"><code>jig:KRate</code> <span class="label">k-rate</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="Linear"><code>jig:Linear</code> <span class="label">linear</span></dt>
+  <dd>Straight line to the next point.</dd>
+  <dt id="MasterGain"><code>jig:MasterGain</code> <span class="label">master gain</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="MasterPan"><code>jig:MasterPan</code> <span class="label">master pan</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
   <dt id="MidiEvents"><code>jig:MidiEvents</code> <span class="label">MIDI Events</span></dt>
   <dd>The host delivers and accepts MIDI. The Web Audio graph carries no
         MIDI, so this is a host service over a message port rather than a property of the
@@ -410,6 +487,10 @@ back.</dd>
         context does not have, declares that it does not support this.</dd>
   <dt id="Persistence"><code>jig:Persistence</code></dt>
   <dd>The host will save and restore the plugin's state with the project.</dd>
+  <dt id="PostFader"><code>jig:PostFader</code> <span class="label">post-fader</span></dt>
+  <dd>The send takes the signal after the track's fader, pan and mute.</dd>
+  <dt id="PreFader"><code>jig:PreFader</code> <span class="label">pre-fader</span></dt>
+  <dd>The send takes the signal before the track's fader, pan and mute.</dd>
   <dt id="SharedMemory"><code>jig:SharedMemory</code> <span class="label">Shared Memory</span></dt>
   <dd>SharedArrayBuffer between the audio thread and elsewhere. Available
         only in a cross-origin isolated page, which in turn requires every cross-origin
@@ -417,6 +498,12 @@ back.</dd>
         constrains not just the host but every server that hosts a plugin, which is why it
         is negotiated rather than assumed.</dd>
   <dt id="Simd128"><code>jig:Simd128</code> <span class="label">SIMD 128</span></dt>
+  <dd><span class="undescribed">No description.</span></dd>
+  <dt id="Smooth"><code>jig:Smooth</code> <span class="label">smooth</span></dt>
+  <dd>Smoothstep to the next point.</dd>
+  <dt id="Step"><code>jig:Step</code> <span class="label">step</span></dt>
+  <dd>Holds the value until the next point.</dd>
+  <dt id="Tempo"><code>jig:Tempo</code> <span class="label">tempo</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="Threads"><code>jig:Threads</code></dt>
   <dd><span class="undescribed">No description.</span></dd>

@@ -294,6 +294,27 @@ describe('addPlugin', () => {
   })
 })
 
+describe('how late each track is', () => {
+  it('is the longest chain on the track, and zero for a track with nothing on it', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine({ latency: 512 }) })
+    d.apply([{ op: 'addTrack', id: 'one' }, { op: 'addTrack', id: 'two' }, { op: 'addTrack', id: 'empty' }])
+    const a = (await d.addPlugin(IRI, { track: 'one' })).nodeId
+    const b = (await d.addPlugin(IRI, { track: 'two' })).nodeId
+    const c = (await d.addPlugin(IRI, { track: 'two' })).nodeId
+    d.apply([edge(b, c)])
+    const byTrack = Object.fromEntries(d.trackLatencies().map(l => [l.trackId, l.frames]))
+    expect(byTrack).toEqual({ one: 512, two: 1024, empty: 0 })
+    expect(a).toBeTruthy()
+  })
+
+  it('is zero everywhere with no engine latency', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'addTrack', id: 'one' }])
+    await d.addPlugin(IRI, { track: 'one' })
+    expect(d.trackLatencies()).toEqual([{ trackId: 'one', frames: 0 }])
+  })
+})
+
 describe('setParameter', () => {
   it('records in the model and applies to the AudioParam', async () => {
     const engine = fakeEngine()
@@ -1143,5 +1164,55 @@ describe('undoing clips', () => {
     expect(d.project.clips).toEqual([])
     await d.undo()
     expect(d.project.clip('c')).toMatchObject({ track: t, source: 'https://example.org/a.wav' })
+  })
+})
+
+describe('undo and redo of the track view (docs/track-view-terms.md)', () => {
+  it('steps master, sends, outputs, markers, regions and envelopes back and forward', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+    const { nodeId } = await d.addPlugin(IRI, { track: 'a' })
+
+    const before = JSON.stringify(d.project.snapshot())
+    const result = d.apply([
+      { op: 'setMaster', gain: 0.5 },
+      { op: 'addSend', from: 'a', to: 'b', level: 0.3, tap: 'pre' },
+      { op: 'setTrack', id: 'a', output: 'b' },
+      { op: 'addMarker', atBeat: 4, label: 'Drop' },
+      { op: 'addRegion', startBeat: 0, lengthBeats: 8 },
+      { op: 'addEnvelope', target: { node: nodeId, symbol: 'mix' }, points: [{ atBeat: 0, value: 0.2 }] }
+    ])
+    expect(result.ok, result.message).toBe(true)
+    const after = JSON.stringify(d.project.snapshot())
+
+    await d.undo()
+    expect(JSON.stringify(d.project.snapshot().master)).toBe(JSON.stringify(JSON.parse(before).master))
+    expect(d.project.sends).toEqual([])
+    expect(d.project.track('a').output).toBeNull()
+    expect(d.project.markers).toEqual([])
+    expect(d.project.regions).toEqual([])
+    expect(d.project.envelopes).toEqual([])
+
+    await d.redo()
+    const redone = JSON.parse(JSON.stringify(d.project.snapshot()))
+    const wanted = JSON.parse(after)
+    for (const key of ['master', 'sends', 'markers', 'regions', 'envelopes']) expect(redone[key]).toEqual(wanted[key])
+    expect(d.project.track('a').output).toBe('b')
+  })
+
+  it('undoes an envelope change by replacing it whole', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addEnvelope', target: { kind: 'tempo' }, points: [{ atBeat: 0, value: 100 }] }])
+    d.apply([{ op: 'setEnvelope', id: 'envelope-1', points: [{ atBeat: 0, value: 100 }, { atBeat: 8, value: 140 }] }])
+    await d.undo()
+    expect(d.project.envelopes[0].points).toHaveLength(1)
+  })
+
+  it('refuses a send that would close a loop, through the dispatcher too', () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }, { op: 'addSend', from: 'a', to: 'b' }])
+    const result = d.apply([{ op: 'addSend', from: 'b', to: 'a' }])
+    expect(result.ok).toBe(false)
+    expect(result.message).toMatch(/feed itself/)
   })
 })

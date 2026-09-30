@@ -97,8 +97,11 @@ export async function openProject (dispatcher, read, { onLoading = () => {}, onC
   const rest = read.changes
     .filter(c =>
       c.op !== 'addNode' && c.op !== 'addTrack' &&
-      (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))))
-    .map(c => c.op === 'setTrack'
+      (c.op !== 'addConnection' || (loaded.has(c.from.node) && loaded.has(c.to.node))) &&
+      // An envelope on a node that failed to load has nothing to move.
+      (c.op !== 'addEnvelope' || c.target.node === undefined || loaded.has(c.target.node)))
+    // Only a change that names inputs: one that sets a bus output alone must not clear them.
+    .map(c => c.op === 'setTrack' && ('midiInput' in c || 'audioInput' in c)
       ? { ...c, midiInput: loadedOrNull(c.midiInput ?? null), audioInput: loadedOrNull(c.audioInput ?? null) }
       : c)
   if (rest.length > 0) {

@@ -177,6 +177,44 @@ Settings are addressed by `lv2:symbol`. An index is a property of a build and ch
 the plugin is rebuilt; a symbol is a property of the plugin and contract section 5.1
 requires it to be stable.
 
+## Master, sends, markers, regions, signatures and envelopes
+
+Facts about the sound and the arrangement, in the project graph, so each bumps the revision. The
+reasoning for every choice is in [track-view-terms.md](track-view-terms.md). A writer MUST NOT
+write any of this for a project that does not use it, so a session from before these terms is
+unchanged when saved.
+
+| Subject | Terms |
+|---|---|
+| `jig:Master`, one, linked by `jig:master` | `jig:gain`, `jig:pan`, `jig:muted`; absent means unity, centred, heard |
+| `jig:Send`, linked by `jig:send` | `jig:sendFrom`, `jig:sendTo` (tracks, not the same), `jig:level` (linear, at least 0), `jig:tap` (`jig:PreFader` or `jig:PostFader`) |
+| a track | `jig:output`, the track it feeds instead of the master, which makes that track a bus |
+| `jig:Marker`, linked by `jig:marker` | `jig:atBeat`, `rdfs:label` |
+| `jig:Region`, linked by `jig:region` | `trn:startBeat`, `trn:lengthBeats` (above 0), `rdfs:label` |
+| `jig:SignaturePoint`, linked from the transport by `jig:signaturePoint` | `jig:atBeat` (above 0), `jig:beatsPerBar`, `jig:beatUnit` |
+| `jig:Envelope`, linked by `jig:envelope` | a target, and `jig:envelopePoint` entries |
+
+An envelope targets either one parameter of one node, by `jig:targetNode` and `jig:targetSymbol`,
+or one project-level target by `jig:targetKind`: `jig:MasterGain`, `jig:MasterPan` or `jig:Tempo`.
+A point carries `jig:atBeat`, `jig:pointValue` in the parameter's own units, and `jig:curve`:
+`jig:Step`, `jig:Linear` or `jig:Smooth`. Points are keyed by beat and read in beat order, never
+by their place in the file.
+
+Three rules the shapes cannot say, and the model enforces:
+
+- A signature change MUST fall on a bar line of the signature before it. The transport's own
+  `jig:beatsPerBar` holds before the first point.
+- Sends and bus outputs together MUST NOT make a track feed itself, however long the loop.
+- A master value or tempo an envelope carries MUST be in range. A node parameter's range is in
+  its profile, which the model does not hold, so that check waits for the layer that does.
+
+Removing a track removes the sends that touch it and clears outputs that name it. Removing a
+node removes its envelopes.
+
+Status of behaviour: the host reads, writes, edits, undoes and validates all of this. The
+compiler and scheduler do not yet act on sends, bus outputs, envelopes or signature changes,
+and the master strip does not yet reach the destination gain.
+
 ## Revision
 
 `jig:revision` increments on every committed change. A changeset names the revision its
@@ -196,6 +234,27 @@ Dragging a node on screen must not invalidate a compiled audio graph. If positio
 topology are in one graph, every layout change looks like a project change: it bumps the
 revision, invalidates caches, and conflicts with a concurrent edit that has nothing to do
 with it. Separating them is valis's rule and the cost of ignoring it is paid continuously.
+
+### The editor graph in a saved session
+
+The editor graph is its own document, `editor.ttl`, saved beside `session.ttl` in the session's
+zip. A session with nothing in the editor graph but defaults is still one Turtle file, and
+a zip without `editor.ttl` opens with default layout. A reader MUST NOT fail to open a
+session because its editor graph is missing or unreadable.
+
+The subjects are fragments of the project IRI, as everywhere else. What it may state:
+
+| Subject | Property | Value |
+|---|---|---|
+| a node | `jig:x`, `jig:y` | where it sits on the routing view |
+| a track | `jig:order` | integer position among tracks, from zero |
+| a track | `jig:color` | lower case `#rrggbb` |
+| a track | `jig:laneSize` | `small`, `medium` (the default, so not written) or `large` |
+
+A track with no `jig:order` follows the placed tracks in the order it was made. Anything
+naming a node or track the session does not hold is dropped. None of these changes the
+project revision. Colour is never the only thing that tells a track apart, and a lane
+size is a drawing choice, not a fact about the audio.
 
 ## Serialisation rules
 

@@ -7,7 +7,7 @@
 // dispatcher's own public apply()/addPlugin()/setParameter(), never into its
 // private state directly.
 //
-import { clipChange } from '../model/Project.js'
+import { clipChange, arrangementReconcile } from '../model/Project.js'
 
 // Bounded so a long session's history is not an unbounded array of full
 // project snapshots. 100 undoable edits is far past what anyone steps back
@@ -211,6 +211,11 @@ export class UndoHistory {
         const live = liveClips.get(id)
         if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip))
       }
+
+      // Master, sends, outputs, markers, regions and envelopes: data, so
+      // replaced whole under their own ids. After the nodes exist, which an
+      // envelope names, and before tracks go, which a send or an output names.
+      reconcile.push(...arrangementReconcile(dispatcher.project.snapshot(), target))
 
       // Last, once every node has moved off or gone.
       for (const id of currentTrackIds) {

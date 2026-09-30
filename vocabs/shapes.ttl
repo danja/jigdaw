@@ -292,7 +292,11 @@ jig:ProjectShape a sh:NodeShape ;
     sh:property [ sh:path jig:transport ; sh:maxCount 1 ] ;
     sh:property [ sh:path jig:node ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path jig:track ; sh:nodeKind sh:IRI ] ;
-    sh:property [ sh:path jig:connection ; sh:nodeKind sh:IRI ] .
+    sh:property [ sh:path jig:connection ; sh:nodeKind sh:IRI ] ;
+    sh:property [
+        sh:path jig:master ; sh:maxCount 1 ;
+        sh:message "A project has at most one master."
+    ] .
 
 jig:TransportShape a sh:NodeShape ;
     sh:targetClass jig:Transport ;
@@ -485,6 +489,68 @@ jig:TempoPointShape a sh:NodeShape ;
         sh:path jig:bpm ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
         sh:message "A tempo point needs a tempo greater than zero."
+    ] .
+
+## -- The track view (docs/track-view-terms.md) --------------------------------
+##
+## That a signature change falls on a bar line, that a send does not close a loop
+## of tracks, and that an envelope value is in its parameter's range are not
+## expressible here. The model refuses them (src/model/ArrangementOps.js).
+
+jig:MasterShape a sh:NodeShape ;
+    sh:targetClass jig:Master ;
+    sh:property [ sh:path jig:gain ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "Master gain is linear and cannot be negative." ] ;
+    sh:property [ sh:path jig:pan ; sh:maxCount 1 ; sh:minInclusive -1 ; sh:maxInclusive 1 ; sh:message "Master pan is between -1 and 1." ] ;
+    sh:property [ sh:path jig:muted ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .
+
+jig:SendShape a sh:NodeShape ;
+    sh:targetClass jig:Send ;
+    sh:property [
+        sh:path jig:sendFrom ; sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Track ;
+        sh:message "A send comes from exactly one track."
+    ] ;
+    sh:property [
+        sh:path jig:sendTo ; sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Track ;
+        sh:disjoint jig:sendFrom ;
+        sh:message "A send goes to exactly one track, and not the one it comes from."
+    ] ;
+    sh:property [ sh:path jig:level ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "A send has a level of zero or more." ] ;
+    sh:property [
+        sh:path jig:tap ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( jig:PreFader jig:PostFader ) ;
+        sh:message "A send takes its signal pre-fader or post-fader, and nothing else."
+    ] .
+
+jig:MarkerShape a sh:NodeShape ;
+    sh:targetClass jig:Marker ;
+    sh:property [ sh:path jig:atBeat ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "A marker sits at one beat, at or after zero." ] .
+
+jig:RegionShape a sh:NodeShape ;
+    sh:targetClass jig:Region ;
+    sh:property [ sh:path trn:startBeat ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "A region starts at one beat, at or after zero." ] ;
+    sh:property [ sh:path trn:lengthBeats ; sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ; sh:message "A region lasts longer than no time." ] .
+
+jig:SignaturePointShape a sh:NodeShape ;
+    sh:targetClass jig:SignaturePoint ;
+    sh:property [ sh:path jig:atBeat ; sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ; sh:message "A signature point comes after beat zero." ] ;
+    sh:property [ sh:path jig:beatsPerBar ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:message "A bar has at least one beat." ] ;
+    sh:property [ sh:path jig:beatUnit ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:message "A beat unit is a note value." ] .
+
+jig:EnvelopeShape a sh:NodeShape ;
+    sh:targetClass jig:Envelope ;
+    sh:xone (
+        [ sh:property [ sh:path jig:targetNode ; sh:minCount 1 ; sh:maxCount 1 ] ;
+          sh:property [ sh:path jig:targetSymbol ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ]
+        [ sh:property [ sh:path jig:targetKind ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( jig:MasterGain jig:MasterPan jig:Tempo ) ] ]
+    ) ;
+    sh:message "An envelope targets either a parameter of one node (jig:targetNode with jig:targetSymbol) or one project-level target (jig:targetKind), and not both." .
+
+jig:EnvelopePointShape a sh:NodeShape ;
+    sh:targetClass jig:EnvelopePoint ;
+    sh:property [ sh:path jig:atBeat ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "An envelope point is keyed by the beat it takes effect at." ] ;
+    sh:property [ sh:path jig:pointValue ; sh:minCount 1 ; sh:maxCount 1 ; sh:message "An envelope point carries a value." ] ;
+    sh:property [
+        sh:path jig:curve ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( jig:Step jig:Linear jig:Smooth ) ;
+        sh:message "An envelope point is stepped, linear or smooth."
     ] .
 
 ## -- Bundles, provenance and signatures ---------------------------------------

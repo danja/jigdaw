@@ -145,6 +145,23 @@ export class OpDispatcher {
     }
   }
 
+  /**
+   * How late each track's signal is, in frames: the longest declared latency
+   * along its chain, counting what the compiler found ahead of each node.
+   * Tracks are not aligned to one another (docs/latency.md, "Between tracks"),
+   * so this is how far a track lags a track with no latency at all.
+   */
+  trackLatencies () {
+    const compiled = this.compile()
+    if (!compiled.ok) return this.#project.tracks.map(t => ({ trackId: t.id, frames: 0 }))
+    return this.#project.tracks.map(track => ({
+      trackId: track.id,
+      frames: this.#project.nodes
+        .filter(n => n.track === track.id)
+        .reduce((most, n) => Math.max(most, (compiled.arrival.get(n.id) ?? 0) + this.#latencyOf(n.id)), 0)
+    }))
+  }
+
   /** The latency each node declares, from what the engine actually loaded. */
   #latencyOf (nodeId) {
     const engineId = this.#nodeIds.get(nodeId)

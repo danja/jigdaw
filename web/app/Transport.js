@@ -174,15 +174,51 @@ export function createTransport (ctx) {
   }
 
   /**
-   * Show the project's tempo in the tempo field, whoever changed it: this
-   * field, undo, a session opening or an agent. Left alone while a person is
-   * typing in it, so the field does not change under their cursor.
+   * Show the project's tempo, signature and loop in the transport bar, whoever
+   * changed them: these controls, undo, a session opening or an agent. A field
+   * is left alone while a person is typing in it, so it does not change under
+   * their cursor.
    */
-  function showTempo () {
-    const bpm = ctx.dispatcher?.project.transport.tempoPoints[0]?.bpm
+  function showTransport () {
+    const t = ctx.dispatcher?.project.transport
+    if (!t) return
+    const bpm = t.tempoPoints[0]?.bpm
     const field = $('tempo')
     if (bpm && document.activeElement !== field) field.value = String(bpm)
+    const signature = $('signature')
+    if (document.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`
+    $('loop').setAttribute('aria-pressed', String(Boolean(t.loopEnabled)))
   }
 
-  return { play, stop, positionLoop, meterLoop, showTempo, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
+  /** Turn the loop on or off. Turning it on with no range sets one: the clips, or four bars. */
+  function toggleLoop () {
+    const d = ctx.dispatcher
+    if (!d) return
+    const t = d.project.transport
+    const change = { op: 'setTransport', loopEnabled: !t.loopEnabled }
+    if (!t.loopEnabled && !(t.loopEnd > t.loopStart)) {
+      const last = Math.max(0, ...d.project.clips.map(c => c.startBeat + c.lengthBeats))
+      change.loopStart = 0
+      change.loopEnd = Math.max(t.beatsPerBar * 4, Math.ceil(last / t.beatsPerBar) * t.beatsPerBar)
+    }
+    const result = d.apply([change])
+    if (!result.ok) log(result.message, 'error')
+  }
+
+  /** Read "3/4" and set it; anything else is refused with the reason, and the field goes back. */
+  function setSignature (text) {
+    const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(text)
+    if (!m) { log(`a time signature is two whole numbers with a slash, like 3/4: ${text}`, 'error'); showTransport(); return }
+    const result = ctx.dispatcher.apply([{ op: 'setTransport', beatsPerBar: Number(m[1]), beatUnit: Number(m[2]) }])
+    if (!result.ok) log(result.message, 'error')
+    showTransport()
+  }
+
+  /** A new loop range from the timeline: set, and turned on. */
+  function setLoopRange ({ start, end }) {
+    const result = ctx.dispatcher.apply([{ op: 'setTransport', loopStart: start, loopEnd: end, loopEnabled: true }])
+    if (!result.ok) log(result.message, 'error')
+  }
+
+  return { play, stop, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
 }

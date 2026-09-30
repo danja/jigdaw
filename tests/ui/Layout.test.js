@@ -1,16 +1,17 @@
 // tests/ui/Layout.test.js
 //
-// The browser column's collapse arrow: one control carrying what the Hide
-// browser button did, in less space. Checked as behaviour rather than pixels:
-// which classes are set, what a screen reader is told, and what survives a
-// reload. Layout has no renderer here, so the rail's 48px width is asserted
-// nowhere; that half needs the narrow-iframe check AGENTS.md describes.
+// The Browser is a panel that starts closed. Checked as behaviour rather than
+// pixels: what is hidden, what a screen reader is told, where the focus goes,
+// and what survives a reload. Layout has no renderer here, so the stage taking
+// the whole width is asserted nowhere; that half needs a look in a real browser.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { createLayout } from '../../web/app/Layout.js'
 
 let document
+let window
 let store
+let focused
 
 function storage (initial = {}) {
   const data = { ...initial }
@@ -21,90 +22,112 @@ function storage (initial = {}) {
   }
 }
 
-/** The shape the test starts from: main, the browser section, the arrow. */
-function build (initialStorage = {}) {
-  ;({ document } = parseHTML('<!doctype html><body></body></html>'))
+/** The shape the page has: a toggle in the bar, main with the browser inside it, its Close button and search box. */
+function build (initialStorage = {}, storageOverride = null) {
+  ;({ document, window } = parseHTML('<!doctype html><body></body></html>'))
   store = storage(initialStorage)
+  focused = null
+  const toggle = document.createElement('button')
+  toggle.id = 'toggle-browser'
   const main = document.createElement('main')
   const browser = document.createElement('section')
   browser.id = 'browser'
-  const head = document.createElement('div')
-  head.className = 'browser-head'
-  const button = document.createElement('button')
-  button.id = 'toggle-browser'
-  const heading = document.createElement('h2')
-  heading.textContent = 'Browser'
-  head.append(button, heading)
-  browser.append(head)
+  const close = document.createElement('button')
+  close.id = 'close-browser'
+  const search = document.createElement('input')
+  search.id = 'q'
+  // linkedom's focus() does not move activeElement; what matters here is which
+  // element was asked to take the focus.
+  for (const el of [toggle, search]) el.focus = () => { focused = el.id }
+  browser.append(close, search)
   main.append(browser)
-  document.body.append(main)
-  const ctx = {
-    document,
-    window: { localStorage: store },
-    $: id => document.getElementById(id)
-  }
-  return { main, browser, button, layout: createLayout(ctx) }
+  document.body.append(toggle, main)
+  const ctx = { document, window: storageOverride ?? { localStorage: store }, $: id => document.getElementById(id) }
+  return { main, browser, toggle, close, search, layout: createLayout(ctx) }
 }
 
-const click = button => button.dispatchEvent(new document.defaultView.Event('click', { bubbles: true }))
+const click = el => el.dispatchEvent(new window.Event('click', { bubbles: true }))
+const key = (el, k) => el.dispatchEvent(Object.defineProperty(new window.Event('keydown', { bubbles: true, cancelable: true }), 'key', { value: k }))
 
-describe('the collapse arrow', () => {
+describe('the Browser panel', () => {
   let main
   let browser
-  let button
+  let toggle
+  let close
   let layout
 
-  beforeEach(() => { ({ main, browser, button, layout } = build()) })
+  beforeEach(() => { ({ main, browser, toggle, close, layout } = build()) })
 
-  it('starts expanded, pointing at the sidebar it collapses', () => {
+  it('starts closed: hidden, out of the layout, and the button says so', () => {
     layout.mount()
-    expect(button.getAttribute('aria-expanded')).toBe('true')
-    expect(button.getAttribute('aria-label')).toBe('Hide browser panel')
-    expect(button.textContent).toBe('‹')
-    expect(browser.classList.contains('rail')).toBe(false)
-    expect(main.classList.contains('no-browser')).toBe(false)
-  })
-
-  it('collapses to a rail on click, and the name follows the state', () => {
-    layout.mount()
-    click(button)
-    expect(browser.classList.contains('rail')).toBe(true)
+    expect(browser.hidden).toBe(true)
     expect(main.classList.contains('no-browser')).toBe(true)
-    expect(button.getAttribute('aria-expanded')).toBe('false')
-    expect(button.getAttribute('aria-label')).toBe('Show browser panel')
-    expect(button.textContent).toBe('›')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('expands again from the rail, the arrow never leaving the page', () => {
+  it('opens from the button and moves the focus to the search box', () => {
     layout.mount()
-    click(button)
-    click(button)
-    expect(browser.classList.contains('rail')).toBe(false)
-    expect(button.getAttribute('aria-expanded')).toBe('true')
-    expect(button.getAttribute('aria-label')).toBe('Hide browser panel')
+    click(toggle)
+    expect(browser.hidden).toBe(false)
+    expect(main.classList.contains('no-browser')).toBe(false)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(focused).toBe('q')
   })
 
-  it('remembers the choice in this browser only', () => {
+  it('closes from the button or from Close, and gives the focus back to the button', () => {
     layout.mount()
-    click(button)
-    expect(store.data['jigdaw.browserHidden']).toBe('1')
-    click(button)
-    expect(store.data['jigdaw.browserHidden']).toBe('0')
+    click(toggle)
+    click(close)
+    expect(browser.hidden).toBe(true)
+    expect(focused).toBe('toggle-browser')
+    click(toggle)
+    click(toggle)
+    expect(browser.hidden).toBe(true)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('restores a collapsed rail from storage on mount', () => {
-    ;({ main, browser, button, layout } = build({ 'jigdaw.browserHidden': '1' }))
+  it('closes on Escape from inside it, and ignores other keys', () => {
     layout.mount()
-    expect(browser.classList.contains('rail')).toBe(true)
-    expect(button.getAttribute('aria-label')).toBe('Show browser panel')
+    click(toggle)
+    key(browser, 'a')
+    expect(browser.hidden).toBe(false)
+    key(browser, 'Escape')
+    expect(browser.hidden).toBe(true)
+    expect(focused).toBe('toggle-browser')
   })
 
-  it('comes back expanded when storage is blocked or cleared', () => {
-    ;({ main, browser, button, layout } = build())
-    const ctx = { document, window: {}, $: id => document.getElementById(id) }
-    const assertive = createLayout(ctx)
-    // A window with no localStorage at all: the try/catch owns this case.
-    expect(() => assertive.mount()).not.toThrow()
-    expect(browser.classList.contains('rail')).toBe(false)
+  it('can be opened from elsewhere on the page, as the empty arrangement does', () => {
+    layout.mount()
+    layout.showBrowser(true)
+    expect(browser.hidden).toBe(false)
+    expect(focused).toBe('q')
+  })
+
+  it('remembers the choice in this browser only, and restores an open panel on mount', () => {
+    layout.mount()
+    click(toggle)
+    expect(store.data['jigdaw.browserOpen']).toBe('1')
+    click(toggle)
+    expect(store.data['jigdaw.browserOpen']).toBe('0')
+    ;({ browser, toggle, layout } = build({ 'jigdaw.browserOpen': '1' }))
+    layout.mount()
+    expect(browser.hidden).toBe(false)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('does not write the remembered state just for mounting', () => {
+    layout.mount()
+    expect(store.data['jigdaw.browserOpen']).toBeUndefined()
+  })
+
+  it('starts closed when storage is blocked or absent, and does not throw', () => {
+    ;({ browser, layout } = build({}, {}))
+    expect(() => layout.mount()).not.toThrow()
+    expect(browser.hidden).toBe(true)
+    const throwing = { localStorage: { getItem () { throw new Error('blocked') }, setItem () { throw new Error('blocked') } } }
+    ;({ browser, toggle, layout } = build({}, throwing))
+    expect(() => layout.mount()).not.toThrow()
+    expect(() => click(toggle)).not.toThrow()
+    expect(browser.hidden).toBe(false)
   })
 })

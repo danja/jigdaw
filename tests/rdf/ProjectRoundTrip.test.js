@@ -11,8 +11,8 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { Project } from '../../src/model/Project.js'
-import { writeProject, writePositions } from '../../src/rdf/ProjectWriter.js'
-import { readProject, readPositions, findProject } from '../../src/rdf/ProjectReader.js'
+import { writeProject, writeEditor } from '../../src/rdf/ProjectWriter.js'
+import { readProject, readEditor, findProject } from '../../src/rdf/ProjectReader.js'
 import { parseText } from '../../src/rdf/parse.js'
 import { shapeValidatorFromFile } from '../../src/validate/files.js'
 import { vocabulary as v } from '../../src/rdf/Vocabulary.js'
@@ -74,8 +74,22 @@ function builtProject () {
       loopStart: 0,
       loopEnd: 32,
       loopEnabled: true,
-      tempoPoints: [{ atBeat: 0, bpm: 96 }, { atBeat: 16, bpm: 104 }]
-    }
+      tempoPoints: [{ atBeat: 0, bpm: 96 }, { atBeat: 16, bpm: 104 }],
+      // Three beats to a bar, so 12 is a bar line; four after that, so 20 is too.
+      signaturePoints: [{ atBeat: 20, beatsPerBar: 3, beatUnit: 4 }, { atBeat: 12, beatsPerBar: 4, beatUnit: 4 }]
+    },
+    // The track view: docs/track-view-terms.md.
+    { op: 'setMaster', gain: 0.9, pan: -0.25, muted: false },
+    { op: 'setTrack', id: 'track-1', output: 'track-10' },
+    { op: 'addSend', id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
+    { op: 'addMarker', id: 'marker-1', atBeat: 8, label: 'Chorus' },
+    { op: 'addMarker', id: 'marker-2', atBeat: 24 },
+    { op: 'addRegion', id: 'region-1', startBeat: 8, lengthBeats: 16, label: 'Verse two' },
+    { op: 'addEnvelope', id: 'envelope-1', target: { node: 'verb', symbol: 'mix' }, points: [
+      { atBeat: 16, value: 0.8, curve: 'smooth' }, { atBeat: 0, value: 0.1, curve: 'linear' }, { atBeat: 8, value: 0.5, curve: 'step' }
+    ] },
+    { op: 'addEnvelope', id: 'envelope-2', target: { kind: 'masterGain' }, points: [{ atBeat: 0, value: 1, curve: 'linear' }] },
+    { op: 'addEnvelope', id: 'envelope-3', target: { kind: 'tempo' } }
   ])
   return project
 }
@@ -106,8 +120,14 @@ const shapeOf = project => ({
     loopStart: project.transport.loopStart,
     loopEnd: project.transport.loopEnd,
     loopEnabled: project.transport.loopEnabled,
-    tempoPoints: project.transport.tempoPoints
-  }
+    tempoPoints: project.transport.tempoPoints,
+    signaturePoints: project.transport.signaturePoints
+  },
+  master: project.master,
+  sends: project.sends,
+  markers: project.markers,
+  regions: project.regions,
+  envelopes: project.envelopes
 })
 
 async function reopen (turtle, baseIRI = IRI) {
@@ -133,6 +153,35 @@ describe('a project survives being written and read back', () => {
     expect(shapeOf(reopened).transport).toEqual(shapeOf(original).transport)
   })
 
+  it('carries the master, sends, bus outputs, markers, regions, envelopes and signature points', async () => {
+    const original = builtProject()
+    const { project: reopened } = await reopen(writeProject(original, { iri: IRI }))
+    const a = shapeOf(original)
+    const b = shapeOf(reopened)
+    expect(b.master).toEqual({ gain: 0.9, pan: -0.25, muted: false })
+    expect(b.sends).toEqual([{ id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' }])
+    expect(reopened.track('track-1').output).toBe('track-10')
+    expect(b.markers).toEqual(a.markers)
+    expect(b.regions).toEqual(a.regions)
+    // Points in beat order however they were given, and an envelope with none survives.
+    expect(b.envelopes).toEqual(a.envelopes)
+    expect(b.envelopes.find(e => e.id === 'envelope-1').points.map(p => p.atBeat)).toEqual([0, 8, 16])
+    expect(b.envelopes.find(e => e.id === 'envelope-3').points).toEqual([])
+    expect(b.transport.signaturePoints).toEqual([{ atBeat: 12, beatsPerBar: 4, beatUnit: 4 }, { atBeat: 20, beatsPerBar: 3, beatUnit: 4 }])
+    expect(reopened.nextId('send')).toBe(original.nextId('send'))
+  })
+
+  it('writes nothing for a default master and no sends, so an old session is unchanged', () => {
+    const turtle = writeProject(new Project(), { iri: IRI })
+    for (const word of ['Master', 'Send', 'Marker', 'Region', 'Envelope', 'signaturePoint', 'output']) {
+      expect(turtle).not.toContain(word)
+    }
+  })
+
+  it('refuses an individual this format does not define', async () => {
+    const turtle = writeProject(builtProject(), { iri: IRI }).replace('jig:PreFader', '<https://example.org/Sideways>')
+    await expect(reopen(turtle)).rejects.toThrow(/tap of send-2 is not one this format defines/)
+  })
   it('is byte identical when written twice', () => {
     // The format requires determinism, so that a diff shows what changed rather
     // than how it was written.
@@ -242,8 +291,47 @@ describe('editor metadata stays in its own graph', () => {
   it('round trips separately', async () => {
     const project = builtProject()
     project.moveNode('pad', 120, 40)
-    const positions = readPositions(await parseText(writePositions(project, { iri: IRI }), IRI), IRI)
+    const { positions } = readEditor(await parseText(writeEditor(project, { iri: IRI }), IRI), IRI)
     expect(positions.get('pad')).toEqual({ x: 120, y: 40 })
+  })
+})
+
+describe('the editor graph, track layout', () => {
+  it('round trips order, colour and lane size, and writes nothing for the default', async () => {
+    const project = builtProject()
+    project.setTrackLayout('track-10', { order: 0, color: '#3366cc', laneSize: 'large' })
+    const text = writeEditor(project, { iri: IRI })
+    expect(text).not.toContain('<#track-1> ')
+    const { tracks } = readEditor(await parseText(text, IRI), IRI)
+    expect(tracks.get('track-10')).toEqual({ order: 0, color: '#3366cc', laneSize: 'large' })
+    expect(tracks.has('track-1')).toBe(false)
+
+    const reopened = builtProject()
+    reopened.loadEditor({ positions: new Map(), tracks })
+    expect(reopened.orderedTracks.map(t => t.id)).toEqual(['track-10', 'track-1'])
+  })
+
+  it('is deterministic', () => {
+    const project = builtProject()
+    project.setTrackLayout('track-1', { color: '#000000' })
+    expect(writeEditor(project, { iri: IRI })).toBe(writeEditor(project, { iri: IRI }))
+  })
+
+  it('leaves the project document, and its revision, untouched', () => {
+    const project = builtProject()
+    const before = writeProject(project, { iri: IRI, created: '2026-01-01T00:00:00Z' })
+    const revision = project.revision
+    project.setTrackLayout('track-1', { order: 3, color: '#123456', laneSize: 'small' })
+    expect(project.revision).toBe(revision)
+    expect(writeProject(project, { iri: IRI, created: '2026-01-01T00:00:00Z' })).toBe(before)
+  })
+
+  it('drops layout for a track that is not in the session', async () => {
+    const project = builtProject()
+    const { tracks } = readEditor(await parseText(`@base <${IRI}> . @prefix jig: <http://purl.org/stuff/jigdaw/> .
+      <#ghost> jig:order 0 .`, IRI), IRI)
+    project.loadEditor({ positions: new Map(), tracks })
+    expect(project.editor.isDefault).toBe(true)
   })
 })
 
@@ -355,8 +443,8 @@ describe('a session saved before tracks', () => {
     expect(project.tracks).toEqual([
       // Verb is the end of gen -> synth -> verb, so its strip was the one the
       // whole chain was heard through. Synth's own gain is dropped.
-      { id: 'track-1', label: 'Verb', channel: { gain: 1, pan: -0.5, muted: true, soloed: false }, midiInput: null, audioInput: null },
-      { id: 'track-2', label: 'Lone', channel: { gain: 1, pan: 0, muted: false, soloed: true }, midiInput: null, audioInput: null }
+      { id: 'track-1', label: 'Verb', channel: { gain: 1, pan: -0.5, muted: true, soloed: false }, midiInput: null, audioInput: null, output: null },
+      { id: 'track-2', label: 'Lone', channel: { gain: 1, pan: 0, muted: false, soloed: true }, midiInput: null, audioInput: null, output: null }
     ])
     expect(Object.fromEntries(project.nodes.map(n => [n.id, n.track]))).toEqual({
       gen: 'track-1', synth: 'track-1', verb: 'track-1', lone: 'track-2'
@@ -380,5 +468,14 @@ describe('a session saved before tracks', () => {
       <#a> a jig:Node ; jig:plugin <https://example.org/p/> .`
     const dataset = await parseText(turtle, IRI)
     expect(() => readProject(dataset)).toThrow(/names no jig:onTrack/)
+  })
+})
+
+describe('the editor graph, defaults', () => {
+  it('writes no line for a node that has not been moved', () => {
+    const project = builtProject()
+    expect(writeEditor(project, { iri: IRI })).not.toContain('jig:x')
+    project.moveNode('pad', 1, 2)
+    expect(writeEditor(project, { iri: IRI })).toContain('<#pad> jig:x 1.0')
   })
 })

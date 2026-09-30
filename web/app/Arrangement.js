@@ -7,6 +7,7 @@
 import { createTimeline } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
+import { mixable } from '../../src/ui/Mixer.js'
 
 export function createArrangement (ctx) {
   const { document, $, log } = ctx
@@ -33,17 +34,20 @@ export function createArrangement (ctx) {
     },
     onMove: (id, startBeat) => edit([{ op: 'setClip', id, startBeat }]),
     onResize: (id, lengthBeats) => edit([{ op: 'setClip', id, lengthBeats }]),
+    // The timeline has already selected it; the dock shows what that calls for.
     onOpen: id => openClip(id),
-    onShowTrack: trackId => {
-      ctx.tabs.select('tracks')
-      document.getElementById(`track-group-${trackId}`)?.scrollIntoView({ block: 'start' })
-      document.getElementById(`track-name-${trackId}`)?.focus({ preventScroll: true })
+    onSetLoop: range => ctx.transport.setLoopRange(range),
+    // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
+    onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
+    onChannel: (trackId, change) => {
+      const result = ctx.dispatcher.setTrackChannel(trackId, change)
+      if (!result.ok) log(result.message, 'error')
     },
     onRemove: id => {
       if (pianoRoll.clipId === id) pianoRoll.hide()
       edit([{ op: 'removeClip', id }])
     }
-  })
+  }, { selection: ctx.selection })
 
   /**
    * Sound a note through the open clip's track, as it is placed or chosen: a
@@ -75,12 +79,20 @@ export function createArrangement (ctx) {
     onClose: () => {
       const id = pianoRoll.clipId
       pianoRoll.hide()
+      ctx.selection.clear()
+      ctx.dock.update()
       document.getElementById(`clip-${id}`)?.focus()
     }
   })
 
-  /** A clip's notes, in the piano roll, for a person to edit. */
+  /** Select a clip and let the dock show it. */
   function openClip (id) {
+    ctx.selection.set('clip', [id])
+    ctx.dock.update()
+  }
+
+  /** A clip's notes, in the piano roll, for a person to edit. */
+  function showInRoll (id) {
     const { project } = ctx.dispatcher
     const clip = project.clip(id)
     if (!clip || clip.kind !== 'midi') return
@@ -97,10 +109,33 @@ export function createArrangement (ctx) {
     const project = ctx.dispatcher?.project
     const { clipPlayer } = ctx
     const restore = preserveFocus(timeline.element)
+    const nodes = project?.nodes ?? []
+    const latencies = new Map((ctx.dispatcher?.trackLatencies() ?? []).map(l => [l.trackId, l.frames]))
+    const sampleRate = ctx.engine?.context.sampleRate ?? null
+    const silent = new Map((ctx.dispatcher?.audibility() ?? []).map(a => [a.trackId, a.silent]))
     timeline.draw({
       tracks,
+      // The same two questions the Mixer tab asks, so a strip there and a
+      // header here agree on which tracks have anything to hear.
+      mixable: track => mixable(track, nodes, id => ctx.dispatcher.engineNode(id)?.profile?.audioOutputs),
+      silent: track => silent.get(track.id) === true,
       clips: project?.clips ?? [],
       beatsPerBar: project?.transport.beatsPerBar ?? 4,
+      // What to do first, as buttons over the requests the page already makes.
+      empty: {
+        text: 'No tracks yet. Start from a preset, or load one plugin.',
+        actions: [
+          { label: 'Browse plugins', run: () => ctx.layout.showBrowser(true) },
+          { label: 'Open the Chiptune preset', run: () => ctx.sessions.openPreset('Chiptune') },
+          { label: 'Load the Pulse synth', run: () => ctx.loading.loadPlugin(new URL('plugins/pulse/', document.baseURI).href).catch(() => {}) }
+        ]
+      },
+      layoutFor: track => project.trackLayout(track.id),
+      latencyFor: track => {
+        const found = latencies.get(track.id)
+        return found === undefined ? null : { frames: found, ms: sampleRate ? (found / sampleRate) * 1000 : null }
+      },
+      loop: project ? { start: project.transport.loopStart, end: project.transport.loopEnd, enabled: project.transport.loopEnabled } : null,
       labelFor: labelOfTrack,
       playsIntoNothing: track => !track.midiInput,
       peaksFor: (clip, count) => {
@@ -123,6 +158,9 @@ export function createArrangement (ctx) {
       if (clip) pianoRoll.draw(clip)
       else pianoRoll.hide()
     }
+    // A clip or track that has gone leaves the selection, and the dock follows.
+    ctx.selection.prune((kind, id) => (kind === 'clip' ? project?.clip(id) : project?.track(id)) != null)
+    ctx.dock.update()
   }
 
   /**
@@ -159,7 +197,8 @@ export function createArrangement (ctx) {
       importAudio(file, target).catch(error => log(`${file.name}: ${error.message}`, 'error'))
     })
     $('timeline-mount').append(timeline.element)
-    $('piano-roll-mount').append(pianoRoll.element)
+    ctx.dock.slot('midi').append(pianoRoll.element)
+    $('dock-mount').append(ctx.dock.element)
   }
 
   return {
@@ -168,6 +207,9 @@ export function createArrangement (ctx) {
     /** Show where the transport is, as a beat, or null when it is stopped. */
     playhead (beat) { timeline.playhead(beat); pianoRoll.playhead(beat) },
     /** Forget what was drawn for the session being replaced. */
-    reset () { pianoRoll.hide(); waveformsRequested.clear() }
+    reset () { pianoRoll.hide(); ctx.selection.clear(); waveformsRequested.clear() },
+    showInRoll,
+    hideRoll: () => pianoRoll.hide(),
+    get rollClipId () { return pianoRoll.clipId }
   }
 }

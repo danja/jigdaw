@@ -62,6 +62,29 @@ describe('openProject', () => {
     expect(dispatcher.project.node('a').settings.get('rate')).toBe(3)
   })
 
+  it('keeps an envelope on a node that loaded, drops one on a node that did not, and keeps track inputs beside a bus output', async () => {
+    const text = `
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+<> a jig:Project ; jig:revision 1 ; jig:track <#t1> , <#t2> ; jig:node <#a> , <#gone> ;
+   jig:send <#send-1> ; jig:envelope <#envelope-1> , <#envelope-2> .
+<#t1> a jig:Track ; jig:midiInput <#a> ; jig:output <#t2> .
+<#t2> a jig:Track .
+<#a> a jig:Node ; jig:plugin <../../plugins/tremolo/> ; jig:onTrack <#t1> .
+<#gone> a jig:Node ; jig:plugin <../../plugins/nosuch/> ; jig:onTrack <#t2> .
+<#send-1> a jig:Send ; jig:sendFrom <#t1> ; jig:sendTo <#t2> ; jig:level 0.5 ; jig:tap jig:PostFader .
+<#envelope-1> a jig:Envelope ; jig:targetNode <#a> ; jig:targetSymbol "rate" .
+<#envelope-2> a jig:Envelope ; jig:targetNode <#gone> ; jig:targetSymbol "rate" .
+`
+    const opened = await openProject(dispatcher, readProject(await parseText(text, `${SITE}sessions/two/`)))
+    expect(opened.ok).toBe(true)
+    expect(opened.errors).toHaveLength(1)
+    expect(dispatcher.project.envelopes.map(e => e.id)).toEqual(['envelope-1'])
+    expect(dispatcher.project.sends).toHaveLength(1)
+    const t1 = dispatcher.project.track('t1')
+    expect(t1.output).toBe('t2')
+    expect(t1.midiInput).toBe('a')
+  })
+
   it('replaces what was open rather than adding to it, and leaves nothing to undo', async () => {
     const cleared = []
     const opened = await openProject(dispatcher, read, { onCleared: () => cleared.push(dispatcher.project.nodes.length) })

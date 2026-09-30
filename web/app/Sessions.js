@@ -5,19 +5,22 @@
 // plugins carries everything needed to fetch them. That is the premise of the
 // whole system applied to its own file format.
 //
-// A session whose audio clips play files this page holds saves as a zip with
-// those files beside it; anything else is one Turtle file.
+// A session whose audio clips play files this page holds, or whose editor
+// layout is not the default, saves as a zip with editor.ttl and those files
+// beside session.ttl; anything else is one Turtle file.
 import { parseText } from '../../src/rdf/parse.js'
-import { writeProject } from '../../src/rdf/ProjectWriter.js'
-import { readProject } from '../../src/rdf/ProjectReader.js'
+import { writeProject, writeEditor } from '../../src/rdf/ProjectWriter.js'
+import { readProject, readEditor } from '../../src/rdf/ProjectReader.js'
 import { openProject } from '../../src/ops/OpenProject.js'
 import { listPresets, fetchPreset } from '../../src/ui/Presets.js'
 import { encodeState } from '../../src/host/StateCodec.js'
 import { clipAudio } from '../../src/engine/Scheduler.js'
-import { writeZip, readZip } from '../../src/host/Zip.js'
+import { readZip } from '../../src/host/Zip.js'
+import { packSession, unpackSession } from '../../src/host/SessionArchive.js'
 
 export function createSessions (ctx) {
   const { document, $, log } = ctx
+  let openPresetByLabel = () => Promise.resolve()
 
   async function saveSession () {
     const { dispatcher, media } = ctx
@@ -35,26 +38,26 @@ export function createSessions (ctx) {
       iri: media.base,
       created: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
     })
-    // A session whose audio clips play files this page holds is saved as a zip
-    // with those files beside it; anything else is one Turtle file, as before.
     const held = media.heldUnderBase([...new Set(clipAudio(dispatcher.project).map(c => c.source))])
-    const blob = held.length === 0
-      ? new Blob([turtle], { type: 'text/turtle' })
-      : new Blob([writeZip([
-        { name: 'session.ttl', bytes: new TextEncoder().encode(turtle) },
-        ...held.map(iri => ({ name: iri.slice(media.base.length), bytes: media.get(iri).bytes }))
-      ])], { type: 'application/zip' })
+    const packed = packSession({
+      turtle,
+      editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
+      media: held.map(iri => ({ name: iri.slice(media.base.length), bytes: media.get(iri).bytes }))
+    })
+    const blob = packed.kind === 'turtle'
+      ? new Blob([packed.text], { type: 'text/turtle' })
+      : new Blob([packed.bytes], { type: 'application/zip' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = held.length === 0 ? 'session.ttl' : 'session.zip'
+    link.download = packed.kind === 'turtle' ? 'session.ttl' : 'session.zip'
     link.click()
     // Revoked on the next turn: revoking immediately races the download in some
     // browsers and the file arrives empty.
     setTimeout(() => URL.revokeObjectURL(url), 10000)
-    log(held.length === 0
+    log(packed.kind === 'turtle'
       ? `saved ${dispatcher.project.nodes.length} nodes as Turtle`
-      : `saved ${dispatcher.project.nodes.length} nodes and ${held.length} audio file(s) as a zip`, 'ok')
+      : `saved ${dispatcher.project.nodes.length} nodes, ${held.length} audio file(s) and the editor layout as a zip`, 'ok')
   }
 
   /**
@@ -62,7 +65,7 @@ export function createSessions (ctx) {
    * relative IRI in it: a saved file carries its own @base, and a bundled preset
    * deliberately does not, so that its plugins are the ones served beside it.
    */
-  async function openSession (text, base = document.baseURI, { files = new Map() } = {}) {
+  async function openSession (text, base = document.baseURI, { files = new Map(), editor = null } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const parsed = await parseText(text, base)
     let read
@@ -71,7 +74,6 @@ export function createSessions (ctx) {
     // in the zip beside it is filed under that.
     ctx.media.rebase(read.iri)
     for (const [name, bytes] of files) {
-      if (name === 'session.ttl') continue
       ctx.media.put(new URL(name, ctx.media.base).href, bytes)
     }
 
@@ -82,7 +84,16 @@ export function createSessions (ctx) {
     for (const message of opened.errors) log(message, 'error')
     if (!opened.ok) return
 
-    ctx.transport.showTempo()
+    // After the nodes exist: editor metadata naming nothing is dropped. Always
+    // replaced, even when the session has none, because ids are reused and the
+    // previous session's layout would otherwise land on this one's tracks.
+    try {
+      d.project.loadEditor(editor === null
+        ? { positions: new Map(), tracks: new Map() }
+        : readEditor(await parseText(editor, read.iri), read.iri))
+    } catch (error) { log(`editor layout ignored: ${error.message}`, 'error') }
+
+    ctx.transport.showTransport()
     ctx.rack.draw()
     ctx.history.updateButtons()
     ctx.expose()
@@ -103,10 +114,8 @@ export function createSessions (ctx) {
         // A zip is a session with its media beside it; anything else is Turtle.
         const bytes = new Uint8Array(await file.arrayBuffer())
         if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
-          const files = await readZip(bytes)
-          const session = files.get('session.ttl')
-          if (!session) throw new Error(`${file.name} holds no session.ttl`)
-          await openSession(new TextDecoder().decode(session), document.baseURI, { files })
+          const { turtle, editor, media } = unpackSession(await readZip(bytes))
+          await openSession(turtle, document.baseURI, { files: media, editor })
         } else {
           await openSession(new TextDecoder().decode(bytes))
         }
@@ -119,12 +128,20 @@ export function createSessions (ctx) {
     let presets = []
     $('presetbar').addEventListener('submit', event => {
       event.preventDefault()
-      const preset = presets[Number($('preset').value)]
+      openPreset(presets[Number($('preset').value)])
+    })
+    /** Open one preset, from the menu or from the empty arrangement's own button. */
+    function openPreset (preset) {
       log(`opening preset ${preset.label}`)
-      fetchPreset({ fetch: url => fetch(url), url: preset.url })
+      return fetchPreset({ fetch: url => fetch(url), url: preset.url })
         .then(text => openSession(text, preset.url))
         .catch(error => log(error.message, 'error'))
-    })
+    }
+    openPresetByLabel = label => {
+      const preset = presets.find(p => p.label === label)
+      if (!preset) { log(`no preset called ${label}`, 'error'); return Promise.resolve() }
+      return openPreset(preset)
+    }
     listPresets({
       fetch: url => fetch(url),
       index: new URL('presets/index.json', document.baseURI).href
@@ -140,5 +157,5 @@ export function createSessions (ctx) {
     }).catch(error => log(`presets: ${error.message}`, 'error'))
   }
 
-  return { saveSession, openSession, mount }
+  return { saveSession, openSession, mount, openPreset: label => openPresetByLabel(label) }
 }

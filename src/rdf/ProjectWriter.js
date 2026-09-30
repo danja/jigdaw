@@ -18,7 +18,7 @@
 //
 // Editor metadata is not here. `jig:x` and `jig:y` belong to a different graph,
 // because dragging a node on screen must not invalidate a compiled audio graph.
-// `writePositions` serialises that second graph separately.
+// `writeEditor` serialises that second graph separately.
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
 
 const { jig, trn } = v
@@ -129,6 +129,15 @@ export function writeProject (project, { iri, created = null } = {}) {
   if (connections.length > 0) {
     lines.push(`    ${term(jig.connection)} ${connections.map(c => `<#${c.id}>`).join(' , ')} ;`)
   }
+  const master = project.master
+  const masterIsDefault = master.gain === 1 && master.pan === 0 && !master.muted
+  if (!masterIsDefault) lines.push(`    ${term(jig.master)} <#master> ;`)
+  for (const [property, items] of [
+    [jig.send, project.sends], [jig.marker, project.markers],
+    [jig.region, project.regions], [jig.envelope, project.envelopes]
+  ]) {
+    if (items.length > 0) lines.push(`    ${term(property)} ${[...items].sort(byId).map(x => `<#${x.id}>`).join(' , ')} ;`)
+  }
   lines.push(`    ${term(jig.transport)} <#transport> .`)
 
   for (const track of tracks) {
@@ -146,6 +155,7 @@ export function writeProject (project, { iri, created = null } = {}) {
     if (channel.soloed) statements.push(`${term(jig.soloed)} true`)
     if (track.midiInput) statements.push(`${term(jig.midiInput)} <#${track.midiInput}>`)
     if (track.audioInput) statements.push(`${term(jig.audioInput)} <#${track.audioInput}>`)
+    if (track.output) statements.push(`${term(jig.output)} <#${track.output}>`)
     const clips = (project.clips ?? []).filter(c => c.track === track.id).sort(byId)
     if (clips.length > 0) statements.push(`${term(jig.clip)} ${clips.map(c => `<#${c.id}>`).join(' , ')}`)
     lines.push(statements.map(st => `    ${st}`).join(' ;\n') + ' .')
@@ -213,6 +223,8 @@ export function writeProject (project, { iri, created = null } = {}) {
     endpoint(lines, iri, `${c.id}-to`, c.to)
   }
 
+  writeArrangement(lines, project)
+
   const points = [...(transport.tempoPoints ?? [])]
     .sort((a, b) => a.atBeat - b.atBeat)
   lines.push('')
@@ -228,8 +240,17 @@ export function writeProject (project, { iri, created = null } = {}) {
       `${term(jig.loopEnd)} ${decimal(transport.loopEnd)} ; `
     : ''
   lines.push(`    ${loop}${term(jig.loopEnabled)} ${transport.loopEnabled ? 'true' : 'false'} ;`)
+  const signatures = [...(transport.signaturePoints ?? [])].sort((a, b) => a.atBeat - b.atBeat)
+  if (signatures.length > 0) {
+    lines.push(`    ${term(jig.signaturePoint)} ${signatures.map((_, i) => `<#s${i}>`).join(' , ')} ;`)
+  }
   lines.push(`    ${term(jig.tempoPoint)} ` +
     points.map((_, i) => `<#t${i}>`).join(' , ') + ' .')
+  signatures.forEach((point, i) => {
+    lines.push(`<#s${i}> a ${term(jig.SignaturePoint)} ; ` +
+      `${term(jig.atBeat)} ${decimal(point.atBeat)} ; ${term(jig.beatsPerBar)} ${integer(point.beatsPerBar)} ; ` +
+      `${term(jig.beatUnit)} ${integer(point.beatUnit)} .`)
+  })
   points.forEach((point, i) => {
     lines.push(`<#t${i}> a ${term(jig.TempoPoint)} ; ` +
       `${term(jig.atBeat)} ${decimal(point.atBeat)} ; ${term(jig.bpm)} ${decimal(point.bpm)} .`)
@@ -238,18 +259,70 @@ export function writeProject (project, { iri, created = null } = {}) {
   return lines.join('\n') + '\n'
 }
 
+const TAP_TERM = { pre: 'PreFader', post: 'PostFader' }
+const CURVE_TERM = { step: 'Step', linear: 'Linear', smooth: 'Smooth' }
+const KIND_TERM = { masterGain: 'MasterGain', masterPan: 'MasterPan', tempo: 'Tempo' }
+
+/** The master, sends, markers, regions and envelopes: docs/track-view-terms.md. */
+function writeArrangement (lines, project) {
+  const master = project.master
+  if (master.gain !== 1 || master.pan !== 0 || master.muted) {
+    const st = [`a ${term(jig.Master)}`]
+    if (master.gain !== 1) st.push(`${term(jig.gain)} ${decimal(master.gain)}`)
+    if (master.pan !== 0) st.push(`${term(jig.pan)} ${decimal(master.pan)}`)
+    if (master.muted) st.push(`${term(jig.muted)} true`)
+    lines.push('', `<#master> ${st.join(' ; ')} .`)
+  }
+  for (const s of [...project.sends].sort(byId)) {
+    lines.push('', `<#${s.id}> a ${term(jig.Send)} ; ${term(jig.sendFrom)} <#${s.from}> ; ${term(jig.sendTo)} <#${s.to}> ; ` +
+      `${term(jig.level)} ${decimal(s.level)} ; ${term(jig.tap)} ${term(jig[TAP_TERM[s.tap]])} .`)
+  }
+  for (const m of [...project.markers].sort(byId)) {
+    lines.push('', `<#${m.id}> a ${term(jig.Marker)} ; ${term(jig.atBeat)} ${decimal(m.atBeat)}` +
+      `${m.label ? ` ; rdfs:label ${string(m.label)}` : ''} .`)
+  }
+  for (const r of [...project.regions].sort(byId)) {
+    lines.push('', `<#${r.id}> a ${term(jig.Region)} ; ${term(trn.startBeat)} ${decimal(r.startBeat)} ; ` +
+      `${term(trn.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ''} .`)
+  }
+  for (const e of [...project.envelopes].sort(byId)) {
+    const target = e.target.kind
+      ? `${term(jig.targetKind)} ${term(jig[KIND_TERM[e.target.kind]])}`
+      : `${term(jig.targetNode)} <#${e.target.node}> ; ${term(jig.targetSymbol)} ${string(e.target.symbol)}`
+    const points = e.points
+    lines.push('', `<#${e.id}> a ${term(jig.Envelope)} ; ${target}` +
+      `${points.length > 0 ? ` ; ${term(jig.envelopePoint)} ${points.map((_, i) => `<#${e.id}-p${i}>`).join(' , ')}` : ''} .`)
+    points.forEach((p, i) => {
+      lines.push(`<#${e.id}-p${i}> a ${term(jig.EnvelopePoint)} ; ${term(jig.atBeat)} ${decimal(p.atBeat)} ; ` +
+        `${term(jig.pointValue)} ${decimal(p.value)} ; ${term(jig.curve)} ${term(jig[CURVE_TERM[p.curve]])} .`)
+    })
+  }
+}
+
 /**
- * The editor's own graph: where the nodes sit on screen.
+ * The editor's own graph: where nodes sit on screen, and how tracks are laid
+ * out.
  *
- * A separate document because it is a separate graph. Moving a node must not
- * bump the project's revision or invalidate anything compiled from it.
+ * A separate document because it is a separate graph. Moving a node or
+ * reordering a track must not bump the project's revision or invalidate
+ * anything compiled from it.
  */
-export function writePositions (project, { iri } = {}) {
-  if (!iri) throw new Error('writePositions needs the project IRI')
+export function writeEditor (project, { iri } = {}) {
+  if (!iri) throw new Error('writeEditor needs the project IRI')
+  const editor = project.editor
   const lines = [`@base <${iri}> .`, '', `@prefix jig: <${JIG}> .`, '']
   for (const node of [...project.nodes].sort(byId)) {
-    const { x, y } = project.position(node.id)
+    const { x, y } = editor.position(node.id)
+    if (x === 0 && y === 0) continue
     lines.push(`<#${node.id}> ${term(jig.x)} ${decimal(x)} ; ${term(jig.y)} ${decimal(y)} .`)
+  }
+  for (const track of [...project.tracks].sort(byId)) {
+    const { order, color, laneSize } = editor.track(track.id)
+    const parts = []
+    if (order !== null) parts.push(`${term(jig.order)} ${integer(order)}`)
+    if (color !== null) parts.push(`${term(jig.color)} ${string(color)}`)
+    if (laneSize !== 'medium') parts.push(`${term(jig.laneSize)} ${string(laneSize)}`)
+    if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(' ; ')} .`)
   }
   return lines.join('\n') + '\n'
 }

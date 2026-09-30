@@ -18,6 +18,7 @@
     jig:node <#a> , <#b> ;
     jig:track <#track> ;
     jig:connection <#c> ;
+    jig:master <#master> , <#master2> ;
     jig:transport <#transport> .
 
 <#a>
@@ -101,3 +102,31 @@
 
 # A stopped clock.
 <#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 0.0 .
+
+# The track view. Each is a violation of one constraint above.
+
+# A second master, gain below zero and pan beyond the edge.
+<#master> a jig:Master ; jig:gain -1.0 ; jig:pan 2.0 .
+<#master2> a jig:Master .
+
+# A send back to its own track, at a negative level, tapped nowhere in particular.
+<#send-1> a jig:Send ;
+    jig:sendFrom <#track> ; jig:sendTo <#track> ;
+    jig:level -0.5 ; jig:tap <https://example.org/nowhere> .
+
+# A marker before the start.
+<#marker-1> a jig:Marker ; jig:atBeat -2.0 .
+
+# A region that lasts no time.
+<#region-1> a jig:Region ; trn:startBeat 4.0 ; trn:lengthBeats 0.0 .
+
+# A signature change at beat zero, in a bar of no beats.
+<#s0> a jig:SignaturePoint ; jig:atBeat 0.0 ; jig:beatsPerBar 0 ; jig:beatUnit 4 .
+
+# Targets a node and a project-level kind at once.
+<#envelope-1> a jig:Envelope ;
+    jig:targetNode <#a> ; jig:targetSymbol "cutoff" ;
+    jig:targetKind jig:Tempo .
+
+# A point with no value and an unknown curve.
+<#point-1> a jig:EnvelopePoint ; jig:atBeat -1.0 ; jig:curve <https://example.org/wobbly> .

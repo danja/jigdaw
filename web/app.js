@@ -19,6 +19,8 @@ import { createRecord } from './app/Record.js'
 import { createRack } from './app/Rack.js'
 import { createEditors } from './app/Editors.js'
 import { createArrangement } from './app/Arrangement.js'
+import { createDockPanel } from './app/Dock.js'
+import { Selection } from '../src/model/Selection.js'
 import { createLoading } from './app/Loading.js'
 import { createBrowser } from './app/Browser.js'
 import { createSessions } from './app/Sessions.js'
@@ -60,6 +62,8 @@ ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.record = createRecord(ctx)
 ctx.editors = createEditors(ctx)
+ctx.selection = new Selection()
+ctx.dock = createDockPanel(ctx)
 ctx.arrangement = createArrangement(ctx)
 ctx.rack = createRack(ctx)
 ctx.loading = createLoading(ctx)
@@ -92,6 +96,11 @@ $('tempo').addEventListener('change', async () => {
   const d = await ctx.runtime.ensureRunning()
   const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: Number($('tempo').value) }] }])
   if (!result.ok) log(result.message, 'error')
+})
+$('loop').addEventListener('click', () => transport.toggleLoop())
+$('signature').addEventListener('change', async () => {
+  await ctx.runtime.ensureRunning()
+  transport.setSignature($('signature').value)
 })
 ctx.sessions.mount()
 ctx.history.mount()

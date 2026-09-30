@@ -16,6 +16,14 @@
 // project change, conflicts with concurrent edits and invalidates caches, and
 // the cost is paid continuously.
 
+import { EditorState } from './EditorState.js'
+import {
+  ARRANGEMENT_OPERATIONS, emptyArrangement, cloneArrangement, checkTrackOutput,
+  dropForTrack, dropForNode, checkSignaturePoints, arrangementChanges, arrangementReconcile
+} from './ArrangementOps.js'
+
+export { arrangementReconcile }
+
 export class RevisionConflict extends Error {
   constructor (expected, actual) {
     super(`project has moved on: expected revision ${expected}, current is ${actual}`)
@@ -43,7 +51,9 @@ const DEFAULT_TRANSPORT = Object.freeze({
   loopStart: 0,
   loopEnd: 0,
   loopEnabled: false,
-  tempoPoints: [{ atBeat: 0, bpm: 120 }]
+  tempoPoints: [{ atBeat: 0, bpm: 120 }],
+  // Time signature changes after beat zero. The fields above hold before the first.
+  signaturePoints: []
 })
 
 /** An endpoint names its port exactly one way. project-format.md, sh:xone. */
@@ -113,7 +123,12 @@ const cloneState = state => ({
   tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
   nodes: new Map([...state.nodes].map(([id, n]) => [id, { ...n, settings: new Map(n.settings) }])),
   connections: new Map([...state.connections].map(([id, c]) => [id, { ...c, from: { ...c.from }, to: { ...c.to } }])),
-  transport: { ...state.transport, tempoPoints: state.transport.tempoPoints.map(p => ({ ...p })) }
+  transport: {
+    ...state.transport,
+    tempoPoints: state.transport.tempoPoints.map(p => ({ ...p })),
+    signaturePoints: (state.transport.signaturePoints ?? []).map(p => ({ ...p }))
+  },
+  ...cloneArrangement(state)
 })
 
 /** A channel strip with `change` applied, refusing values no mixer means. */
@@ -184,6 +199,7 @@ function releaseInputs (state, nodeId) {
 }
 
 const OPERATIONS = {
+  ...ARRANGEMENT_OPERATIONS,
   addTrack (state, change, counters) {
     const id = change.id ?? `track-${++counters.track}`
     if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`)
@@ -198,7 +214,9 @@ const OPERATIONS = {
       // than of one track. Defaults are unity, centre, heard.
       channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
       midiInput: null,
-      audioInput: null
+      audioInput: null,
+      // The bus this track's output goes to instead of the master, or null.
+      output: null
     })
     return id
   },
@@ -212,6 +230,10 @@ const OPERATIONS = {
       if (change[key] === undefined) continue
       checkTrackInput(state, change.id, change[key], key)
       track[key] = change[key]
+    }
+    if (change.output !== undefined) {
+      checkTrackOutput(state, change.id, change.output)
+      track.output = change.output
     }
     return change.id
   },
@@ -249,6 +271,7 @@ const OPERATIONS = {
       }
     }
     state.tracks.delete(change.id)
+    dropForTrack(state, change.id)
     return change.id
   },
 
@@ -473,6 +496,7 @@ const OPERATIONS = {
     }
 
     state.nodes.delete(change.id)
+    dropForNode(state, change.id)
     releaseInputs(state, change.id)
     // A connection to a node that is gone is not a connection. Removing them
     // here rather than leaving them dangling means the graph is always
@@ -585,6 +609,10 @@ const OPERATIONS = {
       // Keyed by beat, which is what orders the map. No list to keep in order.
       next.tempoPoints = [...change.tempoPoints].sort((a, b) => a.atBeat - b.atBeat)
     }
+    if (change.signaturePoints !== undefined) next.signaturePoints = change.signaturePoints
+    // Checked whenever either half changes: a new beatsPerBar can move a bar line
+    // from under a signature point that was fine before.
+    next.signaturePoints = checkSignaturePoints(next.beatsPerBar, next.signaturePoints ?? [])
     if (next.loopEnabled && !(next.loopEnd > next.loopStart)) {
       throw new Error('a loop must start before it ends')
     }
@@ -622,16 +650,17 @@ export function changesFor (snapshot) {
       op: 'addConnection', id: c.id, from: c.from, to: c.to, signalKind: c.signalKind, delayFrames: c.delayFrames
     })),
     ...snapshot.clips.map(clipChange),
-    { op: 'setTransport', ...snapshot.transport }
+    { op: 'setTransport', ...snapshot.transport },
+    ...arrangementChanges(snapshot)
   ]
 }
 
 export class Project {
   #revision = 0
-  #state = { tracks: new Map(), nodes: new Map(), connections: new Map(), clips: new Map(), transport: { ...DEFAULT_TRANSPORT } }
-  #counters = { track: 0, node: 0, connection: 0, clip: 0 }
+  #state = { tracks: new Map(), nodes: new Map(), connections: new Map(), clips: new Map(), transport: { ...DEFAULT_TRANSPORT, signaturePoints: [] }, ...emptyArrangement() }
+  #counters = { track: 0, node: 0, connection: 0, clip: 0, send: 0, marker: 0, region: 0, envelope: 0 }
   // Editor metadata, deliberately outside the state a revision covers.
-  #positions = new Map()
+  #editor = new EditorState()
   #label = null
 
   get revision () { return this.#revision }
@@ -643,6 +672,11 @@ export class Project {
   get connections () { return [...this.#state.connections.values()] }
   get clips () { return [...this.#state.clips.values()] }
   get transport () { return this.#state.transport }
+  get master () { return this.#state.master }
+  get sends () { return [...this.#state.sends.values()] }
+  get markers () { return [...this.#state.markers.values()] }
+  get regions () { return [...this.#state.regions.values()] }
+  get envelopes () { return [...this.#state.envelopes.values()] }
 
   track (id) { return this.#state.tracks.get(id) ?? null }
   node (id) { return this.#state.nodes.get(id) ?? null }
@@ -653,18 +687,50 @@ export class Project {
    * something an earlier one creates: a new track and the first node on it.
    */
   nextId (kind) {
-    const key = { track: 'track', node: 'node', conn: 'connection', clip: 'clip' }[kind]
+    const key = { track: 'track', node: 'node', conn: 'connection', clip: 'clip', send: 'send', marker: 'marker', region: 'region', envelope: 'envelope' }[kind]
     if (!key) throw new Error(`no ids are minted for ${kind}`)
     return `${kind}-${this.#counters[key] + 1}`
   }
   connection (id) { return this.#state.connections.get(id) ?? null }
   clip (id) { return this.#state.clips.get(id) ?? null }
 
-  /** Position is editor metadata and never bumps the revision. */
-  position (id) { return this.#positions.get(id) ?? { x: 0, y: 0 } }
+  /** Whether saving the editor graph would say anything, ignoring what belongs to things that are gone. */
+  get hasEditorState () {
+    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()))
+  }
+
+  /** Editor metadata never bumps the revision. */
+  get editor () { return this.#editor }
+  position (id) { return this.#editor.position(id) }
   moveNode (id, x, y) {
     if (!this.#state.nodes.has(id)) throw new Error(`no such node: ${id}`)
-    this.#positions.set(id, { x, y })
+    this.#editor.setPosition(id, x, y)
+  }
+
+  /** Tracks as the arrangement shows them: placed ones by order, then the rest as made. */
+  get orderedTracks () {
+    return this.#editor.orderTracks(this.tracks.map(t => t.id)).map(id => this.#state.tracks.get(id))
+  }
+
+  /** Take editor metadata read from an editor.ttl; whatever names nothing here is dropped. */
+  loadEditor (read) {
+    this.#editor.load(read)
+    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()))
+  }
+
+  /** Move a track up (-1) or down (+1) in the arrangement. Editor metadata: no revision, no undo. */
+  moveTrack (id, delta) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`)
+    return this.#editor.moveTrack(this.tracks.map(t => t.id), id, delta)
+  }
+
+  trackLayout (id) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`)
+    return this.#editor.track(id)
+  }
+  setTrackLayout (id, patch) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`)
+    this.#editor.setTrack(id, patch)
   }
 
   /**
@@ -700,10 +766,9 @@ export class Project {
     this.#counters = counters
     this.#revision += 1
 
-    // A node that has gone takes its editor metadata with it.
-    for (const id of [...this.#positions.keys()]) {
-      if (!this.#state.nodes.has(id)) this.#positions.delete(id)
-    }
+    // Editor metadata of a node or track that has gone is kept, not pruned: undo
+    // brings the thing back under its own id and should bring its place back too.
+    // Nothing stale is saved (writeEditor walks what exists) or loaded (loadEditor prunes).
 
     return { revision: this.#revision, results, applied: true }
   }
@@ -725,7 +790,16 @@ export class Project {
       })),
       connections: this.connections.map(c => ({ ...c, from: { ...c.from }, to: { ...c.to } })),
       clips: this.clips.map(c => ({ ...c, notes: c.notes.map(n => ({ ...n })) })),
-      transport: { ...this.#state.transport, tempoPoints: this.#state.transport.tempoPoints.map(p => ({ ...p })) }
+      transport: {
+        ...this.#state.transport,
+        tempoPoints: this.#state.transport.tempoPoints.map(p => ({ ...p })),
+        signaturePoints: this.#state.transport.signaturePoints.map(p => ({ ...p }))
+      },
+      master: { ...this.#state.master },
+      sends: [...this.#state.sends.values()].map(x => ({ ...x })),
+      markers: [...this.#state.markers.values()].map(x => ({ ...x })),
+      regions: [...this.#state.regions.values()].map(x => ({ ...x })),
+      envelopes: [...this.#state.envelopes.values()].map(e => ({ id: e.id, target: { ...e.target }, points: e.points.map(p => ({ ...p })) }))
     }
   }
 }

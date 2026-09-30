@@ -153,6 +153,70 @@ function foldIntoTracks (nodes, connections) {
   return { tracks, trackOf }
 }
 
+const TAP_OF = { [jig.PreFader]: 'pre', [jig.PostFader]: 'post' }
+const CURVE_OF = { [jig.Step]: 'step', [jig.Linear]: 'linear', [jig.Smooth]: 'smooth' }
+const KIND_OF = { [jig.MasterGain]: 'masterGain', [jig.MasterPan]: 'masterPan', [jig.Tempo]: 'tempo' }
+
+/** A named individual as the model's word for it. An IRI nobody defined is refused, not guessed at. */
+function named (table, iri, what) {
+  if (iri === null) throw new Error(`${what} is missing`)
+  if (!(iri in table)) throw new Error(`${what} is not one this format defines: ${iri}`)
+  return table[iri]
+}
+
+/**
+ * The master, bus outputs, sends, markers, regions and envelopes, as changes.
+ * Everything here is keyed by its own id or by beat and never by position.
+ */
+function readArrangement (dataset, iri, tracks) {
+  const changes = []
+  const masterIri = value(one(dataset, iri, jig.master))
+  if (masterIri) {
+    const channel = readChannel(dataset, masterIri, 'master')
+    changes.push({ op: 'setMaster', ...(channel.gain !== undefined ? { gain: channel.gain } : {}),
+      ...(channel.pan !== undefined ? { pan: channel.pan } : {}), ...(channel.muted !== undefined ? { muted: channel.muted } : {}) })
+  }
+  for (const t of tracks) {
+    if (t.output) changes.push({ op: 'setTrack', id: t.id, output: idOf(t.output, iri, `output of track ${t.id}`) })
+  }
+  const each = (property, what) => objects(dataset, iri, property).map(x => x.value)
+    .map(subject => ({ subject, id: idOf(subject, iri, what) })).sort((a, b) => mintedOrder(a.id, b.id))
+  for (const { subject, id } of each(jig.send, 'send')) {
+    changes.push({
+      op: 'addSend', id,
+      from: idOf(value(one(dataset, subject, jig.sendFrom)), iri, `sendFrom of ${id}`),
+      to: idOf(value(one(dataset, subject, jig.sendTo)), iri, `sendTo of ${id}`),
+      level: number(one(dataset, subject, jig.level), `level of ${id}`) ?? 1,
+      tap: named(TAP_OF, value(one(dataset, subject, jig.tap)), `tap of ${id}`)
+    })
+  }
+  for (const { subject, id } of each(jig.marker, 'marker')) {
+    changes.push({ op: 'addMarker', id, atBeat: number(one(dataset, subject, jig.atBeat), `atBeat of ${id}`), label: value(one(dataset, subject, RDFS_LABEL)) })
+  }
+  for (const { subject, id } of each(jig.region, 'region')) {
+    changes.push({
+      op: 'addRegion', id,
+      startBeat: number(one(dataset, subject, trn.startBeat), `startBeat of ${id}`),
+      lengthBeats: number(one(dataset, subject, trn.lengthBeats), `lengthBeats of ${id}`),
+      label: value(one(dataset, subject, RDFS_LABEL))
+    })
+  }
+  for (const { subject, id } of each(jig.envelope, 'envelope')) {
+    const kind = value(one(dataset, subject, jig.targetKind))
+    const targetNode = value(one(dataset, subject, jig.targetNode))
+    const target = kind !== null
+      ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) }
+      : { node: idOf(targetNode, iri, `targetNode of ${id}`), symbol: value(one(dataset, subject, jig.targetSymbol)) }
+    const points = objects(dataset, subject, jig.envelopePoint).map(x => x.value).map(pointIri => ({
+      atBeat: number(one(dataset, pointIri, jig.atBeat), `atBeat of a point in ${id}`),
+      value: number(one(dataset, pointIri, jig.pointValue), `pointValue of a point in ${id}`),
+      curve: named(CURVE_OF, value(one(dataset, pointIri, jig.curve)), `curve of a point in ${id}`)
+    })).sort((a, b) => a.atBeat - b.atBeat)
+    changes.push({ op: 'addEnvelope', id, target, points })
+  }
+  return changes
+}
+
 /**
  * Read a project into the changeset that rebuilds it.
  *
@@ -173,7 +237,8 @@ export function readProject (dataset) {
       label: value(one(dataset, trackIri, RDFS_LABEL)),
       channel: readChannel(dataset, trackIri, id),
       midiInput: value(one(dataset, trackIri, jig.midiInput)),
-      audioInput: value(one(dataset, trackIri, jig.audioInput))
+      audioInput: value(one(dataset, trackIri, jig.audioInput)),
+      output: value(one(dataset, trackIri, jig.output))
     }))
 
   // Clips, on the tracks that hold them. The kind is the clip's type, which
@@ -282,6 +347,7 @@ export function readProject (dataset) {
   }
   changes.push(...connections)
   changes.push(...clips)
+  changes.push(...readArrangement(dataset, iri, tracks))
 
   const transportIri = value(one(dataset, iri, jig.transport))
   if (transportIri) {
@@ -307,6 +373,12 @@ export function readProject (dataset) {
     if (loopEnd !== null) transport.loopEnd = loopEnd
     if (loopEnabled !== null) transport.loopEnabled = loopEnabled.value === 'true'
     if (points.length > 0) transport.tempoPoints = points
+    const signatures = objects(dataset, transportIri, jig.signaturePoint).map(t => t.value).map(pointIri => ({
+      atBeat: number(one(dataset, pointIri, jig.atBeat), 'atBeat of a signature point'),
+      beatsPerBar: number(one(dataset, pointIri, jig.beatsPerBar), 'beatsPerBar of a signature point'),
+      beatUnit: number(one(dataset, pointIri, jig.beatUnit), 'beatUnit of a signature point')
+    }))
+    if (signatures.length > 0) transport.signaturePoints = signatures.sort((a, b) => a.atBeat - b.atBeat)
     if (Object.keys(transport).length > 0) changes.push({ op: 'setTransport', ...transport })
   }
 
@@ -318,15 +390,29 @@ export function readProject (dataset) {
   }
 }
 
-/** Editor positions, from the second graph. Never part of the project itself. */
-export function readPositions (dataset, projectIri) {
+/**
+ * The editor graph: node positions and track layout. Never part of the project
+ * itself. A subject that is neither a fragment of the project nor understood is
+ * refused, not skipped, so a corrupt file says so.
+ */
+export function readEditor (dataset, projectIri) {
   const positions = new Map()
+  const tracks = new Map()
+  const layout = id => tracks.get(id) ?? tracks.set(id, {}).get(id)
   for (const quad of dataset) {
-    if (quad.predicate.value !== jig.x && quad.predicate.value !== jig.y) continue
-    const id = idOf(quad.subject.value, projectIri, 'position')
-    const at = positions.get(id) ?? { x: 0, y: 0 }
-    at[quad.predicate.value === jig.x ? 'x' : 'y'] = Number(quad.object.value)
-    positions.set(id, at)
+    const p = quad.predicate.value
+    if (p === jig.x || p === jig.y) {
+      const id = idOf(quad.subject.value, projectIri, 'position')
+      const at = positions.get(id) ?? { x: 0, y: 0 }
+      at[p === jig.x ? 'x' : 'y'] = Number(quad.object.value)
+      positions.set(id, at)
+    } else if (p === jig.order) {
+      layout(idOf(quad.subject.value, projectIri, 'track layout')).order = number(quad.object, 'order')
+    } else if (p === jig.color) {
+      layout(idOf(quad.subject.value, projectIri, 'track layout')).color = quad.object.value
+    } else if (p === jig.laneSize) {
+      layout(idOf(quad.subject.value, projectIri, 'track layout')).laneSize = quad.object.value
+    }
   }
-  return positions
+  return { positions, tracks }
 }
