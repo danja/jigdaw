@@ -1,0 +1,65 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/dice/",
+  "label": "Dice",
+  "comment": "A MIDI probability gate: each note-on passes with the set probability, and a note-off passes if and only if its note-on did. The generator's evolving state is saved with the project, so a restored session gates exactly as the saved one would have.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "dice",
+  "roles": [
+    "trn:MidiProcessor"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Midi"
+  ],
+  "cautions": [
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+    "A dropped note-on also drops its note-off, so nothing downstream is left sustaining. Anything that is not a note passes through untouched."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "dice-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "probability",
+      "name": "Probability",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 9999,
+      "paramIndex": 1
+    },
+    {
+      "symbol": "reseed",
+      "name": "Reseed",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 2,
+      "toggled": true
+    }
+  ]
+}
