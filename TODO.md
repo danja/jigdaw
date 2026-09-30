@@ -486,6 +486,12 @@ give. The detail is in Phases A and B; these are the view-side tasks.
 - [ ] **Selection, multi-select, rubber band, lasso.** On lanes, by pointer and by keys.
 - [ ] **Clip operations from Phase A**: split, trim, duplicate, copy and paste, delete,
       nudge, fades, mute, lock, colour, takes, slip edit. Build in that order, each one Op.
+      Done so far: **split (S at the playhead) and duplicate (D)**, as `src/model/ClipEdit.js`
+      changesets over the existing Ops, so one undo takes back the pair. A note across the
+      cut becomes two notes; an audio half starts further into the same file. Driven in
+      Chrome with real playback: a 16 beat clip cut at 3.73 beats into two clips holding one
+      note each. Not done: the cut is not snapped to the grid, no button (keys only), and
+      trim, copy and paste, fades, mute, lock, colour, takes and slip edit remain.
 - [ ] **Loop a clip.** Content repeats inside the clip bounds, with the loop end draggable
       (openDAW's `loopDuration`). Decide whether it needs vocabulary; it probably does.
 - [ ] **Overlap behaviour.** A stated rule for clips that overlap on a lane: clip the

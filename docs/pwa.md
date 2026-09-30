@@ -64,7 +64,7 @@ It is not offered by a dialog and it is not offered before the page has finished
 
 ## Where it is served
 
-The manifest uses `./` for `start_url` and `scope`, and the app worker registers with a URL
+The installed app opens the simple page: the manifest's `start_url` is `simple.html`, its `scope` is `./` so the studio page is inside it, and each page links to the other ("Full studio", "Simple version"); the studio is also a home-screen shortcut. Both are relative, and the app worker registers with a URL
 relative to the page, so the same files work at the root of a host and under a path such as
 `strandz.it/jigdaw/`.
 

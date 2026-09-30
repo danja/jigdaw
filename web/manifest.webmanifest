@@ -3,14 +3,14 @@
   "name": "Jiggy",
   "short_name": "Jiggy",
   "description": "A browser host for Jigs, web-native audio plugins identified by IRI.",
-  "start_url": "./",
+  "start_url": "simple.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#13161b",
   "theme_color": "#14171d",
   "categories": ["music", "productivity"],
   "shortcuts": [
-    { "name": "Simple", "short_name": "Simple", "description": "Pick a tune and play with it", "url": "simple.html" }
+    { "name": "Studio", "short_name": "Studio", "description": "The full arrangement view", "url": "./" }
   ],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

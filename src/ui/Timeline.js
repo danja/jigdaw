@@ -7,7 +7,8 @@
 // everything the pointer does:
 //
 //   Left and Right move a clip by a beat. Shift with them makes it shorter or
-//   longer by a beat. Enter opens it. Delete removes it.
+//   longer by a beat. Enter opens it. Delete removes it. S cuts it in two at
+//   the playhead, and D puts a copy straight after it.
 //
 // A drag moves a clip by whole beats, and a drag on its right edge resizes it.
 // Both listen for the move and the release on the document once the pointer
@@ -66,13 +67,14 @@ export function describeClip (clip, { beatsPerBar, playsIntoNothing = false }) {
  *   asks the person for.
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
  * - `onOpen(clipId)` and `onRemove(clipId)`.
+ * - `onSplit(clipId)` and `onDuplicate(clipId)`: the page knows the playhead.
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
  * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm })) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
   const element = document.createElement('div')
@@ -476,6 +478,12 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         onRemove(clip.id)
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault()
+        onSplit(clip.id)
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'd') {
+        event.preventDefault()
+        onDuplicate(clip.id)
       }
     })
     button.addEventListener('click', event => {

@@ -21,7 +21,8 @@ describe('the manifest', () => {
 
   it('names the app and starts and scopes it relative to where it is served, so a path deployment works', () => {
     expect(manifest.name).toBe('Jiggy')
-    expect(manifest.start_url).toBe('./')
+    // The installed app opens the simple page; the studio is one link away and inside the scope.
+    expect(manifest.start_url).toBe('simple.html')
     expect(manifest.scope).toBe('./')
     expect(manifest.display).toBe('standalone')
   })

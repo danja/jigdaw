@@ -10,6 +10,7 @@ import { preserveFocus } from '../../src/ui/Focus.js'
 import { mixable } from '../../src/ui/Mixer.js'
 import { describeChain } from '../../src/ui/ChainModel.js'
 import { describeRouting } from '../../src/ui/SendsModel.js'
+import { splitClip, duplicateClip } from '../../src/model/ClipEdit.js'
 
 export function createArrangement (ctx) {
   const { document, $, log } = ctx
@@ -45,6 +46,16 @@ export function createArrangement (ctx) {
     onChannel: (trackId, change) => {
       const result = ctx.dispatcher.setTrackChannel(trackId, change)
       if (!result.ok) log(result.message, 'error')
+    },
+    // At the playhead: the cut goes where the music is, and says so when it is not on the clip.
+    onSplit: id => {
+      try {
+        const at = ctx.transport.position().beat
+        edit(splitClip(ctx.dispatcher.project, id, at, { transport: ctx.dispatcher.transport() }))
+      } catch (error) { log(`${error.message}. Move the playhead onto the clip to cut it.`, 'error') }
+    },
+    onDuplicate: id => {
+      try { edit(duplicateClip(ctx.dispatcher.project, id)) } catch (error) { log(error.message, 'error') }
     },
     onRemove: id => {
       if (pianoRoll.clipId === id) pianoRoll.hide()

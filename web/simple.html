@@ -23,6 +23,7 @@
   header h1 { font-size:26px; margin:0; flex:1 1 auto; }
   h2 { font-size:22px; margin:28px 0 12px; }
   a { color:#8fc0ff; }
+  #studio-link { display:inline-flex; align-items:center; min-height:44px; }
   /* 44px is the floor for a touch target (CLAUDE.md), so the 56px buttons are 44 and the 72px ones 48. */
   button, select { font:inherit; min-height:44px; padding:0 20px; background:#242a33; color:var(--fg);
     border:2px solid var(--line); border-radius:12px; cursor:pointer; }
@@ -71,6 +72,7 @@
 <body>
 <header>
   <h1>Jiggy</h1>
+  <a id="studio-link" href="./">Full studio</a>
   <button id="install" type="button" hidden>Install app</button>
   <span id="net-state" class="note" role="status"></span>
 </header>

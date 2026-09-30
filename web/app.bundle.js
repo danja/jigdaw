@@ -28059,8 +28059,8 @@ function describeClip(clip, { beatsPerBar, playsIntoNothing = false }) {
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
   return `${what}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
 }
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm })) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -28451,6 +28451,12 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       } else if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
         onRemove(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        onSplit(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        onDuplicate(clip.id);
       }
     });
     button.addEventListener("click", (event) => {
@@ -28895,6 +28901,52 @@ function describeRouting(project, trackId, labelOf) {
   return parts.length > 0 ? `${parts.join(". ")}.` : null;
 }
 
+// src/model/ClipEdit.js
+function partition(notes, at) {
+  const left = [];
+  const right = [];
+  for (const note of notes) {
+    const end = note.startBeat + note.lengthBeats;
+    if (end <= at) left.push({ ...note });
+    else if (note.startBeat >= at) right.push({ ...note, startBeat: note.startBeat - at });
+    else {
+      left.push({ ...note, lengthBeats: at - note.startBeat });
+      right.push({ ...note, startBeat: 0, lengthBeats: end - at });
+    }
+  }
+  return { left, right };
+}
+function splitClip(project, id, atBeat, { transport: transport2 = null, newId = project.nextId("clip") } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
+    throw new Error("the cut must fall inside the clip");
+  }
+  const first2 = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first2;
+  if (clip.kind === "midi") {
+    const { left, right } = partition(clip.notes, first2);
+    return [
+      { op: "setClip", id, lengthBeats: first2 },
+      { op: "setClipNotes", id, notes: left },
+      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, notes: right }
+    ];
+  }
+  if (!transport2) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
+  const offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(atBeat) - transport2.secondsAtBeat(clip.startBeat));
+  return [
+    { op: "setClip", id, lengthBeats: first2 },
+    { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, source: clip.source, offsetSeconds }
+  ];
+}
+function duplicateClip(project, id, { track, startBeat, newId = project.nextId("clip") } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  const at = startBeat ?? clip.startBeat + clip.lengthBeats;
+  const where = track ?? clip.track;
+  return [clip.kind === "midi" ? { op: "addClip", id: newId, track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", id: newId, track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, source: clip.source, offsetSeconds: clip.offsetSeconds }];
+}
+
 // web/app/Arrangement.js
 function createArrangement(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
@@ -28928,6 +28980,22 @@ function createArrangement(ctx2) {
     onChannel: (trackId, change) => {
       const result = ctx2.dispatcher.setTrackChannel(trackId, change);
       if (!result.ok) log2(result.message, "error");
+    },
+    // At the playhead: the cut goes where the music is, and says so when it is not on the clip.
+    onSplit: (id) => {
+      try {
+        const at = ctx2.transport.position().beat;
+        edit(splitClip(ctx2.dispatcher.project, id, at, { transport: ctx2.dispatcher.transport() }));
+      } catch (error2) {
+        log2(`${error2.message}. Move the playhead onto the clip to cut it.`, "error");
+      }
+    },
+    onDuplicate: (id) => {
+      try {
+        edit(duplicateClip(ctx2.dispatcher.project, id));
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
     },
     onRemove: (id) => {
       if (pianoRoll.clipId === id) pianoRoll.hide();
