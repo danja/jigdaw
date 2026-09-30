@@ -2,5 +2,4 @@ This file will contain things that are later thoughts, they will need accommodat
 
 ## Items
 
-*None. Previous items moved to TODO.md 2026-09-26: a "Fugue" preset of generative
-plugins, and nested meta-plugins.*
+Use mcp codebase-memory-mcp to index the local repo and ~/github/openDAW ~/github/daw ~/github/webdaw then analyse these projects to determine what should be implemented next in Jiggy. Look for commonalities, in particular we need a main track-oriented view for Jiggy, also gather a list of features, put all this into TODO.md as phased sets of individual tasks.

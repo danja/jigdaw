@@ -50,7 +50,7 @@ If the plugin already exists somewhere else, there's an importer for REAPER JSFX
 
 ## State of play
 
-The spec is complete and normative. A browser host implements it and runs 9 worked plugins:
+The spec is complete and normative. A browser host implements it and runs the worked plugins, including:
 
 - a subtractive synth
 - a reverb

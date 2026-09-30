@@ -24,13 +24,15 @@ const QUEUE_CAPACITY = 256
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
 
-// Zero means unseeded, which is unambiguous: the generator never produces
-// zero from a nonzero state (xorshift32 is a permutation), restore refuses
-// zero, and the seed port starts at one. The first quantum seeds from the
-// seed parameter, so a fresh load is deterministic without a reseed.
-const UNSEEDED = 0
-
 class DiceProcessor extends AudioWorkletProcessor {
+  /** The shipped seed default, read from the descriptor that declares it
+   * rather than repeated here: a second copy is how a default drifts. */
+  static seedDefault () {
+    const found = (DiceProcessor.parameterDescriptors ?? []).find(d => d.name === 'seed')
+    const value = Math.floor(found?.defaultValue ?? 1)
+    return value >= 1 ? value : 1
+  }
+
   static get parameterDescriptors () {
     return [
       { name: 'probability', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
@@ -42,7 +44,11 @@ class DiceProcessor extends AudioWorkletProcessor {
   constructor (options) {
     super(options)
     this.ready = false
-    this.rng = UNSEEDED
+    // Seeded from the shipped default up front, so there is no observable
+    // unseeded state: the first stateRequest already reports the generator
+    // a fresh load plays, and a changed seed port applies only through
+    // reseed, never implicitly on the first quantum.
+    this.rng = DiceProcessor.seedDefault()
     this.reseedWasHigh = false
     this.queueFrames = new Float64Array(QUEUE_CAPACITY)
     this.queueBytes = new Uint8Array(QUEUE_CAPACITY * 3)
@@ -66,7 +72,10 @@ class DiceProcessor extends AudioWorkletProcessor {
     const saved = message.state?.rng
     if (saved !== undefined && saved !== null) {
       // A save from an incompatible version restores as the shipped default,
-      // not as a broken generator: reported, then ignored.
+      // not as a broken generator: reported, then ignored. Zero is refused
+      // the same way: the generator never produces zero from a nonzero
+      // state (xorshift32 is a permutation), so zero on the wire is not a
+      // usable seed.
       if (!Number.isInteger(saved) || saved < 1 || saved > 0xffffffff) {
         this.port.postMessage({
           type: 'error', phase: 'state', fatal: false,
@@ -142,10 +151,10 @@ class DiceProcessor extends AudioWorkletProcessor {
     const probability = parameters.probability[0]
     const seed = Math.max(1, Math.floor(parameters.seed[0]))
     const reseedHigh = parameters.reseed[0] >= 0.5
-    if (this.rng === UNSEEDED) this.rng = seed
     // A rising edge, in the style of DrumGen's triggers: a level would
     // re-seed on every restore carrying reseed 1 and destroy the state it
-    // arrived with.
+    // arrived with. The seed port applies only here, never implicitly: the
+    // constructor already holds the shipped default.
     if (reseedHigh && !this.reseedWasHigh) this.rng = seed
     this.reseedWasHigh = reseedHigh
     this.probability = Math.min(1, Math.max(0, probability))

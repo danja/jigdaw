@@ -5,6 +5,41 @@ complete. Review periodically.
 
 ## From the inbox
 
+- [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** From the inbox,
+      2026-09-30: user report, no buffer size or version details yet.
+      **Diagnosed 2026-09-30, headlessly: mop costs 1.70x realtime through the
+      real native path and cannot keep up.** Measured with a scratch driver
+      (`/tmp/opencode/mop_probe.cpp`, not committed) over `jigdaw_core` at
+      Release: 8 s of A-minor line plus channel-10 drums with sustain held, in
+      512-frame host buffers, took 13.6 s wall at 48 kHz and the same at
+      44.1 kHz. Output is otherwise correct (peak 0.10, no dead windows,
+      MIDI/channel/CC path intact, slicing intact), so this is throughput, not
+      corruption: every realtime block overruns, which is continuous dropouts.
+      Contrast: 8b8 through the same path costs 0.20x, and mop under node/JIT
+      costs 0.06x, which is why no browser or offline test ever saw it. Root
+      cause shape: the adapter runs WAMR as a pure interpreter (no executable
+      pages, by decision in `native/cmake/FindOrFetchWamr.cmake`), and the OPL
+      chip emulator steps all operators per sample; the voice cap changes
+      nothing (8 vs 18 voices measured identical) and neither does buffer
+      size. Fixes are a maintainer decision, not silent work: WAMR AOT/JIT
+      needs wamrc and LLVM as build dependencies (the file says the gain was
+      not needed; for mop 2x or more is needed), or mop-side surgery against
+      the unmodified-Opal rule. Reporter-side confirmation in HUMANS.md
+      (a frozen/bounced track plays clean).
+
+- [x] **A "Chiptune" preset: generative chiptune across several tracks.** From
+      the inbox, 2026-09-30. **Done 2026-09-30.** `web/presets/chiptune.ttl`
+      ("Chiptune", in the index): A minor at 140 BPM, six tracks, ten nodes,
+      eight connections, dry throughout. MelGen states the lead (A4, seed 11)
+      into a square-lead Mop (program 80); that line fans out to
+      Counterpointer (A, 2-bar cycle) and Cadence (A natural minor, 2-bar
+      cycle), both feeding one shared 8b8 chip bus that also takes DrumGen's
+      electro kit (GM map, channel 10); BassGen drives a square Pulse and
+      Ground plans a 16-bar techno sub form into a triangle Pulse. Scale,
+      program and genre choices verified against the DSP sources. Passes the
+      standard preset bar plus `tests/ui/Chiptune.test.js`, 10 tests driving
+      every voice with the preset's own settings.
+
 - [ ] **A keyframe time-stretch plugin from the DAFx26 extrema-sampling paper.**
       From the inbox, 2026-09-26. The paper is at `/chalet/github/dafx26-paper`
       (Nielsen, DAFx26, CC BY 4.0, credit required): a content-adaptive
@@ -38,23 +73,6 @@ complete. Review periodically.
       before code: the trajectory set, the parameter list with units, and a
       mono-compatibility rule. Not started.
 
-- [ ] **Verify `reaper/jigdaw-render.lua` against a real REAPER install.** **Parked
-      2026-09-24: the maintainer will do this when there is more time**, not blocked on
-      anything else. From the inbox,
-      2026-09-23, resolved 2026-09-24: "without the adapter" meant without the JigDAW Adapter
-      VST specifically, and the wanted route takes advantage of REAPER's own scripting rather
-      than a live, playable plugin. Built as an offline bounce: a ReaScript
-      ([reaper/README.md](reaper/README.md)) that asks for plugin IRIs, a duration and MIDI
-      notes, drives `bin/host.js` (the existing Node reference host, no browser), and drops the
-      rendered WAV into the project as a new track. Reaches an instrument, or an instrument
-      feeding effects placed after it, never a bare effect on REAPER's own audio, because
-      `ReferenceHost.js` is a chain with no audio input. No REAPER install was available to
-      actually run this against, so it is written against REAPER's documented ReaScript API
-      (`ExecProcess`, `GetUserInputs`, `InsertMedia`) and unverified; see HUMANS.md. A live,
-      playable Jig in REAPER (a JSFX in EEL2, which cannot call WebAssembly, or a
-      persistent external process piped in real time) is a separate, larger piece of work and
-      was not attempted here.
-
 - [ ] **A static check that a `jig:Abi1`/`jig:Abi2` module never calls `memory.grow`.**
       2026-09-24: `npm run check-wasm-abi -- your.wasm` (`src/validate/WasmAbi.js`) now checks
       the easy half of module-abi.md's calling sequence step 1 statically, an exact and
@@ -73,30 +91,6 @@ complete. Review periodically.
       Node, offline, not on a real audio thread at a fixed priority, so it can only ever catch
       a plugin off by orders of magnitude (an unbounded loop, say), not one merely tight on a
       slow device. `memory.grow` is the one piece of this item still open.
-
-- [ ] **Whether to reduce the native build's dependency on a sibling `downspout` checkout.**
-      **Decided 2026-09-24: leave as-is for now.** Revisit if the shared-DPF tradeoff in item 2
-      below ever stops being worth it. From the inbox, 2026-09-24: "reduce cross-repo
-      dependencies where it can be done without breakage." An audit found three actual
-      couplings to a sibling repository, not counting
-      the ones README.md/AGENTS.md already say are prior art only and depended on for
-      nothing:
-      1. `tests/rdf/vocabulary.test.js` hardcoded `/home/danny/github/...` where
-         `tests/wam/WamModule.test.js`'s equivalent check already used `process.env.HOME`.
-         Fixed 2026-09-24, no behaviour change on this machine, and portable elsewhere now.
-      2. `native/CMakeLists.txt` defaults `JIGDAW_DPF_DIR` and `JIGDAW_HTTPLIB_DIR` to paths
-         inside `~/github/downspout/third_party/`, by design: the comment there says a path
-         rather than a fetch, because it is the same DPF downspout's own plugins build
-         against, and two copies would be two answers. Reducing this would need either
-         accepting that two copies could disagree, or teaching the build to fetch DPF itself
-         (as `native/cmake/FindOrFetchWamr.cmake` now does for WAMR) while still checking it
-         against whatever downspout has, which is more machinery than the coupling it
-         replaces. Not changed: the stated reason is a real tradeoff, not an oversight, and
-         needs a maintainer decision, not a silent reversal.
-      3. `tests/rdf/vocabulary.test.js`'s upstream `trn:` check and
-         `tests/wam/WamModule.test.js`'s WAM API check both already degrade gracefully when
-         the sibling checkout is absent (skip loudly, or return early), which is the pattern
-         AGENTS.md asks for; nothing to reduce there beyond the path fix above.
 
 ## Namespaces
 
@@ -303,62 +297,12 @@ Goal: the page adapts to hands and screens without a second implementation.
       44px targets, 16px inputs. The existing Hide-browser arrow item shows
       the bar to clear.
 
-- [ ] **Is the interface usable and intuitive now?** A question for the maintainer, not a
-      task to guess at. From the inbox, 2026-09-24: "a change from a standard DAW visual
-      interface is welcome, but only if it is usable and intuitive. This isn't right now."
-      2026-09-24, the four items named under it are built and checked in a browser: tracks
-      with a mixer of one fader each, a MIDI timeline with a piano roll, an audio timeline,
-      and (at the maintainer's choice) a plugin's own editor in a sandboxed frame. The page now
-      opens on the Arrangement tab, a track's name there leads to its plugins, and the rack's
-      tab is called Plugins. No further layout change was guessed at, per this item's own
-      instruction. **Ask the maintainer to use it and say what is still wrong.**
-
-- [ ] **An agent cannot press Play.** Since 2026-09-25 an MCP client drives an open page
-      through `npm run mcp-bridge` (docs/webmcp.md "The local bridge"), and can build a whole
-      session but not hear it: `transport_play` and `transport_stop` are specified in
-      docs/webmcp.md and not built. 2026-09-26: built. `createTools` takes `onPlay`
-      and `onStop` the way `plugin_load` takes `loadPlugin`, and the page passes
-      its transport's `play` and `stop` in `src/host/Runtime` wiring
-      (`web/app/Runtime.js`). With no hooks the tools explain that this host
-      cannot play instead of vanishing. A page with no audio started still needs
-      a person's click first: a browser starts no AudioContext without one.
-
-- [ ] **Move Hide Browser button functionality to a sidebar collapse/expand arrow.**
-      **Done 2026-09-26, unreviewed in a real browser.** From the inbox,
-      2026-09-25. The transport bar's Hide browser button is gone; a 44px arrow
-      in the sidebar header carries the function (`web/app/Layout.js`,
-      `tests/ui/Layout.test.js`). Collapsed, the sidebar is a 48px rail holding
-      only the arrow, and the panel's contents leave the accessibility tree;
-      the arrow keeps `aria-expanded`, `aria-controls` and a Hide/Show name,
-      and the choice is still remembered per browser. UI-only: no model or
-      contract change, bundle rebuilt. Not yet measured in a narrow iframe in a
-      real browser, which AGENTS.md requires before the layout half of this is
-      claimed; see HUMANS.md.
-
 - [ ] **A facility for Sends and Receives between tracks.** From the inbox, 2026-09-25.
       Aux routing between tracks: a send taps a track's signal, a receive brings it back
       elsewhere. Needs vocabulary before code, the way the master strip does (loose ends,
       item 1 below): what a send/receive is in the project graph, and how the compiler
       turns it into Web Audio connections without introducing a cycle the latency rules
       refuse.
-
-- [ ] **Group controls in the plugin view.** **Done 2026-09-26.** From the inbox,
-      2026-09-25. LV2's port-groups extension was read first and not reused: `pg:Group`
-      combines ports carrying one stream (stereo channels, surround layouts), verified
-      against the extension's published page, and says nothing about control layout. So
-      ports carry a plain `jig:controlGroup` label instead (`vocabs/jigdaw.ttl`,
-      `src/rdf/Vocabulary.js`), declared in the profile by `bin/write-profile.js` and read
-      by `src/rdf/ProfileReader.js`. The generated panel renders ungrouped controls first,
-      exactly as before, then one `fieldset`/`legend` section per group in first-appearance
-      order. The 8-Bit 8asterd groups by the hardware's own sections from `params.json`
-      (12 groups over 42 controls, via `make.js`); DrumKit groups by voice (12 groups over
-      74 controls, Bit Crush standing alone, which exercises the ungrouped path); DrumGen
-      stays flat, having no natural grouping to declare. Tests bind 8b8's groups to its
-      parameter definition and DrumKit's to its symbol prefixes, and the panel suite checks
-      section order, ungrouped-first, and the no-groups backwards case. The
-      document-order change required reworking the committed-panel selector test to match
-      by label. Both profiles validate and canonicalise; vocab site, index, and bundle
-      rebuilt.
 
 - [ ] **A desktop Jiggy built on Electron.** From the inbox, 2026-09-25. A large direction,
       not a task: packaging, auto-update, native audio device handling, and what happens
@@ -395,54 +339,6 @@ Goal: the page adapts to hands and screens without a second implementation.
          `setParameter` the frame's handler calls. Not a defect found in the code, but the
          path from a real pointer through the frame was only seen once.
 
-- [ ] **A "Fugue" preset: a long-form orchestral fugue from the existing plugins.**
-      **Done 2026-09-26.** From the inbox, 2026-09-26. `web/presets/fugue.ttl` ("Fugue",
-      in the index): D minor at 66 BPM for four generative voices, no clips, everything
-      off the transport. MelGen states the subject (D4, seed 7), a second MelGen answers
-      a fifth below (A3, seed 21), Ground plans the 32-bar bass form (D2, seed 3), and
-      Cadence (D natural minor) learns its cycle from the subject line and comps beneath;
-      each voice has its own Pulse timbre and Cascade room. Scale choices verified against
-      the DSP sources (melgen/ground index 2 minor, cadence index 3 natural minor, key 2
-      D). Passes the standard preset bar (listed, no `@base`, conforms, opens for real
-      with all 12 nodes and 9 connections), plus `tests/ui/Fugue.test.js`, which drives
-      every voice with the preset's own settings read from the file: all three generators
-      emit onsets at 66 BPM, Cadence passes what it hears, and all four Pulse voices
-      render signal. A preset edit that silences a voice fails there.
-
-- [ ] **Record each track to an audio clip while the transport plays.** **Done
-      2026-09-27.** Rec plays (if stopped) and captures every track after its strip;
-      Stop, or Rec again, keeps each sounding track as an audio clip where it was
-      recorded, in one atomic changeset. Takes are WAV takes under the session's IRI by
-      SHA-256, exactly like imported audio, so playback with the plugins removed, zip
-      saving, and one-step undo all reuse proven paths. Capture is per-track
-      AudioWorklet sinks on a lent-buffer pool (`src/engine/capture-processor.js`,
-      `src/engine/TrackRecorder.js`), so the audio thread never allocates and starved
-      quanta count as dropped rather than stalling; silent tracks keep no clip.
-      `src/host/Wav.js` is ported to DataView so the one encoder runs in the page and
-      in node. Verified headlessly throughout: real processor and strip in
-      `tests/engine/TrackRecorder.test.js`, orchestration against the real dispatcher
-      and model in `tests/ui/Record.test.js`. Not yet heard by a person in a browser;
-      press Rec with the window in front, play, Stop, remove the plugins, and play the
-      takes (HUMANS.md).
-
-## Documentation
-
-- [ ] **Whether `web/collections/jigdaw.ttl` should stop being the exception and hold absolute
-      IRIs.** **Decided 2026-09-24: leave unchanged for now.** Revisit if the localhost/mirror
-      case this design serves ever stops mattering. The inbox item this came from also asked
-      for the general "refer to a plugin by
-      its absolute IRI" recommendation, added 2026-09-24 to
-      [for-plugin-authors.md](docs/for-plugin-authors.md) ("Refer to it by its absolute IRI"),
-      cross-linked from [plugin-collections.md](docs/plugin-collections.md) section 1.1. This
-      part is unresolved: making the shipped collection itself absolute conflicts with a
-      deliberate, documented and tested design. Section 1.1 explains the file omits `@base` on
-      purpose, so `<../plugins/pulse/>` resolves against whichever host serves it and the same
-      file works on `localhost` and on strandz.it alike, and
-      `tests/catalogue/CollectionLoader.test.js` checks it against `plugins/` on disk under
-      that assumption. Switching it to absolute IRIs would pin the shipped collection to one
-      origin and needs a maintainer decision, not a silent reversal of a choice that was made
-      and tested for a reason.
-
 ## Quefrency
 
 - [ ] **Listen to Quefrency, and check compensation against a parallel path.** 2026-09-25:
@@ -463,34 +359,6 @@ Goal: the page adapts to hands and screens without a second implementation.
       parameter changed. The 8-Bit 8asterd has the same gap. Needs a message in
       messaging.md, the host updating its AudioParam and the model from it, and a guard so
       that update is not written straight back to the processor.
-- [ ] **Declare CC bindings in RDF instead of a caution.** **Done 2026-09-26.**
-      LV2's MIDI extension (`midi:binding` to a skolemised `midi:Controller`
-      carrying `midi:controllerNumber`, verified against the extension's own
-      page) is reused, not invented. `bin/write-profile.js` emits bindings from
-      a `controller` field per port, `src/rdf/ProfileReader.js` reads them onto
-      `port.controller` (null where unbound), and the generated panel names the
-      controller on each bound control. Quefrency binds 70 to 80 and the 8-Bit
-      8asterd 70 upward in parameter order; both cautions now point at the
-      bindings, keeping only the value-64 and last-wins semantics that are
-      still prose. The Quefrency test checks each declared binding against the
-      module instead of the caution's wording. Both profiles validate and
-      canonicalise; bundle rebuilt.
-- [ ] **Reconcile `trn:MidiCC` with upstream.** **Decided 2026-09-26: keep both
-      terms, comment corrected.** Both are upstream-defined, in different files:
-      transmission's `vocabs/profile.ttl` defines `trn:ControlMidi` (CCs and
-      scene notes that reshape other generators), and plugin-universe's
-      `vocabs/trn-profile.ttl` defines both that term and the narrower
-      `trn:MidiCC` (continuous controller messages alone, without note data).
-      The `tests/rdf/vocabulary.test.js` upstream check already covers both
-      files, so the suite passes either way. `src/rdf/Vocabulary.js` said
-      MidiCC was listed before checking; that comment is now corrected to name
-      both definitions. No profile declares `trn:MidiCC` yet; Quefrency takes
-      CCs 70 to 80 with no notes, which matches the narrower term, but its
-      profile declares `trn:ControlMidi` and both terms behave identically in
-      `src/engine/EventRouter.js` (`isMidi` true, `carriesNotes` false), so no
-      profile change was made here. A future plugin taking CCs alone may
-      declare `trn:MidiCC`.
-
 ## JSFX plugins
 
 ## The reference host
@@ -513,34 +381,6 @@ Build items, not builds: none is started.
       presets address the inside, and whether a nested graph can itself nest.
       Not started.
 
-- [ ] **A plugin that changes its latency, and a host that acts on it.** **Done
-      2026-09-29.** Covers latency.md section 2 ([design](docs/plugins/lookahead-design.md)).
-      Plugin: Lookahead (`plugins/lookahead/`), a two-position lookahead delay in plain
-      JavaScript, direct or held back by 512 frames. Worst case in the profile, actual
-      figure in `ready`, `latency` with `fromFrame` on change
-      (`tests/host/lookahead.test.js`). Host: `OpDispatcher` observes each natively
-      loaded node's messages (foreign excluded: a WAM speaks its own latency protocol,
-      already consumed by `WamModule`), updates the entry, recompiles the unchanged
-      project, and retimes moved compensation delays via `Engine.retime` scheduled
-      against `fromFrame`, never arrival. Not an edit: no revision, no history
-      (`tests/ops/latency.test.js`, `tests/engine/Engine.test.js`). testbed.md updated.
-
-- [ ] **Tails on Pulse, and tail-aware offline renders.** **Done 2026-09-26.** Covers
-      latency.md section 5. Implemented on Pulse rather than the Cascade first proposed:
-      Cascade's freeze can ring for ever, and a plugin whose tail is unbounded must
-      declare none, while Pulse's release is finite. The profile declares the worst case
-      (192000 frames: the 4000 ms release maximum at 48 kHz, bound to the release port in
-      `tests/host/pulse.test.js`), the processor reports the worst case for the actual
-      rate in `ready`, and the reference host renders past the last input by the greatest
-      tail in the chain. `tests/host/ReferenceHost.test.js` renders a note ending near
-      the duration end and checks the decay is present past it and silent by the close;
-      Cascade is the negative control (no tail declared, length unchanged). Two real
-      catches on the way, both in MISTAKES.md pattern: the processor first read the bare
-      `sampleRate` global, which is undefined outside a real worklet and produced a NaN
-      tail that JSON printed as null and poisoned the frame count to zero (fixed to the
-      init message's rate), and the edited processor tripped the integrity check until
-      the profile was regenerated. testbed.md updated.
-
 - [ ] **A plugin that prefers shared memory, and an isolated host mode to run
       it in.** Covers contract section 2.3. Smallest plugin: declares
       `jig:prefers jig:SharedMemory` with the mandated fallback to port
@@ -548,39 +388,10 @@ Build items, not builds: none is started.
       must not require isolation of itself. Test both paths: the capability
       offered in isolated mode, the fallback elsewhere.
 
-- [ ] **Tremolo's own interface showing processor data through the opaque
-      relay.** **Done 2026-09-27 for the processor-to-interface direction.**
-      Covers messaging.md section 2.4. The host relay and both dispatcher ends already
-      existed and were fake-tested; no real plugin used either. Tremolo's processor now posts a gain snapshot every 32nd quantum (about 12 a
-      second, far under the 60/s relay limit) from one object mutated in place, so the
-      per-quantum path allocates nothing, and its editor draws the level as text plus
-      an aria-hidden bar under a polite live region, never as markup. Tests drive the
-      real processor: snapshot rate with LFO tracking, object identity across quanta,
-      and silence before the handshake; the frame file is structure-checked as text (no
-      script executes headlessly), including the no-innerHTML rule. The
-      interface-to-processor direction still has no real user beyond the fakes.
-      Profile regenerated
-      for the new digests. testbed.md updated.
-
-- [ ] **One a-rate parameter, audio-modulated.** **Done 2026-09-27.** Covers contract
-      section 5.2. Tremolo's rate is declared `jig:ARate` (emitted by
-      `bin/write-profile.js` from an `automationRate` field, read by the profile reader
-      that already knew the term) and registered a-rate in its own descriptors, with the
-      profile, the host derivation (`src/host/Parameters.js`) and the registration bound
-      in one test per contract 5.1. The processor already read per-sample arrays; a new
-      test drives `process()` directly with steady, constant-128 and ramped rate arrays
-      and is mutation tested against a read-first-element-only variant (difference
-      exactly 0 there). Depth stays k-rate. Per-sample signal flow itself is Web Audio's
-      work in a real host; offline fakes hold scalars only, which is stated, not worked
-      around. testbed.md updated.
-
-- [ ] **A second plugin answering state requests.** Covers contract section 8.
-      Ferrite is the only one, so token correlation and ordering with two
-      stateful nodes is untested. Smallest: a plugin with genuine
-      non-parameter state (parameters are not state by contract section 8.2,
-      so this cannot be bolted onto Tremolo), plus a round-trip test with
-      Ferrite loaded alongside proving two `state` replies route to the right
-      nodes by token.
+- [ ] **Tremolo's interface-to-processor direction through the opaque relay.**
+      Covers messaging.md section 2.4. The processor-to-interface direction is
+      done (2026-09-27, real snapshots at 12/s, `tests/host/tremolo.test.js`);
+      the reverse direction still has no real user beyond the fakes.
 
 - [ ] **Web MIDI input into the selected track.** Covers testbed.md "MIDI from
       outside the page". Host behaviour only, no plugin needed:

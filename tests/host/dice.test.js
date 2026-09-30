@@ -209,3 +209,45 @@ describe('dice state is what the parameters do not carry', () => {
     }
   })
 })
+
+describe('two stateful nodes route replies by token', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  it('tells a dice reply from a ferrite reply in either initiation order', async () => {
+    // Contract section 8 with two stateful nodes: both requestState calls in
+    // flight at once must resolve with their own node's state, an integer
+    // against asset bytes, whichever was asked first. One engine, so the
+    // ports and the token table are shared for real.
+    const origin = 'https://strandz.it/jigdaw/'
+    const site = sitePlugins(origin, resolve(root, 'plugins'))
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({
+      context,
+      loader: new PluginLoader({
+        fetch: site.fetch,
+        parse: parseText,
+        validator,
+        capabilities: detectCapabilities({ WebAssembly }),
+        processorUrl: site.processorUrl
+      }),
+      AudioWorkletNode: OfflineWorkletNode
+    })
+    const dice = await engine.addPlugin(`${origin}plugins/dice/`)
+    const ferrite = await engine.addPlugin(`${origin}plugins/ferrite/`)
+    engine.setParameter(dice.id, 'probability', 0.5)
+    await play(dice.node, [60, 61, 62])
+
+    for (const first of ['dice', 'ferrite']) {
+      const diceAsked = engine.requestState(dice.id)
+      const ferriteAsked = engine.requestState(ferrite.id)
+      const [diceState, ferriteState] = first === 'dice'
+        ? await Promise.all([diceAsked, ferriteAsked])
+        : await Promise.all([ferriteAsked, diceAsked]).then(([f, d]) => [d, f])
+      expect(Number.isInteger(diceState?.rng)).toBe(true)
+      expect(ferriteState?.nam).toBeInstanceOf(ArrayBuffer)
+      expect(ferriteState?.ir).toBeInstanceOf(ArrayBuffer)
+      expect(ferriteState).not.toHaveProperty('rng')
+    }
+  })
+})

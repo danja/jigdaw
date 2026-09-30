@@ -49,7 +49,7 @@
     jig:location <dice-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "dice" ;
-    jig:integrity "sha384-rcKeSQ3jH6aKTmaM7w6a0jt50uQ18tbZ5G1G4qdzgTQrntDNFAays/ITw55psawo" .
+    jig:integrity "sha384-aNO44cFIQTNDmc1k8Dsl0fCnYchwfmC3hE2x2d+Mau9fJvjkJj06gfoUWIjIbTuj" .
 
 <#probability>
     a lv2:InputPort , lv2:ControlPort ;

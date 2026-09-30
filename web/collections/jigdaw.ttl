@@ -28,7 +28,9 @@
         <../plugins/bassgen/> ,
         <../plugins/boost/> ,
         <../plugins/cadence/> ,
+        <../plugins/canticle/> ,
         <../plugins/cascade/> ,
+        <../plugins/counterpointer/> ,
         <../plugins/dice/> ,
         <../plugins/drumgen/> ,
         <../plugins/drumkit/> ,
@@ -50,7 +52,9 @@
 <../plugins/bassgen/> rdfs:label "BassGen" .
 <../plugins/boost/> rdfs:label "Boost" .
 <../plugins/cadence/> rdfs:label "Cadence" .
+<../plugins/canticle/> rdfs:label "Canticle" .
 <../plugins/cascade/> rdfs:label "Cascade" .
+<../plugins/counterpointer/> rdfs:label "Counterpointer" .
 <../plugins/dice/> rdfs:label "Dice" .
 <../plugins/drumgen/> rdfs:label "DrumGen" .
 <../plugins/drumkit/> rdfs:label "DrumKit" .

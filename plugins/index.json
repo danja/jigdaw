@@ -206,6 +206,57 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/canticle/",
+      "label": "Canticle",
+      "comment": "Twelve-voice polyphonic tonal instrument for the middle of an ensemble: keys, reed, pad, pluck and glass tones for melody, counterpoint and chords.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/canticle/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi",
+        "MelodyMidi",
+        "HarmonyMidi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "Twelve voices. A thirteenth note steals the oldest, releasing voices first, rather than being refused.",
+        "A velocity-100 single note reaches at least -10 dBFS at the default setting on every model; dense chords stay bounded through the final soft clip.",
+        "CC 120 and 123 silence every voice, like an all-notes-off."
+      ],
+      "parameters": [
+        "articulation",
+        "attack",
+        "body",
+        "decay",
+        "detune",
+        "drive",
+        "ensemble",
+        "metal",
+        "model",
+        "movement",
+        "output",
+        "range",
+        "release",
+        "sustain",
+        "tone",
+        "width"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/cascade/",
       "label": "Cascade",
       "comment": "Schroeder plate reverb with per-mode scaling, damping inside the feedback loop, and a freeze that holds the tail indefinitely.",
@@ -236,6 +287,66 @@
         "mix",
         "mode",
         "size"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/counterpointer/",
+      "label": "Counterpointer",
+      "comment": "Transport synced MIDI processor that learns an incoming cycle and answers it with a monophonic counter-melody, in counterpoint or a descending bass register.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/counterpointer/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiProcessor"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi",
+        "MelodyMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the transport rolls and a full cycle of incoming MIDI has been captured. A counter-melody with nothing to answer would be guessing, and this one says so by producing nothing.",
+        "Pure MIDI, no audio: route its MIDI output to an instrument. Learn is a trigger that fires on the rising edge, so each press is one action.",
+        "Monophonic by design. A new step ends the note before it rather than overlapping.",
+        "With pass_input on, incoming notes continue downstream alongside the counter-melody, including while stopped or still learning."
+      ],
+      "parameters": [
+        "color",
+        "consonance",
+        "counter",
+        "cycle_bars",
+        "density",
+        "embellish",
+        "follow",
+        "freeze",
+        "gate",
+        "granularity",
+        "key",
+        "learn",
+        "long_random",
+        "output_channel",
+        "pass_input",
+        "register",
+        "regularity",
+        "response_mode",
+        "rhythm_follow",
+        "scale",
+        "short_random",
+        "span",
+        "syncopation",
+        "velocity_follow"
       ]
     },
     {

@@ -176,6 +176,8 @@ and real-time processing.
 ## Documentation rules
 
 - Technical plain English. No em dashes. No novel jargon.
+- When a document reads like generic AI output, [docs/danify.md](docs/danify.md) is the
+  rewrite guide: strip the tics first, match the voice second.
 - No large language model cliches. Not "delve", "leverage", "robust", "seamless",
   "it's not just X, it's Y", "let's dive in", or a sentence whose only content is that the
   next sentence is coming. A document is read by someone deciding what to do, and a sentence

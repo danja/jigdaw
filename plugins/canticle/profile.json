@@ -1,0 +1,88 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/canticle/",
+  "label": "Canticle",
+  "comment": "Twelve-voice polyphonic tonal instrument for the middle of an ensemble: keys, reed, pad, pluck and glass tones for melody, counterpoint and chords.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "canticle",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi",
+    "trn:MelodyMidi",
+    "trn:HarmonyMidi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Twelve voices. A thirteenth note steals the oldest, releasing voices first, rather than being refused.",
+    "A velocity-100 single note reaches at least -10 dBFS at the default setting on every model; dense chords stay bounded through the final soft clip.",
+    "CC 120 and 123 silence every voice, like an all-notes-off."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "abi": "jig:Abi1",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "tailFrames": 153600
+  },
+  "resources": {
+    "module": "canticle.wasm",
+    "processor": "canticle-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "model", "name": "Model", "default": 0, "minimum": 0, "maximum": 4, "paramIndex": 0,
+      "scalePoints": [
+        { "label": "Keys", "value": 0 }, { "label": "Reed", "value": 1 },
+        { "label": "Pad", "value": 2 }, { "label": "Pluck", "value": 3 },
+        { "label": "Glass", "value": 4 }
+      ]
+    },
+    { "symbol": "tone", "name": "Tone", "default": 0.52, "minimum": 0.0, "maximum": 1.0, "paramIndex": 1 },
+    { "symbol": "body", "name": "Body", "default": 0.58, "minimum": 0.0, "maximum": 1.0, "paramIndex": 2 },
+    { "symbol": "movement", "name": "Movement", "default": 0.20, "minimum": 0.0, "maximum": 1.0, "paramIndex": 3 },
+    { "symbol": "attack", "name": "Attack", "default": 0.10, "minimum": 0.0, "maximum": 1.0, "paramIndex": 4 },
+    { "symbol": "decay", "name": "Decay", "default": 0.34, "minimum": 0.0, "maximum": 1.0, "paramIndex": 5 },
+    { "symbol": "sustain", "name": "Sustain", "default": 0.78, "minimum": 0.0, "maximum": 1.0, "paramIndex": 6 },
+    { "symbol": "release", "name": "Release", "default": 0.42, "minimum": 0.0, "maximum": 1.0, "paramIndex": 7 },
+    { "symbol": "detune", "name": "Detune", "default": 0.18, "minimum": 0.0, "maximum": 1.0, "paramIndex": 8 },
+    { "symbol": "width", "name": "Width", "default": 0.62, "minimum": 0.0, "maximum": 1.0, "paramIndex": 9 },
+    { "symbol": "drive", "name": "Drive", "default": 0.10, "minimum": 0.0, "maximum": 1.0, "paramIndex": 10 },
+    { "symbol": "output", "name": "Output", "default": 0.68, "minimum": 0.0, "maximum": 1.0, "paramIndex": 11 },
+    { "symbol": "metal", "name": "Metal", "default": 0.0, "minimum": 0.0, "maximum": 1.0, "paramIndex": 12 },
+    {
+      "symbol": "articulation", "name": "Articulation", "default": 0, "minimum": 0, "maximum": 3, "paramIndex": 13,
+      "scalePoints": [
+        { "label": "Natural", "value": 0 }, { "label": "Short", "value": 1 },
+        { "label": "Sustain", "value": 2 }, { "label": "Bloom", "value": 3 }
+      ]
+    },
+    {
+      "symbol": "range", "name": "Register", "default": 0, "minimum": 0, "maximum": 3, "paramIndex": 14,
+      "scalePoints": [
+        { "label": "Natural", "value": 0 }, { "label": "Low", "value": 1 },
+        { "label": "High", "value": 2 }, { "label": "Open", "value": 3 }
+      ]
+    },
+    {
+      "symbol": "ensemble", "name": "Ensemble", "default": 0, "minimum": 0, "maximum": 3, "paramIndex": 15,
+      "scalePoints": [
+        { "label": "Solo", "value": 0 }, { "label": "Pair", "value": 1 },
+        { "label": "Chorus", "value": 2 }, { "label": "Wide", "value": 3 }
+      ]
+    }
+  ]
+}

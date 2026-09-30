@@ -19,6 +19,14 @@ import { pathToFileURL } from 'node:url'
 
 const QUANTUM = 128
 
+// The registry of the context whose node is currently rendering. A real
+// worklet exposes one currentFrame per global scope; here every context
+// carries its own registry, and binding the global to whichever addModule
+// ran last silently delivered every other context's events against the
+// wrong clock. Found as two dice restores diverging: the original node's
+// second play read the resumed context's frame, so nothing was ever due.
+let activeRegistry = null
+
 /** A fetch that serves a directory, so the real loader does real fetching. */
 export function directoryFetch (roots) {
   return async (url) => {
@@ -145,7 +153,10 @@ export class OfflineWorkletNode {
   /** Run one render quantum. Returns the output channels. */
   render (inputChannels = null) {
     // Advance the worklet clock, so a processor sees the same frame a real one
-    // would and events land in the quantum that contains them.
+    // would and events land in the quantum that contains them. Scoped to this
+    // node's registry first: process() below is synchronous, so the global
+    // cannot observe another context mid-quantum.
+    activeRegistry = this.context.registry
     this.context.registry.currentFrame = this.frame
     for (let c = 0; c < this.channels; c++) {
       if (inputChannels) this.inputs[0][c].set(inputChannels[Math.min(c, inputChannels.length - 1)])
@@ -232,10 +243,11 @@ export class OfflineContext {
         globalThis.sampleRate = 48000
         // A real AudioWorkletGlobalScope exposes the frame at the start of the
         // current quantum. Events are located against it, so without it every
-        // event in the queue looks due at once.
+        // event in the queue looks due at once. Read off whichever registry
+        // is rendering, not whichever module loaded last.
         Object.defineProperty(globalThis, 'currentFrame', {
           configurable: true,
-          get: () => registry.currentFrame ?? 0
+          get: () => activeRegistry?.currentFrame ?? 0
         })
         try {
           // Cache-busted so two loads in one process both evaluate.

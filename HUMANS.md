@@ -25,7 +25,21 @@ are kept and placed, but no headless check has heard one. Move Lookahead's Posit
 while a parallel dry path plays beside it: the automated check proves the dry path is
 delayed from the reported frame, but no headless check has heard the realignment. Note what is wrong in INBOX.md.
 
-## 2. Tools that would help
+## 2. Confirm the Mop glitch diagnosis in Reaper
+
+Headless measurement says Mop costs 1.70x realtime through the adapter's
+WAMR interpreter (8 s of line plus drums took 13.6 s wall; 8b8 takes 0.20x
+through the same path), so every realtime block overruns and the symptom
+should be continuous dropouts. Two things only you can check: freeze (or
+bounce) the Mop track and play it back — if it plays clean frozen, the fault
+is throughput rather than corruption — and report the buffer size, sample
+rate and machine the glitches were heard on, plus whether raising Voices
+changes anything (headlessly the voice cap changes nothing: the emulator
+steps the whole chip regardless). The fixes (WAMR AOT/JIT with its LLVM
+build dependency, or mop-side surgery) are a maintainer decision; see the
+Mop item in TODO.md.
+
+## 3. Tools that would help
 
 **lld, for the WebAssembly build of `plugins/8b8/` and `plugins/boost/`.** Ubuntu's `clang`
 package ships no `wasm-ld`, so both plugins' `build.sh` link through the `rust-lld` that

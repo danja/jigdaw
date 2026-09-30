@@ -1,0 +1,242 @@
+# web/presets/chiptune.ttl
+#
+# A bundled preset that makes sound on Play with nothing else to do.
+# Generative chiptune in A minor at 140 BPM: MelGen states a sixteenth-note
+# lead line on the first track, and that one line feeds everything melodic. A
+# second voice answers it around the line itself (Counterpointer), a third
+# comps the learned cycle underneath (Cadence), and all three chip voices
+# come out of one shared AY chip bus along with the drums. BassGen drives a
+# square bass, Ground plans a sixteen-bar techno sub form, and DrumGen plays
+# an electro kit. Nothing here is a clip: every generator plays off the
+# transport. Dry throughout, the way chip music is: no room anywhere.
+# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Chiptune" ;
+    jig:revision 1 ;
+    jig:track <#track-1> , <#track-2> , <#track-3> , <#track-4> , <#track-5> , <#track-6> ;
+    jig:node <#lead> , <#counter> , <#chords> , <#bassline> , <#subform> , <#drums> , <#squlead> , <#chip> , <#pulseb> , <#pulses> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> , <#c7> , <#c8> ;
+    jig:transport <#transport> .
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Lead" .
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Counter" .
+
+<#track-3>
+    a jig:Track ;
+    rdfs:label "Chords" .
+
+<#track-4>
+    a jig:Track ;
+    rdfs:label "Bass" .
+
+<#track-5>
+    a jig:Track ;
+    rdfs:label "Sub" .
+
+<#track-6>
+    a jig:Track ;
+    rdfs:label "Drums" .
+
+<#lead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Lead line" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#lead-root> , <#lead-scale> , <#lead-length> , <#lead-phrase> , <#lead-grid> , <#lead-density> , <#lead-register> , <#lead-seed> .
+
+<#counter>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Counterline" ;
+    jig:plugin <../plugins/counterpointer/> ;
+    jig:setting <#counter-key> , <#counter-scale> , <#counter-cycle> , <#counter-grid> , <#counter-density> , <#counter-register> , <#counter-mode> .
+
+<#chords>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Chip chords" ;
+    jig:plugin <../plugins/cadence/> ;
+    jig:setting <#chords-key> , <#chords-scale> , <#chords-cycle> .
+
+<#bassline>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Bass line" ;
+    jig:plugin <../plugins/bassgen/> ;
+    jig:setting <#bassline-root> , <#bassline-scale> , <#bassline-genre> , <#bassline-grid> , <#bassline-density> , <#bassline-seed> .
+
+<#subform>
+    a jig:Node ;
+    jig:onTrack <#track-5> ;
+    rdfs:label "Sub form" ;
+    jig:plugin <../plugins/ground/> ;
+    jig:setting <#subform-root> , <#subform-scale> , <#subform-style> , <#subform-form> , <#subform-shape> , <#subform-register> , <#subform-density> , <#subform-seed> .
+
+<#drums>
+    a jig:Node ;
+    jig:onTrack <#track-6> ;
+    rdfs:label "Chip drums" ;
+    jig:plugin <../plugins/drumgen/> ;
+    jig:setting <#drums-genre> , <#drums-grid> , <#drums-density> , <#drums-kit> , <#drums-bars> , <#drums-seed> .
+
+<#squlead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Square lead" ;
+    jig:plugin <../plugins/mop/> ;
+    jig:setting <#squlead-program> .
+
+<#chip>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Chip bus" ;
+    jig:plugin <../plugins/8b8/> ;
+    jig:setting <#chip-transpose> .
+
+<#pulseb>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Square bass" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#pulseb-waveform> , <#pulseb-attack> , <#pulseb-release> , <#pulseb-cutoff> , <#pulseb-gain> .
+
+<#pulses>
+    a jig:Node ;
+    jig:onTrack <#track-5> ;
+    rdfs:label "Sub bass" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#pulses-waveform> , <#pulses-attack> , <#pulses-release> , <#pulses-cutoff> , <#pulses-gain> .
+
+<#lead-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 69.0 .
+<#lead-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
+<#lead-length>   a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 16.0 .
+<#lead-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars"  ; jig:value 2.0 .
+<#lead-grid>     a jig:ParameterSetting ; jig:symbol "subdivision"  ; jig:value 1.0 .
+<#lead-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.52 .
+<#lead-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 2.0 .
+<#lead-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 11.0 .
+<#counter-key>      a jig:ParameterSetting ; jig:symbol "key"           ; jig:value 9.0 .
+<#counter-scale>    a jig:ParameterSetting ; jig:symbol "scale"         ; jig:value 3.0 .
+<#counter-cycle>    a jig:ParameterSetting ; jig:symbol "cycle_bars"    ; jig:value 2.0 .
+<#counter-grid>     a jig:ParameterSetting ; jig:symbol "granularity"   ; jig:value 0.0 .
+<#counter-density>  a jig:ParameterSetting ; jig:symbol "density"       ; jig:value 0.8 .
+<#counter-register> a jig:ParameterSetting ; jig:symbol "register"      ; jig:value 1.0 .
+<#counter-mode>     a jig:ParameterSetting ; jig:symbol "response_mode" ; jig:value 0.0 .
+<#chords-key>   a jig:ParameterSetting ; jig:symbol "key"        ; jig:value 9.0 .
+<#chords-scale> a jig:ParameterSetting ; jig:symbol "scale"      ; jig:value 3.0 .
+<#chords-cycle> a jig:ParameterSetting ; jig:symbol "cycle_bars" ; jig:value 2.0 .
+<#bassline-root>     a jig:ParameterSetting ; jig:symbol "root"        ; jig:value 33.0 .
+<#bassline-scale>    a jig:ParameterSetting ; jig:symbol "scale"       ; jig:value 2.0 .
+<#bassline-genre>    a jig:ParameterSetting ; jig:symbol "genre"       ; jig:value 3.0 .
+<#bassline-grid>     a jig:ParameterSetting ; jig:symbol "subdivision" ; jig:value 1.0 .
+<#bassline-density>  a jig:ParameterSetting ; jig:symbol "density"     ; jig:value 0.6 .
+<#bassline-seed>     a jig:ParameterSetting ; jig:symbol "seed"        ; jig:value 5.0 .
+<#subform-root>     a jig:ParameterSetting ; jig:symbol "root_note" ; jig:value 33.0 .
+<#subform-scale>    a jig:ParameterSetting ; jig:symbol "scale"     ; jig:value 2.0 .
+<#subform-style>    a jig:ParameterSetting ; jig:symbol "style"     ; jig:value 1.0 .
+<#subform-form>     a jig:ParameterSetting ; jig:symbol "form_bars" ; jig:value 16.0 .
+<#subform-shape>    a jig:ParameterSetting ; jig:symbol "form_shape" ; jig:value 9.0 .
+<#subform-register> a jig:ParameterSetting ; jig:symbol "register"  ; jig:value 1.0 .
+<#subform-density>  a jig:ParameterSetting ; jig:symbol "density"   ; jig:value 0.5 .
+<#subform-seed>     a jig:ParameterSetting ; jig:symbol "seed"      ; jig:value 8.0 .
+<#drums-genre>   a jig:ParameterSetting ; jig:symbol "genre"      ; jig:value 3.0 .
+<#drums-grid>    a jig:ParameterSetting ; jig:symbol "resolution" ; jig:value 1.0 .
+<#drums-density> a jig:ParameterSetting ; jig:symbol "density"    ; jig:value 0.62 .
+<#drums-kit>     a jig:ParameterSetting ; jig:symbol "kit_map"    ; jig:value 1.0 .
+<#drums-bars>    a jig:ParameterSetting ; jig:symbol "bars"       ; jig:value 2.0 .
+<#drums-seed>    a jig:ParameterSetting ; jig:symbol "seed"       ; jig:value 4.0 .
+<#squlead-program> a jig:ParameterSetting ; jig:symbol "program" ; jig:value 80.0 .
+<#chip-transpose>  a jig:ParameterSetting ; jig:symbol "transpose" ; jig:value 0.0 .
+<#pulseb-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 1.0 .
+<#pulseb-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 5.0 .
+<#pulseb-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 120.0 .
+<#pulseb-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 3000.0 .
+<#pulseb-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.4 .
+<#pulses-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 2.0 .
+<#pulses-attack>   a jig:ParameterSetting ; jig:symbol "attack"   ; jig:value 10.0 .
+<#pulses-release>  a jig:ParameterSetting ; jig:symbol "release"  ; jig:value 200.0 .
+<#pulses-cutoff>   a jig:ParameterSetting ; jig:symbol "cutoff"   ; jig:value 1200.0 .
+<#pulses-gain>     a jig:ParameterSetting ; jig:symbol "gain"     ; jig:value 0.45 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#lead>    ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#squlead> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Midi .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#lead>    ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#counter> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Midi .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#lead>   ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#chords> ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Midi .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#counter> ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#chip>    ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Midi .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#chords> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#chip>   ; jig:portIndex 0 .
+
+<#c6>
+    a jig:Connection ;
+    jig:from <#c6-from> ; jig:to <#c6-to> ;
+    jig:signalKind trn:Midi .
+
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#drums> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#chip>  ; jig:portIndex 0 .
+
+<#c7>
+    a jig:Connection ;
+    jig:from <#c7-from> ; jig:to <#c7-to> ;
+    jig:signalKind trn:Midi .
+
+<#c7-from> a jig:Endpoint ; jig:endpointNode <#bassline> ; jig:portIndex 0 .
+<#c7-to>   a jig:Endpoint ; jig:endpointNode <#pulseb>   ; jig:portIndex 0 .
+
+<#c8>
+    a jig:Connection ;
+    jig:from <#c8-from> ; jig:to <#c8-to> ;
+    jig:signalKind trn:Midi .
+
+<#c8-from> a jig:Endpoint ; jig:endpointNode <#subform> ; jig:portIndex 0 .
+<#c8-to>   a jig:Endpoint ; jig:endpointNode <#pulses>  ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 140.0 .

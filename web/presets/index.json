@@ -20,6 +20,10 @@
     {
       "file": "fugue.ttl",
       "label": "Fugue"
+    },
+    {
+      "file": "chiptune.ttl",
+      "label": "Chiptune"
     }
   ]
 }
