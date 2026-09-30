@@ -25,6 +25,20 @@ describe('the page settings', () => {
     }
   })
 
+  it('reads alignTracks as a boolean, and refuses anything else', () => {
+    expect(readHostConfig({ ...shipped, alignTracks: false }).alignTracks).toBe(false)
+    for (const bad of ['true', 1, null, 0]) {
+      expect(() => readHostConfig({ ...shipped, alignTracks: bad }), String(bad)).toThrow(/alignTracks/)
+    }
+    const { alignTracks, ...without } = shipped
+    expect(alignTracks).toBe(true)
+    expect(() => readHostConfig(without)).toThrow(/has no alignTracks/)
+  })
+
+  it('refuses a maximum track delay that is not a positive whole number', () => {
+    for (const bad of [0, -5, 2.5, '2000']) expect(() => readHostConfig({ ...shipped, maxTrackDelayMs: bad }), String(bad)).toThrow(/maxTrackDelayMs/)
+  })
+
   it('refuses a bridge port that is not a port', () => {
     expect(() => readHostConfig({ ...shipped, bridgePort: 70000 })).toThrow(/bridgePort/)
     expect(() => readHostConfig({ ...shipped, bridgePort: 0 })).toThrow(/bridgePort/)

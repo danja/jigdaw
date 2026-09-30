@@ -45,6 +45,14 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/package.json
 curl -sS -o /dev/null -w '%{http_code}\n' https://strandz.it/jigdaw/app.bundle.js  # 200
 ```
 
+### The installable app
+
+`npm run build:web` also rewrites `web/precache.js`, the list of files the service worker keeps
+and their hashes, and `web/manifest.webmanifest` and the icons are committed with it. Regenerate
+before committing, as above. `bin/serve.js` sends `no-cache` for the worker, its list and the
+manifest, so it needs the restart described above after a pull that changes it. See
+[pwa.md](pwa.md).
+
 ### Regenerate before committing, never on the server
 
 ```sh

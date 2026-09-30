@@ -1,7 +1,7 @@
 # web/presets/chiptune.ttl
 #
 # A bundled preset that makes sound on Play with nothing else to do.
-# Generative chiptune in A minor at 140 BPM: MelGen states a sixteenth-note
+# Generative chiptune in A minor at 90 BPM: MelGen states a sixteenth-note
 # lead line on the first track, and that one line feeds everything melodic. A
 # second voice answers it around the line itself (Counterpointer), a third
 # comps the learned cycle underneath (Cadence), and all three chip voices
@@ -239,4 +239,4 @@
     jig:beatsPerBar 4 ; jig:beatUnit 4 ;
     jig:tempoPoint <#t0> .
 
-<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 140.0 .
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 90.0 .

@@ -4,5 +4,7 @@
   "schedulerLookaheadMs": 120,
   "schedulerTickMs": 25,
   "bridgePort": 8749,
-  "bridgeCallTimeoutMs": 30000
+  "bridgeCallTimeoutMs": 30000,
+  "alignTracks": true,
+  "maxTrackDelayMs": 2000
 }

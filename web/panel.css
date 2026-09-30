@@ -1,0 +1,59 @@
+/* web/panel.css
+   The generated control panel and the knob (src/ui/Panel.js, src/ui/Dial.js), shared by the
+   studio page and the simple page so the two draw a plugin's controls the same way.
+   Expects the colour tokens --line, --accent, --fg and --dim on :root. */
+/* Controls.
+
+   A grid of knobs rather than a stack of sliders. A slider needs the width
+   of the panel and a knob needs about 50px, which is the difference between
+   a 42 control plugin being two thousand pixels of scrolling and being one
+   screen. auto-fill, so the number of columns comes from the width the
+   panel is given rather than from a count written here. */
+.controls { display:grid; gap:12px 8px; align-items:start;
+  grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
+/* One named section per control group. A fieldset names its controls to
+   assistive technology; the legend is the visible section heading. */
+.control-group { border:1px solid var(--line); border-radius:7px;
+  padding:10px 12px 12px; margin:0 0 12px; min-width:0; }
+.control-group:last-child { margin-bottom:0; }
+.control-group legend { font-size:12px; color:var(--dim); padding:0 6px; }
+.control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+.control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
+  overflow-wrap:anywhere; }
+.control .value { font-family:ui-monospace,monospace; font-size:11px; text-align:center; }
+/* A dropdown cannot be read at 84px, so it takes two cells and its own
+   control stretches to fill them. */
+.control-selector { grid-column:span 2; }
+.control-selector select { width:100%; }
+/* A file input is wider than 84px lets on and left-aligned reads more like
+   a form field than a knob, the same reasoning behind a selector's own
+   two-cell span. */
+.control-asset { grid-column:span 2; align-items:flex-start; }
+.control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
+
+/* The knob. The input is still the control: it is laid over the face,
+   invisible, and keeps the role, the value and every key. pointer-events
+   are off it so a drag reaches .dial, which turns vertical movement into
+   input events; Dial.js explains why that is not the native behaviour. */
+.dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize;
+  border-radius:50%; }
+/* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
+   so the ring goes on the wrapper. */
+.dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+.dial-face { display:block; width:100%; height:100%; }
+.dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
+.dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
+.dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
+/* Not display:none and not visibility:hidden: either takes it out of the
+   tab order, which is the whole thing this is trying not to lose. It keeps
+   its size so a pointer that does reach it lands where the knob is. */
+.dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0;
+  opacity:0; pointer-events:none; }
+
+/* :not, because input[type=range] is a more specific selector than
+   .dial-input and would otherwise give the knob's hidden input a 40px box
+   inside a 52px knob. Invisible today, since it is out of flow and takes no
+   pointer events, and exactly the kind of thing that is not invisible the
+   day one of those changes. */
+input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
+input[type=checkbox] { width:22px; height:22px; }

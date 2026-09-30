@@ -9,13 +9,16 @@ import { createAudioClipPanel } from '../../src/ui/AudioClipPanel.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createTrackPanel } from '../../src/ui/TrackPanel.js'
 import { createBulkTrackPanel } from '../../src/ui/BulkTrackPanel.js'
+import { createNodeView } from '../../src/ui/NodeView.js'
+import { createSendsPanel } from '../../src/ui/SendsPanel.js'
+import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
 
 export function createDockPanel (ctx) {
   const { document, window, log } = ctx
   let storage = null
   try { storage = window.localStorage } catch { /* storage unavailable */ }
-  const dock = createDock(document, { slots: ['idle', 'midi', 'audio', 'track', 'tracks'], storage })
+  const dock = createDock(document, { slots: ['idle', 'midi', 'audio', 'track', 'tracks', 'node'], storage })
 
   const idle = document.createElement('p')
   idle.className = 'dock-hint'
@@ -45,6 +48,34 @@ export function createDockPanel (ctx) {
     onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) }
   })
   dock.slot('tracks').append(bulk.element)
+
+  let nodeTrack = null
+  const nodeView = createNodeView(document, {
+    onDisconnect: id => {
+      const result = ctx.dispatcher.apply([{ op: 'removeConnection', id }])
+      if (!result.ok) log(result.message, 'error')
+    },
+    onConnect: ({ from, to }) => {
+      const result = ctx.dispatcher.apply([{
+        op: 'addConnection',
+        from: { node: from.node, portIndex: from.portIndex },
+        to: to.portSymbol !== undefined ? { node: to.node, portSymbol: to.portSymbol } : { node: to.node, portIndex: to.portIndex },
+        signalKind: from.kind
+      }])
+      // A refusal is shown as it came, including a loop with no declared delay.
+      if (!result.ok) log(result.message, 'error')
+      else {
+        const name = id => { const n = ctx.dispatcher.project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id }
+        log(`connected ${name(from.node)} to ${name(to.node)}`, 'ok')
+      }
+    },
+    onShowPlugin: () => {
+      ctx.tabs.select('tracks')
+      document.getElementById(`track-group-${nodeTrack}`)?.scrollIntoView({ block: 'start' })
+      document.getElementById(`track-name-${nodeTrack}`)?.focus({ preventScroll: true })
+    }
+  })
+  dock.slot('node').append(nodeView.element)
 
   let chainTrack = null
   const chain = createChainSummary(document, {
@@ -78,7 +109,20 @@ export function createDockPanel (ctx) {
       else log(result.message, 'error')
     }
   })
-  dock.slot('track').append(trackPanel.element, chain.element)
+  // Output and sends of the selected track, as ordinary Ops: the model refuses a loop
+  // of tracks, and the reason is logged as it came.
+  const apply = changes => {
+    const result = ctx.dispatcher.apply(changes)
+    if (!result.ok) log(result.message, 'error')
+  }
+  const sendsPanel = createSendsPanel(document, {
+    onOutput: to => apply([{ op: 'setTrack', id: chainTrack, output: to }]),
+    onAdd: to => apply([{ op: 'addSend', from: chainTrack, to, level: 1, tap: 'post' }]),
+    onLevel: (id, level) => apply([{ op: 'setSend', id, level }]),
+    onTap: (id, tap) => apply([{ op: 'setSend', id, tap }]),
+    onRemove: id => apply([{ op: 'removeSend', id }])
+  })
+  dock.slot('track').append(trackPanel.element, sendsPanel.element, chain.element)
 
   const trackLabel = track => {
     const { project } = ctx.dispatcher
@@ -100,6 +144,26 @@ export function createDockPanel (ctx) {
     }
     // Nothing else is editing a clip, so the roll stops holding one.
     if (arrangement.rollClipId !== null) arrangement.hideRoll()
+
+    const node = selection.kind === 'node' && only ? project?.node(only) : null
+    if (node) {
+      const labelOf = id => { const n = project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id }
+      const tl = id => trackLabel(project.track(id))
+      nodeTrack = node.track
+      nodeView.show({
+        node,
+        label: labelOf(node.id),
+        trackLabel: tl(node.track),
+        profile: ctx.dispatcher.engineNode(node.id)?.profile,
+        connections: project.connections.filter(c => c.from.node === node.id || c.to.node === node.id),
+        others: project.nodes.filter(n => n.id !== node.id).map(n => ({
+          node: n, profile: ctx.dispatcher.engineNode(n.id)?.profile, label: labelOf(n.id), trackLabel: tl(n.track)
+        })),
+        labelFor: labelOf
+      })
+      dock.show('node', `Editor: ${labelOf(node.id)}`)
+      return
+    }
 
     if (selection.kind === 'track' && selection.size > 1 && project) {
       const tracks = selection.ids.map(id => project.track(id)).filter(Boolean)
@@ -137,6 +201,14 @@ export function createDockPanel (ctx) {
         labelOf,
         midiInputLabel: track.midiInput ? named(track.midiInput) : null,
         audioInputLabel: track.audioInput ? named(track.audioInput) : null
+      })
+      const asOption = t => ({ id: t.id, label: trackLabel(t) })
+      sendsPanel.show({
+        label: trackLabel(track),
+        output: track.output,
+        outputOptions: outputTargets(project, track.id).map(asOption),
+        sends: project.sends.filter(s => s.from === track.id).map(s => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), level: s.level, tap: s.tap })),
+        addOptions: sendTargets(project, track.id).map(asOption)
       })
       dock.show('track', `Editor: ${trackLabel(track)}`)
     } else {

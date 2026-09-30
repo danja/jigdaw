@@ -26,6 +26,21 @@ documents say.
 
 Rests on: [host-plugin-contract.md](host-plugin-contract.md), `src/host/PluginLoader.js`.
 
+### A simple page beside the studio
+
+**Built, first version.** `simple.html` is a second front end over the same engine and panels: six
+tunes as big buttons, Play, a Speed slider, and a card per track with On and Off and its plugins'
+generated controls, usable while it plays. Not yet tried on a phone.
+
+### Installs, and works with the server gone
+
+**Built.** Jiggy is an installable web app with one service worker. With the server stopped, the
+page, the presets and every plugin already opened load from the cache and play, and each plugin
+is still checked against its digest: an altered cached file fails to load. Checked on a desktop
+browser only; a phone is not yet tried.
+
+Rests on: [pwa.md](pwa.md), `web/sw.js`, `tests/web/Pwa.test.js`.
+
 ### Verified before it runs
 
 **Built.** Every resource is checked against its SHA-384 digest before it is instantiated, with
@@ -51,10 +66,14 @@ Rests on: [project-format.md](project-format.md), `src/rdf/ProjectWriter.js`.
 ### Routing is the model
 
 **Built in the model, partly in sound.** A track holds plugins joined by named connections, audio
-and MIDI both, with latency declared by each plugin and compensated across parallel paths.
-Sends, bus outputs, a master, markers, regions, signature changes and envelopes are in the
-format, refused when they would loop, and undoable. The compiler and scheduler do not yet act
-on sends, bus outputs or envelopes.
+and MIDI both, with latency declared by each plugin and compensated across parallel paths. Each
+track's chain is drawn under its lane with what each plugin takes, gives and sends, including
+sends to plugins on other tracks, and a plugin can be connected to any compatible port on any
+track from the dock. A Routing tab lays every output against every input as one keyboard-navigable table. Loops of MIDI connections are refused.
+Sends (before or after the fader), bus outputs and a master strip are in the format, act on the
+audio, are refused when they would loop, and are undoable. Markers, regions, signature changes
+and envelopes are in the format too; the scheduler does not yet act on envelopes or signature
+changes.
 
 The others give a track a fixed chain and treat routing as a send level. openDAW has a richer
 device model than that (effect stacks and layers are in its plans) and it is ahead on

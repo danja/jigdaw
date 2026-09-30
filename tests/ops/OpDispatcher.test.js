@@ -65,6 +65,26 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
       this.channels.delete(id)
     },
     trackIds () { return [...this.tracks] },
+    // Sends, bus outputs and the master, refusing what the real engine refuses.
+    sends: [],
+    outputs: new Map(),
+    master: null,
+    clearSends () { this.sends = [] },
+    addSend (id, from, to, options) {
+      for (const t of [from, to]) if (!this.tracks.has(t)) throw new Error(`no such track strip: ${t}`)
+      this.sends.push({ id, from, to, ...options })
+    },
+    setTrackOutput (id, to) {
+      if (!this.tracks.has(id) || (to !== null && !this.tracks.has(to))) throw new Error(`no such track strip: ${to ?? id}`)
+      this.outputs.set(id, to)
+    },
+    setMaster (m) { this.master = { ...m } },
+    // Track delays, refusing what the real engine refuses: a strip that is not there.
+    delays: new Map(),
+    setTrackDelay (id, frames) {
+      if (!this.tracks.has(id)) throw new Error(`no such track strip: ${id}`)
+      this.delays.set(id, frames)
+    },
     linkToTrack (from, track) {
       if (!this.tracks.has(track)) throw new Error(`no such track strip: ${track}`)
       this.links.push({ from, to: 'track', track })
@@ -109,7 +129,11 @@ const trackStrips = () => {
     removeTrack: id => ids.delete(id),
     trackIds: () => [...ids],
     linkToTrack: () => {},
-    setTrackChannel: () => {}
+    setTrackChannel: () => {},
+    clearSends: () => {},
+    addSend: () => {},
+    setTrackOutput: () => {},
+    setMaster: () => {}
   }
 }
 
@@ -311,7 +335,105 @@ describe('how late each track is', () => {
     const d = new OpDispatcher({ engine: fakeEngine() })
     d.apply([{ op: 'addTrack', id: 'one' }])
     await d.addPlugin(IRI, { track: 'one' })
-    expect(d.trackLatencies()).toEqual([{ trackId: 'one', frames: 0 }])
+    expect(d.trackLatencies()).toEqual([{ trackId: 'one', frames: 0, alignFrames: 0 }])
+  })
+})
+
+describe('aligning tracks', () => {
+  async function twoTracks (options = {}) {
+    const engine = fakeEngine({ latency: 512 })
+    const d = new OpDispatcher({ engine, ...options })
+    d.apply([{ op: 'addTrack', id: 'slow' }, { op: 'addTrack', id: 'fast' }, { op: 'addTrack', id: 'empty' }])
+    const a = (await d.addPlugin(IRI, { track: 'slow' })).nodeId
+    const b = (await d.addPlugin(IRI, { track: 'slow' })).nodeId
+    d.apply([edge(a, b)])
+    await d.addPlugin(IRI, { track: 'fast' })
+    return { d, engine }
+  }
+
+  it('delays the faster tracks by the difference to the slowest, when on', async () => {
+    const { d, engine } = await twoTracks({ alignTracks: true })
+    expect(Object.fromEntries(engine.delays)).toEqual({ fast: 512, empty: 1024 })
+    expect(d.trackLatencies().find(t => t.trackId === 'fast')).toEqual({ trackId: 'fast', frames: 512, alignFrames: 512 })
+  })
+
+  it('does nothing to the engine when off, and says no track needs aligning', async () => {
+    const { d, engine } = await twoTracks()
+    expect(engine.delays.size).toBe(0)
+    expect(d.trackLatencies().every(t => t.alignFrames === 0)).toBe(true)
+  })
+
+  it('turning it on gives every track its delay, and turning it off takes them away', async () => {
+    const { d, engine } = await twoTracks()
+    d.setAlignTracks(true)
+    expect(d.alignTracks).toBe(true)
+    expect(engine.delays.get('fast')).toBe(512)
+    d.setAlignTracks(false)
+    expect(engine.delays.get('fast')).toBe(0)
+    expect(engine.delays.get('empty')).toBe(0)
+  })
+
+  it('follows an edit: a new plugin on the fast track changes what it needs', async () => {
+    const { d, engine } = await twoTracks({ alignTracks: true })
+    const [x] = d.project.nodes.filter(n => n.track === 'fast')
+    const y = (await d.addPlugin(IRI, { track: 'fast' })).nodeId
+    d.apply([edge(x.id, y)])
+    expect(engine.delays.get('fast')).toBe(0)
+  })
+
+  it('forgets a track that has gone, and a track brought back starts with none', async () => {
+    const { d, engine } = await twoTracks({ alignTracks: true })
+    d.apply([{ op: 'removeTrack', id: 'empty' }])
+    d.apply([{ op: 'addTrack', id: 'empty' }])
+    expect(engine.delays.get('empty')).toBe(1024)
+  })
+
+  it('reports an alignment the engine cannot do, and leaves the graph as it was', async () => {
+    const engine = fakeEngine({ latency: 512 })
+    engine.setTrackDelay = () => { throw new Error('more than this host allows') }
+    const d = new OpDispatcher({ engine, alignTracks: true })
+    const errors = []
+    const original = console.error
+    console.error = m => errors.push(m)
+    try {
+      d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+      await d.addPlugin(IRI, { track: 'a' })
+      expect(errors.some(m => /could not align track b: more than this host allows/.test(m))).toBe(true)
+      expect(d.project.tracks).toHaveLength(2)
+    } finally { console.error = original }
+  })
+})
+
+describe('sends, bus outputs and the master reach the engine', () => {
+  it('makes each send in the engine from the model, with its level and tap, and again after an edit', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }, { op: 'addSend', id: 's1', from: 'a', to: 'b', level: 0.4, tap: 'pre' }])
+    expect(engine.sends).toEqual([{ id: 's1', from: 'a', to: 'b', level: 0.4, tap: 'pre' }])
+    d.apply([{ op: 'setSend', id: 's1', level: 0.9 }])
+    expect(engine.sends).toEqual([{ id: 's1', from: 'a', to: 'b', level: 0.9, tap: 'pre' }])
+    d.apply([{ op: 'removeSend', id: 's1' }])
+    expect(engine.sends).toEqual([])
+  })
+
+  it('sets a track output as a bus, and back to the master when the bus goes', () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'bus' }, { op: 'setTrack', id: 'a', output: 'bus' }])
+    expect(engine.outputs.get('a')).toBe('bus')
+    d.apply([{ op: 'removeTrack', id: 'bus' }])
+    expect(engine.outputs.get('a')).toBeNull()
+  })
+
+  it('passes the master through, and undo puts the send back', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+    d.apply([{ op: 'setMaster', gain: 0.5, pan: -0.25, muted: true }, { op: 'addSend', id: 's1', from: 'a', to: 'b' }])
+    expect(engine.master).toEqual({ gain: 0.5, pan: -0.25, muted: true })
+    await d.undo()
+    expect(engine.sends).toEqual([])
+    expect(engine.master).toEqual({ gain: 1, pan: 0, muted: false })
   })
 })
 

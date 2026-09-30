@@ -239,3 +239,25 @@ describe('what the server does not serve', () => {
       'a . segment normalises away and is not an escape').toBe(200)
   })
 })
+
+describe('what an installed app needs from the server', () => {
+  const typeOf = async path => {
+    const res = await ask(path)
+    return { status: res.status, type: res.valuesOf('content-type')[0], cache: res.valuesOf('cache-control')[0] }
+  }
+
+  it('serves the manifest as a manifest and the icons as images', async () => {
+    expect(await typeOf('/manifest.webmanifest')).toMatchObject({ status: 200, type: 'application/manifest+json; charset=utf-8' })
+    expect(await typeOf('/icons/icon-192.png')).toMatchObject({ status: 200, type: 'image/png' })
+  })
+
+  it('tells a browser to check the worker, its precache list and the manifest every time', async () => {
+    for (const path of ['/sw.js', '/precache.js', '/manifest.webmanifest']) {
+      expect((await typeOf(path)).cache, path).toBe('no-cache')
+    }
+  })
+
+  it('does not put no-cache on everything, which would defeat the cache it feeds', async () => {
+    expect((await typeOf('/app.bundle.js')).cache).toBeUndefined()
+  })
+})

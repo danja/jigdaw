@@ -30,7 +30,7 @@ function build () {
   const calls = []
   const record = name => (...args) => calls.push([name, ...args])
   const timeline = createTimeline(document, {
-    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
   })
   document.body.append(timeline.element)
   timeline.draw({
@@ -168,7 +168,7 @@ describe('zoom and snap, from a TimeView the page can share', () => {
     const calls = []
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
-      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { view })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: t => !t.midiInput })
@@ -309,7 +309,7 @@ describe('selection', () => {
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
       onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
-      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { selection })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
@@ -363,7 +363,7 @@ describe('the loop', () => {
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
       onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
-      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack')
+      onOpen: record('open'), onRemove: record('remove'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { view })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, loop })
@@ -488,7 +488,7 @@ describe('an empty arrangement', () => {
   it('says what to do and offers it as buttons that run the given requests', () => {
     const ran = []
     const timeline = createTimeline(document, {
-      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
     })
     document.body.append(timeline.element)
     timeline.draw({
@@ -504,11 +504,64 @@ describe('an empty arrangement', () => {
 
   it('still says something with no actions given', () => {
     const timeline = createTimeline(document, {
-      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
     })
     document.body.append(timeline.element)
     timeline.draw({ tracks: [], clips: [], beatsPerBar: 4, labelFor: () => '', playsIntoNothing: () => false })
     expect(document.querySelector('.empty p').textContent).toMatch(/No tracks yet/)
     expect(document.querySelectorAll('.empty button')).toHaveLength(0)
+  })
+})
+
+describe('the chain under each lane', () => {
+  const chainFor = track => ({
+    trackId: track.id,
+    nodes: track.id === 't1'
+      ? [{ id: 'n1', label: 'Synth', loaded: true, failed: null, takes: ['MIDI'], gives: ['audio'], takesMidiFromTrack: true, takesAudioFromTrack: false, sends: [], receives: [] }]
+      : []
+  })
+  const buildChain = selection => {
+    const timeline = createTimeline(document, {
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
+    }, { selection })
+    document.body.append(timeline.element)
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, chainFor })
+    return timeline
+  }
+
+  it('draws a strip for a track with plugins and leaves out one with none', () => {
+    buildChain(new Selection())
+    const strips = [...document.querySelectorAll('.timeline-chain')]
+    expect(strips.map(s => s.hidden)).toEqual([false, true])
+    expect(document.getElementById('chain-n1').textContent).toBe('Synth')
+  })
+
+  it('selects a plugin from its button, marks it, and keeps the button across a redraw', () => {
+    const selection = new Selection()
+    const timeline = buildChain(selection)
+    const chip = document.getElementById('chain-n1')
+    chip.dispatchEvent(event('click'))
+    expect(selection.has('node', 'n1')).toBe(true)
+    expect(chip.getAttribute('aria-pressed')).toBe('true')
+    selection.set('clip', ['c1'])
+    expect(chip.getAttribute('aria-pressed')).toBe('false')
+    timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, chainFor })
+    expect(document.querySelectorAll('.chain-node')).toHaveLength(1)
+  })
+
+  it('has a Routing button that says whether the chains are shown', () => {
+    buildChain(new Selection())
+    const button = [...document.querySelectorAll('.timeline-tools button')].find(b => b.textContent === 'Routing')
+    expect(button.getAttribute('aria-pressed')).toBe('true')
+    button.dispatchEvent(event('click'))
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+    expect(document.querySelector('.timeline').dataset.routing).toBe('off')
+  })
+
+  it('keeps the header and lane side by side above the chain', () => {
+    buildChain(new Selection())
+    const row = document.querySelector('.timeline-row')
+    expect([...row.children].map(c => c.className)).toEqual(['timeline-body', 'timeline-chain'])
+    expect([...row.querySelector('.timeline-body').children].map(c => c.className.split(' ')[0])).toEqual(['timeline-head', 'timeline-lane'])
   })
 })

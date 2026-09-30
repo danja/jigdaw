@@ -23,7 +23,8 @@ export default defineConfig({
       'tests/mcp/**/*.test.js',
       'tests/native/**/*.test.js',
       'tests/server/**/*.test.js',
-      'tests/jsfx/**/*.test.js'
+      'tests/jsfx/**/*.test.js',
+      'tests/web/**/*.test.js'
     ]
   }
 })

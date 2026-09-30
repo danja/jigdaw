@@ -130,7 +130,9 @@ code would make the consent meaningless.
 
 **The virtual origin is built and has been run.** `web/foreign/sw.js` serves a verified
 container from a scoped path and never calls `fetch`; `src/host/ForeignOrigin.js` registers it
-and installs a container. `web/foreign/probe.html` is the check, because none of this is
+(as part of `web/sw.js`, the one worker for the folder, see [pwa.md](pwa.md)) and installs a
+container. Its prefix and registration are derived from the page's base, so a host at the root and
+one under a path such as `/jigdaw/` behave the same. `web/foreign/probe.html` is the check, because none of this is
 reachable from a test in this repository: open it and press the button.
 
 Its two inputs are built rather than committed, because they come from

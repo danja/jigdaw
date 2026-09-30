@@ -8,6 +8,8 @@ import { createTimeline } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { mixable } from '../../src/ui/Mixer.js'
+import { describeChain } from '../../src/ui/ChainModel.js'
+import { describeRouting } from '../../src/ui/SendsModel.js'
 
 export function createArrangement (ctx) {
   const { document, $, log } = ctx
@@ -37,6 +39,7 @@ export function createArrangement (ctx) {
     // The timeline has already selected it; the dock shows what that calls for.
     onOpen: id => openClip(id),
     onSetLoop: range => ctx.transport.setLoopRange(range),
+    onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
     onChannel: (trackId, change) => {
@@ -110,7 +113,7 @@ export function createArrangement (ctx) {
     const { clipPlayer } = ctx
     const restore = preserveFocus(timeline.element)
     const nodes = project?.nodes ?? []
-    const latencies = new Map((ctx.dispatcher?.trackLatencies() ?? []).map(l => [l.trackId, l.frames]))
+    const latencies = new Map((ctx.dispatcher?.trackLatencies() ?? []).map(l => [l.trackId, l]))
     const sampleRate = ctx.engine?.context.sampleRate ?? null
     const silent = new Map((ctx.dispatcher?.audibility() ?? []).map(a => [a.trackId, a.silent]))
     timeline.draw({
@@ -131,9 +134,18 @@ export function createArrangement (ctx) {
         ]
       },
       layoutFor: track => project.trackLayout(track.id),
+      chainFor: track => describeChain(project, track.id, {
+        profileOf: id => ctx.dispatcher.engineNode(id)?.profile,
+        labelOf: id => { const n = project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id },
+        failedOf: id => ctx.dispatcher.engineNode(id)?.failed ?? null,
+        trackLabelOf: id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
+      }),
+      routingFor: track => describeRouting(project, track.id, id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
+      canArm: track => Boolean(track.midiInput),
+      armed: track => ctx.midiIn.armed(track.id),
       latencyFor: track => {
         const found = latencies.get(track.id)
-        return found === undefined ? null : { frames: found, ms: sampleRate ? (found / sampleRate) * 1000 : null }
+        return found === undefined ? null : { frames: found.frames, alignFrames: found.alignFrames, rate: sampleRate }
       },
       loop: project ? { start: project.transport.loopStart, end: project.transport.loopEnd, enabled: project.transport.loopEnabled } : null,
       labelFor: labelOfTrack,
@@ -159,7 +171,7 @@ export function createArrangement (ctx) {
       else pianoRoll.hide()
     }
     // A clip or track that has gone leaves the selection, and the dock follows.
-    ctx.selection.prune((kind, id) => (kind === 'clip' ? project?.clip(id) : project?.track(id)) != null)
+    ctx.selection.prune((kind, id) => (kind === 'clip' ? project?.clip(id) : kind === 'node' ? project?.node(id) : project?.track(id)) != null)
     ctx.dock.update()
   }
 

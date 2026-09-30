@@ -187,6 +187,8 @@ export function createRack (ctx) {
     restoreMixerFocus()
     drawTargets()
     ctx.arrangement.draw(tracks, labelOfTrack)
+    ctx.matrix.draw()
+    ctx.master.update()
 
     if (tracks.length === 0) {
       const empty = document.createElement('div')

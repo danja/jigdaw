@@ -6,12 +6,16 @@ import { dirname, resolve } from 'node:path'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const result = await build({
-  entryPoints: [resolve(root, 'web/app.js')],
+  // The studio page and the simple page: two front ends over the same modules.
+  entryPoints: {
+    'app.bundle': resolve(root, 'web/app.js'),
+    'simple.bundle': resolve(root, 'web/simple.js')
+  },
   bundle: true,
   format: 'esm',
   platform: 'browser',
   target: 'es2022',
-  outfile: resolve(root, 'web/app.bundle.js'),
+  outdir: resolve(root, 'web'),
   sourcemap: true,
   // See web/shims/stream.js: unreachable code paths in two RDF dependencies.
   alias: {
@@ -22,5 +26,6 @@ const result = await build({
   metafile: true
 })
 
-const bytes = Object.values(result.metafile.outputs)[0].bytes
-console.log(`web/app.bundle.js: ${(bytes / 1024).toFixed(0)} KB`)
+for (const [file, { bytes }] of Object.entries(result.metafile.outputs)) {
+  if (file.endsWith('.js')) console.log(`${file}: ${(bytes / 1024).toFixed(0)} KB`)
+}

@@ -22,8 +22,18 @@ export const HOST_CONFIG_KEYS = Object.freeze({
   // loopback port it listens on and the page connects to, and how long a tool
   // call waits for the page. A plugin load can take seconds.
   bridgePort: 'a TCP port, 1 to 65535',
-  bridgeCallTimeoutMs: 'a whole number of milliseconds, at least 1'
+  bridgeCallTimeoutMs: 'a whole number of milliseconds, at least 1',
+  // Delay each track by however much less latency it has than the slowest, so
+  // parallel tracks arrive together (docs/latency.md, "Between tracks"). This is
+  // the starting value; a person can change it on the Mixer tab, and that choice
+  // is remembered in their browser and wins over this file.
+  alignTracks: 'true or false',
+  // The longest delay a track can be given to align it, which is the largest
+  // latency difference between two tracks the page can put right.
+  maxTrackDelayMs: 'a whole number of milliseconds, at least 1'
 })
+
+const BOOLEAN_KEYS = new Set(['alignTracks'])
 
 /** Check a parsed web/host.json and return the settings, frozen. */
 export function readHostConfig (json) {
@@ -32,6 +42,11 @@ export function readHostConfig (json) {
   for (const [key, what] of Object.entries(HOST_CONFIG_KEYS)) {
     const value = json[key]
     if (value === undefined) throw new Error(`web/host.json has no ${key}: it must be ${what}`)
+    if (BOOLEAN_KEYS.has(key)) {
+      if (typeof value !== 'boolean') throw new Error(`web/host.json ${key} is ${JSON.stringify(value)}: it must be ${what}`)
+      settings[key] = value
+      continue
+    }
     if (!Number.isInteger(value) || value < 1) throw new Error(`web/host.json ${key} is ${JSON.stringify(value)}: it must be ${what}`)
     settings[key] = value
   }

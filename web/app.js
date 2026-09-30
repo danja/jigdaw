@@ -20,6 +20,7 @@ import { createRack } from './app/Rack.js'
 import { createEditors } from './app/Editors.js'
 import { createArrangement } from './app/Arrangement.js'
 import { createDockPanel } from './app/Dock.js'
+import { createMatrix } from './app/Matrix.js'
 import { Selection } from '../src/model/Selection.js'
 import { createLoading } from './app/Loading.js'
 import { createBrowser } from './app/Browser.js'
@@ -28,6 +29,10 @@ import { createHistory } from './app/History.js'
 import { createAgent } from './app/Agent.js'
 import { createBridgeLink } from './app/Bridge.js'
 import { createLayout } from './app/Layout.js'
+import { createMidiIn } from './app/MidiIn.js'
+import { createAlign } from './app/Align.js'
+import { createMaster } from './app/Master.js'
+import { createPwa } from './app/Pwa.js'
 
 const $ = id => document.getElementById(id)
 
@@ -58,6 +63,7 @@ const ctx = {
   expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine } }
 }
 ctx.media = createMedia(document)
+ctx.align = createAlign(ctx)
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.record = createRecord(ctx)
@@ -65,6 +71,9 @@ ctx.editors = createEditors(ctx)
 ctx.selection = new Selection()
 ctx.dock = createDockPanel(ctx)
 ctx.arrangement = createArrangement(ctx)
+ctx.matrix = createMatrix(ctx)
+ctx.master = createMaster(ctx)
+ctx.pwa = createPwa(ctx)
 ctx.rack = createRack(ctx)
 ctx.loading = createLoading(ctx)
 ctx.browser = createBrowser(ctx)
@@ -73,6 +82,7 @@ ctx.history = createHistory(ctx)
 ctx.agent = createAgent(ctx)
 ctx.bridge = createBridgeLink(ctx)
 ctx.layout = createLayout(ctx)
+ctx.midiIn = createMidiIn(ctx)
 
 const { loading, browser, transport } = ctx
 
@@ -105,9 +115,14 @@ $('signature').addEventListener('change', async () => {
 ctx.sessions.mount()
 ctx.history.mount()
 ctx.arrangement.mount()
+ctx.matrix.mount()
+ctx.master.mount()
+ctx.pwa.mount()
 ctx.rack.mount()
 ctx.bridge.mount()
 ctx.layout.mount()
+ctx.midiIn.mount()
+ctx.align.mount()
 
 // Show the whole IRI, not a path. A plugin is identified by an absolute IRI,
 // and the box is the clearest place to say so: what goes in it is the same
@@ -134,6 +149,7 @@ if (linked) {
 ctx.tabs = createTabs(document, [
   { id: 'arrangement', label: 'Arrangement', panel: $('arrangement-panel') },
   { id: 'tracks', label: 'Plugins', panel: $('tracks-panel') },
+  { id: 'routing', label: 'Routing', panel: $('routing-panel') },
   { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') }
 ])
 $('tabs-mount').append(ctx.tabs.element)

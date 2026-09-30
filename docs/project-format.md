@@ -211,9 +211,13 @@ Three rules the shapes cannot say, and the model enforces:
 Removing a track removes the sends that touch it and clears outputs that name it. Removing a
 node removes its envelopes.
 
-Status of behaviour: the host reads, writes, edits, undoes and validates all of this. The
-compiler and scheduler do not yet act on sends, bus outputs, envelopes or signature changes,
-and the master strip does not yet reach the destination gain.
+Status of behaviour: the host reads, writes, edits, undoes and validates all of this. Sends,
+bus outputs and the master reach the audio: a send is a gain into another track's arrival
+point, taken before or after the fader; a bus output feeds a track's strip into another's
+instead of the master; the master's level, pan and mute act on everything that reaches the
+speakers. Envelopes and signature changes are not yet acted on by the scheduler. A track's
+alignment delay (latency.md, "Between tracks") does not yet count the latency of a bus it
+feeds.
 
 ## Revision
 

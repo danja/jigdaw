@@ -34,6 +34,7 @@
 // by the page.
 
 import { createTrackHeader } from './TrackHeader.js'
+import { createChainStrip } from './ChainStrip.js'
 import { Selection } from '../model/Selection.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT, GRIDS } from './TimeView.js'
 
@@ -66,11 +67,12 @@ export function describeClip (clip, { beatsPerBar, playsIntoNothing = false }) {
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
  * - `onOpen(clipId)` and `onRemove(clipId)`.
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
+ * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack })) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
   const element = document.createElement('div')
@@ -116,12 +118,21 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     followButton.setAttribute('aria-pressed', String(on))
   }
   setFollow(true)
+  // Whether each track's chain of plugins is drawn under its lane.
+  let routing = true
+  const routingButton = tool('Routing', () => setRouting(!routing))
+  const setRouting = on => {
+    routing = on
+    routingButton.setAttribute('aria-pressed', String(on))
+    element.dataset.routing = on ? 'on' : 'off'
+  }
   tools.append(
     tool('Zoom out', () => zoom(1 / 1.5)),
     tool('Zoom in', () => zoom(1.5)),
     tool('Fit', () => fit()),
-    followButton, zoomStatus, snapLabel)
+    followButton, routingButton, zoomStatus, snapLabel)
   element.append(tools, scroller)
+  setRouting(true)
   // Where the transport is. Drawn over the lanes, never read: the position
   // readout in the transport bar says the same in words.
   const head = document.createElement('div')
@@ -289,6 +300,9 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       button.classList.toggle('selected', on)
       button.setAttribute('aria-current', String(on))
     }
+    for (const chip of scroller.querySelectorAll('.chain-node')) {
+      chip.setAttribute('aria-pressed', String(selection.has('node', chip.id.replace(/^chain-/, ''))))
+    }
     for (const [id, entry] of rows) {
       const on = selection.has('track', id)
       entry.header.element.classList.toggle('selected', on)
@@ -315,11 +329,15 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
 
   function draw (args) {
     lastArgs = args
+    // How much of the lanes is on screen, for anything that must wrap inside it.
+    scroller.style.setProperty('--view', `${scroller.clientWidth}px`)
     const {
       tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null,
       mixable = () => true, silent = () => false, loop = null,
       layoutFor = () => ({ color: null, laneSize: 'medium' }),
       latencyFor = () => null,
+      chainFor = () => ({ nodes: [] }),
+      canArm = () => false, armed = () => false, routingFor = () => null,
       empty: emptyState = { text: 'No tracks yet. Load a plugin and its track appears here.', actions: [] }
     } = args
     const lastBeat = Math.max(0, ...clips.map(c => c.startBeat + c.lengthBeats))
@@ -379,13 +397,18 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.className = 'timeline-row'
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm,
           onSelect: (id, { toggle }) => (toggle ? selection.toggle('track', id) : selection.set('track', [id]))
         })
         const lane = document.createElement('div')
         lane.className = 'timeline-lane'
-        row.append(header.element, lane)
-        entry = { row, header, lane }
+        // The header and lane sit side by side; the chain strip is under both.
+        const body = document.createElement('div')
+        body.className = 'timeline-body'
+        body.append(header.element, lane)
+        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]) })
+        row.append(body, strip.element)
+        entry = { row, header, lane, strip }
         rows.set(track.id, entry)
       }
       const own = clips.filter(c => c.track === track.id)
@@ -398,8 +421,9 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       if (layout.color) entry.row.style.setProperty('--track-color', layout.color); else entry.row.style.removeProperty('--track-color')
       entry.header.update({
         label, channel: track.channel ?? {}, mixable: mixable(track), silent: silent(track), at, where: barBeat(at, beatsPerBar), selected: selection.has('track', track.id),
-        color: layout.color, size: layout.laneSize, latency: latencyFor(track)
+        color: layout.color, size: layout.laneSize, latency: latencyFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
       })
+      entry.strip.update(chainFor(track), { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
       entry.lane.style.width = `${width}px`
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`
       entry.lane.replaceChildren(...own.map(clip => clipButton(clip, {

@@ -84,6 +84,7 @@ authority where any other page, including this one, disagrees with them.
 | [project-format.md](project-format.md) | The session graph: nodes, connections, settings, transport. |
 | [track-view-terms.md](track-view-terms.md) | Proposed terms for master, sends, markers, automation and buses. Not yet normative. |
 | [usp.md](usp.md) | What sets Jiggy apart from openDAW, webdaw and GridSound, and where it is behind. |
+| [pwa.md](pwa.md) | Jiggy as an installable app: one service worker, what is cached, updates. |
 | [webmcp.md](webmcp.md) | The agent tool surface. |
 | [namespace.md](namespace.md) | What the vocabulary IRIs serve, and why a term answers 303. |
 | [architecture.md](architecture.md) | The layers, and the reasoning behind each decision. |

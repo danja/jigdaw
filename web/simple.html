@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14171d">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="panel.css">
+<title>Jiggy, simple</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#a3abb8;
+    --line:#2a2f38; --accent:#3e8ef7; --ok:#7ddc8e; --err:#ff8a8a;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:18px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  :focus-visible { outline:3px solid #7fb3ff; outline-offset:2px; }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  header, main { max-width:60rem; margin:0 auto; padding:16px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+  header h1 { font-size:26px; margin:0; flex:1 1 auto; }
+  h2 { font-size:22px; margin:28px 0 12px; }
+  a { color:#8fc0ff; }
+  button, select { font:inherit; min-height:56px; padding:0 22px; background:#242a33; color:var(--fg);
+    border:2px solid var(--line); border-radius:12px; cursor:pointer; }
+  button:hover { background:#2d343f; }
+  button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .note { color:var(--dim); font-size:16px; margin:6px 0; }
+  /* The tunes: big buttons in a grid. */
+  .tunes { list-style:none; margin:0; padding:0; display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); }
+  .tune { width:100%; min-height:72px; font-size:20px; text-align:left; }
+  /* Playing: one big button. */
+  .player { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:16px; background:var(--panel);
+    border:2px solid var(--line); border-radius:16px; }
+  .player button { min-width:9rem; min-height:72px; font-size:24px; font-weight:600; }
+  .speed { display:flex; align-items:center; gap:12px; flex:1 1 16rem; }
+  .speed input { flex:1; min-height:56px; }
+  .meter { display:flex; gap:4px; align-items:flex-end; height:36px; }
+  .meter i { display:block; width:8px; background:#232a33; border-radius:2px; height:100%; }
+  .meter i.on { background:var(--ok); }
+  .meter i.hot { background:var(--err); }
+  /* One card per track. */
+  .cards { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+  .card { background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:12px 16px; }
+  .card.off { opacity:.7; }
+  .card-head { display:flex; align-items:center; gap:12px; }
+  .card-head h3 { margin:0; flex:1; font-size:22px; }
+  .switch { min-width:6rem; font-weight:600; }
+  details { margin-top:8px; }
+  summary { min-height:56px; display:flex; align-items:center; cursor:pointer; color:#8fc0ff; }
+  .loud { display:flex; align-items:center; gap:12px; margin:8px 0; flex-wrap:wrap; }
+  .loud input { flex:1 1 10rem; min-height:56px; }
+  .value { font-variant-numeric:tabular-nums; color:var(--dim); font-size:15px; }
+  .plugin { border-top:1px solid var(--line); padding-top:8px; margin-top:8px; }
+  .plugin h4 { margin:0 0 4px; font-size:19px; }
+  .about { color:var(--dim); font-size:16px; margin:0 0 8px; }
+  .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+  .actions a { display:inline-flex; align-items:center; min-height:56px; }
+  #status { min-height:1.5em; color:var(--dim); font-size:16px; }
+  #status.error { color:var(--err); }
+  @media (max-width:520px) {
+    body { font-size:18px; }
+    .player button { flex:1 1 40%; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Jiggy</h1>
+  <button id="install" type="button" hidden>Install app</button>
+  <span id="net-state" class="note" role="status"></span>
+</header>
+
+<main>
+  <p id="update-notice" class="note" role="status" hidden></p>
+  <p id="status" role="status"></p>
+
+  <section aria-labelledby="pick">
+    <h2 id="pick">Pick a tune</h2>
+    <div id="tunes-mount"></div>
+    <p class="note">Choosing one starts a new piece. Then press Play.</p>
+  </section>
+
+  <section id="now" aria-labelledby="playing" hidden>
+    <h2 id="playing">Now playing</h2>
+    <div class="player">
+      <button id="play" type="button" aria-pressed="false">Play</button>
+      <button id="stop" type="button">Stop</button>
+      <div class="speed">
+        <label for="tempo">Speed</label>
+        <input type="range" id="tempo" min="50" max="200" step="1" value="120">
+        <span id="tempo-value" class="value"></span>
+      </div>
+      <span class="meter" id="meter" role="img" aria-label="How loud it is"></span>
+      <span id="position" class="visually-hidden"></span>
+    </div>
+
+    <h2>The instruments</h2>
+    <p class="note">Turn one off to hear the rest. Open "Change the sound" to play with it while the music goes.</p>
+    <div id="cards-mount"></div>
+
+    <div class="actions">
+      <button id="save" type="button">Save my piece</button>
+      <a href="./">Open the full studio</a>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="simple.bundle.js"></script>
+</body>
+</html>

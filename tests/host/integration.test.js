@@ -490,7 +490,10 @@ suite('what reaches the speakers, with real plugins', () => {
     // And the plugin reaches the master through its track's fader, not around it.
     const fader = engine.trackInput(only.trackId)
     expect(only.entry.node.connections.map(c => c.destination)).toEqual([fader])
-    expect(engine.master.incoming).toEqual([fader])
+    // The master's own pan sits in front of it, and the track's strip feeds that.
+    expect(engine.master.incoming).toHaveLength(1)
+    const masterPan = engine.master.incoming[0]
+    expect(masterPan.incoming).toHaveLength(1)
   })
 
   it('connects the end of a real chain and not its middle', async () => {

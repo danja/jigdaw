@@ -63,46 +63,31 @@ and a host that claims otherwise is wrong.
 ## Between tracks
 
 Compensation in section 3 aligns the paths inside one graph, joined by connections. Tracks are
-not joined by connections: each track's output goes to its own fader and then to the master.
-Jiggy therefore does not align one track to another. A track holding a plugin that declares
-2047 frames of latency sounds 2047 frames later at the master than a track with none, and
-nothing corrects it. The header of each track says its latency in frames and milliseconds, so
-this is visible, and `OpDispatcher.trackLatencies()` reports it. Whether a host should also delay
-the faster tracks is an open decision, listed in TODO.md, because it changes what a person
-hears and this document has not yet said it MUST.
+not joined by connections: each track's output goes to its own fader and then to the master. So
+a track holding a plugin that declares 2047 frames of latency arrives at the master 2047 frames
+later than a track with none, unless the host does something about it.
 
-## 4. Feedback
+A host SHOULD delay each track that has less latency than the slowest by the difference, at the
+track's output, so parallel tracks arrive together, and SHOULD let the person turn this off. A
+track's latency is the longest latency along its chain, counting what section 3 found ahead of
+each plugin. The delay is applied at the end of the track, after its fader, so what a take
+recorder hears from a track is the track as it was made. The host MUST say how much each track
+was delayed, and what the setting is.
 
-A path that returns to its own source has no accumulated latency, because the computation
-does not terminate. So section 3 cannot be applied to a cycle, and the question is what
-happens instead.
+Jiggy does this by default. `alignTracks` in `web/host.json` is the starting value, the
+checkbox on the Mixer tab changes it and is remembered in the person's browser, and each
+track's header says its own latency and how much it was delayed to line up. The largest
+delay it can give is `maxTrackDelayMs` in the same file; a difference beyond that is reported
+in the console and that track is left as it was. `OpDispatcher.trackLatencies()` reports both
+figures.
 
-**A cycle MUST contain at least one explicit delay of at least one render quantum.** A host
-MUST refuse a graph with a cycle that does not, and MUST report which connections form the
-cycle.
+### MIDI loops
 
-This is not a JigDAW invention and cannot be worked around. The Web Audio API permits a
-cycle only if a `DelayNode` lies within it; a cycle without one outputs silence. So a graph
-that violates this rule does not fail loudly, it simply stops making sound, which is the
-worst available outcome. Refusing it and naming the cycle is strictly better.
-
-valis reaches the same rule from the other direction: a feedback path must pass through a
-`val:UnitDelay` or the circuit is rejected, and a circuit that will not compile leaves the
-previous one playing.
-
-**Latency inside a cycle is not compensated.** The host MUST NOT attempt to compensate any
-connection that lies on a cycle, and MUST exclude cycles when computing accumulated latency
-for section 3.
-
-The delay in a feedback loop is the thing the user is asking for. It is the delay time, the
-comb filter, the resonator. Compensating it away would remove the effect, and there is no
-coherent alternative: to align a cycle with itself is to ask for the signal before it
-exists.
-
-The consequence, which MUST be documented to the user rather than hidden: a plugin with
-declared latency placed inside a feedback loop adds that latency to the loop time. A 1024
-frame lookahead limiter in a delay loop makes the delay 1024 frames longer. That is correct
-behaviour and it will be reported as a bug.
+The delay rule above is about audio. A MIDI connection carries no delay and no frame count, so
+there is nothing to declare that would make a loop of them safe: events would pass round it for
+ever, and a plugin that answers each note with another would make a storm. A host MUST refuse
+a set of MIDI connections that forms a loop, including a plugin connected to itself, and
+SHOULD say which plugins are in it. Jiggy refuses it with the error kind `midi-cycle`.
 
 ## 5. Tails
 

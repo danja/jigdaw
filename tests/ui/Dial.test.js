@@ -303,7 +303,14 @@ describe('the stylesheet and the generator agree', () => {
   // connects the two, and a rename in either leaves a knob that is present,
   // focusable, announced correctly and completely invisible. AGENTS.md names
   // this as the recurring failure here, so the lists are bound.
-  const page = readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+  // The styles are in web/panel.css, shared by both pages, and each page must link it.
+  const webDir = resolve(import.meta.dirname, '../../web')
+  const page = readFileSync(resolve(webDir, 'panel.css'), 'utf8') + readFileSync(resolve(webDir, 'index.html'), 'utf8')
+  for (const html of ['index.html', 'simple.html']) {
+    it(`is linked from ${html}`, () => {
+      expect(readFileSync(resolve(webDir, html), 'utf8')).toContain('<link rel="stylesheet" href="panel.css">')
+    })
+  }
   const source = readFileSync(resolve(import.meta.dirname, '../../src/ui/Dial.js'), 'utf8')
 
   const CLASSES = ['dial', 'dial-face', 'dial-track', 'dial-value', 'dial-pointer', 'dial-input']

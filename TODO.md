@@ -29,7 +29,7 @@ complete. Review periodically.
 
 - [x] **A "Chiptune" preset: generative chiptune across several tracks.** From
       the inbox, 2026-09-30. **Done 2026-09-30.** `web/presets/chiptune.ttl`
-      ("Chiptune", in the index): A minor at 140 BPM, six tracks, ten nodes,
+      ("Chiptune", in the index): A minor at 90 BPM (was 140; lowered 2026-09-30 on request), six tracks, ten nodes,
       eight connections, dry throughout. MelGen states the lead (A4, seed 11)
       into a square-lead Mop (program 80); that line fans out to
       Counterpointer (A, 2-bar cycle) and Cadence (A natural minor, 2-bar
@@ -349,11 +349,25 @@ Goal: everything a person does to a track is available in the header and the men
 - [ ] **Folders and groups.** Editor-only folder first (no compiler change), then bus
       tracks that sum other tracks (compiler work, latency through the sum). Same
       distinction as Phase C "Buses, folder tracks, groups".
-- [ ] **Multi-select and bulk edit.** Select several tracks; mute, solo, colour, level
-      apply to all through one changeset.
-- [ ] **Track input and monitoring.** Choose the MIDI input and the audio input per track,
-      arm, and monitor. Web MIDI permission and refusal shown as state (see Web MIDI item
-      under "Before there is code").
+- [x] **Multi-select and bulk edit.** Shift or Ctrl click on track names selects several; the
+      dock shows `BulkTrackPanel`: Mute all and Solo all (turning off only when all are on),
+      a colour for all, a lane size for all. The channel edits go as one changeset, so one
+      undo takes the lot. Driven in Chrome: Shift-click made "2 tracks selected: Bass, Sub",
+      Mute all muted exactly those two, Ctrl+Z unmuted both in one step. Not done: level and
+      pan for several (needs a rule for relative changes), and a range select by Shift with
+      the keyboard.
+- [ ] **Track input and monitoring.** Half done. Built: Web MIDI input
+      (`src/host/MidiInput.js`, 10 tests with a stand-in that refuses what the real access
+      refuses), a MIDI in button that asks the browser and says the result in words, Arm on
+      each track that has a MIDI input (left out on one that does not), and routing of
+      note and controller messages to the armed tracks, or the selected track when none is
+      armed. Clock, active sensing and sysex are dropped. Driven in Chrome with the window
+      in front and a stand-in controller wired in before the page loaded: enabling asked the
+      browser once and said "MIDI in: Fake Keys."; nothing reached a track with none armed
+      or selected; an armed track took note on and off with a frame stamp; disarming and
+      selecting fell back correctly. Not done: a real controller (untried against hardware),
+      choosing among several inputs, MIDI panic, the audio input choice and input
+      monitoring, and MIDI learn (Phase D).
 - [x] **Latency shown per track.** `OpDispatcher.trackLatencies()` (the longest declared
       latency along each track's chain, counting what the compiler found ahead of each
       node) and a line in the header, "Latency 2047 frames, 42.6 ms", left out when zero.
@@ -362,40 +376,105 @@ Goal: everything a person does to a track is available in the header and the men
       and each track goes to its own fader and then the master, so a track with 2047 frames
       of latency sounds that much later than one with none. Now stated in `docs/latency.md`
       ("Between tracks"). Decision needed, see the item below.
-- [ ] **Align tracks at the master.** Delay the faster tracks by the difference to the
-      slowest, at the track's output, so parallel tracks line up as parallel paths in one
-      graph do. Needs a decision first because it changes what is heard and adds a rule to
-      `docs/latency.md`. Engine work: a delay in each strip and its retiming when a plugin's
-      latency changes (the dispatcher already retimes connection delays this way). Clips
-      and live MIDI input are scheduled ahead of the clock and would need the same offset.
-
-### Phase T3. Routing in the track view (the differentiator)
-
-Goal: signal and MIDI routing is visible and editable on the track, in the timeline page.
-
-- [ ] **Chain strip on each track.** A row under the header showing the track's nodes in
-      order, each with its name, bypass, and a state marker (loading, failed, foreign
-      code). Click or Enter opens the panel in the dock. Reorder by drag and keys
-      (Phase D "Bypass, reorder, safe mode").
-- [ ] **Signal and MIDI cables in place.** For a node with a MIDI output or a side chain,
-      show where it goes, as text and as a drawn line, with the port names from the
-      profile. Never only colour: audio and MIDI differ by label and pattern as well.
-- [ ] **Routing matrix.** One table of every source port against every destination port,
-      across tracks, driven by the same connection Op and refusing the same cycles.
-      Screen reader friendly by construction; the drawn graph is the extra.
+- [x] **Align tracks at the master.** Decided by me on 2026-09-30 (a guess, on request): on by
+      default, and changeable. Each track that has less latency than the slowest is delayed by
+      the difference, in a `DelayNode` at the end of its strip (`Engine.setTrackDelay`), set
+      by the dispatcher whenever links are rebuilt or a plugin's latency changes, asking the
+      engine only where a value moved. The starting value is `alignTracks` in `web/host.json`
+      (with `maxTrackDelayMs` for the longest delay); a checkbox on the Mixer tab overrides
+      it and is remembered in the browser; each track header says its own latency and how
+      much it was delayed. Written into `docs/latency.md` ("Between tracks") as a SHOULD.
+      Tested: config keys, engine strips, and the dispatcher (on, off, toggled, following an
+      edit, a track removed and brought back, an alignment the engine cannot do). Driven in
+      Chrome with real Web Audio: Pulse beside Quefrency (2047 frames) gave Pulse "No latency;
+      delayed 2047 frames, 42.6 ms" and Quefrency "Latency 2047 frames, 42.6 ms"; the Mixer
+      checkbox turned it off with a real click, the engine was asked to set Pulse's delay to 0,
+      the headers changed, and after a reload the person's choice beat the file's `true`.
+      Not measured: that the audio really arrives aligned (a render comparison would). Take
+      recording taps the track before the delay, so a take is the track as made. Not done: clips
+      and live MIDI are not offset (they reach a plugin that then has its own latency, so the
+      arrangement stays consistent), a setting in the saved session so two people hear the
+      same, and a limit warning on the page rather than the console.
+- [x] **Chain strip on each track** (first half). `src/ui/ChainModel.js` (a track's plugins
+      in signal order, what each takes and gives, where each sends and receives, which reach
+      another track; pure and tested) and `src/ui/ChainStrip.js`, drawn under each lane:
+      one button per plugin, its ports as text ("MIDI in, audio out"), and its sends and
+      receives with cross-track ones marked by a sign and "on <track>". A plugin that failed
+      or is still loading says so in text beside the rest. A Routing button in the timeline
+      tools shows or hides the strips; the strip is left out for a track with no plugins
+      and for a small lane. Driven in Chrome on the Chiptune preset: it showed the real
+      routing that was invisible before (Lead line sends MIDI to Counterline on Counter and
+      Chip chords on Chords, and Chip chords, Chip drums and Counterline all feed Chip
+      bus). Not done: bypass, reorder of the chain by drag or keys, and the strip on a
+      phone at narrow width (not measured).
+- [x] **Signal and MIDI cables in place.** Done as text, deliberately not drawn (see
+      `src/ui/Routing.js` for why a canvas of cables loses on keyboard and phone use): the
+      chain strip lists each send with its kind (MIDI, audio, modulation) and destination,
+      and selecting a plugin opens its view in the dock (`src/ui/NodeView.js`): its ports,
+      every connection it is in with Disconnect, and a form to connect it to a compatible
+      port on any track. Not done: a drawn line as an extra, and port names from the
+      profile beyond "Audio out 1" and "MIDI out".
+- [x] **Cross-track connections** (the connection half). From the dock's plugin view, Send
+      [output] to [plugin on any track: port] then Connect, offering only destinations the
+      output can go to, through the same `addConnection` Op, so undo and the dispatcher's
+      checks apply. Driven in Chrome with real clicks: Lead line's MIDI out to Bass line on
+      the Bass track, the strip and the list both showed it, Ctrl+Z removed it. The send,
+      return and bus half depends on the engine (below).
+- [x] **MIDI loops are refused.** Found while driving the above: a loop of MIDI connections
+      (Lead line to Bass line and back) was accepted, because the compiler looks only at
+      audio, and a MIDI connection carries no delay, so events would go round it for ever.
+      Now a `midi-cycle` compile error naming the plugins, in `docs/latency.md` ("MIDI
+      loops"), and an earlier test that asserted the opposite was rewritten. **This is my
+      decision, not yours; say if MIDI loops should be allowed with some limit instead.**
+      No bundled preset had one.
+- [x] **Routing matrix.** A Routing tab (`src/ui/MatrixModel.js`, `src/ui/RoutingMatrix.js`,
+      `web/app/Matrix.js`): every output down the side, every input across the top under its
+      track, a button where the pair can be joined, pressed for a connection. Only audio and
+      MIDI ports (parameters stay in the plugin view). Rows and columns nothing can be
+      joined to are left out; a cell is left out where the kinds differ or it would be a
+      plugin to itself, so nothing in it is disabled. One tab stop with arrow keys, Home and
+      End, and Control for the corners; every cell says its pair and its state in words and
+      shows a mark as well as a colour; a status line beside the table says what the last
+      press came to, including a refusal. Same `addConnection` and `removeConnection` Ops as
+      everywhere, so loops and undo are shared. 29 tests. Driven in Chrome with real input
+      on the Chiptune preset: 6 rows by 10 columns, 8 filled cells matching the 8
+      connections, one tab stop, a click connected Lead line to Bass line and kept focus on
+      the cell, a click and Enter on a pair that would loop were refused with the reason,
+      arrow keys stepped over gaps. It found the fourth tab pushed a phone-width page to 384px
+      (fixed: 360 of 375 now, tabs 44px, cells 44px). Not done: the port names are the
+      generic ones, a "why not" for a missing cell, and column headers are wide at phone
+      width (the table scrolls in its own box).
 - [ ] **Cross-track connections.** Send audio or MIDI from a node on one track to a node on
       another (a MIDI track driving another track's synth; a side chain from a kick track).
       Depends on the sends vocabulary in T0.
-- [ ] **Sends, returns and buses in the header.** Aux level per send, pre and post tap,
-      return tracks. Same item as Phase C "Sends and receives".
+- [x] **Sends, returns and buses.** The model's sends, bus outputs and master now reach the
+      audio. Engine: each strip gets an arrival gain (where a pre-fader send is taken and
+      where another track arrives), `addSend`/`setSendLevel`/`clearSends` (before or after
+      the fader), `setTrackOutput` (a strip into another strip instead of the master,
+      touching the graph only on a change) and `setMaster` (level, pan, mute, with the pan in
+      front of the master node, which is still what the speakers hang off). The dispatcher
+      makes them from the model on every rebuild, the way it makes links. The dock's track
+      view has an Output select (Master or another track) and a Sends list with level,
+      before or after the fader, Remove, and Add send, offering only destinations the model
+      would accept; a header line says the routing in words ("Output to Drums. Sends to
+      Drums (pre). Receives from Bass, Sub."). The Mixer tab has a Master strip (Level,
+      Pan, Mute; no Solo). 44 new tests. **Proved with real Web Audio in Chrome, by the
+      meter:** with only Sub and an empty track unmuted, Sub is audible; routing its output
+      into a muted track silences it; adding a post-fader send to the unmuted track makes it
+      audible again; send level 0 silences it; a pre-fader send is audible; removing it
+      silences it; output back to the master restores it. Muting the master with a real
+      click read 0 on every meter sample and unmuting restored it. Not done: a return
+      track marker beyond the header text, the alignment delay counting a bus's latency, a
+      send's own alignment, master automation (T5), and the level meter per send.
 - [ ] **Sidechain as a routable port.** Phase C item, surfaced on the chain strip.
 - [ ] **MIDI routing tools.** Channel filter and map, transpose, split by range, merge
       several sources into one input, all as nodes or as connection properties, chosen in
       T0. A MIDI monitor per connection showing recent events (bounded, message thread only).
 - [ ] **Parallel chains and layers.** Two chains from one input mixed back, openDAW's
       "effect composite". Do only after nested plugins design (see "Before there is code").
-- [ ] **Failed load stays isolated.** A node that fails to load draws as failed and the rest
-      of the track keeps playing, verified through the real page, per the real-time rules.
+- [ ] **Failed load stays isolated.** The chain strip now draws a failed plugin as failed
+      beside the working ones (tested with the model and the strip). Not yet driven with a
+      plugin that really fails to load in a live page.
 
 ### Phase T4. Clips, regions and the editors in the dock
 
@@ -497,8 +576,8 @@ Goal: the mixer is the same tracks seen as strips, not a second model.
 - [ ] **Live collaboration, considered.** openDAW runs Yjs sync and a peer-to-peer room
       (`packages/studio/p2p`, `ysync`). Jiggy already has revisions and `expectedRevision`
       changesets, which is a better base for merge. Design note only; not started.
-- [ ] **PWA install and offline.** Cache the host and plugins already opened, with the
-      integrity checks intact.
+- [ ] **PWA install and offline.** Not a separate task: owned by "A Jiggy PWA for phones"
+      under "Web-native Jiggy, and a mobile PWA" below, so it is built once.
 - [ ] **Retire the three tabs** once the main view covers each of them and the measured
       checks pass, keeping the plugin rack as the dock's chain view.
 
@@ -527,10 +606,11 @@ From the inbox, 2026-09-30. Two directions, neither started. Each needs a design
          already has revisions and `expectedRevision` changesets, so the wire could be
          changesets over a channel, with the revision as the conflict check. Decide what
          does not sync (the transport clock, the audio itself, editor state) before any code.
-      3. *Other ideas to weigh:* Web Share Target and File Handling so a session or a
-         plugin bundle opens straight from the system; the origin private file system for
-         media and recovery; Web MIDI and Web Bluetooth MIDI for controllers; Web Locks and
+      3. *Other ideas to weigh:* Web Bluetooth MIDI for controllers; Web Locks and
          BroadcastChannel for two tabs of one session; installable plugin collections by URL.
+         (Web Share Target and File Handling, and the origin private file system for media
+         and recovery, moved to the PWA item and Phase F: they are manifest and storage
+         work, not sync or discovery.)
       Output is a document ranking these by cost and by how well each fits the premise.
 - [ ] **A Jiggy PWA for phones, built around generative plugins.** Installable, offline
       once loaded (service worker caching the host and every plugin already opened, with
@@ -543,11 +623,114 @@ From the inbox, 2026-09-30. Two directions, neither started. Each needs a design
       - recording from the microphone, and export to MP3, both easy.
       Open points to settle in the design note: MP3 needs an encoder in the page (WebCodecs
       does not encode MP3 in every browser, so a WASM encoder may be required; see Phase E
-      "Formats and options"); microphone recording exists (`TrackRecorder`) and needs a
+      "Formats and options"); microphone recording does not exist: `Record.js` and
+      `TrackRecorder` capture the tracks as they play, not a microphone, and nothing calls
+      `getUserMedia`. It needs an audio input on a track (T2, the audio half) and then a
       one-button front; the interface rules already require touch targets of 44px and a
       single column below 720px, so this is a different front page and not a different
       layout system. Depends on the Web-native item above only for sharing, not for
       playing.
+
+      **Overlaps with other tasks, checked 2026-09-30, so nothing is built twice:**
+      - *Bounce and MP3.* "Export to MP3" is Phase E "In-page offline bounce" plus its
+        "Formats and options" encoder. The PWA takes one Export button over those; it does
+        not get its own renderer or encoder.
+      - *Recovery and storage.* Offline use needs Phase F "Recent projects and startup
+        recovery" and "Opt-in snapshots and autosave" (the origin private file system is the
+        candidate store, moved here from the Web-native item). One store, two front ends.
+      - *Microphone.* **Correction:** it does not exist yet. `Record.js` and `TrackRecorder`
+        keep what the tracks sound like, and nothing calls `getUserMedia`. A microphone as a
+        source of a track, its device choice and monitoring are T2 "Track input and
+        monitoring" (the audio half, open); the take recorder then keeps it.
+      - *Phone layout.* T1 left a compact phone transport bar open (Play, Stop, Loop, then
+        a menu), and T8 has "Touch" and a first-run help overlay. The PWA front page is the
+        place those land for a phone, so do them once for both, not twice.
+      - *Presets.* Six are bundled, Chiptune among them (now 90 BPM); nothing new is needed
+        for "starting with Chiptunes".
+      - *Generated panels.* "Change parameters while a piece plays" already works through
+        `Panel.js`; the PWA reuses it.
+      **A constraint found while checking:** a service worker already exists for foreign
+      (WAM) plugin containers (`web/foreign/sw.js`, registered by `ForeignOrigin.js`, with
+      contract section 12.3 depending on its scope). An app-wide worker must not take over
+      that scope, and must never answer a plugin resource in a way that skips the digest
+      check; a cached response is still verified when the plugin is instantiated.
+
+      **Done 2026-09-30, the shell:** `docs/pwa.md` (one service worker, because the foreign
+      container worker already owns the scope: `web/sw.js` imports it unchanged), the manifest
+      and icons (`bin/build-icons.js`), `web/sw.js` with a precache written by
+      `bin/build-precache.js` (a test fails when it is stale) and network first caching keyed
+      by URL and Accept for everything else, an update notice that never reloads, an offline
+      indicator, an Install button, correct media types and no-cache for the app files in
+      `bin/serve.js`. 34 new tests, the worker run for real in a vm against a fake cache that
+      refuses what the real one refuses, and four of its guards mutation checked. **In
+      Chrome, window in front:** registered, activated and offered the install; with the
+      server stopped the page loaded and the Chiptune preset opened and played from the
+      cache (meter peak 9); one altered byte in a cached WebAssembly file failed those two
+      plugins with `integrity mismatch` and loaded the other eight; a changed shell file made
+      a new cache version and the notice, with no reload. **Not done:** a phone and a real
+      offline network.
+      - [x] **Foreign container paths under a subpath.** Done 2026-09-30, on request. The
+            container prefix (`foreign/sw.js`) and the registration (`ForeignOrigin`) are
+            derived from the registration scope and the page base instead of `/foreign/` and
+            `/sw.js`. Tested with the real worker at the root and under `/jigdaw/`, with the old
+            prefix and a written-for-the-root path each mutation checked, and driven in Chrome
+            behind a proxy that strips `/jigdaw/`: one registration, a container served at
+            `/jigdaw/foreign/<id>/`, an absent file refused. Not re-run: `web/foreign/probe.html`
+            (manual, absolute paths, needs the WAM example built) and a real WAM plugin.
+
+      **Tasks, in order.** The shell needs no design decision and can start now; the front
+      page waits for the design note.
+      - [x] Design note `docs/pwa.md`: one codebase with a second entry page (`web/simple/`)
+            over the same Ops, or a "simple mode" of the current page. Recommended: a second
+            entry page, so the DAW view is not compromised by the simple one. Decide, with
+            the trade, before the front page.
+      - [x] Web app manifest and icons: name, start URL, display, theme, 192 and 512 icons,
+            a maskable icon, and screenshots. A test that the manifest's icon files exist.
+      - [x] Service worker for the host: precache the host files (page, bundle, vocab,
+            presets index), runtime-cache plugins already opened, versioned by the build so an
+            update replaces the cache. Scope chosen not to collide with `web/foreign/sw.js`.
+            A test binding the precache list to the files the build writes (two lists that
+            must agree, per CLAUDE.md).
+      - [x] Update flow: a visible "new version ready" notice that never reloads under a
+            playing piece; offline indicator in text.
+      - [x] Install prompt, offered after first success and not before, with a way to say no.
+      - [x] Check that a plugin loaded from cache still fails when its digest does not match
+            (mutation-check the cache by editing a cached file).
+      - [ ] Web Share Target and File Handling: a shared or opened `.ttl`, `.zip` or plugin
+            bundle opens as a session or a bundle, through the same open path as Open.
+      - [x] **The simple front page** (first version, 2026-09-30): `web/simple.html`, with
+            `web/simple.js` over the same Runtime, Sessions, Transport, dispatcher and generated
+            panels as the studio, given a context with only what those shared modules call.
+            Six tunes as big buttons (Chiptune first), one Play and one Stop, a Speed slider in
+            plain words, a level meter, and a card per track with a big On and Off and "Change
+            the sound", which opens the plugins on it as their generated panels (made only when
+            opened) with a sentence of what each one is from its own description. Save my piece
+            and a link to the full studio. Also new: `src/ui/TrackCards.js` and
+            `src/ui/TunePicker.js` (15 tests), `web/panel.css` (the panel and knob styles moved
+            out of `index.html` so both pages share them, with the guard that binds them
+            re-pointed and a check that each page links it), a second bundle
+            (`simple.bundle.js`, in the precache, a manifest shortcut), and small tolerance
+            changes in `Runtime.js` and `Transport.js` for elements the simple page does not
+            have. **In Chrome, window in front:** Chiptune opened at 90 and "90 beats a minute";
+            Play sounded (meter peak 9); a card turned Off and said so; "Change the sound"
+            opened real panels; three arrow presses on a knob moved it three steps and kept the
+            focus. **That run found the defect CLAUDE.md warns of:** the cards were put back
+            into the list on every redraw, which dropped the focus, so a knob moved once and
+            then nothing. Fixed by touching the list only when the order changes, with a test
+            that fails without it (mutation checked). At a 375px frame: no horizontal scroll,
+            18px text, 72px tune buttons, 56px others. **Not done:** three panel checkboxes
+            (the generated triggers) are 22px, as in the studio; a piece cannot be carried into
+            the studio except by Save and Open; one odd run where a click on "Change the sound"
+            ended with the card closed (not reproduced in six later clicks, so probably a click
+            that missed after the page moved); no offline check of this page yet; and it has not
+            been tried on a phone.
+      - [ ] One-button record from the microphone into a new track, with the permission
+            state said in words (depends on T2 audio input for the choice of device).
+      - [ ] Export button over Phase E's bounce and encoder; WAV first, MP3 when the encoder
+            exists. Until then the button says only what it can do.
+      - [ ] Measured on a phone-width frame and a real phone: no horizontal scroll, targets,
+            reduced motion, screen reader pass on the simple page.
+
 
 ## The application
 
@@ -623,9 +806,10 @@ Goal: the piano roll covers routine note and controller work.
 
 Goal: gain staging and motion without leaving the page.
 
-- [ ] **Master strip and master automation.** Extends loose ends item 1 above:
-      a `jig:master` term first, then level/pan/mono in the mixer view, then
-      automation on the same lane machinery as tracks.
+- [ ] **Master strip and master automation.** The strip is done: `jig:Master` (T0), a Master
+      strip on the Mixer tab with level, pan and mute, acting on the audio (see "Sends,
+      returns and buses" under T3). Still open: automation on the same lane machinery as
+      tracks (T5) and a mono switch.
 - [ ] **Sends and receives.** The existing inbox item stands; OpenStudio adds
       pre/post tap, send level/pan, and a routing matrix view. Same
       vocabulary-first rule, same cycle refusal as any other connection.
@@ -704,6 +888,8 @@ Goal: sessions survive real use: crashes, missing files, clutter.
 - [ ] **Recent projects and startup recovery.** List recent sessions, reopen
       the last one on choice, recover unsaved changes after a crash from
       local storage. Never overwrite the saved file with a recovery copy.
+      Shared with the PWA (see "A Jiggy PWA for phones"): its offline use and the origin
+      private file system as a store are decided here once, for both front pages.
 - [ ] **Opt-in snapshots and autosave.** Periodic local snapshots including
       untitled sessions, clearly marked as not the saved project. Same store
       rule as above.
@@ -845,10 +1031,9 @@ Build items, not builds: none is started.
       done (2026-09-27, real snapshots at 12/s, `tests/host/tremolo.test.js`);
       the reverse direction still has no real user beyond the fakes.
 
-- [ ] **Web MIDI input into the selected track.** Covers testbed.md "MIDI from
-      outside the page". Host behaviour only, no plugin needed:
-      permission-gated device input with notes delivered to the track's MIDI
-      input, behind the same user-activation story as audio start.
+- [x] **Web MIDI input into the selected track.** Built with the T2 track input item above,
+      into the armed tracks and falling back to the selected one. `docs/testbed.md` says
+      what it has and has not been driven with.
 
 ## Recurring, check periodically
 

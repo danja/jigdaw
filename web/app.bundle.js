@@ -20,8 +20,8 @@ var __commonJS = (cb, mod) => function __require() {
   }
 };
 var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
+  for (var name2 in all)
+    __defProp(target, name2, { get: all[name2], enumerable: true });
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -1721,9 +1721,9 @@ var require_buffer = __commonJS({
     }
     E(
       "ERR_BUFFER_OUT_OF_BOUNDS",
-      function(name) {
-        if (name) {
-          return `${name} is outside of buffer bounds`;
+      function(name2) {
+        if (name2) {
+          return `${name2} is outside of buffer bounds`;
         }
         return "Attempt to access memory outside buffer bounds";
       },
@@ -1731,8 +1731,8 @@ var require_buffer = __commonJS({
     );
     E(
       "ERR_INVALID_ARG_TYPE",
-      function(name, actual) {
-        return `The "${name}" argument must be of type number. Received type ${typeof actual}`;
+      function(name2, actual) {
+        return `The "${name2}" argument must be of type number. Received type ${typeof actual}`;
       },
       TypeError
     );
@@ -1787,9 +1787,9 @@ var require_buffer = __commonJS({
       }
       checkBounds(buf, offset, byteLength2);
     }
-    function validateNumber(value2, name) {
+    function validateNumber(value2, name2) {
       if (typeof value2 !== "number") {
-        throw new errors.ERR_INVALID_ARG_TYPE(name, "number", value2);
+        throw new errors.ERR_INVALID_ARG_TYPE(name2, "number", value2);
       }
     }
     function boundsError(value2, length, type) {
@@ -1995,11 +1995,11 @@ var require_primordials = __commonJS({
       ObjectDefineProperties(self2, props) {
         return Object.defineProperties(self2, props);
       },
-      ObjectDefineProperty(self2, name, prop) {
-        return Object.defineProperty(self2, name, prop);
+      ObjectDefineProperty(self2, name2, prop) {
+        return Object.defineProperty(self2, name2, prop);
       },
-      ObjectGetOwnPropertyDescriptor(self2, name) {
-        return Object.getOwnPropertyDescriptor(self2, name);
+      ObjectGetOwnPropertyDescriptor(self2, name2) {
+        return Object.getOwnPropertyDescriptor(self2, name2);
       },
       ObjectKeys(obj) {
         return Object.keys(obj);
@@ -2225,16 +2225,16 @@ var require_errors = __commonJS({
     E("ERR_ASSERTION", "%s", Error);
     E(
       "ERR_INVALID_ARG_TYPE",
-      (name, expected, actual) => {
-        assert(typeof name === "string", "'name' must be a string");
+      (name2, expected, actual) => {
+        assert(typeof name2 === "string", "'name' must be a string");
         if (!Array.isArray(expected)) {
           expected = [expected];
         }
         let msg = "The ";
-        if (name.endsWith(" argument")) {
-          msg += `${name} `;
+        if (name2.endsWith(" argument")) {
+          msg += `${name2} `;
         } else {
-          msg += `"${name}" ${name.includes(".") ? "property" : "argument"} `;
+          msg += `"${name2}" ${name2.includes(".") ? "property" : "argument"} `;
         }
         msg += "must be ";
         const types = [];
@@ -2338,22 +2338,22 @@ var require_errors = __commonJS({
     );
     E(
       "ERR_INVALID_ARG_VALUE",
-      (name, value2, reason = "is invalid") => {
+      (name2, value2, reason = "is invalid") => {
         let inspected = inspect2(value2);
         if (inspected.length > 128) {
           inspected = inspected.slice(0, 128) + "...";
         }
-        const type = name.includes(".") ? "property" : "argument";
-        return `The ${type} '${name}' ${reason}. Received ${inspected}`;
+        const type = name2.includes(".") ? "property" : "argument";
+        return `The ${type} '${name2}' ${reason}. Received ${inspected}`;
       },
       TypeError
     );
     E(
       "ERR_INVALID_RETURN_VALUE",
-      (input, name, value2) => {
+      (input, name2, value2) => {
         var _value$constructor;
         const type = value2 !== null && value2 !== void 0 && (_value$constructor = value2.constructor) !== null && _value$constructor !== void 0 && _value$constructor.name ? `instance of ${value2.constructor.name}` : `type ${typeof value2}`;
-        return `Expected ${input} to be returned from the "${name}" function but got ${type}.`;
+        return `Expected ${input} to be returned from the "${name2}" function but got ${type}.`;
       },
       TypeError
     );
@@ -2761,10 +2761,10 @@ var require_events = __commonJS({
       }
       return ret;
     }
-    function once(emitter, name) {
+    function once(emitter, name2) {
       return new Promise(function(resolve, reject) {
         function errorListener(err) {
-          emitter.removeListener(name, resolver);
+          emitter.removeListener(name2, resolver);
           reject(err);
         }
         function resolver() {
@@ -2774,8 +2774,8 @@ var require_events = __commonJS({
           resolve([].slice.call(arguments));
         }
         ;
-        eventTargetAgnosticAddListener(emitter, name, resolver, { once: true });
-        if (name !== "error") {
+        eventTargetAgnosticAddListener(emitter, name2, resolver, { once: true });
+        if (name2 !== "error") {
           addErrorHandlerIfEventEmitter(emitter, errorListener, { once: true });
         }
       });
@@ -2785,17 +2785,17 @@ var require_events = __commonJS({
         eventTargetAgnosticAddListener(emitter, "error", handler2, flags);
       }
     }
-    function eventTargetAgnosticAddListener(emitter, name, listener, flags) {
+    function eventTargetAgnosticAddListener(emitter, name2, listener, flags) {
       if (typeof emitter.on === "function") {
         if (flags.once) {
-          emitter.once(name, listener);
+          emitter.once(name2, listener);
         } else {
-          emitter.on(name, listener);
+          emitter.on(name2, listener);
         }
       } else if (typeof emitter.addEventListener === "function") {
-        emitter.addEventListener(name, function wrapListener(arg) {
+        emitter.addEventListener(name2, function wrapListener(arg) {
           if (flags.once) {
-            emitter.removeEventListener(name, wrapListener);
+            emitter.removeEventListener(name2, wrapListener);
           }
           listener(arg);
         });
@@ -2826,14 +2826,14 @@ var require_util = __commonJS({
     } : function isBlob2(b) {
       return false;
     };
-    var validateAbortSignal = (signal, name) => {
+    var validateAbortSignal = (signal, name2) => {
       if (signal !== void 0 && (signal === null || typeof signal !== "object" || !("aborted" in signal))) {
-        throw new ERR_INVALID_ARG_TYPE(name, "AbortSignal", signal);
+        throw new ERR_INVALID_ARG_TYPE(name2, "AbortSignal", signal);
       }
     };
-    var validateFunction = (value2, name) => {
+    var validateFunction = (value2, name2) => {
       if (typeof value2 !== "function") {
-        throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "Function", value2);
       }
     };
     module.exports = {
@@ -2980,124 +2980,124 @@ var require_validators = __commonJS({
     }
     var octalReg = /^[0-7]+$/;
     var modeDesc = "must be a 32-bit unsigned integer or an octal string";
-    function parseFileMode(value2, name, def) {
+    function parseFileMode(value2, name2, def) {
       if (typeof value2 === "undefined") {
         value2 = def;
       }
       if (typeof value2 === "string") {
         if (RegExpPrototypeExec(octalReg, value2) === null) {
-          throw new ERR_INVALID_ARG_VALUE(name, value2, modeDesc);
+          throw new ERR_INVALID_ARG_VALUE(name2, value2, modeDesc);
         }
         value2 = NumberParseInt(value2, 8);
       }
-      validateUint32(value2, name);
+      validateUint32(value2, name2);
       return value2;
     }
-    var validateInteger = hideStackFrames((value2, name, min = NumberMIN_SAFE_INTEGER, max = NumberMAX_SAFE_INTEGER) => {
-      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
-      if (!NumberIsInteger(value2)) throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
-      if (value2 < min || value2 > max) throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
+    var validateInteger = hideStackFrames((value2, name2, min = NumberMIN_SAFE_INTEGER, max = NumberMAX_SAFE_INTEGER) => {
+      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name2, "number", value2);
+      if (!NumberIsInteger(value2)) throw new ERR_OUT_OF_RANGE(name2, "an integer", value2);
+      if (value2 < min || value2 > max) throw new ERR_OUT_OF_RANGE(name2, `>= ${min} && <= ${max}`, value2);
     });
-    var validateInt32 = hideStackFrames((value2, name, min = -2147483648, max = 2147483647) => {
+    var validateInt32 = hideStackFrames((value2, name2, min = -2147483648, max = 2147483647) => {
       if (typeof value2 !== "number") {
-        throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "number", value2);
       }
       if (!NumberIsInteger(value2)) {
-        throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
+        throw new ERR_OUT_OF_RANGE(name2, "an integer", value2);
       }
       if (value2 < min || value2 > max) {
-        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
+        throw new ERR_OUT_OF_RANGE(name2, `>= ${min} && <= ${max}`, value2);
       }
     });
-    var validateUint32 = hideStackFrames((value2, name, positive = false) => {
+    var validateUint32 = hideStackFrames((value2, name2, positive = false) => {
       if (typeof value2 !== "number") {
-        throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "number", value2);
       }
       if (!NumberIsInteger(value2)) {
-        throw new ERR_OUT_OF_RANGE(name, "an integer", value2);
+        throw new ERR_OUT_OF_RANGE(name2, "an integer", value2);
       }
       const min = positive ? 1 : 0;
       const max = 4294967295;
       if (value2 < min || value2 > max) {
-        throw new ERR_OUT_OF_RANGE(name, `>= ${min} && <= ${max}`, value2);
+        throw new ERR_OUT_OF_RANGE(name2, `>= ${min} && <= ${max}`, value2);
       }
     });
-    function validateString(value2, name) {
-      if (typeof value2 !== "string") throw new ERR_INVALID_ARG_TYPE(name, "string", value2);
+    function validateString(value2, name2) {
+      if (typeof value2 !== "string") throw new ERR_INVALID_ARG_TYPE(name2, "string", value2);
     }
-    function validateNumber(value2, name, min = void 0, max) {
-      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name, "number", value2);
+    function validateNumber(value2, name2, min = void 0, max) {
+      if (typeof value2 !== "number") throw new ERR_INVALID_ARG_TYPE(name2, "number", value2);
       if (min != null && value2 < min || max != null && value2 > max || (min != null || max != null) && NumberIsNaN(value2)) {
         throw new ERR_OUT_OF_RANGE(
-          name,
+          name2,
           `${min != null ? `>= ${min}` : ""}${min != null && max != null ? " && " : ""}${max != null ? `<= ${max}` : ""}`,
           value2
         );
       }
     }
-    var validateOneOf = hideStackFrames((value2, name, oneOf) => {
+    var validateOneOf = hideStackFrames((value2, name2, oneOf) => {
       if (!ArrayPrototypeIncludes(oneOf, value2)) {
         const allowed = ArrayPrototypeJoin(
           ArrayPrototypeMap(oneOf, (v) => typeof v === "string" ? `'${v}'` : String2(v)),
           ", "
         );
         const reason = "must be one of: " + allowed;
-        throw new ERR_INVALID_ARG_VALUE(name, value2, reason);
+        throw new ERR_INVALID_ARG_VALUE(name2, value2, reason);
       }
     });
-    function validateBoolean(value2, name) {
-      if (typeof value2 !== "boolean") throw new ERR_INVALID_ARG_TYPE(name, "boolean", value2);
+    function validateBoolean(value2, name2) {
+      if (typeof value2 !== "boolean") throw new ERR_INVALID_ARG_TYPE(name2, "boolean", value2);
     }
     function getOwnPropertyValueOrDefault(options, key, defaultValue) {
       return options == null || !ObjectPrototypeHasOwnProperty(options, key) ? defaultValue : options[key];
     }
-    var validateObject = hideStackFrames((value2, name, options = null) => {
+    var validateObject = hideStackFrames((value2, name2, options = null) => {
       const allowArray = getOwnPropertyValueOrDefault(options, "allowArray", false);
       const allowFunction = getOwnPropertyValueOrDefault(options, "allowFunction", false);
       const nullable = getOwnPropertyValueOrDefault(options, "nullable", false);
       if (!nullable && value2 === null || !allowArray && ArrayIsArray(value2) || typeof value2 !== "object" && (!allowFunction || typeof value2 !== "function")) {
-        throw new ERR_INVALID_ARG_TYPE(name, "Object", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "Object", value2);
       }
     });
-    var validateDictionary = hideStackFrames((value2, name) => {
+    var validateDictionary = hideStackFrames((value2, name2) => {
       if (value2 != null && typeof value2 !== "object" && typeof value2 !== "function") {
-        throw new ERR_INVALID_ARG_TYPE(name, "a dictionary", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "a dictionary", value2);
       }
     });
-    var validateArray = hideStackFrames((value2, name, minLength = 0) => {
+    var validateArray = hideStackFrames((value2, name2, minLength = 0) => {
       if (!ArrayIsArray(value2)) {
-        throw new ERR_INVALID_ARG_TYPE(name, "Array", value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, "Array", value2);
       }
       if (value2.length < minLength) {
         const reason = `must be longer than ${minLength}`;
-        throw new ERR_INVALID_ARG_VALUE(name, value2, reason);
+        throw new ERR_INVALID_ARG_VALUE(name2, value2, reason);
       }
     });
-    function validateStringArray(value2, name) {
-      validateArray(value2, name);
+    function validateStringArray(value2, name2) {
+      validateArray(value2, name2);
       for (let i2 = 0; i2 < value2.length; i2++) {
-        validateString(value2[i2], `${name}[${i2}]`);
+        validateString(value2[i2], `${name2}[${i2}]`);
       }
     }
-    function validateBooleanArray(value2, name) {
-      validateArray(value2, name);
+    function validateBooleanArray(value2, name2) {
+      validateArray(value2, name2);
       for (let i2 = 0; i2 < value2.length; i2++) {
-        validateBoolean(value2[i2], `${name}[${i2}]`);
+        validateBoolean(value2[i2], `${name2}[${i2}]`);
       }
     }
-    function validateAbortSignalArray(value2, name) {
-      validateArray(value2, name);
+    function validateAbortSignalArray(value2, name2) {
+      validateArray(value2, name2);
       for (let i2 = 0; i2 < value2.length; i2++) {
         const signal = value2[i2];
-        const indexedName = `${name}[${i2}]`;
+        const indexedName = `${name2}[${i2}]`;
         if (signal == null) {
           throw new ERR_INVALID_ARG_TYPE(indexedName, "AbortSignal", signal);
         }
         validateAbortSignal(signal, indexedName);
       }
     }
-    function validateSignalName(signal, name = "signal") {
-      validateString(signal, name);
+    function validateSignalName(signal, name2 = "signal") {
+      validateString(signal, name2);
       if (signals[signal] === void 0) {
         if (signals[StringPrototypeToUpperCase(signal)] !== void 0) {
           throw new ERR_UNKNOWN_SIGNAL(signal + " (signals must use all capital letters)");
@@ -3105,9 +3105,9 @@ var require_validators = __commonJS({
         throw new ERR_UNKNOWN_SIGNAL(signal);
       }
     }
-    var validateBuffer = hideStackFrames((buffer, name = "buffer") => {
+    var validateBuffer = hideStackFrames((buffer, name2 = "buffer") => {
       if (!isArrayBufferView(buffer)) {
-        throw new ERR_INVALID_ARG_TYPE(name, ["Buffer", "TypedArray", "DataView"], buffer);
+        throw new ERR_INVALID_ARG_TYPE(name2, ["Buffer", "TypedArray", "DataView"], buffer);
       }
     });
     function validateEncoding(data, encoding) {
@@ -3117,36 +3117,36 @@ var require_validators = __commonJS({
         throw new ERR_INVALID_ARG_VALUE("encoding", encoding, `is invalid for data of length ${length}`);
       }
     }
-    function validatePort(port, name = "Port", allowZero = true) {
+    function validatePort(port, name2 = "Port", allowZero = true) {
       if (typeof port !== "number" && typeof port !== "string" || typeof port === "string" && StringPrototypeTrim(port).length === 0 || +port !== +port >>> 0 || port > 65535 || port === 0 && !allowZero) {
-        throw new ERR_SOCKET_BAD_PORT(name, port, allowZero);
+        throw new ERR_SOCKET_BAD_PORT(name2, port, allowZero);
       }
       return port | 0;
     }
-    var validateAbortSignal = hideStackFrames((signal, name) => {
+    var validateAbortSignal = hideStackFrames((signal, name2) => {
       if (signal !== void 0 && (signal === null || typeof signal !== "object" || !("aborted" in signal))) {
-        throw new ERR_INVALID_ARG_TYPE(name, "AbortSignal", signal);
+        throw new ERR_INVALID_ARG_TYPE(name2, "AbortSignal", signal);
       }
     });
-    var validateFunction = hideStackFrames((value2, name) => {
-      if (typeof value2 !== "function") throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
+    var validateFunction = hideStackFrames((value2, name2) => {
+      if (typeof value2 !== "function") throw new ERR_INVALID_ARG_TYPE(name2, "Function", value2);
     });
-    var validatePlainFunction = hideStackFrames((value2, name) => {
-      if (typeof value2 !== "function" || isAsyncFunction(value2)) throw new ERR_INVALID_ARG_TYPE(name, "Function", value2);
+    var validatePlainFunction = hideStackFrames((value2, name2) => {
+      if (typeof value2 !== "function" || isAsyncFunction(value2)) throw new ERR_INVALID_ARG_TYPE(name2, "Function", value2);
     });
-    var validateUndefined = hideStackFrames((value2, name) => {
-      if (value2 !== void 0) throw new ERR_INVALID_ARG_TYPE(name, "undefined", value2);
+    var validateUndefined = hideStackFrames((value2, name2) => {
+      if (value2 !== void 0) throw new ERR_INVALID_ARG_TYPE(name2, "undefined", value2);
     });
-    function validateUnion(value2, name, union) {
+    function validateUnion(value2, name2, union) {
       if (!ArrayPrototypeIncludes(union, value2)) {
-        throw new ERR_INVALID_ARG_TYPE(name, `('${ArrayPrototypeJoin(union, "|")}')`, value2);
+        throw new ERR_INVALID_ARG_TYPE(name2, `('${ArrayPrototypeJoin(union, "|")}')`, value2);
       }
     }
     var linkValueRegExp = /^(?:<[^>]*>)(?:\s*;\s*[^;"\s]+(?:=(")?[^;"\s]*\1)?)*$/;
-    function validateLinkHeaderFormat(value2, name) {
+    function validateLinkHeaderFormat(value2, name2) {
       if (typeof value2 === "undefined" || !RegExpPrototypeExec(linkValueRegExp, value2)) {
         throw new ERR_INVALID_ARG_VALUE(
-          name,
+          name2,
           value2,
           'must be an array or string of format "</styles.css>; rel=preload; as=style"'
         );
@@ -3353,10 +3353,10 @@ var require_browser2 = __commonJS({
     process2.emit = noop2;
     process2.prependListener = noop2;
     process2.prependOnceListener = noop2;
-    process2.listeners = function(name) {
+    process2.listeners = function(name2) {
       return [];
     };
-    process2.binding = function(name) {
+    process2.binding = function(name2) {
       throw new Error("process.binding is not supported");
     };
     process2.cwd = function() {
@@ -4185,9 +4185,9 @@ var require_add_abort_signal = __commonJS({
     var eos = require_end_of_stream();
     var { ERR_INVALID_ARG_TYPE } = codes;
     var addAbortListener;
-    var validateAbortSignal = (signal, name) => {
+    var validateAbortSignal = (signal, name2) => {
       if (typeof signal !== "object" || !("aborted" in signal)) {
-        throw new ERR_INVALID_ARG_TYPE(name, "AbortSignal", signal);
+        throw new ERR_INVALID_ARG_TYPE(name2, "AbortSignal", signal);
       }
     };
     module.exports.addAbortSignal = function addAbortSignal(signal, stream) {
@@ -4408,8 +4408,8 @@ var require_state = __commonJS({
       const hwm = highWaterMarkFrom(options, isDuplex, duplexKey);
       if (hwm != null) {
         if (!NumberIsInteger(hwm) || hwm < 0) {
-          const name = isDuplex ? `options.${duplexKey}` : "options.highWaterMark";
-          throw new ERR_INVALID_ARG_VALUE(name, hwm);
+          const name2 = isDuplex ? `options.${duplexKey}` : "options.highWaterMark";
+          throw new ERR_INVALID_ARG_VALUE(name2, hwm);
         }
         return MathFloor(hwm);
       }
@@ -6452,7 +6452,7 @@ var require_duplexify = __commonJS({
         }
       }
     };
-    module.exports = function duplexify(body, name) {
+    module.exports = function duplexify(body, name2) {
       if (isDuplexNodeStream(body)) {
         return body;
       }
@@ -6526,7 +6526,7 @@ var require_duplexify = __commonJS({
             destroy
           });
         }
-        throw new ERR_INVALID_RETURN_VALUE("Iterable, AsyncIterable or AsyncFunction", name, value2);
+        throw new ERR_INVALID_RETURN_VALUE("Iterable, AsyncIterable or AsyncFunction", name2, value2);
       }
       if (isBlob(body)) {
         return duplexify(body.arrayBuffer());
@@ -6573,7 +6573,7 @@ var require_duplexify = __commonJS({
         });
       }
       throw new ERR_INVALID_ARG_TYPE(
-        name,
+        name2,
         [
           "Blob",
           "ReadableStream",
@@ -9289,8 +9289,8 @@ var init_DatasetFactory = __esm({
 var unavailable, Transform;
 var init_stream = __esm({
   "web/shims/stream.js"() {
-    unavailable = (name) => {
-      throw new Error(`${name} is not available in the browser build. Nothing should reach node streams here; see web/shims/stream.js.`);
+    unavailable = (name2) => {
+      throw new Error(`${name2} is not available in the browser build. Nothing should reach node streams here; see web/shims/stream.js.`);
     };
     Transform = class {
       constructor() {
@@ -10020,8 +10020,8 @@ var Variable, Variable_default;
 var init_Variable = __esm({
   "node_modules/@rdfjs/data-model/lib/Variable.js"() {
     Variable = class {
-      constructor(name) {
-        this.value = name;
+      constructor(name2) {
+        this.value = name2;
       }
       equals(other) {
         return !!other && other.termType === this.termType && other.value === this.value;
@@ -14333,8 +14333,8 @@ var init_N3Lexer = __esm({
 function namedNode3(iri3) {
   return new NamedNode2(iri3);
 }
-function blankNode3(name) {
-  return new BlankNode2(name || `n3-${_blankNodeCounter++}`);
+function blankNode3(name2) {
+  return new BlankNode2(name2 || `n3-${_blankNodeCounter++}`);
 }
 function literal3(value2, languageOrDataType) {
   if (typeof languageOrDataType === "string")
@@ -14361,8 +14361,8 @@ function literal3(value2, languageOrDataType) {
   }
   return datatype === "" || datatype === xsd3.string ? new Literal2(`"${value2}"`) : new Literal2(`"${value2}"^^${datatype}`);
 }
-function variable2(name) {
-  return new Variable2(name);
+function variable2(name2) {
+  return new Variable2(name2);
 }
 function defaultGraph2() {
   return DEFAULTGRAPH;
@@ -14526,8 +14526,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.blankNode(name)`), so that term validation can be applied;
        * the constructor assumes an already-validated name.
        */
-      constructor(name) {
-        super(`_:${name}`);
+      constructor(name2) {
+        super(`_:${name2}`);
       }
       // ### The term type of this term
       get termType() {
@@ -14545,8 +14545,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.variable(name)`), so that term validation can be applied;
        * the constructor assumes an already-validated name.
        */
-      constructor(name) {
-        super(`?${name}`);
+      constructor(name2) {
+        super(`?${name2}`);
       }
       // ### The term type of this term
       get termType() {
@@ -16158,9 +16158,9 @@ var require_ms = __commonJS({
       }
       return ms + " ms";
     }
-    function plural2(ms, msAbs, n2, name) {
+    function plural2(ms, msAbs, n2, name2) {
       var isPlural = msAbs >= n2 * 1.5;
-      return Math.round(ms / n2) + " " + name + (isPlural ? "s" : "");
+      return Math.round(ms / n2) + " " + name2 + (isPlural ? "s" : "");
     }
   }
 });
@@ -16313,14 +16313,14 @@ var require_common = __commonJS({
         createDebug.enable("");
         return namespaces;
       }
-      function enabled(name) {
+      function enabled(name2) {
         for (const skip of createDebug.skips) {
-          if (matchesTemplate(name, skip)) {
+          if (matchesTemplate(name2, skip)) {
             return false;
           }
         }
         for (const ns2 of createDebug.names) {
-          if (matchesTemplate(name, ns2)) {
+          if (matchesTemplate(name2, ns2)) {
             return true;
           }
         }
@@ -17303,18 +17303,18 @@ async function unpackContainer(bytes) {
     const extraLength = u16(at + 30);
     const commentLength = u16(at + 32);
     const offset = u32(at + 42);
-    const name = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    const name2 = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLength));
     const localNameLength = u16(offset + 26);
     const localExtraLength = u16(offset + 28);
     const start = offset + 30 + localNameLength + localExtraLength;
     const body = bytes.subarray(start, start + compressed);
-    if (!isContained(name)) {
+    if (!isContained(name2)) {
       throw new LoadError(
         STEPS.fetchResource,
-        `the container holds "${name}", which resolves outside it. Contract section 12.3.`
+        `the container holds "${name2}", which resolves outside it. Contract section 12.3.`
       );
     }
-    files.set(name, method === 0 ? body : await inflate(body));
+    files.set(name2, method === 0 ? body : await inflate(body));
     at += 46 + nameLength + extraLength + commentLength;
   }
   return files;
@@ -17420,7 +17420,7 @@ var init_ForeignLoader = __esm({
       woff2: "font/woff2",
       ttf: "font/ttf"
     });
-    mediaTypeFor = (name) => MEDIA_TYPES[name.slice(name.lastIndexOf(".") + 1).toLowerCase()] ?? "application/octet-stream";
+    mediaTypeFor = (name2) => MEDIA_TYPES[name2.slice(name2.lastIndexOf(".") + 1).toLowerCase()] ?? "application/octet-stream";
     ContainerOrigin = class {
       #files;
       #refusals;
@@ -17471,16 +17471,16 @@ function activated(registration) {
     });
   });
 }
-var PREFIX, SCOPE, idFor, ForeignOrigin;
+var prefixFor, workerFor, idFor, ForeignOrigin;
 var init_ForeignOrigin = __esm({
   "src/host/ForeignOrigin.js"() {
-    PREFIX = "/foreign/";
-    SCOPE = "/";
+    prefixFor = (base) => new URL("foreign/", base).pathname;
+    workerFor = (base) => new URL("sw.js", base);
     idFor = (digest) => digest.replace(/^sha\d+-/, "").replace(/[^A-Za-z0-9]/g, "").slice(0, 32).toLowerCase();
     ForeignOrigin = class _ForeignOrigin {
       #registration;
       #refusals = [];
-      constructor(registration, { prefix = PREFIX } = {}) {
+      constructor(registration, { prefix }) {
         this.#registration = registration;
         this.scope = prefix;
         navigator.serviceWorker?.addEventListener("message", (event) => {
@@ -17501,7 +17501,8 @@ var init_ForeignOrigin = __esm({
        * foreign plugin at all, because the consent in section 12.4 was given on the
        * understanding that the boundary exists.
        */
-      static async start({ scope = SCOPE, scriptURL = `${PREFIX}sw.js` } = {}) {
+      static async start({ base = globalThis.document?.baseURI, scriptURL = null } = {}) {
+        if (!base) throw new Error("the container origin needs the page base to derive its paths from");
         if (!globalThis.isSecureContext) {
           throw new Error(
             "a foreign plugin needs a secure context. Serve the host over TLS, or use localhost."
@@ -17512,9 +17513,9 @@ var init_ForeignOrigin = __esm({
             "this browser has no service workers, so the container boundary contract section 12.3 requires cannot be imposed, and a foreign plugin must not be loaded without it."
           );
         }
-        const registration = await navigator.serviceWorker.register(scriptURL, { scope, type: "classic" });
+        const registration = await navigator.serviceWorker.register(scriptURL ?? workerFor(base), { type: "classic" });
         await activated(registration);
-        return new _ForeignOrigin(registration);
+        return new _ForeignOrigin(registration, { prefix: prefixFor(base) });
       }
       /**
        * Hand a verified container to the worker and return where it lives.
@@ -17525,9 +17526,9 @@ var init_ForeignOrigin = __esm({
       async install(containerOrigin, digest) {
         const id = idFor(digest);
         const files = /* @__PURE__ */ new Map();
-        for (const name of containerOrigin.names) {
-          const file = containerOrigin.resolve(name);
-          files.set(name, { bytes: file.bytes, mediaType: file.mediaType });
+        for (const name2 of containerOrigin.names) {
+          const file = containerOrigin.resolve(name2);
+          files.set(name2, { bytes: file.bytes, mediaType: file.mediaType });
         }
         const worker = this.#registration.active ?? navigator.serviceWorker.controller;
         if (!worker) throw new Error("the container worker is registered but not active yet");
@@ -17723,7 +17724,7 @@ var init_WamAdapter = __esm({
 });
 
 // src/host/ForeignPlugin.js
-async function stage(name, step, work, ms = 2e4) {
+async function stage(name2, step, work, ms = 2e4) {
   let timer = null;
   try {
     return await Promise.race([
@@ -17731,7 +17732,7 @@ async function stage(name, step, work, ms = 2e4) {
       new Promise((_, reject) => {
         timer = setTimeout(() => reject(new LoadError(
           step,
-          `${name} did not finish within ${ms / 1e3}s, and did not fail either`
+          `${name2} did not finish within ${ms / 1e3}s, and did not fail either`
         )), ms);
       })
     ]);
@@ -18287,8 +18288,8 @@ async function instantiate(profile, granted, context, {
   }
   const assets = {};
   for (const asset of profile.assets ?? []) {
-    const name2 = asset.iri?.split("#").pop() ?? asset.iri;
-    assets[name2] = await fetchVerified(asset, { kind: `asset "${name2}"` });
+    const name3 = asset.iri?.split("#").pop() ?? asset.iri;
+    assets[name3] = await fetchVerified(asset, { kind: `asset "${name3}"` });
   }
   const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
   try {
@@ -18300,8 +18301,8 @@ async function instantiate(profile, granted, context, {
       { cause }
     );
   }
-  const name = profile.processor.registeredName;
-  if (!name) {
+  const name2 = profile.processor.registeredName;
+  if (!name2) {
     throw new LoadError(
       STEPS.constructNode,
       "the profile declares no jig:registeredName, and a worklet cannot be asked what it registered"
@@ -18310,7 +18311,7 @@ async function instantiate(profile, granted, context, {
   let node;
   try {
     const driven = profile.audioOutputs === 0 && profile.audioInputs === 0;
-    node = new AudioWorkletNode(context, name, {
+    node = new AudioWorkletNode(context, name2, {
       numberOfInputs: driven ? 1 : profile.audioInputs,
       numberOfOutputs: profile.audioOutputs,
       outputChannelCount: profile.audioOutputs > 0 ? Array(profile.audioOutputs).fill(profile.outputChannels) : void 0,
@@ -18325,7 +18326,7 @@ async function instantiate(profile, granted, context, {
   } catch (cause) {
     throw new LoadError(
       STEPS.constructNode,
-      `could not construct "${name}": ${cause.message}. The processor module may register a different name.`,
+      `could not construct "${name2}": ${cause.message}. The processor module may register a different name.`,
       { cause }
     );
   }
@@ -18366,8 +18367,8 @@ function init(node, moduleBytes, assets, granted, context, profile, state) {
     };
     const buffer = moduleBytes ? moduleBytes.buffer.slice(moduleBytes.byteOffset, moduleBytes.byteOffset + moduleBytes.byteLength) : null;
     const assetBuffers = {};
-    for (const [name, bytes] of Object.entries(assets ?? {})) {
-      assetBuffers[name] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    for (const [name2, bytes] of Object.entries(assets ?? {})) {
+      assetBuffers[name2] = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     }
     const transfer = [
       ...buffer ? [buffer] : [],
@@ -21649,6 +21650,8 @@ var nextId = () => `node-${++counter}`;
 var Engine = class {
   #context;
   #master = null;
+  #masterPanner = null;
+  #sends = [];
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -21656,24 +21659,28 @@ var Engine = class {
   // One strip per track, keyed by the model's track id. The engine holds no
   // policy about what a track is; it is a named place for audio to arrive.
   #tracks = /* @__PURE__ */ new Map();
+  #maxTrackDelay = null;
   /**
    * `AudioWorkletNode` is injected rather than read from globals so the engine
    * can be driven by an offline host in a test. Web Audio hangs the class off
    * the global rather than off the context, so there is nowhere else to get it
    * from and no way to substitute it without this.
    */
-  constructor({ context, loader, output = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
+  constructor({ context, loader, output = null, maxTrackDelaySeconds = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
     if (!context) throw new Error("Engine needs an AudioContext");
     if (!loader) throw new Error("Engine needs a PluginLoader");
     if (typeof AudioWorkletNode !== "function") {
       throw new Error("Engine needs an AudioWorkletNode constructor; this environment has none");
     }
     this.#context = context;
+    this.#maxTrackDelay = maxTrackDelaySeconds;
     this.#loader = loader;
     this.#nodeClass = AudioWorkletNode;
     if (typeof context.createGain === "function") {
       this.#master = context.createGain();
       this.#master.connect(output ?? context.destination);
+      this.#masterPanner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
+      if (this.#masterPanner) this.#masterPanner.connect(this.#master);
     }
   }
   /**
@@ -21684,6 +21691,10 @@ var Engine = class {
    */
   get master() {
     return this.#master ?? this.#context.destination;
+  }
+  /** Where a track's output arrives: the master's pan when there is one, else the master. */
+  get #mixInput() {
+    return this.#masterPanner ?? this.master;
   }
   get context() {
     return this.#context;
@@ -21869,23 +21880,109 @@ var Engine = class {
    */
   addTrack(trackId) {
     if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`);
+    const pre = this.#context.createGain();
     const gain = this.#context.createGain();
     const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
-    if (panner) {
-      gain.connect(panner);
-      panner.connect(this.master);
-    } else gain.connect(this.master);
-    this.#tracks.set(trackId, { gain, panner, input: gain });
+    pre.connect(gain);
+    const delay = this.#maxTrackDelay !== null && typeof this.#context.createDelay === "function" ? this.#context.createDelay(this.#maxTrackDelay) : null;
+    const last = panner ?? gain;
+    if (panner) gain.connect(panner);
+    const out = delay ?? last;
+    if (delay) last.connect(delay);
+    out.connect(this.#mixInput);
+    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre });
   }
   removeTrack(trackId) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
     try {
+      strip.pre.disconnect();
       strip.gain.disconnect();
       strip.panner?.disconnect();
+      strip.delay?.disconnect();
     } catch {
     }
     this.#tracks.delete(trackId);
+  }
+  /**
+   * Delay a track's output by `frames`, to line it up with a slower track. Set
+   * at an audio time so a change while playing does not click at the wrong moment.
+   * Refuses what cannot be done: no delay built into the strips, or more than the
+   * host allowed for.
+   */
+  setTrackDelay(trackId, frames, { atTime } = {}) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (!strip.delay) throw new Error("this engine was built with no track delay, so tracks cannot be aligned");
+    const seconds = frames / this.#context.sampleRate;
+    if (!(seconds >= 0) || seconds > this.#maxTrackDelay) {
+      throw new Error(`a track delay of ${frames} frames (${(seconds * 1e3).toFixed(1)} ms) is more than the ${this.#maxTrackDelay * 1e3} ms this host allows`);
+    }
+    strip.delay.delayTime.setValueAtTime(seconds, atTime ?? this.#context.currentTime);
+  }
+  /**
+   * Send a track's output somewhere other than the master: into another track,
+   * which makes that track a bus, or back to the master with null. Only touches
+   * the audio graph when the destination changed, since the dispatcher says it
+   * for every track on every rebuild.
+   */
+  setTrackOutput(trackId, toTrackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    const target = toTrackId === null ? null : this.#tracks.get(toTrackId);
+    if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`);
+    if (strip.to === toTrackId) return;
+    try {
+      strip.out.disconnect();
+    } catch {
+    }
+    strip.out.connect(target ? target.pre : this.#mixInput);
+    strip.to = toTrackId;
+  }
+  /**
+   * A send: a copy of one track's signal, at `level`, into another track. Taken
+   * before the fader with `tap: 'pre'` and after fader and pan with 'post'. Not
+   * a link between plugins, so clearLinks leaves it alone; clearSends takes them
+   * all down and the dispatcher makes them again from the model.
+   */
+  addSend(id, fromTrackId, toTrackId, { level = 1, tap = "post" } = {}) {
+    const from = this.#tracks.get(fromTrackId);
+    const to = this.#tracks.get(toTrackId);
+    if (!from) throw new Error(`no such track strip: ${fromTrackId}`);
+    if (!to) throw new Error(`no such track strip: ${toTrackId}`);
+    if (tap !== "pre" && tap !== "post") throw new Error(`a send is pre or post, not ${tap}`);
+    const gain = this.#context.createGain();
+    gain.gain.setValueAtTime(level, this.#context.currentTime);
+    const source = tap === "pre" ? from.pre : from.panner ?? from.gain;
+    source.connect(gain);
+    gain.connect(to.pre);
+    this.#sends.push({ id, source, gain });
+  }
+  /** Change one send's level without remaking it. */
+  setSendLevel(id, level) {
+    const send = this.#sends.find((x) => x.id === id);
+    if (!send) throw new Error(`no such send: ${id}`);
+    send.gain.gain.setValueAtTime(level, this.#context.currentTime);
+  }
+  clearSends() {
+    for (const { source, gain } of this.#sends) {
+      try {
+        source.disconnect(gain);
+      } catch {
+      }
+      try {
+        gain.disconnect();
+      } catch {
+      }
+    }
+    this.#sends = [];
+  }
+  /** The master's level, pan and mute. Muted is a level of zero, not a disconnect. */
+  setMaster({ gain = 1, pan = 0, muted = false } = {}) {
+    if (!this.#master) return;
+    const at = this.#context.currentTime;
+    this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
+    if (this.#masterPanner) this.#masterPanner.pan.setValueAtTime(pan, at);
   }
   /** The track ids that have a strip. */
   trackIds() {
@@ -22760,9 +22857,9 @@ var OPERATIONS = {
       }
       return grouped;
     };
-    const tryReconnect = (join) => {
+    const tryReconnect = (join2) => {
       try {
-        OPERATIONS.addConnection(state, join, counters);
+        OPERATIONS.addConnection(state, join2, counters);
       } catch {
       }
     };
@@ -22826,9 +22923,9 @@ var OPERATIONS = {
         state.connections.delete(key);
       }
     }
-    for (const join of rejoined) {
+    for (const join2 of rejoined) {
       try {
-        OPERATIONS.addConnection(state, join, counters);
+        OPERATIONS.addConnection(state, join2, counters);
       } catch {
       }
     }
@@ -23232,6 +23329,18 @@ function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
   const inCycle = new Set(cycles.flat());
   const onCycle = (connection) => inCycle.has(connection.from.node) && componentOf.get(connection.from.node) === componentOf.get(connection.to.node);
   const errors = [];
+  const midi2 = project.connections.filter((c3) => !isAudio(c3));
+  const midiOut = new Map(nodes.map((id) => [id, []]));
+  for (const c3 of midi2) midiOut.get(c3.from.node)?.push(c3.to.node);
+  for (const component of stronglyConnected(nodes, (id) => midiOut.get(id) ?? [])) {
+    if (component.length > 1 || (midiOut.get(component[0]) ?? []).includes(component[0])) {
+      errors.push({
+        kind: "midi-cycle",
+        nodes: [...component],
+        message: `MIDI loop through ${component.join(", ")}. A MIDI connection carries no delay, so events would go round it for ever. Remove one of the connections.`
+      });
+    }
+  }
   for (const cycle of cycles) {
     const members = new Set(cycle);
     const nodeDelay = cycle.reduce((total, id) => total + latencyOf(id), 0);
@@ -23809,6 +23918,9 @@ var OpDispatcher = class {
   // id. Rebuilt with the links, and moved by a latency message without
   // rebuilding them (docs/latency.md section 2).
   #compensation = /* @__PURE__ */ new Map();
+  #alignTracks = false;
+  // The delay last given to each track, in frames, so the engine is asked only about a change.
+  #trackDelays = /* @__PURE__ */ new Map();
   #foreign;
   // The stacks and the snapshot-to-snapshot reconciliation live in
   // UndoHistory. Nothing is recorded while #recording is false, which is how
@@ -23816,8 +23928,9 @@ var OpDispatcher = class {
   // without recording their own reversal as a new edit.
   #history = new UndoHistory();
   #recording = true;
-  constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections() } = {}) {
+  constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project;
+    this.#alignTracks = alignTracks;
     this.#engine = engine;
     this.#foreign = foreign;
     this.#inspections = inspections;
@@ -23911,19 +24024,55 @@ var OpDispatcher = class {
       }
     }
   }
+  /** Whether tracks are aligned to one another. */
+  get alignTracks() {
+    return this.#alignTracks;
+  }
+  /** Turn alignment on or off, and give every track the delay that now applies. */
+  setAlignTracks(on) {
+    this.#alignTracks = Boolean(on);
+    const compiled = this.compile();
+    if (compiled.ok) this.#applyTrackDelays(compiled);
+  }
   /**
    * How late each track's signal is, in frames: the longest declared latency
    * along its chain, counting what the compiler found ahead of each node.
-   * Tracks are not aligned to one another (docs/latency.md, "Between tracks"),
-   * so this is how far a track lags a track with no latency at all.
+   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * is zero when alignment is off, and `frames` is what the track itself has
+   * (docs/latency.md, "Between tracks").
    */
   trackLatencies() {
     const compiled = this.compile();
-    if (!compiled.ok) return this.#project.tracks.map((t) => ({ trackId: t.id, frames: 0 }));
+    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
+    const slowest = Math.max(0, ...frames.values());
     return this.#project.tracks.map((track) => ({
       trackId: track.id,
-      frames: this.#project.nodes.filter((n2) => n2.track === track.id).reduce((most, n2) => Math.max(most, (compiled.arrival.get(n2.id) ?? 0) + this.#latencyOf(n2.id)), 0)
+      frames: frames.get(track.id) ?? 0,
+      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
     }));
+  }
+  #trackFrames(compiled) {
+    return new Map(this.#project.tracks.map((track) => [
+      track.id,
+      this.#project.nodes.filter((n2) => n2.track === track.id).reduce((most, n2) => Math.max(most, (compiled.arrival.get(n2.id) ?? 0) + this.#latencyOf(n2.id)), 0)
+    ]));
+  }
+  /** Give each track the delay that lines it up, asking the engine only where it changed. */
+  #applyTrackDelays(compiled) {
+    if (!this.#engine) return;
+    const frames = this.#trackFrames(compiled);
+    const slowest = Math.max(0, ...frames.values());
+    for (const track of this.#project.tracks) {
+      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0;
+      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
+      try {
+        this.#engine.setTrackDelay(track.id, wanted);
+        this.#trackDelays.set(track.id, wanted);
+      } catch (error2) {
+        console.error(`could not align track ${track.id}: ${error2.message}`);
+      }
+    }
+    for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id);
   }
   /** The latency each node declares, from what the engine actually loaded. */
   #latencyOf(nodeId) {
@@ -24211,6 +24360,7 @@ var OpDispatcher = class {
       }
     }
     this.#compensation = after;
+    this.#applyTrackDelays(compiled);
     this.#emit({ type: "latency", nodeId, latencyFrames, fromFrame, compiled });
   }
   /**
@@ -24366,6 +24516,21 @@ var OpDispatcher = class {
     }));
   }
   /** Push every track's channel strip to the engine. */
+  /**
+   * The model's master, sends and bus outputs, made in the audio graph. Sends are
+   * torn down and made again each time, like the links: after an edit the audio
+   * is exactly what the model says. An output is set for every track and the
+   * engine touches the graph only where it changed.
+   */
+  #applyRouting() {
+    if (!this.#engine) return;
+    this.#engine.clearSends();
+    for (const send of this.#project.sends) {
+      this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
+    }
+    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null);
+    this.#engine.setMaster(this.#project.master);
+  }
   #applyChannels() {
     if (!this.#engine) return;
     for (const { trackId, gain, pan, silent } of this.audibility()) {
@@ -24408,6 +24573,7 @@ var OpDispatcher = class {
     this.#compensation = delayFor;
     this.#engine.clearLinks();
     this.#syncTracks();
+    this.#applyRouting();
     const midiRoutes = [];
     for (const connection of this.#project.connections) {
       const from = this.#nodeIds.get(connection.from.node);
@@ -24426,6 +24592,7 @@ var OpDispatcher = class {
       });
     }
     this.#linkSinksToTracks();
+    this.#applyTrackDelays(compiled);
     this.#applyChannels();
     this.#router?.setRoutes(midiRoutes);
   }
@@ -24608,14 +24775,28 @@ var HOST_CONFIG_KEYS = Object.freeze({
   // loopback port it listens on and the page connects to, and how long a tool
   // call waits for the page. A plugin load can take seconds.
   bridgePort: "a TCP port, 1 to 65535",
-  bridgeCallTimeoutMs: "a whole number of milliseconds, at least 1"
+  bridgeCallTimeoutMs: "a whole number of milliseconds, at least 1",
+  // Delay each track by however much less latency it has than the slowest, so
+  // parallel tracks arrive together (docs/latency.md, "Between tracks"). This is
+  // the starting value; a person can change it on the Mixer tab, and that choice
+  // is remembered in their browser and wins over this file.
+  alignTracks: "true or false",
+  // The longest delay a track can be given to align it, which is the largest
+  // latency difference between two tracks the page can put right.
+  maxTrackDelayMs: "a whole number of milliseconds, at least 1"
 });
+var BOOLEAN_KEYS = /* @__PURE__ */ new Set(["alignTracks"]);
 function readHostConfig(json) {
   if (!json || typeof json !== "object") throw new Error("web/host.json is not a JSON object");
   const settings = {};
   for (const [key, what] of Object.entries(HOST_CONFIG_KEYS)) {
     const value2 = json[key];
     if (value2 === void 0) throw new Error(`web/host.json has no ${key}: it must be ${what}`);
+    if (BOOLEAN_KEYS.has(key)) {
+      if (typeof value2 !== "boolean") throw new Error(`web/host.json ${key} is ${JSON.stringify(value2)}: it must be ${what}`);
+      settings[key] = value2;
+      continue;
+    }
     if (!Number.isInteger(value2) || value2 < 1) throw new Error(`web/host.json ${key} is ${JSON.stringify(value2)}: it must be ${what}`);
     settings[key] = value2;
   }
@@ -25262,15 +25443,15 @@ function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPl
   const surface = {
     tools,
     names: tools.map((t) => t.name),
-    async call(name, input = {}) {
-      const tool = tools.find((t) => t.name === name);
+    async call(name2, input = {}) {
+      const tool = tools.find((t) => t.name === name2);
       if (!tool) {
-        return { ok: false, error: `no such tool: ${name}`, known: tools.map((t) => t.name) };
+        return { ok: false, error: `no such tool: ${name2}`, known: tools.map((t) => t.name) };
       }
       try {
         return await tool.handler(input);
       } catch (error2) {
-        return { ok: false, error: `${name} threw: ${error2?.message ?? error2}` };
+        return { ok: false, error: `${name2} threw: ${error2?.message ?? error2}` };
       }
     }
   };
@@ -25329,38 +25510,45 @@ function createRuntime(ctx2) {
     ctx2.engine = new Engine({
       context,
       loader: new PluginLoader({ parse: parseText, validator, capabilities }),
-      output: analyser
+      output: analyser,
+      maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
     ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3) });
     const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
     const dispatcher = new OpDispatcher({
       engine: ctx2.engine,
-      foreign: new ForeignSupport2({ validator })
+      foreign: new ForeignSupport2({ validator }),
+      // The person's own choice, when they have made one, else web/host.json's.
+      alignTracks: ctx2.align.preferred(ctx2.hostConfig.alignTracks)
     });
     ctx2.dispatcher = dispatcher;
+    ctx2.align.sync();
     dispatcher.project.editor.subscribe(() => ctx2.rack.draw());
     dispatcher.subscribe((event) => {
       if (event.type === "parameter") ctx2.editors.parameter(event.nodeId, event.symbol, event.value);
       if (event.type === "changed") {
-        $2("state").textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
+        const state = $2("state");
+        if (state) state.textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
         ctx2.rack.draw();
         ctx2.history.updateButtons();
         ctx2.transport.showTransport();
       }
     });
-    const registration = registerTools({
-      dispatcher,
-      catalogue: ctx2.browser.catalogue(),
-      loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
-      openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
-      onPlay: () => ctx2.transport.play(),
-      onStop: async () => {
-        ctx2.transport.stop();
-      }
-    });
-    ctx2.mcpSurface = registration.surface;
-    log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
-    log2(`${registration.count} agent tools via ${registration.bound}`);
+    if (ctx2.browser) {
+      const registration = registerTools({
+        dispatcher,
+        catalogue: ctx2.browser.catalogue(),
+        loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
+        openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
+        onPlay: () => ctx2.transport.play(),
+        onStop: async () => {
+          ctx2.transport.stop();
+        }
+      });
+      ctx2.mcpSurface = registration.surface;
+      log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
+      log2(`${registration.count} agent tools via ${registration.bound}`);
+    }
     ctx2.transport.meterLoop();
     ctx2.transport.positionLoop();
     ctx2.expose();
@@ -25686,10 +25874,10 @@ function createTransport(ctx2) {
     if (!t) return;
     const bpm = t.tempoPoints[0]?.bpm;
     const field = $2("tempo");
-    if (bpm && document2.activeElement !== field) field.value = String(bpm);
+    if (bpm && field && document2.activeElement !== field) field.value = String(bpm);
     const signature = $2("signature");
-    if (document2.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`;
-    $2("loop").setAttribute("aria-pressed", String(Boolean(t.loopEnabled)));
+    if (signature && document2.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`;
+    $2("loop")?.setAttribute("aria-pressed", String(Boolean(t.loopEnabled)));
   }
   function toggleLoop() {
     const d = ctx2.dispatcher;
@@ -26299,7 +26487,7 @@ function panPosition(pan) {
   const side = pan < 0 ? "left" : "right";
   return `${Math.round(Math.abs(pan) * 100)}% ${side}`;
 }
-function createStrip(document2, channel, onChange, { label: initialLabel = "", id = null } = {}) {
+function createStrip(document2, channel, onChange, { label: initialLabel = "", id = null, solo: withSolo = true } = {}) {
   let label = initialLabel;
   const base = (id ?? `${initialLabel || "node"}`).replace(/\s+/g, "-").toLowerCase();
   const element = document2.createElement("div");
@@ -26359,12 +26547,12 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
   panRow.append(panLabel, panDial.element, panValue);
   const buttons = document2.createElement("div");
   buttons.className = "strip-buttons";
-  const toggle = (name, key) => {
+  const toggle = (name2, key) => {
     const button = document2.createElement("button");
     button.type = "button";
     button.className = `strip-toggle ${key}`;
     button.id = `${base}-${key}`;
-    button.textContent = name;
+    button.textContent = name2;
     button.setAttribute("aria-pressed", String(Boolean(state[key])));
     button.addEventListener("click", () => {
       state[key] = !state[key];
@@ -26375,7 +26563,8 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
   };
   const mute = toggle("Mute", "muted");
   const solo = toggle("Solo", "soloed");
-  buttons.append(mute, solo);
+  buttons.append(mute);
+  if (withSolo) buttons.append(solo);
   element.append(gainRow, panRow, buttons);
   return {
     element,
@@ -26802,10 +26991,10 @@ function preserveFocus(container) {
 
 // web/app/Rack.js
 var NEW_TRACK = "";
-function slotTitle(node, profile, name) {
+function slotTitle(node, profile, name2) {
   const plugin = profile?.label ?? null;
-  if (plugin && node.label && node.label !== plugin) return `${plugin}: ${name}`;
-  return name;
+  if (plugin && node.label && node.label !== plugin) return `${plugin}: ${name2}`;
+  return name2;
 }
 function createRack(ctx2) {
   const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
@@ -26895,9 +27084,9 @@ function createRack(ctx2) {
     const trackNames = tracks.map((t) => trackLabel(t, made.indexOf(t)));
     const labelOfTrack = (track) => {
       const i2 = tracks.indexOf(track);
-      const name = trackNames[i2];
-      const sharing = trackNames.filter((n2) => n2 === name).length;
-      return sharing > 1 ? `${name} ${trackNames.slice(0, i2 + 1).filter((n2) => n2 === name).length}` : name;
+      const name2 = trackNames[i2];
+      const sharing = trackNames.filter((n2) => n2 === name2).length;
+      return sharing > 1 ? `${name2} ${trackNames.slice(0, i2 + 1).filter((n2) => n2 === name2).length}` : name2;
     };
     const restoreMixerFocus = preserveFocus(mixer.element);
     mixer.draw({
@@ -26910,6 +27099,8 @@ function createRack(ctx2) {
     restoreMixerFocus();
     drawTargets();
     ctx2.arrangement.draw(tracks, labelOfTrack);
+    ctx2.matrix.draw();
+    ctx2.master.update();
     if (tracks.length === 0) {
       const empty = document2.createElement("div");
       empty.className = "empty";
@@ -27338,18 +27529,18 @@ function createEditors(ctx2) {
 }
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove }) {
-  for (const [name2, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove })) {
-    if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name2}`);
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm }) {
+  for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
+    if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
   const element = document2.createElement("div");
   element.className = "timeline-head";
-  const name = document2.createElement("button");
-  name.type = "button";
-  name.className = "show-track";
-  name.id = `show-track-${id}`;
-  name.addEventListener("click", (event) => onSelect(id, { toggle: Boolean(event.shiftKey || event.ctrlKey || event.metaKey) }));
-  name.addEventListener("keydown", (event) => {
+  const name2 = document2.createElement("button");
+  name2.type = "button";
+  name2.className = "show-track";
+  name2.id = `show-track-${id}`;
+  name2.addEventListener("click", (event) => onSelect(id, { toggle: Boolean(event.shiftKey || event.ctrlKey || event.metaKey) }));
+  name2.addEventListener("keydown", (event) => {
     if (!event.altKey || event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     onMove(id, event.key === "ArrowUp" ? -1 : 1);
@@ -27365,6 +27556,13 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   let at = 0;
   add.addEventListener("click", () => onAdd(id, at));
   addAudio.addEventListener("click", () => onAddAudio(id, at));
+  const arm = document2.createElement("button");
+  arm.type = "button";
+  arm.className = "head-arm";
+  arm.id = `head-${id}-arm`;
+  arm.textContent = "Arm";
+  arm.setAttribute("aria-pressed", "false");
+  arm.addEventListener("click", () => onArm(id, arm.getAttribute("aria-pressed") !== "true"));
   const mix = document2.createElement("div");
   mix.className = "head-mix";
   const toggle = (text, key) => {
@@ -27409,6 +27607,9 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   };
   const level = slider("Level", "gain", 0, 2, (n2) => `${decibels(n2)} dB`, (n2) => `${decibels(n2)} decibels`);
   const pan = slider("Pan", "pan", -1, 1, panPosition, panPosition);
+  const routing = document2.createElement("p");
+  routing.className = "head-routing";
+  routing.hidden = true;
   const silent = document2.createElement("span");
   silent.className = "head-silent";
   silent.hidden = true;
@@ -27417,7 +27618,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   latency.className = "head-latency";
   latency.hidden = true;
   mix.append(mute, solo, level.label, pan.label, silent);
-  element.append(name, mix, latency, add, addAudio);
+  element.append(name2, arm, mix, routing, latency, add, addAudio);
   return {
     element,
     /**
@@ -27425,15 +27626,15 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = "medium", latency: late = null }) {
-      name.textContent = label;
-      name.setAttribute("aria-label", `Select ${label}`);
-      name.setAttribute("aria-pressed", String(selected));
+    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = "medium", latency: late = null, canArm = false, armed = false, routing: routed = null }) {
+      name2.textContent = label;
+      name2.setAttribute("aria-label", `Select ${label}`);
+      name2.setAttribute("aria-pressed", String(selected));
       element.classList.toggle("selected", selected);
       if (color) element.style.setProperty("--track-color", color);
       else element.style.removeProperty("--track-color");
       element.dataset.size = size;
-      name.title = "Alt with Up or Down moves this track";
+      name2.title = "Alt with Up or Down moves this track";
       element.setAttribute("role", "group");
       element.setAttribute("aria-label", `${label} controls${isSilent ? ", silent" : ""}`);
       at = place;
@@ -27450,11 +27651,213 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
         control.input.setAttribute("aria-label", `${key === "gain" ? "Level" : "Pan"}, ${label}`);
       }
       silent.hidden = !isSilent;
-      latency.hidden = !(late && late.frames > 0);
+      routing.hidden = routed === null;
+      routing.textContent = routed ?? "";
+      arm.hidden = !canArm;
+      arm.setAttribute("aria-pressed", String(armed));
+      arm.textContent = armed ? "Armed" : "Arm";
+      arm.setAttribute("aria-label", `Arm ${label} for MIDI input`);
+      latency.hidden = !(late && (late.frames > 0 || late.alignFrames > 0));
       if (!latency.hidden) {
-        latency.textContent = `Latency ${late.frames} frames${late.ms !== null ? `, ${late.ms.toFixed(1)} ms` : ""}`;
-        latency.title = "How far this track lags a track with no latency. Tracks are not aligned to each other.";
+        const ms = (n2) => late.rate ? `, ${(n2 / late.rate * 1e3).toFixed(1)} ms` : "";
+        const own = late.frames > 0 ? `Latency ${late.frames} frames${ms(late.frames)}` : "No latency";
+        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the slowest track` : "";
+        latency.textContent = own + aligned;
+        latency.title = late.alignFrames > 0 ? "Aligned: this track is delayed so it arrives with the slowest one. Change it on the Mixer tab." : "How far this track lags a track with no latency. Tracks are not aligned to each other.";
       }
+    }
+  };
+}
+
+// src/ops/OpenProject.js
+function inSignalOrder(nodes, connections) {
+  const feeding = new Map(nodes.map((n2) => [n2.id, /* @__PURE__ */ new Set()]));
+  for (const c3 of connections) {
+    if (feeding.has(c3.to.node) && feeding.has(c3.from.node) && c3.from.node !== c3.to.node) {
+      feeding.get(c3.to.node).add(c3.from.node);
+    }
+  }
+  const placed = /* @__PURE__ */ new Set();
+  const ordered = [];
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const node of nodes) {
+      if (placed.has(node.id) || [...feeding.get(node.id)].some((id) => !placed.has(id))) continue;
+      placed.add(node.id);
+      ordered.push(node);
+      progress = true;
+      break;
+    }
+  }
+  return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
+}
+async function openProject(dispatcher, read, { onLoading = () => {
+}, onCleared = () => {
+} } = {}) {
+  const existing = [
+    ...[...dispatcher.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id })),
+    ...[...dispatcher.project.tracks].map((t) => ({ op: "removeTrack", id: t.id }))
+  ];
+  if (existing.length > 0) {
+    const cleared = dispatcher.apply(existing);
+    if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
+  }
+  onCleared();
+  const tracks = read.changes.filter((c3) => c3.op === "addTrack");
+  if (tracks.length > 0) {
+    const added = dispatcher.apply(tracks);
+    if (!added.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [added.message] };
+  }
+  const errors = [];
+  const loaded = /* @__PURE__ */ new Set();
+  const additions = inSignalOrder(
+    read.changes.filter((c3) => c3.op === "addNode"),
+    read.changes.filter((c3) => c3.op === "addConnection")
+  );
+  for (const change of additions) {
+    onLoading(change.pluginIri);
+    const { op, pluginIri, ...node } = change;
+    const result = await dispatcher.addPlugin(pluginIri, node);
+    if (!result.ok) {
+      errors.push(`${change.id}: ${result.message}`);
+      continue;
+    }
+    loaded.add(change.id);
+    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
+      const set = dispatcher.setParameter(change.id, symbol, value2);
+      if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
+    }
+  }
+  const loadedOrNull = (id) => id === null || loaded.has(id) ? id : null;
+  const rest = read.changes.filter((c3) => c3.op !== "addNode" && c3.op !== "addTrack" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)) && // An envelope on a node that failed to load has nothing to move.
+  (c3.op !== "addEnvelope" || c3.target.node === void 0 || loaded.has(c3.target.node))).map((c3) => c3.op === "setTrack" && ("midiInput" in c3 || "audioInput" in c3) ? { ...c3, midiInput: loadedOrNull(c3.midiInput ?? null), audioInput: loadedOrNull(c3.audioInput ?? null) } : c3);
+  if (rest.length > 0) {
+    const applied = dispatcher.apply(rest);
+    if (!applied.ok) errors.push(applied.message);
+  }
+  dispatcher.clearHistory();
+  return { ok: true, loaded, total: additions.length, errors };
+}
+
+// src/ui/ChainModel.js
+function kindOf2(connection) {
+  if (isMidiSignal(connection.signalKind)) return "MIDI";
+  return connection.to.portSymbol !== void 0 && connection.to.portSymbol !== null ? "modulation" : "audio";
+}
+var kindsOf = (ports) => [...new Set(ports.filter((p) => p.portSymbol === void 0).map((p) => isMidiSignal(p.kind) ? "MIDI" : "audio"))];
+var join = (list) => list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLabelOf }) {
+  const track = project.track(trackId);
+  const onTrack = project.nodes.filter((n2) => n2.track === trackId);
+  const ids = new Set(onTrack.map((n2) => n2.id));
+  const ordered = inSignalOrder(onTrack, project.connections);
+  const nodes = ordered.map((node) => {
+    const profile = profileOf(node.id);
+    const sends = project.connections.filter((c3) => c3.from.node === node.id).map((c3) => {
+      const target = project.node(c3.to.node);
+      return {
+        id: c3.id,
+        kind: kindOf2(c3),
+        toNode: c3.to.node,
+        toLabel: labelOf(c3.to.node),
+        toTrack: target?.track ?? null,
+        toTrackLabel: target ? trackLabelOf(target.track) : null,
+        other: Boolean(target) && target.track !== trackId,
+        parameter: c3.to.portSymbol ?? null
+      };
+    });
+    const receives = project.connections.filter((c3) => c3.to.node === node.id && !ids.has(c3.from.node)).map((c3) => {
+      const source = project.node(c3.from.node);
+      return {
+        id: c3.id,
+        kind: kindOf2(c3),
+        fromNode: c3.from.node,
+        fromLabel: labelOf(c3.from.node),
+        fromTrack: source?.track ?? null,
+        fromTrackLabel: source ? trackLabelOf(source.track) : null
+      };
+    });
+    return {
+      id: node.id,
+      label: labelOf(node.id),
+      loaded: profile !== void 0,
+      failed: failedOf(node.id) ?? null,
+      takes: kindsOf(inputsOf(profile)),
+      gives: kindsOf(outputsOf(profile)),
+      takesMidiFromTrack: track?.midiInput === node.id,
+      takesAudioFromTrack: track?.audioInput === node.id,
+      sends,
+      receives
+    };
+  });
+  return { trackId, nodes };
+}
+function say(node) {
+  const parts = [node.label];
+  if (node.failed) parts.push(`failed to load: ${node.failed}`);
+  else if (!node.loaded) parts.push("not loaded yet");
+  else {
+    parts.push(node.takes.length ? `takes ${join(node.takes)}` : "takes no signal");
+    parts.push(node.gives.length ? `gives ${join(node.gives)}` : "gives no signal");
+  }
+  if (node.takesMidiFromTrack) parts.push("the track's MIDI clips play into it");
+  if (node.takesAudioFromTrack) parts.push("the track's audio clips play into it");
+  for (const s of node.sends) {
+    parts.push(`sends ${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ""}${s.other ? ` on ${s.toTrackLabel}` : ""}`);
+  }
+  for (const r of node.receives) parts.push(`receives ${r.kind} from ${r.fromLabel} on ${r.fromTrackLabel}`);
+  return parts.join("; ");
+}
+
+// src/ui/ChainStrip.js
+function createChainStrip(document2, { onSelect }) {
+  if (typeof onSelect !== "function") throw new Error("createChainStrip needs onSelect");
+  const element = document2.createElement("div");
+  element.className = "timeline-chain";
+  element.setAttribute("role", "group");
+  const list = document2.createElement("ol");
+  list.className = "chain-list";
+  element.append(list);
+  return {
+    element,
+    /** `chain` is describeChain's answer; `selected` the node id selected, or null. */
+    update(chain, { label, selected = null }) {
+      element.hidden = chain.nodes.length === 0;
+      element.setAttribute("aria-label", `Plugins on ${label}`);
+      list.replaceChildren(...chain.nodes.map((node) => {
+        const item = document2.createElement("li");
+        item.className = "chain-item";
+        if (node.failed) item.classList.add("failed");
+        const button = document2.createElement("button");
+        button.type = "button";
+        button.className = "chain-node";
+        button.id = `chain-${node.id}`;
+        button.textContent = node.label;
+        button.setAttribute("aria-pressed", String(selected === node.id));
+        button.setAttribute("aria-label", say(node));
+        button.addEventListener("click", () => onSelect(node.id));
+        const io = document2.createElement("span");
+        io.className = "chain-io";
+        io.textContent = node.failed ? "failed to load" : !node.loaded ? "loading" : `${node.takes.join(" + ") || "nothing"} in, ${node.gives.join(" + ") || "nothing"} out`;
+        const links = document2.createElement("ul");
+        links.className = "chain-links";
+        links.setAttribute("aria-hidden", "true");
+        for (const s of node.sends) {
+          const li = document2.createElement("li");
+          if (s.other) li.className = "other";
+          li.textContent = `${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ""}${s.other ? ` on ${s.toTrackLabel}` : ""}`;
+          links.append(li);
+        }
+        for (const r of node.receives) {
+          const li = document2.createElement("li");
+          li.className = "other";
+          li.textContent = `${r.kind} from ${r.fromLabel} on ${r.fromTrackLabel}`;
+          links.append(li);
+        }
+        item.append(button, io, links);
+        return item;
+      }));
     }
   };
 }
@@ -27624,9 +28027,9 @@ function describeClip(clip, { beatsPerBar, playsIntoNothing = false }) {
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
   return `${what}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
 }
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack })) {
-    if (typeof fn !== "function") throw new Error(`createTimeline needs ${name}`);
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onChannel, onSetLoop, onMoveTrack, onArm })) {
+    if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
   const element = document2.createElement("div");
   element.className = "timeline";
@@ -27672,15 +28075,24 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     followButton.setAttribute("aria-pressed", String(on));
   };
   setFollow(true);
+  let routing = true;
+  const routingButton = tool("Routing", () => setRouting(!routing));
+  const setRouting = (on) => {
+    routing = on;
+    routingButton.setAttribute("aria-pressed", String(on));
+    element.dataset.routing = on ? "on" : "off";
+  };
   tools.append(
     tool("Zoom out", () => zoom(1 / 1.5)),
     tool("Zoom in", () => zoom(1.5)),
     tool("Fit", () => fit()),
     followButton,
+    routingButton,
     zoomStatus,
     snapLabel
   );
   element.append(tools, scroller);
+  setRouting(true);
   const head = document2.createElement("div");
   head.className = "playhead";
   head.setAttribute("aria-hidden", "true");
@@ -27822,6 +28234,9 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       button.classList.toggle("selected", on);
       button.setAttribute("aria-current", String(on));
     }
+    for (const chip of scroller.querySelectorAll(".chain-node")) {
+      chip.setAttribute("aria-pressed", String(selection.has("node", chip.id.replace(/^chain-/, ""))));
+    }
     for (const [id, entry] of rows) {
       const on = selection.has("track", id);
       entry.header.element.classList.toggle("selected", on);
@@ -27851,6 +28266,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   }, { passive: false });
   function draw(args) {
     lastArgs = args;
+    scroller.style.setProperty("--view", `${scroller.clientWidth}px`);
     const {
       tracks,
       clips,
@@ -27864,6 +28280,10 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       loop = null,
       layoutFor = () => ({ color: null, laneSize: "medium" }),
       latencyFor = () => null,
+      chainFor = () => ({ nodes: [] }),
+      canArm = () => false,
+      armed = () => false,
+      routingFor = () => null,
       empty: emptyState = { text: "No tracks yet. Load a plugin and its track appears here.", actions: [] }
     } = args;
     const lastBeat = Math.max(0, ...clips.map((c3) => c3.startBeat + c3.lengthBeats));
@@ -27918,12 +28338,17 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onAddAudio,
           onChannel,
           onMove: onMoveTrack,
+          onArm,
           onSelect: (id, { toggle }) => toggle ? selection.toggle("track", id) : selection.set("track", [id])
         });
         const lane = document2.createElement("div");
         lane.className = "timeline-lane";
-        row.append(header.element, lane);
-        entry = { row, header, lane };
+        const body = document2.createElement("div");
+        body.className = "timeline-body";
+        body.append(header.element, lane);
+        const strip = createChainStrip(document2, { onSelect: (id) => selection.set("node", [id]) });
+        row.append(body, strip.element);
+        entry = { row, header, lane, strip };
         rows.set(track.id, entry);
       }
       const own = clips.filter((c3) => c3.track === track.id);
@@ -27944,8 +28369,12 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         selected: selection.has("track", track.id),
         color: layout.color,
         size: layout.laneSize,
-        latency: latencyFor(track)
+        latency: latencyFor(track),
+        canArm: canArm(track),
+        armed: armed(track),
+        routing: routingFor(track)
       });
+      entry.strip.update(chainFor(track), { label, selected: selection.kind === "node" ? selection.ids[0] : null });
       entry.lane.style.width = `${width}px`;
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`;
       entry.lane.replaceChildren(...own.map((clip) => clipButton(clip, {
@@ -28140,7 +28569,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   let low = 48;
   let preview = null;
   let lastPress = null;
-  const say = (message) => {
+  const say2 = (message) => {
     status.textContent = message;
   };
   const clipSteps = () => Math.round(clip.lengthBeats * STEPS_PER_BEAT);
@@ -28213,7 +28642,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     if (hadFocus) document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
   }
   function send(notes, message) {
-    say(message);
+    say2(message);
     const end = Math.max(0, ...notes.map((n2) => n2.startBeat + n2.lengthBeats));
     const bar = options.beatsPerBar;
     const lengthBeats = end > clip.lengthBeats ? Math.ceil(end / bar) * bar : void 0;
@@ -28236,7 +28665,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   function adjust(change, message) {
     const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
     if (!here) {
-      say(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
+      say2(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
       return;
     }
     const next = change(here);
@@ -28280,7 +28709,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       event.preventDefault();
       const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
       if (here) remove(here);
-      else say(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
+      else say2(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
     }
   });
   const cellOf = (target) => {
@@ -28348,7 +28777,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
         send(next, kind === "move" ? `Moved to ${spokenName(changed.pitch)} at ${barBeat(changed.startBeat, options.beatsPerBar)}` : `Length ${beats(changed.lengthBeats)}`);
       } else {
         draw();
-        say(`Selected ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}, ${beats(note.lengthBeats)}`);
+        say2(`Selected ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}, ${beats(note.lengthBeats)}`);
       }
     };
     grid.addEventListener("pointerover", over);
@@ -28396,6 +28825,44 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   };
 }
 
+// src/ui/SendsModel.js
+function reachable(project, from) {
+  const seen = /* @__PURE__ */ new Set();
+  const stack = [from];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const output = project.track(id)?.output;
+    if (output) stack.push(output);
+    for (const send of project.sends) if (send.from === id) stack.push(send.to);
+  }
+  return seen;
+}
+function wouldLoop(project, from, to) {
+  return from === to || reachable(project, to).has(from);
+}
+function sendTargets(project, trackId) {
+  const already = new Set(project.sends.filter((s) => s.from === trackId).map((s) => s.to));
+  return project.orderedTracks.filter((t) => t.id !== trackId && !already.has(t.id) && !wouldLoop(project, trackId, t.id));
+}
+function outputTargets(project, trackId) {
+  return project.orderedTracks.filter((t) => t.id !== trackId && !wouldLoop(project, trackId, t.id));
+}
+function describeRouting(project, trackId, labelOf) {
+  const parts = [];
+  const track = project.track(trackId);
+  if (track?.output) parts.push(`Output to ${labelOf(track.output)}`);
+  const sends = project.sends.filter((s) => s.from === trackId);
+  if (sends.length > 0) {
+    parts.push(`Sends to ${sends.map((s) => `${labelOf(s.to)} (${s.tap === "pre" ? "pre" : "post"})`).join(", ")}`);
+  }
+  const buses = [...project.tracks.filter((t) => t.output === trackId).map((t) => t.id), ...project.sends.filter((s) => s.to === trackId).map((s) => s.from)];
+  const from = [...new Set(buses)];
+  if (from.length > 0) parts.push(`Receives from ${from.map(labelOf).join(", ")}`);
+  return parts.length > 0 ? `${parts.join(". ")}.` : null;
+}
+
 // web/app/Arrangement.js
 function createArrangement(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
@@ -28420,6 +28887,10 @@ function createArrangement(ctx2) {
     // The timeline has already selected it; the dock shows what that calls for.
     onOpen: (id) => openClip(id),
     onSetLoop: (range) => ctx2.transport.setLoopRange(range),
+    onArm: (trackId, on) => {
+      ctx2.midiIn.arm(trackId, on);
+      ctx2.rack.draw();
+    },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx2.dispatcher.project.moveTrack(trackId, delta),
     onChannel: (trackId, change) => {
@@ -28475,7 +28946,7 @@ function createArrangement(ctx2) {
     const { clipPlayer } = ctx2;
     const restore = preserveFocus(timeline.element);
     const nodes = project?.nodes ?? [];
-    const latencies = new Map((ctx2.dispatcher?.trackLatencies() ?? []).map((l) => [l.trackId, l.frames]));
+    const latencies = new Map((ctx2.dispatcher?.trackLatencies() ?? []).map((l) => [l.trackId, l]));
     const sampleRate = ctx2.engine?.context.sampleRate ?? null;
     const silent = new Map((ctx2.dispatcher?.audibility() ?? []).map((a2) => [a2.trackId, a2.silent]));
     timeline.draw({
@@ -28497,9 +28968,21 @@ function createArrangement(ctx2) {
         ]
       },
       layoutFor: (track) => project.trackLayout(track.id),
+      chainFor: (track) => describeChain(project, track.id, {
+        profileOf: (id) => ctx2.dispatcher.engineNode(id)?.profile,
+        labelOf: (id) => {
+          const n2 = project.node(id);
+          return n2?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
+        },
+        failedOf: (id) => ctx2.dispatcher.engineNode(id)?.failed ?? null,
+        trackLabelOf: (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
+      }),
+      routingFor: (track) => describeRouting(project, track.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
+      canArm: (track) => Boolean(track.midiInput),
+      armed: (track) => ctx2.midiIn.armed(track.id),
       latencyFor: (track) => {
         const found = latencies.get(track.id);
-        return found === void 0 ? null : { frames: found, ms: sampleRate ? found / sampleRate * 1e3 : null };
+        return found === void 0 ? null : { frames: found.frames, alignFrames: found.alignFrames, rate: sampleRate };
       },
       loop: project ? { start: project.transport.loopStart, end: project.transport.loopEnd, enabled: project.transport.loopEnabled } : null,
       labelFor: labelOfTrack,
@@ -28521,7 +29004,7 @@ function createArrangement(ctx2) {
       if (clip) pianoRoll.draw(clip);
       else pianoRoll.hide();
     }
-    ctx2.selection.prune((kind, id) => (kind === "clip" ? project?.clip(id) : project?.track(id)) != null);
+    ctx2.selection.prune((kind, id) => (kind === "clip" ? project?.clip(id) : kind === "node" ? project?.node(id) : project?.track(id)) != null);
     ctx2.dock.update();
   }
   async function importAudio(file, { trackId, startBeat }) {
@@ -28609,11 +29092,11 @@ function createDock(document2, { slots, storage = null }) {
   const body = document2.createElement("div");
   body.className = "dock-body";
   const slot = /* @__PURE__ */ new Map();
-  for (const name of slots) {
+  for (const name2 of slots) {
     const s = document2.createElement("div");
-    s.className = `dock-slot dock-${name}`;
+    s.className = `dock-slot dock-${name2}`;
     s.hidden = true;
-    slot.set(name, s);
+    slot.set(name2, s);
     body.append(s);
   }
   element.append(splitter, heading, body);
@@ -28661,15 +29144,15 @@ function createDock(document2, { slots, storage = null }) {
     get height() {
       return height;
     },
-    slot: (name) => {
-      if (!slot.has(name)) throw new Error(`the dock has no slot ${name}`);
-      return slot.get(name);
+    slot: (name2) => {
+      if (!slot.has(name2)) throw new Error(`the dock has no slot ${name2}`);
+      return slot.get(name2);
     },
     /** Show one slot, with a title that says what is in it. */
-    show(name, title) {
-      if (!slot.has(name)) throw new Error(`the dock has no slot ${name}`);
-      for (const [n2, s] of slot) s.hidden = n2 !== name;
-      const resting = name === slots[0];
+    show(name2, title) {
+      if (!slot.has(name2)) throw new Error(`the dock has no slot ${name2}`);
+      for (const [n2, s] of slot) s.hidden = n2 !== name2;
+      const resting = name2 === slots[0];
       splitter.hidden = resting;
       body.classList.toggle("idle", resting);
       heading.textContent = title;
@@ -28682,8 +29165,8 @@ function createDock(document2, { slots, storage = null }) {
 
 // src/ui/AudioClipPanel.js
 function createAudioClipPanel(document2, { onSet, onRemove }) {
-  for (const [name, fn] of Object.entries({ onSet, onRemove })) {
-    if (typeof fn !== "function") throw new Error(`createAudioClipPanel needs ${name}`);
+  for (const [name2, fn] of Object.entries({ onSet, onRemove })) {
+    if (typeof fn !== "function") throw new Error(`createAudioClipPanel needs ${name2}`);
   }
   const element = document2.createElement("div");
   element.className = "audio-panel";
@@ -28807,8 +29290,8 @@ function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
 function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDelete }) {
-  for (const [name2, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete })) {
-    if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name2}`);
+  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete })) {
+    if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
   const element = document2.createElement("div");
   element.className = "track-panel";
@@ -28816,20 +29299,20 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   const nameLabel = document2.createElement("label");
   nameLabel.className = "track-field";
   nameLabel.append(document2.createTextNode("Name "));
-  const name = document2.createElement("input");
-  name.type = "text";
-  name.id = "track-name-input";
-  name.autocomplete = "off";
-  name.spellcheck = false;
-  const commit = () => onRename(trackId, name.value.trim() === "" ? null : name.value.trim());
-  name.addEventListener("change", commit);
-  name.addEventListener("keydown", (event) => {
+  const name2 = document2.createElement("input");
+  name2.type = "text";
+  name2.id = "track-name-input";
+  name2.autocomplete = "off";
+  name2.spellcheck = false;
+  const commit = () => onRename(trackId, name2.value.trim() === "" ? null : name2.value.trim());
+  name2.addEventListener("change", commit);
+  name2.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       commit();
     }
   });
-  nameLabel.append(name);
+  nameLabel.append(name2);
   const colorGroup = document2.createElement("div");
   colorGroup.className = "track-colors";
   colorGroup.setAttribute("role", "group");
@@ -28896,8 +29379,8 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
      */
     show({ id, name: current, defaultName, layout, index, count, plugins }) {
       trackId = id;
-      if (document2.activeElement !== name) name.value = current ?? "";
-      name.placeholder = defaultName;
+      if (document2.activeElement !== name2) name2.value = current ?? "";
+      name2.placeholder = defaultName;
       colorSaid.textContent = ` ${colorName(layout.color)}`;
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
       for (const option of size.options) option.selected = option.value === layout.laneSize;
@@ -28910,75 +29393,319 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   };
 }
 
-// src/ops/OpenProject.js
-function inSignalOrder(nodes, connections) {
-  const feeding = new Map(nodes.map((n2) => [n2.id, /* @__PURE__ */ new Set()]));
-  for (const c3 of connections) {
-    if (feeding.has(c3.to.node) && feeding.has(c3.from.node) && c3.from.node !== c3.to.node) {
-      feeding.get(c3.to.node).add(c3.from.node);
-    }
-  }
-  const placed = /* @__PURE__ */ new Set();
-  const ordered = [];
-  let progress = true;
-  while (progress) {
-    progress = false;
-    for (const node of nodes) {
-      if (placed.has(node.id) || [...feeding.get(node.id)].some((id) => !placed.has(id))) continue;
-      placed.add(node.id);
-      ordered.push(node);
-      progress = true;
-      break;
-    }
-  }
-  return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
+// src/ui/BulkTrackPanel.js
+function tally(tracks, key) {
+  const on = tracks.filter((t) => t.channel[key]).length;
+  return on === 0 ? "none" : on === tracks.length ? "all" : "some";
 }
-async function openProject(dispatcher, read, { onLoading = () => {
-}, onCleared = () => {
-} } = {}) {
-  const existing = [
-    ...[...dispatcher.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id })),
-    ...[...dispatcher.project.tracks].map((t) => ({ op: "removeTrack", id: t.id }))
-  ];
-  if (existing.length > 0) {
-    const cleared = dispatcher.apply(existing);
-    if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
+function createBulkTrackPanel(document2, { onChannel, onColor, onSize }) {
+  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize })) {
+    if (typeof fn !== "function") throw new Error(`createBulkTrackPanel needs ${name2}`);
   }
-  onCleared();
-  const tracks = read.changes.filter((c3) => c3.op === "addTrack");
-  if (tracks.length > 0) {
-    const added = dispatcher.apply(tracks);
-    if (!added.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [added.message] };
+  const element = document2.createElement("div");
+  element.className = "bulk-panel";
+  const summary = document2.createElement("p");
+  summary.className = "bulk-summary";
+  summary.setAttribute("role", "status");
+  const toggle = (id, key) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = id;
+    button.addEventListener("click", () => onChannel({ [key]: button.dataset.next === "true" }));
+    return button;
+  };
+  const mute = toggle("bulk-mute", "muted");
+  const solo = toggle("bulk-solo", "soloed");
+  const colors = document2.createElement("div");
+  colors.className = "track-colors";
+  colors.setAttribute("role", "group");
+  colors.setAttribute("aria-label", "Colour for all selected tracks");
+  for (const color of [{ name: "None", value: null }, ...COLORS]) {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.className = "swatch";
+    button.setAttribute("aria-label", `${color.name} for all selected tracks`);
+    if (color.value) button.style.background = color.value;
+    else button.textContent = "\xD7";
+    button.addEventListener("click", () => onColor(color.value));
+    colors.append(button);
   }
-  const errors = [];
-  const loaded = /* @__PURE__ */ new Set();
-  const additions = inSignalOrder(
-    read.changes.filter((c3) => c3.op === "addNode"),
-    read.changes.filter((c3) => c3.op === "addConnection")
-  );
-  for (const change of additions) {
-    onLoading(change.pluginIri);
-    const { op, pluginIri, ...node } = change;
-    const result = await dispatcher.addPlugin(pluginIri, node);
-    if (!result.ok) {
-      errors.push(`${change.id}: ${result.message}`);
-      continue;
+  const sizeLabel = document2.createElement("label");
+  sizeLabel.className = "track-field";
+  sizeLabel.append(document2.createTextNode("Lane size for all "));
+  const size = document2.createElement("select");
+  size.id = "bulk-size";
+  const keep = document2.createElement("option");
+  keep.value = "";
+  keep.textContent = "Leave as they are";
+  size.append(keep);
+  for (const [value2, text] of [["small", "Small"], ["medium", "Medium"], ["large", "Large"]]) {
+    const option = document2.createElement("option");
+    option.value = value2;
+    option.textContent = text;
+    size.append(option);
+  }
+  size.addEventListener("change", () => {
+    if (size.value) onSize(size.value);
+  });
+  sizeLabel.append(size);
+  const actions = document2.createElement("div");
+  actions.className = "track-actions";
+  actions.append(mute, solo);
+  element.append(summary, actions, colors, sizeLabel);
+  return {
+    element,
+    /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary. */
+    show({ tracks, labels }) {
+      summary.textContent = `${tracks.length} tracks selected: ${labels.join(", ")}.`;
+      for (const [button, key, word] of [[mute, "muted", "Mute"], [solo, "soloed", "Solo"]]) {
+        const state = tally(tracks, key);
+        const turnOn = state !== "all";
+        button.dataset.next = String(turnOn);
+        button.textContent = turnOn ? `${word} all` : `${word} off for all`;
+        button.setAttribute("aria-pressed", String(state === "all"));
+      }
+      size.options[0].selected = true;
     }
-    loaded.add(change.id);
-    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
-      const set = dispatcher.setParameter(change.id, symbol, value2);
-      if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
+  };
+}
+
+// src/ui/NodeView.js
+function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin }) {
+  for (const [name2, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin })) {
+    if (typeof fn !== "function") throw new Error(`createNodeView needs ${name2}`);
+  }
+  const element = document2.createElement("div");
+  element.className = "node-view";
+  const heading = document2.createElement("p");
+  heading.className = "node-heading";
+  const ports = document2.createElement("p");
+  ports.className = "node-ports";
+  const show = document2.createElement("button");
+  show.type = "button";
+  show.textContent = "Show plugin panel";
+  show.addEventListener("click", () => onShowPlugin());
+  const listMount = document2.createElement("div");
+  const form = document2.createElement("form");
+  form.className = "node-connect";
+  form.setAttribute("aria-label", "Connect this plugin to another");
+  const fromLabel = document2.createElement("label");
+  fromLabel.className = "track-field";
+  fromLabel.append(document2.createTextNode("Send "));
+  const from = document2.createElement("select");
+  from.id = "connect-from";
+  fromLabel.append(from);
+  const toLabel = document2.createElement("label");
+  toLabel.className = "track-field";
+  toLabel.append(document2.createTextNode("to "));
+  const to = document2.createElement("select");
+  to.id = "connect-to";
+  toLabel.append(to);
+  const go = document2.createElement("button");
+  go.type = "submit";
+  go.id = "connect-go";
+  go.textContent = "Connect";
+  const none = document2.createElement("p");
+  none.className = "node-none";
+  form.append(fromLabel, toLabel, go, none);
+  element.append(heading, ports, show, listMount, form);
+  let sources = [];
+  let targets = [];
+  let fromIndex = 0;
+  let toIndex = null;
+  function fillTargets() {
+    const port = sources[fromIndex];
+    const options = port ? targets.filter((t) => compatible(port, t.port)) : [];
+    to.replaceChildren(...options.map((t) => {
+      const option = document2.createElement("option");
+      option.value = String(targets.indexOf(t));
+      option.textContent = t.text;
+      return option;
+    }));
+    toIndex = options.length ? targets.indexOf(options[0]) : null;
+    go.hidden = options.length === 0;
+    toLabel.hidden = options.length === 0;
+    none.textContent = options.length === 0 && port ? `Nothing on any track can take ${port.name}.` : "";
+  }
+  from.addEventListener("change", () => {
+    fromIndex = Number(from.value);
+    fillTargets();
+  });
+  to.addEventListener("change", () => {
+    toIndex = Number(to.value);
+  });
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const port = sources[fromIndex];
+    const target = targets[toIndex];
+    if (port && target) onConnect({ from: port, to: target.port, toNode: target.node });
+  });
+  return {
+    element,
+    /**
+     * `node` is the model's node, `profile` its profile or undefined,
+     * `connections` those that involve it, `others` every other node as
+     * `{ node, profile, label, trackLabel }`, `labelFor(id)` a node's name.
+     */
+    show({ node, label, trackLabel, profile, connections, others, labelFor, onlyPort = null }) {
+      heading.textContent = `${label}, on ${trackLabel}.`;
+      const ins = inputsOf(profile).filter((p) => p.portSymbol === void 0).map((p) => p.name);
+      const outs = outputsOf(profile).map((p) => p.name);
+      ports.textContent = profile ? `Takes: ${ins.join(", ") || "nothing"}. Gives: ${outs.join(", ") || "nothing"}.` : "Not loaded, so its ports are not known.";
+      listMount.replaceChildren(createConnectionList(document2, {
+        connections,
+        labelFor: (id) => id === node.id ? label : labelFor(id),
+        onRemove: onDisconnect
+      }));
+      sources = outputsOf(profile).map((p) => ({ node: node.id, portIndex: p.portIndex, kind: p.kind, name: p.name }));
+      targets = others.flatMap((other) => inputsOf(other.profile).map((port) => ({
+        node: other.node.id,
+        port: { ...port, node: other.node.id },
+        text: `${other.label} on ${other.trackLabel}: ${port.name}`
+      })));
+      form.hidden = sources.length === 0;
+      from.replaceChildren(...sources.map((p, i2) => {
+        const option = document2.createElement("option");
+        option.value = String(i2);
+        option.textContent = p.name;
+        return option;
+      }));
+      fromIndex = 0;
+      fillTargets();
     }
+  };
+}
+
+// src/ui/SendsPanel.js
+function createSendsPanel(document2, { onOutput, onAdd, onLevel, onTap, onRemove }) {
+  for (const [name2, fn] of Object.entries({ onOutput, onAdd, onLevel, onTap, onRemove })) {
+    if (typeof fn !== "function") throw new Error(`createSendsPanel needs ${name2}`);
   }
-  const loadedOrNull = (id) => id === null || loaded.has(id) ? id : null;
-  const rest = read.changes.filter((c3) => c3.op !== "addNode" && c3.op !== "addTrack" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)) && // An envelope on a node that failed to load has nothing to move.
-  (c3.op !== "addEnvelope" || c3.target.node === void 0 || loaded.has(c3.target.node))).map((c3) => c3.op === "setTrack" && ("midiInput" in c3 || "audioInput" in c3) ? { ...c3, midiInput: loadedOrNull(c3.midiInput ?? null), audioInput: loadedOrNull(c3.audioInput ?? null) } : c3);
-  if (rest.length > 0) {
-    const applied = dispatcher.apply(rest);
-    if (!applied.ok) errors.push(applied.message);
+  const element = document2.createElement("div");
+  element.className = "sends-panel";
+  const outLabel = document2.createElement("label");
+  outLabel.className = "track-field";
+  outLabel.append(document2.createTextNode("Output "));
+  const output = document2.createElement("select");
+  output.id = "track-output";
+  output.addEventListener("change", () => onOutput(output.value === "" ? null : output.value));
+  outLabel.append(output);
+  const heading = document2.createElement("h3");
+  heading.textContent = "Sends";
+  const list = document2.createElement("ul");
+  list.className = "send-list";
+  list.setAttribute("aria-label", "Sends from this track");
+  const addForm = document2.createElement("form");
+  addForm.className = "send-add";
+  const addLabel = document2.createElement("label");
+  addLabel.className = "track-field";
+  addLabel.append(document2.createTextNode("Send to "));
+  const addTo = document2.createElement("select");
+  addTo.id = "send-to";
+  addLabel.append(addTo);
+  const addButton = document2.createElement("button");
+  addButton.type = "submit";
+  addButton.id = "send-add";
+  addButton.textContent = "Add send";
+  addForm.append(addLabel, addButton);
+  let addChoice = null;
+  addTo.addEventListener("change", () => {
+    addChoice = addTo.value;
+  });
+  addForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (addChoice !== null) onAdd(addChoice);
+  });
+  element.append(outLabel, heading, list, addForm);
+  const rows = /* @__PURE__ */ new Map();
+  function fill(select, options, chosen, { blank = null } = {}) {
+    const items = blank ? [{ id: "", label: blank }, ...options] : options;
+    select.replaceChildren(...items.map((o2) => {
+      const option = document2.createElement("option");
+      option.value = o2.id;
+      option.textContent = o2.label;
+      option.selected = o2.id === chosen;
+      return option;
+    }));
   }
-  dispatcher.clearHistory();
-  return { ok: true, loaded, total: additions.length, errors };
+  function makeRow(send) {
+    const li = document2.createElement("li");
+    li.className = "send-row";
+    const name2 = document2.createElement("span");
+    name2.className = "send-name";
+    const level = document2.createElement("label");
+    level.className = "send-level";
+    const input = document2.createElement("input");
+    input.type = "range";
+    input.min = "0";
+    input.max = "2";
+    input.step = "0.01";
+    input.id = `send-${send.id}-level`;
+    const value2 = document2.createElement("span");
+    value2.className = "value";
+    level.append(document2.createTextNode("Level "), input, value2);
+    const tap = document2.createElement("select");
+    tap.id = `send-${send.id}-tap`;
+    for (const [v, text] of [["post", "After the fader"], ["pre", "Before the fader"]]) {
+      const option = document2.createElement("option");
+      option.value = v;
+      option.textContent = text;
+      tap.append(option);
+    }
+    const remove = document2.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    input.addEventListener("input", () => {
+      show(Number(input.value));
+      onLevel(send.id, Number(input.value));
+    });
+    tap.addEventListener("change", () => onTap(send.id, tap.value));
+    remove.addEventListener("click", () => onRemove(send.id));
+    const show = (n2) => {
+      value2.textContent = `${decibels(n2)} dB`;
+      input.setAttribute("aria-valuetext", `${decibels(n2)} decibels`);
+    };
+    li.append(name2, level, tap, remove);
+    return { li, name: name2, input, tap, remove, show };
+  }
+  return {
+    element,
+    /**
+     * `output` is the track this one's output goes to, or null for the master;
+     * `outputOptions` and `addOptions` are `{ id, label }` lists; `sends` are
+     * `{ id, toLabel, level, tap }`.
+     */
+    show({ label, output: current, outputOptions, sends, addOptions }) {
+      fill(output, outputOptions, current ?? "", { blank: "Master" });
+      output.setAttribute("aria-label", `Output of ${label}`);
+      for (const id of [...rows.keys()]) {
+        if (!sends.some((s) => s.id === id)) {
+          rows.get(id).li.remove();
+          rows.delete(id);
+        }
+      }
+      for (const send of sends) {
+        let row = rows.get(send.id);
+        if (!row) {
+          row = makeRow(send);
+          rows.set(send.id, row);
+        }
+        row.name.textContent = `To ${send.toLabel}`;
+        row.input.setAttribute("aria-label", `Level of the send from ${label} to ${send.toLabel}`);
+        row.tap.setAttribute("aria-label", `Where the send from ${label} to ${send.toLabel} is taken`);
+        row.remove.setAttribute("aria-label", `Remove the send from ${label} to ${send.toLabel}`);
+        if (document2.activeElement !== row.input) row.input.value = String(send.level);
+        row.show(send.level);
+        for (const option of row.tap.options) option.selected = option.value === send.tap;
+        list.append(row.li);
+      }
+      list.hidden = sends.length === 0;
+      heading.hidden = false;
+      addForm.hidden = addOptions.length === 0;
+      fill(addTo, addOptions, addOptions[0]?.id);
+      addChoice = addOptions[0]?.id ?? null;
+    }
+  };
 }
 
 // web/app/Dock.js
@@ -28989,7 +29716,7 @@ function createDockPanel(ctx2) {
     storage = window2.localStorage;
   } catch {
   }
-  const dock = createDock(document2, { slots: ["idle", "midi", "audio", "track"], storage });
+  const dock = createDock(document2, { slots: ["idle", "midi", "audio", "track", "tracks", "node"], storage });
   const idle = document2.createElement("p");
   idle.className = "dock-hint";
   dock.slot("idle").append(idle);
@@ -29005,6 +29732,49 @@ function createDockPanel(ctx2) {
     }
   });
   dock.slot("audio").append(audio.element);
+  const bulk = createBulkTrackPanel(document2, {
+    onChannel: (change) => {
+      const ids = ctx2.selection.ids;
+      const result = ctx2.dispatcher.apply(ids.map((id) => ({ op: "setTrackChannel", track: id, ...change })));
+      if (!result.ok) log2(result.message, "error");
+    },
+    onColor: (color) => {
+      for (const id of ctx2.selection.ids) layoutOf(id, { color });
+    },
+    onSize: (laneSize) => {
+      for (const id of ctx2.selection.ids) layoutOf(id, { laneSize });
+    }
+  });
+  dock.slot("tracks").append(bulk.element);
+  let nodeTrack = null;
+  const nodeView = createNodeView(document2, {
+    onDisconnect: (id) => {
+      const result = ctx2.dispatcher.apply([{ op: "removeConnection", id }]);
+      if (!result.ok) log2(result.message, "error");
+    },
+    onConnect: ({ from, to }) => {
+      const result = ctx2.dispatcher.apply([{
+        op: "addConnection",
+        from: { node: from.node, portIndex: from.portIndex },
+        to: to.portSymbol !== void 0 ? { node: to.node, portSymbol: to.portSymbol } : { node: to.node, portIndex: to.portIndex },
+        signalKind: from.kind
+      }]);
+      if (!result.ok) log2(result.message, "error");
+      else {
+        const name2 = (id) => {
+          const n2 = ctx2.dispatcher.project.node(id);
+          return n2?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
+        };
+        log2(`connected ${name2(from.node)} to ${name2(to.node)}`, "ok");
+      }
+    },
+    onShowPlugin: () => {
+      ctx2.tabs.select("tracks");
+      document2.getElementById(`track-group-${nodeTrack}`)?.scrollIntoView({ block: "start" });
+      document2.getElementById(`track-name-${nodeTrack}`)?.focus({ preventScroll: true });
+    }
+  });
+  dock.slot("node").append(nodeView.element);
   let chainTrack = null;
   const chain = createChainSummary(document2, {
     onShowPlugins: () => {
@@ -29013,7 +29783,7 @@ function createDockPanel(ctx2) {
       document2.getElementById(`track-name-${chainTrack}`)?.focus({ preventScroll: true });
     }
   });
-  const layout = (id, patch) => {
+  const layoutOf = (id, patch) => {
     try {
       ctx2.dispatcher.project.setTrackLayout(id, patch);
     } catch (error2) {
@@ -29025,8 +29795,8 @@ function createDockPanel(ctx2) {
       const result = ctx2.dispatcher.apply([{ op: "setTrack", id, label }]);
       if (!result.ok) log2(result.message, "error");
     },
-    onColor: (id, color) => layout(id, { color }),
-    onSize: (id, laneSize) => layout(id, { laneSize }),
+    onColor: (id, color) => layoutOf(id, { color }),
+    onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onMove: (id, delta) => ctx2.dispatcher.project.moveTrack(id, delta),
     onDelete: (id) => {
       const { project } = ctx2.dispatcher;
@@ -29040,7 +29810,18 @@ function createDockPanel(ctx2) {
       else log2(result.message, "error");
     }
   });
-  dock.slot("track").append(trackPanel.element, chain.element);
+  const apply = (changes) => {
+    const result = ctx2.dispatcher.apply(changes);
+    if (!result.ok) log2(result.message, "error");
+  };
+  const sendsPanel = createSendsPanel(document2, {
+    onOutput: (to) => apply([{ op: "setTrack", id: chainTrack, output: to }]),
+    onAdd: (to) => apply([{ op: "addSend", from: chainTrack, to, level: 1, tap: "post" }]),
+    onLevel: (id, level) => apply([{ op: "setSend", id, level }]),
+    onTap: (id, tap) => apply([{ op: "setSend", id, tap }]),
+    onRemove: (id) => apply([{ op: "removeSend", id }])
+  });
+  dock.slot("track").append(trackPanel.element, sendsPanel.element, chain.element);
   const trackLabel = (track) => {
     const { project } = ctx2.dispatcher;
     return ctx2.rack.trackLabel(track, project.tracks.indexOf(track));
@@ -29057,6 +29838,37 @@ function createDockPanel(ctx2) {
       return;
     }
     if (arrangement.rollClipId !== null) arrangement.hideRoll();
+    const node = selection.kind === "node" && only ? project?.node(only) : null;
+    if (node) {
+      const labelOf = (id) => {
+        const n2 = project.node(id);
+        return n2?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
+      };
+      const tl = (id) => trackLabel(project.track(id));
+      nodeTrack = node.track;
+      nodeView.show({
+        node,
+        label: labelOf(node.id),
+        trackLabel: tl(node.track),
+        profile: ctx2.dispatcher.engineNode(node.id)?.profile,
+        connections: project.connections.filter((c3) => c3.from.node === node.id || c3.to.node === node.id),
+        others: project.nodes.filter((n2) => n2.id !== node.id).map((n2) => ({
+          node: n2,
+          profile: ctx2.dispatcher.engineNode(n2.id)?.profile,
+          label: labelOf(n2.id),
+          trackLabel: tl(n2.track)
+        })),
+        labelFor: labelOf
+      });
+      dock.show("node", `Editor: ${labelOf(node.id)}`);
+      return;
+    }
+    if (selection.kind === "track" && selection.size > 1 && project) {
+      const tracks = selection.ids.map((id) => project.track(id)).filter(Boolean);
+      bulk.show({ tracks, labels: tracks.map(trackLabel) });
+      dock.show("tracks", `Editor: ${tracks.length} tracks`);
+      return;
+    }
     if (clip?.kind === "audio") {
       const owner = project.track(clip.track);
       audio.show(clip, {
@@ -29078,7 +29890,7 @@ function createDockPanel(ctx2) {
         plugins: project.nodes.filter((n2) => n2.track === track.id).length
       });
       const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === track.id), project.connections);
-      const labelOf = (node) => node.label ?? ctx2.dispatcher.engineNode(node.id)?.profile?.label ?? node.id;
+      const labelOf = (node2) => node2.label ?? ctx2.dispatcher.engineNode(node2.id)?.profile?.label ?? node2.id;
       const named2 = (id) => {
         const n2 = project.node(id);
         return n2 ? labelOf(n2) : null;
@@ -29090,6 +29902,14 @@ function createDockPanel(ctx2) {
         midiInputLabel: track.midiInput ? named2(track.midiInput) : null,
         audioInputLabel: track.audioInput ? named2(track.audioInput) : null
       });
+      const asOption = (t) => ({ id: t.id, label: trackLabel(t) });
+      sendsPanel.show({
+        label: trackLabel(track),
+        output: track.output,
+        outputOptions: outputTargets(project, track.id).map(asOption),
+        sends: project.sends.filter((s) => s.from === track.id).map((s) => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), level: s.level, tap: s.tap })),
+        addOptions: sendTargets(project, track.id).map(asOption)
+      });
       dock.show("track", `Editor: ${trackLabel(track)}`);
     } else {
       idle.textContent = selection.size > 1 ? `${selection.size} ${selection.kind}s selected.` : "Select a clip to edit it, or a track to see its plugins.";
@@ -29097,9 +29917,233 @@ function createDockPanel(ctx2) {
     }
   }
   ctx2.selection.subscribe(() => update());
-  return { dock, update, slot: (name) => dock.slot(name), get element() {
+  return { dock, update, slot: (name2) => dock.slot(name2), get element() {
     return dock.element;
   } };
+}
+
+// src/ui/RoutingMatrix.js
+function createRoutingMatrix(document2, { onConnect, onDisconnect }) {
+  for (const [what, fn] of Object.entries({ onConnect, onDisconnect })) {
+    if (typeof fn !== "function") throw new Error(`createRoutingMatrix needs ${what}`);
+  }
+  const element = document2.createElement("div");
+  element.className = "routing-matrix";
+  let cursor = null;
+  const cellButtons = () => [...element.querySelectorAll("button.matrix-cell")];
+  function at(r, c3) {
+    const rows = [...element.querySelectorAll("tbody tr")];
+    return rows[r]?.querySelectorAll("td")[c3]?.querySelector("button") ?? null;
+  }
+  function move(button, dr, dc) {
+    const td = button.closest("td");
+    const tr = td.parentElement;
+    const rows = [...element.querySelectorAll("tbody tr")];
+    let r = rows.indexOf(tr) + dr;
+    let c3 = [...tr.querySelectorAll("td")].indexOf(td) + dc;
+    const width = tr.querySelectorAll("td").length;
+    while (r >= 0 && r < rows.length && c3 >= 0 && c3 < width) {
+      const target = at(r, c3);
+      if (target) {
+        focus(target);
+        return;
+      }
+      r += dr;
+      c3 += dc;
+    }
+  }
+  function jump(button, toEnd, whole) {
+    const scope = whole ? cellButtons() : [...button.closest("tr").querySelectorAll("button.matrix-cell")];
+    focus(toEnd ? scope.at(-1) : scope[0]);
+  }
+  function focus(button) {
+    for (const b of cellButtons()) b.setAttribute("tabindex", "-1");
+    button.setAttribute("tabindex", "0");
+    cursor = button.id;
+    button.focus();
+  }
+  element.addEventListener("keydown", (event) => {
+    const button = event.target.closest?.("button.matrix-cell");
+    if (!button) return;
+    const ctrl = event.ctrlKey || event.metaKey;
+    const delta = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1]
+    }[event.key];
+    if (delta) {
+      event.preventDefault();
+      move(button, ...delta);
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      jump(button, event.key === "End", ctrl);
+    }
+  });
+  return {
+    element,
+    /** Draw from `buildMatrix`'s answer. The button the keyboard was on is kept. */
+    draw(matrix) {
+      const { rows, cols, possible, connectionAt } = matrix;
+      if (rows.length === 0 || cols.length === 0) {
+        const none = document2.createElement("p");
+        none.className = "empty";
+        none.textContent = rows.length === 0 && cols.length === 0 ? "No plugins to route yet." : rows.length === 0 ? "No plugin here has an output to connect from." : "No plugin here has an input to connect to.";
+        element.replaceChildren(none);
+        return;
+      }
+      const table = document2.createElement("table");
+      table.setAttribute("aria-label", "Routing: outputs down the side, inputs across the top. Press a cell to connect or disconnect.");
+      const head = document2.createElement("thead");
+      const groups = document2.createElement("tr");
+      const corner = document2.createElement("td");
+      corner.setAttribute("rowspan", "2");
+      groups.append(corner);
+      const trackRuns = [];
+      for (const col of cols) {
+        const last = trackRuns.at(-1);
+        if (last && last.track === col.track) last.count++;
+        else trackRuns.push({ track: col.track, label: col.trackLabel, count: 1 });
+      }
+      for (const run of trackRuns) {
+        const th = document2.createElement("th");
+        th.setAttribute("scope", "colgroup");
+        th.setAttribute("colspan", String(run.count));
+        th.textContent = run.label;
+        groups.append(th);
+      }
+      const names = document2.createElement("tr");
+      for (const col of cols) {
+        const th = document2.createElement("th");
+        th.setAttribute("scope", "col");
+        th.textContent = col.text;
+        names.append(th);
+      }
+      head.append(groups, names);
+      const body = document2.createElement("tbody");
+      let previousTrack = null;
+      let first2 = null;
+      for (const row of rows) {
+        const tr = document2.createElement("tr");
+        const th = document2.createElement("th");
+        th.setAttribute("scope", "row");
+        th.textContent = row.track === previousTrack ? row.text : `${row.trackLabel}: ${row.text}`;
+        previousTrack = row.track;
+        tr.append(th);
+        for (const col of cols) {
+          const td = document2.createElement("td");
+          if (possible(row, col)) {
+            const connection = connectionAt(row, col);
+            const button = document2.createElement("button");
+            button.type = "button";
+            button.className = "matrix-cell";
+            button.id = `cell-${row.key}--${col.key}`.replace(/[^\w-]/g, "_");
+            button.setAttribute("tabindex", "-1");
+            button.textContent = connection ? "\u25CF" : "\u25CB";
+            button.setAttribute("aria-pressed", String(Boolean(connection)));
+            button.setAttribute(
+              "aria-label",
+              `${row.text} on ${row.trackLabel} to ${col.text} on ${col.trackLabel}: ${connection ? "connected" : "not connected"}`
+            );
+            button.addEventListener("click", () => {
+              cursor = button.id;
+              if (connection) onDisconnect(connection.id);
+              else onConnect(row, col);
+            });
+            td.append(button);
+            first2 ??= button;
+          }
+          tr.append(td);
+        }
+        body.append(tr);
+      }
+      table.append(head, body);
+      element.replaceChildren(table);
+      const keep = cursor && document2.getElementById(cursor);
+      (keep && element.contains(keep) ? keep : first2).setAttribute("tabindex", "0");
+    }
+  };
+}
+
+// src/ui/MatrixModel.js
+var name = (kind) => isMidiSignal(kind) ? "MIDI" : "audio";
+function buildMatrix(project, { profileOf, labelOf, trackLabelOf }) {
+  const rows = [];
+  const cols = [];
+  for (const track of project.orderedTracks) {
+    for (const node of project.nodes.filter((n2) => n2.track === track.id)) {
+      const profile = profileOf(node.id);
+      const common = { node: node.id, track: track.id, label: labelOf(node.id), trackLabel: trackLabelOf(track.id) };
+      for (const port of outputsOf(profile)) {
+        rows.push({ ...common, port, key: `${node.id}-out-${name(port.kind)}-${port.portIndex}`, text: `${common.label} ${port.name}` });
+      }
+      for (const port of inputsOf(profile).filter((p) => p.portSymbol === void 0)) {
+        cols.push({ ...common, port, key: `${node.id}-in-${name(port.kind)}-${port.portIndex}`, text: `${common.label} ${port.name}` });
+      }
+    }
+  }
+  const possible = (row, col) => row.node !== col.node && compatible(row.port, col.port);
+  const connectionAt = (row, col) => project.connections.find((c3) => c3.from.node === row.node && (c3.from.portIndex ?? 0) === row.port.portIndex && c3.to.node === col.node && c3.to.portSymbol === void 0 && (c3.to.portIndex ?? 0) === col.port.portIndex && name(c3.signalKind) === name(row.port.kind)) ?? null;
+  const usefulRows = rows.filter((r) => cols.some((c3) => possible(r, c3)));
+  const usefulCols = cols.filter((c3) => rows.some((r) => possible(r, c3)));
+  return { rows: usefulRows, cols: usefulCols, possible, connectionAt };
+}
+
+// web/app/Matrix.js
+function createMatrix(ctx2) {
+  const { $: $2, log: log2 } = ctx2;
+  const name2 = (id) => {
+    const node = ctx2.dispatcher.project.node(id);
+    return node?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
+  };
+  const status = (message) => {
+    $2("matrix-status").textContent = message;
+  };
+  const matrix = createRoutingMatrix(ctx2.document, {
+    onConnect: (row, col) => {
+      const result = ctx2.dispatcher.apply([{
+        op: "addConnection",
+        from: { node: row.node, portIndex: row.port.portIndex },
+        to: { node: col.node, portIndex: col.port.portIndex },
+        signalKind: row.port.kind
+      }]);
+      if (!result.ok) {
+        log2(result.message, "error");
+        status(`Not connected: ${result.message}`);
+      } else {
+        log2(`connected ${name2(row.node)} to ${name2(col.node)}`, "ok");
+        status(`Connected ${name2(row.node)} to ${name2(col.node)}.`);
+      }
+    },
+    onDisconnect: (id) => {
+      const result = ctx2.dispatcher.apply([{ op: "removeConnection", id }]);
+      if (!result.ok) {
+        log2(result.message, "error");
+        status(`Not disconnected: ${result.message}`);
+      } else status("Disconnected.");
+    }
+  });
+  function draw() {
+    const { dispatcher } = ctx2;
+    const restore = preserveFocus(matrix.element);
+    if (!dispatcher) {
+      matrix.draw({ rows: [], cols: [], possible: () => false, connectionAt: () => null });
+    } else {
+      const { project } = dispatcher;
+      matrix.draw(buildMatrix(project, {
+        profileOf: (id) => dispatcher.engineNode(id)?.profile,
+        labelOf: name2,
+        trackLabelOf: (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
+      }));
+    }
+    restore();
+  }
+  function mount() {
+    $2("matrix-mount").append(matrix.element);
+  }
+  return { mount, draw };
 }
 
 // web/app/Loading.js
@@ -29394,10 +30438,10 @@ function createBrowser(ctx2) {
       const head = document2.createElement("div");
       head.className = "head";
       row.append(head);
-      const name = document2.createElement("div");
-      name.className = "name";
-      name.textContent = result.label ?? result.iri;
-      head.append(name);
+      const name2 = document2.createElement("div");
+      name2.className = "name";
+      name2.textContent = result.label ?? result.iri;
+      head.append(name2);
       if (result.web) {
         const button = document2.createElement("button");
         button.type = "button";
@@ -29464,10 +30508,10 @@ function createBrowser(ctx2) {
       const head = document2.createElement("div");
       head.className = "head";
       row.append(head);
-      const name = document2.createElement("div");
-      name.className = "name";
-      name.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
-      head.append(name);
+      const name2 = document2.createElement("div");
+      name2.className = "name";
+      name2.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
+      head.append(name2);
       if (member.ok) {
         const button = document2.createElement("button");
         button.type = "button";
@@ -30103,21 +31147,21 @@ function crc32(bytes) {
   for (let i2 = 0; i2 < bytes.length; i2++) crc = crcTable[(crc ^ bytes[i2]) & 255] ^ crc >>> 8;
   return (crc ^ 4294967295) >>> 0;
 }
-function checkName(name) {
-  if (typeof name !== "string" || name === "") throw new Error("a zip entry needs a name");
-  if (name.startsWith("/") || name.includes("\\") || /^[a-z]:/i.test(name)) throw new Error(`a zip entry name must be relative: ${name}`);
-  if (name.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name}`);
+function checkName(name2) {
+  if (typeof name2 !== "string" || name2 === "") throw new Error("a zip entry needs a name");
+  if (name2.startsWith("/") || name2.includes("\\") || /^[a-z]:/i.test(name2)) throw new Error(`a zip entry name must be relative: ${name2}`);
+  if (name2.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name2}`);
 }
 function writeZip(entries) {
   const encoder = new TextEncoder();
   const parts = [];
   const central = [];
   let offset = 0;
-  for (const { name, bytes } of entries) {
-    checkName(name);
+  for (const { name: name2, bytes } of entries) {
+    checkName(name2);
     const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    if (data.length > 4294967294) throw new Error(`${name} is too large for a zip without zip64`);
-    const nameBytes = encoder.encode(name);
+    if (data.length > 4294967294) throw new Error(`${name2} is too large for a zip without zip64`);
+    const nameBytes = encoder.encode(name2);
     const crc = crc32(data);
     const local = new DataView(new ArrayBuffer(30));
     local.setUint32(0, LOCAL, true);
@@ -30193,20 +31237,20 @@ async function readZip(input) {
     const extraLength = view.getUint16(at + 30, true);
     const commentLength = view.getUint16(at + 32, true);
     const localOffset = view.getUint32(at + 42, true);
-    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    const name2 = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
     at += 46 + nameLength + extraLength + commentLength;
-    if (name.endsWith("/")) continue;
-    checkName(name);
-    if (flags & 1) throw new Error(`${name} is encrypted, which this host does not read`);
-    if (view.getUint32(localOffset, true) !== LOCAL) throw new Error(`${name}: its local header is damaged`);
+    if (name2.endsWith("/")) continue;
+    checkName(name2);
+    if (flags & 1) throw new Error(`${name2} is encrypted, which this host does not read`);
+    if (view.getUint32(localOffset, true) !== LOCAL) throw new Error(`${name2}: its local header is damaged`);
     const start = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
     const raw = bytes.subarray(start, start + compressedSize);
     let data;
     if (method === 0) data = raw.slice();
     else if (method === 8) data = await inflate2(raw);
-    else throw new Error(`${name} is compressed with method ${method}; only stored and deflated are read`);
-    if (crc32(data) !== crc) throw new Error(`${name} is damaged: its checksum does not match`);
-    files.set(name, data);
+    else throw new Error(`${name2} is compressed with method ${method}; only stored and deflated are read`);
+    if (crc32(data) !== crc) throw new Error(`${name2} is damaged: its checksum does not match`);
+    files.set(name2, data);
   }
   return files;
 }
@@ -30227,7 +31271,7 @@ function unpackSession(files) {
   if (!session) throw new Error(`the archive holds no ${SESSION_FILE}`);
   const decoder = new TextDecoder();
   const editor = files.get(EDITOR_FILE);
-  const media = new Map([...files].filter(([name]) => name !== SESSION_FILE && name !== EDITOR_FILE));
+  const media = new Map([...files].filter(([name2]) => name2 !== SESSION_FILE && name2 !== EDITOR_FILE));
   return { turtle: decoder.decode(session), editor: editor ? decoder.decode(editor) : null, media };
 }
 
@@ -30275,8 +31319,8 @@ function createSessions(ctx2) {
       return;
     }
     ctx2.media.rebase(read.iri);
-    for (const [name, bytes] of files) {
-      ctx2.media.put(new URL(name, ctx2.media.base).href, bytes);
+    for (const [name2, bytes] of files) {
+      ctx2.media.put(new URL(name2, ctx2.media.base).href, bytes);
     }
     const opened = await openProject(d, read, {
       onLoading: (iri3) => log2(`GET ${iri3}`),
@@ -30503,14 +31547,14 @@ function connectBridge({ url, token, surface, EventSource, fetch: fetch2, onStat
     } catch {
       return;
     }
-    const { id, name, input } = call;
-    onCall(name);
-    let result = await surface.call(name, input ?? {});
+    const { id, name: name2, input } = call;
+    onCall(name2);
+    let result = await surface.call(name2, input ?? {});
     let body;
     try {
       body = JSON.stringify({ token, id, result });
     } catch (error2) {
-      result = { ok: false, error: `${name} returned something that cannot be sent: ${error2.message}` };
+      result = { ok: false, error: `${name2} returned something that cannot be sent: ${error2.message}` };
       body = JSON.stringify({ token, id, result });
     }
     await fetch2(`${url}/tab/result`, { method: "POST", headers: { "content-type": "text/plain" }, body }).catch((error2) => onState("retrying", error2.message));
@@ -30564,7 +31608,7 @@ function createBridgeLink(ctx2) {
       // Bound: a detached fetch throws "Illegal invocation" in a browser.
       fetch: window2.fetch.bind(window2),
       onState: show,
-      onCall: (name) => log2(`agent: ${name}`)
+      onCall: (name2) => log2(`agent: ${name2}`)
     });
   }
   function mount() {
@@ -30625,6 +31669,243 @@ function createLayout(ctx2) {
   return { mount, showBrowser };
 }
 
+// src/host/MidiInput.js
+var MIDI_STATUS = Object.freeze({ off: "off", on: "on", denied: "denied", unsupported: "unsupported" });
+function channelMessage(data) {
+  if (!data || data.length === 0) return null;
+  const status = data[0];
+  if (status < 128 || status >= 240) return null;
+  return Uint8Array.from(data);
+}
+function createMidiInput({ requestAccess, onMessage, onChange }) {
+  for (const [name2, fn] of Object.entries({ onMessage, onChange })) {
+    if (typeof fn !== "function") throw new Error(`createMidiInput needs ${name2}`);
+  }
+  let access = null;
+  let status = requestAccess ? MIDI_STATUS.off : MIDI_STATUS.unsupported;
+  const hooked = /* @__PURE__ */ new Set();
+  const names = () => access ? [...access.inputs.values()].filter((i2) => i2.state !== "disconnected").map((i2) => i2.name ?? i2.id) : [];
+  const tell = () => onChange({ status, inputs: names() });
+  function hook() {
+    if (!access) return;
+    for (const input of access.inputs.values()) {
+      if (hooked.has(input.id)) continue;
+      hooked.add(input.id);
+      input.onmidimessage = (event) => {
+        const bytes = channelMessage(event.data);
+        if (bytes) onMessage(bytes, input.name ?? input.id);
+      };
+    }
+  }
+  return {
+    get status() {
+      return status;
+    },
+    get inputs() {
+      return names();
+    },
+    /** Ask the browser, and start listening to every input, including ones plugged in later. */
+    async enable() {
+      if (status === MIDI_STATUS.unsupported || status === MIDI_STATUS.on) {
+        tell();
+        return status;
+      }
+      try {
+        access = await requestAccess({ sysex: false });
+      } catch {
+        status = MIDI_STATUS.denied;
+        tell();
+        return status;
+      }
+      status = MIDI_STATUS.on;
+      hook();
+      access.onstatechange = () => {
+        hook();
+        tell();
+      };
+      tell();
+      return status;
+    },
+    /** Stop listening. The permission stays granted; the next enable does not ask again. */
+    disable() {
+      if (status !== MIDI_STATUS.on) return;
+      for (const input of access.inputs.values()) input.onmidimessage = null;
+      hooked.clear();
+      access.onstatechange = null;
+      access = null;
+      status = MIDI_STATUS.off;
+      tell();
+    }
+  };
+}
+
+// web/app/MidiIn.js
+var SAID2 = {
+  [MIDI_STATUS.off]: "MIDI in is off.",
+  [MIDI_STATUS.denied]: "MIDI in was blocked by the browser. Allow it in the site settings, then try again.",
+  [MIDI_STATUS.unsupported]: "This browser has no Web MIDI."
+};
+function createMidiIn(ctx2) {
+  const { $: $2, log: log2, window: window2 } = ctx2;
+  const armed = /* @__PURE__ */ new Set();
+  const say2 = ({ status, inputs }) => {
+    $2("midi-in").setAttribute("aria-pressed", String(status === MIDI_STATUS.on));
+    $2("midi-state").textContent = status === MIDI_STATUS.on ? inputs.length === 0 ? "MIDI in: no controller found." : `MIDI in: ${inputs.join(", ")}.` : SAID2[status];
+  };
+  function targets() {
+    const project = ctx2.dispatcher?.project;
+    if (!project) return [];
+    const ids = [...armed].filter((id) => project.track(id));
+    const chosen = ids.length > 0 ? ids : ctx2.selection.kind === "track" ? ctx2.selection.ids : [];
+    return chosen.map((id) => project.track(id)?.midiInput).filter(Boolean);
+  }
+  const midi2 = createMidiInput({
+    requestAccess: window2.navigator.requestMIDIAccess ? window2.navigator.requestMIDIAccess.bind(window2.navigator) : null,
+    onMessage: (bytes) => {
+      const { engine, dispatcher } = ctx2;
+      if (!engine || !dispatcher) return;
+      const frame = Math.round(engine.context.currentTime * engine.context.sampleRate);
+      for (const nodeId of targets()) dispatcher.sendEvents(nodeId, [{ frame, bytes }]);
+    },
+    onChange: say2
+  });
+  function mount() {
+    say2({ status: midi2.status, inputs: [] });
+    $2("midi-in").addEventListener("click", async () => {
+      if (midi2.status === MIDI_STATUS.on) {
+        midi2.disable();
+        return;
+      }
+      await ctx2.runtime.ensureRunning().catch((error2) => log2(error2.message, "error"));
+      await midi2.enable();
+    });
+  }
+  return {
+    mount,
+    armed: (id) => armed.has(id),
+    arm(id, on) {
+      if (on) armed.add(id);
+      else armed.delete(id);
+    }
+  };
+}
+
+// web/app/Align.js
+var KEY3 = "jigdaw.alignTracks";
+function createAlign(ctx2) {
+  const { window: window2, $: $2, log: log2 } = ctx2;
+  function preferred(fallback) {
+    try {
+      const stored = window2.localStorage.getItem(KEY3);
+      if (stored === "1") return true;
+      if (stored === "0") return false;
+    } catch {
+    }
+    return fallback;
+  }
+  function sync() {
+    const on = ctx2.dispatcher?.alignTracks;
+    if (on === void 0) return;
+    $2("align-tracks").checked = on;
+    $2("align-status").textContent = on ? "Tracks with less latency are delayed to line up with the slowest." : "Tracks are not lined up: a track with latency sounds later than one without.";
+  }
+  function mount() {
+    $2("align-tracks").addEventListener("change", async () => {
+      const on = $2("align-tracks").checked;
+      try {
+        window2.localStorage.setItem(KEY3, on ? "1" : "0");
+      } catch {
+      }
+      const d = await ctx2.runtime.ensureRunning().catch((error2) => {
+        log2(error2.message, "error");
+        return null;
+      });
+      d?.setAlignTracks(on);
+      sync();
+      ctx2.rack.draw();
+    });
+  }
+  return { preferred, sync, mount };
+}
+
+// web/app/Master.js
+function createMaster(ctx2) {
+  const { $: $2, log: log2 } = ctx2;
+  const strip = createStrip(ctx2.document, { gain: 1, pan: 0, muted: false }, (change) => {
+    const result = ctx2.dispatcher?.apply([{ op: "setMaster", ...change }]);
+    if (result && !result.ok) log2(result.message, "error");
+  }, { label: "Master", id: "strip-master", solo: false });
+  return {
+    mount() {
+      const heading = ctx2.document.createElement("h3");
+      heading.textContent = "Master";
+      const wrapper = ctx2.document.createElement("div");
+      wrapper.className = "mixer-channel master-channel";
+      wrapper.append(heading, strip.element);
+      $2("master-mount").append(wrapper);
+    },
+    /** Show the project's master, whoever changed it. */
+    update() {
+      const master = ctx2.dispatcher?.project.master;
+      if (master) strip.update(master, { label: "Master" });
+    }
+  };
+}
+
+// web/app/Pwa.js
+function createPwa(ctx2) {
+  const { window: window2, document: document2, $: $2, log: log2 } = ctx2;
+  let offered = null;
+  function showNetwork() {
+    $2("net-state").textContent = window2.navigator.onLine ? "" : "Offline. The page and the plugins you have opened still work.";
+  }
+  function watchForUpdates(registration) {
+    registration.addEventListener("updatefound", () => {
+      const worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "installed" && window2.navigator.serviceWorker.controller) {
+          $2("update-notice").hidden = false;
+          $2("update-notice").textContent = "A new version of Jiggy is ready. It is used the next time the page is opened.";
+        }
+      });
+    });
+  }
+  async function register() {
+    if (!window2.navigator.serviceWorker) return;
+    try {
+      const registration = await window2.navigator.serviceWorker.register(new URL("sw.js", document2.baseURI), { type: "classic" });
+      watchForUpdates(registration);
+    } catch (error2) {
+      log2(`offline use is off: ${error2.message}`, "error");
+    }
+  }
+  function mount() {
+    window2.addEventListener("online", showNetwork);
+    window2.addEventListener("offline", showNetwork);
+    showNetwork();
+    window2.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      offered = event;
+      $2("install").hidden = false;
+    });
+    window2.addEventListener("appinstalled", () => {
+      offered = null;
+      $2("install").hidden = true;
+    });
+    $2("install").addEventListener("click", async () => {
+      if (!offered) return;
+      const prompt = offered;
+      offered = null;
+      $2("install").hidden = true;
+      await prompt.prompt();
+    });
+    if (document2.readyState === "complete") register();
+    else window2.addEventListener("load", register, { once: true });
+  }
+  return { mount };
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -30652,6 +31933,7 @@ var ctx = {
   }
 };
 ctx.media = createMedia(document);
+ctx.align = createAlign(ctx);
 ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.record = createRecord(ctx);
@@ -30659,6 +31941,9 @@ ctx.editors = createEditors(ctx);
 ctx.selection = new Selection();
 ctx.dock = createDockPanel(ctx);
 ctx.arrangement = createArrangement(ctx);
+ctx.matrix = createMatrix(ctx);
+ctx.master = createMaster(ctx);
+ctx.pwa = createPwa(ctx);
 ctx.rack = createRack(ctx);
 ctx.loading = createLoading(ctx);
 ctx.browser = createBrowser(ctx);
@@ -30667,6 +31952,7 @@ ctx.history = createHistory(ctx);
 ctx.agent = createAgent(ctx);
 ctx.bridge = createBridgeLink(ctx);
 ctx.layout = createLayout(ctx);
+ctx.midiIn = createMidiIn(ctx);
 var { loading, browser, transport } = ctx;
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -30703,9 +31989,14 @@ $("signature").addEventListener("change", async () => {
 ctx.sessions.mount();
 ctx.history.mount();
 ctx.arrangement.mount();
+ctx.matrix.mount();
+ctx.master.mount();
+ctx.pwa.mount();
 ctx.rack.mount();
 ctx.bridge.mount();
 ctx.layout.mount();
+ctx.midiIn.mount();
+ctx.align.mount();
 $("iri").value = new URL($("iri").value, document.baseURI).href;
 $("collection").value = new URL($("collection").value, document.baseURI).href;
 var linked = new URLSearchParams(location.search).get("collection");
@@ -30716,6 +32007,7 @@ if (linked) {
 ctx.tabs = createTabs(document, [
   { id: "arrangement", label: "Arrangement", panel: $("arrangement-panel") },
   { id: "tracks", label: "Plugins", panel: $("tracks-panel") },
+  { id: "routing", label: "Routing", panel: $("routing-panel") },
   { id: "mixer", label: "Mixer", panel: $("mixer-panel") }
 ]);
 $("tabs-mount").append(ctx.tabs.element);

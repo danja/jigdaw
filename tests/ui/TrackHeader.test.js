@@ -15,7 +15,7 @@ const event = (type, props = {}) => {
 function build () {
   const calls = []
   const rec = name => (...args) => calls.push([name, ...args])
-  const header = createTrackHeader(document, { id: 't1', onSelect: rec('select'), onAdd: rec('add'), onAddAudio: rec('addAudio'), onChannel: rec('channel'), onMove: rec('move') })
+  const header = createTrackHeader(document, { id: 't1', onSelect: rec('select'), onAdd: rec('add'), onAddAudio: rec('addAudio'), onChannel: rec('channel'), onMove: rec('move'), onArm: rec('arm') })
   document.body.append(header.element)
   const state = { label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, mixable: true, silent: false, at: 8, where: 'bar 3 beat 1' }
   header.update(state)
@@ -116,15 +116,37 @@ describe('a track header', () => {
     const { header, state } = build()
     const shown = () => { const p = header.element.querySelector('.head-latency'); return p.hidden ? null : p.textContent }
     expect(shown()).toBeNull()
-    header.update({ ...state, latency: { frames: 2047, ms: 42.6458 } })
+    header.update({ ...state, latency: { frames: 2047, alignFrames: 0, rate: 48000 } })
     expect(shown()).toBe('Latency 2047 frames, 42.6 ms')
-    header.update({ ...state, latency: { frames: 512, ms: null } })
+    header.update({ ...state, latency: { frames: 512, alignFrames: 0, rate: null } })
     expect(shown()).toBe('Latency 512 frames')
-    header.update({ ...state, latency: { frames: 0, ms: 0 } })
+    header.update({ ...state, latency: { frames: 0, alignFrames: 0, rate: 48000 } })
     expect(shown()).toBeNull()
   })
 
+  it('says how much a track is delayed to line up, including a track with no latency of its own', () => {
+    const { header, state } = build()
+    const shown = () => header.element.querySelector('.head-latency').textContent
+    header.update({ ...state, latency: { frames: 512, alignFrames: 1535, rate: 48000 } })
+    expect(shown()).toBe('Latency 512 frames, 10.7 ms; delayed 1535 frames, 32.0 ms to line up with the slowest track')
+    header.update({ ...state, latency: { frames: 0, alignFrames: 2047, rate: 48000 } })
+    expect(shown()).toBe('No latency; delayed 2047 frames, 42.6 ms to line up with the slowest track')
+  })
+
+  it('offers Arm only where there is a MIDI input to play into, and says whether it is on', () => {
+    const { header, state, calls, $ } = build()
+    expect($('head-t1-arm').hidden).toBe(true)
+    header.update({ ...state, canArm: true, armed: false })
+    expect($('head-t1-arm').hidden).toBe(false)
+    expect($('head-t1-arm').getAttribute('aria-label')).toBe('Arm Bass for MIDI input')
+    $('head-t1-arm').dispatchEvent(event('click'))
+    header.update({ ...state, canArm: true, armed: true })
+    expect($('head-t1-arm').getAttribute('aria-pressed')).toBe('true')
+    $('head-t1-arm').dispatchEvent(event('click'))
+    expect(calls.filter(c => c[0] === 'arm')).toEqual([['arm', 't1', true], ['arm', 't1', false]])
+  })
+
   it('refuses to be built without its handlers', () => {
-    expect(() => createTrackHeader(document, { id: 't', onSelect () {}, onAdd () {}, onAddAudio () {}, onMove () {} })).toThrow(/onChannel/)
+    expect(() => createTrackHeader(document, { id: 't', onSelect () {}, onAdd () {}, onAddAudio () {}, onMove () {}, onArm () {} })).toThrow(/onChannel/)
   })
 })

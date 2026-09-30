@@ -23,7 +23,7 @@ import { OfflineContext, OfflineWorkletNode, directoryFetch } from '../../src/te
 
 const root = resolve(import.meta.dirname, '../..')
 const SITE = 'https://site.test/jigdaw/'
-const TEMPO = 140
+const TEMPO = 90
 const SAMPLE_RATE = 48000
 const BEATS_PER_FRAME = TEMPO / (60 * SAMPLE_RATE)
 

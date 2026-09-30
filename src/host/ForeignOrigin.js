@@ -16,16 +16,21 @@
 // verification already happened, but it means two containers can never collide
 // and a plugin's URLs name the exact bytes it was loaded from.
 
-// Where a container's files are addressed.
-const PREFIX = '/foreign/'
-
-// And the scope the worker is registered with, which is not the same thing. A
-// worker only intercepts requests from clients it controls, and a client is
-// controlled when its own URL is inside the scope. The host page is at /, so a
-// worker scoped to /foreign/ never saw a single one of its requests. The
-// script still lives at /foreign/sw.js and bin/serve.js sends
-// Service-Worker-Allowed so it may claim a scope above its own path.
-const SCOPE = '/'
+// Where a container's files are addressed, and where the worker is registered, both
+// derived from the page's own base so a host at the root and one under a path such as
+// /jigdaw/ work the same way. They were absolute (/foreign/ and /sw.js), which reached
+// nothing under a path.
+//
+// The scope is the folder the worker script is in, which is where the host page is.
+// A worker only intercepts requests from clients it controls, and a client is
+// controlled when its own URL is inside the scope, so a worker scoped to /foreign/
+// alone would never see a request from the page (found and measured, 2026-09-18).
+//
+// The one worker for the folder is web/sw.js (docs/pwa.md), which imports the
+// container worker unchanged. Registering foreign/sw.js here instead would register a
+// different script at the same scope and replace the app's worker.
+const prefixFor = base => new URL('foreign/', base).pathname
+const workerFor = base => new URL('sw.js', base)
 
 /** A digest as a path segment: base64 has characters a URL should not carry. */
 const idFor = digest => digest.replace(/^sha\d+-/, '').replace(/[^A-Za-z0-9]/g, '').slice(0, 32).toLowerCase()
@@ -64,7 +69,7 @@ export class ForeignOrigin {
   #registration
   #refusals = []
 
-  constructor (registration, { prefix = PREFIX } = {}) {
+  constructor (registration, { prefix }) {
     this.#registration = registration
     this.scope = prefix
     navigator.serviceWorker?.addEventListener('message', event => {
@@ -85,7 +90,8 @@ export class ForeignOrigin {
    * foreign plugin at all, because the consent in section 12.4 was given on the
    * understanding that the boundary exists.
    */
-  static async start ({ scope = SCOPE, scriptURL = `${PREFIX}sw.js` } = {}) {
+  static async start ({ base = globalThis.document?.baseURI, scriptURL = null } = {}) {
+    if (!base) throw new Error('the container origin needs the page base to derive its paths from')
     if (!globalThis.isSecureContext) {
       throw new Error(
         'a foreign plugin needs a secure context. Serve the host over TLS, or use localhost.')
@@ -95,9 +101,10 @@ export class ForeignOrigin {
         'this browser has no service workers, so the container boundary contract section 12.3 ' +
         'requires cannot be imposed, and a foreign plugin must not be loaded without it.')
     }
-    const registration = await navigator.serviceWorker.register(scriptURL, { scope, type: 'classic' })
+    // No explicit scope: the folder of the script, which is the page's own folder.
+    const registration = await navigator.serviceWorker.register(scriptURL ?? workerFor(base), { type: 'classic' })
     await activated(registration)
-    return new ForeignOrigin(registration)
+    return new ForeignOrigin(registration, { prefix: prefixFor(base) })
   }
 
   /**

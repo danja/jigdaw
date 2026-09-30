@@ -40,7 +40,7 @@ export function panPosition (pan) {
  * caller sends one operation for one movement rather than re-sending values
  * nobody touched.
  */
-export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null } = {}) {
+export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null, solo: withSolo = true } = {}) {
   let label = initialLabel
   // The ids of the controls. From `id` when given, because a label is a name
   // for people and two tracks can share one; from the label otherwise.
@@ -135,7 +135,9 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
 
   const mute = toggle('Mute', 'muted')
   const solo = toggle('Solo', 'soloed')
-  buttons.append(mute, solo)
+  // The master has nothing to solo against, so it has no Solo: left out, not disabled.
+  buttons.append(mute)
+  if (withSolo) buttons.append(solo)
 
   element.append(gainRow, panRow, buttons)
 

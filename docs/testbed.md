@@ -202,5 +202,7 @@ acts on them. Each is a place where the specification is untested by use.
 - **Shared memory** (contract 2.3). The host offers `jig:SharedMemory`; no plugin requires it.
 - **State from more than one plugin** (contract 8). Ferrite is the only plugin that answers a
   state request.
-- **MIDI from outside the page.** Jiggy has no Web MIDI input, so notes come from the on-screen
-  keyboard and clips, and control changes only from another plugin's MIDI output.
+- **MIDI from outside the page.** Jiggy takes Web MIDI input (`src/host/MidiInput.js`) into an
+  armed track, or the selected one, as note and controller messages stamped with the audio
+  clock's frame. It has only been driven with a stand-in controller, never a real device, so
+  the permission prompt and hot-plugging are untried against hardware.

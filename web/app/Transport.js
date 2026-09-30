@@ -184,10 +184,11 @@ export function createTransport (ctx) {
     if (!t) return
     const bpm = t.tempoPoints[0]?.bpm
     const field = $('tempo')
-    if (bpm && document.activeElement !== field) field.value = String(bpm)
+    if (bpm && field && document.activeElement !== field) field.value = String(bpm)
+    // The studio page has these; the simple page has not, and shows only what it has.
     const signature = $('signature')
-    if (document.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`
-    $('loop').setAttribute('aria-pressed', String(Boolean(t.loopEnabled)))
+    if (signature && document.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`
+    $('loop')?.setAttribute('aria-pressed', String(Boolean(t.loopEnabled)))
   }
 
   /** Turn the loop on or off. Turning it on with no range sets one: the clips, or four bars. */

@@ -62,7 +62,8 @@ export function createRuntime (ctx) {
     ctx.engine = new Engine({
       context,
       loader: new PluginLoader({ parse: parseText, validator, capabilities }),
-      output: analyser
+      output: analyser,
+      maxTrackDelaySeconds: ctx.hostConfig.maxTrackDelayMs / 1000
     })
     // Decodes and plays audio clips, from the session's own files first.
     ctx.clipPlayer = new ClipPlayer({ context, fetchBytes: iri => ctx.media.fetchBytes(iri) })
@@ -73,9 +74,12 @@ export function createRuntime (ctx) {
     const { ForeignSupport } = await import('../../src/host/ForeignSupport.js')
     const dispatcher = new OpDispatcher({
       engine: ctx.engine,
-      foreign: new ForeignSupport({ validator })
+      foreign: new ForeignSupport({ validator }),
+      // The person's own choice, when they have made one, else web/host.json's.
+      alignTracks: ctx.align.preferred(ctx.hostConfig.alignTracks)
     })
     ctx.dispatcher = dispatcher
+    ctx.align.sync()
 
     // Track order, colour and lane size are not edits and raise no 'changed', so
     // the editor graph says when to draw again.
@@ -85,7 +89,8 @@ export function createRuntime (ctx) {
       // itself, the panel, undo, a session opening or an agent. messaging.md 2.3.
       if (event.type === 'parameter') ctx.editors.parameter(event.nodeId, event.symbol, event.value)
       if (event.type === 'changed') {
-        $('state').textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ` +
+        const state = $('state')
+        if (state) state.textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ` +
           `${event.compiled.totalLatency} frames latency`
         ctx.rack.draw()
         ctx.history.updateButtons()
@@ -93,17 +98,21 @@ export function createRuntime (ctx) {
       }
     })
 
-    const registration = registerTools({
-      dispatcher,
-      catalogue: ctx.browser.catalogue(),
-      loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options),
-      openCollection: iri => ctx.browser.loadCollection(iri),
-      onPlay: () => ctx.transport.play(),
-      onStop: async () => { ctx.transport.stop() }
-    })
-    ctx.mcpSurface = registration.surface
-    log(`host offers ${[...capabilities].map(compact).join(', ')}`)
-    log(`${registration.count} agent tools via ${registration.bound}`)
+    // The agent surface belongs to the studio page, which has a catalogue to offer it.
+    // A page that has none (the simple one) offers no tools rather than a surface with nothing behind it.
+    if (ctx.browser) {
+      const registration = registerTools({
+        dispatcher,
+        catalogue: ctx.browser.catalogue(),
+        loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options),
+        openCollection: iri => ctx.browser.loadCollection(iri),
+        onPlay: () => ctx.transport.play(),
+        onStop: async () => { ctx.transport.stop() }
+      })
+      ctx.mcpSurface = registration.surface
+      log(`host offers ${[...capabilities].map(compact).join(', ')}`)
+      log(`${registration.count} agent tools via ${registration.bound}`)
+    }
 
     ctx.transport.meterLoop()
     ctx.transport.positionLoop()

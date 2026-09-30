@@ -12,7 +12,7 @@
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve, join, extname, normalize } from 'node:path'
+import { dirname, resolve, join, extname, normalize, basename } from 'node:path'
 import { Catalogue, FACET_NAMES } from '../src/catalogue/Catalogue.js'
 import { LocalCatalogue } from '../src/catalogue/LocalCatalogue.js'
 
@@ -33,8 +33,15 @@ const TYPES = Object.freeze({
   '.ttl': 'text/turtle; charset=utf-8',
   '.wasm': 'application/wasm',
   '.css': 'text/css; charset=utf-8',
-  '.wav': 'audio/wav'
+  '.wav': 'audio/wav',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json; charset=utf-8'
 })
+
+// The files that decide what the installed app is. A browser already re-checks a
+// service worker script itself, but the precache list and the manifest are fetched
+// like any file, and a stale copy of either holds an old version in place.
+const NO_CACHE = new Set(['sw.js', 'precache.js', 'manifest.webmanifest'])
 
 const CORS = Object.freeze({
   'access-control-allow-origin': '*',
@@ -68,7 +75,8 @@ async function serveFile (response, path) {
     const body = await readFile(path)
     send(response, 200, body, {
       'content-type': TYPES[extname(path)] ?? 'application/octet-stream',
-      'content-length': body.length
+      'content-length': body.length,
+      ...(NO_CACHE.has(basename(path)) ? { 'cache-control': 'no-cache' } : {})
     })
     return true
   } catch {

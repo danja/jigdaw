@@ -236,13 +236,17 @@ describe('track strips', () => {
     return { context, engine }
   }
 
-  it('runs a fader into a panner into the master', () => {
+  it('runs an arrival point into a fader into a panner into the master', () => {
     const { engine } = engineWith()
     engine.addTrack('t1')
-    const fader = engine.trackInput('t1')
+    const arrival = engine.trackInput('t1')
+    const fader = arrival.outgoing[0].destination
     const panner = fader.outgoing[0].destination
     expect(panner.pan).toBeDefined()
-    expect(panner.outgoing.map(o => o.destination)).toEqual([engine.master])
+    // The master's own pan sits in front of the master, which is still what the speakers hang off.
+    const masterPan = panner.outgoing[0].destination
+    expect(masterPan.pan).toBeDefined()
+    expect(masterPan.outgoing.map(o => o.destination)).toEqual([engine.master])
     expect(engine.trackIds()).toEqual(['t1'])
   })
 
@@ -262,7 +266,7 @@ describe('track strips', () => {
   it('sets level and position, and silences without forgetting the level', () => {
     const { engine } = engineWith()
     engine.addTrack('t1')
-    const fader = engine.trackInput('t1')
+    const fader = engine.trackInput('t1').outgoing[0].destination
     const panner = fader.outgoing[0].destination
     engine.setTrackChannel('t1', { gain: 0.5, pan: -0.25, silent: false })
     expect(fader.gain.value).toBe(0.5)
@@ -361,5 +365,118 @@ describe('Engine.frameTime', () => {
 
   it('never schedules in the past: a passed frame means already in effect', () => {
     expect(engineAt(5).frameTime(48000)).toBe(5)
+  })
+})
+
+describe('Engine track delay (aligning tracks)', () => {
+  const make = (over = {}) => {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode, ...over })
+    return { context, engine }
+  }
+
+  it('puts a delay at the end of each strip when the host allows one, and sets it in seconds at an audio time', () => {
+    const { context, engine } = make({ maxTrackDelaySeconds: 2 })
+    engine.addTrack('t1')
+    const strip = engine.trackTap('t1')
+    // gain -> panner -> delay -> the master's pan
+    const delay = strip.outgoing[0].destination
+    expect(delay.maxDelayTime).toBe(2)
+    expect(delay.outgoing[0].destination.outgoing[0].destination).toBe(engine.master)
+    context.currentTime = 1.5
+    engine.setTrackDelay('t1', 4800)
+    expect(delay.delayTime.scheduled).toEqual([{ value: 0.1, at: 1.5 }])
+    engine.setTrackDelay('t1', 0, { atTime: 3 })
+    expect(delay.delayTime.scheduled.at(-1)).toEqual({ value: 0, at: 3 })
+  })
+
+  it('refuses a delay it was not built for, and one longer than it allows', () => {
+    const none = make().engine
+    none.addTrack('t1')
+    expect(() => none.setTrackDelay('t1', 100)).toThrow(/no track delay/)
+    const { engine } = make({ maxTrackDelaySeconds: 0.5 })
+    engine.addTrack('t1')
+    expect(() => engine.setTrackDelay('t1', 48000)).toThrow(/more than the 500 ms/)
+    expect(() => engine.setTrackDelay('t1', -1)).toThrow(/more than/)
+    expect(() => engine.setTrackDelay('ghost', 1)).toThrow(/no such track strip/)
+  })
+
+  it('leaves the strip wired straight to the master when no delay is built', () => {
+    const { engine } = make()
+    engine.addTrack('t1')
+    expect(engine.trackTap('t1').outgoing[0].destination.outgoing[0].destination).toBe(engine.master)
+  })
+})
+
+describe('Engine sends, bus outputs and the master', () => {
+  const make = () => {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    engine.addTrack('a')
+    engine.addTrack('b')
+    return { context, engine }
+  }
+  const strip = (engine, id) => {
+    const pre = engine.trackInput(id)
+    const fader = pre.outgoing[0].destination
+    return { pre, fader, panner: engine.trackTap(id) }
+  }
+
+  it('takes a post-fader send after fader and pan, at a level, into the other track', () => {
+    const { engine } = make()
+    engine.addSend('s1', 'a', 'b', { level: 0.4, tap: 'post' })
+    const { panner } = strip(engine, 'a')
+    const sendGain = panner.outgoing.find(o => o.destination.gain && o.destination !== undefined && o.destination.outgoing?.some(x => x.destination === engine.trackInput('b')))
+    expect(sendGain).toBeDefined()
+    expect(sendGain.destination.gain.scheduled.at(-1).value).toBe(0.4)
+  })
+
+  it('takes a pre-fader send before the fader, so the fader does not change it', () => {
+    const { engine } = make()
+    engine.addSend('s1', 'a', 'b', { level: 1, tap: 'pre' })
+    const { pre } = strip(engine, 'a')
+    expect(pre.outgoing.some(o => o.destination.outgoing?.some(x => x.destination === engine.trackInput('b')))).toBe(true)
+  })
+
+  it('changes a level in place, and clears every send', () => {
+    const { engine } = make()
+    engine.addSend('s1', 'a', 'b')
+    const { panner } = strip(engine, 'a')
+    const gain = panner.outgoing.find(o => o.destination.gain && o.destination.outgoing.length).destination
+    engine.setSendLevel('s1', 0.25)
+    expect(gain.gain.scheduled.at(-1).value).toBe(0.25)
+    engine.clearSends()
+    expect(gain.outgoing).toEqual([])
+    expect(() => engine.setSendLevel('s1', 1)).toThrow(/no such send/)
+  })
+
+  it('refuses a send between strips that are not there, and a tap that is neither pre nor post', () => {
+    const { engine } = make()
+    expect(() => engine.addSend('s', 'a', 'ghost')).toThrow(/no such track strip: ghost/)
+    expect(() => engine.addSend('s', 'ghost', 'a')).toThrow(/no such track strip: ghost/)
+    expect(() => engine.addSend('s', 'a', 'b', { tap: 'mid' })).toThrow(/pre or post/)
+  })
+
+  it('routes a track into another as a bus, and back to the master, touching the graph only on a change', () => {
+    const { engine } = make()
+    const out = engine.trackTap('a')
+    engine.setTrackOutput('a', 'b')
+    expect(out.outgoing.at(-1).destination).toBe(engine.trackInput('b'))
+    const count = out.outgoing.length
+    engine.setTrackOutput('a', 'b')
+    expect(out.outgoing).toHaveLength(count)
+    engine.setTrackOutput('a', null)
+    expect(out.outgoing.at(-1).destination.pan).toBeDefined()
+    expect(() => engine.setTrackOutput('a', 'ghost')).toThrow(/no such track strip/)
+    expect(() => engine.setTrackOutput('ghost', null)).toThrow(/no such track strip/)
+  })
+
+  it('sets the master level, pan and mute, a mute being a level of zero', () => {
+    const { context, engine } = make()
+    context.currentTime = 2
+    engine.setMaster({ gain: 0.5, pan: -0.5 })
+    expect(engine.master.gain.scheduled.at(-1)).toEqual({ value: 0.5, at: 2 })
+    engine.setMaster({ gain: 0.5, pan: 0, muted: true })
+    expect(engine.master.gain.scheduled.at(-1).value).toBe(0)
   })
 })

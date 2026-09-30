@@ -160,8 +160,16 @@ describe('where the application draws strips', () => {
   const draw = rack.slice(drawStart, rack.indexOf('\n  }\n', drawStart))
 
   it('builds no strip in the rack, where there is no longer one per plugin', () => {
-    expect(app).not.toMatch(/createStrip\(/)
+    // The rack file, not the whole application: the Master strip (web/app/Master.js) is
+    // a strip on purpose, and one per plugin is what this is about.
+    expect(rack).not.toMatch(/createStrip\(/)
+    expect(rack).not.toMatch(/setChannel\(/)
     expect(app).not.toMatch(/setChannel\(/)
+  })
+
+  it('builds a strip only for the mixer and the master, and nowhere else', () => {
+    const builders = ['web/app/Master.js', 'src/ui/Mixer.js', 'web/app/Rack.js'].filter(f => /createStrip\(/.test(appFile(f)))
+    expect(builders.sort()).toEqual(['src/ui/Mixer.js', 'web/app/Master.js'].sort())
   })
 
   it('draws the mixer from drawRack, before deciding the rack is empty', () => {

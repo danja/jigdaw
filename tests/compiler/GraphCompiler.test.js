@@ -147,11 +147,14 @@ describe('feedback', () => {
 })
 
 describe('signal kinds', () => {
-  it('ignores MIDI edges when looking for Web Audio cycles', () => {
+  it('does not apply the Web Audio delay rule to MIDI edges, and refuses a MIDI loop for its own reason', () => {
     // MIDI is host-routed over message ports and creates no Web Audio edge, so
-    // it cannot produce the silence that rule exists to prevent.
+    // it cannot produce the silence the audio rule exists to prevent. It can go
+    // round for ever, which is why a MIDI loop is refused as a different error.
     const project = graph(['a', 'b'], [['a', 'b', { kind: MIDI }], ['b', 'a', { kind: MIDI }]])
-    expect(compileGraph(project).ok).toBe(true)
+    const compiled = compileGraph(project)
+    expect(compiled.ok).toBe(false)
+    expect(compiled.errors.map(e => e.kind)).toEqual(['midi-cycle'])
   })
 })
 
@@ -161,5 +164,35 @@ describe('an empty project', () => {
     expect(result.ok).toBe(true)
     expect(result.order).toEqual([])
     expect(result.totalLatency).toBe(0)
+  })
+})
+
+describe('a loop of MIDI connections', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+  const build = edges => {
+    const p = new Project()
+    p.apply([
+      { op: 'addTrack', id: 't' },
+      ...['a', 'b', 'c'].map(id => ({ op: 'addNode', id, track: 't', pluginIri: 'https://example.org/p/' })),
+      ...edges.map(([from, to], i) => ({ op: 'addConnection', id: `m${i}`, from: { node: from, portIndex: 0 }, to: { node: to, portIndex: 0 }, signalKind: MIDI }))
+    ])
+    return p
+  }
+
+  it('is refused, naming the plugins in it, since a MIDI connection carries no delay', () => {
+    const compiled = compileGraph(build([['a', 'b'], ['b', 'a']]))
+    expect(compiled.ok).toBe(false)
+    expect(compiled.errors[0]).toMatchObject({ kind: 'midi-cycle' })
+    expect(compiled.errors[0].nodes.sort()).toEqual(['a', 'b'])
+  })
+
+  it('is refused for a longer loop and for a plugin sent back to itself', () => {
+    expect(compileGraph(build([['a', 'b'], ['b', 'c'], ['c', 'a']])).errors[0].kind).toBe('midi-cycle')
+    expect(compileGraph(build([['a', 'a']])).errors[0].kind).toBe('midi-cycle')
+  })
+
+  it('leaves a chain, and a fan out that joins again, alone', () => {
+    expect(compileGraph(build([['a', 'b'], ['b', 'c']])).ok).toBe(true)
+    expect(compileGraph(build([['a', 'b'], ['a', 'c'], ['b', 'c']])).ok).toBe(true)
   })
 })

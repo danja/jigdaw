@@ -13,6 +13,8 @@ const nextId = () => `node-${++counter}`
 export class Engine {
   #context
   #master = null
+  #masterPanner = null
+  #sends = []
   #loader
   #nodeClass
   #nodes = new Map()
@@ -20,6 +22,7 @@ export class Engine {
   // One strip per track, keyed by the model's track id. The engine holds no
   // policy about what a track is; it is a named place for audio to arrive.
   #tracks = new Map()
+  #maxTrackDelay = null
 
   /**
    * `AudioWorkletNode` is injected rather than read from globals so the engine
@@ -27,13 +30,15 @@ export class Engine {
    * the global rather than off the context, so there is nowhere else to get it
    * from and no way to substitute it without this.
    */
-  constructor ({ context, loader, output = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
+  constructor ({ context, loader, output = null, maxTrackDelaySeconds = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
     if (!context) throw new Error('Engine needs an AudioContext')
     if (!loader) throw new Error('Engine needs a PluginLoader')
     if (typeof AudioWorkletNode !== 'function') {
       throw new Error('Engine needs an AudioWorkletNode constructor; this environment has none')
     }
     this.#context = context
+    // Null means tracks cannot be delayed, and setTrackDelay says so rather than pretending.
+    this.#maxTrackDelay = maxTrackDelaySeconds
     this.#loader = loader
     this.#nodeClass = AudioWorkletNode
 
@@ -49,6 +54,10 @@ export class Engine {
     if (typeof context.createGain === 'function') {
       this.#master = context.createGain()
       this.#master.connect(output ?? context.destination)
+      // Where the tracks arrive: through the pan, then the level. `master` stays the
+      // node the speakers hang off, as it always was.
+      this.#masterPanner = typeof context.createStereoPanner === 'function' ? context.createStereoPanner() : null
+      if (this.#masterPanner) this.#masterPanner.connect(this.#master)
     }
   }
 
@@ -59,6 +68,9 @@ export class Engine {
    * is what a meter is for and what stops it reading one voice of many.
    */
   get master () { return this.#master ?? this.#context.destination }
+
+  /** Where a track's output arrives: the master's pan when there is one, else the master. */
+  get #mixInput () { return this.#masterPanner ?? this.master }
 
   get context () { return this.#context }
 
@@ -256,19 +268,111 @@ export class Engine {
    */
   addTrack (trackId) {
     if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`)
+    // `pre` is where the track's signal arrives and where a pre-fader send is
+    // taken, before the fader; a track fed by another track's output or send
+    // arrives here too.
+    const pre = this.#context.createGain()
     const gain = this.#context.createGain()
     const panner = typeof this.#context.createStereoPanner === 'function'
       ? this.#context.createStereoPanner()
       : null
-    if (panner) { gain.connect(panner); panner.connect(this.master) } else gain.connect(this.master)
-    this.#tracks.set(trackId, { gain, panner, input: gain })
+    pre.connect(gain)
+    // A delay at the strip's output, so tracks with less latency can be lined up
+    // with the slowest. Present only when the host says how long it may be.
+    const delay = this.#maxTrackDelay !== null && typeof this.#context.createDelay === 'function'
+      ? this.#context.createDelay(this.#maxTrackDelay)
+      : null
+    const last = panner ?? gain
+    if (panner) gain.connect(panner)
+    const out = delay ?? last
+    if (delay) last.connect(delay)
+    out.connect(this.#mixInput)
+    // `to` is where the strip's output goes: null is the master.
+    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre })
   }
 
   removeTrack (trackId) {
     const strip = this.#tracks.get(trackId)
     if (!strip) throw new Error(`no such track strip: ${trackId}`)
-    try { strip.gain.disconnect(); strip.panner?.disconnect() } catch { /* already torn down */ }
+    try { strip.pre.disconnect(); strip.gain.disconnect(); strip.panner?.disconnect(); strip.delay?.disconnect() } catch { /* already torn down */ }
     this.#tracks.delete(trackId)
+  }
+
+  /**
+   * Delay a track's output by `frames`, to line it up with a slower track. Set
+   * at an audio time so a change while playing does not click at the wrong moment.
+   * Refuses what cannot be done: no delay built into the strips, or more than the
+   * host allowed for.
+   */
+  setTrackDelay (trackId, frames, { atTime } = {}) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    if (!strip.delay) throw new Error('this engine was built with no track delay, so tracks cannot be aligned')
+    const seconds = frames / this.#context.sampleRate
+    if (!(seconds >= 0) || seconds > this.#maxTrackDelay) {
+      throw new Error(`a track delay of ${frames} frames (${(seconds * 1000).toFixed(1)} ms) is more than the ${(this.#maxTrackDelay * 1000)} ms this host allows`)
+    }
+    strip.delay.delayTime.setValueAtTime(seconds, atTime ?? this.#context.currentTime)
+  }
+
+  /**
+   * Send a track's output somewhere other than the master: into another track,
+   * which makes that track a bus, or back to the master with null. Only touches
+   * the audio graph when the destination changed, since the dispatcher says it
+   * for every track on every rebuild.
+   */
+  setTrackOutput (trackId, toTrackId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    const target = toTrackId === null ? null : this.#tracks.get(toTrackId)
+    if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`)
+    if (strip.to === toTrackId) return
+    try { strip.out.disconnect() } catch { /* nothing was connected */ }
+    strip.out.connect(target ? target.pre : this.#mixInput)
+    strip.to = toTrackId
+  }
+
+  /**
+   * A send: a copy of one track's signal, at `level`, into another track. Taken
+   * before the fader with `tap: 'pre'` and after fader and pan with 'post'. Not
+   * a link between plugins, so clearLinks leaves it alone; clearSends takes them
+   * all down and the dispatcher makes them again from the model.
+   */
+  addSend (id, fromTrackId, toTrackId, { level = 1, tap = 'post' } = {}) {
+    const from = this.#tracks.get(fromTrackId)
+    const to = this.#tracks.get(toTrackId)
+    if (!from) throw new Error(`no such track strip: ${fromTrackId}`)
+    if (!to) throw new Error(`no such track strip: ${toTrackId}`)
+    if (tap !== 'pre' && tap !== 'post') throw new Error(`a send is pre or post, not ${tap}`)
+    const gain = this.#context.createGain()
+    gain.gain.setValueAtTime(level, this.#context.currentTime)
+    const source = tap === 'pre' ? from.pre : (from.panner ?? from.gain)
+    source.connect(gain)
+    gain.connect(to.pre)
+    this.#sends.push({ id, source, gain })
+  }
+
+  /** Change one send's level without remaking it. */
+  setSendLevel (id, level) {
+    const send = this.#sends.find(x => x.id === id)
+    if (!send) throw new Error(`no such send: ${id}`)
+    send.gain.gain.setValueAtTime(level, this.#context.currentTime)
+  }
+
+  clearSends () {
+    for (const { source, gain } of this.#sends) {
+      try { source.disconnect(gain) } catch { /* the strip is gone */ }
+      try { gain.disconnect() } catch { /* already disconnected */ }
+    }
+    this.#sends = []
+  }
+
+  /** The master's level, pan and mute. Muted is a level of zero, not a disconnect. */
+  setMaster ({ gain = 1, pan = 0, muted = false } = {}) {
+    if (!this.#master) return
+    const at = this.#context.currentTime
+    this.#master.gain.setValueAtTime(muted ? 0 : gain, at)
+    if (this.#masterPanner) this.#masterPanner.pan.setValueAtTime(pan, at)
   }
 
   /** The track ids that have a strip. */

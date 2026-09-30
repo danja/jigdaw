@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14171d">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="panel.css">
 <title>Jiggy</title>
 <style>
   :root {
@@ -145,7 +149,7 @@
   /* Tabs. src/ui/Tabs.js builds the buttons; this only draws them. The
      selected tab is said by aria-selected, for a screen reader, and shown by
      weight and an underline together, never by colour alone. */
-  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:2px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--line); margin-bottom:2px; }
   .tab { min-height:44px; padding:10px 18px; font-size:14px; font-weight:400;
     background:transparent; color:var(--dim); border:0; border-bottom:2px solid transparent;
     cursor:pointer; margin-bottom:-1px; }
@@ -252,6 +256,45 @@
   .timeline .empty p { flex:1 1 100%; margin:0; color:var(--dim); }
   .timeline .empty button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  /* The chain under a lane stays in view as the lanes scroll, and wraps inside what is visible. */
+  .timeline-chain { position:sticky; left:var(--head); margin-left:var(--head); width:calc(var(--view, 100vw) - var(--head) - 16px); box-sizing:border-box;
+    padding:4px 8px 8px; }
+  .timeline-chain[hidden], .timeline[data-routing="off"] .timeline-chain, .timeline-row[data-size="small"] .timeline-chain { display:none; }
+  .chain-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+  .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
+    border:1px solid var(--line); border-radius:6px; background:#161a20; }
+  .chain-item.failed { border-style:dashed; border-color:var(--err); }
+  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:5px; cursor:pointer; font-size:13px; }
+  .chain-node[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-io { font-size:11px; color:var(--dim); }
+  .chain-links { list-style:none; margin:0; padding:0; font-size:11px; color:var(--dim); }
+  .chain-links li.other { color:var(--fg); }
+  .chain-links li.other::before { content:'\21C4  '; }
+  /* The routing table scrolls inside its own box, so a wide graph never makes the page scroll sideways. */
+  .routing-matrix { overflow:auto; max-height:70vh; border:1px solid var(--line); border-radius:7px; }
+  .routing-matrix table { border-collapse:separate; border-spacing:0; font-size:12px; }
+  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:#13161b; border-bottom:1px solid var(--line); }
+  .routing-matrix thead th[scope="col"] { max-width:9rem; vertical-align:bottom; }
+  .routing-matrix tbody th { position:sticky; left:0; z-index:1; text-align:left; white-space:nowrap; border-right:1px solid var(--line); }
+  .routing-matrix td { padding:0; border-bottom:1px solid var(--line); border-right:1px solid var(--line); text-align:center; }
+  .matrix-cell { width:44px; height:44px; padding:0; background:transparent; color:var(--dim); border:0; cursor:pointer; font-size:16px; }
+  .matrix-cell[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .matrix-cell:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .head-routing { flex:1 1 100%; margin:0; font-size:12px; color:var(--fg); }
+  .timeline-head[data-size="small"] .head-routing { display:none; }
+  .sends-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .sends-panel h3 { margin:6px 0 0; font-size:13px; }
+  .send-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .send-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
+  .send-level { display:inline-flex; align-items:center; gap:6px; }
+  .send-level input { min-height:44px; width:8rem; }
+  .send-row select, .send-add select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .master-channel { border-color:var(--accent); }
+  .align { margin:0 0 10px; }
+  .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
+  .align input { width:24px; height:24px; }
   .timeline-loop { position:relative; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
   .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
     border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
@@ -266,7 +309,8 @@
   .timeline-ruler i { position:absolute; bottom:0; height:6px; border-left:1px solid var(--line); }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
   .timeline { --head:13rem; }
-  .timeline-row { display:flex; align-items:stretch; border-top:1px solid var(--line); width:max-content; }
+  .timeline-row { border-top:1px solid var(--line); width:max-content; }
+  .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
     flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
   .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
@@ -282,6 +326,9 @@
   .head-slider { flex:1 1 100%; display:grid; grid-template-columns:2.4rem 1fr 3.8rem; align-items:center; gap:4px; font-size:12px; }
   .head-slider input { min-height:44px; margin:0; width:100%; }
   .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
+  .midi-state { color:var(--dim); font-size:12px; max-width:16rem; }
+  .timeline-head > .head-arm.head-arm { flex:1 1 100%; }
+  .head-arm[aria-pressed="true"] { background:var(--err); color:#111; border-color:var(--err); }
   .head-latency { flex:1 1 100%; margin:0; font-size:12px; color:var(--dim); }
   .timeline-head[data-size="small"] .head-latency { display:none; }
   .head-silent { flex:1 1 100%; font-size:12px; color:var(--dim); border:1px dashed var(--line); border-radius:4px; padding:2px 6px; }
@@ -379,61 +426,7 @@
   .mixer-channel h3 { margin:0; padding:10px 14px 0; font-size:14px; }
   .mixer-channel .strip { border-bottom:0; }
 
-  /* Controls.
-
-     A grid of knobs rather than a stack of sliders. A slider needs the width
-     of the panel and a knob needs about 50px, which is the difference between
-     a 42 control plugin being two thousand pixels of scrolling and being one
-     screen. auto-fill, so the number of columns comes from the width the
-     panel is given rather than from a count written here. */
-  .controls { display:grid; gap:12px 8px; align-items:start;
-    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
-  /* One named section per control group. A fieldset names its controls to
-     assistive technology; the legend is the visible section heading. */
-  .control-group { border:1px solid var(--line); border-radius:7px;
-    padding:10px 12px 12px; margin:0 0 12px; min-width:0; }
-  .control-group:last-child { margin-bottom:0; }
-  .control-group legend { font-size:12px; color:var(--dim); padding:0 6px; }
-  .control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
-  .control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
-    overflow-wrap:anywhere; }
-  .control .value { font-family:ui-monospace,monospace; font-size:11px; text-align:center; }
-  /* A dropdown cannot be read at 84px, so it takes two cells and its own
-     control stretches to fill them. */
-  .control-selector { grid-column:span 2; }
-  .control-selector select { width:100%; }
-  /* A file input is wider than 84px lets on and left-aligned reads more like
-     a form field than a knob, the same reasoning behind a selector's own
-     two-cell span. */
-  .control-asset { grid-column:span 2; align-items:flex-start; }
-  .control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
-
-  /* The knob. The input is still the control: it is laid over the face,
-     invisible, and keeps the role, the value and every key. pointer-events
-     are off it so a drag reaches .dial, which turns vertical movement into
-     input events; Dial.js explains why that is not the native behaviour. */
-  .dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize;
-    border-radius:50%; }
-  /* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
-     so the ring goes on the wrapper. */
-  .dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
-  .dial-face { display:block; width:100%; height:100%; }
-  .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
-  .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
-  .dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
-  /* Not display:none and not visibility:hidden: either takes it out of the
-     tab order, which is the whole thing this is trying not to lose. It keeps
-     its size so a pointer that does reach it lands where the knob is. */
-  .dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0;
-    opacity:0; pointer-events:none; }
-
-  /* :not, because input[type=range] is a more specific selector than
-     .dial-input and would otherwise give the knob's hidden input a 40px box
-     inside a 52px knob. Invisible today, since it is out of flow and takes no
-     pointer events, and exactly the kind of thing that is not invisible the
-     day one of those changes. */
-  input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
-  input[type=checkbox] { width:22px; height:22px; }
+  /* The generated panel and the knob are in panel.css, shared with the simple page. */
   select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
     padding:8px; font-size:16px; min-height:40px; max-width:100%; }
 
@@ -487,6 +480,8 @@
     /* Wrapped onto several rows the bar is a third of a phone's height, so it scrolls away
        with the page rather than staying put. */
     .transport { position:static; }
+    /* Four tabs must fit a phone's width without the page scrolling sideways. */
+    .tab { padding:10px 10px; }
     /* The lanes get the width: a narrower header, and the empty state uses all of it. */
     .timeline { --head:10.5rem; }
     .timeline .empty { margin-left:0; }
@@ -515,6 +510,8 @@
   </span>
   <button id="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
   <span class="position" id="position" aria-live="off">1 . 1</span>
+  <button id="midi-in" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
+  <span id="midi-state" class="midi-state" role="status"></span>
   <span class="history">
       <button id="undo" title="Undo the last edit" disabled>Undo</button>
       <button id="redo" title="Redo the last undone edit" disabled>Redo</button>
@@ -530,6 +527,8 @@
     <a href="https://danja.github.io/jigdaw/">Docs</a>
     <a href="https://github.com/danja/jigdaw">GitHub</a>
   </nav>
+  <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
+  <span id="net-state" class="midi-state" role="status"></span>
   <span class="meter" id="meter" role="img" aria-label="Output level"></span>
 </div>
 
@@ -584,6 +583,7 @@
   </section>
 
   <section class="stage" aria-label="Tracks and mixer">
+    <p id="update-notice" class="note" role="status" hidden></p>
     <!-- Plugin editors, a plugin's own interface in a sandboxed frame. Outside
          the tabs and never rebuilt, because moving a frame in the document
          reloads it, and the rack is rebuilt on every edit. -->
@@ -601,8 +601,20 @@
       <div id="dock-mount"></div>
     </div>
 
+    <div class="tabpanel" id="routing-panel" hidden>
+      <h2>Routing</h2>
+      <p class="note">Outputs down the side, inputs across the top. A filled cell is a connection; press a cell to make or break one.</p>
+      <p id="matrix-status" class="note" role="status"></p>
+      <div id="matrix-mount"></div>
+    </div>
+
     <div class="tabpanel" id="mixer-panel" hidden>
       <h2>Mixer</h2>
+      <div class="align">
+        <label><input type="checkbox" id="align-tracks"> Line tracks up for latency</label>
+        <p id="align-status" class="note" role="status"></p>
+      </div>
+      <div id="master-mount" class="mixer"></div>
       <div class="mixer" id="mixer"></div>
     </div>
   </section>

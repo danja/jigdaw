@@ -33,6 +33,9 @@ export class OpDispatcher {
   // id. Rebuilt with the links, and moved by a latency message without
   // rebuilding them (docs/latency.md section 2).
   #compensation = new Map()
+  #alignTracks = false
+  // The delay last given to each track, in frames, so the engine is asked only about a change.
+  #trackDelays = new Map()
 
   #foreign
 
@@ -43,8 +46,12 @@ export class OpDispatcher {
   #history = new UndoHistory()
   #recording = true
 
-  constructor ({ project = new Project(), engine = null, foreign = null, inspections = new Inspections() } = {}) {
+  constructor ({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project
+    // Whether tracks with less latency are delayed to line up with the slowest.
+    // False here so a caller that says nothing changes nothing; the page passes
+    // what web/host.json and the person's own choice say.
+    this.#alignTracks = alignTracks
     this.#engine = engine
     // Contract section 12. Absent by default: a host that supports no foreign
     // plugins conforms, and refusing is the safe default, so this has to be
@@ -145,21 +152,60 @@ export class OpDispatcher {
     }
   }
 
+  /** Whether tracks are aligned to one another. */
+  get alignTracks () { return this.#alignTracks }
+
+  /** Turn alignment on or off, and give every track the delay that now applies. */
+  setAlignTracks (on) {
+    this.#alignTracks = Boolean(on)
+    const compiled = this.compile()
+    if (compiled.ok) this.#applyTrackDelays(compiled)
+  }
+
   /**
    * How late each track's signal is, in frames: the longest declared latency
    * along its chain, counting what the compiler found ahead of each node.
-   * Tracks are not aligned to one another (docs/latency.md, "Between tracks"),
-   * so this is how far a track lags a track with no latency at all.
+   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * is zero when alignment is off, and `frames` is what the track itself has
+   * (docs/latency.md, "Between tracks").
    */
   trackLatencies () {
     const compiled = this.compile()
-    if (!compiled.ok) return this.#project.tracks.map(t => ({ trackId: t.id, frames: 0 }))
+    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map(t => [t.id, 0]))
+    const slowest = Math.max(0, ...frames.values())
     return this.#project.tracks.map(track => ({
       trackId: track.id,
-      frames: this.#project.nodes
+      frames: frames.get(track.id) ?? 0,
+      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+    }))
+  }
+
+  #trackFrames (compiled) {
+    return new Map(this.#project.tracks.map(track => [
+      track.id,
+      this.#project.nodes
         .filter(n => n.track === track.id)
         .reduce((most, n) => Math.max(most, (compiled.arrival.get(n.id) ?? 0) + this.#latencyOf(n.id)), 0)
-    }))
+    ]))
+  }
+
+  /** Give each track the delay that lines it up, asking the engine only where it changed. */
+  #applyTrackDelays (compiled) {
+    if (!this.#engine) return
+    const frames = this.#trackFrames(compiled)
+    const slowest = Math.max(0, ...frames.values())
+    for (const track of this.#project.tracks) {
+      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue
+      try {
+        this.#engine.setTrackDelay(track.id, wanted)
+        this.#trackDelays.set(track.id, wanted)
+      } catch (error) {
+        // Not refused as an edit: the graph is fine, only the alignment could not be done.
+        console.error(`could not align track ${track.id}: ${error.message}`)
+      }
+    }
+    for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id)
   }
 
   /** The latency each node declares, from what the engine actually loaded. */
@@ -508,6 +554,7 @@ export class OpDispatcher {
       }
     }
     this.#compensation = after
+    this.#applyTrackDelays(compiled)
     this.#emit({ type: 'latency', nodeId, latencyFrames, fromFrame, compiled })
   }
 
@@ -671,6 +718,22 @@ export class OpDispatcher {
   }
 
   /** Push every track's channel strip to the engine. */
+  /**
+   * The model's master, sends and bus outputs, made in the audio graph. Sends are
+   * torn down and made again each time, like the links: after an edit the audio
+   * is exactly what the model says. An output is set for every track and the
+   * engine touches the graph only where it changed.
+   */
+  #applyRouting () {
+    if (!this.#engine) return
+    this.#engine.clearSends()
+    for (const send of this.#project.sends) {
+      this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap })
+    }
+    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null)
+    this.#engine.setMaster(this.#project.master)
+  }
+
   #applyChannels () {
     if (!this.#engine) return
     for (const { trackId, gain, pan, silent } of this.audibility()) {
@@ -718,6 +781,7 @@ export class OpDispatcher {
     this.#compensation = delayFor
     this.#engine.clearLinks()
     this.#syncTracks()
+    this.#applyRouting()
 
     const midiRoutes = []
 
@@ -749,6 +813,7 @@ export class OpDispatcher {
     }
 
     this.#linkSinksToTracks()
+    this.#applyTrackDelays(compiled)
     this.#applyChannels()
     this.#router?.setRoutes(midiRoutes)
   }

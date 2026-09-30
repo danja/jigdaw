@@ -13,8 +13,8 @@
 // four controls that move and change nothing are worse than none (CLAUDE.md).
 import { decibels, panPosition } from './Strip.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove }) {
-  for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove })) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm }) {
+  for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
   const element = document.createElement('div')
@@ -45,6 +45,16 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   let at = 0
   add.addEventListener('click', () => onAdd(id, at))
   addAudio.addEventListener('click', () => onAddAudio(id, at))
+
+  // Arm: this track takes what a MIDI controller plays. Only for a track with a
+  // MIDI input to play into; on any other it would do nothing, so it is left out.
+  const arm = document.createElement('button')
+  arm.type = 'button'
+  arm.className = 'head-arm'
+  arm.id = `head-${id}-arm`
+  arm.textContent = 'Arm'
+  arm.setAttribute('aria-pressed', 'false')
+  arm.addEventListener('click', () => onArm(id, arm.getAttribute('aria-pressed') !== 'true'))
 
   const mix = document.createElement('div')
   mix.className = 'head-mix'
@@ -89,6 +99,11 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const level = slider('Level', 'gain', 0, 2, n => `${decibels(n)} dB`, n => `${decibels(n)} decibels`)
   const pan = slider('Pan', 'pan', -1, 1, panPosition, panPosition)
 
+  // How this track is routed besides straight to the master, in words.
+  const routing = document.createElement('p')
+  routing.className = 'head-routing'
+  routing.hidden = true
+
   const silent = document.createElement('span')
   silent.className = 'head-silent'
   silent.hidden = true
@@ -101,7 +116,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   latency.hidden = true
 
   mix.append(mute, solo, level.label, pan.label, silent)
-  element.append(name, mix, latency, add, addAudio)
+  element.append(name, arm, mix, routing, latency, add, addAudio)
 
   return {
     element,
@@ -110,7 +125,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = 'medium', latency: late = null }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = 'medium', latency: late = null, canArm = false, armed = false, routing: routed = null }) {
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
       name.setAttribute('aria-pressed', String(selected))
@@ -138,10 +153,22 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
         control.input.setAttribute('aria-label', `${key === 'gain' ? 'Level' : 'Pan'}, ${label}`)
       }
       silent.hidden = !isSilent
-      latency.hidden = !(late && late.frames > 0)
+      routing.hidden = routed === null
+      routing.textContent = routed ?? ''
+      arm.hidden = !canArm
+      arm.setAttribute('aria-pressed', String(armed))
+      // Said in text too, not only by the colour it turns.
+      arm.textContent = armed ? 'Armed' : 'Arm'
+      arm.setAttribute('aria-label', `Arm ${label} for MIDI input`)
+      latency.hidden = !(late && (late.frames > 0 || late.alignFrames > 0))
       if (!latency.hidden) {
-        latency.textContent = `Latency ${late.frames} frames${late.ms !== null ? `, ${late.ms.toFixed(1)} ms` : ''}`
-        latency.title = 'How far this track lags a track with no latency. Tracks are not aligned to each other.'
+        const ms = n => (late.rate ? `, ${((n / late.rate) * 1000).toFixed(1)} ms` : '')
+        const own = late.frames > 0 ? `Latency ${late.frames} frames${ms(late.frames)}` : 'No latency'
+        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the slowest track` : ''
+        latency.textContent = own + aligned
+        latency.title = late.alignFrames > 0
+          ? 'Aligned: this track is delayed so it arrives with the slowest one. Change it on the Mixer tab.'
+          : 'How far this track lags a track with no latency. Tracks are not aligned to each other.'
       }
     }
   }

@@ -122,6 +122,24 @@ export function compileGraph (project, { latencyOf = () => 0, quantum = 128 } = 
     componentOf.get(connection.from.node) === componentOf.get(connection.to.node)
 
   const errors = []
+
+  // A loop of MIDI connections. The checks below are about audio, where a cycle
+  // needs a delay in it; a MIDI connection carries no delay at all, so a loop of
+  // them can only pass the same events round for ever, and one plugin that
+  // answers each note with another makes a storm. Refused, always.
+  const midi = project.connections.filter(c => !isAudio(c))
+  const midiOut = new Map(nodes.map(id => [id, []]))
+  for (const c of midi) midiOut.get(c.from.node)?.push(c.to.node)
+  for (const component of stronglyConnected(nodes, id => midiOut.get(id) ?? [])) {
+    if (component.length > 1 || (midiOut.get(component[0]) ?? []).includes(component[0])) {
+      errors.push({
+        kind: 'midi-cycle',
+        nodes: [...component],
+        message: `MIDI loop through ${component.join(', ')}. A MIDI connection carries no delay, so events would go round it for ever. Remove one of the connections.`
+      })
+    }
+  }
+
   for (const cycle of cycles) {
     const members = new Set(cycle)
     const nodeDelay = cycle.reduce((total, id) => total + latencyOf(id), 0)

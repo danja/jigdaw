@@ -29,7 +29,12 @@
 // request is ours. Everything outside it is passed through untouched, and
 // inside it an unknown container id is passed through too, so the only requests
 // this worker answers are for containers a page has installed.
-const PREFIX = '/foreign/'
+//
+// Derived from where this worker is registered, not written down: at the root of a
+// host that is /foreign/, and under a path such as /jigdaw/ it is /jigdaw/foreign/.
+// A prefix written as /foreign/ was wrong for every deployment that was not at
+// the root, and answered nothing there.
+const PREFIX = new URL('foreign/', self.registration.scope).pathname
 
 const containers = new Map()
 
