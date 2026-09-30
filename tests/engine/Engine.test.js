@@ -480,3 +480,52 @@ describe('Engine sends, bus outputs and the master', () => {
     expect(engine.master.gain.scheduled.at(-1).value).toBe(0)
   })
 })
+
+describe('Engine live input (a microphone into a track)', () => {
+  const make = () => {
+    const context = fakeContext()
+    const sources = []
+    context.createMediaStreamSource = stream => { const s = fakeNode(); s.stream = stream; sources.push(s); return s }
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    engine.addTrack('m')
+    return { context, engine, sources }
+  }
+  const fakeStream = () => { const stopped = []; return { stopped, getTracks: () => [{ stop: () => stopped.push(1) }, { stop: () => stopped.push(2) }] } }
+
+  it('feeds a stream into the track arrival point, and taps it before the fader when asked', () => {
+    const { engine, sources } = make()
+    engine.openInput('m', fakeStream())
+    expect(sources[0].outgoing[0].destination).toBe(engine.trackInput('m'))
+    expect(engine.trackTap('m', { pre: true })).toBe(engine.trackInput('m'))
+    expect(engine.trackTap('m')).not.toBe(engine.trackInput('m'))
+  })
+
+  it('lets go of the input and stops every track of the stream, so the recording light goes out', () => {
+    const { engine, sources } = make()
+    const stream = fakeStream()
+    engine.openInput('m', stream)
+    engine.closeInput('m')
+    expect(sources[0].outgoing).toEqual([])
+    expect(stream.stopped).toEqual([1, 2])
+    expect(() => engine.closeInput('m')).not.toThrow()
+  })
+
+  it('a second stream replaces the first, and removing the track lets go of its input', () => {
+    const { engine } = make()
+    const a = fakeStream()
+    const b = fakeStream()
+    engine.openInput('m', a)
+    engine.openInput('m', b)
+    expect(a.stopped).toHaveLength(2)
+    engine.removeTrack('m')
+    expect(b.stopped).toHaveLength(2)
+  })
+
+  it('refuses a strip that is not there, and a context that cannot take a live input', () => {
+    const { engine } = make()
+    expect(() => engine.openInput('ghost', fakeStream())).toThrow(/no such track strip/)
+    const bare = new Engine({ context: fakeContext(), loader: noLoader, AudioWorkletNode: noWorkletNode })
+    bare.addTrack('m')
+    expect(() => bare.openInput('m', fakeStream())).toThrow(/cannot take a live input/)
+  })
+})

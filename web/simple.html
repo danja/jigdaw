@@ -23,20 +23,21 @@
   header h1 { font-size:26px; margin:0; flex:1 1 auto; }
   h2 { font-size:22px; margin:28px 0 12px; }
   a { color:#8fc0ff; }
-  button, select { font:inherit; min-height:56px; padding:0 22px; background:#242a33; color:var(--fg);
+  /* 44px is the floor for a touch target (CLAUDE.md), so the 56px buttons are 44 and the 72px ones 48. */
+  button, select { font:inherit; min-height:44px; padding:0 20px; background:#242a33; color:var(--fg);
     border:2px solid var(--line); border-radius:12px; cursor:pointer; }
   button:hover { background:#2d343f; }
   button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
   .note { color:var(--dim); font-size:16px; margin:6px 0; }
   /* The tunes: big buttons in a grid. */
   .tunes { list-style:none; margin:0; padding:0; display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); }
-  .tune { width:100%; min-height:72px; font-size:20px; text-align:left; }
+  .tune { width:100%; min-height:48px; font-size:19px; text-align:left; }
   /* Playing: one big button. */
   .player { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:16px; background:var(--panel);
     border:2px solid var(--line); border-radius:16px; }
-  .player button { min-width:9rem; min-height:72px; font-size:24px; font-weight:600; }
+  .player button { min-width:8rem; min-height:48px; font-size:22px; font-weight:600; }
   .speed { display:flex; align-items:center; gap:12px; flex:1 1 16rem; }
-  .speed input { flex:1; min-height:56px; }
+  .speed input { flex:1; min-height:44px; }
   .meter { display:flex; gap:4px; align-items:flex-end; height:36px; }
   .meter i { display:block; width:8px; background:#232a33; border-radius:2px; height:100%; }
   .meter i.on { background:var(--ok); }
@@ -49,15 +50,15 @@
   .card-head h3 { margin:0; flex:1; font-size:22px; }
   .switch { min-width:6rem; font-weight:600; }
   details { margin-top:8px; }
-  summary { min-height:56px; display:flex; align-items:center; cursor:pointer; color:#8fc0ff; }
+  summary { min-height:44px; display:flex; align-items:center; cursor:pointer; color:#8fc0ff; }
   .loud { display:flex; align-items:center; gap:12px; margin:8px 0; flex-wrap:wrap; }
-  .loud input { flex:1 1 10rem; min-height:56px; }
+  .loud input { flex:1 1 10rem; min-height:44px; }
   .value { font-variant-numeric:tabular-nums; color:var(--dim); font-size:15px; }
   .plugin { border-top:1px solid var(--line); padding-top:8px; margin-top:8px; }
   .plugin h4 { margin:0 0 4px; font-size:19px; }
   .about { color:var(--dim); font-size:16px; margin:0 0 8px; }
   .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
-  .actions a { display:inline-flex; align-items:center; min-height:56px; }
+  .actions a { display:inline-flex; align-items:center; min-height:44px; }
   #status { min-height:1.5em; color:var(--dim); font-size:16px; }
   #status.error { color:var(--err); }
   @media (max-width:520px) {
@@ -89,6 +90,7 @@
     <div class="player">
       <button id="play" type="button" aria-pressed="false">Play</button>
       <button id="stop" type="button">Stop</button>
+      <button id="voice" type="button" aria-pressed="false" hidden>Record my voice</button>
       <div class="speed">
         <label for="tempo">Speed</label>
         <input type="range" id="tempo" min="50" max="200" step="1" value="120">

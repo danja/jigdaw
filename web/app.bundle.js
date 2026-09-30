@@ -21652,6 +21652,7 @@ var Engine = class {
   #master = null;
   #masterPanner = null;
   #sends = [];
+  #inputs = /* @__PURE__ */ new Map();
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -21895,6 +21896,7 @@ var Engine = class {
   removeTrack(trackId) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    this.closeInput(trackId);
     try {
       strip.pre.disconnect();
       strip.gain.disconnect();
@@ -22004,10 +22006,38 @@ var Engine = class {
    * as a take recorder: mute and solo record as heard, because they act
    * upstream of here.
    */
-  trackTap(trackId) {
+  trackTap(trackId, { pre = false } = {}) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    return strip.panner ?? strip.gain;
+    return pre ? strip.pre : strip.panner ?? strip.gain;
+  }
+  /**
+   * Feed a live stream (a microphone) into a track's arrival point. One stream
+   * per track; a second replaces the first. The track's fader and mute decide
+   * what is heard, so a track holding only a microphone is muted to keep the
+   * person out of the speakers, and recorded pre-fader (`trackTap`).
+   */
+  openInput(trackId, stream) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (typeof this.#context.createMediaStreamSource !== "function") {
+      throw new Error("this context cannot take a live input");
+    }
+    this.closeInput(trackId);
+    const source = this.#context.createMediaStreamSource(stream);
+    source.connect(strip.pre);
+    this.#inputs.set(trackId, { source, stream });
+  }
+  /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
+  closeInput(trackId) {
+    const held = this.#inputs.get(trackId);
+    if (!held) return;
+    try {
+      held.source.disconnect();
+    } catch {
+    }
+    for (const track of held.stream.getTracks?.() ?? []) track.stop();
+    this.#inputs.delete(trackId);
   }
   /**
    * Connect a node's output to a track's fader. Recorded with the other links,
@@ -26048,13 +26078,15 @@ var TrackRecorder = class {
    * Capture every listed track from after its strip. Refused with nothing
    * recording rather than starting a take of no tracks. Resolves with the
    * takes builder and the live capture nodes, the latter for tests driving
-   * renders and for teardown inspection.
+   * renders and for teardown inspection. `pre` lists tracks captured before
+   * their fader instead of after it.
    */
-  async start(trackIds) {
+  async start(trackIds, { pre = [] } = {}) {
     if (this.recording) throw new Error("already recording");
     if (!trackIds || trackIds.length === 0) throw new Error("nothing to record");
     await this.addModule();
     const takes = new TakeBuilder();
+    const beforeFader = new Set(pre);
     for (const trackId of trackIds) {
       const node = new this.#WorkletNode(this.#context, "jigdaw-capture", {
         numberOfInputs: 1,
@@ -26065,7 +26097,7 @@ var TrackRecorder = class {
       sink.gain.value = 0;
       node.connect(sink);
       sink.connect(this.#context.destination);
-      this.#engine.trackTap(trackId).connect(node, 0, 0);
+      this.#engine.trackTap(trackId, { pre: beforeFader.has(trackId) }).connect(node, 0, 0);
       const session = { node, sink, takes, dropped: 0, stopped: null };
       session.stopped = new Promise((resolve) => {
         session.finish = resolve;

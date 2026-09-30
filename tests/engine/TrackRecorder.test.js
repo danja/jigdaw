@@ -177,6 +177,23 @@ describe('TrackRecorder', () => {
     expect(recorder.recording).toBe(false)
   })
 
+  it('taps a listed track before its fader, and the others after it', async () => {
+    const context = new OfflineContext({ sampleRate: 48000 })
+    const engine = new Engine({ context, loader: {}, output: null, AudioWorkletNode: OfflineWorkletNode })
+    engine.addTrack('mic')
+    engine.addTrack('other')
+    const recorder = new TrackRecorder({
+      engine, context, processorUrl: PROCESSOR_URL, WorkletNode: OfflineWorkletNode
+    })
+    const { nodes } = await recorder.start(['mic', 'other'], { pre: ['mic'] })
+    const reaches = (tap, id) => tap.connections.map(c => c.destination).includes(nodes.get(id))
+    expect(reaches(engine.trackTap('mic', { pre: true }), 'mic')).toBe(true)
+    expect(reaches(engine.trackTap('mic'), 'mic')).toBe(false)
+    expect(reaches(engine.trackTap('other'), 'other')).toBe(true)
+    expect(reaches(engine.trackTap('other', { pre: true }), 'other')).toBe(false)
+    await recorder.stop()
+  })
+
   it('captures a track through the real strip and processor, sample for sample', async () => {
     const context = new OfflineContext({ sampleRate: 48000 })
     const engine = new Engine({ context, loader: {}, output: null, AudioWorkletNode: OfflineWorkletNode })

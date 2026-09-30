@@ -724,8 +724,16 @@ From the inbox, 2026-09-30. Two directions, neither started. Each needs a design
             ended with the card closed (not reproduced in six later clicks, so probably a click
             that missed after the page moved); no offline check of this page yet; and it has not
             been tried on a phone.
-      - [ ] One-button record from the microphone into a new track, with the permission
-            state said in words (depends on T2 audio input for the choice of device).
+      - [x] One-button record from the microphone into a new track, with the permission
+            state said in words. `Engine.openInput`/`closeInput` feed a stream into a track's
+            arrival point, `TrackRecorder.start(ids, {pre})` records before the fader,
+            `src/host/Microphone.js` asks and explains refusals, `web/app/Voice.js` runs it: a
+            muted "Microphone" track carries the stream, and on stop it is swapped for a
+            "Recording N" track holding the clip, in one changeset. The button is left out
+            where `getUserMedia` does not exist. Verified in Chrome with a stream from a
+            `MediaStreamDestination` (set `window.__jigdawMicrophone`): a 3.7 beat WAV clip
+            in a new track, carrier gone. Not yet tried with a real microphone, so the
+            permission prompt and device choice are unchecked; the studio page has no button.
       - [ ] Export button over Phase E's bounce and encoder; WAV first, MP3 when the encoder
             exists. Until then the button says only what it can do.
       - [ ] Measured on a phone-width frame and a real phone: no horizontal scroll, targets,

@@ -122,13 +122,15 @@ export class TrackRecorder {
    * Capture every listed track from after its strip. Refused with nothing
    * recording rather than starting a take of no tracks. Resolves with the
    * takes builder and the live capture nodes, the latter for tests driving
-   * renders and for teardown inspection.
+   * renders and for teardown inspection. `pre` lists tracks captured before
+   * their fader instead of after it.
    */
-  async start (trackIds) {
+  async start (trackIds, { pre = [] } = {}) {
     if (this.recording) throw new Error('already recording')
     if (!trackIds || trackIds.length === 0) throw new Error('nothing to record')
     await this.addModule()
     const takes = new TakeBuilder()
+    const beforeFader = new Set(pre)
     for (const trackId of trackIds) {
       const node = new this.#WorkletNode(this.#context, 'jigdaw-capture', {
         numberOfInputs: 1,
@@ -141,7 +143,8 @@ export class TrackRecorder {
       sink.gain.value = 0
       node.connect(sink)
       sink.connect(this.#context.destination)
-      this.#engine.trackTap(trackId).connect(node, 0, 0)
+      // From before the fader for a track that only carries a live input, after it for the rest.
+      this.#engine.trackTap(trackId, { pre: beforeFader.has(trackId) }).connect(node, 0, 0)
       const session = { node, sink, takes, dropped: 0, stopped: null }
       session.stopped = new Promise(resolve => { session.finish = resolve })
       node.port.onmessage = event => {

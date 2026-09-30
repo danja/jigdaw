@@ -15,6 +15,7 @@ export class Engine {
   #master = null
   #masterPanner = null
   #sends = []
+  #inputs = new Map()
   #loader
   #nodeClass
   #nodes = new Map()
@@ -294,6 +295,7 @@ export class Engine {
   removeTrack (trackId) {
     const strip = this.#tracks.get(trackId)
     if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    this.closeInput(trackId)
     try { strip.pre.disconnect(); strip.gain.disconnect(); strip.panner?.disconnect(); strip.delay?.disconnect() } catch { /* already torn down */ }
     this.#tracks.delete(trackId)
   }
@@ -395,10 +397,40 @@ export class Engine {
    * as a take recorder: mute and solo record as heard, because they act
    * upstream of here.
    */
-  trackTap (trackId) {
+  trackTap (trackId, { pre = false } = {}) {
     const strip = this.#tracks.get(trackId)
     if (!strip) throw new Error(`no such track strip: ${trackId}`)
-    return strip.panner ?? strip.gain
+    // `pre` is the arrival point, before the fader: what came in, whatever the fader,
+    // mute or solo say, which is what a recording of a microphone needs so that
+    // silencing the track (to keep it out of the speakers) does not silence the take.
+    return pre ? strip.pre : (strip.panner ?? strip.gain)
+  }
+
+  /**
+   * Feed a live stream (a microphone) into a track's arrival point. One stream
+   * per track; a second replaces the first. The track's fader and mute decide
+   * what is heard, so a track holding only a microphone is muted to keep the
+   * person out of the speakers, and recorded pre-fader (`trackTap`).
+   */
+  openInput (trackId, stream) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    if (typeof this.#context.createMediaStreamSource !== 'function') {
+      throw new Error('this context cannot take a live input')
+    }
+    this.closeInput(trackId)
+    const source = this.#context.createMediaStreamSource(stream)
+    source.connect(strip.pre)
+    this.#inputs.set(trackId, { source, stream })
+  }
+
+  /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
+  closeInput (trackId) {
+    const held = this.#inputs.get(trackId)
+    if (!held) return
+    try { held.source.disconnect() } catch { /* already gone */ }
+    for (const track of held.stream.getTracks?.() ?? []) track.stop()
+    this.#inputs.delete(trackId)
   }
 
   /**

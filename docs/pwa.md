@@ -1,8 +1,7 @@
 # Jiggy as an installable app
 
 **Status:** a design note, and the shell it describes (manifest, icons, service worker, update
-and install notices) and a first version of the simple front page are built. The microphone and
-the export button are not.
+and install notices) and a first version of the simple front page are built. One-button microphone recording is built too. The export button is not.
 
 Jiggy is a web page, so installing it is a manifest and a service worker. This note records the
 decisions that were not obvious, and one that was forced on us.

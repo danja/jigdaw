@@ -12,6 +12,8 @@ import { createRuntime } from './app/Runtime.js'
 import { createTransport } from './app/Transport.js'
 import { createSessions } from './app/Sessions.js'
 import { createPwa } from './app/Pwa.js'
+import { createVoice } from './app/Voice.js'
+import { microphoneAvailable } from '../src/host/Microphone.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createTrackCards } from '../src/ui/TrackCards.js'
 import { createTunePicker } from '../src/ui/TunePicker.js'
@@ -178,6 +180,23 @@ listPresets({ fetch: url => fetch(url), index: new URL('presets/index.json', doc
 $('play').addEventListener('click', () => ctx.transport.play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', () => ctx.transport.stop())
 $('save').addEventListener('click', () => ctx.sessions.saveSession().catch(error => log(error.message, 'error')))
+
+// ── voice ─────────────────────────────────────────────────────────────────────
+
+// Left out of the page when the browser cannot ask for a microphone. A check from
+// outside may set `window.__jigdawMicrophone` to a function returning a stream.
+const getUserMedia = constraints => (window.__jigdawMicrophone ?? (c => navigator.mediaDevices.getUserMedia(c)))(constraints)
+if (window.__jigdawMicrophone || microphoneAvailable(navigator.mediaDevices)) {
+  const voice = createVoice(ctx, {
+    getUserMedia,
+    onState: on => {
+      $('voice').setAttribute('aria-pressed', String(on))
+      $('voice').textContent = on ? 'Stop recording' : 'Record my voice'
+    }
+  })
+  $('voice').hidden = false
+  $('voice').addEventListener('click', () => voice.toggle().catch(error => log(error.message, 'error')))
+}
 
 ctx.pwa.mount()
 showSpeed()

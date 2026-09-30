@@ -21587,6 +21587,7 @@ var Engine = class {
   #master = null;
   #masterPanner = null;
   #sends = [];
+  #inputs = /* @__PURE__ */ new Map();
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -21830,6 +21831,7 @@ var Engine = class {
   removeTrack(trackId) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    this.closeInput(trackId);
     try {
       strip.pre.disconnect();
       strip.gain.disconnect();
@@ -21939,10 +21941,38 @@ var Engine = class {
    * as a take recorder: mute and solo record as heard, because they act
    * upstream of here.
    */
-  trackTap(trackId) {
+  trackTap(trackId, { pre = false } = {}) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    return strip.panner ?? strip.gain;
+    return pre ? strip.pre : strip.panner ?? strip.gain;
+  }
+  /**
+   * Feed a live stream (a microphone) into a track's arrival point. One stream
+   * per track; a second replaces the first. The track's fader and mute decide
+   * what is heard, so a track holding only a microphone is muted to keep the
+   * person out of the speakers, and recorded pre-fader (`trackTap`).
+   */
+  openInput(trackId, stream) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (typeof this.#context.createMediaStreamSource !== "function") {
+      throw new Error("this context cannot take a live input");
+    }
+    this.closeInput(trackId);
+    const source = this.#context.createMediaStreamSource(stream);
+    source.connect(strip.pre);
+    this.#inputs.set(trackId, { source, stream });
+  }
+  /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
+  closeInput(trackId) {
+    const held = this.#inputs.get(trackId);
+    if (!held) return;
+    try {
+      held.source.disconnect();
+    } catch {
+    }
+    for (const track of held.stream.getTracks?.() ?? []) track.stop();
+    this.#inputs.delete(trackId);
   }
   /**
    * Connect a node's output to a track's fader. Recorded with the other links,
@@ -26795,6 +26825,324 @@ function createPwa(ctx2) {
   return { mount };
 }
 
+// src/host/Wav.js
+var HEADER_BYTES = 44;
+var BITS_PER_SAMPLE = 16;
+var BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
+function toInt16(sample) {
+  const clamped = Math.max(-1, Math.min(1, sample));
+  return Math.round(clamped * (clamped < 0 ? 32768 : 32767));
+}
+function writeAscii(view, offset, text) {
+  for (let i2 = 0; i2 < text.length; i2++) view.setUint8(offset + i2, text.charCodeAt(i2));
+}
+function encodeWav(channels, sampleRate) {
+  if (channels.length === 0) throw new Error("encodeWav needs at least one channel");
+  const frames = channels[0].length;
+  for (const channel of channels) {
+    if (channel.length !== frames) throw new Error("every channel must be the same length");
+  }
+  const numChannels = channels.length;
+  const blockAlign = numChannels * BYTES_PER_SAMPLE;
+  const dataBytes = frames * blockAlign;
+  const bytes = new Uint8Array(HEADER_BYTES + dataBytes);
+  const view = new DataView(bytes.buffer);
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, BITS_PER_SAMPLE, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataBytes, true);
+  let offset = HEADER_BYTES;
+  for (let frame = 0; frame < frames; frame++) {
+    for (let c3 = 0; c3 < numChannels; c3++) {
+      view.setInt16(offset, toInt16(channels[c3][frame]), true);
+      offset += BYTES_PER_SAMPLE;
+    }
+  }
+  return bytes;
+}
+
+// src/engine/TrackRecorder.js
+var CAPTURE_FRAMES = 128;
+var POOL_BUFFERS = 8;
+function floatToInt16(samples) {
+  const out = new Int16Array(samples.length);
+  for (let i2 = 0; i2 < samples.length; i2++) {
+    const clamped = Math.max(-1, Math.min(1, samples[i2]));
+    out[i2] = Math.round(clamped * (clamped < 0 ? 32768 : 32767));
+  }
+  return out;
+}
+function int16ToFloat(samples) {
+  const out = new Float32Array(samples.length);
+  for (let i2 = 0; i2 < samples.length; i2++) out[i2] = samples[i2] / 32768;
+  return out;
+}
+var TakeBuilder = class {
+  #tracks = /* @__PURE__ */ new Map();
+  /** Keep one chunk for a track. A chunk short of a full quantum is padded. */
+  addChunk(trackId, chunk) {
+    let track = this.#tracks.get(trackId);
+    if (!track) {
+      track = { chunks: [], frames: 0 };
+      this.#tracks.set(trackId, track);
+    }
+    const stereo = new Float32Array(CAPTURE_FRAMES * 2);
+    stereo.set(chunk.subarray(0, stereo.length));
+    track.chunks.push(floatToInt16(stereo));
+    track.frames += CAPTURE_FRAMES;
+  }
+  trackIds() {
+    return [...this.#tracks.keys()];
+  }
+  frames(trackId) {
+    return this.#tracks.get(trackId)?.frames ?? 0;
+  }
+  /** True when every captured sample is digital zero: a muted track, or one
+   * with nothing on it, makes no clip rather than a silent one. */
+  isSilent(trackId) {
+    const track = this.#tracks.get(trackId);
+    if (!track) return true;
+    return track.chunks.every((chunk) => chunk.every((v) => v === 0));
+  }
+  /** The take as float channel pairs, deinterleaved. */
+  take(trackId) {
+    const track = this.#tracks.get(trackId);
+    if (!track) throw new Error(`no take for track: ${trackId}`);
+    const left = new Float32Array(track.frames);
+    const right = new Float32Array(track.frames);
+    let at = 0;
+    for (const chunk of track.chunks) {
+      const floats = int16ToFloat(chunk);
+      for (let i2 = 0; i2 < CAPTURE_FRAMES; i2++) {
+        left[at + i2] = floats[i2 * 2];
+        right[at + i2] = floats[i2 * 2 + 1];
+      }
+      at += CAPTURE_FRAMES;
+    }
+    return { left, right };
+  }
+  /** The take encoded, ready to store. */
+  encode(trackId, sampleRate) {
+    const { left, right } = this.take(trackId);
+    return encodeWav([left, right], sampleRate);
+  }
+};
+var TrackRecorder = class {
+  #engine;
+  #context;
+  #processorUrl;
+  #WorkletNode;
+  #poolBuffers;
+  #module = null;
+  #sessions = /* @__PURE__ */ new Map();
+  constructor({ engine, context, processorUrl, WorkletNode = globalThis.AudioWorkletNode, poolBuffers = POOL_BUFFERS }) {
+    if (!engine || !context || !processorUrl) throw new Error("TrackRecorder needs an engine, a context and a processor URL");
+    this.#engine = engine;
+    this.#context = context;
+    this.#processorUrl = processorUrl;
+    this.#WorkletNode = WorkletNode;
+    this.#poolBuffers = poolBuffers;
+  }
+  get recording() {
+    return this.#sessions.size > 0;
+  }
+  async addModule() {
+    if (!this.#module) this.#module = await this.#context.audioWorklet.addModule(this.#processorUrl);
+    return this.#module;
+  }
+  /**
+   * Capture every listed track from after its strip. Refused with nothing
+   * recording rather than starting a take of no tracks. Resolves with the
+   * takes builder and the live capture nodes, the latter for tests driving
+   * renders and for teardown inspection. `pre` lists tracks captured before
+   * their fader instead of after it.
+   */
+  async start(trackIds, { pre = [] } = {}) {
+    if (this.recording) throw new Error("already recording");
+    if (!trackIds || trackIds.length === 0) throw new Error("nothing to record");
+    await this.addModule();
+    const takes = new TakeBuilder();
+    const beforeFader = new Set(pre);
+    for (const trackId of trackIds) {
+      const node = new this.#WorkletNode(this.#context, "jigdaw-capture", {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2]
+      });
+      const sink = this.#context.createGain();
+      sink.gain.value = 0;
+      node.connect(sink);
+      sink.connect(this.#context.destination);
+      this.#engine.trackTap(trackId, { pre: beforeFader.has(trackId) }).connect(node, 0, 0);
+      const session = { node, sink, takes, dropped: 0, stopped: null };
+      session.stopped = new Promise((resolve) => {
+        session.finish = resolve;
+      });
+      node.port.onmessage = (event) => {
+        const message = event?.data ?? event;
+        if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) {
+          takes.addChunk(trackId, new Float32Array(message.buffer ?? message, message.byteOffset ?? 0, CAPTURE_FRAMES * 2));
+          const fresh = new ArrayBuffer(CAPTURE_FRAMES * 2 * 4);
+          node.port.postMessage({ type: "return", buffer: fresh }, [fresh]);
+        } else if (message?.type === "stopped" && !session.done) {
+          session.done = true;
+          session.dropped = message.dropped ?? 0;
+          session.finish();
+        }
+      };
+      const buffers = [];
+      const transfer = [];
+      for (let i2 = 0; i2 < this.#poolBuffers; i2++) {
+        const buffer = new ArrayBuffer(CAPTURE_FRAMES * 2 * 4);
+        buffers.push(buffer);
+        transfer.push(buffer);
+      }
+      node.port.postMessage({ type: "start", buffers }, transfer);
+      this.#sessions.set(trackId, session);
+    }
+    return { takes, nodes: new Map([...this.#sessions.entries()].map(([id, s]) => [id, s.node])) };
+  }
+  /**
+   * Stop every capture and resolve with the takes and per-track drop counts.
+   * The graph is unwired first so nothing further arrives while stopping.
+   */
+  async stop() {
+    const entries = [...this.#sessions.entries()];
+    this.#sessions.clear();
+    const takes = entries.length > 0 ? entries[0][1].takes : new TakeBuilder();
+    for (const [, session] of entries) {
+      try {
+        session.node.port.postMessage({ type: "stop" });
+      } catch {
+      }
+    }
+    await Promise.all(entries.map(([, s]) => s.stopped));
+    for (const [, session] of entries) {
+      try {
+        session.node.disconnect();
+      } catch {
+      }
+      try {
+        session.sink.disconnect();
+      } catch {
+      }
+    }
+    return { takes, dropped: new Map(entries.map(([trackId, s]) => [trackId, s.dropped])) };
+  }
+};
+
+// src/host/Microphone.js
+var AUDIO_CONSTRAINTS = Object.freeze({
+  audio: Object.freeze({ echoCancellation: false, noiseSuppression: false, autoGainControl: false })
+});
+function explain(error2) {
+  switch (error2?.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return "The browser did not let this page use the microphone. Allow it in the site settings, then try again.";
+    case "NotFoundError":
+    case "OverconstrainedError":
+      return "No microphone was found. Plug one in, then try again.";
+    case "NotReadableError":
+    case "AbortError":
+      return "The microphone could not be opened. Another app may be using it.";
+    default:
+      return `The microphone could not be used: ${error2?.message ?? "unknown error"}`;
+  }
+}
+var microphoneAvailable = (mediaDevices) => typeof mediaDevices?.getUserMedia === "function";
+async function openMicrophone(getUserMedia2) {
+  try {
+    return await getUserMedia2(AUDIO_CONSTRAINTS);
+  } catch (error2) {
+    throw new Error(explain(error2), { cause: error2 });
+  }
+}
+
+// web/app/Voice.js
+async function sha256hex(bytes) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function createVoice(ctx2, { getUserMedia: getUserMedia2, processorUrl = null, WorkletNode = globalThis.AudioWorkletNode, onState = () => {
+} }) {
+  const { document: document2, log: log2 } = ctx2;
+  const resolvedUrl = processorUrl ?? new URL("src/engine/capture-processor.js", document2.baseURI).href;
+  let recorder = null;
+  let live = null;
+  const recording = () => live !== null;
+  async function start() {
+    if (live) return;
+    await ctx2.runtime.ensureRunning();
+    const { dispatcher, engine } = ctx2;
+    const stream = await openMicrophone(getUserMedia2);
+    const carrier = dispatcher.project.nextId("track");
+    try {
+      const added = dispatcher.apply([{ op: "addTrack", id: carrier, label: "Microphone", channel: { muted: true } }]);
+      if (!added.ok) throw new Error(added.message);
+      engine.openInput(carrier, stream);
+      recorder ??= new TrackRecorder({ engine, context: engine.context, processorUrl: resolvedUrl, WorkletNode });
+      const wasPlaying = ctx2.transport.playing();
+      if (!wasPlaying) await ctx2.transport.play();
+      const startBeat = ctx2.transport.position().beat;
+      await recorder.start([carrier], { pre: [carrier] });
+      live = { carrier, startBeat, stream };
+    } catch (error2) {
+      engine.closeInput(carrier);
+      stream.getTracks().forEach((t) => t.stop());
+      if (dispatcher.project.track(carrier)) dispatcher.apply([{ op: "removeTrack", id: carrier }]);
+      throw error2;
+    }
+    onState(true);
+    log2("Recording. Press Stop recording when you are done.");
+  }
+  async function stop() {
+    if (!live) return null;
+    const { carrier, startBeat } = live;
+    live = null;
+    onState(false);
+    const { dispatcher, engine } = ctx2;
+    const { takes } = await recorder.stop();
+    engine.closeInput(carrier);
+    const silent = takes.isSilent(carrier);
+    let changes = [{ op: "removeTrack", id: carrier }];
+    let made = null;
+    if (silent) {
+      log2("Nothing was heard, so nothing was kept. Check the microphone is not muted.", "error");
+    } else {
+      const sampleRate = engine.context.sampleRate;
+      const bytes = takes.encode(carrier, sampleRate);
+      const iri2 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+      ctx2.media.put(iri2, bytes, "audio/wav");
+      const buffer = await ctx2.clipPlayer.load(iri2);
+      if (!buffer) throw new Error(ctx2.clipPlayer.failure(iri2)?.message ?? "the recording could not be decoded");
+      const transport = dispatcher.transport();
+      const lengthBeats = transport.beatAtSeconds(transport.secondsAtBeat(startBeat) + takes.frames(carrier) / sampleRate) - startBeat;
+      const count = dispatcher.project.tracks.filter((t) => /^Recording \d+$/.test(t.label ?? "")).length + 1;
+      made = dispatcher.project.nextId("track");
+      changes = [
+        { op: "addTrack", id: made, label: `Recording ${count}` },
+        { op: "addClip", track: made, kind: "audio", startBeat, lengthBeats, source: iri2, offsetSeconds: 0 },
+        ...changes
+      ];
+    }
+    const result = dispatcher.apply(changes);
+    if (!result.ok) throw new Error(result.message);
+    if (made) log2("Kept your recording as a new track.", "ok");
+    return made;
+  }
+  return { start, stop, recording, toggle: () => live ? stop() : start() };
+}
+
 // src/ui/Dial.js
 var START_DEGREES = 135;
 var SWEEP_DEGREES = 270;
@@ -27355,6 +27703,18 @@ listPresets({ fetch: (url) => fetch(url), index: new URL("presets/index.json", d
 $("play").addEventListener("click", () => ctx.transport.play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", () => ctx.transport.stop());
 $("save").addEventListener("click", () => ctx.sessions.saveSession().catch((error2) => log(error2.message, "error")));
+var getUserMedia = (constraints) => (window.__jigdawMicrophone ?? ((c3) => navigator.mediaDevices.getUserMedia(c3)))(constraints);
+if (window.__jigdawMicrophone || microphoneAvailable(navigator.mediaDevices)) {
+  const voice = createVoice(ctx, {
+    getUserMedia,
+    onState: (on) => {
+      $("voice").setAttribute("aria-pressed", String(on));
+      $("voice").textContent = on ? "Stop recording" : "Record my voice";
+    }
+  });
+  $("voice").hidden = false;
+  $("voice").addEventListener("click", () => voice.toggle().catch((error2) => log(error2.message, "error")));
+}
 ctx.pwa.mount();
 showSpeed();
 /*! Bundled license information:
