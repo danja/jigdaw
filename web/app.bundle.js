@@ -27731,12 +27731,6 @@ function createBrowser(ctx2) {
       const name = document2.createElement("div");
       name.className = "name";
       name.textContent = result.label ?? result.iri;
-      if (result.web) {
-        const badge = document2.createElement("span");
-        badge.className = "badge";
-        badge.textContent = " web";
-        name.append(" ", badge);
-      }
       head.append(name);
       if (result.web) {
         const button = document2.createElement("button");

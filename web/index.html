@@ -126,7 +126,7 @@
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to the widest thing in it,
      and a timeline or a piano roll is as wide as the music. They scroll in
      their own boxes, so the column must be allowed to be narrower than they are. */
-  main { display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
+  main { display:grid; grid-template-columns: 240px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
   /* The browser collapsed: a 48px rail holding only the expand arrow, the
      stage taking the rest. The panel's contents are display:none, so they
      leave the accessibility tree exactly as hidden would. */
@@ -171,10 +171,9 @@
   .result .head { display:flex; align-items:center; gap:8px; }
   .result .name { flex:1 1 auto; min-width:0; font-weight:600; font-size:13px; overflow-wrap:anywhere; }
   .result .meta { color:var(--dim); font-size:11px; margin-top:1px; }
-  .result button { flex:none; min-height:32px; padding:2px 10px; font-size:12px;
+  .result button { flex:none; min-height:28px; padding:1px 8px; font-size:11px;
     background:var(--accent); color:#fff; border:0; border-radius:4px; cursor:pointer; }
   .result .native { color:var(--dim); font-size:11px; font-style:italic; }
-  .badge { font-size:10px; padding:1px 6px; border-radius:99px; background:var(--accent); color:#fff; vertical-align:middle; }
   .note { color:var(--dim); font-size:11px; margin:6px 0; }
   .collection-name { margin:4px 0 0; font-size:14px; }
   .result.native { opacity:.62; }
