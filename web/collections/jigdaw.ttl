@@ -29,6 +29,7 @@
         <../plugins/boost/> ,
         <../plugins/cadence/> ,
         <../plugins/cascade/> ,
+        <../plugins/dice/> ,
         <../plugins/drumgen/> ,
         <../plugins/drumkit/> ,
         <../plugins/dynamix/> ,
@@ -50,6 +51,7 @@
 <../plugins/boost/> rdfs:label "Boost" .
 <../plugins/cadence/> rdfs:label "Cadence" .
 <../plugins/cascade/> rdfs:label "Cascade" .
+<../plugins/dice/> rdfs:label "Dice" .
 <../plugins/drumgen/> rdfs:label "DrumGen" .
 <../plugins/drumkit/> rdfs:label "DrumKit" .
 <../plugins/dynamix/> rdfs:label "Dynamix" .

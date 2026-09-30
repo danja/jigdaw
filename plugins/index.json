@@ -239,6 +239,41 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/dice/",
+      "label": "Dice",
+      "comment": "A MIDI probability gate: each note-on passes with the set probability, and a note-off passes if and only if its note-on did. The generator's evolving state is saved with the project, so a restored session gates exactly as the saved one would have.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/dice/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiProcessor"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut"
+      ],
+      "cautions": [
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+        "A dropped note-on also drops its note-off, so nothing downstream is left sustaining. Anything that is not a note passes through untouched."
+      ],
+      "parameters": [
+        "probability",
+        "reseed",
+        "seed"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/drumgen/",
       "label": "DrumGen",
       "comment": "Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.",

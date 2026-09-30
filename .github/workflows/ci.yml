@@ -1,0 +1,74 @@
+# .github/workflows/ci.yml
+#
+# Push CI. Runs on every push, so a broken suite, a stale generated file, or
+# an uncompilable plugin is found at the commit that caused it rather than at
+# release time. The docs deploy in docs.yml stays separate: it publishes from
+# main, this verifies every push.
+#
+# Deliberately not here, and why:
+# - The gallery build needs headless Chrome screenshots per plugin panel.
+#   Too heavy and too flaky for per-push CI; run it by hand before release.
+# - The native adapter build needs a sibling downspout checkout for DPF plus
+#   a full C++ toolchain. Same treatment: by hand, per its own README.
+# - Committed .wasm bytes are not diffed after a rebuild. Byte output moves
+#   with compiler versions, so a rebuild-and-compare gate would go red on a
+#   correct tree the day either toolchain moves. The wasm job proves the
+#   sources still compile; the test suite proves the committed bytes still
+#   sound.
+name: CI
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: tests and generated files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: plugin index matches plugins/ on disk
+        run: |
+          npm run build:index
+          git diff --exit-code -- plugins/index.json web/collections/jigdaw.ttl
+      - name: web bundle matches web/ sources
+        run: |
+          npm run build:web
+          git diff --exit-code -- web/app.bundle.js web/app.bundle.js.map
+      - name: every served profile validates
+        run: npm run validate -- plugins/*/profile.ttl
+      - name: site generators still run
+        run: |
+          npm run build:vocab
+          npm run build:docs
+
+  wasm:
+    name: plugin firmware compiles
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: install clang and lld
+        run: sudo apt-get install -y clang lld
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: build every plugin with a build.sh
+        run: |
+          for build in plugins/*/build.sh; do
+            echo "--- $build"
+            bash "$build" || exit 1
+          done
+      - name: restore committed artifacts
+        run: git checkout -- plugins/
