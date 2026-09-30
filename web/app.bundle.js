@@ -27725,6 +27725,9 @@ function createBrowser(ctx2) {
     for (const result of results) {
       const row = document2.createElement("div");
       row.className = result.web ? "result" : "result native";
+      const head = document2.createElement("div");
+      head.className = "head";
+      row.append(head);
       const name = document2.createElement("div");
       name.className = "name";
       name.textContent = result.label ?? result.iri;
@@ -27734,19 +27737,20 @@ function createBrowser(ctx2) {
         badge.textContent = " web";
         name.append(" ", badge);
       }
-      row.append(name);
-      const meta = document2.createElement("div");
-      meta.className = "meta";
-      meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
-      row.append(meta);
+      head.append(name);
       if (result.web) {
         const button = document2.createElement("button");
         button.type = "button";
         button.textContent = "Load";
         button.addEventListener("click", () => ctx2.loading.loadPlugin(result.homepage ?? result.iri).catch(() => {
         }));
-        row.append(button);
-      } else {
+        head.append(button);
+      }
+      const meta = document2.createElement("div");
+      meta.className = "meta";
+      meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
+      row.append(meta);
+      if (!result.web) {
         const why = document2.createElement("div");
         why.className = "native";
         why.textContent = "native only";
@@ -27797,14 +27801,13 @@ function createBrowser(ctx2) {
     for (const member of members) {
       const row = document2.createElement("div");
       row.className = member.ok ? "result" : "result native";
+      const head = document2.createElement("div");
+      head.className = "head";
+      row.append(head);
       const name = document2.createElement("div");
       name.className = "name";
       name.textContent = member.ok ? member.profile.label : member.listedLabel ?? member.iri;
-      row.append(name);
-      const meta = document2.createElement("div");
-      meta.className = "meta";
-      meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
-      row.append(meta);
+      head.append(name);
       if (member.ok) {
         const button = document2.createElement("button");
         button.type = "button";
@@ -27812,8 +27815,13 @@ function createBrowser(ctx2) {
         button.setAttribute("aria-label", `Load ${member.profile.label}`);
         button.addEventListener("click", () => ctx2.loading.loadPlugin(member.iri).catch(() => {
         }));
-        row.append(button);
-      } else {
+        head.append(button);
+      }
+      const meta = document2.createElement("div");
+      meta.className = "meta";
+      meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
+      row.append(meta);
+      if (!member.ok) {
         const why = document2.createElement("div");
         why.className = "native";
         why.textContent = `Not loadable here: ${member.step ? `[${member.step}] ` : ""}${member.message}`;

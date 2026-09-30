@@ -66,6 +66,10 @@ export function createBrowser (ctx) {
       // Dimmed, so the ones that can be loaded read first at a glance.
       row.className = result.web ? 'result' : 'result native'
 
+      const head = document.createElement('div')
+      head.className = 'head'
+      row.append(head)
+
       const name = document.createElement('div')
       name.className = 'name'
       name.textContent = result.label ?? result.iri
@@ -75,20 +79,22 @@ export function createBrowser (ctx) {
         badge.textContent = ' web'
         name.append(' ', badge)
       }
-      row.append(name)
-
-      const meta = document.createElement('div')
-      meta.className = 'meta'
-      meta.textContent = [result.vendor, result.roles.join(', ')].filter(Boolean).join(' · ')
-      row.append(meta)
+      head.append(name)
 
       if (result.web) {
         const button = document.createElement('button')
         button.type = 'button'
         button.textContent = 'Load'
         button.addEventListener('click', () => ctx.loading.loadPlugin(result.homepage ?? result.iri).catch(() => {}))
-        row.append(button)
-      } else {
+        head.append(button)
+      }
+
+      const meta = document.createElement('div')
+      meta.className = 'meta'
+      meta.textContent = [result.vendor, result.roles.join(', ')].filter(Boolean).join(' · ')
+      row.append(meta)
+
+      if (!result.web) {
         const why = document.createElement('div')
         why.className = 'native'
         why.textContent = 'native only'
@@ -154,11 +160,23 @@ export function createBrowser (ctx) {
     for (const member of members) {
       const row = document.createElement('div')
       row.className = member.ok ? 'result' : 'result native'
+      const head = document.createElement('div')
+      head.className = 'head'
+      row.append(head)
       const name = document.createElement('div')
       name.className = 'name'
       // The profile governs the name once it has arrived.
       name.textContent = member.ok ? member.profile.label : (member.listedLabel ?? member.iri)
-      row.append(name)
+      head.append(name)
+
+      if (member.ok) {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.textContent = 'Load'
+        button.setAttribute('aria-label', `Load ${member.profile.label}`)
+        button.addEventListener('click', () => ctx.loading.loadPlugin(member.iri).catch(() => {}))
+        head.append(button)
+      }
 
       const meta = document.createElement('div')
       meta.className = 'meta'
@@ -167,14 +185,7 @@ export function createBrowser (ctx) {
         : member.iri
       row.append(meta)
 
-      if (member.ok) {
-        const button = document.createElement('button')
-        button.type = 'button'
-        button.textContent = 'Load'
-        button.setAttribute('aria-label', `Load ${member.profile.label}`)
-        button.addEventListener('click', () => ctx.loading.loadPlugin(member.iri).catch(() => {}))
-        row.append(button)
-      } else {
+      if (!member.ok) {
         // No Load button: a control nobody can use is left out, and the reason
         // is written instead, so it is the same information by any means.
         const why = document.createElement('div')
