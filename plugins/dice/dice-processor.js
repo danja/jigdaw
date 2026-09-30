@@ -21,6 +21,7 @@
 // reports rather than growing (messaging.md 1.4).
 
 const QUEUE_CAPACITY = 256
+const RENDER_QUANTUM = 128
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
 
@@ -140,13 +141,10 @@ class DiceProcessor extends AudioWorkletProcessor {
   }
 
   process (inputs, outputs, parameters) {
-    const output = outputs[0]
-    if (!output || output.length === 0) return true
-
-    if (!this.ready) {
-      for (const channel of output) channel.fill(0)
-      return true
-    }
+    // This plugin has no audio output, so a real AudioWorkletNode passes `outputs` empty: a MIDI
+    // processor that returned early on a missing output would never run. The block is a render
+    // quantum however many outputs there are.
+    if (!this.ready) return true
 
     const probability = parameters.probability[0]
     const seed = Math.max(1, Math.floor(parameters.seed[0]))
@@ -159,8 +157,7 @@ class DiceProcessor extends AudioWorkletProcessor {
     this.reseedWasHigh = reseedHigh
     this.probability = Math.min(1, Math.max(0, probability))
 
-    const frames = output[0].length
-    const blockEnd = currentFrame + frames
+    const blockEnd = currentFrame + RENDER_QUANTUM
     const out = []
     let kept = 0
     for (let i = 0; i < this.queueCount; i++) {

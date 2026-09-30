@@ -161,3 +161,24 @@ describe('rebaseLocation', () => {
     expect(rebaseLocation(`${canonical}a.wasm`, canonical, canonical)).toBe(`${canonical}a.wasm`)
   })
 })
+
+describe('a sidechain input', () => {
+  it('is read from the Dynamix profile as its second input, and absent from a plugin with none', async () => {
+    const dynamix = readProfile(await parseTurtle(at('plugins/dynamix/profile.ttl'), 'urn:test'))
+    expect(dynamix.audioInputs).toBe(2)
+    expect(dynamix.sidechainInput).toBe(1)
+    const reference = readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test'))
+    expect(reference.sidechainInput).toBeNull()
+  })
+
+  it('is refused when it names an input the plugin does not have', async () => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const text = value => `@prefix jig: <http://purl.org/stuff/jigdaw/> .
+<https://example.org/p/> a jig:WebPlugin ; jig:audioInputs 1 ; jig:sidechainInput ${value} .`
+    for (const bad of ['1', '-1', '0.5']) {
+      const dataset = await parseText(text(bad), 'urn:test')
+      expect(() => readProfile(dataset), bad).toThrow(/names no audio input/)
+    }
+    expect(readProfile(await parseText(text('0'), 'urn:test')).sidechainInput).toBe(0)
+  })
+})

@@ -1,0 +1,45 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/midifilter/",
+  "label": "MIDI Filter",
+  "comment": "Steers MIDI between plugins: keeps one channel or all, moves what it keeps to another channel, transposes notes, and passes only the notes inside a range, so two of them split a keyboard between two instruments. A note-off passes only for a note-on that passed, so nothing is left sustaining when a setting changes mid-note.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "midifilter",
+  "roles": [
+    "trn:MidiProcessor"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Midi"
+  ],
+  "cautions": [
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+    "Only the note range and transpose touch notes. Control changes, pitch bend and other channel messages follow the channel settings alone, and system messages always pass."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "midifilter-processor.js"
+  },
+  "ports": [
+    { "symbol": "in_channel", "name": "Keep channel (0 = all)", "default": 0, "minimum": 0, "maximum": 16, "paramIndex": 0 },
+    { "symbol": "out_channel", "name": "Send on channel (0 = as it came)", "default": 0, "minimum": 0, "maximum": 16, "paramIndex": 1 },
+    { "symbol": "transpose", "name": "Transpose (semitones)", "default": 0, "minimum": -48, "maximum": 48, "paramIndex": 2 },
+    { "symbol": "low_note", "name": "Lowest note", "default": 0, "minimum": 0, "maximum": 127, "paramIndex": 3 },
+    { "symbol": "high_note", "name": "Highest note", "default": 127, "minimum": 0, "maximum": 127, "paramIndex": 4 }
+  ]
+}

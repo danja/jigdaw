@@ -6,6 +6,7 @@
 // coming out of a worklet; tests/engine/TrackRecorder.test.js drives the
 // real capture processor for exactly that half.
 import { describe, it, expect, beforeEach } from 'vitest'
+import { parseHTML } from 'linkedom'
 import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 import { createRecord } from '../../web/app/Record.js'
 import { CAPTURE_FRAMES } from '../../src/engine/TrackRecorder.js'
@@ -52,6 +53,9 @@ function fakeContext () {
 
 function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
   FakeNode.reset()
+  // A real document: the record button is drawn as an icon, which needs real SVG elements.
+  const page = parseHTML('<!doctype html><html><body><button id="record" data-icon="record">Record</button></body></html>')
+  Object.defineProperty(page.document, 'baseURI', { value: 'https://s.test/' })
   const context = fakeContext()
   const logLines = []
   const mediaFiles = new Map()
@@ -61,8 +65,8 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
   const dispatcher = new OpDispatcher()
   dispatcher.apply(tracks.map(id => ({ op: 'addTrack', id })))
   const ctx = {
-    document: { baseURI: 'https://s.test/' },
-    $: id => ({ setAttribute () {}, textContent: '' }),
+    document: page.document,
+    $: id => page.document.getElementById(id),
     log: (message, kind = 'info') => logLines.push({ message, kind }),
     runtime: { ensureRunning: async () => dispatcher },
     engine: {
@@ -91,10 +95,22 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
     const chunk = new Float32Array(CAPTURE_FRAMES * 2).fill(value)
     node.port.onmessage({ data: chunk })
   }
-  return { ctx, record, dispatcher, logLines, mediaFiles, nodes, feed, played: () => played }
+  return { ctx, page, record, dispatcher, logLines, mediaFiles, nodes, feed, played: () => played }
 }
 
 describe('record', () => {
+  it('names its button for what it will do, as an icon that keeps its words', async () => {
+    const { record, page } = build()
+    const button = page.document.getElementById('record')
+    await record.toggle()
+    expect(button.getAttribute('aria-label')).toBe('Stop take')
+    expect(button.getAttribute('aria-pressed')).toBe('true')
+    await record.finishTake()
+    expect(button.getAttribute('aria-label')).toBe('Record')
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+    expect(button.querySelector('svg')).not.toBeNull()
+  })
+
   let setup
   beforeEach(() => { setup = build() })
 

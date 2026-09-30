@@ -91,18 +91,36 @@ export class ClipPlayer {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start ({ iri, when, offset, duration, destination }) {
+  start ({ iri, when, offset, duration, destination, fadeIn = 0, fadeOut = 0 }) {
     const buffer = this.buffer(iri)
     if (!buffer) return false
     const source = this.#context.createBufferSource()
     source.buffer = buffer
-    source.connect(destination)
+    let tail = source
+    if (fadeIn > 0 || fadeOut > 0) {
+      // Straight lines in level, from `when` (the clip's start) and to `when + duration` (its end), so a
+      // start made late still lands on the same curve. The two are scaled to fit a short clip.
+      const scale = fadeIn + fadeOut > duration ? duration / (fadeIn + fadeOut) : 1
+      const inLength = fadeIn * scale
+      const outLength = fadeOut * scale
+      const shape = this.#context.createGain()
+      const level = shape.gain
+      level.setValueAtTime(inLength > 0 ? 0 : 1, when)
+      if (inLength > 0) level.linearRampToValueAtTime(1, when + inLength)
+      if (outLength > 0) {
+        level.setValueAtTime(1, when + duration - outLength)
+        level.linearRampToValueAtTime(0, when + duration)
+      }
+      source.connect(shape)
+      tail = shape
+    }
+    tail.connect(destination)
     // A start already in the past is started now, at the point in the clip
     // the clock has reached, rather than from its beginning late.
     const late = Math.max(0, this.#context.currentTime - when)
     source.start(when + late, offset + late, Math.max(0, duration - late))
     this.#playing.add(source)
-    source.onended = () => { this.#playing.delete(source); source.disconnect() }
+    source.onended = () => { this.#playing.delete(source); source.disconnect(); if (tail !== source) tail.disconnect() }
     return true
   }
 

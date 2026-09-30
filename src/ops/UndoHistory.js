@@ -205,7 +205,7 @@ export class UndoHistory {
       const targetClips = new Map(target.clips.map(c => [c.id, c]))
       for (const [id, clip] of liveClips) {
         const wanted = targetClips.get(id)
-        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: 'removeClip', id })
+        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: 'removeClip', id, force: true })
       }
       for (const [id, clip] of targetClips) {
         const live = liveClips.get(id)

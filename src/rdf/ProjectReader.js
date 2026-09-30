@@ -259,6 +259,10 @@ export function readProject (dataset) {
         startBeat: number(one(dataset, clipIri, trn.startBeat), `startBeat of clip ${id}`),
         lengthBeats: number(one(dataset, clipIri, trn.lengthBeats), `lengthBeats of clip ${id}`)
       }
+      const muted = one(dataset, clipIri, jig.muted)
+      if (muted !== null) clip.muted = muted.value === 'true'
+      const locked = one(dataset, clipIri, jig.locked)
+      if (locked !== null) clip.locked = locked.value === 'true'
       if (kind === 'midi') {
         clip.notes = objects(dataset, clipIri, jig.note).map(t => t.value).map(noteIri => ({
           startBeat: number(one(dataset, noteIri, trn.startBeat), `startBeat of a note in ${id}`),
@@ -271,6 +275,8 @@ export function readProject (dataset) {
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`)
         clip.source = source
         clip.offsetSeconds = number(one(dataset, clipIri, jig.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0
+        clip.fadeInBeats = number(one(dataset, clipIri, jig.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0
+        clip.fadeOutBeats = number(one(dataset, clipIri, jig.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0
       }
       clips.push(clip)
     }

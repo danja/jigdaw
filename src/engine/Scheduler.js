@@ -35,7 +35,7 @@ export function clipNotes (project) {
   for (const track of project.tracks) {
     if (!track.midiInput) continue
     for (const clip of project.clips) {
-      if (clip.track !== track.id || clip.kind !== 'midi') continue
+      if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
       const end = clip.startBeat + clip.lengthBeats
       for (const note of clip.notes) {
         const on = clip.startBeat + note.startBeat
@@ -56,8 +56,8 @@ export function clipNotes (project) {
  */
 export function clipAudio (project) {
   return project.clips
-    .filter(c => c.kind === 'audio')
-    .map(c => ({ id: c.id, track: c.track, source: c.source, offsetSeconds: c.offsetSeconds, on: c.startBeat, off: c.startBeat + c.lengthBeats }))
+    .filter(c => c.kind === 'audio' && !c.muted)
+    .map(c => ({ id: c.id, track: c.track, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats, on: c.startBeat, off: c.startBeat + c.lengthBeats }))
 }
 
 /**

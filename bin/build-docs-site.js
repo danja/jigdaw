@@ -17,16 +17,18 @@
 // committed but this is not. There is nothing here that needs to be readable
 // without running the build, unlike web/app.bundle.js, which the production
 // server serves with no build step of its own.
-import { readdir, readFile, writeFile, mkdir, copyFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile, mkdir, copyFile, rm } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, join, basename } from 'node:path'
 import { marked } from 'marked'
 import hljs from 'highlight.js'
 import { turtle } from './highlight-turtle.js'
+import { HIDDEN_DOCS } from './docs-hidden.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const docsDir = join(root, 'docs')
-const outDir = join(root, 'docs-site')
+// DOCS_OUT lets a test build somewhere of its own, so two suites never rebuild one folder at once.
+const outDir = process.env.DOCS_OUT ? resolve(process.env.DOCS_OUT) : join(root, 'docs-site')
 
 const REPO = 'https://github.com/danja/jigdaw'
 const SITE = 'https://danja.github.io/jigdaw/'
@@ -70,6 +72,8 @@ const GROUP_OF = {
   deployment: 'Background',
   revisions: 'Background'
 }
+// Kept off the site: see bin/docs-hidden.js.
+const HIDDEN = new Set(HIDDEN_DOCS)
 const GROUP_ORDER = ['Specification', 'Guides', 'Background']
 
 // Linked above every group, with no heading of its own: the first thing a
@@ -93,10 +97,18 @@ marked.use({
   }
 })
 
-const names = (await readdir(docsDir))
+const allNames = (await readdir(docsDir))
   .filter(f => f.endsWith('.md'))
   .map(f => basename(f, '.md'))
   .sort()
+
+for (const name of HIDDEN) {
+  if (!allNames.includes(name)) {
+    console.error(`build-docs-site: ${name} is listed as hidden but docs/${name}.md does not exist`)
+    process.exit(1)
+  }
+}
+const names = allNames.filter(name => !HIDDEN.has(name))
 
 if (!names.includes('index')) {
   console.error('build-docs-site: docs/index.md is missing; it is the site home page')
@@ -153,7 +165,8 @@ for (const name of names) {
  */
 function rewriteLinks (html) {
   return html
-    .replace(/href="([a-zA-Z0-9_-]+)\.md(#[^"]*)?"/g, 'href="$1.html$2"')
+    .replace(/href="([a-zA-Z0-9_-]+)\.md(#[^"]*)?"/g, (_, name, hash = '') =>
+      HIDDEN.has(name) ? `href="${REPO}/blob/main/docs/${name}.md${hash}"` : `href="${name}.html${hash}"`)
     .replace(/href="\.\.\/([^"#]+)(#[^"]*)?"/g, (_, path, hash = '') =>
       `href="${REPO}/${path.endsWith('/') ? 'tree' : 'blob'}/main/${path}${hash}"`)
 }
@@ -234,6 +247,8 @@ ${bodyHtml}
 `
 }
 
+// Start empty, so a page for a document since hidden or removed does not outlive it.
+await rm(outDir, { recursive: true, force: true })
 await mkdir(outDir, { recursive: true })
 
 for (const name of names) {

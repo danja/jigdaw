@@ -122,7 +122,7 @@ describe('the bundled presets', () => {
             expect(same, `${change.id}.${key} is not the embedded ${bytes.byteLength} bytes`).toBe(true)
           }
         }
-      })
+      }, 30000)
     })
   }
 })

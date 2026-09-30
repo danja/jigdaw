@@ -12,6 +12,7 @@
 // save, so nothing about persistence is new. What is new is the capture:
 // per-track AudioWorklet sinks on a buffer pool (src/engine/TrackRecorder.js)
 // rather than a second render, because a second render is not what was heard.
+import { setIcon } from '../../src/ui/Icons.js'
 import { TrackRecorder } from '../../src/engine/TrackRecorder.js'
 
 /** SHA-256 over bytes, as lowercase hex. The subtle API both sides have. */
@@ -29,7 +30,7 @@ export function createRecord (ctx, { processorUrl = null, WorkletNode = globalTh
   function show (active) {
     const button = $('record')
     button.setAttribute('aria-pressed', String(active))
-    button.textContent = active ? 'Stop take' : 'Rec'
+    setIcon(document, button, active ? 'stop' : 'record', active ? 'Stop take' : 'Record', { keepTitle: true })
   }
 
   function isRecording () { return recording !== null }

@@ -27,6 +27,8 @@
     # to be something a search or a signature can be checked against.
     doap:developer "danja" ;
     foaf:homepage <> ;
+    # A sidechain input before the first input there is.
+    jig:sidechainInput -1 ;
     trn:role trn:Instrument ;
 
     # Produces MIDI but requires neither jig:MidiEvents nor jig:MidiOut, so nothing

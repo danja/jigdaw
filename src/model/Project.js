@@ -184,6 +184,29 @@ function checkNotes (notes) {
   }).sort((a, b) => a.startBeat - b.startBeat || a.pitch - b.pitch)
 }
 
+/** A fade lasts no time or some. */
+function checkFade (name, value) {
+  if (!(Number.isFinite(value) && value >= 0)) throw new Error(`${name} must be zero or more beats`)
+  return value
+}
+
+/** A clip is muted or it is not. */
+function checkMuted (value) { return checkFlag('muted', value) }
+
+function checkFlag (name, value) {
+  if (typeof value !== 'boolean') throw new Error(`${name} must be true or false`)
+  return value
+}
+
+/**
+ * A locked clip refuses to be changed, moved, resized or removed, so a gesture that
+ * lands on it by mistake does nothing and says why. `force` is for undo, which must
+ * put things back whatever their state, and is never set by a person's edit.
+ */
+function refuseIfLocked (clip, change, what) {
+  if (clip.locked && change.force !== true) throw new Error(`clip ${clip.id} is locked, so it cannot be ${what}; unlock it first`)
+}
+
 /** Check a clip's placement. */
 function checkPlacement (startBeat, lengthBeats) {
   if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error('a clip needs a startBeat at or after zero')
@@ -296,7 +319,7 @@ const OPERATIONS = {
     const id = change.id ?? `clip-${++counters.clip}`
     if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`)
     noteExplicitId(counters, 'clip', 'clip', id)
-    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats }
+    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag('locked', change.locked ?? false) }
     if (change.kind === 'midi') {
       clip.notes = checkNotes(change.notes ?? [])
     } else {
@@ -309,6 +332,8 @@ const OPERATIONS = {
       if (!(Number.isFinite(offset) && offset >= 0)) throw new Error('offsetSeconds must be at or after zero')
       clip.source = change.source
       clip.offsetSeconds = offset
+      clip.fadeInBeats = checkFade('fadeInBeats', change.fadeInBeats ?? 0)
+      clip.fadeOutBeats = checkFade('fadeOutBeats', change.fadeOutBeats ?? 0)
       clip.notes = []
     }
     state.clips.set(id, clip)
@@ -319,6 +344,7 @@ const OPERATIONS = {
   setClip (state, change) {
     const clip = state.clips.get(change.id)
     if (!clip) throw new Error(`no such clip: ${change.id}`)
+    if (['startBeat', 'lengthBeats', 'track', 'offsetSeconds'].some(k => change[k] !== undefined)) refuseIfLocked(clip, change, 'moved or resized')
     const startBeat = change.startBeat ?? clip.startBeat
     const lengthBeats = change.lengthBeats ?? clip.lengthBeats
     checkPlacement(startBeat, lengthBeats)
@@ -328,6 +354,13 @@ const OPERATIONS = {
       if (!(Number.isFinite(change.offsetSeconds) && change.offsetSeconds >= 0)) throw new Error('offsetSeconds must be at or after zero')
       clip.offsetSeconds = change.offsetSeconds
     }
+    if (change.muted !== undefined) clip.muted = checkMuted(change.muted)
+    for (const key of ['fadeInBeats', 'fadeOutBeats']) {
+      if (change[key] === undefined) continue
+      if (clip.kind !== 'audio') throw new Error('only an audio clip has fades')
+      clip[key] = checkFade(key, change[key])
+    }
+    if (change.locked !== undefined) clip.locked = checkFlag('locked', change.locked)
     clip.startBeat = startBeat
     clip.lengthBeats = lengthBeats
     if (change.track !== undefined) clip.track = change.track
@@ -342,12 +375,14 @@ const OPERATIONS = {
     const clip = state.clips.get(change.id)
     if (!clip) throw new Error(`no such clip: ${change.id}`)
     if (clip.kind !== 'midi') throw new Error(`clip ${change.id} is audio and holds no notes`)
+    refuseIfLocked(clip, change, 'edited')
     clip.notes = checkNotes(change.notes)
     return change.id
   },
 
   removeClip (state, change) {
     if (!state.clips.has(change.id)) throw new Error(`no such clip: ${change.id}`)
+    refuseIfLocked(state.clips.get(change.id), change, 'removed')
     state.clips.delete(change.id)
     return change.id
   },
@@ -624,8 +659,8 @@ const OPERATIONS = {
 /** The addClip that recreates a clip from a snapshot. */
 export function clipChange (c) {
   return c.kind === 'midi'
-    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, notes: c.notes }
-    : { op: 'addClip', id: c.id, track: c.track, kind: 'audio', startBeat: c.startBeat, lengthBeats: c.lengthBeats, source: c.source, offsetSeconds: c.offsetSeconds }
+    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes }
+    : { op: 'addClip', id: c.id, track: c.track, kind: 'audio', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats }
 }
 
 /**
@@ -696,7 +731,7 @@ export class Project {
 
   /** Whether saving the editor graph would say anything, ignoring what belongs to things that are gone. */
   get hasEditorState () {
-    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()))
+    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()))
   }
 
   /** Editor metadata never bumps the revision. */
@@ -714,14 +749,32 @@ export class Project {
 
   /** Take editor metadata read from an editor.ttl; whatever names nothing here is dropped. */
   loadEditor (read) {
-    this.#editor.load(read)
-    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()))
+    // The reader cannot tell a clip's colour from a track's: both are a fragment with jig:color.
+    // What names a clip and not a track is a clip's.
+    const tracks = new Map()
+    const clips = new Map()
+    for (const [id, layout] of read.tracks) {
+      if (this.#state.tracks.has(id) || !this.#state.clips.has(id)) tracks.set(id, layout)
+      else clips.set(id, { color: layout.color })
+    }
+    this.#editor.load({ positions: read.positions, tracks, clips })
+    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()))
   }
 
   /** Move a track up (-1) or down (+1) in the arrangement. Editor metadata: no revision, no undo. */
   moveTrack (id, delta) {
     if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`)
     return this.#editor.moveTrack(this.tracks.map(t => t.id), id, delta)
+  }
+
+  /** A clip's colour, or null for the track's own. Editor metadata: no revision, no undo. */
+  clipColor (id) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`)
+    return this.#editor.clip(id).color
+  }
+  setClipColor (id, color) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`)
+    this.#editor.setClip(id, { color })
   }
 
   trackLayout (id) {

@@ -48,7 +48,8 @@ export function outputsOf (profile) {
 export function inputsOf (profile) {
   const found = []
   for (let i = 0; i < (profile?.audioInputs ?? 0); i++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i, name: `Audio in ${i + 1}` })
+    // A key input is named for what it is, so a person connecting a kick to a compressor sees it.
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i, name: i === profile.sidechainInput ? 'Sidechain key' : `Audio in ${i + 1}`, ...(i === profile.sidechainInput ? { sidechain: true } : {}) })
   }
   if ((profile?.accepts ?? []).some(isMidiSignal)) {
     found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: 'MIDI in' })

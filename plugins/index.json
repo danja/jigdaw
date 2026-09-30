@@ -901,6 +901,43 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/midifilter/",
+      "label": "MIDI Filter",
+      "comment": "Steers MIDI between plugins: keeps one channel or all, moves what it keeps to another channel, transposes notes, and passes only the notes inside a range, so two of them split a keyboard between two instruments. A note-off passes only for a note-on that passed, so nothing is left sustaining when a setting changes mid-note.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/midifilter/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiProcessor"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut"
+      ],
+      "cautions": [
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
+        "Only the note range and transpose touch notes. Control changes, pitch bend and other channel messages follow the channel settings alone, and system messages always pass."
+      ],
+      "parameters": [
+        "high_note",
+        "in_channel",
+        "low_note",
+        "out_channel",
+        "transpose"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/mop/",
       "label": "Mop",
       "comment": "Eighteen voice OPL3 FM General MIDI instrument, capped at eight voices by default, based on mop by M. Glargaard. The AdLib Sound Blaster sound of DOS-era games: FM timbres from mop's own bank, a drum kit on channel 10, and every control answering to a MIDI CC.",

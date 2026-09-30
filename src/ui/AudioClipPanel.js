@@ -48,11 +48,13 @@ export function createAudioClipPanel (document, { onSet, onRemove }) {
   const start = field('startBeat', 'Start (beats)', { min: 0, step: 1 })
   const length = field('lengthBeats', 'Length (beats)', { min: 0.25, step: 1 })
   const offset = field('offsetSeconds', 'Offset into the file (seconds)', { min: 0, step: 0.1 })
+  const fadeIn = field('fadeInBeats', 'Fade in (beats)', { min: 0, step: 0.25 })
+  const fadeOut = field('fadeOutBeats', 'Fade out (beats)', { min: 0, step: 0.25 })
   const remove = document.createElement('button')
   remove.type = 'button'
   remove.textContent = 'Remove clip'
   remove.addEventListener('click', () => onRemove(clipId))
-  element.append(summary, source, start.label, length.label, offset.label, problem, remove)
+  element.append(summary, source, start.label, length.label, offset.label, fadeIn.label, fadeOut.label, problem, remove)
 
   return {
     element,
@@ -63,8 +65,8 @@ export function createAudioClipPanel (document, { onSet, onRemove }) {
       summary.textContent = `${label}: audio clip at ${barBeat(clip.startBeat, beatsPerBar)}.`
       source.textContent = `File: ${clip.source}`
       const active = document.activeElement
-      for (const [f, key] of [[start, 'startBeat'], [length, 'lengthBeats'], [offset, 'offsetSeconds']]) {
-        if (active !== f.input) f.input.value = String(clip[key])
+      for (const [f, key] of [[start, 'startBeat'], [length, 'lengthBeats'], [offset, 'offsetSeconds'], [fadeIn, 'fadeInBeats'], [fadeOut, 'fadeOutBeats']]) {
+        if (active !== f.input) f.input.value = String(clip[key] ?? 0)
       }
       if (!problem.textContent || unplayable) problem.textContent = unplayable ? `Cannot play: ${unplayable}` : ''
     }

@@ -102,7 +102,7 @@
     jig:onTrack <#track-2> ;
     rdfs:label "Formant shifter" ;
     jig:plugin <../plugins/quefrency/> ;
-    jig:setting <#formant-formant_shift> , <#formant-formant_depth> , <#formant-pitch_shift> , <#formant-mix> .
+    jig:setting <#formant-formant_shift> , <#formant-formant_depth> , <#formant-pitch_shift> , <#formant-mix> , <#formant-output> .
 
 <#hall>
     a jig:Node ;
@@ -180,6 +180,7 @@
 <#formant-formant_depth> a jig:ParameterSetting ; jig:symbol "formant_depth" ; jig:value 140.0 .
 <#formant-pitch_shift> a jig:ParameterSetting ; jig:symbol "pitch_shift" ; jig:value 0.0 .
 <#formant-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.7 .
+<#formant-output> a jig:ParameterSetting ; jig:symbol "output" ; jig:value -9.0 .
 <#hall-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 2.0 .
 <#hall-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.5 .
 <#hall-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 50.0 .

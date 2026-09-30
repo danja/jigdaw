@@ -50,6 +50,19 @@ describe('the audio clip panel', () => {
     expect(document.querySelector('.audio-problem').textContent).toMatch(/Length \(beats\) must be a number, 0.25 or more/)
   })
 
+  it('shows and sets both fades, refusing a negative one', () => {
+    const { $, calls, panel } = build()
+    expect([$('audio-fadeInBeats').value, $('audio-fadeOutBeats').value]).toEqual(['0', '0'])
+    panel.show({ ...clip, fadeInBeats: 1, fadeOutBeats: 0.5 }, { beatsPerBar: 4, label: 'Loop' })
+    expect([$('audio-fadeInBeats').value, $('audio-fadeOutBeats').value]).toEqual(['1', '0.5'])
+    $('audio-fadeOutBeats').value = '2'
+    $('audio-fadeOutBeats').dispatchEvent(event('change'))
+    $('audio-fadeInBeats').value = '-1'
+    $('audio-fadeInBeats').dispatchEvent(event('change'))
+    expect(calls).toEqual([['set', 'c3', { fadeOutBeats: 2 }]])
+    expect(document.querySelector('.audio-problem').textContent).toMatch(/Fade in \(beats\) must be a number, 0 or more/)
+  })
+
   it('removes the clip it shows', () => {
     const { calls } = build()
     document.querySelector('button').dispatchEvent(event('click'))

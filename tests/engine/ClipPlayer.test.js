@@ -20,6 +20,21 @@ function fakeContext () {
       const data = new Float32Array(bytes.byteLength).map((_, i) => (i % 4) / 4 - 0.5)
       return { duration: data.length / 48000, getChannelData: () => data }
     },
+    // Refuses what a real AudioParam refuses: a negative or non-finite time.
+    createGain () {
+      const events = []
+      const at = (kind, value, time) => {
+        if (!Number.isFinite(time) || time < 0) throw new RangeError(`${kind} takes a finite time at or after zero`)
+        events.push([kind, value, time])
+      }
+      return {
+        events,
+        gain: { setValueAtTime: (v, t) => at('set', v, t), linearRampToValueAtTime: (v, t) => at('ramp', v, t) },
+        connected: [],
+        connect (d) { this.connected.push(d) },
+        disconnect () { this.connected = [] }
+      }
+    },
     createBufferSource () {
       const source = {
         buffer: null, started: null, stopped: false, connected: [],
@@ -108,6 +123,51 @@ describe('playing', () => {
     expect(player.active).toBe(2)
     player.stopAll()
     expect(context.sources.every(s => s.stopped)).toBe(true)
+    expect(player.active).toBe(0)
+  })
+})
+
+describe('fades', () => {
+  const loaded = async () => {
+    const context = fakeContext()
+    context.gains = []
+    const make = context.createGain
+    context.createGain = () => { const g = make(); context.gains.push(g); return g }
+    const player = new ClipPlayer({ context, fetchBytes: async () => bytesOf(48000) })
+    await player.load('x')
+    return { context, player }
+  }
+
+  it('plays straight into the destination when there is no fade', async () => {
+    const { context, player } = await loaded()
+    const destination = {}
+    player.start({ iri: 'x', when: 1, offset: 0, duration: 2, destination })
+    expect(context.gains).toHaveLength(0)
+    expect(context.sources[0].connected).toEqual([destination])
+  })
+
+  it('shapes a fade in and a fade out as straight lines from the clip start to its end', async () => {
+    const { context, player } = await loaded()
+    const destination = {}
+    player.start({ iri: 'x', when: 1, offset: 0, duration: 4, destination, fadeIn: 1, fadeOut: 0.5 })
+    expect(context.sources[0].connected).toEqual(context.gains)
+    expect(context.gains[0].connected).toEqual([destination])
+    expect(context.gains[0].events).toEqual([['set', 0, 1], ['ramp', 1, 2], ['set', 1, 4.5], ['ramp', 0, 5]])
+  })
+
+  it('a fade out alone starts at full level, and two that are too long are scaled to fit', async () => {
+    const { context, player } = await loaded()
+    player.start({ iri: 'x', when: 0, offset: 0, duration: 2, destination: {}, fadeOut: 0.5 })
+    expect(context.gains[0].events).toEqual([['set', 1, 0], ['set', 1, 1.5], ['ramp', 0, 2]])
+    player.start({ iri: 'x', when: 0, offset: 0, duration: 2, destination: {}, fadeIn: 3, fadeOut: 1 })
+    expect(context.gains[1].events).toEqual([['set', 0, 0], ['ramp', 1, 1.5], ['set', 1, 1.5], ['ramp', 0, 2]])
+  })
+
+  it('lets go of the gain when the source ends', async () => {
+    const { context, player } = await loaded()
+    player.start({ iri: 'x', when: 0, offset: 0, duration: 2, destination: {}, fadeIn: 1 })
+    context.sources[0].onended()
+    expect(context.gains[0].connected).toEqual([])
     expect(player.active).toBe(0)
   })
 })

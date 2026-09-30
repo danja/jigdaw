@@ -42,6 +42,7 @@
         <../plugins/jsfx-soft-clipper/> ,
         <../plugins/lookahead/> ,
         <../plugins/melgen/> ,
+        <../plugins/midifilter/> ,
         <../plugins/mop/> ,
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
@@ -66,6 +67,7 @@
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
 <../plugins/lookahead/> rdfs:label "Lookahead" .
 <../plugins/melgen/> rdfs:label "MelGen" .
+<../plugins/midifilter/> rdfs:label "MIDI Filter" .
 <../plugins/mop/> rdfs:label "Mop" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .

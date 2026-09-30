@@ -172,9 +172,13 @@ export function writeProject (project, { iri, created = null } = {}) {
       `a ${term(clip.kind === 'midi' ? jig.MidiClip : jig.AudioClip)}`,
       `${term(trn.startBeat)} ${decimal(clip.startBeat)} ; ${term(trn.lengthBeats)} ${decimal(clip.lengthBeats)}`
     ]
+    if (clip.muted) statements.push(`${term(jig.muted)} true`)
+    if (clip.locked) statements.push(`${term(jig.locked)} true`)
     if (clip.kind === 'audio') {
       statements.push(`${term(jig.source)} <${relativeTo(clip.source, iri)}>`)
       if (clip.offsetSeconds !== 0) statements.push(`${term(jig.offsetSeconds)} ${decimal(clip.offsetSeconds)}`)
+      if (clip.fadeInBeats > 0) statements.push(`${term(jig.fadeInBeats)} ${decimal(clip.fadeInBeats)}`)
+      if (clip.fadeOutBeats > 0) statements.push(`${term(jig.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`)
     } else if (clip.notes.length > 0) {
       statements.push(`${term(jig.note)} ${clip.notes.map((_, i) => `<#${clip.id}-n${i + 1}>`).join(' , ')}`)
     }
@@ -323,6 +327,10 @@ export function writeEditor (project, { iri } = {}) {
     if (color !== null) parts.push(`${term(jig.color)} ${string(color)}`)
     if (laneSize !== 'medium') parts.push(`${term(jig.laneSize)} ${string(laneSize)}`)
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(' ; ')} .`)
+  }
+  for (const clip of [...project.clips].sort(byId)) {
+    const { color } = editor.clip(clip.id)
+    if (color !== null) lines.push(`<#${clip.id}> ${term(jig.color)} ${string(color)} .`)
   }
   return lines.join('\n') + '\n'
 }

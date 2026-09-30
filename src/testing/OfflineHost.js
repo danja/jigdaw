@@ -139,7 +139,12 @@ export class OfflineWorkletNode {
     this.processor = new registered.ctor({ ...options, port: processorSide })
     this.connections = []
     this.frame = 0
-    this.outputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
+    // As a real AudioWorkletNode does it: no output means an empty `outputs`, not one silent
+    // output, so a processor that reads outputs[0] without looking gets undefined here as it
+    // does in a browser. A plugin that did was silent in Chrome for weeks while every test passed.
+    this.outputs = this.numberOfOutputs === 0
+      ? []
+      : [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
     this.inputs = [Array.from({ length: this.channels }, () => new Float32Array(QUANTUM))]
   }
 
@@ -169,7 +174,7 @@ export class OfflineWorkletNode {
     }
     this.processor.process(this.inputs, this.outputs, parameters)
     this.frame += QUANTUM
-    return this.outputs[0]
+    return this.outputs[0] ?? []
   }
 }
 

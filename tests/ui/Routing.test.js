@@ -45,6 +45,14 @@ describe('what a plugin offers, read from its profile', () => {
     expect(inputsOf(synth).map(p => p.name)).toEqual(['MIDI in', 'Cutoff (modulate)'])
   })
 
+  it('names a key input for what it is, and leaves the main input as it was', () => {
+    const compressor = { audioInputs: 2, audioOutputs: 1, sidechainInput: 1, accepts: [], produces: [], ports: [] }
+    const names = inputsOf(compressor).map(p => p.name)
+    expect(names).toEqual(['Audio in 1', 'Sidechain key'])
+    expect(inputsOf(compressor)[1].sidechain).toBe(true)
+    expect(inputsOf({ ...compressor, sidechainInput: null }).map(p => p.name)).toEqual(['Audio in 1', 'Audio in 2'])
+  })
+
   it('gives a MIDI generator a MIDI output and no audio at all', () => {
     // It declares jig:audioOutputs 0, and offering it an audio port would offer
     // a connection that throws.

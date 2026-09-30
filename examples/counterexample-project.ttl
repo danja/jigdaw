@@ -57,7 +57,13 @@
 <#audio-clip>
     a jig:AudioClip ;
     trn:startBeat 0.0 ; trn:lengthBeats 4.0 ;
-    jig:offsetSeconds -1.0 .
+    jig:offsetSeconds -1.0 ;
+    # A fade that lasts less than no time, and another the wrong way round.
+    jig:fadeInBeats -2.0 ; jig:fadeOutBeats -0.5 ;
+    # Neither true nor false.
+    jig:muted "maybe" ;
+    # Not a boolean either.
+    jig:locked 1 .
 
 # Starts before its clip, lasts no time, has a pitch MIDI cannot send, and a
 # velocity MIDI reads as a note off.

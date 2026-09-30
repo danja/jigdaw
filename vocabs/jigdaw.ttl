@@ -281,6 +281,15 @@ jig:audioInputs a owl:DatatypeProperty ;
         numberOfInputs. Note that this is a count of inputs, not of channels: an input
         carries jig:inputChannels channels.""" .
 
+jig:sidechainInput a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
+    rdfs:label "sidechain input" ;
+    rdfs:comment """The index of the audio input that is a key rather than a signal to
+        process, counted from zero among jig:audioInputs. The plugin listens to it to
+        decide how to treat its main input, as a compressor does to duck, and works without
+        it when nothing is connected there. A host names it as a sidechain key where it
+        offers connections. Absent means the plugin has none.""" .
+
 jig:audioOutputs a owl:DatatypeProperty ;
     rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
     rdfs:label "audio outputs" .
@@ -499,11 +508,14 @@ jig:pan a owl:DatatypeProperty ;
         StereoPannerNode takes it. Absent means centre.""" .
 
 jig:muted a owl:DatatypeProperty ;
-    rdfs:domain jig:Track ; rdfs:range xsd:boolean ;
+    rdfs:range xsd:boolean ;
     rdfs:label "muted" ;
-    rdfs:comment """Silenced by choice. Kept separate from a gain of zero so that
-        unmuting restores the level that was set, which is the whole reason a mixer has
-        both.""" .
+    rdfs:comment """Silenced by choice. On a jig:Track or a jig:Master it is kept separate
+        from a gain of zero so that unmuting restores the level that was set, which is the
+        whole reason a mixer has both. On a jig:Clip it means the clip is kept but not
+        played: it stays on the lane, in undo and in the file, and a host MUST NOT sound
+        it. Absent means false. Deliberately without an rdfs:domain, since RDFS would read
+        two domains as both at once.""" .
 
 jig:soloed a owl:DatatypeProperty ;
     rdfs:domain jig:Track ; rdfs:range xsd:boolean ;
@@ -525,6 +537,26 @@ jig:Clip a owl:Class ;
     rdfs:label "Clip" ;
     rdfs:comment """A span of a track's timeline, from trn:startBeat for
         trn:lengthBeats, in beats of the transport.""" .
+
+jig:fadeInBeats a owl:DatatypeProperty ;
+    rdfs:domain jig:AudioClip ; rdfs:range xsd:decimal ;
+    rdfs:label "fade in, in beats" ;
+    rdfs:comment """How long the clip takes to rise from silence to full level at its start,
+        in beats of the transport. A straight line in level. Absent means no fade. A host
+        scales the two fades down to fit if together they are longer than the clip.""" .
+
+jig:fadeOutBeats a owl:DatatypeProperty ;
+    rdfs:domain jig:AudioClip ; rdfs:range xsd:decimal ;
+    rdfs:label "fade out, in beats" ;
+    rdfs:comment """How long the clip takes to fall from full level to silence at its end, in
+        beats of the transport. Absent means no fade.""" .
+
+jig:locked a owl:DatatypeProperty ;
+    rdfs:domain jig:Clip ; rdfs:range xsd:boolean ;
+    rdfs:label "locked" ;
+    rdfs:comment """True when the clip is protected from being moved, resized, edited or
+        deleted by mistake. It is still played, and can still be muted or unlocked. Absent
+        means false.""" .
 
 jig:MidiClip a owl:Class ;
     rdfs:subClassOf jig:Clip ;

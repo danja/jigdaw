@@ -13279,6 +13279,7 @@ var init_Vocabulary = __esm({
         Persistence: `${JIG}Persistence`,
         // Runtime shape
         audioInputs: `${JIG}audioInputs`,
+        sidechainInput: `${JIG}sidechainInput`,
         audioOutputs: `${JIG}audioOutputs`,
         inputChannels: `${JIG}inputChannels`,
         outputChannels: `${JIG}outputChannels`,
@@ -13323,6 +13324,9 @@ var init_Vocabulary = __esm({
         note: `${JIG}note`,
         source: `${JIG}source`,
         offsetSeconds: `${JIG}offsetSeconds`,
+        locked: `${JIG}locked`,
+        fadeInBeats: `${JIG}fadeInBeats`,
+        fadeOutBeats: `${JIG}fadeOutBeats`,
         setting: `${JIG}setting`,
         from: `${JIG}from`,
         to: `${JIG}to`,
@@ -13438,6 +13442,15 @@ function asBoolean(term3) {
   if (term3.value === "true" || term3.value === "1") return true;
   if (term3.value === "false" || term3.value === "0") return false;
   throw new Error(`not a boolean: ${term3.value}`);
+}
+function sidechainIndex(dataset2, subject) {
+  const index = asNumber(one(dataset2, subject, jig.sidechainInput));
+  if (index === null) return null;
+  const inputs = asNumber(one(dataset2, subject, jig.audioInputs)) ?? 0;
+  if (!Number.isInteger(index) || index < 0 || index >= inputs) {
+    throw new Error(`jig:sidechainInput ${index} names no audio input: the plugin declares ${inputs}`);
+  }
+  return index;
 }
 function asNumber(term3) {
   if (!term3) return null;
@@ -13593,6 +13606,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
     requires: capabilities,
     prefers: values(dataset2, subject, jig.prefers),
     audioInputs: asNumber(one(dataset2, subject, jig.audioInputs)) ?? 0,
+    sidechainInput: sidechainIndex(dataset2, subject),
     audioOutputs: asNumber(one(dataset2, subject, jig.audioOutputs)) ?? 0,
     inputChannels: asNumber(one(dataset2, subject, jig.inputChannels)) ?? 2,
     outputChannels: asNumber(one(dataset2, subject, jig.outputChannels)) ?? 2,
@@ -22136,6 +22150,7 @@ var COLOR = /^#[0-9a-f]{6}$/;
 var EditorState = class _EditorState {
   #positions = /* @__PURE__ */ new Map();
   #tracks = /* @__PURE__ */ new Map();
+  #clips = /* @__PURE__ */ new Map();
   #listeners = /* @__PURE__ */ new Set();
   /** Told after any change, so a view can draw again: layout is not an edit, and no revision says it moved. */
   subscribe(fn) {
@@ -22174,6 +22189,19 @@ var EditorState = class _EditorState {
     this.#tracks.set(id, next);
     this.#changed();
   }
+  /** How a clip is drawn: its colour, or null for the track's own. */
+  clip(id) {
+    return { color: null, ...this.#clips.get(id) };
+  }
+  setClip(id, patch) {
+    const next = { ...this.#clips.get(id) };
+    if (patch.color !== void 0) {
+      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
+      next.color = patch.color;
+    }
+    this.#clips.set(id, next);
+    this.#changed();
+  }
   /**
    * Track ids in the order the arrangement shows them: placed tracks by their
    * order, then unplaced ones in the order given (creation order), so a track
@@ -22186,12 +22214,14 @@ var EditorState = class _EditorState {
     return [...placed, ...rest];
   }
   /** Replace everything with what `readEditor` returned. Bad values throw and change nothing. */
-  load({ positions, tracks }) {
+  load({ positions, tracks, clips = /* @__PURE__ */ new Map() }) {
     const next = new _EditorState();
     for (const [id, { x, y }] of positions) next.setPosition(id, x, y);
     for (const [id, patch] of tracks) next.setTrack(id, patch);
+    for (const [id, patch] of clips) next.setClip(id, patch);
     this.#positions = next.#positions;
     this.#tracks = next.#tracks;
+    this.#clips = next.#clips;
     this.#changed();
   }
   /**
@@ -22216,14 +22246,14 @@ var EditorState = class _EditorState {
   }
   /** True when nothing here differs from a fresh session, so nothing needs saving. */
   get isDefault() {
-    return this.#tracks.size === 0 && [...this.#positions.values()].every((p) => p.x === 0 && p.y === 0);
+    return this.#tracks.size === 0 && this.#clips.size === 0 && [...this.#positions.values()].every((p) => p.x === 0 && p.y === 0);
   }
   /** Like `isDefault`, but only for the nodes and tracks that still exist. */
-  isDefaultFor(nodeIds, trackIds) {
-    return [...this.#tracks.keys()].every((id) => !trackIds.has(id)) && [...this.#positions].every(([id, p]) => !nodeIds.has(id) || p.x === 0 && p.y === 0);
+  isDefaultFor(nodeIds, trackIds, clipIds = /* @__PURE__ */ new Set()) {
+    return [...this.#tracks.keys()].every((id) => !trackIds.has(id)) && [...this.#clips].every(([id, c3]) => !clipIds.has(id) || c3.color === null) && [...this.#positions].every(([id, p]) => !nodeIds.has(id) || p.x === 0 && p.y === 0);
   }
   /** Forget whatever names something that no longer exists. */
-  prune(nodeIds, trackIds) {
+  prune(nodeIds, trackIds, clipIds = null) {
     let changed = false;
     for (const id of [...this.#positions.keys()]) if (!nodeIds.has(id)) {
       this.#positions.delete(id);
@@ -22232,6 +22262,12 @@ var EditorState = class _EditorState {
     for (const id of [...this.#tracks.keys()]) if (!trackIds.has(id)) {
       this.#tracks.delete(id);
       changed = true;
+    }
+    if (clipIds !== null) {
+      for (const id of [...this.#clips.keys()]) if (!clipIds.has(id)) {
+        this.#clips.delete(id);
+        changed = true;
+      }
     }
     if (changed) this.#changed();
   }
@@ -22602,6 +22638,20 @@ function checkNotes(notes) {
     return { startBeat, lengthBeats, pitch, velocity };
   }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
 }
+function checkFade(name, value2) {
+  if (!(Number.isFinite(value2) && value2 >= 0)) throw new Error(`${name} must be zero or more beats`);
+  return value2;
+}
+function checkMuted(value2) {
+  return checkFlag("muted", value2);
+}
+function checkFlag(name, value2) {
+  if (typeof value2 !== "boolean") throw new Error(`${name} must be true or false`);
+  return value2;
+}
+function refuseIfLocked(clip, change, what) {
+  if (clip.locked && change.force !== true) throw new Error(`clip ${clip.id} is locked, so it cannot be ${what}; unlock it first`);
+}
 function checkPlacement(startBeat, lengthBeats) {
   if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a clip needs a startBeat at or after zero");
   if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip needs a lengthBeats above zero");
@@ -22704,7 +22754,7 @@ var OPERATIONS = {
     const id = change.id ?? `clip-${++counters.clip}`;
     if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`);
     noteExplicitId(counters, "clip", "clip", id);
-    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats };
+    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
     } else {
@@ -22715,6 +22765,8 @@ var OPERATIONS = {
       if (!(Number.isFinite(offset) && offset >= 0)) throw new Error("offsetSeconds must be at or after zero");
       clip.source = change.source;
       clip.offsetSeconds = offset;
+      clip.fadeInBeats = checkFade("fadeInBeats", change.fadeInBeats ?? 0);
+      clip.fadeOutBeats = checkFade("fadeOutBeats", change.fadeOutBeats ?? 0);
       clip.notes = [];
     }
     state.clips.set(id, clip);
@@ -22724,6 +22776,7 @@ var OPERATIONS = {
   setClip(state, change) {
     const clip = state.clips.get(change.id);
     if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (["startBeat", "lengthBeats", "track", "offsetSeconds"].some((k) => change[k] !== void 0)) refuseIfLocked(clip, change, "moved or resized");
     const startBeat = change.startBeat ?? clip.startBeat;
     const lengthBeats = change.lengthBeats ?? clip.lengthBeats;
     checkPlacement(startBeat, lengthBeats);
@@ -22733,6 +22786,13 @@ var OPERATIONS = {
       if (!(Number.isFinite(change.offsetSeconds) && change.offsetSeconds >= 0)) throw new Error("offsetSeconds must be at or after zero");
       clip.offsetSeconds = change.offsetSeconds;
     }
+    if (change.muted !== void 0) clip.muted = checkMuted(change.muted);
+    for (const key of ["fadeInBeats", "fadeOutBeats"]) {
+      if (change[key] === void 0) continue;
+      if (clip.kind !== "audio") throw new Error("only an audio clip has fades");
+      clip[key] = checkFade(key, change[key]);
+    }
+    if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
     clip.startBeat = startBeat;
     clip.lengthBeats = lengthBeats;
     if (change.track !== void 0) clip.track = change.track;
@@ -22746,11 +22806,13 @@ var OPERATIONS = {
     const clip = state.clips.get(change.id);
     if (!clip) throw new Error(`no such clip: ${change.id}`);
     if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
+    refuseIfLocked(clip, change, "edited");
     clip.notes = checkNotes(change.notes);
     return change.id;
   },
   removeClip(state, change) {
     if (!state.clips.has(change.id)) throw new Error(`no such clip: ${change.id}`);
+    refuseIfLocked(state.clips.get(change.id), change, "removed");
     state.clips.delete(change.id);
     return change.id;
   },
@@ -22986,7 +23048,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, source: c3.source, offsetSeconds: c3.offsetSeconds };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -23084,7 +23146,7 @@ var Project = class {
   }
   /** Whether saving the editor graph would say anything, ignoring what belongs to things that are gone. */
   get hasEditorState() {
-    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()));
+    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
   }
   /** Editor metadata never bumps the revision. */
   get editor() {
@@ -23103,13 +23165,28 @@ var Project = class {
   }
   /** Take editor metadata read from an editor.ttl; whatever names nothing here is dropped. */
   loadEditor(read) {
-    this.#editor.load(read);
-    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()));
+    const tracks = /* @__PURE__ */ new Map();
+    const clips = /* @__PURE__ */ new Map();
+    for (const [id, layout] of read.tracks) {
+      if (this.#state.tracks.has(id) || !this.#state.clips.has(id)) tracks.set(id, layout);
+      else clips.set(id, { color: layout.color });
+    }
+    this.#editor.load({ positions: read.positions, tracks, clips });
+    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
   }
   /** Move a track up (-1) or down (+1) in the arrangement. Editor metadata: no revision, no undo. */
   moveTrack(id, delta) {
     if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
     return this.#editor.moveTrack(this.tracks.map((t) => t.id), id, delta);
+  }
+  /** A clip's colour, or null for the track's own. Editor metadata: no revision, no undo. */
+  clipColor(id) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
+    return this.#editor.clip(id).color;
+  }
+  setClipColor(id, color) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
+    this.#editor.setClip(id, { color });
   }
   trackLayout(id) {
     if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
@@ -23197,7 +23274,7 @@ function outputsOf(profile) {
 function inputsOf(profile) {
   const found = [];
   for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio in ${i2 + 1}` });
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: i2 === profile.sidechainInput ? "Sidechain key" : `Audio in ${i2 + 1}`, ...i2 === profile.sidechainInput ? { sidechain: true } : {} });
   }
   if ((profile?.accepts ?? []).some(isMidiSignal)) {
     found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
@@ -23851,7 +23928,7 @@ var UndoHistory = class {
       const targetClips = new Map(target.clips.map((c3) => [c3.id, c3]));
       for (const [id, clip] of liveClips) {
         const wanted = targetClips.get(id);
-        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id });
+        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id, force: true });
       }
       for (const [id, clip] of targetClips) {
         const live = liveClips.get(id);
@@ -24689,18 +24766,35 @@ var ClipPlayer = class {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start({ iri: iri2, when, offset, duration, destination }) {
+  start({ iri: iri2, when, offset, duration, destination, fadeIn = 0, fadeOut = 0 }) {
     const buffer = this.buffer(iri2);
     if (!buffer) return false;
     const source = this.#context.createBufferSource();
     source.buffer = buffer;
-    source.connect(destination);
+    let tail = source;
+    if (fadeIn > 0 || fadeOut > 0) {
+      const scale = fadeIn + fadeOut > duration ? duration / (fadeIn + fadeOut) : 1;
+      const inLength = fadeIn * scale;
+      const outLength = fadeOut * scale;
+      const shape = this.#context.createGain();
+      const level = shape.gain;
+      level.setValueAtTime(inLength > 0 ? 0 : 1, when);
+      if (inLength > 0) level.linearRampToValueAtTime(1, when + inLength);
+      if (outLength > 0) {
+        level.setValueAtTime(1, when + duration - outLength);
+        level.linearRampToValueAtTime(0, when + duration);
+      }
+      source.connect(shape);
+      tail = shape;
+    }
+    tail.connect(destination);
     const late = Math.max(0, this.#context.currentTime - when);
     source.start(when + late, offset + late, Math.max(0, duration - late));
     this.#playing.add(source);
     source.onended = () => {
       this.#playing.delete(source);
       source.disconnect();
+      if (tail !== source) tail.disconnect();
     };
     return true;
   }
@@ -25525,7 +25619,7 @@ function clipNotes(project) {
   for (const track of project.tracks) {
     if (!track.midiInput) continue;
     for (const clip of project.clips) {
-      if (clip.track !== track.id || clip.kind !== "midi") continue;
+      if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
       for (const note of clip.notes) {
         const on = clip.startBeat + note.startBeat;
@@ -25539,7 +25633,7 @@ function clipNotes(project) {
   return byNode;
 }
 function clipAudio(project) {
-  return project.clips.filter((c3) => c3.kind === "audio").map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
+  return project.clips.filter((c3) => c3.kind === "audio" && !c3.muted).map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
 }
 function* segments(transport, start, end) {
   const loop = transport.loop;
@@ -25721,7 +25815,10 @@ function createTransport(ctx2) {
     if (!track) return;
     const destination = track.audioInput ? ctx2.dispatcher.engineNode(track.audioInput)?.node : ctx2.engine.trackInput(track.id);
     if (!destination) return;
-    ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration, destination });
+    const transport = ctx2.dispatcher.transport();
+    const fadeIn = clip.fadeInBeats > 0 ? transport.secondsAtBeat(clip.on + clip.fadeInBeats) - transport.secondsAtBeat(clip.on) : 0;
+    const fadeOut = clip.fadeOutBeats > 0 ? transport.secondsAtBeat(clip.off) - transport.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
+    ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut });
   }
   async function play() {
     const d = await ctx2.runtime.ensureRunning();
@@ -25978,9 +26075,13 @@ function writeProject(project, { iri: iri2, created = null } = {}) {
       `a ${term2(clip.kind === "midi" ? jig3.MidiClip : jig3.AudioClip)}`,
       `${term2(trn3.startBeat)} ${decimal(clip.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(clip.lengthBeats)}`
     ];
+    if (clip.muted) statements.push(`${term2(jig3.muted)} true`);
+    if (clip.locked) statements.push(`${term2(jig3.locked)} true`);
     if (clip.kind === "audio") {
       statements.push(`${term2(jig3.source)} <${relativeTo(clip.source, iri2)}>`);
       if (clip.offsetSeconds !== 0) statements.push(`${term2(jig3.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
+      if (clip.fadeInBeats > 0) statements.push(`${term2(jig3.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
+      if (clip.fadeOutBeats > 0) statements.push(`${term2(jig3.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else if (clip.notes.length > 0) {
       statements.push(`${term2(jig3.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
     }
@@ -26081,6 +26182,10 @@ function writeEditor(project, { iri: iri2 } = {}) {
     if (color !== null) parts.push(`${term2(jig3.color)} ${string(color)}`);
     if (laneSize !== "medium") parts.push(`${term2(jig3.laneSize)} ${string(laneSize)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
+  }
+  for (const clip of [...project.clips].sort(byId)) {
+    const { color } = editor.clip(clip.id);
+    if (color !== null) lines.push(`<#${clip.id}> ${term2(jig3.color)} ${string(color)} .`);
   }
   return lines.join("\n") + "\n";
 }
@@ -26279,6 +26384,10 @@ function readProject(dataset2) {
         startBeat: number(one2(dataset2, clipIri, trn4.startBeat), `startBeat of clip ${id}`),
         lengthBeats: number(one2(dataset2, clipIri, trn4.lengthBeats), `lengthBeats of clip ${id}`)
       };
+      const muted = one2(dataset2, clipIri, jig4.muted);
+      if (muted !== null) clip.muted = muted.value === "true";
+      const locked = one2(dataset2, clipIri, jig4.locked);
+      if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
         clip.notes = objects2(dataset2, clipIri, jig4.note).map((t) => t.value).map((noteIri) => ({
           startBeat: number(one2(dataset2, noteIri, trn4.startBeat), `startBeat of a note in ${id}`),
@@ -26291,6 +26400,8 @@ function readProject(dataset2) {
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
         clip.source = source;
         clip.offsetSeconds = number(one2(dataset2, clipIri, jig4.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
+        clip.fadeInBeats = number(one2(dataset2, clipIri, jig4.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
+        clip.fadeOutBeats = number(one2(dataset2, clipIri, jig4.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
       }
       clips.push(clip);
     }

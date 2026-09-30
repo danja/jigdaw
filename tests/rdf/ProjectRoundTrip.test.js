@@ -139,6 +139,19 @@ async function reopen (turtle, baseIRI = IRI) {
 }
 
 describe('a project survives being written and read back', () => {
+  it('keeps a muted clip muted, writing the flag only where it is true', async () => {
+    const original = builtProject()
+    const clip = original.clips[0]
+    const count = text => (text.match(/jig:muted true/g) ?? []).length
+    const before = count(writeProject(original, { iri: IRI }))
+    original.apply([{ op: 'setClip', id: clip.id, muted: true }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(count(turtle)).toBe(before + 1)
+    const { project } = await reopen(turtle)
+    expect(project.clip(clip.id).muted).toBe(true)
+    expect(project.clips.filter(c => c.muted)).toHaveLength(1)
+  })
+
   it('comes back the same, ids and all', async () => {
     const original = builtProject()
     const { project: reopened } = await reopen(writeProject(original, { iri: IRI }))
@@ -477,5 +490,38 @@ describe('the editor graph, defaults', () => {
     expect(writeEditor(project, { iri: IRI })).not.toContain('jig:x')
     project.moveNode('pad', 1, 2)
     expect(writeEditor(project, { iri: IRI })).toContain('<#pad> jig:x 1.0')
+  })
+})
+
+describe('a clip colour in the editor graph', () => {
+  it('is written to editor.ttl and comes back onto the clip, not onto a track', async () => {
+    const original = builtProject()
+    const clip = original.clips[0]
+    original.setClipColor(clip.id, '#3e8ef7')
+    const editorText = writeEditor(original, { iri: IRI })
+    expect(editorText).toContain(`<#${clip.id}> jig:color "#3e8ef7"`)
+    const { project } = await reopen(writeProject(original, { iri: IRI }))
+    project.loadEditor(readEditor(await parseText(editorText, IRI), IRI))
+    expect(project.clipColor(clip.id)).toBe('#3e8ef7')
+    expect(project.tracks.every(t => project.trackLayout(t.id).color === null)).toBe(true)
+  })
+
+  it('leaves the revision alone, and a project with only that colour still counts as having editor state', () => {
+    const p = builtProject()
+    const revision = p.revision
+    p.setClipColor(p.clips[0].id, '#3e8ef7')
+    expect(p.revision).toBe(revision)
+    expect(p.hasEditorState).toBe(true)
+  })
+})
+
+describe('fades in the project file', () => {
+  it('are written only when set, and come back', async () => {
+    const original = builtProject()
+    original.apply([{ op: 'addClip', id: 'faded', track: original.tracks[0].id, kind: 'audio', startBeat: 0, lengthBeats: 4, source: 'https://example.org/a.wav', fadeInBeats: 0.5, fadeOutBeats: 1 }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle.match(/jig:fadeInBeats/g)).toHaveLength(1)
+    const { project } = await reopen(turtle)
+    expect(project.clip('faded')).toMatchObject({ fadeInBeats: 0.5, fadeOutBeats: 1 })
   })
 })

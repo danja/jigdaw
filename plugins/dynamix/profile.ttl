@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -35,6 +36,7 @@
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 2 ;
+    jig:sidechainInput 1 ;
     jig:inputChannels 2 ;
     jig:audioOutputs 1 ;
     jig:outputChannels 2 ;

@@ -11,6 +11,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve, join, dirname, extname } from 'node:path'
 import { appSource } from '../ui/appSource.js'
+import { HIDDEN_DOCS } from '../../bin/docs-hidden.js'
 
 const root = resolve(import.meta.dirname, '../..')
 
@@ -214,6 +215,8 @@ describe('the published documentation', () => {
   const docNames = readdirSync(join(root, 'docs'))
     .filter(f => f.endsWith('.md'))
     .map(f => f.replace(/\.md$/, ''))
+    // Kept in the repository and off the site on purpose (bin/docs-hidden.js).
+    .filter(name => !HIDDEN_DOCS.includes(name))
 
   execFileSync(process.execPath, [join(root, 'bin/build-docs-site.js')], { cwd: root })
   const pages = docNames.map(name => `docs-site/${name}.html`)

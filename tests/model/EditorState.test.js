@@ -114,3 +114,23 @@ describe('EditorState.isDefaultFor', () => {
     expect(editor.isDefaultFor(new Set(), new Set(['gone']))).toBe(false)
   })
 })
+
+describe('a clip colour', () => {
+  it('is set and read without touching a revision, and refuses a value that is not a colour', () => {
+    const editor = new EditorState()
+    expect(editor.clip('c')).toEqual({ color: null })
+    editor.setClip('c', { color: '#e5484d' })
+    expect(editor.clip('c').color).toBe('#e5484d')
+    expect(() => editor.setClip('c', { color: 'red' })).toThrow(/color must be/)
+    expect(editor.isDefault).toBe(false)
+  })
+
+  it('is forgotten with its clip when pruned, and kept when nothing is said about clips', () => {
+    const editor = new EditorState()
+    editor.setClip('c', { color: '#e5484d' })
+    editor.prune(new Set(), new Set())
+    expect(editor.clip('c').color).toBe('#e5484d')
+    editor.prune(new Set(), new Set(), new Set())
+    expect(editor.clip('c').color).toBe(null)
+  })
+})

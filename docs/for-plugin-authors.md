@@ -79,6 +79,16 @@ a switch's shape.
 `lv2:symbol` is what automation and saved projects key on. Changing one is introducing a
 new parameter, not renaming an old one.
 
+### Mark a sidechain key
+
+If one of your audio inputs is a key that steers how you treat the main input (a compressor
+that ducks, a gate that opens) rather than a signal to process, declare its index with
+`jig:sidechainInput`, counted from zero among `jig:audioInputs`. A host names that input
+"Sidechain key" where it offers connections, so a person joining a kick drum to it can see
+what it is. Work without it when nothing is connected there. Dynamix declares
+`jig:audioInputs 2` and `jig:sidechainInput 1`. A value that names an input you do not have
+is refused.
+
 ### Say what you need
 
 `trn:requires` for what you cannot run without, `jig:prefers` for what improves you. A host

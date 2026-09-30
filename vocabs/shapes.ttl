@@ -112,6 +112,7 @@ jig:WebPluginShape a sh:NodeShape ;
     sh:property [ sh:path jig:ui ; sh:maxCount 1 ] ;
 
     sh:property [ sh:path jig:audioInputs   ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path jig:sidechainInput ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:audioOutputs  ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:inputChannels ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path jig:outputChannels; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
@@ -380,6 +381,16 @@ jig:ClipShape a sh:NodeShape ;
         sh:path trn:lengthBeats ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:minExclusive 0 ;
         sh:message "A clip has a length greater than zero. A clip of no length is never heard and cannot be selected."
+    ] ;
+    sh:property [
+        sh:path jig:muted ;
+        sh:maxCount 1 ; sh:datatype xsd:boolean ;
+        sh:message "A clip is muted or it is not: jig:muted is one true or false."
+    ] ;
+    sh:property [
+        sh:path jig:locked ;
+        sh:maxCount 1 ; sh:datatype xsd:boolean ;
+        sh:message "A clip is locked or it is not: jig:locked is one true or false."
     ] .
 
 jig:MidiClipShape a sh:NodeShape ;
@@ -401,6 +412,16 @@ jig:AudioClipShape a sh:NodeShape ;
         sh:path jig:offsetSeconds ;
         sh:maxCount 1 ; sh:minInclusive 0 ;
         sh:message "An audio clip's offset into its source is at or after the start of the file."
+    ] ;
+    sh:property [
+        sh:path jig:fadeInBeats ;
+        sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A fade in has a length of zero or more beats."
+    ] ;
+    sh:property [
+        sh:path jig:fadeOutBeats ;
+        sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A fade out has a length of zero or more beats."
     ] .
 
 jig:NoteShape a sh:NodeShape ;

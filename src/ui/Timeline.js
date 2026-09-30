@@ -8,7 +8,8 @@
 //
 //   Left and Right move a clip by a beat. Shift with them makes it shorter or
 //   longer by a beat. Enter opens it. Delete removes it. S cuts it in two at
-//   the playhead, and D puts a copy straight after it.
+//   the playhead, D puts a copy straight after it, M mutes or unmutes it, L locks or unlocks it, [ and ] trim its start or its end to the playhead, and Ctrl+C and Ctrl+X copy or cut
+//   the clip (or the selected clips) and Ctrl+V pastes at the playhead.
 //
 // A drag moves a clip by whole beats, and a drag on its right edge resizes it.
 // Both listen for the move and the release on the document once the pointer
@@ -37,6 +38,8 @@
 import { createTrackHeader } from './TrackHeader.js'
 import { createChainStrip } from './ChainStrip.js'
 import { Selection } from '../model/Selection.js'
+import { setIcon } from './Icons.js'
+import { colorName } from './TrackPanel.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT, GRIDS } from './TimeView.js'
 
 /** CSS pixels per beat at the default zoom. */
@@ -52,10 +55,10 @@ export function barBeat (beat, beatsPerBar) {
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** What a clip says about itself to a screen reader, and on hover. */
-export function describeClip (clip, { beatsPerBar, playsIntoNothing = false }) {
+export function describeClip (clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
   const what = clip.kind === 'midi' ? `MIDI clip, ${plural(clip.notes.length, 'note')}` : 'Audio clip'
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, 'beat')}`
-  return `${what}, ${where}${playsIntoNothing ? ', plays into nothing: this track has no MIDI input' : ''}`
+  return `${what}${clip.muted ? ', muted' : ''}${clip.locked ? ', locked' : ''}${color ? `, coloured ${colorName(color)}` : ''}, ${where}${playsIntoNothing ? ', plays into nothing: this track has no MIDI input' : ''}`
 }
 
 /**
@@ -68,13 +71,17 @@ export function describeClip (clip, { beatsPerBar, playsIntoNothing = false }) {
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
  * - `onOpen(clipId)` and `onRemove(clipId)`.
  * - `onSplit(clipId)` and `onDuplicate(clipId)`: the page knows the playhead.
+ * - `onLock(clipId, locked)`: protect a clip from being moved, edited or deleted.
+ * - `onMute(clipId, muted)`: keep a clip on the lane but do not play it.
+ * - `onCopy(clipId)`, `onCut(clipId)` and `onPaste(clipId)`: Ctrl or Cmd with C, X and V; the page holds the clipboard.
+ * - `onTrim(clipId, edge)`: shorten a clip to the playhead, from its 'start' or its 'end'.
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
  * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onChannel, onSetLoop, onMoveTrack, onArm })) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
   const element = document.createElement('div')
@@ -94,6 +101,11 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     button.type = 'button'
     button.textContent = label
     button.addEventListener('click', onClick)
+    return button
+  }
+  const iconTool = (icon, label, onClick) => {
+    const button = tool(label, onClick)
+    setIcon(document, button, icon, label)
     return button
   }
   const zoomStatus = document.createElement('span')
@@ -129,8 +141,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     element.dataset.routing = on ? 'on' : 'off'
   }
   tools.append(
-    tool('Zoom out', () => zoom(1 / 1.5)),
-    tool('Zoom in', () => zoom(1.5)),
+    iconTool('zoomOut', 'Zoom out', () => zoom(1 / 1.5)),
+    iconTool('zoomIn', 'Zoom in', () => zoom(1.5)),
     tool('Fit', () => fit()),
     followButton, routingButton, zoomStatus, snapLabel)
   element.append(tools, scroller)
@@ -337,6 +349,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null,
       mixable = () => true, silent = () => false, loop = null,
       layoutFor = () => ({ color: null, laneSize: 'medium' }),
+      colorFor = () => null,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
       canArm = () => false, armed = () => false, routingFor = () => null,
@@ -431,6 +444,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       entry.lane.replaceChildren(...own.map(clip => clipButton(clip, {
         beatsPerBar,
         playsIntoNothing: clip.kind === 'midi' && playsIntoNothing(track),
+        color: colorFor(clip),
         peaks: clip.kind === 'audio' ? peaksFor(clip, Math.max(1, Math.round(clip.lengthBeats * ppb() / 3))) : null,
         problem: clip.kind === 'audio' ? unplayable(clip) : null
       })))
@@ -445,20 +459,25 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     if (!same) scroller.replaceChildren(...expected)
   }
 
-  function clipButton (clip, { beatsPerBar, playsIntoNothing, peaks, problem }) {
+  function clipButton (clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
     const button = document.createElement('button')
     button.type = 'button'
     button.id = `clip-${clip.id}`
-    button.className = `clip clip-${clip.kind}${playsIntoNothing ? ' clip-orphan' : ''}`
+    button.className = `clip clip-${clip.kind}${playsIntoNothing ? ' clip-orphan' : ''}${clip.muted ? ' clip-muted' : ''}${clip.locked ? ' clip-locked' : ''}`
     button.style.left = `${clip.startBeat * ppb()}px`
     button.style.width = `${clip.lengthBeats * ppb()}px`
-    const description = describeClip(clip, { beatsPerBar, playsIntoNothing }) + (problem ? `, cannot play: ${problem}` : '')
+    const description = describeClip(clip, { beatsPerBar, playsIntoNothing, color }) + (problem ? `, cannot play: ${problem}` : '')
     button.setAttribute('aria-label', description)
     button.title = description
     // Shown as well as said: a clip that plays into nothing, or cannot play,
     // is marked in text, not only by a colour.
     button.textContent = clip.kind === 'midi' ? `${clip.notes.length}♪${playsIntoNothing ? ' !' : ''}` : `∿${problem ? ' !' : ''}`
     if (problem) button.classList.add('clip-orphan')
+    // The colour is a person's mark, said in the spoken name too, never the only thing telling clips apart.
+    if (color) { button.classList.add('clip-colored'); button.style.setProperty('--clip-color', color) }
+    // Said in the label as well as faded, so it is not colour or opacity alone.
+    if (clip.muted) button.textContent = `\u2298 ${button.textContent}`
+    if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`
     if (peaks) button.append(waveform(peaks))
 
     button.addEventListener('keydown', event => {
@@ -484,6 +503,21 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'd') {
         event.preventDefault()
         onDuplicate(clip.id)
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'm') {
+        event.preventDefault()
+        onMute(clip.id, !clip.muted)
+      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && ['c', 'x', 'v'].includes(event.key.toLowerCase())) {
+        event.preventDefault()
+        const which = event.key.toLowerCase()
+        if (which === 'c') onCopy(clip.id)
+        else if (which === 'x') onCut(clip.id)
+        else onPaste(clip.id)
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'l') {
+        event.preventDefault()
+        onLock(clip.id, !clip.locked)
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && (event.key === '[' || event.key === ']')) {
+        event.preventDefault()
+        onTrim(clip.id, event.key === '[' ? 'start' : 'end')
       }
     })
     button.addEventListener('click', event => {
@@ -576,5 +610,6 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     programmatic = null
   })
 
-  return { element, draw, playhead }
+  // The view is handed back so the page can snap a cut to the same grid a drag snaps to.
+  return { element, draw, playhead, view }
 }

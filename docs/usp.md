@@ -15,7 +15,7 @@ checkout, so what is said of it comes from its README only. None of the three wa
 
 **Built.** A Jig is loaded from one IRI. Fetching it returns a description, its code, and a
 digest for each. Publishing a plugin is putting files where a browser can fetch them: no
-installer, no registry, no rebuild of the host. The tree holds **23 plugins** written this way,
+installer, no registry, no rebuild of the host. The tree holds **24 plugins** written this way,
 in Rust, JavaScript, JSFX and hand-written WebAssembly.
 
 The others compile their instruments and effects into the application. openDAW's stock devices

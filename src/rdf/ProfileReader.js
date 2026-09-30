@@ -35,6 +35,17 @@ function asBoolean (term) {
   throw new Error(`not a boolean: ${term.value}`)
 }
 
+/** The audio input that is a key, which has to be one the plugin has. */
+function sidechainIndex (dataset, subject) {
+  const index = asNumber(one(dataset, subject, jig.sidechainInput))
+  if (index === null) return null
+  const inputs = asNumber(one(dataset, subject, jig.audioInputs)) ?? 0
+  if (!Number.isInteger(index) || index < 0 || index >= inputs) {
+    throw new Error(`jig:sidechainInput ${index} names no audio input: the plugin declares ${inputs}`)
+  }
+  return index
+}
+
 function asNumber (term) {
   if (!term) return null
   const n = Number(term.value)
@@ -283,6 +294,7 @@ export function readProfile (dataset, { baseIRI } = {}) {
     prefers: values(dataset, subject, jig.prefers),
 
     audioInputs: asNumber(one(dataset, subject, jig.audioInputs)) ?? 0,
+    sidechainInput: sidechainIndex(dataset, subject),
     audioOutputs: asNumber(one(dataset, subject, jig.audioOutputs)) ?? 0,
     inputChannels: asNumber(one(dataset, subject, jig.inputChannels)) ?? 2,
     outputChannels: asNumber(one(dataset, subject, jig.outputChannels)) ?? 2,

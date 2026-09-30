@@ -10,7 +10,8 @@ import { preserveFocus } from '../../src/ui/Focus.js'
 import { mixable } from '../../src/ui/Mixer.js'
 import { describeChain } from '../../src/ui/ChainModel.js'
 import { describeRouting } from '../../src/ui/SendsModel.js'
-import { splitClip, duplicateClip } from '../../src/model/ClipEdit.js'
+import { createClipActions } from '../../src/ui/ClipActions.js'
+import { splitClip, duplicateClip, trimClip, copyClips, pasteClips } from '../../src/model/ClipEdit.js'
 
 export function createArrangement (ctx) {
   const { document, $, log } = ctx
@@ -26,7 +27,8 @@ export function createArrangement (ctx) {
   // Sources already asked to load for drawing, so a redraw asks once.
   const waveformsRequested = new Set()
 
-  const timeline = createTimeline(document, {
+  // Each is a request for one clip; the keys and the buttons below both make them.
+  const handlers = {
     onAdd: (trackId, startBeat) => {
       const result = edit([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats: ctx.dispatcher.project.transport.beatsPerBar }])
       if (result.ok) openClip(result.results[0])
@@ -50,18 +52,100 @@ export function createArrangement (ctx) {
     // At the playhead: the cut goes where the music is, and says so when it is not on the clip.
     onSplit: id => {
       try {
-        const at = ctx.transport.position().beat
+        const at = playheadBeat()
         edit(splitClip(ctx.dispatcher.project, id, at, { transport: ctx.dispatcher.transport() }))
       } catch (error) { log(`${error.message}. Move the playhead onto the clip to cut it.`, 'error') }
     },
     onDuplicate: id => {
       try { edit(duplicateClip(ctx.dispatcher.project, id)) } catch (error) { log(error.message, 'error') }
     },
+    onTrim: (id, edge) => {
+      try {
+        const at = playheadBeat()
+        edit(trimClip(ctx.dispatcher.project, id, edge === 'start' ? { from: at } : { to: at }, { transport: ctx.dispatcher.transport() }))
+      } catch (error) { log(`${error.message}. Move the playhead onto the clip to trim it.`, 'error') }
+    },
+    onCopy: id => {
+      try {
+        // The selected clips when this one is among them, otherwise just this one.
+        const ids = ctx.selection.has('clip', id) ? ctx.selection.ids : [id]
+        clipboard = copyClips(ctx.dispatcher.project, ids)
+        log(`copied ${ids.length} clip${ids.length === 1 ? '' : 's'}`, 'ok')
+        drawClipActions()
+      } catch (error) { log(error.message, 'error') }
+    },
+    // Copy, then remove, as one edit so one undo puts them back.
+    onCut: id => {
+      try {
+        const ids = ctx.selection.has('clip', id) ? ctx.selection.ids : [id]
+        clipboard = copyClips(ctx.dispatcher.project, ids)
+        edit(ids.map(clipId => ({ op: 'removeClip', id: clipId })))
+        log(`cut ${ids.length} clip${ids.length === 1 ? '' : 's'}`, 'ok')
+      } catch (error) { log(error.message, 'error') }
+    },
+    onPaste: id => {
+      try {
+        const { project } = ctx.dispatcher
+        // One clip goes onto the track of the clip that has focus; a group goes back where it came from.
+        const track = clipboard?.length === 1 ? project.clip(id)?.track : null
+        edit(pasteClips(project, clipboard, { startBeat: playheadBeat(), track }))
+      } catch (error) { log(error.message, 'error') }
+    },
+    onLock: (id, locked) => edit([{ op: 'setClip', id, locked }]),
+    onMute: (id, muted) => edit([{ op: 'setClip', id, muted }]),
     onRemove: id => {
       if (pianoRoll.clipId === id) pianoRoll.hide()
       edit([{ op: 'removeClip', id }])
     }
-  }, { selection: ctx.selection })
+  }
+  const timeline = createTimeline(document, handlers, { selection: ctx.selection })
+
+  const clipActions = createClipActions(document, {
+    // Editor metadata: no revision, no undo, like a track's colour.
+    onColor: color => {
+      for (const id of ctx.selection.kind === 'clip' ? ctx.selection.ids : []) ctx.dispatcher.project.setClipColor(id, color)
+      ctx.rack.draw()
+    },
+    onAction: name => {
+      const ids = ctx.selection.kind === 'clip' ? ctx.selection.ids : []
+      if (ids.length === 0) return
+      switch (name) {
+        case 'split': return handlers.onSplit(ids[0])
+        case 'trimStart': return handlers.onTrim(ids[0], 'start')
+        case 'trimEnd': return handlers.onTrim(ids[0], 'end')
+        case 'duplicate': return edit(ids.flatMap(id => duplicateClip(ctx.dispatcher.project, id)))
+        case 'mute': {
+          const muted = !ids.every(id => ctx.dispatcher.project.clip(id)?.muted)
+          return edit(ids.map(id => ({ op: 'setClip', id, muted })))
+        }
+        case 'lock': {
+          const locked = !ids.every(id => ctx.dispatcher.project.clip(id)?.locked)
+          return edit(ids.map(id => ({ op: 'setClip', id, locked })))
+        }
+        case 'copy': return handlers.onCopy(ids[0])
+        case 'cut': return handlers.onCut(ids[0])
+        case 'paste': return handlers.onPaste(ids[0])
+        case 'remove': return edit(ids.map(id => ({ op: 'removeClip', id })))
+      }
+    }
+  })
+  function drawClipActions () {
+    const project = ctx.dispatcher?.project
+    const ids = ctx.selection.kind === 'clip' ? ctx.selection.ids.filter(id => project?.clip(id)) : []
+    clipActions.draw({
+      count: ids.length,
+      allMuted: ids.length > 0 && ids.every(id => project.clip(id).muted),
+      allLocked: ids.length > 0 && ids.every(id => project.clip(id).locked),
+      canPaste: clipboard !== null
+    })
+  }
+  ctx.selection.subscribe(drawClipActions)
+
+  // What Ctrl+C took: plain data, kept here so it outlasts the clips and an undo.
+  let clipboard = null
+
+  /** The playhead's beat, on the grid the timeline is set to (or exactly, with snapping off). */
+  const playheadBeat = () => timeline.view.snap(ctx.transport.position().beat, ctx.dispatcher.project.transport.beatsPerBar)
 
   /**
    * Sound a note through the open clip's track, as it is placed or chosen: a
@@ -145,6 +229,7 @@ export function createArrangement (ctx) {
         ]
       },
       layoutFor: track => project.trackLayout(track.id),
+      colorFor: clip => project.clipColor(clip.id),
       chainFor: track => describeChain(project, track.id, {
         profileOf: id => ctx.dispatcher.engineNode(id)?.profile,
         labelOf: id => { const n = project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id },
@@ -184,6 +269,7 @@ export function createArrangement (ctx) {
     // A clip or track that has gone leaves the selection, and the dock follows.
     ctx.selection.prune((kind, id) => (kind === 'clip' ? project?.clip(id) : kind === 'node' ? project?.node(id) : project?.track(id)) != null)
     ctx.dock.update()
+    drawClipActions()
   }
 
   /**
@@ -219,7 +305,7 @@ export function createArrangement (ctx) {
       if (!file || !target) return
       importAudio(file, target).catch(error => log(`${file.name}: ${error.message}`, 'error'))
     })
-    $('timeline-mount').append(timeline.element)
+    $('timeline-mount').append(clipActions.element, timeline.element)
     ctx.dock.slot('midi').append(pianoRoll.element)
     $('dock-mount').append(ctx.dock.element)
   }

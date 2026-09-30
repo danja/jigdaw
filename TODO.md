@@ -466,10 +466,33 @@ Goal: everything a person does to a track is available in the header and the men
       click read 0 on every meter sample and unmuting restored it. Not done: a return
       track marker beyond the header text, the alignment delay counting a bus's latency, a
       send's own alignment, master automation (T5), and the level meter per send.
-- [ ] **Sidechain as a routable port.** Phase C item, surfaced on the chain strip.
+- [x] **Sidechain as a routable port.** The model already allowed a connection from a node on
+      one track to any audio input of a node on another, so the missing part was saying which
+      input is a key. New profile term `jig:sidechainInput` (index among `jig:audioInputs`),
+      declared by Dynamix as 1, read and range-checked by `ProfileReader`, shaped, in the
+      counterexample profile (now 14 violations), and named "Sidechain key" by `inputsOf`, so
+      the routing matrix shows "Dynamix Sidechain key". Proved with real Web Audio in Chrome:
+      a Pulse bass through Dynamix (threshold -40, ratio 20) measured before and after
+      connecting a drum kit on another track to Dynamix's second input: without the key the
+      bass was compressed on itself (peak RMS 0.027), with the kick as key it was loud in the
+      gaps and ducked to 0.005 at each hit (peak 0.201). Not done: the chain strip does not
+      draw the key connection as its own thing yet, and only Dynamix declares one.
 - [ ] **MIDI routing tools.** Channel filter and map, transpose, split by range, merge
       several sources into one input, all as nodes or as connection properties, chosen in
       T0. A MIDI monitor per connection showing recent events (bounded, message thread only).
+      Done: **MIDI Filter** (`plugins/midifilter/`, plain JavaScript): keep one channel or all,
+      send on another channel, transpose, and a lowest and highest note, so two of them split
+      a keyboard; a note-off follows the note-on it answers even if a setting changes while the
+      note is held; system messages always pass. Merge already worked (several connections into
+      one input). Proved in Chrome with MelGen into it into Pulse, measured on the synth's own
+      track: open 0.305, range 127 only 0, keep channel 9 only 0, back to defaults 0.305. It
+      also found that **Dice, and the first draft of this, never ran in a real browser**: a
+      plugin with no audio output gets an empty `outputs`, and both returned early on
+      `outputs[0]`. The offline fake now withholds it too (MISTAKES.md). That also means the
+      "Generative, through effects" preset's lead line was silent until now; measured per track
+      it is 0.12, the pad 0.39 (turned down 9 dB), drums 0.49, master 0.54. Not done: a MIDI
+      monitor per connection, and a note-range split as a connection property rather than a
+      plugin.
 - [ ] **Parallel chains and layers.** Two chains from one input mixed back, openDAW's
       "effect composite". Do only after nested plugins design (see "Before there is code").
 - [ ] **Failed load stays isolated.** The chain strip now draws a failed plugin as failed
@@ -490,8 +513,58 @@ give. The detail is in Phases A and B; these are the view-side tasks.
       changesets over the existing Ops, so one undo takes back the pair. A note across the
       cut becomes two notes; an audio half starts further into the same file. Driven in
       Chrome with real playback: a 16 beat clip cut at 3.73 beats into two clips holding one
-      note each. Not done: the cut is not snapped to the grid, no button (keys only), and
-      trim, copy and paste, fades, mute, lock, colour, takes and slip edit remain.
+      note each. **Mute (M)** is done too: `jig:muted` on a clip (the existing term, its
+      domain dropped so it serves track and clip), written only when true, refused unless a
+      boolean, skipped by the scheduler for MIDI and audio, kept by split, duplicate and undo,
+      shown by a dotted faded clip, a ⊘ in the label and "muted" in its spoken name. Driven in
+      Chrome: M and M again flipped it with focus kept. Playback of a muted clip is proved by
+      the scheduler tests, not by ear. **Trim** is done: `[` and `]` cut a clip's start or end
+      to the playhead (`trimClip`): MIDI notes are shifted and cut so those left sound where
+      they did, an audio clip starts further into its file. Driven in Chrome: a 16 beat clip
+      trimmed at the playhead kept its later note at absolute beat 12. Cut and trim snap to
+      the timeline's grid (the same TimeView a drag uses): a cut at 3.7 beats landed on 4 with
+      the bar grid. **Copy and paste** (Ctrl or Cmd with C and V) is done: `copyClips` and
+      `pasteClips` hold plain data relative to the earliest clip, so a group keeps its spacing
+      and tracks; one clip pastes onto the focused clip's track; it survives undo and the
+      source being deleted. In-page clipboard only, not the operating system's. Driven in
+      Chrome: one clip pasted onto its own track at the playhead, two selected clips pasted
+      as two. **Buttons** for all of these (`src/ui/ClipActions.js`, above the lanes) appear only while
+      a clip is selected, and each only where it can act: Split and the trims need one clip,
+      Paste needs something copied, Mute says Unmute when every selected clip is muted. They
+      make the same requests the keys do. Driven in Chrome with real clicks: duplicate, mute,
+      copy, paste and delete each changed the project as expected and the bar hid itself when
+      the selection went. Measured in a 375px frame: the seven buttons wrap onto rows, each 44px
+      tall, no horizontal scroll. **Cut** (Ctrl+X, and a Cut button) is copy then remove in
+      one edit; driven in Chrome: a clip cut from one track pasted onto another with its
+      note. **Lock** (L, and a Lock button) is done: `jig:locked` on a clip; a locked clip
+      refuses to move, resize, change track, have its notes edited or be removed, with the
+      reason in the log, and can still be muted or unlocked. Undo puts things back regardless
+      (its removals carry `force`). Track removal still takes its clips. Shown by a ▣ in the
+      label and "locked" in its spoken name. Driven in Chrome: arrow and Delete were refused
+      with the message, M still worked, and after unlock the clip moved. Copies are not
+      locked. **Colour** is done, as editor metadata (`editor.ttl`, `<#clip-id> jig:color`), so
+      no revision and no undo, like a track's: a row of colour buttons in the clip bar acts on
+      the selection, the clip gets a coloured border and top edge, and its spoken name says
+      "coloured Teal". Driven in Chrome: Teal on one selected clip changed only that clip's
+      border, the button is 44px, and the editor graph carries it. **Fades** (audio clips) are done: `jig:fadeInBeats` and
+      `jig:fadeOutBeats`, straight lines in level, set in the dock's audio panel. A split gives
+      the fade in to the first half and the fade out to the second; trimming an edge drops its
+      fade; copies keep both; the two scale to fit a short clip. Played through a gain node in
+      `ClipPlayer`, timed from the clip's start so a late start lands on the same curve. Real
+      Web Audio, offline render of a constant signal in Chrome: 0 at the start, 0.25 at a
+      quarter, 1.0 by the end of a 1 beat fade in, 0.5 half way down a 0.5 s fade out, 0 after.
+      Not heard by ear, and no curve choice (straight only). Not done: takes and slip edit
+      remain.
+- [x] **Icon buttons.** Play, Stop, Record, Loop, Undo, Redo, Save, Open, the two zoom
+      buttons and every clip action are standard icons (`src/ui/Icons.js`, Material Design
+      shapes, Apache 2.0, plus drawn split and trim glyphs) that keep their words as accessible
+      name and tooltip; the drawing is `aria-hidden`. Static buttons carry `data-icon` and
+      keep their words in the HTML, so without the script they still read. Mute, Lock and
+      Record swap icon and name with their state. Still 44px tall (48 wide in the clip bar):
+      CLAUDE.md sets 44px as the touch target, so they are smaller than the text buttons were
+      but not smaller than that. Left as words: Browser, MIDI in, Follow, Routing, Fit, Add
+      clip, Add audio, Arm, Silent, Install app, the forms, and the simple page, where the
+      words are the point. Checked in Chrome: every name, size, and the record toggle.
 - [ ] **Loop a clip.** Content repeats inside the clip bounds, with the loop end draggable
       (openDAW's `loopDuration`). Decide whether it needs vocabulary; it probably does.
 - [ ] **Overlap behaviour.** A stated rule for clips that overlap on a lane: clip the

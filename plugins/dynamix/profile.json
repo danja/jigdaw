@@ -30,6 +30,7 @@
   "prefers": [],
   "shape": {
     "audioInputs": 2,
+    "sidechainInput": 1,
     "inputChannels": 2,
     "audioOutputs": 1,
     "outputChannels": 2,

@@ -25,7 +25,7 @@ Five programs load Jigs, and a sixth packages them for someone else's host.
 
 ## Plugins
 
-There are 23 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 24 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -52,6 +52,7 @@ written to cover different parts of the contract, and each one's row says which.
 | [Quefrency](../plugins/quefrency/) | A cepstral formant and pitch shifter, in Rust ([design](../docs/plugins/quefrency-design.md)). | [latency.md](latency.md) sections 1 and 3: a constant latency, reported in `ready` for the actual sample rate. Module ABI version 2 MIDI in on an audio effect, taking `trn:ControlMidi`. The host's rule that a plugin taking only control changes gets no keyboard or clip. |
 | [Lookahead](../plugins/lookahead/) | A switchable lookahead delay in plain JavaScript, direct or held back by 512 frames ([design](../docs/plugins/lookahead-design.md)). | [latency.md](latency.md) section 2: the only plugin whose latency changes, reporting the actual figure in `ready` and posting `latency` with `fromFrame` on change, with the worst case in the profile. The host half: the dispatcher recompiles compensation and retimes the moved delays scheduled against `fromFrame`. |
 | [Dice](../plugins/dice/) | A MIDI probability gate in plain JavaScript, with no WebAssembly module ([design](../docs/plugins/dice-design.md)). | Contract section 8: genuine non-parameter state (the xorshift32 generator) answered over the state channel, and the joint round trip with Ferrite proving two `state` replies route by token. |
+| [MIDI Filter](../plugins/midifilter/) | Steers MIDI in plain JavaScript: a channel filter, a channel remap, transpose and a note range, so two of them split a keyboard. | Contract section 6 (MIDI over the message port, delivered by stream position, and kept at its own frame), and that a note-off follows the note-on it answers even when a setting changes mid-note. Stateless: it answers no state request. |
 
 [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md) is not a plugin itself: it is the
 interpreter the three converted JSFX plugins copy.

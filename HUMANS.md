@@ -31,8 +31,8 @@ Headless measurement says Mop costs 1.70x realtime through the adapter's
 WAMR interpreter (8 s of line plus drums took 13.6 s wall; 8b8 takes 0.20x
 through the same path), so every realtime block overruns and the symptom
 should be continuous dropouts. Two things only you can check: freeze (or
-bounce) the Mop track and play it back — if it plays clean frozen, the fault
-is throughput rather than corruption — and report the buffer size, sample
+bounce) the Mop track and play it back. If it plays clean frozen, the fault
+is throughput rather than corruption. Then report the buffer size, sample
 rate and machine the glitches were heard on, plus whether raising Voices
 changes anything (headlessly the voice cap changes nothing: the emulator
 steps the whole chip regardless). The fixes (WAMR AOT/JIT with its LLVM

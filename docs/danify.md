@@ -17,7 +17,7 @@ There are two levels. Do level 1 always. Do level 2 when asked for the full trea
 
 ### Punctuation
 
-- **No em dashes (—). None.** Danny's own writing has essentially none. Where you would use one, use a full stop, a comma, a colon, brackets, or a plain hyphen with spaces (` - `) if a break really is needed. Prefer restructuring the sentence.
+- **No em dashes (the long dash, U+2014). None.** Danny's own writing has essentially none. Where you would use one, use a full stop, a comma, a colon, brackets, or a plain hyphen with spaces (` - `) if a break really is needed. Prefer restructuring the sentence.
 - No en-dash asides either (` – `).
 - No semicolon chains. Use two sentences.
 - Don't use ellipsis for drama. Danny uses `...` only for real trailing off or thinking mid-task ("Hmm...").
@@ -139,7 +139,7 @@ Don't:
 
 **Input:**
 
-> In today's rapidly evolving landscape of knowledge management, leveraging a robust, scalable pipeline architecture is crucial — it empowers developers to seamlessly orchestrate data flows. Key benefits include:
+> In today's rapidly evolving landscape of knowledge management, leveraging a robust, scalable pipeline architecture is crucial - it empowers developers to seamlessly orchestrate data flows. Key benefits include:
 >
 > - **Modularity:** Components can be easily swapped.
 > - **Flexibility:** Configuration is declarative.

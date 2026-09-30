@@ -30,7 +30,7 @@ function build () {
   const calls = []
   const record = name => (...args) => calls.push([name, ...args])
   const timeline = createTimeline(document, {
-    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
+    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
   })
   document.body.append(timeline.element)
   timeline.draw({
@@ -132,6 +132,36 @@ describe('the keyboard', () => {
     expect(calls).toEqual([['open', 'c1'], ['remove', 'c1']])
   })
 
+  it('toggles lock on L, asking for the opposite of what the clip is now', () => {
+    const { calls, clip } = build()
+    clip('c1').dispatchEvent(event('keydown', { key: 'l' }))
+    expect(calls).toEqual([['lock', 'c1', true]])
+  })
+
+  it('toggles mute on M, asking for the opposite of what the clip is now', () => {
+    const { calls, clip } = build()
+    clip('c1').dispatchEvent(event('keydown', { key: 'm' }))
+    expect(calls).toEqual([['mute', 'c1', true]])
+  })
+
+  it('copies on Ctrl+C and pastes on Ctrl+V, and leaves the bare letters alone', () => {
+    const { calls, clip } = build()
+    clip('c1').dispatchEvent(event('keydown', { key: 'c', ctrlKey: true }))
+    clip('c1').dispatchEvent(event('keydown', { key: 'x', ctrlKey: true }))
+    clip('c1').dispatchEvent(event('keydown', { key: 'V', metaKey: true }))
+    clip('c1').dispatchEvent(event('keydown', { key: 'c' }))
+    clip('c1').dispatchEvent(event('keydown', { key: 'v' }))
+    expect(calls).toEqual([['copy', 'c1'], ['cut', 'c1'], ['paste', 'c1']])
+  })
+
+  it('trims the start on [ and the end on ]', () => {
+    const { calls, clip } = build()
+    clip('c1').dispatchEvent(event('keydown', { key: '[' }))
+    clip('c1').dispatchEvent(event('keydown', { key: ']' }))
+    clip('c1').dispatchEvent(event('keydown', { key: ']', ctrlKey: true }))
+    expect(calls).toEqual([['trim', 'c1', 'start'], ['trim', 'c1', 'end']])
+  })
+
   it('splits on S and duplicates on D, and leaves Ctrl with those letters to the browser', () => {
     const { calls, clip } = build()
     clip('c1').dispatchEvent(event('keydown', { key: 's' }))
@@ -177,13 +207,20 @@ describe('zoom and snap, from a TimeView the page can share', () => {
     const calls = []
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
-      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
+      onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { view })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: t => !t.midiInput })
     return { timeline, calls, clip: id => document.getElementById(`clip-${id}`) }
   }
-  const button = name => [...document.querySelectorAll('.timeline-tools button')].find(b => b.textContent === name)
+  const button = name => [...document.querySelectorAll('.timeline-tools button')].find(b => (b.getAttribute('aria-label') ?? b.textContent) === name)
+
+  it('hands back the view it draws with, so the page snaps a cut to the same grid', () => {
+    const view = new TimeView()
+    const { timeline } = buildWith(view)
+    expect(timeline.view).toBe(view)
+    expect(timeline.view.snap(3.7, 4)).toBe(view.step(4) === null ? 3.7 : Math.round(3.7 / view.step(4)) * view.step(4))
+  })
 
   it('redraws to the new scale when zoomed from its own buttons, and says so', () => {
     const view = new TimeView()
@@ -318,7 +355,7 @@ describe('selection', () => {
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
       onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
-      onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
+      onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { selection })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false })
@@ -372,7 +409,7 @@ describe('the loop', () => {
     const record = name => (...args) => calls.push([name, ...args])
     const timeline = createTimeline(document, {
       onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'),
-      onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
+      onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
     }, { view })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, loop })
@@ -497,7 +534,7 @@ describe('an empty arrangement', () => {
   it('says what to do and offers it as buttons that run the given requests', () => {
     const ran = []
     const timeline = createTimeline(document, {
-      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
     })
     document.body.append(timeline.element)
     timeline.draw({
@@ -513,7 +550,7 @@ describe('an empty arrangement', () => {
 
   it('still says something with no actions given', () => {
     const timeline = createTimeline(document, {
-      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
     })
     document.body.append(timeline.element)
     timeline.draw({ tracks: [], clips: [], beatsPerBar: 4, labelFor: () => '', playsIntoNothing: () => false })
@@ -531,7 +568,7 @@ describe('the chain under each lane', () => {
   })
   const buildChain = selection => {
     const timeline = createTimeline(document, {
-      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onArm () {}
     }, { selection })
     document.body.append(timeline.element)
     timeline.draw({ tracks, clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false, chainFor })

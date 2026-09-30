@@ -14,13 +14,37 @@
     rdfs:label "Amp into a room" ;
     jig:revision 1 ;
     jig:track <#track-1> ;
-    jig:node <#amp> , <#room> ;
-    jig:connection <#c1> ;
+    jig:node <#lead> , <#guitar> , <#amp> , <#room> ;
+    jig:connection <#c1> , <#c2> , <#c3> ;
     jig:transport <#transport> .
 
 <#track-1>
     a jig:Track ;
     rdfs:label "Amp into a room" .
+
+<#lead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Riff" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#lead-root> , <#lead-scale> , <#lead-length> , <#lead-phrase> , <#lead-grid> , <#lead-density> , <#lead-register> , <#lead-seed> .
+
+<#guitar>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Guitar" ;
+    jig:plugin <../plugins/mop/> ;
+    jig:setting <#guitar-program> .
+
+<#lead-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 52.0 .
+<#lead-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
+<#lead-length>   a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 16.0 .
+<#lead-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars"  ; jig:value 2.0 .
+<#lead-grid>     a jig:ParameterSetting ; jig:symbol "subdivision"  ; jig:value 0.0 .
+<#lead-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.5 .
+<#lead-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 1.0 .
+<#lead-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 3.0 .
+<#guitar-program> a jig:ParameterSetting ; jig:symbol "program" ; jig:value 27.0 .
 
 <#amp>
     a jig:Node ;
@@ -36,8 +60,8 @@
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#room-mode> , <#room-mix> , <#room-size> .
 
-<#amp-input>  a jig:ParameterSetting ; jig:symbol "input"  ; jig:value 2.0 .
-<#amp-output> a jig:ParameterSetting ; jig:symbol "output" ; jig:value 0.8 .
+<#amp-input>  a jig:ParameterSetting ; jig:symbol "input"  ; jig:value 3.5 .
+<#amp-output> a jig:ParameterSetting ; jig:symbol "output" ; jig:value 1.6 .
 <#room-mode>  a jig:ParameterSetting ; jig:symbol "mode"   ; jig:value 1.0 .
 <#room-mix>   a jig:ParameterSetting ; jig:symbol "mix"    ; jig:value 0.25 .
 <#room-size>  a jig:ParameterSetting ; jig:symbol "size"   ; jig:value 30.0 .
@@ -49,6 +73,22 @@
 
 <#c1-from> a jig:Endpoint ; jig:endpointNode <#amp>  ; jig:portIndex 0 .
 <#c1-to>   a jig:Endpoint ; jig:endpointNode <#room> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Midi .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#lead>   ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#guitar> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Audio .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#guitar> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#amp>    ; jig:portIndex 0 .
 
 <#transport>
     a jig:Transport ;

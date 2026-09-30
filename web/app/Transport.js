@@ -52,7 +52,11 @@ export function createTransport (ctx) {
       ? ctx.dispatcher.engineNode(track.audioInput)?.node
       : ctx.engine.trackInput(track.id)
     if (!destination) return
-    ctx.clipPlayer.start({ iri: clip.source, when, offset, duration, destination })
+    // Fade lengths are beats in the file and seconds at the clock: read off the tempo map at the clip's edges.
+    const transport = ctx.dispatcher.transport()
+    const fadeIn = clip.fadeInBeats > 0 ? transport.secondsAtBeat(clip.on + clip.fadeInBeats) - transport.secondsAtBeat(clip.on) : 0
+    const fadeOut = clip.fadeOutBeats > 0 ? transport.secondsAtBeat(clip.off) - transport.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0
+    ctx.clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut })
   }
 
   async function play () {

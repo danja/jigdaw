@@ -157,6 +157,15 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   resolves against the session document, so a session saved beside a `media/` folder is
   portable as a folder. `jig:offsetSeconds` is where in the file the clip begins, in seconds
   rather than beats, because a recording does not change length when the tempo does.
+- A clip with `jig:muted true` is kept and not played: it stays on its lane and in the file,
+  and a host MUST NOT sound it. Absent means false, and a writer leaves it out rather than
+  writing `false`.
+- An audio clip may carry `jig:fadeInBeats` and `jig:fadeOutBeats`: how long it takes to rise
+  from silence at its start and fall to silence at its end, in beats, as straight lines in
+  level. Absent means no fade. A host scales the two down to fit if together they are longer
+  than the clip.
+- A clip with `jig:locked true` is played as normal, and a host SHOULD refuse to move,
+  resize, edit or delete it until it is unlocked. Absent means false.
 
 ## Parameters are settings, state is state
 
@@ -253,6 +262,7 @@ The subjects are fragments of the project IRI, as everywhere else. What it may s
 | a node | `jig:x`, `jig:y` | where it sits on the routing view |
 | a track | `jig:order` | integer position among tracks, from zero |
 | a track | `jig:color` | lower case `#rrggbb` |
+| a clip | `jig:color` | lower case `#rrggbb`, a person's mark on one clip; absent means the clip is drawn in its track's own way |
 | a track | `jig:laneSize` | `small`, `medium` (the default, so not written) or `large` |
 
 A track with no `jig:order` follows the placed tracks in the order it was made. Anything

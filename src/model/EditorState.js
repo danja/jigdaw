@@ -12,6 +12,7 @@ const COLOR = /^#[0-9a-f]{6}$/
 export class EditorState {
   #positions = new Map()
   #tracks = new Map()
+  #clips = new Map()
   #listeners = new Set()
 
   /** Told after any change, so a view can draw again: layout is not an edit, and no revision says it moved. */
@@ -49,6 +50,18 @@ export class EditorState {
     this.#changed()
   }
 
+  /** How a clip is drawn: its colour, or null for the track's own. */
+  clip (id) { return { color: null, ...this.#clips.get(id) } }
+  setClip (id, patch) {
+    const next = { ...this.#clips.get(id) }
+    if (patch.color !== undefined) {
+      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error('color must be #rrggbb in lower case, or null')
+      next.color = patch.color
+    }
+    this.#clips.set(id, next)
+    this.#changed()
+  }
+
   /**
    * Track ids in the order the arrangement shows them: placed tracks by their
    * order, then unplaced ones in the order given (creation order), so a track
@@ -62,12 +75,14 @@ export class EditorState {
   }
 
   /** Replace everything with what `readEditor` returned. Bad values throw and change nothing. */
-  load ({ positions, tracks }) {
+  load ({ positions, tracks, clips = new Map() }) {
     const next = new EditorState()
     for (const [id, { x, y }] of positions) next.setPosition(id, x, y)
     for (const [id, patch] of tracks) next.setTrack(id, patch)
+    for (const [id, patch] of clips) next.setClip(id, patch)
     this.#positions = next.#positions
     this.#tracks = next.#tracks
+    this.#clips = next.#clips
     this.#changed()
   }
 
@@ -94,21 +109,23 @@ export class EditorState {
 
   /** True when nothing here differs from a fresh session, so nothing needs saving. */
   get isDefault () {
-    return this.#tracks.size === 0 &&
+    return this.#tracks.size === 0 && this.#clips.size === 0 &&
       [...this.#positions.values()].every(p => p.x === 0 && p.y === 0)
   }
 
   /** Like `isDefault`, but only for the nodes and tracks that still exist. */
-  isDefaultFor (nodeIds, trackIds) {
+  isDefaultFor (nodeIds, trackIds, clipIds = new Set()) {
     return [...this.#tracks.keys()].every(id => !trackIds.has(id)) &&
+      [...this.#clips].every(([id, c]) => !clipIds.has(id) || c.color === null) &&
       [...this.#positions].every(([id, p]) => !nodeIds.has(id) || (p.x === 0 && p.y === 0))
   }
 
   /** Forget whatever names something that no longer exists. */
-  prune (nodeIds, trackIds) {
+  prune (nodeIds, trackIds, clipIds = null) {
     let changed = false
     for (const id of [...this.#positions.keys()]) if (!nodeIds.has(id)) { this.#positions.delete(id); changed = true }
     for (const id of [...this.#tracks.keys()]) if (!trackIds.has(id)) { this.#tracks.delete(id); changed = true }
+    if (clipIds !== null) for (const id of [...this.#clips.keys()]) if (!clipIds.has(id)) { this.#clips.delete(id); changed = true }
     if (changed) this.#changed()
   }
 

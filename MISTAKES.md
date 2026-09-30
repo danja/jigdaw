@@ -6,6 +6,22 @@ each lesson are named. Retired 2026-09-30 from a 1466-line chronological log:
 entries whose lesson now lives in AGENTS.md are a pointer, entries fixed by a
 persisting test alone are dropped, everything else is below.
 
+## A fake that supplies what the real thing withholds hides a plugin that never runs
+
+**2026-09-30 Dice was silent in Chrome since it was written, and every test passed.** Dice's
+processor began `const output = outputs[0]; if (!output || output.length === 0) return true`,
+copied from the audio plugins. A plugin with `jig:audioOutputs 0` gets an empty `outputs` from a
+real AudioWorkletNode, so it returned on every block and gated nothing. `OfflineWorkletNode`
+always handed over one silent output, so 12 Dice tests rendered real quanta and passed. Found
+by putting a new MIDI Filter (copied from Dice) between MelGen and a synth in a live page and
+getting silence, then feeding both plugins a note directly and seeing neither answer. The
+generative preset's lead chain, which goes through Dice, was silent for the same reason: the
+level meter I read for it was the other two tracks. Fixed in both processors, and the fake now
+gives an empty `outputs` when `numberOfOutputs` is 0, which failed Dice's tests the way the browser
+did. Same lesson as the fake `MessagePort` and the detached `fetch`: a stand-in must refuse what
+the real thing refuses. Prevention: `tests/host/dice.test.js` and `tests/host/midifilter.test.js`
+run through that fake; measure a preset's chain track by track, not by the master.
+
 ## A destructive edit drops what its replacement does not repeat
 
 **2026-09-30 pruning TODO.md deleted two live items with the done ones.**
@@ -28,8 +44,8 @@ DSP. Output, MIDI, slicing and transport were all correct: throughput, not
 corruption.
 
 **Root cause.** Each host was timed, if at all, on its own fastest engine.
-The budget that matters is the slowest host's — here WAMR's pure
-interpreter, 28 times the JIT cost for this module — and nothing drove the
+The budget that matters is the slowest host's (here WAMR's pure
+interpreter, 28 times the JIT cost for this module) and nothing drove the
 native path against a clock. Voice caps, buffer sizes and sample rates were
 all measured harmless before concluding: the emulator steps the whole chip
 regardless, so none of them moves the number.

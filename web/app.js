@@ -11,6 +11,7 @@
 // the context, reading what it needs from it at the moment it needs it: the
 // dispatcher and the engine do not exist until the first thing that needs
 // sound (web/app/Runtime.js), so nothing can hold them any earlier.
+import { applyIcons } from '../src/ui/Icons.js'
 import { createTabs } from '../src/ui/Tabs.js'
 import { createMedia } from './app/Media.js'
 import { createRuntime } from './app/Runtime.js'
@@ -112,6 +113,7 @@ $('signature').addEventListener('change', async () => {
   await ctx.runtime.ensureRunning()
   transport.setSignature($('signature').value)
 })
+applyIcons(document)
 ctx.sessions.mount()
 ctx.history.mount()
 ctx.arrangement.mount()

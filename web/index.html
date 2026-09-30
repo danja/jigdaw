@@ -246,6 +246,12 @@
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
   .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
+  .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
+  button[data-icon] { min-width:44px; min-height:44px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
+  button[data-icon] .icon { display:block; }
+  .clip-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; font:inherit; }
   .timeline-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
   .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg);
                            border:1px solid var(--line); border-radius:6px; }
@@ -339,6 +345,9 @@
     font-size:12px; text-align:left; cursor:grab; overflow:hidden; touch-action:none; }
   .clip-audio { background:#2f3b27; border-color:var(--ok); }
   .clip-orphan { border-style:dashed; }
+  .clip-colored { border-color:var(--clip-color); border-top-width:5px; }
+  .clip-muted { opacity:.5; border-style:dotted; }
+  .clip-locked { cursor:not-allowed; }
   .clip-wave { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
   .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
@@ -496,9 +505,9 @@
 <div class="transport">
   <span class="brand">Jiggy</span>
   <button id="toggle-browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
-  <button id="play" aria-pressed="false">Play</button>
-  <button id="stop">Stop</button>
-  <button id="record" aria-pressed="false" title="Play and keep each track as an audio clip">Rec</button>
+  <button id="play" data-icon="play" aria-pressed="false">Play</button>
+  <button id="stop" data-icon="stop">Stop</button>
+  <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
   <span class="tempo">
     <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
     <input type="number" id="tempo" value="120" min="20" max="300" step="1">
@@ -508,17 +517,17 @@
     <label for="signature" class="visually-hidden">Time signature, beats per bar over beat unit</label>
     <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
   </span>
-  <button id="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
+  <button id="loop" data-icon="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
   <span class="position" id="position" aria-live="off">1 . 1</span>
   <button id="midi-in" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
   <span id="midi-state" class="midi-state" role="status"></span>
   <span class="history">
-      <button id="undo" title="Undo the last edit" disabled>Undo</button>
-      <button id="redo" title="Redo the last undone edit" disabled>Redo</button>
+      <button id="undo" data-icon="undo" title="Undo the last edit" disabled>Undo</button>
+      <button id="redo" data-icon="redo" title="Redo the last undone edit" disabled>Redo</button>
     </span>
   <span class="session">
-      <button id="save" title="Save this session as RDF">Save</button>
-      <button id="open" title="Open a saved session">Open</button>
+      <button id="save" data-icon="save" title="Save this session as RDF">Save</button>
+      <button id="open" data-icon="open" title="Open a saved session">Open</button>
       <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
       <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
     </span>
