@@ -34,3 +34,29 @@ describe('unpackSession', () => {
     expect(() => unpackSession(new Map([['editor.ttl', new Uint8Array()]]))).toThrow(/session\.ttl/)
   })
 })
+
+describe('scripts in a session', () => {
+  it('make a zip even with no editor layout and no audio, with scripts.ttl beside session.ttl', async () => {
+    const packed = packSession({ turtle: 'a', scripts: 'b' })
+    expect(packed.kind).toBe('zip')
+    expect([...(await readZip(packed.bytes)).keys()]).toEqual(['session.ttl', 'scripts.ttl'])
+  })
+
+  it('come back apart from the other documents and the media', async () => {
+    const packed = packSession({ turtle: 'a', editor: 'e', scripts: 's', media: [{ name: 'kick.wav', bytes: new Uint8Array([1]) }] })
+    const out = unpackSession(await readZip(packed.bytes))
+    expect(out).toMatchObject({ turtle: 'a', editor: 'e', scripts: 's' })
+    expect([...out.media.keys()]).toEqual(['kick.wav'])
+  })
+
+  it('are absent from a session saved without one, whether older or newer', async () => {
+    const packed = packSession({ turtle: 'a', editor: 'e' })
+    expect(unpackSession(await readZip(packed.bytes)).scripts).toBeNull()
+  })
+
+  it('are kept as text exactly, whatever the characters', async () => {
+    const text = 'a.mix = 1 # \u00e9\u2028 "quoted" \\ \t\n'
+    const out = unpackSession(await readZip(packSession({ turtle: 'a', scripts: text }).bytes))
+    expect(out.scripts).toBe(text)
+  })
+})

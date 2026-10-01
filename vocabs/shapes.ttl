@@ -771,6 +771,31 @@ jig:ContainerShape a sh:NodeShape ;
 ## profiles for a document it could not read would be acting on a guess about
 ## what the document meant.
 
+## -- Scripts -------------------------------------------------------------------
+##
+## The script document of a saved session (docs/project-format.md). A script is a fragment of the
+## session's IRI, states its language and its source, and nothing in it is a blank node.
+
+jig:ScriptShape a sh:NodeShape ;
+    sh:targetClass jig:Script ;
+    sh:nodeKind sh:IRI ;
+    sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [
+        sh:path jig:scriptLanguage ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:in ( jig:Reel ) ;
+        sh:message "A script states exactly one language, one this version of the format names (jig:Reel), so a host can tell whether it can run it. Every jig:ScriptLanguage in the ontology is in this list: tests/rdf/ScriptsRoundTrip.test.js binds the two."
+    ] ;
+    sh:property [
+        sh:path jig:scriptSource ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ;
+        sh:message "A script has exactly one source, a string that is not empty."
+    ] ;
+    sh:property [
+        sh:path dcterms:modified ;
+        sh:maxCount 1 ; sh:datatype xsd:dateTime ;
+        sh:message "When it was saved, as an xsd:dateTime."
+    ] .
+
 jig:PluginCollectionShape a sh:NodeShape ;
     sh:targetClass jig:PluginCollection ;
     rdfs:label "Plugin collection shape" ;

@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  154 terms.
+  159 terms.
 </p>
 
 <h2>Classes</h2>
@@ -135,6 +135,14 @@
   <dd>A fetchable file belonging to a plugin. Its jig:location is resolved
         against the profile's own IRI, so a profile that moves keeps working and a plugin
         can be served from a directory copied anywhere.</dd>
+  <dt id="Script"><code>jig:Script</code></dt>
+  <dd>The text of a script saved with a session, and the language it is in. A
+        fragment of the session's IRI. It is not part of the project: it has no revision, and
+        it is stored in a document of its own. A host that opens a session MUST NOT run a
+        script found in it; a person runs it, as a person runs any script, and the host
+        checks it in full first.</dd>
+  <dt id="ScriptLanguage"><code>jig:ScriptLanguage</code> <span class="label">Script language</span></dt>
+  <dd>A language a script can be in, so a host can tell a script it can run from one it cannot.</dd>
   <dt id="Send"><code>jig:Send</code></dt>
   <dd>A copy of one track's signal, at a level and a tap point, into another
         track. A return is an ordinary track that is the target of a send; nothing marks
@@ -256,6 +264,8 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="region"><code>jig:region</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="scriptLanguage"><code>jig:scriptLanguage</code> <span class="label">script language</span></dt>
+  <dd>The language the script is in. Exactly one.</dd>
   <dt id="send"><code>jig:send</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="sendFrom"><code>jig:sendFrom</code></dt>
@@ -434,6 +444,8 @@
   <dd>Increments on every committed change. A caller submitting a changeset
         names the revision it last saw and is rejected if the project has moved on. An agent
         and a person editing one project is the normal case here.</dd>
+  <dt id="scriptSource"><code>jig:scriptSource</code> <span class="label">script source</span></dt>
+  <dd>The script as typed, every character, including its comments and its line breaks. Exactly one, and never empty.</dd>
   <dt id="sidechainInput"><code>jig:sidechainInput</code> <span class="label">sidechain input</span></dt>
   <dd>The index of the audio input that is a key rather than a signal to
         process, counted from zero among jig:audioInputs. The plugin listens to it to
@@ -521,6 +533,8 @@ back.</dd>
   <dd>The send takes the signal after the track's fader, pan and mute.</dd>
   <dt id="PreFader"><code>jig:PreFader</code> <span class="label">pre-fader</span></dt>
   <dd>The send takes the signal before the track's fader, pan and mute.</dd>
+  <dt id="Reel"><code>jig:Reel</code></dt>
+  <dd>The livecoding language of docs/livecoding.md, one statement a line, driving the plugins through the same operations the interface uses.</dd>
   <dt id="SharedMemory"><code>jig:SharedMemory</code> <span class="label">Shared Memory</span></dt>
   <dd>SharedArrayBuffer between the audio thread and elsewhere. Available
         only in a cross-origin isolated page, which in turn requires every cross-origin

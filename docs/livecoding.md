@@ -10,7 +10,10 @@ position, on the same loop logic as `src/engine/Scheduler.js`), the plugin valid
 **Script tab** (`src/ui/ScriptPanel.js`, `web/app/Script.js`), wired to the transport beside the scheduler. Checked in Chrome:
 a script is validated through the real loader, errors come back with lines, `every` fires on the beat while playing, a
 replacement takes over at a bar line and acts on that bar line's downbeat, Stop halts it, and the page does not scroll sideways at
-390px. **Not built:** saving a script in a session, and the render test for a ramp across a block boundary. `now` is a run option
+390px. A script is saved with a session in `scripts.ttl` and is shown, not run, when the session opens
+([project-format.md](project-format.md), "Scripts in a saved session"). Checked in Chrome through the studio to simple page
+hand-off: the text came through the real zip with quotes, a backslash and Japanese intact. The last hop, restoring it into the
+Studio's Script tab, is covered by `tests/web/Script.test.js` and has not been seen in a browser. The timing of a ramp is held to the frame by `tests/reel/RampTiming.test.js`. **Not built:** nothing in the original plan except what is listed in `TODO.md`. `now` is a run option
 and not a word in the language.
 
 **The principle behind every trade-off here is live performance.** A script runs while the music plays, so nothing in it may
@@ -153,8 +156,10 @@ on load. A person presses run, or the host asks.
   tripping.
 - A plan is checked against the Ops it names. A guard binds the capability table to `src/mcp/tools.js`, so a new
   tool is either exposed to scripts or excluded on purpose, and a test fails when a tool is in neither list.
-- Timing is checked with an `OfflineAudioContext` render: a ramp scheduled at beat 4 starts in the block containing
-  that frame, at a tempo where beat 4 is not a block multiple.
+- Timing is checked in `tests/reel/RampTiming.test.js`: a script's ramp goes through the real tools into the real project and the real
+  `Scheduler` plays it on an injected clock whose beat zero is not at time zero. The time handed to the audio clock is the exact
+  frame, for a start on a quantum boundary and for one between two, once, whatever size the ticks are. What it does not check is the
+  sound of an `AudioParam` ramping, which is the platform's and not ours.
 - A deliberately hostile script (an endless loop, a huge plan, a reference to a missing name) fails with an error and
   leaves the project, and the audio, as they were.
 

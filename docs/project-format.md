@@ -286,6 +286,28 @@ naming a node or track the session does not hold is dropped. None of these chang
 project revision. Colour is never the only thing that tells a track apart, and a lane
 size is a drawing choice, not a fact about the audio.
 
+### Scripts in a saved session
+
+A script saved with a session is its own document, `scripts.ttl`, beside `session.ttl` in the zip, so it is its own graph
+with its own provenance. A session with no script has no `scripts.ttl` and is one Turtle file when nothing else needs a
+zip. A script is text, and it is not part of the project: it has no revision, saving one does not move the project's, and
+undo does not touch it.
+
+The subjects are fragments of the session IRI, as everywhere else. What it states:
+
+| Subject | Property | Value |
+|---|---|---|
+| a `jig:Script` | `jig:scriptLanguage` | exactly one language; `jig:Reel` is the only one this version names |
+| | `jig:scriptSource` | exactly one string, never empty, the script as typed, every character |
+| | `rdfs:label` | optional, a name for it |
+| | `dcterms:modified` | optional, when it was saved, an `xsd:dateTime` |
+
+**A host that opens a session MUST NOT run a script found in it.** It may show the text, and says that it has not been
+run. A script is run by a person, and the host checks it in full first ([livecoding.md](livecoding.md)): a session from
+somewhere else must do nothing the moment it is opened. A reader MUST NOT fail to open a session because its scripts
+document is missing or unreadable. The ids a session is opened over are reused, so opening a session replaces whatever
+scripts the previous one held, as it replaces the editor graph.
+
 ## Serialisation rules
 
 - No blank nodes. Every track, node, connection, endpoint, setting, clip, note and tempo point

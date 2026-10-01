@@ -5,12 +5,14 @@
 // plugins carries everything needed to fetch them. That is the premise of the
 // whole system applied to its own file format.
 //
-// A session whose audio clips play files this page holds, or whose editor
-// layout is not the default, saves as a zip with editor.ttl and those files
-// beside session.ttl; anything else is one Turtle file.
+// A session whose audio clips play files this page holds, whose editor layout
+// is not the default, or that carries a script, saves as a zip with editor.ttl,
+// scripts.ttl and those files beside session.ttl; anything else is one Turtle
+// file. A script in a session is text and is never run by opening it.
 import { parseText } from '../../src/rdf/parse.js'
-import { writeProject, writeEditor } from '../../src/rdf/ProjectWriter.js'
-import { readProject, readEditor } from '../../src/rdf/ProjectReader.js'
+import { writeProject, writeEditor, writeScripts } from '../../src/rdf/ProjectWriter.js'
+import { readProject, readEditor, readScripts } from '../../src/rdf/ProjectReader.js'
+import { vocabulary } from '../../src/rdf/Vocabulary.js'
 import { openProject } from '../../src/ops/OpenProject.js'
 import { listPresets, fetchPreset } from '../../src/ui/Presets.js'
 import { encodeState } from '../../src/host/StateCodec.js'
@@ -39,14 +41,16 @@ export function createSessions (ctx) {
     for (const [id, state] of states) {
       if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: id, state: encodeState(state) }])
     }
-    const turtle = writeProject(dispatcher.project, {
-      iri: media.base,
-      created: new Date().toISOString().replace(/\.\d+Z$/, 'Z')
-    })
+    const savedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
+    // What is in the Script tab goes into the session, as text. Not on the simple page, which has no tab and
+    // so leaves whatever the session already holds, carried through unchanged.
+    ctx.script?.captureInto(dispatcher.project, savedAt)
+    const turtle = writeProject(dispatcher.project, { iri: media.base, created: savedAt })
     const held = media.heldUnderBase([...new Set(clipAudio(dispatcher.project).map(c => c.source))])
     const packed = packSession({
       turtle,
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
+      scripts: writeScripts(dispatcher.project, { iri: media.base, savedAt }),
       media: held.map(iri => ({ name: iri.slice(media.base.length), bytes: media.get(iri).bytes }))
     })
     return {
@@ -78,8 +82,8 @@ export function createSessions (ctx) {
   /** Open a session from its bytes: a zip is a session with its media beside it, anything else is Turtle. */
   async function openBytes (bytes) {
     if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
-      const { turtle, editor, media } = unpackSession(await readZip(bytes))
-      await openSession(turtle, document.baseURI, { files: media, editor })
+      const { turtle, editor, scripts, media } = unpackSession(await readZip(bytes))
+      await openSession(turtle, document.baseURI, { files: media, editor, scripts })
     } else {
       await openSession(new TextDecoder().decode(bytes))
     }
@@ -90,7 +94,7 @@ export function createSessions (ctx) {
    * relative IRI in it: a saved file carries its own @base, and a bundled preset
    * deliberately does not, so that its plugins are the ones served beside it.
    */
-  async function openSession (text, base = document.baseURI, { files = new Map(), editor = null } = {}) {
+  async function openSession (text, base = document.baseURI, { files = new Map(), editor = null, scripts = null } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const parsed = await parseText(text, base)
     let read
@@ -117,6 +121,18 @@ export function createSessions (ctx) {
         ? { positions: new Map(), tracks: new Map() }
         : readEditor(await parseText(editor, read.iri), read.iri))
     } catch (error) { log(`editor layout ignored: ${error.message}`, 'error') }
+
+    // Scripts are text, and replaced like the editor graph, because ids are reused. An unreadable scripts document
+    // never stops a session opening. A script that is there is put in the Script tab and NOT run: a session from
+    // somewhere else must not do anything the moment it is opened, and a person presses Run, which checks it first.
+    try {
+      d.project.scripts.load(scripts === null ? [] : readScripts(await parseText(scripts, read.iri), read.iri))
+      const saved = d.project.scripts.firstIn(vocabulary.jig.Reel)
+      if (saved) ctx.script?.restore(saved)
+    } catch (error) {
+      d.project.scripts.clear()
+      log(`script ignored: ${error.message}`, 'error')
+    }
 
     ctx.transport.showTransport()
     ctx.rack.draw()

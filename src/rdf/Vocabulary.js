@@ -43,6 +43,7 @@ export const vocabulary = Object.freeze({
 
   dcterms: Object.freeze({
     created: `${DCTERMS}created`,
+    modified: `${DCTERMS}modified`,
     // A collection's members. docs/plugin-collections.md.
     hasPart: `${DCTERMS}hasPart`
   }),
@@ -260,6 +261,13 @@ export const vocabulary = Object.freeze({
     order: `${JIG}order`,
     color: `${JIG}color`,
     laneSize: `${JIG}laneSize`,
+
+    // Scripts saved with a session. docs/project-format.md.
+    Script: `${JIG}Script`,
+    ScriptLanguage: `${JIG}ScriptLanguage`,
+    Reel: `${JIG}Reel`,
+    scriptLanguage: `${JIG}scriptLanguage`,
+    scriptSource: `${JIG}scriptSource`,
 
     // Foreign plugins. Contract section 12.
     ForeignPlugin: `${JIG}ForeignPlugin`,

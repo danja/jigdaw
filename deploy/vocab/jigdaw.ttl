@@ -879,6 +879,39 @@ jig:entryPoint a owl:DatatypeProperty ;
     rdfs:label "entry point" ;
     rdfs:comment "The path inside the container the adapter starts at, such as index.js." .
 
+## -- Scripts ------------------------------------------------------------------
+##
+## docs/project-format.md, "Scripts in a saved session", and docs/livecoding.md. A script a
+## person typed to drive the plugins, saved beside the session in its own document
+## (scripts.ttl), so it is its own named graph with its own provenance and saving it can
+## never touch the project's revision. Saved text only: opening a session never runs it.
+
+jig:Script a owl:Class ;
+    rdfs:label "Script" ;
+    rdfs:comment """The text of a script saved with a session, and the language it is in. A
+        fragment of the session's IRI. It is not part of the project: it has no revision, and
+        it is stored in a document of its own. A host that opens a session MUST NOT run a
+        script found in it; a person runs it, as a person runs any script, and the host
+        checks it in full first.""" .
+
+jig:ScriptLanguage a owl:Class ;
+    rdfs:label "Script language" ;
+    rdfs:comment "A language a script can be in, so a host can tell a script it can run from one it cannot." .
+
+jig:Reel a owl:NamedIndividual , jig:ScriptLanguage ;
+    rdfs:label "Reel" ;
+    rdfs:comment "The livecoding language of docs/livecoding.md, one statement a line, driving the plugins through the same operations the interface uses." .
+
+jig:scriptLanguage a owl:ObjectProperty ;
+    rdfs:domain jig:Script ; rdfs:range jig:ScriptLanguage ;
+    rdfs:label "script language" ;
+    rdfs:comment "The language the script is in. Exactly one." .
+
+jig:scriptSource a owl:DatatypeProperty ;
+    rdfs:domain jig:Script ; rdfs:range xsd:string ;
+    rdfs:label "script source" ;
+    rdfs:comment "The script as typed, every character, including its comments and its line breaks. Exactly one, and never empty." .
+
 ## -- Collections ---------------------------------------------------------------
 ##
 ## docs/plugin-collections.md. A list of plugin IRIs published as one Turtle

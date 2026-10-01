@@ -17,6 +17,7 @@
 // the cost is paid continuously.
 
 import { EditorState } from './EditorState.js'
+import { ScriptState } from './ScriptState.js'
 import {
   ARRANGEMENT_OPERATIONS, emptyArrangement, cloneArrangement, checkTrackOutput,
   dropForTrack, dropForNode, checkSignaturePoints, arrangementChanges, arrangementReconcile
@@ -708,6 +709,8 @@ export class Project {
   #counters = { track: 0, node: 0, connection: 0, clip: 0, send: 0, marker: 0, region: 0, envelope: 0 }
   // Editor metadata, deliberately outside the state a revision covers.
   #editor = new EditorState()
+  // Scripts saved with the session: text, outside the revision for the same reason.
+  #scripts = new ScriptState()
   #label = null
 
   get revision () { return this.#revision }
@@ -748,6 +751,9 @@ export class Project {
 
   /** Editor metadata never bumps the revision. */
   get editor () { return this.#editor }
+
+  /** The scripts saved with this session. Text only, never run by opening a session, and not part of the revision. */
+  get scripts () { return this.#scripts }
   position (id) { return this.#editor.position(id) }
   moveNode (id, x, y) {
     if (!this.#state.nodes.has(id)) throw new Error(`no such node: ${id}`)

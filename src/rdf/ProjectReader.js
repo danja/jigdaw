@@ -423,3 +423,29 @@ export function readEditor (dataset, projectIri) {
   }
   return { positions, tracks }
 }
+
+/**
+ * The scripts document: each `jig:Script`, as {id, label, language, source, savedAt}. A subject that is not a
+ * fragment of the project is refused, not skipped, so a corrupt file says so; the caller decides that an
+ * unreadable scripts document must not stop a session opening (docs/project-format.md).
+ */
+export function readScripts (dataset, projectIri) {
+  const found = new Map()
+  const at = id => found.get(id) ?? found.set(id, { id, label: null, language: null, source: null, savedAt: null }).get(id)
+  for (const quad of dataset) {
+    const p = quad.predicate.value
+    if (p === jig.scriptSource || p === jig.scriptLanguage || p === v.rdfs.label || p === v.dcterms.modified) {
+      const script = at(idOf(quad.subject.value, projectIri, 'script'))
+      if (p === jig.scriptSource) script.source = quad.object.value
+      else if (p === jig.scriptLanguage) script.language = quad.object.value
+      else if (p === v.dcterms.modified) script.savedAt = quad.object.value
+      else script.label = quad.object.value
+    }
+  }
+  const scripts = [...found.values()]
+  for (const s of scripts) {
+    if (!s.source) throw new Error(`script ${s.id} has no source text`)
+    if (!s.language) throw new Error(`script ${s.id} states no language`)
+  }
+  return scripts.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+}

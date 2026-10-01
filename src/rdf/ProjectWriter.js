@@ -335,3 +335,36 @@ export function writeEditor (project, { iri } = {}) {
   }
   return lines.join('\n') + '\n'
 }
+
+/**
+ * The scripts saved with a session: their own document, so their own graph, with a save time on each.
+ *
+ * Text only, written exactly as typed, and never run by anything that opens a session. They are not part of
+ * the project: a script has no revision and saving one does not touch the project's. `savedAt` is given by
+ * the caller, so the same scripts written with the same time are byte-identical (docs/project-format.md,
+ * "Serialisation rules"). Returns null when there is nothing to save, so a session with no script stays
+ * one Turtle file.
+ */
+export function writeScripts (project, { iri, savedAt = null } = {}) {
+  if (!iri) throw new Error('writeScripts needs the project IRI')
+  const scripts = project.scripts.all
+  if (scripts.length === 0) return null
+  const lines = [
+    `@base <${iri}> .`, '',
+    `@prefix jig: <${JIG}> .`,
+    '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .',
+    '@prefix dcterms: <http://purl.org/dc/terms/> .',
+    '@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .',
+    ''
+  ]
+  for (const s of scripts) {
+    const parts = [`a ${term(jig.Script)}`]
+    if (s.label) parts.push(`rdfs:label ${string(s.label)}`)
+    parts.push(`${term(jig.scriptLanguage)} ${term(s.language)}`)
+    parts.push(`${term(jig.scriptSource)} ${string(s.source)}`)
+    const when = s.savedAt ?? savedAt
+    if (when) parts.push(`dcterms:modified ${string(when)}^^xsd:dateTime`)
+    lines.push(`<#${s.id}> ${parts.join(' ;\n    ')} .`, '')
+  }
+  return lines.join('\n')
+}

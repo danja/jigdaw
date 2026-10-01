@@ -13176,6 +13176,7 @@ var init_Vocabulary = __esm({
       }),
       dcterms: Object.freeze({
         created: `${DCTERMS}created`,
+        modified: `${DCTERMS}modified`,
         // A collection's members. docs/plugin-collections.md.
         hasPart: `${DCTERMS}hasPart`
       }),
@@ -13383,6 +13384,12 @@ var init_Vocabulary = __esm({
         order: `${JIG}order`,
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
+        // Scripts saved with a session. docs/project-format.md.
+        Script: `${JIG}Script`,
+        ScriptLanguage: `${JIG}ScriptLanguage`,
+        Reel: `${JIG}Reel`,
+        scriptLanguage: `${JIG}scriptLanguage`,
+        scriptSource: `${JIG}scriptSource`,
         // Foreign plugins. Contract section 12.
         ForeignPlugin: `${JIG}ForeignPlugin`,
         ForeignFormat: `${JIG}ForeignFormat`,
@@ -22299,6 +22306,63 @@ var EditorState = class _EditorState {
   }
 };
 
+// src/model/ScriptState.js
+init_Vocabulary();
+var REEL = vocabulary.jig.Reel;
+var ScriptState = class _ScriptState {
+  #scripts = /* @__PURE__ */ new Map();
+  #listeners = /* @__PURE__ */ new Set();
+  /** Told after any change, so a view can know there is something to save. */
+  subscribe(fn) {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+  #changed() {
+    for (const fn of [...this.#listeners]) fn(this);
+  }
+  get size() {
+    return this.#scripts.size;
+  }
+  /** Every script, by id, as plain objects: {id, label, language, source, savedAt}. */
+  get all() {
+    return [...this.#scripts.values()].map((s) => ({ ...s })).sort((a2, b) => a2.id < b.id ? -1 : a2.id > b.id ? 1 : 0);
+  }
+  get(id) {
+    const s = this.#scripts.get(id);
+    return s ? { ...s } : null;
+  }
+  /** The first script in a language, or null: what the Script tab shows. */
+  firstIn(language) {
+    return this.all.find((s) => s.language === language) ?? null;
+  }
+  /**
+   * Save a script under an id, replacing any with that id. The source must be a non-empty string,
+   * because an empty script is nothing to save and the format refuses one.
+   */
+  set(id, { source, label = null, language = REEL, savedAt = null }) {
+    if (typeof id !== "string" || !/^[A-Za-z0-9_-]+$/.test(id)) throw new Error("a script id is letters, digits, hyphens and underscores");
+    if (typeof source !== "string" || source.length === 0) throw new Error("a script needs source text that is not empty");
+    if (typeof language !== "string" || !language) throw new Error("a script needs a language");
+    this.#scripts.set(id, { id, label, language, source, savedAt });
+    this.#changed();
+  }
+  remove(id) {
+    if (this.#scripts.delete(id)) this.#changed();
+  }
+  clear() {
+    if (this.#scripts.size === 0) return;
+    this.#scripts.clear();
+    this.#changed();
+  }
+  /** Replace everything with what `readScripts` returned. A bad entry throws and changes nothing. */
+  load(list) {
+    const next = new _ScriptState();
+    for (const s of list) next.set(s.id, s);
+    this.#scripts = next.#scripts;
+    this.#changed();
+  }
+};
+
 // src/model/ArrangementOps.js
 var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false });
 var TAPS = Object.freeze(["pre", "post"]);
@@ -23114,6 +23178,8 @@ var Project = class {
   #counters = { track: 0, node: 0, connection: 0, clip: 0, send: 0, marker: 0, region: 0, envelope: 0 };
   // Editor metadata, deliberately outside the state a revision covers.
   #editor = new EditorState();
+  // Scripts saved with the session: text, outside the revision for the same reason.
+  #scripts = new ScriptState();
   #label = null;
   get revision() {
     return this.#revision;
@@ -23183,6 +23249,10 @@ var Project = class {
   /** Editor metadata never bumps the revision. */
   get editor() {
     return this.#editor;
+  }
+  /** The scripts saved with this session. Text only, never run by opening a session, and not part of the revision. */
+  get scripts() {
+    return this.#scripts;
   }
   position(id) {
     return this.#editor.position(id);
@@ -26878,6 +26948,30 @@ function writeEditor(project, { iri: iri2 } = {}) {
   }
   return lines.join("\n") + "\n";
 }
+function writeScripts(project, { iri: iri2, savedAt = null } = {}) {
+  if (!iri2) throw new Error("writeScripts needs the project IRI");
+  const scripts = project.scripts.all;
+  if (scripts.length === 0) return null;
+  const lines = [
+    `@base <${iri2}> .`,
+    "",
+    `@prefix jig: <${JIG}> .`,
+    "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
+    "@prefix dcterms: <http://purl.org/dc/terms/> .",
+    "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .",
+    ""
+  ];
+  for (const s of scripts) {
+    const parts = [`a ${term2(jig3.Script)}`];
+    if (s.label) parts.push(`rdfs:label ${string(s.label)}`);
+    parts.push(`${term2(jig3.scriptLanguage)} ${term2(s.language)}`);
+    parts.push(`${term2(jig3.scriptSource)} ${string(s.source)}`);
+    const when = s.savedAt ?? savedAt;
+    if (when) parts.push(`dcterms:modified ${string(when)}^^xsd:dateTime`);
+    lines.push(`<#${s.id}> ${parts.join(" ;\n    ")} .`, "");
+  }
+  return lines.join("\n");
+}
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
@@ -27213,6 +27307,29 @@ function readEditor(dataset2, projectIri) {
   }
   return { positions, tracks };
 }
+function readScripts(dataset2, projectIri) {
+  const found = /* @__PURE__ */ new Map();
+  const at = (id) => found.get(id) ?? found.set(id, { id, label: null, language: null, source: null, savedAt: null }).get(id);
+  for (const quad3 of dataset2) {
+    const p = quad3.predicate.value;
+    if (p === jig4.scriptSource || p === jig4.scriptLanguage || p === vocabulary.rdfs.label || p === vocabulary.dcterms.modified) {
+      const script = at(idOf(quad3.subject.value, projectIri, "script"));
+      if (p === jig4.scriptSource) script.source = quad3.object.value;
+      else if (p === jig4.scriptLanguage) script.language = quad3.object.value;
+      else if (p === vocabulary.dcterms.modified) script.savedAt = quad3.object.value;
+      else script.label = quad3.object.value;
+    }
+  }
+  const scripts = [...found.values()];
+  for (const s of scripts) {
+    if (!s.source) throw new Error(`script ${s.id} has no source text`);
+    if (!s.language) throw new Error(`script ${s.id} states no language`);
+  }
+  return scripts.sort((a2, b) => a2.id < b.id ? -1 : a2.id > b.id ? 1 : 0);
+}
+
+// web/app/Sessions.js
+init_Vocabulary();
 
 // src/ops/OpenProject.js
 function inSignalOrder(nodes, connections) {
@@ -27434,11 +27551,13 @@ async function readZip(input) {
 // src/host/SessionArchive.js
 var SESSION_FILE = "session.ttl";
 var EDITOR_FILE = "editor.ttl";
+var SCRIPTS_FILE = "scripts.ttl";
 var encode = (text) => new TextEncoder().encode(text);
-function packSession({ turtle, editor = null, media = [] }) {
-  if (editor === null && media.length === 0) return { kind: "turtle", text: turtle };
+function packSession({ turtle, editor = null, scripts = null, media = [] }) {
+  if (editor === null && scripts === null && media.length === 0) return { kind: "turtle", text: turtle };
   const entries = [{ name: SESSION_FILE, bytes: encode(turtle) }];
   if (editor !== null) entries.push({ name: EDITOR_FILE, bytes: encode(editor) });
+  if (scripts !== null) entries.push({ name: SCRIPTS_FILE, bytes: encode(scripts) });
   entries.push(...media);
   return { kind: "zip", bytes: writeZip(entries) };
 }
@@ -27447,8 +27566,9 @@ function unpackSession(files) {
   if (!session) throw new Error(`the archive holds no ${SESSION_FILE}`);
   const decoder = new TextDecoder();
   const editor = files.get(EDITOR_FILE);
-  const media = new Map([...files].filter(([name]) => name !== SESSION_FILE && name !== EDITOR_FILE));
-  return { turtle: decoder.decode(session), editor: editor ? decoder.decode(editor) : null, media };
+  const scripts = files.get(SCRIPTS_FILE);
+  const media = new Map([...files].filter(([name]) => name !== SESSION_FILE && name !== EDITOR_FILE && name !== SCRIPTS_FILE));
+  return { turtle: decoder.decode(session), editor: editor ? decoder.decode(editor) : null, scripts: scripts ? decoder.decode(scripts) : null, media };
 }
 
 // web/app/Sessions.js
@@ -27461,14 +27581,14 @@ function createSessions(ctx2) {
     for (const [id, state] of states) {
       if (state !== null) dispatcher.apply([{ op: "setNodeState", node: id, state: encodeState(state) }]);
     }
-    const turtle = writeProject(dispatcher.project, {
-      iri: media.base,
-      created: (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d+Z$/, "Z")
-    });
+    const savedAt = (/* @__PURE__ */ new Date()).toISOString().replace(/\.\d+Z$/, "Z");
+    ctx2.script?.captureInto(dispatcher.project, savedAt);
+    const turtle = writeProject(dispatcher.project, { iri: media.base, created: savedAt });
     const held = media.heldUnderBase([...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))]);
     const packed = packSession({
       turtle,
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
+      scripts: writeScripts(dispatcher.project, { iri: media.base, savedAt }),
       media: held.map((iri2) => ({ name: iri2.slice(media.base.length), bytes: media.get(iri2).bytes }))
     });
     return {
@@ -27496,13 +27616,13 @@ function createSessions(ctx2) {
   }
   async function openBytes(bytes) {
     if (bytes[0] === 80 && bytes[1] === 75) {
-      const { turtle, editor, media } = unpackSession(await readZip(bytes));
-      await openSession(turtle, document2.baseURI, { files: media, editor });
+      const { turtle, editor, scripts, media } = unpackSession(await readZip(bytes));
+      await openSession(turtle, document2.baseURI, { files: media, editor, scripts });
     } else {
       await openSession(new TextDecoder().decode(bytes));
     }
   }
-  async function openSession(text, base = document2.baseURI, { files = /* @__PURE__ */ new Map(), editor = null } = {}) {
+  async function openSession(text, base = document2.baseURI, { files = /* @__PURE__ */ new Map(), editor = null, scripts = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const parsed = await parseText(text, base);
     let read;
@@ -27530,6 +27650,14 @@ function createSessions(ctx2) {
       d.project.loadEditor(editor === null ? { positions: /* @__PURE__ */ new Map(), tracks: /* @__PURE__ */ new Map() } : readEditor(await parseText(editor, read.iri), read.iri));
     } catch (error2) {
       log2(`editor layout ignored: ${error2.message}`, "error");
+    }
+    try {
+      d.project.scripts.load(scripts === null ? [] : readScripts(await parseText(scripts, read.iri), read.iri));
+      const saved = d.project.scripts.firstIn(vocabulary.jig.Reel);
+      if (saved) ctx2.script?.restore(saved);
+    } catch (error2) {
+      d.project.scripts.clear();
+      log2(`script ignored: ${error2.message}`, "error");
     }
     ctx2.transport.showTransport();
     ctx2.rack.draw();

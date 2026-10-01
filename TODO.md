@@ -9,13 +9,15 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 - [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
       decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built, tested and checked in
-      Chrome, 2026-10-01:** everything in `src/reel/`, `OpDispatcher.grouped`, `script_run`, and the **Script tab** with its
+      Chrome, 2026-10-01:** everything in `src/reel/`, `OpDispatcher.grouped`, `script_run`, saving a script in a session
+      (`scripts.ttl`, shown and never run on open; the browser check reached the simple page and not the final hop back into the
+      Script tab, so repeat that hop), and the **Script tab** with its
       wiring (the clock ticks beside the scheduler, `ReelClock` takes `since` so a script taking over at a bar line acts on that
-      bar line's downbeat, found in the browser). **Left:** (1) saving a script in a session, in its own named graph, never run on
-      open (vocabulary and `vocabs/shapes.ttl` first); (2) an offline render test that a ramp placed at a beat that is not a block
-      multiple starts in the block containing it; (3) a real screen reader pass over the tab, which only a person can do
-      (`HUMANS.md`); (4) the studio page redirects phones to the simple page, so the tab is not offered on a phone unless
-      `?studio` is used, and a decision whether the simple page should have one. **Known limits to decide:** a new plugin named by a
+      bar line's downbeat, found in the browser). **Left:** (1) repeat in Chrome the one hop not yet seen, a session carrying a script back into the studio's Script tab
+      (covered by `tests/web/Script.test.js`, and the browser tool refused to continue); (2) a real screen reader pass over the tab, which
+      only a person can do (`HUMANS.md`); (3) the studio page redirects phones to the simple page, so the tab is not offered on a phone
+      unless `?studio` is used, and a decision whether the simple page should have one. The timing of a ramp is held to the frame by
+      `tests/reel/RampTiming.test.js`. **Known limits to decide:** a new plugin named by a
       script is validated before the swap but instantiated at it, so a swap that adds one can stall the bar (preloading is the
       fix); a failure after the swap begins has already stopped the old script; a timed parameter set is accurate to the tick,
       and sample accuracy for one means giving `parameter_set` an `atFrame`; parse errors are reported before planning, so a

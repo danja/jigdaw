@@ -9,7 +9,7 @@
 import { ReelClock } from '../../src/reel/Clock.js'
 import { createReel } from '../../src/reel/Reel.js'
 import { createPluginValidator } from '../../src/reel/Host.js'
-import { createScriptPanel } from '../../src/ui/ScriptPanel.js'
+import { createScriptPanel, REEL_EXAMPLE } from '../../src/ui/ScriptPanel.js'
 
 export function createScript (ctx) {
   const { window, $, log } = ctx
@@ -126,6 +126,28 @@ export function createScript (ctx) {
     }
   }
 
+  /**
+   * Put what is in the tab into the session before it is saved, as text. The tab's own example, and nothing at
+   * all, is not a script worth saving, so a session that never had one is not given one.
+   */
+  function captureInto (project, savedAt) {
+    const text = panel.source()
+    if (text.trim() === '' || text === REEL_EXAMPLE) { project.scripts.remove('script'); return }
+    project.scripts.set('script', { source: text, label: 'Script', savedAt })
+  }
+
+  /**
+   * A script came with a session being opened. It goes in the tab and is not run: opening a session must
+   * do nothing a person did not ask for, and Run checks the script in full before it does anything.
+   */
+  function restore (script) {
+    panel.setSource(script.source)
+    panel.problems(null)
+    panel.plan(null)
+    panel.status('A script was saved with this session. It has not been run. Check it, then run it.')
+    panel.log('opened a script saved with the session; it has not been run')
+  }
+
   function stop () {
     reel?.stop()
     panel.running(false)
@@ -133,5 +155,5 @@ export function createScript (ctx) {
     panel.log('stopped')
   }
 
-  return { panel, attach, agentReel, clockStart, clockTick, clockStop, stop }
+  return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop }
 }
