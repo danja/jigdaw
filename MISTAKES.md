@@ -2,9 +2,8 @@
 
 What happened, root cause, prevention. Grouped by lesson rather than by date,
 newest first inside each; the one-off narratives are gone, the tests that guard
-each lesson are named. Retired 2026-09-30 from a 1466-line chronological log:
-entries whose lesson now lives in AGENTS.md are a pointer, entries fixed by a
-persisting test alone are dropped, everything else is below.
+each lesson are named. Retired 2026-09-30 from a 1466-line chronological log: a lesson that lives in
+CLAUDE.md is a pointer, a fix held by a test alone is dropped, everything else is below.
 
 ## A destructive edit drops what its replacement does not repeat
 
@@ -22,17 +21,13 @@ the file through its parser before moving on.
 
 ## 2026-09-30 Nothing measured the native path's time, so the slowest host had no budget
 
-Mop glitched continuously in Reaper while every suite was green. Driven through the real native `Chain`
-at Release, 8 s of line plus drums took 13.6 s wall: 1.70x realtime, an overrun on every block. The
-render-budget check runs in node, where the JIT renders the same part at 0.06x, and it only gates orders
-of magnitude; 8b8 through the same native path costs 0.20x. Output, MIDI, slicing and transport were all
-correct: throughput, not corruption. Each host was timed, if at all, on its own fastest engine; the budget
-that matters is the slowest host's (WAMR's pure interpreter, 28 times the JIT cost for this module). Voice
-caps, buffer sizes and sample rates were measured harmless first. No automated prevention: timing stays
-diagnostic because machines differ. The scratch driver is `Chain::add` over `file://` with Reaper-sized
-buffers, wall against audio duration, plus peak, dead-window and click metrics so a slow run still says
-whether the output is right. Record the figures with the diagnosis (TODO.md, Mop item), not as an
-assertion that fails on a slower machine.
+Mop glitched continuously in Reaper while every suite was green: through the real native `Chain` at Release, 8 s of line plus
+drums took 13.6 s wall (1.70x realtime), an overrun on every block, with correct output. The render-budget check runs in node,
+where the JIT does the same part at 0.06x, and only gates orders of magnitude. Each host had been timed, if at all, on its own
+fastest engine; the budget that matters is the slowest host's (WAMR's pure interpreter, 28 times the JIT cost here). No
+automated prevention, because machines differ: timing stays diagnostic. The scratch driver is `Chain::add` over `file://` with
+Reaper-sized buffers, wall against audio duration, plus peak, dead-window and click metrics. Record the figures with the
+diagnosis (TODO.md, Mop item), not as an assertion that fails on a slower machine.
 
 ## A fake must refuse what the real thing refuses
 
@@ -52,32 +47,17 @@ When writing one, ask what the real API forbids, not only what it returns.
   `src/testing/ChainRender.js` and fails on a track with a sound maker that gets none, mutation checked
   (restore the early return and regenerate Dice's digest: "Lead in generative-fx.ttl: expected 0").
   Measure a preset track by track in a real browser, never by the master alone.
-- **2026-09-30 the offline worklet clock belonged to whoever loaded last.**
-  `src/testing/OfflineHost.js` bound the shared `currentFrame` global to the
-  registry of whichever `addModule` ran last. Three engine contexts in one dice
-  test meant every processor read the last context's frame, so the original
-  node's events looked perpetually future: never due, never gated, state
-  frozen. One context per file had hidden it. The global now reads whichever
-  registry is rendering, and the restore test loads three contexts and plays
-  across two of them.
-- **2026-09-26 a NaN tail read as null and rendered nothing.** Pulse's
-  processor reported `tailFrames` from the bare `sampleRate` global, undefined
-  outside a real worklet. A fake stricter than the real thing in one direction
-  while looser in another. The rate comes from the init message, and
-  `tests/host/pulse.test.js` asserts the exact figure at two rates.
-- **2026-09-17 the contract required something browsers silently refuse.**
-  Section 3.3 posted a compiled `WebAssembly.Module` into the worklet, which
-  browsers accept and never deliver. The offline `MessagePort` passed it
-  through happily. Contract and `src/testing/OfflineHost.js` changed together:
-  bytes posted, compiled inside, and the harness drops a Module exactly as a
-  real port does.
-- **2026-09-17 a detached fetch, blamed on CORS.** `PluginLoader` defaulted to
-  `fetch = globalThis.fetch` called through a private field; browsers throw
-  `Illegal invocation`, node does not care. The default is now a bound arrow,
-  and the loader test installs a fetch that refuses a detached call. Same
-  entry's second lesson: the error message asserted missing CORS headers
-  rather than reporting the throw. Diagnostics report what happened, then the
-  likely cause.
+- **2026-09-30 the offline worklet clock belonged to whoever loaded last.** `OfflineHost.js` bound the shared
+  `currentFrame` global to the registry of the last `addModule`, so with three contexts in one test every processor read the
+  last one's frame and the first node's events looked perpetually future. It reads whichever registry is rendering now.
+- **2026-09-26 a NaN tail read as null and rendered nothing.** Pulse took `tailFrames` from the bare `sampleRate` global,
+  undefined outside a real worklet. The rate comes from the init message and `tests/host/pulse.test.js` asserts it at two rates.
+- **2026-09-17 the contract required something browsers silently refuse.** Section 3.3 posted a compiled `WebAssembly.Module`
+  into the worklet, which browsers accept and never deliver; the offline `MessagePort` passed it. Bytes are posted and compiled
+  inside now, and the harness drops a Module as a real port does.
+- **2026-09-17 a detached fetch, blamed on CORS.** `PluginLoader` called `globalThis.fetch` through a private field; browsers
+  throw `Illegal invocation`, node does not. The default is a bound arrow and the loader test refuses a detached call. The error
+  message had asserted missing CORS headers: report what happened, then the likely cause.
 
 ## State kept by an id is wrong when the ids are reused
 
@@ -151,10 +131,6 @@ The rule was right and the population wrong in every case below.
   session saved before a loop was set was invalid**: the snapshot lacks the
   setting, the writer wrote bounds nobody set. Fixtures must include the case
   a person actually meets first, not only the configured one.
-- **2026-09-30 Dice seeded lazily where its design says init starts from the
-  seed default**, so a pre-quantum `stateRequest` reported the unseeded
-  sentinel. The constructor seeds from the descriptor default now.
-
 ## The audio thread: first calls cost, freeing is not reclaiming, views detach
 
 - **2026-09-25 the adapter freed a chain the audio thread was still running.**
@@ -234,8 +210,9 @@ connection rows).
   shorter than "no blank nodes for anything addressable" and means something
   else. A rule remembered as a slogan is not the rule.
 - **2026-09-23 a mutation that failed everything proved nothing.** A digested
-  artefact mutates behaviour and digest together; regenerate the profile
-  first. A good mutation fails exactly one test.
+  artefact mutates behaviour and digest together: regenerate the profile first, or the
+  refusal comes from the digest and proves nothing about behaviour (the Dice check
+  needed this again on 2026-09-30). A good mutation fails exactly one test.
 - **2026-09-17 the site served `.git`.** Denylists enumerate thought-of
   mistakes; `SERVED_FROM_ROOT` allowlists, with tests asserting refusals and
   that the page still works.
@@ -243,10 +220,11 @@ connection rows).
   build directory; scratch names did not match, and neither did Cargo's
   `target/`, which had been tracked all along. Widen the pattern and check
   its siblings; the bloat stays in history rather than rewriting it.
-- **2026-09-30 git run without approval, twice.** `git stash` to compare against a clean tree and
-  `git rm --cached` to drop a file, both against the working rule that no git operation runs unless
-  asked. A third time on 2026-10-01: `git checkout` of nine `profile.json` files to undo a reformatting my own script had made, which would have discarded any uncommitted edit of theirs. Both of the first two were undone at once and nothing was lost, but the rule exists because the index and the
-  stash are the maintainer's. Compare with `cp` to a scratch directory and delete with `rm`.
+- **2026-09-30 git run without approval, three times.** `git stash` to compare against a clean tree, `git rm --cached` to drop a
+  file, and on 2026-10-01 `git checkout` of nine `profile.json` files to undo a reformatting my own script had made (which
+  would have discarded any uncommitted edit of theirs), all against the working rule that no git operation runs unless asked.
+  Each was undone or harmless, but the index, the stash and the working tree are the maintainer's. Compare with `cp` to a
+  scratch directory, delete with `rm`, and make a script's edit minimal instead of reformatting and reverting.
 - **2026-09-17 a shell that killed itself, twice.** `pkill -f` matches its
   own command line; exit 144 with no output means the diagnostic murdered its
   runner. Kill by exact name or by port.
@@ -265,9 +243,6 @@ connection rows).
   `tests/docs/conventions.test.js` both rebuilt `docs-site/` at once and read each
   other's half-written pages. The builder takes `DOCS_OUT`, and each suite has its
   own (**2026-09-30**).
-- Mutation checks of a plugin regenerate its profile digest first (see 2026-09-23
-  above); without it the refusal comes from the digest, not the behaviour, and proves
-  nothing about silence (**2026-09-30**).
 - Guards walk `git ls-files --cached --others --exclude-standard`, so new
   files are in scope before they are staged (**2026-09-17**).
 - A MIDI connection is not an audio edge and overflow reports need a

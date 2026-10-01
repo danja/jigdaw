@@ -66,6 +66,7 @@ const GROUP_OF = {
   'for-plugin-authors': 'Guides',
   'for-juce-developers': 'Guides',
   testbed: 'Guides',
+  'jiggy-features': 'Guides',
   plan: 'Background',
   'first-thoughts': 'Background',
   'local-references': 'Background',

@@ -7,28 +7,27 @@ Ordered by what blocks most.
 
 ## 1. Listen, and use it with real hands
 
-Everything below was checked by code or by reading a meter, never by ear or by a real finger. `npm run
-serve`, open `http://127.0.0.1:8748/`, keep the browser window in front (a hidden tab gets no user
-activation and audio hangs), and note what is wrong in INBOX.md.
+Everything below was checked by code or by reading a meter, never by ear or by a real finger. `npm run serve`, open
+`http://127.0.0.1:8748/`, keep the browser window in front (a hidden tab gets no user activation and audio hangs), and note what
+is wrong in INBOX.md.
 
-- **Listen to the presets.** All six bundled presets, and say which sound bad. In particular "Generative,
-  through effects" (its lead line was silent until 2026-09-30 and has not been heard), "Amp into a room" and
-  "Fender into the Ropery" (their levels were set by a meter), and Chiptune's Lead track, which measures much
-  quieter than the rest.
-- **Use the clip keys and buttons.** Select a clip and try S, D, M, L, [, ], Ctrl+C, Ctrl+X and Ctrl+V with real
-  keys, then the icon buttons above the lanes. Every check so far dispatched key events. Listen to a muted clip
-  (silent?), a fade in and a fade out on an audio clip, and a split at a playing position.
-- **Record your voice on the simple page** (`/simple.html`, "Record my voice") with a real microphone. The
-  browser's permission prompt, the device it picks and how the take sounds are all untried; the check used a
-  stand-in stream.
-- **Install the app on a phone** and open it. It should start on the simple page, play offline once loaded,
-  and not scroll sideways. Try the clip button bar at phone width in the studio page too. None of it has been
-  on a real phone.
-- **Older checks still owed:** press Rec with the window in front, play, Stop, remove every plugin and play the
-  takes; move Lookahead's Position while a parallel dry path plays beside it and listen for the realignment;
-  real key presses in the piano roll; and a real pointer through a plugin's own editor frame (load
-  `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on the page's own
-  origin is refused).
+- **Listen to the presets.** All six, and say which sound bad. In particular "Generative, through effects" (its lead line was
+  silent until 2026-09-30 and has not been heard), "Amp into a room" and "Fender into the Ropery" (levels set by a meter), and
+  Chiptune's Lead track, which measures much quieter than the rest.
+- **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
+  position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track
+  against the live one, and an exported WAV and a stems zip opened in another program.
+- **Use the keys and buttons with real hands:** the clip keys (S, D, M, L, [, ], Ctrl+C, X, V), the chain strip's Alt with Left or
+  Right, the automation points (arrows, C, Delete), and the icon buttons, with real key presses and not dispatched events.
+- **Record your voice on the simple page** with a real microphone: the browser's permission prompt, the device it picks and how
+  the take sounds are untried; the check used a stand-in stream.
+- **Use it on a real phone:** install the app, check it starts on the simple page, plays offline once loaded, does not scroll
+  sideways, opens "Change the sound" as its own screen, carries a piece to the studio and back, and that the clip button bar is
+  usable at that width.
+- **Older checks still owed:** press Rec with the window in front, play, Stop, remove every plugin and play the takes; move
+  Lookahead's Position while a parallel dry path plays beside it and listen for the realignment; and a real pointer through a
+  plugin's own editor frame (load `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on the
+  page's own origin is refused).
 
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 

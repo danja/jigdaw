@@ -28,6 +28,8 @@ curl -H 'Accept: text/turtle' https://strandz.it/jigdaw/plugins/cascade/
 - **[for-juce-developers.md](for-juce-developers.md)**: you already have a JUCE plugin and
   want it loadable by IRI too. What has to be ported by hand, and what is generated from your
   existing parameter layout instead.
+- **[jiggy-features.md](jiggy-features.md)**: what Jiggy, the browser host, does now: playing, the track view,
+  routing, automation, rendering, sessions, the simple page and the agent tools.
 - **[testbed.md](testbed.md)**: you want a worked example of a clause. Every host, plugin and
   tool in this repository, what it is, which parts of the specification it exercises, and
   which parts nothing exercises yet.

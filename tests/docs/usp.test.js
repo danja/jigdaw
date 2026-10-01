@@ -1,16 +1,16 @@
 // tests/docs/usp.test.js
 //
-// docs/usp.md states three figures about the system. A sentence about the
-// system is a claim, and nothing tests sentences, so these bind the figures to
+// docs/usp.md and docs/jiggy-features.md state three figures about the system. A sentence
+// about the system is a claim, and nothing tests sentences, so these bind the figures to
 // what is counted here.
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
-const usp = readFileSync(join(root, 'docs/usp.md'), 'utf8')
+const documents = ['docs/usp.md', 'docs/jiggy-features.md'].map(path => [path, readFileSync(join(root, path), 'utf8')])
 
-describe('docs/usp.md', () => {
+describe.each(documents)('%s', (path, usp) => {
   it('states the number of plugins in the tree', () => {
     // A plugin is a directory of plugins/ holding a profile; _jsfx-runtime is a
     // shared runtime and index.json a file.
