@@ -717,3 +717,51 @@ describe('history and parameter reset', () => {
     expect(reset.ok).toBe(false)
   })
 })
+
+describe('script_run', () => {
+  const fakeReel = over => ({
+    check: async () => ({ ok: true, plan: { seed: 1 } }),
+    run: async () => ({ ok: true, swapped: 'now' }),
+    describe: plan => ({ described: plan.seed }),
+    ...over
+  })
+  const callWith = (reel, input) => createTools({ dispatcher, reel }).find(t => t.name === 'script_run').handler(input)
+
+  it('says so when the host has no scripting, rather than being absent', async () => {
+    expect(await callWith(null, { source: 'x' })).toMatchObject({ ok: false, error: 'this host has no scripting' })
+  })
+
+  it('needs the script as a string', async () => {
+    expect((await callWith(fakeReel(), {})).ok).toBe(false)
+    expect((await callWith(fakeReel(), { source: 3 })).ok).toBe(false)
+  })
+
+  it('returns the plan as data for a dry run, and does not run it', async () => {
+    let ran = false
+    const r = await callWith(fakeReel({ run: async () => { ran = true; return { ok: true } } }), { source: 'x', dryRun: true })
+    expect(r).toEqual({ ok: true, plan: { described: 1 } })
+    expect(ran).toBe(false)
+  })
+
+  it('runs the script and says when it took over', async () => {
+    let received
+    const r = await callWith(fakeReel({ run: async (source, options) => { received = { source, options }; return { ok: true, swapped: 'at-bar' } } }), { source: 'a.b = 1', now: true })
+    expect(r).toEqual({ ok: true, swapped: 'at-bar' })
+    expect(received).toEqual({ source: 'a.b = 1', options: { now: true } })
+  })
+
+  it('returns a script\'s errors with their lines, and says nothing was changed', async () => {
+    const errors = [{ line: 2, column: 1, message: 'no plugin called "x"' }]
+    const r = await callWith(fakeReel({ run: async () => ({ ok: false, stage: 'plan', errors }) }), { source: 'x.a = 1' })
+    expect(r).toMatchObject({ ok: false, stage: 'plan', errors })
+    expect(r.error).toMatch(/nothing was changed/)
+    const dry = await callWith(fakeReel({ check: async () => ({ ok: false, stage: 'parse', errors }) }), { source: 'x', dryRun: true })
+    expect(dry).toMatchObject({ ok: false, stage: 'parse', errors })
+  })
+
+  it('reports a run that went through with errors as failed, keeping them', async () => {
+    const errors = [{ line: 3, message: 'offline' }]
+    const r = await callWith(fakeReel({ run: async () => ({ ok: false, errors, swapped: 'now' }) }), { source: 'x' })
+    expect(r).toMatchObject({ ok: false, swapped: 'now', errors })
+  })
+})

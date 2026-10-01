@@ -36,6 +36,7 @@ import { createMidiIn } from './app/MidiIn.js'
 import { createAlign } from './app/Align.js'
 import { createMaster } from './app/Master.js'
 import { createPwa } from './app/Pwa.js'
+import { createScript } from './app/Script.js'
 
 const $ = id => document.getElementById(id)
 
@@ -88,6 +89,7 @@ ctx.agent = createAgent(ctx)
 ctx.bridge = createBridgeLink(ctx)
 ctx.layout = createLayout(ctx)
 ctx.midiIn = createMidiIn(ctx)
+ctx.script = createScript(ctx)
 
 const { loading, browser, transport } = ctx
 
@@ -161,7 +163,8 @@ ctx.tabs = createTabs(document, [
   { id: 'arrangement', label: 'Arrangement', panel: $('arrangement-panel') },
   { id: 'tracks', label: 'Plugins', panel: $('tracks-panel') },
   { id: 'routing', label: 'Routing', panel: $('routing-panel') },
-  { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') }
+  { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') },
+  { id: 'script', label: 'Script', panel: $('script-panel') }
 ])
 $('tabs-mount').append(ctx.tabs.element)
 

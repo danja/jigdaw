@@ -185,9 +185,14 @@ clips play into, and refuses one that is not on that track.
 | `parameter_reset` | `node`, `symbol` | `value`, the default now held |
 | `history_undo` | | `revision`, `canUndo`, `canRedo` |
 | `history_redo` | | `revision`, `canUndo`, `canRedo` |
+| `script_run` | `source`, `dryRun?`, `now?` | `swapped`, or the `plan` for a dry run, or the `errors` with their lines |
 | `transport_play` | | |
 | `transport_stop` | | |
 | `transport_configure` | `tempo?`, `timeSignature?`, `loop?`, `position?` | |
+
+`script_run` runs a Reel script, [livecoding.md](livecoding.md). It is the same operations the other tools
+perform, checked as a whole first: a script with an error changes nothing and the errors come back with their line
+numbers, and `dryRun` returns what the script would do without doing it.
 
 Parameters are addressed by `lv2:symbol`, never by index. An index is a property of a
 build; a symbol is a property of the plugin, and contract section 5.1 requires it to be

@@ -19,9 +19,9 @@ var __commonJS = (cb, mod) => function __require() {
     throw mod = 0, e;
   }
 };
-var __export = (target, all) => {
+var __export = (target2, all) => {
   for (var name2 in all)
-    __defProp(target, name2, { get: all[name2], enumerable: true });
+    __defProp(target2, name2, { get: all[name2], enumerable: true });
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -31,12 +31,12 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+var __toESM = (mod, isNodeMode, target2) => (target2 = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
   // If the importer is in node compatibility mode or this is not an ESM
   // file that has been converted to a CommonJS file using a Babel-
   // compatible transform (i.e. "__esModule" has not been set), then set
   // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target2, "default", { value: mod, enumerable: true }) : target2,
   mod
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
@@ -78,14 +78,14 @@ var init_Environment = __esm({
 // node_modules/@zazuko/env-core/lib/extend.js
 function extend({ parent, child }) {
   const proxy = new Proxy({}, {
-    get(target, prop) {
+    get(target2, prop) {
       return child[prop] || parent[prop];
     },
-    set(target, prop, value2) {
+    set(target2, prop, value2) {
       child[prop] = value2;
       return true;
     },
-    has(target, prop) {
+    has(target2, prop) {
       return prop in child || prop in parent;
     },
     ownKeys() {
@@ -93,7 +93,7 @@ function extend({ parent, child }) {
       const childKeys = Object.getOwnPropertyNames(child);
       return [...(/* @__PURE__ */ new Set([...parentKeys, ...childKeys])).values()];
     },
-    getOwnPropertyDescriptor(target, prop) {
+    getOwnPropertyDescriptor(target2, prop) {
       return {
         enumerable: !prop.toString().startsWith("_"),
         configurable: true
@@ -790,20 +790,20 @@ var require_buffer = __commonJS({
     if (customInspectSymbol) {
       Buffer3.prototype[customInspectSymbol] = Buffer3.prototype.inspect;
     }
-    Buffer3.prototype.compare = function compare(target, start, end, thisStart, thisEnd) {
-      if (isInstance(target, Uint8Array)) {
-        target = Buffer3.from(target, target.offset, target.byteLength);
+    Buffer3.prototype.compare = function compare(target2, start, end, thisStart, thisEnd) {
+      if (isInstance(target2, Uint8Array)) {
+        target2 = Buffer3.from(target2, target2.offset, target2.byteLength);
       }
-      if (!Buffer3.isBuffer(target)) {
+      if (!Buffer3.isBuffer(target2)) {
         throw new TypeError(
-          'The "target" argument must be one of type Buffer or Uint8Array. Received type ' + typeof target
+          'The "target" argument must be one of type Buffer or Uint8Array. Received type ' + typeof target2
         );
       }
       if (start === void 0) {
         start = 0;
       }
       if (end === void 0) {
-        end = target ? target.length : 0;
+        end = target2 ? target2.length : 0;
       }
       if (thisStart === void 0) {
         thisStart = 0;
@@ -811,7 +811,7 @@ var require_buffer = __commonJS({
       if (thisEnd === void 0) {
         thisEnd = this.length;
       }
-      if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+      if (start < 0 || end > target2.length || thisStart < 0 || thisEnd > this.length) {
         throw new RangeError("out of range index");
       }
       if (thisStart >= thisEnd && start >= end) {
@@ -827,12 +827,12 @@ var require_buffer = __commonJS({
       end >>>= 0;
       thisStart >>>= 0;
       thisEnd >>>= 0;
-      if (this === target) return 0;
+      if (this === target2) return 0;
       let x = thisEnd - thisStart;
       let y = end - start;
       const len = Math.min(x, y);
       const thisCopy = this.slice(thisStart, thisEnd);
-      const targetCopy = target.slice(start, end);
+      const targetCopy = target2.slice(start, end);
       for (let i2 = 0; i2 < len; ++i2) {
         if (thisCopy[i2] !== targetCopy[i2]) {
           x = thisCopy[i2];
@@ -1606,30 +1606,30 @@ var require_buffer = __commonJS({
     Buffer3.prototype.writeDoubleBE = function writeDoubleBE(value2, offset, noAssert) {
       return writeDouble(this, value2, offset, false, noAssert);
     };
-    Buffer3.prototype.copy = function copy(target, targetStart, start, end) {
-      if (!Buffer3.isBuffer(target)) throw new TypeError("argument should be a Buffer");
+    Buffer3.prototype.copy = function copy(target2, targetStart, start, end) {
+      if (!Buffer3.isBuffer(target2)) throw new TypeError("argument should be a Buffer");
       if (!start) start = 0;
       if (!end && end !== 0) end = this.length;
-      if (targetStart >= target.length) targetStart = target.length;
+      if (targetStart >= target2.length) targetStart = target2.length;
       if (!targetStart) targetStart = 0;
       if (end > 0 && end < start) end = start;
       if (end === start) return 0;
-      if (target.length === 0 || this.length === 0) return 0;
+      if (target2.length === 0 || this.length === 0) return 0;
       if (targetStart < 0) {
         throw new RangeError("targetStart out of bounds");
       }
       if (start < 0 || start >= this.length) throw new RangeError("Index out of range");
       if (end < 0) throw new RangeError("sourceEnd out of bounds");
       if (end > this.length) end = this.length;
-      if (target.length - targetStart < end - start) {
-        end = target.length - targetStart + start;
+      if (target2.length - targetStart < end - start) {
+        end = target2.length - targetStart + start;
       }
       const len = end - start;
-      if (this === target && typeof Uint8Array.prototype.copyWithin === "function") {
+      if (this === target2 && typeof Uint8Array.prototype.copyWithin === "function") {
         this.copyWithin(targetStart, start, end);
       } else {
         Uint8Array.prototype.set.call(
-          target,
+          target2,
           this.subarray(start, end),
           targetStart
         );
@@ -2004,8 +2004,8 @@ var require_primordials = __commonJS({
       ObjectKeys(obj) {
         return Object.keys(obj);
       },
-      ObjectSetPrototypeOf(target, proto) {
-        return Object.setPrototypeOf(target, proto);
+      ObjectSetPrototypeOf(target2, proto) {
+        return Object.setPrototypeOf(target2, proto);
       },
       Promise,
       PromisePrototypeCatch(self2, fn) {
@@ -2442,19 +2442,19 @@ var require_events = __commonJS({
   "node_modules/events/events.js"(exports, module) {
     "use strict";
     var R = typeof Reflect === "object" ? Reflect : null;
-    var ReflectApply = R && typeof R.apply === "function" ? R.apply : function ReflectApply2(target, receiver, args) {
-      return Function.prototype.apply.call(target, receiver, args);
+    var ReflectApply = R && typeof R.apply === "function" ? R.apply : function ReflectApply2(target2, receiver, args) {
+      return Function.prototype.apply.call(target2, receiver, args);
     };
     var ReflectOwnKeys;
     if (R && typeof R.ownKeys === "function") {
       ReflectOwnKeys = R.ownKeys;
     } else if (Object.getOwnPropertySymbols) {
-      ReflectOwnKeys = function ReflectOwnKeys2(target) {
-        return Object.getOwnPropertyNames(target).concat(Object.getOwnPropertySymbols(target));
+      ReflectOwnKeys = function ReflectOwnKeys2(target2) {
+        return Object.getOwnPropertyNames(target2).concat(Object.getOwnPropertySymbols(target2));
       };
     } else {
-      ReflectOwnKeys = function ReflectOwnKeys2(target) {
-        return Object.getOwnPropertyNames(target);
+      ReflectOwnKeys = function ReflectOwnKeys2(target2) {
+        return Object.getOwnPropertyNames(target2);
       };
     }
     function ProcessEmitWarning(warning) {
@@ -2545,29 +2545,29 @@ var require_events = __commonJS({
       }
       return true;
     };
-    function _addListener(target, type, listener, prepend) {
+    function _addListener(target2, type, listener, prepend) {
       var m;
       var events;
       var existing;
       checkListener(listener);
-      events = target._events;
+      events = target2._events;
       if (events === void 0) {
-        events = target._events = /* @__PURE__ */ Object.create(null);
-        target._eventsCount = 0;
+        events = target2._events = /* @__PURE__ */ Object.create(null);
+        target2._eventsCount = 0;
       } else {
         if (events.newListener !== void 0) {
-          target.emit(
+          target2.emit(
             "newListener",
             type,
             listener.listener ? listener.listener : listener
           );
-          events = target._events;
+          events = target2._events;
         }
         existing = events[type];
       }
       if (existing === void 0) {
         existing = events[type] = listener;
-        ++target._eventsCount;
+        ++target2._eventsCount;
       } else {
         if (typeof existing === "function") {
           existing = events[type] = prepend ? [listener, existing] : [existing, listener];
@@ -2576,18 +2576,18 @@ var require_events = __commonJS({
         } else {
           existing.push(listener);
         }
-        m = _getMaxListeners(target);
+        m = _getMaxListeners(target2);
         if (m > 0 && existing.length > m && !existing.warned) {
           existing.warned = true;
           var w = new Error("Possible EventEmitter memory leak detected. " + existing.length + " " + String(type) + " listeners added. Use emitter.setMaxListeners() to increase limit");
           w.name = "MaxListenersExceededWarning";
-          w.emitter = target;
+          w.emitter = target2;
           w.type = type;
           w.count = existing.length;
           ProcessEmitWarning(w);
         }
       }
-      return target;
+      return target2;
     }
     EventEmitter.prototype.addListener = function addListener(type, listener) {
       return _addListener(this, type, listener, false);
@@ -2605,8 +2605,8 @@ var require_events = __commonJS({
         return this.listener.apply(this.target, arguments);
       }
     }
-    function _onceWrap(target, type, listener) {
-      var state = { fired: false, wrapFn: void 0, target, type, listener };
+    function _onceWrap(target2, type, listener) {
+      var state = { fired: false, wrapFn: void 0, target: target2, type, listener };
       var wrapped = onceWrapper.bind(state);
       wrapped.listener = listener;
       state.wrapFn = wrapped;
@@ -2623,7 +2623,7 @@ var require_events = __commonJS({
       return this;
     };
     EventEmitter.prototype.removeListener = function removeListener(type, listener) {
-      var list, events, position, i2, originalListener;
+      var list, events, position2, i2, originalListener;
       checkListener(listener);
       events = this._events;
       if (events === void 0)
@@ -2640,20 +2640,20 @@ var require_events = __commonJS({
             this.emit("removeListener", type, list.listener || listener);
         }
       } else if (typeof list !== "function") {
-        position = -1;
+        position2 = -1;
         for (i2 = list.length - 1; i2 >= 0; i2--) {
           if (list[i2] === listener || list[i2].listener === listener) {
             originalListener = list[i2].listener;
-            position = i2;
+            position2 = i2;
             break;
           }
         }
-        if (position < 0)
+        if (position2 < 0)
           return this;
-        if (position === 0)
+        if (position2 === 0)
           list.shift();
         else {
-          spliceOne(list, position);
+          spliceOne(list, position2);
         }
         if (list.length === 1)
           events[type] = list[0];
@@ -2703,8 +2703,8 @@ var require_events = __commonJS({
       }
       return this;
     };
-    function _listeners(target, type, unwrap) {
-      var events = target._events;
+    function _listeners(target2, type, unwrap) {
+      var events = target2._events;
       if (events === void 0)
         return [];
       var evlistener = events[type];
@@ -7931,24 +7931,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number2) {
-      number2 = Number2(number2);
-      if (NumberIsNaN(number2)) {
+    function toIntegerOrInfinity(number3) {
+      number3 = Number2(number3);
+      if (NumberIsNaN(number3)) {
         return 0;
       }
-      if (number2 < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number2);
+      if (number3 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number3);
       }
-      return number2;
+      return number3;
     }
-    function drop(number2, options = void 0) {
+    function drop(number3, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number2 = toIntegerOrInfinity(number2);
+      number3 = toIntegerOrInfinity(number3);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7959,20 +7959,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number2-- <= 0) {
+          if (number3-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number2, options = void 0) {
+    function take2(number3, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number2 = toIntegerOrInfinity(number2);
+      number3 = toIntegerOrInfinity(number3);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7983,10 +7983,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number2-- > 0) {
+          if (number3-- > 0) {
             yield val;
           }
-          if (number2 <= 0) {
+          if (number3 <= 0) {
             return;
           }
         }
@@ -8619,12 +8619,12 @@ var require_NQuads = __commonJS({
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
       const datatype = "(?:\\^\\^" + iri3 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
-      const literal4 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
+      const literal5 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
       const subject = "(?:" + iri3 + "|" + bnode + ")" + ws;
       const property = iri3 + ws;
-      const object = "(?:" + iri3 + "|" + bnode + "|" + literal4 + ")" + wso;
+      const object = "(?:" + iri3 + "|" + bnode + "|" + literal5 + ")" + wso;
       const graphName = "(?:\\.|(?:(?:" + iri3 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
@@ -8705,8 +8705,8 @@ var require_NQuads = __commonJS({
           } else {
             let unique = true;
             const quads = graphs[quad3.graph.value];
-            for (const q of quads) {
-              if (_compareTriples(q, quad3)) {
+            for (const q2 of quads) {
+              if (_compareTriples(q2, quad3)) {
                 unique = false;
                 break;
               }
@@ -9029,7 +9029,7 @@ var require_URDNA2015Sync = __commonJS({
         return info.hash;
       }
       // 4.7) Hash Related Blank Node
-      hashRelatedBlankNode(related, quad3, issuer, position) {
+      hashRelatedBlankNode(related, quad3, issuer, position2) {
         let id;
         if (this.canonicalIssuer.hasId(related)) {
           id = this.canonicalIssuer.getId(related);
@@ -9039,8 +9039,8 @@ var require_URDNA2015Sync = __commonJS({
           id = this.blankNodeInfo.get(related).hash;
         }
         const md = this.createMessageDigest();
-        md.update(position);
-        if (position !== "g") {
+        md.update(position2);
+        if (position2 !== "g") {
           md.update(this.getRelatedPredicate(quad3));
         }
         md.update(id);
@@ -9176,12 +9176,12 @@ var require_URDNA2015Sync = __commonJS({
           this.blankNodeInfo.set(id, { quads: /* @__PURE__ */ new Set([quad3]), hash: null });
         }
       }
-      _addRelatedBlankNodeHash({ quad: quad3, component, position, id, issuer, hashToRelated }) {
+      _addRelatedBlankNodeHash({ quad: quad3, component, position: position2, id, issuer, hashToRelated }) {
         if (!(component.termType === "BlankNode" && component.value !== id)) {
           return;
         }
         const related = component.value;
-        const hash = this.hashRelatedBlankNode(related, quad3, issuer, position);
+        const hash = this.hashRelatedBlankNode(related, quad3, issuer, position2);
         const entries = hashToRelated.get(hash);
         if (entries) {
           entries.push(related);
@@ -10182,7 +10182,7 @@ var init_data_model = __esm({
 
 // node_modules/@rdfjs/namespace/index.js
 function namespace(baseIRI, { factory: factory3 = data_model_default } = {}) {
-  const builder111 = (term3 = "") => factory3.namedNode(`${baseIRI}${term3.raw || term3}`);
+  const builder111 = (term4 = "") => factory3.namedNode(`${baseIRI}${term4.raw || term4}`);
   return typeof Proxy === "undefined" ? builder111 : new Proxy(builder111, handler);
 }
 var handler, namespace_default;
@@ -10190,8 +10190,8 @@ var init_namespace = __esm({
   "node_modules/@rdfjs/namespace/index.js"() {
     init_data_model();
     handler = {
-      apply: (target, thisArg, args) => target(args[0]),
-      get: (target, property) => target(property)
+      apply: (target2, thisArg, args) => target2(args[0]),
+      get: (target2, property) => target2(property)
     };
     namespace_default = namespace;
   }
@@ -11664,11 +11664,11 @@ function literal(value2, languageOrDatatype, factory3) {
     }
     return factory3.literal(value2.toString(), languageOrDatatype);
   }
-  const term3 = toLiteral(value2, factory3);
-  if (!term3) {
+  const term4 = toLiteral(value2, factory3);
+  if (!term4) {
     throw new Error("The value cannot be converted to a literal node");
   }
-  return term3;
+  return term4;
 }
 function namedNode(value2, factory3) {
   if (typeof value2 !== "string") {
@@ -11906,16 +11906,16 @@ var init_Clownface = __esm({
     init_toTermArray();
     init_Context();
     Clownface = class _Clownface {
-      constructor({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3, _context }) {
+      constructor({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3, _context }) {
         this.factory = factory3;
         this.namespace = namespace_default2(factory3);
         if (_context) {
           this._context = _context;
           return;
         }
-        const terms = term3 && toArray(term3) || value2 && toArray(value2) || [null];
-        this._context = terms.map((term4) => {
-          return new Context({ dataset: dataset2, graph, value: term4, factory: this.factory, namespace: this.namespace });
+        const terms = term4 && toArray(term4) || value2 && toArray(value2) || [null];
+        this._context = terms.map((term5) => {
+          return new Context({ dataset: dataset2, graph, value: term5, factory: this.factory, namespace: this.namespace });
         });
       }
       /**
@@ -11944,8 +11944,8 @@ var init_Clownface = __esm({
        * @returns {undefined|string}
        */
       get value() {
-        const term3 = this.term;
-        return term3 && term3.value;
+        const term4 = this.term;
+        return term4 && term4.value;
       }
       /**
        * Gets the string representation of terms
@@ -11953,7 +11953,7 @@ var init_Clownface = __esm({
        * @returns {string[]}
        */
       get values() {
-        return this.terms.map((term3) => term3.value);
+        return this.terms.map((term4) => term4.value);
       }
       /**
        * Gets the current context's dataset, or undefined if there are multiple
@@ -12283,8 +12283,8 @@ var init_Clownface = __esm({
 });
 
 // node_modules/clownface/index.js
-function factory2({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3 = environment_default, _context }) {
-  return new Clownface({ dataset: dataset2, graph, term: term3, value: value2, factory: factory3, _context });
+function factory2({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3 = environment_default, _context }) {
+  return new Clownface({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3, _context });
 }
 var init_clownface = __esm({
   "node_modules/clownface/index.js"() {
@@ -12365,15 +12365,15 @@ function escapeValue(value2) {
   }
   return value2;
 }
-function literal2(literal4) {
-  const escapedValue = escapeValue(literal4.value);
-  if (literal4.datatype.value === "http://www.w3.org/2001/XMLSchema#string") {
+function literal2(literal5) {
+  const escapedValue = escapeValue(literal5.value);
+  if (literal5.datatype.value === "http://www.w3.org/2001/XMLSchema#string") {
     return '"' + escapedValue + '"';
   }
-  if (literal4.datatype.value === "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString") {
-    return '"' + escapedValue + '"@' + literal4.language;
+  if (literal5.datatype.value === "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString") {
+    return '"' + escapedValue + '"@' + literal5.language;
   }
-  return '"' + escapedValue + '"^^' + namedNode_default(literal4.datatype);
+  return '"' + escapedValue + '"^^' + namedNode_default(literal5.datatype);
 }
 var echarRegEx, echarRegExAll, echarReplacement, literal_default;
 var init_literal = __esm({
@@ -12418,32 +12418,32 @@ var init_variable = __esm({
 });
 
 // node_modules/@rdfjs/to-ntriples/index.js
-function toNT(term3) {
-  if (!term3) {
+function toNT(term4) {
+  if (!term4) {
     return null;
   }
-  if (term3.termType === "BlankNode") {
-    return blankNode_default(term3);
+  if (term4.termType === "BlankNode") {
+    return blankNode_default(term4);
   }
-  if (term3.termType === "DefaultGraph") {
+  if (term4.termType === "DefaultGraph") {
     return defaultGraph_default();
   }
-  if (term3.termType === "Literal") {
-    return literal_default(term3);
+  if (term4.termType === "Literal") {
+    return literal_default(term4);
   }
-  if (term3.termType === "NamedNode") {
-    return namedNode_default(term3);
+  if (term4.termType === "NamedNode") {
+    return namedNode_default(term4);
   }
-  if (term3.termType === "Quad" || term3.subject && term3.predicate && term3.object && term3.graph) {
-    return quad_default(term3, toNT);
+  if (term4.termType === "Quad" || term4.subject && term4.predicate && term4.object && term4.graph) {
+    return quad_default(term4, toNT);
   }
-  if (term3.termType === "Variable") {
-    return variable_default(term3);
+  if (term4.termType === "Variable") {
+    return variable_default(term4);
   }
-  if (term3[Symbol.iterator]) {
-    return dataset_default(term3, toNT);
+  if (term4[Symbol.iterator]) {
+    return dataset_default(term4, toNT);
   }
-  throw new Error(`unknown termType ${term3.termType}`);
+  throw new Error(`unknown termType ${term4.termType}`);
 }
 var to_ntriples_default;
 var init_to_ntriples = __esm({
@@ -12468,8 +12468,8 @@ var init_TermMap = __esm({
       constructor(entries) {
         this.index = /* @__PURE__ */ new Map();
         if (entries) {
-          for (const [term3, value2] of entries) {
-            this.set(term3, value2);
+          for (const [term4, value2] of entries) {
+            this.set(term4, value2);
           }
         }
       }
@@ -12479,12 +12479,12 @@ var init_TermMap = __esm({
       clear() {
         this.index.clear();
       }
-      delete(term3) {
-        return this.index.delete(to_ntriples_default(term3));
+      delete(term4) {
+        return this.index.delete(to_ntriples_default(term4));
       }
       *entries() {
-        for (const [, { term: term3, value: value2 }] of this.index) {
-          yield [term3, value2];
+        for (const [, { term: term4, value: value2 }] of this.index) {
+          yield [term4, value2];
         }
       }
       forEach(callback, thisArg) {
@@ -12492,21 +12492,21 @@ var init_TermMap = __esm({
           callback.call(thisArg, entry[1], entry[0], this);
         }
       }
-      get(term3) {
-        const item = this.index.get(to_ntriples_default(term3));
+      get(term4) {
+        const item = this.index.get(to_ntriples_default(term4));
         return item && item.value;
       }
-      has(term3) {
-        return this.index.has(to_ntriples_default(term3));
+      has(term4) {
+        return this.index.has(to_ntriples_default(term4));
       }
       *keys() {
-        for (const [, { term: term3 }] of this.index) {
-          yield term3;
+        for (const [, { term: term4 }] of this.index) {
+          yield term4;
         }
       }
-      set(term3, value2) {
-        const key = to_ntriples_default(term3);
-        this.index.set(key, { term: term3, value: value2 });
+      set(term4, value2) {
+        const key = to_ntriples_default(term4);
+        this.index.set(key, { term: term4, value: value2 });
         return this;
       }
       *values() {
@@ -12538,9 +12538,9 @@ var init_Factory6 = __esm({
 });
 
 // node_modules/@rdfjs/term-set/TermSet.js
-function quietToNT(term3) {
+function quietToNT(term4) {
   try {
-    return to_ntriples_default(term3);
+    return to_ntriples_default(term4);
   } catch (err) {
     return null;
   }
@@ -12553,29 +12553,29 @@ var init_TermSet = __esm({
       constructor(terms) {
         this.index = /* @__PURE__ */ new Map();
         if (terms) {
-          for (const term3 of terms) {
-            this.add(term3);
+          for (const term4 of terms) {
+            this.add(term4);
           }
         }
       }
       get size() {
         return this.index.size;
       }
-      add(term3) {
-        const key = to_ntriples_default(term3);
+      add(term4) {
+        const key = to_ntriples_default(term4);
         if (!this.index.has(key)) {
-          this.index.set(key, term3);
+          this.index.set(key, term4);
         }
         return this;
       }
       clear() {
         this.index.clear();
       }
-      delete(term3) {
-        if (!term3) {
+      delete(term4) {
+        if (!term4) {
           return false;
         }
-        return this.index.delete(quietToNT(term3));
+        return this.index.delete(quietToNT(term4));
       }
       entries() {
         return this.values().entries();
@@ -12583,11 +12583,11 @@ var init_TermSet = __esm({
       forEach(callbackfn, thisArg) {
         return this.values().forEach(callbackfn, thisArg);
       }
-      has(term3) {
-        if (!term3) {
+      has(term4) {
+        if (!term4) {
           return false;
         }
-        return this.index.has(quietToNT(term3));
+        return this.index.has(quietToNT(term4));
       }
       values() {
         return new Set(this.index.values());
@@ -12619,8 +12619,8 @@ var init_Factory7 = __esm({
 });
 
 // node_modules/@rdfjs/traverser/Traverser.js
-function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term3, visited = new Visisted() }) {
-  const next = (term4, level) => {
+function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term4, visited = new Visisted() }) {
+  const next = (term5, level) => {
     const checkMatches = (matches) => {
       for (const quad3 of matches) {
         if (visited.has(quad3, level)) {
@@ -12640,13 +12640,13 @@ function forEach({ backward, callback, dataset: dataset2, filter, forward, term:
       }
     };
     if (forward) {
-      checkMatches(dataset2.match(term4));
+      checkMatches(dataset2.match(term5));
     }
     if (backward) {
-      checkMatches(dataset2.match(null, null, term4));
+      checkMatches(dataset2.match(null, null, term5));
     }
   };
-  next(term3, 0);
+  next(term4, 0);
 }
 var Visisted, Traverser, Traverser_default;
 var init_Traverser = __esm({
@@ -12674,17 +12674,17 @@ var init_Traverser = __esm({
         this.filter = filter;
         this.forward = forward;
       }
-      forEach({ term: term3, dataset: dataset2 }, callback) {
+      forEach({ term: term4, dataset: dataset2 }, callback) {
         forEach({
           backward: this.backward,
           callback,
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term3
+          term: term4
         });
       }
-      match({ term: term3, dataset: dataset2 }) {
+      match({ term: term4, dataset: dataset2 }) {
         const result = this.factory.dataset();
         forEach({
           backward: this.backward,
@@ -12692,11 +12692,11 @@ var init_Traverser = __esm({
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term3
+          term: term4
         });
         return result;
       }
-      reduce({ term: term3, dataset: dataset2 }, callback, initialValue) {
+      reduce({ term: term4, dataset: dataset2 }, callback, initialValue) {
         let result = initialValue;
         forEach({
           backward: this.backward,
@@ -12706,7 +12706,7 @@ var init_Traverser = __esm({
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term3
+          term: term4
         });
         return result;
       }
@@ -12760,39 +12760,39 @@ var init_env_no_dataset = __esm({
 function isString(s) {
   return typeof s === "string" || s instanceof String;
 }
-function termToId(term3) {
-  if (typeof term3 === "string") {
-    return term3;
+function termToId(term4) {
+  if (typeof term4 === "string") {
+    return term4;
   }
-  if (!term3) {
+  if (!term4) {
     return "";
   }
-  if (typeof term3.id !== "undefined" && term3.termType !== "Quad") {
-    return term3.id;
+  if (typeof term4.id !== "undefined" && term4.termType !== "Quad") {
+    return term4.id;
   }
   let subject, predicate, object, graph;
-  switch (term3.termType) {
+  switch (term4.termType) {
     case "NamedNode":
-      return term3.value;
+      return term4.value;
     case "BlankNode":
-      return `_:${term3.value}`;
+      return `_:${term4.value}`;
     case "Variable":
-      return `?${term3.value}`;
+      return `?${term4.value}`;
     case "DefaultGraph":
       return "";
     case "Literal":
-      if (term3.language) {
-        return `"${term3.value}"@${term3.language}${term3.direction ? `--${term3.direction}` : ""}`;
+      if (term4.language) {
+        return `"${term4.value}"@${term4.language}${term4.direction ? `--${term4.direction}` : ""}`;
       }
-      return `"${term3.value}"${term3.datatype && term3.datatype.value !== xsdString ? `^^${term3.datatype.value}` : ""}`;
+      return `"${term4.value}"${term4.datatype && term4.datatype.value !== xsdString ? `^^${term4.datatype.value}` : ""}`;
     case "Quad":
-      subject = escapeQuotes(termToId(term3.subject));
-      predicate = escapeQuotes(termToId(term3.predicate));
-      object = escapeQuotes(termToId(term3.object));
-      graph = term3.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term3.graph)}`;
+      subject = escapeQuotes(termToId(term4.subject));
+      predicate = escapeQuotes(termToId(term4.predicate));
+      object = escapeQuotes(termToId(term4.object));
+      graph = term4.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term4.graph)}`;
       return `<<${subject} ${predicate} ${object}${graph}>>`;
     default:
-      throw new Error(`Unexpected termType: ${term3.termType}`);
+      throw new Error(`Unexpected termType: ${term4.termType}`);
   }
 }
 function escapeQuotes(id) {
@@ -13434,16 +13434,16 @@ var init_Vocabulary = __esm({
 
 // src/rdf/ProfileReader.js
 function objects(dataset2, subject, predicate) {
-  return [...dataset2.match(subject, iri(predicate), null)].map((q) => q.object);
+  return [...dataset2.match(subject, iri(predicate), null)].map((q2) => q2.object);
 }
 function one(dataset2, subject, predicate) {
   return objects(dataset2, subject, predicate)[0] ?? null;
 }
-function asBoolean(term3) {
-  if (!term3) return false;
-  if (term3.value === "true" || term3.value === "1") return true;
-  if (term3.value === "false" || term3.value === "0") return false;
-  throw new Error(`not a boolean: ${term3.value}`);
+function asBoolean(term4) {
+  if (!term4) return false;
+  if (term4.value === "true" || term4.value === "1") return true;
+  if (term4.value === "false" || term4.value === "0") return false;
+  throw new Error(`not a boolean: ${term4.value}`);
 }
 function sidechainIndex(dataset2, subject) {
   const index = asNumber(one(dataset2, subject, jig.sidechainInput));
@@ -13454,10 +13454,10 @@ function sidechainIndex(dataset2, subject) {
   }
   return index;
 }
-function asNumber(term3) {
-  if (!term3) return null;
-  const n2 = Number(term3.value);
-  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term3.value}`);
+function asNumber(term4) {
+  if (!term4) return null;
+  const n2 = Number(term4.value);
+  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term4.value}`);
   return n2;
 }
 function resolveLocation(location2, baseIRI) {
@@ -13467,18 +13467,18 @@ function rebaseLocation(location2, canonical, retrieval) {
   if (!location2 || !canonical || !retrieval || canonical === retrieval) return location2;
   return location2.startsWith(canonical) ? retrieval + location2.slice(canonical.length) : location2;
 }
-function readResource(dataset2, term3, baseIRI, canonical) {
-  if (!term3) return null;
-  const location2 = one(dataset2, term3, jig.location);
+function readResource(dataset2, term4, baseIRI, canonical) {
+  if (!term4) return null;
+  const location2 = one(dataset2, term4, jig.location);
   const resolved = location2 ? resolveLocation(location2.value, baseIRI) : null;
   return {
-    iri: term3.value,
+    iri: term4.value,
     location: rebaseLocation(resolved, canonical, baseIRI),
-    integrity: asString(one(dataset2, term3, jig.integrity)),
-    mediaType: asString(one(dataset2, term3, jig.mediaType)),
-    registeredName: asString(one(dataset2, term3, jig.registeredName)),
-    wasmFeatures: values(dataset2, term3, jig.wasmFeature),
-    userReplaceable: asBoolean(one(dataset2, term3, jig.userReplaceable))
+    integrity: asString(one(dataset2, term4, jig.integrity)),
+    mediaType: asString(one(dataset2, term4, jig.mediaType)),
+    registeredName: asString(one(dataset2, term4, jig.registeredName)),
+    wasmFeatures: values(dataset2, term4, jig.wasmFeature),
+    userReplaceable: asBoolean(one(dataset2, term4, jig.userReplaceable))
   };
 }
 function readScalePoints(dataset2, port) {
@@ -13498,35 +13498,35 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
-function readPort(dataset2, term3) {
-  const properties = values(dataset2, term3, lv2.portProperty);
+function readPort(dataset2, term4) {
+  const properties = values(dataset2, term4, lv2.portProperty);
   const port = {
-    iri: term3.value,
-    symbol: asString(one(dataset2, term3, lv2.symbol)),
-    name: asString(one(dataset2, term3, lv2.name)),
-    defaultValue: asNumber(one(dataset2, term3, lv2.default)),
-    minimum: asNumber(one(dataset2, term3, lv2.minimum)),
-    maximum: asNumber(one(dataset2, term3, lv2.maximum)),
-    unit: asString(one(dataset2, term3, units.unit)),
+    iri: term4.value,
+    symbol: asString(one(dataset2, term4, lv2.symbol)),
+    name: asString(one(dataset2, term4, lv2.name)),
+    defaultValue: asNumber(one(dataset2, term4, lv2.default)),
+    minimum: asNumber(one(dataset2, term4, lv2.minimum)),
+    maximum: asNumber(one(dataset2, term4, lv2.maximum)),
+    unit: asString(one(dataset2, term4, units.unit)),
     toggled: properties.includes(lv2.toggled),
     enumeration: properties.includes(lv2.enumeration),
-    scalePoints: readScalePoints(dataset2, term3),
+    scalePoints: readScalePoints(dataset2, term4),
     // The MIDI controller driving this port, if the profile binds one. Absent
     // means no claim, the same discipline as userReplaceable: a port the
     // profile does not bind answers to no controller.
-    controller: readController(dataset2, term3),
+    controller: readController(dataset2, term4),
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
-    group: asString(one(dataset2, term3, jig.controlGroup)),
+    group: asString(one(dataset2, term4, jig.controlGroup)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
-    automationRate: one(dataset2, term3, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
+    automationRate: one(dataset2, term4, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
   };
   port.widget = widgetFor(port);
   return port;
 }
 function findSubject(dataset2) {
-  const subjects = [...dataset2.match(null, iri(rdfTerms.type), iri(jig.WebPlugin))].map((q) => q.subject);
+  const subjects = [...dataset2.match(null, iri(rdfTerms.type), iri(jig.WebPlugin))].map((q2) => q2.subject);
   if (subjects.length === 0) {
     const foreign = [...dataset2.match(null, iri(rdfTerms.type), iri(jig.ForeignPlugin))];
     if (foreign.length > 0) {
@@ -13553,7 +13553,7 @@ function kindOf(dataset2) {
   return native ? "native" : foreign ? "foreign" : "neither";
 }
 function readForeignProfile(dataset2, { baseIRI } = {}) {
-  const subjects = [...dataset2.match(null, iri(rdfTerms.type), iri(jig.ForeignPlugin))].map((q) => q.subject);
+  const subjects = [...dataset2.match(null, iri(rdfTerms.type), iri(jig.ForeignPlugin))].map((q2) => q2.subject);
   if (subjects.length === 0) throw new Error("no jig:ForeignPlugin in this document");
   if (subjects.length > 1) throw new Error(`${subjects.length} jig:ForeignPlugin subjects in one document; expected one`);
   const subject = subjects[0];
@@ -13584,7 +13584,7 @@ function readForeignProfile(dataset2, { baseIRI } = {}) {
     // fetched. What the host actually draws comes from the adapter at run time,
     // because the plugin is the authority on its own parameters and these are
     // a description of it written by whoever wrote the profile.
-    ports: objects(dataset2, subject, lv2.port).map((term3) => readPort(dataset2, term3))
+    ports: objects(dataset2, subject, lv2.port).map((term4) => readPort(dataset2, term4))
   };
 }
 function readProfile(dataset2, { baseIRI } = {}) {
@@ -13630,7 +13630,7 @@ var init_ProfileReader = __esm({
     init_Vocabulary();
     ({ jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
     iri = (value2) => env_default.namedNode(value2);
-    asString = (term3) => term3 ? term3.value : null;
+    asString = (term4) => term4 ? term4.value : null;
     values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
   }
 });
@@ -14387,24 +14387,24 @@ function defaultGraph2() {
 function quad2(subject, predicate, object, graph) {
   return new Quad2(subject, predicate, object, graph);
 }
-function fromTerm2(term3) {
-  if (term3 instanceof Term)
-    return term3;
-  switch (term3.termType) {
+function fromTerm2(term4) {
+  if (term4 instanceof Term)
+    return term4;
+  switch (term4.termType) {
     case "NamedNode":
-      return namedNode3(term3.value);
+      return namedNode3(term4.value);
     case "BlankNode":
-      return blankNode3(term3.value);
+      return blankNode3(term4.value);
     case "Variable":
-      return variable2(term3.value);
+      return variable2(term4.value);
     case "DefaultGraph":
       return DEFAULTGRAPH;
     case "Literal":
-      return literal3(term3.value, term3.language || term3.datatype);
+      return literal3(term4.value, term4.language || term4.datatype);
     case "Quad":
-      return fromQuad(term3);
+      return fromQuad(term4);
     default:
-      throw new Error(`Unexpected termType: ${term3.termType}`);
+      throw new Error(`Unexpected termType: ${term4.termType}`);
   }
 }
 function fromQuad(inQuad) {
@@ -15313,7 +15313,7 @@ var init_N3Parser = __esm({
       // ### `_completeLiteral` completes a literal with an optional datatype or language
       // Defers possible direction tags without allocating bound callbacks.
       _completeLiteral(token, component) {
-        let literal4, readCb = false;
+        let literal5, readCb = false;
         switch (token.type) {
           // Create a datatyped literal
           case "type":
@@ -15323,14 +15323,14 @@ var init_N3Parser = __esm({
             if (datatype.value === IRIs_default.rdf.langString || datatype.value === IRIs_default.rdf.dirLangString) {
               return this._error("Detected illegal (directional) languaged-tagged string with explicit datatype", token);
             }
-            literal4 = this._factory.literal(this._literalValue, datatype);
+            literal5 = this._factory.literal(this._literalValue, datatype);
             token = null;
             break;
           // Create a language-tagged string
           case "langcode":
             if (token.value.split("-").some((t) => t.length > 8))
               return this._error("Detected language tag with subtag longer than 8 characters", token);
-            literal4 = this._factory.literal(this._literalValue, token.value);
+            literal5 = this._factory.literal(this._literalValue, token.value);
             this._literalLanguage = token.value;
             token = null;
             this._literalComponent = component;
@@ -15338,21 +15338,21 @@ var init_N3Parser = __esm({
             break;
           // Create a simple string literal by default
           default:
-            literal4 = this._factory.literal(this._literalValue);
+            literal5 = this._factory.literal(this._literalValue);
         }
-        return { token, literal: literal4, readCb };
+        return { token, literal: literal5, readCb };
       }
       // ### `_readDirCode` reads an optional directional language tag
       _readDirCode(token) {
         const component = this._literalComponent, listItem = this._literalListItem;
         if (token.type === "dircode") {
-          const term3 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
+          const term4 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
           if (component === "subject")
-            this._subject = term3;
+            this._subject = term4;
           else if (component === "predicate")
-            this._predicate = term3;
+            this._predicate = term4;
           else
-            this._object = term3;
+            this._object = term4;
           this._literalLanguage = void 0;
           token = null;
         }
@@ -15670,17 +15670,17 @@ var init_N3Parser = __esm({
         }
       }
       // ### `_getPathReader` reads a potential path and then resumes with the given function
-      _getPathReader(afterPath, position) {
+      _getPathReader(afterPath, position2) {
         this._afterPath = afterPath;
-        this._pathPosition = position || (this._predicate === null ? "subject" : "object");
+        this._pathPosition = position2 || (this._predicate === null ? "subject" : "object");
         return this._readPath;
       }
       // ### `_getPathEndReader` continues reading after a term that might start a path,
       // given the pending token that follows the term (or `null` if it was consumed)
-      _getPathEndReader(token, afterPath, position) {
+      _getPathEndReader(token, afterPath, position2) {
         if (token !== null && token.type !== "!" && token.type !== "^")
           return null;
-        const reader = this._getPathReader(afterPath, position);
+        const reader = this._getPathReader(afterPath, position2);
         return token === null ? reader : reader.call(this, token);
       }
       // ### `_readPath` reads a potential path
@@ -16079,7 +16079,7 @@ var require_ms = __commonJS({
       options = options || {};
       var type = typeof val;
       if (type === "string" && val.length > 0) {
-        return parse(val);
+        return parse2(val);
       } else if (type === "number" && isFinite(val)) {
         return options.long ? fmtLong(val) : fmtShort(val);
       }
@@ -16087,7 +16087,7 @@ var require_ms = __commonJS({
         "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
       );
     };
-    function parse(str) {
+    function parse2(str) {
       str = String(str);
       if (str.length > 100) {
         return;
@@ -16839,8 +16839,8 @@ var require_Translator = __commonJS({
         this.fromRdfHandlers = {};
         this.toRdfHandlers = {};
       }
-      static incorrectRdfDataType(literal4) {
-        throw new Error(`Invalid RDF ${literal4.datatype.value} value: '${literal4.value}'`);
+      static incorrectRdfDataType(literal5) {
+        throw new Error(`Invalid RDF ${literal5.datatype.value} value: '${literal5.value}'`);
       }
       registerHandler(handler2, rdfDatatypes, javaScriptDataTypes) {
         for (const rdfDatatype of rdfDatatypes) {
@@ -16855,12 +16855,12 @@ var require_Translator = __commonJS({
           existingToRdfHandlers.push(handler2);
         }
       }
-      fromRdf(literal4, validate) {
-        const handler2 = this.fromRdfHandlers[literal4.datatype.value];
+      fromRdf(literal5, validate) {
+        const handler2 = this.fromRdfHandlers[literal5.datatype.value];
         if (handler2) {
-          return handler2.fromRdf(literal4, validate);
+          return handler2.fromRdf(literal5, validate);
         } else {
-          return literal4.value;
+          return literal5.value;
         }
       }
       toRdf(value2, options) {
@@ -16900,8 +16900,8 @@ var require_TypeHandlerBoolean = __commonJS({
     exports.TypeHandlerBoolean = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerBoolean = class _TypeHandlerBoolean {
-      fromRdf(literal4, validate) {
-        switch (literal4.value) {
+      fromRdf(literal5, validate) {
+        switch (literal5.value) {
           case "true":
             return true;
           case "false":
@@ -16912,7 +16912,7 @@ var require_TypeHandlerBoolean = __commonJS({
             return false;
         }
         if (validate) {
-          Translator_1.Translator.incorrectRdfDataType(literal4);
+          Translator_1.Translator.incorrectRdfDataType(literal5);
         }
         return false;
       }
@@ -16933,22 +16933,22 @@ var require_TypeHandlerDate = __commonJS({
     exports.TypeHandlerDate = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerDate = class _TypeHandlerDate {
-      fromRdf(literal4, validate) {
-        if (validate && !literal4.value.match(_TypeHandlerDate.VALIDATORS[literal4.datatype.value.substr(33, literal4.datatype.value.length)])) {
-          Translator_1.Translator.incorrectRdfDataType(literal4);
+      fromRdf(literal5, validate) {
+        if (validate && !literal5.value.match(_TypeHandlerDate.VALIDATORS[literal5.datatype.value.substr(33, literal5.datatype.value.length)])) {
+          Translator_1.Translator.incorrectRdfDataType(literal5);
         }
-        switch (literal4.datatype.value) {
+        switch (literal5.datatype.value) {
           case "http://www.w3.org/2001/XMLSchema#gDay":
-            return new Date(0, 0, parseInt(literal4.value, 10));
+            return new Date(0, 0, parseInt(literal5.value, 10));
           case "http://www.w3.org/2001/XMLSchema#gMonthDay":
-            const partsMonthDay = literal4.value.split("-");
+            const partsMonthDay = literal5.value.split("-");
             return new Date(0, parseInt(partsMonthDay[0], 10) - 1, parseInt(partsMonthDay[1], 10));
           case "http://www.w3.org/2001/XMLSchema#gYear":
-            return /* @__PURE__ */ new Date(literal4.value + "-01-01");
+            return /* @__PURE__ */ new Date(literal5.value + "-01-01");
           case "http://www.w3.org/2001/XMLSchema#gYearMonth":
-            return /* @__PURE__ */ new Date(literal4.value + "-01");
+            return /* @__PURE__ */ new Date(literal5.value + "-01");
           default:
-            return new Date(literal4.value);
+            return new Date(literal5.value);
         }
       }
       toRdf(value2, { datatype, dataFactory }) {
@@ -17008,11 +17008,11 @@ var require_TypeHandlerNumberDouble = __commonJS({
     exports.TypeHandlerNumberDouble = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerNumberDouble = class _TypeHandlerNumberDouble {
-      fromRdf(literal4, validate) {
-        const parsed = parseFloat(literal4.value);
+      fromRdf(literal5, validate) {
+        const parsed = parseFloat(literal5.value);
         if (validate) {
           if (isNaN(parsed)) {
-            Translator_1.Translator.incorrectRdfDataType(literal4);
+            Translator_1.Translator.incorrectRdfDataType(literal5);
           }
         }
         return parsed;
@@ -17048,11 +17048,11 @@ var require_TypeHandlerNumberInteger = __commonJS({
     exports.TypeHandlerNumberInteger = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerNumberInteger = class _TypeHandlerNumberInteger {
-      fromRdf(literal4, validate) {
-        const parsed = parseInt(literal4.value, 10);
+      fromRdf(literal5, validate) {
+        const parsed = parseInt(literal5.value, 10);
         if (validate) {
-          if (isNaN(parsed) || literal4.value.indexOf(".") >= 0) {
-            Translator_1.Translator.incorrectRdfDataType(literal4);
+          if (isNaN(parsed) || literal5.value.indexOf(".") >= 0) {
+            Translator_1.Translator.incorrectRdfDataType(literal5);
           }
         }
         return parsed;
@@ -17089,8 +17089,8 @@ var require_TypeHandlerString = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TypeHandlerString = void 0;
     var TypeHandlerString = class {
-      fromRdf(literal4) {
-        return literal4.value;
+      fromRdf(literal5) {
+        return literal5.value;
       }
       toRdf(value2, { datatype, dataFactory }) {
         return dataFactory.literal(value2, datatype);
@@ -17192,8 +17192,8 @@ var require_rdf_literal = __commonJS({
     translator.registerHandler(new handler_1.TypeHandlerNumberDouble(), handler_1.TypeHandlerNumberDouble.TYPES.map((t) => DF.namedNode(t)), ["number"]);
     translator.registerHandler(new handler_1.TypeHandlerNumberInteger(), handler_1.TypeHandlerNumberInteger.TYPES.map((t) => DF.namedNode(t)), ["number"]);
     translator.registerHandler(new handler_1.TypeHandlerDate(), handler_1.TypeHandlerDate.TYPES.map((t) => DF.namedNode(t)), ["object"]);
-    function fromRdf2(literal4, validate) {
-      return translator.fromRdf(literal4, validate);
+    function fromRdf2(literal5, validate) {
+      return translator.fromRdf(literal5, validate);
     }
     function toRdf(value2, options) {
       if (options && "namedNode" in options) {
@@ -17205,11 +17205,11 @@ var require_rdf_literal = __commonJS({
       }
       return translator.toRdf(value2, options);
     }
-    function getTermRaw(term3, validate) {
-      if (term3.termType === "Literal") {
-        return fromRdf2(term3, validate);
+    function getTermRaw(term4, validate) {
+      if (term4.termType === "Literal") {
+        return fromRdf2(term4, validate);
       }
-      return term3.value;
+      return term4.value;
     }
     function getSupportedRdfDatatypes() {
       return translator.getSupportedRdfDatatypes();
@@ -18324,16 +18324,16 @@ var PluginLoader = class {
     // node's does not care. So a detached reference passes every test here and
     // fails on the first real page load.
     fetch: fetch2 = (...args) => globalThis.fetch(...args),
-    parse,
+    parse: parse2,
     validator = null,
     capabilities = detectCapabilities(),
     validate = (bytes) => WebAssembly.validate(bytes),
     processorUrl = null
   } = {}) {
     if (typeof fetch2 !== "function") throw new Error("PluginLoader needs a fetch implementation");
-    if (typeof parse !== "function") throw new Error("PluginLoader needs a parse function");
+    if (typeof parse2 !== "function") throw new Error("PluginLoader needs a parse function");
     this.#fetch = fetch2;
-    this.#parse = parse;
+    this.#parse = parse2;
     this.#validator = validator;
     this.#capabilities = capabilities;
     this.#validate = validate;
@@ -18724,14 +18724,14 @@ var Engine = class {
   setTrackOutput(trackId, toTrackId) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    const target = toTrackId === null ? null : this.#tracks.get(toTrackId);
-    if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`);
+    const target2 = toTrackId === null ? null : this.#tracks.get(toTrackId);
+    if (toTrackId !== null && !target2) throw new Error(`no such track strip: ${toTrackId}`);
     if (strip.to === toTrackId) return;
     try {
       strip.out.disconnect();
     } catch {
     }
-    strip.out.connect(target ? target.pre : this.#mixInput);
+    strip.out.connect(target2 ? target2.pre : this.#mixInput);
     strip.to = toTrackId;
   }
   /**
@@ -19333,14 +19333,14 @@ var ClipPlayer = class {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start({ iri: iri3, when, offset, duration, destination, fadeIn = 0, fadeOut = 0 }) {
+  start({ iri: iri3, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
     const buffer = this.buffer(iri3);
     if (!buffer) return false;
     const source = this.#context.createBufferSource();
     source.buffer = buffer;
     let tail = source;
     if (fadeIn > 0 || fadeOut > 0) {
-      const scale = fadeIn + fadeOut > duration ? duration / (fadeIn + fadeOut) : 1;
+      const scale = fadeIn + fadeOut > duration2 ? duration2 / (fadeIn + fadeOut) : 1;
       const inLength = fadeIn * scale;
       const outLength = fadeOut * scale;
       const shape = this.#context.createGain();
@@ -19348,15 +19348,15 @@ var ClipPlayer = class {
       level.setValueAtTime(inLength > 0 ? 0 : 1, when);
       if (inLength > 0) level.linearRampToValueAtTime(1, when + inLength);
       if (outLength > 0) {
-        level.setValueAtTime(1, when + duration - outLength);
-        level.linearRampToValueAtTime(0, when + duration);
+        level.setValueAtTime(1, when + duration2 - outLength);
+        level.linearRampToValueAtTime(0, when + duration2);
       }
       source.connect(shape);
       tail = shape;
     }
     tail.connect(destination);
     const late = Math.max(0, this.#context.currentTime - when);
-    source.start(when + late, offset + late, Math.max(0, duration - late));
+    source.start(when + late, offset + late, Math.max(0, duration2 - late));
     this.#playing.add(source);
     source.onended = () => {
       this.#playing.delete(source);
@@ -19389,9 +19389,9 @@ function createAutomationHost(ctx2) {
   const warned = /* @__PURE__ */ new Set();
   const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
   const MASTER = { masterGain: "gain", masterPan: "pan" };
-  const paramOf = (target) => target.kind !== void 0 ? MASTER[target.kind] ? ctx2.engine.masterParam(MASTER[target.kind]) : null : ctx2.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol);
-  const hold = (target, on) => {
-    if (MASTER[target.kind]) ctx2.engine.holdMaster(MASTER[target.kind], on);
+  const paramOf = (target2) => target2.kind !== void 0 ? MASTER[target2.kind] ? ctx2.engine.masterParam(MASTER[target2.kind]) : null : ctx2.dispatcher.engineNode(target2.node)?.node?.parameters?.get(target2.symbol);
+  const hold = (target2, on) => {
+    if (MASTER[target2.kind]) ctx2.engine.holdMaster(MASTER[target2.kind], on);
   };
   const masterSnapshot = () => JSON.stringify(ctx2.dispatcher.project.master);
   let masterAtStart = null;
@@ -19442,9 +19442,9 @@ function createAutomationHost(ctx2) {
     },
     /** A parameter was changed by hand (or by an agent, or by undo): it takes over from its envelope until Stop. */
     edited(nodeId, symbol, value2) {
-      const target = { node: nodeId, symbol };
+      const target2 = { node: nodeId, symbol };
       for (const [param, state] of touched) {
-        if (keyOf(state.target) !== keyOf(target) || state.suspended) continue;
+        if (keyOf(state.target) !== keyOf(target2) || state.suspended) continue;
         const now = ctx2.engine.context.currentTime;
         param.cancelScheduledValues(now);
         param.setValueAtTime(value2, now);
@@ -19675,7 +19675,7 @@ function mint(state, counters, key, prefix, id, what) {
   if (m) counters[prefix] = Math.max(counters[prefix], Number(m[1]));
   return minted;
 }
-function checkPoints(points, target) {
+function checkPoints(points, target2) {
   if (!Array.isArray(points)) throw new Error("points must be an array");
   const seen = /* @__PURE__ */ new Set();
   for (const p of points) {
@@ -19684,21 +19684,21 @@ function checkPoints(points, target) {
     seen.add(p.atBeat);
     if (!Number.isFinite(p.value)) throw new Error(`an envelope point needs a finite value: ${p.value}`);
     if (!CURVES.includes(p.curve ?? "linear")) throw new Error(`curve must be one of ${CURVES.join(", ")}`);
-    if (target.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
-    if (target.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
-    if (target.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
+    if (target2.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
+    if (target2.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
+    if (target2.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
   }
   return points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve ?? "linear" })).sort((a2, b) => a2.atBeat - b.atBeat);
 }
-function checkTarget(state, target) {
-  if (!target || typeof target !== "object") throw new Error("an envelope needs a target");
-  if (target.kind !== void 0) {
-    if (!TARGET_KINDS.includes(target.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
-    return { kind: target.kind };
+function checkTarget(state, target2) {
+  if (!target2 || typeof target2 !== "object") throw new Error("an envelope needs a target");
+  if (target2.kind !== void 0) {
+    if (!TARGET_KINDS.includes(target2.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
+    return { kind: target2.kind };
   }
-  if (!state.nodes.has(target.node)) throw new Error(`target names no such node: ${target.node}`);
-  if (typeof target.symbol !== "string" || target.symbol === "") throw new Error("a node target needs the parameter symbol");
-  return { node: target.node, symbol: target.symbol };
+  if (!state.nodes.has(target2.node)) throw new Error(`target names no such node: ${target2.node}`);
+  if (typeof target2.symbol !== "string" || target2.symbol === "") throw new Error("a node target needs the parameter symbol");
+  return { node: target2.node, symbol: target2.symbol };
 }
 var ARRANGEMENT_OPERATIONS = {
   setMaster(state, change) {
@@ -19790,13 +19790,13 @@ var ARRANGEMENT_OPERATIONS = {
     return change.id;
   },
   addEnvelope(state, change, counters) {
-    const target = checkTarget(state, change.target);
+    const target2 = checkTarget(state, change.target);
     for (const e of state.envelopes.values()) {
-      if (JSON.stringify(e.target) === JSON.stringify(target)) throw new Error(`${e.id} already automates that target`);
+      if (JSON.stringify(e.target) === JSON.stringify(target2)) throw new Error(`${e.id} already automates that target`);
     }
-    const points = checkPoints(change.points ?? [], target);
+    const points = checkPoints(change.points ?? [], target2);
     const id = mint(state, counters, "envelopes", "envelope", change.id, "envelope");
-    state.envelopes.set(id, { id, target, points });
+    state.envelopes.set(id, { id, target: target2, points });
     return id;
   },
   /** Replace the whole point list at once, so one drawn gesture is one edit and one undo. */
@@ -19847,7 +19847,7 @@ function arrangementChanges(snapshot) {
     ...snapshot.envelopes.map((e) => ({ op: "addEnvelope", id: e.id, target: e.target, points: e.points }))
   ];
 }
-function arrangementReconcile(current, target) {
+function arrangementReconcile(current, target2) {
   const changes = [];
   const table = [
     ["sends", "removeSend", "addSend"],
@@ -19857,18 +19857,18 @@ function arrangementReconcile(current, target) {
   ];
   const same = (a2, b) => JSON.stringify(a2) === JSON.stringify(b);
   for (const [key, remove] of table) {
-    const wanted = new Map(target[key].map((x) => [x.id, x]));
+    const wanted = new Map(target2[key].map((x) => [x.id, x]));
     for (const item of current[key]) if (!same(wanted.get(item.id), item)) changes.push({ op: remove, id: item.id });
   }
   const outputs = (t) => t.output ?? null;
   const currentTracks = new Map(current.tracks.map((t) => [t.id, t]));
-  for (const t of target.tracks) {
+  for (const t of target2.tracks) {
     if (outputs(currentTracks.get(t.id) ?? {}) !== outputs(t)) changes.push({ op: "setTrack", id: t.id, output: outputs(t) });
   }
-  if (!same(current.master, target.master)) changes.push({ op: "setMaster", ...target.master });
+  if (!same(current.master, target2.master)) changes.push({ op: "setMaster", ...target2.master });
   for (const [key, , add] of table) {
     const live = new Map(current[key].map((x) => [x.id, x]));
-    for (const item of target[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
+    for (const item of target2[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
   }
   return changes;
 }
@@ -20768,9 +20768,9 @@ function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
     const i2 = queue.shift();
     componentOrder.push(i2);
     for (const connection of compOutgoing[i2]) {
-      const target = componentIndex.get(connection.to.node);
-      remaining[target] -= 1;
-      if (remaining[target] === 0) queue.push(target);
+      const target2 = componentIndex.get(connection.to.node);
+      remaining[target2] -= 1;
+      if (remaining[target2] === 0) queue.push(target2);
     }
   }
   const componentArrival = components.map(() => 0);
@@ -20890,9 +20890,9 @@ var EventRouter = class {
   #forward(fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId);
     if (!targets || !events?.length) return;
-    for (const target of targets) {
-      this.#remember(fromEngineId, target, events);
-      this.send(target, events);
+    for (const target2 of targets) {
+      this.#remember(fromEngineId, target2, events);
+      this.send(target2, events);
     }
   }
   #remember(from, to, events) {
@@ -20936,12 +20936,12 @@ var intoMain = (connection) => connection.to.portSymbol === void 0 && (connectio
 function effectiveConnections(connections, { bypassed, passes }) {
   let list = connections.map((c3) => c3);
   for (let guard = 0; guard <= connections.length + 1; guard++) {
-    const target = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
-    if (target === void 0) break;
+    const target2 = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
+    if (target2 === void 0) break;
     for (const kind of [AUDIO2, MIDI2]) {
-      if (!passes(target, kind)) continue;
-      const into = list.filter((c3) => c3.to.node === target && kindOf2(c3) === kind && intoMain(c3));
-      const out = list.filter((c3) => c3.from.node === target && kindOf2(c3) === kind);
+      if (!passes(target2, kind)) continue;
+      const into = list.filter((c3) => c3.to.node === target2 && kindOf2(c3) === kind && intoMain(c3));
+      const out = list.filter((c3) => c3.from.node === target2 && kindOf2(c3) === kind);
       if (into.length === 0 || out.length === 0) continue;
       const joined = [];
       for (const a2 of into) {
@@ -21009,6 +21009,12 @@ var Transport = class _Transport {
   }
   get loop() {
     return { ...this.#loop };
+  }
+  get beatsPerBar() {
+    return this.#beatsPerBar;
+  }
+  get beatUnit() {
+    return this.#beatUnit;
   }
   /** The leg a beat falls in: its start point, and the tempo it ends on (null when it holds). */
   #leg(index) {
@@ -21100,14 +21106,14 @@ var Transport = class _Transport {
   }
   /** The message a processor receives each quantum. messaging.md section 1.2. */
   messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
-    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
+    const position2 = this.positionAtElapsed(elapsedFrames, { startBeat });
     return {
       type: "transport",
       playing,
       frame,
-      beat: position.beat,
-      beatsPerFrame: position.beatsPerFrame,
-      tempo: position.tempo,
+      beat: position2.beat,
+      beatsPerFrame: position2.beatsPerFrame,
+      tempo: position2.tempo,
       timeSignature: { beatsPerBar: this.#beatsPerBar, beatUnit: this.#beatUnit },
       loop: this.#loop.enabled ? { start: this.#loop.start, end: this.#loop.end } : null
     };
@@ -21252,17 +21258,17 @@ var UndoHistory = class {
    */
   async undo(dispatcher) {
     if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
-    const target = this.#undoStack.pop();
+    const target2 = this.#undoStack.pop();
     this.#redoStack.push(dispatcher.project.snapshot());
-    await this.#restoreTo(dispatcher, target);
+    await this.#restoreTo(dispatcher, target2);
     return { ok: true, revision: dispatcher.project.revision };
   }
   /** The inverse of undo: step forward to whatever undo last stepped back from. */
   async redo(dispatcher) {
     if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
-    const target = this.#redoStack.pop();
+    const target2 = this.#redoStack.pop();
     this.#undoStack.push(dispatcher.project.snapshot());
-    await this.#restoreTo(dispatcher, target);
+    await this.#restoreTo(dispatcher, target2);
     return { ok: true, revision: dispatcher.project.revision };
   }
   /**
@@ -21286,14 +21292,14 @@ var UndoHistory = class {
    * which is one node's worth of undo history lost rather than the whole
    * step refused for a plugin that may no longer be reachable.
    */
-  async #restoreTo(dispatcher, target) {
+  async #restoreTo(dispatcher, target2) {
     await dispatcher.withoutRecording(async () => {
       const current = dispatcher.project.snapshot();
       const currentIds = new Set(current.nodes.map((n2) => n2.id));
-      const targetIds = new Set(target.nodes.map((n2) => n2.id));
+      const targetIds = new Set(target2.nodes.map((n2) => n2.id));
       const currentTrackIds = new Set(current.tracks.map((t) => t.id));
-      const targetTrackIds = new Set(target.tracks.map((t) => t.id));
-      const toAddTracks = target.tracks.filter((t) => !currentTrackIds.has(t.id));
+      const targetTrackIds = new Set(target2.tracks.map((t) => t.id));
+      const toAddTracks = target2.tracks.filter((t) => !currentTrackIds.has(t.id));
       if (toAddTracks.length > 0) {
         dispatcher.apply(toAddTracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })));
       }
@@ -21301,7 +21307,7 @@ var UndoHistory = class {
       if (toRemove.length > 0) {
         dispatcher.apply(toRemove.map((id) => ({ op: "removeNode", id })));
       }
-      for (const node of target.nodes) {
+      for (const node of target2.nodes) {
         if (currentIds.has(node.id)) continue;
         const result = await dispatcher.addPlugin(node.pluginIri, {
           id: node.id,
@@ -21320,7 +21326,7 @@ var UndoHistory = class {
         }
       }
       const reconcile = [];
-      for (const node of target.nodes) {
+      for (const node of target2.nodes) {
         if (!currentIds.has(node.id)) continue;
         const live = dispatcher.project.node(node.id);
         if (!live) continue;
@@ -21334,7 +21340,7 @@ var UndoHistory = class {
         if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
       }
       const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
-      for (const track of target.tracks) {
+      for (const track of target2.tracks) {
         const live = dispatcher.project.track(track.id);
         const c3 = track.channel;
         const l = live.channel;
@@ -21354,11 +21360,11 @@ var UndoHistory = class {
       }
       const liveIds = new Set(dispatcher.project.nodes.map((n2) => n2.id));
       const currentConnIds = new Set(dispatcher.project.connections.map((c3) => c3.id));
-      const targetConnIds = new Set(target.connections.map((c3) => c3.id));
+      const targetConnIds = new Set(target2.connections.map((c3) => c3.id));
       for (const id of currentConnIds) {
         if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
       }
-      for (const connection of target.connections) {
+      for (const connection of target2.connections) {
         if (currentConnIds.has(connection.id)) continue;
         if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue;
         reconcile.push({
@@ -21370,11 +21376,11 @@ var UndoHistory = class {
           delayFrames: connection.delayFrames
         });
       }
-      if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target.transport)) {
-        reconcile.push({ op: "setTransport", ...target.transport });
+      if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target2.transport)) {
+        reconcile.push({ op: "setTransport", ...target2.transport });
       }
       const liveClips = new Map(dispatcher.project.snapshot().clips.map((c3) => [c3.id, c3]));
-      const targetClips = new Map(target.clips.map((c3) => [c3.id, c3]));
+      const targetClips = new Map(target2.clips.map((c3) => [c3.id, c3]));
       for (const [id, clip] of liveClips) {
         const wanted = targetClips.get(id);
         if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id, force: true });
@@ -21383,7 +21389,7 @@ var UndoHistory = class {
         const live = liveClips.get(id);
         if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip));
       }
-      reconcile.push(...arrangementReconcile(dispatcher.project.snapshot(), target));
+      reconcile.push(...arrangementReconcile(dispatcher.project.snapshot(), target2));
       for (const id of currentTrackIds) {
         if (!targetTrackIds.has(id)) reconcile.push({ op: "removeTrack", id });
       }
@@ -21409,11 +21415,13 @@ var OpDispatcher = class {
   #trackDelays = /* @__PURE__ */ new Map();
   #foreign;
   // The stacks and the snapshot-to-snapshot reconciliation live in
-  // UndoHistory. Nothing is recorded while #recording is false, which is how
+  // UndoHistory. Nothing is recorded while #unrecorded is above zero, which is how
   // undo and redo call back into apply()/addPlugin() to do the actual work
   // without recording their own reversal as a new edit.
   #history = new UndoHistory();
-  #recording = true;
+  // A count and not a flag, so a group inside an undo, or an unrecorded firing during a group, ends only
+  // its own suppression and never another's.
+  #unrecorded = 0;
   constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project;
     this.#alignTracks = alignTracks;
@@ -21614,7 +21622,7 @@ var OpDispatcher = class {
     if (dryRun) {
       return { ok: true, applied: false, revision: this.#project.revision, compiled };
     }
-    const before = this.#recording ? this.#project.snapshot() : null;
+    const before = this.#unrecorded === 0 ? this.#project.snapshot() : null;
     const result = this.#project.apply(changes, { expectedRevision });
     this.#releaseRemoved();
     this.#rebuildLinks(compiled);
@@ -21661,6 +21669,27 @@ var OpDispatcher = class {
     return this.#history.redo(this);
   }
   /**
+   * Run fn as one undoable edit: however many edits it makes, one undo reverses them all. The snapshot is
+   * taken before it starts and recorded once after it ends, and nothing inside is recorded on its own.
+   * Nothing is recorded if fn changed nothing, so an empty run leaves no step to undo. A group inside a
+   * group, or inside an undo, joins the one already open.
+   *
+   * For a script (docs/livecoding.md): the run is one group. What it schedules for later is done through
+   * withoutRecording, because a performance is not a series of edits to step back over.
+   */
+  async grouped(fn) {
+    if (this.#unrecorded > 0) return fn();
+    const before = this.#project.snapshot();
+    const revision = this.#project.revision;
+    this.#unrecorded++;
+    try {
+      return await fn();
+    } finally {
+      this.#unrecorded--;
+      if (this.#project.revision !== revision) this.#history.record(before);
+    }
+  }
+  /**
    * Run fn with recording off, so the apply()/addPlugin()/setParameter()
    * calls it makes are not themselves recorded as further undoable edits.
    * Called by UndoHistory while it reconciles the project to a snapshot; nothing
@@ -21668,11 +21697,11 @@ var OpDispatcher = class {
    * field so UndoHistory can drive it without reaching into private state.
    */
   async withoutRecording(fn) {
-    this.#recording = false;
+    this.#unrecorded++;
     try {
       return await fn();
     } finally {
-      this.#recording = true;
+      this.#unrecorded--;
     }
   }
   /** The first end of a new connection that names a port its node has not got. */
@@ -21741,7 +21770,7 @@ var OpDispatcher = class {
    * input, since it is the only node there for notes to go to. On an existing
    * track nothing is guessed: which node takes the notes is a person's call.
    */
-  async addPlugin(iri3, { position, foreign = false, ...node } = {}) {
+  async addPlugin(iri3, { position: position2, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
@@ -21779,7 +21808,7 @@ var OpDispatcher = class {
         if (message?.type === "latency") this.#onLatency(nodeId, entry.id, message);
       });
     }
-    if (position) this.#project.moveNode(nodeId, position.x, position.y);
+    if (position2) this.#project.moveNode(nodeId, position2.x, position2.y);
     this.#emit({ type: "plugin-added", nodeId, trackId: node.track ?? newTrack, entry });
     return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
   }
@@ -22283,7 +22312,7 @@ async function bounce({
   const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
   await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
   const errors = [...opened.errors, ...sources.filter((iri3) => clipPlayer.failure(iri3)).map((iri3) => `audio ${iri3}: ${clipPlayer.failure(iri3).message}`)];
-  const playAudioClip = (clip, { when, offset, duration }) => {
+  const playAudioClip = (clip, { when, offset, duration: duration2 }) => {
     const track = dispatcher.project.track(clip.track);
     if (!track) return;
     const destination = track.audioInput ? dispatcher.engineNode(track.audioInput)?.node : engine.trackInput(track.id);
@@ -22291,7 +22320,7 @@ async function bounce({
     const timing = dispatcher.transport();
     const fadeIn = clip.fadeInBeats > 0 ? timing.secondsAtBeat(clip.on + clip.fadeInBeats) - timing.secondsAtBeat(clip.on) : 0;
     const fadeOut = clip.fadeOutBeats > 0 ? timing.secondsAtBeat(clip.off) - timing.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
-    clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut });
+    clipPlayer.start({ iri: clip.source, when, offset, duration: duration2, destination, fadeIn, fadeOut });
   };
   const automation = createAutomationHost({ dispatcher, engine, log: (message) => errors.push(message) });
   const scheduler = new Scheduler({
@@ -24648,8 +24677,8 @@ function* extractSourceShapeStructure(shape, dataset2, startNode, visited = new 
   }
   const { factory: factory3 } = shape.context;
   const { sh, rdfs: rdfs3 } = shape.context.ns;
-  const inListSize = (term3) => {
-    const inConstraint = shape.constraints.find((x) => term3.equals(x.paramValue));
+  const inListSize = (term4) => {
+    const inConstraint = shape.constraints.find((x) => term4.equals(x.paramValue));
     return inConstraint?.nodeSet.size || -1;
   };
   visited.add(startNode);
@@ -24688,7 +24717,7 @@ function isInstanceOf(instance, cls, ns2) {
   return types.some((type) => classes.has(type));
 }
 function rdfListToArray(listNode) {
-  return [...listNode.list?.() || []].map(({ term: term3 }) => term3);
+  return [...listNode.list?.() || []].map(({ term: term4 }) => term4);
 }
 
 // node_modules/rdf-validate-shacl/src/shapes-graph.js
@@ -25451,13 +25480,13 @@ validators.register(strict68.XMLLiteral, () => true);
 validators.register(strict68.HTML, () => true);
 
 // node_modules/rdf-validate-datatype/src/validate-term.js
-function validateTerm(term3) {
-  if (term3.termType !== "Literal") {
+function validateTerm(term4) {
+  if (term4.termType !== "Literal") {
     throw new Error("Cannot validate non-literal terms");
   }
-  const validator = validators.find(term3.datatype);
+  const validator = validators.find(term4.datatype);
   if (validator) {
-    return validator(term3.value);
+    return validator(term4.value);
   }
   return true;
 }
@@ -25493,7 +25522,7 @@ var validateClosed = {
     if (!trueTerm.equals(closedNode)) {
       return;
     }
-    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term3) => term3.termType === "NamedNode"));
+    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term4) => term4.termType === "NamedNode"));
     if (ignoredPropertiesNode) {
       allowed.addAll(rdfListToArray(context.$shapes.node(ignoredPropertiesNode)));
     }
@@ -25797,7 +25826,7 @@ function validateQualifiedHelper(context, focusNode, constraint) {
   const trueTerm = context.factory.literal("true", xsd4.boolean);
   const siblingShapes = new node_set_default();
   if (trueTerm.equals(qualifiedValueShapesDisjointNode)) {
-    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term3 }) => !term3.equals(qualifiedValueShapeNode)).terms;
+    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term4 }) => !term4.equals(qualifiedValueShapeNode)).terms;
     siblingShapes.addAll(qualifiedSiblingShapes);
   }
   const path = constraint.shape.pathObject;
@@ -26292,7 +26321,7 @@ var NOTE_SCHEMA = Object.freeze({
   },
   required: ["startBeat", "lengthBeats", "pitch", "velocity"]
 });
-function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null }) {
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
   if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -26341,7 +26370,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           limit: { type: "integer", description: "At most 200, default 25" }
         }
       },
-      async handler({ q = "", limit = 25, ...facets } = {}) {
+      async handler({ q: q2 = "", limit = 25, ...facets } = {}) {
         const unavailable2 = requireCatalogue();
         if (unavailable2) return unavailable2;
         const unknown = Object.keys(facets).filter((k) => !FACET_NAMES.includes(k));
@@ -26349,7 +26378,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           return failed(`unknown facet: ${unknown.join(", ")}`, { known: FACET_NAMES });
         }
         try {
-          return ok({ results: await catalogue.search({ text: q, limit, ...facets }) });
+          return ok({ results: await catalogue.search({ text: q2, limit, ...facets }) });
         } catch (error2) {
           return failed(`catalogue: ${error2.message}`);
         }
@@ -26980,6 +27009,61 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "parameter_reset",
+      description: "Put a parameter back to its plugin default and forget its setting, so the project says what a node that was never touched says. Returns the default the plugin now holds.",
+      inputSchema: {
+        type: "object",
+        properties: { node: { type: "string" }, symbol: { type: "string" } },
+        required: ["node", "symbol"]
+      },
+      async handler({ node, symbol } = {}) {
+        const result = dispatcher.resetParameter(node, symbol);
+        return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "history_undo",
+      description: "Step the project back over the last edit, whoever made it, a person or an agent. Undoing a removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is nothing to undo.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const result = await dispatcher.undo();
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+      }
+    },
+    {
+      name: "history_redo",
+      description: "Step forward again over whatever history_undo last stepped back from. Fails, changing nothing, when there is nothing to redo, which includes after any new edit.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const result = await dispatcher.redo();
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+      }
+    },
+    {
+      name: "script_run",
+      description: "Run a Reel script, the livecoding language of docs/livecoding.md, or with dryRun check it and return what it would do without doing it. A script that does not parse or plan changes nothing, and errors come back with their line numbers. During playback a new script takes over at the next bar line, atomically, unless now is true. One run is one undo step. Every plugin the script loads is fetched and validated before anything it says is carried out.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "The script, one statement per line" },
+          dryRun: { type: "boolean", description: "Check and describe only. Default false." },
+          now: { type: "boolean", description: "Take over at once and not at the next bar line. Default false." }
+        },
+        required: ["source"]
+      },
+      async handler({ source, dryRun = false, now = false } = {}) {
+        if (!reel) return failed("this host has no scripting");
+        if (typeof source !== "string") return failed("script_run needs the script as source");
+        if (dryRun) {
+          const checked = await reel.check(source);
+          return checked.ok ? ok({ plan: reel.describe(checked.plan) }) : failed("the script has errors", { stage: checked.stage, errors: checked.errors });
+        }
+        const result = await reel.run(source, { now });
+        if (result.stage) return failed("the script has errors, so nothing was changed", { stage: result.stage, errors: result.errors });
+        return result.ok ? ok({ swapped: result.swapped }) : failed("the script ran with errors", { swapped: result.swapped, errors: result.errors });
+      }
+    },
+    {
       name: "transport_play",
       description: "Start the transport, so clips play and plugins receive transport position. Needs audio already started by a person: a browser starts no AudioContext without a click.",
       inputSchema: { type: "object", properties: {} },
@@ -27057,8 +27141,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop });
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel = null, target: target2 = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -27074,8 +27158,8 @@ function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPl
       }
     }
   };
-  target.jigdaw = { ...target.jigdaw ?? {}, mcp: surface };
-  const navigatorContext = target.navigator?.modelContext;
+  target2.jigdaw = { ...target2.jigdaw ?? {}, mcp: surface };
+  const navigatorContext = target2.navigator?.modelContext;
   if (navigatorContext && typeof navigatorContext.provideContext === "function") {
     try {
       navigatorContext.provideContext({
@@ -27126,9 +27210,10 @@ function createRuntime(ctx2) {
     ctx2.hostConfig = readHostConfig(await response.json());
     const capabilities = detectCapabilities(globalThis);
     ctx2.hostCapabilities = capabilities;
+    ctx2.loader = new PluginLoader({ parse: parseText, validator, capabilities });
     ctx2.engine = new Engine({
       context,
-      loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+      loader: ctx2.loader,
       output: analyser,
       maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
@@ -27162,9 +27247,12 @@ function createRuntime(ctx2) {
         onPlay: () => ctx2.transport.play(),
         onStop: async () => {
           ctx2.transport.stop();
-        }
+        },
+        // script_run, built before the reel exists and calling it once it does.
+        reel: ctx2.script.agentReel()
       });
       ctx2.mcpSurface = registration.surface;
+      ctx2.script.attach({ dispatcher, tools: registration.surface.tools, loader: ctx2.loader });
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
     }
@@ -27203,11 +27291,11 @@ function createTransport(ctx2) {
   let playheadFrame = null;
   function followPlayhead() {
     if (!playing) return;
-    const position = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
-    ctx2.arrangement.playhead(position.beat);
+    const position2 = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
+    ctx2.arrangement.playhead(position2.beat);
     playheadFrame = requestAnimationFrame(followPlayhead);
   }
-  function playAudioClip(clip, { when, offset, duration }) {
+  function playAudioClip(clip, { when, offset, duration: duration2 }) {
     const track = ctx2.dispatcher.project.track(clip.track);
     if (!track) return;
     const destination = track.audioInput ? ctx2.dispatcher.engineNode(track.audioInput)?.node : ctx2.engine.trackInput(track.id);
@@ -27215,7 +27303,7 @@ function createTransport(ctx2) {
     const transport2 = ctx2.dispatcher.transport();
     const fadeIn = clip.fadeInBeats > 0 ? transport2.secondsAtBeat(clip.on + clip.fadeInBeats) - transport2.secondsAtBeat(clip.on) : 0;
     const fadeOut = clip.fadeOutBeats > 0 ? transport2.secondsAtBeat(clip.off) - transport2.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
-    ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut });
+    ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration: duration2, destination, fadeIn, fadeOut });
   }
   async function play() {
     const d = await ctx2.runtime.ensureRunning();
@@ -27252,7 +27340,12 @@ function createTransport(ctx2) {
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt);
     scheduler.tick();
-    schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs);
+    ctx2.script?.clockStart(startedAt);
+    ctx2.script?.clockTick();
+    schedulerTimer = setInterval(() => {
+      scheduler.tick();
+      ctx2.script?.clockTick();
+    }, hostConfig.schedulerTickMs);
     followPlayhead();
     log2("playing", "ok");
   }
@@ -27261,6 +27354,7 @@ function createTransport(ctx2) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
     scheduler?.stop();
+    ctx2.script?.clockStop();
     cancelAnimationFrame(playheadFrame);
     ctx2.arrangement.playhead(null);
     $2("play").setAttribute("aria-pressed", "false");
@@ -27295,9 +27389,9 @@ function createTransport(ctx2) {
   function positionLoop() {
     const tick = () => {
       if (ctx2.dispatcher) {
-        const position = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
-        const bar = Math.floor(position.bar) + 1;
-        const beat = Math.floor(position.beatInBar) + 1;
+        const position2 = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
+        const bar = Math.floor(position2.bar) + 1;
+        const beat = Math.floor(position2.beatInBar) + 1;
         $2("position").textContent = `${bar} . ${beat}`;
         if (playing) sendTransport();
       }
@@ -28409,8 +28503,8 @@ function createKeyboard(document2, { first: first2 = 48, octaves = 2, onNote } =
   for (let octave = 0; octave < octaves; octave++) {
     for (const [semitone, after] of Object.entries(BLACK)) {
       const element = key(first2 + octave * 12 + Number(semitone), "key key-black");
-      const position = octave * 7 + after;
-      element.style.left = `calc(${position + 1} * var(--white-width) - var(--black-width) / 2)`;
+      const position2 = octave * 7 + after;
+      element.style.left = `calc(${position2 + 1} * var(--white-width) - var(--black-width) / 2)`;
       blacks.append(element);
     }
   }
@@ -28705,8 +28799,8 @@ function createRack(ctx2) {
     }
     const index = nodes.indexOf(node);
     const reorderTo = (neighbour) => {
-      const target = allNodes.indexOf(neighbour);
-      const result = dispatcher.apply([{ op: "reorderNode", id: node.id, index: target }]);
+      const target2 = allNodes.indexOf(neighbour);
+      const result = dispatcher.apply([{ op: "reorderNode", id: node.id, index: target2 }]);
       if (!result.ok) log2(result.message, "error");
       else log2(`moved ${labelFor(node.id)}`);
     };
@@ -29170,15 +29264,15 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
   const nodes = ordered.map((node) => {
     const profile = profileOf(node.id);
     const sends = project.connections.filter((c3) => c3.from.node === node.id).map((c3) => {
-      const target = project.node(c3.to.node);
+      const target2 = project.node(c3.to.node);
       return {
         id: c3.id,
         kind: kindOf3(c3),
         toNode: c3.to.node,
         toLabel: labelOf(c3.to.node),
-        toTrack: target?.track ?? null,
-        toTrackLabel: target ? trackLabelOf(target.track) : null,
-        other: Boolean(target) && target.track !== trackId,
+        toTrack: target2?.track ?? null,
+        toTrackLabel: target2 ? trackLabelOf(target2.track) : null,
+        other: Boolean(target2) && target2.track !== trackId,
         parameter: c3.to.portSymbol ?? null
       };
     });
@@ -29710,8 +29804,8 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   down.id = "track-move-down";
   down.textContent = "Move down";
   down.addEventListener("click", () => onMove(trackId, 1));
-  const position = document2.createElement("span");
-  position.className = "track-position";
+  const position2 = document2.createElement("span");
+  position2.className = "track-position";
   const remove = document2.createElement("button");
   remove.type = "button";
   remove.id = "track-delete";
@@ -29725,7 +29819,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   freeze.addEventListener("click", () => onFreeze(trackId));
   const actions = document2.createElement("div");
   actions.className = "track-actions";
-  actions.append(position, up, down, freeze, remove);
+  actions.append(position2, up, down, freeze, remove);
   element.append(nameLabel, colorGroup, sizeLabel, actions);
   return {
     element,
@@ -29744,7 +29838,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
       colorSaid.textContent = ` ${colorName(layout.color)}`;
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
       for (const option of size.options) option.selected = option.value === layout.laneSize;
-      position.textContent = `Track ${index + 1} of ${count}.`;
+      position2.textContent = `Track ${index + 1} of ${count}.`;
       up.hidden = index === 0;
       down.hidden = index === count - 1;
       remove.textContent = plugins > 0 ? `Delete track and ${plugins === 1 ? "1 plugin" : `${plugins} plugins`}` : "Delete track";
@@ -29787,10 +29881,10 @@ var TimeView = class {
     this.#update({ scrollBeat: Math.max(0, finite(beat, "scroll position")) });
   }
   /** Zoom by a factor, keeping the beat under `anchorX` where it is. */
-  zoomBy(factor, anchorX = 0) {
-    if (!(factor > 0) || !Number.isFinite(factor)) throw new Error("a zoom factor must be above zero");
+  zoomBy(factor2, anchorX = 0) {
+    if (!(factor2 > 0) || !Number.isFinite(factor2)) throw new Error("a zoom factor must be above zero");
     const anchorBeat = this.xToBeat(anchorX);
-    const pixelsPerBeat = clamp(this.#pixelsPerBeat * factor, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
+    const pixelsPerBeat = clamp(this.#pixelsPerBeat * factor2, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
     this.#update({ pixelsPerBeat, scrollBeat: Math.max(0, anchorBeat - anchorX / pixelsPerBeat) });
   }
   /** Show `lengthBeats` across `widthPx`, from the start. */
@@ -29958,9 +30052,9 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   const ppb = () => view.pixelsPerBeat;
   const bpb = () => lastArgs?.beatsPerBar ?? 4;
   const headPx = () => scroller.querySelector(".timeline-head")?.offsetWidth ?? 0;
-  function zoom(factor, anchorX = 0) {
+  function zoom(factor2, anchorX = 0) {
     const beat = (scroller.scrollLeft + anchorX) / ppb();
-    view.zoomBy(factor);
+    view.zoomBy(factor2);
     scroller.scrollLeft = beat * ppb() - anchorX;
     programmatic = scroller.scrollLeft;
   }
@@ -30149,11 +30243,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       const text = document2.createElement("p");
       text.textContent = emptyState.text;
       empty.append(text);
-      for (const action of emptyState.actions) {
+      for (const action2 of emptyState.actions) {
         const button = document2.createElement("button");
         button.type = "button";
-        button.textContent = action.label;
-        button.addEventListener("click", () => action.run());
+        button.textContent = action2.label;
+        button.addEventListener("click", () => action2.run());
         empty.append(button);
       }
       drawLoop(loop, width);
@@ -30312,11 +30406,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       dragged = false;
       const step = view.step(beatsPerBar);
       const min = step ?? 0.25;
-      const target = (e) => {
+      const target2 = (e) => {
         const at = (resizing ? clip.startBeat + clip.lengthBeats : clip.startBeat) + (e.clientX - originX) / ppb();
         return view.snap(at, beatsPerBar, { bypass: e.altKey });
       };
-      const place = (e) => resizing ? { length: Math.max(min, target(e) - clip.startBeat) } : { start: Math.max(0, target(e)) };
+      const place = (e) => resizing ? { length: Math.max(min, target2(e) - clip.startBeat) } : { start: Math.max(0, target2(e)) };
       const move = (e) => {
         const to = place(e);
         if (resizing ? to.length !== clip.lengthBeats : to.start !== clip.startBeat) dragged = true;
@@ -30579,8 +30673,8 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       else say2(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
     }
   });
-  const cellOf = (target) => {
-    const cell = target?.closest?.("[data-step]");
+  const cellOf = (target2) => {
+    const cell = target2?.closest?.("[data-step]");
     return cell ? { pitch: Number(cell.dataset.pitch), step: Number(cell.dataset.step) } : null;
   };
   function dragged(kind, from, to, note) {
@@ -31128,10 +31222,10 @@ function createArrangement(ctx2) {
     $2("audiofile").addEventListener("change", (event) => {
       const file = event.target.files?.[0];
       event.target.value = "";
-      const target = pendingAudio;
+      const target2 = pendingAudio;
       pendingAudio = null;
-      if (!file || !target) return;
-      importAudio(file, target).catch((error2) => log2(`${file.name}: ${error2.message}`, "error"));
+      if (!file || !target2) return;
+      importAudio(file, target2).catch((error2) => log2(`${file.name}: ${error2.message}`, "error"));
     });
     $2("timeline-mount").append(clipActions.element, timeline.element);
     ctx2.dock.slot("midi").append(pianoRoll.element);
@@ -31537,8 +31631,8 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAu
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const port = sources[fromIndex];
-    const target = targets[toIndex];
-    if (port && target) onConnect({ from: port, to: target.port, toNode: target.node });
+    const target2 = targets[toIndex];
+    if (port && target2) onConnect({ from: port, to: target2.port, toNode: target2.node });
   });
   let list = null;
   return {
@@ -31977,9 +32071,9 @@ function createRoutingMatrix(document2, { onConnect, onDisconnect }) {
     let c3 = [...tr.querySelectorAll("td")].indexOf(td) + dc;
     const width = tr.querySelectorAll("td").length;
     while (r >= 0 && r < rows.length && c3 >= 0 && c3 < width) {
-      const target = at(r, c3);
-      if (target) {
-        focus(target);
+      const target2 = at(r, c3);
+      if (target2) {
+        focus(target2);
         return;
       }
       r += dr;
@@ -32189,9 +32283,9 @@ function askConsent(document2, request) {
     heading.textContent = `Run ${request.label}?`;
     dialog.append(heading);
     const list = document2.createElement("ul");
-    for (const statement of request.statements) {
+    for (const statement2 of request.statements) {
       const item = document2.createElement("li");
-      item.textContent = statement;
+      item.textContent = statement2;
       list.append(item);
     }
     dialog.append(list);
@@ -32281,13 +32375,13 @@ var { jig: jig3, rdfs: rdfs2, dcterms, rdf: rdfTerms2 } = vocabulary;
 var iri2 = (value2) => env_default.namedNode(value2);
 var first = (dataset2, subject, predicate) => [...dataset2.match(subject, iri2(predicate), null)][0]?.object.value ?? null;
 function readCollection(dataset2) {
-  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.PluginCollection))].map((q) => q.subject);
+  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.PluginCollection))].map((q2) => q2.subject);
   if (subjects.length === 0) throw new Error("the document declares no jig:PluginCollection");
   if (subjects.length > 1) {
     throw new Error(`the document declares ${subjects.length} collections (${subjects.map((s) => s.value).join(", ")}); a collection document holds one`);
   }
   const subject = subjects[0];
-  const members = [...dataset2.match(subject, iri2(dcterms.hasPart), null)].map((q) => ({ iri: q.object.value, label: first(dataset2, q.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
+  const members = [...dataset2.match(subject, iri2(dcterms.hasPart), null)].map((q2) => ({ iri: q2.object.value, label: first(dataset2, q2.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
   return {
     iri: subject.value,
     label: first(dataset2, subject, rdfs2.label),
@@ -32327,17 +32421,17 @@ var CollectionLoader = class {
   constructor({
     // Bound rather than taken by reference: see PluginLoader.
     fetch: fetch2 = (...args) => globalThis.fetch(...args),
-    parse,
+    parse: parse2,
     validator,
     verify,
     concurrency = 6
   } = {}) {
-    if (typeof parse !== "function") throw new Error("CollectionLoader needs a parse function");
+    if (typeof parse2 !== "function") throw new Error("CollectionLoader needs a parse function");
     if (!validator) throw new Error("CollectionLoader needs a shape validator");
     if (typeof verify !== "function") throw new Error("CollectionLoader needs a verify function");
     if (!(Number.isInteger(concurrency) && concurrency > 0)) throw new Error(`concurrency must be a positive integer, not ${concurrency}`);
     this.#fetch = fetch2;
-    this.#parse = parse;
+    this.#parse = parse2;
     this.#validator = validator;
     this.#verify = verify;
     this.#concurrency = concurrency;
@@ -32792,9 +32886,9 @@ function writeArrangement(lines, project) {
     lines.push("", `<#${r.id}> a ${term2(jig4.Region)} ; ${term2(trn3.startBeat)} ${decimal(r.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
   }
   for (const e of [...project.envelopes].sort(byId)) {
-    const target = e.target.kind ? `${term2(jig4.targetKind)} ${term2(jig4[KIND_TERM[e.target.kind]])}` : `${term2(jig4.targetNode)} <#${e.target.node}> ; ${term2(jig4.targetSymbol)} ${string(e.target.symbol)}`;
+    const target2 = e.target.kind ? `${term2(jig4.targetKind)} ${term2(jig4[KIND_TERM[e.target.kind]])}` : `${term2(jig4.targetNode)} <#${e.target.node}> ; ${term2(jig4.targetSymbol)} ${string(e.target.symbol)}`;
     const points = e.points;
-    lines.push("", `<#${e.id}> a ${term2(jig4.Envelope)} ; ${target}${points.length > 0 ? ` ; ${term2(jig4.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
+    lines.push("", `<#${e.id}> a ${term2(jig4.Envelope)} ; ${target2}${points.length > 0 ? ` ; ${term2(jig4.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
     points.forEach((p, i2) => {
       lines.push(`<#${e.id}-p${i2}> a ${term2(jig4.EnvelopePoint)} ; ${term2(jig4.atBeat)} ${decimal(p.atBeat)} ; ${term2(jig4.pointValue)} ${decimal(p.value)} ; ${term2(jig4.curve)} ${term2(jig4[CURVE_TERM[p.curve]])} .`);
     });
@@ -32839,11 +32933,11 @@ function objects2(dataset2, subject, predicate) {
   return out;
 }
 var one2 = (dataset2, subject, predicate) => objects2(dataset2, subject, predicate)[0] ?? null;
-var value = (term3) => term3 ? term3.value : null;
-function number(term3, what) {
-  if (!term3) return null;
-  const n2 = Number(term3.value);
-  if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term3.value}`);
+var value = (term4) => term4 ? term4.value : null;
+function number(term4, what) {
+  if (!term4) return null;
+  const n2 = Number(term4.value);
+  if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term4.value}`);
   return n2;
 }
 function findProject(dataset2) {
@@ -32980,13 +33074,13 @@ function readArrangement(dataset2, iri3, tracks) {
   for (const { subject, id } of each(jig5.envelope, "envelope")) {
     const kind = value(one2(dataset2, subject, jig5.targetKind));
     const targetNode = value(one2(dataset2, subject, jig5.targetNode));
-    const target = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri3, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig5.targetSymbol)) };
+    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri3, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig5.targetSymbol)) };
     const points = objects2(dataset2, subject, jig5.envelopePoint).map((x) => x.value).map((pointIri) => ({
       atBeat: number(one2(dataset2, pointIri, jig5.atBeat), `atBeat of a point in ${id}`),
       value: number(one2(dataset2, pointIri, jig5.pointValue), `pointValue of a point in ${id}`),
       curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig5.curve)), `curve of a point in ${id}`)
     })).sort((a2, b) => a2.atBeat - b.atBeat);
-    changes.push({ op: "addEnvelope", id, target, points });
+    changes.push({ op: "addEnvelope", id, target: target2, points });
   }
   return changes;
 }
@@ -33353,8 +33447,8 @@ function createHistory(ctx2) {
     $2("redo").addEventListener("click", () => redo());
     document2.addEventListener("keydown", (event) => {
       if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "z" && event.key.toLowerCase() !== "y") return;
-      const target = document2.activeElement;
-      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      const target2 = document2.activeElement;
+      if (target2 && (target2.tagName === "INPUT" || target2.tagName === "TEXTAREA" || target2.isContentEditable)) return;
       const key = event.key.toLowerCase();
       if (key === "y") {
         event.preventDefault();
@@ -33839,6 +33933,1264 @@ function createPwa(ctx2) {
   return { mount };
 }
 
+// src/reel/Clock.js
+var ReelClock = class {
+  #now;
+  #transport;
+  #origin = null;
+  #until = 0;
+  #jobs = [];
+  #sequence = 0;
+  /**
+   * - `now()`: the audio clock in seconds, AudioContext.currentTime.
+   * - `transport()`: the Transport as it is now, read every tick so a tempo or loop edit is followed.
+   */
+  constructor({ now, transport: transport2 }) {
+    if (typeof now !== "function" || typeof transport2 !== "function") throw new Error("ReelClock needs now and transport");
+    this.#now = now;
+    this.#transport = transport2;
+  }
+  get running() {
+    return this.#origin !== null;
+  }
+  /** Start at the clock time the transport's beat zero is heard, as Scheduler.start does. */
+  start(atTime) {
+    this.#origin = atTime;
+    this.#until = 0;
+  }
+  stop() {
+    this.#origin = null;
+  }
+  /** Fire `fn` once when the transport passes `beat`, on every pass of a loop. Returns a cancel. */
+  at(beat, fn) {
+    return this.#add({ kind: "at", beat, fn });
+  }
+  /** Fire `fn` at every multiple of `beats`, starting at beat 0. Returns a cancel. */
+  every(beats2, fn) {
+    if (!(beats2 > 0)) throw new Error("every needs a length above zero");
+    return this.#add({ kind: "every", beats: beats2, fn });
+  }
+  #add(job) {
+    job.live = true;
+    job.order = this.#sequence++;
+    this.#jobs.push(job);
+    return () => {
+      job.live = false;
+      this.#jobs = this.#jobs.filter((j) => j.live);
+    };
+  }
+  /** Fire what the transport has passed since the last tick. Call often; a tick with nothing new does nothing. */
+  tick() {
+    if (!this.running) return;
+    const end = this.#now() - this.#origin;
+    const start = this.#until;
+    if (end <= start) return;
+    const transport2 = this.#transport();
+    const passes = [...segments(transport2, start, end)];
+    const due = [];
+    for (const job of this.#jobs) {
+      if (!job.live) continue;
+      const at = job.kind === "at" ? this.#lastAt(transport2, passes, job.beat, start, end) : this.#lastEvery(transport2, passes, job.beats, start, end);
+      if (at !== null) due.push({ at, order: job.order, job });
+    }
+    this.#until = end;
+    due.sort((a2, b) => a2.at - b.at || a2.order - b.order);
+    for (const { job } of due) {
+      if (!job.live) continue;
+      try {
+        Promise.resolve(job.fn()).catch(() => {
+        });
+      } catch {
+      }
+    }
+  }
+  /** The latest elapsed time in [start, end) at which the transport reaches `beat`, or null. */
+  #lastAt(transport2, passes, beat, start, end) {
+    const song = transport2.secondsAtBeat(beat);
+    let found = null;
+    for (const pass of passes) {
+      if (song < pass.lo || song >= pass.hi) continue;
+      const elapsed = song + pass.shift;
+      if (elapsed >= start && elapsed < end) found = found === null ? elapsed : Math.max(found, elapsed);
+    }
+    return found;
+  }
+  /** The latest elapsed time in [start, end) at which the transport reaches a multiple of `period` beats, or null. */
+  #lastEvery(transport2, passes, period, start, end) {
+    let found = null;
+    for (const pass of passes) {
+      const from = Math.max(start, pass.from);
+      const to = Math.min(end, pass.to);
+      if (!(to > from)) continue;
+      const a2 = from - pass.shift;
+      const b = to - pass.shift;
+      const beatA = transport2.beatAtSeconds(a2);
+      const beatB = transport2.beatAtSeconds(b);
+      let k = Math.ceil(beatA / period);
+      if (k * period < beatA) k++;
+      let last = null;
+      for (; k * period < beatB; k++) last = k;
+      if (last === null) continue;
+      const elapsed = transport2.secondsAtBeat(last * period) + pass.shift;
+      found = found === null ? elapsed : Math.max(found, elapsed);
+    }
+    return found;
+  }
+};
+
+// src/reel/Parser.js
+var MAX_EXPRESSION_DEPTH = 32;
+var UNITS2 = ["kHz", "Hz", "ms", "s", "dB", "st", "%", "cents"];
+function stripComment(text) {
+  const match = /(^|\s)#/.exec(text);
+  return (match ? text.slice(0, match.index) : text).replace(/\s+$/, "");
+}
+var LineError = class extends Error {
+  constructor(message, column) {
+    super(message);
+    this.column = column;
+  }
+};
+var Tokens = class {
+  constructor(text) {
+    this.text = text;
+    this.pos = 0;
+  }
+  skipSpace() {
+    while (this.pos < this.text.length && /\s/.test(this.text[this.pos])) this.pos++;
+  }
+  atEnd() {
+    this.skipSpace();
+    return this.pos >= this.text.length;
+  }
+  peek(s) {
+    this.skipSpace();
+    return this.text.startsWith(s, this.pos);
+  }
+  /** A punctuation token, such as `=`, `->`, `(`. */
+  eat(s) {
+    if (!this.peek(s)) return false;
+    this.pos += s.length;
+    return true;
+  }
+  expect(s, what = `"${s}"`) {
+    if (!this.eat(s)) throw new LineError(`expected ${what}`, this.pos + 1);
+  }
+  ident() {
+    this.skipSpace();
+    const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(this.text.slice(this.pos));
+    if (!m) return null;
+    this.pos += m[0].length;
+    return m[0];
+  }
+  /** A keyword, only when it is a whole word. */
+  keyword(word) {
+    this.skipSpace();
+    const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(this.text.slice(this.pos));
+    if (m && m[0] === word) {
+      this.pos += word.length;
+      return true;
+    }
+    return false;
+  }
+  rest() {
+    this.skipSpace();
+    const r = this.text.slice(this.pos);
+    this.pos = this.text.length;
+    return r.trim();
+  }
+};
+function number2(t) {
+  t.skipSpace();
+  const m = /^\d+(\.\d+)?|^\.\d+/.exec(t.text.slice(t.pos));
+  if (!m) return null;
+  t.pos += m[0].length;
+  let unit = null;
+  for (const u2 of UNITS2) {
+    if (t.text.startsWith(u2, t.pos) && !/[A-Za-z0-9_]/.test(t.text[t.pos + u2.length] ?? "")) {
+      unit = u2;
+      t.pos += u2.length;
+      break;
+    }
+  }
+  return { type: "number", value: Number(m[0]), unit };
+}
+function expression(t, depth = 0) {
+  if (depth > MAX_EXPRESSION_DEPTH) throw new LineError("expression nested too deeply", t.pos + 1);
+  let left = term3(t, depth);
+  for (; ; ) {
+    t.skipSpace();
+    const c3 = t.text[t.pos];
+    if (c3 === "+" || c3 === "-" && t.text[t.pos + 1] !== ">") {
+      t.pos++;
+      left = { type: "binary", op: c3, left, right: term3(t, depth) };
+    } else return left;
+  }
+}
+function term3(t, depth) {
+  let left = factor(t, depth);
+  for (; ; ) {
+    t.skipSpace();
+    const c3 = t.text[t.pos];
+    if (c3 === "*" || c3 === "/") {
+      t.pos++;
+      left = { type: "binary", op: c3, left, right: factor(t, depth) };
+    } else return left;
+  }
+}
+function factor(t, depth) {
+  t.skipSpace();
+  const column = t.pos + 1;
+  if (t.eat("(")) {
+    const e = expression(t, depth + 1);
+    t.expect(")");
+    return e;
+  }
+  if (t.peek("-") && !t.peek("->")) {
+    t.pos++;
+    return { type: "negate", operand: factor(t, depth + 1) };
+  }
+  const n2 = number2(t);
+  if (n2) return n2;
+  const name2 = t.ident();
+  if (!name2) throw new LineError("expected a number, a name or a call", column);
+  if (t.eat("(")) {
+    const args = [];
+    if (!t.eat(")")) {
+      do {
+        args.push(expression(t, depth + 1));
+      } while (t.eat(","));
+      t.expect(")");
+    }
+    return { type: "call", name: name2, args, column };
+  }
+  return { type: "variable", name: name2, column };
+}
+function target(t) {
+  const column = t.pos + 1;
+  const name2 = t.ident();
+  if (!name2) throw new LineError("expected a plugin name", column);
+  t.expect(".", '"." and a parameter symbol');
+  const symbol = t.ident();
+  if (!symbol) throw new LineError(`expected a parameter symbol after "${name2}."`, t.pos + 1);
+  return { name: name2, symbol, column };
+}
+function position(t) {
+  t.skipSpace();
+  const m = /^(\d+):(\d+(?:\.\d+)?)/.exec(t.text.slice(t.pos));
+  if (!m) throw new LineError("expected a position such as 4:1 (bar, then beat)", t.pos + 1);
+  t.pos += m[0].length;
+  const bar = Number(m[1]);
+  const beat = Number(m[2]);
+  if (bar < 1 || beat < 1) throw new LineError("bars and beats count from 1", t.pos - m[0].length + 1);
+  return { bar, beat };
+}
+function duration(t) {
+  const n2 = number2(t);
+  if (!n2 || n2.unit) throw new LineError("expected a length such as 2 bars", t.pos + 1);
+  const unit = t.ident();
+  if (!["bar", "bars", "beat", "beats"].includes(unit)) throw new LineError('expected "bars" or "beats" after the length', t.pos + 1);
+  if (n2.value <= 0) throw new LineError("a length must be more than zero", t.pos + 1);
+  return { n: n2.value, unit: unit.startsWith("bar") ? "bars" : "beats" };
+}
+function action(t) {
+  const column = t.pos + 1;
+  if (t.keyword("ramp")) {
+    const tgt2 = target(t);
+    const from = expression(t);
+    t.expect("->");
+    const to = expression(t);
+    if (!t.keyword("over")) throw new LineError('expected "over" and a length', t.pos + 1);
+    return { type: "ramp", target: tgt2, from, to, length: duration(t), column };
+  }
+  const tgt = target(t);
+  t.expect("=");
+  return { type: "set", target: tgt, expr: expression(t), column };
+}
+function statement(text) {
+  const t = new Tokens(text);
+  const column = t.pos + 1;
+  let s;
+  if (t.keyword("load")) {
+    const name2 = t.ident();
+    if (!name2) throw new LineError("expected a name for the plugin", t.pos + 1);
+    t.expect("=");
+    const iri3 = t.rest();
+    if (!/^https?:\/\/\S+$/.test(iri3)) throw new LineError("expected an http or https address, written out in full", t.pos - iri3.length + 1);
+    return { type: "load", name: name2, iri: iri3, column };
+  }
+  if (t.keyword("let")) {
+    const name2 = t.ident();
+    if (!name2) throw new LineError("expected a name", t.pos + 1);
+    t.expect("=");
+    s = { type: "let", name: name2, expr: expression(t), column };
+  } else if (t.keyword("seed")) {
+    const n2 = number2(t);
+    if (!n2 || n2.unit) throw new LineError("expected a whole number for the seed", t.pos + 1);
+    s = { type: "seed", value: Math.trunc(n2.value), column };
+  } else if (t.keyword("connect")) {
+    const from = t.ident();
+    t.expect("->");
+    const to = t.ident();
+    if (!from || !to) throw new LineError('expected "connect FROM -> TO"', t.pos + 1);
+    s = { type: "connect", from, to, column };
+  } else if (t.keyword("at")) {
+    const pos = position(t);
+    s = { type: "at", pos, body: action(t), column };
+  } else if (t.keyword("every")) {
+    const length = duration(t);
+    t.expect(":");
+    s = { type: "every", length, body: action(t), column };
+  } else {
+    s = action(t);
+  }
+  if (!t.atEnd()) throw new LineError(`unexpected "${t.rest().slice(0, 20)}"`, t.pos + 1);
+  return s;
+}
+function parse(source) {
+  const statements = [];
+  const errors = [];
+  String(source).split(/\r?\n/).forEach((raw, index) => {
+    const text = stripComment(raw);
+    if (text.trim() === "") return;
+    const line = index + 1;
+    try {
+      statements.push({ ...statement(text), line });
+    } catch (error2) {
+      if (!(error2 instanceof LineError)) throw error2;
+      errors.push({ line, column: error2.column, message: error2.message });
+    }
+  });
+  return { statements, errors };
+}
+
+// src/reel/Values.js
+var ReelError = class extends Error {
+  constructor(message, line = null, column = null) {
+    super(message);
+    this.line = line;
+    this.column = column;
+  }
+};
+var LITERAL = {
+  Hz: ["hz", 1],
+  kHz: ["hz", 1e3],
+  ms: ["time", 1],
+  s: ["time", 1e3],
+  dB: ["db", 1],
+  st: ["st", 1],
+  "%": ["pc", 1],
+  cents: ["cent", 1]
+};
+var PORT = {
+  hz: ["hz", 1],
+  khz: ["hz", 1 / 1e3],
+  ms: ["time", 1],
+  s: ["time", 1 / 1e3],
+  db: ["db", 1],
+  semitone12tet: ["st", 1],
+  pc: ["pc", 1],
+  cent: ["cent", 1]
+};
+var portDimension = (unit) => {
+  if (!unit) return null;
+  const local = String(unit).split(/[#/]/).pop().toLowerCase();
+  return PORT[local] ? { dim: PORT[local][0], factor: PORT[local][1], name: local } : { dim: void 0, factor: 1, name: local };
+};
+var q = (v, dim = null) => ({ v, dim });
+function literal4(node) {
+  if (node.unit === null) return q(node.value);
+  const [dim, factor2] = LITERAL[node.unit];
+  return q(node.value * factor2, dim);
+}
+var need = (condition, message, node) => {
+  if (!condition) throw new ReelError(message, null, node?.column ?? null);
+};
+function combine(op, a2, b, node) {
+  if (op === "+" || op === "-") {
+    need(a2.dim === b.dim, `cannot ${op === "+" ? "add" : "subtract"} ${a2.dim ?? "a plain number"} and ${b.dim ?? "a plain number"}`, node);
+    return q(op === "+" ? a2.v + b.v : a2.v - b.v, a2.dim);
+  }
+  if (op === "*") {
+    need(a2.dim === null || b.dim === null, "cannot multiply two quantities that both carry a unit", node);
+    return q(a2.v * b.v, a2.dim ?? b.dim);
+  }
+  need(b.dim === null, "cannot divide by a quantity that carries a unit", node);
+  need(b.v !== 0, "division by zero", node);
+  return q(a2.v / b.v, a2.dim);
+}
+var FUNCTIONS = {
+  pick: { min: 1, max: 64 },
+  rand: { min: 2, max: 2 },
+  round: { min: 1, max: 1 }
+};
+function checkCall(node) {
+  const f = FUNCTIONS[node.name];
+  need(f, `unknown function "${node.name}"; Reel has ${Object.keys(FUNCTIONS).join(", ")}`, node);
+  need(
+    node.args.length >= f.min && node.args.length <= f.max,
+    `${node.name} takes ${f.min === f.max ? f.min : `${f.min} to ${f.max}`} argument(s), not ${node.args.length}`,
+    node
+  );
+}
+function evaluate(node, env, rng, budget = { left: 2e3 }) {
+  if (--budget.left < 0) throw new ReelError("this expression is too large to run inside a tick", null, node.column);
+  switch (node.type) {
+    case "number":
+      return literal4(node);
+    case "variable": {
+      need(env.has(node.name), `"${node.name}" is not defined; use let ${node.name} = ... first`, node);
+      return env.get(node.name);
+    }
+    case "negate": {
+      const a2 = evaluate(node.operand, env, rng, budget);
+      return q(-a2.v, a2.dim);
+    }
+    case "binary":
+      return combine(node.op, evaluate(node.left, env, rng, budget), evaluate(node.right, env, rng, budget), node);
+    case "call": {
+      checkCall(node);
+      const args = node.args.map((a2) => evaluate(a2, env, rng, budget));
+      if (node.name === "pick") return args[Math.min(args.length - 1, Math.floor(rng() * args.length))];
+      if (node.name === "round") return q(Math.round(args[0].v), args[0].dim);
+      need(args[0].dim === args[1].dim, "rand needs both ends in the same unit", node);
+      return q(args[0].v + rng() * (args[1].v - args[0].v), args[0].dim);
+    }
+    default:
+      throw new ReelError(`unknown expression ${node.type}`);
+  }
+}
+function bounds(node, env) {
+  const i2 = (lo, hi, dim) => ({ lo: Math.min(lo, hi), hi: Math.max(lo, hi), dim });
+  switch (node.type) {
+    case "number": {
+      const v = literal4(node);
+      return i2(v.v, v.v, v.dim);
+    }
+    case "variable": {
+      need(env.has(node.name), `"${node.name}" is not defined; use let ${node.name} = ... first`, node);
+      return env.get(node.name);
+    }
+    case "negate": {
+      const a2 = bounds(node.operand, env);
+      return i2(-a2.hi, -a2.lo, a2.dim);
+    }
+    case "binary": {
+      const a2 = bounds(node.left, env);
+      const b = bounds(node.right, env);
+      const corners = [[a2.lo, b.lo], [a2.lo, b.hi], [a2.hi, b.lo], [a2.hi, b.hi]];
+      const dim = combine(node.op, q(1, a2.dim), q(1, b.dim === null && node.op === "/" ? null : b.dim), node).dim;
+      if (node.op === "/") need(b.lo > 0 || b.hi < 0, "division by a value that could be zero", node);
+      const all = corners.map(([x, y]) => node.op === "+" ? x + y : node.op === "-" ? x - y : node.op === "*" ? x * y : x / y);
+      return i2(Math.min(...all), Math.max(...all), dim);
+    }
+    case "call": {
+      checkCall(node);
+      const args = node.args.map((a2) => bounds(a2, env));
+      if (node.name === "rand") {
+        need(args[0].dim === args[1].dim, "rand needs both ends in the same unit", node);
+        return i2(args[0].lo, args[1].hi, args[0].dim);
+      }
+      if (node.name === "pick") {
+        for (const a2 of args) need(a2.dim === args[0].dim, "pick needs every choice in the same unit", node);
+        return i2(Math.min(...args.map((a2) => a2.lo)), Math.max(...args.map((a2) => a2.hi)), args[0].dim);
+      }
+      return i2(Math.round(args[0].lo), Math.round(args[0].hi), args[0].dim);
+    }
+    default:
+      throw new ReelError(`unknown expression ${node.type}`);
+  }
+}
+function makeRng(seed) {
+  let a2 = seed >>> 0;
+  return () => {
+    a2 = a2 + 1831565813 >>> 0;
+    let t = a2;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// src/reel/Planner.js
+var MAX_STATEMENTS = 500;
+function nearest(word, candidates, count = 3) {
+  const distance = (a2, b) => {
+    const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i2 = 1; i2 <= a2.length; i2++) {
+      let previous = row[0];
+      row[0] = i2;
+      for (let j = 1; j <= b.length; j++) {
+        const above = row[j];
+        row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a2[i2 - 1] === b[j - 1] ? 0 : 1));
+        previous = above;
+      }
+    }
+    return row[b.length];
+  };
+  return [...candidates].sort((x, y) => distance(word, x) - distance(word, y)).slice(0, count);
+}
+var hint = (word, candidates) => {
+  const near = nearest(word, candidates);
+  return near.length ? `; nearest: ${near.join(", ")}` : "";
+};
+async function plan(statements, context) {
+  const { beatsPerBar, existing = /* @__PURE__ */ new Map(), resolvePlugin } = context;
+  const errors = [];
+  const fail = (line, message, column = null) => errors.push({ line, column, message });
+  if (statements.length > MAX_STATEMENTS) {
+    return { ok: false, errors: [{ line: null, column: null, message: `a script is limited to ${MAX_STATEMENTS} statements, this has ${statements.length}` }] };
+  }
+  const scope = new Map([...existing].map(([name2, v]) => [name2, v.ports]));
+  const loads = [];
+  const fetched = /* @__PURE__ */ new Map();
+  for (const s of statements.filter((s2) => s2.type === "load")) {
+    if (scope.has(s.name)) {
+      fail(s.line, `"${s.name}" is already a plugin name`, s.column);
+      continue;
+    }
+    if (!fetched.has(s.iri)) fetched.set(s.iri, resolvePlugin(s.iri));
+    scope.set(s.name, null);
+    loads.push(s);
+  }
+  for (const s of loads) {
+    let result;
+    try {
+      result = await fetched.get(s.iri);
+    } catch (error2) {
+      result = { ok: false, message: error2.message };
+    }
+    if (!result?.ok) {
+      fail(s.line, `cannot load ${s.name} from ${s.iri}: ${result?.message ?? "refused"}${result?.step ? ` (at ${result.step})` : ""}`, s.column);
+    } else {
+      scope.set(s.name, result.ports);
+    }
+  }
+  const lets = /* @__PURE__ */ new Map();
+  const out = { seed: 1, loads: loads.map(({ name: name2, iri: iri3, line }) => ({ name: name2, iri: iri3, line })), lets: [], steps: [] };
+  const portOf = (name2, symbol, line, column) => {
+    if (!scope.has(name2)) {
+      fail(line, `no plugin called "${name2}"${hint(name2, scope.keys())}`, column);
+      return null;
+    }
+    const ports = scope.get(name2);
+    if (!ports) return null;
+    const port = ports.find((p) => p.symbol === symbol);
+    if (!port) {
+      fail(line, `${name2} has no parameter "${symbol}"${hint(symbol, ports.map((p) => p.symbol))}`, column);
+      return null;
+    }
+    return port;
+  };
+  const check = (expr, port, name2, line) => {
+    let b;
+    try {
+      b = bounds(expr, lets);
+    } catch (error2) {
+      if (!(error2 instanceof ReelError)) throw error2;
+      fail(line, error2.message, error2.column);
+      return null;
+    }
+    const unit = portDimension(port.unit);
+    if (b.dim !== null) {
+      if (!unit?.dim) {
+        fail(line, `${name2}.${port.symbol} takes ${unit ? `${unit.name}` : "a plain number"}, not a ${b.dim} quantity`, expr.column);
+        return null;
+      }
+      if (unit.dim !== b.dim) {
+        fail(line, `${name2}.${port.symbol} is in ${unit.name}, and this value is ${b.dim}`, expr.column);
+        return null;
+      }
+    }
+    const factor2 = b.dim === null ? 1 : unit.factor;
+    const lo = b.lo * factor2;
+    const hi = b.hi * factor2;
+    const { minimum, maximum } = port;
+    if (lo < minimum - 1e-9 || hi > maximum + 1e-9) {
+      const reach = lo === hi ? `${lo}` : `${lo} to ${hi}`;
+      fail(line, `${name2}.${port.symbol} can be set to ${reach}, outside its range ${minimum} to ${maximum}`, expr.column);
+      return null;
+    }
+    return { unit: port.unit ?? null, factor: factor2, minimum, maximum };
+  };
+  const beatOf = (pos) => (pos.bar - 1) * beatsPerBar + (pos.beat - 1);
+  const lengthBeats = (length) => length.unit === "bars" ? length.n * beatsPerBar : length.n;
+  const action2 = (a2, when, line) => {
+    const { name: name2, symbol, column } = a2.target;
+    const port = portOf(name2, symbol, line, column);
+    if (!port) return;
+    if (a2.type === "set") {
+      const meta = check(a2.expr, port, name2, line);
+      if (meta) out.steps.push({ line, when, action: { type: "set", node: name2, symbol, expr: a2.expr, port: meta } });
+    } else {
+      if (when.kind === "every") {
+        fail(line, "a ramp cannot be repeated by every; use at to place it", a2.column);
+        return;
+      }
+      const from = check(a2.from, port, name2, line);
+      const to = check(a2.to, port, name2, line);
+      if (from && to) {
+        out.steps.push({ line, when, action: { type: "ramp", node: name2, symbol, from: a2.from, to: a2.to, lengthBeats: lengthBeats(a2.length), port: from } });
+      }
+    }
+  };
+  for (const s of statements) {
+    switch (s.type) {
+      case "load":
+        break;
+      case "seed":
+        out.seed = s.value;
+        break;
+      case "let": {
+        if (lets.has(s.name)) {
+          fail(s.line, `"${s.name}" is already defined`, s.column);
+          break;
+        }
+        try {
+          lets.set(s.name, bounds(s.expr, lets));
+          out.lets.push({ name: s.name, expr: s.expr, line: s.line });
+        } catch (error2) {
+          if (!(error2 instanceof ReelError)) throw error2;
+          fail(s.line, error2.message, error2.column);
+        }
+        break;
+      }
+      case "connect": {
+        for (const end of [s.from, s.to]) if (!scope.has(end)) fail(s.line, `no plugin called "${end}"${hint(end, scope.keys())}`, s.column);
+        if (scope.has(s.from) && scope.has(s.to)) out.steps.push({ line: s.line, when: { kind: "now" }, action: { type: "connect", from: s.from, to: s.to } });
+        break;
+      }
+      case "set":
+      case "ramp":
+        action2(s, { kind: "now" }, s.line);
+        break;
+      case "at":
+        action2(s.body, { kind: "at", beat: beatOf(s.pos) }, s.line);
+        break;
+      case "every":
+        action2(s.body, { kind: "every", beats: lengthBeats(s.length) }, s.line);
+        break;
+      default:
+        fail(s.line, `unknown statement ${s.type}`);
+    }
+  }
+  return errors.length ? { ok: false, errors } : { ok: true, plan: out };
+}
+
+// src/reel/Capabilities.js
+var SCRIPTABLE = Object.freeze({
+  load: "plugin_load",
+  set: "parameter_set",
+  ramp: "envelope_add",
+  connect: "connection_add"
+});
+var NOT_SCRIPTABLE = Object.freeze({
+  status: "a query; a script cannot branch on a result",
+  project_get: "a query; a script cannot branch on a result",
+  plugins_search: "a query, and a script names its plugins",
+  plugin_describe: "a query, answered by the planner for every plugin the script loads",
+  plugin_validate_chain: "a query; the planner validates what a script loads",
+  collection_open: "replaces the session, which is a person's decision and not a gesture in a set",
+  graph_apply_changes: "the general changeset; Reel has a statement for each change it permits",
+  track_add: "arrangement editing, not yet a statement",
+  track_remove: "arrangement editing, not yet a statement",
+  track_layout: "editor layout",
+  track_set: "arrangement editing, not yet a statement",
+  track_set_channel: "a mixer gesture; wanted, and not in version one",
+  node_move_to_track: "arrangement editing, not yet a statement",
+  clip_add: "arrangement editing, not yet a statement",
+  clip_add_audio: "arrangement editing, not yet a statement",
+  clip_set_notes: "arrangement editing, not yet a statement",
+  clip_move: "arrangement editing, not yet a statement",
+  clip_set: "arrangement editing, not yet a statement",
+  clip_split: "arrangement editing, not yet a statement",
+  clip_duplicate: "arrangement editing, not yet a statement",
+  clip_remove: "arrangement editing, not yet a statement",
+  envelope_set: "a ramp replaces an envelope through envelope_add; editing points is not a gesture",
+  envelope_remove: "not yet a statement",
+  node_move_in_chain: "chain editing, not yet a statement",
+  node_bypass: "wanted for performance, and not in version one",
+  node_remove: "destructive, and not a gesture in a set",
+  connection_remove: "not yet a statement",
+  parameters_set_batch: "a script sets parameters one statement at a time, each checked",
+  parameter_reset: "not yet a statement",
+  history_undo: "a script must not undo a person's edits",
+  history_redo: "a script must not redo a person's edits",
+  transport_play: "needs user activation, and the person starts the music",
+  transport_stop: "the person stops the music",
+  transport_configure: "tempo and loop changes are wanted for performance, and not in version one",
+  diagnostics: "a query; a script cannot branch on a result",
+  script_run: "a script cannot run a script, which would let one never end"
+});
+
+// src/reel/Runner.js
+var TICK_BUDGET = 200;
+function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = () => 0, unrecorded = (fn) => fn() }) {
+  for (const tool of Object.values(SCRIPTABLE)) {
+    if (!tools[tool]) throw new Error(`the host has no ${tool} tool, which Reel needs`);
+  }
+  async function run(plan2, { onError = () => {
+  } } = {}) {
+    const errors = [];
+    const report = (line, message) => {
+      const e = { line, message };
+      errors.push(e);
+      onError(e);
+    };
+    const cancels = [];
+    const rng = makeRng(plan2.seed);
+    const env = /* @__PURE__ */ new Map();
+    for (const l of plan2.lets) {
+      try {
+        env.set(l.name, evaluate(l.expr, env, rng, { left: 2e3 }));
+      } catch (error2) {
+        if (!(error2 instanceof ReelError)) throw error2;
+        report(l.line, error2.message);
+      }
+    }
+    for (const load of plan2.loads) {
+      const result = await tools[SCRIPTABLE.load]({ iri: load.iri });
+      if (!result.ok) {
+        report(load.line, `cannot load ${load.name}: ${result.error}`);
+        continue;
+      }
+      session.names.set(load.name, result.nodeId);
+    }
+    const idOf2 = (name2, line) => {
+      const id = session.names.get(name2);
+      if (!id) report(line, `${name2} is not loaded`);
+      return id;
+    };
+    const value2 = (expr, port) => {
+      const v = evaluate(expr, env, rng, { left: TICK_BUDGET });
+      const scaled = v.dim === null ? v.v : v.v * port.factor;
+      return Math.min(port.maximum, Math.max(port.minimum, scaled));
+    };
+    const nextBar = (beat) => Math.ceil(beat / beatsPerBar - 1e-9) * beatsPerBar;
+    const fire = async (step) => {
+      const a2 = step.action;
+      try {
+        if (a2.type === "connect") {
+          const from = idOf2(a2.from, step.line);
+          const to = idOf2(a2.to, step.line);
+          if (!from || !to) return false;
+          const r2 = await tools[SCRIPTABLE.connect]({ from, to });
+          if (!r2.ok) {
+            report(step.line, r2.error);
+            return false;
+          }
+          return true;
+        }
+        const node = idOf2(a2.node, step.line);
+        if (!node) return false;
+        if (a2.type === "set") {
+          const r2 = await tools[SCRIPTABLE.set]({ node, symbol: a2.symbol, value: value2(a2.expr, a2.port) });
+          if (!r2.ok) {
+            report(step.line, r2.error);
+            return false;
+          }
+          return true;
+        }
+        const start = step.when.kind === "at" ? step.when.beat : nextBar(currentBeat());
+        const r = await tools[SCRIPTABLE.ramp]({
+          nodeId: node,
+          symbol: a2.symbol,
+          points: [
+            { atBeat: start, value: value2(a2.from, a2.port), curve: "linear" },
+            { atBeat: start + a2.lengthBeats, value: value2(a2.to, a2.port) }
+          ]
+        });
+        if (!r.ok) {
+          report(step.line, r.error);
+          return false;
+        }
+        return true;
+      } catch (error2) {
+        if (!(error2 instanceof ReelError)) throw error2;
+        report(step.line, error2.message);
+        return false;
+      }
+    };
+    for (const step of plan2.steps) {
+      if (step.when.kind === "now") {
+        await fire(step);
+      } else if (step.when.kind === "at") {
+        if (step.action.type === "ramp") await fire(step);
+        else cancels.push(scheduler.at(step.when.beat, () => unrecorded(() => fire(step))));
+      } else {
+        let cancel = null;
+        let dead = false;
+        cancel = scheduler.every(step.when.beats, async () => {
+          if (dead) return;
+          if (!await unrecorded(() => fire(step))) {
+            dead = true;
+            cancel?.();
+          }
+        });
+        cancels.push(cancel);
+      }
+    }
+    return { ok: errors.length === 0, errors, names: session.names, stop: () => {
+      for (const c3 of cancels) c3?.();
+    } };
+  }
+  return { run };
+}
+
+// src/reel/Host.js
+init_LoadError();
+function createPluginValidator(loader) {
+  const verified = /* @__PURE__ */ new Map();
+  return async function resolvePlugin(iri3) {
+    try {
+      const { profile } = await loader.loadProfile(iri3);
+      const resources = [
+        ["processor", profile.processor],
+        ["module", profile.module],
+        ...(profile.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
+      ].filter(([, resource]) => resource);
+      const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(" ");
+      if (verified.get(iri3) !== key) {
+        for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind });
+        verified.set(iri3, key);
+      }
+      return {
+        ok: true,
+        ports: profile.ports.map((p) => ({ symbol: p.symbol, name: p.name, unit: p.unit ?? null, minimum: p.minimum, maximum: p.maximum, defaultValue: p.defaultValue }))
+      };
+    } catch (error2) {
+      if (error2 instanceof LoadError) return { ok: false, message: error2.message, step: error2.step ?? null };
+      return { ok: false, message: error2?.message ?? String(error2), step: null };
+    }
+  };
+}
+var slug = (label) => {
+  const s = String(label ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return /^[a-z_]/.test(s) ? s : s ? `_${s}` : "";
+};
+function existingPlugins(dispatcher, session) {
+  const existing = /* @__PURE__ */ new Map();
+  const ids = /* @__PURE__ */ new Map();
+  const portsOf = (id) => dispatcher.engineNode(id)?.profile?.ports ?? null;
+  for (const [name2, id] of session.names) {
+    const ports = portsOf(id);
+    if (ports && dispatcher.project.nodes.some((n2) => n2.id === id)) {
+      existing.set(name2, { ports });
+      ids.set(name2, id);
+    }
+  }
+  const bySlug = /* @__PURE__ */ new Map();
+  for (const node of dispatcher.project.nodes) {
+    const name2 = slug(node.label ?? dispatcher.engineNode(node.id)?.profile?.label);
+    if (!name2) continue;
+    if (!bySlug.has(name2)) bySlug.set(name2, []);
+    bySlug.get(name2).push(node.id);
+  }
+  for (const [name2, nodeIds] of bySlug) {
+    if (nodeIds.length !== 1 || existing.has(name2)) continue;
+    const ports = portsOf(nodeIds[0]);
+    if (ports) {
+      existing.set(name2, { ports });
+      ids.set(name2, nodeIds[0]);
+    }
+  }
+  return { existing, ids };
+}
+
+// src/reel/Reel.js
+function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, currentBeat = () => 0, onError = () => {
+}, onPhase = () => {
+} }) {
+  const session = { names: /* @__PURE__ */ new Map() };
+  let current = null;
+  let pending = null;
+  const runner = () => createRunner({
+    tools,
+    scheduler: clock,
+    session,
+    beatsPerBar: beatsPerBar(),
+    currentBeat,
+    unrecorded: (fn) => dispatcher.withoutRecording(fn)
+  });
+  async function check(source) {
+    const parsed = parse(source);
+    if (parsed.errors.length) return { ok: false, stage: "parse", errors: parsed.errors };
+    const { existing, ids } = existingPlugins(dispatcher, session);
+    for (const [name2, id] of ids) if (!session.names.has(name2)) session.names.set(name2, id);
+    const planned = await plan(parsed.statements, { beatsPerBar: beatsPerBar(), existing, resolvePlugin });
+    return planned.ok ? { ok: true, plan: planned.plan } : { ok: false, stage: "plan", errors: planned.errors };
+  }
+  async function swap(plan2) {
+    current?.stop();
+    current = null;
+    const run2 = await dispatcher.grouped(() => runner().run(plan2, { onError }));
+    current = run2;
+    return run2;
+  }
+  function atNextBar(fn) {
+    let cancel = null;
+    let done = false;
+    cancel = clock.every(beatsPerBar(), () => {
+      if (done) return;
+      done = true;
+      cancel?.();
+      fn();
+    });
+    return () => {
+      done = true;
+      cancel?.();
+    };
+  }
+  async function run(source, { now = false } = {}) {
+    onPhase("checking");
+    const checked = await check(source);
+    if (!checked.ok) return checked;
+    if (pending) {
+      pending.cancel();
+      pending.resolve({ ok: true, swapped: "superseded" });
+      pending = null;
+    }
+    if (now || !clock.running || !current) {
+      const result = await swap(checked.plan);
+      return { ok: result.ok, errors: result.errors, swapped: "now" };
+    }
+    onPhase("waiting");
+    return new Promise((resolve) => {
+      const cancel = atNextBar(async () => {
+        pending = null;
+        const result = await swap(checked.plan);
+        resolve({ ok: result.ok, errors: result.errors, swapped: "at-bar" });
+      });
+      pending = { cancel, resolve };
+    });
+  }
+  function stop() {
+    if (pending) {
+      pending.cancel();
+      pending.resolve({ ok: true, swapped: "superseded" });
+      pending = null;
+    }
+    current?.stop();
+    current = null;
+  }
+  return {
+    check,
+    run,
+    stop,
+    describe: describePlan,
+    get running() {
+      return current !== null;
+    },
+    get waiting() {
+      return pending !== null;
+    },
+    session
+  };
+}
+function describePlan(plan2) {
+  return {
+    seed: plan2.seed,
+    loads: plan2.loads.map(({ name: name2, iri: iri3, line }) => ({ name: name2, iri: iri3, line })),
+    steps: plan2.steps.map((s) => ({
+      line: s.line,
+      when: s.when.kind === "now" ? "now" : s.when.kind === "at" ? `at beat ${s.when.beat}` : `every ${s.when.beats} beats`,
+      do: s.action.type === "connect" ? `connect ${s.action.from} -> ${s.action.to}` : `${s.action.type} ${s.action.node}.${s.action.symbol}`
+    }))
+  };
+}
+
+// src/ui/ScriptPanel.js
+var EXAMPLE = `# Reel. One statement per line; the first thing on a line is what it does.
+# Load a plugin by its address, then set its parameters, in their units:
+#   load verb = https://example.org/plugins/cascade/
+#   verb.mix = 35%
+#   at 3:1 verb.size = 40
+#   every 1 bar: verb.mix = pick(20%, 35%, 50%)
+#   ramp verb.size 10 -> 60 over 4 bars
+# Edit and run again while the music plays: the new script takes over at the next bar line.
+`;
+var SYNTAX = [
+  ["load NAME = ADDRESS", "Fetch, validate and load a plugin. The address is written out in full."],
+  ["NAME.parameter = VALUE", "Set a parameter now. A value can carry a unit: 8kHz, 250ms, -6dB, 7st, 35%."],
+  ["at BAR:BEAT NAME.parameter = VALUE", "Set it when the transport reaches bar 3 beat 1, as 3:1. Beats count from 1."],
+  ["every N bars: NAME.parameter = VALUE", "Set it again at every bar line, or every N beats. Use pick(a, b, c) or rand(low, high)."],
+  ["ramp NAME.parameter FROM -> TO over N bars", "Move a parameter smoothly. It starts on the next bar line."],
+  ["connect A -> B", "Connect one plugin to another."],
+  ["let NAME = VALUE", "Name a value to use below. seed N makes the random choices repeat."]
+];
+var LOG_LIMIT = 50;
+function createScriptPanel(document2, { mount, onRun, onCheck, onStop, storage = null, draftKey = "jigdaw.reel.draft" }) {
+  for (const [name2, fn] of Object.entries({ onRun, onCheck, onStop })) {
+    if (typeof fn !== "function") throw new Error(`the script panel needs ${name2}`);
+  }
+  const el = (tag, attributes = {}, ...children) => {
+    const node = document2.createElement(tag);
+    for (const [key, value2] of Object.entries(attributes)) {
+      if (value2 === false || value2 === null || value2 === void 0) continue;
+      node.setAttribute(key, value2 === true ? "" : String(value2));
+    }
+    node.append(...children);
+    return node;
+  };
+  const button = (id, text2, extra = {}) => el("button", { type: "button", id, class: "script-button", ...extra }, text2);
+  const help = el(
+    "p",
+    { id: "script-help", class: "note" },
+    "Reel drives the plugins from text. Run it to take over at the next bar line, or run it now. Nothing runs until the script has been checked in full, and a script with a problem changes nothing."
+  );
+  const source = el("textarea", {
+    id: "script-source",
+    class: "script-source",
+    rows: 14,
+    spellcheck: "false",
+    autocapitalize: "off",
+    autocomplete: "off",
+    autocorrect: "off",
+    "aria-describedby": "script-help script-status"
+  });
+  const label = el("label", { for: "script-source", class: "script-label" }, "Reel script");
+  const run = button("script-run", "Run at the next bar", { "aria-keyshortcuts": "Control+Enter" });
+  const runNow = button("script-run-now", "Run now", { "aria-keyshortcuts": "Control+Shift+Enter" });
+  const check = button("script-check", "Check only");
+  const stop = button("script-stop", "Stop script", { hidden: true });
+  const actions = el("div", { class: "script-actions", role: "group", "aria-label": "Script actions" }, run, runNow, check, stop);
+  const status = el("p", { id: "script-status", class: "script-status", role: "status" });
+  const problemsHeading = el("h3", { id: "script-problems-heading" }, "Problems");
+  const problemsList = el("ol", { class: "script-problems-list" });
+  const problems = el("section", { class: "script-problems", "aria-labelledby": "script-problems-heading", hidden: true }, problemsHeading, problemsList);
+  const planHeading = el("h3", { id: "script-plan-heading" }, "What this script would do");
+  const planList = el("ul", { class: "script-plan-list" });
+  const plan2 = el("section", { class: "script-plan", "aria-labelledby": "script-plan-heading", hidden: true }, planHeading, planList);
+  const syntax = el(
+    "details",
+    { class: "script-syntax" },
+    el("summary", {}, "Syntax"),
+    el("dl", {}, ...SYNTAX.flatMap(([form, what]) => [el("dt", {}, el("code", {}, form)), el("dd", {}, what)]))
+  );
+  const logHeading = el("h3", { id: "script-log-heading" }, "Log");
+  const logList = el("ol", { class: "script-log-list", "aria-live": "polite" });
+  const logSection = el("section", { class: "script-log", "aria-labelledby": "script-log-heading" }, logHeading, logList);
+  mount.append(help, label, source, actions, status, problems, plan2, syntax, logSection);
+  const read = () => {
+    try {
+      return storage?.getItem(draftKey) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const write = (text2) => {
+    try {
+      storage?.setItem(draftKey, text2);
+    } catch {
+    }
+  };
+  source.value = read() ?? EXAMPLE;
+  source.addEventListener("input", () => write(source.value));
+  const text = () => source.value;
+  run.addEventListener("click", () => onRun(text(), { now: false }));
+  runNow.addEventListener("click", () => onRun(text(), { now: true }));
+  check.addEventListener("click", () => onCheck(text()));
+  stop.addEventListener("click", () => onStop());
+  source.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey)) return;
+    event.preventDefault();
+    onRun(text(), { now: event.shiftKey === true });
+  });
+  function goToLine(line) {
+    const lines = source.value.split("\n");
+    const index = Math.min(Math.max(line, 1), lines.length) - 1;
+    const start = lines.slice(0, index).reduce((n2, l) => n2 + l.length + 1, 0);
+    source.focus();
+    if (typeof source.setSelectionRange === "function") source.setSelectionRange(start, start + lines[index].length);
+  }
+  const clear = (node) => {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  };
+  return {
+    /** The script as typed. */
+    source: text,
+    setSource(value2) {
+      source.value = value2;
+      write(value2);
+    },
+    /** A line of text for the status region, which a screen reader announces. Empty clears it. */
+    status(message) {
+      status.textContent = message ?? "";
+    },
+    /** Show whether a script is running. Stop is there only while one is. */
+    running(isRunning) {
+      if (isRunning) stop.removeAttribute("hidden");
+      else stop.setAttribute("hidden", "");
+    },
+    /** Problems with their lines, or nothing to take the section away. */
+    problems(list) {
+      clear(problemsList);
+      if (!list?.length) {
+        problems.setAttribute("hidden", "");
+        return;
+      }
+      problemsHeading.textContent = `Problems (${list.length})`;
+      for (const p of list) {
+        const where = p.line ? `Line ${p.line}${p.column ? `, column ${p.column}` : ""}: ` : "";
+        const item = el("li", {}, el("span", { class: "script-error-word" }, "Error"), ` ${where}${p.message} `);
+        if (p.line) {
+          const go = button(`script-go-${p.line}`, "Go to line", { "aria-label": `Go to line ${p.line}` });
+          go.addEventListener("click", () => goToLine(p.line));
+          item.append(go);
+        }
+        problemsList.append(item);
+      }
+      problems.removeAttribute("hidden");
+    },
+    /** What a checked script would do, as the plan's own description, or nothing to take it away. */
+    plan(described) {
+      clear(planList);
+      if (!described) {
+        plan2.setAttribute("hidden", "");
+        return;
+      }
+      for (const l of described.loads) planList.append(el("li", {}, `Line ${l.line}: load ${l.name} from ${l.iri}`));
+      for (const s of described.steps) planList.append(el("li", {}, `Line ${s.line}, ${s.when}: ${s.do}`));
+      if (!planList.firstChild) planList.append(el("li", {}, "Nothing: the script has no statements."));
+      plan2.removeAttribute("hidden");
+    },
+    /** One line in the log, newest first. An error says so in words. */
+    log(message, kind = "info") {
+      const item = el("li", { class: `script-log-${kind}` }, kind === "error" ? `Error: ${message}` : message);
+      logList.prepend(item);
+      while (logList.children.length > LOG_LIMIT) logList.removeChild(logList.lastChild);
+    },
+    goToLine,
+    focus() {
+      source.focus();
+    },
+    elements: { source, run, runNow, check, stop, status, problems, plan: plan2, logList }
+  };
+}
+
+// web/app/Script.js
+function createScript(ctx2) {
+  const { window: window2, $: $2, log: log2 } = ctx2;
+  let reel = null;
+  let clock = null;
+  let startedAt = null;
+  const storage = (() => {
+    try {
+      return window2.localStorage;
+    } catch {
+      return null;
+    }
+  })();
+  const panel = createScriptPanel(ctx2.document, {
+    mount: $2("script-mount"),
+    storage,
+    onRun: (source, options) => run(source, options),
+    onCheck: (source) => check(source),
+    onStop: () => stop()
+  });
+  const need2 = () => {
+    if (!reel) throw new Error("the script runner is not ready: audio has not started");
+    return reel;
+  };
+  function agentReel() {
+    return {
+      check: (source) => need2().check(source),
+      run: (source, options) => need2().run(source, options),
+      describe: (plan2) => need2().describe(plan2)
+    };
+  }
+  function attach({ dispatcher, tools, loader }) {
+    clock = new ReelClock({ now: () => ctx2.engine.context.currentTime, transport: () => dispatcher.transport() });
+    reel = createReel({
+      dispatcher,
+      tools: Object.fromEntries(tools.map((t) => [t.name, t.handler])),
+      clock,
+      resolvePlugin: createPluginValidator(loader),
+      beatsPerBar: () => dispatcher.transport().beatsPerBar,
+      currentBeat: () => startedAt === null ? 0 : dispatcher.transport().beatAtSeconds(ctx2.engine.context.currentTime - startedAt),
+      onError: (e) => {
+        panel.log(`line ${e.line}: ${e.message}`, "error");
+        panel.status(`A statement failed on line ${e.line}, and the rest carries on. See the log.`);
+      },
+      onPhase: (phase) => {
+        if (phase === "checking") panel.status("Checking the script and loading its plugins\u2026");
+        if (phase === "waiting") panel.status("Checked. It takes over at the next bar line.");
+      }
+    });
+    return reel;
+  }
+  function clockStart(at) {
+    startedAt = at;
+    clock?.start(at);
+  }
+  function clockTick() {
+    clock?.tick();
+  }
+  function clockStop() {
+    startedAt = null;
+    clock?.stop();
+  }
+  const problemsSentence = (n2) => `The script has ${n2} problem${n2 === 1 ? "" : "s"}, so nothing was changed.`;
+  async function check(source) {
+    panel.problems(null);
+    panel.plan(null);
+    try {
+      await ctx2.runtime.ensureRunning();
+      panel.status("Checking the script and loading its plugins\u2026");
+      const result = await need2().check(source);
+      if (!result.ok) {
+        panel.problems(result.errors);
+        panel.status(problemsSentence(result.errors.length));
+        return;
+      }
+      panel.plan(need2().describe(result.plan));
+      panel.status("Checked: no problems. Nothing has been run.");
+    } catch (error2) {
+      panel.status(`Could not check the script: ${error2.message}`);
+      panel.log(error2.message, "error");
+    }
+  }
+  async function run(source, { now = false } = {}) {
+    panel.problems(null);
+    panel.plan(null);
+    try {
+      await ctx2.runtime.ensureRunning();
+      const result = await need2().run(source, { now });
+      if (result.stage) {
+        panel.problems(result.errors);
+        panel.status(problemsSentence(result.errors.length));
+        panel.log(`not run: ${result.errors.length} problem${result.errors.length === 1 ? "" : "s"}`, "error");
+        return;
+      }
+      if (result.swapped === "superseded") {
+        panel.log("replaced by a newer run before it took over");
+        return;
+      }
+      panel.running(need2().running);
+      const when = result.swapped === "at-bar" ? "at the bar line" : "now";
+      if (!result.ok) {
+        panel.problems(result.errors);
+        panel.status(`Took over ${when}, with ${result.errors.length} statement${result.errors.length === 1 ? "" : "s"} failing. See the problems.`);
+        panel.log(`took over ${when} with errors`, "error");
+        return;
+      }
+      panel.status(`Running. It took over ${when}.`);
+      panel.log(`took over ${when}`);
+    } catch (error2) {
+      panel.status(`Could not run the script: ${error2.message}`);
+      panel.log(error2.message, "error");
+      log2(`script: ${error2.message}`, "error");
+    }
+  }
+  function stop() {
+    reel?.stop();
+    panel.running(false);
+    panel.status("Stopped.");
+    panel.log("stopped");
+  }
+  return { panel, attach, agentReel, clockStart, clockTick, clockStop, stop };
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -33888,6 +35240,7 @@ ctx.agent = createAgent(ctx);
 ctx.bridge = createBridgeLink(ctx);
 ctx.layout = createLayout(ctx);
 ctx.midiIn = createMidiIn(ctx);
+ctx.script = createScript(ctx);
 var { loading, browser, transport } = ctx;
 $("searchbar").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -33948,7 +35301,8 @@ ctx.tabs = createTabs(document, [
   { id: "arrangement", label: "Arrangement", panel: $("arrangement-panel") },
   { id: "tracks", label: "Plugins", panel: $("tracks-panel") },
   { id: "routing", label: "Routing", panel: $("routing-panel") },
-  { id: "mixer", label: "Mixer", panel: $("mixer-panel") }
+  { id: "mixer", label: "Mixer", panel: $("mixer-panel") },
+  { id: "script", label: "Script", panel: $("script-panel") }
 ]);
 $("tabs-mount").append(ctx.tabs.element);
 ctx.rack.draw();

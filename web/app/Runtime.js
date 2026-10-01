@@ -59,9 +59,11 @@ export function createRuntime (ctx) {
 
     const capabilities = detectCapabilities(globalThis)
     ctx.hostCapabilities = capabilities
+    // Kept, because a script's `load` is validated through the same loader a person's is, before it runs.
+    ctx.loader = new PluginLoader({ parse: parseText, validator, capabilities })
     ctx.engine = new Engine({
       context,
-      loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+      loader: ctx.loader,
       output: analyser,
       maxTrackDelaySeconds: ctx.hostConfig.maxTrackDelayMs / 1000
     })
@@ -107,9 +109,13 @@ export function createRuntime (ctx) {
         loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options),
         openCollection: iri => ctx.browser.loadCollection(iri),
         onPlay: () => ctx.transport.play(),
-        onStop: async () => { ctx.transport.stop() }
+        onStop: async () => { ctx.transport.stop() },
+        // script_run, built before the reel exists and calling it once it does.
+        reel: ctx.script.agentReel()
       })
       ctx.mcpSurface = registration.surface
+      // Reel runs a script through these same tools, so it is made after them.
+      ctx.script.attach({ dispatcher, tools: registration.surface.tools, loader: ctx.loader })
       log(`host offers ${[...capabilities].map(compact).join(', ')}`)
       log(`${registration.count} agent tools via ${registration.bound}`)
     }

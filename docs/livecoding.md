@@ -3,10 +3,12 @@
 **Status:** design, with its four open questions decided on 2026-10-01 (see "Decisions"). Nothing described here is built.
 The language is called **Reel**, and a script is a `.reel` file.
 
-**Built so far (2026-10-01):** the parser, the planner, the runner with its tick budget and seeded randomness, the capability
-table bound to the tool list, and `OpDispatcher.grouped`, in `src/reel/` and `src/ops/`, with `tests/reel/` and
-`tests/ops/Grouping.test.js`. **Not built:** the scheduler that fires a statement at a transport position by stream position,
-the host's validation adapter for `load`, the `script_run` tool, re-evaluation at a bar line, `now`, and the editor panel.
+**Built so far (2026-10-01), in `src/reel/` with `tests/reel/`:** the parser, the planner, the runner with its tick
+budget and seeded randomness, the capability table bound to the tool list, `ReelClock` (fires `at` and `every` by transport
+position, on the same loop logic as `src/engine/Scheduler.js`), the plugin validator and name lookup (`Host.js`), `createReel`
+(replacement at a bar line, `now`, supersession, stop, the dry run), the `script_run` tool, and `OpDispatcher.grouped`.
+**Not built:** wiring it into the page (`web/app/Transport.js` ticks the clock beside the scheduler), the editor panel, and
+saving a script in a session. `now` is a run option and not a word in the language.
 
 **The principle behind every trade-off here is live performance.** A script runs while the music plays, so nothing in it may
 stall the audio or the page, nothing may open a dialog mid-set, every change lands on a boundary the player chose, and a script

@@ -75,6 +75,8 @@ export class Transport {
   get tempoPoints () { return this.#points.map(p => ({ ...p })) }
   get sampleRate () { return this.#sampleRate }
   get loop () { return { ...this.#loop } }
+  get beatsPerBar () { return this.#beatsPerBar }
+  get beatUnit () { return this.#beatUnit }
 
   /** The leg a beat falls in: its start point, and the tempo it ends on (null when it holds). */
   #leg (index) {

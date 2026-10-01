@@ -84,7 +84,7 @@ this on the track is Phase T3 in TODO.md.
 
 ### The agent uses the same Ops as the person
 
-**Built.** **39 tools** are offered to an agent through WebMCP, over the one dispatcher the page
+**Built.** **40 tools** are offered to an agent through WebMCP, over the one dispatcher the page
 uses. A changeset carries the revision it expects and can be run as a dry run first, so an
 agent checks a chain before committing it and a stale edit is refused with the current
 revision.

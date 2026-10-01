@@ -108,7 +108,10 @@ export function createTransport (ctx) {
     if (failed.length > 0) ctx.rack.draw()
     scheduler.start(startedAt)
     scheduler.tick()
-    schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs)
+    // A script's timed statements are fired from the same tick, against the same beat zero.
+    ctx.script?.clockStart(startedAt)
+    ctx.script?.clockTick()
+    schedulerTimer = setInterval(() => { scheduler.tick(); ctx.script?.clockTick() }, hostConfig.schedulerTickMs)
     followPlayhead()
     log('playing', 'ok')
   }
@@ -119,6 +122,7 @@ export function createTransport (ctx) {
     clearInterval(schedulerTimer)
     schedulerTimer = null
     scheduler?.stop()
+    ctx.script?.clockStop()
     cancelAnimationFrame(playheadFrame)
     ctx.arrangement.playhead(null)
     $('play').setAttribute('aria-pressed', 'false')

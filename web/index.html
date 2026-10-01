@@ -178,6 +178,31 @@
     background:var(--accent); color:#fff; border:0; border-radius:4px; cursor:pointer; }
   .result .native { color:var(--dim); font-size:11px; font-style:italic; }
   .note { color:var(--dim); font-size:11px; margin:6px 0; }
+  /* Script tab (src/ui/ScriptPanel.js). The text area is 16px so iOS does not zoom the page in on it, and the
+     buttons are 44px. An error is the word "Error" first and a bold line number, never colour alone. */
+  .script { display:flex; flex-direction:column; gap:10px; max-width:60rem; }
+  .script-label { font-size:12px; color:var(--dim); }
+  .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
+                   font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+                   background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .script-button { min-height:44px; padding:8px 16px; font-size:16px; background:var(--panel); color:var(--fg);
+                   border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #script-run { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .script-status { margin:0; min-height:1.5em; color:var(--fg); }
+  .script h3 { font-size:13px; margin:6px 0 4px; }
+  .script ol, .script ul { margin:0; padding-left:1.4rem; }
+  .script-problems-list li { margin-bottom:6px; overflow-wrap:anywhere; }
+  .script-problems-list .script-button { min-height:44px; margin-left:6px; padding:4px 12px; font-size:14px; }
+  .script-error-word { font-weight:700; color:var(--err); }
+  .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:12px; }
+  .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
+  .script-log-error { color:var(--err); }
+  .script-syntax summary { cursor:pointer; color:var(--dim); font-size:12px; min-height:44px; display:flex; align-items:center; }
+  .script-syntax dt { margin-top:8px; }
+  .script-syntax dd { margin:2px 0 0 1.2rem; color:var(--dim); font-size:12px; }
+  @media (max-width: 720px) { .script-button { flex:1 1 100%; } }
+
   .collection-name { margin:4px 0 0; font-size:14px; }
   .result.native { opacity:.62; }
 
@@ -670,6 +695,11 @@
       </div>
       <div id="master-mount" class="mixer"></div>
       <div class="mixer" id="mixer"></div>
+    </div>
+
+    <div class="tabpanel" id="script-panel" hidden>
+      <h2>Script</h2>
+      <div id="script-mount" class="script"></div>
     </div>
   </section>
 </main>

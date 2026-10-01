@@ -23684,6 +23684,12 @@ var Transport = class _Transport {
   get loop() {
     return { ...this.#loop };
   }
+  get beatsPerBar() {
+    return this.#beatsPerBar;
+  }
+  get beatUnit() {
+    return this.#beatUnit;
+  }
   /** The leg a beat falls in: its start point, and the tempo it ends on (null when it holds). */
   #leg(index) {
     const from = this.#points[index];
@@ -24083,11 +24089,13 @@ var OpDispatcher = class {
   #trackDelays = /* @__PURE__ */ new Map();
   #foreign;
   // The stacks and the snapshot-to-snapshot reconciliation live in
-  // UndoHistory. Nothing is recorded while #recording is false, which is how
+  // UndoHistory. Nothing is recorded while #unrecorded is above zero, which is how
   // undo and redo call back into apply()/addPlugin() to do the actual work
   // without recording their own reversal as a new edit.
   #history = new UndoHistory();
-  #recording = true;
+  // A count and not a flag, so a group inside an undo, or an unrecorded firing during a group, ends only
+  // its own suppression and never another's.
+  #unrecorded = 0;
   constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project;
     this.#alignTracks = alignTracks;
@@ -24288,7 +24296,7 @@ var OpDispatcher = class {
     if (dryRun) {
       return { ok: true, applied: false, revision: this.#project.revision, compiled };
     }
-    const before = this.#recording ? this.#project.snapshot() : null;
+    const before = this.#unrecorded === 0 ? this.#project.snapshot() : null;
     const result = this.#project.apply(changes, { expectedRevision });
     this.#releaseRemoved();
     this.#rebuildLinks(compiled);
@@ -24335,6 +24343,27 @@ var OpDispatcher = class {
     return this.#history.redo(this);
   }
   /**
+   * Run fn as one undoable edit: however many edits it makes, one undo reverses them all. The snapshot is
+   * taken before it starts and recorded once after it ends, and nothing inside is recorded on its own.
+   * Nothing is recorded if fn changed nothing, so an empty run leaves no step to undo. A group inside a
+   * group, or inside an undo, joins the one already open.
+   *
+   * For a script (docs/livecoding.md): the run is one group. What it schedules for later is done through
+   * withoutRecording, because a performance is not a series of edits to step back over.
+   */
+  async grouped(fn) {
+    if (this.#unrecorded > 0) return fn();
+    const before = this.#project.snapshot();
+    const revision = this.#project.revision;
+    this.#unrecorded++;
+    try {
+      return await fn();
+    } finally {
+      this.#unrecorded--;
+      if (this.#project.revision !== revision) this.#history.record(before);
+    }
+  }
+  /**
    * Run fn with recording off, so the apply()/addPlugin()/setParameter()
    * calls it makes are not themselves recorded as further undoable edits.
    * Called by UndoHistory while it reconciles the project to a snapshot; nothing
@@ -24342,11 +24371,11 @@ var OpDispatcher = class {
    * field so UndoHistory can drive it without reaching into private state.
    */
   async withoutRecording(fn) {
-    this.#recording = false;
+    this.#unrecorded++;
     try {
       return await fn();
     } finally {
-      this.#recording = true;
+      this.#unrecorded--;
     }
   }
   /** The first end of a new connection that names a port its node has not got. */
@@ -25132,7 +25161,7 @@ var NOTE_SCHEMA = Object.freeze({
   },
   required: ["startBeat", "lengthBeats", "pitch", "velocity"]
 });
-function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null }) {
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
   if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -25820,6 +25849,61 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "parameter_reset",
+      description: "Put a parameter back to its plugin default and forget its setting, so the project says what a node that was never touched says. Returns the default the plugin now holds.",
+      inputSchema: {
+        type: "object",
+        properties: { node: { type: "string" }, symbol: { type: "string" } },
+        required: ["node", "symbol"]
+      },
+      async handler({ node, symbol } = {}) {
+        const result = dispatcher.resetParameter(node, symbol);
+        return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
+      }
+    },
+    {
+      name: "history_undo",
+      description: "Step the project back over the last edit, whoever made it, a person or an agent. Undoing a removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is nothing to undo.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const result = await dispatcher.undo();
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+      }
+    },
+    {
+      name: "history_redo",
+      description: "Step forward again over whatever history_undo last stepped back from. Fails, changing nothing, when there is nothing to redo, which includes after any new edit.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        const result = await dispatcher.redo();
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+      }
+    },
+    {
+      name: "script_run",
+      description: "Run a Reel script, the livecoding language of docs/livecoding.md, or with dryRun check it and return what it would do without doing it. A script that does not parse or plan changes nothing, and errors come back with their line numbers. During playback a new script takes over at the next bar line, atomically, unless now is true. One run is one undo step. Every plugin the script loads is fetched and validated before anything it says is carried out.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          source: { type: "string", description: "The script, one statement per line" },
+          dryRun: { type: "boolean", description: "Check and describe only. Default false." },
+          now: { type: "boolean", description: "Take over at once and not at the next bar line. Default false." }
+        },
+        required: ["source"]
+      },
+      async handler({ source, dryRun = false, now = false } = {}) {
+        if (!reel) return failed("this host has no scripting");
+        if (typeof source !== "string") return failed("script_run needs the script as source");
+        if (dryRun) {
+          const checked = await reel.check(source);
+          return checked.ok ? ok({ plan: reel.describe(checked.plan) }) : failed("the script has errors", { stage: checked.stage, errors: checked.errors });
+        }
+        const result = await reel.run(source, { now });
+        if (result.stage) return failed("the script has errors, so nothing was changed", { stage: result.stage, errors: result.errors });
+        return result.ok ? ok({ swapped: result.swapped }) : failed("the script ran with errors", { swapped: result.swapped, errors: result.errors });
+      }
+    },
+    {
       name: "transport_play",
       description: "Start the transport, so clips play and plugins receive transport position. Needs audio already started by a person: a browser starts no AudioContext without a click.",
       inputSchema: { type: "object", properties: {} },
@@ -25897,8 +25981,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, target = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop });
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel = null, target = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -25966,9 +26050,10 @@ function createRuntime(ctx2) {
     ctx2.hostConfig = readHostConfig(await response.json());
     const capabilities = detectCapabilities(globalThis);
     ctx2.hostCapabilities = capabilities;
+    ctx2.loader = new PluginLoader({ parse: parseText, validator, capabilities });
     ctx2.engine = new Engine({
       context,
-      loader: new PluginLoader({ parse: parseText, validator, capabilities }),
+      loader: ctx2.loader,
       output: analyser,
       maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
@@ -26002,9 +26087,12 @@ function createRuntime(ctx2) {
         onPlay: () => ctx2.transport.play(),
         onStop: async () => {
           ctx2.transport.stop();
-        }
+        },
+        // script_run, built before the reel exists and calling it once it does.
+        reel: ctx2.script.agentReel()
       });
       ctx2.mcpSurface = registration.surface;
+      ctx2.script.attach({ dispatcher, tools: registration.surface.tools, loader: ctx2.loader });
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
     }
@@ -26443,7 +26531,12 @@ function createTransport(ctx2) {
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt);
     scheduler.tick();
-    schedulerTimer = setInterval(() => scheduler.tick(), hostConfig.schedulerTickMs);
+    ctx2.script?.clockStart(startedAt);
+    ctx2.script?.clockTick();
+    schedulerTimer = setInterval(() => {
+      scheduler.tick();
+      ctx2.script?.clockTick();
+    }, hostConfig.schedulerTickMs);
     followPlayhead();
     log2("playing", "ok");
   }
@@ -26452,6 +26545,7 @@ function createTransport(ctx2) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
     scheduler?.stop();
+    ctx2.script?.clockStop();
     cancelAnimationFrame(playheadFrame);
     ctx2.arrangement.playhead(null);
     $2("play").setAttribute("aria-pressed", "false");

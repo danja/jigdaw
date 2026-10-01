@@ -52,5 +52,6 @@ export const NOT_SCRIPTABLE = Object.freeze({
   transport_play: 'needs user activation, and the person starts the music',
   transport_stop: 'the person stops the music',
   transport_configure: 'tempo and loop changes are wanted for performance, and not in version one',
-  diagnostics: 'a query; a script cannot branch on a result'
+  diagnostics: 'a query; a script cannot branch on a result',
+  script_run: 'a script cannot run a script, which would let one never end'
 })

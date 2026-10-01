@@ -206,3 +206,16 @@ describe('a tempo envelope in a project', () => {
     expect(Transport.fromProject(p, 48000).tempoAtBeat(2)).toBe(100)
   })
 })
+
+describe('the signature, as a script needs it', () => {
+  it('reports the beats in a bar and the beat unit it was given', () => {
+    const t = new Transport({ sampleRate: 48000, beatsPerBar: 7, beatUnit: 8 })
+    expect(t.beatsPerBar).toBe(7)
+    expect(t.beatUnit).toBe(8)
+  })
+
+  it('defaults to four four', () => {
+    const t = new Transport({ sampleRate: 48000 })
+    expect([t.beatsPerBar, t.beatUnit]).toEqual([4, 4])
+  })
+})

@@ -7,6 +7,9 @@ export default defineConfig({
     // Tests that run real plugins and worklets take a second alone and several when the whole suite
     // shares the machine; the default 5 s failed them at random under load and they passed alone.
     testTimeout: 30000,
+    // A beforeAll that loads and validates every plugin profile outgrew the default 10 s as the plugin count grew,
+    // and timed out under a full parallel run while passing alone.
+    hookTimeout: 60000,
     // Every test directory must appear here. A suite that is written and never
     // run is the same as a suite that does not exist, and nothing reports it.
     include: [

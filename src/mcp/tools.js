@@ -38,7 +38,7 @@ const NOTE_SCHEMA = Object.freeze({
   required: ['startBeat', 'lengthBeats', 'pitch', 'velocity']
 })
 
-export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null }) {
+export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
   if (!dispatcher) throw new Error('the tool surface needs a dispatcher')
 
   const requireCatalogue = () =>
@@ -861,6 +861,36 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       async handler () {
         const result = await dispatcher.redo()
         return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message)
+      }
+    },
+
+    {
+      name: 'script_run',
+      description:
+        'Run a Reel script, the livecoding language of docs/livecoding.md, or with dryRun check it and ' +
+        'return what it would do without doing it. A script that does not parse or plan changes nothing, ' +
+        'and errors come back with their line numbers. During playback a new script takes over at the next ' +
+        'bar line, atomically, unless now is true. One run is one undo step. Every plugin the script loads ' +
+        'is fetched and validated before anything it says is carried out.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          source: { type: 'string', description: 'The script, one statement per line' },
+          dryRun: { type: 'boolean', description: 'Check and describe only. Default false.' },
+          now: { type: 'boolean', description: 'Take over at once and not at the next bar line. Default false.' }
+        },
+        required: ['source']
+      },
+      async handler ({ source, dryRun = false, now = false } = {}) {
+        if (!reel) return failed('this host has no scripting')
+        if (typeof source !== 'string') return failed('script_run needs the script as source')
+        if (dryRun) {
+          const checked = await reel.check(source)
+          return checked.ok ? ok({ plan: reel.describe(checked.plan) }) : failed('the script has errors', { stage: checked.stage, errors: checked.errors })
+        }
+        const result = await reel.run(source, { now })
+        if (result.stage) return failed('the script has errors, so nothing was changed', { stage: result.stage, errors: result.errors })
+        return result.ok ? ok({ swapped: result.swapped }) : failed('the script ran with errors', { swapped: result.swapped, errors: result.errors })
       }
     },
 
