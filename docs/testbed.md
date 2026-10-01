@@ -25,7 +25,7 @@ Five programs load Jigs, and a sixth packages them for someone else's host.
 
 ## Plugins
 
-There are 24 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 25 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 

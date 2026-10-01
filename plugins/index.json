@@ -809,6 +809,48 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/keyframe/",
+      "label": "Keyframe",
+      "comment": "Stretches audio in time and shifts its pitch, independently, by reducing the signal to its local extrema and crossfading between playheads over a span the extrema's own density chooses.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/keyframe/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "The algorithm is Matthew Nielsen's, Keyframe Time Stretching via Extrema Sampling, DAFx26, CC BY 4.0. This implementation is written from the paper.",
+        "It colours the sound: added saturation and some blurring of spectral detail. It is at its best on dense, layered material and percussion, and at its weakest on solo voice and bells.",
+        "On a live input a time rate above 100 percent cannot run ahead of the input, so it repeats a short stretch and skips back; below 100 percent it falls behind the input by up to eight seconds and then skips forward. Both are splices, and both are audible.",
+        "Economy quality joins the extrema with straight lines, which is the roughest reconstruction. Balanced and Full use a smooth curve between them. Full also places each extremum between samples.",
+        "Changing Quality or Stereo empties the capture and restarts it, so it is heard as a short gap.",
+        "Latency is a fixed 512 frames, which is two forced keyframe hops."
+      ],
+      "parameters": [
+        "max_splice",
+        "mix",
+        "output",
+        "pitch_shift",
+        "quality",
+        "splice_keyframes",
+        "stereo",
+        "threshold",
+        "time_rate"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/lookahead/",
       "label": "Lookahead",
       "comment": "A switchable lookahead delay for time-aligning parallel paths: direct, or held back by 512 frames. Changing position changes the plugin's latency, which the host compensates.",

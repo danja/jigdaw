@@ -35,15 +35,14 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       wamrc and LLVM as build dependencies; the interpreter was chosen in `native/cmake/FindOrFetchWamr.cmake`
       because the gain was not needed, and for Mop 2x or more is), or Mop-side surgery against the
       unmodified-Opal rule. Confirmation from a person is in HUMANS.md.
-- [ ] **A keyframe time-stretch plugin from the DAFx26 extrema-sampling paper.** 2026-09-26. The paper is at
-      `/chalet/github/dafx26-paper` (Nielsen, DAFx26, CC BY 4.0, credit required): a content-adaptive overlap-add
-      where the spacing between local extrema drives both when a splice happens and how long its crossfade lasts.
-      Analysis is a 4-tap B-spline derivative with a deadband threshold and subsample refinement; reconstruction is
-      smoothstep interpolation between timestamped extrema; stretching tracks reference, play and temporary
-      playheads with a leash of K keyframes. Output is sample by sample with no block latency in principle; live
-      block processing needs boundary keyframes (paper section 2.7, e.g. a 512-sample delay, declared as
-      `jig:latencyFrames`). Likely parameters: time rate, pitch rate, splice threshold K, maximum splice duration,
-      analysis threshold epsilon. Rust, `no_std`, Abi1 audio effect. Design doc goes in `docs/plugins/` before code.
+- [ ] **Finish Keyframe, the extrema-sampling time and pitch stretcher.** 2026-09-26, built 2026-10-01 in `plugins/keyframe/`
+      from the DAFx26 paper (`/chalet/github/dafx26-paper`, Nielsen, CC BY 4.0, credit kept in the profile). Design and
+      measurements: [docs/plugins/keyframe-design.md](docs/plugins/keyframe-design.md). Built and tested (52 DSP tests, 6
+      host tests): Economy, Balanced and Full quality, Linked and Independent stereo, defaults Economy and Linked. Open:
+      **decide whether `quality` should default to Balanced** (measured 2026-10-01 under WAMR: Economy is about 15 percent cheaper than Full and every setting is 0.1 to 0.2 of realtime, so Economy stands as the cheapest; the figures and the driver are in the design); reduce the 10 dB the forced keyframes cost at Balanced and Full; listen to it, including
+      Linked stereo on a wide clip (HUMANS.md). Checked in Chrome 2026-10-01: loads through Jiggy's own loader into a real
+      AudioWorklet in 0.6 s, generated panel complete and labelled with spoken values. Not checked: sound through it in the live
+      page, since no source was connected. The panel lists ports alphabetically by symbol, which puts Time rate last.
 - [ ] **An additive resynthesis effect that builds harmonics from the input.** 2026-09-26 (r/synthesizers idea):
       pitch-shift the input to 2x, 3x and 5x, then use feedback to supply the intermediate non-prime harmonics (4x
       from 2x fed back, 6x from 2x and 3x combined, and so on). Needs design before code: what the pitch shifters

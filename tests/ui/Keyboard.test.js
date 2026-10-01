@@ -48,7 +48,7 @@ describe('which plugins get a keyboard', () => {
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
     expect(got).toEqual(['8b8', 'canticle', 'drumkit', 'mop', 'pulse'])
-    expect(not).toEqual(['bassgen', 'boost', 'cadence', 'cascade', 'counterpointer', 'dice', 'drumgen', 'dynamix', 'ferrite', 'ground', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'lookahead', 'melgen', 'midifilter', 'quefrency', 'squelch', 'tremolo'])
+    expect(not).toEqual(['bassgen', 'boost', 'cadence', 'cascade', 'counterpointer', 'dice', 'drumgen', 'dynamix', 'ferrite', 'ground', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'keyframe', 'lookahead', 'melgen', 'midifilter', 'quefrency', 'squelch', 'tremolo'])
   })
 
   it('asks whether it makes a sound, not only whether it takes a note', async () => {

@@ -1,0 +1,20 @@
+[package]
+name = "keyframe"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Time and pitch stretching from the extrema of the signal, a Jig"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# powf for the rate and gain mappings, on parameter writes only.
+libm = { version = "0.2", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

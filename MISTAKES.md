@@ -5,6 +5,19 @@ newest first inside each; the one-off narratives are gone, the tests that guard
 each lesson are named. Retired 2026-09-30 from a 1466-line chronological log: a lesson that lives in
 CLAUDE.md is a pointer, a fix held by a test alone is dropped, everything else is below.
 
+## A design sentence described the offline algorithm and the plugin is live
+
+**2026-10-01 Keyframe's design said a time rate of 200 "fills twice the output span", and its first build froze.**
+Both came from reading a paper written for offline and embedded use as if it described a live graph. A live input cannot be
+played faster than it arrives, so a time rate above 100 percent plays at the input's own rate, and the sentence was wrong
+before any code existed. A second flaw only a run exposed: with a fast time rate and a raised pitch the reference is held
+back, its distance from the play playhead stays under the leash, and the play playhead runs past the newest keyframe and
+reads a constant. `tests/dsp/keyframe.test.js` caught both (the splice test failed with the fix removed). Prevention: when a
+design adapts offline work to a live graph, list what the stream's own direction of time forbids before listing parameters,
+and write the test for each limit the first time it is stated. The default for `quality` was also chosen by an operation
+count and then measured under node's JIT, where it changed nothing; the Mop lesson below applies, the slowest host is the
+one to measure.
+
 ## A destructive edit drops what its replacement does not repeat
 
 **2026-09-30 pruning TODO.md deleted two live items with the done ones.**

@@ -17,6 +17,9 @@ is wrong in INBOX.md.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
   position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track
   against the live one, and an exported WAV and a stems zip opened in another program.
+- **Listen to Keyframe** (`plugins/keyframe/`, new 2026-10-01): a time rate of 50 on a drum loop, a pitch shift of 7 on a
+  chord, and each Quality and Stereo setting against the others. Say whether Economy is usable or only Balanced is, and whether
+  Linked stereo moves the image on a wide clip. Nothing here has been heard, only measured.
 - **Use the keys and buttons with real hands:** the clip keys (S, D, M, L, [, ], Ctrl+C, X, V), the chain strip's Alt with Left or
   Right, the automation points (arrows, C, Delete), and the icon buttons, with real key presses and not dispatched events.
 - **Record your voice on the simple page** with a real microphone: the browser's permission prompt, the device it picks and how

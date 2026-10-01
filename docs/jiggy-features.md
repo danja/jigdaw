@@ -110,7 +110,7 @@ starts on the simple page.
 
 ## The plugins
 
-**24 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**25 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).
