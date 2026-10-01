@@ -9,17 +9,9 @@
 // (webassembly.github.io/spec/core/binary), so it is a few dozen lines
 // rather than a dependency.
 //
-// Deliberately not attempted here: whether the module ever executes
-// memory.grow, which module-abi.md also forbids after jig_init. Answering
-// that needs decoding every instruction in the code section correctly,
-// including the newer 0xFC/0xFD-prefixed ones (bulk memory, saturating
-// conversions, SIMD). A real, maintained parser (@webassemblyjs/wasm-parser)
-// was tried against this project's own plugin .wasm files and failed to
-// decode one of them ("Unexpected instruction: 0xfc00"), so a hand-rolled
-// decoder here would very likely be wrong in the same way, and a check that
-// is wrong there is worse than no check at all (AGENTS.md: "a fake more
-// permissive than the real thing turns a specification error into a
-// passing test"). Left open in TODO.md.
+// Whether the module ever executes memory.grow, which module-abi.md also forbids
+// after jig_init, is src/validate/WasmCode.js: it needs every instruction decoded,
+// which is a different job from reading one section.
 const MAGIC = Uint8Array.of(0x00, 0x61, 0x73, 0x6d)
 const IMPORT_SECTION = 2
 

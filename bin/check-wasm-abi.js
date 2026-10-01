@@ -11,11 +11,16 @@
 //
 //   node bin/check-wasm-abi.js plugins/pulse/pulse.wasm
 //
-// See src/validate/WasmAbi.js for what this does and does not check, and
-// why: an import count is exact; whether the module ever calls memory.grow
-// is not attempted, and TODO.md says why.
+// Two checks. Imports are read from the import section (src/validate/WasmAbi.js).
+// memory.grow is found by decoding every instruction (src/validate/WasmCode.js):
+// the ABI forbids growing memory after jig_init, because it detaches every view
+// the host holds. A grow reached by direct calls from an ABI export fails; one
+// reachable only if a table call lands on it is reported as possible and does
+// not fail; one under an export outside the ABI is reported and does not fail,
+// since that is the plugin's own protocol with its own processor.
 import { readFile } from 'node:fs/promises'
 import { checkAbiImports } from '../src/validate/WasmAbi.js'
+import { checkMemoryGrow } from '../src/validate/WasmCode.js'
 
 const files = process.argv.slice(2)
 if (files.length === 0) {
@@ -26,8 +31,11 @@ if (files.length === 0) {
 let failed = false
 for (const file of files) {
   let result
+  let growth
   try {
-    result = checkAbiImports(await readFile(file))
+    const bytes = await readFile(file)
+    result = checkAbiImports(bytes)
+    growth = checkMemoryGrow(bytes)
   } catch (error) {
     console.log(`${file}: ${error.message}`)
     failed = true
@@ -39,6 +47,18 @@ for (const file of files) {
     console.log(`${file}: ${result.imports.length} import(s), which jig:Abi1/jig:Abi2 forbid:`)
     for (const imp of result.imports) console.log(`  ${imp.module}.${imp.name}`)
     failed = true
+  }
+  if (!growth.ok) {
+    console.log(`${file}: memory.grow is reachable from an ABI export, which the ABI forbids after jig_init:`)
+    for (const g of growth.growers.filter(g => g.fromAbi === 'direct')) console.log(`  function ${g.func}`)
+    failed = true
+  } else if (growth.growers.length === 0) {
+    console.log(`${file}: ok, no memory.grow`)
+  } else {
+    for (const g of growth.growers) {
+      const how = g.fromAbi === 'indirect' ? 'reachable from an ABI export only through a table call, so possible' : 'not reachable from an ABI export'
+      console.log(`${file}: memory.grow in function ${g.func}, ${how}${g.fromPrivateExport ? '; reached by a plugin-private export' : ''}`)
+    }
   }
 }
 

@@ -7,12 +7,17 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
-- [ ] **Build the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed in
-      [docs/livecoding.md](docs/livecoding.md): a small interpreted language over the Op table, timed by stream
-      position, planned before it dispatches, one run one undo group. Settle its four open decisions first (patterns
-      in version one, the name, whether a script may call `plugin_load`, and whether `UndoHistory` can group Ops that
-      dispatch over time), then build the interpreter, the capability-table guard against `src/mcp/tools.js`, and
-      the editor panel.
+- [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
+      decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle (no stalls, no mid-set prompts, changes
+      on a bar line, failures leave the music playing). **Built and tested:** `src/reel/` (parser, planner, runner, capability
+      table bound to `src/mcp/tools.js`) and `OpDispatcher.grouped`, 78 tests plus 11 for grouping, every mutant caught but one that
+      exposed a missing test, since added. **Left, in order:** (1) the scheduler that fires `at` and `every` by transport stream
+      position and not by a timer, with the offline render test the design names; (2) the page's `resolvePlugin` adapter, which
+      runs the host's own fetch, shape validation, digest check and capability check for a `load` and returns its ports; (3)
+      `script_run`, which returns the plan as data and so is also the dry run; (4) re-evaluation: the old schedules stop and the
+      new ones start at the next bar line, atomically, a failed plan leaving the old one playing, and the `now` prefix; (5) the
+      editor panel, with run, stop and a log, to the interface rules; (6) saving a script in a session, in its own named graph,
+      never run on open (vocabulary and `vocabs/shapes.ttl` first). Not yet seen in a browser.
 - [ ] **Decide whether more docs should be hidden.** 2026-10-01 (DIM task `/farelo/task/t57b75c497c2a`). The mechanism
       exists: `bin/docs-hidden.js` keeps six documents off the site, and `tests/bin/docs-site.test.js` now checks
       that the published set is every document not hidden and that `docs/plugins/*-design.md` has no page. That
@@ -47,18 +52,20 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       pitch-shift the input to 2x, 3x and 5x, then use feedback to supply the intermediate non-prime harmonics (4x
       from 2x fed back, 6x from 2x and 3x combined, and so on). Needs design before code: what the pitch shifters
       are, what the feedback network is, and how gains stay bounded. Any cycle needs an explicit delay by the
-      latency rules, and latency inside a cycle is never compensated. Probably Rust, Abi1.
+      latency rules, and latency inside a cycle is never compensated. Designed 2026-10-01 in
+      [docs/plugins/harmonics-design.md](docs/plugins/harmonics-design.md) (delay-line shifters, a loop gain bounded at 90 percent, plain
+      JavaScript); settle its three open decisions, then build it.
 - [ ] **A panning effect with non-linear motion.** 2026-09-26. An auto-panner whose position follows non-linear
       trajectories rather than one LFO: circular motion, random walk and envelope-follower-driven jumps, with
       per-band panning so low and high content move independently. Needs design before code: the trajectory set,
-      the parameters with units, and a mono-compatibility rule.
-- [ ] **A static check that a `jig:Abi1`/`jig:Abi2` module never calls `memory.grow`.** `npm run check-wasm-abi`
-      (`src/validate/WasmAbi.js`) checks the easy half of module-abi.md's calling sequence step 1 (no imported
-      memory), and `npm run check-plugin -- IRI --measure-budget` is a deliberately coarse render-time budget. The
-      hard half, whether a module ever executes `memory.grow` after `jig_init`, is open. A hand-rolled instruction
-      decoder would be wrong the way CLAUDE.md calls worse than no check (`@webassemblyjs/wasm-parser` fails on
-      `ferrite.wasm` at `0xfc00`). Disassembling with `wasm2wat` and grepping the mnemonic is exact; wabt is
-      requested in HUMANS.md.
+      the parameters with units, and a mono-compatibility rule. Designed 2026-10-01 in
+      [docs/plugins/trajectory-pan-design.md](docs/plugins/trajectory-pan-design.md) (level-only panning so the mono sum cannot cancel,
+      Linkwitz-Riley bands, plain JavaScript); settle its three open decisions, then build it.
+
+- [ ] **Resolve the table in the `memory.grow` check.** Done 2026-10-01 (`src/validate/WasmCode.js`, `npm run check-wasm-abi`):
+      every module in the repository decodes exactly, and none grows memory under an ABI export. Ferrite is reported as
+      possible, because its `jig_load_nam` grows and a table call might reach it from an ABI export. Reading the element
+      segments and matching call types would make that certain either way.
 
 ## The track view
 
@@ -196,7 +203,11 @@ a screen reader and usable at phone width. [docs/usp.md](docs/usp.md) says where
 - [ ] **Screen reader pass over the whole view.** Test with a real screen reader and record what was and was not tested.
 - [ ] **High-contrast theme and reduced motion** checked against the new view.
 - [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, measured at a real phone width.
-- [ ] **WebMCP parity.** A test walks the dispatcher's Op list against the tool list so an Op not exposed fails a check.
+- [ ] **WebMCP parity, the gaps it found.** Done 2026-10-01: `tests/mcp/parity.test.js` classifies every member of the
+      dispatcher, so a new Op fails until it is exposed or excluded with a reason; `history_undo`, `history_redo` and
+      `parameter_reset` were added because three real edits had no tool. Left as listed gaps, each a decision: the
+      track-alignment preference and per-track latencies, `audibility`, a stateful plugin's live state, and `loadAsset`
+      (how an agent would supply bytes). Closing one means removing it from the gap list in that test.
 - [ ] **Agent-driven arrangement.** An agent builds a track from profiles: chooses plugins by role, connects them,
       writes a clip. Regress with a scripted session against the real dispatcher.
 - [ ] **Live collaboration, considered.** openDAW runs Yjs sync and a peer-to-peer room. Jiggy has revisions and

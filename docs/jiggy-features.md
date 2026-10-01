@@ -103,8 +103,8 @@ starts on the simple page.
 
 ## For agents
 
-- **36 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
-  and clips, connect and bypass and reorder nodes, set parameters, write envelopes, and play and stop.
+- **39 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+  and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).
 

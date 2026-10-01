@@ -822,6 +822,49 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     },
 
     {
+      name: 'parameter_reset',
+      description:
+        'Put a parameter back to its plugin default and forget its setting, so the project says what ' +
+        'a node that was never touched says. Returns the default the plugin now holds.',
+      inputSchema: {
+        type: 'object',
+        properties: { node: { type: 'string' }, symbol: { type: 'string' } },
+        required: ['node', 'symbol']
+      },
+      async handler ({ node, symbol } = {}) {
+        const result = dispatcher.resetParameter(node, symbol)
+        return result.ok
+          ? ok({ value: result.value, revision: result.revision })
+          : failed(result.message)
+      }
+    },
+
+    {
+      name: 'history_undo',
+      description:
+        'Step the project back over the last edit, whoever made it, a person or an agent. Undoing a ' +
+        'removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is ' +
+        'nothing to undo.',
+      inputSchema: { type: 'object', properties: {} },
+      async handler () {
+        const result = await dispatcher.undo()
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message)
+      }
+    },
+
+    {
+      name: 'history_redo',
+      description:
+        'Step forward again over whatever history_undo last stepped back from. Fails, changing ' +
+        'nothing, when there is nothing to redo, which includes after any new edit.',
+      inputSchema: { type: 'object', properties: {} },
+      async handler () {
+        const result = await dispatcher.redo()
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message)
+      }
+    },
+
+    {
       name: 'transport_play',
       description:
         'Start the transport, so clips play and plugins receive transport position. ' +

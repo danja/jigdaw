@@ -27,7 +27,8 @@ export default defineConfig({
       'tests/native/**/*.test.js',
       'tests/server/**/*.test.js',
       'tests/jsfx/**/*.test.js',
-      'tests/web/**/*.test.js'
+      'tests/web/**/*.test.js',
+      'tests/reel/**/*.test.js'
     ]
   }
 })

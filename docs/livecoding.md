@@ -1,7 +1,16 @@
 # A livecoding language
 
-**Status:** design. Nothing described here is built. It records the decisions to make before code, with a
-recommendation for each.
+**Status:** design, with its four open questions decided on 2026-10-01 (see "Decisions"). Nothing described here is built.
+The language is called **Reel**, and a script is a `.reel` file.
+
+**Built so far (2026-10-01):** the parser, the planner, the runner with its tick budget and seeded randomness, the capability
+table bound to the tool list, and `OpDispatcher.grouped`, in `src/reel/` and `src/ops/`, with `tests/reel/` and
+`tests/ops/Grouping.test.js`. **Not built:** the scheduler that fires a statement at a transport position by stream position,
+the host's validation adapter for `load`, the `script_run` tool, re-evaluation at a bar line, `now`, and the editor panel.
+
+**The principle behind every trade-off here is live performance.** A script runs while the music plays, so nothing in it may
+stall the audio or the page, nothing may open a dialog mid-set, every change lands on a boundary the player chose, and a script
+that fails leaves what was playing playing.
 
 A person types a few lines, and Jiggy changes a plugin parameter, ramps a filter over two bars, adds a plugin to a
 track or plays a pattern. This note decides what the language is, where it runs, and how it reaches the model.
@@ -33,13 +42,13 @@ calls the same table without changing what a script means.
 
 ## What it looks like
 
-A sketch to fix the shape, not a grammar. Names resolve against the project: a track or plugin by its label, a
-parameter by its `lv2:symbol`, a plugin to load by its IRI.
+Names resolve against the project: a plugin by the name a script gave it with `load`, or by its label, a parameter by its
+`lv2:symbol`, a plugin to load by its IRI. The grammar is `src/reel/Parser.js`; a position is `BAR:BEAT`, counted from 1.
 
 ```
 load reverb = https://example.org/plugins/cascade     # plugin_load, on the current track
 reverb.mix = 0.35                                     # parameter_set, now
-at 4.1 reverb.mix = 0.6                               # at bar 4, beat 1
+at 4:1 reverb.mix = 0.6                               # at bar 4, beat 1
 ramp filter.cutoff 200Hz -> 8000Hz over 2 bars        # envelope_add
 every 1 bar: bass.cutoff = pick(400Hz, 800Hz, 1600Hz)
 connect lead -> reverb                                # connection_add
@@ -76,6 +85,23 @@ value, and produces a plan, a list of Ops and timed schedules, without touching 
 the plan. A script that fails in the first step changes nothing, which is the rule that a failed load leaves the
 previous graph playing.
 
+## Loading a plugin from a script
+
+**A script may load a plugin from any address, and every plugin it names is fetched and validated when the script is first run,
+before anything it says is dispatched.** The address is a literal in the script, never computed, so the planning step can list
+every plugin the script will ever load and resolve all of them up front. That is what makes an arbitrary address safe to allow:
+nothing is loaded for the first time in the middle of a performance, where a slow fetch would stall a bar and a modal prompt
+would stop the set.
+
+Validation is the host's own, the same path a person loading that IRI by hand goes through: the profile is fetched and checked
+against `vocabs/shapes.ttl`, every declared digest is verified, and the host's capabilities are compared with what the plugin
+requires. A script that names a plugin that fails any of it fails the whole run in the planning step, with the plugin and the
+reason named, and changes nothing. A plugin that is not a native Jig, and so needs the foreign-plugin trust decision, asks for
+it at that same first run, once, and a script can never answer it for the person.
+
+Plugins are cached by digest, so a re-run does not fetch again. A re-evaluation that names a new plugin validates it before the
+swap at the next boundary, and if it fails the previous script keeps playing.
+
 ## Live changes
 
 **Evaluating a new version replaces the previous script's schedule at the next boundary, atomically.** A person
@@ -83,15 +109,19 @@ edits a line and re-evaluates; the old `every` loops stop and the new ones start
 does not stutter or double. State a script keeps (a counter, a random generator's position) is carried across
 only if the person names it, because silently carrying it makes an edit behave differently from a fresh start.
 
-One evaluation is one undo group, so a single undo reverses what one run did. `src/ops/UndoHistory.js` records
-snapshot to snapshot, and whether it can group a run of Ops that dispatch over time is the first thing to check
-before building.
+One evaluation is one undo group, so a single undo reverses what one run did. `src/ops/UndoHistory.js` records one full
+snapshot per `apply()` and has no grouping, but because undo is snapshot to snapshot a group is small: take the snapshot
+before the run, switch recording off while it runs (`withoutRecording` already does this), and record the one snapshot
+afterwards. **Timed firings, an `every` body or an `at` after the run began, update the model and are not undo steps.** A saved
+session then holds what the performance left behind, as it would after a person turned a knob, and undo reverses the run and
+not each firing. Recording each firing would fill the 100-step history in minutes and make undo fight the script.
 
 ## The sandbox
 
 The interpreter has a capability table and nothing else. Each entry names an Op, its argument schema and whether it
-is timeable. There is no network, no storage, no clock other than the transport, no `import` and no access to a
-plugin's own code. Resource limits are part of the language and not an afterthought:
+is timeable. There is no network of its own, no storage, no clock other than the transport, no `import` and no access to a
+plugin's own code. The one thing that reaches the network is `load`, which goes through the host's own plugin loader and is
+validated before the script's first note (see "Loading a plugin from a script"). Resource limits are part of the language and not an afterthought:
 
 - a step budget per evaluation, and a tighter one per tick for `every` bodies, so a loop that never ends fails
   with an error instead of freezing the page;
@@ -123,12 +153,26 @@ on load. A person presses run, or the host asks.
 - A deliberately hostile script (an endless loop, a huge plan, a reference to a missing name) fails with an error and
   leaves the project, and the audio, as they were.
 
-## Open decisions
+## Decisions
 
-1. **Whether patterns are in the first version.** `pick` and `every` give generative behaviour. A pattern notation
-   in the style of TidalCycles or Strudel is a larger design and is better added once the Op table works.
-2. **The name of the language and its file extension**, and the media type if it becomes a bundle member.
-3. **Whether a script may call `plugin_load`.** Loading fetches over the network, which the sandbox otherwise
-   denies. The proposal is that it may name only an IRI already in the session or the catalogue, so a script cannot
-   make the host fetch an arbitrary address.
-4. **Grouping in `UndoHistory`**, as above.
+Decided 2026-10-01.
+
+1. **Patterns are not in version one.** `pick` and `every` give generative behaviour. A pattern notation in the style of
+   TidalCycles or Strudel is a language of its own and is better added once the Op table works.
+2. **The language is Reel**, files are `.reel`, and the media type, if a script becomes a bundle member, is
+   `text/x-jigdaw-reel`.
+3. **A script may load a plugin from any address, validated on first run.** Changed from the first proposal, which limited a
+   script to an IRI already in the session or the catalogue. The address is a literal, and everything is resolved and validated
+   before the script dispatches anything. See "Loading a plugin from a script".
+4. **One run is one undo group, and timed firings are not undo steps.** See "Live changes". Grouping needs a small addition to
+   `OpDispatcher`, not a change to `UndoHistory`'s snapshots.
+
+## Choices that follow from the principle
+
+- **No modal prompt during a run.** A decision that needs a person is asked for at first run, before the music depends on it.
+- **A change lands on a boundary.** Re-evaluation takes effect at the next bar line by default, and `now` is available for the
+  player who wants it immediately and accepts the click.
+- **A failure never silences.** An error in a tick's body is reported and that body is skipped until the next evaluation; the
+  other schedules and the audio carry on.
+- **Everything has a tight budget.** The per-tick step budget is small enough that the slowest legal script still finishes
+  inside a tick at the smallest block size in use.

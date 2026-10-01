@@ -71,19 +71,6 @@ action. Install it (`reaper/README.md`), run it once against a disposable projec
 whether `ExecProcess`'s exit-code parsing and `InsertMedia`'s track-insert mode behave as
 documented; those are the two most likely to have moved between REAPER versions.
 
-**wabt (`wasm2wat`), for the exact `memory.grow` static check.** TODO.md's WebAssembly ABI
-item is open on its harder half: whether a module ever executes `memory.grow`. A hand-rolled
-instruction decoder here would be wrong in exactly the way AGENTS.md calls worse than no
-check, and `@webassemblyjs/wasm-parser` fails on this project's own plugins. Disassembling
-with the reference toolchain and grepping the mnemonic is exact instead: `memory.grow` is a
-dedicated opcode that always prints as such. With it, `npm run check-wasm-abi` grows the
-check in `src/validate/WasmAbi.js` plus a test that reverts to red on a growing module.
-Until then, only the coarse wall-clock render budget covers it.
-
-```sh
-sudo apt install wabt
-```
-
 ## Updating a deployment
 
 **[docs/deployment.md](docs/deployment.md) opens with this**, including which changes need the

@@ -41,11 +41,13 @@ export class OpDispatcher {
   #foreign
 
   // The stacks and the snapshot-to-snapshot reconciliation live in
-  // UndoHistory. Nothing is recorded while #recording is false, which is how
+  // UndoHistory. Nothing is recorded while #unrecorded is above zero, which is how
   // undo and redo call back into apply()/addPlugin() to do the actual work
   // without recording their own reversal as a new edit.
   #history = new UndoHistory()
-  #recording = true
+  // A count and not a flag, so a group inside an undo, or an unrecorded firing during a group, ends only
+  // its own suppression and never another's.
+  #unrecorded = 0
 
   constructor ({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project
@@ -279,9 +281,9 @@ export class OpDispatcher {
 
     // Taken before the commit, so it is what undo restores to. Not taken for a
     // dry run, which never reaches here, and not recorded at all while
-    // #recording is false: undo and redo call back into this same apply()
+    // #unrecorded is above zero: undo and redo call back into this same apply()
     // through #restoreTo, and their own reversal is not a new edit.
-    const before = this.#recording ? this.#project.snapshot() : null
+    const before = this.#unrecorded === 0 ? this.#project.snapshot() : null
 
     const result = this.#project.apply(changes, { expectedRevision })
     this.#releaseRemoved()
@@ -333,6 +335,28 @@ export class OpDispatcher {
   }
 
   /**
+   * Run fn as one undoable edit: however many edits it makes, one undo reverses them all. The snapshot is
+   * taken before it starts and recorded once after it ends, and nothing inside is recorded on its own.
+   * Nothing is recorded if fn changed nothing, so an empty run leaves no step to undo. A group inside a
+   * group, or inside an undo, joins the one already open.
+   *
+   * For a script (docs/livecoding.md): the run is one group. What it schedules for later is done through
+   * withoutRecording, because a performance is not a series of edits to step back over.
+   */
+  async grouped (fn) {
+    if (this.#unrecorded > 0) return fn()
+    const before = this.#project.snapshot()
+    const revision = this.#project.revision
+    this.#unrecorded++
+    try {
+      return await fn()
+    } finally {
+      this.#unrecorded--
+      if (this.#project.revision !== revision) this.#history.record(before)
+    }
+  }
+
+  /**
    * Run fn with recording off, so the apply()/addPlugin()/setParameter()
    * calls it makes are not themselves recorded as further undoable edits.
    * Called by UndoHistory while it reconciles the project to a snapshot; nothing
@@ -340,11 +364,11 @@ export class OpDispatcher {
    * field so UndoHistory can drive it without reaching into private state.
    */
   async withoutRecording (fn) {
-    this.#recording = false
+    this.#unrecorded++
     try {
       return await fn()
     } finally {
-      this.#recording = true
+      this.#unrecorded--
     }
   }
 

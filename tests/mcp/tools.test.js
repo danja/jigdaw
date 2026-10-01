@@ -677,3 +677,43 @@ describe('audio clips', () => {
     expect((await call('clip_add_audio', { trackId, source: 'loop.wav', startBeat: 0, lengthBeats: 8 })).ok).toBe(false)
   })
 })
+
+describe('history and parameter reset', () => {
+  it('undoes the last edit and redoes it, and says what is left to step over', async () => {
+    // An edit that needs no engine to reverse: undoing a removed plugin reloads it.
+    addNodes()
+    await call('parameter_set', { node: 'a', symbol: 'mix', value: 0.2 })
+    const mix = () => dispatcher.project.nodes.find(n => n.id === 'a').settings.get('mix')
+    expect(mix()).toBe(0.2)
+
+    const undone = await call('history_undo')
+    expect(undone).toMatchObject({ ok: true, canRedo: true })
+    expect(mix()).toBeUndefined()
+
+    const redone = await call('history_redo')
+    expect(redone).toMatchObject({ ok: true, canRedo: false })
+    expect(mix()).toBe(0.2)
+  })
+
+  it('fails, changing nothing, when there is nothing to undo or redo', async () => {
+    const revision = dispatcher.project.revision
+    expect(await call('history_undo')).toMatchObject({ ok: false, error: 'nothing to undo' })
+    expect(await call('history_redo')).toMatchObject({ ok: false, error: 'nothing to redo' })
+    expect(dispatcher.project.revision).toBe(revision)
+  })
+
+  it('forgets a parameter setting, so the project says what an untouched node says', async () => {
+    addNodes()
+    await call('parameter_set', { node: 'a', symbol: 'mix', value: 0.2 })
+    const settings = () => dispatcher.project.nodes.find(n => n.id === 'a').settings
+    expect(settings().get('mix')).toBe(0.2)
+    const reset = await call('parameter_reset', { node: 'a', symbol: 'mix' })
+    expect(reset.ok).toBe(true)
+    expect(settings().has('mix')).toBe(false)
+  })
+
+  it('refuses to reset a parameter on a node that is not there', async () => {
+    const reset = await call('parameter_reset', { node: 'nope', symbol: 'mix' })
+    expect(reset.ok).toBe(false)
+  })
+})

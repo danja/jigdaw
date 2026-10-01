@@ -182,6 +182,9 @@ clips play into, and refuses one that is not on that track.
 |---|---|---|
 | `parameter_set` | `nodeId`, `symbol`, `value`, `atFrame?` | |
 | `parameters_set_batch` | `settings[]` | |
+| `parameter_reset` | `node`, `symbol` | `value`, the default now held |
+| `history_undo` | | `revision`, `canUndo`, `canRedo` |
+| `history_redo` | | `revision`, `canUndo`, `canRedo` |
 | `transport_play` | | |
 | `transport_stop` | | |
 | `transport_configure` | `tempo?`, `timeSignature?`, `loop?`, `position?` | |
