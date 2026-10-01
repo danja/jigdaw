@@ -29,6 +29,8 @@
     foaf:homepage <> ;
     # A sidechain input before the first input there is.
     jig:sidechainInput -1 ;
+    # Stateless is a yes or a no.
+    jig:stateless "mostly" ;
     trn:role trn:Instrument ;
 
     # Produces MIDI but requires neither jig:MidiEvents nor jig:MidiOut, so nothing

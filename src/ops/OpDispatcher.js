@@ -642,6 +642,8 @@ export class OpDispatcher {
   async getNodeState (nodeId) {
     const engineId = this.#nodeIds.get(nodeId)
     if (!engineId || !this.#engine) return null
+    // A plugin that declares jig:stateless never answers: asking would only wait out the timeout.
+    if (this.#engine.get(engineId)?.profile?.stateless) return null
     return this.#engine.requestState(engineId)
   }
 

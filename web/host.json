@@ -6,5 +6,6 @@
   "bridgePort": 8749,
   "bridgeCallTimeoutMs": 30000,
   "alignTracks": true,
-  "maxTrackDelayMs": 2000
+  "maxTrackDelayMs": 2000,
+  "handoffMinutes": 30
 }

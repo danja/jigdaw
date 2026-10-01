@@ -30,7 +30,10 @@ export const HOST_CONFIG_KEYS = Object.freeze({
   alignTracks: 'true or false',
   // The longest delay a track can be given to align it, which is the largest
   // latency difference between two tracks the page can put right.
-  maxTrackDelayMs: 'a whole number of milliseconds, at least 1'
+  maxTrackDelayMs: 'a whole number of milliseconds, at least 1',
+  // How long a piece carried from one page to the other (src/host/Handoff.js) is offered. After this it is
+  // forgotten, so a piece left over from last week is not offered as if it were what was just open.
+  handoffMinutes: 'a whole number of minutes, at least 1'
 })
 
 const BOOLEAN_KEYS = new Set(['alignTracks'])

@@ -48,7 +48,7 @@ or a wall-clock time.
 | `init` | `{ module, assets, capabilities, sampleRate, quantum, state? }` | `module` is an `ArrayBuffer` of WebAssembly bytes, transferred. Sent once |
 | `events` | `{ events: [{ frame, bytes }] }` | `bytes` is a `Uint8Array` of one MIDI message |
 | `transport` | `{ playing, frame, beat, beatsPerFrame, tempo, timeSignature, loop? }` | Sent when anything in it changes, and at least once before playback |
-| `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token |
+| `stateRequest` | `{ token }` | The processor replies with `state` carrying the same token. Not sent to a plugin that declares `jig:stateless true` |
 | `loadAsset` | `{ key, bytes }` | Replace a `jig:asset` the profile marked `jig:userReplaceable`, after `init`. `bytes` is an `ArrayBuffer`, transferred |
 | `dispose` | `{}` | Release everything. No further messages will be sent |
 | `plugin` | `{ payload }` | Opaque, relayed from the plugin's own user interface. Section 2.4 |

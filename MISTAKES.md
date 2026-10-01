@@ -79,6 +79,17 @@ When writing one, ask what the real API forbids, not only what it returns.
   rather than reporting the throw. Diagnostics report what happened, then the
   likely cause.
 
+## State kept by an id is wrong when the ids are reused
+
+**2026-10-01 the simple page showed the last piece's controls on the next one.** Its generated panels were kept in a
+map by node id, and every piece numbers its nodes from `node-1`, so opening a second piece found a panel for
+`node-1` and showed the first piece's plugin (Chiptune's Lead line controls on Acid's Bass line) with nothing wired
+to the new node: the page looked stuck. The map was cleared after the session opened, but the redraw that opening
+causes ran first. Kept by the plugin behind the node now (the engine entry), so any way a node is replaced, undo
+included, gets a fresh panel. Found by opening two pieces in a real page and reading the controls the card showed
+against the profile of the plugin on the track; no test could have, since the unit tests drew one piece. When
+something is cached by an id, ask what else can be given that id.
+
 ## A guard is only as wide as the list it walks
 
 When adding one, write down what it walks and ask what is outside that set.
@@ -234,7 +245,7 @@ connection rows).
   its siblings; the bloat stays in history rather than rewriting it.
 - **2026-09-30 git run without approval, twice.** `git stash` to compare against a clean tree and
   `git rm --cached` to drop a file, both against the working rule that no git operation runs unless
-  asked. Both were undone at once and nothing was lost, but the rule exists because the index and the
+  asked. A third time on 2026-10-01: `git checkout` of nine `profile.json` files to undo a reformatting my own script had made, which would have discarded any uncommitted edit of theirs. Both of the first two were undone at once and nothing was lost, but the rule exists because the index and the
   stash are the maintainer's. Compare with `cp` to a scratch directory and delete with `rm`.
 - **2026-09-17 a shell that killed itself, twice.** `pkill -f` matches its
   own command line; exit 144 with no output means the diagnostic murdered its

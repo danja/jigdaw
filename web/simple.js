@@ -13,9 +13,12 @@ import { createTransport } from './app/Transport.js'
 import { createSessions } from './app/Sessions.js'
 import { createPwa } from './app/Pwa.js'
 import { createVoice } from './app/Voice.js'
+import { createBounce } from './app/Bounce.js'
+import { createCarry } from './app/Carry.js'
 import { microphoneAvailable } from '../src/host/Microphone.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createTrackCards } from '../src/ui/TrackCards.js'
+import { createSoundRack } from '../src/ui/SoundRack.js'
 import { createTunePicker } from '../src/ui/TunePicker.js'
 import { listPresets, fetchPreset } from '../src/ui/Presets.js'
 import { inSignalOrder } from '../src/ops/OpenProject.js'
@@ -51,24 +54,32 @@ const ctx = {
   // No alignment setting on this page: the starting value in web/host.json applies.
   align: { preferred: fromConfig => fromConfig, sync () {} },
   /** For the console and for a check driven from outside the page, as on the studio page. */
-  expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine } }
+  expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce } }
 }
 ctx.media = createMedia(document)
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.pwa = createPwa(ctx)
+ctx.bounce = createBounce(ctx)
+ctx.carry = createCarry(ctx, { self: 'simple', offerText: 'You have a piece open in the studio. Open it here?' })
 
 // ── the instruments ───────────────────────────────────────────────────────────
 
 const panels = new Map()
 
-/** The generated panel for one plugin, made once and kept, shown what the model says. */
+/**
+ * The generated panel for one plugin, made once and kept, shown what the model says. Kept by the plugin behind
+ * the node, not by the node's id alone: a new piece reuses ids (node-1 is a different plugin in each), and a
+ * panel kept by id showed the last piece's controls on the new one's.
+ */
 function panelFor (nodeId) {
   const d = ctx.dispatcher
-  const profile = d?.engineNode(nodeId)?.profile
+  const entry = d?.engineNode(nodeId)
+  const profile = entry?.profile
   if (!profile) return null
   let panel = panels.get(nodeId)
+  if (panel && panel.entry !== entry) { panels.delete(nodeId); panel = null }
   if (!panel) {
     panel = createPanel(document, profile, (symbol, value) => {
       const applied = d.setParameter(nodeId, symbol, value)
@@ -78,6 +89,7 @@ function panelFor (nodeId) {
       if (!result.ok) log(`${key}: ${result.message}`, 'error')
     }, { scope: `panel-${nodeId}` })
     panel.element.querySelector('h3')?.remove()
+    panel.entry = entry
     panels.set(nodeId, panel)
   }
   return panel.element
@@ -104,9 +116,50 @@ const cards = createTrackCards(document, {
     const result = ctx.dispatcher.setTrackChannel(trackId, { gain })
     if (!result.ok) log(result.message, 'error')
   },
-  panelFor
+  onOpen: trackId => openRack(trackId)
 })
 $('cards-mount').append(cards.element)
+
+// ── the rack for one track ─────────────────────────────────────────────────────
+
+// "Change the sound" takes you to a screen of its own with that track's plugins, and the browser's Back
+// returns to the instruments (a history entry per visit), as a person on a phone expects.
+const rack = createSoundRack(document, { onBack: () => closeRack({ fromBack: true }), panelFor })
+$('rack-mount').append(rack.element)
+let rackTrack = null
+
+function pluginsOf (trackId) {
+  const d = ctx.dispatcher
+  const { project } = d
+  return inSignalOrder(project.nodes.filter(n => n.track === trackId), project.connections).map(node => {
+    const profile = d.engineNode(node.id)?.profile
+    return { id: node.id, label: node.label ?? profile?.label ?? node.id, about: about(profile) }
+  })
+}
+
+function openRack (trackId, { push = true } = {}) {
+  const d = ctx.dispatcher
+  const track = d?.project.track(trackId)
+  if (!track) return
+  rackTrack = trackId
+  rack.show({ label: track.label ?? `Track ${d.project.tracks.indexOf(track) + 1}`, plugins: pluginsOf(trackId) })
+  $('instruments').hidden = true
+  if (push) history.pushState({ rack: trackId }, '', '#sound')
+  syncPanels()
+  rack.focus()
+}
+
+/** Back to the instruments. From the Back button this steps the history back, so the browser's Back does the same. */
+function closeRack ({ fromBack = false } = {}) {
+  if (rackTrack === null) return
+  const id = rackTrack
+  rackTrack = null
+  rack.hide()
+  $('instruments').hidden = false
+  if (fromBack && history.state?.rack) history.back()
+  $(`open-${id}`)?.focus()
+}
+window.addEventListener('popstate', () => { if (rackTrack !== null && !history.state?.rack) closeRack() })
 
 /** A sentence to say what a plugin is, from its own description, kept short. */
 const about = profile => {
@@ -123,12 +176,13 @@ redraw = () => {
     id: track.id,
     label: track.label ?? `Track ${made.indexOf(track) + 1}`,
     on: !track.channel.muted,
-    level: track.channel.gain,
-    plugins: inSignalOrder(project.nodes.filter(n => n.track === track.id), project.connections).map(node => {
-      const profile = d.engineNode(node.id)?.profile
-      return { id: node.id, label: node.label ?? profile?.label ?? node.id, about: about(profile) }
-    })
+    level: track.channel.gain
   })))
+  // The rack follows the piece: its plugins redrawn if they changed, and closed if its track has gone.
+  if (rackTrack !== null) {
+    if (project.track(rackTrack)) rack.update(pluginsOf(rackTrack))
+    else closeRack()
+  }
   syncPanels()
   showSpeed()
 }
@@ -155,6 +209,13 @@ const picker = createTunePicker(document, { onPick: tune => openTune(tune).catch
 $('tunes-mount').append(picker.element)
 
 async function openTune (tune) {
+  // A new piece starts at the instruments: the rack was for a track of the old one, and its history entry goes too.
+  if (rackTrack !== null) {
+    rackTrack = null
+    rack.hide()
+    $('instruments').hidden = false
+    if (history.state?.rack) history.replaceState(null, '', location.pathname + location.search)
+  }
   log(`Opening ${tune.label}...`)
   const text = await fetchPreset({ fetch: url => fetch(url), url: tune.url })
   await ctx.sessions.openSession(text, tune.url)
@@ -180,6 +241,8 @@ listPresets({ fetch: url => fetch(url), index: new URL('presets/index.json', doc
 $('play').addEventListener('click', () => ctx.transport.play().catch(error => log(error.message, 'error')))
 $('stop').addEventListener('click', () => ctx.transport.stop())
 $('save').addEventListener('click', () => ctx.sessions.saveSession().catch(error => log(error.message, 'error')))
+// The whole piece as a WAV, rendered in the page faster than it plays; the status line says how far it is.
+$('export').addEventListener('click', () => ctx.bounce.exportWav().catch(error => log(error.message, 'error')))
 
 // ── voice ─────────────────────────────────────────────────────────────────────
 
@@ -198,5 +261,8 @@ if (window.__jigdawMicrophone || microphoneAvailable(navigator.mediaDevices)) {
   $('voice').addEventListener('click', () => voice.toggle().catch(error => log(error.message, 'error')))
 }
 
+// A link to the studio carries the piece with it, and the studio offers it.
+for (const link of document.querySelectorAll('a[href="./?studio"]')) ctx.carry.carryOnClick(link)
+ctx.carry.offer()
 ctx.pwa.mount()
 showSpeed()

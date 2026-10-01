@@ -15,7 +15,7 @@ const event = (type, props = {}) => {
 function build (over = {}) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onSize: rec('size'), onMove: rec('move'), onDelete: rec('delete') })
+  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onSize: rec('size'), onMove: rec('move'), onDelete: rec('delete'), onFreeze: rec('freeze') })
   document.body.append(panel.element)
   const state = { id: 't2', name: 'Bass', defaultName: 'Bass', layout: { order: null, color: null, laneSize: 'medium' }, index: 1, count: 3, plugins: 2, ...over }
   panel.show(state)
@@ -23,6 +23,13 @@ function build (over = {}) {
 }
 
 describe('the track panel', () => {
+  it('offers Freeze track and asks for it by the track it shows', () => {
+    const { $, calls } = build()
+    expect($('track-freeze').textContent).toBe('Freeze track')
+    $('track-freeze').dispatchEvent(event('click'))
+    expect(calls).toEqual([['freeze', 't2']])
+  })
+
   it('renames on change or Enter, and sends null for an emptied name so the default returns', () => {
     const { $, calls } = build()
     $('track-name-input').value = 'Sub bass'

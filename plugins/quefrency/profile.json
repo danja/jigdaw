@@ -40,7 +40,8 @@
     "audioOutputs": 1,
     "outputChannels": 2,
     "renderQuantum": 128,
-    "latencyFrames": 2047
+    "latencyFrames": 2047,
+    "stateless": true
   },
   "resources": {
     "module": "quefrency.wasm",

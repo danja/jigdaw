@@ -295,6 +295,7 @@ export function readProfile (dataset, { baseIRI } = {}) {
 
     audioInputs: asNumber(one(dataset, subject, jig.audioInputs)) ?? 0,
     sidechainInput: sidechainIndex(dataset, subject),
+    stateless: asBoolean(one(dataset, subject, jig.stateless)),
     audioOutputs: asNumber(one(dataset, subject, jig.audioOutputs)) ?? 0,
     inputChannels: asNumber(one(dataset, subject, jig.inputChannels)) ?? 2,
     outputChannels: asNumber(one(dataset, subject, jig.outputChannels)) ?? 2,

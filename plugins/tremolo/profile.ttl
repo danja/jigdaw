@@ -38,6 +38,7 @@
     jig:outputChannels 2 ;
     jig:renderQuantum 128 ;
     jig:latencyFrames 0 ;
+    jig:stateless true ;
 
     jig:processor <#processor> ;
     jig:ui <#ui> ;

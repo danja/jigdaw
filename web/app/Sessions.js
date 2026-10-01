@@ -22,17 +22,22 @@ export function createSessions (ctx) {
   const { document, $, log } = ctx
   let openPresetByLabel = () => Promise.resolve()
 
-  async function saveSession () {
+  /**
+   * The open session as a file's worth of bytes: Turtle, or a zip when it holds audio or a layout. What Save
+   * downloads and what carrying a piece to the other page keeps, so the two cannot differ.
+   */
+  async function pack () {
     const { dispatcher, media } = ctx
-    if (!dispatcher) { log('nothing to save yet', 'error'); return }
     // The model's own node.state is whatever was last restored or never set;
     // a stateful plugin's actual current state only lives in its own running
     // processor. Asked for, live, per node, before writing: contract section
     // 8 is what this is for, and skipping it would silently save whichever
     // asset a session started with rather than whatever a person loaded since.
-    for (const node of dispatcher.project.nodes) {
-      const state = await dispatcher.getNodeState(node.id)
-      if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: node.id, state: encodeState(state) }])
+    // All at once: a plugin with no state never answers, and each such plugin cost its two second timeout
+    // in turn, so a piece of seven plugins took fourteen seconds to save instead of two.
+    const states = await Promise.all(dispatcher.project.nodes.map(async node => [node.id, await dispatcher.getNodeState(node.id)]))
+    for (const [id, state] of states) {
+      if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: id, state: encodeState(state) }])
     }
     const turtle = writeProject(dispatcher.project, {
       iri: media.base,
@@ -44,9 +49,19 @@ export function createSessions (ctx) {
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       media: held.map(iri => ({ name: iri.slice(media.base.length), bytes: media.get(iri).bytes }))
     })
-    const blob = packed.kind === 'turtle'
-      ? new Blob([packed.text], { type: 'text/turtle' })
-      : new Blob([packed.bytes], { type: 'application/zip' })
+    return {
+      kind: packed.kind,
+      bytes: packed.kind === 'turtle' ? new TextEncoder().encode(packed.text) : packed.bytes,
+      nodes: dispatcher.project.nodes.length,
+      audioFiles: held.length
+    }
+  }
+
+  async function saveSession () {
+    const { dispatcher } = ctx
+    if (!dispatcher) { log('nothing to save yet', 'error'); return }
+    const packed = await pack()
+    const blob = new Blob([packed.bytes], { type: packed.kind === 'turtle' ? 'text/turtle' : 'application/zip' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -56,8 +71,18 @@ export function createSessions (ctx) {
     // browsers and the file arrives empty.
     setTimeout(() => URL.revokeObjectURL(url), 10000)
     log(packed.kind === 'turtle'
-      ? `saved ${dispatcher.project.nodes.length} nodes as Turtle`
-      : `saved ${dispatcher.project.nodes.length} nodes, ${held.length} audio file(s) and the editor layout as a zip`, 'ok')
+      ? `saved ${packed.nodes} nodes as Turtle`
+      : `saved ${packed.nodes} nodes, ${packed.audioFiles} audio file(s) and the editor layout as a zip`, 'ok')
+  }
+
+  /** Open a session from its bytes: a zip is a session with its media beside it, anything else is Turtle. */
+  async function openBytes (bytes) {
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+      const { turtle, editor, media } = unpackSession(await readZip(bytes))
+      await openSession(turtle, document.baseURI, { files: media, editor })
+    } else {
+      await openSession(new TextDecoder().decode(bytes))
+    }
   }
 
   /**
@@ -111,14 +136,7 @@ export function createSessions (ctx) {
       // Cleared so that opening the same file twice in a row still fires a change.
       event.target.value = ''
       try {
-        // A zip is a session with its media beside it; anything else is Turtle.
-        const bytes = new Uint8Array(await file.arrayBuffer())
-        if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
-          const { turtle, editor, media } = unpackSession(await readZip(bytes))
-          await openSession(turtle, document.baseURI, { files: media, editor })
-        } else {
-          await openSession(new TextDecoder().decode(bytes))
-        }
+        await openBytes(new Uint8Array(await file.arrayBuffer()))
       } catch (error) { log(error.message, 'error') }
     })
 
@@ -157,5 +175,5 @@ export function createSessions (ctx) {
     }).catch(error => log(`presets: ${error.message}`, 'error'))
   }
 
-  return { saveSession, openSession, mount, openPreset: label => openPresetByLabel(label) }
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: label => openPresetByLabel(label) }
 }

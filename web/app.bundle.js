@@ -3804,7 +3804,7 @@ var require_end_of_stream = __commonJS({
       PromisePrototypeThen(stream[kIsClosedPromise].promise, resolverFn, resolverFn);
       return nop;
     }
-    function finished(stream, opts) {
+    function finished2(stream, opts) {
       var _opts;
       let autoCleanup = false;
       if (opts === null) {
@@ -3828,7 +3828,7 @@ var require_end_of_stream = __commonJS({
       });
     }
     module.exports = eos;
-    module.exports.finished = finished;
+    module.exports.finished = finished2;
   }
 });
 
@@ -7022,9 +7022,9 @@ var require_pipeline = __commonJS({
     var Readable;
     var addAbortListener;
     function destroyer(stream, reading, writing) {
-      let finished = false;
+      let finished2 = false;
       stream.on("close", () => {
-        finished = true;
+        finished2 = true;
       });
       const cleanup = eos(
         stream,
@@ -7033,13 +7033,13 @@ var require_pipeline = __commonJS({
           writable: writing
         },
         (err) => {
-          finished = !err;
+          finished2 = !err;
         }
       );
       return {
         destroy: (err) => {
-          if (finished) return;
-          finished = true;
+          if (finished2) return;
+          finished2 = true;
           destroyImpl.destroyer(stream, err || new ERR_STREAM_DESTROYED("pipe"));
         },
         cleanup
@@ -7619,7 +7619,7 @@ var require_operators = __commonJS({
     var { validateAbortSignal, validateInteger, validateObject } = require_validators();
     var kWeakHandler = require_primordials().Symbol("kWeak");
     var kResistStopPropagation = require_primordials().Symbol("kResistStopPropagation");
-    var { finished } = require_end_of_stream();
+    var { finished: finished2 } = require_end_of_stream();
     var staticCompose = require_compose();
     var { addAbortSignalNoValidate } = require_add_abort_signal();
     var { isWritable, isNodeStream } = require_utils();
@@ -7866,7 +7866,7 @@ var require_operators = __commonJS({
         });
         this.once("error", () => {
         });
-        await finished(this.destroy(err));
+        await finished2(this.destroy(err));
         throw err;
       }
       const ac = new AbortController2();
@@ -8019,7 +8019,7 @@ var require_promises = __commonJS({
     var { ArrayPrototypePop, Promise: Promise2 } = require_primordials();
     var { isIterable, isNodeStream, isWebStream } = require_utils();
     var { pipelineImpl: pl } = require_pipeline();
-    var { finished } = require_end_of_stream();
+    var { finished: finished2 } = require_end_of_stream();
     require_stream();
     function pipeline(...streams) {
       return new Promise2((resolve, reject) => {
@@ -8048,7 +8048,7 @@ var require_promises = __commonJS({
       });
     }
     module.exports = {
-      finished,
+      finished: finished2,
       pipeline
     };
   }
@@ -8259,10 +8259,10 @@ var init_util = __esm({
 var require_fromStream = __commonJS({
   "node_modules/rdf-dataset-ext/fromStream.js"(exports, module) {
     var { promisify: promisify2 } = (init_util(), __toCommonJS(util_exports));
-    var { finished } = require_browser3();
+    var { finished: finished2 } = require_browser3();
     async function fromStream3(dataset2, stream) {
       stream.on("data", (quad3) => dataset2.add(quad3));
-      await promisify2(finished)(stream);
+      await promisify2(finished2)(stream);
       return dataset2;
     }
     module.exports = fromStream3;
@@ -13280,6 +13280,7 @@ var init_Vocabulary = __esm({
         // Runtime shape
         audioInputs: `${JIG}audioInputs`,
         sidechainInput: `${JIG}sidechainInput`,
+        stateless: `${JIG}stateless`,
         audioOutputs: `${JIG}audioOutputs`,
         inputChannels: `${JIG}inputChannels`,
         outputChannels: `${JIG}outputChannels`,
@@ -13608,6 +13609,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
     prefers: values(dataset2, subject, jig.prefers),
     audioInputs: asNumber(one(dataset2, subject, jig.audioInputs)) ?? 0,
     sidechainInput: sidechainIndex(dataset2, subject),
+    stateless: asBoolean(one(dataset2, subject, jig.stateless)),
     audioOutputs: asNumber(one(dataset2, subject, jig.audioOutputs)) ?? 0,
     inputChannels: asNumber(one(dataset2, subject, jig.inputChannels)) ?? 2,
     outputChannels: asNumber(one(dataset2, subject, jig.outputChannels)) ?? 2,
@@ -17329,12 +17331,12 @@ async function unpackContainer(bytes) {
         `the container holds "${name2}", which resolves outside it. Contract section 12.3.`
       );
     }
-    files.set(name2, method === 0 ? body : await inflate(body));
+    files.set(name2, method === 0 ? body : await inflate2(body));
     at += 46 + nameLength + extraLength + commentLength;
   }
   return files;
 }
-async function inflate(bytes) {
+async function inflate2(bytes) {
   if (typeof DecompressionStream !== "function") {
     throw new LoadError(
       STEPS.fetchResource,
@@ -17934,175 +17936,6 @@ var init_ForeignSupport = __esm({
   }
 });
 
-// src/ui/Icons.js
-var SVG_NS = "http://www.w3.org/2000/svg";
-var ICONS = Object.freeze({
-  play: "M8 5v14l11-7z",
-  stop: "M6 6h12v12H6z",
-  record: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z",
-  loop: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
-  undo: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",
-  redo: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z",
-  save: "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
-  open: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z",
-  zoomIn: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z",
-  zoomOut: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z",
-  split: "M11 3h2v18h-2zM3 8l5 4-5 4zM21 8l-5 4 5 4z",
-  trimStart: "M4 4h2v16H4zM8 9h12v6H8z",
-  trimEnd: "M18 4h2v16h-2zM4 9h12v6H4z",
-  duplicate: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z",
-  mute: "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z",
-  unmute: "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z",
-  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
-  unlock: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
-  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
-  cut: "M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z",
-  paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
-  bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
-  earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
-  later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
-  delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-});
-function iconElement(document2, name2) {
-  const d = ICONS[name2];
-  if (!d) throw new Error(`no such icon: ${name2}`);
-  const svg = document2.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "22");
-  svg.setAttribute("height", "22");
-  svg.setAttribute("fill", "currentColor");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("focusable", "false");
-  svg.setAttribute("class", "icon");
-  const path = document2.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", d);
-  svg.append(path);
-  return svg;
-}
-function setIcon(document2, button, name2, label, { keepTitle = false } = {}) {
-  button.replaceChildren(iconElement(document2, name2));
-  button.setAttribute("aria-label", label);
-  if (!keepTitle || !button.getAttribute("title")) button.setAttribute("title", label);
-  button.dataset.icon = name2;
-}
-function applyIcons(root) {
-  const document2 = root.ownerDocument ?? root;
-  for (const button of root.querySelectorAll("button[data-icon]")) {
-    if (button.querySelector("svg")) continue;
-    const label = (button.getAttribute("aria-label") ?? button.textContent).trim();
-    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true });
-  }
-}
-
-// src/ui/Tabs.js
-function createTabs(document2, tabs, { onSelect = () => {
-} } = {}) {
-  if (tabs.length === 0) throw new Error("a tab list needs at least one tab");
-  const tablist = document2.createElement("div");
-  tablist.setAttribute("role", "tablist");
-  tablist.className = "tabs";
-  const buttons = tabs.map((tab, index) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.id = `tab-${tab.id}`;
-    button.className = "tab";
-    button.setAttribute("role", "tab");
-    button.setAttribute("aria-controls", tab.panel.id);
-    button.textContent = tab.label;
-    tablist.append(button);
-    tab.panel.setAttribute("role", "tabpanel");
-    tab.panel.setAttribute("aria-labelledby", button.id);
-    tab.panel.tabIndex = 0;
-    return button;
-  });
-  let current = 0;
-  const select = (index) => {
-    current = index;
-    buttons.forEach((button, i2) => {
-      const active = i2 === index;
-      button.setAttribute("aria-selected", String(active));
-      button.tabIndex = active ? 0 : -1;
-      tabs[i2].panel.hidden = !active;
-    });
-    onSelect(tabs[index].id);
-  };
-  const MOVES = {
-    ArrowRight: (i2) => (i2 + 1) % buttons.length,
-    ArrowLeft: (i2) => (i2 - 1 + buttons.length) % buttons.length,
-    Home: () => 0,
-    End: () => buttons.length - 1
-  };
-  buttons.forEach((button, index) => {
-    button.addEventListener("click", () => select(index));
-    button.addEventListener("keydown", (event) => {
-      const move = MOVES[event.key];
-      if (!move) return;
-      event.preventDefault();
-      const next = move(index);
-      select(next);
-      buttons[next].focus();
-    });
-  });
-  select(0);
-  return {
-    element: tablist,
-    /** Select a tab by id, from outside a keypress or a click. */
-    select(id) {
-      const index = tabs.findIndex((tab) => tab.id === id);
-      if (index === -1) throw new Error(`no such tab: ${id}`);
-      select(index);
-    },
-    /** The id of whichever tab is currently shown. */
-    selected() {
-      return tabs[current].id;
-    }
-  };
-}
-
-// web/app/Media.js
-function createMedia(document2) {
-  let base = new URL(`sessions/${Date.now()}/`, document2.baseURI).href;
-  const files = /* @__PURE__ */ new Map();
-  return {
-    get base() {
-      return base;
-    },
-    /**
-     * Move to the session at `iri`: its directory, not the file, because a
-     * preset's IRI is the preset file and media imported afterwards goes
-     * beside it, under the base the session saves with.
-     */
-    rebase(iri3) {
-      base = new URL("./", iri3).href;
-    },
-    has(iri3) {
-      return files.has(iri3);
-    },
-    get(iri3) {
-      return files.get(iri3) ?? null;
-    },
-    /** Keep a file's bytes under its IRI. */
-    put(iri3, bytes, mediaType = null) {
-      files.set(iri3, { bytes, mediaType });
-    },
-    /** Where an imported file lives, named by its content. */
-    iriFor(hex2, extension) {
-      return new URL(`media/${hex2}.${extension}`, base).href;
-    },
-    /** The files a saved session carries: held here, and under its base. */
-    heldUnderBase(iris) {
-      return iris.filter((iri3) => files.has(iri3) && iri3.startsWith(base));
-    },
-    /** A file's bytes, from what is held or else the network. */
-    async fetchBytes(iri3) {
-      if (files.has(iri3)) return files.get(iri3).bytes.slice().buffer;
-      const response = await fetch(iri3);
-      if (!response.ok) throw new Error(`${iri3} answered ${response.status}`);
-      return response.arrayBuffer();
-    }
-  };
-}
-
 // src/host/PluginLoader.js
 init_ProfileReader();
 init_Integrity();
@@ -18598,6 +18431,4533 @@ var PluginLoader = class {
     });
   }
 };
+
+// web/app/Bounce.js
+init_parse();
+
+// src/engine/Engine.js
+init_LoadError();
+var counter = 0;
+var nextId = () => `node-${++counter}`;
+var Engine = class {
+  #context;
+  #master = null;
+  #masterPanner = null;
+  #sends = [];
+  #inputs = /* @__PURE__ */ new Map();
+  #masterHeld = /* @__PURE__ */ new Set();
+  #loader;
+  #nodeClass;
+  #nodes = /* @__PURE__ */ new Map();
+  #links = [];
+  // One strip per track, keyed by the model's track id. The engine holds no
+  // policy about what a track is; it is a named place for audio to arrive.
+  #tracks = /* @__PURE__ */ new Map();
+  #maxTrackDelay = null;
+  /**
+   * `AudioWorkletNode` is injected rather than read from globals so the engine
+   * can be driven by an offline host in a test. Web Audio hangs the class off
+   * the global rather than off the context, so there is nowhere else to get it
+   * from and no way to substitute it without this.
+   */
+  constructor({ context, loader, output = null, maxTrackDelaySeconds = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
+    if (!context) throw new Error("Engine needs an AudioContext");
+    if (!loader) throw new Error("Engine needs a PluginLoader");
+    if (typeof AudioWorkletNode !== "function") {
+      throw new Error("Engine needs an AudioWorkletNode constructor; this environment has none");
+    }
+    this.#context = context;
+    this.#maxTrackDelay = maxTrackDelaySeconds;
+    this.#loader = loader;
+    this.#nodeClass = AudioWorkletNode;
+    if (typeof context.createGain === "function") {
+      this.#master = context.createGain();
+      this.#master.connect(output ?? context.destination);
+      this.#masterPanner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
+      if (this.#masterPanner) this.#masterPanner.connect(this.#master);
+    }
+  }
+  /**
+   * The node every sink reaches, and the only one wired to the destination.
+   *
+   * Exposed so a meter can tap the mix rather than each node separately, which
+   * is what a meter is for and what stops it reading one voice of many.
+   */
+  get master() {
+    return this.#master ?? this.#context.destination;
+  }
+  /** Where a track's output arrives: the master's pan when there is one, else the master. */
+  get #mixInput() {
+    return this.#masterPanner ?? this.master;
+  }
+  get context() {
+    return this.#context;
+  }
+  nodes() {
+    return [...this.#nodes.values()];
+  }
+  get(id) {
+    const entry = this.#nodes.get(id);
+    if (!entry) throw new Error(`no such node: ${id}`);
+    return entry;
+  }
+  /**
+   * Contract section 3 in full: fetch, validate, negotiate, verify, register,
+   * construct, await ready. The node is connected to nothing until the caller
+   * says so.
+   */
+  async addPlugin(iri3, { state = null } = {}) {
+    const { profile, granted } = await this.#loader.loadProfile(iri3);
+    const { node, ready, descriptors } = await this.#loader.instantiate(
+      profile,
+      granted,
+      this.#context,
+      { AudioWorkletNode: this.#nodeClass, state }
+    );
+    return this.adopt({ iri: iri3, profile, node, ready, descriptors, granted });
+  }
+  /**
+   * Take an instantiated node into the graph.
+   *
+   * Everything after instantiation is the same whoever made the node: it needs
+   * driving if it has no audio, and it becomes an entry. A foreign plugin (contract section 12) is instantiated by
+   * its own adapter and arrives here rather than through addPlugin, and this is
+   * the seam that stops that being a second copy of the code below.
+   */
+  adopt({ iri: iri3, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
+    let driver = null;
+    if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
+      driver = this.#context.createConstantSource();
+      driver.offset.value = 0;
+      driver.connect(node, 0, 0);
+      driver.start();
+    }
+    const id = nextId();
+    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver };
+    this.#nodes.set(id, entry);
+    return entry;
+  }
+  /** Remove a node, disconnecting it and telling the processor to release. */
+  remove(id) {
+    const entry = this.get(id);
+    try {
+      if (entry.driver) {
+        entry.driver.stop();
+        entry.driver.disconnect();
+      }
+      entry.node.disconnect();
+      entry.node.port.postMessage({ type: "dispose" });
+    } catch {
+    }
+    this.#nodes.delete(id);
+  }
+  connect(fromId, toId, { fromOutput = 0, toInput = 0 } = {}) {
+    const source = this.get(fromId).node;
+    const destination = toId === "output" ? this.master : this.get(toId).node;
+    source.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
+  }
+  /**
+   * Link two nodes, inserting the delay the compiler asked for.
+   *
+   * Compensation is delay added to the fast paths, per docs/latency.md. The
+   * delay node is owned here and torn down with the link, so a recompile
+   * cannot leave one behind feeding silence into a mix.
+   */
+  /**
+   * Connect one node to another, or to one of its parameters.
+   *
+   * `toParameter` names an AudioParam by its lv2:symbol, and is what an endpoint
+   * carrying jig:portSymbol means. Web Audio sums a connection into a parameter
+   * on top of that parameter's own value, which is the modulation the project
+   * format has been able to express since it was written and which nothing
+   * honoured: the symbol was ignored and the signal was connected to audio input
+   * zero instead, silently and audibly.
+   *
+   * A parameter takes no input index, so toInput is not consulted for one.
+   */
+  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null, connection = null } = {}) {
+    const source = this.get(fromId).node;
+    let destination;
+    if (toParameter !== null) {
+      const entry = this.get(toId);
+      destination = entry.node.parameters?.get(toParameter);
+      if (!destination) {
+        throw new Error(`${entry.profile.label} has no parameter "${toParameter}" to modulate`);
+      }
+    } else {
+      destination = toId === "output" ? this.master : this.get(toId).node;
+    }
+    const targetInput = toId === "output" ? 0 : toInput;
+    if (delayFrames > 0) {
+      if (typeof this.#context.createDelay !== "function") {
+        throw new Error("this context cannot create a delay, so latency cannot be compensated");
+      }
+      const seconds = delayFrames / this.#context.sampleRate;
+      const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
+      delay.delayTime.value = seconds;
+      source.connect(delay, fromOutput, 0);
+      if (toParameter !== null) delay.connect(destination);
+      else delay.connect(destination, 0, targetInput);
+      this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay });
+      return;
+    }
+    if (toParameter !== null) source.connect(destination, fromOutput);
+    else source.connect(destination, fromOutput, targetInput);
+    this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay: null });
+  }
+  /**
+   * The audio time for an absolute stream position, never in the past.
+   *
+   * A latency message names the frame its figure applies from
+   * (docs/latency.md section 2), and a frame already past means already in
+   * effect: scheduling it then is immediate rather than an error.
+   */
+  frameTime(frame) {
+    return Math.max(frame / this.#context.sampleRate, this.#context.currentTime);
+  }
+  /**
+   * Change one compensated link's delay, scheduled at an audio time.
+   *
+   * Compensation is re-applied without rebuilding the graph: tearing every
+   * link down and remaking it would itself be audible, which is what
+   * scheduling against fromFrame exists to avoid. An existing delay node is
+   * driven with setValueAtTime; a newly needed one is inserted passing
+   * through and switched at the same time. A delay that falls to zero stays
+   * in the graph as a passthrough until the next full rebuild: removing a
+   * node cannot be scheduled, and a zero delay node changes nothing audible.
+   */
+  retime(connection, delayFrames, { atTime } = {}) {
+    const link = this.#links.find((l) => l.connection === connection && l.toId !== void 0);
+    if (!link) throw new Error(`no compensated link for connection "${connection}"`);
+    const when = Math.max(atTime ?? this.#context.currentTime, this.#context.currentTime);
+    const seconds = delayFrames / this.#context.sampleRate;
+    if (link.delay) {
+      link.delay.delayTime.setValueAtTime(seconds, when);
+      return;
+    }
+    if (seconds <= 0) return;
+    if (typeof this.#context.createDelay !== "function") {
+      throw new Error("this context cannot create a delay, so latency cannot be compensated");
+    }
+    const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
+    const source = this.get(link.fromId).node;
+    const destination = link.toParameter != null ? this.get(link.toId).node.parameters.get(link.toParameter) : link.toId === "output" ? this.master : this.get(link.toId).node;
+    const targetInput = link.toId === "output" ? 0 : link.toInput;
+    source.connect(delay, link.fromOutput, 0);
+    if (link.toParameter != null) delay.connect(destination);
+    else delay.connect(destination, 0, targetInput);
+    delay.delayTime.setValueAtTime(seconds, when);
+    link.delay = delay;
+  }
+  /** Tear down every link, including the delay nodes this engine created. */
+  clearLinks() {
+    for (const link of this.#links) {
+      try {
+        if (link.delay) link.delay.disconnect();
+        this.get(link.fromId).node.disconnect();
+      } catch {
+      }
+    }
+    this.#links = [];
+  }
+  get links() {
+    return [...this.#links];
+  }
+  connectSource(audioNode, toId, { toInput = 0 } = {}) {
+    audioNode.connect(this.get(toId).node, 0, toInput);
+  }
+  /**
+   * Make a track's strip: a fader then a panner, into the master.
+   *
+   * Gain then pan, which is the order a mixer works in: the fader sets how much
+   * of the signal there is and the pan decides where it goes.
+   */
+  addTrack(trackId) {
+    if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`);
+    const pre = this.#context.createGain();
+    const gain = this.#context.createGain();
+    const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
+    pre.connect(gain);
+    const delay = this.#maxTrackDelay !== null && typeof this.#context.createDelay === "function" ? this.#context.createDelay(this.#maxTrackDelay) : null;
+    const last = panner ?? gain;
+    if (panner) gain.connect(panner);
+    const out = delay ?? last;
+    if (delay) last.connect(delay);
+    out.connect(this.#mixInput);
+    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre });
+  }
+  removeTrack(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    this.closeInput(trackId);
+    try {
+      strip.pre.disconnect();
+      strip.gain.disconnect();
+      strip.panner?.disconnect();
+      strip.delay?.disconnect();
+    } catch {
+    }
+    this.#tracks.delete(trackId);
+  }
+  /**
+   * Delay a track's output by `frames`, to line it up with a slower track. Set
+   * at an audio time so a change while playing does not click at the wrong moment.
+   * Refuses what cannot be done: no delay built into the strips, or more than the
+   * host allowed for.
+   */
+  setTrackDelay(trackId, frames, { atTime } = {}) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (!strip.delay) throw new Error("this engine was built with no track delay, so tracks cannot be aligned");
+    const seconds = frames / this.#context.sampleRate;
+    if (!(seconds >= 0) || seconds > this.#maxTrackDelay) {
+      throw new Error(`a track delay of ${frames} frames (${(seconds * 1e3).toFixed(1)} ms) is more than the ${this.#maxTrackDelay * 1e3} ms this host allows`);
+    }
+    strip.delay.delayTime.setValueAtTime(seconds, atTime ?? this.#context.currentTime);
+  }
+  /**
+   * Send a track's output somewhere other than the master: into another track,
+   * which makes that track a bus, or back to the master with null. Only touches
+   * the audio graph when the destination changed, since the dispatcher says it
+   * for every track on every rebuild.
+   */
+  setTrackOutput(trackId, toTrackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    const target = toTrackId === null ? null : this.#tracks.get(toTrackId);
+    if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`);
+    if (strip.to === toTrackId) return;
+    try {
+      strip.out.disconnect();
+    } catch {
+    }
+    strip.out.connect(target ? target.pre : this.#mixInput);
+    strip.to = toTrackId;
+  }
+  /**
+   * A send: a copy of one track's signal, at `level`, into another track. Taken
+   * before the fader with `tap: 'pre'` and after fader and pan with 'post'. Not
+   * a link between plugins, so clearLinks leaves it alone; clearSends takes them
+   * all down and the dispatcher makes them again from the model.
+   */
+  addSend(id, fromTrackId, toTrackId, { level = 1, tap = "post" } = {}) {
+    const from = this.#tracks.get(fromTrackId);
+    const to = this.#tracks.get(toTrackId);
+    if (!from) throw new Error(`no such track strip: ${fromTrackId}`);
+    if (!to) throw new Error(`no such track strip: ${toTrackId}`);
+    if (tap !== "pre" && tap !== "post") throw new Error(`a send is pre or post, not ${tap}`);
+    const gain = this.#context.createGain();
+    gain.gain.setValueAtTime(level, this.#context.currentTime);
+    const source = tap === "pre" ? from.pre : from.panner ?? from.gain;
+    source.connect(gain);
+    gain.connect(to.pre);
+    this.#sends.push({ id, source, gain });
+  }
+  /** Change one send's level without remaking it. */
+  setSendLevel(id, level) {
+    const send = this.#sends.find((x) => x.id === id);
+    if (!send) throw new Error(`no such send: ${id}`);
+    send.gain.gain.setValueAtTime(level, this.#context.currentTime);
+  }
+  clearSends() {
+    for (const { source, gain } of this.#sends) {
+      try {
+        source.disconnect(gain);
+      } catch {
+      }
+      try {
+        gain.disconnect();
+      } catch {
+      }
+    }
+    this.#sends = [];
+  }
+  /**
+   * The master's level, pan and mute. Muted is a level of zero, not a disconnect. A parameter an envelope is
+   * playing on (`holdMaster`) is left alone: this runs on every rebuild of the graph, and setting a value at
+   * the current time would cut into the envelope's own scheduling on every edit.
+   */
+  setMaster({ gain = 1, pan = 0, muted = false } = {}) {
+    if (!this.#master) return;
+    const at = this.#context.currentTime;
+    if (!this.#masterHeld.has("gain")) this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
+    if (this.#masterPanner && !this.#masterHeld.has("pan")) this.#masterPanner.pan.setValueAtTime(pan, at);
+  }
+  /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
+  masterParam(which) {
+    if (which === "gain") return this.#master?.gain ?? null;
+    if (which === "pan") return this.#masterPanner?.pan ?? null;
+    throw new Error(`the master has no ${which}`);
+  }
+  /** Leave the master's level or pan to an envelope (on), or take it back (off). */
+  holdMaster(which, on) {
+    if (which !== "gain" && which !== "pan") throw new Error(`the master has no ${which}`);
+    if (on) this.#masterHeld.add(which);
+    else this.#masterHeld.delete(which);
+  }
+  /** The track ids that have a strip. */
+  trackIds() {
+    return [...this.#tracks.keys()];
+  }
+  /**
+   * The node a track's audio arrives at: its fader. For a caller that plays
+   * something into a track from outside the plugin graph, such as an audio
+   * clip with nowhere else to go.
+   */
+  trackInput(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    return strip.input;
+  }
+  /**
+   * The node a track sounds through: after its fader and panner, on the way
+   * to the master. For a caller that captures what a track sounds like, such
+   * as a take recorder: mute and solo record as heard, because they act
+   * upstream of here.
+   */
+  trackTap(trackId, { pre = false } = {}) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    return pre ? strip.pre : strip.panner ?? strip.gain;
+  }
+  /**
+   * Feed a live stream (a microphone) into a track's arrival point. One stream
+   * per track; a second replaces the first. The track's fader and mute decide
+   * what is heard, so a track holding only a microphone is muted to keep the
+   * person out of the speakers, and recorded pre-fader (`trackTap`).
+   */
+  openInput(trackId, stream) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (typeof this.#context.createMediaStreamSource !== "function") {
+      throw new Error("this context cannot take a live input");
+    }
+    this.closeInput(trackId);
+    const source = this.#context.createMediaStreamSource(stream);
+    source.connect(strip.pre);
+    this.#inputs.set(trackId, { source, stream });
+  }
+  /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
+  closeInput(trackId) {
+    const held = this.#inputs.get(trackId);
+    if (!held) return;
+    try {
+      held.source.disconnect();
+    } catch {
+    }
+    for (const track of held.stream.getTracks?.() ?? []) track.stop();
+    this.#inputs.delete(trackId);
+  }
+  /**
+   * Connect a node's output to a track's fader. Recorded with the other links,
+   * so clearLinks takes it down with them.
+   */
+  linkToTrack(fromId, trackId, { fromOutput = 0 } = {}) {
+    this.get(fromId).node.connect(this.trackInput(trackId), fromOutput, 0);
+    this.#links.push({ fromId, toTrack: trackId, delay: null });
+  }
+  /**
+   * Apply a track's channel strip.
+   *
+   * `silent` is given separately from the model's own mute because solo makes
+   * a track silent without it being muted: what a listener hears is a property
+   * of the whole mix, and the dispatcher is what can see the whole mix.
+   */
+  setTrackChannel(trackId, { gain = 1, pan = 0, silent = false } = {}) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    const at = this.#context.currentTime;
+    strip.gain.gain.setValueAtTime(silent ? 0 : gain, at);
+    if (strip.panner) strip.panner.pan.setValueAtTime(pan, at);
+  }
+  /**
+   * What a value would become, without applying it.
+   *
+   * Separate from setParameter so a caller can record the value it is going to
+   * apply before applying it. Writing the asked-for value and then correcting it
+   * is two edits to the model for one edit by the person, which an undo stack
+   * then has to unpick.
+   */
+  clampParameter(id, symbol, value2) {
+    const entry = this.get(id);
+    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
+    return Math.min(port.maximum, Math.max(port.minimum, value2));
+  }
+  /** The value a parameter has before anything sets it, from the profile. */
+  defaultParameter(id, symbol) {
+    const entry = this.get(id);
+    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
+    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
+    return port.defaultValue;
+  }
+  setParameter(id, symbol, value2) {
+    const entry = this.get(id);
+    const param = entry.node.parameters.get(symbol);
+    if (!param) {
+      throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
+    }
+    const clamped = this.clampParameter(id, symbol, value2);
+    param.setValueAtTime(clamped, this.#context.currentTime);
+    return clamped;
+  }
+  /**
+   * Mute and disconnect a node that failed, leaving the rest of the graph
+   * running. Contract section 10.2: a host whose failure mode is silence for
+   * the whole project is one nobody will load an unfamiliar plugin into.
+   */
+  quarantine(id, reason) {
+    const entry = this.get(id);
+    try {
+      entry.node.disconnect();
+    } catch {
+    }
+    entry.failed = reason;
+    return entry;
+  }
+  /**
+   * Register a handler for messages from a node's processor.
+   *
+   * A port has one `onmessage`, and more than one part of the host needs to
+   * hear from a processor: errors, outgoing events, dropped counts. So the
+   * engine owns the handler and fans out, rather than each subsystem
+   * overwriting the last one to register.
+   */
+  onMessage(id, handler2) {
+    const entry = this.get(id);
+    if (!entry.handlers) {
+      entry.handlers = /* @__PURE__ */ new Set();
+      entry.node.port.onmessage = (event) => {
+        for (const listener of entry.handlers) {
+          try {
+            listener(event.data, entry);
+          } catch (error2) {
+            console.error("message handler failed", error2);
+          }
+        }
+      };
+    }
+    entry.handlers.add(handler2);
+    return () => entry.handlers.delete(handler2);
+  }
+  /**
+   * Watch a node for the errors a processor reports after loading.
+   *
+   * Only a fatal one quarantines. messaging.md 1.3 documents `fatal: false`
+   * for a problem the node survives, such as a `loadAsset` that failed to
+   * parse: contract 10.2 says a *plugin that throws* is what gets muted and
+   * disconnected, not every message a processor happens to send with type
+   * "error", and those are different populations.
+   */
+  watch(id, onError) {
+    return this.onMessage(id, (message) => {
+      if (message?.type !== "error" || message.fatal === false) return;
+      this.quarantine(id, message.message);
+      onError?.(new LoadError("process", `${this.get(id).profile.label}: ${message.message}`));
+    });
+  }
+  /** Post a message to a node's processor. */
+  post(id, message) {
+    this.get(id).node.port.postMessage(message);
+  }
+  /**
+   * Ask a node's processor for its current state (contract section 8,
+   * messaging.md 1.2's `stateRequest` and 1.3's `state`). Resolves with
+   * whatever it returns, or `null` if nothing answers before `timeoutMs`: a
+   * plugin with no state to report simply never replies, which is the
+   * ordinary case and not a failure, so a timeout resolves rather than
+   * rejects.
+   *
+   * A token round-trips with the request rather than trusting "the next
+   * `state` message must be the answer to this one", because `watch()` and
+   * any other `onMessage` listener share the same port and a message meant
+   * for one caller must not resolve another's promise.
+   */
+  requestState(id, { timeoutMs = 2e3 } = {}) {
+    const entry = this.get(id);
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return new Promise((resolve) => {
+      let settled = false;
+      const stop = this.onMessage(id, (message) => {
+        if (settled || message?.type !== "state" || message.token !== token) return;
+        settled = true;
+        stop();
+        resolve(message.state ?? null);
+      });
+      entry.node.port.postMessage({ type: "stateRequest", token });
+      setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        stop();
+        resolve(null);
+      }, timeoutMs);
+    });
+  }
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node, messaging.md
+   * 1.2's `loadAsset`: a person choosing a different file from the
+   * generated panel, after the plugin is already loaded. `bytes` is
+   * transferred, so the caller must not use it again afterward.
+   */
+  loadAsset(id, key, bytes) {
+    this.get(id).node.port.postMessage({ type: "loadAsset", key, bytes }, [bytes]);
+  }
+};
+
+// src/engine/Automation.js
+var SAMPLES_PER_SECOND = 100;
+var MAX_SAMPLES = 512;
+var smooth = (u2) => u2 * u2 * (3 - 2 * u2);
+function valueAtSeconds(points, t) {
+  if (points.length === 0) return null;
+  if (t <= points[0].t) return points[0].value;
+  const last = points[points.length - 1];
+  if (t >= last.t) return last.value;
+  let i2 = 0;
+  while (points[i2 + 1].t <= t) i2++;
+  const a2 = points[i2];
+  const b = points[i2 + 1];
+  const u2 = (t - a2.t) / (b.t - a2.t);
+  if (a2.curve === "linear") return a2.value + (b.value - a2.value) * u2;
+  if (a2.curve === "smooth") return a2.value + (b.value - a2.value) * smooth(u2);
+  return a2.value;
+}
+function segment(a2, b, t0, t1, at) {
+  if (a2.curve === "step" || !(t1 > t0)) return null;
+  const v0 = valueAtSeconds([a2, b], t0);
+  const v1 = valueAtSeconds([a2, b], t1);
+  if (a2.curve === "linear") return { kind: "ramp", at, value: v0, end: at + (t1 - t0), endValue: v1 };
+  const count = Math.min(MAX_SAMPLES, Math.max(2, Math.round((t1 - t0) * SAMPLES_PER_SECOND)));
+  const values2 = new Float32Array(count);
+  for (let k = 0; k < count; k++) values2[k] = valueAtSeconds([a2, b], t0 + (t1 - t0) * (k / (count - 1)));
+  return { kind: "curve", at, duration: t1 - t0, values: values2 };
+}
+function automationBetween(transport2, points, segments2, start, end) {
+  if (points.length === 0) return [];
+  const timed = points.map((p) => ({ t: transport2.secondsAtBeat(p.atBeat), value: p.value, curve: p.curve ?? "linear" }));
+  const out = [];
+  for (const seg of segments2) {
+    const inWindow = (t) => t >= start && t < end;
+    if (inWindow(seg.from)) {
+      out.push({ kind: "set", at: seg.from, value: valueAtSeconds(timed, seg.lo) });
+      const i2 = timed.findIndex((p, k) => p.t <= seg.lo && (k === timed.length - 1 || timed[k + 1].t > seg.lo));
+      if (i2 >= 0 && i2 < timed.length - 1) {
+        const partial = segment(timed[i2], timed[i2 + 1], seg.lo, Math.min(timed[i2 + 1].t, seg.hi), seg.from);
+        if (partial) out.push(partial);
+      }
+    }
+    for (let i2 = 0; i2 < timed.length; i2++) {
+      const p = timed[i2];
+      if (p.t < seg.lo || p.t >= seg.hi) continue;
+      const at = p.t + seg.shift;
+      if (!inWindow(at) || at === seg.from && inWindow(seg.from)) continue;
+      out.push({ kind: "set", at, value: p.value });
+      if (i2 < timed.length - 1) {
+        const leg = segment(p, timed[i2 + 1], p.t, Math.min(timed[i2 + 1].t, seg.hi), at);
+        if (leg) out.push(leg);
+      }
+    }
+  }
+  return out.sort((x, y) => x.at - y.at);
+}
+
+// src/engine/Scheduler.js
+var NOTE_ON = 144;
+var NOTE_OFF = 128;
+function clipNotes(project) {
+  const byNode = /* @__PURE__ */ new Map();
+  for (const track of project.tracks) {
+    if (!track.midiInput) continue;
+    for (const clip of project.clips) {
+      if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
+      const end = clip.startBeat + clip.lengthBeats;
+      for (const note of clip.notes) {
+        const on = clip.startBeat + note.startBeat;
+        if (on >= end) continue;
+        const off = Math.min(on + note.lengthBeats, end);
+        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
+        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
+      }
+    }
+  }
+  return byNode;
+}
+function clipAudio(project) {
+  return project.clips.filter((c3) => c3.kind === "audio" && !c3.muted).map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
+}
+function* segments(transport2, start, end) {
+  const loop = transport2.loop;
+  if (!loop.enabled) {
+    yield { from: 0, to: Infinity, lo: 0, hi: Infinity, shift: 0 };
+    return;
+  }
+  const loStart = transport2.secondsAtBeat(loop.start);
+  const loEnd = transport2.secondsAtBeat(loop.end);
+  const length = loEnd - loStart;
+  if (start < loEnd) yield { from: 0, to: loEnd, lo: 0, hi: loEnd, shift: 0 };
+  let k = start < loEnd ? 1 : 1 + Math.floor((start - loEnd) / length);
+  for (; ; k++) {
+    const from = loEnd + (k - 1) * length;
+    if (from >= end) return;
+    yield { from, to: from + length, lo: loStart, hi: loEnd, shift: from - loStart };
+  }
+}
+function notesBetween(transport2, notes, start, end) {
+  const found = [];
+  const timed = notes.map((n2) => ({ ...n2, onS: transport2.secondsAtBeat(n2.on), offS: transport2.secondsAtBeat(n2.off) }));
+  for (const seg of segments(transport2, start, end)) {
+    for (const note of timed) {
+      if (note.onS < seg.lo || note.onS >= seg.hi) continue;
+      const on = note.onS + seg.shift;
+      if (on < start || on >= end) continue;
+      const { onS, offS, ...rest } = note;
+      found.push({ ...rest, on, off: Math.min(offS, seg.hi) + seg.shift });
+    }
+  }
+  return found;
+}
+var onClock = (instruction, origin) => ({
+  ...instruction,
+  at: origin + instruction.at,
+  ...instruction.end !== void 0 ? { end: origin + instruction.end } : {}
+});
+var Scheduler = class {
+  #now;
+  #sampleRate;
+  #lookahead;
+  #notes;
+  #transport;
+  #send;
+  #audio;
+  #playAudio;
+  #stopAudio;
+  #automation;
+  #origin = null;
+  #until = 0;
+  // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
+  #sounding = [];
+  /**
+   * - `now()`: the audio clock in seconds, AudioContext.currentTime.
+   * - `lookahead`: seconds ahead of the clock each tick schedules to. From
+   *   configuration, never defaulted here.
+   * - `notes()`: clipNotes of the project as it is now, read every tick so an
+   *   edit is heard at the next one.
+   * - `transport()`: the Transport as it is now.
+   * - `send(nodeId, events)`: deliver events, `{ frame, bytes }`.
+   * - `audio()`, `playAudio(clip, { when, offset, duration })` and
+   *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
+   *   stop them. All three or none; a host that plays no audio clips gives none.
+   * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
+   *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
+   *   gets each instruction of Automation.js with its times on the audio clock.
+   */
+  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio, automation }) {
+    if (typeof now !== "function" || typeof notes !== "function" || typeof transport2 !== "function" || typeof send !== "function") {
+      throw new Error("Scheduler needs now, notes, transport and send");
+    }
+    if (!(sampleRate > 0)) throw new Error("Scheduler needs a sample rate");
+    if (!(lookahead > 0)) throw new Error("Scheduler needs a lookahead in seconds, from configuration");
+    this.#now = now;
+    this.#sampleRate = sampleRate;
+    this.#lookahead = lookahead;
+    this.#notes = notes;
+    this.#transport = transport2;
+    this.#send = send;
+    const given = [audio, playAudio, stopAudio].filter((f) => f !== void 0);
+    if (given.length !== 0 && (given.length !== 3 || given.some((f) => typeof f !== "function"))) {
+      throw new Error("Scheduler needs all of audio, playAudio and stopAudio, or none of them");
+    }
+    this.#audio = audio ?? null;
+    this.#playAudio = playAudio ?? null;
+    this.#stopAudio = stopAudio ?? null;
+    if (automation !== void 0 && ["envelopes", "apply", "stop"].some((k) => typeof automation[k] !== "function")) {
+      throw new Error("Scheduler needs automation as { envelopes, apply, stop }, or none");
+    }
+    this.#automation = automation ?? null;
+  }
+  get running() {
+    return this.#origin !== null;
+  }
+  /** An absolute stream position, from elapsed seconds since the start. */
+  #frame(elapsed) {
+    return Math.round((this.#origin + elapsed) * this.#sampleRate);
+  }
+  /** Start at the clock time the transport's beat zero is heard. */
+  start(atTime) {
+    this.#origin = atTime;
+    this.#until = 0;
+    this.#sounding = [];
+  }
+  /** Schedule everything up to the lookahead. Call often; a tick with nothing new sends nothing. */
+  tick() {
+    if (!this.running) return;
+    const end = this.#now() - this.#origin + this.#lookahead;
+    const start = this.#until;
+    if (end <= start) return;
+    const transport2 = this.#transport();
+    const outgoing = /* @__PURE__ */ new Map();
+    const add = (nodeId, frame, bytes, order) => {
+      if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
+      outgoing.get(nodeId).push({ frame, bytes, order });
+    };
+    for (const [nodeId, notes] of this.#notes()) {
+      for (const note of notesBetween(transport2, notes, start, end)) {
+        const onFrame = this.#frame(note.on);
+        add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1);
+        this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame });
+      }
+    }
+    if (this.#audio) {
+      for (const clip of notesBetween(transport2, this.#audio(), start, end)) {
+        this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on });
+      }
+    }
+    if (this.#automation) {
+      const passes = [...segments(transport2, start, end)];
+      for (const envelope of this.#automation.envelopes()) {
+        for (const instruction of automationBetween(transport2, envelope.points, passes, start, end)) {
+          this.#automation.apply(envelope, onClock(instruction, this.#origin));
+        }
+      }
+    }
+    this.#sounding = this.#sounding.filter((s) => {
+      if (s.off >= end) return true;
+      add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
+      return false;
+    });
+    this.#until = end;
+    this.#deliver(outgoing);
+  }
+  /** End everything still sounding, and stop. */
+  stop() {
+    if (!this.running) return;
+    const nowFrame = this.#frame(this.#now() - this.#origin);
+    const outgoing = /* @__PURE__ */ new Map();
+    for (const s of this.#sounding) {
+      if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, []);
+      outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 });
+    }
+    this.#sounding = [];
+    this.#origin = null;
+    this.#stopAudio?.();
+    this.#automation?.stop();
+    this.#deliver(outgoing);
+  }
+  /** In time order, and at one frame an off before an on, so a repeated note is retriggered rather than cut. */
+  #deliver(outgoing) {
+    for (const [nodeId, events] of outgoing) {
+      events.sort((a2, b) => a2.frame - b.frame || a2.order - b.order);
+      this.#send(nodeId, events.map(({ frame, bytes }) => ({ frame, bytes })));
+    }
+  }
+};
+
+// src/engine/ClipPlayer.js
+var ClipPlayer = class {
+  #context;
+  #fetchBytes;
+  #buffers = /* @__PURE__ */ new Map();
+  #loading = /* @__PURE__ */ new Map();
+  #failures = /* @__PURE__ */ new Map();
+  #peaks = /* @__PURE__ */ new Map();
+  #playing = /* @__PURE__ */ new Set();
+  /**
+   * - `context`: the AudioContext, which decodes and plays.
+   * - `fetchBytes(iri)`: the file's bytes as an ArrayBuffer. The page gives it
+   *   a function that looks in the session's own media first, then the network.
+   */
+  constructor({ context, fetchBytes }) {
+    if (!context || typeof fetchBytes !== "function") throw new Error("ClipPlayer needs a context and fetchBytes");
+    this.#context = context;
+    this.#fetchBytes = fetchBytes;
+  }
+  /** The decoded audio, or null while it loads or if it failed. */
+  buffer(iri3) {
+    return this.#buffers.get(iri3) ?? null;
+  }
+  /** Why a source could not be loaded, or null. */
+  failure(iri3) {
+    return this.#failures.get(iri3) ?? null;
+  }
+  /**
+   * Decode a source, once. Resolves with the AudioBuffer, or with null if it
+   * cannot be had, in which case failure(iri) says why. Never rejects: one
+   * missing file is one silent clip, not a session that will not play.
+   */
+  load(iri3) {
+    if (this.#buffers.has(iri3)) return Promise.resolve(this.#buffers.get(iri3));
+    if (this.#loading.has(iri3)) return this.#loading.get(iri3);
+    const loading2 = (async () => {
+      try {
+        const bytes = await this.#fetchBytes(iri3);
+        const buffer = await this.#context.decodeAudioData(bytes);
+        this.#buffers.set(iri3, buffer);
+        this.#failures.delete(iri3);
+        return buffer;
+      } catch (error2) {
+        this.#failures.set(iri3, error2);
+        return null;
+      } finally {
+        this.#loading.delete(iri3);
+      }
+    })();
+    this.#loading.set(iri3, loading2);
+    return loading2;
+  }
+  /**
+   * The loudest sample in each of `count` equal stretches of the first
+   * channel, for drawing a waveform. Computed once per source and count.
+   */
+  peaks(iri3, count) {
+    const buffer = this.buffer(iri3);
+    if (!buffer || !(count > 0)) return null;
+    const key = `${count} ${iri3}`;
+    if (this.#peaks.has(key)) return this.#peaks.get(key);
+    const data = buffer.getChannelData(0);
+    const out = new Float32Array(count);
+    const per = data.length / count;
+    for (let i2 = 0; i2 < count; i2++) {
+      let peak = 0;
+      const end = Math.min(data.length, Math.floor((i2 + 1) * per));
+      for (let j = Math.floor(i2 * per); j < end; j++) {
+        const v = Math.abs(data[j]);
+        if (v > peak) peak = v;
+      }
+      out[i2] = peak;
+    }
+    this.#peaks.set(key, out);
+    return out;
+  }
+  /**
+   * Start a source at `when` (context seconds), `offset` seconds into the
+   * file, for `duration` seconds, into `destination`. Returns false, and
+   * starts nothing, when the source is not loaded.
+   */
+  start({ iri: iri3, when, offset, duration, destination, fadeIn = 0, fadeOut = 0 }) {
+    const buffer = this.buffer(iri3);
+    if (!buffer) return false;
+    const source = this.#context.createBufferSource();
+    source.buffer = buffer;
+    let tail = source;
+    if (fadeIn > 0 || fadeOut > 0) {
+      const scale = fadeIn + fadeOut > duration ? duration / (fadeIn + fadeOut) : 1;
+      const inLength = fadeIn * scale;
+      const outLength = fadeOut * scale;
+      const shape = this.#context.createGain();
+      const level = shape.gain;
+      level.setValueAtTime(inLength > 0 ? 0 : 1, when);
+      if (inLength > 0) level.linearRampToValueAtTime(1, when + inLength);
+      if (outLength > 0) {
+        level.setValueAtTime(1, when + duration - outLength);
+        level.linearRampToValueAtTime(0, when + duration);
+      }
+      source.connect(shape);
+      tail = shape;
+    }
+    tail.connect(destination);
+    const late = Math.max(0, this.#context.currentTime - when);
+    source.start(when + late, offset + late, Math.max(0, duration - late));
+    this.#playing.add(source);
+    source.onended = () => {
+      this.#playing.delete(source);
+      source.disconnect();
+      if (tail !== source) tail.disconnect();
+    };
+    return true;
+  }
+  /** Stop everything this has started. */
+  stopAll() {
+    for (const source of this.#playing) {
+      try {
+        source.stop();
+      } catch {
+      }
+      source.disconnect();
+    }
+    this.#playing.clear();
+  }
+  /** How many sources are playing or scheduled, for a caller that wants to know. */
+  get active() {
+    return this.#playing.size;
+  }
+};
+
+// src/engine/AutomationHost.js
+function createAutomationHost(ctx2) {
+  const { log: log2 } = ctx2;
+  const touched = /* @__PURE__ */ new Map();
+  const warned = /* @__PURE__ */ new Set();
+  const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const MASTER = { masterGain: "gain", masterPan: "pan" };
+  const paramOf = (target) => target.kind !== void 0 ? MASTER[target.kind] ? ctx2.engine.masterParam(MASTER[target.kind]) : null : ctx2.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol);
+  const hold = (target, on) => {
+    if (MASTER[target.kind]) ctx2.engine.holdMaster(MASTER[target.kind], on);
+  };
+  const masterSnapshot = () => JSON.stringify(ctx2.dispatcher.project.master);
+  let masterAtStart = null;
+  const manualValue = ({ node, symbol, kind }) => {
+    if (kind === "masterGain") {
+      const m = ctx2.dispatcher.project.master;
+      return m.muted ? 0 : m.gain;
+    }
+    if (kind === "masterPan") return ctx2.dispatcher.project.master.pan;
+    const set = ctx2.dispatcher.project.node(node)?.settings.get(symbol);
+    if (set !== void 0) return set;
+    return ctx2.dispatcher.engineNode(node)?.profile?.ports?.find((p) => p.symbol === symbol)?.defaultValue;
+  };
+  let listeningTo = null;
+  const listen = () => {
+    if (listeningTo === ctx2.dispatcher) return;
+    listeningTo = ctx2.dispatcher;
+    listeningTo.subscribe((event) => {
+      if (event.type === "parameter") host.edited(event.nodeId, event.symbol, event.value);
+      else if (event.type === "changed") host.masterEdited(listeningTo.project.master);
+    });
+  };
+  const host = {
+    envelopes: () => ctx2.dispatcher.project.envelopes.filter((e) => (e.target.node !== void 0 || MASTER[e.target.kind]) && e.points.length > 0),
+    apply(envelope, instruction) {
+      listen();
+      const param = paramOf(envelope.target);
+      if (!param) return;
+      const state = touched.get(param) ?? { target: envelope.target, suspended: false };
+      touched.set(param, state);
+      if (state.suspended) return;
+      if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) return;
+      if (!state.held) {
+        hold(envelope.target, true);
+        state.held = true;
+        masterAtStart ??= masterSnapshot();
+      }
+      try {
+        if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
+        else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
+        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
+      } catch (error2) {
+        if (!warned.has(envelope.id)) {
+          warned.add(envelope.id);
+          log2(`automation ${envelope.id}: ${error2.message}`, "error");
+        }
+      }
+    },
+    /** A parameter was changed by hand (or by an agent, or by undo): it takes over from its envelope until Stop. */
+    edited(nodeId, symbol, value2) {
+      const target = { node: nodeId, symbol };
+      for (const [param, state] of touched) {
+        if (keyOf(state.target) !== keyOf(target) || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(value2, now);
+        state.suspended = true;
+        hold(state.target, false);
+        log2(`${symbol} was changed by hand, so its automation is paused until you press Stop`);
+      }
+    },
+    /**
+     * The master was changed through setMaster: an envelope on its level or pan, if one is playing, steps aside.
+     * `master` is the project's master as it is now.
+     */
+    masterEdited(master) {
+      if (masterAtStart === null || JSON.stringify(master) === masterAtStart) return;
+      for (const [param, state] of touched) {
+        if (state.target.kind === void 0 || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        state.suspended = true;
+        hold(state.target, false);
+        ctx2.engine.setMaster(master);
+        log2(`the master ${state.target.kind === "masterGain" ? "level" : "pan"} was changed by hand, so its automation is paused until you press Stop`);
+      }
+      masterAtStart = JSON.stringify(master);
+    },
+    stop() {
+      const now = ctx2.engine.context.currentTime;
+      masterAtStart = null;
+      for (const [param, state] of touched) {
+        hold(state.target, false);
+        param.cancelScheduledValues(now);
+        const value2 = manualValue(state.target);
+        if (value2 !== void 0) param.setValueAtTime(value2, now);
+      }
+      touched.clear();
+    }
+  };
+  return host;
+}
+
+// src/model/EditorState.js
+var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
+var COLOR = /^#[0-9a-f]{6}$/;
+var EditorState = class _EditorState {
+  #positions = /* @__PURE__ */ new Map();
+  #tracks = /* @__PURE__ */ new Map();
+  #clips = /* @__PURE__ */ new Map();
+  #listeners = /* @__PURE__ */ new Set();
+  /** Told after any change, so a view can draw again: layout is not an edit, and no revision says it moved. */
+  subscribe(fn) {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+  #changed() {
+    for (const fn of [...this.#listeners]) fn(this);
+  }
+  position(id) {
+    return this.#positions.get(id) ?? { x: 0, y: 0 };
+  }
+  setPosition(id, x, y) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("a position needs finite x and y");
+    this.#positions.set(id, { x, y });
+    this.#changed();
+  }
+  /** Layout of one track. `order` is null until a person has placed it. */
+  track(id) {
+    return { order: null, color: null, laneSize: "medium", ...this.#tracks.get(id) };
+  }
+  setTrack(id, patch) {
+    const next = { ...this.#tracks.get(id) };
+    if (patch.order !== void 0) {
+      if (patch.order !== null && !Number.isInteger(patch.order)) throw new Error("order must be an integer or null");
+      next.order = patch.order;
+    }
+    if (patch.color !== void 0) {
+      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
+      next.color = patch.color;
+    }
+    if (patch.laneSize !== void 0) {
+      if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
+      next.laneSize = patch.laneSize;
+    }
+    this.#tracks.set(id, next);
+    this.#changed();
+  }
+  /** How a clip is drawn: its colour, or null for the track's own. */
+  clip(id) {
+    return { color: null, ...this.#clips.get(id) };
+  }
+  setClip(id, patch) {
+    const next = { ...this.#clips.get(id) };
+    if (patch.color !== void 0) {
+      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
+      next.color = patch.color;
+    }
+    this.#clips.set(id, next);
+    this.#changed();
+  }
+  /**
+   * Track ids in the order the arrangement shows them: placed tracks by their
+   * order, then unplaced ones in the order given (creation order), so a track
+   * added after a reorder appears at the end rather than somewhere surprising.
+   */
+  orderTracks(ids) {
+    const placed = ids.filter((id) => this.track(id).order !== null);
+    const rest = ids.filter((id) => this.track(id).order === null);
+    placed.sort((a2, b) => this.track(a2).order - this.track(b).order);
+    return [...placed, ...rest];
+  }
+  /** Replace everything with what `readEditor` returned. Bad values throw and change nothing. */
+  load({ positions, tracks, clips = /* @__PURE__ */ new Map() }) {
+    const next = new _EditorState();
+    for (const [id, { x, y }] of positions) next.setPosition(id, x, y);
+    for (const [id, patch] of tracks) next.setTrack(id, patch);
+    for (const [id, patch] of clips) next.setClip(id, patch);
+    this.#positions = next.#positions;
+    this.#tracks = next.#tracks;
+    this.#clips = next.#clips;
+    this.#changed();
+  }
+  /**
+   * Move one track `delta` places in the order `ids` shows now, giving every
+   * track an explicit place so the arrangement no longer depends on creation
+   * order. Refuses to move past either end; returns whether anything moved.
+   */
+  moveTrack(ids, id, delta) {
+    const order = this.orderTracks(ids);
+    const from = order.indexOf(id);
+    if (from < 0) throw new Error(`no such track: ${id}`);
+    const to = from + delta;
+    if (!Number.isInteger(delta) || to < 0 || to >= order.length || delta === 0) return false;
+    order.splice(from, 1);
+    order.splice(to, 0, id);
+    order.forEach((trackId, index) => {
+      const next = { ...this.#tracks.get(trackId), order: index };
+      this.#tracks.set(trackId, next);
+    });
+    this.#changed();
+    return true;
+  }
+  /** True when nothing here differs from a fresh session, so nothing needs saving. */
+  get isDefault() {
+    return this.#tracks.size === 0 && this.#clips.size === 0 && [...this.#positions.values()].every((p) => p.x === 0 && p.y === 0);
+  }
+  /** Like `isDefault`, but only for the nodes and tracks that still exist. */
+  isDefaultFor(nodeIds, trackIds, clipIds = /* @__PURE__ */ new Set()) {
+    return [...this.#tracks.keys()].every((id) => !trackIds.has(id)) && [...this.#clips].every(([id, c3]) => !clipIds.has(id) || c3.color === null) && [...this.#positions].every(([id, p]) => !nodeIds.has(id) || p.x === 0 && p.y === 0);
+  }
+  /** Forget whatever names something that no longer exists. */
+  prune(nodeIds, trackIds, clipIds = null) {
+    let changed = false;
+    for (const id of [...this.#positions.keys()]) if (!nodeIds.has(id)) {
+      this.#positions.delete(id);
+      changed = true;
+    }
+    for (const id of [...this.#tracks.keys()]) if (!trackIds.has(id)) {
+      this.#tracks.delete(id);
+      changed = true;
+    }
+    if (clipIds !== null) {
+      for (const id of [...this.#clips.keys()]) if (!clipIds.has(id)) {
+        this.#clips.delete(id);
+        changed = true;
+      }
+    }
+    if (changed) this.#changed();
+  }
+  get positions() {
+    return new Map(this.#positions);
+  }
+  get trackIds() {
+    return [...this.#tracks.keys()];
+  }
+};
+
+// src/model/ArrangementOps.js
+var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false });
+var TAPS = Object.freeze(["pre", "post"]);
+var CURVES = Object.freeze(["step", "linear", "smooth"]);
+var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
+var EPSILON = 1e-9;
+function emptyArrangement() {
+  return { master: { ...DEFAULT_MASTER }, sends: /* @__PURE__ */ new Map(), markers: /* @__PURE__ */ new Map(), regions: /* @__PURE__ */ new Map(), envelopes: /* @__PURE__ */ new Map() };
+}
+function cloneArrangement(state) {
+  return {
+    master: { ...state.master },
+    sends: new Map([...state.sends].map(([id, s]) => [id, { ...s }])),
+    markers: new Map([...state.markers].map(([id, m]) => [id, { ...m }])),
+    regions: new Map([...state.regions].map(([id, r]) => [id, { ...r }])),
+    envelopes: new Map([...state.envelopes].map(([id, e]) => [id, {
+      id,
+      target: { ...e.target },
+      points: e.points.map((p) => ({ ...p }))
+    }]))
+  };
+}
+var finiteAtLeast = (n2, min, what) => {
+  if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
+};
+function reaches(state, from, to) {
+  const seen = /* @__PURE__ */ new Set();
+  const stack = [from];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === to) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const track = state.tracks.get(id);
+    if (track?.output) stack.push(track.output);
+    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
+  }
+  return false;
+}
+function checkNoCycle(state, from, to, what) {
+  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
+}
+function checkTrackOutput(state, trackId, output) {
+  if (output === null) return;
+  if (!state.tracks.has(output)) throw new Error(`no such track: ${output}`);
+  checkNoCycle(state, trackId, output, "an output");
+}
+function mint(state, counters, key, prefix, id, what) {
+  const table = state[key];
+  const minted = id ?? `${prefix}-${++counters[prefix]}`;
+  if (table.has(minted)) throw new Error(`${what} already exists: ${minted}`);
+  const m = new RegExp(`^${prefix}-(\\d+)$`).exec(minted);
+  if (m) counters[prefix] = Math.max(counters[prefix], Number(m[1]));
+  return minted;
+}
+function checkPoints(points, target) {
+  if (!Array.isArray(points)) throw new Error("points must be an array");
+  const seen = /* @__PURE__ */ new Set();
+  for (const p of points) {
+    finiteAtLeast(p.atBeat, 0, "an envelope point atBeat");
+    if (seen.has(p.atBeat)) throw new Error(`two envelope points at beat ${p.atBeat}`);
+    seen.add(p.atBeat);
+    if (!Number.isFinite(p.value)) throw new Error(`an envelope point needs a finite value: ${p.value}`);
+    if (!CURVES.includes(p.curve ?? "linear")) throw new Error(`curve must be one of ${CURVES.join(", ")}`);
+    if (target.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
+    if (target.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
+    if (target.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
+  }
+  return points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve ?? "linear" })).sort((a2, b) => a2.atBeat - b.atBeat);
+}
+function checkTarget(state, target) {
+  if (!target || typeof target !== "object") throw new Error("an envelope needs a target");
+  if (target.kind !== void 0) {
+    if (!TARGET_KINDS.includes(target.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
+    return { kind: target.kind };
+  }
+  if (!state.nodes.has(target.node)) throw new Error(`target names no such node: ${target.node}`);
+  if (typeof target.symbol !== "string" || target.symbol === "") throw new Error("a node target needs the parameter symbol");
+  return { node: target.node, symbol: target.symbol };
+}
+var ARRANGEMENT_OPERATIONS = {
+  setMaster(state, change) {
+    const next = { ...state.master };
+    if (change.gain !== void 0) {
+      finiteAtLeast(change.gain, 0, "master gain");
+      next.gain = change.gain;
+    }
+    if (change.pan !== void 0) {
+      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) throw new Error(`pan must be between -1 and 1: ${change.pan}`);
+      next.pan = change.pan;
+    }
+    if (change.muted !== void 0) next.muted = Boolean(change.muted);
+    state.master = next;
+    return "master";
+  },
+  addSend(state, change, counters) {
+    for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
+    checkNoCycle(state, change.from, change.to, "a send");
+    for (const s of state.sends.values()) {
+      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
+    }
+    const level = change.level ?? 1;
+    finiteAtLeast(level, 0, "a send level");
+    const tap = change.tap ?? "post";
+    if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
+    const id = mint(state, counters, "sends", "send", change.id, "send");
+    state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
+    return id;
+  },
+  setSend(state, change) {
+    const send = state.sends.get(change.id);
+    if (!send) throw new Error(`no such send: ${change.id}`);
+    if (change.level !== void 0) {
+      finiteAtLeast(change.level, 0, "a send level");
+      send.level = change.level;
+    }
+    if (change.tap !== void 0) {
+      if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
+      send.tap = change.tap;
+    }
+    return change.id;
+  },
+  removeSend(state, change) {
+    if (!state.sends.delete(change.id)) throw new Error(`no such send: ${change.id}`);
+    return change.id;
+  },
+  addMarker(state, change, counters) {
+    finiteAtLeast(change.atBeat, 0, "a marker atBeat");
+    const id = mint(state, counters, "markers", "marker", change.id, "marker");
+    state.markers.set(id, { id, atBeat: change.atBeat, label: change.label ?? null });
+    return id;
+  },
+  setMarker(state, change) {
+    const marker = state.markers.get(change.id);
+    if (!marker) throw new Error(`no such marker: ${change.id}`);
+    if (change.atBeat !== void 0) {
+      finiteAtLeast(change.atBeat, 0, "a marker atBeat");
+      marker.atBeat = change.atBeat;
+    }
+    if (change.label !== void 0) marker.label = change.label;
+    return change.id;
+  },
+  removeMarker(state, change) {
+    if (!state.markers.delete(change.id)) throw new Error(`no such marker: ${change.id}`);
+    return change.id;
+  },
+  addRegion(state, change, counters) {
+    finiteAtLeast(change.startBeat, 0, "a region startBeat");
+    if (!(Number.isFinite(change.lengthBeats) && change.lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
+    const id = mint(state, counters, "regions", "region", change.id, "region");
+    state.regions.set(id, { id, startBeat: change.startBeat, lengthBeats: change.lengthBeats, label: change.label ?? null });
+    return id;
+  },
+  setRegion(state, change) {
+    const region = state.regions.get(change.id);
+    if (!region) throw new Error(`no such region: ${change.id}`);
+    const startBeat = change.startBeat ?? region.startBeat;
+    const lengthBeats = change.lengthBeats ?? region.lengthBeats;
+    finiteAtLeast(startBeat, 0, "a region startBeat");
+    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
+    region.startBeat = startBeat;
+    region.lengthBeats = lengthBeats;
+    if (change.label !== void 0) region.label = change.label;
+    return change.id;
+  },
+  removeRegion(state, change) {
+    if (!state.regions.delete(change.id)) throw new Error(`no such region: ${change.id}`);
+    return change.id;
+  },
+  addEnvelope(state, change, counters) {
+    const target = checkTarget(state, change.target);
+    for (const e of state.envelopes.values()) {
+      if (JSON.stringify(e.target) === JSON.stringify(target)) throw new Error(`${e.id} already automates that target`);
+    }
+    const points = checkPoints(change.points ?? [], target);
+    const id = mint(state, counters, "envelopes", "envelope", change.id, "envelope");
+    state.envelopes.set(id, { id, target, points });
+    return id;
+  },
+  /** Replace the whole point list at once, so one drawn gesture is one edit and one undo. */
+  setEnvelope(state, change) {
+    const envelope = state.envelopes.get(change.id);
+    if (!envelope) throw new Error(`no such envelope: ${change.id}`);
+    envelope.points = checkPoints(change.points, envelope.target);
+    return change.id;
+  },
+  removeEnvelope(state, change) {
+    if (!state.envelopes.delete(change.id)) throw new Error(`no such envelope: ${change.id}`);
+    return change.id;
+  }
+};
+function dropForTrack(state, trackId) {
+  for (const [id, s] of [...state.sends]) if (s.from === trackId || s.to === trackId) state.sends.delete(id);
+  for (const t of state.tracks.values()) if (t.output === trackId) t.output = null;
+}
+function dropForNode(state, nodeId) {
+  for (const [id, e] of [...state.envelopes]) if (e.target.node === nodeId) state.envelopes.delete(id);
+}
+function checkSignaturePoints(initialBeatsPerBar, points) {
+  if (!Array.isArray(points)) throw new Error("signaturePoints must be an array");
+  const sorted = [...points].sort((a2, b) => a2.atBeat - b.atBeat);
+  let barStart = 0;
+  let bar = initialBeatsPerBar;
+  for (const p of sorted) {
+    if (!(Number.isFinite(p.atBeat) && p.atBeat > 0)) throw new Error(`a signature point comes after beat zero: ${p.atBeat}`);
+    if (!Number.isInteger(p.beatsPerBar) || p.beatsPerBar < 1) throw new Error(`a bar has at least one beat: ${p.beatsPerBar}`);
+    if (!Number.isInteger(p.beatUnit) || p.beatUnit < 1) throw new Error(`a beat unit is a note value: ${p.beatUnit}`);
+    const bars = (p.atBeat - barStart) / bar;
+    if (Math.abs(bars - Math.round(bars)) > EPSILON) {
+      throw new Error(`a signature change must fall on a bar line: beat ${p.atBeat} is not one`);
+    }
+    if (p.atBeat === barStart && barStart !== 0) throw new Error(`two signature points at beat ${p.atBeat}`);
+    barStart = p.atBeat;
+    bar = p.beatsPerBar;
+  }
+  return sorted.map((p) => ({ atBeat: p.atBeat, beatsPerBar: p.beatsPerBar, beatUnit: p.beatUnit }));
+}
+function arrangementChanges(snapshot) {
+  return [
+    { op: "setMaster", ...snapshot.master },
+    ...snapshot.tracks.filter((t) => t.output).map((t) => ({ op: "setTrack", id: t.id, output: t.output })),
+    ...snapshot.sends.map((s) => ({ op: "addSend", ...s })),
+    ...snapshot.markers.map((m) => ({ op: "addMarker", ...m })),
+    ...snapshot.regions.map((r) => ({ op: "addRegion", ...r })),
+    ...snapshot.envelopes.map((e) => ({ op: "addEnvelope", id: e.id, target: e.target, points: e.points }))
+  ];
+}
+function arrangementReconcile(current, target) {
+  const changes = [];
+  const table = [
+    ["sends", "removeSend", "addSend"],
+    ["markers", "removeMarker", "addMarker"],
+    ["regions", "removeRegion", "addRegion"],
+    ["envelopes", "removeEnvelope", "addEnvelope"]
+  ];
+  const same = (a2, b) => JSON.stringify(a2) === JSON.stringify(b);
+  for (const [key, remove] of table) {
+    const wanted = new Map(target[key].map((x) => [x.id, x]));
+    for (const item of current[key]) if (!same(wanted.get(item.id), item)) changes.push({ op: remove, id: item.id });
+  }
+  const outputs = (t) => t.output ?? null;
+  const currentTracks = new Map(current.tracks.map((t) => [t.id, t]));
+  for (const t of target.tracks) {
+    if (outputs(currentTracks.get(t.id) ?? {}) !== outputs(t)) changes.push({ op: "setTrack", id: t.id, output: outputs(t) });
+  }
+  if (!same(current.master, target.master)) changes.push({ op: "setMaster", ...target.master });
+  for (const [key, , add] of table) {
+    const live = new Map(current[key].map((x) => [x.id, x]));
+    for (const item of target[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
+  }
+  return changes;
+}
+
+// src/model/Project.js
+var RevisionConflict = class extends Error {
+  constructor(expected, actual) {
+    super(`project has moved on: expected revision ${expected}, current is ${actual}`);
+    this.name = "RevisionConflict";
+    this.expected = expected;
+    this.actual = actual;
+  }
+};
+var ChangeError = class extends Error {
+  constructor(index, op, message) {
+    super(`change ${index} (${op}): ${message}`);
+    this.name = "ChangeError";
+    this.index = index;
+    this.op = op;
+  }
+};
+var DEFAULT_CHANNEL = Object.freeze({ gain: 1, pan: 0, muted: false, soloed: false });
+var DEFAULT_TRANSPORT = Object.freeze({
+  playing: false,
+  beatsPerBar: 4,
+  beatUnit: 4,
+  loopStart: 0,
+  loopEnd: 0,
+  loopEnabled: false,
+  tempoPoints: [{ atBeat: 0, bpm: 120 }],
+  // Time signature changes after beat zero. The fields above hold before the first.
+  signaturePoints: []
+});
+function checkEndpoint(state, endpoint2, what) {
+  if (!endpoint2 || typeof endpoint2 !== "object") throw new Error(`${what} is missing`);
+  if (!state.nodes.has(endpoint2.node)) throw new Error(`${what} names no such node: ${endpoint2.node}`);
+  const hasIndex = endpoint2.portIndex !== void 0 && endpoint2.portIndex !== null;
+  const hasSymbol = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null;
+  if (hasIndex === hasSymbol) {
+    throw new Error(`${what} must give exactly one of portIndex, for an audio or MIDI port, or portSymbol, for a parameter`);
+  }
+  if (hasIndex && (!Number.isInteger(endpoint2.portIndex) || endpoint2.portIndex < 0)) {
+    throw new Error(`${what} has a portIndex that is not a non-negative integer`);
+  }
+}
+function noteExplicitId(counters, prefix, counterKey, id) {
+  const minted = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
+  if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]));
+}
+function isLoadableIRI(value2) {
+  let url;
+  try {
+    url = new URL(String(value2));
+  } catch {
+    return false;
+  }
+  if (url.protocol === "https:") return true;
+  if (url.protocol !== "http:") return false;
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
+}
+var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+var cloneState = (state) => ({
+  clips: new Map([...state.clips].map(([id, c3]) => [id, { ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) }])),
+  tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
+  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
+  connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
+  transport: {
+    ...state.transport,
+    tempoPoints: state.transport.tempoPoints.map((p) => ({ ...p })),
+    signaturePoints: (state.transport.signaturePoints ?? []).map((p) => ({ ...p }))
+  },
+  ...cloneArrangement(state)
+});
+function nextChannel(channel, change) {
+  const next = { ...channel };
+  if (change.gain !== void 0) {
+    if (!Number.isFinite(change.gain) || change.gain < 0) {
+      throw new Error(`gain must be a number at or above zero: ${change.gain}`);
+    }
+    next.gain = change.gain;
+  }
+  if (change.pan !== void 0) {
+    if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
+      throw new Error(`pan must be between -1 and 1: ${change.pan}`);
+    }
+    next.pan = change.pan;
+  }
+  if (change.muted !== void 0) next.muted = Boolean(change.muted);
+  if (change.soloed !== void 0) next.soloed = Boolean(change.soloed);
+  return next;
+}
+function checkTrackInput(state, trackId, nodeId, what) {
+  if (nodeId === null) return;
+  const node = state.nodes.get(nodeId);
+  if (!node) throw new Error(`${what} names no such node: ${nodeId}`);
+  if (node.track !== trackId) throw new Error(`${what} ${nodeId} is not on track ${trackId}`);
+}
+function checkNotes(notes) {
+  if (!Array.isArray(notes)) throw new Error("notes must be an array");
+  return notes.map((note, i2) => {
+    const { startBeat, lengthBeats, pitch, velocity } = note ?? {};
+    if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error(`note ${i2} needs a startBeat at or after zero`);
+    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error(`note ${i2} needs a lengthBeats above zero`);
+    if (!(Number.isInteger(pitch) && pitch >= 0 && pitch <= 127)) throw new Error(`note ${i2} needs a pitch from 0 to 127`);
+    if (!(Number.isInteger(velocity) && velocity >= 1 && velocity <= 127)) {
+      throw new Error(`note ${i2} needs a velocity from 1 to 127; MIDI reads 0 as a note off`);
+    }
+    return { startBeat, lengthBeats, pitch, velocity };
+  }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
+}
+function checkFade(name2, value2) {
+  if (!(Number.isFinite(value2) && value2 >= 0)) throw new Error(`${name2} must be zero or more beats`);
+  return value2;
+}
+function checkMuted(value2) {
+  return checkFlag("muted", value2);
+}
+function checkFlag(name2, value2) {
+  if (typeof value2 !== "boolean") throw new Error(`${name2} must be true or false`);
+  return value2;
+}
+function refuseIfLocked(clip, change, what) {
+  if (clip.locked && change.force !== true) throw new Error(`clip ${clip.id} is locked, so it cannot be ${what}; unlock it first`);
+}
+function checkPlacement(startBeat, lengthBeats) {
+  if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a clip needs a startBeat at or after zero");
+  if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip needs a lengthBeats above zero");
+}
+function releaseInputs(state, nodeId) {
+  for (const track of state.tracks.values()) {
+    if (track.midiInput === nodeId) track.midiInput = null;
+    if (track.audioInput === nodeId) track.audioInput = null;
+  }
+}
+var OPERATIONS = {
+  ...ARRANGEMENT_OPERATIONS,
+  addTrack(state, change, counters) {
+    const id = change.id ?? `track-${++counters.track}`;
+    if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`);
+    noteExplicitId(counters, "track", "track", id);
+    state.tracks.set(id, {
+      id,
+      label: change.label ?? null,
+      // The channel strip. Host services rather than plugin parameters: no
+      // lv2:port declares them, and solo is a property of the mix rather
+      // than of one track. Defaults are unity, centre, heard.
+      channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
+      midiInput: null,
+      audioInput: null,
+      // The bus this track's output goes to instead of the master, or null.
+      output: null
+    });
+    return id;
+  },
+  /** Rename a track, or name the nodes its clips play into. */
+  setTrack(state, change) {
+    const track = state.tracks.get(change.id);
+    if (!track) throw new Error(`no such track: ${change.id}`);
+    if (change.label !== void 0) track.label = change.label;
+    for (const key of ["midiInput", "audioInput"]) {
+      if (change[key] === void 0) continue;
+      checkTrackInput(state, change.id, change[key], key);
+      track[key] = change[key];
+    }
+    if (change.output !== void 0) {
+      checkTrackOutput(state, change.id, change.output);
+      track.output = change.output;
+    }
+    return change.id;
+  },
+  /**
+   * Remove a track.
+   *
+   * Refused while any node is still on it, unless `moveNodesTo` names the
+   * track they go to instead. Removing the nodes along with the track would be
+   * one click destroying a chain somebody built, and the undo of it would have
+   * to reload every plugin; a person who wants that removes the nodes first.
+   *
+   * Its clips go with it, or to `moveNodesTo` when that is given. A clip is
+   * data rather than an instantiated plugin, so taking it away costs undo
+   * nothing to restore.
+   */
+  removeTrack(state, change) {
+    if (!state.tracks.has(change.id)) throw new Error(`no such track: ${change.id}`);
+    const onIt = [...state.nodes.values()].filter((n2) => n2.track === change.id);
+    if (onIt.length > 0) {
+      if (change.moveNodesTo === void 0) {
+        throw new Error(`track ${change.id} still has ${onIt.length} node(s) on it; remove them or give moveNodesTo`);
+      }
+      if (change.moveNodesTo === change.id || !state.tracks.has(change.moveNodesTo)) {
+        throw new Error(`moveNodesTo names no other track: ${change.moveNodesTo}`);
+      }
+      for (const node of onIt) node.track = change.moveNodesTo;
+    }
+    for (const [id, clip] of [...state.clips]) {
+      if (clip.track !== change.id) continue;
+      if (change.moveNodesTo !== void 0 && state.tracks.has(change.moveNodesTo) && change.moveNodesTo !== change.id) {
+        clip.track = change.moveNodesTo;
+      } else {
+        state.clips.delete(id);
+      }
+    }
+    state.tracks.delete(change.id);
+    dropForTrack(state, change.id);
+    return change.id;
+  },
+  moveNodeToTrack(state, change) {
+    const node = state.nodes.get(change.id);
+    if (!node) throw new Error(`no such node: ${change.id}`);
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (node.track === change.track) return change.id;
+    releaseInputs(state, change.id);
+    node.track = change.track;
+    return change.id;
+  },
+  /**
+   * Add a clip to a track. A MIDI clip holds notes; an audio clip names the
+   * file it plays by `source`, never its bytes (project-format.md "Clips").
+   */
+  addClip(state, change, counters) {
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (change.kind !== "midi" && change.kind !== "audio") throw new Error("kind must be midi or audio");
+    checkPlacement(change.startBeat, change.lengthBeats);
+    const id = change.id ?? `clip-${++counters.clip}`;
+    if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`);
+    noteExplicitId(counters, "clip", "clip", id);
+    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
+    if (change.kind === "midi") {
+      clip.notes = checkNotes(change.notes ?? []);
+    } else {
+      if (typeof change.source !== "string" || !URL.canParse(change.source)) {
+        throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
+      }
+      const offset = change.offsetSeconds ?? 0;
+      if (!(Number.isFinite(offset) && offset >= 0)) throw new Error("offsetSeconds must be at or after zero");
+      clip.source = change.source;
+      clip.offsetSeconds = offset;
+      clip.fadeInBeats = checkFade("fadeInBeats", change.fadeInBeats ?? 0);
+      clip.fadeOutBeats = checkFade("fadeOutBeats", change.fadeOutBeats ?? 0);
+      clip.notes = [];
+    }
+    state.clips.set(id, clip);
+    return id;
+  },
+  /** Move a clip in time or to another track, resize it, or change its offset. */
+  setClip(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (["startBeat", "lengthBeats", "track", "offsetSeconds"].some((k) => change[k] !== void 0)) refuseIfLocked(clip, change, "moved or resized");
+    const startBeat = change.startBeat ?? clip.startBeat;
+    const lengthBeats = change.lengthBeats ?? clip.lengthBeats;
+    checkPlacement(startBeat, lengthBeats);
+    if (change.track !== void 0 && !state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    if (change.offsetSeconds !== void 0) {
+      if (clip.kind !== "audio") throw new Error("only an audio clip has an offset");
+      if (!(Number.isFinite(change.offsetSeconds) && change.offsetSeconds >= 0)) throw new Error("offsetSeconds must be at or after zero");
+      clip.offsetSeconds = change.offsetSeconds;
+    }
+    if (change.muted !== void 0) clip.muted = checkMuted(change.muted);
+    for (const key of ["fadeInBeats", "fadeOutBeats"]) {
+      if (change[key] === void 0) continue;
+      if (clip.kind !== "audio") throw new Error("only an audio clip has fades");
+      clip[key] = checkFade(key, change[key]);
+    }
+    if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
+    clip.startBeat = startBeat;
+    clip.lengthBeats = lengthBeats;
+    if (change.track !== void 0) clip.track = change.track;
+    return change.id;
+  },
+  /**
+   * Replace a MIDI clip's notes. The whole list at once, so one gesture in a
+   * piano roll, or one agent's phrase, is one edit and one undo.
+   */
+  setClipNotes(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
+    refuseIfLocked(clip, change, "edited");
+    clip.notes = checkNotes(change.notes);
+    return change.id;
+  },
+  removeClip(state, change) {
+    if (!state.clips.has(change.id)) throw new Error(`no such clip: ${change.id}`);
+    refuseIfLocked(state.clips.get(change.id), change, "removed");
+    state.clips.delete(change.id);
+    return change.id;
+  },
+  addNode(state, change, counters) {
+    if (!change.pluginIri) throw new Error("needs a pluginIri");
+    if (!isLoadableIRI(change.pluginIri)) {
+      throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`);
+    }
+    if (!change.track) throw new Error("needs a track");
+    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    const id = change.id ?? `node-${++counters.node}`;
+    if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
+    noteExplicitId(counters, "node", "node", id);
+    state.nodes.set(id, {
+      id,
+      pluginIri: change.pluginIri,
+      label: change.label ?? null,
+      track: change.track,
+      settings: new Map(Object.entries(change.settings ?? {})),
+      state: change.state ?? null,
+      bypassed: checkFlag("bypassed", change.bypassed ?? false)
+    });
+    return id;
+  },
+  /**
+   * Change a node's own properties. Bypass passes what arrives at its input straight to where
+   * its output goes, and keeps its state, so turning it back on is instant and exact.
+   */
+  setNode(state, change) {
+    const node = state.nodes.get(change.id);
+    if (!node) throw new Error(`no such node: ${change.id}`);
+    if (change.bypassed !== void 0) node.bypassed = checkFlag("bypassed", change.bypassed);
+    return change.id;
+  },
+  /**
+   * Move a node to a new position among the others, healing the direct
+   * link(s) it stood between the same way `removeNode`'s heal does. Node
+   * order is otherwise display only (the compiler reads connections, never
+   * this order), so this is the one place order and topology change
+   * together, on purpose: TODO.md decided a drag in the rack means the
+   * signal path moves, not only the drawing.
+   *
+   * Healing acts only on a direct link between exactly the two nodes
+   * involved, the same "one obvious answer" restriction `removeNode`'s heal
+   * uses, and for the same reason: a node with several inputs or outputs at
+   * that point has no single right rewiring and guessing at one would
+   * silently rewire a graph somebody built.
+   *
+   * Deliberately not attempted: splicing the node into whatever direct link
+   * joins its new neighbours. A first version guessed port 0 on the moved
+   * node for that, which is exactly the kind of guess this file otherwise
+   * refuses to make, and it broke on the first plugin with no such port: an
+   * uncaught IndexSizeError out of the real Web Audio graph, past every
+   * check `addConnection` normally goes through, because the model has no
+   * profile to check a guessed port against
+   * (OpDispatcher.apply's own comment says why: "the model checks the shape
+   * of an endpoint and cannot check more"). A node landing in a new
+   * position is simply unwired there, exactly like a freshly added one,
+   * for a person to connect deliberately.
+   */
+  reorderNode(state, change, counters) {
+    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
+    if (!Number.isInteger(change.index) || change.index < 0) throw new Error("needs a non-negative integer index");
+    const order = [...state.nodes.keys()];
+    const from = order.indexOf(change.id);
+    const oldPrev = order[from - 1] ?? null;
+    const oldNext = order[from + 1] ?? null;
+    const to = Math.min(change.index, order.length - 1);
+    order.splice(from, 1);
+    order.splice(to, 0, change.id);
+    state.nodes = new Map(order.map((id) => [id, state.nodes.get(id)]));
+    if (from === to) return change.id;
+    const linksBetween = (a2, b) => a2 && b ? [...state.connections.values()].filter((c3) => c3.from.node === a2 && c3.to.node === b) : [];
+    const bySignalKind = (links) => {
+      const grouped = /* @__PURE__ */ new Map();
+      for (const link of links) {
+        const list = grouped.get(link.signalKind) ?? [];
+        list.push(link);
+        grouped.set(link.signalKind, list);
+      }
+      return grouped;
+    };
+    const tryReconnect = (join2) => {
+      try {
+        OPERATIONS.addConnection(state, join2, counters);
+      } catch {
+      }
+    };
+    const oldIn = bySignalKind(linksBetween(oldPrev, change.id));
+    const oldOut = bySignalKind(linksBetween(change.id, oldNext));
+    for (const [signalKind, before] of oldIn) {
+      const after = oldOut.get(signalKind) ?? [];
+      if (before.length === 1 && after.length === 1) {
+        tryReconnect({ from: { ...before[0].from }, to: { ...after[0].to }, signalKind });
+      }
+    }
+    for (const link of [...oldIn.values(), ...oldOut.values()].flat()) state.connections.delete(link.id);
+    return change.id;
+  },
+  /**
+   * Remove a node, and optionally rejoin what it stood between.
+   *
+   * `heal` is off by default, so a changeset means what it says. With it on, a
+   * node removed from the middle of a path is rejoined rather than leaving two
+   * fragments and no way in the interface to put them back together.
+   *
+   * It heals only where there is one obvious answer: exactly one incoming and
+   * exactly one outgoing edge of the same signal kind. That covers a chain,
+   * which is the case a person is looking at when they press Remove. Anything
+   * else, a node with several inputs or several outputs, has no single right
+   * answer and guessing at one would silently rewire a graph somebody built.
+   */
+  removeNode(state, change, counters) {
+    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
+    const rejoined = [];
+    if (change.heal) {
+      const incoming = /* @__PURE__ */ new Map();
+      const outgoing = /* @__PURE__ */ new Map();
+      for (const connection of state.connections.values()) {
+        if (connection.to.node === change.id) {
+          const list = incoming.get(connection.signalKind) ?? [];
+          list.push(connection);
+          incoming.set(connection.signalKind, list);
+        }
+        if (connection.from.node === change.id) {
+          const list = outgoing.get(connection.signalKind) ?? [];
+          list.push(connection);
+          outgoing.set(connection.signalKind, list);
+        }
+      }
+      for (const [signalKind, before] of incoming) {
+        const after = outgoing.get(signalKind) ?? [];
+        if (before.length !== 1 || after.length !== 1) continue;
+        rejoined.push({
+          from: { ...before[0].from },
+          to: { ...after[0].to },
+          signalKind
+        });
+      }
+    }
+    state.nodes.delete(change.id);
+    dropForNode(state, change.id);
+    releaseInputs(state, change.id);
+    for (const [key, connection] of [...state.connections]) {
+      if (connection.from.node === change.id || connection.to.node === change.id) {
+        state.connections.delete(key);
+      }
+    }
+    for (const join2 of rejoined) {
+      try {
+        OPERATIONS.addConnection(state, join2, counters);
+      } catch {
+      }
+    }
+    return change.id;
+  },
+  addConnection(state, change, counters) {
+    checkEndpoint(state, change.from, "from");
+    checkEndpoint(state, change.to, "to");
+    if (!change.signalKind) {
+      throw new Error("needs a signalKind");
+    }
+    const key = connectionKey(change);
+    for (const existing of state.connections.values()) {
+      if (connectionKey(existing) === key) throw new Error("that connection already exists");
+    }
+    const id = change.id ?? `conn-${++counters.connection}`;
+    noteExplicitId(counters, "conn", "connection", id);
+    state.connections.set(id, {
+      id,
+      from: { ...change.from },
+      to: { ...change.to },
+      signalKind: change.signalKind,
+      delayFrames: change.delayFrames ?? 0
+    });
+    return id;
+  },
+  removeConnection(state, change) {
+    if (!state.connections.has(change.id)) throw new Error(`no such connection: ${change.id}`);
+    state.connections.delete(change.id);
+    return change.id;
+  },
+  setSetting(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    if (!change.symbol) throw new Error("needs a symbol");
+    if (!Number.isFinite(change.value)) throw new Error(`value is not a number: ${change.value}`);
+    node.settings.set(change.symbol, change.value);
+    return change.symbol;
+  },
+  /**
+   * Forget a parameter's setting, so it is at its plugin's default again. The
+   * model has no profiles and so no defaults; the setting is simply absent,
+   * which is what a node that was never touched has.
+   */
+  clearSetting(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    if (!change.symbol) throw new Error("needs a symbol");
+    node.settings.delete(change.symbol);
+    return change.symbol;
+  },
+  /**
+   * Set any of a track's channel strip.
+   *
+   * One operation for the four rather than one each, because a person moving a
+   * fader and a person pressing mute are the same kind of edit and a preset
+   * setting all four is one edit rather than four.
+   */
+  setTrackChannel(state, change) {
+    const track = state.tracks.get(change.track);
+    if (!track) throw new Error(`no such track: ${change.track}`);
+    track.channel = nextChannel(track.channel, change);
+    return change.track;
+  },
+  setNodeState(state, change) {
+    const node = state.nodes.get(change.node);
+    if (!node) throw new Error(`no such node: ${change.node}`);
+    node.state = change.state ?? null;
+    return change.node;
+  },
+  setTransport(state, change) {
+    const next = { ...state.transport };
+    for (const key of ["beatsPerBar", "beatUnit", "loopStart", "loopEnd", "loopEnabled", "playing"]) {
+      if (change[key] !== void 0) next[key] = change[key];
+    }
+    if (change.tempoPoints) {
+      if (!Array.isArray(change.tempoPoints) || change.tempoPoints.length === 0) {
+        throw new Error("tempoPoints must be a non-empty array");
+      }
+      for (const point of change.tempoPoints) {
+        if (!(point.bpm > 0)) throw new Error(`a tempo point needs a bpm greater than zero: ${point.bpm}`);
+        if (!(point.atBeat >= 0)) throw new Error(`a tempo point needs atBeat at or after zero: ${point.atBeat}`);
+      }
+      next.tempoPoints = [...change.tempoPoints].sort((a2, b) => a2.atBeat - b.atBeat);
+    }
+    if (change.signaturePoints !== void 0) next.signaturePoints = change.signaturePoints;
+    next.signaturePoints = checkSignaturePoints(next.beatsPerBar, next.signaturePoints ?? []);
+    if (next.loopEnabled && !(next.loopEnd > next.loopStart)) {
+      throw new Error("a loop must start before it ends");
+    }
+    state.transport = next;
+    return "transport";
+  }
+};
+function clipChange(c3) {
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+}
+function changesFor(snapshot) {
+  return [
+    ...snapshot.tracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })),
+    ...snapshot.nodes.map((n2) => ({
+      op: "addNode",
+      id: n2.id,
+      pluginIri: n2.pluginIri,
+      label: n2.label,
+      track: n2.track,
+      settings: n2.settings,
+      state: n2.state,
+      bypassed: n2.bypassed
+    })),
+    ...snapshot.tracks.filter((t) => t.midiInput !== null || t.audioInput !== null).map((t) => ({ op: "setTrack", id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
+    ...snapshot.connections.map((c3) => ({
+      op: "addConnection",
+      id: c3.id,
+      from: c3.from,
+      to: c3.to,
+      signalKind: c3.signalKind,
+      delayFrames: c3.delayFrames
+    })),
+    ...snapshot.clips.map(clipChange),
+    { op: "setTransport", ...snapshot.transport },
+    ...arrangementChanges(snapshot)
+  ];
+}
+var Project = class {
+  #revision = 0;
+  #state = { tracks: /* @__PURE__ */ new Map(), nodes: /* @__PURE__ */ new Map(), connections: /* @__PURE__ */ new Map(), clips: /* @__PURE__ */ new Map(), transport: { ...DEFAULT_TRANSPORT, signaturePoints: [] }, ...emptyArrangement() };
+  #counters = { track: 0, node: 0, connection: 0, clip: 0, send: 0, marker: 0, region: 0, envelope: 0 };
+  // Editor metadata, deliberately outside the state a revision covers.
+  #editor = new EditorState();
+  #label = null;
+  get revision() {
+    return this.#revision;
+  }
+  get label() {
+    return this.#label;
+  }
+  set label(value2) {
+    this.#label = value2;
+  }
+  get tracks() {
+    return [...this.#state.tracks.values()];
+  }
+  get nodes() {
+    return [...this.#state.nodes.values()];
+  }
+  get connections() {
+    return [...this.#state.connections.values()];
+  }
+  get clips() {
+    return [...this.#state.clips.values()];
+  }
+  get transport() {
+    return this.#state.transport;
+  }
+  get master() {
+    return this.#state.master;
+  }
+  get sends() {
+    return [...this.#state.sends.values()];
+  }
+  get markers() {
+    return [...this.#state.markers.values()];
+  }
+  get regions() {
+    return [...this.#state.regions.values()];
+  }
+  get envelopes() {
+    return [...this.#state.envelopes.values()];
+  }
+  track(id) {
+    return this.#state.tracks.get(id) ?? null;
+  }
+  node(id) {
+    return this.#state.nodes.get(id) ?? null;
+  }
+  /**
+   * The id the next minted track, node or connection would get, without
+   * minting it. For a caller building one changeset whose later changes name
+   * something an earlier one creates: a new track and the first node on it.
+   */
+  nextId(kind) {
+    const key = { track: "track", node: "node", conn: "connection", clip: "clip", send: "send", marker: "marker", region: "region", envelope: "envelope" }[kind];
+    if (!key) throw new Error(`no ids are minted for ${kind}`);
+    return `${kind}-${this.#counters[key] + 1}`;
+  }
+  connection(id) {
+    return this.#state.connections.get(id) ?? null;
+  }
+  clip(id) {
+    return this.#state.clips.get(id) ?? null;
+  }
+  /** Whether saving the editor graph would say anything, ignoring what belongs to things that are gone. */
+  get hasEditorState() {
+    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
+  }
+  /** Editor metadata never bumps the revision. */
+  get editor() {
+    return this.#editor;
+  }
+  position(id) {
+    return this.#editor.position(id);
+  }
+  moveNode(id, x, y) {
+    if (!this.#state.nodes.has(id)) throw new Error(`no such node: ${id}`);
+    this.#editor.setPosition(id, x, y);
+  }
+  /** Tracks as the arrangement shows them: placed ones by order, then the rest as made. */
+  get orderedTracks() {
+    return this.#editor.orderTracks(this.tracks.map((t) => t.id)).map((id) => this.#state.tracks.get(id));
+  }
+  /** Take editor metadata read from an editor.ttl; whatever names nothing here is dropped. */
+  loadEditor(read) {
+    const tracks = /* @__PURE__ */ new Map();
+    const clips = /* @__PURE__ */ new Map();
+    for (const [id, layout] of read.tracks) {
+      if (this.#state.tracks.has(id) || !this.#state.clips.has(id)) tracks.set(id, layout);
+      else clips.set(id, { color: layout.color });
+    }
+    this.#editor.load({ positions: read.positions, tracks, clips });
+    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
+  }
+  /** Move a track up (-1) or down (+1) in the arrangement. Editor metadata: no revision, no undo. */
+  moveTrack(id, delta) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
+    return this.#editor.moveTrack(this.tracks.map((t) => t.id), id, delta);
+  }
+  /** A clip's colour, or null for the track's own. Editor metadata: no revision, no undo. */
+  clipColor(id) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
+    return this.#editor.clip(id).color;
+  }
+  setClipColor(id, color) {
+    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
+    this.#editor.setClip(id, { color });
+  }
+  trackLayout(id) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
+    return this.#editor.track(id);
+  }
+  setTrackLayout(id, patch) {
+    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
+    this.#editor.setTrack(id, patch);
+  }
+  /**
+   * Apply a changeset atomically.
+   *
+   * Returns { revision, results, applied }. With dryRun the project is
+   * untouched and `applied` is false, which is how an agent checks a chain
+   * before committing it.
+   */
+  apply(changes, { expectedRevision, dryRun = false } = {}) {
+    if (!Array.isArray(changes)) throw new TypeError("changes must be an array");
+    if (expectedRevision !== void 0 && expectedRevision !== this.#revision) {
+      throw new RevisionConflict(expectedRevision, this.#revision);
+    }
+    const draft = cloneState(this.#state);
+    const counters = { ...this.#counters };
+    const results = [];
+    changes.forEach((change, index) => {
+      const operation = OPERATIONS[change.op];
+      if (!operation) throw new ChangeError(index, change.op ?? "undefined", "unknown operation");
+      try {
+        results.push(operation(draft, change, counters));
+      } catch (error2) {
+        throw new ChangeError(index, change.op, error2.message);
+      }
+    });
+    if (dryRun) return { revision: this.#revision, results, applied: false };
+    this.#state = draft;
+    this.#counters = counters;
+    this.#revision += 1;
+    return { revision: this.#revision, results, applied: true };
+  }
+  /** A plain snapshot, for serialisation or for handing to an agent. */
+  snapshot() {
+    return {
+      label: this.#label,
+      revision: this.#revision,
+      tracks: this.tracks.map((t) => ({ ...t, channel: { ...t.channel } })),
+      nodes: this.nodes.map((n2) => ({
+        id: n2.id,
+        pluginIri: n2.pluginIri,
+        label: n2.label,
+        track: n2.track,
+        settings: Object.fromEntries(n2.settings),
+        state: n2.state,
+        bypassed: n2.bypassed === true,
+        position: this.position(n2.id)
+      })),
+      connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
+      clips: this.clips.map((c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) })),
+      transport: {
+        ...this.#state.transport,
+        tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })),
+        signaturePoints: this.#state.transport.signaturePoints.map((p) => ({ ...p }))
+      },
+      master: { ...this.#state.master },
+      sends: [...this.#state.sends.values()].map((x) => ({ ...x })),
+      markers: [...this.#state.markers.values()].map((x) => ({ ...x })),
+      regions: [...this.#state.regions.values()].map((x) => ({ ...x })),
+      envelopes: [...this.#state.envelopes.values()].map((e) => ({ id: e.id, target: { ...e.target }, points: e.points.map((p) => ({ ...p })) }))
+    };
+  }
+};
+
+// src/model/Endpoints.js
+var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
+var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
+var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
+function outputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
+  }
+  if ((profile?.produces ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
+  }
+  return found;
+}
+function inputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: i2 === profile.sidechainInput ? "Sidechain key" : `Audio in ${i2 + 1}`, ...i2 === profile.sidechainInput ? { sidechain: true } : {} });
+  }
+  if ((profile?.accepts ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
+  }
+  for (const port of profile?.ports ?? []) {
+    found.push({
+      kind: AUDIO_SIGNAL,
+      portSymbol: port.symbol,
+      name: `${port.name || port.symbol} (modulate)`
+    });
+  }
+  return found;
+}
+function compatible(from, to) {
+  if (!from || !to) return false;
+  if (to.portSymbol !== void 0) return from.kind === AUDIO_SIGNAL;
+  return from.kind === to.kind;
+}
+function findPort(profile, endpoint2, direction, signalKind) {
+  if (!profile) return { ok: true, port: null };
+  const ports = direction === "from" ? outputsOf(profile) : inputsOf(profile);
+  const what = direction === "from" ? "output" : "input";
+  const label = profile.label ?? "the plugin";
+  const port = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? ports.find((p) => p.portSymbol === endpoint2.portSymbol) : ports.find((p) => p.portSymbol === void 0 && p.portIndex === endpoint2.portIndex && p.kind === signalKind);
+  if (port) return { ok: true, port };
+  const named2 = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? `parameter "${endpoint2.portSymbol}"` : `${signalKind === MIDI_SIGNAL ? "MIDI" : "audio"} ${what} at index ${endpoint2.portIndex}`;
+  const has = ports.length === 0 ? `${label} has nothing to connect ${direction === "from" ? "from" : "to"}.` : `It has: ${ports.map((p) => p.name).join(", ")}.`;
+  return { ok: false, message: `${label} has no ${named2}. ${has}` };
+}
+
+// src/compiler/GraphCompiler.js
+var AUDIO = "http://purl.org/stuff/transmissions/Audio";
+var isAudio = (connection) => connection.signalKind === AUDIO;
+function stronglyConnected(nodeIds, edgesFrom) {
+  const index = /* @__PURE__ */ new Map();
+  const low = /* @__PURE__ */ new Map();
+  const onStack = /* @__PURE__ */ new Set();
+  const stack = [];
+  const components = [];
+  let counter2 = 0;
+  for (const start of nodeIds) {
+    if (index.has(start)) continue;
+    const work = [{ node: start, edge: 0 }];
+    while (work.length > 0) {
+      const frame = work[work.length - 1];
+      const { node } = frame;
+      if (frame.edge === 0) {
+        index.set(node, counter2);
+        low.set(node, counter2);
+        counter2 += 1;
+        stack.push(node);
+        onStack.add(node);
+      }
+      const edges = edgesFrom(node);
+      if (frame.edge < edges.length) {
+        const next = edges[frame.edge];
+        frame.edge += 1;
+        if (!index.has(next)) work.push({ node: next, edge: 0 });
+        else if (onStack.has(next)) low.set(node, Math.min(low.get(node), index.get(next)));
+        continue;
+      }
+      if (low.get(node) === index.get(node)) {
+        const component = [];
+        let member;
+        do {
+          member = stack.pop();
+          onStack.delete(member);
+          component.push(member);
+        } while (member !== node);
+        components.push(component);
+      }
+      work.pop();
+      if (work.length > 0) {
+        const parent = work[work.length - 1].node;
+        low.set(parent, Math.min(low.get(parent), low.get(node)));
+      }
+    }
+  }
+  return components;
+}
+function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
+  const nodes = project.nodes.map((n2) => n2.id);
+  const connections = project.connections.filter(isAudio);
+  const outgoing = new Map(nodes.map((id) => [id, []]));
+  const incoming = new Map(nodes.map((id) => [id, []]));
+  for (const connection of connections) {
+    outgoing.get(connection.from.node)?.push(connection);
+    incoming.get(connection.to.node)?.push(connection);
+  }
+  const components = stronglyConnected(nodes, (id) => (outgoing.get(id) ?? []).map((c3) => c3.to.node));
+  const cycles = components.filter((component) => component.length > 1 || (outgoing.get(component[0]) ?? []).some((c3) => c3.to.node === component[0]));
+  const componentOf = /* @__PURE__ */ new Map();
+  for (const component of components) for (const id of component) componentOf.set(id, component);
+  const inCycle = new Set(cycles.flat());
+  const onCycle = (connection) => inCycle.has(connection.from.node) && componentOf.get(connection.from.node) === componentOf.get(connection.to.node);
+  const errors = [];
+  const midi2 = project.connections.filter((c3) => !isAudio(c3));
+  const midiOut = new Map(nodes.map((id) => [id, []]));
+  for (const c3 of midi2) midiOut.get(c3.from.node)?.push(c3.to.node);
+  for (const component of stronglyConnected(nodes, (id) => midiOut.get(id) ?? [])) {
+    if (component.length > 1 || (midiOut.get(component[0]) ?? []).includes(component[0])) {
+      errors.push({
+        kind: "midi-cycle",
+        nodes: [...component],
+        message: `MIDI loop through ${component.join(", ")}. A MIDI connection carries no delay, so events would go round it for ever. Remove one of the connections.`
+      });
+    }
+  }
+  for (const cycle of cycles) {
+    const members = new Set(cycle);
+    const nodeDelay = cycle.reduce((total, id) => total + latencyOf(id), 0);
+    const edgeDelay = connections.filter((c3) => members.has(c3.from.node) && members.has(c3.to.node)).reduce((total, c3) => total + (c3.delayFrames ?? 0), 0);
+    if (nodeDelay + edgeDelay < quantum) {
+      errors.push({
+        kind: "undelayed-cycle",
+        nodes: [...cycle],
+        message: `feedback loop through ${cycle.join(", ")} carries ${nodeDelay + edgeDelay} frames of delay and needs at least ${quantum}. Web Audio outputs silence for a cycle with no delay in it, so this is refused rather than left to go quiet.`
+      });
+    }
+  }
+  const componentIndex = /* @__PURE__ */ new Map();
+  components.forEach((component, i2) => {
+    for (const id of component) componentIndex.set(id, i2);
+  });
+  const componentLatency = components.map((component) => component.reduce((most, id) => Math.max(most, latencyOf(id)), 0));
+  const crossing = connections.filter((c3) => componentIndex.get(c3.from.node) !== componentIndex.get(c3.to.node));
+  const compIncoming = components.map(() => []);
+  const compOutgoing = components.map(() => []);
+  for (const connection of crossing) {
+    compIncoming[componentIndex.get(connection.to.node)].push(connection);
+    compOutgoing[componentIndex.get(connection.from.node)].push(connection);
+  }
+  const remaining = components.map((_, i2) => compIncoming[i2].length);
+  const componentOrder = [];
+  const queue = components.map((_, i2) => i2).filter((i2) => remaining[i2] === 0);
+  while (queue.length > 0) {
+    const i2 = queue.shift();
+    componentOrder.push(i2);
+    for (const connection of compOutgoing[i2]) {
+      const target = componentIndex.get(connection.to.node);
+      remaining[target] -= 1;
+      if (remaining[target] === 0) queue.push(target);
+    }
+  }
+  const componentArrival = components.map(() => 0);
+  for (const i2 of componentOrder) {
+    let latest = 0;
+    for (const connection of compIncoming[i2]) {
+      const source = componentIndex.get(connection.from.node);
+      latest = Math.max(latest, componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0));
+    }
+    componentArrival[i2] = latest;
+  }
+  const compensation = [];
+  for (const i2 of componentOrder) {
+    for (const connection of compIncoming[i2]) {
+      const source = componentIndex.get(connection.from.node);
+      const path = componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0);
+      const needed = componentArrival[i2] - path;
+      if (needed > 0) compensation.push({ connection: connection.id, delayFrames: needed });
+    }
+  }
+  const arrival = new Map(nodes.map((id) => [id, componentArrival[componentIndex.get(id)]]));
+  const order = componentOrder.flatMap((i2) => components[i2]);
+  const sinks = componentOrder.filter((i2) => compOutgoing[i2].length === 0);
+  const totalLatency = sinks.reduce((max, i2) => Math.max(max, componentArrival[i2] + componentLatency[i2]), 0);
+  return {
+    order,
+    cycles,
+    errors,
+    ok: errors.length === 0,
+    arrival,
+    compensation,
+    totalLatency
+  };
+}
+
+// src/engine/EventRouter.js
+init_Vocabulary();
+var MIDI_SIGNALS = /* @__PURE__ */ new Set([
+  "http://purl.org/stuff/transmissions/Midi",
+  "http://purl.org/stuff/transmissions/BassMidi",
+  "http://purl.org/stuff/transmissions/DrumMidi",
+  "http://purl.org/stuff/transmissions/MelodyMidi",
+  "http://purl.org/stuff/transmissions/HarmonyMidi",
+  "http://purl.org/stuff/transmissions/MultiPartMidi",
+  "http://purl.org/stuff/transmissions/ControlMidi",
+  "http://purl.org/stuff/transmissions/MidiCC"
+]);
+var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
+var CONTROL_ONLY = /* @__PURE__ */ new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]);
+var carriesNotes = (signalKind) => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind);
+var MONITOR_EVENTS = 24;
+var EventRouter = class {
+  #engine;
+  #routes = /* @__PURE__ */ new Map();
+  #detach = /* @__PURE__ */ new Map();
+  #dropped = /* @__PURE__ */ new Map();
+  #onDropped;
+  #recent = /* @__PURE__ */ new Map();
+  constructor({ engine, onDropped = null }) {
+    if (!engine) throw new Error("EventRouter needs an engine");
+    this.#engine = engine;
+    this.#onDropped = onDropped;
+  }
+  /**
+   * The last few events that went from one node to another, oldest first, for a monitor. Bounded per
+   * route (MONITOR_EVENTS) and kept on the message thread, where the router lives; nothing here is
+   * read or written from process().
+   */
+  recent(fromEngineId, toEngineId) {
+    return [...this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? []];
+  }
+  get routes() {
+    return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
+  }
+  /** How many events a node has reported dropping, since it last said. */
+  droppedFor(engineId) {
+    return this.#dropped.get(engineId) ?? 0;
+  }
+  /**
+   * Replace every route.
+   *
+   * Rebuilt whole rather than diffed, for the same reason the audio links are:
+   * after any edit the routes are exactly what the model says, with no stale
+   * target left receiving notes from a node it is no longer connected to.
+   */
+  setRoutes(pairs) {
+    this.#routes = /* @__PURE__ */ new Map();
+    const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`));
+    for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key);
+    for (const { from, to } of pairs) {
+      if (!this.#routes.has(from)) this.#routes.set(from, []);
+      this.#routes.get(from).push(to);
+      this.observe(from);
+    }
+  }
+  /**
+   * Listen to a node whether or not it has routes.
+   *
+   * A node reports overflow on the same channel it reports outgoing events,
+   * and overflow matters regardless of how the node is wired: an instrument
+   * dropping notes is worth knowing about even when nothing is listening to
+   * its MIDI output. Listening only to routed nodes made that invisible.
+   */
+  observe(engineId) {
+    if (this.#detach.has(engineId)) return;
+    const off = this.#engine.onMessage(engineId, (message) => {
+      if (message?.type === "events") this.#forward(engineId, message.events);
+      else if (message?.type === "dropped") this.#noteDropped(engineId, message);
+    });
+    this.#detach.set(engineId, off);
+  }
+  #noteDropped(engineId, message) {
+    const total = (this.#dropped.get(engineId) ?? 0) + (message.count ?? 0);
+    this.#dropped.set(engineId, total);
+    this.#onDropped?.({ engineId, count: message.count ?? 0, total });
+  }
+  #forward(fromEngineId, events) {
+    const targets = this.#routes.get(fromEngineId);
+    if (!targets || !events?.length) return;
+    for (const target of targets) {
+      this.#remember(fromEngineId, target, events);
+      this.send(target, events);
+    }
+  }
+  #remember(from, to, events) {
+    const key = `${from}>${to}`;
+    const history = this.#recent.get(key) ?? [];
+    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
+    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS);
+    this.#recent.set(key, history);
+  }
+  /**
+   * Deliver events to one node.
+   *
+   * Sorted before sending, because messaging.md section 1.4 requires the host
+   * to post in non-decreasing frame order and a processor is entitled to stop
+   * scanning once it passes the quantum.
+   */
+  send(engineId, events) {
+    if (!events?.length) return;
+    const ordered = [...events].sort((a2, b) => a2.frame - b.frame);
+    this.#engine.post(engineId, { type: "events", events: ordered });
+  }
+  /** Broadcast a transport message to every loaded node. */
+  broadcastTransport(message) {
+    for (const entry of this.#engine.nodes()) {
+      this.#engine.post(entry.id, message);
+    }
+  }
+  /** Stop listening to everything. */
+  dispose() {
+    for (const off of this.#detach.values()) off();
+    this.#detach.clear();
+    this.#routes.clear();
+  }
+};
+
+// src/ops/Bypass.js
+var AUDIO2 = "audio";
+var MIDI2 = "midi";
+var kindOf2 = (connection) => isMidi(connection.signalKind) ? MIDI2 : AUDIO2;
+var intoMain = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
+function effectiveConnections(connections, { bypassed, passes }) {
+  let list = connections.map((c3) => c3);
+  for (let guard = 0; guard <= connections.length + 1; guard++) {
+    const target = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
+    if (target === void 0) break;
+    for (const kind of [AUDIO2, MIDI2]) {
+      if (!passes(target, kind)) continue;
+      const into = list.filter((c3) => c3.to.node === target && kindOf2(c3) === kind && intoMain(c3));
+      const out = list.filter((c3) => c3.from.node === target && kindOf2(c3) === kind);
+      if (into.length === 0 || out.length === 0) continue;
+      const joined = [];
+      for (const a2 of into) {
+        for (const b of out) {
+          if (a2.from.node === b.to.node) continue;
+          joined.push({ id: `${a2.id}~${b.id}`, from: a2.from, to: b.to, signalKind: a2.signalKind });
+        }
+      }
+      const gone = /* @__PURE__ */ new Set([...into, ...out]);
+      list = [...list.filter((c3) => !gone.has(c3)), ...joined];
+    }
+  }
+  return list.filter((c3) => !bypassed(c3.from.node) && !(bypassed(c3.to.node) && passes(c3.to.node, kindOf2(c3)) && intoMain(c3)));
+}
+
+// src/engine/Transport.js
+var MINUTE = 60;
+var SMOOTH_LEGS = 16;
+var smoothstep = (u2) => u2 * u2 * (3 - 2 * u2);
+function normalise(tempoPoints) {
+  const points = [...tempoPoints ?? []].filter((p) => Number.isFinite(p.atBeat) && p.bpm > 0).sort((a2, b) => a2.atBeat - b.atBeat);
+  if (points.length === 0) return [{ atBeat: 0, bpm: 120, curve: "step" }];
+  if (points[0].atBeat > 0) points.unshift({ atBeat: 0, bpm: points[0].bpm });
+  const out = [];
+  points.forEach((p, i2) => {
+    const next = points[i2 + 1];
+    const curve = p.curve ?? "step";
+    if (curve === "smooth" && next) {
+      for (let j = 0; j < SMOOTH_LEGS; j++) {
+        const u2 = j / SMOOTH_LEGS;
+        out.push({ atBeat: p.atBeat + (next.atBeat - p.atBeat) * u2, bpm: p.bpm + (next.bpm - p.bpm) * smoothstep(u2), curve: "linear" });
+      }
+    } else {
+      out.push({ atBeat: p.atBeat, bpm: p.bpm, curve: curve === "linear" && next ? "linear" : "step" });
+    }
+  });
+  return out;
+}
+var Transport = class _Transport {
+  #points;
+  #sampleRate;
+  #beatsPerBar;
+  #beatUnit;
+  #loop;
+  constructor({
+    tempoPoints = [{ atBeat: 0, bpm: 120 }],
+    sampleRate = 48e3,
+    beatsPerBar = 4,
+    beatUnit = 4,
+    loopStart = 0,
+    loopEnd = 0,
+    loopEnabled = false
+  } = {}) {
+    this.#points = normalise(tempoPoints);
+    this.#sampleRate = sampleRate;
+    this.#beatsPerBar = beatsPerBar;
+    this.#beatUnit = beatUnit;
+    this.#loop = { start: loopStart, end: loopEnd, enabled: loopEnabled && loopEnd > loopStart };
+  }
+  get tempoPoints() {
+    return this.#points.map((p) => ({ ...p }));
+  }
+  get sampleRate() {
+    return this.#sampleRate;
+  }
+  get loop() {
+    return { ...this.#loop };
+  }
+  /** The leg a beat falls in: its start point, and the tempo it ends on (null when it holds). */
+  #leg(index) {
+    const from = this.#points[index];
+    const next = this.#points[index + 1];
+    return { from, to: next ?? null, ramps: from.curve === "linear" && next !== void 0 };
+  }
+  /** Beats per minute per beat along a ramp: the slope of the tempo. */
+  #slope(leg) {
+    return (leg.to.bpm - leg.from.bpm) / (leg.to.atBeat - leg.from.atBeat);
+  }
+  /** The tempo in force at a beat; on a ramp, the value on the straight line. */
+  tempoAtBeat(beat) {
+    let tempo = this.#points[0].bpm;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const leg = this.#leg(i2);
+      if (leg.from.atBeat > beat) break;
+      tempo = leg.ramps && beat < leg.to.atBeat ? leg.from.bpm + this.#slope(leg) * (beat - leg.from.atBeat) : leg.from.bpm;
+    }
+    return tempo;
+  }
+  /** Seconds across part of a leg, from its start to `beat` (inside it). */
+  #secondsIn(leg, beat) {
+    if (!leg.ramps) return (beat - leg.from.atBeat) * MINUTE / leg.from.bpm;
+    const k = this.#slope(leg);
+    const end = leg.from.bpm + k * (beat - leg.from.atBeat);
+    return Math.abs(k) < 1e-12 ? (beat - leg.from.atBeat) * MINUTE / leg.from.bpm : MINUTE / k * Math.log(end / leg.from.bpm);
+  }
+  /** Seconds from beat zero to a beat, across every tempo change between. */
+  secondsAtBeat(beat) {
+    if (beat <= 0) return 0;
+    let seconds = 0;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const leg = this.#leg(i2);
+      if (leg.from.atBeat >= beat) break;
+      seconds += this.#secondsIn(leg, Math.min(leg.to?.atBeat ?? Infinity, beat));
+    }
+    return seconds;
+  }
+  /** The inverse: which beat a number of seconds reaches. */
+  beatAtSeconds(seconds) {
+    if (seconds <= 0) return 0;
+    let elapsed = 0;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const leg = this.#leg(i2);
+      const length = leg.to ? this.#secondsIn(leg, leg.to.atBeat) : Infinity;
+      if (elapsed + length > seconds || !leg.to) {
+        const local = seconds - elapsed;
+        if (!leg.ramps) return leg.from.atBeat + local * leg.from.bpm / MINUTE;
+        const k = this.#slope(leg);
+        if (Math.abs(k) < 1e-12) return leg.from.atBeat + local * leg.from.bpm / MINUTE;
+        return leg.from.atBeat + (leg.from.bpm * Math.exp(k * local / MINUTE) - leg.from.bpm) / k;
+      }
+      elapsed += length;
+    }
+    return 0;
+  }
+  /** Beats advanced per frame at a given beat. Sent to plugins each quantum. */
+  beatsPerFrame(beat) {
+    return this.tempoAtBeat(beat) / (MINUTE * this.#sampleRate);
+  }
+  /**
+   * Where the transport is, given how long it has been rolling.
+   *
+   * `elapsedFrames` counts frames since play started, not frames since the
+   * context did. The two differ after a stop and restart, and using the wrong
+   * one is the class of bug contract section 7 exists to prevent.
+   */
+  positionAtElapsed(elapsedFrames, { startBeat = 0 } = {}) {
+    const startSeconds = this.secondsAtBeat(startBeat);
+    let absolute = startSeconds + elapsedFrames / this.#sampleRate;
+    if (this.#loop.enabled) {
+      const loopStartSeconds = this.secondsAtBeat(this.#loop.start);
+      const loopEndSeconds = this.secondsAtBeat(this.#loop.end);
+      const length = loopEndSeconds - loopStartSeconds;
+      if (length > 0 && absolute >= loopEndSeconds) {
+        absolute = loopStartSeconds + (absolute - loopStartSeconds) % length;
+      }
+    }
+    const beat = this.beatAtSeconds(absolute);
+    return {
+      beat,
+      seconds: absolute,
+      tempo: this.tempoAtBeat(beat),
+      beatsPerFrame: this.beatsPerFrame(beat),
+      bar: Math.floor(beat / this.#beatsPerBar),
+      beatInBar: beat % this.#beatsPerBar
+    };
+  }
+  /** The message a processor receives each quantum. messaging.md section 1.2. */
+  messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
+    return {
+      type: "transport",
+      playing,
+      frame,
+      beat: position.beat,
+      beatsPerFrame: position.beatsPerFrame,
+      tempo: position.tempo,
+      timeSignature: { beatsPerBar: this.#beatsPerBar, beatUnit: this.#beatUnit },
+      loop: this.#loop.enabled ? { start: this.#loop.start, end: this.#loop.end } : null
+    };
+  }
+  /** Build one from a project's transport, so the two cannot disagree. */
+  static fromProject(project, sampleRate) {
+    const t = project.transport;
+    const envelope = (project.envelopes ?? []).find((e) => e.target.kind === "tempo" && e.points.length > 0);
+    const tempoPoints = envelope ? envelope.points.map((p) => ({ atBeat: p.atBeat, bpm: p.value, curve: p.curve })) : t.tempoPoints;
+    return new _Transport({
+      tempoPoints,
+      sampleRate,
+      beatsPerBar: t.beatsPerBar,
+      beatUnit: t.beatUnit,
+      loopStart: t.loopStart,
+      loopEnd: t.loopEnd,
+      loopEnabled: t.loopEnabled
+    });
+  }
+};
+
+// src/host/Inspections.js
+var HOST_VERSION = "jigdaw-host/0.1.0";
+var STORAGE_KEY = "jigdaw:inspections";
+var MAX_RECORDS = 200;
+function defaultStorage() {
+  try {
+    return typeof localStorage !== "undefined" ? localStorage : null;
+  } catch {
+    return null;
+  }
+}
+var Inspections = class {
+  #storage;
+  // Storage is injected, never read from globalThis inside a method, so a
+  // host with none (private browsing, a test, a worker) gets a working
+  // no-op instead of a throw the first time a plugin loads.
+  constructor({ storage = defaultStorage() } = {}) {
+    this.#storage = storage ?? null;
+  }
+  /** Record what happened loading `iri`. `outcome` is free text, per
+   * jig:loadOutcome: "loaded", or "failed: <reason>". */
+  record({ iri: iri3, outcome }) {
+    if (!this.#storage) return;
+    const records = this.#read();
+    records.push({
+      inspectionOf: iri3,
+      inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      hostVersion: HOST_VERSION,
+      loadOutcome: outcome
+    });
+    while (records.length > MAX_RECORDS) records.shift();
+    try {
+      this.#storage.setItem(STORAGE_KEY, JSON.stringify(records));
+    } catch {
+    }
+  }
+  /** Every inspection recorded of one plugin, oldest first. */
+  forPlugin(iri3) {
+    return this.#read().filter((r) => r.inspectionOf === iri3);
+  }
+  /** Every inspection recorded, oldest first. */
+  all() {
+    return this.#read();
+  }
+  #read() {
+    if (!this.#storage) return [];
+    try {
+      const raw = this.#storage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+};
+
+// src/host/StateCodec.js
+var MARKER = "__jigdawArrayBuffer";
+function toBase642(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  for (let i2 = 0; i2 < bytes.length; i2++) binary += String.fromCharCode(bytes[i2]);
+  return btoa(binary);
+}
+function fromBase64(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i2 = 0; i2 < binary.length; i2++) bytes[i2] = binary.charCodeAt(i2);
+  return bytes.buffer;
+}
+function encodeState(state) {
+  if (state === null || state === void 0) return null;
+  return JSON.stringify(state, (_key, value2) => value2 instanceof ArrayBuffer ? { [MARKER]: toBase642(value2) } : value2);
+}
+function decodeState(text) {
+  if (text === null || text === void 0) return null;
+  return JSON.parse(text, (_key, value2) => value2 && typeof value2 === "object" && MARKER in value2 ? fromBase64(value2[MARKER]) : value2);
+}
+
+// src/ops/UndoHistory.js
+var UNDO_LIMIT = 100;
+var UndoHistory = class {
+  #undoStack = [];
+  #redoStack = [];
+  #limit;
+  constructor(limit = UNDO_LIMIT) {
+    this.#limit = limit;
+  }
+  /** Whether there is an edit to step back from. */
+  canUndo() {
+    return this.#undoStack.length > 0;
+  }
+  /** Whether there is an edit undo last stepped back from to step forward to. */
+  canRedo() {
+    return this.#redoStack.length > 0;
+  }
+  /** Drop all undo and redo history. */
+  clear() {
+    this.#undoStack.length = 0;
+    this.#redoStack.length = 0;
+  }
+  /**
+   * Record a snapshot taken just before a committed edit. Called by
+   * OpDispatcher.apply() itself, never from here, because only apply() knows
+   * whether the edit it just committed should be undoable.
+   */
+  record(snapshot) {
+    this.#undoStack.push(snapshot);
+    if (this.#undoStack.length > this.#limit) this.#undoStack.shift();
+    this.#redoStack.length = 0;
+  }
+  /**
+   * Step the project back to how it was before the last recorded edit.
+   *
+   * Async, unlike apply(): a node removed since the snapshot being restored to
+   * is not data the model can conjure back, it is an instantiated plugin, and
+   * bringing it back means reloading it, contract section 3.1 start to
+   * finish. Most edits touch no such node and this still returns a promise,
+   * so a caller does not need to know in advance which kind of edit it was
+   * undoing.
+   */
+  async undo(dispatcher) {
+    if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
+    const target = this.#undoStack.pop();
+    this.#redoStack.push(dispatcher.project.snapshot());
+    await this.#restoreTo(dispatcher, target);
+    return { ok: true, revision: dispatcher.project.revision };
+  }
+  /** The inverse of undo: step forward to whatever undo last stepped back from. */
+  async redo(dispatcher) {
+    if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
+    const target = this.#redoStack.pop();
+    this.#undoStack.push(dispatcher.project.snapshot());
+    await this.#restoreTo(dispatcher, target);
+    return { ok: true, revision: dispatcher.project.revision };
+  }
+  /**
+   * Bring the live project to match a snapshot, reusing the same paths a
+   * person or the WebMCP surface would use rather than writing the state in
+   * directly, so the engine (AudioParams, the channel strip, the links) moves
+   * with the model exactly as it does for any other edit. Recording is off
+   * throughout, through dispatcher.withoutRecording(): every apply()/
+   * addPlugin()/setParameter() call this makes is the mechanism of the undo
+   * or redo, not a further edit to record one of.
+   *
+   * Tracks are added before any node is reloaded, because a node names its
+   * track, and removed only after every node has moved off them or gone,
+   * because the model refuses to remove a track with nodes on it.
+   *
+   * A node the target has and the present does not is reloaded from its
+   * plugin IRI, the same as reopening a saved session, with its id, track,
+   * settings and state preserved so the graph below still recognises it. A
+   * node a reload could not restore is left out and reported nowhere further
+   * than the console: its connections are skipped rather than left dangling,
+   * which is one node's worth of undo history lost rather than the whole
+   * step refused for a plugin that may no longer be reachable.
+   */
+  async #restoreTo(dispatcher, target) {
+    await dispatcher.withoutRecording(async () => {
+      const current = dispatcher.project.snapshot();
+      const currentIds = new Set(current.nodes.map((n2) => n2.id));
+      const targetIds = new Set(target.nodes.map((n2) => n2.id));
+      const currentTrackIds = new Set(current.tracks.map((t) => t.id));
+      const targetTrackIds = new Set(target.tracks.map((t) => t.id));
+      const toAddTracks = target.tracks.filter((t) => !currentTrackIds.has(t.id));
+      if (toAddTracks.length > 0) {
+        dispatcher.apply(toAddTracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })));
+      }
+      const toRemove = current.nodes.filter((n2) => !targetIds.has(n2.id)).map((n2) => n2.id);
+      if (toRemove.length > 0) {
+        dispatcher.apply(toRemove.map((id) => ({ op: "removeNode", id })));
+      }
+      for (const node of target.nodes) {
+        if (currentIds.has(node.id)) continue;
+        const result = await dispatcher.addPlugin(node.pluginIri, {
+          id: node.id,
+          label: node.label,
+          track: node.track,
+          settings: node.settings,
+          state: node.state,
+          bypassed: node.bypassed
+        });
+        if (!result.ok) {
+          console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`);
+          continue;
+        }
+        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
+          dispatcher.setParameter(node.id, symbol, value2);
+        }
+      }
+      const reconcile = [];
+      for (const node of target.nodes) {
+        if (!currentIds.has(node.id)) continue;
+        const live = dispatcher.project.node(node.id);
+        if (!live) continue;
+        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
+          if (live.settings.get(symbol) !== value2) dispatcher.setParameter(node.id, symbol, value2);
+        }
+        for (const symbol of [...live.settings.keys()]) {
+          if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol);
+        }
+        if (live.track !== node.track) reconcile.push({ op: "moveNodeToTrack", id: node.id, track: node.track });
+        if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
+      }
+      const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
+      for (const track of target.tracks) {
+        const live = dispatcher.project.track(track.id);
+        const c3 = track.channel;
+        const l = live.channel;
+        if (c3.gain !== l.gain || c3.pan !== l.pan || c3.muted !== l.muted || c3.soloed !== l.soloed) {
+          reconcile.push({ op: "setTrackChannel", track: track.id, ...c3 });
+        }
+        const input = (id) => id !== null && liveIdsAfterReload.has(id) ? id : null;
+        if (live.label !== track.label || live.midiInput !== input(track.midiInput) || live.audioInput !== input(track.audioInput)) {
+          reconcile.push({
+            op: "setTrack",
+            id: track.id,
+            label: track.label,
+            midiInput: input(track.midiInput),
+            audioInput: input(track.audioInput)
+          });
+        }
+      }
+      const liveIds = new Set(dispatcher.project.nodes.map((n2) => n2.id));
+      const currentConnIds = new Set(dispatcher.project.connections.map((c3) => c3.id));
+      const targetConnIds = new Set(target.connections.map((c3) => c3.id));
+      for (const id of currentConnIds) {
+        if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
+      }
+      for (const connection of target.connections) {
+        if (currentConnIds.has(connection.id)) continue;
+        if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue;
+        reconcile.push({
+          op: "addConnection",
+          id: connection.id,
+          from: connection.from,
+          to: connection.to,
+          signalKind: connection.signalKind,
+          delayFrames: connection.delayFrames
+        });
+      }
+      if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target.transport)) {
+        reconcile.push({ op: "setTransport", ...target.transport });
+      }
+      const liveClips = new Map(dispatcher.project.snapshot().clips.map((c3) => [c3.id, c3]));
+      const targetClips = new Map(target.clips.map((c3) => [c3.id, c3]));
+      for (const [id, clip] of liveClips) {
+        const wanted = targetClips.get(id);
+        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id, force: true });
+      }
+      for (const [id, clip] of targetClips) {
+        const live = liveClips.get(id);
+        if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip));
+      }
+      reconcile.push(...arrangementReconcile(dispatcher.project.snapshot(), target));
+      for (const id of currentTrackIds) {
+        if (!targetTrackIds.has(id)) reconcile.push({ op: "removeTrack", id });
+      }
+      dispatcher.apply(reconcile);
+    });
+  }
+};
+
+// src/ops/OpDispatcher.js
+var OpDispatcher = class {
+  #project;
+  #engine;
+  #listeners = /* @__PURE__ */ new Set();
+  #nodeIds = /* @__PURE__ */ new Map();
+  #router = null;
+  #inspections;
+  // The compensation delays the running graph holds, by project connection
+  // id. Rebuilt with the links, and moved by a latency message without
+  // rebuilding them (docs/latency.md section 2).
+  #compensation = /* @__PURE__ */ new Map();
+  #alignTracks = false;
+  // The delay last given to each track, in frames, so the engine is asked only about a change.
+  #trackDelays = /* @__PURE__ */ new Map();
+  #foreign;
+  // The stacks and the snapshot-to-snapshot reconciliation live in
+  // UndoHistory. Nothing is recorded while #recording is false, which is how
+  // undo and redo call back into apply()/addPlugin() to do the actual work
+  // without recording their own reversal as a new edit.
+  #history = new UndoHistory();
+  #recording = true;
+  constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
+    this.#project = project;
+    this.#alignTracks = alignTracks;
+    this.#engine = engine;
+    this.#foreign = foreign;
+    this.#inspections = inspections;
+    if (engine) {
+      this.#router = new EventRouter({
+        engine,
+        onDropped: (report) => this.#emit({ type: "dropped", ...report })
+      });
+    }
+  }
+  get router() {
+    return this.#router;
+  }
+  /**
+   * Where consent for foreign plugins is recorded, or null on a host that
+   * loads none. Exposed because contract section 12.4 requires a person to be
+   * asked, and the asking happens in a surface rather than in here.
+   */
+  get foreignTrust() {
+    return this.#foreign?.trust ?? null;
+  }
+  /** The foreign side, or null on a host that loads none. */
+  get foreignSupport() {
+    return this.#foreign ?? null;
+  }
+  /** The musical clock, built from the project so the two cannot disagree. */
+  transport(sampleRate = this.#engine?.context?.sampleRate ?? 48e3) {
+    return Transport.fromProject(this.#project, sampleRate);
+  }
+  /**
+   * Send the transport position to every plugin.
+   *
+   * Contract section 7: a plugin derives musical timing from this and never by
+   * counting process() calls, so the host has to supply it rather than leave a
+   * plugin to infer it.
+   */
+  sendTransport(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
+    if (!this.#router) return null;
+    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
+    this.#router.broadcastTransport(message);
+    return message;
+  }
+  /**
+   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
+   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
+   * loaded), or one nothing has gone over.
+   */
+  midiActivity(connectionId) {
+    const connection = this.#project.connection(connectionId);
+    if (!connection || !isMidi(connection.signalKind) || !this.#router) return [];
+    const from = this.#nodeIds.get(connection.from.node);
+    const to = this.#nodeIds.get(connection.to.node);
+    return from && to ? this.#router.recent(from, to) : [];
+  }
+  /** Deliver MIDI into a node, as if from outside the graph. */
+  sendEvents(nodeId, events) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#router) return false;
+    this.#router.send(engineId, events);
+    return true;
+  }
+  /**
+   * Relay an opaque payload from a plugin's own interface to its processor,
+   * docs/messaging.md 2.4. Not an operation: it changes nothing the project
+   * records, and the host does not read it. Throttling is the caller's, which
+   * is where the interface's messages arrive.
+   */
+  relayToPlugin(nodeId, payload) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return false;
+    this.#engine.post(engineId, { type: "plugin", payload });
+    return true;
+  }
+  /**
+   * Hear a processor's opaque payloads for its own interface. Returns an
+   * unsubscribe function, or null for a node the engine has not loaded. Only
+   * this node's payloads: 2.4 forbids one plugin's reaching another.
+   */
+  onPluginMessage(nodeId, handler2) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return null;
+    return this.#engine.onMessage(engineId, (message) => {
+      if (message?.type === "plugin") handler2(message.payload);
+    });
+  }
+  get project() {
+    return this.#project;
+  }
+  get revision() {
+    return this.#project.revision;
+  }
+  /** Subscribe to what happened. Returns an unsubscribe function. */
+  subscribe(listener) {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+  #emit(event) {
+    for (const listener of this.#listeners) {
+      try {
+        listener(event);
+      } catch (error2) {
+        console.error("listener failed", error2);
+      }
+    }
+  }
+  /** Whether tracks are aligned to one another. */
+  get alignTracks() {
+    return this.#alignTracks;
+  }
+  /** Turn alignment on or off, and give every track the delay that now applies. */
+  setAlignTracks(on) {
+    this.#alignTracks = Boolean(on);
+    const compiled = this.compile();
+    if (compiled.ok) this.#applyTrackDelays(compiled);
+  }
+  /**
+   * How late each track's signal is, in frames: the longest declared latency
+   * along its chain, counting what the compiler found ahead of each node.
+   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * is zero when alignment is off, and `frames` is what the track itself has
+   * (docs/latency.md, "Between tracks").
+   */
+  trackLatencies() {
+    const compiled = this.compile();
+    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
+    const slowest = Math.max(0, ...frames.values());
+    return this.#project.tracks.map((track) => ({
+      trackId: track.id,
+      frames: frames.get(track.id) ?? 0,
+      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+    }));
+  }
+  #trackFrames(compiled) {
+    return new Map(this.#project.tracks.map((track) => [
+      track.id,
+      this.#project.nodes.filter((n2) => n2.track === track.id).reduce((most, n2) => Math.max(most, (compiled.arrival.get(n2.id) ?? 0) + this.#latencyOf(n2.id)), 0)
+    ]));
+  }
+  /** Give each track the delay that lines it up, asking the engine only where it changed. */
+  #applyTrackDelays(compiled) {
+    if (!this.#engine) return;
+    const frames = this.#trackFrames(compiled);
+    const slowest = Math.max(0, ...frames.values());
+    for (const track of this.#project.tracks) {
+      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0;
+      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
+      try {
+        this.#engine.setTrackDelay(track.id, wanted);
+        this.#trackDelays.set(track.id, wanted);
+      } catch (error2) {
+        console.error(`could not align track ${track.id}: ${error2.message}`);
+      }
+    }
+    for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id);
+  }
+  /** The latency each node declares, from what the engine actually loaded. */
+  #latencyOf(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return 0;
+    try {
+      return this.#engine.get(engineId).ready?.latencyFrames ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+  /**
+   * Apply a changeset.
+   *
+   * Compilation happens against the result before it is committed, so a
+   * changeset that would produce an uncompilable graph is refused whole. That
+   * is why this is the only way in.
+   */
+  apply(changes, { expectedRevision, dryRun = false } = {}) {
+    const unroutable = this.#unroutable(changes);
+    if (unroutable) {
+      return { ok: false, kind: "change", revision: this.#project.revision, message: unroutable };
+    }
+    try {
+      this.#project.apply(changes, { expectedRevision, dryRun: true });
+    } catch (error2) {
+      return this.#failure(error2);
+    }
+    const trial = this.#clone();
+    trial.apply(changes);
+    const compiled = compileGraph(trial, { latencyOf: (id) => this.#latencyOf(id) });
+    if (!compiled.ok) {
+      return {
+        ok: false,
+        kind: "compile",
+        revision: this.#project.revision,
+        errors: compiled.errors,
+        message: compiled.errors[0].message
+      };
+    }
+    if (dryRun) {
+      return { ok: true, applied: false, revision: this.#project.revision, compiled };
+    }
+    const before = this.#recording ? this.#project.snapshot() : null;
+    const result = this.#project.apply(changes, { expectedRevision });
+    this.#releaseRemoved();
+    this.#rebuildLinks(compiled);
+    if (before) this.#history.record(before);
+    this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
+    return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
+  }
+  /** Whether there is an edit to step back from. */
+  canUndo() {
+    return this.#history.canUndo();
+  }
+  /** Whether there is an edit undo last stepped back from to step forward to. */
+  canRedo() {
+    return this.#history.canRedo();
+  }
+  /**
+   * Drop all undo and redo history.
+   *
+   * For a caller opening a different session into this dispatcher, such as
+   * web/app.js's openSession, which loads a project by clearing every node
+   * and adding back what the file says. Without this, undoing straight after
+   * opening a file would try to step back into whatever session was open
+   * before it, node by node, restoring plugins the person just replaced.
+   */
+  clearHistory() {
+    this.#history.clear();
+  }
+  /**
+   * Step the project back to how it was before the last recorded edit.
+   *
+   * Async, unlike apply(): a node removed since the snapshot being restored to
+   * is not data the model can conjure back, it is an instantiated plugin, and
+   * bringing it back means reloading it, contract section 3.1 start to
+   * finish. Most edits touch no such node and this still returns a promise,
+   * so a caller does not need to know in advance which kind of edit it was
+   * undoing. The stack bookkeeping and the snapshot-to-snapshot reconciliation
+   * are UndoHistory's; this dispatcher is the host it calls back into.
+   */
+  async undo() {
+    return this.#history.undo(this);
+  }
+  /** The inverse of undo: step forward to whatever undo last stepped back from. */
+  async redo() {
+    return this.#history.redo(this);
+  }
+  /**
+   * Run fn with recording off, so the apply()/addPlugin()/setParameter()
+   * calls it makes are not themselves recorded as further undoable edits.
+   * Called by UndoHistory while it reconciles the project to a snapshot; nothing
+   * else needs it, but it stays on the public dispatcher rather than a private
+   * field so UndoHistory can drive it without reaching into private state.
+   */
+  async withoutRecording(fn) {
+    this.#recording = false;
+    try {
+      return await fn();
+    } finally {
+      this.#recording = true;
+    }
+  }
+  /** The first end of a new connection that names a port its node has not got. */
+  #unroutable(changes) {
+    for (const change of changes ?? []) {
+      if (change?.op !== "addConnection") continue;
+      for (const direction of ["from", "to"]) {
+        const endpoint2 = change[direction];
+        if (!endpoint2?.node) continue;
+        const found = findPort(
+          this.engineNode(endpoint2.node)?.profile,
+          endpoint2,
+          direction,
+          change.signalKind
+        );
+        if (!found.ok) return found.message;
+      }
+    }
+    return null;
+  }
+  #failure(error2) {
+    if (error2 instanceof RevisionConflict) {
+      return {
+        ok: false,
+        kind: "conflict",
+        revision: this.#project.revision,
+        expected: error2.expected,
+        message: error2.message
+      };
+    }
+    if (error2 instanceof ChangeError) {
+      return { ok: false, kind: "change", revision: this.#project.revision, index: error2.index, message: error2.message };
+    }
+    throw error2;
+  }
+  /** A copy of the project, for trying a changeset without committing it. */
+  #clone() {
+    const copy = new Project();
+    copy.apply(changesFor(this.#project.snapshot()));
+    return copy;
+  }
+  /**
+   * Load a plugin and add it as a node.
+   *
+   * Loading reaches the network and can fail slowly, which does not sit well
+   * inside an atomic changeset, so it happens first and the node id joins the
+   * two halves. webmcp.md raises this as open; this is the answer.
+   */
+  /**
+   * Load a plugin and add a node for it.
+   *
+   * `id` names the node rather than letting one be minted, which is what
+   * reopening a saved project needs: the connections in the file name the nodes
+   * they join, so a node that came back under a different name would be joined
+   * to nothing. The model tracks ids it did not mint, so a later minted id
+   * cannot collide with one restored here.
+   *
+   * Everything else is passed through to addNode rather than enumerated here.
+   * It used to list the fields it forwarded, and the day a node gained a channel
+   * strip that list was silently one field short: a saved mix was written
+   * correctly, read correctly, and dropped on the way back in.
+   *
+   * Without a `track` the plugin gets a new track of its own, named after it,
+   * in the same changeset, so dropping an instrument in makes a sound without a
+   * second step. A plugin that accepts MIDI becomes that new track's MIDI
+   * input, since it is the only node there for notes to go to. On an existing
+   * track nothing is guessed: which node takes the notes is a person's call.
+   */
+  async addPlugin(iri3, { position, foreign = false, ...node } = {}) {
+    if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
+    let entry;
+    try {
+      entry = foreign ? await this.#addForeign(iri3) : await this.#engine.addPlugin(iri3, { state: decodeState(node.state ?? null) });
+    } catch (error2) {
+      if (error2.name === "ConsentRequired") {
+        return { ok: false, kind: "consent", request: error2.request, message: error2.message };
+      }
+      this.#inspections.record({ iri: iri3, outcome: `failed: ${error2.message}` });
+      return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
+    }
+    this.#inspections.record({ iri: iri3, outcome: "loaded" });
+    const label = node.label ?? entry.profile.label;
+    const changes = [];
+    let newTrack = null;
+    if (node.track === void 0 || node.track === null) {
+      newTrack = this.#project.nextId("track");
+      changes.push({ op: "addTrack", id: newTrack, label });
+    }
+    const nodeId = node.id ?? this.#project.nextId("node");
+    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
+    if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
+      changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
+    }
+    const result = this.apply(changes);
+    if (!result.ok) {
+      this.#engine.remove(entry.id);
+      return result;
+    }
+    this.#nodeIds.set(nodeId, entry.id);
+    this.#rebuildLinks(this.compile());
+    this.#router?.observe(entry.id);
+    if (!foreign) {
+      this.#engine.onMessage(entry.id, (message) => {
+        if (message?.type === "latency") this.#onLatency(nodeId, entry.id, message);
+      });
+    }
+    if (position) this.#project.moveNode(nodeId, position.x, position.y);
+    this.#emit({ type: "plugin-added", nodeId, trackId: node.track ?? newTrack, entry });
+    return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
+  }
+  /**
+   * Fetch a foreign profile, load it through its adapter, and adopt it.
+   *
+   * Private because there must be exactly one way into running foreign code,
+   * and it is the branch in addPlugin above.
+   */
+  async #addForeign(iri3) {
+    if (!this.#foreign) {
+      throw new Error(
+        "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
+      );
+    }
+    const loaded = await this.#foreign.add(iri3, this.#engine.context);
+    return this.#engine.adopt({
+      iri: iri3,
+      profile: loaded.profile,
+      node: loaded.node,
+      ready: loaded.ready
+    });
+  }
+  /**
+   * A processor reporting a new latency (docs/latency.md section 2).
+   *
+   * Not an operation: nothing the project records changed, so there is no
+   * revision, no history entry, and nothing to undo. The node's figure is
+   * updated, the unchanged project is recompiled, and each compensation delay
+   * that moved is retimed against the message's fromFrame rather than against
+   * this arrival. A handler that throws must not take down the fan-out, so a
+   * connection that is not in the running graph yet (one end still loading)
+   * is reported and skipped: the next full rebuild wires it with the current
+   * figures.
+   */
+  #onLatency(nodeId, engineId, message) {
+    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return;
+    let entry;
+    try {
+      entry = this.#engine.get(engineId);
+    } catch {
+      return;
+    }
+    const label = entry?.profile?.label ?? nodeId;
+    const { latencyFrames, fromFrame } = message ?? {};
+    if (!Number.isFinite(latencyFrames) || latencyFrames < 0) {
+      console.error(`${label} reported an unusable latency: ${JSON.stringify(latencyFrames)}. A latency message carries a non-negative latencyFrames in frames.`);
+      return;
+    }
+    if (!Number.isFinite(fromFrame) || fromFrame < 0) {
+      console.error(`${label} reported an unusable fromFrame: ${JSON.stringify(fromFrame)}. A latency message carries the absolute stream position its figure applies from.`);
+      return;
+    }
+    entry.ready = { ...entry.ready ?? {}, latencyFrames };
+    const compiled = this.compile();
+    if (!compiled.ok) {
+      console.error(`${label} changed its latency to ${latencyFrames} frames and the graph no longer compiles: ${compiled.errors[0].message}. Keeping the previous compensation.`);
+      return;
+    }
+    const atTime = this.#engine.frameTime(fromFrame);
+    const after = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
+    for (const [connection, delayFrames] of after) {
+      if (this.#compensation.get(connection) === delayFrames) continue;
+      try {
+        this.#engine.retime(connection, delayFrames, { atTime });
+      } catch (error2) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
+      }
+    }
+    for (const connection of this.#compensation.keys()) {
+      if (after.has(connection)) continue;
+      try {
+        this.#engine.retime(connection, 0, { atTime });
+      } catch (error2) {
+        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
+      }
+    }
+    this.#compensation = after;
+    this.#applyTrackDelays(compiled);
+    this.#emit({ type: "latency", nodeId, latencyFrames, fromFrame, compiled });
+  }
+  /**
+   * Set a parameter. Goes to the model and the AudioParam, never a message.
+   *
+   * The clamp is asked for before the write rather than corrected after it. The
+   * engine clamps to the declared range and the model must record what was
+   * actually applied, not what was asked for, per messaging.md 2.3: a surface
+   * renders what it is told, not what it requested. Writing the asked-for value
+   * and then writing the clamped one was two revisions for one edit, and the
+   * second went straight to the project, around this dispatcher's own gate.
+   */
+  setParameter(nodeId, symbol, value2) {
+    const engineId = this.#nodeIds.get(nodeId);
+    let applied = value2;
+    if (engineId && this.#engine) {
+      try {
+        applied = this.#engine.clampParameter(engineId, symbol, value2);
+      } catch (error2) {
+        return { ok: false, kind: "change", message: error2.message };
+      }
+    }
+    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    if (!result.ok) return result;
+    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
+    this.#emit({ type: "parameter", nodeId, symbol, value: applied });
+    return { ...result, value: applied };
+  }
+  /**
+   * Put a parameter back to its plugin's default and forget its setting, so
+   * the model says what a node that was never touched says. What undo does
+   * for a parameter that had not been set before the edit being undone:
+   * restoring "no setting" in the model alone left the AudioParam, the panel
+   * and an open editor all at the value being undone.
+   */
+  resetParameter(nodeId, symbol) {
+    const engineId = this.#nodeIds.get(nodeId);
+    let value2 = null;
+    if (engineId && this.#engine) {
+      try {
+        value2 = this.#engine.defaultParameter(engineId, symbol);
+      } catch (error2) {
+        return { ok: false, kind: "change", message: error2.message };
+      }
+    }
+    const result = this.apply([{ op: "clearSetting", node: nodeId, symbol }]);
+    if (!result.ok) return result;
+    if (engineId && this.#engine && value2 !== null) {
+      this.#engine.setParameter(engineId, symbol, value2);
+      this.#emit({ type: "parameter", nodeId, symbol, value: value2 });
+    }
+    return { ...result, value: value2 };
+  }
+  /**
+   * Ask a node's own processor for its current state, live, rather than
+   * whatever `jig:nodeState` last happened to hold in the model. Called
+   * before writing a session, per contract section 8: parameter values are
+   * never part of state, so this is the only way a saved project carries
+   * what a stateful plugin is actually doing.
+   *
+   * `null` for a node the engine has no entry for (not yet loaded, or a
+   * foreign plugin, whose own adapter this does not reach into) and for a
+   * plugin that never answers, which are both ordinary rather than errors.
+   */
+  async getNodeState(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) return null;
+    if (this.#engine.get(engineId)?.profile?.stateless) return null;
+    return this.#engine.requestState(engineId);
+  }
+  /**
+   * Replace one `jig:userReplaceable` asset in a running node: a person
+   * choosing a different file from the generated panel. Not routed through
+   * `apply()`: it changes neither the graph nor a parameter the model
+   * tracks, only bytes a processor holds, which is exactly what
+   * `jig:nodeState` exists to carry, and the next `getNodeState` reflects it
+   * without this needing to touch the project itself.
+   */
+  loadAsset(nodeId, key, bytes) {
+    const engineId = this.#nodeIds.get(nodeId);
+    if (!engineId || !this.#engine) {
+      return { ok: false, message: "no such node, or nothing to load an asset into" };
+    }
+    this.#engine.loadAsset(engineId, key, bytes);
+    return { ok: true };
+  }
+  /**
+   * Rebuild the audio links to match the compiled graph.
+   *
+   * The whole set is torn down and rebuilt rather than diffed. A diff is an
+   * optimisation and this is the correctness-first version: after any edit the
+   * links are exactly what the compiler said, with no stale delay node left
+   * feeding silence into a mix because an edge moved.
+   */
+  /**
+   * Let go of the engine nodes whose model nodes are gone.
+   *
+   * Removing a node from the model does not remove the AudioWorkletNode behind
+   * it, and until this existed nothing did: a removed plugin kept running and
+   * kept whatever the page had connected it to. Rebuilding links does not cover
+   * it, because a node with no links is exactly the case.
+   *
+   * Driven by the model rather than by the change list, so it is right for any
+   * route that removes a node, including a changeset that removes one as a side
+   * effect of removing something else.
+   */
+  #releaseRemoved() {
+    if (!this.#engine) return;
+    for (const [nodeId, engineId] of [...this.#nodeIds]) {
+      if (this.#project.node(nodeId)) continue;
+      try {
+        this.#engine.remove(engineId);
+      } catch {
+      }
+      this.#nodeIds.delete(nodeId);
+    }
+  }
+  /**
+   * Make the engine's track strips match the model's tracks: one each, no
+   * more. Before the links, because the links end at them.
+   */
+  #syncTracks() {
+    if (!this.#engine) return;
+    const wanted = new Set(this.#project.tracks.map((t) => t.id));
+    for (const id of this.#engine.trackIds()) {
+      if (!wanted.has(id)) this.#engine.removeTrack(id);
+    }
+    const have = new Set(this.#engine.trackIds());
+    for (const id of wanted) {
+      if (!have.has(id)) this.#engine.addTrack(id);
+    }
+  }
+  /**
+   * Whether each track is heard, after solo is resolved.
+   *
+   * Solo is resolved here because it cannot be resolved anywhere else. Whether
+   * a track is heard depends on whether *any other* track is soloed, so it is a
+   * property of the mix rather than of the track, and the track is the only
+   * thing the engine can see one at a time.
+   *
+   * The rule is the one every mixer uses: if nothing is soloed, a track is heard
+   * unless it is muted. If anything is soloed, only soloed tracks are heard, and
+   * muting a soloed track still silences it, because a person who pressed mute
+   * meant it.
+   */
+  audibility() {
+    const tracks = this.#project.tracks;
+    const anySoloed = tracks.some((t) => t.channel.soloed);
+    return tracks.map((track) => ({
+      trackId: track.id,
+      gain: track.channel.gain,
+      pan: track.channel.pan,
+      silent: track.channel.muted || anySoloed && !track.channel.soloed
+    }));
+  }
+  /** Push every track's channel strip to the engine. */
+  /**
+   * The model's master, sends and bus outputs, made in the audio graph. Sends are
+   * torn down and made again each time, like the links: after an edit the audio
+   * is exactly what the model says. An output is set for every track and the
+   * engine touches the graph only where it changed.
+   */
+  #applyRouting() {
+    if (!this.#engine) return;
+    this.#engine.clearSends();
+    for (const send of this.#project.sends) {
+      this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
+    }
+    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null);
+    this.#engine.setMaster(this.#project.master);
+  }
+  #applyChannels() {
+    if (!this.#engine) return;
+    for (const { trackId, gain, pan, silent } of this.audibility()) {
+      this.#engine.setTrackChannel(trackId, { gain, pan, silent });
+    }
+  }
+  /**
+   * Connect everything that produces audio and feeds nothing to its track's
+   * fader.
+   *
+   * A sink is where the signal has arrived, so it is what a person expects to
+   * hear. Deriving it from the connections rather than declaring it keeps the
+   * rule the project format already states for processing order: the graph
+   * answers the question, and a second answer written down beside it would have
+   * no rule for which wins.
+   *
+   * A node with no audio outputs is not a sink for this purpose even when
+   * nothing follows it. A MIDI generator ends a path and produces nothing to
+   * hear, and connecting it throws.
+   */
+  #linkSinksToTracks() {
+    if (!this.#engine) return;
+    const feedsSomething = /* @__PURE__ */ new Set();
+    for (const connection of this.#connectionsInUse()) {
+      if (isMidi(connection.signalKind)) continue;
+      feedsSomething.add(connection.from.node);
+    }
+    for (const node of this.#project.nodes) {
+      if (feedsSomething.has(node.id)) continue;
+      if (node.bypassed) continue;
+      const engineId = this.#nodeIds.get(node.id);
+      if (!engineId) continue;
+      const entry = this.#engine.get(engineId);
+      if (!(entry?.node?.numberOfOutputs > 0)) continue;
+      this.#engine.linkToTrack(engineId, node.track);
+    }
+  }
+  /**
+   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
+   * model keeps every connection; bypass changes only what is wired.
+   */
+  #connectionsInUse() {
+    const passes = (nodeId, kind) => {
+      const profile = this.engineNode(nodeId)?.profile;
+      if (!profile) return false;
+      if (kind === "audio") return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0;
+      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi);
+    };
+    return effectiveConnections(this.#project.connections, {
+      bypassed: (nodeId) => this.#project.node(nodeId)?.bypassed === true,
+      passes
+    });
+  }
+  #rebuildLinks(compiled) {
+    if (!this.#engine) return;
+    const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
+    this.#compensation = delayFor;
+    this.#engine.clearLinks();
+    this.#syncTracks();
+    this.#applyRouting();
+    const midiRoutes = [];
+    for (const connection of this.#connectionsInUse()) {
+      const from = this.#nodeIds.get(connection.from.node);
+      const to = this.#nodeIds.get(connection.to.node);
+      if (!from || !to) continue;
+      if (isMidi(connection.signalKind)) {
+        midiRoutes.push({ from, to });
+        continue;
+      }
+      this.#engine.link(from, to, {
+        fromOutput: connection.from.portIndex ?? 0,
+        toInput: connection.to.portIndex ?? 0,
+        toParameter: connection.to.portSymbol ?? null,
+        delayFrames: delayFor.get(connection.id) ?? 0,
+        connection: connection.id
+      });
+    }
+    this.#linkSinksToTracks();
+    this.#applyTrackDelays(compiled);
+    this.#applyChannels();
+    this.#router?.setRoutes(midiRoutes);
+  }
+  /**
+   * Set several parameters as one edit.
+   *
+   * Not a loop over setParameter, which would be one revision and one compile
+   * per value: a preset of thirty parameters would arrive as thirty edits, be
+   * thirty entries in an undo stack, and be audible as a sweep through
+   * intermediate states. Clamped first, for the same reason as the single
+   * value, then written once, then pushed to the AudioParams.
+   */
+  setParameters(settings, { expectedRevision } = {}) {
+    if (!Array.isArray(settings) || settings.length === 0) {
+      return { ok: false, kind: "change", message: "needs a non-empty list of settings" };
+    }
+    const applied = [];
+    for (const { nodeId, symbol, value: value2 } of settings) {
+      const engineId = this.#nodeIds.get(nodeId);
+      let clamped = value2;
+      if (engineId && this.#engine) {
+        try {
+          clamped = this.#engine.clampParameter(engineId, symbol, value2);
+        } catch (error2) {
+          return { ok: false, kind: "change", message: error2.message };
+        }
+      }
+      applied.push({ nodeId, symbol, value: clamped, engineId });
+    }
+    const result = this.apply(
+      applied.map((a2) => ({ op: "setSetting", node: a2.nodeId, symbol: a2.symbol, value: a2.value })),
+      { expectedRevision }
+    );
+    if (!result.ok) return result;
+    for (const a2 of applied) {
+      if (a2.engineId && this.#engine) this.#engine.setParameter(a2.engineId, a2.symbol, a2.value);
+      this.#emit({ type: "parameter", nodeId: a2.nodeId, symbol: a2.symbol, value: a2.value });
+    }
+    return { ...result, applied: applied.map(({ nodeId, symbol, value: value2 }) => ({ nodeId, symbol, value: value2 })) };
+  }
+  /** Set any of a track's channel strip: gain, pan, mute, solo. */
+  setTrackChannel(trackId, change, { expectedRevision } = {}) {
+    return this.apply([{ op: "setTrackChannel", track: trackId, ...change }], { expectedRevision });
+  }
+  /** The engine node behind a model node, if it has been loaded. */
+  engineNode(nodeId) {
+    const engineId = this.#nodeIds.get(nodeId);
+    return engineId && this.#engine ? this.#engine.get(engineId) : null;
+  }
+  /** Compile without changing anything, for diagnostics. */
+  compile() {
+    return compileGraph(this.#project, { latencyOf: (id) => this.#latencyOf(id) });
+  }
+};
+
+// src/ops/OpenProject.js
+function inSignalOrder(nodes, connections) {
+  const feeding = new Map(nodes.map((n2) => [n2.id, /* @__PURE__ */ new Set()]));
+  for (const c3 of connections) {
+    if (feeding.has(c3.to.node) && feeding.has(c3.from.node) && c3.from.node !== c3.to.node) {
+      feeding.get(c3.to.node).add(c3.from.node);
+    }
+  }
+  const placed = /* @__PURE__ */ new Set();
+  const ordered = [];
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const node of nodes) {
+      if (placed.has(node.id) || [...feeding.get(node.id)].some((id) => !placed.has(id))) continue;
+      placed.add(node.id);
+      ordered.push(node);
+      progress = true;
+      break;
+    }
+  }
+  return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
+}
+async function openProject(dispatcher, read, { onLoading = () => {
+}, onCleared = () => {
+} } = {}) {
+  const existing = [
+    ...[...dispatcher.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id })),
+    ...[...dispatcher.project.tracks].map((t) => ({ op: "removeTrack", id: t.id }))
+  ];
+  if (existing.length > 0) {
+    const cleared = dispatcher.apply(existing);
+    if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
+  }
+  onCleared();
+  const tracks = read.changes.filter((c3) => c3.op === "addTrack");
+  if (tracks.length > 0) {
+    const added = dispatcher.apply(tracks);
+    if (!added.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [added.message] };
+  }
+  const errors = [];
+  const loaded = /* @__PURE__ */ new Set();
+  const additions = inSignalOrder(
+    read.changes.filter((c3) => c3.op === "addNode"),
+    read.changes.filter((c3) => c3.op === "addConnection")
+  );
+  for (const change of additions) {
+    onLoading(change.pluginIri);
+    const { op, pluginIri, ...node } = change;
+    const result = await dispatcher.addPlugin(pluginIri, node);
+    if (!result.ok) {
+      errors.push(`${change.id}: ${result.message}`);
+      continue;
+    }
+    loaded.add(change.id);
+    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
+      const set = dispatcher.setParameter(change.id, symbol, value2);
+      if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
+    }
+  }
+  const loadedOrNull = (id) => id === null || loaded.has(id) ? id : null;
+  const rest = read.changes.filter((c3) => c3.op !== "addNode" && c3.op !== "addTrack" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)) && // An envelope on a node that failed to load has nothing to move.
+  (c3.op !== "addEnvelope" || c3.target.node === void 0 || loaded.has(c3.target.node))).map((c3) => c3.op === "setTrack" && ("midiInput" in c3 || "audioInput" in c3) ? { ...c3, midiInput: loadedOrNull(c3.midiInput ?? null), audioInput: loadedOrNull(c3.audioInput ?? null) } : c3);
+  if (rest.length > 0) {
+    const applied = dispatcher.apply(rest);
+    if (!applied.ok) errors.push(applied.message);
+  }
+  dispatcher.clearHistory();
+  return { ok: true, loaded, total: additions.length, errors };
+}
+
+// src/engine/Bounce.js
+var QUANTUM = 128;
+var quantised = (seconds, sampleRate) => Math.round(seconds * sampleRate / QUANTUM) * QUANTUM / sampleRate;
+function suspendTimes(seconds, tickSeconds, sampleRate) {
+  const step = Math.max(QUANTUM / sampleRate, quantised(tickSeconds, sampleRate));
+  const times = [];
+  for (let t = step; t < seconds - QUANTUM / sampleRate; t += step) times.push(quantised(t, sampleRate));
+  return [...new Set(times)];
+}
+async function bounce({
+  snapshot,
+  makeLoader,
+  fetchBytes,
+  hostConfig,
+  seconds,
+  sampleRate = 48e3,
+  onlyTrack = null,
+  alignTracks = true,
+  OfflineContext = globalThis.OfflineAudioContext,
+  AudioWorkletNode = globalThis.AudioWorkletNode,
+  onProgress = () => {
+  }
+}) {
+  if (!(seconds > 0)) throw new Error("a bounce needs a length above zero");
+  if (typeof OfflineContext !== "function") throw new Error("this browser has no OfflineAudioContext to render with");
+  for (const key of ["schedulerLookaheadMs", "schedulerTickMs", "maxTrackDelayMs"]) {
+    if (!(hostConfig?.[key] > 0)) throw new Error(`a bounce needs ${key} from the host configuration`);
+  }
+  if (onlyTrack !== null && !snapshot.tracks.some((t) => t.id === onlyTrack)) throw new Error(`no such track: ${onlyTrack}`);
+  const frames = Math.ceil(seconds * sampleRate / QUANTUM) * QUANTUM;
+  const context = new OfflineContext({ numberOfChannels: 2, length: frames, sampleRate });
+  const engine = new Engine({ context, loader: makeLoader(), AudioWorkletNode, maxTrackDelaySeconds: hostConfig.maxTrackDelayMs / 1e3 });
+  const dispatcher = new OpDispatcher({ engine, alignTracks });
+  const opened = await openProject(dispatcher, { changes: changesFor(snapshot) });
+  if (!opened.ok) throw new Error(`the project could not be opened for rendering: ${opened.errors.join("; ")}`);
+  if (onlyTrack !== null) {
+    const edits = [
+      ...dispatcher.project.tracks.map((t) => ({ op: "setTrackChannel", track: t.id, muted: t.id !== onlyTrack ? true : false })),
+      { op: "setMaster", gain: 1, pan: 0, muted: false },
+      ...dispatcher.project.envelopes.filter((e) => e.target.kind === "masterGain" || e.target.kind === "masterPan").map((e) => ({ op: "removeEnvelope", id: e.id }))
+    ];
+    const done = dispatcher.apply(edits);
+    if (!done.ok) throw new Error(done.message);
+  }
+  const clipPlayer = new ClipPlayer({ context, fetchBytes });
+  const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
+  await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
+  const errors = [...opened.errors, ...sources.filter((iri3) => clipPlayer.failure(iri3)).map((iri3) => `audio ${iri3}: ${clipPlayer.failure(iri3).message}`)];
+  const playAudioClip = (clip, { when, offset, duration }) => {
+    const track = dispatcher.project.track(clip.track);
+    if (!track) return;
+    const destination = track.audioInput ? dispatcher.engineNode(track.audioInput)?.node : engine.trackInput(track.id);
+    if (!destination) return;
+    const timing = dispatcher.transport();
+    const fadeIn = clip.fadeInBeats > 0 ? timing.secondsAtBeat(clip.on + clip.fadeInBeats) - timing.secondsAtBeat(clip.on) : 0;
+    const fadeOut = clip.fadeOutBeats > 0 ? timing.secondsAtBeat(clip.off) - timing.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
+    clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut });
+  };
+  const automation = createAutomationHost({ dispatcher, engine, log: (message) => errors.push(message) });
+  const scheduler = new Scheduler({
+    now: () => context.currentTime,
+    sampleRate,
+    lookahead: hostConfig.schedulerLookaheadMs / 1e3,
+    notes: () => clipNotes(dispatcher.project),
+    transport: () => dispatcher.transport(),
+    send: (nodeId, events) => dispatcher.sendEvents(nodeId, events),
+    audio: () => clipAudio(dispatcher.project),
+    playAudio: playAudioClip,
+    stopAudio: () => clipPlayer.stopAll(),
+    automation
+  });
+  const tick = (time) => {
+    dispatcher.sendTransport(Math.round(time * sampleRate), { frame: Math.round(time * sampleRate), playing: true });
+    scheduler.tick();
+  };
+  scheduler.start(0);
+  tick(0);
+  const times = suspendTimes(frames / sampleRate, hostConfig.schedulerTickMs / 1e3, sampleRate);
+  for (const time of times) {
+    context.suspend(time).then(() => {
+      tick(time);
+      onProgress(time / (frames / sampleRate));
+      context.resume();
+    });
+  }
+  const buffer = await context.startRendering();
+  return { buffer, seconds: frames / sampleRate, errors };
+}
+function bounceSeconds(project, transport2, { tailSeconds = 2, minimumBars = 4 } = {}) {
+  const beatsPerBar = project.transport.beatsPerBar;
+  const loop = project.transport.loopEnabled ? project.transport.loopEnd : 0;
+  const lastClip = Math.max(0, ...project.clips.map((c3) => c3.startBeat + c3.lengthBeats));
+  const beats2 = Math.max(loop, lastClip, minimumBars * beatsPerBar);
+  return transport2.secondsAtBeat(Math.ceil(beats2 / beatsPerBar) * beatsPerBar) + tailSeconds;
+}
+
+// src/host/Wav.js
+var HEADER_BYTES = 44;
+var BITS_PER_SAMPLE = 16;
+var BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
+function toInt16(sample) {
+  const clamped = Math.max(-1, Math.min(1, sample));
+  return Math.round(clamped * (clamped < 0 ? 32768 : 32767));
+}
+function writeAscii(view, offset, text) {
+  for (let i2 = 0; i2 < text.length; i2++) view.setUint8(offset + i2, text.charCodeAt(i2));
+}
+function encodeWav(channels, sampleRate) {
+  if (channels.length === 0) throw new Error("encodeWav needs at least one channel");
+  const frames = channels[0].length;
+  for (const channel of channels) {
+    if (channel.length !== frames) throw new Error("every channel must be the same length");
+  }
+  const numChannels = channels.length;
+  const blockAlign = numChannels * BYTES_PER_SAMPLE;
+  const dataBytes = frames * blockAlign;
+  const bytes = new Uint8Array(HEADER_BYTES + dataBytes);
+  const view = new DataView(bytes.buffer);
+  writeAscii(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataBytes, true);
+  writeAscii(view, 8, "WAVE");
+  writeAscii(view, 12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, BITS_PER_SAMPLE, true);
+  writeAscii(view, 36, "data");
+  view.setUint32(40, dataBytes, true);
+  let offset = HEADER_BYTES;
+  for (let frame = 0; frame < frames; frame++) {
+    for (let c3 = 0; c3 < numChannels; c3++) {
+      view.setInt16(offset, toInt16(channels[c3][frame]), true);
+      offset += BYTES_PER_SAMPLE;
+    }
+  }
+  return bytes;
+}
+
+// src/host/Zip.js
+var LOCAL = 67324752;
+var CENTRAL = 33639248;
+var END = 101010256;
+var UTF8 = 2048;
+var DOS_DATE = 0 << 9 | 1 << 5 | 1;
+var DOS_TIME = 0;
+var crcTable = null;
+function crc32(bytes) {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let n2 = 0; n2 < 256; n2++) {
+      let c3 = n2;
+      for (let k = 0; k < 8; k++) c3 = c3 & 1 ? 3988292384 ^ c3 >>> 1 : c3 >>> 1;
+      crcTable[n2] = c3 >>> 0;
+    }
+  }
+  let crc = 4294967295;
+  for (let i2 = 0; i2 < bytes.length; i2++) crc = crcTable[(crc ^ bytes[i2]) & 255] ^ crc >>> 8;
+  return (crc ^ 4294967295) >>> 0;
+}
+function checkName(name2) {
+  if (typeof name2 !== "string" || name2 === "") throw new Error("a zip entry needs a name");
+  if (name2.startsWith("/") || name2.includes("\\") || /^[a-z]:/i.test(name2)) throw new Error(`a zip entry name must be relative: ${name2}`);
+  if (name2.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name2}`);
+}
+function writeZip(entries) {
+  const encoder = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  for (const { name: name2, bytes } of entries) {
+    checkName(name2);
+    const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    if (data.length > 4294967294) throw new Error(`${name2} is too large for a zip without zip64`);
+    const nameBytes = encoder.encode(name2);
+    const crc = crc32(data);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, LOCAL, true);
+    local.setUint16(4, 20, true);
+    local.setUint16(6, UTF8, true);
+    local.setUint16(8, 0, true);
+    local.setUint16(10, DOS_TIME, true);
+    local.setUint16(12, DOS_DATE, true);
+    local.setUint32(14, crc, true);
+    local.setUint32(18, data.length, true);
+    local.setUint32(22, data.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    local.setUint16(28, 0, true);
+    parts.push(new Uint8Array(local.buffer), nameBytes, data);
+    const entry = new DataView(new ArrayBuffer(46));
+    entry.setUint32(0, CENTRAL, true);
+    entry.setUint16(4, 20, true);
+    entry.setUint16(6, 20, true);
+    entry.setUint16(8, UTF8, true);
+    entry.setUint16(10, 0, true);
+    entry.setUint16(12, DOS_TIME, true);
+    entry.setUint16(14, DOS_DATE, true);
+    entry.setUint32(16, crc, true);
+    entry.setUint32(20, data.length, true);
+    entry.setUint32(24, data.length, true);
+    entry.setUint16(28, nameBytes.length, true);
+    entry.setUint32(42, offset, true);
+    central.push(new Uint8Array(entry.buffer), nameBytes);
+    offset += 30 + nameBytes.length + data.length;
+  }
+  const centralSize = central.reduce((n2, p) => n2 + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, END, true);
+  end.setUint16(8, entries.length, true);
+  end.setUint16(10, entries.length, true);
+  end.setUint32(12, centralSize, true);
+  end.setUint32(16, offset, true);
+  const all = [...parts, ...central, new Uint8Array(end.buffer)];
+  const out = new Uint8Array(all.reduce((n2, p) => n2 + p.length, 0));
+  let at = 0;
+  for (const p of all) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+async function inflate(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function readZip(input) {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = -1;
+  for (let i2 = bytes.length - 22; i2 >= Math.max(0, bytes.length - 22 - 65535); i2--) {
+    if (view.getUint32(i2, true) === END) {
+      end = i2;
+      break;
+    }
+  }
+  if (end < 0) throw new Error("not a zip: no end of central directory");
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const decoder = new TextDecoder();
+  const files = /* @__PURE__ */ new Map();
+  for (let n2 = 0; n2 < count; n2++) {
+    if (view.getUint32(at, true) !== CENTRAL) throw new Error("not a zip: a central directory entry is damaged");
+    const flags = view.getUint16(at + 8, true);
+    const method = view.getUint16(at + 10, true);
+    const crc = view.getUint32(at + 16, true);
+    const compressedSize = view.getUint32(at + 20, true);
+    const nameLength = view.getUint16(at + 28, true);
+    const extraLength = view.getUint16(at + 30, true);
+    const commentLength = view.getUint16(at + 32, true);
+    const localOffset = view.getUint32(at + 42, true);
+    const name2 = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    at += 46 + nameLength + extraLength + commentLength;
+    if (name2.endsWith("/")) continue;
+    checkName(name2);
+    if (flags & 1) throw new Error(`${name2} is encrypted, which this host does not read`);
+    if (view.getUint32(localOffset, true) !== LOCAL) throw new Error(`${name2}: its local header is damaged`);
+    const start = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
+    const raw = bytes.subarray(start, start + compressedSize);
+    let data;
+    if (method === 0) data = raw.slice();
+    else if (method === 8) data = await inflate(raw);
+    else throw new Error(`${name2} is compressed with method ${method}; only stored and deflated are read`);
+    if (crc32(data) !== crc) throw new Error(`${name2} is damaged: its checksum does not match`);
+    files.set(name2, data);
+  }
+  return files;
+}
+
+// web/app/Bounce.js
+var TAIL_SECONDS = 2;
+async function sha256hex(bytes) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = {}) {
+  const { log: log2 } = ctx2;
+  let busy = false;
+  let stemming = false;
+  function loopRange(project) {
+    const t = project.transport;
+    return t.loopEnabled && t.loopEnd > t.loopStart ? { fromBeat: t.loopStart, toBeat: t.loopEnd } : null;
+  }
+  function from(buffer, seconds) {
+    const start = Math.min(buffer.length, Math.round(seconds * buffer.sampleRate));
+    return {
+      sampleRate: buffer.sampleRate,
+      length: buffer.length - start,
+      getChannelData: (channel) => buffer.getChannelData(channel).subarray(start)
+    };
+  }
+  async function render({ onlyTrack = null, announce = true, range = null } = {}) {
+    if (busy) throw new Error("a render is already running");
+    busy = true;
+    try {
+      const d = await ctx2.runtime.ensureRunning();
+      const validator = await ctx2.runtime.shapeValidator();
+      const timing = d.transport();
+      const seconds = range ? timing.secondsAtBeat(range.toBeat) + TAIL_SECONDS : bounceSeconds(d.project, timing, { tailSeconds: TAIL_SECONDS });
+      let said = -1;
+      if (announce) log2(`rendering ${seconds.toFixed(1)} seconds`);
+      const result = await bounceFn({
+        snapshot: d.project.snapshot(),
+        makeLoader: () => new PluginLoader({ parse: parseText, validator, capabilities: ctx2.hostCapabilities }),
+        fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3),
+        hostConfig: ctx2.hostConfig,
+        seconds,
+        sampleRate: ctx2.engine.context.sampleRate,
+        onlyTrack,
+        alignTracks: d.alignTracks ?? true,
+        onProgress: (ratio) => {
+          const percent = Math.floor(ratio * 10) * 10;
+          if (announce && percent !== said && percent > 0) {
+            said = percent;
+            log2(`rendering ${percent}%`);
+          }
+        }
+      });
+      for (const error2 of result.errors) log2(`render: ${error2}`, "error");
+      if (!range) return result;
+      const start = timing.secondsAtBeat(range.fromBeat);
+      return { ...result, buffer: from(result.buffer, start), seconds: result.seconds - start };
+    } finally {
+      busy = false;
+    }
+  }
+  const wavOf = (buffer) => encodeWav([buffer.getChannelData(0), buffer.getChannelData(1)], buffer.sampleRate);
+  const baseName = () => (ctx2.dispatcher.project.label ?? "jiggy").replace(/[^\w.-]+/g, "-");
+  async function exportWav() {
+    await ctx2.runtime.ensureRunning();
+    const range = loopRange(ctx2.dispatcher.project);
+    if (range) log2("the loop is on, so the loop is what is rendered");
+    const { buffer } = await render({ range });
+    const bytes = wavOf(buffer);
+    const name2 = `${baseName()}${range ? "-loop" : ""}.wav`;
+    download(bytes, name2, "audio/wav");
+    log2(`exported ${name2}, ${(buffer.length / buffer.sampleRate).toFixed(1)} seconds, ${(bytes.byteLength / 1048576).toFixed(1)} MB`, "ok");
+    return { bytes, name: name2 };
+  }
+  async function exportStems() {
+    if (stemming || busy) throw new Error("a render is already running");
+    stemming = true;
+    try {
+      const d = await ctx2.runtime.ensureRunning();
+      const range = loopRange(d.project);
+      const makers = d.project.tracks.filter((track) => d.project.nodes.some((n2) => n2.track === track.id && (d.engineNode(n2.id)?.profile?.audioOutputs ?? 0) > 0) || d.project.clips.some((c3) => c3.track === track.id && c3.kind === "audio"));
+      if (makers.length === 0) throw new Error("no track makes sound, so there are no stems");
+      const entries = [];
+      for (const [index, track] of makers.entries()) {
+        const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+        log2(`stem ${index + 1} of ${makers.length}: ${label}`);
+        const { buffer } = await render({ onlyTrack: track.id, announce: false, range });
+        const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
+        if (peak < 1e-5) {
+          log2(`${label} made no sound, so it is left out`);
+          continue;
+        }
+        entries.push({ name: `${String(entries.length + 1).padStart(2, "0")}-${label.replace(/[^\w.-]+/g, "-")}.wav`, bytes: wavOf(buffer) });
+      }
+      if (entries.length === 0) throw new Error("no track made any sound, so there are no stems");
+      const zip = writeZip(entries);
+      const name2 = `${baseName()}-stems.zip`;
+      download(zip, name2, "application/zip");
+      log2(`exported ${name2}, ${entries.length} stem${entries.length === 1 ? "" : "s"}, ${(zip.byteLength / 1048576).toFixed(1)} MB`, "ok");
+      return { name: name2, entries: entries.map((e) => e.name) };
+    } finally {
+      stemming = false;
+    }
+  }
+  async function freezeTrack(trackId) {
+    const d = await ctx2.runtime.ensureRunning();
+    const track = d.project.track(trackId);
+    if (!track) throw new Error(`no such track: ${trackId}`);
+    const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+    const { buffer, seconds } = await render({ onlyTrack: trackId });
+    const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
+    if (peak < 1e-5) {
+      log2(`${label} made no sound, so nothing was frozen`, "error");
+      return null;
+    }
+    const bytes = wavOf(buffer);
+    const iri3 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+    ctx2.media.put(iri3, bytes, "audio/wav");
+    const frozen = d.project.nextId("track");
+    const lengthBeats = d.transport().beatAtSeconds(seconds);
+    const result = d.apply([
+      { op: "addTrack", id: frozen, label: `${label} (frozen)` },
+      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri3, offsetSeconds: 0 },
+      { op: "setTrackChannel", track: trackId, muted: true }
+    ]);
+    if (!result.ok) throw new Error(result.message);
+    log2(`froze ${label} into "${label} (frozen)"; the original is muted, not removed. Undo brings it back`, "ok");
+    return { frozen, iri: iri3, seconds };
+  }
+  return { render, exportWav, exportStems, freezeTrack, get busy() {
+    return busy || stemming;
+  } };
+}
+function defaultDownload(bytes, name2, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name2;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1e4);
+}
+
+// src/host/Handoff.js
+var DATABASE = "jigdaw-handoff";
+var STORE = "handoff";
+var KEY = "piece";
+var asPromise = (request) => new Promise((resolve, reject) => {
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error ?? new Error("IndexedDB refused the request"));
+});
+var finished = (transaction) => new Promise((resolve, reject) => {
+  transaction.oncomplete = () => resolve();
+  transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB refused the transaction"));
+  transaction.onabort = () => reject(transaction.error ?? new Error("the transaction was aborted"));
+});
+function createHandoff({ indexedDB = globalThis.indexedDB, now = () => Date.now(), maxAgeMs }) {
+  if (!indexedDB) throw new Error("this browser has no IndexedDB to carry a piece in");
+  if (!(maxAgeMs > 0)) throw new Error("Handoff needs maxAgeMs, from the host configuration");
+  const open = () => new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB could not be opened"));
+    request.onblocked = () => reject(new Error("IndexedDB is blocked by another tab"));
+  });
+  const fresh = (record) => record && now() - record.savedAt <= maxAgeMs;
+  return {
+    /** Keep a piece: `{ from, kind, bytes }`, `from` the page it came from, `kind` 'turtle' or 'zip'. */
+    async put({ from, kind, bytes }) {
+      if (!from || !(bytes instanceof Uint8Array) || kind !== "turtle" && kind !== "zip") throw new Error("a handoff needs from, kind and bytes");
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        transaction.objectStore(STORE).put({ from, kind, bytes, savedAt: now() }, KEY);
+        await finished(transaction);
+      } finally {
+        db.close();
+      }
+    },
+    /** Whether there is a piece to offer and where it came from, without taking it. */
+    async peek() {
+      const db = await open();
+      try {
+        const record = await asPromise(db.transaction(STORE, "readonly").objectStore(STORE).get(KEY));
+        return fresh(record) ? { from: record.from, savedAt: record.savedAt } : null;
+      } finally {
+        db.close();
+      }
+    },
+    /** Take the piece: the record, removed, or null when there is none or it has expired. */
+    async take() {
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        const store = transaction.objectStore(STORE);
+        const record = await asPromise(store.get(KEY));
+        store.delete(KEY);
+        await finished(transaction);
+        return fresh(record) ? record : null;
+      } finally {
+        db.close();
+      }
+    },
+    /** Forget any piece that is waiting. */
+    async clear() {
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        transaction.objectStore(STORE).delete(KEY);
+        await finished(transaction);
+      } finally {
+        db.close();
+      }
+    }
+  };
+}
+
+// web/app/Carry.js
+function createCarry(ctx2, { self: self2, offerText }) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  let handoff = null;
+  async function store() {
+    if (handoff) return handoff;
+    const response = await fetch(new URL("host.json", document2.baseURI));
+    if (!response.ok) throw new Error(`web/host.json could not be read: ${response.status}`);
+    const config = await response.json();
+    if (!(config.handoffMinutes > 0)) throw new Error("web/host.json has no handoffMinutes");
+    handoff = createHandoff({ maxAgeMs: config.handoffMinutes * 6e4 });
+    return handoff;
+  }
+  async function leave(href) {
+    if (ctx2.dispatcher && ctx2.dispatcher.project.nodes.length > 0) log2("Taking your piece with you...");
+    try {
+      const d = ctx2.dispatcher;
+      if (d && d.project.nodes.length > 0) {
+        const packed = await ctx2.sessions.pack();
+        await (await store()).put({ from: self2, kind: packed.kind, bytes: packed.bytes });
+      }
+    } catch (error2) {
+      log2(`the piece could not be carried over: ${error2.message}`, "error");
+    }
+    window.location.href = href;
+  }
+  function carryOnClick(link) {
+    link.addEventListener("click", (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      leave(link.href);
+    });
+  }
+  async function offer() {
+    let waiting = null;
+    try {
+      waiting = await (await store()).peek();
+    } catch {
+      return;
+    }
+    if (!waiting || waiting.from === self2) return;
+    $2("carry-text").textContent = offerText;
+    $2("carry").hidden = false;
+    $2("carry-open").onclick = async () => {
+      $2("carry").hidden = true;
+      try {
+        const piece = await (await store()).take();
+        if (!piece) {
+          log2("the piece is no longer there", "error");
+          return;
+        }
+        await ctx2.sessions.openBytes(piece.bytes);
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
+    };
+    $2("carry-dismiss").onclick = async () => {
+      $2("carry").hidden = true;
+      try {
+        await (await store()).clear();
+      } catch {
+      }
+    };
+  }
+  return { leave, carryOnClick, offer };
+}
+
+// src/ui/Icons.js
+var SVG_NS = "http://www.w3.org/2000/svg";
+var ICONS = Object.freeze({
+  play: "M8 5v14l11-7z",
+  stop: "M6 6h12v12H6z",
+  record: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z",
+  loop: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
+  undo: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",
+  redo: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z",
+  save: "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
+  open: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z",
+  zoomIn: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z",
+  zoomOut: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z",
+  split: "M11 3h2v18h-2zM3 8l5 4-5 4zM21 8l-5 4 5 4z",
+  trimStart: "M4 4h2v16H4zM8 9h12v6H8z",
+  trimEnd: "M18 4h2v16h-2zM4 9h12v6H4z",
+  duplicate: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z",
+  mute: "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z",
+  unmute: "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z",
+  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+  unlock: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
+  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
+  cut: "M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z",
+  paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
+  bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
+  earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
+  later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+  stems: "M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z",
+  download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+  freeze: "M20.79 13.95l-3.17-.5-3.14-1.45L17.62 10l3.17-.5-.58-1.76-3.14 1.5L14 5.4V2h-2v3.4l-2.98 3.65-3.17-1.5-.58 1.76 3.17.5 3.14 1.45-3.14 1.45-3.17.5.58 1.76 3.14-1.5L12 17.4V21h2v-3.6l2.98-3.65 3.17 1.5z",
+  delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+});
+function iconElement(document2, name2) {
+  const d = ICONS[name2];
+  if (!d) throw new Error(`no such icon: ${name2}`);
+  const svg = document2.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "22");
+  svg.setAttribute("height", "22");
+  svg.setAttribute("fill", "currentColor");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  svg.setAttribute("class", "icon");
+  const path = document2.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", d);
+  svg.append(path);
+  return svg;
+}
+function setIcon(document2, button, name2, label, { keepTitle = false } = {}) {
+  button.replaceChildren(iconElement(document2, name2));
+  button.setAttribute("aria-label", label);
+  if (!keepTitle || !button.getAttribute("title")) button.setAttribute("title", label);
+  button.dataset.icon = name2;
+}
+function applyIcons(root) {
+  const document2 = root.ownerDocument ?? root;
+  for (const button of root.querySelectorAll("button[data-icon]")) {
+    if (button.querySelector("svg")) continue;
+    const label = (button.getAttribute("aria-label") ?? button.textContent).trim();
+    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true });
+  }
+}
+
+// src/ui/Tabs.js
+function createTabs(document2, tabs, { onSelect = () => {
+} } = {}) {
+  if (tabs.length === 0) throw new Error("a tab list needs at least one tab");
+  const tablist = document2.createElement("div");
+  tablist.setAttribute("role", "tablist");
+  tablist.className = "tabs";
+  const buttons = tabs.map((tab, index) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = `tab-${tab.id}`;
+    button.className = "tab";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-controls", tab.panel.id);
+    button.textContent = tab.label;
+    tablist.append(button);
+    tab.panel.setAttribute("role", "tabpanel");
+    tab.panel.setAttribute("aria-labelledby", button.id);
+    tab.panel.tabIndex = 0;
+    return button;
+  });
+  let current = 0;
+  const select = (index) => {
+    current = index;
+    buttons.forEach((button, i2) => {
+      const active = i2 === index;
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+      tabs[i2].panel.hidden = !active;
+    });
+    onSelect(tabs[index].id);
+  };
+  const MOVES = {
+    ArrowRight: (i2) => (i2 + 1) % buttons.length,
+    ArrowLeft: (i2) => (i2 - 1 + buttons.length) % buttons.length,
+    Home: () => 0,
+    End: () => buttons.length - 1
+  };
+  buttons.forEach((button, index) => {
+    button.addEventListener("click", () => select(index));
+    button.addEventListener("keydown", (event) => {
+      const move = MOVES[event.key];
+      if (!move) return;
+      event.preventDefault();
+      const next = move(index);
+      select(next);
+      buttons[next].focus();
+    });
+  });
+  select(0);
+  return {
+    element: tablist,
+    /** Select a tab by id, from outside a keypress or a click. */
+    select(id) {
+      const index = tabs.findIndex((tab) => tab.id === id);
+      if (index === -1) throw new Error(`no such tab: ${id}`);
+      select(index);
+    },
+    /** The id of whichever tab is currently shown. */
+    selected() {
+      return tabs[current].id;
+    }
+  };
+}
+
+// web/app/Media.js
+function createMedia(document2) {
+  let base = new URL(`sessions/${Date.now()}/`, document2.baseURI).href;
+  const files = /* @__PURE__ */ new Map();
+  return {
+    get base() {
+      return base;
+    },
+    /**
+     * Move to the session at `iri`: its directory, not the file, because a
+     * preset's IRI is the preset file and media imported afterwards goes
+     * beside it, under the base the session saves with.
+     */
+    rebase(iri3) {
+      base = new URL("./", iri3).href;
+    },
+    has(iri3) {
+      return files.has(iri3);
+    },
+    get(iri3) {
+      return files.get(iri3) ?? null;
+    },
+    /** Keep a file's bytes under its IRI. */
+    put(iri3, bytes, mediaType = null) {
+      files.set(iri3, { bytes, mediaType });
+    },
+    /** Where an imported file lives, named by its content. */
+    iriFor(hex2, extension) {
+      return new URL(`media/${hex2}.${extension}`, base).href;
+    },
+    /** The files a saved session carries: held here, and under its base. */
+    heldUnderBase(iris) {
+      return iris.filter((iri3) => files.has(iri3) && iri3.startsWith(base));
+    },
+    /** A file's bytes, from what is held or else the network. */
+    async fetchBytes(iri3) {
+      if (files.has(iri3)) return files.get(iri3).bytes.slice().buffer;
+      const response = await fetch(iri3);
+      if (!response.ok) throw new Error(`${iri3} answered ${response.status}`);
+      return response.arrayBuffer();
+    }
+  };
+}
 
 // web/app/Runtime.js
 init_parse();
@@ -21718,3346 +26078,6 @@ var ShapeValidator = class {
   }
 };
 
-// src/engine/Engine.js
-init_LoadError();
-var counter = 0;
-var nextId = () => `node-${++counter}`;
-var Engine = class {
-  #context;
-  #master = null;
-  #masterPanner = null;
-  #sends = [];
-  #inputs = /* @__PURE__ */ new Map();
-  #masterHeld = /* @__PURE__ */ new Set();
-  #loader;
-  #nodeClass;
-  #nodes = /* @__PURE__ */ new Map();
-  #links = [];
-  // One strip per track, keyed by the model's track id. The engine holds no
-  // policy about what a track is; it is a named place for audio to arrive.
-  #tracks = /* @__PURE__ */ new Map();
-  #maxTrackDelay = null;
-  /**
-   * `AudioWorkletNode` is injected rather than read from globals so the engine
-   * can be driven by an offline host in a test. Web Audio hangs the class off
-   * the global rather than off the context, so there is nowhere else to get it
-   * from and no way to substitute it without this.
-   */
-  constructor({ context, loader, output = null, maxTrackDelaySeconds = null, AudioWorkletNode = globalThis.AudioWorkletNode }) {
-    if (!context) throw new Error("Engine needs an AudioContext");
-    if (!loader) throw new Error("Engine needs a PluginLoader");
-    if (typeof AudioWorkletNode !== "function") {
-      throw new Error("Engine needs an AudioWorkletNode constructor; this environment has none");
-    }
-    this.#context = context;
-    this.#maxTrackDelay = maxTrackDelaySeconds;
-    this.#loader = loader;
-    this.#nodeClass = AudioWorkletNode;
-    if (typeof context.createGain === "function") {
-      this.#master = context.createGain();
-      this.#master.connect(output ?? context.destination);
-      this.#masterPanner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
-      if (this.#masterPanner) this.#masterPanner.connect(this.#master);
-    }
-  }
-  /**
-   * The node every sink reaches, and the only one wired to the destination.
-   *
-   * Exposed so a meter can tap the mix rather than each node separately, which
-   * is what a meter is for and what stops it reading one voice of many.
-   */
-  get master() {
-    return this.#master ?? this.#context.destination;
-  }
-  /** Where a track's output arrives: the master's pan when there is one, else the master. */
-  get #mixInput() {
-    return this.#masterPanner ?? this.master;
-  }
-  get context() {
-    return this.#context;
-  }
-  nodes() {
-    return [...this.#nodes.values()];
-  }
-  get(id) {
-    const entry = this.#nodes.get(id);
-    if (!entry) throw new Error(`no such node: ${id}`);
-    return entry;
-  }
-  /**
-   * Contract section 3 in full: fetch, validate, negotiate, verify, register,
-   * construct, await ready. The node is connected to nothing until the caller
-   * says so.
-   */
-  async addPlugin(iri3, { state = null } = {}) {
-    const { profile, granted } = await this.#loader.loadProfile(iri3);
-    const { node, ready, descriptors } = await this.#loader.instantiate(
-      profile,
-      granted,
-      this.#context,
-      { AudioWorkletNode: this.#nodeClass, state }
-    );
-    return this.adopt({ iri: iri3, profile, node, ready, descriptors, granted });
-  }
-  /**
-   * Take an instantiated node into the graph.
-   *
-   * Everything after instantiation is the same whoever made the node: it needs
-   * driving if it has no audio, and it becomes an entry. A foreign plugin (contract section 12) is instantiated by
-   * its own adapter and arrives here rather than through addPlugin, and this is
-   * the seam that stops that being a second copy of the code below.
-   */
-  adopt({ iri: iri3, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
-    let driver = null;
-    if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
-      driver = this.#context.createConstantSource();
-      driver.offset.value = 0;
-      driver.connect(node, 0, 0);
-      driver.start();
-    }
-    const id = nextId();
-    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver };
-    this.#nodes.set(id, entry);
-    return entry;
-  }
-  /** Remove a node, disconnecting it and telling the processor to release. */
-  remove(id) {
-    const entry = this.get(id);
-    try {
-      if (entry.driver) {
-        entry.driver.stop();
-        entry.driver.disconnect();
-      }
-      entry.node.disconnect();
-      entry.node.port.postMessage({ type: "dispose" });
-    } catch {
-    }
-    this.#nodes.delete(id);
-  }
-  connect(fromId, toId, { fromOutput = 0, toInput = 0 } = {}) {
-    const source = this.get(fromId).node;
-    const destination = toId === "output" ? this.master : this.get(toId).node;
-    source.connect(destination, fromOutput, toId === "output" ? 0 : toInput);
-  }
-  /**
-   * Link two nodes, inserting the delay the compiler asked for.
-   *
-   * Compensation is delay added to the fast paths, per docs/latency.md. The
-   * delay node is owned here and torn down with the link, so a recompile
-   * cannot leave one behind feeding silence into a mix.
-   */
-  /**
-   * Connect one node to another, or to one of its parameters.
-   *
-   * `toParameter` names an AudioParam by its lv2:symbol, and is what an endpoint
-   * carrying jig:portSymbol means. Web Audio sums a connection into a parameter
-   * on top of that parameter's own value, which is the modulation the project
-   * format has been able to express since it was written and which nothing
-   * honoured: the symbol was ignored and the signal was connected to audio input
-   * zero instead, silently and audibly.
-   *
-   * A parameter takes no input index, so toInput is not consulted for one.
-   */
-  link(fromId, toId, { fromOutput = 0, toInput = 0, delayFrames = 0, toParameter = null, connection = null } = {}) {
-    const source = this.get(fromId).node;
-    let destination;
-    if (toParameter !== null) {
-      const entry = this.get(toId);
-      destination = entry.node.parameters?.get(toParameter);
-      if (!destination) {
-        throw new Error(`${entry.profile.label} has no parameter "${toParameter}" to modulate`);
-      }
-    } else {
-      destination = toId === "output" ? this.master : this.get(toId).node;
-    }
-    const targetInput = toId === "output" ? 0 : toInput;
-    if (delayFrames > 0) {
-      if (typeof this.#context.createDelay !== "function") {
-        throw new Error("this context cannot create a delay, so latency cannot be compensated");
-      }
-      const seconds = delayFrames / this.#context.sampleRate;
-      const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
-      delay.delayTime.value = seconds;
-      source.connect(delay, fromOutput, 0);
-      if (toParameter !== null) delay.connect(destination);
-      else delay.connect(destination, 0, targetInput);
-      this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay });
-      return;
-    }
-    if (toParameter !== null) source.connect(destination, fromOutput);
-    else source.connect(destination, fromOutput, targetInput);
-    this.#links.push({ fromId, toId, connection, fromOutput, toInput, toParameter, delay: null });
-  }
-  /**
-   * The audio time for an absolute stream position, never in the past.
-   *
-   * A latency message names the frame its figure applies from
-   * (docs/latency.md section 2), and a frame already past means already in
-   * effect: scheduling it then is immediate rather than an error.
-   */
-  frameTime(frame) {
-    return Math.max(frame / this.#context.sampleRate, this.#context.currentTime);
-  }
-  /**
-   * Change one compensated link's delay, scheduled at an audio time.
-   *
-   * Compensation is re-applied without rebuilding the graph: tearing every
-   * link down and remaking it would itself be audible, which is what
-   * scheduling against fromFrame exists to avoid. An existing delay node is
-   * driven with setValueAtTime; a newly needed one is inserted passing
-   * through and switched at the same time. A delay that falls to zero stays
-   * in the graph as a passthrough until the next full rebuild: removing a
-   * node cannot be scheduled, and a zero delay node changes nothing audible.
-   */
-  retime(connection, delayFrames, { atTime } = {}) {
-    const link = this.#links.find((l) => l.connection === connection && l.toId !== void 0);
-    if (!link) throw new Error(`no compensated link for connection "${connection}"`);
-    const when = Math.max(atTime ?? this.#context.currentTime, this.#context.currentTime);
-    const seconds = delayFrames / this.#context.sampleRate;
-    if (link.delay) {
-      link.delay.delayTime.setValueAtTime(seconds, when);
-      return;
-    }
-    if (seconds <= 0) return;
-    if (typeof this.#context.createDelay !== "function") {
-      throw new Error("this context cannot create a delay, so latency cannot be compensated");
-    }
-    const delay = this.#context.createDelay(Math.max(seconds * 2, 1));
-    const source = this.get(link.fromId).node;
-    const destination = link.toParameter != null ? this.get(link.toId).node.parameters.get(link.toParameter) : link.toId === "output" ? this.master : this.get(link.toId).node;
-    const targetInput = link.toId === "output" ? 0 : link.toInput;
-    source.connect(delay, link.fromOutput, 0);
-    if (link.toParameter != null) delay.connect(destination);
-    else delay.connect(destination, 0, targetInput);
-    delay.delayTime.setValueAtTime(seconds, when);
-    link.delay = delay;
-  }
-  /** Tear down every link, including the delay nodes this engine created. */
-  clearLinks() {
-    for (const link of this.#links) {
-      try {
-        if (link.delay) link.delay.disconnect();
-        this.get(link.fromId).node.disconnect();
-      } catch {
-      }
-    }
-    this.#links = [];
-  }
-  get links() {
-    return [...this.#links];
-  }
-  connectSource(audioNode, toId, { toInput = 0 } = {}) {
-    audioNode.connect(this.get(toId).node, 0, toInput);
-  }
-  /**
-   * Make a track's strip: a fader then a panner, into the master.
-   *
-   * Gain then pan, which is the order a mixer works in: the fader sets how much
-   * of the signal there is and the pan decides where it goes.
-   */
-  addTrack(trackId) {
-    if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`);
-    const pre = this.#context.createGain();
-    const gain = this.#context.createGain();
-    const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
-    pre.connect(gain);
-    const delay = this.#maxTrackDelay !== null && typeof this.#context.createDelay === "function" ? this.#context.createDelay(this.#maxTrackDelay) : null;
-    const last = panner ?? gain;
-    if (panner) gain.connect(panner);
-    const out = delay ?? last;
-    if (delay) last.connect(delay);
-    out.connect(this.#mixInput);
-    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre });
-  }
-  removeTrack(trackId) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    this.closeInput(trackId);
-    try {
-      strip.pre.disconnect();
-      strip.gain.disconnect();
-      strip.panner?.disconnect();
-      strip.delay?.disconnect();
-    } catch {
-    }
-    this.#tracks.delete(trackId);
-  }
-  /**
-   * Delay a track's output by `frames`, to line it up with a slower track. Set
-   * at an audio time so a change while playing does not click at the wrong moment.
-   * Refuses what cannot be done: no delay built into the strips, or more than the
-   * host allowed for.
-   */
-  setTrackDelay(trackId, frames, { atTime } = {}) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    if (!strip.delay) throw new Error("this engine was built with no track delay, so tracks cannot be aligned");
-    const seconds = frames / this.#context.sampleRate;
-    if (!(seconds >= 0) || seconds > this.#maxTrackDelay) {
-      throw new Error(`a track delay of ${frames} frames (${(seconds * 1e3).toFixed(1)} ms) is more than the ${this.#maxTrackDelay * 1e3} ms this host allows`);
-    }
-    strip.delay.delayTime.setValueAtTime(seconds, atTime ?? this.#context.currentTime);
-  }
-  /**
-   * Send a track's output somewhere other than the master: into another track,
-   * which makes that track a bus, or back to the master with null. Only touches
-   * the audio graph when the destination changed, since the dispatcher says it
-   * for every track on every rebuild.
-   */
-  setTrackOutput(trackId, toTrackId) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    const target = toTrackId === null ? null : this.#tracks.get(toTrackId);
-    if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`);
-    if (strip.to === toTrackId) return;
-    try {
-      strip.out.disconnect();
-    } catch {
-    }
-    strip.out.connect(target ? target.pre : this.#mixInput);
-    strip.to = toTrackId;
-  }
-  /**
-   * A send: a copy of one track's signal, at `level`, into another track. Taken
-   * before the fader with `tap: 'pre'` and after fader and pan with 'post'. Not
-   * a link between plugins, so clearLinks leaves it alone; clearSends takes them
-   * all down and the dispatcher makes them again from the model.
-   */
-  addSend(id, fromTrackId, toTrackId, { level = 1, tap = "post" } = {}) {
-    const from = this.#tracks.get(fromTrackId);
-    const to = this.#tracks.get(toTrackId);
-    if (!from) throw new Error(`no such track strip: ${fromTrackId}`);
-    if (!to) throw new Error(`no such track strip: ${toTrackId}`);
-    if (tap !== "pre" && tap !== "post") throw new Error(`a send is pre or post, not ${tap}`);
-    const gain = this.#context.createGain();
-    gain.gain.setValueAtTime(level, this.#context.currentTime);
-    const source = tap === "pre" ? from.pre : from.panner ?? from.gain;
-    source.connect(gain);
-    gain.connect(to.pre);
-    this.#sends.push({ id, source, gain });
-  }
-  /** Change one send's level without remaking it. */
-  setSendLevel(id, level) {
-    const send = this.#sends.find((x) => x.id === id);
-    if (!send) throw new Error(`no such send: ${id}`);
-    send.gain.gain.setValueAtTime(level, this.#context.currentTime);
-  }
-  clearSends() {
-    for (const { source, gain } of this.#sends) {
-      try {
-        source.disconnect(gain);
-      } catch {
-      }
-      try {
-        gain.disconnect();
-      } catch {
-      }
-    }
-    this.#sends = [];
-  }
-  /**
-   * The master's level, pan and mute. Muted is a level of zero, not a disconnect. A parameter an envelope is
-   * playing on (`holdMaster`) is left alone: this runs on every rebuild of the graph, and setting a value at
-   * the current time would cut into the envelope's own scheduling on every edit.
-   */
-  setMaster({ gain = 1, pan = 0, muted = false } = {}) {
-    if (!this.#master) return;
-    const at = this.#context.currentTime;
-    if (!this.#masterHeld.has("gain")) this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
-    if (this.#masterPanner && !this.#masterHeld.has("pan")) this.#masterPanner.pan.setValueAtTime(pan, at);
-  }
-  /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
-  masterParam(which) {
-    if (which === "gain") return this.#master?.gain ?? null;
-    if (which === "pan") return this.#masterPanner?.pan ?? null;
-    throw new Error(`the master has no ${which}`);
-  }
-  /** Leave the master's level or pan to an envelope (on), or take it back (off). */
-  holdMaster(which, on) {
-    if (which !== "gain" && which !== "pan") throw new Error(`the master has no ${which}`);
-    if (on) this.#masterHeld.add(which);
-    else this.#masterHeld.delete(which);
-  }
-  /** The track ids that have a strip. */
-  trackIds() {
-    return [...this.#tracks.keys()];
-  }
-  /**
-   * The node a track's audio arrives at: its fader. For a caller that plays
-   * something into a track from outside the plugin graph, such as an audio
-   * clip with nowhere else to go.
-   */
-  trackInput(trackId) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    return strip.input;
-  }
-  /**
-   * The node a track sounds through: after its fader and panner, on the way
-   * to the master. For a caller that captures what a track sounds like, such
-   * as a take recorder: mute and solo record as heard, because they act
-   * upstream of here.
-   */
-  trackTap(trackId, { pre = false } = {}) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    return pre ? strip.pre : strip.panner ?? strip.gain;
-  }
-  /**
-   * Feed a live stream (a microphone) into a track's arrival point. One stream
-   * per track; a second replaces the first. The track's fader and mute decide
-   * what is heard, so a track holding only a microphone is muted to keep the
-   * person out of the speakers, and recorded pre-fader (`trackTap`).
-   */
-  openInput(trackId, stream) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    if (typeof this.#context.createMediaStreamSource !== "function") {
-      throw new Error("this context cannot take a live input");
-    }
-    this.closeInput(trackId);
-    const source = this.#context.createMediaStreamSource(stream);
-    source.connect(strip.pre);
-    this.#inputs.set(trackId, { source, stream });
-  }
-  /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
-  closeInput(trackId) {
-    const held = this.#inputs.get(trackId);
-    if (!held) return;
-    try {
-      held.source.disconnect();
-    } catch {
-    }
-    for (const track of held.stream.getTracks?.() ?? []) track.stop();
-    this.#inputs.delete(trackId);
-  }
-  /**
-   * Connect a node's output to a track's fader. Recorded with the other links,
-   * so clearLinks takes it down with them.
-   */
-  linkToTrack(fromId, trackId, { fromOutput = 0 } = {}) {
-    this.get(fromId).node.connect(this.trackInput(trackId), fromOutput, 0);
-    this.#links.push({ fromId, toTrack: trackId, delay: null });
-  }
-  /**
-   * Apply a track's channel strip.
-   *
-   * `silent` is given separately from the model's own mute because solo makes
-   * a track silent without it being muted: what a listener hears is a property
-   * of the whole mix, and the dispatcher is what can see the whole mix.
-   */
-  setTrackChannel(trackId, { gain = 1, pan = 0, silent = false } = {}) {
-    const strip = this.#tracks.get(trackId);
-    if (!strip) throw new Error(`no such track strip: ${trackId}`);
-    const at = this.#context.currentTime;
-    strip.gain.gain.setValueAtTime(silent ? 0 : gain, at);
-    if (strip.panner) strip.panner.pan.setValueAtTime(pan, at);
-  }
-  /**
-   * What a value would become, without applying it.
-   *
-   * Separate from setParameter so a caller can record the value it is going to
-   * apply before applying it. Writing the asked-for value and then correcting it
-   * is two edits to the model for one edit by the person, which an undo stack
-   * then has to unpick.
-   */
-  clampParameter(id, symbol, value2) {
-    const entry = this.get(id);
-    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
-    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
-    return Math.min(port.maximum, Math.max(port.minimum, value2));
-  }
-  /** The value a parameter has before anything sets it, from the profile. */
-  defaultParameter(id, symbol) {
-    const entry = this.get(id);
-    const port = entry.profile.ports?.find((p) => p.symbol === symbol);
-    if (!port) throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
-    return port.defaultValue;
-  }
-  setParameter(id, symbol, value2) {
-    const entry = this.get(id);
-    const param = entry.node.parameters.get(symbol);
-    if (!param) {
-      throw new Error(`${entry.profile.label} has no parameter "${symbol}"`);
-    }
-    const clamped = this.clampParameter(id, symbol, value2);
-    param.setValueAtTime(clamped, this.#context.currentTime);
-    return clamped;
-  }
-  /**
-   * Mute and disconnect a node that failed, leaving the rest of the graph
-   * running. Contract section 10.2: a host whose failure mode is silence for
-   * the whole project is one nobody will load an unfamiliar plugin into.
-   */
-  quarantine(id, reason) {
-    const entry = this.get(id);
-    try {
-      entry.node.disconnect();
-    } catch {
-    }
-    entry.failed = reason;
-    return entry;
-  }
-  /**
-   * Register a handler for messages from a node's processor.
-   *
-   * A port has one `onmessage`, and more than one part of the host needs to
-   * hear from a processor: errors, outgoing events, dropped counts. So the
-   * engine owns the handler and fans out, rather than each subsystem
-   * overwriting the last one to register.
-   */
-  onMessage(id, handler2) {
-    const entry = this.get(id);
-    if (!entry.handlers) {
-      entry.handlers = /* @__PURE__ */ new Set();
-      entry.node.port.onmessage = (event) => {
-        for (const listener of entry.handlers) {
-          try {
-            listener(event.data, entry);
-          } catch (error2) {
-            console.error("message handler failed", error2);
-          }
-        }
-      };
-    }
-    entry.handlers.add(handler2);
-    return () => entry.handlers.delete(handler2);
-  }
-  /**
-   * Watch a node for the errors a processor reports after loading.
-   *
-   * Only a fatal one quarantines. messaging.md 1.3 documents `fatal: false`
-   * for a problem the node survives, such as a `loadAsset` that failed to
-   * parse: contract 10.2 says a *plugin that throws* is what gets muted and
-   * disconnected, not every message a processor happens to send with type
-   * "error", and those are different populations.
-   */
-  watch(id, onError) {
-    return this.onMessage(id, (message) => {
-      if (message?.type !== "error" || message.fatal === false) return;
-      this.quarantine(id, message.message);
-      onError?.(new LoadError("process", `${this.get(id).profile.label}: ${message.message}`));
-    });
-  }
-  /** Post a message to a node's processor. */
-  post(id, message) {
-    this.get(id).node.port.postMessage(message);
-  }
-  /**
-   * Ask a node's processor for its current state (contract section 8,
-   * messaging.md 1.2's `stateRequest` and 1.3's `state`). Resolves with
-   * whatever it returns, or `null` if nothing answers before `timeoutMs`: a
-   * plugin with no state to report simply never replies, which is the
-   * ordinary case and not a failure, so a timeout resolves rather than
-   * rejects.
-   *
-   * A token round-trips with the request rather than trusting "the next
-   * `state` message must be the answer to this one", because `watch()` and
-   * any other `onMessage` listener share the same port and a message meant
-   * for one caller must not resolve another's promise.
-   */
-  requestState(id, { timeoutMs = 2e3 } = {}) {
-    const entry = this.get(id);
-    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    return new Promise((resolve) => {
-      let settled = false;
-      const stop = this.onMessage(id, (message) => {
-        if (settled || message?.type !== "state" || message.token !== token) return;
-        settled = true;
-        stop();
-        resolve(message.state ?? null);
-      });
-      entry.node.port.postMessage({ type: "stateRequest", token });
-      setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        stop();
-        resolve(null);
-      }, timeoutMs);
-    });
-  }
-  /**
-   * Replace one `jig:userReplaceable` asset in a running node, messaging.md
-   * 1.2's `loadAsset`: a person choosing a different file from the
-   * generated panel, after the plugin is already loaded. `bytes` is
-   * transferred, so the caller must not use it again afterward.
-   */
-  loadAsset(id, key, bytes) {
-    this.get(id).node.port.postMessage({ type: "loadAsset", key, bytes }, [bytes]);
-  }
-};
-
-// src/model/EditorState.js
-var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
-var COLOR = /^#[0-9a-f]{6}$/;
-var EditorState = class _EditorState {
-  #positions = /* @__PURE__ */ new Map();
-  #tracks = /* @__PURE__ */ new Map();
-  #clips = /* @__PURE__ */ new Map();
-  #listeners = /* @__PURE__ */ new Set();
-  /** Told after any change, so a view can draw again: layout is not an edit, and no revision says it moved. */
-  subscribe(fn) {
-    this.#listeners.add(fn);
-    return () => this.#listeners.delete(fn);
-  }
-  #changed() {
-    for (const fn of [...this.#listeners]) fn(this);
-  }
-  position(id) {
-    return this.#positions.get(id) ?? { x: 0, y: 0 };
-  }
-  setPosition(id, x, y) {
-    if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error("a position needs finite x and y");
-    this.#positions.set(id, { x, y });
-    this.#changed();
-  }
-  /** Layout of one track. `order` is null until a person has placed it. */
-  track(id) {
-    return { order: null, color: null, laneSize: "medium", ...this.#tracks.get(id) };
-  }
-  setTrack(id, patch) {
-    const next = { ...this.#tracks.get(id) };
-    if (patch.order !== void 0) {
-      if (patch.order !== null && !Number.isInteger(patch.order)) throw new Error("order must be an integer or null");
-      next.order = patch.order;
-    }
-    if (patch.color !== void 0) {
-      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
-      next.color = patch.color;
-    }
-    if (patch.laneSize !== void 0) {
-      if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
-      next.laneSize = patch.laneSize;
-    }
-    this.#tracks.set(id, next);
-    this.#changed();
-  }
-  /** How a clip is drawn: its colour, or null for the track's own. */
-  clip(id) {
-    return { color: null, ...this.#clips.get(id) };
-  }
-  setClip(id, patch) {
-    const next = { ...this.#clips.get(id) };
-    if (patch.color !== void 0) {
-      if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
-      next.color = patch.color;
-    }
-    this.#clips.set(id, next);
-    this.#changed();
-  }
-  /**
-   * Track ids in the order the arrangement shows them: placed tracks by their
-   * order, then unplaced ones in the order given (creation order), so a track
-   * added after a reorder appears at the end rather than somewhere surprising.
-   */
-  orderTracks(ids) {
-    const placed = ids.filter((id) => this.track(id).order !== null);
-    const rest = ids.filter((id) => this.track(id).order === null);
-    placed.sort((a2, b) => this.track(a2).order - this.track(b).order);
-    return [...placed, ...rest];
-  }
-  /** Replace everything with what `readEditor` returned. Bad values throw and change nothing. */
-  load({ positions, tracks, clips = /* @__PURE__ */ new Map() }) {
-    const next = new _EditorState();
-    for (const [id, { x, y }] of positions) next.setPosition(id, x, y);
-    for (const [id, patch] of tracks) next.setTrack(id, patch);
-    for (const [id, patch] of clips) next.setClip(id, patch);
-    this.#positions = next.#positions;
-    this.#tracks = next.#tracks;
-    this.#clips = next.#clips;
-    this.#changed();
-  }
-  /**
-   * Move one track `delta` places in the order `ids` shows now, giving every
-   * track an explicit place so the arrangement no longer depends on creation
-   * order. Refuses to move past either end; returns whether anything moved.
-   */
-  moveTrack(ids, id, delta) {
-    const order = this.orderTracks(ids);
-    const from = order.indexOf(id);
-    if (from < 0) throw new Error(`no such track: ${id}`);
-    const to = from + delta;
-    if (!Number.isInteger(delta) || to < 0 || to >= order.length || delta === 0) return false;
-    order.splice(from, 1);
-    order.splice(to, 0, id);
-    order.forEach((trackId, index) => {
-      const next = { ...this.#tracks.get(trackId), order: index };
-      this.#tracks.set(trackId, next);
-    });
-    this.#changed();
-    return true;
-  }
-  /** True when nothing here differs from a fresh session, so nothing needs saving. */
-  get isDefault() {
-    return this.#tracks.size === 0 && this.#clips.size === 0 && [...this.#positions.values()].every((p) => p.x === 0 && p.y === 0);
-  }
-  /** Like `isDefault`, but only for the nodes and tracks that still exist. */
-  isDefaultFor(nodeIds, trackIds, clipIds = /* @__PURE__ */ new Set()) {
-    return [...this.#tracks.keys()].every((id) => !trackIds.has(id)) && [...this.#clips].every(([id, c3]) => !clipIds.has(id) || c3.color === null) && [...this.#positions].every(([id, p]) => !nodeIds.has(id) || p.x === 0 && p.y === 0);
-  }
-  /** Forget whatever names something that no longer exists. */
-  prune(nodeIds, trackIds, clipIds = null) {
-    let changed = false;
-    for (const id of [...this.#positions.keys()]) if (!nodeIds.has(id)) {
-      this.#positions.delete(id);
-      changed = true;
-    }
-    for (const id of [...this.#tracks.keys()]) if (!trackIds.has(id)) {
-      this.#tracks.delete(id);
-      changed = true;
-    }
-    if (clipIds !== null) {
-      for (const id of [...this.#clips.keys()]) if (!clipIds.has(id)) {
-        this.#clips.delete(id);
-        changed = true;
-      }
-    }
-    if (changed) this.#changed();
-  }
-  get positions() {
-    return new Map(this.#positions);
-  }
-  get trackIds() {
-    return [...this.#tracks.keys()];
-  }
-};
-
-// src/model/ArrangementOps.js
-var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false });
-var TAPS = Object.freeze(["pre", "post"]);
-var CURVES = Object.freeze(["step", "linear", "smooth"]);
-var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
-var EPSILON = 1e-9;
-function emptyArrangement() {
-  return { master: { ...DEFAULT_MASTER }, sends: /* @__PURE__ */ new Map(), markers: /* @__PURE__ */ new Map(), regions: /* @__PURE__ */ new Map(), envelopes: /* @__PURE__ */ new Map() };
-}
-function cloneArrangement(state) {
-  return {
-    master: { ...state.master },
-    sends: new Map([...state.sends].map(([id, s]) => [id, { ...s }])),
-    markers: new Map([...state.markers].map(([id, m]) => [id, { ...m }])),
-    regions: new Map([...state.regions].map(([id, r]) => [id, { ...r }])),
-    envelopes: new Map([...state.envelopes].map(([id, e]) => [id, {
-      id,
-      target: { ...e.target },
-      points: e.points.map((p) => ({ ...p }))
-    }]))
-  };
-}
-var finiteAtLeast = (n2, min, what) => {
-  if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
-};
-function reaches(state, from, to) {
-  const seen = /* @__PURE__ */ new Set();
-  const stack = [from];
-  while (stack.length > 0) {
-    const id = stack.pop();
-    if (id === to) return true;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const track = state.tracks.get(id);
-    if (track?.output) stack.push(track.output);
-    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
-  }
-  return false;
-}
-function checkNoCycle(state, from, to, what) {
-  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
-}
-function checkTrackOutput(state, trackId, output) {
-  if (output === null) return;
-  if (!state.tracks.has(output)) throw new Error(`no such track: ${output}`);
-  checkNoCycle(state, trackId, output, "an output");
-}
-function mint(state, counters, key, prefix, id, what) {
-  const table = state[key];
-  const minted = id ?? `${prefix}-${++counters[prefix]}`;
-  if (table.has(minted)) throw new Error(`${what} already exists: ${minted}`);
-  const m = new RegExp(`^${prefix}-(\\d+)$`).exec(minted);
-  if (m) counters[prefix] = Math.max(counters[prefix], Number(m[1]));
-  return minted;
-}
-function checkPoints(points, target) {
-  if (!Array.isArray(points)) throw new Error("points must be an array");
-  const seen = /* @__PURE__ */ new Set();
-  for (const p of points) {
-    finiteAtLeast(p.atBeat, 0, "an envelope point atBeat");
-    if (seen.has(p.atBeat)) throw new Error(`two envelope points at beat ${p.atBeat}`);
-    seen.add(p.atBeat);
-    if (!Number.isFinite(p.value)) throw new Error(`an envelope point needs a finite value: ${p.value}`);
-    if (!CURVES.includes(p.curve ?? "linear")) throw new Error(`curve must be one of ${CURVES.join(", ")}`);
-    if (target.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
-    if (target.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
-    if (target.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
-  }
-  return points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve ?? "linear" })).sort((a2, b) => a2.atBeat - b.atBeat);
-}
-function checkTarget(state, target) {
-  if (!target || typeof target !== "object") throw new Error("an envelope needs a target");
-  if (target.kind !== void 0) {
-    if (!TARGET_KINDS.includes(target.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
-    return { kind: target.kind };
-  }
-  if (!state.nodes.has(target.node)) throw new Error(`target names no such node: ${target.node}`);
-  if (typeof target.symbol !== "string" || target.symbol === "") throw new Error("a node target needs the parameter symbol");
-  return { node: target.node, symbol: target.symbol };
-}
-var ARRANGEMENT_OPERATIONS = {
-  setMaster(state, change) {
-    const next = { ...state.master };
-    if (change.gain !== void 0) {
-      finiteAtLeast(change.gain, 0, "master gain");
-      next.gain = change.gain;
-    }
-    if (change.pan !== void 0) {
-      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) throw new Error(`pan must be between -1 and 1: ${change.pan}`);
-      next.pan = change.pan;
-    }
-    if (change.muted !== void 0) next.muted = Boolean(change.muted);
-    state.master = next;
-    return "master";
-  },
-  addSend(state, change, counters) {
-    for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
-    checkNoCycle(state, change.from, change.to, "a send");
-    for (const s of state.sends.values()) {
-      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
-    }
-    const level = change.level ?? 1;
-    finiteAtLeast(level, 0, "a send level");
-    const tap = change.tap ?? "post";
-    if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-    const id = mint(state, counters, "sends", "send", change.id, "send");
-    state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
-    return id;
-  },
-  setSend(state, change) {
-    const send = state.sends.get(change.id);
-    if (!send) throw new Error(`no such send: ${change.id}`);
-    if (change.level !== void 0) {
-      finiteAtLeast(change.level, 0, "a send level");
-      send.level = change.level;
-    }
-    if (change.tap !== void 0) {
-      if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-      send.tap = change.tap;
-    }
-    return change.id;
-  },
-  removeSend(state, change) {
-    if (!state.sends.delete(change.id)) throw new Error(`no such send: ${change.id}`);
-    return change.id;
-  },
-  addMarker(state, change, counters) {
-    finiteAtLeast(change.atBeat, 0, "a marker atBeat");
-    const id = mint(state, counters, "markers", "marker", change.id, "marker");
-    state.markers.set(id, { id, atBeat: change.atBeat, label: change.label ?? null });
-    return id;
-  },
-  setMarker(state, change) {
-    const marker = state.markers.get(change.id);
-    if (!marker) throw new Error(`no such marker: ${change.id}`);
-    if (change.atBeat !== void 0) {
-      finiteAtLeast(change.atBeat, 0, "a marker atBeat");
-      marker.atBeat = change.atBeat;
-    }
-    if (change.label !== void 0) marker.label = change.label;
-    return change.id;
-  },
-  removeMarker(state, change) {
-    if (!state.markers.delete(change.id)) throw new Error(`no such marker: ${change.id}`);
-    return change.id;
-  },
-  addRegion(state, change, counters) {
-    finiteAtLeast(change.startBeat, 0, "a region startBeat");
-    if (!(Number.isFinite(change.lengthBeats) && change.lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
-    const id = mint(state, counters, "regions", "region", change.id, "region");
-    state.regions.set(id, { id, startBeat: change.startBeat, lengthBeats: change.lengthBeats, label: change.label ?? null });
-    return id;
-  },
-  setRegion(state, change) {
-    const region = state.regions.get(change.id);
-    if (!region) throw new Error(`no such region: ${change.id}`);
-    const startBeat = change.startBeat ?? region.startBeat;
-    const lengthBeats = change.lengthBeats ?? region.lengthBeats;
-    finiteAtLeast(startBeat, 0, "a region startBeat");
-    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
-    region.startBeat = startBeat;
-    region.lengthBeats = lengthBeats;
-    if (change.label !== void 0) region.label = change.label;
-    return change.id;
-  },
-  removeRegion(state, change) {
-    if (!state.regions.delete(change.id)) throw new Error(`no such region: ${change.id}`);
-    return change.id;
-  },
-  addEnvelope(state, change, counters) {
-    const target = checkTarget(state, change.target);
-    for (const e of state.envelopes.values()) {
-      if (JSON.stringify(e.target) === JSON.stringify(target)) throw new Error(`${e.id} already automates that target`);
-    }
-    const points = checkPoints(change.points ?? [], target);
-    const id = mint(state, counters, "envelopes", "envelope", change.id, "envelope");
-    state.envelopes.set(id, { id, target, points });
-    return id;
-  },
-  /** Replace the whole point list at once, so one drawn gesture is one edit and one undo. */
-  setEnvelope(state, change) {
-    const envelope = state.envelopes.get(change.id);
-    if (!envelope) throw new Error(`no such envelope: ${change.id}`);
-    envelope.points = checkPoints(change.points, envelope.target);
-    return change.id;
-  },
-  removeEnvelope(state, change) {
-    if (!state.envelopes.delete(change.id)) throw new Error(`no such envelope: ${change.id}`);
-    return change.id;
-  }
-};
-function dropForTrack(state, trackId) {
-  for (const [id, s] of [...state.sends]) if (s.from === trackId || s.to === trackId) state.sends.delete(id);
-  for (const t of state.tracks.values()) if (t.output === trackId) t.output = null;
-}
-function dropForNode(state, nodeId) {
-  for (const [id, e] of [...state.envelopes]) if (e.target.node === nodeId) state.envelopes.delete(id);
-}
-function checkSignaturePoints(initialBeatsPerBar, points) {
-  if (!Array.isArray(points)) throw new Error("signaturePoints must be an array");
-  const sorted = [...points].sort((a2, b) => a2.atBeat - b.atBeat);
-  let barStart = 0;
-  let bar = initialBeatsPerBar;
-  for (const p of sorted) {
-    if (!(Number.isFinite(p.atBeat) && p.atBeat > 0)) throw new Error(`a signature point comes after beat zero: ${p.atBeat}`);
-    if (!Number.isInteger(p.beatsPerBar) || p.beatsPerBar < 1) throw new Error(`a bar has at least one beat: ${p.beatsPerBar}`);
-    if (!Number.isInteger(p.beatUnit) || p.beatUnit < 1) throw new Error(`a beat unit is a note value: ${p.beatUnit}`);
-    const bars = (p.atBeat - barStart) / bar;
-    if (Math.abs(bars - Math.round(bars)) > EPSILON) {
-      throw new Error(`a signature change must fall on a bar line: beat ${p.atBeat} is not one`);
-    }
-    if (p.atBeat === barStart && barStart !== 0) throw new Error(`two signature points at beat ${p.atBeat}`);
-    barStart = p.atBeat;
-    bar = p.beatsPerBar;
-  }
-  return sorted.map((p) => ({ atBeat: p.atBeat, beatsPerBar: p.beatsPerBar, beatUnit: p.beatUnit }));
-}
-function arrangementChanges(snapshot) {
-  return [
-    { op: "setMaster", ...snapshot.master },
-    ...snapshot.tracks.filter((t) => t.output).map((t) => ({ op: "setTrack", id: t.id, output: t.output })),
-    ...snapshot.sends.map((s) => ({ op: "addSend", ...s })),
-    ...snapshot.markers.map((m) => ({ op: "addMarker", ...m })),
-    ...snapshot.regions.map((r) => ({ op: "addRegion", ...r })),
-    ...snapshot.envelopes.map((e) => ({ op: "addEnvelope", id: e.id, target: e.target, points: e.points }))
-  ];
-}
-function arrangementReconcile(current, target) {
-  const changes = [];
-  const table = [
-    ["sends", "removeSend", "addSend"],
-    ["markers", "removeMarker", "addMarker"],
-    ["regions", "removeRegion", "addRegion"],
-    ["envelopes", "removeEnvelope", "addEnvelope"]
-  ];
-  const same = (a2, b) => JSON.stringify(a2) === JSON.stringify(b);
-  for (const [key, remove] of table) {
-    const wanted = new Map(target[key].map((x) => [x.id, x]));
-    for (const item of current[key]) if (!same(wanted.get(item.id), item)) changes.push({ op: remove, id: item.id });
-  }
-  const outputs = (t) => t.output ?? null;
-  const currentTracks = new Map(current.tracks.map((t) => [t.id, t]));
-  for (const t of target.tracks) {
-    if (outputs(currentTracks.get(t.id) ?? {}) !== outputs(t)) changes.push({ op: "setTrack", id: t.id, output: outputs(t) });
-  }
-  if (!same(current.master, target.master)) changes.push({ op: "setMaster", ...target.master });
-  for (const [key, , add] of table) {
-    const live = new Map(current[key].map((x) => [x.id, x]));
-    for (const item of target[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
-  }
-  return changes;
-}
-
-// src/model/Project.js
-var RevisionConflict = class extends Error {
-  constructor(expected, actual) {
-    super(`project has moved on: expected revision ${expected}, current is ${actual}`);
-    this.name = "RevisionConflict";
-    this.expected = expected;
-    this.actual = actual;
-  }
-};
-var ChangeError = class extends Error {
-  constructor(index, op, message) {
-    super(`change ${index} (${op}): ${message}`);
-    this.name = "ChangeError";
-    this.index = index;
-    this.op = op;
-  }
-};
-var DEFAULT_CHANNEL = Object.freeze({ gain: 1, pan: 0, muted: false, soloed: false });
-var DEFAULT_TRANSPORT = Object.freeze({
-  playing: false,
-  beatsPerBar: 4,
-  beatUnit: 4,
-  loopStart: 0,
-  loopEnd: 0,
-  loopEnabled: false,
-  tempoPoints: [{ atBeat: 0, bpm: 120 }],
-  // Time signature changes after beat zero. The fields above hold before the first.
-  signaturePoints: []
-});
-function checkEndpoint(state, endpoint2, what) {
-  if (!endpoint2 || typeof endpoint2 !== "object") throw new Error(`${what} is missing`);
-  if (!state.nodes.has(endpoint2.node)) throw new Error(`${what} names no such node: ${endpoint2.node}`);
-  const hasIndex = endpoint2.portIndex !== void 0 && endpoint2.portIndex !== null;
-  const hasSymbol = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null;
-  if (hasIndex === hasSymbol) {
-    throw new Error(`${what} must give exactly one of portIndex, for an audio or MIDI port, or portSymbol, for a parameter`);
-  }
-  if (hasIndex && (!Number.isInteger(endpoint2.portIndex) || endpoint2.portIndex < 0)) {
-    throw new Error(`${what} has a portIndex that is not a non-negative integer`);
-  }
-}
-function noteExplicitId(counters, prefix, counterKey, id) {
-  const minted = new RegExp(`^${prefix}-(\\d+)$`).exec(id);
-  if (minted) counters[counterKey] = Math.max(counters[counterKey], Number(minted[1]));
-}
-function isLoadableIRI(value2) {
-  let url;
-  try {
-    url = new URL(String(value2));
-  } catch {
-    return false;
-  }
-  if (url.protocol === "https:") return true;
-  if (url.protocol !== "http:") return false;
-  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
-}
-var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
-var cloneState = (state) => ({
-  clips: new Map([...state.clips].map(([id, c3]) => [id, { ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) }])),
-  tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
-  nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
-  connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
-  transport: {
-    ...state.transport,
-    tempoPoints: state.transport.tempoPoints.map((p) => ({ ...p })),
-    signaturePoints: (state.transport.signaturePoints ?? []).map((p) => ({ ...p }))
-  },
-  ...cloneArrangement(state)
-});
-function nextChannel(channel, change) {
-  const next = { ...channel };
-  if (change.gain !== void 0) {
-    if (!Number.isFinite(change.gain) || change.gain < 0) {
-      throw new Error(`gain must be a number at or above zero: ${change.gain}`);
-    }
-    next.gain = change.gain;
-  }
-  if (change.pan !== void 0) {
-    if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) {
-      throw new Error(`pan must be between -1 and 1: ${change.pan}`);
-    }
-    next.pan = change.pan;
-  }
-  if (change.muted !== void 0) next.muted = Boolean(change.muted);
-  if (change.soloed !== void 0) next.soloed = Boolean(change.soloed);
-  return next;
-}
-function checkTrackInput(state, trackId, nodeId, what) {
-  if (nodeId === null) return;
-  const node = state.nodes.get(nodeId);
-  if (!node) throw new Error(`${what} names no such node: ${nodeId}`);
-  if (node.track !== trackId) throw new Error(`${what} ${nodeId} is not on track ${trackId}`);
-}
-function checkNotes(notes) {
-  if (!Array.isArray(notes)) throw new Error("notes must be an array");
-  return notes.map((note, i2) => {
-    const { startBeat, lengthBeats, pitch, velocity } = note ?? {};
-    if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error(`note ${i2} needs a startBeat at or after zero`);
-    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error(`note ${i2} needs a lengthBeats above zero`);
-    if (!(Number.isInteger(pitch) && pitch >= 0 && pitch <= 127)) throw new Error(`note ${i2} needs a pitch from 0 to 127`);
-    if (!(Number.isInteger(velocity) && velocity >= 1 && velocity <= 127)) {
-      throw new Error(`note ${i2} needs a velocity from 1 to 127; MIDI reads 0 as a note off`);
-    }
-    return { startBeat, lengthBeats, pitch, velocity };
-  }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
-}
-function checkFade(name2, value2) {
-  if (!(Number.isFinite(value2) && value2 >= 0)) throw new Error(`${name2} must be zero or more beats`);
-  return value2;
-}
-function checkMuted(value2) {
-  return checkFlag("muted", value2);
-}
-function checkFlag(name2, value2) {
-  if (typeof value2 !== "boolean") throw new Error(`${name2} must be true or false`);
-  return value2;
-}
-function refuseIfLocked(clip, change, what) {
-  if (clip.locked && change.force !== true) throw new Error(`clip ${clip.id} is locked, so it cannot be ${what}; unlock it first`);
-}
-function checkPlacement(startBeat, lengthBeats) {
-  if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a clip needs a startBeat at or after zero");
-  if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip needs a lengthBeats above zero");
-}
-function releaseInputs(state, nodeId) {
-  for (const track of state.tracks.values()) {
-    if (track.midiInput === nodeId) track.midiInput = null;
-    if (track.audioInput === nodeId) track.audioInput = null;
-  }
-}
-var OPERATIONS = {
-  ...ARRANGEMENT_OPERATIONS,
-  addTrack(state, change, counters) {
-    const id = change.id ?? `track-${++counters.track}`;
-    if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`);
-    noteExplicitId(counters, "track", "track", id);
-    state.tracks.set(id, {
-      id,
-      label: change.label ?? null,
-      // The channel strip. Host services rather than plugin parameters: no
-      // lv2:port declares them, and solo is a property of the mix rather
-      // than of one track. Defaults are unity, centre, heard.
-      channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
-      midiInput: null,
-      audioInput: null,
-      // The bus this track's output goes to instead of the master, or null.
-      output: null
-    });
-    return id;
-  },
-  /** Rename a track, or name the nodes its clips play into. */
-  setTrack(state, change) {
-    const track = state.tracks.get(change.id);
-    if (!track) throw new Error(`no such track: ${change.id}`);
-    if (change.label !== void 0) track.label = change.label;
-    for (const key of ["midiInput", "audioInput"]) {
-      if (change[key] === void 0) continue;
-      checkTrackInput(state, change.id, change[key], key);
-      track[key] = change[key];
-    }
-    if (change.output !== void 0) {
-      checkTrackOutput(state, change.id, change.output);
-      track.output = change.output;
-    }
-    return change.id;
-  },
-  /**
-   * Remove a track.
-   *
-   * Refused while any node is still on it, unless `moveNodesTo` names the
-   * track they go to instead. Removing the nodes along with the track would be
-   * one click destroying a chain somebody built, and the undo of it would have
-   * to reload every plugin; a person who wants that removes the nodes first.
-   *
-   * Its clips go with it, or to `moveNodesTo` when that is given. A clip is
-   * data rather than an instantiated plugin, so taking it away costs undo
-   * nothing to restore.
-   */
-  removeTrack(state, change) {
-    if (!state.tracks.has(change.id)) throw new Error(`no such track: ${change.id}`);
-    const onIt = [...state.nodes.values()].filter((n2) => n2.track === change.id);
-    if (onIt.length > 0) {
-      if (change.moveNodesTo === void 0) {
-        throw new Error(`track ${change.id} still has ${onIt.length} node(s) on it; remove them or give moveNodesTo`);
-      }
-      if (change.moveNodesTo === change.id || !state.tracks.has(change.moveNodesTo)) {
-        throw new Error(`moveNodesTo names no other track: ${change.moveNodesTo}`);
-      }
-      for (const node of onIt) node.track = change.moveNodesTo;
-    }
-    for (const [id, clip] of [...state.clips]) {
-      if (clip.track !== change.id) continue;
-      if (change.moveNodesTo !== void 0 && state.tracks.has(change.moveNodesTo) && change.moveNodesTo !== change.id) {
-        clip.track = change.moveNodesTo;
-      } else {
-        state.clips.delete(id);
-      }
-    }
-    state.tracks.delete(change.id);
-    dropForTrack(state, change.id);
-    return change.id;
-  },
-  moveNodeToTrack(state, change) {
-    const node = state.nodes.get(change.id);
-    if (!node) throw new Error(`no such node: ${change.id}`);
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
-    if (node.track === change.track) return change.id;
-    releaseInputs(state, change.id);
-    node.track = change.track;
-    return change.id;
-  },
-  /**
-   * Add a clip to a track. A MIDI clip holds notes; an audio clip names the
-   * file it plays by `source`, never its bytes (project-format.md "Clips").
-   */
-  addClip(state, change, counters) {
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
-    if (change.kind !== "midi" && change.kind !== "audio") throw new Error("kind must be midi or audio");
-    checkPlacement(change.startBeat, change.lengthBeats);
-    const id = change.id ?? `clip-${++counters.clip}`;
-    if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`);
-    noteExplicitId(counters, "clip", "clip", id);
-    const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
-    if (change.kind === "midi") {
-      clip.notes = checkNotes(change.notes ?? []);
-    } else {
-      if (typeof change.source !== "string" || !URL.canParse(change.source)) {
-        throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
-      }
-      const offset = change.offsetSeconds ?? 0;
-      if (!(Number.isFinite(offset) && offset >= 0)) throw new Error("offsetSeconds must be at or after zero");
-      clip.source = change.source;
-      clip.offsetSeconds = offset;
-      clip.fadeInBeats = checkFade("fadeInBeats", change.fadeInBeats ?? 0);
-      clip.fadeOutBeats = checkFade("fadeOutBeats", change.fadeOutBeats ?? 0);
-      clip.notes = [];
-    }
-    state.clips.set(id, clip);
-    return id;
-  },
-  /** Move a clip in time or to another track, resize it, or change its offset. */
-  setClip(state, change) {
-    const clip = state.clips.get(change.id);
-    if (!clip) throw new Error(`no such clip: ${change.id}`);
-    if (["startBeat", "lengthBeats", "track", "offsetSeconds"].some((k) => change[k] !== void 0)) refuseIfLocked(clip, change, "moved or resized");
-    const startBeat = change.startBeat ?? clip.startBeat;
-    const lengthBeats = change.lengthBeats ?? clip.lengthBeats;
-    checkPlacement(startBeat, lengthBeats);
-    if (change.track !== void 0 && !state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
-    if (change.offsetSeconds !== void 0) {
-      if (clip.kind !== "audio") throw new Error("only an audio clip has an offset");
-      if (!(Number.isFinite(change.offsetSeconds) && change.offsetSeconds >= 0)) throw new Error("offsetSeconds must be at or after zero");
-      clip.offsetSeconds = change.offsetSeconds;
-    }
-    if (change.muted !== void 0) clip.muted = checkMuted(change.muted);
-    for (const key of ["fadeInBeats", "fadeOutBeats"]) {
-      if (change[key] === void 0) continue;
-      if (clip.kind !== "audio") throw new Error("only an audio clip has fades");
-      clip[key] = checkFade(key, change[key]);
-    }
-    if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
-    clip.startBeat = startBeat;
-    clip.lengthBeats = lengthBeats;
-    if (change.track !== void 0) clip.track = change.track;
-    return change.id;
-  },
-  /**
-   * Replace a MIDI clip's notes. The whole list at once, so one gesture in a
-   * piano roll, or one agent's phrase, is one edit and one undo.
-   */
-  setClipNotes(state, change) {
-    const clip = state.clips.get(change.id);
-    if (!clip) throw new Error(`no such clip: ${change.id}`);
-    if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
-    refuseIfLocked(clip, change, "edited");
-    clip.notes = checkNotes(change.notes);
-    return change.id;
-  },
-  removeClip(state, change) {
-    if (!state.clips.has(change.id)) throw new Error(`no such clip: ${change.id}`);
-    refuseIfLocked(state.clips.get(change.id), change, "removed");
-    state.clips.delete(change.id);
-    return change.id;
-  },
-  addNode(state, change, counters) {
-    if (!change.pluginIri) throw new Error("needs a pluginIri");
-    if (!isLoadableIRI(change.pluginIri)) {
-      throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`);
-    }
-    if (!change.track) throw new Error("needs a track");
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
-    const id = change.id ?? `node-${++counters.node}`;
-    if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
-    noteExplicitId(counters, "node", "node", id);
-    state.nodes.set(id, {
-      id,
-      pluginIri: change.pluginIri,
-      label: change.label ?? null,
-      track: change.track,
-      settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null,
-      bypassed: checkFlag("bypassed", change.bypassed ?? false)
-    });
-    return id;
-  },
-  /**
-   * Change a node's own properties. Bypass passes what arrives at its input straight to where
-   * its output goes, and keeps its state, so turning it back on is instant and exact.
-   */
-  setNode(state, change) {
-    const node = state.nodes.get(change.id);
-    if (!node) throw new Error(`no such node: ${change.id}`);
-    if (change.bypassed !== void 0) node.bypassed = checkFlag("bypassed", change.bypassed);
-    return change.id;
-  },
-  /**
-   * Move a node to a new position among the others, healing the direct
-   * link(s) it stood between the same way `removeNode`'s heal does. Node
-   * order is otherwise display only (the compiler reads connections, never
-   * this order), so this is the one place order and topology change
-   * together, on purpose: TODO.md decided a drag in the rack means the
-   * signal path moves, not only the drawing.
-   *
-   * Healing acts only on a direct link between exactly the two nodes
-   * involved, the same "one obvious answer" restriction `removeNode`'s heal
-   * uses, and for the same reason: a node with several inputs or outputs at
-   * that point has no single right rewiring and guessing at one would
-   * silently rewire a graph somebody built.
-   *
-   * Deliberately not attempted: splicing the node into whatever direct link
-   * joins its new neighbours. A first version guessed port 0 on the moved
-   * node for that, which is exactly the kind of guess this file otherwise
-   * refuses to make, and it broke on the first plugin with no such port: an
-   * uncaught IndexSizeError out of the real Web Audio graph, past every
-   * check `addConnection` normally goes through, because the model has no
-   * profile to check a guessed port against
-   * (OpDispatcher.apply's own comment says why: "the model checks the shape
-   * of an endpoint and cannot check more"). A node landing in a new
-   * position is simply unwired there, exactly like a freshly added one,
-   * for a person to connect deliberately.
-   */
-  reorderNode(state, change, counters) {
-    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
-    if (!Number.isInteger(change.index) || change.index < 0) throw new Error("needs a non-negative integer index");
-    const order = [...state.nodes.keys()];
-    const from = order.indexOf(change.id);
-    const oldPrev = order[from - 1] ?? null;
-    const oldNext = order[from + 1] ?? null;
-    const to = Math.min(change.index, order.length - 1);
-    order.splice(from, 1);
-    order.splice(to, 0, change.id);
-    state.nodes = new Map(order.map((id) => [id, state.nodes.get(id)]));
-    if (from === to) return change.id;
-    const linksBetween = (a2, b) => a2 && b ? [...state.connections.values()].filter((c3) => c3.from.node === a2 && c3.to.node === b) : [];
-    const bySignalKind = (links) => {
-      const grouped = /* @__PURE__ */ new Map();
-      for (const link of links) {
-        const list = grouped.get(link.signalKind) ?? [];
-        list.push(link);
-        grouped.set(link.signalKind, list);
-      }
-      return grouped;
-    };
-    const tryReconnect = (join2) => {
-      try {
-        OPERATIONS.addConnection(state, join2, counters);
-      } catch {
-      }
-    };
-    const oldIn = bySignalKind(linksBetween(oldPrev, change.id));
-    const oldOut = bySignalKind(linksBetween(change.id, oldNext));
-    for (const [signalKind, before] of oldIn) {
-      const after = oldOut.get(signalKind) ?? [];
-      if (before.length === 1 && after.length === 1) {
-        tryReconnect({ from: { ...before[0].from }, to: { ...after[0].to }, signalKind });
-      }
-    }
-    for (const link of [...oldIn.values(), ...oldOut.values()].flat()) state.connections.delete(link.id);
-    return change.id;
-  },
-  /**
-   * Remove a node, and optionally rejoin what it stood between.
-   *
-   * `heal` is off by default, so a changeset means what it says. With it on, a
-   * node removed from the middle of a path is rejoined rather than leaving two
-   * fragments and no way in the interface to put them back together.
-   *
-   * It heals only where there is one obvious answer: exactly one incoming and
-   * exactly one outgoing edge of the same signal kind. That covers a chain,
-   * which is the case a person is looking at when they press Remove. Anything
-   * else, a node with several inputs or several outputs, has no single right
-   * answer and guessing at one would silently rewire a graph somebody built.
-   */
-  removeNode(state, change, counters) {
-    if (!state.nodes.has(change.id)) throw new Error(`no such node: ${change.id}`);
-    const rejoined = [];
-    if (change.heal) {
-      const incoming = /* @__PURE__ */ new Map();
-      const outgoing = /* @__PURE__ */ new Map();
-      for (const connection of state.connections.values()) {
-        if (connection.to.node === change.id) {
-          const list = incoming.get(connection.signalKind) ?? [];
-          list.push(connection);
-          incoming.set(connection.signalKind, list);
-        }
-        if (connection.from.node === change.id) {
-          const list = outgoing.get(connection.signalKind) ?? [];
-          list.push(connection);
-          outgoing.set(connection.signalKind, list);
-        }
-      }
-      for (const [signalKind, before] of incoming) {
-        const after = outgoing.get(signalKind) ?? [];
-        if (before.length !== 1 || after.length !== 1) continue;
-        rejoined.push({
-          from: { ...before[0].from },
-          to: { ...after[0].to },
-          signalKind
-        });
-      }
-    }
-    state.nodes.delete(change.id);
-    dropForNode(state, change.id);
-    releaseInputs(state, change.id);
-    for (const [key, connection] of [...state.connections]) {
-      if (connection.from.node === change.id || connection.to.node === change.id) {
-        state.connections.delete(key);
-      }
-    }
-    for (const join2 of rejoined) {
-      try {
-        OPERATIONS.addConnection(state, join2, counters);
-      } catch {
-      }
-    }
-    return change.id;
-  },
-  addConnection(state, change, counters) {
-    checkEndpoint(state, change.from, "from");
-    checkEndpoint(state, change.to, "to");
-    if (!change.signalKind) {
-      throw new Error("needs a signalKind");
-    }
-    const key = connectionKey(change);
-    for (const existing of state.connections.values()) {
-      if (connectionKey(existing) === key) throw new Error("that connection already exists");
-    }
-    const id = change.id ?? `conn-${++counters.connection}`;
-    noteExplicitId(counters, "conn", "connection", id);
-    state.connections.set(id, {
-      id,
-      from: { ...change.from },
-      to: { ...change.to },
-      signalKind: change.signalKind,
-      delayFrames: change.delayFrames ?? 0
-    });
-    return id;
-  },
-  removeConnection(state, change) {
-    if (!state.connections.has(change.id)) throw new Error(`no such connection: ${change.id}`);
-    state.connections.delete(change.id);
-    return change.id;
-  },
-  setSetting(state, change) {
-    const node = state.nodes.get(change.node);
-    if (!node) throw new Error(`no such node: ${change.node}`);
-    if (!change.symbol) throw new Error("needs a symbol");
-    if (!Number.isFinite(change.value)) throw new Error(`value is not a number: ${change.value}`);
-    node.settings.set(change.symbol, change.value);
-    return change.symbol;
-  },
-  /**
-   * Forget a parameter's setting, so it is at its plugin's default again. The
-   * model has no profiles and so no defaults; the setting is simply absent,
-   * which is what a node that was never touched has.
-   */
-  clearSetting(state, change) {
-    const node = state.nodes.get(change.node);
-    if (!node) throw new Error(`no such node: ${change.node}`);
-    if (!change.symbol) throw new Error("needs a symbol");
-    node.settings.delete(change.symbol);
-    return change.symbol;
-  },
-  /**
-   * Set any of a track's channel strip.
-   *
-   * One operation for the four rather than one each, because a person moving a
-   * fader and a person pressing mute are the same kind of edit and a preset
-   * setting all four is one edit rather than four.
-   */
-  setTrackChannel(state, change) {
-    const track = state.tracks.get(change.track);
-    if (!track) throw new Error(`no such track: ${change.track}`);
-    track.channel = nextChannel(track.channel, change);
-    return change.track;
-  },
-  setNodeState(state, change) {
-    const node = state.nodes.get(change.node);
-    if (!node) throw new Error(`no such node: ${change.node}`);
-    node.state = change.state ?? null;
-    return change.node;
-  },
-  setTransport(state, change) {
-    const next = { ...state.transport };
-    for (const key of ["beatsPerBar", "beatUnit", "loopStart", "loopEnd", "loopEnabled", "playing"]) {
-      if (change[key] !== void 0) next[key] = change[key];
-    }
-    if (change.tempoPoints) {
-      if (!Array.isArray(change.tempoPoints) || change.tempoPoints.length === 0) {
-        throw new Error("tempoPoints must be a non-empty array");
-      }
-      for (const point of change.tempoPoints) {
-        if (!(point.bpm > 0)) throw new Error(`a tempo point needs a bpm greater than zero: ${point.bpm}`);
-        if (!(point.atBeat >= 0)) throw new Error(`a tempo point needs atBeat at or after zero: ${point.atBeat}`);
-      }
-      next.tempoPoints = [...change.tempoPoints].sort((a2, b) => a2.atBeat - b.atBeat);
-    }
-    if (change.signaturePoints !== void 0) next.signaturePoints = change.signaturePoints;
-    next.signaturePoints = checkSignaturePoints(next.beatsPerBar, next.signaturePoints ?? []);
-    if (next.loopEnabled && !(next.loopEnd > next.loopStart)) {
-      throw new Error("a loop must start before it ends");
-    }
-    state.transport = next;
-    return "transport";
-  }
-};
-function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
-}
-function changesFor(snapshot) {
-  return [
-    ...snapshot.tracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })),
-    ...snapshot.nodes.map((n2) => ({
-      op: "addNode",
-      id: n2.id,
-      pluginIri: n2.pluginIri,
-      label: n2.label,
-      track: n2.track,
-      settings: n2.settings,
-      state: n2.state,
-      bypassed: n2.bypassed
-    })),
-    ...snapshot.tracks.filter((t) => t.midiInput !== null || t.audioInput !== null).map((t) => ({ op: "setTrack", id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
-    ...snapshot.connections.map((c3) => ({
-      op: "addConnection",
-      id: c3.id,
-      from: c3.from,
-      to: c3.to,
-      signalKind: c3.signalKind,
-      delayFrames: c3.delayFrames
-    })),
-    ...snapshot.clips.map(clipChange),
-    { op: "setTransport", ...snapshot.transport },
-    ...arrangementChanges(snapshot)
-  ];
-}
-var Project = class {
-  #revision = 0;
-  #state = { tracks: /* @__PURE__ */ new Map(), nodes: /* @__PURE__ */ new Map(), connections: /* @__PURE__ */ new Map(), clips: /* @__PURE__ */ new Map(), transport: { ...DEFAULT_TRANSPORT, signaturePoints: [] }, ...emptyArrangement() };
-  #counters = { track: 0, node: 0, connection: 0, clip: 0, send: 0, marker: 0, region: 0, envelope: 0 };
-  // Editor metadata, deliberately outside the state a revision covers.
-  #editor = new EditorState();
-  #label = null;
-  get revision() {
-    return this.#revision;
-  }
-  get label() {
-    return this.#label;
-  }
-  set label(value2) {
-    this.#label = value2;
-  }
-  get tracks() {
-    return [...this.#state.tracks.values()];
-  }
-  get nodes() {
-    return [...this.#state.nodes.values()];
-  }
-  get connections() {
-    return [...this.#state.connections.values()];
-  }
-  get clips() {
-    return [...this.#state.clips.values()];
-  }
-  get transport() {
-    return this.#state.transport;
-  }
-  get master() {
-    return this.#state.master;
-  }
-  get sends() {
-    return [...this.#state.sends.values()];
-  }
-  get markers() {
-    return [...this.#state.markers.values()];
-  }
-  get regions() {
-    return [...this.#state.regions.values()];
-  }
-  get envelopes() {
-    return [...this.#state.envelopes.values()];
-  }
-  track(id) {
-    return this.#state.tracks.get(id) ?? null;
-  }
-  node(id) {
-    return this.#state.nodes.get(id) ?? null;
-  }
-  /**
-   * The id the next minted track, node or connection would get, without
-   * minting it. For a caller building one changeset whose later changes name
-   * something an earlier one creates: a new track and the first node on it.
-   */
-  nextId(kind) {
-    const key = { track: "track", node: "node", conn: "connection", clip: "clip", send: "send", marker: "marker", region: "region", envelope: "envelope" }[kind];
-    if (!key) throw new Error(`no ids are minted for ${kind}`);
-    return `${kind}-${this.#counters[key] + 1}`;
-  }
-  connection(id) {
-    return this.#state.connections.get(id) ?? null;
-  }
-  clip(id) {
-    return this.#state.clips.get(id) ?? null;
-  }
-  /** Whether saving the editor graph would say anything, ignoring what belongs to things that are gone. */
-  get hasEditorState() {
-    return !this.#editor.isDefaultFor(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
-  }
-  /** Editor metadata never bumps the revision. */
-  get editor() {
-    return this.#editor;
-  }
-  position(id) {
-    return this.#editor.position(id);
-  }
-  moveNode(id, x, y) {
-    if (!this.#state.nodes.has(id)) throw new Error(`no such node: ${id}`);
-    this.#editor.setPosition(id, x, y);
-  }
-  /** Tracks as the arrangement shows them: placed ones by order, then the rest as made. */
-  get orderedTracks() {
-    return this.#editor.orderTracks(this.tracks.map((t) => t.id)).map((id) => this.#state.tracks.get(id));
-  }
-  /** Take editor metadata read from an editor.ttl; whatever names nothing here is dropped. */
-  loadEditor(read) {
-    const tracks = /* @__PURE__ */ new Map();
-    const clips = /* @__PURE__ */ new Map();
-    for (const [id, layout] of read.tracks) {
-      if (this.#state.tracks.has(id) || !this.#state.clips.has(id)) tracks.set(id, layout);
-      else clips.set(id, { color: layout.color });
-    }
-    this.#editor.load({ positions: read.positions, tracks, clips });
-    this.#editor.prune(new Set(this.#state.nodes.keys()), new Set(this.#state.tracks.keys()), new Set(this.#state.clips.keys()));
-  }
-  /** Move a track up (-1) or down (+1) in the arrangement. Editor metadata: no revision, no undo. */
-  moveTrack(id, delta) {
-    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
-    return this.#editor.moveTrack(this.tracks.map((t) => t.id), id, delta);
-  }
-  /** A clip's colour, or null for the track's own. Editor metadata: no revision, no undo. */
-  clipColor(id) {
-    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
-    return this.#editor.clip(id).color;
-  }
-  setClipColor(id, color) {
-    if (!this.#state.clips.has(id)) throw new Error(`no such clip: ${id}`);
-    this.#editor.setClip(id, { color });
-  }
-  trackLayout(id) {
-    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
-    return this.#editor.track(id);
-  }
-  setTrackLayout(id, patch) {
-    if (!this.#state.tracks.has(id)) throw new Error(`no such track: ${id}`);
-    this.#editor.setTrack(id, patch);
-  }
-  /**
-   * Apply a changeset atomically.
-   *
-   * Returns { revision, results, applied }. With dryRun the project is
-   * untouched and `applied` is false, which is how an agent checks a chain
-   * before committing it.
-   */
-  apply(changes, { expectedRevision, dryRun = false } = {}) {
-    if (!Array.isArray(changes)) throw new TypeError("changes must be an array");
-    if (expectedRevision !== void 0 && expectedRevision !== this.#revision) {
-      throw new RevisionConflict(expectedRevision, this.#revision);
-    }
-    const draft = cloneState(this.#state);
-    const counters = { ...this.#counters };
-    const results = [];
-    changes.forEach((change, index) => {
-      const operation = OPERATIONS[change.op];
-      if (!operation) throw new ChangeError(index, change.op ?? "undefined", "unknown operation");
-      try {
-        results.push(operation(draft, change, counters));
-      } catch (error2) {
-        throw new ChangeError(index, change.op, error2.message);
-      }
-    });
-    if (dryRun) return { revision: this.#revision, results, applied: false };
-    this.#state = draft;
-    this.#counters = counters;
-    this.#revision += 1;
-    return { revision: this.#revision, results, applied: true };
-  }
-  /** A plain snapshot, for serialisation or for handing to an agent. */
-  snapshot() {
-    return {
-      label: this.#label,
-      revision: this.#revision,
-      tracks: this.tracks.map((t) => ({ ...t, channel: { ...t.channel } })),
-      nodes: this.nodes.map((n2) => ({
-        id: n2.id,
-        pluginIri: n2.pluginIri,
-        label: n2.label,
-        track: n2.track,
-        settings: Object.fromEntries(n2.settings),
-        state: n2.state,
-        bypassed: n2.bypassed === true,
-        position: this.position(n2.id)
-      })),
-      connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
-      clips: this.clips.map((c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) })),
-      transport: {
-        ...this.#state.transport,
-        tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })),
-        signaturePoints: this.#state.transport.signaturePoints.map((p) => ({ ...p }))
-      },
-      master: { ...this.#state.master },
-      sends: [...this.#state.sends.values()].map((x) => ({ ...x })),
-      markers: [...this.#state.markers.values()].map((x) => ({ ...x })),
-      regions: [...this.#state.regions.values()].map((x) => ({ ...x })),
-      envelopes: [...this.#state.envelopes.values()].map((e) => ({ id: e.id, target: { ...e.target }, points: e.points.map((p) => ({ ...p })) }))
-    };
-  }
-};
-
-// src/model/Endpoints.js
-var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
-var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
-var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
-function outputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
-  }
-  if ((profile?.produces ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
-  }
-  return found;
-}
-function inputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: i2 === profile.sidechainInput ? "Sidechain key" : `Audio in ${i2 + 1}`, ...i2 === profile.sidechainInput ? { sidechain: true } : {} });
-  }
-  if ((profile?.accepts ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
-  }
-  for (const port of profile?.ports ?? []) {
-    found.push({
-      kind: AUDIO_SIGNAL,
-      portSymbol: port.symbol,
-      name: `${port.name || port.symbol} (modulate)`
-    });
-  }
-  return found;
-}
-function compatible(from, to) {
-  if (!from || !to) return false;
-  if (to.portSymbol !== void 0) return from.kind === AUDIO_SIGNAL;
-  return from.kind === to.kind;
-}
-function findPort(profile, endpoint2, direction, signalKind) {
-  if (!profile) return { ok: true, port: null };
-  const ports = direction === "from" ? outputsOf(profile) : inputsOf(profile);
-  const what = direction === "from" ? "output" : "input";
-  const label = profile.label ?? "the plugin";
-  const port = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? ports.find((p) => p.portSymbol === endpoint2.portSymbol) : ports.find((p) => p.portSymbol === void 0 && p.portIndex === endpoint2.portIndex && p.kind === signalKind);
-  if (port) return { ok: true, port };
-  const named2 = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? `parameter "${endpoint2.portSymbol}"` : `${signalKind === MIDI_SIGNAL ? "MIDI" : "audio"} ${what} at index ${endpoint2.portIndex}`;
-  const has = ports.length === 0 ? `${label} has nothing to connect ${direction === "from" ? "from" : "to"}.` : `It has: ${ports.map((p) => p.name).join(", ")}.`;
-  return { ok: false, message: `${label} has no ${named2}. ${has}` };
-}
-
-// src/compiler/GraphCompiler.js
-var AUDIO = "http://purl.org/stuff/transmissions/Audio";
-var isAudio = (connection) => connection.signalKind === AUDIO;
-function stronglyConnected(nodeIds, edgesFrom) {
-  const index = /* @__PURE__ */ new Map();
-  const low = /* @__PURE__ */ new Map();
-  const onStack = /* @__PURE__ */ new Set();
-  const stack = [];
-  const components = [];
-  let counter2 = 0;
-  for (const start of nodeIds) {
-    if (index.has(start)) continue;
-    const work = [{ node: start, edge: 0 }];
-    while (work.length > 0) {
-      const frame = work[work.length - 1];
-      const { node } = frame;
-      if (frame.edge === 0) {
-        index.set(node, counter2);
-        low.set(node, counter2);
-        counter2 += 1;
-        stack.push(node);
-        onStack.add(node);
-      }
-      const edges = edgesFrom(node);
-      if (frame.edge < edges.length) {
-        const next = edges[frame.edge];
-        frame.edge += 1;
-        if (!index.has(next)) work.push({ node: next, edge: 0 });
-        else if (onStack.has(next)) low.set(node, Math.min(low.get(node), index.get(next)));
-        continue;
-      }
-      if (low.get(node) === index.get(node)) {
-        const component = [];
-        let member;
-        do {
-          member = stack.pop();
-          onStack.delete(member);
-          component.push(member);
-        } while (member !== node);
-        components.push(component);
-      }
-      work.pop();
-      if (work.length > 0) {
-        const parent = work[work.length - 1].node;
-        low.set(parent, Math.min(low.get(parent), low.get(node)));
-      }
-    }
-  }
-  return components;
-}
-function compileGraph(project, { latencyOf = () => 0, quantum = 128 } = {}) {
-  const nodes = project.nodes.map((n2) => n2.id);
-  const connections = project.connections.filter(isAudio);
-  const outgoing = new Map(nodes.map((id) => [id, []]));
-  const incoming = new Map(nodes.map((id) => [id, []]));
-  for (const connection of connections) {
-    outgoing.get(connection.from.node)?.push(connection);
-    incoming.get(connection.to.node)?.push(connection);
-  }
-  const components = stronglyConnected(nodes, (id) => (outgoing.get(id) ?? []).map((c3) => c3.to.node));
-  const cycles = components.filter((component) => component.length > 1 || (outgoing.get(component[0]) ?? []).some((c3) => c3.to.node === component[0]));
-  const componentOf = /* @__PURE__ */ new Map();
-  for (const component of components) for (const id of component) componentOf.set(id, component);
-  const inCycle = new Set(cycles.flat());
-  const onCycle = (connection) => inCycle.has(connection.from.node) && componentOf.get(connection.from.node) === componentOf.get(connection.to.node);
-  const errors = [];
-  const midi2 = project.connections.filter((c3) => !isAudio(c3));
-  const midiOut = new Map(nodes.map((id) => [id, []]));
-  for (const c3 of midi2) midiOut.get(c3.from.node)?.push(c3.to.node);
-  for (const component of stronglyConnected(nodes, (id) => midiOut.get(id) ?? [])) {
-    if (component.length > 1 || (midiOut.get(component[0]) ?? []).includes(component[0])) {
-      errors.push({
-        kind: "midi-cycle",
-        nodes: [...component],
-        message: `MIDI loop through ${component.join(", ")}. A MIDI connection carries no delay, so events would go round it for ever. Remove one of the connections.`
-      });
-    }
-  }
-  for (const cycle of cycles) {
-    const members = new Set(cycle);
-    const nodeDelay = cycle.reduce((total, id) => total + latencyOf(id), 0);
-    const edgeDelay = connections.filter((c3) => members.has(c3.from.node) && members.has(c3.to.node)).reduce((total, c3) => total + (c3.delayFrames ?? 0), 0);
-    if (nodeDelay + edgeDelay < quantum) {
-      errors.push({
-        kind: "undelayed-cycle",
-        nodes: [...cycle],
-        message: `feedback loop through ${cycle.join(", ")} carries ${nodeDelay + edgeDelay} frames of delay and needs at least ${quantum}. Web Audio outputs silence for a cycle with no delay in it, so this is refused rather than left to go quiet.`
-      });
-    }
-  }
-  const componentIndex = /* @__PURE__ */ new Map();
-  components.forEach((component, i2) => {
-    for (const id of component) componentIndex.set(id, i2);
-  });
-  const componentLatency = components.map((component) => component.reduce((most, id) => Math.max(most, latencyOf(id)), 0));
-  const crossing = connections.filter((c3) => componentIndex.get(c3.from.node) !== componentIndex.get(c3.to.node));
-  const compIncoming = components.map(() => []);
-  const compOutgoing = components.map(() => []);
-  for (const connection of crossing) {
-    compIncoming[componentIndex.get(connection.to.node)].push(connection);
-    compOutgoing[componentIndex.get(connection.from.node)].push(connection);
-  }
-  const remaining = components.map((_, i2) => compIncoming[i2].length);
-  const componentOrder = [];
-  const queue = components.map((_, i2) => i2).filter((i2) => remaining[i2] === 0);
-  while (queue.length > 0) {
-    const i2 = queue.shift();
-    componentOrder.push(i2);
-    for (const connection of compOutgoing[i2]) {
-      const target = componentIndex.get(connection.to.node);
-      remaining[target] -= 1;
-      if (remaining[target] === 0) queue.push(target);
-    }
-  }
-  const componentArrival = components.map(() => 0);
-  for (const i2 of componentOrder) {
-    let latest = 0;
-    for (const connection of compIncoming[i2]) {
-      const source = componentIndex.get(connection.from.node);
-      latest = Math.max(latest, componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0));
-    }
-    componentArrival[i2] = latest;
-  }
-  const compensation = [];
-  for (const i2 of componentOrder) {
-    for (const connection of compIncoming[i2]) {
-      const source = componentIndex.get(connection.from.node);
-      const path = componentArrival[source] + componentLatency[source] + (connection.delayFrames ?? 0);
-      const needed = componentArrival[i2] - path;
-      if (needed > 0) compensation.push({ connection: connection.id, delayFrames: needed });
-    }
-  }
-  const arrival = new Map(nodes.map((id) => [id, componentArrival[componentIndex.get(id)]]));
-  const order = componentOrder.flatMap((i2) => components[i2]);
-  const sinks = componentOrder.filter((i2) => compOutgoing[i2].length === 0);
-  const totalLatency = sinks.reduce((max, i2) => Math.max(max, componentArrival[i2] + componentLatency[i2]), 0);
-  return {
-    order,
-    cycles,
-    errors,
-    ok: errors.length === 0,
-    arrival,
-    compensation,
-    totalLatency
-  };
-}
-
-// src/engine/EventRouter.js
-init_Vocabulary();
-var MIDI_SIGNALS = /* @__PURE__ */ new Set([
-  "http://purl.org/stuff/transmissions/Midi",
-  "http://purl.org/stuff/transmissions/BassMidi",
-  "http://purl.org/stuff/transmissions/DrumMidi",
-  "http://purl.org/stuff/transmissions/MelodyMidi",
-  "http://purl.org/stuff/transmissions/HarmonyMidi",
-  "http://purl.org/stuff/transmissions/MultiPartMidi",
-  "http://purl.org/stuff/transmissions/ControlMidi",
-  "http://purl.org/stuff/transmissions/MidiCC"
-]);
-var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
-var CONTROL_ONLY = /* @__PURE__ */ new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]);
-var carriesNotes = (signalKind) => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind);
-var MONITOR_EVENTS = 24;
-var EventRouter = class {
-  #engine;
-  #routes = /* @__PURE__ */ new Map();
-  #detach = /* @__PURE__ */ new Map();
-  #dropped = /* @__PURE__ */ new Map();
-  #onDropped;
-  #recent = /* @__PURE__ */ new Map();
-  constructor({ engine, onDropped = null }) {
-    if (!engine) throw new Error("EventRouter needs an engine");
-    this.#engine = engine;
-    this.#onDropped = onDropped;
-  }
-  /**
-   * The last few events that went from one node to another, oldest first, for a monitor. Bounded per
-   * route (MONITOR_EVENTS) and kept on the message thread, where the router lives; nothing here is
-   * read or written from process().
-   */
-  recent(fromEngineId, toEngineId) {
-    return [...this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? []];
-  }
-  get routes() {
-    return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
-  }
-  /** How many events a node has reported dropping, since it last said. */
-  droppedFor(engineId) {
-    return this.#dropped.get(engineId) ?? 0;
-  }
-  /**
-   * Replace every route.
-   *
-   * Rebuilt whole rather than diffed, for the same reason the audio links are:
-   * after any edit the routes are exactly what the model says, with no stale
-   * target left receiving notes from a node it is no longer connected to.
-   */
-  setRoutes(pairs) {
-    this.#routes = /* @__PURE__ */ new Map();
-    const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`));
-    for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key);
-    for (const { from, to } of pairs) {
-      if (!this.#routes.has(from)) this.#routes.set(from, []);
-      this.#routes.get(from).push(to);
-      this.observe(from);
-    }
-  }
-  /**
-   * Listen to a node whether or not it has routes.
-   *
-   * A node reports overflow on the same channel it reports outgoing events,
-   * and overflow matters regardless of how the node is wired: an instrument
-   * dropping notes is worth knowing about even when nothing is listening to
-   * its MIDI output. Listening only to routed nodes made that invisible.
-   */
-  observe(engineId) {
-    if (this.#detach.has(engineId)) return;
-    const off = this.#engine.onMessage(engineId, (message) => {
-      if (message?.type === "events") this.#forward(engineId, message.events);
-      else if (message?.type === "dropped") this.#noteDropped(engineId, message);
-    });
-    this.#detach.set(engineId, off);
-  }
-  #noteDropped(engineId, message) {
-    const total = (this.#dropped.get(engineId) ?? 0) + (message.count ?? 0);
-    this.#dropped.set(engineId, total);
-    this.#onDropped?.({ engineId, count: message.count ?? 0, total });
-  }
-  #forward(fromEngineId, events) {
-    const targets = this.#routes.get(fromEngineId);
-    if (!targets || !events?.length) return;
-    for (const target of targets) {
-      this.#remember(fromEngineId, target, events);
-      this.send(target, events);
-    }
-  }
-  #remember(from, to, events) {
-    const key = `${from}>${to}`;
-    const history = this.#recent.get(key) ?? [];
-    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
-    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS);
-    this.#recent.set(key, history);
-  }
-  /**
-   * Deliver events to one node.
-   *
-   * Sorted before sending, because messaging.md section 1.4 requires the host
-   * to post in non-decreasing frame order and a processor is entitled to stop
-   * scanning once it passes the quantum.
-   */
-  send(engineId, events) {
-    if (!events?.length) return;
-    const ordered = [...events].sort((a2, b) => a2.frame - b.frame);
-    this.#engine.post(engineId, { type: "events", events: ordered });
-  }
-  /** Broadcast a transport message to every loaded node. */
-  broadcastTransport(message) {
-    for (const entry of this.#engine.nodes()) {
-      this.#engine.post(entry.id, message);
-    }
-  }
-  /** Stop listening to everything. */
-  dispose() {
-    for (const off of this.#detach.values()) off();
-    this.#detach.clear();
-    this.#routes.clear();
-  }
-};
-
-// src/ops/Bypass.js
-var AUDIO2 = "audio";
-var MIDI2 = "midi";
-var kindOf2 = (connection) => isMidi(connection.signalKind) ? MIDI2 : AUDIO2;
-var intoMain = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
-function effectiveConnections(connections, { bypassed, passes }) {
-  let list = connections.map((c3) => c3);
-  for (let guard = 0; guard <= connections.length + 1; guard++) {
-    const target = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
-    if (target === void 0) break;
-    for (const kind of [AUDIO2, MIDI2]) {
-      if (!passes(target, kind)) continue;
-      const into = list.filter((c3) => c3.to.node === target && kindOf2(c3) === kind && intoMain(c3));
-      const out = list.filter((c3) => c3.from.node === target && kindOf2(c3) === kind);
-      if (into.length === 0 || out.length === 0) continue;
-      const joined = [];
-      for (const a2 of into) {
-        for (const b of out) {
-          if (a2.from.node === b.to.node) continue;
-          joined.push({ id: `${a2.id}~${b.id}`, from: a2.from, to: b.to, signalKind: a2.signalKind });
-        }
-      }
-      const gone = /* @__PURE__ */ new Set([...into, ...out]);
-      list = [...list.filter((c3) => !gone.has(c3)), ...joined];
-    }
-  }
-  return list.filter((c3) => !bypassed(c3.from.node) && !(bypassed(c3.to.node) && passes(c3.to.node, kindOf2(c3)) && intoMain(c3)));
-}
-
-// src/engine/Transport.js
-var MINUTE = 60;
-function normalise(tempoPoints) {
-  const points = [...tempoPoints ?? []].filter((p) => Number.isFinite(p.atBeat) && p.bpm > 0).sort((a2, b) => a2.atBeat - b.atBeat);
-  if (points.length === 0) return [{ atBeat: 0, bpm: 120 }];
-  if (points[0].atBeat > 0) points.unshift({ atBeat: 0, bpm: points[0].bpm });
-  return points;
-}
-var Transport = class _Transport {
-  #points;
-  #sampleRate;
-  #beatsPerBar;
-  #beatUnit;
-  #loop;
-  constructor({
-    tempoPoints = [{ atBeat: 0, bpm: 120 }],
-    sampleRate = 48e3,
-    beatsPerBar = 4,
-    beatUnit = 4,
-    loopStart = 0,
-    loopEnd = 0,
-    loopEnabled = false
-  } = {}) {
-    this.#points = normalise(tempoPoints);
-    this.#sampleRate = sampleRate;
-    this.#beatsPerBar = beatsPerBar;
-    this.#beatUnit = beatUnit;
-    this.#loop = { start: loopStart, end: loopEnd, enabled: loopEnabled && loopEnd > loopStart };
-  }
-  get tempoPoints() {
-    return this.#points.map((p) => ({ ...p }));
-  }
-  get sampleRate() {
-    return this.#sampleRate;
-  }
-  get loop() {
-    return { ...this.#loop };
-  }
-  /** The tempo in force at a beat. */
-  tempoAtBeat(beat) {
-    let tempo = this.#points[0].bpm;
-    for (const point of this.#points) {
-      if (point.atBeat > beat) break;
-      tempo = point.bpm;
-    }
-    return tempo;
-  }
-  /** Seconds from beat zero to a beat, across every tempo change between. */
-  secondsAtBeat(beat) {
-    if (beat <= 0) return 0;
-    let seconds = 0;
-    for (let i2 = 0; i2 < this.#points.length; i2++) {
-      const from = this.#points[i2].atBeat;
-      if (from >= beat) break;
-      const to = Math.min(this.#points[i2 + 1]?.atBeat ?? Infinity, beat);
-      seconds += (to - from) * MINUTE / this.#points[i2].bpm;
-    }
-    return seconds;
-  }
-  /** The inverse: which beat a number of seconds reaches. */
-  beatAtSeconds(seconds) {
-    if (seconds <= 0) return 0;
-    let elapsed = 0;
-    for (let i2 = 0; i2 < this.#points.length; i2++) {
-      const { atBeat, bpm } = this.#points[i2];
-      const next = this.#points[i2 + 1]?.atBeat ?? Infinity;
-      const segment2 = (next - atBeat) * MINUTE / bpm;
-      if (elapsed + segment2 > seconds || next === Infinity) {
-        return atBeat + (seconds - elapsed) * bpm / MINUTE;
-      }
-      elapsed += segment2;
-    }
-    return 0;
-  }
-  /** Beats advanced per frame at a given beat. Sent to plugins each quantum. */
-  beatsPerFrame(beat) {
-    return this.tempoAtBeat(beat) / (MINUTE * this.#sampleRate);
-  }
-  /**
-   * Where the transport is, given how long it has been rolling.
-   *
-   * `elapsedFrames` counts frames since play started, not frames since the
-   * context did. The two differ after a stop and restart, and using the wrong
-   * one is the class of bug contract section 7 exists to prevent.
-   */
-  positionAtElapsed(elapsedFrames, { startBeat = 0 } = {}) {
-    const startSeconds = this.secondsAtBeat(startBeat);
-    let absolute = startSeconds + elapsedFrames / this.#sampleRate;
-    if (this.#loop.enabled) {
-      const loopStartSeconds = this.secondsAtBeat(this.#loop.start);
-      const loopEndSeconds = this.secondsAtBeat(this.#loop.end);
-      const length = loopEndSeconds - loopStartSeconds;
-      if (length > 0 && absolute >= loopEndSeconds) {
-        absolute = loopStartSeconds + (absolute - loopStartSeconds) % length;
-      }
-    }
-    const beat = this.beatAtSeconds(absolute);
-    return {
-      beat,
-      seconds: absolute,
-      tempo: this.tempoAtBeat(beat),
-      beatsPerFrame: this.beatsPerFrame(beat),
-      bar: Math.floor(beat / this.#beatsPerBar),
-      beatInBar: beat % this.#beatsPerBar
-    };
-  }
-  /** The message a processor receives each quantum. messaging.md section 1.2. */
-  messageAt(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
-    const position = this.positionAtElapsed(elapsedFrames, { startBeat });
-    return {
-      type: "transport",
-      playing,
-      frame,
-      beat: position.beat,
-      beatsPerFrame: position.beatsPerFrame,
-      tempo: position.tempo,
-      timeSignature: { beatsPerBar: this.#beatsPerBar, beatUnit: this.#beatUnit },
-      loop: this.#loop.enabled ? { start: this.#loop.start, end: this.#loop.end } : null
-    };
-  }
-  /** Build one from a project's transport, so the two cannot disagree. */
-  static fromProject(project, sampleRate) {
-    const t = project.transport;
-    return new _Transport({
-      tempoPoints: t.tempoPoints,
-      sampleRate,
-      beatsPerBar: t.beatsPerBar,
-      beatUnit: t.beatUnit,
-      loopStart: t.loopStart,
-      loopEnd: t.loopEnd,
-      loopEnabled: t.loopEnabled
-    });
-  }
-};
-
-// src/host/Inspections.js
-var HOST_VERSION = "jigdaw-host/0.1.0";
-var STORAGE_KEY = "jigdaw:inspections";
-var MAX_RECORDS = 200;
-function defaultStorage() {
-  try {
-    return typeof localStorage !== "undefined" ? localStorage : null;
-  } catch {
-    return null;
-  }
-}
-var Inspections = class {
-  #storage;
-  // Storage is injected, never read from globalThis inside a method, so a
-  // host with none (private browsing, a test, a worker) gets a working
-  // no-op instead of a throw the first time a plugin loads.
-  constructor({ storage = defaultStorage() } = {}) {
-    this.#storage = storage ?? null;
-  }
-  /** Record what happened loading `iri`. `outcome` is free text, per
-   * jig:loadOutcome: "loaded", or "failed: <reason>". */
-  record({ iri: iri3, outcome }) {
-    if (!this.#storage) return;
-    const records = this.#read();
-    records.push({
-      inspectionOf: iri3,
-      inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      hostVersion: HOST_VERSION,
-      loadOutcome: outcome
-    });
-    while (records.length > MAX_RECORDS) records.shift();
-    try {
-      this.#storage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch {
-    }
-  }
-  /** Every inspection recorded of one plugin, oldest first. */
-  forPlugin(iri3) {
-    return this.#read().filter((r) => r.inspectionOf === iri3);
-  }
-  /** Every inspection recorded, oldest first. */
-  all() {
-    return this.#read();
-  }
-  #read() {
-    if (!this.#storage) return [];
-    try {
-      const raw = this.#storage.getItem(STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-};
-
-// src/host/StateCodec.js
-var MARKER = "__jigdawArrayBuffer";
-function toBase642(buffer) {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  for (let i2 = 0; i2 < bytes.length; i2++) binary += String.fromCharCode(bytes[i2]);
-  return btoa(binary);
-}
-function fromBase64(base64) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i2 = 0; i2 < binary.length; i2++) bytes[i2] = binary.charCodeAt(i2);
-  return bytes.buffer;
-}
-function encodeState(state) {
-  if (state === null || state === void 0) return null;
-  return JSON.stringify(state, (_key, value2) => value2 instanceof ArrayBuffer ? { [MARKER]: toBase642(value2) } : value2);
-}
-function decodeState(text) {
-  if (text === null || text === void 0) return null;
-  return JSON.parse(text, (_key, value2) => value2 && typeof value2 === "object" && MARKER in value2 ? fromBase64(value2[MARKER]) : value2);
-}
-
-// src/ops/UndoHistory.js
-var UNDO_LIMIT = 100;
-var UndoHistory = class {
-  #undoStack = [];
-  #redoStack = [];
-  #limit;
-  constructor(limit = UNDO_LIMIT) {
-    this.#limit = limit;
-  }
-  /** Whether there is an edit to step back from. */
-  canUndo() {
-    return this.#undoStack.length > 0;
-  }
-  /** Whether there is an edit undo last stepped back from to step forward to. */
-  canRedo() {
-    return this.#redoStack.length > 0;
-  }
-  /** Drop all undo and redo history. */
-  clear() {
-    this.#undoStack.length = 0;
-    this.#redoStack.length = 0;
-  }
-  /**
-   * Record a snapshot taken just before a committed edit. Called by
-   * OpDispatcher.apply() itself, never from here, because only apply() knows
-   * whether the edit it just committed should be undoable.
-   */
-  record(snapshot) {
-    this.#undoStack.push(snapshot);
-    if (this.#undoStack.length > this.#limit) this.#undoStack.shift();
-    this.#redoStack.length = 0;
-  }
-  /**
-   * Step the project back to how it was before the last recorded edit.
-   *
-   * Async, unlike apply(): a node removed since the snapshot being restored to
-   * is not data the model can conjure back, it is an instantiated plugin, and
-   * bringing it back means reloading it, contract section 3.1 start to
-   * finish. Most edits touch no such node and this still returns a promise,
-   * so a caller does not need to know in advance which kind of edit it was
-   * undoing.
-   */
-  async undo(dispatcher) {
-    if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
-    const target = this.#undoStack.pop();
-    this.#redoStack.push(dispatcher.project.snapshot());
-    await this.#restoreTo(dispatcher, target);
-    return { ok: true, revision: dispatcher.project.revision };
-  }
-  /** The inverse of undo: step forward to whatever undo last stepped back from. */
-  async redo(dispatcher) {
-    if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
-    const target = this.#redoStack.pop();
-    this.#undoStack.push(dispatcher.project.snapshot());
-    await this.#restoreTo(dispatcher, target);
-    return { ok: true, revision: dispatcher.project.revision };
-  }
-  /**
-   * Bring the live project to match a snapshot, reusing the same paths a
-   * person or the WebMCP surface would use rather than writing the state in
-   * directly, so the engine (AudioParams, the channel strip, the links) moves
-   * with the model exactly as it does for any other edit. Recording is off
-   * throughout, through dispatcher.withoutRecording(): every apply()/
-   * addPlugin()/setParameter() call this makes is the mechanism of the undo
-   * or redo, not a further edit to record one of.
-   *
-   * Tracks are added before any node is reloaded, because a node names its
-   * track, and removed only after every node has moved off them or gone,
-   * because the model refuses to remove a track with nodes on it.
-   *
-   * A node the target has and the present does not is reloaded from its
-   * plugin IRI, the same as reopening a saved session, with its id, track,
-   * settings and state preserved so the graph below still recognises it. A
-   * node a reload could not restore is left out and reported nowhere further
-   * than the console: its connections are skipped rather than left dangling,
-   * which is one node's worth of undo history lost rather than the whole
-   * step refused for a plugin that may no longer be reachable.
-   */
-  async #restoreTo(dispatcher, target) {
-    await dispatcher.withoutRecording(async () => {
-      const current = dispatcher.project.snapshot();
-      const currentIds = new Set(current.nodes.map((n2) => n2.id));
-      const targetIds = new Set(target.nodes.map((n2) => n2.id));
-      const currentTrackIds = new Set(current.tracks.map((t) => t.id));
-      const targetTrackIds = new Set(target.tracks.map((t) => t.id));
-      const toAddTracks = target.tracks.filter((t) => !currentTrackIds.has(t.id));
-      if (toAddTracks.length > 0) {
-        dispatcher.apply(toAddTracks.map((t) => ({ op: "addTrack", id: t.id, label: t.label, channel: t.channel })));
-      }
-      const toRemove = current.nodes.filter((n2) => !targetIds.has(n2.id)).map((n2) => n2.id);
-      if (toRemove.length > 0) {
-        dispatcher.apply(toRemove.map((id) => ({ op: "removeNode", id })));
-      }
-      for (const node of target.nodes) {
-        if (currentIds.has(node.id)) continue;
-        const result = await dispatcher.addPlugin(node.pluginIri, {
-          id: node.id,
-          label: node.label,
-          track: node.track,
-          settings: node.settings,
-          state: node.state,
-          bypassed: node.bypassed
-        });
-        if (!result.ok) {
-          console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`);
-          continue;
-        }
-        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
-          dispatcher.setParameter(node.id, symbol, value2);
-        }
-      }
-      const reconcile = [];
-      for (const node of target.nodes) {
-        if (!currentIds.has(node.id)) continue;
-        const live = dispatcher.project.node(node.id);
-        if (!live) continue;
-        for (const [symbol, value2] of Object.entries(node.settings ?? {})) {
-          if (live.settings.get(symbol) !== value2) dispatcher.setParameter(node.id, symbol, value2);
-        }
-        for (const symbol of [...live.settings.keys()]) {
-          if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol);
-        }
-        if (live.track !== node.track) reconcile.push({ op: "moveNodeToTrack", id: node.id, track: node.track });
-        if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
-      }
-      const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
-      for (const track of target.tracks) {
-        const live = dispatcher.project.track(track.id);
-        const c3 = track.channel;
-        const l = live.channel;
-        if (c3.gain !== l.gain || c3.pan !== l.pan || c3.muted !== l.muted || c3.soloed !== l.soloed) {
-          reconcile.push({ op: "setTrackChannel", track: track.id, ...c3 });
-        }
-        const input = (id) => id !== null && liveIdsAfterReload.has(id) ? id : null;
-        if (live.label !== track.label || live.midiInput !== input(track.midiInput) || live.audioInput !== input(track.audioInput)) {
-          reconcile.push({
-            op: "setTrack",
-            id: track.id,
-            label: track.label,
-            midiInput: input(track.midiInput),
-            audioInput: input(track.audioInput)
-          });
-        }
-      }
-      const liveIds = new Set(dispatcher.project.nodes.map((n2) => n2.id));
-      const currentConnIds = new Set(dispatcher.project.connections.map((c3) => c3.id));
-      const targetConnIds = new Set(target.connections.map((c3) => c3.id));
-      for (const id of currentConnIds) {
-        if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
-      }
-      for (const connection of target.connections) {
-        if (currentConnIds.has(connection.id)) continue;
-        if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue;
-        reconcile.push({
-          op: "addConnection",
-          id: connection.id,
-          from: connection.from,
-          to: connection.to,
-          signalKind: connection.signalKind,
-          delayFrames: connection.delayFrames
-        });
-      }
-      if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target.transport)) {
-        reconcile.push({ op: "setTransport", ...target.transport });
-      }
-      const liveClips = new Map(dispatcher.project.snapshot().clips.map((c3) => [c3.id, c3]));
-      const targetClips = new Map(target.clips.map((c3) => [c3.id, c3]));
-      for (const [id, clip] of liveClips) {
-        const wanted = targetClips.get(id);
-        if (!wanted || JSON.stringify(wanted) !== JSON.stringify(clip)) reconcile.push({ op: "removeClip", id, force: true });
-      }
-      for (const [id, clip] of targetClips) {
-        const live = liveClips.get(id);
-        if (!live || JSON.stringify(live) !== JSON.stringify(clip)) reconcile.push(clipChange(clip));
-      }
-      reconcile.push(...arrangementReconcile(dispatcher.project.snapshot(), target));
-      for (const id of currentTrackIds) {
-        if (!targetTrackIds.has(id)) reconcile.push({ op: "removeTrack", id });
-      }
-      dispatcher.apply(reconcile);
-    });
-  }
-};
-
-// src/ops/OpDispatcher.js
-var OpDispatcher = class {
-  #project;
-  #engine;
-  #listeners = /* @__PURE__ */ new Set();
-  #nodeIds = /* @__PURE__ */ new Map();
-  #router = null;
-  #inspections;
-  // The compensation delays the running graph holds, by project connection
-  // id. Rebuilt with the links, and moved by a latency message without
-  // rebuilding them (docs/latency.md section 2).
-  #compensation = /* @__PURE__ */ new Map();
-  #alignTracks = false;
-  // The delay last given to each track, in frames, so the engine is asked only about a change.
-  #trackDelays = /* @__PURE__ */ new Map();
-  #foreign;
-  // The stacks and the snapshot-to-snapshot reconciliation live in
-  // UndoHistory. Nothing is recorded while #recording is false, which is how
-  // undo and redo call back into apply()/addPlugin() to do the actual work
-  // without recording their own reversal as a new edit.
-  #history = new UndoHistory();
-  #recording = true;
-  constructor({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
-    this.#project = project;
-    this.#alignTracks = alignTracks;
-    this.#engine = engine;
-    this.#foreign = foreign;
-    this.#inspections = inspections;
-    if (engine) {
-      this.#router = new EventRouter({
-        engine,
-        onDropped: (report) => this.#emit({ type: "dropped", ...report })
-      });
-    }
-  }
-  get router() {
-    return this.#router;
-  }
-  /**
-   * Where consent for foreign plugins is recorded, or null on a host that
-   * loads none. Exposed because contract section 12.4 requires a person to be
-   * asked, and the asking happens in a surface rather than in here.
-   */
-  get foreignTrust() {
-    return this.#foreign?.trust ?? null;
-  }
-  /** The foreign side, or null on a host that loads none. */
-  get foreignSupport() {
-    return this.#foreign ?? null;
-  }
-  /** The musical clock, built from the project so the two cannot disagree. */
-  transport(sampleRate = this.#engine?.context?.sampleRate ?? 48e3) {
-    return Transport.fromProject(this.#project, sampleRate);
-  }
-  /**
-   * Send the transport position to every plugin.
-   *
-   * Contract section 7: a plugin derives musical timing from this and never by
-   * counting process() calls, so the host has to supply it rather than leave a
-   * plugin to infer it.
-   */
-  sendTransport(elapsedFrames, { frame, playing = true, startBeat = 0 } = {}) {
-    if (!this.#router) return null;
-    const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
-    this.#router.broadcastTransport(message);
-    return message;
-  }
-  /**
-   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
-   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
-   * loaded), or one nothing has gone over.
-   */
-  midiActivity(connectionId) {
-    const connection = this.#project.connection(connectionId);
-    if (!connection || !isMidi(connection.signalKind) || !this.#router) return [];
-    const from = this.#nodeIds.get(connection.from.node);
-    const to = this.#nodeIds.get(connection.to.node);
-    return from && to ? this.#router.recent(from, to) : [];
-  }
-  /** Deliver MIDI into a node, as if from outside the graph. */
-  sendEvents(nodeId, events) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#router) return false;
-    this.#router.send(engineId, events);
-    return true;
-  }
-  /**
-   * Relay an opaque payload from a plugin's own interface to its processor,
-   * docs/messaging.md 2.4. Not an operation: it changes nothing the project
-   * records, and the host does not read it. Throttling is the caller's, which
-   * is where the interface's messages arrive.
-   */
-  relayToPlugin(nodeId, payload) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#engine) return false;
-    this.#engine.post(engineId, { type: "plugin", payload });
-    return true;
-  }
-  /**
-   * Hear a processor's opaque payloads for its own interface. Returns an
-   * unsubscribe function, or null for a node the engine has not loaded. Only
-   * this node's payloads: 2.4 forbids one plugin's reaching another.
-   */
-  onPluginMessage(nodeId, handler2) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#engine) return null;
-    return this.#engine.onMessage(engineId, (message) => {
-      if (message?.type === "plugin") handler2(message.payload);
-    });
-  }
-  get project() {
-    return this.#project;
-  }
-  get revision() {
-    return this.#project.revision;
-  }
-  /** Subscribe to what happened. Returns an unsubscribe function. */
-  subscribe(listener) {
-    this.#listeners.add(listener);
-    return () => this.#listeners.delete(listener);
-  }
-  #emit(event) {
-    for (const listener of this.#listeners) {
-      try {
-        listener(event);
-      } catch (error2) {
-        console.error("listener failed", error2);
-      }
-    }
-  }
-  /** Whether tracks are aligned to one another. */
-  get alignTracks() {
-    return this.#alignTracks;
-  }
-  /** Turn alignment on or off, and give every track the delay that now applies. */
-  setAlignTracks(on) {
-    this.#alignTracks = Boolean(on);
-    const compiled = this.compile();
-    if (compiled.ok) this.#applyTrackDelays(compiled);
-  }
-  /**
-   * How late each track's signal is, in frames: the longest declared latency
-   * along its chain, counting what the compiler found ahead of each node.
-   * `alignFrames` is the delay added to line it up with the slowest track, which
-   * is zero when alignment is off, and `frames` is what the track itself has
-   * (docs/latency.md, "Between tracks").
-   */
-  trackLatencies() {
-    const compiled = this.compile();
-    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
-    const slowest = Math.max(0, ...frames.values());
-    return this.#project.tracks.map((track) => ({
-      trackId: track.id,
-      frames: frames.get(track.id) ?? 0,
-      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
-    }));
-  }
-  #trackFrames(compiled) {
-    return new Map(this.#project.tracks.map((track) => [
-      track.id,
-      this.#project.nodes.filter((n2) => n2.track === track.id).reduce((most, n2) => Math.max(most, (compiled.arrival.get(n2.id) ?? 0) + this.#latencyOf(n2.id)), 0)
-    ]));
-  }
-  /** Give each track the delay that lines it up, asking the engine only where it changed. */
-  #applyTrackDelays(compiled) {
-    if (!this.#engine) return;
-    const frames = this.#trackFrames(compiled);
-    const slowest = Math.max(0, ...frames.values());
-    for (const track of this.#project.tracks) {
-      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0;
-      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
-      try {
-        this.#engine.setTrackDelay(track.id, wanted);
-        this.#trackDelays.set(track.id, wanted);
-      } catch (error2) {
-        console.error(`could not align track ${track.id}: ${error2.message}`);
-      }
-    }
-    for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id);
-  }
-  /** The latency each node declares, from what the engine actually loaded. */
-  #latencyOf(nodeId) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#engine) return 0;
-    try {
-      return this.#engine.get(engineId).ready?.latencyFrames ?? 0;
-    } catch {
-      return 0;
-    }
-  }
-  /**
-   * Apply a changeset.
-   *
-   * Compilation happens against the result before it is committed, so a
-   * changeset that would produce an uncompilable graph is refused whole. That
-   * is why this is the only way in.
-   */
-  apply(changes, { expectedRevision, dryRun = false } = {}) {
-    const unroutable = this.#unroutable(changes);
-    if (unroutable) {
-      return { ok: false, kind: "change", revision: this.#project.revision, message: unroutable };
-    }
-    try {
-      this.#project.apply(changes, { expectedRevision, dryRun: true });
-    } catch (error2) {
-      return this.#failure(error2);
-    }
-    const trial = this.#clone();
-    trial.apply(changes);
-    const compiled = compileGraph(trial, { latencyOf: (id) => this.#latencyOf(id) });
-    if (!compiled.ok) {
-      return {
-        ok: false,
-        kind: "compile",
-        revision: this.#project.revision,
-        errors: compiled.errors,
-        message: compiled.errors[0].message
-      };
-    }
-    if (dryRun) {
-      return { ok: true, applied: false, revision: this.#project.revision, compiled };
-    }
-    const before = this.#recording ? this.#project.snapshot() : null;
-    const result = this.#project.apply(changes, { expectedRevision });
-    this.#releaseRemoved();
-    this.#rebuildLinks(compiled);
-    if (before) this.#history.record(before);
-    this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
-    return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
-  }
-  /** Whether there is an edit to step back from. */
-  canUndo() {
-    return this.#history.canUndo();
-  }
-  /** Whether there is an edit undo last stepped back from to step forward to. */
-  canRedo() {
-    return this.#history.canRedo();
-  }
-  /**
-   * Drop all undo and redo history.
-   *
-   * For a caller opening a different session into this dispatcher, such as
-   * web/app.js's openSession, which loads a project by clearing every node
-   * and adding back what the file says. Without this, undoing straight after
-   * opening a file would try to step back into whatever session was open
-   * before it, node by node, restoring plugins the person just replaced.
-   */
-  clearHistory() {
-    this.#history.clear();
-  }
-  /**
-   * Step the project back to how it was before the last recorded edit.
-   *
-   * Async, unlike apply(): a node removed since the snapshot being restored to
-   * is not data the model can conjure back, it is an instantiated plugin, and
-   * bringing it back means reloading it, contract section 3.1 start to
-   * finish. Most edits touch no such node and this still returns a promise,
-   * so a caller does not need to know in advance which kind of edit it was
-   * undoing. The stack bookkeeping and the snapshot-to-snapshot reconciliation
-   * are UndoHistory's; this dispatcher is the host it calls back into.
-   */
-  async undo() {
-    return this.#history.undo(this);
-  }
-  /** The inverse of undo: step forward to whatever undo last stepped back from. */
-  async redo() {
-    return this.#history.redo(this);
-  }
-  /**
-   * Run fn with recording off, so the apply()/addPlugin()/setParameter()
-   * calls it makes are not themselves recorded as further undoable edits.
-   * Called by UndoHistory while it reconciles the project to a snapshot; nothing
-   * else needs it, but it stays on the public dispatcher rather than a private
-   * field so UndoHistory can drive it without reaching into private state.
-   */
-  async withoutRecording(fn) {
-    this.#recording = false;
-    try {
-      return await fn();
-    } finally {
-      this.#recording = true;
-    }
-  }
-  /** The first end of a new connection that names a port its node has not got. */
-  #unroutable(changes) {
-    for (const change of changes ?? []) {
-      if (change?.op !== "addConnection") continue;
-      for (const direction of ["from", "to"]) {
-        const endpoint2 = change[direction];
-        if (!endpoint2?.node) continue;
-        const found = findPort(
-          this.engineNode(endpoint2.node)?.profile,
-          endpoint2,
-          direction,
-          change.signalKind
-        );
-        if (!found.ok) return found.message;
-      }
-    }
-    return null;
-  }
-  #failure(error2) {
-    if (error2 instanceof RevisionConflict) {
-      return {
-        ok: false,
-        kind: "conflict",
-        revision: this.#project.revision,
-        expected: error2.expected,
-        message: error2.message
-      };
-    }
-    if (error2 instanceof ChangeError) {
-      return { ok: false, kind: "change", revision: this.#project.revision, index: error2.index, message: error2.message };
-    }
-    throw error2;
-  }
-  /** A copy of the project, for trying a changeset without committing it. */
-  #clone() {
-    const copy = new Project();
-    copy.apply(changesFor(this.#project.snapshot()));
-    return copy;
-  }
-  /**
-   * Load a plugin and add it as a node.
-   *
-   * Loading reaches the network and can fail slowly, which does not sit well
-   * inside an atomic changeset, so it happens first and the node id joins the
-   * two halves. webmcp.md raises this as open; this is the answer.
-   */
-  /**
-   * Load a plugin and add a node for it.
-   *
-   * `id` names the node rather than letting one be minted, which is what
-   * reopening a saved project needs: the connections in the file name the nodes
-   * they join, so a node that came back under a different name would be joined
-   * to nothing. The model tracks ids it did not mint, so a later minted id
-   * cannot collide with one restored here.
-   *
-   * Everything else is passed through to addNode rather than enumerated here.
-   * It used to list the fields it forwarded, and the day a node gained a channel
-   * strip that list was silently one field short: a saved mix was written
-   * correctly, read correctly, and dropped on the way back in.
-   *
-   * Without a `track` the plugin gets a new track of its own, named after it,
-   * in the same changeset, so dropping an instrument in makes a sound without a
-   * second step. A plugin that accepts MIDI becomes that new track's MIDI
-   * input, since it is the only node there for notes to go to. On an existing
-   * track nothing is guessed: which node takes the notes is a person's call.
-   */
-  async addPlugin(iri3, { position, foreign = false, ...node } = {}) {
-    if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
-    let entry;
-    try {
-      entry = foreign ? await this.#addForeign(iri3) : await this.#engine.addPlugin(iri3, { state: decodeState(node.state ?? null) });
-    } catch (error2) {
-      if (error2.name === "ConsentRequired") {
-        return { ok: false, kind: "consent", request: error2.request, message: error2.message };
-      }
-      this.#inspections.record({ iri: iri3, outcome: `failed: ${error2.message}` });
-      return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
-    }
-    this.#inspections.record({ iri: iri3, outcome: "loaded" });
-    const label = node.label ?? entry.profile.label;
-    const changes = [];
-    let newTrack = null;
-    if (node.track === void 0 || node.track === null) {
-      newTrack = this.#project.nextId("track");
-      changes.push({ op: "addTrack", id: newTrack, label });
-    }
-    const nodeId = node.id ?? this.#project.nextId("node");
-    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
-    if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
-      changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
-    }
-    const result = this.apply(changes);
-    if (!result.ok) {
-      this.#engine.remove(entry.id);
-      return result;
-    }
-    this.#nodeIds.set(nodeId, entry.id);
-    this.#rebuildLinks(this.compile());
-    this.#router?.observe(entry.id);
-    if (!foreign) {
-      this.#engine.onMessage(entry.id, (message) => {
-        if (message?.type === "latency") this.#onLatency(nodeId, entry.id, message);
-      });
-    }
-    if (position) this.#project.moveNode(nodeId, position.x, position.y);
-    this.#emit({ type: "plugin-added", nodeId, trackId: node.track ?? newTrack, entry });
-    return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
-  }
-  /**
-   * Fetch a foreign profile, load it through its adapter, and adopt it.
-   *
-   * Private because there must be exactly one way into running foreign code,
-   * and it is the branch in addPlugin above.
-   */
-  async #addForeign(iri3) {
-    if (!this.#foreign) {
-      throw new Error(
-        "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
-      );
-    }
-    const loaded = await this.#foreign.add(iri3, this.#engine.context);
-    return this.#engine.adopt({
-      iri: iri3,
-      profile: loaded.profile,
-      node: loaded.node,
-      ready: loaded.ready
-    });
-  }
-  /**
-   * A processor reporting a new latency (docs/latency.md section 2).
-   *
-   * Not an operation: nothing the project records changed, so there is no
-   * revision, no history entry, and nothing to undo. The node's figure is
-   * updated, the unchanged project is recompiled, and each compensation delay
-   * that moved is retimed against the message's fromFrame rather than against
-   * this arrival. A handler that throws must not take down the fan-out, so a
-   * connection that is not in the running graph yet (one end still loading)
-   * is reported and skipped: the next full rebuild wires it with the current
-   * figures.
-   */
-  #onLatency(nodeId, engineId, message) {
-    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return;
-    let entry;
-    try {
-      entry = this.#engine.get(engineId);
-    } catch {
-      return;
-    }
-    const label = entry?.profile?.label ?? nodeId;
-    const { latencyFrames, fromFrame } = message ?? {};
-    if (!Number.isFinite(latencyFrames) || latencyFrames < 0) {
-      console.error(`${label} reported an unusable latency: ${JSON.stringify(latencyFrames)}. A latency message carries a non-negative latencyFrames in frames.`);
-      return;
-    }
-    if (!Number.isFinite(fromFrame) || fromFrame < 0) {
-      console.error(`${label} reported an unusable fromFrame: ${JSON.stringify(fromFrame)}. A latency message carries the absolute stream position its figure applies from.`);
-      return;
-    }
-    entry.ready = { ...entry.ready ?? {}, latencyFrames };
-    const compiled = this.compile();
-    if (!compiled.ok) {
-      console.error(`${label} changed its latency to ${latencyFrames} frames and the graph no longer compiles: ${compiled.errors[0].message}. Keeping the previous compensation.`);
-      return;
-    }
-    const atTime = this.#engine.frameTime(fromFrame);
-    const after = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
-    for (const [connection, delayFrames] of after) {
-      if (this.#compensation.get(connection) === delayFrames) continue;
-      try {
-        this.#engine.retime(connection, delayFrames, { atTime });
-      } catch (error2) {
-        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
-      }
-    }
-    for (const connection of this.#compensation.keys()) {
-      if (after.has(connection)) continue;
-      try {
-        this.#engine.retime(connection, 0, { atTime });
-      } catch (error2) {
-        console.error(`${label}: cannot retime connection "${connection}": ${error2.message}`);
-      }
-    }
-    this.#compensation = after;
-    this.#applyTrackDelays(compiled);
-    this.#emit({ type: "latency", nodeId, latencyFrames, fromFrame, compiled });
-  }
-  /**
-   * Set a parameter. Goes to the model and the AudioParam, never a message.
-   *
-   * The clamp is asked for before the write rather than corrected after it. The
-   * engine clamps to the declared range and the model must record what was
-   * actually applied, not what was asked for, per messaging.md 2.3: a surface
-   * renders what it is told, not what it requested. Writing the asked-for value
-   * and then writing the clamped one was two revisions for one edit, and the
-   * second went straight to the project, around this dispatcher's own gate.
-   */
-  setParameter(nodeId, symbol, value2) {
-    const engineId = this.#nodeIds.get(nodeId);
-    let applied = value2;
-    if (engineId && this.#engine) {
-      try {
-        applied = this.#engine.clampParameter(engineId, symbol, value2);
-      } catch (error2) {
-        return { ok: false, kind: "change", message: error2.message };
-      }
-    }
-    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
-    if (!result.ok) return result;
-    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
-    this.#emit({ type: "parameter", nodeId, symbol, value: applied });
-    return { ...result, value: applied };
-  }
-  /**
-   * Put a parameter back to its plugin's default and forget its setting, so
-   * the model says what a node that was never touched says. What undo does
-   * for a parameter that had not been set before the edit being undone:
-   * restoring "no setting" in the model alone left the AudioParam, the panel
-   * and an open editor all at the value being undone.
-   */
-  resetParameter(nodeId, symbol) {
-    const engineId = this.#nodeIds.get(nodeId);
-    let value2 = null;
-    if (engineId && this.#engine) {
-      try {
-        value2 = this.#engine.defaultParameter(engineId, symbol);
-      } catch (error2) {
-        return { ok: false, kind: "change", message: error2.message };
-      }
-    }
-    const result = this.apply([{ op: "clearSetting", node: nodeId, symbol }]);
-    if (!result.ok) return result;
-    if (engineId && this.#engine && value2 !== null) {
-      this.#engine.setParameter(engineId, symbol, value2);
-      this.#emit({ type: "parameter", nodeId, symbol, value: value2 });
-    }
-    return { ...result, value: value2 };
-  }
-  /**
-   * Ask a node's own processor for its current state, live, rather than
-   * whatever `jig:nodeState` last happened to hold in the model. Called
-   * before writing a session, per contract section 8: parameter values are
-   * never part of state, so this is the only way a saved project carries
-   * what a stateful plugin is actually doing.
-   *
-   * `null` for a node the engine has no entry for (not yet loaded, or a
-   * foreign plugin, whose own adapter this does not reach into) and for a
-   * plugin that never answers, which are both ordinary rather than errors.
-   */
-  async getNodeState(nodeId) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#engine) return null;
-    return this.#engine.requestState(engineId);
-  }
-  /**
-   * Replace one `jig:userReplaceable` asset in a running node: a person
-   * choosing a different file from the generated panel. Not routed through
-   * `apply()`: it changes neither the graph nor a parameter the model
-   * tracks, only bytes a processor holds, which is exactly what
-   * `jig:nodeState` exists to carry, and the next `getNodeState` reflects it
-   * without this needing to touch the project itself.
-   */
-  loadAsset(nodeId, key, bytes) {
-    const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#engine) {
-      return { ok: false, message: "no such node, or nothing to load an asset into" };
-    }
-    this.#engine.loadAsset(engineId, key, bytes);
-    return { ok: true };
-  }
-  /**
-   * Rebuild the audio links to match the compiled graph.
-   *
-   * The whole set is torn down and rebuilt rather than diffed. A diff is an
-   * optimisation and this is the correctness-first version: after any edit the
-   * links are exactly what the compiler said, with no stale delay node left
-   * feeding silence into a mix because an edge moved.
-   */
-  /**
-   * Let go of the engine nodes whose model nodes are gone.
-   *
-   * Removing a node from the model does not remove the AudioWorkletNode behind
-   * it, and until this existed nothing did: a removed plugin kept running and
-   * kept whatever the page had connected it to. Rebuilding links does not cover
-   * it, because a node with no links is exactly the case.
-   *
-   * Driven by the model rather than by the change list, so it is right for any
-   * route that removes a node, including a changeset that removes one as a side
-   * effect of removing something else.
-   */
-  #releaseRemoved() {
-    if (!this.#engine) return;
-    for (const [nodeId, engineId] of [...this.#nodeIds]) {
-      if (this.#project.node(nodeId)) continue;
-      try {
-        this.#engine.remove(engineId);
-      } catch {
-      }
-      this.#nodeIds.delete(nodeId);
-    }
-  }
-  /**
-   * Make the engine's track strips match the model's tracks: one each, no
-   * more. Before the links, because the links end at them.
-   */
-  #syncTracks() {
-    if (!this.#engine) return;
-    const wanted = new Set(this.#project.tracks.map((t) => t.id));
-    for (const id of this.#engine.trackIds()) {
-      if (!wanted.has(id)) this.#engine.removeTrack(id);
-    }
-    const have = new Set(this.#engine.trackIds());
-    for (const id of wanted) {
-      if (!have.has(id)) this.#engine.addTrack(id);
-    }
-  }
-  /**
-   * Whether each track is heard, after solo is resolved.
-   *
-   * Solo is resolved here because it cannot be resolved anywhere else. Whether
-   * a track is heard depends on whether *any other* track is soloed, so it is a
-   * property of the mix rather than of the track, and the track is the only
-   * thing the engine can see one at a time.
-   *
-   * The rule is the one every mixer uses: if nothing is soloed, a track is heard
-   * unless it is muted. If anything is soloed, only soloed tracks are heard, and
-   * muting a soloed track still silences it, because a person who pressed mute
-   * meant it.
-   */
-  audibility() {
-    const tracks = this.#project.tracks;
-    const anySoloed = tracks.some((t) => t.channel.soloed);
-    return tracks.map((track) => ({
-      trackId: track.id,
-      gain: track.channel.gain,
-      pan: track.channel.pan,
-      silent: track.channel.muted || anySoloed && !track.channel.soloed
-    }));
-  }
-  /** Push every track's channel strip to the engine. */
-  /**
-   * The model's master, sends and bus outputs, made in the audio graph. Sends are
-   * torn down and made again each time, like the links: after an edit the audio
-   * is exactly what the model says. An output is set for every track and the
-   * engine touches the graph only where it changed.
-   */
-  #applyRouting() {
-    if (!this.#engine) return;
-    this.#engine.clearSends();
-    for (const send of this.#project.sends) {
-      this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
-    }
-    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null);
-    this.#engine.setMaster(this.#project.master);
-  }
-  #applyChannels() {
-    if (!this.#engine) return;
-    for (const { trackId, gain, pan, silent } of this.audibility()) {
-      this.#engine.setTrackChannel(trackId, { gain, pan, silent });
-    }
-  }
-  /**
-   * Connect everything that produces audio and feeds nothing to its track's
-   * fader.
-   *
-   * A sink is where the signal has arrived, so it is what a person expects to
-   * hear. Deriving it from the connections rather than declaring it keeps the
-   * rule the project format already states for processing order: the graph
-   * answers the question, and a second answer written down beside it would have
-   * no rule for which wins.
-   *
-   * A node with no audio outputs is not a sink for this purpose even when
-   * nothing follows it. A MIDI generator ends a path and produces nothing to
-   * hear, and connecting it throws.
-   */
-  #linkSinksToTracks() {
-    if (!this.#engine) return;
-    const feedsSomething = /* @__PURE__ */ new Set();
-    for (const connection of this.#connectionsInUse()) {
-      if (isMidi(connection.signalKind)) continue;
-      feedsSomething.add(connection.from.node);
-    }
-    for (const node of this.#project.nodes) {
-      if (feedsSomething.has(node.id)) continue;
-      if (node.bypassed) continue;
-      const engineId = this.#nodeIds.get(node.id);
-      if (!engineId) continue;
-      const entry = this.#engine.get(engineId);
-      if (!(entry?.node?.numberOfOutputs > 0)) continue;
-      this.#engine.linkToTrack(engineId, node.track);
-    }
-  }
-  /**
-   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
-   * model keeps every connection; bypass changes only what is wired.
-   */
-  #connectionsInUse() {
-    const passes = (nodeId, kind) => {
-      const profile = this.engineNode(nodeId)?.profile;
-      if (!profile) return false;
-      if (kind === "audio") return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0;
-      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi);
-    };
-    return effectiveConnections(this.#project.connections, {
-      bypassed: (nodeId) => this.#project.node(nodeId)?.bypassed === true,
-      passes
-    });
-  }
-  #rebuildLinks(compiled) {
-    if (!this.#engine) return;
-    const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
-    this.#compensation = delayFor;
-    this.#engine.clearLinks();
-    this.#syncTracks();
-    this.#applyRouting();
-    const midiRoutes = [];
-    for (const connection of this.#connectionsInUse()) {
-      const from = this.#nodeIds.get(connection.from.node);
-      const to = this.#nodeIds.get(connection.to.node);
-      if (!from || !to) continue;
-      if (isMidi(connection.signalKind)) {
-        midiRoutes.push({ from, to });
-        continue;
-      }
-      this.#engine.link(from, to, {
-        fromOutput: connection.from.portIndex ?? 0,
-        toInput: connection.to.portIndex ?? 0,
-        toParameter: connection.to.portSymbol ?? null,
-        delayFrames: delayFor.get(connection.id) ?? 0,
-        connection: connection.id
-      });
-    }
-    this.#linkSinksToTracks();
-    this.#applyTrackDelays(compiled);
-    this.#applyChannels();
-    this.#router?.setRoutes(midiRoutes);
-  }
-  /**
-   * Set several parameters as one edit.
-   *
-   * Not a loop over setParameter, which would be one revision and one compile
-   * per value: a preset of thirty parameters would arrive as thirty edits, be
-   * thirty entries in an undo stack, and be audible as a sweep through
-   * intermediate states. Clamped first, for the same reason as the single
-   * value, then written once, then pushed to the AudioParams.
-   */
-  setParameters(settings, { expectedRevision } = {}) {
-    if (!Array.isArray(settings) || settings.length === 0) {
-      return { ok: false, kind: "change", message: "needs a non-empty list of settings" };
-    }
-    const applied = [];
-    for (const { nodeId, symbol, value: value2 } of settings) {
-      const engineId = this.#nodeIds.get(nodeId);
-      let clamped = value2;
-      if (engineId && this.#engine) {
-        try {
-          clamped = this.#engine.clampParameter(engineId, symbol, value2);
-        } catch (error2) {
-          return { ok: false, kind: "change", message: error2.message };
-        }
-      }
-      applied.push({ nodeId, symbol, value: clamped, engineId });
-    }
-    const result = this.apply(
-      applied.map((a2) => ({ op: "setSetting", node: a2.nodeId, symbol: a2.symbol, value: a2.value })),
-      { expectedRevision }
-    );
-    if (!result.ok) return result;
-    for (const a2 of applied) {
-      if (a2.engineId && this.#engine) this.#engine.setParameter(a2.engineId, a2.symbol, a2.value);
-      this.#emit({ type: "parameter", nodeId: a2.nodeId, symbol: a2.symbol, value: a2.value });
-    }
-    return { ...result, applied: applied.map(({ nodeId, symbol, value: value2 }) => ({ nodeId, symbol, value: value2 })) };
-  }
-  /** Set any of a track's channel strip: gain, pan, mute, solo. */
-  setTrackChannel(trackId, change, { expectedRevision } = {}) {
-    return this.apply([{ op: "setTrackChannel", track: trackId, ...change }], { expectedRevision });
-  }
-  /** The engine node behind a model node, if it has been loaded. */
-  engineNode(nodeId) {
-    const engineId = this.#nodeIds.get(nodeId);
-    return engineId && this.#engine ? this.#engine.get(engineId) : null;
-  }
-  /** Compile without changing anything, for diagnostics. */
-  compile() {
-    return compileGraph(this.#project, { latencyOf: (id) => this.#latencyOf(id) });
-  }
-};
-
-// src/engine/ClipPlayer.js
-var ClipPlayer = class {
-  #context;
-  #fetchBytes;
-  #buffers = /* @__PURE__ */ new Map();
-  #loading = /* @__PURE__ */ new Map();
-  #failures = /* @__PURE__ */ new Map();
-  #peaks = /* @__PURE__ */ new Map();
-  #playing = /* @__PURE__ */ new Set();
-  /**
-   * - `context`: the AudioContext, which decodes and plays.
-   * - `fetchBytes(iri)`: the file's bytes as an ArrayBuffer. The page gives it
-   *   a function that looks in the session's own media first, then the network.
-   */
-  constructor({ context, fetchBytes }) {
-    if (!context || typeof fetchBytes !== "function") throw new Error("ClipPlayer needs a context and fetchBytes");
-    this.#context = context;
-    this.#fetchBytes = fetchBytes;
-  }
-  /** The decoded audio, or null while it loads or if it failed. */
-  buffer(iri3) {
-    return this.#buffers.get(iri3) ?? null;
-  }
-  /** Why a source could not be loaded, or null. */
-  failure(iri3) {
-    return this.#failures.get(iri3) ?? null;
-  }
-  /**
-   * Decode a source, once. Resolves with the AudioBuffer, or with null if it
-   * cannot be had, in which case failure(iri) says why. Never rejects: one
-   * missing file is one silent clip, not a session that will not play.
-   */
-  load(iri3) {
-    if (this.#buffers.has(iri3)) return Promise.resolve(this.#buffers.get(iri3));
-    if (this.#loading.has(iri3)) return this.#loading.get(iri3);
-    const loading2 = (async () => {
-      try {
-        const bytes = await this.#fetchBytes(iri3);
-        const buffer = await this.#context.decodeAudioData(bytes);
-        this.#buffers.set(iri3, buffer);
-        this.#failures.delete(iri3);
-        return buffer;
-      } catch (error2) {
-        this.#failures.set(iri3, error2);
-        return null;
-      } finally {
-        this.#loading.delete(iri3);
-      }
-    })();
-    this.#loading.set(iri3, loading2);
-    return loading2;
-  }
-  /**
-   * The loudest sample in each of `count` equal stretches of the first
-   * channel, for drawing a waveform. Computed once per source and count.
-   */
-  peaks(iri3, count) {
-    const buffer = this.buffer(iri3);
-    if (!buffer || !(count > 0)) return null;
-    const key = `${count} ${iri3}`;
-    if (this.#peaks.has(key)) return this.#peaks.get(key);
-    const data = buffer.getChannelData(0);
-    const out = new Float32Array(count);
-    const per = data.length / count;
-    for (let i2 = 0; i2 < count; i2++) {
-      let peak = 0;
-      const end = Math.min(data.length, Math.floor((i2 + 1) * per));
-      for (let j = Math.floor(i2 * per); j < end; j++) {
-        const v = Math.abs(data[j]);
-        if (v > peak) peak = v;
-      }
-      out[i2] = peak;
-    }
-    this.#peaks.set(key, out);
-    return out;
-  }
-  /**
-   * Start a source at `when` (context seconds), `offset` seconds into the
-   * file, for `duration` seconds, into `destination`. Returns false, and
-   * starts nothing, when the source is not loaded.
-   */
-  start({ iri: iri3, when, offset, duration, destination, fadeIn = 0, fadeOut = 0 }) {
-    const buffer = this.buffer(iri3);
-    if (!buffer) return false;
-    const source = this.#context.createBufferSource();
-    source.buffer = buffer;
-    let tail = source;
-    if (fadeIn > 0 || fadeOut > 0) {
-      const scale = fadeIn + fadeOut > duration ? duration / (fadeIn + fadeOut) : 1;
-      const inLength = fadeIn * scale;
-      const outLength = fadeOut * scale;
-      const shape = this.#context.createGain();
-      const level = shape.gain;
-      level.setValueAtTime(inLength > 0 ? 0 : 1, when);
-      if (inLength > 0) level.linearRampToValueAtTime(1, when + inLength);
-      if (outLength > 0) {
-        level.setValueAtTime(1, when + duration - outLength);
-        level.linearRampToValueAtTime(0, when + duration);
-      }
-      source.connect(shape);
-      tail = shape;
-    }
-    tail.connect(destination);
-    const late = Math.max(0, this.#context.currentTime - when);
-    source.start(when + late, offset + late, Math.max(0, duration - late));
-    this.#playing.add(source);
-    source.onended = () => {
-      this.#playing.delete(source);
-      source.disconnect();
-      if (tail !== source) tail.disconnect();
-    };
-    return true;
-  }
-  /** Stop everything this has started. */
-  stopAll() {
-    for (const source of this.#playing) {
-      try {
-        source.stop();
-      } catch {
-      }
-      source.disconnect();
-    }
-    this.#playing.clear();
-  }
-  /** How many sources are playing or scheduled, for a caller that wants to know. */
-  get active() {
-    return this.#playing.size;
-  }
-};
-
 // src/host/HostConfig.js
 var HOST_CONFIG_KEYS = Object.freeze({
   // Plugin payloads relayed per second, in each direction, between a plugin's
@@ -25080,7 +26100,10 @@ var HOST_CONFIG_KEYS = Object.freeze({
   alignTracks: "true or false",
   // The longest delay a track can be given to align it, which is the largest
   // latency difference between two tracks the page can put right.
-  maxTrackDelayMs: "a whole number of milliseconds, at least 1"
+  maxTrackDelayMs: "a whole number of milliseconds, at least 1",
+  // How long a piece carried from one page to the other (src/host/Handoff.js) is offered. After this it is
+  // forgotten, so a piece left over from last week is not offered as if it were what was just open.
+  handoffMinutes: "a whole number of minutes, at least 1"
 });
 var BOOLEAN_KEYS = /* @__PURE__ */ new Set(["alignTracks"]);
 function readHostConfig(json) {
@@ -26153,357 +27176,6 @@ function createRuntime(ctx2) {
   return { ensureRunning, shapeValidator };
 }
 
-// web/app/AutomationHost.js
-function createAutomationHost(ctx2) {
-  const { log: log2 } = ctx2;
-  const touched = /* @__PURE__ */ new Map();
-  const warned = /* @__PURE__ */ new Set();
-  const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
-  const MASTER = { masterGain: "gain", masterPan: "pan" };
-  const paramOf = (target) => target.kind !== void 0 ? MASTER[target.kind] ? ctx2.engine.masterParam(MASTER[target.kind]) : null : ctx2.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol);
-  const hold = (target, on) => {
-    if (MASTER[target.kind]) ctx2.engine.holdMaster(MASTER[target.kind], on);
-  };
-  const masterSnapshot = () => JSON.stringify(ctx2.dispatcher.project.master);
-  let masterAtStart = null;
-  const manualValue = ({ node, symbol, kind }) => {
-    if (kind === "masterGain") {
-      const m = ctx2.dispatcher.project.master;
-      return m.muted ? 0 : m.gain;
-    }
-    if (kind === "masterPan") return ctx2.dispatcher.project.master.pan;
-    const set = ctx2.dispatcher.project.node(node)?.settings.get(symbol);
-    if (set !== void 0) return set;
-    return ctx2.dispatcher.engineNode(node)?.profile?.ports?.find((p) => p.symbol === symbol)?.defaultValue;
-  };
-  let listeningTo = null;
-  const listen = () => {
-    if (listeningTo === ctx2.dispatcher) return;
-    listeningTo = ctx2.dispatcher;
-    listeningTo.subscribe((event) => {
-      if (event.type === "parameter") host.edited(event.nodeId, event.symbol, event.value);
-      else if (event.type === "changed") host.masterEdited(listeningTo.project.master);
-    });
-  };
-  const host = {
-    envelopes: () => ctx2.dispatcher.project.envelopes.filter((e) => (e.target.node !== void 0 || MASTER[e.target.kind]) && e.points.length > 0),
-    apply(envelope, instruction) {
-      listen();
-      const param = paramOf(envelope.target);
-      if (!param) return;
-      const state = touched.get(param) ?? { target: envelope.target, suspended: false };
-      touched.set(param, state);
-      if (state.suspended) return;
-      if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) return;
-      if (!state.held) {
-        hold(envelope.target, true);
-        state.held = true;
-        masterAtStart ??= masterSnapshot();
-      }
-      try {
-        if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
-        else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
-        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
-      } catch (error2) {
-        if (!warned.has(envelope.id)) {
-          warned.add(envelope.id);
-          log2(`automation ${envelope.id}: ${error2.message}`, "error");
-        }
-      }
-    },
-    /** A parameter was changed by hand (or by an agent, or by undo): it takes over from its envelope until Stop. */
-    edited(nodeId, symbol, value2) {
-      const target = { node: nodeId, symbol };
-      for (const [param, state] of touched) {
-        if (keyOf(state.target) !== keyOf(target) || state.suspended) continue;
-        const now = ctx2.engine.context.currentTime;
-        param.cancelScheduledValues(now);
-        param.setValueAtTime(value2, now);
-        state.suspended = true;
-        hold(state.target, false);
-        log2(`${symbol} was changed by hand, so its automation is paused until you press Stop`);
-      }
-    },
-    /**
-     * The master was changed through setMaster: an envelope on its level or pan, if one is playing, steps aside.
-     * `master` is the project's master as it is now.
-     */
-    masterEdited(master) {
-      if (masterAtStart === null || JSON.stringify(master) === masterAtStart) return;
-      for (const [param, state] of touched) {
-        if (state.target.kind === void 0 || state.suspended) continue;
-        const now = ctx2.engine.context.currentTime;
-        param.cancelScheduledValues(now);
-        state.suspended = true;
-        hold(state.target, false);
-        ctx2.engine.setMaster(master);
-        log2(`the master ${state.target.kind === "masterGain" ? "level" : "pan"} was changed by hand, so its automation is paused until you press Stop`);
-      }
-      masterAtStart = JSON.stringify(master);
-    },
-    stop() {
-      const now = ctx2.engine.context.currentTime;
-      masterAtStart = null;
-      for (const [param, state] of touched) {
-        hold(state.target, false);
-        param.cancelScheduledValues(now);
-        const value2 = manualValue(state.target);
-        if (value2 !== void 0) param.setValueAtTime(value2, now);
-      }
-      touched.clear();
-    }
-  };
-  return host;
-}
-
-// src/engine/Automation.js
-var SAMPLES_PER_SECOND = 100;
-var MAX_SAMPLES = 512;
-var smooth = (u2) => u2 * u2 * (3 - 2 * u2);
-function valueAtSeconds(points, t) {
-  if (points.length === 0) return null;
-  if (t <= points[0].t) return points[0].value;
-  const last = points[points.length - 1];
-  if (t >= last.t) return last.value;
-  let i2 = 0;
-  while (points[i2 + 1].t <= t) i2++;
-  const a2 = points[i2];
-  const b = points[i2 + 1];
-  const u2 = (t - a2.t) / (b.t - a2.t);
-  if (a2.curve === "linear") return a2.value + (b.value - a2.value) * u2;
-  if (a2.curve === "smooth") return a2.value + (b.value - a2.value) * smooth(u2);
-  return a2.value;
-}
-function segment(a2, b, t0, t1, at) {
-  if (a2.curve === "step" || !(t1 > t0)) return null;
-  const v0 = valueAtSeconds([a2, b], t0);
-  const v1 = valueAtSeconds([a2, b], t1);
-  if (a2.curve === "linear") return { kind: "ramp", at, value: v0, end: at + (t1 - t0), endValue: v1 };
-  const count = Math.min(MAX_SAMPLES, Math.max(2, Math.round((t1 - t0) * SAMPLES_PER_SECOND)));
-  const values2 = new Float32Array(count);
-  for (let k = 0; k < count; k++) values2[k] = valueAtSeconds([a2, b], t0 + (t1 - t0) * (k / (count - 1)));
-  return { kind: "curve", at, duration: t1 - t0, values: values2 };
-}
-function automationBetween(transport2, points, segments2, start, end) {
-  if (points.length === 0) return [];
-  const timed = points.map((p) => ({ t: transport2.secondsAtBeat(p.atBeat), value: p.value, curve: p.curve ?? "linear" }));
-  const out = [];
-  for (const seg of segments2) {
-    const inWindow = (t) => t >= start && t < end;
-    if (inWindow(seg.from)) {
-      out.push({ kind: "set", at: seg.from, value: valueAtSeconds(timed, seg.lo) });
-      const i2 = timed.findIndex((p, k) => p.t <= seg.lo && (k === timed.length - 1 || timed[k + 1].t > seg.lo));
-      if (i2 >= 0 && i2 < timed.length - 1) {
-        const partial = segment(timed[i2], timed[i2 + 1], seg.lo, Math.min(timed[i2 + 1].t, seg.hi), seg.from);
-        if (partial) out.push(partial);
-      }
-    }
-    for (let i2 = 0; i2 < timed.length; i2++) {
-      const p = timed[i2];
-      if (p.t < seg.lo || p.t >= seg.hi) continue;
-      const at = p.t + seg.shift;
-      if (!inWindow(at) || at === seg.from && inWindow(seg.from)) continue;
-      out.push({ kind: "set", at, value: p.value });
-      if (i2 < timed.length - 1) {
-        const leg = segment(p, timed[i2 + 1], p.t, Math.min(timed[i2 + 1].t, seg.hi), at);
-        if (leg) out.push(leg);
-      }
-    }
-  }
-  return out.sort((x, y) => x.at - y.at);
-}
-
-// src/engine/Scheduler.js
-var NOTE_ON = 144;
-var NOTE_OFF = 128;
-function clipNotes(project) {
-  const byNode = /* @__PURE__ */ new Map();
-  for (const track of project.tracks) {
-    if (!track.midiInput) continue;
-    for (const clip of project.clips) {
-      if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
-      const end = clip.startBeat + clip.lengthBeats;
-      for (const note of clip.notes) {
-        const on = clip.startBeat + note.startBeat;
-        if (on >= end) continue;
-        const off = Math.min(on + note.lengthBeats, end);
-        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
-        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
-      }
-    }
-  }
-  return byNode;
-}
-function clipAudio(project) {
-  return project.clips.filter((c3) => c3.kind === "audio" && !c3.muted).map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
-}
-function* segments(transport2, start, end) {
-  const loop = transport2.loop;
-  if (!loop.enabled) {
-    yield { from: 0, to: Infinity, lo: 0, hi: Infinity, shift: 0 };
-    return;
-  }
-  const loStart = transport2.secondsAtBeat(loop.start);
-  const loEnd = transport2.secondsAtBeat(loop.end);
-  const length = loEnd - loStart;
-  if (start < loEnd) yield { from: 0, to: loEnd, lo: 0, hi: loEnd, shift: 0 };
-  let k = start < loEnd ? 1 : 1 + Math.floor((start - loEnd) / length);
-  for (; ; k++) {
-    const from = loEnd + (k - 1) * length;
-    if (from >= end) return;
-    yield { from, to: from + length, lo: loStart, hi: loEnd, shift: from - loStart };
-  }
-}
-function notesBetween(transport2, notes, start, end) {
-  const found = [];
-  const timed = notes.map((n2) => ({ ...n2, onS: transport2.secondsAtBeat(n2.on), offS: transport2.secondsAtBeat(n2.off) }));
-  for (const seg of segments(transport2, start, end)) {
-    for (const note of timed) {
-      if (note.onS < seg.lo || note.onS >= seg.hi) continue;
-      const on = note.onS + seg.shift;
-      if (on < start || on >= end) continue;
-      const { onS, offS, ...rest } = note;
-      found.push({ ...rest, on, off: Math.min(offS, seg.hi) + seg.shift });
-    }
-  }
-  return found;
-}
-var onClock = (instruction, origin) => ({
-  ...instruction,
-  at: origin + instruction.at,
-  ...instruction.end !== void 0 ? { end: origin + instruction.end } : {}
-});
-var Scheduler = class {
-  #now;
-  #sampleRate;
-  #lookahead;
-  #notes;
-  #transport;
-  #send;
-  #audio;
-  #playAudio;
-  #stopAudio;
-  #automation;
-  #origin = null;
-  #until = 0;
-  // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
-  #sounding = [];
-  /**
-   * - `now()`: the audio clock in seconds, AudioContext.currentTime.
-   * - `lookahead`: seconds ahead of the clock each tick schedules to. From
-   *   configuration, never defaulted here.
-   * - `notes()`: clipNotes of the project as it is now, read every tick so an
-   *   edit is heard at the next one.
-   * - `transport()`: the Transport as it is now.
-   * - `send(nodeId, events)`: deliver events, `{ frame, bytes }`.
-   * - `audio()`, `playAudio(clip, { when, offset, duration })` and
-   *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
-   *   stop them. All three or none; a host that plays no audio clips gives none.
-   * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
-   *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
-   *   gets each instruction of Automation.js with its times on the audio clock.
-   */
-  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio, automation }) {
-    if (typeof now !== "function" || typeof notes !== "function" || typeof transport2 !== "function" || typeof send !== "function") {
-      throw new Error("Scheduler needs now, notes, transport and send");
-    }
-    if (!(sampleRate > 0)) throw new Error("Scheduler needs a sample rate");
-    if (!(lookahead > 0)) throw new Error("Scheduler needs a lookahead in seconds, from configuration");
-    this.#now = now;
-    this.#sampleRate = sampleRate;
-    this.#lookahead = lookahead;
-    this.#notes = notes;
-    this.#transport = transport2;
-    this.#send = send;
-    const given = [audio, playAudio, stopAudio].filter((f) => f !== void 0);
-    if (given.length !== 0 && (given.length !== 3 || given.some((f) => typeof f !== "function"))) {
-      throw new Error("Scheduler needs all of audio, playAudio and stopAudio, or none of them");
-    }
-    this.#audio = audio ?? null;
-    this.#playAudio = playAudio ?? null;
-    this.#stopAudio = stopAudio ?? null;
-    if (automation !== void 0 && ["envelopes", "apply", "stop"].some((k) => typeof automation[k] !== "function")) {
-      throw new Error("Scheduler needs automation as { envelopes, apply, stop }, or none");
-    }
-    this.#automation = automation ?? null;
-  }
-  get running() {
-    return this.#origin !== null;
-  }
-  /** An absolute stream position, from elapsed seconds since the start. */
-  #frame(elapsed) {
-    return Math.round((this.#origin + elapsed) * this.#sampleRate);
-  }
-  /** Start at the clock time the transport's beat zero is heard. */
-  start(atTime) {
-    this.#origin = atTime;
-    this.#until = 0;
-    this.#sounding = [];
-  }
-  /** Schedule everything up to the lookahead. Call often; a tick with nothing new sends nothing. */
-  tick() {
-    if (!this.running) return;
-    const end = this.#now() - this.#origin + this.#lookahead;
-    const start = this.#until;
-    if (end <= start) return;
-    const transport2 = this.#transport();
-    const outgoing = /* @__PURE__ */ new Map();
-    const add = (nodeId, frame, bytes, order) => {
-      if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
-      outgoing.get(nodeId).push({ frame, bytes, order });
-    };
-    for (const [nodeId, notes] of this.#notes()) {
-      for (const note of notesBetween(transport2, notes, start, end)) {
-        const onFrame = this.#frame(note.on);
-        add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1);
-        this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame });
-      }
-    }
-    if (this.#audio) {
-      for (const clip of notesBetween(transport2, this.#audio(), start, end)) {
-        this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on });
-      }
-    }
-    if (this.#automation) {
-      const passes = [...segments(transport2, start, end)];
-      for (const envelope of this.#automation.envelopes()) {
-        for (const instruction of automationBetween(transport2, envelope.points, passes, start, end)) {
-          this.#automation.apply(envelope, onClock(instruction, this.#origin));
-        }
-      }
-    }
-    this.#sounding = this.#sounding.filter((s) => {
-      if (s.off >= end) return true;
-      add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
-      return false;
-    });
-    this.#until = end;
-    this.#deliver(outgoing);
-  }
-  /** End everything still sounding, and stop. */
-  stop() {
-    if (!this.running) return;
-    const nowFrame = this.#frame(this.#now() - this.#origin);
-    const outgoing = /* @__PURE__ */ new Map();
-    for (const s of this.#sounding) {
-      if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, []);
-      outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 });
-    }
-    this.#sounding = [];
-    this.#origin = null;
-    this.#stopAudio?.();
-    this.#automation?.stop();
-    this.#deliver(outgoing);
-  }
-  /** In time order, and at one frame an off before an on, so a repeated note is retriggered rather than cut. */
-  #deliver(outgoing) {
-    for (const [nodeId, events] of outgoing) {
-      events.sort((a2, b) => a2.frame - b.frame || a2.order - b.order);
-      this.#send(nodeId, events.map(({ frame, bytes }) => ({ frame, bytes })));
-    }
-  }
-};
-
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -26657,6 +27329,11 @@ function createTransport(ctx2) {
     if (!t) return;
     const bpm = t.tempoPoints[0]?.bpm;
     const field = $2("tempo");
+    const automated = ctx2.dispatcher.project.envelopes.some((e) => e.target.kind === "tempo" && e.points.length > 0);
+    const group = $2("tempo-group");
+    if (group) group.hidden = automated;
+    const note = $2("tempo-note");
+    if (note) note.hidden = !automated;
     if (bpm && field && document2.activeElement !== field) field.value = String(bpm);
     const signature = $2("signature");
     if (signature && document2.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`;
@@ -26691,51 +27368,6 @@ function createTransport(ctx2) {
     if (!result.ok) log2(result.message, "error");
   }
   return { play, stop, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
-}
-
-// src/host/Wav.js
-var HEADER_BYTES = 44;
-var BITS_PER_SAMPLE = 16;
-var BYTES_PER_SAMPLE = BITS_PER_SAMPLE / 8;
-function toInt16(sample) {
-  const clamped = Math.max(-1, Math.min(1, sample));
-  return Math.round(clamped * (clamped < 0 ? 32768 : 32767));
-}
-function writeAscii(view, offset, text) {
-  for (let i2 = 0; i2 < text.length; i2++) view.setUint8(offset + i2, text.charCodeAt(i2));
-}
-function encodeWav(channels, sampleRate) {
-  if (channels.length === 0) throw new Error("encodeWav needs at least one channel");
-  const frames = channels[0].length;
-  for (const channel of channels) {
-    if (channel.length !== frames) throw new Error("every channel must be the same length");
-  }
-  const numChannels = channels.length;
-  const blockAlign = numChannels * BYTES_PER_SAMPLE;
-  const dataBytes = frames * blockAlign;
-  const bytes = new Uint8Array(HEADER_BYTES + dataBytes);
-  const view = new DataView(bytes.buffer);
-  writeAscii(view, 0, "RIFF");
-  view.setUint32(4, 36 + dataBytes, true);
-  writeAscii(view, 8, "WAVE");
-  writeAscii(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * blockAlign, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, BITS_PER_SAMPLE, true);
-  writeAscii(view, 36, "data");
-  view.setUint32(40, dataBytes, true);
-  let offset = HEADER_BYTES;
-  for (let frame = 0; frame < frames; frame++) {
-    for (let c3 = 0; c3 < numChannels; c3++) {
-      view.setInt16(offset, toInt16(channels[c3][frame]), true);
-      offset += BYTES_PER_SAMPLE;
-    }
-  }
-  return bytes;
 }
 
 // src/engine/TrackRecorder.js
@@ -26909,7 +27541,7 @@ var TrackRecorder = class {
 };
 
 // web/app/Record.js
-async function sha256hex(bytes) {
+async function sha256hex2(bytes) {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -26968,7 +27600,7 @@ function createRecord(ctx2, { processorUrl = null, WorkletNode = globalThis.Audi
       }
       const frames = takes.frames(trackId);
       const bytes = takes.encode(trackId, sampleRate);
-      const iri3 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+      const iri3 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
       ctx2.media.put(iri3, bytes, "audio/wav");
       const buffer = await ctx2.clipPlayer.load(iri3);
       if (!buffer) {
@@ -28523,77 +29155,6 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   };
 }
 
-// src/ops/OpenProject.js
-function inSignalOrder(nodes, connections) {
-  const feeding = new Map(nodes.map((n2) => [n2.id, /* @__PURE__ */ new Set()]));
-  for (const c3 of connections) {
-    if (feeding.has(c3.to.node) && feeding.has(c3.from.node) && c3.from.node !== c3.to.node) {
-      feeding.get(c3.to.node).add(c3.from.node);
-    }
-  }
-  const placed = /* @__PURE__ */ new Set();
-  const ordered = [];
-  let progress = true;
-  while (progress) {
-    progress = false;
-    for (const node of nodes) {
-      if (placed.has(node.id) || [...feeding.get(node.id)].some((id) => !placed.has(id))) continue;
-      placed.add(node.id);
-      ordered.push(node);
-      progress = true;
-      break;
-    }
-  }
-  return [...ordered, ...nodes.filter((n2) => !placed.has(n2.id))];
-}
-async function openProject(dispatcher, read, { onLoading = () => {
-}, onCleared = () => {
-} } = {}) {
-  const existing = [
-    ...[...dispatcher.project.nodes].map((n2) => ({ op: "removeNode", id: n2.id })),
-    ...[...dispatcher.project.tracks].map((t) => ({ op: "removeTrack", id: t.id }))
-  ];
-  if (existing.length > 0) {
-    const cleared = dispatcher.apply(existing);
-    if (!cleared.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [cleared.message] };
-  }
-  onCleared();
-  const tracks = read.changes.filter((c3) => c3.op === "addTrack");
-  if (tracks.length > 0) {
-    const added = dispatcher.apply(tracks);
-    if (!added.ok) return { ok: false, loaded: /* @__PURE__ */ new Set(), total: 0, errors: [added.message] };
-  }
-  const errors = [];
-  const loaded = /* @__PURE__ */ new Set();
-  const additions = inSignalOrder(
-    read.changes.filter((c3) => c3.op === "addNode"),
-    read.changes.filter((c3) => c3.op === "addConnection")
-  );
-  for (const change of additions) {
-    onLoading(change.pluginIri);
-    const { op, pluginIri, ...node } = change;
-    const result = await dispatcher.addPlugin(pluginIri, node);
-    if (!result.ok) {
-      errors.push(`${change.id}: ${result.message}`);
-      continue;
-    }
-    loaded.add(change.id);
-    for (const [symbol, value2] of Object.entries(change.settings ?? {})) {
-      const set = dispatcher.setParameter(change.id, symbol, value2);
-      if (!set.ok) errors.push(`${change.id}.${symbol}: ${set.message}`);
-    }
-  }
-  const loadedOrNull = (id) => id === null || loaded.has(id) ? id : null;
-  const rest = read.changes.filter((c3) => c3.op !== "addNode" && c3.op !== "addTrack" && (c3.op !== "addConnection" || loaded.has(c3.from.node) && loaded.has(c3.to.node)) && // An envelope on a node that failed to load has nothing to move.
-  (c3.op !== "addEnvelope" || c3.target.node === void 0 || loaded.has(c3.target.node))).map((c3) => c3.op === "setTrack" && ("midiInput" in c3 || "audioInput" in c3) ? { ...c3, midiInput: loadedOrNull(c3.midiInput ?? null), audioInput: loadedOrNull(c3.audioInput ?? null) } : c3);
-  if (rest.length > 0) {
-    const applied = dispatcher.apply(rest);
-    if (!applied.ok) errors.push(applied.message);
-  }
-  dispatcher.clearHistory();
-  return { ok: true, loaded, total: additions.length, errors };
-}
-
 // src/ui/ChainModel.js
 function kindOf3(connection) {
   if (isMidiSignal(connection.signalKind)) return "MIDI";
@@ -28959,13 +29520,13 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
   const element = document2.createElement("div");
   element.className = "master-row";
   element.setAttribute("role", "group");
-  element.setAttribute("aria-label", "Master");
+  element.setAttribute("aria-label", "Master and tempo");
   const head = document2.createElement("form");
   head.className = "master-head";
-  head.setAttribute("aria-label", "Automate the master");
+  head.setAttribute("aria-label", "Automate the master or the tempo");
   const title = document2.createElement("span");
   title.className = "master-title";
-  title.textContent = "Master";
+  title.textContent = "Master and tempo";
   const label = document2.createElement("label");
   label.className = "track-field";
   label.append(document2.createTextNode("Automate "));
@@ -29082,8 +29643,8 @@ var SIZES = Object.freeze([["small", "Small"], ["medium", "Medium"], ["large", "
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
-function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDelete }) {
-  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete })) {
+function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDelete, onFreeze }) {
+  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete, onFreeze })) {
     if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
   const element = document2.createElement("div");
@@ -29156,9 +29717,15 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   remove.id = "track-delete";
   remove.className = "danger";
   remove.addEventListener("click", () => onDelete(trackId));
+  const freeze = document2.createElement("button");
+  freeze.type = "button";
+  freeze.id = "track-freeze";
+  freeze.textContent = "Freeze track";
+  freeze.title = "Render this track as heard to an audio clip on a new track, and mute this one";
+  freeze.addEventListener("click", () => onFreeze(trackId));
   const actions = document2.createElement("div");
   actions.className = "track-actions";
-  actions.append(position, up, down, remove);
+  actions.append(position, up, down, freeze, remove);
   element.append(nameLabel, colorGroup, sizeLabel, actions);
   return {
     element,
@@ -30325,7 +30892,7 @@ function createArrangement(ctx2) {
     // A lane for the master's level or pan, starting at what it is now.
     onAutomateMaster: (kind) => {
       const { master } = ctx2.dispatcher.project;
-      const value2 = kind === "masterGain" ? master.gain : master.pan;
+      const value2 = kind === "masterGain" ? master.gain : kind === "masterPan" ? master.pan : ctx2.dispatcher.project.transport.tempoPoints[0]?.bpm ?? 120;
       edit([{ op: "addEnvelope", target: { kind }, points: [{ atBeat: 0, value: value2, curve: "linear" }] }]);
     },
     onBypass: (nodeId, bypassed) => edit([{ op: "setNode", id: nodeId, bypassed }]),
@@ -30410,6 +30977,7 @@ function createArrangement(ctx2) {
     if (!project) return { list: [], available: [] };
     const kinds = {
       masterGain: { label: "Master level", min: 0, max: 2, start: project.master.gain, speak: (v) => v > 0 ? `${(20 * Math.log10(v)).toFixed(1)} decibels` : "silent" },
+      tempo: { label: "Tempo", min: 20, max: 300, start: project.transport.tempoPoints[0]?.bpm ?? 120, speak: (v) => `${Math.round(v)} beats a minute` },
       masterPan: { label: "Master pan", min: -1, max: 1, start: project.master.pan, speak: (v) => v === 0 ? "centre" : `${Math.abs(v).toFixed(2)} ${v < 0 ? "left" : "right"}` }
     };
     const has = new Set(project.envelopes.map((e) => e.target.kind).filter(Boolean));
@@ -30596,7 +31164,7 @@ var DOCK_MIN = 160;
 var DOCK_MAX = 720;
 var DOCK_DEFAULT = 320;
 var DOCK_STEP = 24;
-var KEY = "jigdaw.dockHeight";
+var KEY2 = "jigdaw.dockHeight";
 var clamp2 = (n2) => Math.min(DOCK_MAX, Math.max(DOCK_MIN, Math.round(n2)));
 function createDock(document2, { slots, storage = null }) {
   if (!Array.isArray(slots) || slots.length === 0) throw new Error("a dock needs at least one slot");
@@ -30628,7 +31196,7 @@ function createDock(document2, { slots, storage = null }) {
   element.append(splitter, heading, body);
   let height = DOCK_DEFAULT;
   try {
-    const saved = Number(storage?.getItem(KEY));
+    const saved = Number(storage?.getItem(KEY2));
     if (Number.isFinite(saved) && saved > 0) height = clamp2(saved);
   } catch {
   }
@@ -30639,7 +31207,7 @@ function createDock(document2, { slots, storage = null }) {
     splitter.setAttribute("aria-valuetext", `${height} pixels tall`);
     if (remember) {
       try {
-        storage?.setItem(KEY, String(height));
+        storage?.setItem(KEY2, String(height));
       } catch {
       }
     }
@@ -31256,6 +31824,9 @@ function createDockPanel(ctx2) {
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onMove: (id, delta) => ctx2.dispatcher.project.moveTrack(id, delta),
+    onFreeze: (id) => {
+      ctx2.bounce.freezeTrack(id).catch((error2) => log2(error2.message, "error"));
+    },
     onDelete: (id) => {
       const { project } = ctx2.dispatcher;
       const label = trackLabel(project.track(id));
@@ -32605,135 +33176,6 @@ async function fetchPreset({ fetch: fetch2, url }) {
   return (await fetchOk(fetch2, url)).text();
 }
 
-// src/host/Zip.js
-var LOCAL = 67324752;
-var CENTRAL = 33639248;
-var END = 101010256;
-var UTF8 = 2048;
-var DOS_DATE = 0 << 9 | 1 << 5 | 1;
-var DOS_TIME = 0;
-var crcTable = null;
-function crc32(bytes) {
-  if (!crcTable) {
-    crcTable = new Uint32Array(256);
-    for (let n2 = 0; n2 < 256; n2++) {
-      let c3 = n2;
-      for (let k = 0; k < 8; k++) c3 = c3 & 1 ? 3988292384 ^ c3 >>> 1 : c3 >>> 1;
-      crcTable[n2] = c3 >>> 0;
-    }
-  }
-  let crc = 4294967295;
-  for (let i2 = 0; i2 < bytes.length; i2++) crc = crcTable[(crc ^ bytes[i2]) & 255] ^ crc >>> 8;
-  return (crc ^ 4294967295) >>> 0;
-}
-function checkName(name2) {
-  if (typeof name2 !== "string" || name2 === "") throw new Error("a zip entry needs a name");
-  if (name2.startsWith("/") || name2.includes("\\") || /^[a-z]:/i.test(name2)) throw new Error(`a zip entry name must be relative: ${name2}`);
-  if (name2.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name2}`);
-}
-function writeZip(entries) {
-  const encoder = new TextEncoder();
-  const parts = [];
-  const central = [];
-  let offset = 0;
-  for (const { name: name2, bytes } of entries) {
-    checkName(name2);
-    const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-    if (data.length > 4294967294) throw new Error(`${name2} is too large for a zip without zip64`);
-    const nameBytes = encoder.encode(name2);
-    const crc = crc32(data);
-    const local = new DataView(new ArrayBuffer(30));
-    local.setUint32(0, LOCAL, true);
-    local.setUint16(4, 20, true);
-    local.setUint16(6, UTF8, true);
-    local.setUint16(8, 0, true);
-    local.setUint16(10, DOS_TIME, true);
-    local.setUint16(12, DOS_DATE, true);
-    local.setUint32(14, crc, true);
-    local.setUint32(18, data.length, true);
-    local.setUint32(22, data.length, true);
-    local.setUint16(26, nameBytes.length, true);
-    local.setUint16(28, 0, true);
-    parts.push(new Uint8Array(local.buffer), nameBytes, data);
-    const entry = new DataView(new ArrayBuffer(46));
-    entry.setUint32(0, CENTRAL, true);
-    entry.setUint16(4, 20, true);
-    entry.setUint16(6, 20, true);
-    entry.setUint16(8, UTF8, true);
-    entry.setUint16(10, 0, true);
-    entry.setUint16(12, DOS_TIME, true);
-    entry.setUint16(14, DOS_DATE, true);
-    entry.setUint32(16, crc, true);
-    entry.setUint32(20, data.length, true);
-    entry.setUint32(24, data.length, true);
-    entry.setUint16(28, nameBytes.length, true);
-    entry.setUint32(42, offset, true);
-    central.push(new Uint8Array(entry.buffer), nameBytes);
-    offset += 30 + nameBytes.length + data.length;
-  }
-  const centralSize = central.reduce((n2, p) => n2 + p.length, 0);
-  const end = new DataView(new ArrayBuffer(22));
-  end.setUint32(0, END, true);
-  end.setUint16(8, entries.length, true);
-  end.setUint16(10, entries.length, true);
-  end.setUint32(12, centralSize, true);
-  end.setUint32(16, offset, true);
-  const all = [...parts, ...central, new Uint8Array(end.buffer)];
-  const out = new Uint8Array(all.reduce((n2, p) => n2 + p.length, 0));
-  let at = 0;
-  for (const p of all) {
-    out.set(p, at);
-    at += p.length;
-  }
-  return out;
-}
-async function inflate2(bytes) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-async function readZip(input) {
-  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  let end = -1;
-  for (let i2 = bytes.length - 22; i2 >= Math.max(0, bytes.length - 22 - 65535); i2--) {
-    if (view.getUint32(i2, true) === END) {
-      end = i2;
-      break;
-    }
-  }
-  if (end < 0) throw new Error("not a zip: no end of central directory");
-  const count = view.getUint16(end + 10, true);
-  let at = view.getUint32(end + 16, true);
-  const decoder = new TextDecoder();
-  const files = /* @__PURE__ */ new Map();
-  for (let n2 = 0; n2 < count; n2++) {
-    if (view.getUint32(at, true) !== CENTRAL) throw new Error("not a zip: a central directory entry is damaged");
-    const flags = view.getUint16(at + 8, true);
-    const method = view.getUint16(at + 10, true);
-    const crc = view.getUint32(at + 16, true);
-    const compressedSize = view.getUint32(at + 20, true);
-    const nameLength = view.getUint16(at + 28, true);
-    const extraLength = view.getUint16(at + 30, true);
-    const commentLength = view.getUint16(at + 32, true);
-    const localOffset = view.getUint32(at + 42, true);
-    const name2 = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
-    at += 46 + nameLength + extraLength + commentLength;
-    if (name2.endsWith("/")) continue;
-    checkName(name2);
-    if (flags & 1) throw new Error(`${name2} is encrypted, which this host does not read`);
-    if (view.getUint32(localOffset, true) !== LOCAL) throw new Error(`${name2}: its local header is damaged`);
-    const start = localOffset + 30 + view.getUint16(localOffset + 26, true) + view.getUint16(localOffset + 28, true);
-    const raw = bytes.subarray(start, start + compressedSize);
-    let data;
-    if (method === 0) data = raw.slice();
-    else if (method === 8) data = await inflate2(raw);
-    else throw new Error(`${name2} is compressed with method ${method}; only stored and deflated are read`);
-    if (crc32(data) !== crc) throw new Error(`${name2} is damaged: its checksum does not match`);
-    files.set(name2, data);
-  }
-  return files;
-}
-
 // src/host/SessionArchive.js
 var SESSION_FILE = "session.ttl";
 var EDITOR_FILE = "editor.ttl";
@@ -32758,15 +33200,11 @@ function unpackSession(files) {
 function createSessions(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   let openPresetByLabel = () => Promise.resolve();
-  async function saveSession() {
+  async function pack() {
     const { dispatcher, media } = ctx2;
-    if (!dispatcher) {
-      log2("nothing to save yet", "error");
-      return;
-    }
-    for (const node of dispatcher.project.nodes) {
-      const state = await dispatcher.getNodeState(node.id);
-      if (state !== null) dispatcher.apply([{ op: "setNodeState", node: node.id, state: encodeState(state) }]);
+    const states = await Promise.all(dispatcher.project.nodes.map(async (node) => [node.id, await dispatcher.getNodeState(node.id)]));
+    for (const [id, state] of states) {
+      if (state !== null) dispatcher.apply([{ op: "setNodeState", node: id, state: encodeState(state) }]);
     }
     const turtle = writeProject(dispatcher.project, {
       iri: media.base,
@@ -32778,14 +33216,36 @@ function createSessions(ctx2) {
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       media: held.map((iri3) => ({ name: iri3.slice(media.base.length), bytes: media.get(iri3).bytes }))
     });
-    const blob = packed.kind === "turtle" ? new Blob([packed.text], { type: "text/turtle" }) : new Blob([packed.bytes], { type: "application/zip" });
+    return {
+      kind: packed.kind,
+      bytes: packed.kind === "turtle" ? new TextEncoder().encode(packed.text) : packed.bytes,
+      nodes: dispatcher.project.nodes.length,
+      audioFiles: held.length
+    };
+  }
+  async function saveSession() {
+    const { dispatcher } = ctx2;
+    if (!dispatcher) {
+      log2("nothing to save yet", "error");
+      return;
+    }
+    const packed = await pack();
+    const blob = new Blob([packed.bytes], { type: packed.kind === "turtle" ? "text/turtle" : "application/zip" });
     const url = URL.createObjectURL(blob);
     const link = document2.createElement("a");
     link.href = url;
     link.download = packed.kind === "turtle" ? "session.ttl" : "session.zip";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1e4);
-    log2(packed.kind === "turtle" ? `saved ${dispatcher.project.nodes.length} nodes as Turtle` : `saved ${dispatcher.project.nodes.length} nodes, ${held.length} audio file(s) and the editor layout as a zip`, "ok");
+    log2(packed.kind === "turtle" ? `saved ${packed.nodes} nodes as Turtle` : `saved ${packed.nodes} nodes, ${packed.audioFiles} audio file(s) and the editor layout as a zip`, "ok");
+  }
+  async function openBytes(bytes) {
+    if (bytes[0] === 80 && bytes[1] === 75) {
+      const { turtle, editor, media } = unpackSession(await readZip(bytes));
+      await openSession(turtle, document2.baseURI, { files: media, editor });
+    } else {
+      await openSession(new TextDecoder().decode(bytes));
+    }
   }
   async function openSession(text, base = document2.baseURI, { files = /* @__PURE__ */ new Map(), editor = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
@@ -32830,13 +33290,7 @@ function createSessions(ctx2) {
       if (!file) return;
       event.target.value = "";
       try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        if (bytes[0] === 80 && bytes[1] === 75) {
-          const { turtle, editor, media } = unpackSession(await readZip(bytes));
-          await openSession(turtle, document2.baseURI, { files: media, editor });
-        } else {
-          await openSession(new TextDecoder().decode(bytes));
-        }
+        await openBytes(new Uint8Array(await file.arrayBuffer()));
       } catch (error2) {
         log2(error2.message, "error");
       }
@@ -32872,7 +33326,7 @@ function createSessions(ctx2) {
       $2("presets").hidden = found.length === 0;
     }).catch((error2) => log2(`presets: ${error2.message}`, "error"));
   }
-  return { saveSession, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
 }
 
 // web/app/History.js
@@ -33107,7 +33561,7 @@ function createBridgeLink(ctx2) {
 }
 
 // web/app/Layout.js
-var KEY2 = "jigdaw.browserOpen";
+var KEY3 = "jigdaw.browserOpen";
 function createLayout(ctx2) {
   const { document: document2, window: window2, $: $2 } = ctx2;
   function show(open, { focus = false, remember = true } = {}) {
@@ -33117,7 +33571,7 @@ function createLayout(ctx2) {
     button.setAttribute("aria-expanded", String(open));
     if (remember) {
       try {
-        window2.localStorage.setItem(KEY2, open ? "1" : "0");
+        window2.localStorage.setItem(KEY3, open ? "1" : "0");
       } catch {
       }
     }
@@ -33132,7 +33586,7 @@ function createLayout(ctx2) {
   function mount() {
     let open = false;
     try {
-      open = window2.localStorage.getItem(KEY2) === "1";
+      open = window2.localStorage.getItem(KEY3) === "1";
     } catch {
     }
     show(open, { remember: false });
@@ -33270,12 +33724,12 @@ function createMidiIn(ctx2) {
 }
 
 // web/app/Align.js
-var KEY3 = "jigdaw.alignTracks";
+var KEY4 = "jigdaw.alignTracks";
 function createAlign(ctx2) {
   const { window: window2, $: $2, log: log2 } = ctx2;
   function preferred(fallback) {
     try {
-      const stored = window2.localStorage.getItem(KEY3);
+      const stored = window2.localStorage.getItem(KEY4);
       if (stored === "1") return true;
       if (stored === "0") return false;
     } catch {
@@ -33292,7 +33746,7 @@ function createAlign(ctx2) {
     $2("align-tracks").addEventListener("change", async () => {
       const on = $2("align-tracks").checked;
       try {
-        window2.localStorage.setItem(KEY3, on ? "1" : "0");
+        window2.localStorage.setItem(KEY4, on ? "1" : "0");
       } catch {
       }
       const d = await ctx2.runtime.ensureRunning().catch((error2) => {
@@ -33408,7 +33862,7 @@ var ctx = {
   mcpSurface: null,
   /** For the console, and for a check driven from outside the page. */
   expose() {
-    window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine };
+    window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce };
   }
 };
 ctx.media = createMedia(document);
@@ -33421,6 +33875,8 @@ ctx.selection = new Selection();
 ctx.dock = createDockPanel(ctx);
 ctx.arrangement = createArrangement(ctx);
 ctx.matrix = createMatrix(ctx);
+ctx.bounce = createBounce(ctx);
+ctx.carry = createCarry(ctx, { self: "studio", offerText: "You have a piece open on the simple page. Open it here?" });
 ctx.master = createMaster(ctx);
 ctx.pwa = createPwa(ctx);
 ctx.rack = createRack(ctx);
@@ -33466,11 +33922,15 @@ $("signature").addEventListener("change", async () => {
   transport.setSignature($("signature").value);
 });
 applyIcons(document);
+$("export").addEventListener("click", () => ctx.bounce.exportWav().catch((error2) => log(error2.message, "error")));
+$("export-stems").addEventListener("click", () => ctx.bounce.exportStems().catch((error2) => log(error2.message, "error")));
 ctx.sessions.mount();
 ctx.history.mount();
 ctx.arrangement.mount();
 ctx.matrix.mount();
 ctx.master.mount();
+for (const link of document.querySelectorAll('a[href="simple.html"]')) ctx.carry.carryOnClick(link);
+ctx.carry.offer();
 ctx.pwa.mount();
 ctx.rack.mount();
 ctx.bridge.mount();

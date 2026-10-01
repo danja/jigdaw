@@ -29,6 +29,7 @@
   "requires": [],
   "prefers": [],
   "shape": {
+    "stateless": true,
     "audioInputs": 2,
     "sidechainInput": 1,
     "inputChannels": 2,

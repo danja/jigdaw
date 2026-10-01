@@ -116,20 +116,17 @@ text inputs 16px. The panel for a plugin is generated from its declared ports, s
 accessible generator covers every plugin.
 
 The others were not audited for this, so no comparison is made. Known gaps in Jiggy are in
-TODO.md, for example the transport buttons at 40px.
+TODO.md, for example controls not yet measured at phone width.
 
 ## Where Jiggy is behind
 
 The three examples have these and Jiggy does not yet. They are the reason for the track view
 plan in TODO.md, and none is a difference in Jiggy's favour.
 
-- Automation lanes drawn on the timeline (Phase T5).
-- Track reorder, folders, rename and colour in the header (Phase T2).
-- A master strip in the mixer, and sends and buses that change the sound (Phases T3, T6).
-- Clip split, trim, copy, fades and takes (Phase A).
-- A metronome and count-in, tempo and signature drawn on the ruler.
+- Folders and groups of tracks (Phase T2), and takes and comping (Phase A).
+- A metronome and count-in, and signature changes drawn on the ruler.
 - A clip launcher, a sample browser, DAWproject import and export, live collaboration.
-- A bounce to a file in the page.
+- Export to MP3 and the other compressed formats: the page renders and exports WAV only.
 
 ## Keeping this true
 

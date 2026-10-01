@@ -39,6 +39,13 @@ describe('the page settings', () => {
     for (const bad of [0, -5, 2.5, '2000']) expect(() => readHostConfig({ ...shipped, maxTrackDelayMs: bad }), String(bad)).toThrow(/maxTrackDelayMs/)
   })
 
+  it('refuses a handoff time that is not a positive whole number of minutes', () => {
+    for (const bad of [0, -1, 1.5, '30']) expect(() => readHostConfig({ ...shipped, handoffMinutes: bad }), String(bad)).toThrow(/handoffMinutes/)
+    const { handoffMinutes, ...without } = shipped
+    expect(handoffMinutes).toBeGreaterThan(0)
+    expect(() => readHostConfig(without)).toThrow(/has no handoffMinutes/)
+  })
+
   it('refuses a bridge port that is not a port', () => {
     expect(() => readHostConfig({ ...shipped, bridgePort: 70000 })).toThrow(/bridgePort/)
     expect(() => readHostConfig({ ...shipped, bridgePort: 0 })).toThrow(/bridgePort/)

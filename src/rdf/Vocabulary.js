@@ -155,6 +155,7 @@ export const vocabulary = Object.freeze({
     // Runtime shape
     audioInputs: `${JIG}audioInputs`,
     sidechainInput: `${JIG}sidechainInput`,
+    stateless: `${JIG}stateless`,
     audioOutputs: `${JIG}audioOutputs`,
     inputChannels: `${JIG}inputChannels`,
     outputChannels: `${JIG}outputChannels`,

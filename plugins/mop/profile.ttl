@@ -44,6 +44,7 @@
     jig:renderQuantum 128 ;
     jig:latencyFrames 0 ;
     jig:tailFrames 96000 ;
+    jig:stateless true ;
 
     jig:module <#module> ;
     jig:processor <#processor> ;

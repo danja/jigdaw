@@ -1,4 +1,4 @@
-// web/app/AutomationHost.js
+// src/engine/AutomationHost.js
 //
 // Envelopes on plugin parameters, played on the audio clock through each AudioParam's own scheduling,
 // which Scheduler drives (src/engine/Scheduler.js) with instructions from src/engine/Automation.js.

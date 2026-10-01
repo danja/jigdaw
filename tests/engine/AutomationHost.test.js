@@ -1,9 +1,9 @@
-// tests/web/AutomationHost.test.js
+// tests/engine/AutomationHost.test.js
 //
 // The parameter stand-in refuses what a real AudioParam refuses: a negative or non-finite time, a
 // ramp with no value to start from, and a curve over a time already taken by another event.
 import { describe, it, expect } from 'vitest'
-import { createAutomationHost } from '../../web/app/AutomationHost.js'
+import { createAutomationHost } from '../../src/engine/AutomationHost.js'
 
 function fakeParam (name) {
   const events = []

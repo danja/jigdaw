@@ -220,8 +220,10 @@ the last. When a loop begins a pass the value is set to what the envelope has at
 along a segment if the loop starts inside one, so every pass sounds alike. Stopping puts the parameter
 back to the value set by hand, which the envelope never overwrites in the project. Jiggy does this for
 node parameters and for the master's level and pan, which it holds against its own rebuilds of the graph while
-an envelope plays on them and releases on Stop or on a change by hand; a tempo envelope is carried by the file
-and not yet played.
+an envelope plays on them and releases on Stop or on a change by hand; a tempo envelope is not played on a parameter but is the tempo map:
+when a project has one with points, it replaces the transport's own tempo points, and its curves say how the
+tempo moves (step holds, linear is a straight line in beats per minute across the beats, smooth is smoothstep),
+so seconds, positions, the scheduler and audio clips all follow it. Without one, the transport's points hold.
 
 Three rules the shapes cannot say, and the model enforces:
 

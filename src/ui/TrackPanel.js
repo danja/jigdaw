@@ -27,8 +27,8 @@ export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')
 }
 
-export function createTrackPanel (document, { onRename, onColor, onSize, onMove, onDelete }) {
-  for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete })) {
+export function createTrackPanel (document, { onRename, onColor, onSize, onMove, onDelete, onFreeze }) {
+  for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete, onFreeze })) {
     if (typeof fn !== 'function') throw new Error(`createTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -105,9 +105,17 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onMove,
   remove.className = 'danger'
   remove.addEventListener('click', () => onDelete(trackId))
 
+  // Render the track as heard to an audio clip on a new track, and mute this one (web/app/Bounce.js).
+  const freeze = document.createElement('button')
+  freeze.type = 'button'
+  freeze.id = 'track-freeze'
+  freeze.textContent = 'Freeze track'
+  freeze.title = 'Render this track as heard to an audio clip on a new track, and mute this one'
+  freeze.addEventListener('click', () => onFreeze(trackId))
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
-  actions.append(position, up, down, remove)
+  actions.append(position, up, down, freeze, remove)
   element.append(nameLabel, colorGroup, sizeLabel, actions)
 
   return {

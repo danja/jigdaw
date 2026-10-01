@@ -10,25 +10,18 @@ const event = type => new window.Event(type, { bubbles: true, cancelable: true }
 
 function build () {
   const calls = []
-  const panels = []
   const cards = createTrackCards(document, {
     onSwitch: (id, on) => calls.push(['switch', id, on]),
     onLevel: (id, level) => calls.push(['level', id, level]),
-    panelFor: id => { panels.push(id); const p = document.createElement('div'); p.className = `panel-${id}`; return p }
+    onOpen: id => calls.push(['open', id])
   })
   document.body.append(cards.element)
   const state = [
-    { id: 't1', label: 'Lead', on: true, level: 1, plugins: [{ id: 'a', label: 'Square lead', about: 'A bright lead sound.' }, { id: 'b', label: 'Echo', about: null }] },
-    { id: 't2', label: 'Drums', on: false, level: 0.5, plugins: [{ id: 'c', label: 'Kit', about: null }] }
+    { id: 't1', label: 'Lead', on: true, level: 1 },
+    { id: 't2', label: 'Drums', on: false, level: 0.5 }
   ]
   cards.draw(state)
-  return { cards, calls, panels, state }
-}
-
-const open = id => {
-  const details = document.querySelector(`#card-${id} details`)
-  details.open = true
-  details.dispatchEvent(event('toggle'))
+  return { cards, calls, state }
 }
 
 describe('the track cards', () => {
@@ -59,34 +52,27 @@ describe('the track cards', () => {
     expect(slider.getAttribute('aria-label')).toBe('Loudness of Lead')
   })
 
-  it('makes no panel until a card is opened, and then one for each plugin on it', () => {
-    const { panels } = build()
-    expect(panels).toEqual([])
-    open('t1')
-    expect(panels).toEqual(['a', 'b'])
-    expect([...document.querySelectorAll('#card-t1 h4')].map(h => h.textContent)).toEqual(['Square lead', 'Echo'])
-    expect(document.querySelector('#card-t1 .about').textContent).toBe('A bright lead sound.')
-    expect(document.querySelectorAll('#card-t1 .about')).toHaveLength(1)
-    expect(document.querySelector('.panel-a')).not.toBeNull()
+  it('takes you to the rack for a track from its Change the sound button, named for the track', () => {
+    const { calls } = build()
+    const buttons = [...document.querySelectorAll('.card-open')]
+    expect(buttons.map(b => b.textContent)).toEqual(['Change the sound', 'Change the sound'])
+    expect(buttons.map(b => b.getAttribute('aria-label'))).toEqual(['Change the sound of Lead', 'Change the sound of Drums'])
+    buttons[1].dispatchEvent(event('click'))
+    expect(calls).toEqual([['open', 't2']])
+    expect(document.querySelector('details')).toBeNull()
   })
 
-  it('keeps a card, and its open panels, across a redraw, so what is being turned is not taken away', () => {
-    const { cards, state, panels } = build()
-    open('t1')
+  it('keeps a card across a redraw, so what is being turned is not taken away, and forgets a track that has gone', () => {
+    const { cards, state } = build()
     const before = document.getElementById('card-t1')
     const slider = document.getElementById('loud-t1')
+    const open = document.getElementById('open-t1')
     cards.draw(state.map(c => ({ ...c, level: 1.5 })))
     expect(document.getElementById('card-t1')).toBe(before)
     expect(document.getElementById('loud-t1')).toBe(slider)
+    expect(document.getElementById('open-t1')).toBe(open)
     expect(slider.value).toBe('1.5')
-    expect(panels).toEqual(['a', 'b'])
-  })
-
-  it('builds the panels again when the plugins on an open card change, and forgets a track that has gone', () => {
-    const { cards, state, panels } = build()
-    open('t1')
-    cards.draw([{ ...state[0], plugins: [{ id: 'z', label: 'New', about: null }] }])
-    expect(panels).toEqual(['a', 'b', 'z'])
+    cards.draw([state[0]])
     expect(document.getElementById('card-t2')).toBeNull()
     expect(document.querySelectorAll('.card')).toHaveLength(1)
   })
@@ -107,6 +93,6 @@ describe('the track cards', () => {
   })
 
   it('will not be built without its handlers', () => {
-    expect(() => createTrackCards(document, { onSwitch () {}, onLevel () {} })).toThrow(/panelFor/)
+    expect(() => createTrackCards(document, { onSwitch () {}, onLevel () {} })).toThrow(/onOpen/)
   })
 })

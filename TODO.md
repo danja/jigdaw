@@ -221,8 +221,11 @@ Goal: parameters move over time, drawn on the timeline, for any plugin. The mode
       0.02 to 0.5 over four beats: peaks 0.066 up to 0.419 and then held, falling back each pass when looped,
       and the parameter back to 0.05 after Stop). Master level and pan envelopes are played too (`Engine.holdMaster`, so the graph rebuild on every edit does
       not cut into them; Chrome: a master level falling 1 to 0.1 over 16 beats read 0.319 down to 0.186, an unrelated
-      edit did not interrupt it, a hand change to 0.5 held it flat and Stop left 0.5). Open: tempo envelopes, which
-      change the beat to seconds map the scheduler itself reads, and signature changes.
+      edit did not interrupt it, a hand change to 0.5 held it flat and Stop left 0.5). Tempo envelopes are the tempo map
+      (`Transport.fromProject`; step, linear and smooth legs, seconds across a ramp in closed form so beats and seconds
+      invert exactly); a note on beat 6 sounded at 3.00 s at a steady 120 and at 4.48 s under a tempo lane rising 60 to
+      120 over 8 beats, the 4.48 the map gives, measured in the audio in Chrome. With a tempo lane the tempo field is
+      replaced by "Tempo follows its lane". Open: signature changes.
 - [ ] **Lanes, what is left.** Built: Automate in a plugin's view (every parameter with a range that has no
       lane) adds a lane under the track (`src/ui/EnvelopeLane.js`, `EnvelopeLanes.js`); each point is a button
       named in words (parameter, value with its unit spoken out, bar and beat, curve); Left and Right move it
@@ -238,13 +241,12 @@ Goal: parameters move over time, drawn on the timeline, for any plugin. The mode
 - [ ] **Write, touch, latch and read modes.** openDAW records any write while the transport runs and
       latches until stop; copy that, because a gate on one control type left every other control
       unrecordable (`docs/automation.md` there).
-- [ ] **A manual change while automated, what is left.** Built (`web/app/AutomationHost.js`): a hand edit,
+- [ ] **A manual change while automated, what is left.** Built (`src/engine/AutomationHost.js`): a hand edit,
       an agent's or undo's, while a lane plays takes over at once, cancels the scheduled events and pauses
       that lane until Stop, saying so in the log; Chrome: a gain rising under an envelope went flat at the
       edited level and resumed from the start after Stop and Play. Open: a "restore" that resumes the lane
       without stopping, and showing on the control that it is paused.
-- [ ] **Tempo lanes** on the same lane machinery (they need the scheduler to play tempo envelopes, above). The
-      master has its own row after the tracks (`src/ui/MasterRow.js`): Automate offers Master level (0 to 2, spoken
+- [ ] **Master and tempo lanes, what is left.** The master has its own row after the tracks, which also offers a Tempo lane (20 to 300 beats a minute) (`src/ui/MasterRow.js`): Automate offers Master level (0 to 2, spoken
       in decibels) and Master pan, and its lanes are the same lane component; Chrome: a level lane was added, its
       first point named "Master level, 0.0 decibels at bar 1 beat 1, linear", keys kept focus on it, and the lane
       played. **MIDI learn** writes into the same lanes (Phase D).
@@ -259,7 +261,7 @@ Goal: the mixer is the same tracks seen as strips, not a second model.
 - [ ] **Master strip, what is left:** meters with clip hold, automation (T5), a mono switch, and
       controls beyond level, pan and mute (a master bus with its own chain, Phase D).
 - [ ] **Insert slots on the strip** mirroring the chain strip from T3, so both views edit one list.
-- [ ] **Snapshots, freeze, render in place, consolidate** (Phase C; share the bounce path in Phase E).
+- [ ] **Snapshots, render in place, consolidate** (Phase C; they share the bounce path, which Freeze already uses).
 - [ ] **Metering and correlation as displays**, with no loudness-compliance claims.
 
 ### T7. Session, clip launcher and interchange
@@ -328,19 +330,36 @@ touch the "host is a page, plugins are IRIs" premise.
       "Where things stand" and `docs/pwa.md`). Open:
       - Web Share Target and File Handling: a shared or opened `.ttl`, `.zip` or plugin bundle opens as a
         session or bundle through the same path as Open.
-      - An Export button over Phase E's bounce and encoder, WAV first and MP3 when an encoder exists
-        (WebCodecs does not encode MP3 in every browser, so a WASM encoder may be needed). Until then
-        the page says only what it can do.
+      - Export on the simple page is built (a WAV, rendered in the page). An MP3 encoder is not: WebCodecs does not
+        encode MP3 in every browser, so a WASM encoder may be needed.
       - Offline use and recovery depend on Phase F's store (the origin private file system is the
         candidate): one store, two front ends. A real offline network and a real phone are unchecked.
-      - The simple page: carry a piece into the studio other than by Save and Open; three generated
-        trigger checkboxes are 22px (as in the studio); one click on "Change the sound" once left its
+      - The simple page: one click on "Change the sound" once left its
         card closed and did not reproduce; reduced motion and a screen reader pass; the phone-width
         frame and a real phone.
       - The microphone is verified only with a stand-in stream (`window.__jigdawMicrophone`); the
         studio page has no record-voice button. A real microphone is in HUMANS.md.
       - `web/foreign/probe.html` (manual, absolute paths, needs the WAM example built) and a real WAM
         plugin have not been re-run since the container paths were derived from the scope.
+      - Done 2026-10-01, on request: a phone starts on the simple page (`web/view.js`: narrow screens go to it unless
+        the person asked for the studio with `?studio`, which the Full studio links carry and which is remembered
+        until they visit the simple page again; checked in 375px and 1000px frames), "Change the sound" opens a
+        rack screen for that track with Back (`src/ui/SoundRack.js`, a history entry so the browser's Back works,
+        focus on its title and back on the card's button), and opening a second piece no longer leaves the first
+        one's controls on it: the panels were kept by node id and a new piece reuses ids, so the first card showed
+        Chiptune's Lead line controls on Acid; they are kept by the plugin behind the node now. Generated
+        checkboxes are 44px on a phone. The rack is 356px of 371 wide with no target under 44px.
+      - Done 2026-10-01, on request: a piece is carried between the two pages (`src/host/Handoff.js`,
+        `web/app/Carry.js`). Following the link keeps the open session, packed exactly as Save packs it (the session's
+        own RDF, `writeProject` and `writeEditor`, as a zip when it holds audio or layout; nothing new in the model, only
+        an IndexedDB envelope saying which page it came from and when), and the other page offers it in a bar with Open
+        it and Not now; opening is the person's click because audio cannot start without one. One piece, taken once,
+        forgotten after `handoffMinutes` (30, in `web/host.json`). Chrome: Acid with Drums off at 97 on the simple page
+        opened in the studio with the same tracks, mute and tempo; the studio's Chiptune with a renamed track at 88 opened
+        on the simple page with 10 plugins, the name and the speed. Saving also asked each plugin for its state in turn and
+        waited two seconds on every one that has none (14 s for seven plugins); it asks all at once now (2 s). A plugin that keeps no state now says so (`jig:stateless true`,
+        in the vocabulary, the shapes and the reader, on the 22 plugins that never answer; Dice and Ferrite, which do, do not),
+        and is not asked, so saving does not wait on it.
       - A constraint to keep: an app-wide service worker must never answer a plugin resource in a way
         that skips the digest check; a cached response is still verified when instantiated.
 
@@ -399,8 +418,12 @@ remains of clips is under T4.
 - [ ] **Metering and gain staging.** Peak and RMS per strip with clip reset, phase invert, stereo width,
       pan law. LUFS, phase correlation and spectrum stay meter-only displays if built, never claims about
       loudness compliance.
-- [ ] **Freeze, render in place, consolidate.** Freeze a track to its post-FX audio (reuse TrackRecorder
-      takes), render in place to a new clip, consolidate a range to one file. All reuse the Phase E bounce.
+- [ ] **Freeze, what is left.** Freeze track is built (Freeze track in the track panel: `bounce({ onlyTrack })`
+      renders that track alone through its own chain and fader with the master neutral, keeps the WAV in the
+      session's media, adds `<name> (frozen)` with the audio clip from beat zero and mutes the original, as one
+      edit; Chrome on Acid: Bass froze to a 20.14 beat clip that played at a peak of 0.686, and one Undo restored
+      both). Open: freeing the original's CPU (it is muted, not unloaded), unfreeze as one action, render in place
+      onto the same track, consolidate a range, and a WebMCP tool for it.
 
 ### Phase D. Plugin and effect workflows
 
@@ -420,11 +443,18 @@ remains of clips is under T4.
 
 ### Phase E. Render, export and delivery
 
-- [ ] **In-page offline bounce.** Render project, time selection, region or razor range through the same
-      graph the page plays, including latency compensation and tails. `bin/host.js` renders in node; this
-      is the page equivalent with the same frame counts.
-- [ ] **Stems and add-back.** Render every track (or every sounding track) to takes, and offer rendered
-      output back into the project as a clip, reusing the WAV take path.
+- [ ] **In-page offline bounce, what is left.** Built (`src/engine/Bounce.js`): an offline engine from a snapshot,
+      the same plugins, Scheduler, clips, envelopes and transport messages, with the context suspended every tick;
+      Export in the studio and "Make a sound file" on the simple page write the whole project as WAV. Chrome on Acid:
+      9.74 s rendered in 6.45 s including loading the plugins, no errors, sound in every window. Open: a time
+      selection, region or razor range (the loop is a range: Export renders the loop when it is on, and the file is
+      named `-loop`; Chrome: a loop of 8 beats came out 5.87 s, its 3.87 s plus the 2 s tail); a render of a chain that starts with an effect (the live page feeds that
+      chain an impulse and the bounce does not); foreign (WAM) plugins, which are not loaded offline; state is the
+      snapshot's, not the live nodes' current state; cancelling a render; and timing it against a real-time capture.
+- [ ] **Stems, what is left.** Stems is built (the Stems button renders every track that makes sound, each alone with
+      the master neutral, to its own WAV in one zip, numbered in order; a silent one is left out; Chrome on Acid:
+      `jiggy-stems.zip` held `01-Bass.wav` and `02-Drums.wav`, 3.4 MB). Open: stems back into the project as clips
+      (add-back), choosing which tracks, and stems including sends' returns.
 - [ ] **Formats and options.** WAV always; AIFF, FLAC, MP3 and OGG only if the encoder runs in the page
       (WebCodecs or a WASM encoder), with sample rate, mono or stereo, normalize, tail and dither. No FFmpeg
       dependency: OpenStudio shells to system FFmpeg, which a page cannot do.

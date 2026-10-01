@@ -106,6 +106,9 @@ export function createDockPanel (ctx) {
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onMove: (id, delta) => ctx.dispatcher.project.moveTrack(id, delta),
+    onFreeze: id => {
+      ctx.bounce.freezeTrack(id).catch(error => log(error.message, 'error'))
+    },
     onDelete: id => {
       const { project } = ctx.dispatcher
       const label = trackLabel(project.track(id))

@@ -109,7 +109,7 @@ export function createArrangement (ctx) {
     // A lane for the master's level or pan, starting at what it is now.
     onAutomateMaster: kind => {
       const { master } = ctx.dispatcher.project
-      const value = kind === 'masterGain' ? master.gain : master.pan
+      const value = kind === 'masterGain' ? master.gain : kind === 'masterPan' ? master.pan : ctx.dispatcher.project.transport.tempoPoints[0]?.bpm ?? 120
       edit([{ op: 'addEnvelope', target: { kind }, points: [{ atBeat: 0, value, curve: 'linear' }] }])
     },
     onBypass: (nodeId, bypassed) => edit([{ op: 'setNode', id: nodeId, bypassed }]),
@@ -188,12 +188,13 @@ export function createArrangement (ctx) {
     })
   }
 
-  /** The master's automation: a lane for its level and for its pan, where they have an envelope, and what may still be added. */
+  /** The master's and the tempo's automation: a lane for each that has an envelope, and what may still be added. */
   function masterLanes (project) {
     const { beatsPerBar } = project?.transport ?? { beatsPerBar: 4 }
     if (!project) return { list: [], available: [] }
     const kinds = {
       masterGain: { label: 'Master level', min: 0, max: 2, start: project.master.gain, speak: v => (v > 0 ? `${(20 * Math.log10(v)).toFixed(1)} decibels` : 'silent') },
+      tempo: { label: 'Tempo', min: 20, max: 300, start: project.transport.tempoPoints[0]?.bpm ?? 120, speak: v => `${Math.round(v)} beats a minute` },
       masterPan: { label: 'Master pan', min: -1, max: 1, start: project.master.pan, speak: v => (v === 0 ? 'centre' : `${Math.abs(v).toFixed(2)} ${v < 0 ? 'left' : 'right'}`) }
     }
     const has = new Set(project.envelopes.map(e => e.target.kind).filter(Boolean))

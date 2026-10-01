@@ -32,6 +32,7 @@
   ],
   "prefers": [],
   "shape": {
+    "stateless": true,
     "audioInputs": 0,
     "audioOutputs": 0,
     "renderQuantum": 128,

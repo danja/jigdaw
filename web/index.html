@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="view.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14171d">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -255,6 +256,10 @@
   .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
   button[data-icon] { min-width:44px; min-height:44px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
   button[data-icon] .icon { display:block; }
+  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
+  #carry[hidden] { display:none; }
+  #carry-text { flex:1 1 14rem; }
+  #carry button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
   .clip-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
   .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; font:inherit; }
   .timeline-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
@@ -537,11 +542,12 @@
   <button id="play" data-icon="play" aria-pressed="false">Play</button>
   <button id="stop" data-icon="stop">Stop</button>
   <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
-  <span class="tempo">
+  <span class="tempo" id="tempo-group">
     <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
     <input type="number" id="tempo" value="120" min="20" max="300" step="1">
     <span style="color:var(--dim);font-size:12px">BPM</span>
   </span>
+  <span id="tempo-note" role="status" hidden style="color:var(--dim);font-size:13px">Tempo follows its lane</span>
   <span class="tempo">
     <label for="signature" class="visually-hidden">Time signature, beats per bar over beat unit</label>
     <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
@@ -556,6 +562,8 @@
     </span>
   <span class="session">
       <button id="save" data-icon="save" title="Save this session as RDF">Save</button>
+      <button id="export" data-icon="download" title="Render the mix to a WAV file (the loop, when the loop is on)">Export</button>
+      <button id="export-stems" data-icon="stems" title="Render every track that makes sound to its own WAV, in one zip">Stems</button>
       <button id="open" data-icon="open" title="Open a saved session">Open</button>
       <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
       <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
@@ -569,6 +577,12 @@
   <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
   <span id="net-state" class="midi-state" role="status"></span>
   <span class="meter" id="meter" role="img" aria-label="Output level"></span>
+</div>
+
+<div id="carry" role="status" hidden>
+  <span id="carry-text"></span>
+  <button id="carry-open" type="button">Open it</button>
+  <button id="carry-dismiss" type="button">Not now</button>
 </div>
 
 <main>

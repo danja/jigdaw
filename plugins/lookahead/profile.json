@@ -29,7 +29,8 @@
     "audioOutputs": 1,
     "outputChannels": 2,
     "renderQuantum": 128,
-    "latencyFrames": 512
+    "latencyFrames": 512,
+    "stateless": true
   },
   "resources": {
     "processor": "lookahead-processor.js"

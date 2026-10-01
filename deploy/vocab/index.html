@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  153 terms.
+  154 terms.
 </p>
 
 <h2>Classes</h2>
@@ -444,6 +444,11 @@
   <dd>Heard while anything is soloed. Stored per track and applied across
         the mix: if any track is soloed then every track that is not is silent, so what a
         listener hears is not a property of any one track's statements.</dd>
+  <dt id="stateless"><code>jig:stateless</code></dt>
+  <dd>True when the plugin has no state beyond its parameters and its assets and never answers a
+        stateRequest, so a host saving a session need not ask it and wait for a reply that will not come. Absent
+        means the plugin may answer, and a host asks and waits a bounded time. Declaring it on a plugin that does
+        keep state loses that state from every saved session.</dd>
   <dt id="symbol"><code>jig:symbol</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="tailFrames"><code>jig:tailFrames</code> <span class="label">tail frames</span></dt>

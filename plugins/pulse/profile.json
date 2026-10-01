@@ -35,7 +35,8 @@
     "outputChannels": 2,
     "renderQuantum": 128,
     "latencyFrames": 0,
-    "tailFrames": 192000
+    "tailFrames": 192000,
+    "stateless": true
   },
   "resources": {
     "module": "pulse.wasm",

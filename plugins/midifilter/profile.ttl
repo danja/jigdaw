@@ -35,6 +35,7 @@
     trn:requires jig:MidiEvents ;
     trn:requires jig:MidiOut ;
 
+    jig:stateless true ;
     jig:audioInputs 0 ;
     jig:audioOutputs 0 ;
     jig:renderQuantum 128 ;

@@ -182,3 +182,20 @@ describe('a sidechain input', () => {
     expect(readProfile(await parseText(text('0'), 'urn:test')).sidechainInput).toBe(0)
   })
 })
+
+describe('a plugin that keeps no state', () => {
+  it('is read from the profiles that declare it, and Dice and Ferrite, which answer state requests, do not', async () => {
+    const pulse = readProfile(await parseTurtle(at('plugins/pulse/profile.ttl'), 'urn:test'))
+    expect(pulse.stateless).toBe(true)
+    for (const name of ['dice', 'ferrite']) {
+      expect(readProfile(await parseTurtle(at(`plugins/${name}/profile.ttl`), 'urn:test')).stateless, name).toBe(false)
+    }
+    expect(readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test')).stateless).toBe(false)
+  })
+
+  it('refuses a value that is not true or false', async () => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText('@prefix jig: <http://purl.org/stuff/jigdaw/> .\n<https://example.org/p/> a jig:WebPlugin ; jig:stateless "mostly" .', 'urn:test')
+    expect(() => readProfile(dataset)).toThrow(/not a boolean/)
+  })
+})

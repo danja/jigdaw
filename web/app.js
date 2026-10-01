@@ -11,6 +11,8 @@
 // the context, reading what it needs from it at the moment it needs it: the
 // dispatcher and the engine do not exist until the first thing that needs
 // sound (web/app/Runtime.js), so nothing can hold them any earlier.
+import { createBounce } from './app/Bounce.js'
+import { createCarry } from './app/Carry.js'
 import { applyIcons } from '../src/ui/Icons.js'
 import { createTabs } from '../src/ui/Tabs.js'
 import { createMedia } from './app/Media.js'
@@ -61,7 +63,7 @@ const ctx = {
   clipPlayer: null,
   mcpSurface: null,
   /** For the console, and for a check driven from outside the page. */
-  expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine } }
+  expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce } }
 }
 ctx.media = createMedia(document)
 ctx.align = createAlign(ctx)
@@ -73,6 +75,8 @@ ctx.selection = new Selection()
 ctx.dock = createDockPanel(ctx)
 ctx.arrangement = createArrangement(ctx)
 ctx.matrix = createMatrix(ctx)
+ctx.bounce = createBounce(ctx)
+ctx.carry = createCarry(ctx, { self: 'studio', offerText: 'You have a piece open on the simple page. Open it here?' })
 ctx.master = createMaster(ctx)
 ctx.pwa = createPwa(ctx)
 ctx.rack = createRack(ctx)
@@ -114,11 +118,16 @@ $('signature').addEventListener('change', async () => {
   transport.setSignature($('signature').value)
 })
 applyIcons(document)
+$('export').addEventListener('click', () => ctx.bounce.exportWav().catch(error => log(error.message, 'error')))
+$('export-stems').addEventListener('click', () => ctx.bounce.exportStems().catch(error => log(error.message, 'error')))
 ctx.sessions.mount()
 ctx.history.mount()
 ctx.arrangement.mount()
 ctx.matrix.mount()
 ctx.master.mount()
+// The link to the simple page carries the piece with it, and the simple page offers it.
+for (const link of document.querySelectorAll('a[href="simple.html"]')) ctx.carry.carryOnClick(link)
+ctx.carry.offer()
 ctx.pwa.mount()
 ctx.rack.mount()
 ctx.bridge.mount()

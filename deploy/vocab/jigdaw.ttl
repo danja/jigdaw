@@ -290,6 +290,14 @@ jig:sidechainInput a owl:DatatypeProperty ;
         it when nothing is connected there. A host names it as a sidechain key where it
         offers connections. Absent means the plugin has none.""" .
 
+jig:stateless a owl:DatatypeProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range xsd:boolean ;
+    rdfs:label "stateless" ;
+    rdfs:comment """True when the plugin has no state beyond its parameters and its assets and never answers a
+        stateRequest, so a host saving a session need not ask it and wait for a reply that will not come. Absent
+        means the plugin may answer, and a host asks and waits a bounded time. Declaring it on a plugin that does
+        keep state loses that state from every saved session.""" .
+
 jig:audioOutputs a owl:DatatypeProperty ;
     rdfs:domain jig:WebPlugin ; rdfs:range xsd:integer ;
     rdfs:label "audio outputs" .

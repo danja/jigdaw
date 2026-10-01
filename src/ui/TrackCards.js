@@ -1,17 +1,15 @@
 // src/ui/TrackCards.js
 //
 // The simple page's view of a piece: one card per track, each with a big On and
-// Off, and "Change the sound" that opens the plugins on it as their generated
-// panels. Plain words, large targets, and everything else one step away.
+// Off, its loudness, and "Change the sound", which takes you to the rack for that track
+// (src/ui/SoundRack.js). Plain words, large targets, and everything else one step away.
 //
-// A card is kept and updated in place, like a track header: a panel being
-// turned or a slider being dragged must not be taken out of the page by the
-// redraw every edit causes. Panels are made only when a card is first opened,
-// since a piece may hold a dozen plugins and most are never touched.
+// A card is kept and updated in place, like a track header: a slider being dragged must
+// not be taken out of the page by the redraw every edit causes.
 import { decibels } from './Strip.js'
 
-export function createTrackCards (document, { onSwitch, onLevel, panelFor }) {
-  for (const [name, fn] of Object.entries({ onSwitch, onLevel, panelFor })) {
+export function createTrackCards (document, { onSwitch, onLevel, onOpen }) {
+  for (const [name, fn] of Object.entries({ onSwitch, onLevel, onOpen })) {
     if (typeof fn !== 'function') throw new Error(`createTrackCards needs ${name}`)
   }
   const element = document.createElement('ul')
@@ -33,11 +31,6 @@ export function createTrackCards (document, { onSwitch, onLevel, panelFor }) {
     power.addEventListener('click', () => onSwitch(card.id, power.getAttribute('aria-pressed') !== 'true'))
     head.append(title, power)
 
-    const details = document.createElement('details')
-    const summary = document.createElement('summary')
-    summary.textContent = 'Change the sound'
-    const body = document.createElement('div')
-    body.className = 'card-body'
     const loud = document.createElement('label')
     loud.className = 'loud'
     const loudText = document.createElement('span')
@@ -50,16 +43,16 @@ export function createTrackCards (document, { onSwitch, onLevel, panelFor }) {
     const loudValue = document.createElement('span')
     loudValue.className = 'value'
     loud.append(loudText, slider, loudValue)
-    const plugins = document.createElement('div')
-    plugins.className = 'plugins'
-    body.append(loud, plugins)
-    details.append(summary, body)
-    li.append(head, details)
+    // Change the sound takes you to the rack for this track (src/ui/SoundRack.js), a screen of its own.
+    const open = document.createElement('button')
+    open.type = 'button'
+    open.className = 'card-open'
+    open.id = `open-${card.id}`
+    open.addEventListener('click', () => onOpen(card.id))
+    li.append(head, loud, open)
 
-    const entry = { li, title, power, details, slider, loudText, loudValue, plugins, built: null }
+    const entry = { li, title, power, slider, loudText, loudValue, open }
     slider.addEventListener('input', () => { showLevel(entry, Number(slider.value)); onLevel(card.id, Number(slider.value)) })
-    // The panels are made the first time the card is opened, and again if its plugins change.
-    details.addEventListener('toggle', () => { if (details.open) build(entry, card.id) })
     return entry
   }
 
@@ -68,32 +61,9 @@ export function createTrackCards (document, { onSwitch, onLevel, panelFor }) {
     entry.slider.setAttribute('aria-valuetext', `${decibels(n)} decibels`)
   }
 
-  function build (entry, id) {
-    const current = entry.pluginList
-    const key = current.map(p => p.id).join('|')
-    if (entry.built === key) return
-    entry.built = key
-    entry.plugins.replaceChildren(...current.map(plugin => {
-      const section = document.createElement('section')
-      section.className = 'plugin'
-      const h = document.createElement('h4')
-      h.textContent = plugin.label
-      section.append(h)
-      if (plugin.about) {
-        const p = document.createElement('p')
-        p.className = 'about'
-        p.textContent = plugin.about
-        section.append(p)
-      }
-      const panel = panelFor(plugin.id)
-      if (panel) section.append(panel)
-      return section
-    }))
-  }
-
   return {
     element,
-    /** `cards`: `{ id, label, on, level, plugins: [{ id, label, about }] }` in the order to show. */
+    /** `cards`: `{ id, label, on, level }` in the order to show. */
     draw (cards) {
       for (const id of [...kept.keys()]) {
         if (!cards.some(c => c.id === id)) { kept.get(id).li.remove(); kept.delete(id) }
@@ -110,8 +80,8 @@ export function createTrackCards (document, { onSwitch, onLevel, panelFor }) {
         if (document.activeElement !== entry.slider) entry.slider.value = String(card.level)
         showLevel(entry, card.level)
         entry.li.classList.toggle('off', !card.on)
-        entry.pluginList = card.plugins
-        if (entry.details.open) build(entry, card.id)
+        entry.open.textContent = 'Change the sound'
+        entry.open.setAttribute('aria-label', `Change the sound of ${card.label}`)
       }
       // Only when the order differs. Putting an element back where it already is still
       // takes it out of the page for a moment, which drops the focus from a knob being

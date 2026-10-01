@@ -40,7 +40,8 @@
     "outputChannels": 2,
     "renderQuantum": 128,
     "latencyFrames": 0,
-    "tailFrames": 96000
+    "tailFrames": 96000,
+    "stateless": true
   },
   "resources": {
     "module": "mop.wasm",

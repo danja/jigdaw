@@ -57,3 +57,5 @@
    day one of those changes. */
 input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
 input[type=checkbox] { width:22px; height:22px; }
+/* A touch target is 44px (CLAUDE.md): on a phone the generated switches and triggers are that size. */
+@media (max-width: 720px) { input[type=checkbox] { width:44px; height:44px; } }

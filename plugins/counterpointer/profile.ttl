@@ -38,6 +38,7 @@
     trn:requires jig:MidiOut ;
     trn:requires trn:HostTransport ;
 
+    jig:stateless true ;
     jig:audioInputs 0 ;
     jig:audioOutputs 0 ;
     jig:renderQuantum 128 ;

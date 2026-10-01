@@ -47,7 +47,8 @@
     "audioInputs": 0,
     "audioOutputs": 0,
     "renderQuantum": 128,
-    "latencyFrames": 0
+    "latencyFrames": 0,
+    "stateless": true
   },
   "resources": {
     "module": "bassgen.wasm",

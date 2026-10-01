@@ -3804,7 +3804,7 @@ var require_end_of_stream = __commonJS({
       PromisePrototypeThen(stream[kIsClosedPromise].promise, resolverFn, resolverFn);
       return nop;
     }
-    function finished(stream, opts) {
+    function finished2(stream, opts) {
       var _opts;
       let autoCleanup = false;
       if (opts === null) {
@@ -3828,7 +3828,7 @@ var require_end_of_stream = __commonJS({
       });
     }
     module.exports = eos;
-    module.exports.finished = finished;
+    module.exports.finished = finished2;
   }
 });
 
@@ -7022,9 +7022,9 @@ var require_pipeline = __commonJS({
     var Readable;
     var addAbortListener;
     function destroyer(stream, reading, writing) {
-      let finished = false;
+      let finished2 = false;
       stream.on("close", () => {
-        finished = true;
+        finished2 = true;
       });
       const cleanup = eos(
         stream,
@@ -7033,13 +7033,13 @@ var require_pipeline = __commonJS({
           writable: writing
         },
         (err) => {
-          finished = !err;
+          finished2 = !err;
         }
       );
       return {
         destroy: (err) => {
-          if (finished) return;
-          finished = true;
+          if (finished2) return;
+          finished2 = true;
           destroyImpl.destroyer(stream, err || new ERR_STREAM_DESTROYED("pipe"));
         },
         cleanup
@@ -7619,7 +7619,7 @@ var require_operators = __commonJS({
     var { validateAbortSignal, validateInteger, validateObject } = require_validators();
     var kWeakHandler = require_primordials().Symbol("kWeak");
     var kResistStopPropagation = require_primordials().Symbol("kResistStopPropagation");
-    var { finished } = require_end_of_stream();
+    var { finished: finished2 } = require_end_of_stream();
     var staticCompose = require_compose();
     var { addAbortSignalNoValidate } = require_add_abort_signal();
     var { isWritable, isNodeStream } = require_utils();
@@ -7866,7 +7866,7 @@ var require_operators = __commonJS({
         });
         this.once("error", () => {
         });
-        await finished(this.destroy(err));
+        await finished2(this.destroy(err));
         throw err;
       }
       const ac = new AbortController2();
@@ -8019,7 +8019,7 @@ var require_promises = __commonJS({
     var { ArrayPrototypePop, Promise: Promise2 } = require_primordials();
     var { isIterable, isNodeStream, isWebStream } = require_utils();
     var { pipelineImpl: pl } = require_pipeline();
-    var { finished } = require_end_of_stream();
+    var { finished: finished2 } = require_end_of_stream();
     require_stream();
     function pipeline(...streams) {
       return new Promise2((resolve, reject) => {
@@ -8048,7 +8048,7 @@ var require_promises = __commonJS({
       });
     }
     module.exports = {
-      finished,
+      finished: finished2,
       pipeline
     };
   }
@@ -8259,10 +8259,10 @@ var init_util = __esm({
 var require_fromStream = __commonJS({
   "node_modules/rdf-dataset-ext/fromStream.js"(exports, module) {
     var { promisify: promisify2 } = (init_util(), __toCommonJS(util_exports));
-    var { finished } = require_browser3();
+    var { finished: finished2 } = require_browser3();
     async function fromStream3(dataset2, stream) {
       stream.on("data", (quad3) => dataset2.add(quad3));
-      await promisify2(finished)(stream);
+      await promisify2(finished2)(stream);
       return dataset2;
     }
     module.exports = fromStream3;
@@ -13280,6 +13280,7 @@ var init_Vocabulary = __esm({
         // Runtime shape
         audioInputs: `${JIG}audioInputs`,
         sidechainInput: `${JIG}sidechainInput`,
+        stateless: `${JIG}stateless`,
         audioOutputs: `${JIG}audioOutputs`,
         inputChannels: `${JIG}inputChannels`,
         outputChannels: `${JIG}outputChannels`,
@@ -13459,17 +13460,17 @@ function asNumber(term3) {
   if (!Number.isFinite(n2)) throw new Error(`not a number: ${term3.value}`);
   return n2;
 }
-function resolveLocation(location, baseIRI) {
-  return new URL(location, baseIRI).toString();
+function resolveLocation(location2, baseIRI) {
+  return new URL(location2, baseIRI).toString();
 }
-function rebaseLocation(location, canonical, retrieval) {
-  if (!location || !canonical || !retrieval || canonical === retrieval) return location;
-  return location.startsWith(canonical) ? retrieval + location.slice(canonical.length) : location;
+function rebaseLocation(location2, canonical, retrieval) {
+  if (!location2 || !canonical || !retrieval || canonical === retrieval) return location2;
+  return location2.startsWith(canonical) ? retrieval + location2.slice(canonical.length) : location2;
 }
 function readResource(dataset2, term3, baseIRI, canonical) {
   if (!term3) return null;
-  const location = one(dataset2, term3, jig.location);
-  const resolved = location ? resolveLocation(location.value, baseIRI) : null;
+  const location2 = one(dataset2, term3, jig.location);
+  const resolved = location2 ? resolveLocation(location2.value, baseIRI) : null;
   return {
     iri: term3.value,
     location: rebaseLocation(resolved, canonical, baseIRI),
@@ -13608,6 +13609,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
     prefers: values(dataset2, subject, jig.prefers),
     audioInputs: asNumber(one(dataset2, subject, jig.audioInputs)) ?? 0,
     sidechainInput: sidechainIndex(dataset2, subject),
+    stateless: asBoolean(one(dataset2, subject, jig.stateless)),
     audioOutputs: asNumber(one(dataset2, subject, jig.audioOutputs)) ?? 0,
     inputChannels: asNumber(one(dataset2, subject, jig.inputChannels)) ?? 2,
     outputChannels: asNumber(one(dataset2, subject, jig.outputChannels)) ?? 2,
@@ -23569,10 +23571,10 @@ var EventRouter = class {
   }
   #remember(from, to, events) {
     const key = `${from}>${to}`;
-    const history = this.#recent.get(key) ?? [];
-    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
-    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS);
-    this.#recent.set(key, history);
+    const history2 = this.#recent.get(key) ?? [];
+    for (const event of events) history2.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
+    if (history2.length > MONITOR_EVENTS) history2.splice(0, history2.length - MONITOR_EVENTS);
+    this.#recent.set(key, history2);
   }
   /**
    * Deliver events to one node.
@@ -23631,11 +23633,26 @@ function effectiveConnections(connections, { bypassed, passes }) {
 
 // src/engine/Transport.js
 var MINUTE = 60;
+var SMOOTH_LEGS = 16;
+var smoothstep = (u2) => u2 * u2 * (3 - 2 * u2);
 function normalise(tempoPoints) {
   const points = [...tempoPoints ?? []].filter((p) => Number.isFinite(p.atBeat) && p.bpm > 0).sort((a2, b) => a2.atBeat - b.atBeat);
-  if (points.length === 0) return [{ atBeat: 0, bpm: 120 }];
+  if (points.length === 0) return [{ atBeat: 0, bpm: 120, curve: "step" }];
   if (points[0].atBeat > 0) points.unshift({ atBeat: 0, bpm: points[0].bpm });
-  return points;
+  const out = [];
+  points.forEach((p, i2) => {
+    const next = points[i2 + 1];
+    const curve = p.curve ?? "step";
+    if (curve === "smooth" && next) {
+      for (let j = 0; j < SMOOTH_LEGS; j++) {
+        const u2 = j / SMOOTH_LEGS;
+        out.push({ atBeat: p.atBeat + (next.atBeat - p.atBeat) * u2, bpm: p.bpm + (next.bpm - p.bpm) * smoothstep(u2), curve: "linear" });
+      }
+    } else {
+      out.push({ atBeat: p.atBeat, bpm: p.bpm, curve: curve === "linear" && next ? "linear" : "step" });
+    }
+  });
+  return out;
 }
 var Transport = class _Transport {
   #points;
@@ -23667,24 +23684,41 @@ var Transport = class _Transport {
   get loop() {
     return { ...this.#loop };
   }
-  /** The tempo in force at a beat. */
+  /** The leg a beat falls in: its start point, and the tempo it ends on (null when it holds). */
+  #leg(index) {
+    const from = this.#points[index];
+    const next = this.#points[index + 1];
+    return { from, to: next ?? null, ramps: from.curve === "linear" && next !== void 0 };
+  }
+  /** Beats per minute per beat along a ramp: the slope of the tempo. */
+  #slope(leg) {
+    return (leg.to.bpm - leg.from.bpm) / (leg.to.atBeat - leg.from.atBeat);
+  }
+  /** The tempo in force at a beat; on a ramp, the value on the straight line. */
   tempoAtBeat(beat) {
     let tempo = this.#points[0].bpm;
-    for (const point of this.#points) {
-      if (point.atBeat > beat) break;
-      tempo = point.bpm;
+    for (let i2 = 0; i2 < this.#points.length; i2++) {
+      const leg = this.#leg(i2);
+      if (leg.from.atBeat > beat) break;
+      tempo = leg.ramps && beat < leg.to.atBeat ? leg.from.bpm + this.#slope(leg) * (beat - leg.from.atBeat) : leg.from.bpm;
     }
     return tempo;
+  }
+  /** Seconds across part of a leg, from its start to `beat` (inside it). */
+  #secondsIn(leg, beat) {
+    if (!leg.ramps) return (beat - leg.from.atBeat) * MINUTE / leg.from.bpm;
+    const k = this.#slope(leg);
+    const end = leg.from.bpm + k * (beat - leg.from.atBeat);
+    return Math.abs(k) < 1e-12 ? (beat - leg.from.atBeat) * MINUTE / leg.from.bpm : MINUTE / k * Math.log(end / leg.from.bpm);
   }
   /** Seconds from beat zero to a beat, across every tempo change between. */
   secondsAtBeat(beat) {
     if (beat <= 0) return 0;
     let seconds = 0;
     for (let i2 = 0; i2 < this.#points.length; i2++) {
-      const from = this.#points[i2].atBeat;
-      if (from >= beat) break;
-      const to = Math.min(this.#points[i2 + 1]?.atBeat ?? Infinity, beat);
-      seconds += (to - from) * MINUTE / this.#points[i2].bpm;
+      const leg = this.#leg(i2);
+      if (leg.from.atBeat >= beat) break;
+      seconds += this.#secondsIn(leg, Math.min(leg.to?.atBeat ?? Infinity, beat));
     }
     return seconds;
   }
@@ -23693,13 +23727,16 @@ var Transport = class _Transport {
     if (seconds <= 0) return 0;
     let elapsed = 0;
     for (let i2 = 0; i2 < this.#points.length; i2++) {
-      const { atBeat, bpm } = this.#points[i2];
-      const next = this.#points[i2 + 1]?.atBeat ?? Infinity;
-      const segment2 = (next - atBeat) * MINUTE / bpm;
-      if (elapsed + segment2 > seconds || next === Infinity) {
-        return atBeat + (seconds - elapsed) * bpm / MINUTE;
+      const leg = this.#leg(i2);
+      const length = leg.to ? this.#secondsIn(leg, leg.to.atBeat) : Infinity;
+      if (elapsed + length > seconds || !leg.to) {
+        const local = seconds - elapsed;
+        if (!leg.ramps) return leg.from.atBeat + local * leg.from.bpm / MINUTE;
+        const k = this.#slope(leg);
+        if (Math.abs(k) < 1e-12) return leg.from.atBeat + local * leg.from.bpm / MINUTE;
+        return leg.from.atBeat + (leg.from.bpm * Math.exp(k * local / MINUTE) - leg.from.bpm) / k;
       }
-      elapsed += segment2;
+      elapsed += length;
     }
     return 0;
   }
@@ -23752,8 +23789,10 @@ var Transport = class _Transport {
   /** Build one from a project's transport, so the two cannot disagree. */
   static fromProject(project, sampleRate) {
     const t = project.transport;
+    const envelope = (project.envelopes ?? []).find((e) => e.target.kind === "tempo" && e.points.length > 0);
+    const tempoPoints = envelope ? envelope.points.map((p) => ({ atBeat: p.atBeat, bpm: p.value, curve: p.curve })) : t.tempoPoints;
     return new _Transport({
-      tempoPoints: t.tempoPoints,
+      tempoPoints,
       sampleRate,
       beatsPerBar: t.beatsPerBar,
       beatUnit: t.beatUnit,
@@ -24561,6 +24600,7 @@ var OpDispatcher = class {
   async getNodeState(nodeId) {
     const engineId = this.#nodeIds.get(nodeId);
     if (!engineId || !this.#engine) return null;
+    if (this.#engine.get(engineId)?.profile?.stateless) return null;
     return this.#engine.requestState(engineId);
   }
   /**
@@ -24950,7 +24990,10 @@ var HOST_CONFIG_KEYS = Object.freeze({
   alignTracks: "true or false",
   // The longest delay a track can be given to align it, which is the largest
   // latency difference between two tracks the page can put right.
-  maxTrackDelayMs: "a whole number of milliseconds, at least 1"
+  maxTrackDelayMs: "a whole number of milliseconds, at least 1",
+  // How long a piece carried from one page to the other (src/host/Handoff.js) is offered. After this it is
+  // forgotten, so a piece left over from last week is not offered as if it were what was just open.
+  handoffMinutes: "a whole number of minutes, at least 1"
 });
 var BOOLEAN_KEYS = /* @__PURE__ */ new Set(["alignTracks"]);
 function readHostConfig(json) {
@@ -25973,7 +26016,7 @@ function createRuntime(ctx2) {
   return { ensureRunning, shapeValidator };
 }
 
-// web/app/AutomationHost.js
+// src/engine/AutomationHost.js
 function createAutomationHost(ctx2) {
   const { log: log2 } = ctx2;
   const touched = /* @__PURE__ */ new Map();
@@ -26477,6 +26520,11 @@ function createTransport(ctx2) {
     if (!t) return;
     const bpm = t.tempoPoints[0]?.bpm;
     const field = $2("tempo");
+    const automated = ctx2.dispatcher.project.envelopes.some((e) => e.target.kind === "tempo" && e.points.length > 0);
+    const group = $2("tempo-group");
+    if (group) group.hidden = automated;
+    const note = $2("tempo-note");
+    if (note) note.hidden = !automated;
     if (bpm && field && document2.activeElement !== field) field.value = String(bpm);
     const signature = $2("signature");
     if (signature && document2.activeElement !== signature) signature.value = `${t.beatsPerBar}/${t.beatUnit}`;
@@ -27313,15 +27361,11 @@ function unpackSession(files) {
 function createSessions(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   let openPresetByLabel = () => Promise.resolve();
-  async function saveSession() {
+  async function pack() {
     const { dispatcher, media } = ctx2;
-    if (!dispatcher) {
-      log2("nothing to save yet", "error");
-      return;
-    }
-    for (const node of dispatcher.project.nodes) {
-      const state = await dispatcher.getNodeState(node.id);
-      if (state !== null) dispatcher.apply([{ op: "setNodeState", node: node.id, state: encodeState(state) }]);
+    const states = await Promise.all(dispatcher.project.nodes.map(async (node) => [node.id, await dispatcher.getNodeState(node.id)]));
+    for (const [id, state] of states) {
+      if (state !== null) dispatcher.apply([{ op: "setNodeState", node: id, state: encodeState(state) }]);
     }
     const turtle = writeProject(dispatcher.project, {
       iri: media.base,
@@ -27333,14 +27377,36 @@ function createSessions(ctx2) {
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       media: held.map((iri2) => ({ name: iri2.slice(media.base.length), bytes: media.get(iri2).bytes }))
     });
-    const blob = packed.kind === "turtle" ? new Blob([packed.text], { type: "text/turtle" }) : new Blob([packed.bytes], { type: "application/zip" });
+    return {
+      kind: packed.kind,
+      bytes: packed.kind === "turtle" ? new TextEncoder().encode(packed.text) : packed.bytes,
+      nodes: dispatcher.project.nodes.length,
+      audioFiles: held.length
+    };
+  }
+  async function saveSession() {
+    const { dispatcher } = ctx2;
+    if (!dispatcher) {
+      log2("nothing to save yet", "error");
+      return;
+    }
+    const packed = await pack();
+    const blob = new Blob([packed.bytes], { type: packed.kind === "turtle" ? "text/turtle" : "application/zip" });
     const url = URL.createObjectURL(blob);
     const link = document2.createElement("a");
     link.href = url;
     link.download = packed.kind === "turtle" ? "session.ttl" : "session.zip";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1e4);
-    log2(packed.kind === "turtle" ? `saved ${dispatcher.project.nodes.length} nodes as Turtle` : `saved ${dispatcher.project.nodes.length} nodes, ${held.length} audio file(s) and the editor layout as a zip`, "ok");
+    log2(packed.kind === "turtle" ? `saved ${packed.nodes} nodes as Turtle` : `saved ${packed.nodes} nodes, ${packed.audioFiles} audio file(s) and the editor layout as a zip`, "ok");
+  }
+  async function openBytes(bytes) {
+    if (bytes[0] === 80 && bytes[1] === 75) {
+      const { turtle, editor, media } = unpackSession(await readZip(bytes));
+      await openSession(turtle, document2.baseURI, { files: media, editor });
+    } else {
+      await openSession(new TextDecoder().decode(bytes));
+    }
   }
   async function openSession(text, base = document2.baseURI, { files = /* @__PURE__ */ new Map(), editor = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
@@ -27385,13 +27451,7 @@ function createSessions(ctx2) {
       if (!file) return;
       event.target.value = "";
       try {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        if (bytes[0] === 80 && bytes[1] === 75) {
-          const { turtle, editor, media } = unpackSession(await readZip(bytes));
-          await openSession(turtle, document2.baseURI, { files: media, editor });
-        } else {
-          await openSession(new TextDecoder().decode(bytes));
-        }
+        await openBytes(new Uint8Array(await file.arrayBuffer()));
       } catch (error2) {
         log2(error2.message, "error");
       }
@@ -27427,7 +27487,7 @@ function createSessions(ctx2) {
       $2("presets").hidden = found.length === 0;
     }).catch((error2) => log2(`presets: ${error2.message}`, "error"));
   }
-  return { saveSession, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
 }
 
 // web/app/Pwa.js
@@ -27802,6 +27862,387 @@ function createVoice(ctx2, { getUserMedia: getUserMedia2, processorUrl = null, W
   return { start, stop, recording, toggle: () => live ? stop() : start() };
 }
 
+// web/app/Bounce.js
+init_parse();
+
+// src/engine/Bounce.js
+var QUANTUM = 128;
+var quantised = (seconds, sampleRate) => Math.round(seconds * sampleRate / QUANTUM) * QUANTUM / sampleRate;
+function suspendTimes(seconds, tickSeconds, sampleRate) {
+  const step = Math.max(QUANTUM / sampleRate, quantised(tickSeconds, sampleRate));
+  const times = [];
+  for (let t = step; t < seconds - QUANTUM / sampleRate; t += step) times.push(quantised(t, sampleRate));
+  return [...new Set(times)];
+}
+async function bounce({
+  snapshot,
+  makeLoader,
+  fetchBytes,
+  hostConfig,
+  seconds,
+  sampleRate = 48e3,
+  onlyTrack = null,
+  alignTracks = true,
+  OfflineContext = globalThis.OfflineAudioContext,
+  AudioWorkletNode = globalThis.AudioWorkletNode,
+  onProgress = () => {
+  }
+}) {
+  if (!(seconds > 0)) throw new Error("a bounce needs a length above zero");
+  if (typeof OfflineContext !== "function") throw new Error("this browser has no OfflineAudioContext to render with");
+  for (const key of ["schedulerLookaheadMs", "schedulerTickMs", "maxTrackDelayMs"]) {
+    if (!(hostConfig?.[key] > 0)) throw new Error(`a bounce needs ${key} from the host configuration`);
+  }
+  if (onlyTrack !== null && !snapshot.tracks.some((t) => t.id === onlyTrack)) throw new Error(`no such track: ${onlyTrack}`);
+  const frames = Math.ceil(seconds * sampleRate / QUANTUM) * QUANTUM;
+  const context = new OfflineContext({ numberOfChannels: 2, length: frames, sampleRate });
+  const engine = new Engine({ context, loader: makeLoader(), AudioWorkletNode, maxTrackDelaySeconds: hostConfig.maxTrackDelayMs / 1e3 });
+  const dispatcher = new OpDispatcher({ engine, alignTracks });
+  const opened = await openProject(dispatcher, { changes: changesFor(snapshot) });
+  if (!opened.ok) throw new Error(`the project could not be opened for rendering: ${opened.errors.join("; ")}`);
+  if (onlyTrack !== null) {
+    const edits = [
+      ...dispatcher.project.tracks.map((t) => ({ op: "setTrackChannel", track: t.id, muted: t.id !== onlyTrack ? true : false })),
+      { op: "setMaster", gain: 1, pan: 0, muted: false },
+      ...dispatcher.project.envelopes.filter((e) => e.target.kind === "masterGain" || e.target.kind === "masterPan").map((e) => ({ op: "removeEnvelope", id: e.id }))
+    ];
+    const done = dispatcher.apply(edits);
+    if (!done.ok) throw new Error(done.message);
+  }
+  const clipPlayer = new ClipPlayer({ context, fetchBytes });
+  const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
+  await Promise.all(sources.map((iri2) => clipPlayer.load(iri2)));
+  const errors = [...opened.errors, ...sources.filter((iri2) => clipPlayer.failure(iri2)).map((iri2) => `audio ${iri2}: ${clipPlayer.failure(iri2).message}`)];
+  const playAudioClip = (clip, { when, offset, duration }) => {
+    const track = dispatcher.project.track(clip.track);
+    if (!track) return;
+    const destination = track.audioInput ? dispatcher.engineNode(track.audioInput)?.node : engine.trackInput(track.id);
+    if (!destination) return;
+    const timing = dispatcher.transport();
+    const fadeIn = clip.fadeInBeats > 0 ? timing.secondsAtBeat(clip.on + clip.fadeInBeats) - timing.secondsAtBeat(clip.on) : 0;
+    const fadeOut = clip.fadeOutBeats > 0 ? timing.secondsAtBeat(clip.off) - timing.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
+    clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut });
+  };
+  const automation = createAutomationHost({ dispatcher, engine, log: (message) => errors.push(message) });
+  const scheduler = new Scheduler({
+    now: () => context.currentTime,
+    sampleRate,
+    lookahead: hostConfig.schedulerLookaheadMs / 1e3,
+    notes: () => clipNotes(dispatcher.project),
+    transport: () => dispatcher.transport(),
+    send: (nodeId, events) => dispatcher.sendEvents(nodeId, events),
+    audio: () => clipAudio(dispatcher.project),
+    playAudio: playAudioClip,
+    stopAudio: () => clipPlayer.stopAll(),
+    automation
+  });
+  const tick = (time) => {
+    dispatcher.sendTransport(Math.round(time * sampleRate), { frame: Math.round(time * sampleRate), playing: true });
+    scheduler.tick();
+  };
+  scheduler.start(0);
+  tick(0);
+  const times = suspendTimes(frames / sampleRate, hostConfig.schedulerTickMs / 1e3, sampleRate);
+  for (const time of times) {
+    context.suspend(time).then(() => {
+      tick(time);
+      onProgress(time / (frames / sampleRate));
+      context.resume();
+    });
+  }
+  const buffer = await context.startRendering();
+  return { buffer, seconds: frames / sampleRate, errors };
+}
+function bounceSeconds(project, transport, { tailSeconds = 2, minimumBars = 4 } = {}) {
+  const beatsPerBar = project.transport.beatsPerBar;
+  const loop = project.transport.loopEnabled ? project.transport.loopEnd : 0;
+  const lastClip = Math.max(0, ...project.clips.map((c3) => c3.startBeat + c3.lengthBeats));
+  const beats = Math.max(loop, lastClip, minimumBars * beatsPerBar);
+  return transport.secondsAtBeat(Math.ceil(beats / beatsPerBar) * beatsPerBar) + tailSeconds;
+}
+
+// web/app/Bounce.js
+var TAIL_SECONDS = 2;
+async function sha256hex2(bytes) {
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = {}) {
+  const { log: log2 } = ctx2;
+  let busy = false;
+  let stemming = false;
+  function loopRange(project) {
+    const t = project.transport;
+    return t.loopEnabled && t.loopEnd > t.loopStart ? { fromBeat: t.loopStart, toBeat: t.loopEnd } : null;
+  }
+  function from(buffer, seconds) {
+    const start = Math.min(buffer.length, Math.round(seconds * buffer.sampleRate));
+    return {
+      sampleRate: buffer.sampleRate,
+      length: buffer.length - start,
+      getChannelData: (channel) => buffer.getChannelData(channel).subarray(start)
+    };
+  }
+  async function render({ onlyTrack = null, announce = true, range = null } = {}) {
+    if (busy) throw new Error("a render is already running");
+    busy = true;
+    try {
+      const d = await ctx2.runtime.ensureRunning();
+      const validator = await ctx2.runtime.shapeValidator();
+      const timing = d.transport();
+      const seconds = range ? timing.secondsAtBeat(range.toBeat) + TAIL_SECONDS : bounceSeconds(d.project, timing, { tailSeconds: TAIL_SECONDS });
+      let said = -1;
+      if (announce) log2(`rendering ${seconds.toFixed(1)} seconds`);
+      const result = await bounceFn({
+        snapshot: d.project.snapshot(),
+        makeLoader: () => new PluginLoader({ parse: parseText, validator, capabilities: ctx2.hostCapabilities }),
+        fetchBytes: (iri2) => ctx2.media.fetchBytes(iri2),
+        hostConfig: ctx2.hostConfig,
+        seconds,
+        sampleRate: ctx2.engine.context.sampleRate,
+        onlyTrack,
+        alignTracks: d.alignTracks ?? true,
+        onProgress: (ratio) => {
+          const percent = Math.floor(ratio * 10) * 10;
+          if (announce && percent !== said && percent > 0) {
+            said = percent;
+            log2(`rendering ${percent}%`);
+          }
+        }
+      });
+      for (const error2 of result.errors) log2(`render: ${error2}`, "error");
+      if (!range) return result;
+      const start = timing.secondsAtBeat(range.fromBeat);
+      return { ...result, buffer: from(result.buffer, start), seconds: result.seconds - start };
+    } finally {
+      busy = false;
+    }
+  }
+  const wavOf = (buffer) => encodeWav([buffer.getChannelData(0), buffer.getChannelData(1)], buffer.sampleRate);
+  const baseName = () => (ctx2.dispatcher.project.label ?? "jiggy").replace(/[^\w.-]+/g, "-");
+  async function exportWav() {
+    await ctx2.runtime.ensureRunning();
+    const range = loopRange(ctx2.dispatcher.project);
+    if (range) log2("the loop is on, so the loop is what is rendered");
+    const { buffer } = await render({ range });
+    const bytes = wavOf(buffer);
+    const name = `${baseName()}${range ? "-loop" : ""}.wav`;
+    download(bytes, name, "audio/wav");
+    log2(`exported ${name}, ${(buffer.length / buffer.sampleRate).toFixed(1)} seconds, ${(bytes.byteLength / 1048576).toFixed(1)} MB`, "ok");
+    return { bytes, name };
+  }
+  async function exportStems() {
+    if (stemming || busy) throw new Error("a render is already running");
+    stemming = true;
+    try {
+      const d = await ctx2.runtime.ensureRunning();
+      const range = loopRange(d.project);
+      const makers = d.project.tracks.filter((track) => d.project.nodes.some((n2) => n2.track === track.id && (d.engineNode(n2.id)?.profile?.audioOutputs ?? 0) > 0) || d.project.clips.some((c3) => c3.track === track.id && c3.kind === "audio"));
+      if (makers.length === 0) throw new Error("no track makes sound, so there are no stems");
+      const entries = [];
+      for (const [index, track] of makers.entries()) {
+        const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+        log2(`stem ${index + 1} of ${makers.length}: ${label}`);
+        const { buffer } = await render({ onlyTrack: track.id, announce: false, range });
+        const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
+        if (peak < 1e-5) {
+          log2(`${label} made no sound, so it is left out`);
+          continue;
+        }
+        entries.push({ name: `${String(entries.length + 1).padStart(2, "0")}-${label.replace(/[^\w.-]+/g, "-")}.wav`, bytes: wavOf(buffer) });
+      }
+      if (entries.length === 0) throw new Error("no track made any sound, so there are no stems");
+      const zip = writeZip(entries);
+      const name = `${baseName()}-stems.zip`;
+      download(zip, name, "application/zip");
+      log2(`exported ${name}, ${entries.length} stem${entries.length === 1 ? "" : "s"}, ${(zip.byteLength / 1048576).toFixed(1)} MB`, "ok");
+      return { name, entries: entries.map((e) => e.name) };
+    } finally {
+      stemming = false;
+    }
+  }
+  async function freezeTrack(trackId) {
+    const d = await ctx2.runtime.ensureRunning();
+    const track = d.project.track(trackId);
+    if (!track) throw new Error(`no such track: ${trackId}`);
+    const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+    const { buffer, seconds } = await render({ onlyTrack: trackId });
+    const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
+    if (peak < 1e-5) {
+      log2(`${label} made no sound, so nothing was frozen`, "error");
+      return null;
+    }
+    const bytes = wavOf(buffer);
+    const iri2 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
+    ctx2.media.put(iri2, bytes, "audio/wav");
+    const frozen = d.project.nextId("track");
+    const lengthBeats = d.transport().beatAtSeconds(seconds);
+    const result = d.apply([
+      { op: "addTrack", id: frozen, label: `${label} (frozen)` },
+      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri2, offsetSeconds: 0 },
+      { op: "setTrackChannel", track: trackId, muted: true }
+    ]);
+    if (!result.ok) throw new Error(result.message);
+    log2(`froze ${label} into "${label} (frozen)"; the original is muted, not removed. Undo brings it back`, "ok");
+    return { frozen, iri: iri2, seconds };
+  }
+  return { render, exportWav, exportStems, freezeTrack, get busy() {
+    return busy || stemming;
+  } };
+}
+function defaultDownload(bytes, name, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1e4);
+}
+
+// src/host/Handoff.js
+var DATABASE = "jigdaw-handoff";
+var STORE = "handoff";
+var KEY = "piece";
+var asPromise = (request) => new Promise((resolve, reject) => {
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error ?? new Error("IndexedDB refused the request"));
+});
+var finished = (transaction) => new Promise((resolve, reject) => {
+  transaction.oncomplete = () => resolve();
+  transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB refused the transaction"));
+  transaction.onabort = () => reject(transaction.error ?? new Error("the transaction was aborted"));
+});
+function createHandoff({ indexedDB = globalThis.indexedDB, now = () => Date.now(), maxAgeMs }) {
+  if (!indexedDB) throw new Error("this browser has no IndexedDB to carry a piece in");
+  if (!(maxAgeMs > 0)) throw new Error("Handoff needs maxAgeMs, from the host configuration");
+  const open = () => new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB could not be opened"));
+    request.onblocked = () => reject(new Error("IndexedDB is blocked by another tab"));
+  });
+  const fresh = (record) => record && now() - record.savedAt <= maxAgeMs;
+  return {
+    /** Keep a piece: `{ from, kind, bytes }`, `from` the page it came from, `kind` 'turtle' or 'zip'. */
+    async put({ from, kind, bytes }) {
+      if (!from || !(bytes instanceof Uint8Array) || kind !== "turtle" && kind !== "zip") throw new Error("a handoff needs from, kind and bytes");
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        transaction.objectStore(STORE).put({ from, kind, bytes, savedAt: now() }, KEY);
+        await finished(transaction);
+      } finally {
+        db.close();
+      }
+    },
+    /** Whether there is a piece to offer and where it came from, without taking it. */
+    async peek() {
+      const db = await open();
+      try {
+        const record = await asPromise(db.transaction(STORE, "readonly").objectStore(STORE).get(KEY));
+        return fresh(record) ? { from: record.from, savedAt: record.savedAt } : null;
+      } finally {
+        db.close();
+      }
+    },
+    /** Take the piece: the record, removed, or null when there is none or it has expired. */
+    async take() {
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        const store = transaction.objectStore(STORE);
+        const record = await asPromise(store.get(KEY));
+        store.delete(KEY);
+        await finished(transaction);
+        return fresh(record) ? record : null;
+      } finally {
+        db.close();
+      }
+    },
+    /** Forget any piece that is waiting. */
+    async clear() {
+      const db = await open();
+      try {
+        const transaction = db.transaction(STORE, "readwrite");
+        transaction.objectStore(STORE).delete(KEY);
+        await finished(transaction);
+      } finally {
+        db.close();
+      }
+    }
+  };
+}
+
+// web/app/Carry.js
+function createCarry(ctx2, { self: self2, offerText }) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  let handoff = null;
+  async function store() {
+    if (handoff) return handoff;
+    const response = await fetch(new URL("host.json", document2.baseURI));
+    if (!response.ok) throw new Error(`web/host.json could not be read: ${response.status}`);
+    const config = await response.json();
+    if (!(config.handoffMinutes > 0)) throw new Error("web/host.json has no handoffMinutes");
+    handoff = createHandoff({ maxAgeMs: config.handoffMinutes * 6e4 });
+    return handoff;
+  }
+  async function leave(href) {
+    if (ctx2.dispatcher && ctx2.dispatcher.project.nodes.length > 0) log2("Taking your piece with you...");
+    try {
+      const d = ctx2.dispatcher;
+      if (d && d.project.nodes.length > 0) {
+        const packed = await ctx2.sessions.pack();
+        await (await store()).put({ from: self2, kind: packed.kind, bytes: packed.bytes });
+      }
+    } catch (error2) {
+      log2(`the piece could not be carried over: ${error2.message}`, "error");
+    }
+    window.location.href = href;
+  }
+  function carryOnClick(link) {
+    link.addEventListener("click", (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      leave(link.href);
+    });
+  }
+  async function offer() {
+    let waiting = null;
+    try {
+      waiting = await (await store()).peek();
+    } catch {
+      return;
+    }
+    if (!waiting || waiting.from === self2) return;
+    $2("carry-text").textContent = offerText;
+    $2("carry").hidden = false;
+    $2("carry-open").onclick = async () => {
+      $2("carry").hidden = true;
+      try {
+        const piece = await (await store()).take();
+        if (!piece) {
+          log2("the piece is no longer there", "error");
+          return;
+        }
+        await ctx2.sessions.openBytes(piece.bytes);
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
+    };
+    $2("carry-dismiss").onclick = async () => {
+      $2("carry").hidden = true;
+      try {
+        await (await store()).clear();
+      } catch {
+      }
+    };
+  }
+  return { leave, carryOnClick, offer };
+}
+
 // src/ui/Dial.js
 var START_DEGREES = 135;
 var SWEEP_DEGREES = 270;
@@ -28082,8 +28523,8 @@ function decibels(gain) {
 }
 
 // src/ui/TrackCards.js
-function createTrackCards(document2, { onSwitch, onLevel, panelFor: panelFor2 }) {
-  for (const [name, fn] of Object.entries({ onSwitch, onLevel, panelFor: panelFor2 })) {
+function createTrackCards(document2, { onSwitch, onLevel, onOpen }) {
+  for (const [name, fn] of Object.entries({ onSwitch, onLevel, onOpen })) {
     if (typeof fn !== "function") throw new Error(`createTrackCards needs ${name}`);
   }
   const element = document2.createElement("ul");
@@ -28102,11 +28543,6 @@ function createTrackCards(document2, { onSwitch, onLevel, panelFor: panelFor2 })
     power.id = `switch-${card.id}`;
     power.addEventListener("click", () => onSwitch(card.id, power.getAttribute("aria-pressed") !== "true"));
     head.append(title, power);
-    const details = document2.createElement("details");
-    const summary = document2.createElement("summary");
-    summary.textContent = "Change the sound";
-    const body = document2.createElement("div");
-    body.className = "card-body";
     const loud = document2.createElement("label");
     loud.className = "loud";
     const loudText = document2.createElement("span");
@@ -28119,18 +28555,16 @@ function createTrackCards(document2, { onSwitch, onLevel, panelFor: panelFor2 })
     const loudValue = document2.createElement("span");
     loudValue.className = "value";
     loud.append(loudText, slider, loudValue);
-    const plugins = document2.createElement("div");
-    plugins.className = "plugins";
-    body.append(loud, plugins);
-    details.append(summary, body);
-    li.append(head, details);
-    const entry = { li, title, power, details, slider, loudText, loudValue, plugins, built: null };
+    const open = document2.createElement("button");
+    open.type = "button";
+    open.className = "card-open";
+    open.id = `open-${card.id}`;
+    open.addEventListener("click", () => onOpen(card.id));
+    li.append(head, loud, open);
+    const entry = { li, title, power, slider, loudText, loudValue, open };
     slider.addEventListener("input", () => {
       showLevel(entry, Number(slider.value));
       onLevel(card.id, Number(slider.value));
-    });
-    details.addEventListener("toggle", () => {
-      if (details.open) build(entry, card.id);
     });
     return entry;
   }
@@ -28138,31 +28572,9 @@ function createTrackCards(document2, { onSwitch, onLevel, panelFor: panelFor2 })
     entry.loudValue.textContent = `${decibels(n2)} dB`;
     entry.slider.setAttribute("aria-valuetext", `${decibels(n2)} decibels`);
   };
-  function build(entry, id) {
-    const current2 = entry.pluginList;
-    const key = current2.map((p) => p.id).join("|");
-    if (entry.built === key) return;
-    entry.built = key;
-    entry.plugins.replaceChildren(...current2.map((plugin) => {
-      const section = document2.createElement("section");
-      section.className = "plugin";
-      const h2 = document2.createElement("h4");
-      h2.textContent = plugin.label;
-      section.append(h2);
-      if (plugin.about) {
-        const p = document2.createElement("p");
-        p.className = "about";
-        p.textContent = plugin.about;
-        section.append(p);
-      }
-      const panel = panelFor2(plugin.id);
-      if (panel) section.append(panel);
-      return section;
-    }));
-  }
   return {
     element,
-    /** `cards`: `{ id, label, on, level, plugins: [{ id, label, about }] }` in the order to show. */
+    /** `cards`: `{ id, label, on, level }` in the order to show. */
     draw(cards2) {
       for (const id of [...kept.keys()]) {
         if (!cards2.some((c3) => c3.id === id)) {
@@ -28185,12 +28597,78 @@ function createTrackCards(document2, { onSwitch, onLevel, panelFor: panelFor2 })
         if (document2.activeElement !== entry.slider) entry.slider.value = String(card.level);
         showLevel(entry, card.level);
         entry.li.classList.toggle("off", !card.on);
-        entry.pluginList = card.plugins;
-        if (entry.details.open) build(entry, card.id);
+        entry.open.textContent = "Change the sound";
+        entry.open.setAttribute("aria-label", `Change the sound of ${card.label}`);
       }
       const wanted = cards2.map((c3) => kept.get(c3.id).li);
       const current2 = [...element.children];
       if (current2.length !== wanted.length || current2.some((li, i2) => li !== wanted[i2])) element.replaceChildren(...wanted);
+    }
+  };
+}
+
+// src/ui/SoundRack.js
+function createSoundRack(document2, { onBack, panelFor: panelFor2 }) {
+  for (const [name, fn] of Object.entries({ onBack, panelFor: panelFor2 })) {
+    if (typeof fn !== "function") throw new Error(`createSoundRack needs ${name}`);
+  }
+  const element = document2.createElement("section");
+  element.id = "rack";
+  element.hidden = true;
+  element.setAttribute("aria-labelledby", "rack-title");
+  const back = document2.createElement("button");
+  back.type = "button";
+  back.id = "rack-back";
+  back.textContent = "Back to the instruments";
+  back.addEventListener("click", () => onBack());
+  const title = document2.createElement("h2");
+  title.id = "rack-title";
+  title.tabIndex = -1;
+  const plugins = document2.createElement("div");
+  plugins.className = "plugins";
+  element.append(back, title, plugins);
+  let built = null;
+  return {
+    element,
+    /** Show the rack for a track. `plugins`: `[{ id, label, about }]` in signal order. */
+    show({ label, plugins: list }) {
+      title.textContent = `${label}: change the sound`;
+      this.update(list);
+      element.hidden = false;
+    },
+    /** The plugins on the track have changed, or may have: the panels are made again only if they did. */
+    update(list) {
+      const key = list.map((p) => p.id).join("|");
+      if (built === key) return;
+      built = key;
+      plugins.replaceChildren(...list.map((plugin) => {
+        const section = document2.createElement("section");
+        section.className = "plugin";
+        const h2 = document2.createElement("h3");
+        h2.textContent = plugin.label;
+        section.append(h2);
+        if (plugin.about) {
+          const p = document2.createElement("p");
+          p.className = "about";
+          p.textContent = plugin.about;
+          section.append(p);
+        }
+        const panel = panelFor2(plugin.id);
+        if (panel) section.append(panel);
+        return section;
+      }));
+    },
+    hide() {
+      element.hidden = true;
+      built = null;
+      plugins.replaceChildren();
+    },
+    get open() {
+      return !element.hidden;
+    },
+    /** Put the focus on the screen's title, where a screen reader should begin. */
+    focus() {
+      title.focus({ preventScroll: false });
     }
   };
 }
@@ -28257,7 +28735,7 @@ var ctx = {
   } },
   /** For the console and for a check driven from outside the page, as on the studio page. */
   expose() {
-    window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine };
+    window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce };
   }
 };
 ctx.media = createMedia(document);
@@ -28265,12 +28743,19 @@ ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.sessions = createSessions(ctx);
 ctx.pwa = createPwa(ctx);
+ctx.bounce = createBounce(ctx);
+ctx.carry = createCarry(ctx, { self: "simple", offerText: "You have a piece open in the studio. Open it here?" });
 var panels = /* @__PURE__ */ new Map();
 function panelFor(nodeId) {
   const d = ctx.dispatcher;
-  const profile = d?.engineNode(nodeId)?.profile;
+  const entry = d?.engineNode(nodeId);
+  const profile = entry?.profile;
   if (!profile) return null;
   let panel = panels.get(nodeId);
+  if (panel && panel.entry !== entry) {
+    panels.delete(nodeId);
+    panel = null;
+  }
   if (!panel) {
     panel = createPanel(document, profile, (symbol, value2) => {
       const applied = d.setParameter(nodeId, symbol, value2);
@@ -28280,6 +28765,7 @@ function panelFor(nodeId) {
       if (!result.ok) log(`${key}: ${result.message}`, "error");
     }, { scope: `panel-${nodeId}` });
     panel.element.querySelector("h3")?.remove();
+    panel.entry = entry;
     panels.set(nodeId, panel);
   }
   return panel.element;
@@ -28303,9 +28789,43 @@ var cards = createTrackCards(document, {
     const result = ctx.dispatcher.setTrackChannel(trackId, { gain });
     if (!result.ok) log(result.message, "error");
   },
-  panelFor
+  onOpen: (trackId) => openRack(trackId)
 });
 $("cards-mount").append(cards.element);
+var rack = createSoundRack(document, { onBack: () => closeRack({ fromBack: true }), panelFor });
+$("rack-mount").append(rack.element);
+var rackTrack = null;
+function pluginsOf(trackId) {
+  const d = ctx.dispatcher;
+  const { project } = d;
+  return inSignalOrder(project.nodes.filter((n2) => n2.track === trackId), project.connections).map((node) => {
+    const profile = d.engineNode(node.id)?.profile;
+    return { id: node.id, label: node.label ?? profile?.label ?? node.id, about: about(profile) };
+  });
+}
+function openRack(trackId, { push = true } = {}) {
+  const d = ctx.dispatcher;
+  const track = d?.project.track(trackId);
+  if (!track) return;
+  rackTrack = trackId;
+  rack.show({ label: track.label ?? `Track ${d.project.tracks.indexOf(track) + 1}`, plugins: pluginsOf(trackId) });
+  $("instruments").hidden = true;
+  if (push) history.pushState({ rack: trackId }, "", "#sound");
+  syncPanels();
+  rack.focus();
+}
+function closeRack({ fromBack = false } = {}) {
+  if (rackTrack === null) return;
+  const id = rackTrack;
+  rackTrack = null;
+  rack.hide();
+  $("instruments").hidden = false;
+  if (fromBack && history.state?.rack) history.back();
+  $(`open-${id}`)?.focus();
+}
+window.addEventListener("popstate", () => {
+  if (rackTrack !== null && !history.state?.rack) closeRack();
+});
 var about = (profile) => {
   const text = (profile?.comment ?? "").trim().split(/(?<=[.!?])\s/)[0] ?? "";
   return text.length > 140 ? `${text.slice(0, 137)}...` : text || null;
@@ -28319,12 +28839,12 @@ redraw = () => {
     id: track.id,
     label: track.label ?? `Track ${made.indexOf(track) + 1}`,
     on: !track.channel.muted,
-    level: track.channel.gain,
-    plugins: inSignalOrder(project.nodes.filter((n2) => n2.track === track.id), project.connections).map((node) => {
-      const profile = d.engineNode(node.id)?.profile;
-      return { id: node.id, label: node.label ?? profile?.label ?? node.id, about: about(profile) };
-    })
+    level: track.channel.gain
   })));
+  if (rackTrack !== null) {
+    if (project.track(rackTrack)) rack.update(pluginsOf(rackTrack));
+    else closeRack();
+  }
   syncPanels();
   showSpeed();
 };
@@ -28344,6 +28864,12 @@ var current = null;
 var picker = createTunePicker(document, { onPick: (tune) => openTune(tune).catch((error2) => log(error2.message, "error")) });
 $("tunes-mount").append(picker.element);
 async function openTune(tune) {
+  if (rackTrack !== null) {
+    rackTrack = null;
+    rack.hide();
+    $("instruments").hidden = false;
+    if (history.state?.rack) history.replaceState(null, "", location.pathname + location.search);
+  }
   log(`Opening ${tune.label}...`);
   const text = await fetchPreset({ fetch: (url) => fetch(url), url: tune.url });
   await ctx.sessions.openSession(text, tune.url);
@@ -28362,6 +28888,7 @@ listPresets({ fetch: (url) => fetch(url), index: new URL("presets/index.json", d
 $("play").addEventListener("click", () => ctx.transport.play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", () => ctx.transport.stop());
 $("save").addEventListener("click", () => ctx.sessions.saveSession().catch((error2) => log(error2.message, "error")));
+$("export").addEventListener("click", () => ctx.bounce.exportWav().catch((error2) => log(error2.message, "error")));
 var getUserMedia = (constraints) => (window.__jigdawMicrophone ?? ((c3) => navigator.mediaDevices.getUserMedia(c3)))(constraints);
 if (window.__jigdawMicrophone || microphoneAvailable(navigator.mediaDevices)) {
   const voice = createVoice(ctx, {
@@ -28374,6 +28901,8 @@ if (window.__jigdawMicrophone || microphoneAvailable(navigator.mediaDevices)) {
   $("voice").hidden = false;
   $("voice").addEventListener("click", () => voice.toggle().catch((error2) => log(error2.message, "error")));
 }
+for (const link of document.querySelectorAll('a[href="./?studio"]')) ctx.carry.carryOnClick(link);
+ctx.carry.offer();
 ctx.pwa.mount();
 showSpeed();
 /*! Bundled license information:

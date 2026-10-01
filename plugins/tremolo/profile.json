@@ -28,7 +28,8 @@
     "audioOutputs": 1,
     "outputChannels": 2,
     "renderQuantum": 128,
-    "latencyFrames": 0
+    "latencyFrames": 0,
+    "stateless": true
   },
   "resources": {
     "processor": "tremolo-processor.js",

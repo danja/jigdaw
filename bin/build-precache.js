@@ -26,6 +26,7 @@ export function shellFiles () {
     ['./', 'web/index.html'],
     web('app.bundle.js'),
     web('simple.html'),
+    web('view.js'),
     web('simple.bundle.js'),
     web('panel.css'),
     web('host.json'),

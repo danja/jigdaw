@@ -37,6 +37,7 @@
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 
+    jig:stateless true ;
     jig:audioInputs 0 ;
     jig:audioOutputs 1 ;
     jig:outputChannels 2 ;

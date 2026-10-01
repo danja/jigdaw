@@ -3,7 +3,7 @@
 // Play and Stop, the position readout and the output meter. While the
 // transport runs, the scheduler plays the tracks' clips (src/engine/Scheduler.js)
 // and every plugin is told where the transport is (contract section 7).
-import { createAutomationHost } from './AutomationHost.js'
+import { createAutomationHost } from '../../src/engine/AutomationHost.js'
 import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
 
 /** A repeating impulse, so an effect has something to work on. */
@@ -192,6 +192,13 @@ export function createTransport (ctx) {
     if (!t) return
     const bpm = t.tempoPoints[0]?.bpm
     const field = $('tempo')
+    // With a tempo envelope the tempo is the lane's, and a number typed here would change nothing the
+    // person could hear: the field is left out and the page says so, rather than shown and ignored.
+    const automated = ctx.dispatcher.project.envelopes.some(e => e.target.kind === 'tempo' && e.points.length > 0)
+    const group = $('tempo-group')
+    if (group) group.hidden = automated
+    const note = $('tempo-note')
+    if (note) note.hidden = !automated
     if (bpm && field && document.activeElement !== field) field.value = String(bpm)
     // The studio page has these; the simple page has not, and shows only what it has.
     const signature = $('signature')

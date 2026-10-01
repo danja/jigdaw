@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -37,6 +38,7 @@
     jig:outputChannels 2 ;
     jig:renderQuantum 128 ;
     jig:latencyFrames 0 ;
+    jig:stateless true ;
 
     jig:module <#module> ;
     jig:processor <#processor> ;

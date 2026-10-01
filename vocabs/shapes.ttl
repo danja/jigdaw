@@ -112,6 +112,7 @@ jig:WebPluginShape a sh:NodeShape ;
     sh:property [ sh:path jig:ui ; sh:maxCount 1 ] ;
 
     sh:property [ sh:path jig:audioInputs   ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
+    sh:property [ sh:path jig:stateless ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
     sh:property [ sh:path jig:sidechainInput ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:audioOutputs  ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:inputChannels ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;

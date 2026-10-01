@@ -37,7 +37,7 @@ describe('the master row', () => {
 
   it('is a group named Master, and needs onAutomate', () => {
     build({ list: [], available: [{ kind: 'masterGain', label: 'Master level' }] })
-    expect(document.querySelector('.master-row').getAttribute('aria-label')).toBe('Master')
+    expect(document.querySelector('.master-row').getAttribute('aria-label')).toBe('Master and tempo')
     expect(() => createMasterRow(document, { onChange () {}, onRemove () {}, view: new TimeView() })).toThrow(/onAutomate/)
   })
 })

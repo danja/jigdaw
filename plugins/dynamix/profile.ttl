@@ -35,6 +35,7 @@
     trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
+    jig:stateless true ;
     jig:audioInputs 2 ;
     jig:sidechainInput 1 ;
     jig:inputChannels 2 ;

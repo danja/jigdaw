@@ -1,7 +1,7 @@
 # Jiggy as an installable app
 
 **Status:** a design note, and the shell it describes (manifest, icons, service worker, update
-and install notices) and a first version of the simple front page are built. One-button microphone recording is built too. The export button is not.
+and install notices) and a first version of the simple front page are built. One-button microphone recording is built too, and so is the export button, as a WAV.
 
 Jiggy is a web page, so installing it is a manifest and a service worker. This note records the
 decisions that were not obvious, and one that was forced on us.
@@ -64,6 +64,10 @@ It is not offered by a dialog and it is not offered before the page has finished
 
 ## Where it is served
 
+A piece is carried between the two pages: the link to the other page keeps the open session (the same bytes Save writes, held in IndexedDB for `handoffMinutes` from `web/host.json`, once) and the other page offers it with Open it and Not now. A piece is the session's own RDF; nothing about carrying it is in the model.
+
+A phone starts on the simple page: `web/view.js`, loaded at the top of both pages, sends a screen narrower than 720px from the studio to `simple.html`, unless the person asked for the studio (the links to it carry `?studio`, which is remembered in the browser until they next visit the simple page). On the simple page, "Change the sound" on a track takes you to a rack screen for it (its plugins as generated panels, with Back to the instruments).
+
 The installed app opens the simple page: the manifest's `start_url` is `simple.html`, its `scope` is `./` so the studio page is inside it, and each page links to the other ("Full studio", "Simple version"); the studio is also a home-screen shortcut. Both are relative, and the app worker registers with a URL
 relative to the page, so the same files work at the root of a host and under a path such as
 `strandz.it/jigdaw/`.
@@ -107,7 +111,8 @@ Not checked: an install on a phone, a real offline network rather than a stopped
   recommendation: the arrangement view is not compromised by the simple one, and a fix to the
   dispatcher reaches both. A simple mode inside the current page was rejected because every
   control of the DAW would then have to be hidden by a flag.
-- **Export.** The Export button is the in-page bounce and encoder of Phase E in TODO.md; the app
-  gets no renderer of its own.
+- **Export.** The Export button is the in-page bounce of `src/engine/Bounce.js`, the same one the studio's
+  Export and Freeze use; the app has no renderer of its own. It writes WAV. MP3 needs an encoder in the page
+  (TODO.md, Phase E).
 - **Recovery.** Offline use of a session, and the origin private file system as its store, is
   Phase F.

@@ -89,6 +89,14 @@ what it is. Work without it when nothing is connected there. Dynamix declares
 `jig:audioInputs 2` and `jig:sidechainInput 1`. A value that names an input you do not have
 is refused.
 
+### Say that you keep no state
+
+A plugin that holds nothing beyond its parameters and its assets (most of them) declares `jig:stateless true`.
+A host saving a session asks every plugin for its state and waits a bounded time for a reply; a plugin that
+never answers makes it wait out that time, so a stateless plugin says so and is not asked. Leave it out if the
+plugin does answer `stateRequest`: declaring it on a plugin that keeps state loses that state from every saved
+session.
+
 ### Say what you need
 
 `trn:requires` for what you cannot run without, `jig:prefers` for what improves you. A host
