@@ -407,9 +407,21 @@ const OPERATIONS = {
       label: change.label ?? null,
       track: change.track,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null
+      state: change.state ?? null,
+      bypassed: checkFlag('bypassed', change.bypassed ?? false)
     })
     return id
+  },
+
+  /**
+   * Change a node's own properties. Bypass passes what arrives at its input straight to where
+   * its output goes, and keeps its state, so turning it back on is instant and exact.
+   */
+  setNode (state, change) {
+    const node = state.nodes.get(change.id)
+    if (!node) throw new Error(`no such node: ${change.id}`)
+    if (change.bypassed !== undefined) node.bypassed = checkFlag('bypassed', change.bypassed)
+    return change.id
   },
 
   /**
@@ -676,7 +688,7 @@ export function changesFor (snapshot) {
   return [
     ...snapshot.tracks.map(t => ({ op: 'addTrack', id: t.id, label: t.label, channel: t.channel })),
     ...snapshot.nodes.map(n => ({
-      op: 'addNode', id: n.id, pluginIri: n.pluginIri, label: n.label, track: n.track, settings: n.settings, state: n.state
+      op: 'addNode', id: n.id, pluginIri: n.pluginIri, label: n.label, track: n.track, settings: n.settings, state: n.state, bypassed: n.bypassed
     })),
     ...snapshot.tracks
       .filter(t => t.midiInput !== null || t.audioInput !== null)
@@ -839,6 +851,7 @@ export class Project {
         track: n.track,
         settings: Object.fromEntries(n.settings),
         state: n.state,
+        bypassed: n.bypassed === true,
         position: this.position(n.id)
       })),
       connections: this.connections.map(c => ({ ...c, from: { ...c.from }, to: { ...c.to } })),

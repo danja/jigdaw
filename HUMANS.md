@@ -5,25 +5,30 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
-## 1. Try the new interface and say what is still wrong
+## 1. Listen, and use it with real hands
 
-Tracks, a mixer of one fader per track, an arrangement with a piano roll and audio clips, and
-plugin editors were built on 2026-09-24 against the "not usable and intuitive" item in
-TODO.md. Whether it is usable now is a judgement only a person using it can make. `npm run
-serve`, open `http://127.0.0.1:8748/`, open the "Square lead" preset, add a clip on the
-Arrangement tab, and play it. Do it with the window in front and with real keys: the
-automated check could only dispatch key events, because its browser window was in the
-background (TODO.md, loose end 5). To see a plugin's own editor, load
-`http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on
-the page's own origin is refused. While there, collapse the browser with the arrow in the
-sidebar header and check the rail at phone width: the automated check covers classes and
-names only, and AGENTS.md requires `documentElement.scrollWidth` compared against
-`innerWidth` in a narrow iframe in a real browser before the layout half is claimed
-(TODO.md, sidebar arrow item). While there, press Rec with the window in front,
-play, Stop, remove every plugin, and play the takes: the automated check proves takes
-are kept and placed, but no headless check has heard one. Move Lookahead's Position
-while a parallel dry path plays beside it: the automated check proves the dry path is
-delayed from the reported frame, but no headless check has heard the realignment. Note what is wrong in INBOX.md.
+Everything below was checked by code or by reading a meter, never by ear or by a real finger. `npm run
+serve`, open `http://127.0.0.1:8748/`, keep the browser window in front (a hidden tab gets no user
+activation and audio hangs), and note what is wrong in INBOX.md.
+
+- **Listen to the presets.** All six bundled presets, and say which sound bad. In particular "Generative,
+  through effects" (its lead line was silent until 2026-09-30 and has not been heard), "Amp into a room" and
+  "Fender into the Ropery" (their levels were set by a meter), and Chiptune's Lead track, which measures much
+  quieter than the rest.
+- **Use the clip keys and buttons.** Select a clip and try S, D, M, L, [, ], Ctrl+C, Ctrl+X and Ctrl+V with real
+  keys, then the icon buttons above the lanes. Every check so far dispatched key events. Listen to a muted clip
+  (silent?), a fade in and a fade out on an audio clip, and a split at a playing position.
+- **Record your voice on the simple page** (`/simple.html`, "Record my voice") with a real microphone. The
+  browser's permission prompt, the device it picks and how the take sounds are all untried; the check used a
+  stand-in stream.
+- **Install the app on a phone** and open it. It should start on the simple page, play offline once loaded,
+  and not scroll sideways. Try the clip button bar at phone width in the studio page too. None of it has been
+  on a real phone.
+- **Older checks still owed:** press Rec with the window in front, play, Stop, remove every plugin and play the
+  takes; move Lookahead's Position while a parallel dry path plays beside it and listen for the realignment;
+  real key presses in the piano roll; and a real pointer through a plugin's own editor frame (load
+  `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on the page's own
+  origin is refused).
 
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 

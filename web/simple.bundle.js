@@ -13325,6 +13325,7 @@ var init_Vocabulary = __esm({
         source: `${JIG}source`,
         offsetSeconds: `${JIG}offsetSeconds`,
         locked: `${JIG}locked`,
+        bypassed: `${JIG}bypassed`,
         fadeInBeats: `${JIG}fadeInBeats`,
         fadeOutBeats: `${JIG}fadeOutBeats`,
         setting: `${JIG}setting`,
@@ -17346,7 +17347,7 @@ async function inflate(bytes) {
 function isContained(path) {
   if (typeof path !== "string" || path.length === 0) return false;
   if (path.startsWith("/") || path.includes("\\") || /^[A-Za-z]:/.test(path)) return false;
-  return path.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+  return path.split("/").every((segment2) => segment2 !== "" && segment2 !== "." && segment2 !== "..");
 }
 async function openForeign(profile, {
   trust,
@@ -21602,6 +21603,7 @@ var Engine = class {
   #masterPanner = null;
   #sends = [];
   #inputs = /* @__PURE__ */ new Map();
+  #masterHeld = /* @__PURE__ */ new Set();
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -21928,12 +21930,28 @@ var Engine = class {
     }
     this.#sends = [];
   }
-  /** The master's level, pan and mute. Muted is a level of zero, not a disconnect. */
+  /**
+   * The master's level, pan and mute. Muted is a level of zero, not a disconnect. A parameter an envelope is
+   * playing on (`holdMaster`) is left alone: this runs on every rebuild of the graph, and setting a value at
+   * the current time would cut into the envelope's own scheduling on every edit.
+   */
   setMaster({ gain = 1, pan = 0, muted = false } = {}) {
     if (!this.#master) return;
     const at = this.#context.currentTime;
-    this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
-    if (this.#masterPanner) this.#masterPanner.pan.setValueAtTime(pan, at);
+    if (!this.#masterHeld.has("gain")) this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
+    if (this.#masterPanner && !this.#masterHeld.has("pan")) this.#masterPanner.pan.setValueAtTime(pan, at);
+  }
+  /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
+  masterParam(which) {
+    if (which === "gain") return this.#master?.gain ?? null;
+    if (which === "pan") return this.#masterPanner?.pan ?? null;
+    throw new Error(`the master has no ${which}`);
+  }
+  /** Leave the master's level or pan to an envelope (on), or take it back (off). */
+  holdMaster(which, on) {
+    if (which !== "gain" && which !== "pan") throw new Error(`the master has no ${which}`);
+    if (on) this.#masterHeld.add(which);
+    else this.#masterHeld.delete(which);
   }
   /** The track ids that have a strip. */
   trackIds() {
@@ -22832,9 +22850,20 @@ var OPERATIONS = {
       label: change.label ?? null,
       track: change.track,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null
+      state: change.state ?? null,
+      bypassed: checkFlag("bypassed", change.bypassed ?? false)
     });
     return id;
+  },
+  /**
+   * Change a node's own properties. Bypass passes what arrives at its input straight to where
+   * its output goes, and keeps its state, so turning it back on is instant and exact.
+   */
+  setNode(state, change) {
+    const node = state.nodes.get(change.id);
+    if (!node) throw new Error(`no such node: ${change.id}`);
+    if (change.bypassed !== void 0) node.bypassed = checkFlag("bypassed", change.bypassed);
+    return change.id;
   },
   /**
    * Move a node to a new position among the others, healing the direct
@@ -23060,7 +23089,8 @@ function changesFor(snapshot) {
       label: n2.label,
       track: n2.track,
       settings: n2.settings,
-      state: n2.state
+      state: n2.state,
+      bypassed: n2.bypassed
     })),
     ...snapshot.tracks.filter((t) => t.midiInput !== null || t.audioInput !== null).map((t) => ({ op: "setTrack", id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
     ...snapshot.connections.map((c3) => ({
@@ -23239,6 +23269,7 @@ var Project = class {
         track: n2.track,
         settings: Object.fromEntries(n2.settings),
         state: n2.state,
+        bypassed: n2.bypassed === true,
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
@@ -23462,16 +23493,26 @@ var MIDI_SIGNALS = /* @__PURE__ */ new Set([
 var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
 var CONTROL_ONLY = /* @__PURE__ */ new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]);
 var carriesNotes = (signalKind) => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind);
+var MONITOR_EVENTS = 24;
 var EventRouter = class {
   #engine;
   #routes = /* @__PURE__ */ new Map();
   #detach = /* @__PURE__ */ new Map();
   #dropped = /* @__PURE__ */ new Map();
   #onDropped;
+  #recent = /* @__PURE__ */ new Map();
   constructor({ engine, onDropped = null }) {
     if (!engine) throw new Error("EventRouter needs an engine");
     this.#engine = engine;
     this.#onDropped = onDropped;
+  }
+  /**
+   * The last few events that went from one node to another, oldest first, for a monitor. Bounded per
+   * route (MONITOR_EVENTS) and kept on the message thread, where the router lives; nothing here is
+   * read or written from process().
+   */
+  recent(fromEngineId, toEngineId) {
+    return [...this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? []];
   }
   get routes() {
     return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
@@ -23489,6 +23530,8 @@ var EventRouter = class {
    */
   setRoutes(pairs) {
     this.#routes = /* @__PURE__ */ new Map();
+    const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`));
+    for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key);
     for (const { from, to } of pairs) {
       if (!this.#routes.has(from)) this.#routes.set(from, []);
       this.#routes.get(from).push(to);
@@ -23519,7 +23562,17 @@ var EventRouter = class {
   #forward(fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId);
     if (!targets || !events?.length) return;
-    for (const target of targets) this.send(target, events);
+    for (const target of targets) {
+      this.#remember(fromEngineId, target, events);
+      this.send(target, events);
+    }
+  }
+  #remember(from, to, events) {
+    const key = `${from}>${to}`;
+    const history = this.#recent.get(key) ?? [];
+    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
+    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS);
+    this.#recent.set(key, history);
   }
   /**
    * Deliver events to one node.
@@ -23546,6 +23599,35 @@ var EventRouter = class {
     this.#routes.clear();
   }
 };
+
+// src/ops/Bypass.js
+var AUDIO2 = "audio";
+var MIDI2 = "midi";
+var kindOf2 = (connection) => isMidi(connection.signalKind) ? MIDI2 : AUDIO2;
+var intoMain = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
+function effectiveConnections(connections, { bypassed, passes }) {
+  let list = connections.map((c3) => c3);
+  for (let guard = 0; guard <= connections.length + 1; guard++) {
+    const target = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
+    if (target === void 0) break;
+    for (const kind of [AUDIO2, MIDI2]) {
+      if (!passes(target, kind)) continue;
+      const into = list.filter((c3) => c3.to.node === target && kindOf2(c3) === kind && intoMain(c3));
+      const out = list.filter((c3) => c3.from.node === target && kindOf2(c3) === kind);
+      if (into.length === 0 || out.length === 0) continue;
+      const joined = [];
+      for (const a2 of into) {
+        for (const b of out) {
+          if (a2.from.node === b.to.node) continue;
+          joined.push({ id: `${a2.id}~${b.id}`, from: a2.from, to: b.to, signalKind: a2.signalKind });
+        }
+      }
+      const gone = /* @__PURE__ */ new Set([...into, ...out]);
+      list = [...list.filter((c3) => !gone.has(c3)), ...joined];
+    }
+  }
+  return list.filter((c3) => !bypassed(c3.from.node) && !(bypassed(c3.to.node) && passes(c3.to.node, kindOf2(c3)) && intoMain(c3)));
+}
 
 // src/engine/Transport.js
 var MINUTE = 60;
@@ -23613,11 +23695,11 @@ var Transport = class _Transport {
     for (let i2 = 0; i2 < this.#points.length; i2++) {
       const { atBeat, bpm } = this.#points[i2];
       const next = this.#points[i2 + 1]?.atBeat ?? Infinity;
-      const segment = (next - atBeat) * MINUTE / bpm;
-      if (elapsed + segment > seconds || next === Infinity) {
+      const segment2 = (next - atBeat) * MINUTE / bpm;
+      if (elapsed + segment2 > seconds || next === Infinity) {
         return atBeat + (seconds - elapsed) * bpm / MINUTE;
       }
-      elapsed += segment;
+      elapsed += segment2;
     }
     return 0;
   }
@@ -23861,7 +23943,8 @@ var UndoHistory = class {
           label: node.label,
           track: node.track,
           settings: node.settings,
-          state: node.state
+          state: node.state,
+          bypassed: node.bypassed
         });
         if (!result.ok) {
           console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`);
@@ -23883,6 +23966,7 @@ var UndoHistory = class {
           if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol);
         }
         if (live.track !== node.track) reconcile.push({ op: "moveNodeToTrack", id: node.id, track: node.track });
+        if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
       }
       const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
       for (const track of target.tracks) {
@@ -24009,6 +24093,18 @@ var OpDispatcher = class {
     const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
     this.#router.broadcastTransport(message);
     return message;
+  }
+  /**
+   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
+   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
+   * loaded), or one nothing has gone over.
+   */
+  midiActivity(connectionId) {
+    const connection = this.#project.connection(connectionId);
+    if (!connection || !isMidi(connection.signalKind) || !this.#router) return [];
+    const from = this.#nodeIds.get(connection.from.node);
+    const to = this.#nodeIds.get(connection.to.node);
+    return from && to ? this.#router.recent(from, to) : [];
   }
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents(nodeId, events) {
@@ -24591,18 +24687,35 @@ var OpDispatcher = class {
   #linkSinksToTracks() {
     if (!this.#engine) return;
     const feedsSomething = /* @__PURE__ */ new Set();
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       if (isMidi(connection.signalKind)) continue;
       feedsSomething.add(connection.from.node);
     }
     for (const node of this.#project.nodes) {
       if (feedsSomething.has(node.id)) continue;
+      if (node.bypassed) continue;
       const engineId = this.#nodeIds.get(node.id);
       if (!engineId) continue;
       const entry = this.#engine.get(engineId);
       if (!(entry?.node?.numberOfOutputs > 0)) continue;
       this.#engine.linkToTrack(engineId, node.track);
     }
+  }
+  /**
+   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
+   * model keeps every connection; bypass changes only what is wired.
+   */
+  #connectionsInUse() {
+    const passes = (nodeId, kind) => {
+      const profile = this.engineNode(nodeId)?.profile;
+      if (!profile) return false;
+      if (kind === "audio") return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0;
+      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi);
+    };
+    return effectiveConnections(this.#project.connections, {
+      bypassed: (nodeId) => this.#project.node(nodeId)?.bypassed === true,
+      passes
+    });
   }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
@@ -24612,7 +24725,7 @@ var OpDispatcher = class {
     this.#syncTracks();
     this.#applyRouting();
     const midiRoutes = [];
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       const from = this.#nodeIds.get(connection.from.node);
       const to = this.#nodeIds.get(connection.to.node);
       if (!from || !to) continue;
@@ -24861,6 +24974,95 @@ function readHostConfig(json) {
   return Object.freeze(settings);
 }
 
+// src/model/ClipEdit.js
+function partition(notes, at) {
+  const left = [];
+  const right = [];
+  for (const note of notes) {
+    const end = note.startBeat + note.lengthBeats;
+    if (end <= at) left.push({ ...note });
+    else if (note.startBeat >= at) right.push({ ...note, startBeat: note.startBeat - at });
+    else {
+      left.push({ ...note, lengthBeats: at - note.startBeat });
+      right.push({ ...note, startBeat: 0, lengthBeats: end - at });
+    }
+  }
+  return { left, right };
+}
+function splitClip(project, id, atBeat, { transport = null, newId = project.nextId("clip") } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
+    throw new Error("the cut must fall inside the clip");
+  }
+  const first = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first;
+  if (clip.kind === "midi") {
+    const { left, right } = partition(clip.notes, first);
+    return [
+      { op: "setClip", id, lengthBeats: first },
+      { op: "setClipNotes", id, notes: left },
+      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
+    ];
+  }
+  if (!transport) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
+  const offsetSeconds = clip.offsetSeconds + (transport.secondsAtBeat(atBeat) - transport.secondsAtBeat(clip.startBeat));
+  return [
+    { op: "setClip", id, lengthBeats: first, fadeOutBeats: 0 },
+    { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
+  ];
+}
+function duplicateClip(project, id, { track, startBeat } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  const at = startBeat ?? clip.startBeat + clip.lengthBeats;
+  const where = track ?? clip.track;
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+}
+
+// src/ops/ChainReorder.js
+var audioOnly = (connection) => !isMidi(connection.signalKind);
+var mainInput = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
+function chainSwapChanges(project, nodeId, delta, { passesAudio }) {
+  if (delta !== -1 && delta !== 1) throw new Error("a chain moves one place at a time");
+  const node = project.node(nodeId);
+  if (!node) throw new Error(`no such node: ${nodeId}`);
+  const audio = project.connections.filter(audioOnly);
+  const into = (id) => audio.filter((c3) => c3.to.node === id && mainInput(c3));
+  const outOf = (id) => audio.filter((c3) => c3.from.node === id && c3.to.portSymbol === void 0);
+  const neighbours = delta === -1 ? into(nodeId) : outOf(nodeId);
+  if (neighbours.length !== 1) {
+    throw new Error(`${node.label ?? nodeId} has ${neighbours.length === 0 ? "nothing" : "several things"} ${delta === -1 ? "before" : "after"} it in an audio chain, so there is nothing to swap with`);
+  }
+  const middle = neighbours[0];
+  const a2 = delta === -1 ? middle.from.node : nodeId;
+  const b = delta === -1 ? nodeId : middle.to.node;
+  const nameOf = (id) => project.node(id)?.label ?? id;
+  if (!passesAudio(a2) || !passesAudio(b)) {
+    throw new Error(`${nameOf(a2)} and ${nameOf(b)} cannot swap: each has to take audio and give audio`);
+  }
+  if (project.node(a2).track !== project.node(b).track) throw new Error("only plugins on one track are reordered");
+  const before = into(a2);
+  const after = outOf(b);
+  if (into(b).length !== 1 || outOf(a2).length !== 1) throw new Error(`${nameOf(a2)} and ${nameOf(b)} are joined to other things as well, so the chain is not a plain one`);
+  if (before.length > 1 || after.length > 1) throw new Error("the chain branches here, so swapping would have to guess which branch goes where");
+  if (before.length === 1 && before[0].from.node === b) throw new Error("these plugins feed each other in a loop");
+  const p = before[0] ?? null;
+  const n2 = after[0] ?? null;
+  const link = (from, fromPort, to, toPort, kind) => ({
+    op: "addConnection",
+    from: { node: from, portIndex: fromPort },
+    to: { node: to, portIndex: toPort },
+    signalKind: kind
+  });
+  const removals = [p, middle, n2].filter(Boolean).map((c3) => ({ op: "removeConnection", id: c3.id }));
+  const additions = [];
+  if (p) additions.push(link(p.from.node, p.from.portIndex ?? 0, b, middle.to.portIndex ?? 0, p.signalKind));
+  additions.push(link(b, n2 ? n2.from.portIndex ?? 0 : 0, a2, p ? p.to.portIndex ?? 0 : 0, middle.signalKind));
+  if (n2) additions.push(link(a2, middle.from.portIndex ?? 0, n2.to.node, n2.to.portIndex ?? 0, n2.signalKind));
+  return [...removals, ...additions];
+}
+
 // src/catalogue/facets.js
 var TRN2 = "http://purl.org/stuff/transmissions/";
 var FACETS = Object.freeze({
@@ -24874,6 +25076,7 @@ var FACET_NAMES = Object.freeze(Object.keys(FACETS));
 var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
 
 // src/mcp/tools.js
+var POINT_SCHEMA = { type: "object", properties: { atBeat: { type: "number", minimum: 0 }, value: { type: "number" }, curve: { type: "string", enum: ["step", "linear", "smooth"] } }, required: ["atBeat", "value"] };
 var ok = (data) => ({ ok: true, ...data });
 var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
 var NOTE_SCHEMA = Object.freeze({
@@ -25295,6 +25498,86 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "clip_set",
+      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          muted: { type: "boolean" },
+          locked: { type: "boolean" },
+          fadeInBeats: { type: "number", minimum: 0 },
+          fadeOutBeats: { type: "number", minimum: 0 },
+          color: { type: ["string", "null"] },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId"]
+      },
+      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+        const change = { op: "setClip", id: clipId };
+        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+          if (value2 !== void 0) change[key] = value2;
+        }
+        const edited = Object.keys(change).length > 2;
+        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade or a color", { kind: "change" });
+        try {
+          let revision = dispatcher.project.revision;
+          if (edited) {
+            const result = dispatcher.apply([change], { expectedRevision });
+            if (!result.ok) return failed(result.message, { kind: result.kind });
+            revision = result.revision;
+          }
+          if (color !== void 0) dispatcher.project.setClipColor(clipId, color);
+          return ok({ revision, clip: { ...dispatcher.project.clip(clipId), color: dispatcher.project.clipColor(clipId) } });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_split",
+      description: "Cut a clip in two at a beat inside it. The first half keeps the clip id; the second is new and its id is returned. A note across the cut becomes two notes, an audio half starts further into the same file, and a fade in stays with the first half and a fade out goes with the second. One edit, one undo.",
+      inputSchema: {
+        type: "object",
+        properties: { clipId: { type: "string" }, atBeat: { type: "number" }, expectedRevision: { type: "integer" } },
+        required: ["clipId", "atBeat"]
+      },
+      async handler({ clipId, atBeat, expectedRevision } = {}) {
+        try {
+          const changes = splitClip(dispatcher.project, clipId, atBeat, { transport: dispatcher.transport() });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          if (!result.ok) return failed(result.message, { kind: result.kind });
+          const created = changes.find((c3) => c3.op === "addClip").id;
+          return ok({ revision: result.revision, firstClipId: clipId, secondClipId: created });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_duplicate",
+      description: "Copy a clip, by default straight after it on the same track, or at startBeat and/or on trackId. The copy is not locked. Returns the new clip id.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          startBeat: { type: "number" },
+          trackId: { type: "string" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId"]
+      },
+      async handler({ clipId, startBeat, trackId, expectedRevision } = {}) {
+        try {
+          const changes = duplicateClip(dispatcher.project, clipId, { startBeat, track: trackId });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
       name: "clip_remove",
       description: "Remove a clip and its notes. The plugins on its track are untouched.",
       inputSchema: {
@@ -25331,6 +25614,85 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         };
         const result = dispatcher.apply([change]);
         return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_add",
+      description: "Automate one parameter of a plugin: an envelope of points over the beats. Each point has atBeat, value (in the parameter's own units) and curve, which is how the value leaves it towards the next point (step holds, linear is a straight line, smooth is smoothstep). Before the first point the value holds the first value, after the last it holds the last. A parameter has one envelope. Returns its id.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeId: { type: "string" },
+          symbol: { type: "string", description: "The parameter's lv2:symbol" },
+          points: { type: "array", items: POINT_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["nodeId", "symbol", "points"]
+      },
+      async handler({ nodeId, symbol, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addEnvelope", target: { node: nodeId, symbol }, points }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, envelopeId: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_set",
+      description: "Replace every point of an envelope at once, as one edit and one undo. Same point shape as envelope_add.",
+      inputSchema: {
+        type: "object",
+        properties: { envelopeId: { type: "string" }, points: { type: "array", items: POINT_SCHEMA }, expectedRevision: { type: "integer" } },
+        required: ["envelopeId", "points"]
+      },
+      async handler({ envelopeId, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setEnvelope", id: envelopeId, points }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_remove",
+      description: "Remove an envelope. The parameter keeps the value set by hand.",
+      inputSchema: {
+        type: "object",
+        properties: { envelopeId: { type: "string" }, expectedRevision: { type: "integer" } },
+        required: ["envelopeId"]
+      },
+      async handler({ envelopeId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "removeEnvelope", id: envelopeId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: envelopeId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_move_in_chain",
+      description: "Move an effect one place earlier (delta -1) or later (1) in its track's audio chain, swapping it with its neighbour and rewiring the joins, as one edit. Only a plain chain is moved: both plugins must take and give audio, and each join must be the only one, so nothing is guessed. The reason is returned when it is refused.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, delta: { type: "integer", enum: [-1, 1] }, expectedRevision: { type: "integer" } },
+        required: ["nodeId", "delta"]
+      },
+      async handler({ nodeId, delta, expectedRevision } = {}) {
+        try {
+          const passesAudio = (id) => {
+            const profile = dispatcher.engineNode(id)?.profile;
+            return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0;
+          };
+          const changes = chainSwapChanges(dispatcher.project, nodeId, delta, { passesAudio });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, nodeId, delta }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "node_bypass",
+      description: "Take a plugin out of the signal, or put it back, keeping its state. A bypassed effect passes what arrives at its input straight on, a bypassed MIDI processor passes its MIDI through, and a bypassed instrument or generator makes nothing. One edit, one undo.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, bypassed: { type: "boolean" }, expectedRevision: { type: "integer" } },
+        required: ["nodeId", "bypassed"]
+      },
+      async handler({ nodeId, bypassed, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setNode", id: nodeId, bypassed }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, nodeId, bypassed }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -25611,6 +25973,166 @@ function createRuntime(ctx2) {
   return { ensureRunning, shapeValidator };
 }
 
+// web/app/AutomationHost.js
+function createAutomationHost(ctx2) {
+  const { log: log2 } = ctx2;
+  const touched = /* @__PURE__ */ new Map();
+  const warned = /* @__PURE__ */ new Set();
+  const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const MASTER = { masterGain: "gain", masterPan: "pan" };
+  const paramOf = (target) => target.kind !== void 0 ? MASTER[target.kind] ? ctx2.engine.masterParam(MASTER[target.kind]) : null : ctx2.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol);
+  const hold = (target, on) => {
+    if (MASTER[target.kind]) ctx2.engine.holdMaster(MASTER[target.kind], on);
+  };
+  const masterSnapshot = () => JSON.stringify(ctx2.dispatcher.project.master);
+  let masterAtStart = null;
+  const manualValue = ({ node, symbol, kind }) => {
+    if (kind === "masterGain") {
+      const m = ctx2.dispatcher.project.master;
+      return m.muted ? 0 : m.gain;
+    }
+    if (kind === "masterPan") return ctx2.dispatcher.project.master.pan;
+    const set = ctx2.dispatcher.project.node(node)?.settings.get(symbol);
+    if (set !== void 0) return set;
+    return ctx2.dispatcher.engineNode(node)?.profile?.ports?.find((p) => p.symbol === symbol)?.defaultValue;
+  };
+  let listeningTo = null;
+  const listen = () => {
+    if (listeningTo === ctx2.dispatcher) return;
+    listeningTo = ctx2.dispatcher;
+    listeningTo.subscribe((event) => {
+      if (event.type === "parameter") host.edited(event.nodeId, event.symbol, event.value);
+      else if (event.type === "changed") host.masterEdited(listeningTo.project.master);
+    });
+  };
+  const host = {
+    envelopes: () => ctx2.dispatcher.project.envelopes.filter((e) => (e.target.node !== void 0 || MASTER[e.target.kind]) && e.points.length > 0),
+    apply(envelope, instruction) {
+      listen();
+      const param = paramOf(envelope.target);
+      if (!param) return;
+      const state = touched.get(param) ?? { target: envelope.target, suspended: false };
+      touched.set(param, state);
+      if (state.suspended) return;
+      if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) return;
+      if (!state.held) {
+        hold(envelope.target, true);
+        state.held = true;
+        masterAtStart ??= masterSnapshot();
+      }
+      try {
+        if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
+        else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
+        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
+      } catch (error2) {
+        if (!warned.has(envelope.id)) {
+          warned.add(envelope.id);
+          log2(`automation ${envelope.id}: ${error2.message}`, "error");
+        }
+      }
+    },
+    /** A parameter was changed by hand (or by an agent, or by undo): it takes over from its envelope until Stop. */
+    edited(nodeId, symbol, value2) {
+      const target = { node: nodeId, symbol };
+      for (const [param, state] of touched) {
+        if (keyOf(state.target) !== keyOf(target) || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(value2, now);
+        state.suspended = true;
+        hold(state.target, false);
+        log2(`${symbol} was changed by hand, so its automation is paused until you press Stop`);
+      }
+    },
+    /**
+     * The master was changed through setMaster: an envelope on its level or pan, if one is playing, steps aside.
+     * `master` is the project's master as it is now.
+     */
+    masterEdited(master) {
+      if (masterAtStart === null || JSON.stringify(master) === masterAtStart) return;
+      for (const [param, state] of touched) {
+        if (state.target.kind === void 0 || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        state.suspended = true;
+        hold(state.target, false);
+        ctx2.engine.setMaster(master);
+        log2(`the master ${state.target.kind === "masterGain" ? "level" : "pan"} was changed by hand, so its automation is paused until you press Stop`);
+      }
+      masterAtStart = JSON.stringify(master);
+    },
+    stop() {
+      const now = ctx2.engine.context.currentTime;
+      masterAtStart = null;
+      for (const [param, state] of touched) {
+        hold(state.target, false);
+        param.cancelScheduledValues(now);
+        const value2 = manualValue(state.target);
+        if (value2 !== void 0) param.setValueAtTime(value2, now);
+      }
+      touched.clear();
+    }
+  };
+  return host;
+}
+
+// src/engine/Automation.js
+var SAMPLES_PER_SECOND = 100;
+var MAX_SAMPLES = 512;
+var smooth = (u2) => u2 * u2 * (3 - 2 * u2);
+function valueAtSeconds(points, t) {
+  if (points.length === 0) return null;
+  if (t <= points[0].t) return points[0].value;
+  const last = points[points.length - 1];
+  if (t >= last.t) return last.value;
+  let i2 = 0;
+  while (points[i2 + 1].t <= t) i2++;
+  const a2 = points[i2];
+  const b = points[i2 + 1];
+  const u2 = (t - a2.t) / (b.t - a2.t);
+  if (a2.curve === "linear") return a2.value + (b.value - a2.value) * u2;
+  if (a2.curve === "smooth") return a2.value + (b.value - a2.value) * smooth(u2);
+  return a2.value;
+}
+function segment(a2, b, t0, t1, at) {
+  if (a2.curve === "step" || !(t1 > t0)) return null;
+  const v0 = valueAtSeconds([a2, b], t0);
+  const v1 = valueAtSeconds([a2, b], t1);
+  if (a2.curve === "linear") return { kind: "ramp", at, value: v0, end: at + (t1 - t0), endValue: v1 };
+  const count = Math.min(MAX_SAMPLES, Math.max(2, Math.round((t1 - t0) * SAMPLES_PER_SECOND)));
+  const values2 = new Float32Array(count);
+  for (let k = 0; k < count; k++) values2[k] = valueAtSeconds([a2, b], t0 + (t1 - t0) * (k / (count - 1)));
+  return { kind: "curve", at, duration: t1 - t0, values: values2 };
+}
+function automationBetween(transport, points, segments2, start, end) {
+  if (points.length === 0) return [];
+  const timed = points.map((p) => ({ t: transport.secondsAtBeat(p.atBeat), value: p.value, curve: p.curve ?? "linear" }));
+  const out = [];
+  for (const seg of segments2) {
+    const inWindow = (t) => t >= start && t < end;
+    if (inWindow(seg.from)) {
+      out.push({ kind: "set", at: seg.from, value: valueAtSeconds(timed, seg.lo) });
+      const i2 = timed.findIndex((p, k) => p.t <= seg.lo && (k === timed.length - 1 || timed[k + 1].t > seg.lo));
+      if (i2 >= 0 && i2 < timed.length - 1) {
+        const partial = segment(timed[i2], timed[i2 + 1], seg.lo, Math.min(timed[i2 + 1].t, seg.hi), seg.from);
+        if (partial) out.push(partial);
+      }
+    }
+    for (let i2 = 0; i2 < timed.length; i2++) {
+      const p = timed[i2];
+      if (p.t < seg.lo || p.t >= seg.hi) continue;
+      const at = p.t + seg.shift;
+      if (!inWindow(at) || at === seg.from && inWindow(seg.from)) continue;
+      out.push({ kind: "set", at, value: p.value });
+      if (i2 < timed.length - 1) {
+        const leg = segment(p, timed[i2 + 1], p.t, Math.min(timed[i2 + 1].t, seg.hi), at);
+        if (leg) out.push(leg);
+      }
+    }
+  }
+  return out.sort((x, y) => x.at - y.at);
+}
+
 // src/engine/Scheduler.js
 var NOTE_ON = 144;
 var NOTE_OFF = 128;
@@ -25666,6 +26188,11 @@ function notesBetween(transport, notes, start, end) {
   }
   return found;
 }
+var onClock = (instruction, origin) => ({
+  ...instruction,
+  at: origin + instruction.at,
+  ...instruction.end !== void 0 ? { end: origin + instruction.end } : {}
+});
 var Scheduler = class {
   #now;
   #sampleRate;
@@ -25676,6 +26203,7 @@ var Scheduler = class {
   #audio;
   #playAudio;
   #stopAudio;
+  #automation;
   #origin = null;
   #until = 0;
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
@@ -25691,8 +26219,11 @@ var Scheduler = class {
    * - `audio()`, `playAudio(clip, { when, offset, duration })` and
    *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
    *   stop them. All three or none; a host that plays no audio clips gives none.
+   * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
+   *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
+   *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio }) {
+  constructor({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== "function" || typeof notes !== "function" || typeof transport !== "function" || typeof send !== "function") {
       throw new Error("Scheduler needs now, notes, transport and send");
     }
@@ -25711,6 +26242,10 @@ var Scheduler = class {
     this.#audio = audio ?? null;
     this.#playAudio = playAudio ?? null;
     this.#stopAudio = stopAudio ?? null;
+    if (automation !== void 0 && ["envelopes", "apply", "stop"].some((k) => typeof automation[k] !== "function")) {
+      throw new Error("Scheduler needs automation as { envelopes, apply, stop }, or none");
+    }
+    this.#automation = automation ?? null;
   }
   get running() {
     return this.#origin !== null;
@@ -25749,6 +26284,14 @@ var Scheduler = class {
         this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on });
       }
     }
+    if (this.#automation) {
+      const passes = [...segments(transport, start, end)];
+      for (const envelope of this.#automation.envelopes()) {
+        for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
+          this.#automation.apply(envelope, onClock(instruction, this.#origin));
+        }
+      }
+    }
     this.#sounding = this.#sounding.filter((s) => {
       if (s.off >= end) return true;
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
@@ -25769,6 +26312,7 @@ var Scheduler = class {
     this.#sounding = [];
     this.#origin = null;
     this.#stopAudio?.();
+    this.#automation?.stop();
     this.#deliver(outgoing);
   }
   /** In time order, and at one frame an off before an on, so a repeated note is retriggered rather than cut. */
@@ -25798,6 +26342,7 @@ function makeSource(context) {
 }
 function createTransport(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
+  const automation = createAutomationHost(ctx2);
   let playing = false;
   let startedAt = 0;
   let source = null;
@@ -25845,7 +26390,8 @@ function createTransport(ctx2) {
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),
       playAudio: (clip, at) => playAudioClip(clip, at),
-      stopAudio: () => clipPlayer.stopAll()
+      stopAudio: () => clipPlayer.stopAll(),
+      automation
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
     await Promise.all(sources.map((iri2) => clipPlayer.load(iri2)));
@@ -26100,6 +26646,7 @@ function writeProject(project, { iri: iri2, created = null } = {}) {
     if (settings.length > 0) {
       lines.push(`    ${term2(jig3.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
+    if (node.bypassed) lines.push(`    ${term2(jig3.bypassed)} true ;`);
     if (node.state) lines.push(`    ${term2(jig3.nodeState)} ${string(node.state)} ;`);
     lines.push(`    ${term2(jig3.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
@@ -26429,6 +26976,7 @@ function readProject(dataset2) {
       track: onTrack === null ? null : idOf(onTrack, iri2, `track of node ${id}`),
       settings,
       state: value(one2(dataset2, nodeIri, jig4.nodeState)),
+      ...one2(dataset2, nodeIri, jig4.bypassed)?.value === "true" ? { bypassed: true } : {},
       // Only read to fold a session from before tracks, below.
       channel: readChannel(dataset2, nodeIri, id)
     });

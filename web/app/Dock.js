@@ -13,6 +13,7 @@ import { createNodeView } from '../../src/ui/NodeView.js'
 import { createSendsPanel } from '../../src/ui/SendsPanel.js'
 import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
+import { describeMidi } from '../../src/ui/MidiText.js'
 
 export function createDockPanel (ctx) {
   const { document, window, log } = ctx
@@ -68,6 +69,15 @@ export function createDockPanel (ctx) {
         const name = id => { const n = ctx.dispatcher.project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id }
         log(`connected ${name(from.node)} to ${name(to.node)}`, 'ok')
       }
+    },
+    // A lane for one parameter, starting at the value it has now. The lane is drawn under the track.
+    onAutomate: (nodeId, symbol) => {
+      const { project } = ctx.dispatcher
+      const port = ctx.dispatcher.engineNode(nodeId)?.profile?.ports?.find(p => p.symbol === symbol)
+      const start = project.node(nodeId)?.settings.get(symbol) ?? port?.defaultValue
+      const result = ctx.dispatcher.apply([{ op: 'addEnvelope', target: { node: nodeId, symbol }, points: start === undefined ? [] : [{ atBeat: 0, value: start, curve: 'linear' }] }])
+      if (!result.ok) log(result.message, 'error')
+      else log(`added an automation lane for ${port?.name ?? symbol}, under the track`, 'ok')
     },
     onShowPlugin: () => {
       ctx.tabs.select('tracks')
@@ -159,7 +169,9 @@ export function createDockPanel (ctx) {
         others: project.nodes.filter(n => n.id !== node.id).map(n => ({
           node: n, profile: ctx.dispatcher.engineNode(n.id)?.profile, label: labelOf(n.id), trackLabel: tl(n.track)
         })),
-        labelFor: labelOf
+        labelFor: labelOf,
+        automated: new Set(project.envelopes.filter(e => e.target.node === node.id).map(e => e.target.symbol)),
+        monitor: connectionId => ctx.dispatcher.midiActivity(connectionId).map(e => describeMidi(e.bytes))
       })
       dock.show('node', `Editor: ${labelOf(node.id)}`)
       return
@@ -222,6 +234,10 @@ export function createDockPanel (ctx) {
   // The timeline writes the selection and never calls the dock, so this is what
   // makes a click on a track name or a Shift-click on a clip show anything.
   ctx.selection.subscribe(() => update())
+
+  // The open MIDI watches in the plugin view follow the traffic while it is on screen: twice a second,
+  // message thread, nothing from process().
+  setInterval(() => { if (dock.shown === 'node') nodeView.refreshMonitors() }, 500)
 
   return { dock, update, slot: name => dock.slot(name), get element () { return dock.element } }
 }

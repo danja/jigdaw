@@ -384,7 +384,7 @@ describe('the panel each committed plugin actually generates', () => {
     // The assertion above is vacuously true for a plugin with no enumerated
     // port, so the population is checked as well as the rule.
     expect(selectorsSeen, 'no plugin declares an enumerated port').toBeGreaterThan(0)
-  })
+  }, 30000)
 
   // A port declares units:unit and the panel looks it up in a table. A unit
   // missing from that table is not an error anywhere: the control renders the

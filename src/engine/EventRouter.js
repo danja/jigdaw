@@ -37,17 +37,30 @@ const CONTROL_ONLY = new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]
 /** A MIDI signal kind that can carry notes, so something can be played into it. */
 export const carriesNotes = signalKind => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind)
 
+// How many events a monitor can look back over, per route.
+export const MONITOR_EVENTS = 24
+
 export class EventRouter {
   #engine
   #routes = new Map()
   #detach = new Map()
   #dropped = new Map()
   #onDropped
+  #recent = new Map()
 
   constructor ({ engine, onDropped = null }) {
     if (!engine) throw new Error('EventRouter needs an engine')
     this.#engine = engine
     this.#onDropped = onDropped
+  }
+
+  /**
+   * The last few events that went from one node to another, oldest first, for a monitor. Bounded per
+   * route (MONITOR_EVENTS) and kept on the message thread, where the router lives; nothing here is
+   * read or written from process().
+   */
+  recent (fromEngineId, toEngineId) {
+    return [...(this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? [])]
   }
 
   get routes () {
@@ -66,6 +79,9 @@ export class EventRouter {
    */
   setRoutes (pairs) {
     this.#routes = new Map()
+    // A route that is gone takes its history with it.
+    const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`))
+    for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key)
     for (const { from, to } of pairs) {
       if (!this.#routes.has(from)) this.#routes.set(from, [])
       this.#routes.get(from).push(to)
@@ -101,7 +117,18 @@ export class EventRouter {
   #forward (fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId)
     if (!targets || !events?.length) return
-    for (const target of targets) this.send(target, events)
+    for (const target of targets) {
+      this.#remember(fromEngineId, target, events)
+      this.send(target, events)
+    }
+  }
+
+  #remember (from, to, events) {
+    const key = `${from}>${to}`
+    const history = this.#recent.get(key) ?? []
+    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) })
+    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS)
+    this.#recent.set(key, history)
   }
 
   /**

@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  152 terms.
+  153 terms.
 </p>
 
 <h2>Classes</h2>
@@ -310,6 +310,11 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="bpm"><code>jig:bpm</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="bypassed"><code>jig:bypassed</code></dt>
+  <dd>True when the node is in the project but out of the signal: what arrives at its
+        audio input goes straight to where its output goes, a MIDI processor passes its MIDI through, and
+        a node with no input (an instrument, a generator) makes nothing. Its state is kept. Absent means
+        false.</dd>
   <dt id="canonicalDigest"><code>jig:canonicalDigest</code> <span class="label">canonical digest</span></dt>
   <dd>A Subresource Integrity digest, as in sha384-&lt;base64&gt;, over the canonical
         form of the profile rather than over its bytes. Every file a bundle carries is already

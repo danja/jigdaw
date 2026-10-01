@@ -37,7 +37,7 @@ export const UNIT_LABELS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#cent': 'ct'
 })
 
-const formatValue = (port, value) => {
+export const formatValue = (port, value) => {
   const unit = UNIT_LABELS[port.unit]
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2
   return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
@@ -61,7 +61,7 @@ export const SPOKEN_UNITS = Object.freeze({
   'http://lv2plug.in/ns/extensions/units#cent': 'cents'
 })
 
-const spokenValue = (port, value) => {
+export const spokenValue = (port, value) => {
   const unit = SPOKEN_UNITS[port.unit]
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2
   return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`

@@ -16,6 +16,7 @@ export class Engine {
   #masterPanner = null
   #sends = []
   #inputs = new Map()
+  #masterHeld = new Set()
   #loader
   #nodeClass
   #nodes = new Map()
@@ -369,12 +370,30 @@ export class Engine {
     this.#sends = []
   }
 
-  /** The master's level, pan and mute. Muted is a level of zero, not a disconnect. */
+  /**
+   * The master's level, pan and mute. Muted is a level of zero, not a disconnect. A parameter an envelope is
+   * playing on (`holdMaster`) is left alone: this runs on every rebuild of the graph, and setting a value at
+   * the current time would cut into the envelope's own scheduling on every edit.
+   */
   setMaster ({ gain = 1, pan = 0, muted = false } = {}) {
     if (!this.#master) return
     const at = this.#context.currentTime
-    this.#master.gain.setValueAtTime(muted ? 0 : gain, at)
-    if (this.#masterPanner) this.#masterPanner.pan.setValueAtTime(pan, at)
+    if (!this.#masterHeld.has('gain')) this.#master.gain.setValueAtTime(muted ? 0 : gain, at)
+    if (this.#masterPanner && !this.#masterHeld.has('pan')) this.#masterPanner.pan.setValueAtTime(pan, at)
+  }
+
+  /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
+  masterParam (which) {
+    if (which === 'gain') return this.#master?.gain ?? null
+    if (which === 'pan') return this.#masterPanner?.pan ?? null
+    throw new Error(`the master has no ${which}`)
+  }
+
+  /** Leave the master's level or pan to an envelope (on), or take it back (off). */
+  holdMaster (which, on) {
+    if (which !== 'gain' && which !== 'pan') throw new Error(`the master has no ${which}`)
+    if (on) this.#masterHeld.add(which)
+    else this.#masterHeld.delete(which)
   }
 
   /** The track ids that have a strip. */

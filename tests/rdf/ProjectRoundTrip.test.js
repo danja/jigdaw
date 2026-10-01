@@ -525,3 +525,18 @@ describe('fades in the project file', () => {
     expect(project.clip('faded')).toMatchObject({ fadeInBeats: 0.5, fadeOutBeats: 1 })
   })
 })
+
+describe('bypass in the project file', () => {
+  it('is written only when set, and comes back', async () => {
+    const original = builtProject()
+    const node = original.nodes[0]
+    const count = text => (text.match(/jig:bypassed true/g) ?? []).length
+    expect(count(writeProject(original, { iri: IRI }))).toBe(0)
+    original.apply([{ op: 'setNode', id: node.id, bypassed: true }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(count(turtle)).toBe(1)
+    const { project } = await reopen(turtle)
+    expect(project.node(node.id).bypassed).toBe(true)
+    expect(project.nodes.filter(n => n.bypassed)).toHaveLength(1)
+  })
+})

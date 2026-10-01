@@ -479,6 +479,14 @@ jig:onTrack a owl:ObjectProperty ;
         than listed on the track, so moving a node between tracks is one triple, and so
         that nothing about membership is an ordering.""" .
 
+jig:bypassed a owl:DatatypeProperty ;
+    rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
+    rdfs:label "bypassed" ;
+    rdfs:comment """True when the node is in the project but out of the signal: what arrives at its
+        audio input goes straight to where its output goes, a MIDI processor passes its MIDI through, and
+        a node with no input (an instrument, a generator) makes nothing. Its state is kept. Absent means
+        false.""" .
+
 jig:midiInput a owl:ObjectProperty ;
     rdfs:domain jig:Track ; rdfs:range jig:Node ;
     rdfs:label "MIDI input" ;

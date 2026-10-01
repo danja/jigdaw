@@ -204,6 +204,7 @@ export function writeProject (project, { iri, created = null } = {}) {
     // Opaque to the host: whatever the plugin returned when asked. Parameter
     // values are settings and are deliberately not in here, because storing them
     // in both places means the two disagree on restore.
+    if (node.bypassed) lines.push(`    ${term(jig.bypassed)} true ;`)
     if (node.state) lines.push(`    ${term(jig.nodeState)} ${string(node.state)} ;`)
     lines.push(`    ${term(jig.plugin)} <${node.pluginIri}> .`)
 

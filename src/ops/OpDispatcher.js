@@ -16,6 +16,7 @@ import { Project, RevisionConflict, ChangeError, changesFor } from '../model/Pro
 import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi, carriesNotes } from '../engine/EventRouter.js'
+import { effectiveConnections } from './Bypass.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
 import { decodeState } from '../host/StateCodec.js'
@@ -99,6 +100,19 @@ export class OpDispatcher {
     const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat })
     this.#router.broadcastTransport(message)
     return message
+  }
+
+  /**
+   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
+   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
+   * loaded), or one nothing has gone over.
+   */
+  midiActivity (connectionId) {
+    const connection = this.#project.connection(connectionId)
+    if (!connection || !isMidi(connection.signalKind) || !this.#router) return []
+    const from = this.#nodeIds.get(connection.from.node)
+    const to = this.#nodeIds.get(connection.to.node)
+    return from && to ? this.#router.recent(from, to) : []
   }
 
   /** Deliver MIDI into a node, as if from outside the graph. */
@@ -759,19 +773,38 @@ export class OpDispatcher {
     if (!this.#engine) return
 
     const feedsSomething = new Set()
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       if (isMidi(connection.signalKind)) continue
       feedsSomething.add(connection.from.node)
     }
 
     for (const node of this.#project.nodes) {
       if (feedsSomething.has(node.id)) continue
+      // A bypassed node is out of the signal: what it would make is not to be heard.
+      if (node.bypassed) continue
       const engineId = this.#nodeIds.get(node.id)
       if (!engineId) continue
       const entry = this.#engine.get(engineId)
       if (!(entry?.node?.numberOfOutputs > 0)) continue
       this.#engine.linkToTrack(engineId, node.track)
     }
+  }
+
+  /**
+   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
+   * model keeps every connection; bypass changes only what is wired.
+   */
+  #connectionsInUse () {
+    const passes = (nodeId, kind) => {
+      const profile = this.engineNode(nodeId)?.profile
+      if (!profile) return false
+      if (kind === 'audio') return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0
+      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi)
+    }
+    return effectiveConnections(this.#project.connections, {
+      bypassed: nodeId => this.#project.node(nodeId)?.bypassed === true,
+      passes
+    })
   }
 
   #rebuildLinks (compiled) {
@@ -785,7 +818,7 @@ export class OpDispatcher {
 
     const midiRoutes = []
 
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       const from = this.#nodeIds.get(connection.from.node)
       const to = this.#nodeIds.get(connection.to.node)
       // A connection between nodes that are not both loaded is in the model

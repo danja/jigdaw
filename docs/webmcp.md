@@ -150,10 +150,18 @@ halfway is worse than one that was never touched.
 
 | Tool | Arguments | Returns |
 |---|---|---|
+| `envelope_add` | `nodeId`, `symbol`, `points[]` | Envelope id |
+| `envelope_set` | `envelopeId`, `points[]` | |
+| `envelope_remove` | `envelopeId` | |
+| `node_move_in_chain` | `nodeId`, `delta` (-1 or 1) | |
+| `node_bypass` | `nodeId`, `bypassed` | |
 | `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?` | Clip id |
 | `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
 | `clip_set_notes` | `clipId`, `notes[]` | |
 | `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
+| `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `color?` | Revision and the clip |
+| `clip_split` | `clipId`, `atBeat` | Both clip ids |
+| `clip_duplicate` | `clipId`, `startBeat?`, `trackId?` | Clip id |
 | `clip_remove` | `clipId` | |
 
 A note is `{ startBeat, lengthBeats, pitch, velocity }`, its start counted from the clip's.

@@ -14,12 +14,15 @@ const synth = { audioInputs: 0, audioOutputs: 1, accepts: [MIDI], produces: [], 
 const gen = { audioInputs: 0, audioOutputs: 0, accepts: [], produces: [MIDI], ports: [] }
 const fx = { audioInputs: 1, audioOutputs: 1, accepts: [], produces: [], ports: [{ symbol: 'mix', name: 'Mix' }] }
 
+const traffic = {}
+
 function build (over = {}) {
   const calls = []
   const view = createNodeView(document, {
     onDisconnect: id => calls.push(['disconnect', id]),
     onConnect: c => calls.push(['connect', c]),
-    onShowPlugin: () => calls.push(['show'])
+    onShowPlugin: () => calls.push(['show']),
+    onAutomate: (node, symbol) => calls.push(['automate', node, symbol])
   })
   document.body.append(view.element)
   const state = {
@@ -28,13 +31,67 @@ function build (over = {}) {
       { node: { id: 'synth' }, profile: synth, label: 'Synth', trackLabel: 'Lead' },
       { node: { id: 'fx' }, profile: fx, label: 'Reverb', trackLabel: 'Lead' }
     ],
-    labelFor: id => id, ...over
+    labelFor: id => id, monitor: id => (traffic[id] ?? []), ...over
   }
   view.show(state)
   return { view, calls, state }
 }
 
 describe('the node view', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+  const withMidi = () => build({
+    connections: [{ id: 'c1', from: { node: 'gen', portIndex: 0 }, to: { node: 'synth', portIndex: 0 }, signalKind: MIDI }]
+  })
+
+  it('offers Watch on a MIDI connection only, closed until asked, and shows what went over it in words', () => {
+    for (const key of Object.keys(traffic)) delete traffic[key]
+    const { view } = withMidi()
+    const watch = document.querySelector('.connection-watch')
+    expect(watch.getAttribute('aria-pressed')).toBe('false')
+    expect(document.querySelector('.connection-log').hidden).toBe(true)
+    traffic.c1 = ['Note on C4, velocity 99, channel 1']
+    watch.dispatchEvent(new document.defaultView.Event('click'))
+    expect(watch.getAttribute('aria-pressed')).toBe('true')
+    expect([...document.querySelectorAll('.connection-log li')].map(li => li.textContent)).toEqual(['Note on C4, velocity 99, channel 1'])
+    traffic.c1 = ['Note on C4, velocity 99, channel 1', 'Note off C4, channel 1']
+    view.refreshMonitors()
+    expect(document.querySelectorAll('.connection-log li')).toHaveLength(2)
+    watch.dispatchEvent(new document.defaultView.Event('click'))
+    expect(document.querySelector('.connection-log').hidden).toBe(true)
+  })
+
+  it('says nothing yet when nothing has gone over it, and leaves a closed watch alone on refresh', () => {
+    for (const key of Object.keys(traffic)) delete traffic[key]
+    const { view } = withMidi()
+    view.refreshMonitors()
+    expect(document.querySelectorAll('.connection-log li')).toHaveLength(0)
+    document.querySelector('.connection-watch').dispatchEvent(new document.defaultView.Event('click'))
+    expect(document.querySelector('.connection-log li').textContent).toBe('Nothing yet')
+  })
+
+  it('has no Watch on an audio connection', () => {
+    build({ connections: [{ id: 'c2', from: { node: 'gen', portIndex: 0 }, to: { node: 'fx', portIndex: 0 }, signalKind: 'http://purl.org/stuff/transmissions/Audio' }] })
+    expect(document.querySelector('.connection-watch')).toBeNull()
+  })
+
+  const dial = { symbol: 'mix', name: 'Mix', minimum: 0, maximum: 1 }
+  const automatable = { audioInputs: 1, audioOutputs: 1, accepts: [], produces: [], ports: [dial, { symbol: 'rate', name: 'Rate', minimum: 0, maximum: 20 }, { symbol: 'bad', name: 'No range' }] }
+
+  it('offers to automate each parameter that has a range and no lane yet, and asks for the one chosen', () => {
+    const { calls } = build({ profile: automatable, automated: new Set(['mix']) })
+    expect([...document.querySelectorAll('#automate-symbol option')].map(o => o.textContent)).toEqual(['Rate'])
+    document.querySelector('.node-automate').dispatchEvent(new document.defaultView.Event('submit', { cancelable: true }))
+    expect(calls).toContainEqual(['automate', 'gen', 'rate'])
+  })
+
+  it('leaves the automate form out when every parameter has a lane, or there are none', () => {
+    build({ profile: automatable, automated: new Set(['mix', 'rate']) })
+    expect(document.querySelector('.node-automate').hidden).toBe(true)
+    document.body.replaceChildren()
+    build({ profile: gen })
+    expect(document.querySelector('.node-automate').hidden).toBe(true)
+  })
+
   it('says what the plugin is, where it is, and its ports', () => {
     build()
     expect(document.querySelector('.node-heading').textContent).toBe('Gen, on Drums.')
@@ -108,5 +165,6 @@ describe('the node view', () => {
 
   it('will not be built without its handlers', () => {
     expect(() => createNodeView(document, { onDisconnect () {}, onConnect () {} })).toThrow(/onShowPlugin/)
+    expect(() => createNodeView(document, { onDisconnect () {}, onConnect () {}, onShowPlugin () {} })).toThrow(/onAutomate/)
   })
 })

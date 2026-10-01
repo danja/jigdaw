@@ -202,6 +202,7 @@ export const vocabulary = Object.freeze({
     source: `${JIG}source`,
     offsetSeconds: `${JIG}offsetSeconds`,
     locked: `${JIG}locked`,
+    bypassed: `${JIG}bypassed`,
     fadeInBeats: `${JIG}fadeInBeats`,
     fadeOutBeats: `${JIG}fadeOutBeats`,
     setting: `${JIG}setting`,

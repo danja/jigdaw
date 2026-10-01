@@ -542,6 +542,133 @@ describe('clips', () => {
   })
 })
 
+describe('envelope tools', () => {
+  const setup = () => dispatcher.apply([{ op: 'addTrack', id: 't' }, { op: 'addNode', id: 'n', track: 't', pluginIri: 'https://example.org/p/' }])
+  const points = [{ atBeat: 0, value: 100, curve: 'linear' }, { atBeat: 4, value: 900, curve: 'smooth' }]
+
+  it('adds, replaces and removes an envelope, one edit each', async () => {
+    setup()
+    const added = await call('envelope_add', { nodeId: 'n', symbol: 'cutoff', points })
+    expect(added.ok).toBe(true)
+    expect(dispatcher.project.envelopes).toHaveLength(1)
+    expect(dispatcher.project.envelopes[0].points.map(p => p.curve)).toEqual(['linear', 'smooth'])
+    expect((await call('envelope_set', { envelopeId: added.envelopeId, points: [{ atBeat: 2, value: 5 }] })).ok).toBe(true)
+    expect(dispatcher.project.envelopes[0].points).toEqual([{ atBeat: 2, value: 5, curve: 'linear' }])
+    expect((await call('envelope_remove', { envelopeId: added.envelopeId })).ok).toBe(true)
+    expect(dispatcher.project.envelopes).toEqual([])
+  })
+
+  it('refuses a second envelope on one parameter, an unknown node, a bad curve, two points at one beat, and an unknown envelope', async () => {
+    setup()
+    expect((await call('envelope_add', { nodeId: 'n', symbol: 'cutoff', points })).ok).toBe(true)
+    expect((await call('envelope_add', { nodeId: 'n', symbol: 'cutoff', points })).error).toMatch(/already automates/)
+    expect((await call('envelope_add', { nodeId: 'ghost', symbol: 'x', points })).ok).toBe(false)
+    expect((await call('envelope_add', { nodeId: 'n', symbol: 'q', points: [{ atBeat: 0, value: 1, curve: 'wavy' }] })).error).toMatch(/curve must be one of/)
+    expect((await call('envelope_add', { nodeId: 'n', symbol: 'r', points: [{ atBeat: 1, value: 1 }, { atBeat: 1, value: 2 }] })).error).toMatch(/two envelope points/)
+    expect((await call('envelope_set', { envelopeId: 'ghost', points: [] })).ok).toBe(false)
+    expect((await call('envelope_remove', { envelopeId: 'ghost' })).ok).toBe(false)
+  })
+})
+
+describe('node_move_in_chain', () => {
+  it('refuses, with the reason, what it cannot swap, and a move that is not one place', async () => {
+    dispatcher.apply([{ op: 'addTrack', id: 't' }, { op: 'addNode', id: 'a', track: 't', pluginIri: 'https://example.org/p/' }, { op: 'addNode', id: 'b', track: 't', pluginIri: 'https://example.org/p/' },
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: 'http://purl.org/stuff/transmissions/Audio' }])
+    // Nothing is loaded in this dispatcher, so neither node is known to take and give audio.
+    const refused = await call('node_move_in_chain', { nodeId: 'a', delta: 1 })
+    expect(refused.ok).toBe(false)
+    expect(refused.error).toMatch(/cannot swap/)
+    expect((await call('node_move_in_chain', { nodeId: 'a', delta: 2 })).error).toMatch(/one place/)
+    expect((await call('node_move_in_chain', { nodeId: 'ghost', delta: 1 })).ok).toBe(false)
+  })
+})
+
+describe('node_bypass', () => {
+  it('bypasses and restores a node, refusing what is not a node or not a boolean', async () => {
+    dispatcher.apply([{ op: 'addTrack', id: 't' }, { op: 'addNode', id: 'n', track: 't', pluginIri: 'https://example.org/p/' }])
+    const done = await call('node_bypass', { nodeId: 'n', bypassed: true })
+    expect(done.ok).toBe(true)
+    expect(dispatcher.project.node('n').bypassed).toBe(true)
+    expect((await call('node_bypass', { nodeId: 'n', bypassed: false })).ok).toBe(true)
+    expect(dispatcher.project.node('n').bypassed).toBe(false)
+    expect((await call('node_bypass', { nodeId: 'ghost', bypassed: true })).ok).toBe(false)
+    expect((await call('node_bypass', { nodeId: 'n', bypassed: 'yes' })).ok).toBe(false)
+  })
+})
+
+describe('clip behaviour, split and duplicate', () => {
+  const note = { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }
+  const make = async (extra = {}) => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 8, notes: [note, { ...note, startBeat: 5 }], ...extra })
+    return { trackId, clipId: added.clipId }
+  }
+
+  it('mutes, locks and colours a clip, and colour is not an edit', async () => {
+    const { clipId } = await make()
+    const before = dispatcher.project.revision
+    const colored = await call('clip_set', { clipId, color: '#3e8ef7' })
+    expect(colored.ok).toBe(true)
+    expect(dispatcher.project.revision).toBe(before)
+    expect(colored.clip.color).toBe('#3e8ef7')
+    const done = await call('clip_set', { clipId, muted: true, locked: true })
+    expect(done.ok).toBe(true)
+    expect(dispatcher.project.clip(clipId)).toMatchObject({ muted: true, locked: true })
+    expect(dispatcher.project.revision).toBe(before + 1)
+  })
+
+  it('says a locked clip is locked when it is moved, and nothing when asked to change nothing', async () => {
+    const { clipId } = await make()
+    await call('clip_set', { clipId, locked: true })
+    const refused = await call('clip_move', { clipId, startBeat: 4 })
+    expect(refused.ok).toBe(false)
+    expect(refused.error).toMatch(/locked/)
+    expect((await call('clip_set', { clipId })).error).toMatch(/nothing to change/)
+    expect((await call('clip_set', { clipId, color: 'red' })).ok).toBe(false)
+    expect((await call('clip_set', { clipId: 'ghost', muted: true })).ok).toBe(false)
+  })
+
+  it('splits a clip, keeping the first id and reporting the second, in one undo', async () => {
+    const { clipId } = await make()
+    const split = await call('clip_split', { clipId, atBeat: 3 })
+    expect(split.ok).toBe(true)
+    expect(split.firstClipId).toBe(clipId)
+    expect(dispatcher.project.clip(clipId).lengthBeats).toBe(3)
+    expect(dispatcher.project.clip(split.secondClipId)).toMatchObject({ startBeat: 3, lengthBeats: 5 })
+    await dispatcher.undo()
+    expect(dispatcher.project.clips).toHaveLength(1)
+    expect(dispatcher.project.clip(clipId).lengthBeats).toBe(8)
+  })
+
+  it('refuses a cut outside the clip', async () => {
+    const { clipId } = await make()
+    const refused = await call('clip_split', { clipId, atBeat: 0 })
+    expect(refused.ok).toBe(false)
+    expect(refused.error).toMatch(/inside the clip/)
+  })
+
+  it('sets fades on an audio clip only', async () => {
+    const { trackId, clipId } = await make()
+    expect((await call('clip_set', { clipId, fadeInBeats: 1 })).error).toMatch(/only an audio clip/)
+    const audio = await call('clip_add_audio', { trackId, source: 'https://example.org/a.wav', startBeat: 0, lengthBeats: 4 })
+    expect((await call('clip_set', { clipId: audio.clipId, fadeInBeats: 1, fadeOutBeats: 0.5 })).ok).toBe(true)
+    expect(dispatcher.project.clip(audio.clipId)).toMatchObject({ fadeInBeats: 1, fadeOutBeats: 0.5 })
+  })
+
+  it('duplicates after the clip, or where asked, and the copy is not locked', async () => {
+    const { trackId, clipId } = await make()
+    await call('clip_set', { clipId, locked: true })
+    const copy = await call('clip_duplicate', { clipId })
+    expect(copy.ok).toBe(true)
+    expect(dispatcher.project.clip(copy.clipId)).toMatchObject({ startBeat: 8, track: trackId })
+    expect(dispatcher.project.clip(copy.clipId).locked).toBe(false)
+    const other = await call('track_add', {})
+    const placed = await call('clip_duplicate', { clipId, startBeat: 2, trackId: other.trackId })
+    expect(dispatcher.project.clip(placed.clipId)).toMatchObject({ startBeat: 2, track: other.trackId })
+    expect((await call('clip_duplicate', { clipId: 'ghost' })).ok).toBe(false)
+  })
+})
+
 describe('audio clips', () => {
   it('adds one by the IRI of its file, and refuses a relative one', async () => {
     const { trackId } = await call('track_add', {})

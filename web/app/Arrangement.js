@@ -4,13 +4,15 @@
 // the piano roll, and audio files a person brings in. Every edit is a request
 // to the dispatcher; the drawing follows from what the project then says, on
 // the next 'changed'.
-import { createTimeline } from '../../src/ui/Timeline.js'
+import { createTimeline, barBeat } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { mixable } from '../../src/ui/Mixer.js'
 import { describeChain } from '../../src/ui/ChainModel.js'
 import { describeRouting } from '../../src/ui/SendsModel.js'
+import { spokenValue } from '../../src/ui/Panel.js'
 import { createClipActions } from '../../src/ui/ClipActions.js'
+import { chainSwapChanges } from '../../src/ops/ChainReorder.js'
 import { splitClip, duplicateClip, trimClip, copyClips, pasteClips } from '../../src/model/ClipEdit.js'
 
 export function createArrangement (ctx) {
@@ -92,6 +94,25 @@ export function createArrangement (ctx) {
       } catch (error) { log(error.message, 'error') }
     },
     onLock: (id, locked) => edit([{ op: 'setClip', id, locked }]),
+    onMoveInChain: (nodeId, delta) => {
+      try {
+        const passesAudio = id => {
+          const profile = ctx.dispatcher.engineNode(id)?.profile
+          return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0
+        }
+        edit(chainSwapChanges(ctx.dispatcher.project, nodeId, delta, { passesAudio }))
+      } catch (error) { log(error.message, 'error') }
+    },
+    // An automation lane edited: the whole new list of points, one edit and one undo.
+    onEnvelope: (id, points) => edit([{ op: 'setEnvelope', id, points }]),
+    onRemoveEnvelope: id => edit([{ op: 'removeEnvelope', id }]),
+    // A lane for the master's level or pan, starting at what it is now.
+    onAutomateMaster: kind => {
+      const { master } = ctx.dispatcher.project
+      const value = kind === 'masterGain' ? master.gain : master.pan
+      edit([{ op: 'addEnvelope', target: { kind }, points: [{ atBeat: 0, value, curve: 'linear' }] }])
+    },
+    onBypass: (nodeId, bypassed) => edit([{ op: 'setNode', id: nodeId, bypassed }]),
     onMute: (id, muted) => edit([{ op: 'setClip', id, muted }]),
     onRemove: id => {
       if (pianoRoll.clipId === id) pianoRoll.hide()
@@ -143,6 +164,46 @@ export function createArrangement (ctx) {
 
   // What Ctrl+C took: plain data, kept here so it outlasts the clips and an undo.
   let clipboard = null
+
+  /** The automation lanes of a track: an envelope on each parameter of each plugin on it, named and ranged from the profile. */
+  function automationLanes (project, track) {
+    const nodeIds = new Set(project.nodes.filter(n => n.track === track.id).map(n => n.id))
+    const { beatsPerBar } = project.transport
+    return project.envelopes.filter(e => e.target.node !== undefined && nodeIds.has(e.target.node)).flatMap(envelope => {
+      const node = project.node(envelope.target.node)
+      const profile = ctx.dispatcher.engineNode(node.id)?.profile
+      const port = profile?.ports?.find(p => p.symbol === envelope.target.symbol)
+      // A plugin that has not loaded, or no longer has the parameter, cannot be drawn against a range.
+      if (!port || !(port.maximum > port.minimum)) return []
+      return [{
+        id: envelope.id,
+        label: `${node.label ?? profile.label ?? node.id}, ${port.name || port.symbol}`,
+        min: port.minimum,
+        max: port.maximum,
+        start: node.settings.get(port.symbol) ?? port.defaultValue,
+        points: envelope.points,
+        speak: value => spokenValue(port, value),
+        where: beat => barBeat(beat, beatsPerBar)
+      }]
+    })
+  }
+
+  /** The master's automation: a lane for its level and for its pan, where they have an envelope, and what may still be added. */
+  function masterLanes (project) {
+    const { beatsPerBar } = project?.transport ?? { beatsPerBar: 4 }
+    if (!project) return { list: [], available: [] }
+    const kinds = {
+      masterGain: { label: 'Master level', min: 0, max: 2, start: project.master.gain, speak: v => (v > 0 ? `${(20 * Math.log10(v)).toFixed(1)} decibels` : 'silent') },
+      masterPan: { label: 'Master pan', min: -1, max: 1, start: project.master.pan, speak: v => (v === 0 ? 'centre' : `${Math.abs(v).toFixed(2)} ${v < 0 ? 'left' : 'right'}`) }
+    }
+    const has = new Set(project.envelopes.map(e => e.target.kind).filter(Boolean))
+    return {
+      list: project.envelopes.filter(e => kinds[e.target.kind]).map(e => ({
+        id: e.id, ...kinds[e.target.kind], points: e.points, where: beat => barBeat(beat, beatsPerBar)
+      })),
+      available: Object.entries(kinds).filter(([kind]) => !has.has(kind)).map(([kind, k]) => ({ kind, label: k.label }))
+    }
+  }
 
   /** The playhead's beat, on the grid the timeline is set to (or exactly, with snapping off). */
   const playheadBeat = () => timeline.view.snap(ctx.transport.position().beat, ctx.dispatcher.project.transport.beatsPerBar)
@@ -229,6 +290,8 @@ export function createArrangement (ctx) {
         ]
       },
       layoutFor: track => project.trackLayout(track.id),
+      lanesFor: track => automationLanes(project, track),
+      masterFor: () => masterLanes(project),
       colorFor: clip => project.clipColor(clip.id),
       chainFor: track => describeChain(project, track.id, {
         profileOf: id => ctx.dispatcher.engineNode(id)?.profile,

@@ -195,7 +195,7 @@ describe('the port bar', () => {
 describe('the connection list', () => {
   const labelFor = id => ({ a: 'Pulse', b: 'Cascade' })[id] ?? id
   const list = connections => createConnectionList(document, {
-    connections, labelFor, onRemove: () => {}
+    connections, labelFor, onRemove: () => {}, monitor: () => []
   })
 
   it('says nothing is connected rather than showing an empty box', () => {
@@ -247,7 +247,8 @@ describe('the connection list', () => {
         { id: 'c9', from: { node: 'b', portIndex: 0 }, to: { node: 'a', portIndex: 0 }, signalKind: AUDIO }
       ],
       labelFor,
-      onRemove: id => removed.push(id)
+      onRemove: id => removed.push(id),
+      monitor: () => []
     })
     element.querySelectorAll('.connection-remove')[1].click()
     expect(removed).toEqual(['c9'])
@@ -269,6 +270,7 @@ describe('telling two instances of one plugin apart', () => {
     const element = createConnectionList(document, {
       labelFor,
       onRemove: () => {},
+      monitor: () => [],
       connections: [
         { id: 'c1', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
         { id: 'c2', from: { node: 'a', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }

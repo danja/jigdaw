@@ -94,13 +94,18 @@
   .connection-remove { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                        border:1px solid var(--line); border-radius:4px;
                        background:transparent; color:var(--dim); cursor:pointer; }
+  .connection-watch { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
+                      border:1px solid var(--line); border-radius:4px;
+                      background:transparent; color:var(--dim); cursor:pointer; }
+  .connection-watch[aria-pressed="true"] { border-color:#ffd166; color:var(--fg); }
+  .connection-log { margin:0 0 8px 28px; padding:0 0 0 16px; font-size:12px; color:var(--dim); max-height:12rem; overflow:auto; }
   /* A gap where a wire is not, so a stack of slots does not imply a chain. */
   .gap { height:20px; }
 
   @media (max-width: 760px) {
     .port { min-height:44px; flex:1 1 auto; }
     .connection { flex-wrap:wrap; }
-    .connection-remove { min-height:44px; }
+    .connection-remove, .connection-watch { min-height:44px; }
   }
 
 
@@ -270,6 +275,30 @@
   .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
     border:1px solid var(--line); border-radius:6px; background:#161a20; }
   .chain-item.failed { border-style:dashed; border-color:var(--err); }
+  .master-row { margin-top:8px; padding:6px 0; border-top:2px solid var(--line); }
+  .master-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 8px 6px; }
+  .master-title { font-weight:600; }
+  .master-head button { min-height:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
+  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
+  .envelope-head { display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
+  .envelope-title { flex:1 1 auto; }
+  .envelope-add, .envelope-remove { min-height:44px; min-width:44px; padding:0 10px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
+  .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
+  .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
+  .envelope-line path { fill:none; stroke:var(--accent); stroke-width:2; }
+  .envelope-point { position:absolute; width:44px; height:44px; padding:0; border:0; background:transparent; cursor:grab; touch-action:none;
+    display:flex; align-items:center; justify-content:center; }
+  .envelope-dot { width:12px; height:12px; border-radius:50%; background:var(--fg); border:2px solid var(--accent); }
+  .envelope-point:focus-visible .envelope-dot { outline:3px solid #ffd166; outline-offset:2px; }
+  .chain-head { display:flex; gap:4px; }
+  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-head .chain-node { flex:1 1 auto; min-width:0; }
+  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-item.bypassed { border-style:dotted; opacity:.75; }
   .chain-node { min-height:44px; text-align:left; padding:0 8px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:5px; cursor:pointer; font-size:13px; }
   .chain-node[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }

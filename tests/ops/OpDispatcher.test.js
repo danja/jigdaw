@@ -1338,3 +1338,33 @@ describe('undo and redo of the track view (docs/track-view-terms.md)', () => {
     expect(result.message).toMatch(/feed itself/)
   })
 })
+
+describe('bypass', () => {
+  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+  const setup = () => {
+    const dispatcher = new OpDispatcher()
+    dispatcher.apply([{ op: 'addTrack', id: 't' }, ...['a', 'b', 'c'].map(id => ({ op: 'addNode', id, track: 't', pluginIri: 'https://example.org/p/' }))])
+    dispatcher.apply([
+      { op: 'addConnection', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: AUDIO },
+      { op: 'addConnection', from: { node: 'b', portIndex: 0 }, to: { node: 'c', portIndex: 0 }, signalKind: AUDIO }
+    ])
+    return dispatcher
+  }
+
+  it('is an edit that can be undone, and leaves every connection in the model', async () => {
+    const d = setup()
+    expect(d.apply([{ op: 'setNode', id: 'b', bypassed: true }]).ok).toBe(true)
+    expect(d.project.node('b').bypassed).toBe(true)
+    expect(d.project.connections).toHaveLength(2)
+    await d.undo()
+    expect(d.project.node('b').bypassed).toBe(false)
+    await d.redo()
+    expect(d.project.node('b').bypassed).toBe(true)
+  })
+
+  it('refuses anything but true or false, and a node that is not there', () => {
+    const d = setup()
+    expect(d.apply([{ op: 'setNode', id: 'b', bypassed: 'yes' }]).message).toMatch(/true or false/)
+    expect(d.apply([{ op: 'setNode', id: 'ghost', bypassed: true }]).message).toMatch(/no such node/)
+  })
+})

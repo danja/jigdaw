@@ -8522,11 +8522,11 @@ var require_MessageDigest_browser = __commonJS({
         const buffer = new Uint8Array(
           await crypto2.subtle.digest(this.algorithm, data)
         );
-        let hex = "";
+        let hex2 = "";
         for (let i2 = 0; i2 < buffer.length; ++i2) {
-          hex += buffer[i2].toString(16).padStart(2, "0");
+          hex2 += buffer[i2].toString(16).padStart(2, "0");
         }
-        return hex;
+        return hex2;
       }
     };
   }
@@ -13325,6 +13325,7 @@ var init_Vocabulary = __esm({
         source: `${JIG}source`,
         offsetSeconds: `${JIG}offsetSeconds`,
         locked: `${JIG}locked`,
+        bypassed: `${JIG}bypassed`,
         fadeInBeats: `${JIG}fadeInBeats`,
         fadeOutBeats: `${JIG}fadeOutBeats`,
         setting: `${JIG}setting`,
@@ -17346,7 +17347,7 @@ async function inflate(bytes) {
 function isContained(path) {
   if (typeof path !== "string" || path.length === 0) return false;
   if (path.startsWith("/") || path.includes("\\") || /^[A-Za-z]:/.test(path)) return false;
-  return path.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+  return path.split("/").every((segment2) => segment2 !== "" && segment2 !== "." && segment2 !== "..");
 }
 async function openForeign(profile, {
   trust,
@@ -17957,6 +17958,9 @@ var ICONS = Object.freeze({
   copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
   cut: "M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z",
   paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
+  bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
+  earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
+  later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
   delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
 });
 function iconElement(document2, name2) {
@@ -18082,8 +18086,8 @@ function createMedia(document2) {
       files.set(iri3, { bytes, mediaType });
     },
     /** Where an imported file lives, named by its content. */
-    iriFor(hex, extension) {
-      return new URL(`media/${hex}.${extension}`, base).href;
+    iriFor(hex2, extension) {
+      return new URL(`media/${hex2}.${extension}`, base).href;
     },
     /** The files a saved session carries: held here, and under its base. */
     heldUnderBase(iris) {
@@ -21724,6 +21728,7 @@ var Engine = class {
   #masterPanner = null;
   #sends = [];
   #inputs = /* @__PURE__ */ new Map();
+  #masterHeld = /* @__PURE__ */ new Set();
   #loader;
   #nodeClass;
   #nodes = /* @__PURE__ */ new Map();
@@ -22050,12 +22055,28 @@ var Engine = class {
     }
     this.#sends = [];
   }
-  /** The master's level, pan and mute. Muted is a level of zero, not a disconnect. */
+  /**
+   * The master's level, pan and mute. Muted is a level of zero, not a disconnect. A parameter an envelope is
+   * playing on (`holdMaster`) is left alone: this runs on every rebuild of the graph, and setting a value at
+   * the current time would cut into the envelope's own scheduling on every edit.
+   */
   setMaster({ gain = 1, pan = 0, muted = false } = {}) {
     if (!this.#master) return;
     const at = this.#context.currentTime;
-    this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
-    if (this.#masterPanner) this.#masterPanner.pan.setValueAtTime(pan, at);
+    if (!this.#masterHeld.has("gain")) this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
+    if (this.#masterPanner && !this.#masterHeld.has("pan")) this.#masterPanner.pan.setValueAtTime(pan, at);
+  }
+  /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
+  masterParam(which) {
+    if (which === "gain") return this.#master?.gain ?? null;
+    if (which === "pan") return this.#masterPanner?.pan ?? null;
+    throw new Error(`the master has no ${which}`);
+  }
+  /** Leave the master's level or pan to an envelope (on), or take it back (off). */
+  holdMaster(which, on) {
+    if (which !== "gain" && which !== "pan") throw new Error(`the master has no ${which}`);
+    if (on) this.#masterHeld.add(which);
+    else this.#masterHeld.delete(which);
   }
   /** The track ids that have a strip. */
   trackIds() {
@@ -22954,9 +22975,20 @@ var OPERATIONS = {
       label: change.label ?? null,
       track: change.track,
       settings: new Map(Object.entries(change.settings ?? {})),
-      state: change.state ?? null
+      state: change.state ?? null,
+      bypassed: checkFlag("bypassed", change.bypassed ?? false)
     });
     return id;
+  },
+  /**
+   * Change a node's own properties. Bypass passes what arrives at its input straight to where
+   * its output goes, and keeps its state, so turning it back on is instant and exact.
+   */
+  setNode(state, change) {
+    const node = state.nodes.get(change.id);
+    if (!node) throw new Error(`no such node: ${change.id}`);
+    if (change.bypassed !== void 0) node.bypassed = checkFlag("bypassed", change.bypassed);
+    return change.id;
   },
   /**
    * Move a node to a new position among the others, healing the direct
@@ -23182,7 +23214,8 @@ function changesFor(snapshot) {
       label: n2.label,
       track: n2.track,
       settings: n2.settings,
-      state: n2.state
+      state: n2.state,
+      bypassed: n2.bypassed
     })),
     ...snapshot.tracks.filter((t) => t.midiInput !== null || t.audioInput !== null).map((t) => ({ op: "setTrack", id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
     ...snapshot.connections.map((c3) => ({
@@ -23361,6 +23394,7 @@ var Project = class {
         track: n2.track,
         settings: Object.fromEntries(n2.settings),
         state: n2.state,
+        bypassed: n2.bypassed === true,
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
@@ -23589,16 +23623,26 @@ var MIDI_SIGNALS = /* @__PURE__ */ new Set([
 var isMidi = (signalKind) => MIDI_SIGNALS.has(signalKind);
 var CONTROL_ONLY = /* @__PURE__ */ new Set([vocabulary.trn.ControlMidi, vocabulary.trn.MidiCC]);
 var carriesNotes = (signalKind) => isMidi(signalKind) && !CONTROL_ONLY.has(signalKind);
+var MONITOR_EVENTS = 24;
 var EventRouter = class {
   #engine;
   #routes = /* @__PURE__ */ new Map();
   #detach = /* @__PURE__ */ new Map();
   #dropped = /* @__PURE__ */ new Map();
   #onDropped;
+  #recent = /* @__PURE__ */ new Map();
   constructor({ engine, onDropped = null }) {
     if (!engine) throw new Error("EventRouter needs an engine");
     this.#engine = engine;
     this.#onDropped = onDropped;
+  }
+  /**
+   * The last few events that went from one node to another, oldest first, for a monitor. Bounded per
+   * route (MONITOR_EVENTS) and kept on the message thread, where the router lives; nothing here is
+   * read or written from process().
+   */
+  recent(fromEngineId, toEngineId) {
+    return [...this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? []];
   }
   get routes() {
     return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
@@ -23616,6 +23660,8 @@ var EventRouter = class {
    */
   setRoutes(pairs) {
     this.#routes = /* @__PURE__ */ new Map();
+    const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`));
+    for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key);
     for (const { from, to } of pairs) {
       if (!this.#routes.has(from)) this.#routes.set(from, []);
       this.#routes.get(from).push(to);
@@ -23646,7 +23692,17 @@ var EventRouter = class {
   #forward(fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId);
     if (!targets || !events?.length) return;
-    for (const target of targets) this.send(target, events);
+    for (const target of targets) {
+      this.#remember(fromEngineId, target, events);
+      this.send(target, events);
+    }
+  }
+  #remember(from, to, events) {
+    const key = `${from}>${to}`;
+    const history = this.#recent.get(key) ?? [];
+    for (const event of events) history.push({ frame: event.frame, bytes: Uint8Array.from(event.bytes ?? []) });
+    if (history.length > MONITOR_EVENTS) history.splice(0, history.length - MONITOR_EVENTS);
+    this.#recent.set(key, history);
   }
   /**
    * Deliver events to one node.
@@ -23673,6 +23729,35 @@ var EventRouter = class {
     this.#routes.clear();
   }
 };
+
+// src/ops/Bypass.js
+var AUDIO2 = "audio";
+var MIDI2 = "midi";
+var kindOf2 = (connection) => isMidi(connection.signalKind) ? MIDI2 : AUDIO2;
+var intoMain = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
+function effectiveConnections(connections, { bypassed, passes }) {
+  let list = connections.map((c3) => c3);
+  for (let guard = 0; guard <= connections.length + 1; guard++) {
+    const target = list.flatMap((c3) => [c3.from.node, c3.to.node]).find((id) => bypassed(id) && [AUDIO2, MIDI2].some((kind) => passes(id, kind) && list.some((c3) => c3.to.node === id && kindOf2(c3) === kind && intoMain(c3)) && list.some((c3) => c3.from.node === id && kindOf2(c3) === kind)));
+    if (target === void 0) break;
+    for (const kind of [AUDIO2, MIDI2]) {
+      if (!passes(target, kind)) continue;
+      const into = list.filter((c3) => c3.to.node === target && kindOf2(c3) === kind && intoMain(c3));
+      const out = list.filter((c3) => c3.from.node === target && kindOf2(c3) === kind);
+      if (into.length === 0 || out.length === 0) continue;
+      const joined = [];
+      for (const a2 of into) {
+        for (const b of out) {
+          if (a2.from.node === b.to.node) continue;
+          joined.push({ id: `${a2.id}~${b.id}`, from: a2.from, to: b.to, signalKind: a2.signalKind });
+        }
+      }
+      const gone = /* @__PURE__ */ new Set([...into, ...out]);
+      list = [...list.filter((c3) => !gone.has(c3)), ...joined];
+    }
+  }
+  return list.filter((c3) => !bypassed(c3.from.node) && !(bypassed(c3.to.node) && passes(c3.to.node, kindOf2(c3)) && intoMain(c3)));
+}
 
 // src/engine/Transport.js
 var MINUTE = 60;
@@ -23740,11 +23825,11 @@ var Transport = class _Transport {
     for (let i2 = 0; i2 < this.#points.length; i2++) {
       const { atBeat, bpm } = this.#points[i2];
       const next = this.#points[i2 + 1]?.atBeat ?? Infinity;
-      const segment = (next - atBeat) * MINUTE / bpm;
-      if (elapsed + segment > seconds || next === Infinity) {
+      const segment2 = (next - atBeat) * MINUTE / bpm;
+      if (elapsed + segment2 > seconds || next === Infinity) {
         return atBeat + (seconds - elapsed) * bpm / MINUTE;
       }
-      elapsed += segment;
+      elapsed += segment2;
     }
     return 0;
   }
@@ -23988,7 +24073,8 @@ var UndoHistory = class {
           label: node.label,
           track: node.track,
           settings: node.settings,
-          state: node.state
+          state: node.state,
+          bypassed: node.bypassed
         });
         if (!result.ok) {
           console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`);
@@ -24010,6 +24096,7 @@ var UndoHistory = class {
           if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol);
         }
         if (live.track !== node.track) reconcile.push({ op: "moveNodeToTrack", id: node.id, track: node.track });
+        if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
       }
       const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
       for (const track of target.tracks) {
@@ -24136,6 +24223,18 @@ var OpDispatcher = class {
     const message = this.transport().messageAt(elapsedFrames, { frame, playing, startBeat });
     this.#router.broadcastTransport(message);
     return message;
+  }
+  /**
+   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
+   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
+   * loaded), or one nothing has gone over.
+   */
+  midiActivity(connectionId) {
+    const connection = this.#project.connection(connectionId);
+    if (!connection || !isMidi(connection.signalKind) || !this.#router) return [];
+    const from = this.#nodeIds.get(connection.from.node);
+    const to = this.#nodeIds.get(connection.to.node);
+    return from && to ? this.#router.recent(from, to) : [];
   }
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents(nodeId, events) {
@@ -24718,18 +24817,35 @@ var OpDispatcher = class {
   #linkSinksToTracks() {
     if (!this.#engine) return;
     const feedsSomething = /* @__PURE__ */ new Set();
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       if (isMidi(connection.signalKind)) continue;
       feedsSomething.add(connection.from.node);
     }
     for (const node of this.#project.nodes) {
       if (feedsSomething.has(node.id)) continue;
+      if (node.bypassed) continue;
       const engineId = this.#nodeIds.get(node.id);
       if (!engineId) continue;
       const entry = this.#engine.get(engineId);
       if (!(entry?.node?.numberOfOutputs > 0)) continue;
       this.#engine.linkToTrack(engineId, node.track);
     }
+  }
+  /**
+   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
+   * model keeps every connection; bypass changes only what is wired.
+   */
+  #connectionsInUse() {
+    const passes = (nodeId, kind) => {
+      const profile = this.engineNode(nodeId)?.profile;
+      if (!profile) return false;
+      if (kind === "audio") return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0;
+      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi);
+    };
+    return effectiveConnections(this.#project.connections, {
+      bypassed: (nodeId) => this.#project.node(nodeId)?.bypassed === true,
+      passes
+    });
   }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
@@ -24739,7 +24855,7 @@ var OpDispatcher = class {
     this.#syncTracks();
     this.#applyRouting();
     const midiRoutes = [];
-    for (const connection of this.#project.connections) {
+    for (const connection of this.#connectionsInUse()) {
       const from = this.#nodeIds.get(connection.from.node);
       const to = this.#nodeIds.get(connection.to.node);
       if (!from || !to) continue;
@@ -24988,6 +25104,145 @@ function readHostConfig(json) {
   return Object.freeze(settings);
 }
 
+// src/model/ClipEdit.js
+function partition(notes, at) {
+  const left = [];
+  const right = [];
+  for (const note of notes) {
+    const end = note.startBeat + note.lengthBeats;
+    if (end <= at) left.push({ ...note });
+    else if (note.startBeat >= at) right.push({ ...note, startBeat: note.startBeat - at });
+    else {
+      left.push({ ...note, lengthBeats: at - note.startBeat });
+      right.push({ ...note, startBeat: 0, lengthBeats: end - at });
+    }
+  }
+  return { left, right };
+}
+function splitClip(project, id, atBeat, { transport: transport2 = null, newId = project.nextId("clip") } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
+    throw new Error("the cut must fall inside the clip");
+  }
+  const first2 = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first2;
+  if (clip.kind === "midi") {
+    const { left, right } = partition(clip.notes, first2);
+    return [
+      { op: "setClip", id, lengthBeats: first2 },
+      { op: "setClipNotes", id, notes: left },
+      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
+    ];
+  }
+  if (!transport2) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
+  const offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(atBeat) - transport2.secondsAtBeat(clip.startBeat));
+  return [
+    { op: "setClip", id, lengthBeats: first2, fadeOutBeats: 0 },
+    { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
+  ];
+}
+function duplicateClip(project, id, { track, startBeat } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  const at = startBeat ?? clip.startBeat + clip.lengthBeats;
+  const where = track ?? clip.track;
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+}
+function trimClip(project, id, { from, to } = {}, { transport: transport2 = null } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  const end = clip.startBeat + clip.lengthBeats;
+  const start = from ?? clip.startBeat;
+  const stop = to ?? end;
+  if (!(start >= clip.startBeat && stop <= end && stop > start)) {
+    throw new Error("a trim must leave some of the clip, between its start and its end");
+  }
+  const cut = start - clip.startBeat;
+  const change = { op: "setClip", id, startBeat: start, lengthBeats: stop - start };
+  if (clip.kind === "audio") {
+    if (from !== void 0 && from > clip.startBeat) change.fadeInBeats = 0;
+    if (to !== void 0 && to < end) change.fadeOutBeats = 0;
+    if (cut > 0) {
+      if (!transport2) throw new Error("trimming the start of an audio clip needs the transport, to turn beats into seconds");
+      change.offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(start) - transport2.secondsAtBeat(clip.startBeat));
+    }
+    return [change];
+  }
+  if (cut === 0) return [change];
+  const { right } = partition(clip.notes, cut);
+  return [change, { op: "setClipNotes", id, notes: right }];
+}
+function copyClips(project, ids) {
+  const clips = ids.map((id) => {
+    const clip = project.clip(id);
+    if (!clip) throw new Error(`no such clip: ${id}`);
+    return clip;
+  });
+  if (clips.length === 0) throw new Error("there is nothing selected to copy");
+  const first2 = Math.min(...clips.map((c3) => c3.startBeat));
+  return clips.map((c3) => ({
+    track: c3.track,
+    kind: c3.kind,
+    offset: c3.startBeat - first2,
+    lengthBeats: c3.lengthBeats,
+    muted: c3.muted,
+    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
+  }));
+}
+function pasteClips(project, copied, { startBeat, track = null } = {}) {
+  if (!Array.isArray(copied) || copied.length === 0) throw new Error("there is nothing copied to paste");
+  return copied.map((c3) => {
+    const where = track ?? c3.track;
+    if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
+    const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
+    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })) } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  });
+}
+
+// src/ops/ChainReorder.js
+var audioOnly = (connection) => !isMidi(connection.signalKind);
+var mainInput = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
+function chainSwapChanges(project, nodeId, delta, { passesAudio }) {
+  if (delta !== -1 && delta !== 1) throw new Error("a chain moves one place at a time");
+  const node = project.node(nodeId);
+  if (!node) throw new Error(`no such node: ${nodeId}`);
+  const audio = project.connections.filter(audioOnly);
+  const into = (id) => audio.filter((c3) => c3.to.node === id && mainInput(c3));
+  const outOf = (id) => audio.filter((c3) => c3.from.node === id && c3.to.portSymbol === void 0);
+  const neighbours = delta === -1 ? into(nodeId) : outOf(nodeId);
+  if (neighbours.length !== 1) {
+    throw new Error(`${node.label ?? nodeId} has ${neighbours.length === 0 ? "nothing" : "several things"} ${delta === -1 ? "before" : "after"} it in an audio chain, so there is nothing to swap with`);
+  }
+  const middle = neighbours[0];
+  const a2 = delta === -1 ? middle.from.node : nodeId;
+  const b = delta === -1 ? nodeId : middle.to.node;
+  const nameOf = (id) => project.node(id)?.label ?? id;
+  if (!passesAudio(a2) || !passesAudio(b)) {
+    throw new Error(`${nameOf(a2)} and ${nameOf(b)} cannot swap: each has to take audio and give audio`);
+  }
+  if (project.node(a2).track !== project.node(b).track) throw new Error("only plugins on one track are reordered");
+  const before = into(a2);
+  const after = outOf(b);
+  if (into(b).length !== 1 || outOf(a2).length !== 1) throw new Error(`${nameOf(a2)} and ${nameOf(b)} are joined to other things as well, so the chain is not a plain one`);
+  if (before.length > 1 || after.length > 1) throw new Error("the chain branches here, so swapping would have to guess which branch goes where");
+  if (before.length === 1 && before[0].from.node === b) throw new Error("these plugins feed each other in a loop");
+  const p = before[0] ?? null;
+  const n2 = after[0] ?? null;
+  const link = (from, fromPort, to, toPort, kind) => ({
+    op: "addConnection",
+    from: { node: from, portIndex: fromPort },
+    to: { node: to, portIndex: toPort },
+    signalKind: kind
+  });
+  const removals = [p, middle, n2].filter(Boolean).map((c3) => ({ op: "removeConnection", id: c3.id }));
+  const additions = [];
+  if (p) additions.push(link(p.from.node, p.from.portIndex ?? 0, b, middle.to.portIndex ?? 0, p.signalKind));
+  additions.push(link(b, n2 ? n2.from.portIndex ?? 0 : 0, a2, p ? p.to.portIndex ?? 0 : 0, middle.signalKind));
+  if (n2) additions.push(link(a2, middle.from.portIndex ?? 0, n2.to.node, n2.to.portIndex ?? 0, n2.signalKind));
+  return [...removals, ...additions];
+}
+
 // src/catalogue/facets.js
 var TRN2 = "http://purl.org/stuff/transmissions/";
 var FACETS = Object.freeze({
@@ -25001,6 +25256,7 @@ var FACET_NAMES = Object.freeze(Object.keys(FACETS));
 var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
 
 // src/mcp/tools.js
+var POINT_SCHEMA = { type: "object", properties: { atBeat: { type: "number", minimum: 0 }, value: { type: "number" }, curve: { type: "string", enum: ["step", "linear", "smooth"] } }, required: ["atBeat", "value"] };
 var ok = (data) => ({ ok: true, ...data });
 var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
 var NOTE_SCHEMA = Object.freeze({
@@ -25422,6 +25678,86 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "clip_set",
+      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          muted: { type: "boolean" },
+          locked: { type: "boolean" },
+          fadeInBeats: { type: "number", minimum: 0 },
+          fadeOutBeats: { type: "number", minimum: 0 },
+          color: { type: ["string", "null"] },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId"]
+      },
+      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+        const change = { op: "setClip", id: clipId };
+        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+          if (value2 !== void 0) change[key] = value2;
+        }
+        const edited = Object.keys(change).length > 2;
+        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade or a color", { kind: "change" });
+        try {
+          let revision = dispatcher.project.revision;
+          if (edited) {
+            const result = dispatcher.apply([change], { expectedRevision });
+            if (!result.ok) return failed(result.message, { kind: result.kind });
+            revision = result.revision;
+          }
+          if (color !== void 0) dispatcher.project.setClipColor(clipId, color);
+          return ok({ revision, clip: { ...dispatcher.project.clip(clipId), color: dispatcher.project.clipColor(clipId) } });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_split",
+      description: "Cut a clip in two at a beat inside it. The first half keeps the clip id; the second is new and its id is returned. A note across the cut becomes two notes, an audio half starts further into the same file, and a fade in stays with the first half and a fade out goes with the second. One edit, one undo.",
+      inputSchema: {
+        type: "object",
+        properties: { clipId: { type: "string" }, atBeat: { type: "number" }, expectedRevision: { type: "integer" } },
+        required: ["clipId", "atBeat"]
+      },
+      async handler({ clipId, atBeat, expectedRevision } = {}) {
+        try {
+          const changes = splitClip(dispatcher.project, clipId, atBeat, { transport: dispatcher.transport() });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          if (!result.ok) return failed(result.message, { kind: result.kind });
+          const created = changes.find((c3) => c3.op === "addClip").id;
+          return ok({ revision: result.revision, firstClipId: clipId, secondClipId: created });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_duplicate",
+      description: "Copy a clip, by default straight after it on the same track, or at startBeat and/or on trackId. The copy is not locked. Returns the new clip id.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          startBeat: { type: "number" },
+          trackId: { type: "string" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId"]
+      },
+      async handler({ clipId, startBeat, trackId, expectedRevision } = {}) {
+        try {
+          const changes = duplicateClip(dispatcher.project, clipId, { startBeat, track: trackId });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
       name: "clip_remove",
       description: "Remove a clip and its notes. The plugins on its track are untouched.",
       inputSchema: {
@@ -25458,6 +25794,85 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         };
         const result = dispatcher.apply([change]);
         return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_add",
+      description: "Automate one parameter of a plugin: an envelope of points over the beats. Each point has atBeat, value (in the parameter's own units) and curve, which is how the value leaves it towards the next point (step holds, linear is a straight line, smooth is smoothstep). Before the first point the value holds the first value, after the last it holds the last. A parameter has one envelope. Returns its id.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeId: { type: "string" },
+          symbol: { type: "string", description: "The parameter's lv2:symbol" },
+          points: { type: "array", items: POINT_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["nodeId", "symbol", "points"]
+      },
+      async handler({ nodeId, symbol, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addEnvelope", target: { node: nodeId, symbol }, points }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, envelopeId: result.results[0] }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_set",
+      description: "Replace every point of an envelope at once, as one edit and one undo. Same point shape as envelope_add.",
+      inputSchema: {
+        type: "object",
+        properties: { envelopeId: { type: "string" }, points: { type: "array", items: POINT_SCHEMA }, expectedRevision: { type: "integer" } },
+        required: ["envelopeId", "points"]
+      },
+      async handler({ envelopeId, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setEnvelope", id: envelopeId, points }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "envelope_remove",
+      description: "Remove an envelope. The parameter keeps the value set by hand.",
+      inputSchema: {
+        type: "object",
+        properties: { envelopeId: { type: "string" }, expectedRevision: { type: "integer" } },
+        required: ["envelopeId"]
+      },
+      async handler({ envelopeId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "removeEnvelope", id: envelopeId }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, removed: envelopeId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_move_in_chain",
+      description: "Move an effect one place earlier (delta -1) or later (1) in its track's audio chain, swapping it with its neighbour and rewiring the joins, as one edit. Only a plain chain is moved: both plugins must take and give audio, and each join must be the only one, so nothing is guessed. The reason is returned when it is refused.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, delta: { type: "integer", enum: [-1, 1] }, expectedRevision: { type: "integer" } },
+        required: ["nodeId", "delta"]
+      },
+      async handler({ nodeId, delta, expectedRevision } = {}) {
+        try {
+          const passesAudio = (id) => {
+            const profile = dispatcher.engineNode(id)?.profile;
+            return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0;
+          };
+          const changes = chainSwapChanges(dispatcher.project, nodeId, delta, { passesAudio });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, nodeId, delta }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "node_bypass",
+      description: "Take a plugin out of the signal, or put it back, keeping its state. A bypassed effect passes what arrives at its input straight on, a bypassed MIDI processor passes its MIDI through, and a bypassed instrument or generator makes nothing. One edit, one undo.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, bypassed: { type: "boolean" }, expectedRevision: { type: "integer" } },
+        required: ["nodeId", "bypassed"]
+      },
+      async handler({ nodeId, bypassed, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setNode", id: nodeId, bypassed }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision, nodeId, bypassed }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -25738,6 +26153,166 @@ function createRuntime(ctx2) {
   return { ensureRunning, shapeValidator };
 }
 
+// web/app/AutomationHost.js
+function createAutomationHost(ctx2) {
+  const { log: log2 } = ctx2;
+  const touched = /* @__PURE__ */ new Map();
+  const warned = /* @__PURE__ */ new Set();
+  const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const MASTER = { masterGain: "gain", masterPan: "pan" };
+  const paramOf = (target) => target.kind !== void 0 ? MASTER[target.kind] ? ctx2.engine.masterParam(MASTER[target.kind]) : null : ctx2.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol);
+  const hold = (target, on) => {
+    if (MASTER[target.kind]) ctx2.engine.holdMaster(MASTER[target.kind], on);
+  };
+  const masterSnapshot = () => JSON.stringify(ctx2.dispatcher.project.master);
+  let masterAtStart = null;
+  const manualValue = ({ node, symbol, kind }) => {
+    if (kind === "masterGain") {
+      const m = ctx2.dispatcher.project.master;
+      return m.muted ? 0 : m.gain;
+    }
+    if (kind === "masterPan") return ctx2.dispatcher.project.master.pan;
+    const set = ctx2.dispatcher.project.node(node)?.settings.get(symbol);
+    if (set !== void 0) return set;
+    return ctx2.dispatcher.engineNode(node)?.profile?.ports?.find((p) => p.symbol === symbol)?.defaultValue;
+  };
+  let listeningTo = null;
+  const listen = () => {
+    if (listeningTo === ctx2.dispatcher) return;
+    listeningTo = ctx2.dispatcher;
+    listeningTo.subscribe((event) => {
+      if (event.type === "parameter") host.edited(event.nodeId, event.symbol, event.value);
+      else if (event.type === "changed") host.masterEdited(listeningTo.project.master);
+    });
+  };
+  const host = {
+    envelopes: () => ctx2.dispatcher.project.envelopes.filter((e) => (e.target.node !== void 0 || MASTER[e.target.kind]) && e.points.length > 0),
+    apply(envelope, instruction) {
+      listen();
+      const param = paramOf(envelope.target);
+      if (!param) return;
+      const state = touched.get(param) ?? { target: envelope.target, suspended: false };
+      touched.set(param, state);
+      if (state.suspended) return;
+      if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) return;
+      if (!state.held) {
+        hold(envelope.target, true);
+        state.held = true;
+        masterAtStart ??= masterSnapshot();
+      }
+      try {
+        if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
+        else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
+        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
+      } catch (error2) {
+        if (!warned.has(envelope.id)) {
+          warned.add(envelope.id);
+          log2(`automation ${envelope.id}: ${error2.message}`, "error");
+        }
+      }
+    },
+    /** A parameter was changed by hand (or by an agent, or by undo): it takes over from its envelope until Stop. */
+    edited(nodeId, symbol, value2) {
+      const target = { node: nodeId, symbol };
+      for (const [param, state] of touched) {
+        if (keyOf(state.target) !== keyOf(target) || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(value2, now);
+        state.suspended = true;
+        hold(state.target, false);
+        log2(`${symbol} was changed by hand, so its automation is paused until you press Stop`);
+      }
+    },
+    /**
+     * The master was changed through setMaster: an envelope on its level or pan, if one is playing, steps aside.
+     * `master` is the project's master as it is now.
+     */
+    masterEdited(master) {
+      if (masterAtStart === null || JSON.stringify(master) === masterAtStart) return;
+      for (const [param, state] of touched) {
+        if (state.target.kind === void 0 || state.suspended) continue;
+        const now = ctx2.engine.context.currentTime;
+        param.cancelScheduledValues(now);
+        state.suspended = true;
+        hold(state.target, false);
+        ctx2.engine.setMaster(master);
+        log2(`the master ${state.target.kind === "masterGain" ? "level" : "pan"} was changed by hand, so its automation is paused until you press Stop`);
+      }
+      masterAtStart = JSON.stringify(master);
+    },
+    stop() {
+      const now = ctx2.engine.context.currentTime;
+      masterAtStart = null;
+      for (const [param, state] of touched) {
+        hold(state.target, false);
+        param.cancelScheduledValues(now);
+        const value2 = manualValue(state.target);
+        if (value2 !== void 0) param.setValueAtTime(value2, now);
+      }
+      touched.clear();
+    }
+  };
+  return host;
+}
+
+// src/engine/Automation.js
+var SAMPLES_PER_SECOND = 100;
+var MAX_SAMPLES = 512;
+var smooth = (u2) => u2 * u2 * (3 - 2 * u2);
+function valueAtSeconds(points, t) {
+  if (points.length === 0) return null;
+  if (t <= points[0].t) return points[0].value;
+  const last = points[points.length - 1];
+  if (t >= last.t) return last.value;
+  let i2 = 0;
+  while (points[i2 + 1].t <= t) i2++;
+  const a2 = points[i2];
+  const b = points[i2 + 1];
+  const u2 = (t - a2.t) / (b.t - a2.t);
+  if (a2.curve === "linear") return a2.value + (b.value - a2.value) * u2;
+  if (a2.curve === "smooth") return a2.value + (b.value - a2.value) * smooth(u2);
+  return a2.value;
+}
+function segment(a2, b, t0, t1, at) {
+  if (a2.curve === "step" || !(t1 > t0)) return null;
+  const v0 = valueAtSeconds([a2, b], t0);
+  const v1 = valueAtSeconds([a2, b], t1);
+  if (a2.curve === "linear") return { kind: "ramp", at, value: v0, end: at + (t1 - t0), endValue: v1 };
+  const count = Math.min(MAX_SAMPLES, Math.max(2, Math.round((t1 - t0) * SAMPLES_PER_SECOND)));
+  const values2 = new Float32Array(count);
+  for (let k = 0; k < count; k++) values2[k] = valueAtSeconds([a2, b], t0 + (t1 - t0) * (k / (count - 1)));
+  return { kind: "curve", at, duration: t1 - t0, values: values2 };
+}
+function automationBetween(transport2, points, segments2, start, end) {
+  if (points.length === 0) return [];
+  const timed = points.map((p) => ({ t: transport2.secondsAtBeat(p.atBeat), value: p.value, curve: p.curve ?? "linear" }));
+  const out = [];
+  for (const seg of segments2) {
+    const inWindow = (t) => t >= start && t < end;
+    if (inWindow(seg.from)) {
+      out.push({ kind: "set", at: seg.from, value: valueAtSeconds(timed, seg.lo) });
+      const i2 = timed.findIndex((p, k) => p.t <= seg.lo && (k === timed.length - 1 || timed[k + 1].t > seg.lo));
+      if (i2 >= 0 && i2 < timed.length - 1) {
+        const partial = segment(timed[i2], timed[i2 + 1], seg.lo, Math.min(timed[i2 + 1].t, seg.hi), seg.from);
+        if (partial) out.push(partial);
+      }
+    }
+    for (let i2 = 0; i2 < timed.length; i2++) {
+      const p = timed[i2];
+      if (p.t < seg.lo || p.t >= seg.hi) continue;
+      const at = p.t + seg.shift;
+      if (!inWindow(at) || at === seg.from && inWindow(seg.from)) continue;
+      out.push({ kind: "set", at, value: p.value });
+      if (i2 < timed.length - 1) {
+        const leg = segment(p, timed[i2 + 1], p.t, Math.min(timed[i2 + 1].t, seg.hi), at);
+        if (leg) out.push(leg);
+      }
+    }
+  }
+  return out.sort((x, y) => x.at - y.at);
+}
+
 // src/engine/Scheduler.js
 var NOTE_ON = 144;
 var NOTE_OFF = 128;
@@ -25793,6 +26368,11 @@ function notesBetween(transport2, notes, start, end) {
   }
   return found;
 }
+var onClock = (instruction, origin) => ({
+  ...instruction,
+  at: origin + instruction.at,
+  ...instruction.end !== void 0 ? { end: origin + instruction.end } : {}
+});
 var Scheduler = class {
   #now;
   #sampleRate;
@@ -25803,6 +26383,7 @@ var Scheduler = class {
   #audio;
   #playAudio;
   #stopAudio;
+  #automation;
   #origin = null;
   #until = 0;
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
@@ -25818,8 +26399,11 @@ var Scheduler = class {
    * - `audio()`, `playAudio(clip, { when, offset, duration })` and
    *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
    *   stop them. All three or none; a host that plays no audio clips gives none.
+   * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
+   *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
+   *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio }) {
+  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== "function" || typeof notes !== "function" || typeof transport2 !== "function" || typeof send !== "function") {
       throw new Error("Scheduler needs now, notes, transport and send");
     }
@@ -25838,6 +26422,10 @@ var Scheduler = class {
     this.#audio = audio ?? null;
     this.#playAudio = playAudio ?? null;
     this.#stopAudio = stopAudio ?? null;
+    if (automation !== void 0 && ["envelopes", "apply", "stop"].some((k) => typeof automation[k] !== "function")) {
+      throw new Error("Scheduler needs automation as { envelopes, apply, stop }, or none");
+    }
+    this.#automation = automation ?? null;
   }
   get running() {
     return this.#origin !== null;
@@ -25876,6 +26464,14 @@ var Scheduler = class {
         this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on });
       }
     }
+    if (this.#automation) {
+      const passes = [...segments(transport2, start, end)];
+      for (const envelope of this.#automation.envelopes()) {
+        for (const instruction of automationBetween(transport2, envelope.points, passes, start, end)) {
+          this.#automation.apply(envelope, onClock(instruction, this.#origin));
+        }
+      }
+    }
     this.#sounding = this.#sounding.filter((s) => {
       if (s.off >= end) return true;
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
@@ -25896,6 +26492,7 @@ var Scheduler = class {
     this.#sounding = [];
     this.#origin = null;
     this.#stopAudio?.();
+    this.#automation?.stop();
     this.#deliver(outgoing);
   }
   /** In time order, and at one frame an off before an on, so a repeated note is retriggered rather than cut. */
@@ -25925,6 +26522,7 @@ function makeSource(context) {
 }
 function createTransport(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
+  const automation = createAutomationHost(ctx2);
   let playing = false;
   let startedAt = 0;
   let source = null;
@@ -25972,7 +26570,8 @@ function createTransport(ctx2) {
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),
       playAudio: (clip, at) => playAudioClip(clip, at),
-      stopAudio: () => clipPlayer.stopAll()
+      stopAudio: () => clipPlayer.stopAll(),
+      automation
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
     await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
@@ -27035,9 +27634,14 @@ function createPortBar(document2, { node, profile, pending, onPick, onCancel }) 
   }
   return element;
 }
-function createConnectionList(document2, { connections, labelFor, onRemove }) {
+function createConnectionList(document2, { connections, labelFor, onRemove, monitor }) {
+  if (typeof monitor !== "function") throw new Error("createConnectionList needs monitor");
+  const refreshers = [];
   const element = document2.createElement("div");
   element.className = "connections";
+  element.refreshMonitors = () => {
+    for (const refresh of refreshers) refresh();
+  };
   element.setAttribute("role", "group");
   element.setAttribute("aria-label", "Connections");
   if (connections.length === 0) {
@@ -27067,6 +27671,36 @@ function createConnectionList(document2, { connections, labelFor, onRemove }) {
     remove.addEventListener("click", () => onRemove(connection.id));
     row.append(badge, text, remove);
     element.append(row);
+    if (kind === "MIDI") {
+      const watch = document2.createElement("button");
+      watch.type = "button";
+      watch.className = "connection-watch";
+      watch.textContent = "Watch";
+      watch.setAttribute("aria-pressed", "false");
+      watch.setAttribute("aria-label", `Watch the MIDI on ${description}`);
+      const log2 = document2.createElement("ol");
+      log2.className = "connection-log";
+      log2.hidden = true;
+      log2.setAttribute("aria-label", `Recent MIDI on ${description}`);
+      watch.addEventListener("click", () => {
+        const on = watch.getAttribute("aria-pressed") !== "true";
+        watch.setAttribute("aria-pressed", String(on));
+        log2.hidden = !on;
+        if (on) refresh();
+      });
+      const refresh = () => {
+        if (log2.hidden) return;
+        const lines = monitor(connection.id);
+        log2.replaceChildren(...(lines.length === 0 ? ["Nothing yet"] : lines).map((line) => {
+          const item = document2.createElement("li");
+          item.textContent = line;
+          return item;
+        }));
+      };
+      row.append(watch);
+      element.append(log2);
+      refreshers.push(refresh);
+    }
   }
   return element;
 }
@@ -27175,6 +27809,35 @@ function preserveFocus(container) {
   };
 }
 
+// src/ui/MidiText.js
+var NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var noteName2 = (pitch) => `${NOTE_NAMES[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
+var hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, "0")).join(" ");
+function describeMidi(bytes) {
+  const [status = 0, a2 = 0, b = 0] = bytes;
+  if (status >= 240) return status === 248 ? "Clock" : `System message ${hex(bytes)}`;
+  const kind = status & 240;
+  const channel = (status & 15) + 1;
+  switch (kind) {
+    case 144:
+      return b > 0 ? `Note on ${noteName2(a2)}, velocity ${b}, channel ${channel}` : `Note off ${noteName2(a2)}, channel ${channel}`;
+    case 128:
+      return `Note off ${noteName2(a2)}, channel ${channel}`;
+    case 176:
+      return `Control ${a2} = ${b}, channel ${channel}`;
+    case 224:
+      return `Pitch bend ${(b << 7 | a2) - 8192}, channel ${channel}`;
+    case 192:
+      return `Program ${a2}, channel ${channel}`;
+    case 160:
+      return `Key pressure ${noteName2(a2)} = ${b}, channel ${channel}`;
+    case 208:
+      return `Channel pressure ${a2}, channel ${channel}`;
+    default:
+      return `Message ${hex(bytes)}`;
+  }
+}
+
 // web/app/Rack.js
 var NEW_TRACK = "";
 function slotTitle(node, profile, name2) {
@@ -27186,6 +27849,7 @@ function createRack(ctx2) {
   const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
   const panels = /* @__PURE__ */ new Map();
   let loadTarget = null;
+  let watching = null;
   let pending = null;
   const mixer = createMixer(document2, {
     onChange: (trackId, change) => {
@@ -27307,15 +27971,18 @@ function createRack(ctx2) {
     const heading = document2.createElement("h3");
     heading.className = "connections-heading";
     heading.textContent = "Connections";
-    rack.append(heading, createConnectionList(document2, {
+    const connectionList = createConnectionList(document2, {
       connections,
       labelFor,
+      monitor: (id) => dispatcher.midiActivity(id).map((e) => describeMidi(e.bytes)),
       onRemove: (id) => {
         const result = dispatcher.apply([{ op: "removeConnection", id }]);
         if (!result.ok) log2(result.message, "error");
         drawRack();
       }
-    }));
+    });
+    rack.append(heading, connectionList);
+    watching = connectionList;
     restoreFocus();
   }
   function drawTrack(track, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
@@ -27599,6 +28266,7 @@ function createRack(ctx2) {
       $2("target").addEventListener("change", () => {
         loadTarget = $2("target").value;
       });
+      setInterval(() => watching?.refreshMonitors(), 500);
     }
   };
 }
@@ -27927,7 +28595,7 @@ async function openProject(dispatcher, read, { onLoading = () => {
 }
 
 // src/ui/ChainModel.js
-function kindOf2(connection) {
+function kindOf3(connection) {
   if (isMidiSignal(connection.signalKind)) return "MIDI";
   return connection.to.portSymbol !== void 0 && connection.to.portSymbol !== null ? "modulation" : "audio";
 }
@@ -27944,7 +28612,7 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
       const target = project.node(c3.to.node);
       return {
         id: c3.id,
-        kind: kindOf2(c3),
+        kind: kindOf3(c3),
         toNode: c3.to.node,
         toLabel: labelOf(c3.to.node),
         toTrack: target?.track ?? null,
@@ -27957,7 +28625,7 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
       const source = project.node(c3.from.node);
       return {
         id: c3.id,
-        kind: kindOf2(c3),
+        kind: kindOf3(c3),
         fromNode: c3.from.node,
         fromLabel: labelOf(c3.from.node),
         fromTrack: source?.track ?? null,
@@ -27969,6 +28637,8 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
       label: labelOf(node.id),
       loaded: profile !== void 0,
       failed: failedOf(node.id) ?? null,
+      bypassed: node.bypassed === true,
+      passesAudio: kindsOf(inputsOf(profile)).includes("audio") && kindsOf(outputsOf(profile)).includes("audio"),
       takes: kindsOf(inputsOf(profile)),
       gives: kindsOf(outputsOf(profile)),
       takesMidiFromTrack: track?.midiInput === node.id,
@@ -27981,6 +28651,7 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
 }
 function say(node) {
   const parts = [node.label];
+  if (node.bypassed) parts.push("bypassed");
   if (node.failed) parts.push(`failed to load: ${node.failed}`);
   else if (!node.loaded) parts.push("not loaded yet");
   else {
@@ -27997,8 +28668,10 @@ function say(node) {
 }
 
 // src/ui/ChainStrip.js
-function createChainStrip(document2, { onSelect }) {
+function createChainStrip(document2, { onSelect, onBypass, onMove }) {
   if (typeof onSelect !== "function") throw new Error("createChainStrip needs onSelect");
+  if (typeof onBypass !== "function") throw new Error("createChainStrip needs onBypass");
+  if (typeof onMove !== "function") throw new Error("createChainStrip needs onMove");
   const element = document2.createElement("div");
   element.className = "timeline-chain";
   element.setAttribute("role", "group");
@@ -28011,10 +28684,11 @@ function createChainStrip(document2, { onSelect }) {
     update(chain, { label, selected = null }) {
       element.hidden = chain.nodes.length === 0;
       element.setAttribute("aria-label", `Plugins on ${label}`);
-      list.replaceChildren(...chain.nodes.map((node) => {
+      list.replaceChildren(...chain.nodes.map((node, index) => {
         const item = document2.createElement("li");
         item.className = "chain-item";
         if (node.failed) item.classList.add("failed");
+        if (node.bypassed) item.classList.add("bypassed");
         const button = document2.createElement("button");
         button.type = "button";
         button.className = "chain-node";
@@ -28023,9 +28697,19 @@ function createChainStrip(document2, { onSelect }) {
         button.setAttribute("aria-pressed", String(selected === node.id));
         button.setAttribute("aria-label", say(node));
         button.addEventListener("click", () => onSelect(node.id));
+        const before = chain.nodes[index - 1];
+        const after = chain.nodes[index + 1];
+        const canEarlier = node.passesAudio && before?.passesAudio === true;
+        const canLater = node.passesAudio && after?.passesAudio === true;
+        button.addEventListener("keydown", (event) => {
+          if (!event.altKey || event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          const delta = event.key === "ArrowLeft" ? -1 : 1;
+          if (delta === -1 ? canEarlier : canLater) onMove(node.id, delta);
+        });
         const io = document2.createElement("span");
         io.className = "chain-io";
-        io.textContent = node.failed ? "failed to load" : !node.loaded ? "loading" : `${node.takes.join(" + ") || "nothing"} in, ${node.gives.join(" + ") || "nothing"} out`;
+        io.textContent = node.failed ? "failed to load" : !node.loaded ? "loading" : node.bypassed ? "bypassed: passes what it gets" : `${node.takes.join(" + ") || "nothing"} in, ${node.gives.join(" + ") || "nothing"} out`;
         const links = document2.createElement("ul");
         links.className = "chain-links";
         links.setAttribute("aria-hidden", "true");
@@ -28041,9 +28725,280 @@ function createChainStrip(document2, { onSelect }) {
           li.textContent = `${r.kind} from ${r.fromLabel} on ${r.fromTrackLabel}`;
           links.append(li);
         }
-        item.append(button, io, links);
+        if (node.loaded && !node.failed) {
+          const bypass = document2.createElement("button");
+          bypass.type = "button";
+          bypass.className = "chain-bypass";
+          bypass.id = `chain-bypass-${node.id}`;
+          setIcon(document2, bypass, "bypass", `Bypass ${node.label}`);
+          bypass.setAttribute("aria-pressed", String(node.bypassed === true));
+          bypass.addEventListener("click", () => onBypass(node.id, !node.bypassed));
+          const head = document2.createElement("div");
+          head.className = "chain-head";
+          head.append(button, bypass);
+          for (const [delta, can, icon, text] of [[-1, canEarlier, "earlier", "Move earlier"], [1, canLater, "later", "Move later"]]) {
+            if (!can) continue;
+            const move = document2.createElement("button");
+            move.type = "button";
+            move.className = "chain-move";
+            move.id = `chain-move-${delta === -1 ? "earlier" : "later"}-${node.id}`;
+            setIcon(document2, move, icon, `${text}: ${node.label}`);
+            move.addEventListener("click", () => onMove(node.id, delta));
+            head.append(move);
+          }
+          item.append(head, io, links);
+        } else {
+          item.append(button, io, links);
+        }
         return item;
       }));
+    }
+  };
+}
+
+// src/ui/EnvelopeLane.js
+var SVG_NS3 = "http://www.w3.org/2000/svg";
+var CURVE_ORDER = ["step", "linear", "smooth"];
+var LANE_HEIGHT = 96;
+var DRAG_SLOP = 3;
+var smooth2 = (u2) => u2 * u2 * (3 - 2 * u2);
+function envelopePath(points, { ppb, height, min, max, width }) {
+  if (points.length === 0) return "";
+  const x = (beat) => beat * ppb;
+  const y = (value2) => (1 - (value2 - min) / (max - min)) * height;
+  const parts = [`M 0 ${y(points[0].value)}`, `L ${x(points[0].atBeat)} ${y(points[0].value)}`];
+  for (let i2 = 0; i2 < points.length - 1; i2++) {
+    const a2 = points[i2];
+    const b = points[i2 + 1];
+    if (a2.curve === "step") parts.push(`L ${x(b.atBeat)} ${y(a2.value)}`, `L ${x(b.atBeat)} ${y(b.value)}`);
+    else if (a2.curve === "smooth") {
+      for (let k = 1; k <= 16; k++) {
+        const u2 = k / 16;
+        parts.push(`L ${x(a2.atBeat + (b.atBeat - a2.atBeat) * u2)} ${y(a2.value + (b.value - a2.value) * smooth2(u2))}`);
+      }
+    } else parts.push(`L ${x(b.atBeat)} ${y(b.value)}`);
+  }
+  const last = points[points.length - 1];
+  parts.push(`L ${Math.max(width, x(last.atBeat))} ${y(last.value)}`);
+  return parts.join(" ");
+}
+function createEnvelopeLane(document2, { onChange, onRemove, view }) {
+  for (const [name2, fn] of Object.entries({ onChange, onRemove })) {
+    if (typeof fn !== "function") throw new Error(`createEnvelopeLane needs ${name2}`);
+  }
+  if (!view) throw new Error("createEnvelopeLane needs view, the shared TimeView");
+  const element = document2.createElement("div");
+  element.className = "envelope-lane";
+  element.setAttribute("role", "group");
+  const head = document2.createElement("div");
+  head.className = "envelope-head";
+  const title = document2.createElement("span");
+  title.className = "envelope-title";
+  const add = document2.createElement("button");
+  add.type = "button";
+  add.className = "envelope-add";
+  add.textContent = "Add point";
+  const remove = document2.createElement("button");
+  remove.type = "button";
+  remove.className = "envelope-remove";
+  head.append(title, add, remove);
+  const body = document2.createElement("div");
+  body.className = "envelope-body";
+  const svg = document2.createElementNS(SVG_NS3, "svg");
+  svg.setAttribute("class", "envelope-line");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = document2.createElementNS(SVG_NS3, "path");
+  svg.append(path);
+  body.append(svg);
+  element.append(head, body);
+  let current = null;
+  let shown = { beatsPerBar: 4, width: 0 };
+  const ppb = () => view.pixelsPerBeat;
+  const step = () => view.step(shown.beatsPerBar) ?? 0.25;
+  const clampValue = (v) => Math.min(current.max, Math.max(current.min, v));
+  const valueAtY = (y) => clampValue(current.max - Math.min(LANE_HEIGHT, Math.max(0, y)) / LANE_HEIGHT * (current.max - current.min));
+  const yOfValue = (v) => (1 - (v - current.min) / (current.max - current.min)) * LANE_HEIGHT;
+  const commit = (points) => onChange(current.id, points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve })));
+  const limits = (index) => ({
+    low: index === 0 ? 0 : current.points[index - 1].atBeat + 1e-6,
+    high: index === current.points.length - 1 ? Infinity : current.points[index + 1].atBeat - 1e-6
+  });
+  const describe = (point) => `${current.label}, ${current.speak(point.value)} at ${current.where(point.atBeat)}, ${point.curve}`;
+  function pointButton(point, index) {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.className = "envelope-point";
+    button.id = `env-${current.id}-p${index}`;
+    const dot = document2.createElement("span");
+    dot.className = "envelope-dot";
+    dot.setAttribute("aria-hidden", "true");
+    button.append(dot);
+    const label = describe(point);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.style.left = `${point.atBeat * ppb() - 22}px`;
+    button.style.top = `${yOfValue(point.value) - 22}px`;
+    button.addEventListener("keydown", (event) => {
+      const all = current.points;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        const { low, high } = limits(index);
+        const next = point.atBeat + (event.key === "ArrowRight" ? step() : -step());
+        if (next < low || next > high) return;
+        commit(all.map((p, i2) => i2 === index ? { ...p, atBeat: next } : p));
+      } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        event.preventDefault();
+        const delta = (current.max - current.min) / (event.shiftKey ? 200 : 50) * (event.key === "ArrowUp" ? 1 : -1);
+        const value2 = clampValue(point.value + delta);
+        if (value2 !== point.value) commit(all.map((p, i2) => i2 === index ? { ...p, value: value2 } : p));
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        commit(all.filter((_, i2) => i2 !== index));
+      } else if (event.key.toLowerCase() === "c" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        const curve = CURVE_ORDER[(CURVE_ORDER.indexOf(point.curve) + 1) % CURVE_ORDER.length];
+        commit(all.map((p, i2) => i2 === index ? { ...p, curve } : p));
+      }
+    });
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const origin = { x: event.clientX, y: event.clientY };
+      const rect = body.getBoundingClientRect();
+      let moved = false;
+      let landed = { atBeat: point.atBeat, value: point.value };
+      const place = (e) => {
+        const { low, high } = limits(index);
+        const beat = view.snap((e.clientX - rect.left) / ppb(), shown.beatsPerBar, { bypass: e.altKey });
+        landed = { atBeat: Math.min(high, Math.max(low, beat)), value: valueAtY(e.clientY - rect.top) };
+        button.style.left = `${landed.atBeat * ppb() - 22}px`;
+        button.style.top = `${yOfValue(landed.value) - 22}px`;
+      };
+      const move = (e) => {
+        if (!moved && Math.hypot(e.clientX - origin.x, e.clientY - origin.y) < DRAG_SLOP) return;
+        moved = true;
+        place(e);
+      };
+      const up = () => {
+        document2.removeEventListener("pointermove", move);
+        document2.removeEventListener("pointerup", up);
+        if (moved) commit(current.points.map((p, i2) => i2 === index ? { ...p, ...landed } : p));
+      };
+      document2.addEventListener("pointermove", move);
+      document2.addEventListener("pointerup", up);
+    });
+    return button;
+  }
+  body.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || event.target !== body && event.target !== svg && event.target !== path) return;
+    const rect = body.getBoundingClientRect();
+    const atBeat = view.snap((event.clientX - rect.left) / ppb(), shown.beatsPerBar, { bypass: event.altKey });
+    if (current.points.some((p) => Math.abs(p.atBeat - atBeat) < 1e-6)) return;
+    const value2 = valueAtY(event.clientY - rect.top);
+    commit([...current.points, { atBeat, value: value2, curve: "linear" }].sort((a2, b) => a2.atBeat - b.atBeat));
+  });
+  add.addEventListener("click", () => {
+    const last = current.points.at(-1);
+    const next = last ? { atBeat: last.atBeat + shown.beatsPerBar, value: last.value, curve: "linear" } : { atBeat: 0, value: clampValue(current.start), curve: "linear" };
+    commit([...current.points, next]);
+  });
+  remove.addEventListener("click", () => onRemove(current.id));
+  setIcon(document2, remove, "delete", "Remove lane");
+  return {
+    element,
+    /**
+     * `lane` is `{ id, label, min, max, start, points, speak(value), where(beat) }`: `start` the value a first
+     * point takes, `speak` a value in words, `where` a beat as "bar 2 beat 1".
+     */
+    update(lane, { beatsPerBar, width }) {
+      current = lane;
+      shown = { beatsPerBar, width };
+      element.setAttribute("aria-label", `Automation: ${lane.label}`);
+      title.textContent = `Automation: ${lane.label}`;
+      remove.setAttribute("aria-label", `Remove the automation lane for ${lane.label}`);
+      add.setAttribute("aria-label", `Add a point to ${lane.label}`);
+      body.style.width = `${width}px`;
+      body.style.height = `${LANE_HEIGHT}px`;
+      svg.setAttribute("width", String(width));
+      svg.setAttribute("height", String(LANE_HEIGHT));
+      path.setAttribute("d", envelopePath(lane.points, { ppb: ppb(), height: LANE_HEIGHT, min: lane.min, max: lane.max, width }));
+      body.replaceChildren(svg, ...lane.points.map(pointButton));
+    }
+  };
+}
+
+// src/ui/EnvelopeLanes.js
+function createEnvelopeLanes(document2, { onChange, onRemove, view }) {
+  const element = document2.createElement("div");
+  element.className = "envelope-lanes";
+  const lanes = /* @__PURE__ */ new Map();
+  return {
+    element,
+    /** `list` is the lanes for this track, each as EnvelopeLane.update takes it. */
+    update(list, { beatsPerBar, width }) {
+      for (const id of [...lanes.keys()]) if (!list.some((l) => l.id === id)) lanes.delete(id);
+      const wanted = list.map((lane) => {
+        let entry = lanes.get(lane.id);
+        if (!entry) {
+          entry = createEnvelopeLane(document2, { onChange, onRemove, view });
+          lanes.set(lane.id, entry);
+        }
+        entry.update(lane, { beatsPerBar, width });
+        return entry.element;
+      });
+      element.hidden = wanted.length === 0;
+      const same = wanted.length === element.children.length && wanted.every((e, i2) => element.children[i2] === e);
+      if (!same) element.replaceChildren(...wanted);
+    }
+  };
+}
+
+// src/ui/MasterRow.js
+function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
+  if (typeof onAutomate !== "function") throw new Error("createMasterRow needs onAutomate");
+  const element = document2.createElement("div");
+  element.className = "master-row";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Master");
+  const head = document2.createElement("form");
+  head.className = "master-head";
+  head.setAttribute("aria-label", "Automate the master");
+  const title = document2.createElement("span");
+  title.className = "master-title";
+  title.textContent = "Master";
+  const label = document2.createElement("label");
+  label.className = "track-field";
+  label.append(document2.createTextNode("Automate "));
+  const select = document2.createElement("select");
+  select.id = "automate-master";
+  label.append(select);
+  const go = document2.createElement("button");
+  go.type = "submit";
+  go.textContent = "Add lane";
+  head.append(title, label, go);
+  const lanes = createEnvelopeLanes(document2, { onChange, onRemove, view });
+  element.append(head, lanes.element);
+  let chosen = null;
+  select.addEventListener("change", () => {
+    chosen = select.value;
+  });
+  head.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (chosen) onAutomate(chosen);
+  });
+  return {
+    element,
+    /** `available` is `[{ kind, label }]` of the master's parameters with no lane yet; `list` the lanes there are. */
+    update({ list, available }, { beatsPerBar, width }) {
+      chosen = available[0]?.kind ?? null;
+      select.replaceChildren(...available.map((a2) => {
+        const option = document2.createElement("option");
+        option.value = a2.kind;
+        option.textContent = a2.label;
+        return option;
+      }));
+      label.hidden = go.hidden = available.length === 0;
+      lanes.update(list, { beatsPerBar, width });
     }
   };
 }
@@ -28332,8 +29287,8 @@ function describeClip(clip, { beatsPerBar, playsIntoNothing = false, color = nul
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
   return `${what}${clip.muted ? ", muted" : ""}${clip.locked ? ", locked" : ""}${color ? `, coloured ${colorName(color)}` : ""}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
 }
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -28413,6 +29368,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   ruler.className = "timeline-ruler";
   ruler.setAttribute("aria-hidden", "true");
   const rows = /* @__PURE__ */ new Map();
+  const masterRow = createMasterRow(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view });
   const loopRow = document2.createElement("div");
   loopRow.className = "timeline-loop";
   loopRow.setAttribute("role", "group");
@@ -28588,6 +29544,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       mixable: mixable2 = () => true,
       silent = () => false,
       loop = null,
+      lanesFor = () => [],
+      masterFor = () => ({ list: [], available: [] }),
       layoutFor = () => ({ color: null, laneSize: "medium" }),
       colorFor = () => null,
       latencyFor = () => null,
@@ -28657,9 +29615,10 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         const body = document2.createElement("div");
         body.className = "timeline-body";
         body.append(header.element, lane);
-        const strip = createChainStrip(document2, { onSelect: (id) => selection.set("node", [id]) });
-        row.append(body, strip.element);
-        entry = { row, header, lane, strip };
+        const strip = createChainStrip(document2, { onSelect: (id) => selection.set("node", [id]), onBypass, onMove: onMoveInChain });
+        const automation = createEnvelopeLanes(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view });
+        row.append(body, automation.element, strip.element);
+        entry = { row, header, lane, strip, automation };
         rows.set(track.id, entry);
       }
       const own = clips.filter((c3) => c3.track === track.id);
@@ -28686,6 +29645,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         routing: routingFor(track)
       });
       entry.strip.update(chainFor(track), { label, selected: selection.kind === "node" ? selection.ids[0] : null });
+      entry.automation.update(lanesFor(track), { beatsPerBar, width });
       entry.lane.style.width = `${width}px`;
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`;
       entry.lane.replaceChildren(...own.map((clip) => clipButton(clip, {
@@ -28699,7 +29659,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     });
     const current = [...scroller.children];
     drawLoop(loop, width);
-    const expected = [head, ruler, loopRow, ...wanted];
+    masterRow.update(masterFor(), { beatsPerBar, width });
+    const expected = [head, ruler, loopRow, ...wanted, masterRow.element];
     const same = current.length === expected.length && current.every((child, k) => child === expected[k]);
     if (!same) scroller.replaceChildren(...expected);
   }
@@ -28845,11 +29806,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
 var STEPS_PER_BEAT = 4;
 var VISIBLE_PITCHES = 24;
 var NAMES2 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-function noteName2(pitch) {
+function noteName3(pitch) {
   return `${NAMES2[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
 }
 function spokenName(pitch) {
-  return noteName2(pitch).replace("#", " sharp ");
+  return noteName3(pitch).replace("#", " sharp ");
 }
 var beats = (n2) => `${n2} beat${n2 === 1 ? "" : "s"}`;
 function noteAt(notes, pitch, beat) {
@@ -28949,7 +29910,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       const label = document2.createElement("span");
       label.className = "piano-roll-key";
       label.setAttribute("role", "rowheader");
-      label.textContent = noteName2(pitch);
+      label.textContent = noteName3(pitch);
       row.append(label);
       for (let step = 0; step < steps(); step++) {
         const cell = document2.createElement("div");
@@ -29258,102 +30219,6 @@ function createClipActions(document2, { onAction, onColor }) {
   return { element, draw };
 }
 
-// src/model/ClipEdit.js
-function partition(notes, at) {
-  const left = [];
-  const right = [];
-  for (const note of notes) {
-    const end = note.startBeat + note.lengthBeats;
-    if (end <= at) left.push({ ...note });
-    else if (note.startBeat >= at) right.push({ ...note, startBeat: note.startBeat - at });
-    else {
-      left.push({ ...note, lengthBeats: at - note.startBeat });
-      right.push({ ...note, startBeat: 0, lengthBeats: end - at });
-    }
-  }
-  return { left, right };
-}
-function splitClip(project, id, atBeat, { transport: transport2 = null, newId = project.nextId("clip") } = {}) {
-  const clip = project.clip(id);
-  if (!clip) throw new Error(`no such clip: ${id}`);
-  if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
-    throw new Error("the cut must fall inside the clip");
-  }
-  const first2 = atBeat - clip.startBeat;
-  const second = clip.lengthBeats - first2;
-  if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first2);
-    return [
-      { op: "setClip", id, lengthBeats: first2 },
-      { op: "setClipNotes", id, notes: left },
-      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
-    ];
-  }
-  if (!transport2) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
-  const offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(atBeat) - transport2.secondsAtBeat(clip.startBeat));
-  return [
-    { op: "setClip", id, lengthBeats: first2, fadeOutBeats: 0 },
-    { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
-  ];
-}
-function duplicateClip(project, id, { track, startBeat } = {}) {
-  const clip = project.clip(id);
-  if (!clip) throw new Error(`no such clip: ${id}`);
-  const at = startBeat ?? clip.startBeat + clip.lengthBeats;
-  const where = track ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
-}
-function trimClip(project, id, { from, to } = {}, { transport: transport2 = null } = {}) {
-  const clip = project.clip(id);
-  if (!clip) throw new Error(`no such clip: ${id}`);
-  const end = clip.startBeat + clip.lengthBeats;
-  const start = from ?? clip.startBeat;
-  const stop = to ?? end;
-  if (!(start >= clip.startBeat && stop <= end && stop > start)) {
-    throw new Error("a trim must leave some of the clip, between its start and its end");
-  }
-  const cut = start - clip.startBeat;
-  const change = { op: "setClip", id, startBeat: start, lengthBeats: stop - start };
-  if (clip.kind === "audio") {
-    if (from !== void 0 && from > clip.startBeat) change.fadeInBeats = 0;
-    if (to !== void 0 && to < end) change.fadeOutBeats = 0;
-    if (cut > 0) {
-      if (!transport2) throw new Error("trimming the start of an audio clip needs the transport, to turn beats into seconds");
-      change.offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(start) - transport2.secondsAtBeat(clip.startBeat));
-    }
-    return [change];
-  }
-  if (cut === 0) return [change];
-  const { right } = partition(clip.notes, cut);
-  return [change, { op: "setClipNotes", id, notes: right }];
-}
-function copyClips(project, ids) {
-  const clips = ids.map((id) => {
-    const clip = project.clip(id);
-    if (!clip) throw new Error(`no such clip: ${id}`);
-    return clip;
-  });
-  if (clips.length === 0) throw new Error("there is nothing selected to copy");
-  const first2 = Math.min(...clips.map((c3) => c3.startBeat));
-  return clips.map((c3) => ({
-    track: c3.track,
-    kind: c3.kind,
-    offset: c3.startBeat - first2,
-    lengthBeats: c3.lengthBeats,
-    muted: c3.muted,
-    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
-  }));
-}
-function pasteClips(project, copied, { startBeat, track = null } = {}) {
-  if (!Array.isArray(copied) || copied.length === 0) throw new Error("there is nothing copied to paste");
-  return copied.map((c3) => {
-    const where = track ?? c3.track;
-    if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
-    const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
-    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })) } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
-  });
-}
-
 // web/app/Arrangement.js
 function createArrangement(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
@@ -29443,6 +30308,27 @@ function createArrangement(ctx2) {
       }
     },
     onLock: (id, locked) => edit([{ op: "setClip", id, locked }]),
+    onMoveInChain: (nodeId, delta) => {
+      try {
+        const passesAudio = (id) => {
+          const profile = ctx2.dispatcher.engineNode(id)?.profile;
+          return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0;
+        };
+        edit(chainSwapChanges(ctx2.dispatcher.project, nodeId, delta, { passesAudio }));
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
+    },
+    // An automation lane edited: the whole new list of points, one edit and one undo.
+    onEnvelope: (id, points) => edit([{ op: "setEnvelope", id, points }]),
+    onRemoveEnvelope: (id) => edit([{ op: "removeEnvelope", id }]),
+    // A lane for the master's level or pan, starting at what it is now.
+    onAutomateMaster: (kind) => {
+      const { master } = ctx2.dispatcher.project;
+      const value2 = kind === "masterGain" ? master.gain : master.pan;
+      edit([{ op: "addEnvelope", target: { kind }, points: [{ atBeat: 0, value: value2, curve: "linear" }] }]);
+    },
+    onBypass: (nodeId, bypassed) => edit([{ op: "setNode", id: nodeId, bypassed }]),
     onMute: (id, muted) => edit([{ op: "setClip", id, muted }]),
     onRemove: (id) => {
       if (pianoRoll.clipId === id) pianoRoll.hide();
@@ -29499,6 +30385,44 @@ function createArrangement(ctx2) {
   }
   ctx2.selection.subscribe(drawClipActions);
   let clipboard = null;
+  function automationLanes(project, track) {
+    const nodeIds = new Set(project.nodes.filter((n2) => n2.track === track.id).map((n2) => n2.id));
+    const { beatsPerBar } = project.transport;
+    return project.envelopes.filter((e) => e.target.node !== void 0 && nodeIds.has(e.target.node)).flatMap((envelope) => {
+      const node = project.node(envelope.target.node);
+      const profile = ctx2.dispatcher.engineNode(node.id)?.profile;
+      const port = profile?.ports?.find((p) => p.symbol === envelope.target.symbol);
+      if (!port || !(port.maximum > port.minimum)) return [];
+      return [{
+        id: envelope.id,
+        label: `${node.label ?? profile.label ?? node.id}, ${port.name || port.symbol}`,
+        min: port.minimum,
+        max: port.maximum,
+        start: node.settings.get(port.symbol) ?? port.defaultValue,
+        points: envelope.points,
+        speak: (value2) => spokenValue(port, value2),
+        where: (beat) => barBeat(beat, beatsPerBar)
+      }];
+    });
+  }
+  function masterLanes(project) {
+    const { beatsPerBar } = project?.transport ?? { beatsPerBar: 4 };
+    if (!project) return { list: [], available: [] };
+    const kinds = {
+      masterGain: { label: "Master level", min: 0, max: 2, start: project.master.gain, speak: (v) => v > 0 ? `${(20 * Math.log10(v)).toFixed(1)} decibels` : "silent" },
+      masterPan: { label: "Master pan", min: -1, max: 1, start: project.master.pan, speak: (v) => v === 0 ? "centre" : `${Math.abs(v).toFixed(2)} ${v < 0 ? "left" : "right"}` }
+    };
+    const has = new Set(project.envelopes.map((e) => e.target.kind).filter(Boolean));
+    return {
+      list: project.envelopes.filter((e) => kinds[e.target.kind]).map((e) => ({
+        id: e.id,
+        ...kinds[e.target.kind],
+        points: e.points,
+        where: (beat) => barBeat(beat, beatsPerBar)
+      })),
+      available: Object.entries(kinds).filter(([kind]) => !has.has(kind)).map(([kind, k]) => ({ kind, label: k.label }))
+    };
+  }
   const playheadBeat = () => timeline.view.snap(ctx2.transport.position().beat, ctx2.dispatcher.project.transport.beatsPerBar);
   function audition(pitch, velocity) {
     const { dispatcher, engine } = ctx2;
@@ -29566,6 +30490,8 @@ function createArrangement(ctx2) {
         ]
       },
       layoutFor: (track) => project.trackLayout(track.id),
+      lanesFor: (track) => automationLanes(project, track),
+      masterFor: () => masterLanes(project),
       colorFor: (clip) => project.clipColor(clip.id),
       chainFor: (track) => describeChain(project, track.id, {
         profileOf: (id) => ctx2.dispatcher.engineNode(id)?.profile,
@@ -29615,9 +30541,9 @@ function createArrangement(ctx2) {
     }
     const bytes = new Uint8Array(await file.arrayBuffer());
     const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-    const hex = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const hex2 = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
     const extension = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? "audio").toLowerCase();
-    const iri3 = ctx2.media.iriFor(hex, extension);
+    const iri3 = ctx2.media.iriFor(hex2, extension);
     ctx2.media.put(iri3, bytes, file.type);
     const buffer = await ctx2.clipPlayer.load(iri3);
     if (!buffer) {
@@ -29954,8 +30880,8 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize }) {
 }
 
 // src/ui/NodeView.js
-function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin }) {
-  for (const [name2, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin })) {
+function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAutomate }) {
+  for (const [name2, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin, onAutomate })) {
     if (typeof fn !== "function") throw new Error(`createNodeView needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -29991,7 +30917,30 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin }) {
   const none = document2.createElement("p");
   none.className = "node-none";
   form.append(fromLabel, toLabel, go, none);
-  element.append(heading, ports, show, listMount, form);
+  const automate = document2.createElement("form");
+  automate.className = "node-automate";
+  automate.setAttribute("aria-label", "Automate a parameter of this plugin");
+  const automateLabel = document2.createElement("label");
+  automateLabel.className = "track-field";
+  automateLabel.append(document2.createTextNode("Automate "));
+  const automateSymbol = document2.createElement("select");
+  automateSymbol.id = "automate-symbol";
+  automateLabel.append(automateSymbol);
+  const automateGo = document2.createElement("button");
+  automateGo.type = "submit";
+  automateGo.id = "automate-go";
+  automateGo.textContent = "Add lane";
+  automate.append(automateLabel, automateGo);
+  let automateNode = null;
+  let automateChosen = null;
+  automateSymbol.addEventListener("change", () => {
+    automateChosen = automateSymbol.value;
+  });
+  automate.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (automateNode && automateChosen) onAutomate(automateNode, automateChosen);
+  });
+  element.append(heading, ports, show, listMount, form, automate);
   let sources = [];
   let targets = [];
   let fromIndex = 0;
@@ -30023,23 +30972,40 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin }) {
     const target = targets[toIndex];
     if (port && target) onConnect({ from: port, to: target.port, toNode: target.node });
   });
+  let list = null;
   return {
     element,
+    /** Redraw the open MIDI watches; the page calls this on a timer while the view is showing. */
+    refreshMonitors() {
+      list?.refreshMonitors();
+    },
     /**
      * `node` is the model's node, `profile` its profile or undefined,
      * `connections` those that involve it, `others` every other node as
      * `{ node, profile, label, trackLabel }`, `labelFor(id)` a node's name.
      */
-    show({ node, label, trackLabel, profile, connections, others, labelFor, onlyPort = null }) {
+    show({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = /* @__PURE__ */ new Set(), onlyPort = null }) {
       heading.textContent = `${label}, on ${trackLabel}.`;
       const ins = inputsOf(profile).filter((p) => p.portSymbol === void 0).map((p) => p.name);
       const outs = outputsOf(profile).map((p) => p.name);
       ports.textContent = profile ? `Takes: ${ins.join(", ") || "nothing"}. Gives: ${outs.join(", ") || "nothing"}.` : "Not loaded, so its ports are not known.";
-      listMount.replaceChildren(createConnectionList(document2, {
+      list = createConnectionList(document2, {
         connections,
         labelFor: (id) => id === node.id ? label : labelFor(id),
-        onRemove: onDisconnect
+        onRemove: onDisconnect,
+        monitor
+      });
+      listMount.replaceChildren(list);
+      const automatable = (profile?.ports ?? []).filter((p) => Number.isFinite(p.minimum) && p.maximum > p.minimum && !automated.has(p.symbol));
+      automateNode = node.id;
+      automateChosen = automatable[0]?.symbol ?? null;
+      automateSymbol.replaceChildren(...automatable.map((p) => {
+        const option = document2.createElement("option");
+        option.value = p.symbol;
+        option.textContent = p.name || p.symbol;
+        return option;
       }));
+      automate.hidden = automatable.length === 0;
       sources = outputsOf(profile).map((p) => ({ node: node.id, portIndex: p.portIndex, kind: p.kind, name: p.name }));
       targets = others.flatMap((other) => inputsOf(other.profile).map((port) => ({
         node: other.node.id,
@@ -30251,6 +31217,15 @@ function createDockPanel(ctx2) {
         log2(`connected ${name2(from.node)} to ${name2(to.node)}`, "ok");
       }
     },
+    // A lane for one parameter, starting at the value it has now. The lane is drawn under the track.
+    onAutomate: (nodeId, symbol) => {
+      const { project } = ctx2.dispatcher;
+      const port = ctx2.dispatcher.engineNode(nodeId)?.profile?.ports?.find((p) => p.symbol === symbol);
+      const start = project.node(nodeId)?.settings.get(symbol) ?? port?.defaultValue;
+      const result = ctx2.dispatcher.apply([{ op: "addEnvelope", target: { node: nodeId, symbol }, points: start === void 0 ? [] : [{ atBeat: 0, value: start, curve: "linear" }] }]);
+      if (!result.ok) log2(result.message, "error");
+      else log2(`added an automation lane for ${port?.name ?? symbol}, under the track`, "ok");
+    },
     onShowPlugin: () => {
       ctx2.tabs.select("tracks");
       document2.getElementById(`track-group-${nodeTrack}`)?.scrollIntoView({ block: "start" });
@@ -30341,7 +31316,9 @@ function createDockPanel(ctx2) {
           label: labelOf(n2.id),
           trackLabel: tl(n2.track)
         })),
-        labelFor: labelOf
+        labelFor: labelOf,
+        automated: new Set(project.envelopes.filter((e) => e.target.node === node.id).map((e) => e.target.symbol)),
+        monitor: (connectionId) => ctx2.dispatcher.midiActivity(connectionId).map((e) => describeMidi(e.bytes))
       });
       dock.show("node", `Editor: ${labelOf(node.id)}`);
       return;
@@ -30400,6 +31377,9 @@ function createDockPanel(ctx2) {
     }
   }
   ctx2.selection.subscribe(() => update());
+  setInterval(() => {
+    if (dock.shown === "node") nodeView.refreshMonitors();
+  }, 500);
   return { dock, update, slot: (name2) => dock.slot(name2), get element() {
     return dock.element;
   } };
@@ -31182,6 +32162,7 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     if (settings.length > 0) {
       lines.push(`    ${term2(jig4.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
+    if (node.bypassed) lines.push(`    ${term2(jig4.bypassed)} true ;`);
     if (node.state) lines.push(`    ${term2(jig4.nodeState)} ${string(node.state)} ;`);
     lines.push(`    ${term2(jig4.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
@@ -31511,6 +32492,7 @@ function readProject(dataset2) {
       track: onTrack === null ? null : idOf(onTrack, iri3, `track of node ${id}`),
       settings,
       state: value(one2(dataset2, nodeIri, jig5.nodeState)),
+      ...one2(dataset2, nodeIri, jig5.bypassed)?.value === "true" ? { bypassed: true } : {},
       // Only read to fold a session from before tracks, below.
       channel: readChannel(dataset2, nodeIri, id)
     });

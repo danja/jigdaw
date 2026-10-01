@@ -29,7 +29,7 @@ const EXPECTED = {
   'examples/reference-foreign.ttl': 0,
   'examples/reference-collection.ttl': 0,
   'examples/counterexample-profile.ttl': 14,
-  'examples/counterexample-project.ttl': 43,
+  'examples/counterexample-project.ttl': 44,
   'examples/counterexample-provenance.ttl': 11,
   'examples/counterexample-foreign.ttl': 11,
   'examples/counterexample-collection.ttl': 6

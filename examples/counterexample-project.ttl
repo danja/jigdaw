@@ -32,6 +32,8 @@
 <#b>
     a jig:Node ;
     jig:onTrack <#track> , <#other-track> ;
+    # Neither true nor false.
+    jig:bypassed "sometimes" ;
     jig:plugin <https://example.org/plugins/pulse/> .
 
 <#other-track> a jig:Track .

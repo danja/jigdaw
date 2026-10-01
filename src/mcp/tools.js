@@ -10,9 +10,13 @@
 // Nothing here knows how a tool is registered with a user agent. That binding
 // is not settled and lives in adapter.js, so when the API moves one file
 // changes and this one does not.
+import { splitClip, duplicateClip } from '../model/ClipEdit.js'
+import { chainSwapChanges } from '../ops/ChainReorder.js'
 import { FACET_NAMES, expandTerm as expand, compactTerm as compact } from '../catalogue/facets.js'
 
 /** A tool result, in the shape every handler returns. */
+const POINT_SCHEMA = { type: 'object', properties: { atBeat: { type: 'number', minimum: 0 }, value: { type: 'number' }, curve: { type: 'string', enum: ['step', 'linear', 'smooth'] } }, required: ['atBeat', 'value'] }
+
 const ok = data => ({ ok: true, ...data })
 const failed = (message, extra = {}) => ({ ok: false, error: message, ...extra })
 
@@ -500,6 +504,95 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     },
 
     {
+      name: 'clip_set',
+      description:
+        'Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked ' +
+        'refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); ' +
+        'fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case ' +
+        '#rrggbb or null, editor metadata that changes no revision and has no undo.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' },
+          muted: { type: 'boolean' },
+          locked: { type: 'boolean' },
+          fadeInBeats: { type: 'number', minimum: 0 },
+          fadeOutBeats: { type: 'number', minimum: 0 },
+          color: { type: ['string', 'null'] },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId']
+      },
+      async handler ({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+        const change = { op: 'setClip', id: clipId }
+        for (const [key, value] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+          if (value !== undefined) change[key] = value
+        }
+        const edited = Object.keys(change).length > 2
+        if (!edited && color === undefined) return failed('nothing to change: give muted, locked, a fade or a color', { kind: 'change' })
+        try {
+          let revision = dispatcher.project.revision
+          if (edited) {
+            const result = dispatcher.apply([change], { expectedRevision })
+            if (!result.ok) return failed(result.message, { kind: result.kind })
+            revision = result.revision
+          }
+          if (color !== undefined) dispatcher.project.setClipColor(clipId, color)
+          return ok({ revision, clip: { ...dispatcher.project.clip(clipId), color: dispatcher.project.clipColor(clipId) } })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+
+    {
+      name: 'clip_split',
+      description:
+        'Cut a clip in two at a beat inside it. The first half keeps the clip id; the second is new and its id ' +
+        'is returned. A note across the cut becomes two notes, an audio half starts further into the same file, ' +
+        'and a fade in stays with the first half and a fade out goes with the second. One edit, one undo.',
+      inputSchema: {
+        type: 'object',
+        properties: { clipId: { type: 'string' }, atBeat: { type: 'number' }, expectedRevision: { type: 'integer' } },
+        required: ['clipId', 'atBeat']
+      },
+      async handler ({ clipId, atBeat, expectedRevision } = {}) {
+        try {
+          const changes = splitClip(dispatcher.project, clipId, atBeat, { transport: dispatcher.transport() })
+          const result = dispatcher.apply(changes, { expectedRevision })
+          if (!result.ok) return failed(result.message, { kind: result.kind })
+          const created = changes.find(c => c.op === 'addClip').id
+          return ok({ revision: result.revision, firstClipId: clipId, secondClipId: created })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+
+    {
+      name: 'clip_duplicate',
+      description:
+        'Copy a clip, by default straight after it on the same track, or at startBeat and/or on trackId. The copy ' +
+        'is not locked. Returns the new clip id.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' }, startBeat: { type: 'number' }, trackId: { type: 'string' }, expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId']
+      },
+      async handler ({ clipId, startBeat, trackId, expectedRevision } = {}) {
+        try {
+          const changes = duplicateClip(dispatcher.project, clipId, { startBeat, track: trackId })
+          const result = dispatcher.apply(changes, { expectedRevision })
+          return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+
+    {
       name: 'clip_remove',
       description: 'Remove a clip and its notes. The plugins on its track are untouched.',
       inputSchema: {
@@ -537,6 +630,98 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         return result.ok
           ? ok({ revision: result.revision, connection: result.results[0] })
           : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'envelope_add',
+      description:
+        'Automate one parameter of a plugin: an envelope of points over the beats. Each point has atBeat, value (in ' +
+        'the parameter\'s own units) and curve, which is how the value leaves it towards the next point (step holds, ' +
+        'linear is a straight line, smooth is smoothstep). Before the first point the value holds the first value, ' +
+        'after the last it holds the last. A parameter has one envelope. Returns its id.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nodeId: { type: 'string' }, symbol: { type: 'string', description: 'The parameter\'s lv2:symbol' },
+          points: { type: 'array', items: POINT_SCHEMA }, expectedRevision: { type: 'integer' }
+        },
+        required: ['nodeId', 'symbol', 'points']
+      },
+      async handler ({ nodeId, symbol, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addEnvelope', target: { node: nodeId, symbol }, points }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, envelopeId: result.results[0] }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'envelope_set',
+      description: 'Replace every point of an envelope at once, as one edit and one undo. Same point shape as envelope_add.',
+      inputSchema: {
+        type: 'object',
+        properties: { envelopeId: { type: 'string' }, points: { type: 'array', items: POINT_SCHEMA }, expectedRevision: { type: 'integer' } },
+        required: ['envelopeId', 'points']
+      },
+      async handler ({ envelopeId, points, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'setEnvelope', id: envelopeId, points }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'envelope_remove',
+      description: 'Remove an envelope. The parameter keeps the value set by hand.',
+      inputSchema: {
+        type: 'object',
+        properties: { envelopeId: { type: 'string' }, expectedRevision: { type: 'integer' } },
+        required: ['envelopeId']
+      },
+      async handler ({ envelopeId, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'removeEnvelope', id: envelopeId }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, removed: envelopeId }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'node_move_in_chain',
+      description:
+        'Move an effect one place earlier (delta -1) or later (1) in its track\'s audio chain, swapping it with its ' +
+        'neighbour and rewiring the joins, as one edit. Only a plain chain is moved: both plugins must take and give ' +
+        'audio, and each join must be the only one, so nothing is guessed. The reason is returned when it is refused.',
+      inputSchema: {
+        type: 'object',
+        properties: { nodeId: { type: 'string' }, delta: { type: 'integer', enum: [-1, 1] }, expectedRevision: { type: 'integer' } },
+        required: ['nodeId', 'delta']
+      },
+      async handler ({ nodeId, delta, expectedRevision } = {}) {
+        try {
+          const passesAudio = id => {
+            const profile = dispatcher.engineNode(id)?.profile
+            return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0
+          }
+          const changes = chainSwapChanges(dispatcher.project, nodeId, delta, { passesAudio })
+          const result = dispatcher.apply(changes, { expectedRevision })
+          return result.ok ? ok({ revision: result.revision, nodeId, delta }) : failed(result.message, { kind: result.kind })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+
+    {
+      name: 'node_bypass',
+      description:
+        'Take a plugin out of the signal, or put it back, keeping its state. A bypassed effect passes what ' +
+        'arrives at its input straight on, a bypassed MIDI processor passes its MIDI through, and a bypassed ' +
+        'instrument or generator makes nothing. One edit, one undo.',
+      inputSchema: {
+        type: 'object',
+        properties: { nodeId: { type: 'string' }, bypassed: { type: 'boolean' }, expectedRevision: { type: 'integer' } },
+        required: ['nodeId', 'bypassed']
+      },
+      async handler ({ nodeId, bypassed, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'setNode', id: nodeId, bypassed }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision, nodeId, bypassed }) : failed(result.message, { kind: result.kind })
       }
     },
 

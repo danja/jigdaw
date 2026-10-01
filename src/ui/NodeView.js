@@ -12,8 +12,8 @@
 import { outputsOf, inputsOf, compatible } from '../model/Endpoints.js'
 import { createConnectionList } from './Routing.js'
 
-export function createNodeView (document, { onDisconnect, onConnect, onShowPlugin }) {
-  for (const [name, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin })) {
+export function createNodeView (document, { onDisconnect, onConnect, onShowPlugin, onAutomate }) {
+  for (const [name, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin, onAutomate })) {
     if (typeof fn !== 'function') throw new Error(`createNodeView needs ${name}`)
   }
   const element = document.createElement('div')
@@ -50,7 +50,29 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
   const none = document.createElement('p')
   none.className = 'node-none'
   form.append(fromLabel, toLabel, go, none)
-  element.append(heading, ports, show, listMount, form)
+  // Automate a parameter: adds a lane under the track, where its envelope is drawn and edited.
+  const automate = document.createElement('form')
+  automate.className = 'node-automate'
+  automate.setAttribute('aria-label', 'Automate a parameter of this plugin')
+  const automateLabel = document.createElement('label')
+  automateLabel.className = 'track-field'
+  automateLabel.append(document.createTextNode('Automate '))
+  const automateSymbol = document.createElement('select')
+  automateSymbol.id = 'automate-symbol'
+  automateLabel.append(automateSymbol)
+  const automateGo = document.createElement('button')
+  automateGo.type = 'submit'
+  automateGo.id = 'automate-go'
+  automateGo.textContent = 'Add lane'
+  automate.append(automateLabel, automateGo)
+  let automateNode = null
+  let automateChosen = null
+  automateSymbol.addEventListener('change', () => { automateChosen = automateSymbol.value })
+  automate.addEventListener('submit', event => {
+    event.preventDefault()
+    if (automateNode && automateChosen) onAutomate(automateNode, automateChosen)
+  })
+  element.append(heading, ports, show, listMount, form, automate)
 
   let sources = []
   let targets = []
@@ -83,23 +105,41 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
     if (port && target) onConnect({ from: port, to: target.port, toNode: target.node })
   })
 
+  let list = null
+
   return {
     element,
+    /** Redraw the open MIDI watches; the page calls this on a timer while the view is showing. */
+    refreshMonitors () { list?.refreshMonitors() },
     /**
      * `node` is the model's node, `profile` its profile or undefined,
      * `connections` those that involve it, `others` every other node as
      * `{ node, profile, label, trackLabel }`, `labelFor(id)` a node's name.
      */
-    show ({ node, label, trackLabel, profile, connections, others, labelFor, onlyPort = null }) {
+    show ({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = new Set(), onlyPort = null }) {
       heading.textContent = `${label}, on ${trackLabel}.`
       const ins = inputsOf(profile).filter(p => p.portSymbol === undefined).map(p => p.name)
       const outs = outputsOf(profile).map(p => p.name)
       ports.textContent = profile
         ? `Takes: ${ins.join(', ') || 'nothing'}. Gives: ${outs.join(', ') || 'nothing'}.`
         : 'Not loaded, so its ports are not known.'
-      listMount.replaceChildren(createConnectionList(document, {
-        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect
+      list = createConnectionList(document, {
+        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect, monitor
+      })
+      listMount.replaceChildren(list)
+
+      // A parameter that has a range and is not automated yet can be given a lane; the form is left out
+      // when there is nothing to offer, not shown empty.
+      const automatable = (profile?.ports ?? []).filter(p => Number.isFinite(p.minimum) && p.maximum > p.minimum && !automated.has(p.symbol))
+      automateNode = node.id
+      automateChosen = automatable[0]?.symbol ?? null
+      automateSymbol.replaceChildren(...automatable.map(p => {
+        const option = document.createElement('option')
+        option.value = p.symbol
+        option.textContent = p.name || p.symbol
+        return option
       }))
+      automate.hidden = automatable.length === 0
 
       sources = outputsOf(profile).map(p => ({ node: node.id, portIndex: p.portIndex, kind: p.kind, name: p.name }))
       targets = others.flatMap(other => inputsOf(other.profile).map(port => ({

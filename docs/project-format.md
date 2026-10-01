@@ -157,6 +157,10 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   resolves against the session document, so a session saved beside a `media/` folder is
   portable as a folder. `jig:offsetSeconds` is where in the file the clip begins, in seconds
   rather than beats, because a recording does not change length when the tempo does.
+- A node with `jig:bypassed true` is in the project and out of the signal, and keeps its state. An
+  effect passes what reaches its main input straight to where its output goes, a MIDI processor passes its
+  MIDI through, and a node with no input to pass (an instrument, a generator) makes nothing. Connections to
+  a parameter or to a second input, such as a sidechain key, stay where they are. Absent means false.
 - A clip with `jig:muted true` is kept and not played: it stays on its lane and in the file,
   and a host MUST NOT sound it. Absent means false, and a writer leaves it out rather than
   writing `false`.
@@ -208,6 +212,16 @@ or one project-level target by `jig:targetKind`: `jig:MasterGain`, `jig:MasterPa
 A point carries `jig:atBeat`, `jig:pointValue` in the parameter's own units, and `jig:curve`:
 `jig:Step`, `jig:Linear` or `jig:Smooth`. Points are keyed by beat and read in beat order, never
 by their place in the file.
+
+A host plays an envelope on a plugin parameter by scheduling the parameter on the audio clock, from
+stream position and not from block counting. A point's curve is how the value leaves it towards the
+next point. Before the first point the value holds the first point's value and after the last it holds
+the last. When a loop begins a pass the value is set to what the envelope has at the loop start, partway
+along a segment if the loop starts inside one, so every pass sounds alike. Stopping puts the parameter
+back to the value set by hand, which the envelope never overwrites in the project. Jiggy does this for
+node parameters and for the master's level and pan, which it holds against its own rebuilds of the graph while
+an envelope plays on them and releases on Stop or on a change by hand; a tempo envelope is carried by the file
+and not yet played.
 
 Three rules the shapes cannot say, and the model enforces:
 

@@ -15,6 +15,7 @@ import { createKeyboard, octavesForWidth, playable } from '../../src/ui/Keyboard
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { isMidi, carriesNotes } from '../../src/engine/EventRouter.js'
 import { compact } from '../../src/host/Capabilities.js'
+import { describeMidi } from '../../src/ui/MidiText.js'
 
 // Where Load puts a plugin: a track id, or NEW_TRACK for a track of its own.
 export const NEW_TRACK = ''
@@ -41,6 +42,8 @@ export function createRack (ctx) {
   // The track last chosen or last loaded onto; null until then, which means
   // the newest track.
   let loadTarget = null
+  // The connection list on the page now, so its open MIDI watches can be redrawn on a timer.
+  let watching = null
   // The output a person has chosen, while they choose an input. Held here rather
   // than in a slot because every node's ports have to know about it: an input
   // can only say whether it may take this output if it knows what the output is.
@@ -212,15 +215,18 @@ export function createRack (ctx) {
     const heading = document.createElement('h3')
     heading.className = 'connections-heading'
     heading.textContent = 'Connections'
-    rack.append(heading, createConnectionList(document, {
+    const connectionList = createConnectionList(document, {
       connections,
       labelFor,
+      monitor: id => dispatcher.midiActivity(id).map(e => describeMidi(e.bytes)),
       onRemove: id => {
         const result = dispatcher.apply([{ op: 'removeConnection', id }])
         if (!result.ok) log(result.message, 'error')
         drawRack()
       }
-    }))
+    })
+    rack.append(heading, connectionList)
+    watching = connectionList
 
     restoreFocus()
   }
@@ -589,6 +595,8 @@ export function createRack (ctx) {
       $('mixer').replaceWith(mixer.element)
       mixer.element.id = 'mixer'
       $('target').addEventListener('change', () => { loadTarget = $('target').value })
+      // Open MIDI watches on the Plugins tab follow the traffic, on the message thread.
+      setInterval(() => watching?.refreshMonitors(), 500)
     }
   }
 }

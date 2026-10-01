@@ -18,6 +18,8 @@
 // elapsed time before the loop end plays as written, and each pass after it
 // plays the loop again. A note that runs past the loop end is cut there.
 
+import { automationBetween } from './Automation.js'
+
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
 
@@ -66,7 +68,7 @@ export function clipAudio (project) {
  * [lo, hi), and a song time t is heard at elapsed t + shift. Only the
  * stretches that overlap elapsed [start, end).
  */
-function * segments (transport, start, end) {
+export function * segments (transport, start, end) {
   const loop = transport.loop
   if (!loop.enabled) {
     yield { from: 0, to: Infinity, lo: 0, hi: Infinity, shift: 0 }
@@ -107,6 +109,13 @@ export function notesBetween (transport, notes, start, end) {
   return found
 }
 
+/** An instruction from automationBetween with its times moved from elapsed seconds to the audio clock's. */
+const onClock = (instruction, origin) => ({
+  ...instruction,
+  at: origin + instruction.at,
+  ...(instruction.end !== undefined ? { end: origin + instruction.end } : {})
+})
+
 export class Scheduler {
   #now
   #sampleRate
@@ -117,6 +126,7 @@ export class Scheduler {
   #audio
   #playAudio
   #stopAudio
+  #automation
   #origin = null
   #until = 0
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
@@ -133,8 +143,11 @@ export class Scheduler {
    * - `audio()`, `playAudio(clip, { when, offset, duration })` and
    *   `stopAudio()`: the audio clips, from clipAudio, and how to start and
    *   stop them. All three or none; a host that plays no audio clips gives none.
+   * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
+   *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
+   *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor ({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio }) {
+  constructor ({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== 'function' || typeof notes !== 'function' || typeof transport !== 'function' || typeof send !== 'function') {
       throw new Error('Scheduler needs now, notes, transport and send')
     }
@@ -153,6 +166,10 @@ export class Scheduler {
     this.#audio = audio ?? null
     this.#playAudio = playAudio ?? null
     this.#stopAudio = stopAudio ?? null
+    if (automation !== undefined && ['envelopes', 'apply', 'stop'].some(k => typeof automation[k] !== 'function')) {
+      throw new Error('Scheduler needs automation as { envelopes, apply, stop }, or none')
+    }
+    this.#automation = automation ?? null
   }
 
   get running () { return this.#origin !== null }
@@ -196,6 +213,15 @@ export class Scheduler {
         this.#playAudio(clip, { when: this.#origin + clip.on, offset: clip.offsetSeconds, duration: clip.off - clip.on })
       }
     }
+    // Envelopes move a parameter on the audio clock: the same windows, looped the same way as the notes.
+    if (this.#automation) {
+      const passes = [...segments(transport, start, end)]
+      for (const envelope of this.#automation.envelopes()) {
+        for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
+          this.#automation.apply(envelope, onClock(instruction, this.#origin))
+        }
+      }
+    }
     this.#sounding = this.#sounding.filter(s => {
       if (s.off >= end) return true
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0)
@@ -217,6 +243,7 @@ export class Scheduler {
     this.#sounding = []
     this.#origin = null
     this.#stopAudio?.()
+    this.#automation?.stop()
     this.#deliver(outgoing)
   }
 

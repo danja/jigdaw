@@ -481,6 +481,31 @@ describe('Engine sends, bus outputs and the master', () => {
   })
 })
 
+describe('the master under an envelope', () => {
+  const make = () => {
+    const context = fakeContext()
+    return { context, engine: new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode }) }
+  }
+
+  it('gives out the master\'s level, and its pan where the context has one, and refuses anything else', () => {
+    const { engine } = make()
+    expect(engine.masterParam('gain')).toBe(engine.master.gain)
+    expect(() => engine.masterParam('width')).toThrow(/no width/)
+    expect(() => engine.holdMaster('width', true)).toThrow(/no width/)
+  })
+
+  it('leaves a held parameter alone when the master is set, and sets it again when let go', () => {
+    const { context, engine } = make()
+    context.currentTime = 3
+    engine.holdMaster('gain', true)
+    engine.setMaster({ gain: 0.4, pan: 0 })
+    expect(engine.master.gain.scheduled).toEqual([])
+    engine.holdMaster('gain', false)
+    engine.setMaster({ gain: 0.4, pan: 0 })
+    expect(engine.master.gain.scheduled.at(-1)).toEqual({ value: 0.4, at: 3 })
+  })
+})
+
 describe('Engine live input (a microphone into a track)', () => {
   const make = () => {
     const context = fakeContext()

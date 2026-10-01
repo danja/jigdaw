@@ -3,6 +3,7 @@
 // Play and Stop, the position readout and the output meter. While the
 // transport runs, the scheduler plays the tracks' clips (src/engine/Scheduler.js)
 // and every plugin is told where the transport is (contract section 7).
+import { createAutomationHost } from './AutomationHost.js'
 import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
 
 /** A repeating impulse, so an effect has something to work on. */
@@ -24,6 +25,8 @@ function makeSource (context) {
 
 export function createTransport (ctx) {
   const { document, $, log } = ctx
+  // Envelopes on plugin parameters, played by the scheduler; a hand edit while one plays suspends it (AutomationHost.js).
+  const automation = createAutomationHost(ctx)
   let playing = false
   let startedAt = 0
   let source = null
@@ -92,7 +95,8 @@ export function createTransport (ctx) {
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),
       playAudio: (clip, at) => playAudioClip(clip, at),
-      stopAudio: () => clipPlayer.stopAll()
+      stopAudio: () => clipPlayer.stopAll(),
+      automation: automation
     })
     // Every audio clip's file decoded before the clock starts, so the first
     // pass plays them; one that cannot be had is said once and left silent.

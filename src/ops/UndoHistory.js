@@ -115,7 +115,7 @@ export class UndoHistory {
       for (const node of target.nodes) {
         if (currentIds.has(node.id)) continue
         const result = await dispatcher.addPlugin(node.pluginIri, {
-          id: node.id, label: node.label, track: node.track, settings: node.settings, state: node.state
+          id: node.id, label: node.label, track: node.track, settings: node.settings, state: node.state, bypassed: node.bypassed
         })
         if (!result.ok) {
           console.warn(`undo/redo: could not reload ${node.pluginIri} as ${node.id}: ${result.message}`)
@@ -144,6 +144,7 @@ export class UndoHistory {
           if (!(symbol in (node.settings ?? {}))) dispatcher.resetParameter(node.id, symbol)
         }
         if (live.track !== node.track) reconcile.push({ op: 'moveNodeToTrack', id: node.id, track: node.track })
+        if ((live.bypassed === true) !== (node.bypassed === true)) reconcile.push({ op: 'setNode', id: node.id, bypassed: node.bypassed === true })
       }
 
       // Every track the target has now exists. Its channel is always fully

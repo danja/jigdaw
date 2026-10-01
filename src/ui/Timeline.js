@@ -37,6 +37,8 @@
 
 import { createTrackHeader } from './TrackHeader.js'
 import { createChainStrip } from './ChainStrip.js'
+import { createEnvelopeLanes } from './EnvelopeLanes.js'
+import { createMasterRow } from './MasterRow.js'
 import { Selection } from '../model/Selection.js'
 import { setIcon } from './Icons.js'
 import { colorName } from './TrackPanel.js'
@@ -74,14 +76,18 @@ export function describeClip (clip, { beatsPerBar, playsIntoNothing = false, col
  * - `onLock(clipId, locked)`: protect a clip from being moved, edited or deleted.
  * - `onMute(clipId, muted)`: keep a clip on the lane but do not play it.
  * - `onCopy(clipId)`, `onCut(clipId)` and `onPaste(clipId)`: Ctrl or Cmd with C, X and V; the page holds the clipboard.
+ * - `onAutomateMaster(kind)`: add a lane for the master's 'masterGain' or 'masterPan'.
+ * - `onEnvelope(envelopeId, points)` and `onRemoveEnvelope(envelopeId)`: an automation lane edited, or taken away.
+ * - `onMoveInChain(nodeId, delta)`: move a plugin one place earlier (-1) or later (1) in its audio chain.
+ * - `onBypass(nodeId, bypassed)`: take a plugin out of the signal, or put it back.
  * - `onTrim(clipId, edge)`: shorten a clip to the playhead, from its 'start' or its 'end'.
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
  * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
   const element = document.createElement('div')
@@ -168,6 +174,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   ruler.className = 'timeline-ruler'
   ruler.setAttribute('aria-hidden', 'true')
   const rows = new Map()
+  // The master's own row after the tracks: its automation lanes and the way to add one.
+  const masterRow = createMasterRow(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view })
   const loopRow = document.createElement('div')
   loopRow.className = 'timeline-loop'
   loopRow.setAttribute('role', 'group')
@@ -347,7 +355,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     scroller.style.setProperty('--view', `${scroller.clientWidth}px`)
     const {
       tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null,
-      mixable = () => true, silent = () => false, loop = null,
+      mixable = () => true, silent = () => false, loop = null, lanesFor = () => [], masterFor = () => ({ list: [], available: [] }),
       layoutFor = () => ({ color: null, laneSize: 'medium' }),
       colorFor = () => null,
       latencyFor = () => null,
@@ -421,9 +429,10 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         const body = document.createElement('div')
         body.className = 'timeline-body'
         body.append(header.element, lane)
-        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]) })
-        row.append(body, strip.element)
-        entry = { row, header, lane, strip }
+        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]), onBypass, onMove: onMoveInChain })
+        const automation = createEnvelopeLanes(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view })
+        row.append(body, automation.element, strip.element)
+        entry = { row, header, lane, strip, automation }
         rows.set(track.id, entry)
       }
       const own = clips.filter(c => c.track === track.id)
@@ -439,6 +448,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         color: layout.color, size: layout.laneSize, latency: latencyFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
       })
       entry.strip.update(chainFor(track), { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
+      entry.automation.update(lanesFor(track), { beatsPerBar, width })
       entry.lane.style.width = `${width}px`
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`
       entry.lane.replaceChildren(...own.map(clip => clipButton(clip, {
@@ -454,7 +464,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     // moves nothing (and so drops no focus).
     const current = [...scroller.children]
     drawLoop(loop, width)
-    const expected = [head, ruler, loopRow, ...wanted]
+    masterRow.update(masterFor(), { beatsPerBar, width })
+    const expected = [head, ruler, loopRow, ...wanted, masterRow.element]
     const same = current.length === expected.length && current.every((child, k) => child === expected[k])
     if (!same) scroller.replaceChildren(...expected)
   }

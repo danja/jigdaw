@@ -307,6 +307,7 @@ export function readProject (dataset) {
       track: onTrack === null ? null : idOf(onTrack, iri, `track of node ${id}`),
       settings,
       state: value(one(dataset, nodeIri, jig.nodeState)),
+      ...(one(dataset, nodeIri, jig.bypassed)?.value === 'true' ? { bypassed: true } : {}),
       // Only read to fold a session from before tracks, below.
       channel: readChannel(dataset, nodeIri, id)
     })

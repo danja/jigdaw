@@ -331,6 +331,7 @@ jig:NodeShape_ a sh:NodeShape ;
         sh:message "A node must name the plugin it instantiates, by a dereferenceable https IRI. That is what lets a project be reopened on a machine that has never seen the plugin."
     ] ;
     sh:property [ sh:path jig:nodeState ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path jig:bypassed ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:message "A node is bypassed or it is not: jig:bypassed is one true or false." ] ;
     sh:property [
         sh:path jig:onTrack ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Track ;

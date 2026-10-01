@@ -57,6 +57,8 @@ export function describeChain (project, trackId, { profileOf, labelOf, failedOf,
       label: labelOf(node.id),
       loaded: profile !== undefined,
       failed: failedOf(node.id) ?? null,
+      bypassed: node.bypassed === true,
+      passesAudio: kindsOf(inputsOf(profile)).includes('audio') && kindsOf(outputsOf(profile)).includes('audio'),
       takes: kindsOf(inputsOf(profile)),
       gives: kindsOf(outputsOf(profile)),
       takesMidiFromTrack: track?.midiInput === node.id,
@@ -71,6 +73,7 @@ export function describeChain (project, trackId, { profileOf, labelOf, failedOf,
 /** One node in words, for a screen reader and for a title. */
 export function say (node) {
   const parts = [node.label]
+  if (node.bypassed) parts.push('bypassed')
   if (node.failed) parts.push(`failed to load: ${node.failed}`)
   else if (!node.loaded) parts.push('not loaded yet')
   else {

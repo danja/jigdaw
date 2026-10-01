@@ -4,6 +4,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    // Tests that run real plugins and worklets take a second alone and several when the whole suite
+    // shares the machine; the default 5 s failed them at random under load and they passed alone.
+    testTimeout: 30000,
     // Every test directory must appear here. A suite that is written and never
     // run is the same as a suite that does not exist, and nothing reports it.
     include: [

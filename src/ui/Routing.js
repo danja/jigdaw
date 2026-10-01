@@ -124,9 +124,13 @@ export function createPortBar (document, { node, profile, pending, onPick, onCan
  * point: this is the first thing in the interface that tells the truth about a
  * graph that is not a chain.
  */
-export function createConnectionList (document, { connections, labelFor, onRemove }) {
+export function createConnectionList (document, { connections, labelFor, onRemove, monitor }) {
+  if (typeof monitor !== 'function') throw new Error('createConnectionList needs monitor')
+  const refreshers = []
   const element = document.createElement('div')
   element.className = 'connections'
+  // Called on a timer by whoever shows the list, while it is on screen: redraws the logs that are open.
+  element.refreshMonitors = () => { for (const refresh of refreshers) refresh() }
   element.setAttribute('role', 'group')
   element.setAttribute('aria-label', 'Connections')
 
@@ -170,6 +174,37 @@ export function createConnectionList (document, { connections, labelFor, onRemov
 
     row.append(badge, text, remove)
     element.append(row)
+    // A MIDI connection can be watched: the last events over it, in words, for as long as it is open.
+    if (kind === 'MIDI') {
+      const watch = document.createElement('button')
+      watch.type = 'button'
+      watch.className = 'connection-watch'
+      watch.textContent = 'Watch'
+      watch.setAttribute('aria-pressed', 'false')
+      watch.setAttribute('aria-label', `Watch the MIDI on ${description}`)
+      const log = document.createElement('ol')
+      log.className = 'connection-log'
+      log.hidden = true
+      log.setAttribute('aria-label', `Recent MIDI on ${description}`)
+      watch.addEventListener('click', () => {
+        const on = watch.getAttribute('aria-pressed') !== 'true'
+        watch.setAttribute('aria-pressed', String(on))
+        log.hidden = !on
+        if (on) refresh()
+      })
+      const refresh = () => {
+        if (log.hidden) return
+        const lines = monitor(connection.id)
+        log.replaceChildren(...(lines.length === 0 ? ['Nothing yet'] : lines).map(line => {
+          const item = document.createElement('li')
+          item.textContent = line
+          return item
+        }))
+      }
+      row.append(watch)
+      element.append(log)
+      refreshers.push(refresh)
+    }
   }
   return element
 }

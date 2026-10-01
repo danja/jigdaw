@@ -218,3 +218,34 @@ describe('audio clips', () => {
     })).toThrow(/all of audio/)
   })
 })
+
+describe('automation through the scheduler', () => {
+  it('gives each instruction to the host on the audio clock, and stops with the scheduler', () => {
+    const applied = []
+    let stopped = 0
+    let now = 10
+    const transport = { secondsAtBeat: b => b / 2, loop: { enabled: false } }
+    const scheduler = new Scheduler({
+      now: () => now, sampleRate: 48000, lookahead: 0.5, notes: () => new Map(), transport: () => transport, send: () => {},
+      automation: {
+        envelopes: () => [{ id: 'e', target: { node: 'n', symbol: 'cutoff' }, points: [{ atBeat: 0, value: 100, curve: 'linear' }, { atBeat: 4, value: 500, curve: 'linear' }] }],
+        apply: (envelope, instruction) => applied.push([envelope.id, instruction]),
+        stop: () => { stopped += 1 }
+      }
+    })
+    scheduler.start(10)
+    scheduler.tick()
+    expect(applied.map(([, i]) => [i.kind, i.at])).toEqual([['set', 10], ['ramp', 10]])
+    expect(applied[1][1]).toMatchObject({ end: 12, endValue: 500 })
+    now = 11.6
+    scheduler.tick()
+    expect(applied.map(([, i]) => i.kind)).toEqual(['set', 'ramp', 'set'])
+    expect(applied[2][1].at).toBe(12)
+    scheduler.stop()
+    expect(stopped).toBe(1)
+  })
+
+  it('refuses an automation host that is not all three of envelopes, apply and stop', () => {
+    expect(() => new Scheduler({ now: () => 0, sampleRate: 48000, lookahead: 0.5, notes: () => new Map(), transport: () => ({}), send: () => {}, automation: { envelopes () {} } })).toThrow(/automation/)
+  })
+})
