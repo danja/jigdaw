@@ -50,13 +50,13 @@ for (const file of files) {
   }
   if (!growth.ok) {
     console.log(`${file}: memory.grow is reachable from an ABI export, which the ABI forbids after jig_init:`)
-    for (const g of growth.growers.filter(g => g.fromAbi === 'direct')) console.log(`  function ${g.func}`)
+    for (const g of growth.growers.filter(g => g.fromAbi === 'direct' || g.fromAbi === 'table')) console.log(`  function ${g.func}${g.fromAbi === 'table' ? ' (through a table call)' : ''}`)
     failed = true
   } else if (growth.growers.length === 0) {
     console.log(`${file}: ok, no memory.grow`)
   } else {
     for (const g of growth.growers) {
-      const how = g.fromAbi === 'indirect' ? 'reachable from an ABI export only through a table call, so possible' : 'not reachable from an ABI export'
+      const how = g.fromAbi === 'indirect' ? 'reachable from an ABI export only because the table could not be read, so possible' : 'not reachable from an ABI export'
       console.log(`${file}: memory.grow in function ${g.func}, ${how}${g.fromPrivateExport ? '; reached by a plugin-private export' : ''}`)
     }
   }

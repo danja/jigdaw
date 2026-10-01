@@ -271,6 +271,13 @@ zip. A session with nothing in the editor graph but defaults is still one Turtle
 a zip without `editor.ttl` opens with default layout. A reader MUST NOT fail to open a
 session because its editor graph is missing or unreadable.
 
+The editor graph is checked against the editor shapes in `vocabs/shapes.ttl` before it is applied: a
+position has one decimal `jig:x` and one `jig:y`, `jig:order` is a whole number from zero,
+`jig:laneSize` is `small`, `medium` or `large`, and `jig:color` is lower case `#rrggbb`. Its subjects
+carry no type, so the shapes target by property. A graph that breaks one is left out whole, with a
+message, and the session opens with default layout. `examples/reference-editor.ttl` conforms and
+`examples/counterexample-editor.ttl` breaks each shape once.
+
 The subjects are fragments of the project IRI, as everywhere else. What it may state:
 
 | Subject | Property | Value |

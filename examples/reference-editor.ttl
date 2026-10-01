@@ -1,0 +1,11 @@
+# examples/reference-editor.ttl
+#
+# An editor graph that conforms to the editor shapes in vocabs/shapes.ttl: where a node sits, and how a track and a
+# clip are laid out. Nothing in it types a subject.
+@base <http://example.org/session/> .
+@prefix jig: <http://purl.org/stuff/jigdaw/> .
+
+<#synth> jig:x 120.0 ; jig:y 40.5 .
+<#track-1> jig:order 0 ; jig:color "#3e8ef7" ; jig:laneSize "large" .
+<#track-2> jig:order 1 ; jig:laneSize "small" .
+<#clip-1> jig:color "#ff8a8a" .

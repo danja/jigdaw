@@ -27325,6 +27325,9 @@ function createRuntime(ctx2) {
       ctx2.script.attach({ dispatcher, tools: registration.surface.tools, loader: ctx2.loader });
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
+    } else if (ctx2.script) {
+      const tools = createTools({ dispatcher, loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options), reel: ctx2.script.agentReel() });
+      ctx2.script.attach({ dispatcher, tools, loader: ctx2.loader });
     }
     ctx2.transport.meterLoop();
     ctx2.transport.positionLoop();
@@ -33486,7 +33489,14 @@ function createSessions(ctx2) {
     for (const message of opened.errors) log2(message, "error");
     if (!opened.ok) return;
     try {
-      d.project.loadEditor(editor === null ? { positions: /* @__PURE__ */ new Map(), tracks: /* @__PURE__ */ new Map() } : readEditor(await parseText(editor, read.iri), read.iri));
+      let layout = { positions: /* @__PURE__ */ new Map(), tracks: /* @__PURE__ */ new Map() };
+      if (editor !== null) {
+        const graph = await parseText(editor, read.iri);
+        const report = await (await ctx2.runtime.shapeValidator()).validate(graph);
+        if (report.conforms) layout = readEditor(graph, read.iri);
+        else log2(`editor layout ignored: ${report.violations.map((v) => v.message).join(" ")}`, "error");
+      }
+      d.project.loadEditor(layout);
     } catch (error2) {
       log2(`editor layout ignored: ${error2.message}`, "error");
     }

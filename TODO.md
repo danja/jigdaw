@@ -15,8 +15,13 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       wiring (the clock ticks beside the scheduler, `ReelClock` takes `since` so a script taking over at a bar line acts on that
       bar line's downbeat, found in the browser). **Left:** (1) repeat in Chrome the one hop not yet seen, a session carrying a script back into the studio's Script tab
       (covered by `tests/web/Script.test.js`, and the browser tool refused to continue); (2) a real screen reader pass over the tab, which
-      only a person can do (`HUMANS.md`); (3) the studio page redirects phones to the simple page, so the tab is not offered on a phone
-      unless `?studio` is used, and a decision whether the simple page should have one. The timing of a ramp is held to the frame by
+      only a person can do (`HUMANS.md`); (3) **the simple page now has a Script tab** (2026-10-01, `web/simple.html`, `web/simple.js`; `Runtime` builds
+      the tools for Reel alone there, with no public agent surface; `tests/web/SimplePage.test.js` binds its ids). Checked
+      in Chrome with the window in front and a real click (a scripted click carries no activation and the tune never opens):
+      a tune plays, Check reports two bad names with line numbers, Run now sets Square bass's cutoff to 800 and shows Stop, and
+      at 360px there is no horizontal overflow, every button is 44px and the text area is 16px. A script's name for a plugin is
+      its label with underscores (`square_bass`), which the error message offers. Not yet seen: the saved-session round trip on
+      this page, and a screen reader. The timing of a ramp is held to the frame by
       `tests/reel/RampTiming.test.js`. **Known limits to decide:** a new plugin named by a
       script is validated before the swap but instantiated at it, so a swap that adds one can stall the bar (preloading is the
       fix); a failure after the swap begins has already stopped the old script; a timed parameter set is accurate to the tick,
@@ -66,12 +71,11 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       [docs/plugins/trajectory-pan-design.md](docs/plugins/trajectory-pan-design.md) (level-only panning so the mono sum cannot cancel,
       Linkwitz-Riley bands, plain JavaScript); settle its three open decisions, then build it.
 
-- [ ] **Resolve the table in the `memory.grow` check.** Done 2026-10-01 (`src/validate/WasmCode.js`, `npm run check-wasm-abi`):
-      every module in the repository decodes exactly, and none grows memory under an ABI export. Ferrite is reported as
-      possible, because its `jig_load_nam` grows and a table call might reach it from an ABI export. Reading the element
-      segments and matching call types would make that certain either way.
-
 ## The track view
+
+- [ ] **Arrangement and mixer UIs follow Reaper where possible**, familiar and intuitive. From the inbox, 2026-10-01. Needs a
+      note of what Reaper's track control panel, mixer strip and arrange conventions are (and what to keep from Jiggy's own
+      routing-first model) before changes; T0's layout decision and T6 are where it lands.
 
 Derived 2026-09-30 from a graph index of this repository and of `~/github/openDAW`, `~/github/webdaw` and
 `~/github/daw` (GridSound; its source was empty submodules, so what is said of it is from its README). All three
@@ -88,8 +92,9 @@ a screen reader and usable at phone width. [docs/usp.md](docs/usp.md) says where
 - [ ] **Layout decision for the main view**, recorded with its rejected alternatives: header column, lane area,
       bottom dock, side browser, top transport. It is built that way and measured at phone width; the decision and
       the alternatives are not written down.
-- [ ] **An editor-graph shape in `vocabs/shapes.ttl`.** The editor document types no subject, so the existing
-      target-class shapes do not reach it. Marker and region colour, and folders (`jig:parent`), are not in it.
+- [ ] **Editor-graph shape, what is left.** Done 2026-10-01: shapes for position, order, lane size and colour, a reference
+      and a counterexample (14 violations, each constraint once), and a session's `editor.ttl` is validated before it is applied.
+      Open: marker and region colour, and folders (`jig:parent`), which have no model or writer yet, so their shapes come with them.
 - [ ] **WebMCP tools for what has none:** the master, sends, bus outputs, markers and regions; trim, copy, cut and
       paste of clips; and freeze. The generic changeset tool accepts the terms today.
 

@@ -13,6 +13,7 @@ import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 import { ClipPlayer } from '../../src/engine/ClipPlayer.js'
 import { readHostConfig } from '../../src/host/HostConfig.js'
 import { registerTools } from '../../src/mcp/adapter.js'
+import { createTools } from '../../src/mcp/tools.js'
 
 export function createRuntime (ctx) {
   const { document, $, log } = ctx
@@ -118,6 +119,11 @@ export function createRuntime (ctx) {
       ctx.script.attach({ dispatcher, tools: registration.surface.tools, loader: ctx.loader })
       log(`host offers ${[...capabilities].map(compact).join(', ')}`)
       log(`${registration.count} agent tools via ${registration.bound}`)
+    } else if (ctx.script) {
+      // The simple page offers no agent surface, but Reel runs a script through the same tools, so they are
+      // built for it alone: not registered, not on `jigdaw.mcp`, and with no catalogue to search.
+      const tools = createTools({ dispatcher, loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options), reel: ctx.script.agentReel() })
+      ctx.script.attach({ dispatcher, tools, loader: ctx.loader })
     }
 
     ctx.transport.meterLoop()

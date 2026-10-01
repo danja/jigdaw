@@ -33,6 +33,37 @@ function build (bodies, exports, { raw = false } = {}) {
   return Uint8Array.from([0, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...types, ...funcs, ...exp, ...code])
 }
 
+/**
+ * A module with a table: types 0 (no parameters) and 1 (one i32), jig_process (function 0) calling through the
+ * table with `callType`, and function 1 the grower, of type `growerType`. Each element is [form, ...functions].
+ */
+function tabled ({ elements, callType, growerType = 0, importTable = false }) {
+  const types = section(1, [2, 0x60, 0, 0, 0x60, 1, 0x7f, 0])
+  const imports = importTable ? section(2, [1, ...str('env'), ...str('t'), 1, 0x70, 0, 1]) : []
+  const funcs = section(3, [2, callType, growerType])
+  const table = importTable ? [] : section(4, [1, 0x70, 0, 1])
+  const exp = section(7, [1, ...str('jig_process'), 0, 0])
+  const exprs = i => [1, 0xd2, i, 0x0b]
+  const segment = ([form, ...fns]) => {
+    const offset = [0x41, 0, 0x0b]
+    switch (form) {
+      case 0: return [0, ...offset, ...leb(fns.length), ...fns]
+      case 1: return [1, 0, ...leb(fns.length), ...fns]
+      case 2: return [2, 0, ...offset, 0, ...leb(fns.length), ...fns]
+      case 3: return [3, 0, ...leb(fns.length), ...fns]
+      case 4: return [4, ...offset, ...exprs(fns[0])]
+      case 5: return [5, 0x70, ...exprs(fns[0])]
+      case 6: return [6, 0, ...offset, 0x70, ...exprs(fns[0])]
+      default: return [7, 0x70, ...exprs(fns[0])]
+    }
+  }
+  const elem = elements.length ? section(9, [elements.length, ...elements.flatMap(segment)]) : []
+  const callBody = [0, 0x41, 0, 0x11, callType, 0, 0x0b]
+  const growBody = [0, ...GROW, 0x0b]
+  const code = section(10, [2, ...leb(callBody.length), ...callBody, ...leb(growBody.length), ...growBody])
+  return Uint8Array.from([0, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...types, ...imports, ...funcs, ...table, ...exp, ...elem, ...code])
+}
+
 const GROW = [0x41, 1, 0x40, 0, 0x1a] // i32.const 1, memory.grow 0, drop
 const CALL = i => [0x10, i]
 
@@ -77,9 +108,36 @@ describe('checkMemoryGrow, on what the rule is about', () => {
     expect(r.growers[0]).toMatchObject({ fromAbi: 'no', fromPrivateExport: true })
   })
 
-  it('flags growth reachable only through a table call as uncertain and not as failed', () => {
-    // call_indirect type 0, table 0, and a function the table could hold.
+  it('does not reach a function through a table call when no table holds it', () => {
+    // call_indirect type 0, table 0, and a function nothing ever puts in a table.
     const r = checkMemoryGrow(build([[0x41, 0, 0x11, 0, 0], GROW], [['jig_process', 0]]))
+    expect(r).toMatchObject({ ok: true, uncertain: false })
+    expect(r.growers[0].fromAbi).toBe('no')
+  })
+
+  it('fails growth that an element segment puts where a matching table call lands', () => {
+    const r = checkMemoryGrow(tabled({ elements: [[0, 1]], callType: 0 }))
+    expect(r.ok).toBe(false)
+    expect(r.uncertain).toBe(false)
+    expect(r.growers[0].fromAbi).toBe('table')
+  })
+
+  it('does not reach a function in a table whose signature the call does not name', () => {
+    // The grower takes an i32 (type 1) and the call names type 0.
+    const r = checkMemoryGrow(tabled({ elements: [[0, 1]], callType: 0, growerType: 1 }))
+    expect(r).toMatchObject({ ok: true, uncertain: false })
+    expect(r.growers[0].fromAbi).toBe('no')
+  })
+
+  it('reads the passive and expression forms of element segment, so a function put there is not missed', () => {
+    for (const elements of [[[1, 1]], [[2, 1]], [[3, 1]], [[4, 1]], [[5, 1]], [[6, 1]], [[7, 1]]]) {
+      const r = checkMemoryGrow(tabled({ elements, callType: 0 }))
+      expect(r.growers[0].fromAbi, `form ${elements[0][0]}`).toBe('table')
+    }
+  })
+
+  it('flags growth as uncertain when the table is imported and so could hold anything', () => {
+    const r = checkMemoryGrow(tabled({ elements: [], callType: 0, importTable: true }))
     expect(r.ok).toBe(true)
     expect(r.uncertain).toBe(true)
     expect(r.growers[0].fromAbi).toBe('indirect')
@@ -182,17 +240,18 @@ describe('checkMemoryGrow, against every module in the repository', () => {
     expect(failures).toEqual([])
   })
 
-  it('finds no module growing memory under an ABI export, apart from the one reported uncertain', () => {
+  it('finds no module growing memory under an ABI export, and reads the table of each module', () => {
     const found = {}
     for (const file of modules) {
       const r = checkMemoryGrow(readFileSync(file))
       expect(r.ok, file).toBe(true)
       if (r.growers.length) found[file.replace(`${root}/`, '')] = r.growers.map(g => `${g.fromAbi}${g.fromPrivateExport ? '+private' : ''}`)
     }
-    // Ferrite grows when a model loads. No ABI export reaches it directly, a table call might, and
-    // its jig_load_nam does, which its processor runs before taking any view. If this changes, the
-    // module changed, and ferrite-processor.js and module-abi.md need a look.
-    expect(found).toEqual({ 'plugins/ferrite/ferrite.wasm': ['indirect+private'] })
+    // Ferrite grows when a model loads. No ABI export reaches it, directly or through a table call
+    // (its table was read, not assumed), and its jig_load_nam does, which its processor runs before
+    // taking any view. If this changes, the module changed, and ferrite-processor.js and module-abi.md
+    // need a look.
+    expect(found).toEqual({ 'plugins/ferrite/ferrite.wasm': ['no+private'] })
   })
 })
 
@@ -215,10 +274,10 @@ describe('npm run check-wasm-abi', () => {
     expect(r.stdout).toMatch(/memory\.grow is reachable from an ABI export/)
   })
 
-  it('exits zero for a module that does not, and for the one reported only as possible', () => {
+  it('exits zero for a module that does not, and for one that grows only under its own export', () => {
     expect(run(resolve(root, 'plugins/keyframe/keyframe.wasm')).status).toBe(0)
     const r = run(resolve(root, 'plugins/ferrite/ferrite.wasm'))
     expect(r.status).toBe(0)
-    expect(r.stdout).toMatch(/so possible/)
+    expect(r.stdout).toMatch(/not reachable from an ABI export; reached by a plugin-private export/)
   })
 })

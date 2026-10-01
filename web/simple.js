@@ -15,10 +15,12 @@ import { createPwa } from './app/Pwa.js'
 import { createVoice } from './app/Voice.js'
 import { createBounce } from './app/Bounce.js'
 import { createCarry } from './app/Carry.js'
+import { createScript } from './app/Script.js'
 import { microphoneAvailable } from '../src/host/Microphone.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createTrackCards } from '../src/ui/TrackCards.js'
 import { createSoundRack } from '../src/ui/SoundRack.js'
+import { createTabs } from '../src/ui/Tabs.js'
 import { createTunePicker } from '../src/ui/TunePicker.js'
 import { listPresets, fetchPreset } from '../src/ui/Presets.js'
 import { inSignalOrder } from '../src/ops/OpenProject.js'
@@ -62,7 +64,15 @@ ctx.transport = createTransport(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.pwa = createPwa(ctx)
 ctx.bounce = createBounce(ctx)
+ctx.script = createScript(ctx)
 ctx.carry = createCarry(ctx, { self: 'simple', offerText: 'You have a piece open in the studio. Open it here?' })
+
+// The music and the script, one panel at a time under the player.
+ctx.tabs = createTabs(document, [
+  { id: 'music', label: 'Music', panel: $('music-panel') },
+  { id: 'script', label: 'Script', panel: $('script-panel') }
+])
+$('tabs-mount').append(ctx.tabs.element)
 
 // ── the instruments ───────────────────────────────────────────────────────────
 

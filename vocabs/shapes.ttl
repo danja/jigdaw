@@ -576,6 +576,30 @@ jig:EnvelopePointShape a sh:NodeShape ;
         sh:message "An envelope point is stepped, linear or smooth."
     ] .
 
+## -- The editor graph ----------------------------------------------------------
+##
+## What a person arranges and the compiled graph never reads: where a node sits, and how a track is laid out
+## (docs/project-format.md). The editor document types none of its subjects, so these shapes target by the
+## property each subject carries rather than by class. A reader still drops what names nothing in the
+## project; these say what a value may be, which readEditor does not check.
+
+jig:EditorPositionShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:x , jig:y ;
+    sh:property [ sh:path jig:x ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:message "A node position has one x, a decimal, and a y with it." ] ;
+    sh:property [ sh:path jig:y ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:message "A node position has one y, a decimal, and an x with it." ] .
+
+jig:EditorOrderShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:order ;
+    sh:property [ sh:path jig:order ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:message "A track's place in the arrangement is one whole number, from zero." ] .
+
+jig:EditorLaneSizeShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:laneSize ;
+    sh:property [ sh:path jig:laneSize ; sh:maxCount 1 ; sh:in ( "small" "medium" "large" ) ; sh:message "A lane is small, medium or large." ] .
+
+jig:EditorColorShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:color ;
+    sh:property [ sh:path jig:color ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^#[0-9a-f]{6}$" ; sh:message "A colour is one string of the form #rrggbb in lower case." ] .
+
 ## -- Bundles, provenance and signatures ---------------------------------------
 ##
 ## docs/plugin-bundles.md sections 5 and 6. These constrain the record a bundle

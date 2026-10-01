@@ -117,9 +117,15 @@ export function createSessions (ctx) {
     // replaced, even when the session has none, because ids are reused and the
     // previous session's layout would otherwise land on this one's tracks.
     try {
-      d.project.loadEditor(editor === null
-        ? { positions: new Map(), tracks: new Map() }
-        : readEditor(await parseText(editor, read.iri), read.iri))
+      let layout = { positions: new Map(), tracks: new Map() }
+      if (editor !== null) {
+        const graph = await parseText(editor, read.iri)
+        // Layout is cosmetic, so a layout that breaks the editor shapes is left out whole rather than half applied.
+        const report = await (await ctx.runtime.shapeValidator()).validate(graph)
+        if (report.conforms) layout = readEditor(graph, read.iri)
+        else log(`editor layout ignored: ${report.violations.map(v => v.message).join(' ')}`, 'error')
+      }
+      d.project.loadEditor(layout)
     } catch (error) { log(`editor layout ignored: ${error.message}`, 'error') }
 
     // Scripts are text, and replaced like the editor graph, because ids are reused. An unreadable scripts document

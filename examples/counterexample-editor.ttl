@@ -1,0 +1,23 @@
+# examples/counterexample-editor.ttl
+#
+# An editor graph that breaks each editor shape in vocabs/shapes.ttl, so that a shape which has stopped firing shows
+# as a count that went down (tests/validate/ShapeValidator.test.js).
+@base <http://example.org/session/> .
+@prefix jig: <http://purl.org/stuff/jigdaw/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# An x that is not a number, and no y.
+<#a> jig:x "left" .
+# Two xs, and a y that is not a number.
+<#b> jig:x 1.0 , 2.0 ; jig:y "up" .
+# An order that is negative, then one that is not whole and a second order.
+<#t1> jig:order -1 .
+<#t2> jig:order 1.5 , 2 .
+# A lane size that is not one of the three, and two of them.
+<#t3> jig:laneSize "huge" .
+<#t4> jig:laneSize "small" , "large" .
+# Colours that are not lower case #rrggbb, and a colour that is not a string, and two colours.
+<#t5> jig:color "#3E8EF7" .
+<#t6> jig:color "blue" .
+<#t7> jig:color 7 .
+<#t8> jig:color "#112233" , "#445566" .
