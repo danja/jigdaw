@@ -103,7 +103,7 @@ REAPER session for the render script (testbed.md).
 
 **Built.** MelGen, BassGen, DrumGen, Cadence, Counterpointer and Ground write music from a seed,
 in time with the transport, as plugins like any other, and can be chained and steered from
-another plugin's output. **6 presets** are bundled, one of them a chiptune piece across six
+another plugin's output. **7 presets** are bundled, one of them a chiptune piece across six
 tracks. The others are sample and clip based, as one would expect of a DAW; none of them was
 seen to ship generators as plugins.
 

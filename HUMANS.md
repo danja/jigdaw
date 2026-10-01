@@ -11,7 +11,9 @@ Everything below was checked by code or by reading a meter, never by ear or by a
 `http://127.0.0.1:8748/`, keep the browser window in front (a hidden tab gets no user activation and audio hangs), and note what
 is wrong in INBOX.md.
 
-- **Listen to the presets.** All six, and say which sound bad. In particular "Generative, through effects" (its lead line was
+- **Listen to the presets.** All seven, and say which sound bad. "Through Keyframe" (new 2026-10-01) is the one to start with:
+  its melody carries a fifth above it from Keyframe's pitch shift, and its drums are pitched down and slurred, so say whether either
+  sounds musical or only broken. In particular "Generative, through effects" (its lead line was
   silent until 2026-09-30 and has not been heard), "Amp into a room" and "Fender into the Ropery" (levels set by a meter), and
   Chiptune's Lead track, which measures much quieter than the rest.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing

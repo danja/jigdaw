@@ -1,0 +1,179 @@
+# web/presets/keyframe.ttl
+#
+# A bundled preset that makes sound on Play with nothing else to do, and passes
+# two chains through Keyframe. The melodic chain is a generated line into a
+# square synth, then Keyframe seven semitones up mixed half with the dry line,
+# so every note is heard with its fifth, then a plate. The drum chain is a
+# generated beat into a kit, then Keyframe five semitones down, mixed mostly
+# wet: the splices as the shifted playhead drifts from the reference are the
+# sound, a slurred, pitched-down smear that stays in time because the time rate
+# is 100 percent. Keyframe adds 512 frames of latency to each chain, and the
+# dry half of its mix is delayed to match, so nothing is out of step inside a
+# chain. Nothing here is a clip: both generators play off the transport.
+# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl gives.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Through Keyframe" ;
+    jig:revision 1 ;
+    jig:track <#track-1> , <#track-2> ;
+    jig:node <#lead> , <#synth> , <#stretch> , <#plate> , <#beat> , <#kit> , <#smear> , <#room> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> ;
+    jig:transport <#transport> .
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Melody" .
+
+<#track-2>
+    a jig:Track ;
+    rdfs:label "Drums" .
+
+<#lead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Lead line" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#lead-root_note> , <#lead-scale> , <#lead-length_beats> , <#lead-phrase_bars> , <#lead-subdivision> , <#lead-density> , <#lead-register> , <#lead-seed> .
+
+<#synth>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Square synth" ;
+    jig:plugin <../plugins/pulse/> ;
+    jig:setting <#synth-waveform> , <#synth-attack> , <#synth-release> , <#synth-cutoff> , <#synth-gain> .
+
+<#stretch>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Keyframe, a fifth up" ;
+    jig:plugin <../plugins/keyframe/> ;
+    jig:setting <#stretch-time_rate> , <#stretch-pitch_shift> , <#stretch-splice_keyframes> , <#stretch-quality> , <#stretch-mix> .
+
+<#plate>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Plate" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#plate-mode> , <#plate-mix> , <#plate-size> .
+
+<#beat>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Beat" ;
+    jig:plugin <../plugins/drumgen/> ;
+    jig:setting <#beat-genre> , <#beat-resolution> , <#beat-density> , <#beat-bars> , <#beat-seed> .
+
+<#kit>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Drum kit" ;
+    jig:plugin <../plugins/drumkit/> .
+
+<#smear>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Keyframe, down and slurred" ;
+    jig:plugin <../plugins/keyframe/> ;
+    jig:setting <#smear-time_rate> , <#smear-pitch_shift> , <#smear-splice_keyframes> , <#smear-quality> , <#smear-mix> .
+
+<#room>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Room" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#room-mode> , <#room-mix> , <#room-size> .
+
+<#lead-root_note> a jig:ParameterSetting ; jig:symbol "root_note" ; jig:value 57.0 .
+<#lead-scale> a jig:ParameterSetting ; jig:symbol "scale" ; jig:value 2.0 .
+<#lead-length_beats> a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 16.0 .
+<#lead-phrase_bars> a jig:ParameterSetting ; jig:symbol "phrase_bars" ; jig:value 2.0 .
+<#lead-subdivision> a jig:ParameterSetting ; jig:symbol "subdivision" ; jig:value 1.0 .
+<#lead-density> a jig:ParameterSetting ; jig:symbol "density" ; jig:value 0.6 .
+<#lead-register> a jig:ParameterSetting ; jig:symbol "register" ; jig:value 2.0 .
+<#lead-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 41.0 .
+<#synth-waveform> a jig:ParameterSetting ; jig:symbol "waveform" ; jig:value 1.0 .
+<#synth-attack> a jig:ParameterSetting ; jig:symbol "attack" ; jig:value 4.0 .
+<#synth-release> a jig:ParameterSetting ; jig:symbol "release" ; jig:value 500.0 .
+<#synth-cutoff> a jig:ParameterSetting ; jig:symbol "cutoff" ; jig:value 3200.0 .
+<#synth-gain> a jig:ParameterSetting ; jig:symbol "gain" ; jig:value 0.25 .
+<#stretch-time_rate> a jig:ParameterSetting ; jig:symbol "time_rate" ; jig:value 100.0 .
+<#stretch-pitch_shift> a jig:ParameterSetting ; jig:symbol "pitch_shift" ; jig:value 7.0 .
+<#stretch-splice_keyframes> a jig:ParameterSetting ; jig:symbol "splice_keyframes" ; jig:value 16.0 .
+<#stretch-quality> a jig:ParameterSetting ; jig:symbol "quality" ; jig:value 1.0 .
+<#stretch-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.5 .
+<#plate-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 0.0 .
+<#plate-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.3 .
+<#plate-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 30.0 .
+<#beat-genre> a jig:ParameterSetting ; jig:symbol "genre" ; jig:value 3.0 .
+<#beat-resolution> a jig:ParameterSetting ; jig:symbol "resolution" ; jig:value 1.0 .
+<#beat-density> a jig:ParameterSetting ; jig:symbol "density" ; jig:value 0.6 .
+<#beat-bars> a jig:ParameterSetting ; jig:symbol "bars" ; jig:value 2.0 .
+<#beat-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 12.0 .
+<#smear-time_rate> a jig:ParameterSetting ; jig:symbol "time_rate" ; jig:value 100.0 .
+<#smear-pitch_shift> a jig:ParameterSetting ; jig:symbol "pitch_shift" ; jig:value -5.0 .
+<#smear-splice_keyframes> a jig:ParameterSetting ; jig:symbol "splice_keyframes" ; jig:value 24.0 .
+<#smear-quality> a jig:ParameterSetting ; jig:symbol "quality" ; jig:value 0.0 .
+<#smear-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.65 .
+<#room-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#room-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.2 .
+<#room-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 16.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#lead> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#synth> ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#stretch> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Audio .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#stretch> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#plate> ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Midi .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#beat> ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#kit> ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Audio .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#kit> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#smear> ; jig:portIndex 0 .
+
+<#c6>
+    a jig:Connection ;
+    jig:from <#c6-from> ; jig:to <#c6-to> ;
+    jig:signalKind trn:Audio .
+
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#smear> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#room> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 96.0 .

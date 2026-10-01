@@ -24,6 +24,10 @@
     {
       "file": "chiptune.ttl",
       "label": "Chiptune"
+    },
+    {
+      "file": "keyframe.ttl",
+      "label": "Through Keyframe"
     }
   ]
 }
