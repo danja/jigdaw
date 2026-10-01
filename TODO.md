@@ -7,6 +7,24 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
+- [ ] **Build the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed in
+      [docs/livecoding.md](docs/livecoding.md): a small interpreted language over the Op table, timed by stream
+      position, planned before it dispatches, one run one undo group. Settle its four open decisions first (patterns
+      in version one, the name, whether a script may call `plugin_load`, and whether `UndoHistory` can group Ops that
+      dispatch over time), then build the interpreter, the capability-table guard against `src/mcp/tools.js`, and
+      the editor panel.
+- [ ] **Decide whether more docs should be hidden.** 2026-10-01 (DIM task `/farelo/task/t57b75c497c2a`). The mechanism
+      exists: `bin/docs-hidden.js` keeps six documents off the site, and `tests/bin/docs-site.test.js` now checks
+      that the published set is every document not hidden and that `docs/plugins/*-design.md` has no page. That
+      guard is weak by construction (the build derives the published set from the same list), so it catches a
+      build that leaks, not a wrong decision. Open: whether `revisions`, `testbed` and `pwa` (published today, the
+      first in a "Background" group) are essential. A maintainer decision, since `docs/index.md` links each.
+- [ ] **Finish cross-linking the JigDAW pages, Jiggy and `~/github/plugin-universe`.** 2026-10-01. Done here: a
+      "Where the catalogue is" section in `docs/index.md`, and a Plugin Universe link in Jiggy's header nav. Open:
+      plugin-universe's own pages should link back to the spec and to Jiggy at strandz.it/jigdaw (a change in
+      that repository, made and checked there), and nothing checks that an external link resolves, so a moved
+      page still passes. A check needs network access, which the offline-first test rule argues against, so a
+      scheduled check is the likelier shape.
 - [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report, no buffer size or version
       yet. **Diagnosed headlessly:** Mop costs 1.70x realtime through the adapter's pure-interpreter WAMR (8 s of
       line plus drums took 13.6 s wall at 48 kHz and at 44.1 kHz), so every realtime block overruns and the

@@ -26,6 +26,14 @@ describe('the documentation site', () => {
     }
   })
 
+  it('publishes every document that is not hidden, so a new one is in or out on purpose', () => {
+    const docs = readdirSync(join(root, 'docs')).filter(f => f.endsWith('.md')).map(f => f.slice(0, -3))
+    const published = readdirSync(out).filter(f => f.endsWith('.html')).map(f => f.slice(0, -5))
+    expect(published.sort()).toEqual(docs.filter(n => !HIDDEN.includes(n)).sort())
+    // Design notes under docs/plugins/ are working notes and have no page.
+    expect(published.filter(n => n.endsWith('-design'))).toEqual([])
+  })
+
   it('has no link to a page it did not publish', () => {
     const pages = new Set(readdirSync(out).filter(f => f.endsWith('.html')))
     const dead = []

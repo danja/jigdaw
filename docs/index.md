@@ -86,6 +86,7 @@ authority where any other page, including this one, disagrees with them.
 | [project-format.md](project-format.md) | The session graph: nodes, connections, settings, transport. |
 | [track-view-terms.md](track-view-terms.md) | Proposed terms for master, sends, markers, automation and buses. Not yet normative. |
 | [usp.md](usp.md) | What sets Jiggy apart from openDAW, webdaw and GridSound, and where it is behind. |
+| [livecoding.md](livecoding.md) | Design for a scripting language that drives plugins through the Ops. Not built. |
 | [pwa.md](pwa.md) | Jiggy as an installable app: one service worker, what is cached, updates. |
 | [webmcp.md](webmcp.md) | The agent tool surface. |
 | [namespace.md](namespace.md) | What the vocabulary IRIs serve, and why a term answers 303. |
@@ -148,6 +149,15 @@ loads the same plugins as a VST3, CLAP or LV2; see
 | [Quefrency](../plugins/quefrency/) | Formants and harmonics separated through the cepstrum and shifted independently. [Design](../docs/plugins/quefrency-design.md). |
 | [Dynamix](../plugins/dynamix/) | A compressor/expander, limiter and clipper in series, with a side chain input. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/) | A one-slider gain stage converted from a REAPER JSFX effect. |
+
+## Where the catalogue is
+
+[Plugin Universe](https://plugin-universe.com/) harvests JigDAW profiles into an open catalogue of
+plugins, with a public SPARQL endpoint at `sparql.plugin-universe.com/public/query` and an MCP
+endpoint at `mcp.plugin-universe.com/mcp`. [Jiggy](https://strandz.it/jigdaw/) searches that
+catalogue from its plugin browser, so a plugin published anywhere and harvested there can be found
+and loaded by IRI. [How a profile is submitted](https://plugin-universe.com/about/profiles) is
+documented there.
 
 ---
 
