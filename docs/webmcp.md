@@ -142,9 +142,28 @@ halfway is worse than one that was never touched.
 | `track_add` | `label?` | Track id |
 | `track_remove` | `trackId`, `moveNodesTo?` | |
 | `track_layout` | `trackId`, `move?`, `color?`, `laneSize?` | The track's layout and place. Editor metadata: no revision, no undo |
-| `track_set` | `trackId`, `label?`, `midiInput?`, `audioInput?` | |
+| `track_set` | `trackId`, `label?`, `midiInput?`, `audioInput?`, `output?` | |
 | `track_set_channel` | `trackId`, `gain?`, `pan?`, `muted?`, `soloed?` | The whole strip, as applied |
 | `node_move_to_track` | `nodeId`, `trackId` | |
+
+### Master, sends, markers and regions
+
+| Tool | Arguments | Returns |
+|---|---|---|
+| `master_set` | `gain?`, `pan?`, `muted?` | |
+| `send_add` | `from`, `to`, `level?`, `tap?` | Send id |
+| `send_set` | `sendId`, `level?`, `tap?` | |
+| `send_remove` | `sendId` | |
+| `marker_add` | `atBeat`, `label?` | Marker id |
+| `marker_set` | `markerId`, `atBeat?`, `label?` | |
+| `marker_remove` | `markerId` | |
+| `region_add` | `startBeat`, `lengthBeats`, `label?` | Region id |
+| `region_set` | `regionId`, `startBeat?`, `lengthBeats?`, `label?` | |
+| `region_remove` | `regionId` | |
+
+Each is one Op through the dispatcher, so each is one undo step and takes `expectedRevision`. A send is
+`pre` or `post` fader and its level is linear. `track_set` with `output` sends a track to another track
+instead of the master, which makes the target a bus; a cycle is refused, for sends and outputs alike.
 
 ### Clips
 

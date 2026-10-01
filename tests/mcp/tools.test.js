@@ -765,3 +765,73 @@ describe('script_run', () => {
     expect(r).toMatchObject({ ok: false, swapped: 'now', errors })
   })
 })
+
+describe('the master, sends, markers and regions', () => {
+  const twoTracks = () => dispatcher.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+
+  it('sets the master and refuses a pan out of range, leaving it as it was', async () => {
+    expect((await call('master_set', { gain: 0.5, pan: -0.25, muted: true })).ok).toBe(true)
+    expect(dispatcher.project.master).toMatchObject({ gain: 0.5, pan: -0.25, muted: true })
+    const refused = await call('master_set', { pan: 3 })
+    expect(refused.ok).toBe(false)
+    expect(dispatcher.project.master.pan).toBe(-0.25)
+  })
+
+  it('adds, changes and removes a send, refusing a cycle and a duplicate', async () => {
+    twoTracks()
+    const added = await call('send_add', { from: 'a', to: 'b', level: 0.4, tap: 'pre' })
+    expect(added.ok).toBe(true)
+    expect(dispatcher.project.sends.find(s => s.id === added.sendId)).toMatchObject({ from: 'a', to: 'b', level: 0.4, tap: 'pre' })
+    expect((await call('send_add', { from: 'a', to: 'b' })).ok).toBe(false)
+    expect((await call('send_add', { from: 'b', to: 'a' })).ok).toBe(false)
+    expect((await call('send_set', { sendId: added.sendId, level: 0.9 })).ok).toBe(true)
+    expect((await call('send_set', { sendId: added.sendId, tap: 'middle' })).ok).toBe(false)
+    expect(dispatcher.project.sends[0].level).toBe(0.9)
+    expect((await call('send_remove', { sendId: added.sendId })).ok).toBe(true)
+    expect(dispatcher.project.sends).toHaveLength(0)
+    expect((await call('send_remove', { sendId: 'ghost' })).ok).toBe(false)
+  })
+
+  it('makes a track a bus with output, refusing a loop', async () => {
+    twoTracks()
+    expect((await call('track_set', { trackId: 'a', output: 'b' })).ok).toBe(true)
+    expect(dispatcher.project.track('a').output).toBe('b')
+    expect((await call('track_set', { trackId: 'b', output: 'a' })).ok).toBe(false)
+    expect((await call('track_set', { trackId: 'a', output: null })).ok).toBe(true)
+    expect(dispatcher.project.track('a').output).toBe(null)
+  })
+
+  it('adds, moves and removes a marker', async () => {
+    const added = await call('marker_add', { atBeat: 8, label: 'Chorus' })
+    expect(added.ok).toBe(true)
+    expect((await call('marker_set', { markerId: added.markerId, atBeat: 12 })).ok).toBe(true)
+    expect(dispatcher.project.markers[0]).toMatchObject({ atBeat: 12, label: 'Chorus' })
+    expect((await call('marker_add', { atBeat: -1 })).ok).toBe(false)
+    expect((await call('marker_remove', { markerId: added.markerId })).ok).toBe(true)
+    expect(dispatcher.project.markers).toHaveLength(0)
+  })
+
+  it('adds, resizes and removes a region, refusing one with no length', async () => {
+    const added = await call('region_add', { startBeat: 4, lengthBeats: 8, label: 'Verse' })
+    expect(added.ok).toBe(true)
+    expect((await call('region_set', { regionId: added.regionId, lengthBeats: 16 })).ok).toBe(true)
+    expect(dispatcher.project.regions[0]).toMatchObject({ startBeat: 4, lengthBeats: 16, label: 'Verse' })
+    expect((await call('region_add', { startBeat: 0, lengthBeats: 0 })).ok).toBe(false)
+    expect((await call('region_remove', { regionId: added.regionId })).ok).toBe(true)
+  })
+
+  it('takes expectedRevision, and refuses a stale one', async () => {
+    const stale = await call('marker_add', { atBeat: 1, expectedRevision: 999 })
+    expect(stale.ok).toBe(false)
+    expect(dispatcher.project.markers).toHaveLength(0)
+  })
+
+  it('makes each a single undo step', async () => {
+    const before = dispatcher.revision
+    await call('marker_add', { atBeat: 2 })
+    expect(dispatcher.canUndo()).toBe(true)
+    dispatcher.undo()
+    expect(dispatcher.project.markers).toHaveLength(0)
+    expect(dispatcher.revision).toBeGreaterThanOrEqual(before)
+  })
+})

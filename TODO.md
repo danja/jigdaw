@@ -89,14 +89,14 @@ a screen reader and usable at phone width. [docs/usp.md](docs/usp.md) says where
 
 ### T0. Decisions
 
-- [ ] **Layout decision for the main view**, recorded with its rejected alternatives: header column, lane area,
-      bottom dock, side browser, top transport. It is built that way and measured at phone width; the decision and
-      the alternatives are not written down.
+- [ ] **Layout decision for the main view, what is left.** Written 2026-10-01 in [docs/main-view.md](docs/main-view.md) with its
+      rejected alternatives, after the fact and from the code. The open question it names is a docked mixer in the
+      Reaper manner against the tab (INBOX, T6); decide that, and the document is revised with the answer. Also unmeasured: the tab row at phone width with five tabs (needs the Chrome window in front).
 - [ ] **Editor-graph shape, what is left.** Done 2026-10-01: shapes for position, order, lane size and colour, a reference
       and a counterexample (14 violations, each constraint once), and a session's `editor.ttl` is validated before it is applied.
       Open: marker and region colour, and folders (`jig:parent`), which have no model or writer yet, so their shapes come with them.
-- [ ] **WebMCP tools for what has none:** the master, sends, bus outputs, markers and regions; trim, copy, cut and
-      paste of clips; and freeze. The generic changeset tool accepts the terms today.
+- [ ] **WebMCP tools for what has none, what is left:** trim, copy, cut and paste of clips, and freeze. Done 2026-10-01:
+      the master, sends, bus outputs (`track_set` `output`), markers and regions, 10 tools, tested in `tests/mcp/tools.test.js`.
 
 ### T1. The main view shell
 

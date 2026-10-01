@@ -53,4 +53,12 @@ describe('the agent surface and the document that specifies it', () => {
       expect(tool.description.length, `${tool.name} has no useful description`).toBeGreaterThan(30)
     }
   })
+
+  it('is the number of tools that docs/usp.md and docs/jiggy-features.md say it is', () => {
+    for (const file of ['docs/usp.md', 'docs/jiggy-features.md']) {
+      const said = readFileSync(resolve(root, file), 'utf8').match(/\*\*(\d+) tools\*\*/)
+      expect(said, `${file} states no tool count`).not.toBeNull()
+      expect(Number(said[1]), file).toBe(built.length)
+    }
+  })
 })

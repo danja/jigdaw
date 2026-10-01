@@ -352,8 +352,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     {
       name: 'track_set',
       description:
-        'Rename a track, or name the plugins on it that its MIDI clips and audio clips play into. ' +
-        'Pass null to clear an input.',
+        'Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its ' +
+        'output to another track instead of the master (a bus). Pass null to clear an input or an output.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -361,13 +361,14 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           label: { type: ['string', 'null'] },
           midiInput: { type: ['string', 'null'], description: 'A node on this track' },
           audioInput: { type: ['string', 'null'], description: 'A node on this track' },
+          output: { type: ['string', 'null'], description: 'The track this one feeds instead of the master, which makes it a bus. null for the master. A cycle is refused.' },
           expectedRevision: { type: 'integer' }
         },
         required: ['trackId']
       },
       async handler ({ trackId, expectedRevision, ...fields } = {}) {
         const change = { op: 'setTrack', id: trackId }
-        for (const key of ['label', 'midiInput', 'audioInput']) {
+        for (const key of ['label', 'midiInput', 'audioInput', 'output']) {
           if (fields[key] !== undefined) change[key] = fields[key]
         }
         const result = dispatcher.apply([change], { expectedRevision })
@@ -397,6 +398,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           : failed(result.message, { kind: result.kind })
       }
     },
+
+    ...arrangementTools(),
 
     {
       name: 'node_move_to_track',
@@ -971,6 +974,86 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       }
     }
   ]
+
+  /**
+   * The arrangement's own parts, each one Op through apply: the master, sends, markers and regions. They are
+   * written from a table because each is the same call with different fields.
+   */
+  function arrangementTools () {
+    const num = description => ({ type: 'number', description })
+    const one = ({ name, description, properties = {}, required = [], op, id, pick = args => args, returns = 'id' }) => ({
+      name,
+      description,
+      inputSchema: { type: 'object', properties: { ...properties, expectedRevision: { type: 'integer' } }, required },
+      async handler ({ expectedRevision, ...args } = {}) {
+        const fields = pick(args)
+        const result = dispatcher.apply([{ op, ...fields }], { expectedRevision })
+        if (!result.ok) return failed(result.message, { kind: result.kind })
+        return ok({ revision: result.revision, ...(returns === 'id' ? { [id]: result.results[0] } : {}) })
+      }
+    })
+    const keep = names => args => Object.fromEntries(Object.entries(args).filter(([k]) => names.includes(k)))
+    const withId = (key, names) => args => ({ id: args[key], ...keep(names)(args) })
+    return [
+      one({
+        name: 'master_set',
+        description: 'Set the master bus: linear gain (1 is unity), pan (-1 to 1) and mute. Any of them; the rest stay.',
+        properties: { gain: num('Linear, zero or more'), pan: num('-1 to 1'), muted: { type: 'boolean' } },
+        op: 'setMaster', returns: 'none', pick: keep(['gain', 'pan', 'muted'])
+      }),
+      one({
+        name: 'send_add',
+        description: 'Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.',
+        properties: { from: { type: 'string' }, to: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] } },
+        required: ['from', 'to'], op: 'addSend', id: 'sendId', pick: keep(['from', 'to', 'level', 'tap'])
+      }),
+      one({
+        name: 'send_set',
+        description: 'Change a send\'s level or whether it takes the signal before or after the fader.',
+        properties: { sendId: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] } },
+        required: ['sendId'], op: 'setSend', returns: 'none', pick: withId('sendId', ['level', 'tap'])
+      }),
+      one({
+        name: 'send_remove',
+        description: 'Remove a send, by the id send_add returned or project_get lists.',
+        properties: { sendId: { type: 'string' } }, required: ['sendId'], op: 'removeSend', returns: 'none', pick: withId('sendId', [])
+      }),
+      one({
+        name: 'marker_add',
+        description: 'Name a position in the arrangement, in beats from the start.',
+        properties: { atBeat: num('Zero or more'), label: { type: ['string', 'null'] } },
+        required: ['atBeat'], op: 'addMarker', id: 'markerId', pick: keep(['atBeat', 'label'])
+      }),
+      one({
+        name: 'marker_set',
+        description: 'Move a marker to another beat, or rename it. Either, or both.',
+        properties: { markerId: { type: 'string' }, atBeat: num('Zero or more'), label: { type: ['string', 'null'] } },
+        required: ['markerId'], op: 'setMarker', returns: 'none', pick: withId('markerId', ['atBeat', 'label'])
+      }),
+      one({
+        name: 'marker_remove',
+        description: 'Remove a marker, by the id marker_add returned or project_get lists.',
+        properties: { markerId: { type: 'string' } }, required: ['markerId'], op: 'removeMarker', returns: 'none', pick: withId('markerId', [])
+      }),
+      one({
+        name: 'region_add',
+        description: 'Name a range of the arrangement: where it starts and how long it lasts, both in beats.',
+        properties: { startBeat: num('Zero or more'), lengthBeats: num('Above zero'), label: { type: ['string', 'null'] } },
+        required: ['startBeat', 'lengthBeats'], op: 'addRegion', id: 'regionId', pick: keep(['startBeat', 'lengthBeats', 'label'])
+      }),
+      one({
+        name: 'region_set',
+        description: 'Move a region, change how long it lasts, or rename it. Any of them.',
+        properties: { regionId: { type: 'string' }, startBeat: num('Zero or more'), lengthBeats: num('Above zero'), label: { type: ['string', 'null'] } },
+        required: ['regionId'], op: 'setRegion', returns: 'none', pick: withId('regionId', ['startBeat', 'lengthBeats', 'label'])
+      }),
+      one({
+        name: 'region_remove',
+        description: 'Remove a region, by the id region_add returned or project_get lists.',
+        properties: { regionId: { type: 'string' } }, required: ['regionId'], op: 'removeRegion', returns: 'none', pick: withId('regionId', [])
+      })
+    ]
+  }
 
   return tools
 }

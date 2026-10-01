@@ -86,7 +86,8 @@ authority where any other page, including this one, disagrees with them.
 | [project-format.md](project-format.md) | The session graph: nodes, connections, settings, transport. |
 | [track-view-terms.md](track-view-terms.md) | Proposed terms for master, sends, markers, automation and buses. Not yet normative. |
 | [usp.md](usp.md) | What sets Jiggy apart from openDAW, webdaw and GridSound, and where it is behind. |
-| [livecoding.md](livecoding.md) | Design for a scripting language that drives plugins through the Ops. Not built. |
+| [livecoding.md](livecoding.md) | Reel, the scripting language that drives plugins through the Ops: the design and its decisions. Built, as the Script tab. |
+| [main-view.md](main-view.md) | The layout of the main view: the parts, why they sit where they do, and what was rejected. |
 | [pwa.md](pwa.md) | Jiggy as an installable app: one service worker, what is cached, updates. |
 | [webmcp.md](webmcp.md) | The agent tool surface. |
 | [namespace.md](namespace.md) | What the vocabulary IRIs serve, and why a term answers 303. |
