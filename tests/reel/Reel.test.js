@@ -117,6 +117,17 @@ describe('replacing a script during playback', () => {
     expect(rig.mix('n1')).toBe(0.9)
   })
 
+  it('lets the new script act on the downbeat of the bar it took over on', async () => {
+    await playing()
+    const pending = rig.reel.run('every 1 beat: a.mix = 0.9')
+    await flush()
+    await rig.tick(2.05) // the bar line at 2.0 s: the old script's last firing, and the swap
+    await pending
+    expect(rig.mix('n1')).toBe(0.1)
+    await rig.tick(2.15) // well before the next beat at 2.5 s
+    expect(rig.mix('n1')).toBe(0.9)
+  })
+
   it('stops the old script at the swap, so nothing doubles', async () => {
     await playing()
     const pending = rig.reel.run('every 1 beat: a.cutoff = 1kHz')

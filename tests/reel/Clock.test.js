@@ -187,6 +187,78 @@ describe('every', () => {
   })
 })
 
+describe('counting from an earlier time', () => {
+  it('covers a downbeat the tick before it found, for a job registered a moment later', () => {
+    const r = rig()
+    r.begin()
+    r.at(2.05) // the bar line at 2.0 s has just passed, and a script takes over
+    r.clock.every(4, r.mark('new'), { since: 2.0 })
+    r.at(2.1)
+    expect(r.fired).toEqual([['new', 2.1]])
+  })
+
+  it('does not, without it, which is what lost the downbeat in the browser', () => {
+    const r = rig()
+    r.begin()
+    r.at(2.05)
+    r.clock.every(4, r.mark('new'))
+    r.at(2.1)
+    expect(r.fired).toEqual([])
+    r.at(4.1)
+    expect(r.fired).toHaveLength(1)
+  })
+
+  it('counts from the earlier time once, and then as any job does', () => {
+    const r = rig()
+    r.begin()
+    r.at(2.05)
+    r.clock.every(1, r.mark('beat'), { since: 2.0 })
+    r.at(2.1) // the downbeat at 2.0
+    r.at(2.3)
+    expect(r.fired).toHaveLength(1)
+    r.at(2.6) // the next beat, 2.5
+    expect(r.fired).toHaveLength(2)
+  })
+
+  it('does not fire twice for the same position when a job counts from before a tick that already fired it', () => {
+    const r = rig()
+    r.clock.every(4, r.mark('old'))
+    r.begin()
+    r.at(2.05) // the old job fires for the bar line at 2.0
+    r.clock.every(4, r.mark('new'), { since: 2.0 })
+    r.at(2.1)
+    // The old job fired once for the bar line, in the earlier tick; the new one fires once for it, in this one.
+    expect(r.fired.map(f => f[0])).toEqual(['old', 'new'])
+  })
+
+  it('applies to at as well', () => {
+    const r = rig()
+    r.begin()
+    r.at(2.05)
+    r.clock.at(4, r.mark('downbeat'), { since: 2.0 }) // beat 4 is 2.0 s
+    r.at(2.1)
+    expect(r.fired).toEqual([['downbeat', 2.1]])
+  })
+
+  it('tells a firing when its position was, in elapsed time', () => {
+    const r = rig()
+    const seen = []
+    r.clock.every(4, arg => seen.push(arg.at))
+    r.begin()
+    r.at(0.1)
+    r.at(2.3)
+    expect(seen).toEqual([0, 2])
+  })
+
+  it('treats a since before the start as the start', () => {
+    const r = rig()
+    r.begin()
+    r.clock.every(4, r.mark('x'), { since: -5 })
+    r.at(0.1)
+    expect(r.fired).toHaveLength(1)
+  })
+})
+
 describe('a loop', () => {
   // Beats 0 to 4 loop: two seconds, repeated.
   const looped = () => transport({ loopStart: 0, loopEnd: 4, loopEnabled: true })

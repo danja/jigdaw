@@ -45,15 +45,22 @@ export class ReelClock {
     this.#origin = null
   }
 
-  /** Fire `fn` once when the transport passes `beat`, on every pass of a loop. Returns a cancel. */
-  at (beat, fn) {
-    return this.#add({ kind: 'at', beat, fn })
+  /**
+   * Fire `fn` once when the transport passes `beat`, on every pass of a loop. Returns a cancel.
+   * `fn` is given `{ at }`, the elapsed time of the position that fired it.
+   *
+   * `since` is an elapsed time to count from instead of the last tick, once. A script that takes over at
+   * a bar line is registered a moment after the tick that found the bar line, and its own downbeat is
+   * in that tick's window, so it asks to count from there and the downbeat is not lost.
+   */
+  at (beat, fn, { since = null } = {}) {
+    return this.#add({ kind: 'at', beat, fn, since })
   }
 
-  /** Fire `fn` at every multiple of `beats`, starting at beat 0. Returns a cancel. */
-  every (beats, fn) {
+  /** Fire `fn` at every multiple of `beats`, starting at beat 0. Returns a cancel. Takes `since` as `at` does. */
+  every (beats, fn, { since = null } = {}) {
     if (!(beats > 0)) throw new Error('every needs a length above zero')
-    return this.#add({ kind: 'every', beats, fn })
+    return this.#add({ kind: 'every', beats, fn, since })
   }
 
   #add (job) {
@@ -70,21 +77,26 @@ export class ReelClock {
     const start = this.#until
     if (end <= start) return
     const transport = this.#transport()
-    const passes = [...segments(transport, start, end)]
+    const earliest = this.#jobs.reduce((m, j) => (j.live && j.since !== null ? Math.min(m, j.since) : m), start)
+    const all = [...segments(transport, Math.max(0, earliest), end)]
 
     const due = []
     for (const job of this.#jobs) {
       if (!job.live) continue
-      const at = job.kind === 'at' ? this.#lastAt(transport, passes, job.beat, start, end) : this.#lastEvery(transport, passes, job.beats, start, end)
+      // A job that asked to count from earlier looks further back, once; the rest see this tick's window.
+      const from = job.since !== null ? Math.max(0, Math.min(start, job.since)) : start
+      job.since = null
+      const passes = from === start ? [...segments(transport, start, end)] : all
+      const at = job.kind === 'at' ? this.#lastAt(transport, passes, job.beat, from, end) : this.#lastEvery(transport, passes, job.beats, from, end)
       if (at !== null) due.push({ at, order: job.order, job })
     }
     // Advance first: a firing that edits the transport, or throws, must not make this window fire twice.
     this.#until = end
     due.sort((a, b) => a.at - b.at || a.order - b.order)
-    for (const { job } of due) {
+    for (const { job, at } of due) {
       if (!job.live) continue // an earlier firing in this tick cancelled it
       try {
-        Promise.resolve(job.fn()).catch(() => {})
+        Promise.resolve(job.fn({ at })).catch(() => {})
       } catch { /* a firing that throws is the runner's to report; it does not stop the clock */ }
     }
   }

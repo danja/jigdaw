@@ -3,12 +3,15 @@
 **Status:** design, with its four open questions decided on 2026-10-01 (see "Decisions"). Nothing described here is built.
 The language is called **Reel**, and a script is a `.reel` file.
 
-**Built so far (2026-10-01), in `src/reel/` with `tests/reel/`:** the parser, the planner, the runner with its tick
-budget and seeded randomness, the capability table bound to the tool list, `ReelClock` (fires `at` and `every` by transport
+**Built so far (2026-10-01), in `src/reel/` with `tests/reel/`, and in the page:** the parser, the planner, the runner with its
+tick budget and seeded randomness, the capability table bound to the tool list, `ReelClock` (fires `at` and `every` by transport
 position, on the same loop logic as `src/engine/Scheduler.js`), the plugin validator and name lookup (`Host.js`), `createReel`
-(replacement at a bar line, `now`, supersession, stop, the dry run), the `script_run` tool, and `OpDispatcher.grouped`.
-**Not built:** wiring it into the page (`web/app/Transport.js` ticks the clock beside the scheduler), the editor panel, and
-saving a script in a session. `now` is a run option and not a word in the language.
+(replacement at a bar line, `now`, supersession, stop, the dry run), the `script_run` tool, `OpDispatcher.grouped`, and the
+**Script tab** (`src/ui/ScriptPanel.js`, `web/app/Script.js`), wired to the transport beside the scheduler. Checked in Chrome:
+a script is validated through the real loader, errors come back with lines, `every` fires on the beat while playing, a
+replacement takes over at a bar line and acts on that bar line's downbeat, Stop halts it, and the page does not scroll sideways at
+390px. **Not built:** saving a script in a session, and the render test for a ramp across a block boundary. `now` is a run option
+and not a word in the language.
 
 **The principle behind every trade-off here is live performance.** A script runs while the music plays, so nothing in it may
 stall the audio or the page, nothing may open a dialog mid-set, every change lands on a boundary the player chose, and a script

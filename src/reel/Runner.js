@@ -30,7 +30,11 @@ export function createRunner ({ tools, scheduler, session, beatsPerBar, currentB
     if (!tools[tool]) throw new Error(`the host has no ${tool} tool, which Reel needs`)
   }
 
-  async function run (plan, { onError = () => {} } = {}) {
+  /**
+   * `since` is the elapsed time of the bar line the script takes over at, so what it schedules counts from there
+   * and its own downbeat is not missed (ReelClock.at).
+   */
+  async function run (plan, { onError = () => {}, since = null } = {}) {
     const errors = []
     const report = (line, message) => { const e = { line, message }; errors.push(e); onError(e) }
     const cancels = []
@@ -108,14 +112,14 @@ export function createRunner ({ tools, scheduler, session, beatsPerBar, currentB
       } else if (step.when.kind === 'at') {
         // A ramp's own `at` is its start, and is carried out now, as an envelope the engine plays.
         if (step.action.type === 'ramp') await fire(step)
-        else cancels.push(scheduler.at(step.when.beat, () => unrecorded(() => fire(step))))
+        else cancels.push(scheduler.at(step.when.beat, () => unrecorded(() => fire(step)), { since }))
       } else {
         let cancel = null
         let dead = false
         cancel = scheduler.every(step.when.beats, async () => {
           if (dead) return
           if (!(await unrecorded(() => fire(step)))) { dead = true; cancel?.() }
-        })
+        }, { since })
         cancels.push(cancel)
       }
     }

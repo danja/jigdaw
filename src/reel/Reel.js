@@ -49,23 +49,23 @@ export function createReel ({ dispatcher, tools, clock, resolvePlugin, beatsPerB
   }
 
   /** The swap itself: the old schedules stop and the new run begins, as one step. */
-  async function swap (plan) {
+  async function swap (plan, { since = null } = {}) {
     current?.stop()
     current = null
-    const run = await dispatcher.grouped(() => runner().run(plan, { onError }))
+    const run = await dispatcher.grouped(() => runner().run(plan, { onError, since }))
     current = run
     return run
   }
 
-  /** Call `fn` once, at the next bar line the clock reaches. Returns a cancel. */
+  /** Call `fn(at)` once, at the next bar line the clock reaches, with that bar line's elapsed time. Returns a cancel. */
   function atNextBar (fn) {
     let cancel = null
     let done = false
-    cancel = clock.every(beatsPerBar(), () => {
+    cancel = clock.every(beatsPerBar(), ({ at } = {}) => {
       if (done) return
       done = true
       cancel?.()
-      fn()
+      fn(at)
     })
     return () => { done = true; cancel?.() }
   }
@@ -89,9 +89,9 @@ export function createReel ({ dispatcher, tools, clock, resolvePlugin, beatsPerB
 
     onPhase('waiting')
     return new Promise(resolve => {
-      const cancel = atNextBar(async () => {
+      const cancel = atNextBar(async barAt => {
         pending = null
-        const result = await swap(checked.plan)
+        const result = await swap(checked.plan, { since: barAt ?? null })
         resolve({ ok: result.ok, errors: result.errors, swapped: 'at-bar' })
       })
       pending = { cancel, resolve }

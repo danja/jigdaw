@@ -33961,14 +33961,21 @@ var ReelClock = class {
   stop() {
     this.#origin = null;
   }
-  /** Fire `fn` once when the transport passes `beat`, on every pass of a loop. Returns a cancel. */
-  at(beat, fn) {
-    return this.#add({ kind: "at", beat, fn });
+  /**
+   * Fire `fn` once when the transport passes `beat`, on every pass of a loop. Returns a cancel.
+   * `fn` is given `{ at }`, the elapsed time of the position that fired it.
+   *
+   * `since` is an elapsed time to count from instead of the last tick, once. A script that takes over at
+   * a bar line is registered a moment after the tick that found the bar line, and its own downbeat is
+   * in that tick's window, so it asks to count from there and the downbeat is not lost.
+   */
+  at(beat, fn, { since = null } = {}) {
+    return this.#add({ kind: "at", beat, fn, since });
   }
-  /** Fire `fn` at every multiple of `beats`, starting at beat 0. Returns a cancel. */
-  every(beats2, fn) {
+  /** Fire `fn` at every multiple of `beats`, starting at beat 0. Returns a cancel. Takes `since` as `at` does. */
+  every(beats2, fn, { since = null } = {}) {
     if (!(beats2 > 0)) throw new Error("every needs a length above zero");
-    return this.#add({ kind: "every", beats: beats2, fn });
+    return this.#add({ kind: "every", beats: beats2, fn, since });
   }
   #add(job) {
     job.live = true;
@@ -33986,19 +33993,23 @@ var ReelClock = class {
     const start = this.#until;
     if (end <= start) return;
     const transport2 = this.#transport();
-    const passes = [...segments(transport2, start, end)];
+    const earliest = this.#jobs.reduce((m, j) => j.live && j.since !== null ? Math.min(m, j.since) : m, start);
+    const all = [...segments(transport2, Math.max(0, earliest), end)];
     const due = [];
     for (const job of this.#jobs) {
       if (!job.live) continue;
-      const at = job.kind === "at" ? this.#lastAt(transport2, passes, job.beat, start, end) : this.#lastEvery(transport2, passes, job.beats, start, end);
+      const from = job.since !== null ? Math.max(0, Math.min(start, job.since)) : start;
+      job.since = null;
+      const passes = from === start ? [...segments(transport2, start, end)] : all;
+      const at = job.kind === "at" ? this.#lastAt(transport2, passes, job.beat, from, end) : this.#lastEvery(transport2, passes, job.beats, from, end);
       if (at !== null) due.push({ at, order: job.order, job });
     }
     this.#until = end;
     due.sort((a2, b) => a2.at - b.at || a2.order - b.order);
-    for (const { job } of due) {
+    for (const { job, at } of due) {
       if (!job.live) continue;
       try {
-        Promise.resolve(job.fn()).catch(() => {
+        Promise.resolve(job.fn({ at })).catch(() => {
         });
       } catch {
       }
@@ -34630,7 +34641,7 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
     if (!tools[tool]) throw new Error(`the host has no ${tool} tool, which Reel needs`);
   }
   async function run(plan2, { onError = () => {
-  } } = {}) {
+  }, since = null } = {}) {
     const errors = [];
     const report = (line, message) => {
       const e = { line, message };
@@ -34716,7 +34727,7 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
         await fire(step);
       } else if (step.when.kind === "at") {
         if (step.action.type === "ramp") await fire(step);
-        else cancels.push(scheduler.at(step.when.beat, () => unrecorded(() => fire(step))));
+        else cancels.push(scheduler.at(step.when.beat, () => unrecorded(() => fire(step)), { since }));
       } else {
         let cancel = null;
         let dead = false;
@@ -34726,7 +34737,7 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
             dead = true;
             cancel?.();
           }
-        });
+        }, { since });
         cancels.push(cancel);
       }
     }
@@ -34820,21 +34831,21 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
     const planned = await plan(parsed.statements, { beatsPerBar: beatsPerBar(), existing, resolvePlugin });
     return planned.ok ? { ok: true, plan: planned.plan } : { ok: false, stage: "plan", errors: planned.errors };
   }
-  async function swap(plan2) {
+  async function swap(plan2, { since = null } = {}) {
     current?.stop();
     current = null;
-    const run2 = await dispatcher.grouped(() => runner().run(plan2, { onError }));
+    const run2 = await dispatcher.grouped(() => runner().run(plan2, { onError, since }));
     current = run2;
     return run2;
   }
   function atNextBar(fn) {
     let cancel = null;
     let done = false;
-    cancel = clock.every(beatsPerBar(), () => {
+    cancel = clock.every(beatsPerBar(), ({ at } = {}) => {
       if (done) return;
       done = true;
       cancel?.();
-      fn();
+      fn(at);
     });
     return () => {
       done = true;
@@ -34856,9 +34867,9 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
     }
     onPhase("waiting");
     return new Promise((resolve) => {
-      const cancel = atNextBar(async () => {
+      const cancel = atNextBar(async (barAt) => {
         pending = null;
-        const result = await swap(checked.plan);
+        const result = await swap(checked.plan, { since: barAt ?? null });
         resolve({ ok: result.ok, errors: result.errors, swapped: "at-bar" });
       });
       pending = { cancel, resolve };

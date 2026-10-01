@@ -122,6 +122,27 @@ describe('running a plan', () => {
   })
 })
 
+describe('taking over at a bar line', () => {
+  it('hands the bar line\'s time to what it schedules, so its own downbeat is counted', async () => {
+    const { plan, runner, scheduler } = await setup(`${header}at 3:1 f.mix = 0.9\nevery 1 bar: f.mix = 0.5`)
+    const seen = []
+    const original = { at: scheduler.at.bind(scheduler), every: scheduler.every.bind(scheduler) }
+    scheduler.at = (beat, fn, options) => { seen.push(['at', options]); return original.at(beat, fn) }
+    scheduler.every = (beats, fn, options) => { seen.push(['every', options]); return original.every(beats, fn) }
+    await runner.run(plan, { since: 2 })
+    expect(seen).toEqual([['at', { since: 2 }], ['every', { since: 2 }]])
+  })
+
+  it('hands nothing when it does not take over at a bar line', async () => {
+    const { plan, runner, scheduler } = await setup(`${header}every 1 bar: f.mix = 0.5`)
+    let options
+    const every = scheduler.every.bind(scheduler)
+    scheduler.every = (beats, fn, o) => { options = o; return every(beats, fn) }
+    await runner.run(plan)
+    expect(options).toEqual({ since: null })
+  })
+})
+
 describe('ramps', () => {
   it('places a ramp that has its own start as an envelope at that beat', async () => {
     const { plan, runner, calls } = await setup(`${header}at 2:1 ramp f.cutoff 200Hz -> 8kHz over 2 bars`)

@@ -107,6 +107,10 @@ starts on the simple page.
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).
+- **A Script tab** drives the plugins from text, in Reel ([livecoding.md](livecoding.md)): every plugin a script loads is
+  fetched and validated before anything runs, a script with a problem changes nothing and says which lines, a new script
+  takes over at the next bar line (or now), and one run is one undo step. Control+Enter runs it and
+  Control+Shift+Enter runs it now. Checked in Chrome, at phone width too.
 
 ## The plugins
 

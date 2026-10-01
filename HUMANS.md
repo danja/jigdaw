@@ -22,6 +22,9 @@ is wrong in INBOX.md.
 - **Listen to Keyframe** (`plugins/keyframe/`, new 2026-10-01): a time rate of 50 on a drum loop, a pitch shift of 7 on a
   chord, and each Quality and Stereo setting against the others. Say whether Economy is usable or only Balanced is, and whether
   Linked stereo moves the image on a wide clip. Nothing here has been heard, only measured.
+- **Use the Script tab with a screen reader and a real phone** (new 2026-10-01): run a script with an error and listen to whether
+  "Problems" and the status are announced and the "Go to line" buttons make sense, run one that plays, and use Control+Enter. The
+  studio page sends a phone to the simple page, so add `?studio` to the address to reach the tab on one.
 - **Use the keys and buttons with real hands:** the clip keys (S, D, M, L, [, ], Ctrl+C, X, V), the chain strip's Alt with Left or
   Right, the automation points (arrows, C, Delete), and the icon buttons, with real key presses and not dispatched events.
 - **Record your voice on the simple page** with a real microphone: the browser's permission prompt, the device it picks and how

@@ -198,7 +198,8 @@
   .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:12px; }
   .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
   .script-log-error { color:var(--err); }
-  .script-syntax summary { cursor:pointer; color:var(--dim); font-size:12px; min-height:44px; display:flex; align-items:center; }
+  /* No display:flex here: it removes the disclosure triangle, which is what says this opens. */
+  .script-syntax summary { cursor:pointer; color:var(--dim); font-size:14px; padding:12px 0; min-height:44px; }
   .script-syntax dt { margin-top:8px; }
   .script-syntax dd { margin:2px 0 0 1.2rem; color:var(--dim); font-size:12px; }
   @media (max-width: 720px) { .script-button { flex:1 1 100%; } }

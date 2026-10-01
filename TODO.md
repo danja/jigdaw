@@ -8,19 +8,18 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 ## From the inbox
 
 - [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
-      decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built and tested, 2026-10-01** (`src/reel/`, 16
-      files of tests, every mutant tried caught): parser, planner, runner, capability table bound to `src/mcp/tools.js`, `ReelClock`
-      (stream-position firing, loops, no replay of a stalled stretch), the plugin validator that runs the host's own checks with
-      digests on a first run, `createReel` (bar-line swap, `now`, latest-wins, a failed plan leaves the old script playing, stop,
-      dry run), the `script_run` tool, and `OpDispatcher.grouped`. **Left, in order:** (1) wire it into the page: build the reel in
-      `web/app/`, start, tick and stop its `ReelClock` beside the `Scheduler` in `web/app/Transport.js`, and register `script_run`
-      through `registerTools`; (2) the editor panel (run, run now, stop, a log, errors announced and not shown by colour alone,
-      reachable by keyboard, usable at phone width), then a check in Chrome with the window in front; (3) saving a script in a
-      session, in its own named graph, never run on open (vocabulary and `vocabs/shapes.ttl` first); (4) an offline render test
-      that a ramp placed at a beat that is not a block multiple starts in the block containing it. **Known limits to decide:** a
-      new plugin named by a script is validated before the swap but instantiated at it, so a swap that adds one can stall the bar
-      (preloading is the fix); a failure after the swap begins has already stopped the old script; a timed parameter set is
-      accurate to the tick, and sample accuracy for one means giving `parameter_set` an `atFrame`.
+      decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built, tested and checked in
+      Chrome, 2026-10-01:** everything in `src/reel/`, `OpDispatcher.grouped`, `script_run`, and the **Script tab** with its
+      wiring (the clock ticks beside the scheduler, `ReelClock` takes `since` so a script taking over at a bar line acts on that
+      bar line's downbeat, found in the browser). **Left:** (1) saving a script in a session, in its own named graph, never run on
+      open (vocabulary and `vocabs/shapes.ttl` first); (2) an offline render test that a ramp placed at a beat that is not a block
+      multiple starts in the block containing it; (3) a real screen reader pass over the tab, which only a person can do
+      (`HUMANS.md`); (4) the studio page redirects phones to the simple page, so the tab is not offered on a phone unless
+      `?studio` is used, and a decision whether the simple page should have one. **Known limits to decide:** a new plugin named by a
+      script is validated before the swap but instantiated at it, so a swap that adds one can stall the bar (preloading is the
+      fix); a failure after the swap begins has already stopped the old script; a timed parameter set is accurate to the tick,
+      and sample accuracy for one means giving `parameter_set` an `atFrame`; parse errors are reported before planning, so a
+      script with a typo and a bad range shows the typo first.
 - [ ] **Decide whether more docs should be hidden.** 2026-10-01 (DIM task `/farelo/task/t57b75c497c2a`). The mechanism
       exists: `bin/docs-hidden.js` keeps six documents off the site, and `tests/bin/docs-site.test.js` now checks
       that the published set is every document not hidden and that `docs/plugins/*-design.md` has no page. That
