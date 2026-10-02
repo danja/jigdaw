@@ -1,0 +1,95 @@
+# stomp-rack/profile.ttl
+#
+# A composite plugin: a boost, a tremolo and a reverb, in that order, published and loaded as one plugin.
+# docs/nested-plugins.md. Written by hand, since there is no code to generate a profile from.
+#
+# Each member is pinned to the canonical digest of its profile. A member rebuilt with a different digest makes
+# the pin stale, and tests/host/StompRackPins.test.js fails until it is renewed with
+#   node bin/pin.js plugins/stomp-rack --members plugins
+# which prints the line to write. A pin is the author saying "these bytes", so it is renewed deliberately.
+
+@base <https://strandz.it/jigdaw/plugins/stomp-rack/> .
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
+@prefix pu:   <http://purl.org/stuff/plugin-universe/> .
+
+<>
+    a jig:CompositePlugin , trn:PluginProfile ;
+    rdfs:label "Stomp rack" ;
+    rdfs:comment "A boost into a tremolo into a plate reverb, as one plugin: Drive, Tremolo depth and Reverb mix are all it exposes. The rack is built from three published Jigs by reference, and is the worked example of a composite plugin." ;
+    trn:vendor "danja" ;
+    doap:revision "1.0.0" ;
+    doap:developer <http://danny.ayers.name> ;
+    pu:licenceId "Apache-2.0" ;
+    foaf:homepage <> ;
+    trn:role trn:AudioEffect ;
+    trn:accepts trn:Audio ;
+    trn:produces trn:Audio ;
+    trn:format trn:Jig ;
+
+    jig:audioInputs 1 ;
+    jig:inputChannels 2 ;
+    jig:audioOutputs 1 ;
+    jig:outputChannels 2 ;
+
+    jig:member <#boost> , <#trem> , <#verb> ;
+    jig:connection <#c-in> , <#c-bt> , <#c-tv> , <#c-out> ;
+    lv2:port <#drive> , <#depth> , <#room> .
+
+<#boost> a jig:Member ;
+    jig:plugin <https://strandz.it/jigdaw/plugins/boost/> ;
+    jig:pinnedDigest "sha384-mHh84PoU3fUsInw8O8gmsVoppGyZDZIAXNbhGw5Yh+fsF0BxnDobEqXZHjd3/c2U" .
+
+<#trem> a jig:Member ;
+    jig:plugin <https://strandz.it/jigdaw/plugins/tremolo/> ;
+    jig:pinnedDigest "sha384-KfKgyd8ISMq5rDWpXOs3y5w15lo19/MQ1Em9UExL2HpanWACTqsntEeo9gwanuzH" ;
+    jig:setting <#trem-rate> .
+
+<#trem-rate> a jig:ParameterSetting ; jig:symbol "rate" ; jig:value 4.5 .
+
+<#verb> a jig:Member ;
+    jig:plugin <https://strandz.it/jigdaw/plugins/cascade/> ;
+    jig:pinnedDigest "sha384-NyVA8Oaw03CjRZz0ul4qUs3F2hFZgwpe9dS40kUQEGMA4o43CB2uDXL7bym/D5xc" .
+
+# The rack's own input 0 and output 0 are connections from and to the composite itself.
+<#c-in> a jig:Connection ; jig:from <#c-in-from> ; jig:to <#c-in-to> ; jig:signalKind trn:Audio .
+<#c-in-from> a jig:Endpoint ; jig:endpointNode <> ; jig:portIndex 0 .
+<#c-in-to> a jig:Endpoint ; jig:endpointNode <#boost> ; jig:portIndex 0 .
+
+<#c-bt> a jig:Connection ; jig:from <#c-bt-from> ; jig:to <#c-bt-to> ; jig:signalKind trn:Audio .
+<#c-bt-from> a jig:Endpoint ; jig:endpointNode <#boost> ; jig:portIndex 0 .
+<#c-bt-to> a jig:Endpoint ; jig:endpointNode <#trem> ; jig:portIndex 0 .
+
+<#c-tv> a jig:Connection ; jig:from <#c-tv-from> ; jig:to <#c-tv-to> ; jig:signalKind trn:Audio .
+<#c-tv-from> a jig:Endpoint ; jig:endpointNode <#trem> ; jig:portIndex 0 .
+<#c-tv-to> a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+
+<#c-out> a jig:Connection ; jig:from <#c-out-from> ; jig:to <#c-out-to> ; jig:signalKind trn:Audio .
+<#c-out-from> a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+<#c-out-to> a jig:Endpoint ; jig:endpointNode <> ; jig:portIndex 0 .
+
+<#drive>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "drive" ; lv2:name "Drive" ;
+    lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 2 ;
+    jig:drives <#drive-target> .
+<#drive-target> a jig:Endpoint ; jig:endpointNode <#boost> ; jig:portSymbol "gain" .
+
+<#depth>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "depth" ; lv2:name "Tremolo depth" ;
+    lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:drives <#depth-target> .
+<#depth-target> a jig:Endpoint ; jig:endpointNode <#trem> ; jig:portSymbol "depth" .
+
+<#room>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "room" ; lv2:name "Reverb mix" ;
+    lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:drives <#room-target> .
+<#room-target> a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portSymbol "mix" .

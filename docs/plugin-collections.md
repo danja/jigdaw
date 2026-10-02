@@ -123,6 +123,10 @@ For each included plugin, a host MUST perform steps 1 and 2 of contract section 
 its IRI: fetch the profile, parse it, validate it, and evaluate `trn:requires` and
 `jig:wasmFeature` against the capabilities the host offers.
 
+A member that is a composite plugin ([nested-plugins.md](nested-plugins.md)) is checked as its own profile and its own
+`trn:requires`. Its members are not fetched, since a collection of forty racks would otherwise fetch forty trees to draw a list: the
+whole tree is checked when a person loads it, as section 6 of that document says.
+
 A host MUST NOT fetch any `jig:module`, `jig:processor`, `jig:ui` or `jig:asset` while opening a
 collection. Those are fetched and verified against their `jig:integrity` digests when a person
 loads the plugin, and a host MUST perform the whole of contract section 3.1 again at that

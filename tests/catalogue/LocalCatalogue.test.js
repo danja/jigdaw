@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { LocalCatalogue } from '../../src/catalogue/LocalCatalogue.js'
 import { parseTurtleFile } from '../../src/validate/files.js'
-import { readProfile } from '../../src/rdf/ProfileReader.js'
+import { readPlugin } from '../../src/rdf/PluginReader.js'
 import { pluginDirs } from '../../src/catalogue/PluginDirectories.js'
 
 const root = resolve(import.meta.dirname, '../..')
@@ -27,7 +27,7 @@ describe('the plugins this host serves', () => {
     const expected = []
     for (const name of await pluginDirs(join(root, 'plugins'))) {
       const file = join(root, 'plugins', name, 'profile.ttl')
-      expected.push(readProfile(await parseTurtleFile(file)).iri)
+      expected.push(readPlugin(await parseTurtleFile(file)).iri)
     }
     const found = (await catalogue.search({})).map(e => e.iri)
     expect(found.sort()).toEqual(expected.sort())
@@ -39,7 +39,7 @@ describe('the plugins this host serves', () => {
   })
 
   it('matches text against name, description and vendor', async () => {
-    expect((await catalogue.search({ text: 'reverb' })).map(e => e.label)).toEqual(['Cascade', 'Ferrite'])
+    expect((await catalogue.search({ text: 'reverb' })).map(e => e.label)).toEqual(['Cascade', 'Ferrite', 'Stomp rack'])
     expect((await catalogue.search({ text: 'synthesiser' })).map(e => e.label)).toEqual(['Pulse'])
     // Every plugin here is by the same vendor, so this matches all of them.
     expect((await catalogue.search({ text: 'danja' })).length)
@@ -52,7 +52,7 @@ describe('the plugins this host serves', () => {
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Mop', 'Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
     // BassGen accepts MIDI too: it can be steered from a keyboard. DrumKit
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
@@ -63,7 +63,7 @@ describe('the plugins this host serves', () => {
   it('takes a full IRI for a facet as well as a bare name', async () => {
     const full = await catalogue.search({ role: 'http://purl.org/stuff/transmissions/AudioEffect' })
     expect(full.map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
   })
 
   it('returns nothing rather than everything when nothing matches', async () => {
@@ -90,7 +90,7 @@ describe('the generated index', () => {
 
     for (const entry of index.plugins) {
       const slug = entry.iri.replace(/\/$/, '').split('/').pop()
-      const profile = readProfile(await parseTurtleFile(join(root, `plugins/${slug}/profile.ttl`), entry.iri))
+      const profile = readPlugin(await parseTurtleFile(join(root, `plugins/${slug}/profile.ttl`), entry.iri))
 
       expect(profile.label, `${slug} label`).toBe(entry.label)
       expect(profile.iri, `${slug} iri`).toBe(entry.iri)

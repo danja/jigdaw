@@ -112,7 +112,7 @@ export function createBrowser (ctx) {
     return new CollectionLoader({
       parse: parseText,
       validator,
-      verify: iri => verifier.loadProfile(iri)
+      verify: iri => verifier.loadListing(iri)
     }).load(url)
   }
 

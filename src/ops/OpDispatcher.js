@@ -20,9 +20,12 @@ import { effectiveConnections } from './Bypass.js'
 import { expandComposites, flatIdOf } from './CompositeExpansion.js'
 import { parameterTargets } from '../host/CompositeParameters.js'
 import { collectState } from '../host/CompositeState.js'
+import { planUnpack } from './CompositeUnpack.js'
+import { planPack } from './CompositePack.js'
+import { writeComposite } from '../rdf/CompositeWriter.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
-import { decodeState } from '../host/StateCodec.js'
+import { decodeState, encodeState } from '../host/StateCodec.js'
 import { UndoHistory } from './UndoHistory.js'
 
 export class OpDispatcher {
@@ -587,6 +590,98 @@ export class OpDispatcher {
     if (position) this.#project.moveNode(nodeId, position.x, position.y)
     this.#emit({ type: 'plugin-added', nodeId, trackId: track, entry })
     return { ...result, nodeId, trackId: track, entry }
+  }
+
+  /**
+   * Turn a composite plugin's node back into its members, as ordinary nodes on the same track, joined to what was around it, with
+   * the value each had inside the rack so it sounds the same. One undoable edit. docs/nested-plugins.md section 12.
+   *
+   * The members are added first and the composite is removed last, in the same change as the wiring, so a member that will not load
+   * leaves the rack exactly as it was and no stray nodes behind. A composite with automation on it is refused: an envelope is on one
+   * of its exposed parameters, which will not exist, and dropping it silently would lose a person's work.
+   */
+  async unpackComposite (nodeId) {
+    const composite = this.#composites.get(nodeId)
+    if (!composite) return { ok: false, kind: 'change', message: `${nodeId} is not a composite plugin, so there is nothing to unpack` }
+    if (this.#project.envelopes.some(e => e.target.node === nodeId)) {
+      return { ok: false, kind: 'change', message: `${composite.entry.profile.label} has automation on it, which unpacking would lose. Remove its envelopes first.` }
+    }
+
+    const plan = planUnpack({ project: this.#project, nodeId, tree: composite.entry.tree, state: await this.getNodeState(nodeId) })
+
+    return this.grouped(async () => {
+      const made = new Map()
+      const abandon = async failure => {
+        for (const id of made.values()) this.apply([{ op: 'removeNode', id }])
+        return failure
+      }
+
+      for (const member of plan.members) {
+        const added = await this.addPlugin(member.plugin, {
+          track: plan.track, label: member.label, ...(member.state === null ? {} : { state: encodeState(member.state) })
+        })
+        if (!added.ok) return abandon({ ...added, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${added.message}` })
+        made.set(member.key, added.nodeId)
+        for (const [symbol, value] of Object.entries(member.settings)) {
+          const set = this.setParameter(added.nodeId, symbol, value)
+          if (!set.ok) return abandon({ ...set, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${set.message}` })
+        }
+        if (plan.bypassed) this.apply([{ op: 'setNode', id: added.nodeId, bypassed: true }])
+      }
+
+      const idOf = e => (e.member === undefined ? e : { node: made.get(e.member), ...Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'member')) })
+      const changes = [
+        { op: 'removeNode', id: nodeId },
+        ...plan.connections.map(c => ({ op: 'addConnection', from: idOf(c.from), to: idOf(c.to), signalKind: c.signalKind })),
+        ...(plan.midiInput ? [{ op: 'setTrack', id: plan.track, midiInput: made.get(plan.midiInput) }] : []),
+        ...(plan.audioInput ? [{ op: 'setTrack', id: plan.track, audioInput: made.get(plan.audioInput) }] : [])
+      ]
+      const result = this.apply(changes)
+      if (!result.ok) return abandon(result)
+      return { ...result, nodeIds: [...made.values()] }
+    })
+  }
+
+  /**
+   * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
+   * a composite is a plugin at an IRI, and an IRI is where only its author can put it, so what comes back is a document and not a node.
+   * Each member is pinned to the digest of the profile fetched for it now. docs/nested-plugins.md section 12.
+   *
+   * `iri` is where it will be published, `https:` or loopback `http:`. Returns `{ ok, turtle, summary, warnings }`, the warnings saying
+   * what a composite cannot carry (bypass, saved state, automation, a connection into a member's own parameter).
+   */
+  async packSelection ({ nodeIds, iri, label, comment = null, expose = 'set' } = {}) {
+    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri ?? '')) {
+      return { ok: false, kind: 'change', message: 'a composite is published at an https IRI, or an http one on loopback, and needs one to be named by' }
+    }
+    if (typeof label !== 'string' || label.trim() === '') return { ok: false, kind: 'change', message: 'a composite needs a name' }
+    let plan
+    try {
+      plan = planPack({ project: this.#project, nodeIds, profileOf: id => this.engineNode(id)?.profile ?? null, expose })
+    } catch (error) {
+      return { ok: false, kind: 'change', message: error.message }
+    }
+
+    const warnings = [...plan.warnings]
+    const pins = new Map()
+    for (const plugin of new Set(plan.members.map(m => m.plugin))) {
+      try {
+        pins.set(plugin, await this.#engine.profileDigest(plugin))
+      } catch (error) {
+        warnings.push(`${plugin} could not be pinned (${error.message}), so a signature on this composite would not reach it`)
+      }
+    }
+    const turtle = writeComposite({
+      iri, label: label.trim(), comment,
+      ...plan,
+      members: plan.members.map(m => ({ ...m, pinnedDigest: pins.get(m.plugin) ?? null }))
+    })
+    return {
+      ok: true,
+      turtle,
+      summary: { members: plan.members.length, controls: plan.ports.length, audioInputs: plan.audioInputs, audioOutputs: plan.audioOutputs, pinned: pins.size },
+      warnings
+    }
   }
 
   /**

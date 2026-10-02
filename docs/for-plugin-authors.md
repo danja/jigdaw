@@ -315,8 +315,7 @@ as one. [nested-plugins.md](nested-plugins.md) is the specification, and its sec
 
 The steps, for a rack of existing Jigs:
 
-1. In a directory of its own, such as `racks/yourrack/`, not under `plugins/` (the local catalogue reads that as Jigs only, see TODO.md), copy
-   `examples/reference-composite.ttl` to `profile.ttl` and change the members, the wiring and the label. A member is a plugin IRI with, optionally, the
+1. In a directory of its own, such as `racks/yourrack/`, copy `examples/reference-composite.ttl` to `profile.ttl` and change the members, the wiring and the label. A member is a plugin IRI with, optionally, the
    settings you want it to start with and keep. A connection to or from `<>`, the composite itself, is its input or its output.
 2. Expose only what a person should change. Each `lv2:port` you declare says, with `jig:drives`, which member parameter it sets. The
    rest is your voicing, fixed. A port's range must lie within the range of what it drives.
@@ -328,6 +327,10 @@ The steps, for a rack of existing Jigs:
    asks of any plugin.
 6. To send it to somebody, `node bin/bundle.js racks/yourrack --members plugins`. A rack with an unpinned member is refused, naming it, because
    a signature on it would not reach what it runs.
+
+To have it listed by the host that serves `plugins/` (its search, its gallery and its shipped collection), put the directory there instead:
+[`plugins/stomp-rack/`](../plugins/stomp-rack/profile.ttl) is the worked example, and `tests/host/StompRackPins.test.js` is the guard that fails, with the
+command to run, when a member is rebuilt and a pin goes stale.
 
 Things worth knowing. A composite has no module, no processor and no `jig:ui`, and MUST NOT declare latency or a tail: they are worked out
 from the members. It runs code from every origin it names, and a person loading it should be told so. A pin has no override in a host: a

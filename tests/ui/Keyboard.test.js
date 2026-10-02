@@ -25,7 +25,7 @@ describe('which plugins get a keyboard', () => {
     const { readFileSync } = await import('node:fs')
     const { resolve, join } = await import('node:path')
     const { parseText } = await import('../../src/rdf/parse.js')
-    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const { readPlugin } = await import('../../src/rdf/PluginReader.js')
     const { pluginDirs } = await import('../../src/catalogue/PluginDirectories.js')
     const root = resolve(import.meta.dirname, '../..')
     const found = []
@@ -33,7 +33,7 @@ describe('which plugins get a keyboard', () => {
       const file = join(root, 'plugins', name, 'profile.ttl')
       found.push({
         name,
-        profile: readProfile(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
+        profile: readPlugin(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
       })
     }
     return found
@@ -48,7 +48,7 @@ describe('which plugins get a keyboard', () => {
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
     expect(got).toEqual(['8b8', 'canticle', 'drumkit', 'mop', 'pulse'])
-    expect(not).toEqual(['bassgen', 'boost', 'cadence', 'cascade', 'counterpointer', 'dice', 'drumgen', 'dynamix', 'ferrite', 'ground', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'keyframe', 'lookahead', 'melgen', 'midifilter', 'parameq', 'quefrency', 'squelch', 'tremolo'])
+    expect(not).toEqual(['bassgen', 'boost', 'cadence', 'cascade', 'counterpointer', 'dice', 'drumgen', 'dynamix', 'ferrite', 'ground', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'keyframe', 'lookahead', 'melgen', 'midifilter', 'parameq', 'quefrency', 'squelch', 'stomp-rack', 'tremolo'])
   })
 
   it('asks whether it makes a sound, not only whether it takes a note', async () => {

@@ -478,6 +478,25 @@ export function createRack (ctx) {
       header.append(toggle)
     }
 
+    // A composite plugin can be turned back into the plugins it is made of. Offered only on one: on any other plugin it would be a
+    // control that can only ever refuse. The Op joins the members to what the composite was joined to and gives each the value it had.
+    if (profile?.composite) {
+      const unpack = document.createElement('button')
+      unpack.type = 'button'
+      unpack.className = 'unpack'
+      unpack.id = `unpack-${node.id}`
+      unpack.textContent = 'Unpack'
+      unpack.setAttribute('aria-label', `Unpack ${labelFor(node.id)} into the plugins it is made of`)
+      unpack.addEventListener('click', async () => {
+        unpack.disabled = true
+        const result = await dispatcher.unpackComposite(node.id)
+        if (!result.ok) { unpack.disabled = false; log(result.message, 'error'); return }
+        forgetNode(node.id)
+        log(`unpacked ${node.label} into ${result.nodeIds.length} plugins`, 'ok')
+      })
+      header.append(unpack)
+    }
+
     const remove = document.createElement('button')
     remove.className = 'remove'
     remove.type = 'button'

@@ -338,7 +338,7 @@ describe('the panel each committed plugin actually generates', () => {
     const { resolve, join } = await import('node:path')
     const root = resolve(import.meta.dirname, '../..')
     const { parseText } = await import('../../src/rdf/parse.js')
-    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const { readPlugin } = await import('../../src/rdf/PluginReader.js')
 
     const found = []
     for (const entry of readdirSync(join(root, 'plugins'), { withFileTypes: true })) {
@@ -347,7 +347,7 @@ describe('the panel each committed plugin actually generates', () => {
       if (!existsSync(file)) continue
       found.push({
         name: entry.name,
-        profile: readProfile(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
+        profile: readPlugin(await parseText(readFileSync(file, 'utf8'), 'urn:jigdaw:test'))
       })
     }
     return found

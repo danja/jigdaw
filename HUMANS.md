@@ -19,8 +19,9 @@ is wrong in INBOX.md.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
   position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track
   against the live one, and an exported WAV and a stems zip opened in another program.
-- **Listen to a composite** (new 2026-10-02): a rack of boost, tremolo and cascade, `examples/reference-composite.ttl`, loaded after Pulse in
-  Jiggy. It was driven in Chrome and measured at the master, never heard. Say whether Drive, Tremolo depth and Reverb mix do what their names
+- **Listen to a composite** (new 2026-10-02): `plugins/stomp-rack/`, a rack of boost, tremolo and cascade, loaded after Pulse in
+  Jiggy. It is not on the live site until the next deploy, and the page's search loads an entry from its canonical address, so after deploying, search
+  for "rack" and press Load to confirm that path, which has been checked only up to the Load button. It was driven in Chrome and measured at the master, never heard. Say whether Drive, Tremolo depth and Reverb mix do what their names
   say and whether the three together sound like a pedal board. Loading one needs its members served and its pins current: see
   `docs/nested-plugins.md` section 9.2.
 - **Listen to Keyframe** (`plugins/keyframe/`, new 2026-10-01): a time rate of 50 on a drum loop, a pitch shift of 7 on a

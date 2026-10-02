@@ -667,7 +667,21 @@ suspect: a silent result in the first run was the page's own meter, which polls 
 recorder built on it saw nothing. Measuring at the track input from an audio callback does not have that problem. The native adapter now names a
 composite when it refuses one, and `npm run check-plugin` renders a straight chain.
 
-Not done: a phone, listening, and running a linear composite in the native adapter. TODO.md has the order.
+The composite then became a catalogue entry. `plugins/stomp-rack/` is a worked composite at its canonical address, pinned to boost, tremolo and cascade, and
+`src/rdf/PluginReader.js` reads either kind of plugin into one shape, so the local index, the gallery, the shipped collection and the `jig` tool list it
+like any Jig. A collection checks a composite as its own profile, a script's `load` verifies every member's files, and the page's search offers it as
+loadable. A test fails, with the command to run, when a member is rebuilt and a pin goes stale. Wiring it in found a real regression of mine: the
+`bundle` command deadlocked on its own import for every plugin (MISTAKES.md).
+
+Pack and unpack followed. **Unpack** replaces a composite's node with its members as ordinary nodes, each with the value it had inside, joined to what the
+rack was joined to, as one undo step, refusing a rack with automation on it and leaving the rack untouched when a member will not load. **Pack** describes
+a selection as a composite profile, pinning each member, and changes nothing in the project, because a composite is a plugin at an address only its author
+can publish at. The check that mattered was a round trip: take the reference rack apart, pack what came out, load the result as a composite, and render both,
+which are identical. In Chrome, Unpack on the rack's card produced Boost, Tremolo and Cascade with the rack's Drive as Boost's Gain, and Undo restored the
+rack; the pins computed by `composite_pack` in the browser were the same as the ones Node computed.
+
+Not done: a phone, listening, loading the rack from a search result (the page loads a local entry from its canonical address, and the rack is not
+deployed there yet), and running a linear composite in the native adapter. TODO.md has the order.
 
 ## What it found
 

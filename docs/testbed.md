@@ -25,7 +25,7 @@ Five programs load Jigs, and a sixth packages them for someone else's host.
 
 ## Plugins
 
-There are 26 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 27 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -45,6 +45,7 @@ written to cover different parts of the contract, and each one's row says which.
 | [8-Bit 8asterd](../plugins/8b8/README.md) | Unmodified firmware for three AY-3-8910 chips, compiled from C++. | Module ABI version 2 MIDI in, as whole event records. 42 parameters, generated from the firmware's own list, with scale points and values shown as the device's panel shows them. Parameters that also answer to MIDI CCs. |
 | [Mop](../plugins/mop/README.md) | An OPL3 FM General MIDI instrument in C, with its AdLib bank embedded. MIDI in, stereo audio out, drums on channel 10. | Module ABI version 2 MIDI in, as whole event records released per sample. 128 General MIDI programs as one enumeration, a voice cap defaulting to eight of the eighteen the chip has, and every other parameter answering to a MIDI CC. |
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
+| [Stomp rack](../plugins/stomp-rack/) | A boost into a tremolo into a plate reverb, as one plugin, built from Boost, Tremolo and Cascade by reference and pinned to each. No code of its own. | [nested-plugins.md](nested-plugins.md) and contract section 14: a composite plugin, its exposed controls, its pins (`tests/host/StompRackPins.test.js` fails when a member is rebuilt), bundling and the catalogue. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/), [One-Pole Filter](../plugins/jsfx-one-pole-filter/), [Soft Clipper](../plugins/jsfx-soft-clipper/) | Three REAPER JSFX effects converted by `bin/jsfx-import.js`, run by the shared bytecode interpreter in [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md). | A module with no `jig:abi`, private to its processor, which module-abi.md says a native host must refuse. The compiled script carried as a `jig:asset`. Converting from another plugin format. |
 | [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The first plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. Contract 5.2: the only plugin declaring an a-rate port, read per sample. Messaging.md 2.4: the only interface drawing the processor's own snapshots, a live gain readout. |
@@ -130,6 +131,10 @@ These are the modules the hosts are built from, in the layers
   [CompositeState.js](../src/host/CompositeState.js): [nested-plugins.md](nested-plugins.md), the tree check before any code is fetched,
   the expansion of a composite into its members for the compiler, and the state a composite saves. Each rule is listed beside its test in
   that document's section 11.
+- [CompositeUnpack.js](../src/ops/CompositeUnpack.js), [CompositePack.js](../src/ops/CompositePack.js) and
+  [CompositeWriter.js](../src/rdf/CompositeWriter.js): [nested-plugins.md](nested-plugins.md) section 9.4, taking a composite apart into its members
+  and describing a selection as a composite profile, checked by taking the reference rack apart, packing what came out and hearing that the result is
+  the rack again.
 - [EventRouter.js](../src/engine/EventRouter.js): contract 6.1, MIDI carried by the host
   between processors.
 - [Scheduler.js](../src/engine/Scheduler.js): contract 6.2, clip notes sent ahead at absolute

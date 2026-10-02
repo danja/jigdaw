@@ -24,6 +24,17 @@ purpose once. A sentence in a design that says what a load does gets a line in t
 The plugin's own panel had been drawn correctly in a test, so the first assumption was that headless Chrome was unavailable or slow.
 `/usr/bin/google-chrome` was there and had been used all along; the mistake was not checking, which AGENTS.md says not to do. Chrome was fine and the page was not: `bin/jig.js`'s `panelStyle()` inlined the `<style>` block from `web/index.html`, but the generated panel and the knob had moved out of it into `web/panel.css`, which that page only links. A standalone page opened as `file://` cannot resolve the link, so `.controls` kept its default `display: block` and every control stacked full width. Measured with `--dump-dom` and a script reporting `getComputedStyle`, on cascade, drumkit, boost and tremolo alike: all four `block`, so every gallery screenshot taken since the stylesheet moved was of an unstyled page. The 20 committed PNGs were correct because they predate the move, and regenerating all 26 after the fix reproduced all 20 byte for byte, which is what confirmed the diagnosis rather than a new one. `tests/bin/jig.test.js` now asserts the panel selectors are present and that the page carries no stylesheet link. Prevention: a screenshot path is a build step, and a step whose output nobody looks at until something looks wrong is one that was broken for as long as nobody checked.
 
+## A library test cannot see a deadlock in the entry point
+
+**2026-10-02 `bin/bundle.js` wrote nothing for any plugin, for a few hours, with every test green.** The command line awaited a dynamic import of
+`bundle-composite.js`, which imported from `bundle.js`, which was the entry module still waiting on that import: node printed "unsettled
+top-level await" and exited 0 with no files. The two bundle suites call `bundle()` as a library, where the cycle is harmless. It was found by
+running the command on the real worked composite, which is what CLAUDE.md says to do after any change to imports and which I had not done
+after adding `--members`. Fixed by moving everything but the command line into `bundle-core.js`, keeping `bundle.js` as the front door that
+re-exports it. `tests/bin/bundle-cli.test.js` runs the commands as subprocesses and fails on all four checks when the cycle is recreated.
+Prevention: a CLI that gains an import gets a subprocess test in the same change, because a library call exercises the code and not the
+entry point, and a command that exits 0 having produced nothing is still a failure.
+
 ## A browser experiment that does not check what its calls returned measures the default
 
 **2026-10-02 the first A/B of the composite's Drive control compared Drive 1 with Drive 1, and nearly reported a defect.** `parameter_set`

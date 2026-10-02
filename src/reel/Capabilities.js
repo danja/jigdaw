@@ -54,6 +54,8 @@ export const NOT_SCRIPTABLE = Object.freeze({
   node_move_in_chain: 'chain editing, not yet a statement',
   node_bypass: 'wanted for performance, and not in version one',
   node_remove: 'destructive, and not a gesture in a set',
+  node_unpack: 'it replaces one node with several, so a name a script already holds for it would change meaning under it',
+  composite_pack: 'it writes a profile for a person to publish and changes nothing a script plays',
   connection_remove: 'not yet a statement',
   parameters_set_batch: 'a script sets parameters one statement at a time, each checked',
   parameter_reset: 'not yet a statement',

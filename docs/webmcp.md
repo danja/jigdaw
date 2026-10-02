@@ -137,7 +137,7 @@ halfway is worse than one that was never touched.
 
 A composite plugin ([nested-plugins.md](nested-plugins.md)) needs no tool of its own. `plugin_load` and `node_add` take its IRI, and it is one node:
 its parameters are the ones it exposes, so `parameter_set` and the envelope tools address them by those symbols, and `node_bypass` acts on it as
-a whole. Its members are not nodes and have no ids an agent can use. `diagnostics` reports the compiled graph, whose `order` and
+a whole. `node_unpack` turns it back into its members as ordinary nodes, and `composite_pack` goes the other way, describing a selection as a composite profile to publish and changing nothing. Its members are not nodes and have no ids an agent can use. `diagnostics` reports the compiled graph, whose `order` and
 `compensation` name the members of a composite by flat ids, which are opaque keys and not something to parse.
 
 ### Tracks
@@ -179,6 +179,8 @@ instead of the master, which makes the target a bus; a cycle is refused, for sen
 | `envelope_remove` | `envelopeId` | |
 | `node_move_in_chain` | `nodeId`, `delta` (-1 or 1) | |
 | `node_bypass` | `nodeId`, `bypassed` | |
+| `node_unpack` | `nodeId` | Ids of the members |
+| `composite_pack` | `nodeIds[]`, `iri`, `label`, `comment?`, `expose?` | The profile as Turtle, a summary, warnings |
 | `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?` | Clip id |
 | `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
 | `clip_set_notes` | `clipId`, `notes[]` | |

@@ -7931,24 +7931,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number4) {
-      number4 = Number2(number4);
-      if (NumberIsNaN(number4)) {
+    function toIntegerOrInfinity(number5) {
+      number5 = Number2(number5);
+      if (NumberIsNaN(number5)) {
         return 0;
       }
-      if (number4 < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number4);
+      if (number5 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number5);
       }
-      return number4;
+      return number5;
     }
-    function drop(number4, options = void 0) {
+    function drop(number5, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number4 = toIntegerOrInfinity(number4);
+      number5 = toIntegerOrInfinity(number5);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7959,20 +7959,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number4-- <= 0) {
+          if (number5-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number4, options = void 0) {
+    function take2(number5, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number4 = toIntegerOrInfinity(number4);
+      number5 = toIntegerOrInfinity(number5);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7983,10 +7983,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number4-- > 0) {
+          if (number5-- > 0) {
             yield val;
           }
-          if (number4 <= 0) {
+          if (number5 <= 0) {
             return;
           }
         }
@@ -8619,12 +8619,12 @@ var require_NQuads = __commonJS({
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
       const datatype = "(?:\\^\\^" + iri4 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
-      const literal5 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
+      const literal6 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
       const subject = "(?:" + iri4 + "|" + bnode + ")" + ws;
       const property = iri4 + ws;
-      const object = "(?:" + iri4 + "|" + bnode + "|" + literal5 + ")" + wso;
+      const object = "(?:" + iri4 + "|" + bnode + "|" + literal6 + ")" + wso;
       const graphName = "(?:\\.|(?:(?:" + iri4 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
@@ -12365,15 +12365,15 @@ function escapeValue(value2) {
   }
   return value2;
 }
-function literal2(literal5) {
-  const escapedValue = escapeValue(literal5.value);
-  if (literal5.datatype.value === "http://www.w3.org/2001/XMLSchema#string") {
+function literal2(literal6) {
+  const escapedValue = escapeValue(literal6.value);
+  if (literal6.datatype.value === "http://www.w3.org/2001/XMLSchema#string") {
     return '"' + escapedValue + '"';
   }
-  if (literal5.datatype.value === "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString") {
-    return '"' + escapedValue + '"@' + literal5.language;
+  if (literal6.datatype.value === "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString") {
+    return '"' + escapedValue + '"@' + literal6.language;
   }
-  return '"' + escapedValue + '"^^' + namedNode_default(literal5.datatype);
+  return '"' + escapedValue + '"^^' + namedNode_default(literal6.datatype);
 }
 var echarRegEx, echarRegExAll, echarReplacement, literal_default;
 var init_literal = __esm({
@@ -15345,7 +15345,7 @@ var init_N3Parser = __esm({
       // ### `_completeLiteral` completes a literal with an optional datatype or language
       // Defers possible direction tags without allocating bound callbacks.
       _completeLiteral(token, component) {
-        let literal5, readCb = false;
+        let literal6, readCb = false;
         switch (token.type) {
           // Create a datatyped literal
           case "type":
@@ -15355,14 +15355,14 @@ var init_N3Parser = __esm({
             if (datatype.value === IRIs_default.rdf.langString || datatype.value === IRIs_default.rdf.dirLangString) {
               return this._error("Detected illegal (directional) languaged-tagged string with explicit datatype", token);
             }
-            literal5 = this._factory.literal(this._literalValue, datatype);
+            literal6 = this._factory.literal(this._literalValue, datatype);
             token = null;
             break;
           // Create a language-tagged string
           case "langcode":
             if (token.value.split("-").some((t) => t.length > 8))
               return this._error("Detected language tag with subtag longer than 8 characters", token);
-            literal5 = this._factory.literal(this._literalValue, token.value);
+            literal6 = this._factory.literal(this._literalValue, token.value);
             this._literalLanguage = token.value;
             token = null;
             this._literalComponent = component;
@@ -15370,9 +15370,9 @@ var init_N3Parser = __esm({
             break;
           // Create a simple string literal by default
           default:
-            literal5 = this._factory.literal(this._literalValue);
+            literal6 = this._factory.literal(this._literalValue);
         }
-        return { token, literal: literal5, readCb };
+        return { token, literal: literal6, readCb };
       }
       // ### `_readDirCode` reads an optional directional language tag
       _readDirCode(token) {
@@ -16871,8 +16871,8 @@ var require_Translator = __commonJS({
         this.fromRdfHandlers = {};
         this.toRdfHandlers = {};
       }
-      static incorrectRdfDataType(literal5) {
-        throw new Error(`Invalid RDF ${literal5.datatype.value} value: '${literal5.value}'`);
+      static incorrectRdfDataType(literal6) {
+        throw new Error(`Invalid RDF ${literal6.datatype.value} value: '${literal6.value}'`);
       }
       registerHandler(handler2, rdfDatatypes, javaScriptDataTypes) {
         for (const rdfDatatype of rdfDatatypes) {
@@ -16887,12 +16887,12 @@ var require_Translator = __commonJS({
           existingToRdfHandlers.push(handler2);
         }
       }
-      fromRdf(literal5, validate) {
-        const handler2 = this.fromRdfHandlers[literal5.datatype.value];
+      fromRdf(literal6, validate) {
+        const handler2 = this.fromRdfHandlers[literal6.datatype.value];
         if (handler2) {
-          return handler2.fromRdf(literal5, validate);
+          return handler2.fromRdf(literal6, validate);
         } else {
-          return literal5.value;
+          return literal6.value;
         }
       }
       toRdf(value2, options) {
@@ -16932,8 +16932,8 @@ var require_TypeHandlerBoolean = __commonJS({
     exports.TypeHandlerBoolean = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerBoolean = class _TypeHandlerBoolean {
-      fromRdf(literal5, validate) {
-        switch (literal5.value) {
+      fromRdf(literal6, validate) {
+        switch (literal6.value) {
           case "true":
             return true;
           case "false":
@@ -16944,7 +16944,7 @@ var require_TypeHandlerBoolean = __commonJS({
             return false;
         }
         if (validate) {
-          Translator_1.Translator.incorrectRdfDataType(literal5);
+          Translator_1.Translator.incorrectRdfDataType(literal6);
         }
         return false;
       }
@@ -16965,22 +16965,22 @@ var require_TypeHandlerDate = __commonJS({
     exports.TypeHandlerDate = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerDate = class _TypeHandlerDate {
-      fromRdf(literal5, validate) {
-        if (validate && !literal5.value.match(_TypeHandlerDate.VALIDATORS[literal5.datatype.value.substr(33, literal5.datatype.value.length)])) {
-          Translator_1.Translator.incorrectRdfDataType(literal5);
+      fromRdf(literal6, validate) {
+        if (validate && !literal6.value.match(_TypeHandlerDate.VALIDATORS[literal6.datatype.value.substr(33, literal6.datatype.value.length)])) {
+          Translator_1.Translator.incorrectRdfDataType(literal6);
         }
-        switch (literal5.datatype.value) {
+        switch (literal6.datatype.value) {
           case "http://www.w3.org/2001/XMLSchema#gDay":
-            return new Date(0, 0, parseInt(literal5.value, 10));
+            return new Date(0, 0, parseInt(literal6.value, 10));
           case "http://www.w3.org/2001/XMLSchema#gMonthDay":
-            const partsMonthDay = literal5.value.split("-");
+            const partsMonthDay = literal6.value.split("-");
             return new Date(0, parseInt(partsMonthDay[0], 10) - 1, parseInt(partsMonthDay[1], 10));
           case "http://www.w3.org/2001/XMLSchema#gYear":
-            return /* @__PURE__ */ new Date(literal5.value + "-01-01");
+            return /* @__PURE__ */ new Date(literal6.value + "-01-01");
           case "http://www.w3.org/2001/XMLSchema#gYearMonth":
-            return /* @__PURE__ */ new Date(literal5.value + "-01");
+            return /* @__PURE__ */ new Date(literal6.value + "-01");
           default:
-            return new Date(literal5.value);
+            return new Date(literal6.value);
         }
       }
       toRdf(value2, { datatype, dataFactory }) {
@@ -17040,11 +17040,11 @@ var require_TypeHandlerNumberDouble = __commonJS({
     exports.TypeHandlerNumberDouble = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerNumberDouble = class _TypeHandlerNumberDouble {
-      fromRdf(literal5, validate) {
-        const parsed = parseFloat(literal5.value);
+      fromRdf(literal6, validate) {
+        const parsed = parseFloat(literal6.value);
         if (validate) {
           if (isNaN(parsed)) {
-            Translator_1.Translator.incorrectRdfDataType(literal5);
+            Translator_1.Translator.incorrectRdfDataType(literal6);
           }
         }
         return parsed;
@@ -17080,11 +17080,11 @@ var require_TypeHandlerNumberInteger = __commonJS({
     exports.TypeHandlerNumberInteger = void 0;
     var Translator_1 = require_Translator();
     var TypeHandlerNumberInteger = class _TypeHandlerNumberInteger {
-      fromRdf(literal5, validate) {
-        const parsed = parseInt(literal5.value, 10);
+      fromRdf(literal6, validate) {
+        const parsed = parseInt(literal6.value, 10);
         if (validate) {
-          if (isNaN(parsed) || literal5.value.indexOf(".") >= 0) {
-            Translator_1.Translator.incorrectRdfDataType(literal5);
+          if (isNaN(parsed) || literal6.value.indexOf(".") >= 0) {
+            Translator_1.Translator.incorrectRdfDataType(literal6);
           }
         }
         return parsed;
@@ -17121,8 +17121,8 @@ var require_TypeHandlerString = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TypeHandlerString = void 0;
     var TypeHandlerString = class {
-      fromRdf(literal5) {
-        return literal5.value;
+      fromRdf(literal6) {
+        return literal6.value;
       }
       toRdf(value2, { datatype, dataFactory }) {
         return dataFactory.literal(value2, datatype);
@@ -17224,8 +17224,8 @@ var require_rdf_literal = __commonJS({
     translator.registerHandler(new handler_1.TypeHandlerNumberDouble(), handler_1.TypeHandlerNumberDouble.TYPES.map((t) => DF.namedNode(t)), ["number"]);
     translator.registerHandler(new handler_1.TypeHandlerNumberInteger(), handler_1.TypeHandlerNumberInteger.TYPES.map((t) => DF.namedNode(t)), ["number"]);
     translator.registerHandler(new handler_1.TypeHandlerDate(), handler_1.TypeHandlerDate.TYPES.map((t) => DF.namedNode(t)), ["object"]);
-    function fromRdf2(literal5, validate) {
-      return translator.fromRdf(literal5, validate);
+    function fromRdf2(literal6, validate) {
+      return translator.fromRdf(literal6, validate);
     }
     function toRdf(value2, options) {
       if (options && "namedNode" in options) {
@@ -17487,12 +17487,12 @@ var init_ForeignLoader = __esm({
       /** Answer one request, or refuse it. Never fetches. */
       resolve(path) {
         const wanted = path.startsWith(this.base) ? path.slice(this.base.length) : path;
-        const clean = wanted.split("?")[0].split("#")[0];
-        if (!isContained(clean) || !this.#files.has(clean)) {
-          this.#refusals.push(clean);
+        const clean2 = wanted.split("?")[0].split("#")[0];
+        if (!isContained(clean2) || !this.#files.has(clean2)) {
+          this.#refusals.push(clean2);
           return null;
         }
-        return { path: clean, bytes: this.#files.get(clean), mediaType: mediaTypeFor(clean) };
+        return { path: clean2, bytes: this.#files.get(clean2), mediaType: mediaTypeFor(clean2) };
       }
     };
   }
@@ -18219,9 +18219,16 @@ function readComposite(dataset2, { iri: wanted = null } = {}) {
     iri: subject.value,
     label: first(dataset2, subject, vocabulary.rdfs.label),
     comment: first(dataset2, subject, vocabulary.rdfs.comment),
+    vendor: first(dataset2, subject, trn3.vendor),
+    homepage: first(dataset2, subject, vocabulary.foaf.homepage),
     roles: objects2(dataset2, subject, trn3.role).map((o2) => o2.value),
     accepts: objects2(dataset2, subject, trn3.accepts).map((o2) => o2.value),
     produces: objects2(dataset2, subject, trn3.produces).map((o2) => o2.value),
+    formats: objects2(dataset2, subject, trn3.format).map((o2) => o2.value),
+    genres: objects2(dataset2, subject, trn3.genre).map((o2) => o2.value),
+    cautions: objects2(dataset2, subject, trn3.caution).map((o2) => o2.value),
+    inputChannels: number(first(dataset2, subject, jig3.inputChannels)) ?? 2,
+    outputChannels: number(first(dataset2, subject, jig3.outputChannels)) ?? 2,
     audioInputs: number(first(dataset2, subject, jig3.audioInputs)),
     audioOutputs: number(first(dataset2, subject, jig3.audioOutputs)),
     requires: objects2(dataset2, subject, trn3.requires).map((o2) => o2.value),
@@ -18234,15 +18241,33 @@ var compositeProfile = (composite) => ({
   iri: composite.iri,
   label: composite.label,
   comment: composite.comment,
+  vendor: composite.vendor,
+  homepage: composite.homepage,
   roles: composite.roles,
   accepts: composite.accepts,
   produces: composite.produces,
+  formats: composite.formats,
+  genres: composite.genres,
+  cautions: composite.cautions,
+  recommendedBefore: [],
+  recommendedAfter: [],
   requires: composite.requires,
   prefers: [],
   audioInputs: composite.audioInputs ?? 0,
+  sidechainInput: null,
   audioOutputs: composite.audioOutputs ?? 0,
+  inputChannels: composite.inputChannels,
+  outputChannels: composite.outputChannels,
+  renderQuantum: null,
+  latencyFrames: 0,
+  tailFrames: null,
   stateless: false,
   composite: true,
+  // No code of its own: its members carry it.
+  module: null,
+  processor: null,
+  ui: null,
+  assets: [],
   ports: composite.ports
 });
 function checkComposite(composite) {
@@ -18250,7 +18275,7 @@ function checkComposite(composite) {
   const problem = (rule, message) => problems.push({ rule, message });
   const memberIds = new Set(composite.members.map((m) => m.id));
   const known = (id) => id === composite.iri || memberIds.has(id);
-  const AUDIO3 = trn3.Audio;
+  const AUDIO4 = trn3.Audio;
   if (memberIds.has(composite.iri)) {
     problem("member-is-composite", `${composite.iri} lists itself as a member`);
   }
@@ -18262,7 +18287,7 @@ function checkComposite(composite) {
       problem("unknown-port", `${e.conn.id} targets the composite's parameter "${e.portSymbol}", which it does not expose`);
     }
   }
-  const audio = composite.connections.filter((c3) => c3.signalKind === AUDIO3);
+  const audio = composite.connections.filter((c3) => c3.signalKind === AUDIO4);
   const inputIndices = audio.filter((c3) => c3.from.node === composite.iri && c3.from.portIndex !== void 0).map((c3) => c3.from.portIndex);
   const outputIndices = audio.filter((c3) => c3.to.node === composite.iri && c3.to.portIndex !== void 0).map((c3) => c3.to.portIndex);
   for (const index of inputIndices) {
@@ -18483,6 +18508,23 @@ var PluginLoader = class {
     this.#capabilities = capabilities;
     this.#validate = validate;
     this.#processorUrlFor = processorUrl;
+  }
+  /**
+   * Contract section 3.1 steps 1 and 2 for a plugin of either kind, as a listing needs them: the profile, and whether
+   * this host can run it, with no code fetched. A composite is read as its own profile and its own `trn:requires`; the
+   * members are checked when it is loaded, as nested-plugins.md section 6 says, and a collection of forty racks does not
+   * fetch forty trees to draw a list.
+   */
+  async loadListing(iri4) {
+    const dataset2 = await this.fetchDataset(iri4);
+    if (!isComposite(dataset2)) return this.profileFrom(dataset2, iri4);
+    let profile;
+    try {
+      profile = compositeProfile(readComposite(dataset2));
+    } catch (cause) {
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri4 });
+    }
+    return { profile, granted: this.checkCapabilities(profile, iri4) };
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
   async loadProfile(iri4) {
@@ -18795,6 +18837,15 @@ function checkDrives(iri4, composite, members) {
     }
   }
 }
+function pluginsOf(tree) {
+  const found = /* @__PURE__ */ new Map();
+  const walk = (node) => {
+    if (node.kind === "plugin") found.set(node.iri, node);
+    else node.members.forEach((m) => walk(m.tree));
+  };
+  walk(tree);
+  return [...found.values()];
+}
 
 // src/host/CompositeState.js
 async function collectState(tree, ask, path = []) {
@@ -18829,8 +18880,31 @@ function parameterTargets(tree, symbol) {
     return [{ path: [member.id], symbol: drive.portSymbol }];
   });
 }
+function voicing(tree, prefix = []) {
+  const writes = [];
+  for (const member of tree.members) {
+    if (member.tree.kind === "composite") writes.push(...voicing(member.tree, [...prefix, member.id]));
+  }
+  for (const port of tree.composite.ports) {
+    if (port.defaultValue === null || port.defaultValue === void 0) continue;
+    for (const target2 of parameterTargets(tree, port.symbol)) {
+      writes.push({ path: [...prefix, ...target2.path], symbol: target2.symbol, value: port.defaultValue });
+    }
+  }
+  for (const member of tree.composite.members) {
+    const inner = tree.members.find((m) => m.id === member.id).tree;
+    for (const setting of member.settings) {
+      if (setting.value === null || setting.value === void 0) continue;
+      if (inner.kind === "plugin") writes.push({ path: [...prefix, member.id], symbol: setting.symbol, value: setting.value });
+      else for (const target2 of parameterTargets(inner, setting.symbol)) writes.push({ path: [...prefix, member.id, ...target2.path], symbol: target2.symbol, value: setting.value });
+    }
+  }
+  return writes;
+}
 
 // src/engine/Engine.js
+init_ProfileReader();
+init_Integrity();
 var counter = 0;
 var nextId = () => `node-${++counter}`;
 var Engine = class {
@@ -18918,6 +18992,15 @@ var Engine = class {
     return this.adopt({ iri: iri4, profile, node, ready, descriptors, granted });
   }
   /**
+   * The canonical digest of a plugin's profile, which is what a composite pins it by (docs/nested-plugins.md section 9.1). Over the
+   * identity the profile states and not the URL it was fetched from. Fetches the profile and nothing else.
+   */
+  async profileDigest(iri4) {
+    const dataset2 = await this.#loader.fetchDataset(iri4);
+    const identity2 = isComposite(dataset2) ? readComposite(dataset2).iri : readProfile(dataset2).iri;
+    return digestOf(new TextEncoder().encode(pluginForm(dataset2, identity2)), "sha384");
+  }
+  /**
    * A composite plugin, loaded whole or not at all: the tree is checked first (CompositeResolver, which
    * fetches no code), then each member is instantiated as a plugin in its own right, and a failure
    * removes the members already made and fails the composite naming the member.
@@ -18958,7 +19041,7 @@ var Engine = class {
     };
     try {
       await walk(tree, []);
-      this.#voice(tree, [], byPath);
+      this.#voice(tree, byPath);
     } catch (error2) {
       for (const { entry } of members) this.remove(entry.id);
       throw error2;
@@ -18971,23 +19054,10 @@ var Engine = class {
    * cannot reach. Inner composites first, so the outer author's choice is the last word. A person's own
    * settings, from a saved session, arrive after this through the dispatcher and win over all of it.
    */
-  #voice(tree, prefix, byPath) {
-    const set = (path, symbol, value2) => {
+  #voice(tree, byPath) {
+    for (const { path, symbol, value: value2 } of voicing(tree)) {
       const entry = byPath.get(JSON.stringify(path));
-      if (entry && value2 !== null && value2 !== void 0) this.setParameter(entry.id, symbol, value2);
-    };
-    for (const member of tree.members) {
-      if (member.tree.kind === "composite") this.#voice(member.tree, [...prefix, member.id], byPath);
-    }
-    for (const port of tree.composite.ports) {
-      for (const target2 of parameterTargets(tree, port.symbol)) set([...prefix, ...target2.path], target2.symbol, port.defaultValue);
-    }
-    for (const member of tree.composite.members) {
-      const inner = tree.members.find((m) => m.id === member.id).tree;
-      for (const setting of member.settings) {
-        if (inner.kind === "plugin") set([...prefix, member.id], setting.symbol, setting.value);
-        else for (const target2 of parameterTargets(inner, setting.symbol)) set([...prefix, member.id, ...target2.path], target2.symbol, setting.value);
-      }
+      if (entry) this.setParameter(entry.id, symbol, value2);
     }
   }
   /**
@@ -19861,7 +19931,7 @@ function createAutomationHost(ctx2) {
   const { log: log2 } = ctx2;
   const touched = /* @__PURE__ */ new Map();
   const warned = /* @__PURE__ */ new Set();
-  const keyOf2 = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const keyOf3 = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
   const MASTER = { masterGain: "gain", masterPan: "pan" };
   const paramsOf = (target2) => target2.kind !== void 0 ? [MASTER[target2.kind] ? ctx2.engine.masterParam(MASTER[target2.kind]) : null].filter(Boolean) : ctx2.dispatcher.audioParams(target2.node, target2.symbol);
   const hold = (target2, on) => {
@@ -19918,7 +19988,7 @@ function createAutomationHost(ctx2) {
     edited(nodeId, symbol, value2) {
       const target2 = { node: nodeId, symbol };
       for (const [param, state] of touched) {
-        if (keyOf2(state.target) !== keyOf2(target2) || state.suspended) continue;
+        if (keyOf3(state.target) !== keyOf3(target2) || state.suspended) continue;
         const now = ctx2.engine.context.currentTime;
         param.cancelScheduledValues(now);
         param.setValueAtTime(value2, now);
@@ -21570,6 +21640,298 @@ function expandComposites({ nodes, connections, treeOf = () => null, bypassed = 
   return { nodes: pending.map(({ id, path, plugin, bypassed: out }) => ({ id, path, plugin, bypassed: out })), connections: list };
 }
 
+// src/ops/CompositeUnpack.js
+var keyOf2 = (c3) => JSON.stringify([c3.from.node, c3.from.portIndex ?? c3.from.portSymbol, c3.to.node, c3.to.portIndex ?? c3.to.portSymbol, c3.signalKind]);
+var OUTSIDE = "\0outside";
+var shallow = (tree) => ({
+  ...tree,
+  members: tree.members.map((m) => ({ ...m, tree: { kind: "plugin", iri: m.plugin, profile: {}, granted: [] } }))
+});
+function planUnpack({ project, nodeId, tree, state = null }) {
+  const node = project.node(nodeId);
+  if (!node) throw new Error(`no such node: ${nodeId}`);
+  const composite = tree.composite;
+  const flat = expandComposites({
+    nodes: project.nodes.map((n2) => ({ id: n2.id })),
+    connections: project.connections,
+    treeOf: (id) => id === nodeId ? shallow(tree) : null
+  });
+  const memberOfFlat = new Map(flat.nodes.filter((n2) => n2.path[0] === nodeId && n2.path.length === 2).map((n2) => [n2.id, n2.path[1]]));
+  const endpoint2 = (e) => memberOfFlat.has(e.node) ? { ...e, node: void 0, member: memberOfFlat.get(e.node) } : e;
+  const untouched = new Set(project.connections.filter((c3) => c3.from.node !== nodeId && c3.to.node !== nodeId).map(keyOf2));
+  const connections = flat.connections.filter((c3) => !untouched.has(keyOf2(c3))).map((c3) => ({ from: clean(endpoint2(c3.from)), to: clean(endpoint2(c3.to)), signalKind: c3.signalKind }));
+  const settings = new Map(composite.members.map((m) => [m.id, Object.fromEntries(m.settings.map((s) => [s.symbol, s.value]))]));
+  for (const port of composite.ports) {
+    const value2 = node.settings.get(port.symbol) ?? port.defaultValue;
+    if (value2 === null || value2 === void 0) continue;
+    for (const drive of port.drives) {
+      const target2 = settings.get(drive.node);
+      if (target2) target2[drive.portSymbol] = value2;
+    }
+  }
+  const labelOf = (member) => {
+    const inner = tree.members.find((m) => m.id === member.id).tree;
+    return (inner.kind === "plugin" ? inner.profile.label : inner.composite.label) ?? member.id.split("#").pop();
+  };
+  const members = composite.members.map((m) => ({
+    key: m.id,
+    plugin: m.plugin,
+    label: labelOf(m),
+    settings: settings.get(m.id),
+    state: state?.members?.[m.id] ?? null
+  }));
+  const takeover = (kind) => {
+    const via = composite.connections.find((c3) => c3.from.node === composite.iri && c3.signalKind === kind);
+    if (!via) return null;
+    const probe = expandComposites({
+      nodes: [{ id: OUTSIDE }, { id: nodeId }],
+      connections: [{ id: "p", from: { node: OUTSIDE, portIndex: 0 }, to: { node: nodeId, portIndex: 0 }, signalKind: kind }],
+      treeOf: (id) => id === nodeId ? shallow(tree) : null
+    });
+    const hit = probe.connections.find((c3) => memberOfFlat.has(c3.to.node));
+    return hit ? memberOfFlat.get(hit.to.node) : null;
+  };
+  const track = project.track(node.track);
+  const midiKind = composite.connections.find((c3) => c3.from.node === composite.iri && isMidi(c3.signalKind))?.signalKind;
+  const audioKind = composite.connections.find((c3) => c3.from.node === composite.iri && !isMidi(c3.signalKind))?.signalKind;
+  return {
+    track: node.track,
+    bypassed: node.bypassed === true,
+    members,
+    connections,
+    midiInput: track?.midiInput === nodeId && midiKind ? takeover(midiKind) : null,
+    audioInput: track?.audioInput === nodeId && audioKind ? takeover(audioKind) : null
+  };
+}
+function clean(e) {
+  return Object.fromEntries(Object.entries(e).filter(([, v]) => v !== void 0));
+}
+
+// src/ops/CompositePack.js
+var AUDIO3 = "http://purl.org/stuff/transmissions/Audio";
+var MIDI3 = "http://purl.org/stuff/transmissions/Midi";
+var trn4 = (name2) => `http://purl.org/stuff/transmissions/${name2}`;
+var MIDI_EVENTS = "http://purl.org/stuff/jigdaw/MidiEvents";
+var slug = (label) => {
+  const s = String(label ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return s === "" ? "member" : s;
+};
+var symbolOf = (text) => String(text).replace(/[^A-Za-z0-9_]/g, "_").replace(/^([0-9])/, "_$1");
+function planPack({ project, nodeIds, profileOf, expose = "set" }) {
+  if (!Array.isArray(nodeIds) || nodeIds.length === 0) throw new Error("select at least one plugin to pack");
+  if (new Set(nodeIds).size !== nodeIds.length) throw new Error("a node is selected twice");
+  if (!["set", "none"].includes(expose)) throw new Error(`expose is "set" or "none", not ${JSON.stringify(expose)}`);
+  const nodes = nodeIds.map((id) => {
+    const node = project.node(id);
+    if (!node) throw new Error(`no such node: ${id}`);
+    if (!profileOf(id)) throw new Error(`${node.label ?? id} is not loaded, so what it takes and gives is not known`);
+    return node;
+  });
+  if (new Set(nodes.map((n2) => n2.track)).size > 1) throw new Error("the selection is on more than one track, and a composite is on one");
+  const bypassed = nodes.filter((n2) => n2.bypassed === true);
+  if (bypassed.length > 0) throw new Error(`${bypassed.map((n2) => n2.label ?? n2.id).join(", ")} is bypassed, and a composite has no way to carry that. Take it out of bypass first.`);
+  const taken = /* @__PURE__ */ new Map();
+  const idOf2 = /* @__PURE__ */ new Map();
+  for (const node of nodes) {
+    const base = slug(node.label);
+    const n2 = (taken.get(base) ?? 0) + 1;
+    taken.set(base, n2);
+    idOf2.set(node.id, n2 === 1 ? base : `${base}-${n2}`);
+  }
+  const selected = new Set(nodeIds);
+  const warnings = [];
+  const connections = [];
+  const counters = /* @__PURE__ */ new Map();
+  const boundary = /* @__PURE__ */ new Map();
+  const allocate = (direction, kind, key) => {
+    const full = `${direction}|${kind}|${key}`;
+    if (!boundary.has(full)) {
+      const index = counters.get(`${direction}|${kind}`) ?? 0;
+      counters.set(`${direction}|${kind}`, index + 1);
+      boundary.set(full, index);
+    }
+    return { index: boundary.get(full), full };
+  };
+  const portOf = (e) => e.portSymbol !== void 0 ? { portSymbol: e.portSymbol } : { portIndex: e.portIndex ?? 0 };
+  for (const c3 of project.connections) {
+    const fromIn = selected.has(c3.from.node);
+    const toIn = selected.has(c3.to.node);
+    if (fromIn && toIn) {
+      connections.push({ from: { node: idOf2.get(c3.from.node), ...portOf(c3.from) }, to: { node: idOf2.get(c3.to.node), ...portOf(c3.to) }, signalKind: c3.signalKind });
+    } else if (toIn) {
+      if (c3.to.portSymbol !== void 0) {
+        warnings.push(`the connection into ${project.node(c3.to.node).label ?? c3.to.node}'s parameter "${c3.to.portSymbol}" is not carried: a composite offers only the controls it exposes`);
+        continue;
+      }
+      const key = `${idOf2.get(c3.to.node)}:${c3.to.portIndex ?? 0}`;
+      const { index, full } = allocate("in", c3.signalKind, key);
+      if (!connections.some((x) => x._boundary === full)) {
+        connections.push({ _boundary: full, from: { node: null, portIndex: index }, to: { node: idOf2.get(c3.to.node), ...portOf(c3.to) }, signalKind: c3.signalKind });
+      }
+    } else if (fromIn) {
+      const key = `${idOf2.get(c3.from.node)}:${c3.from.portIndex ?? 0}`;
+      const { index, full } = allocate("out", c3.signalKind, key);
+      if (!connections.some((x) => x._boundary === full)) {
+        connections.push({ _boundary: full, from: { node: idOf2.get(c3.from.node), ...portOf(c3.from) }, to: { node: null, portIndex: index }, signalKind: c3.signalKind });
+      }
+    }
+  }
+  const has = (direction, audio) => [...boundary.keys()].some((k) => k.startsWith(`${direction}|`) && isMidi(k.split("|")[1]) !== audio);
+  const mainAudio = (id, direction) => connections.some((c3) => c3.signalKind === AUDIO3 && c3.from.node !== null && c3.to.node !== null && (direction === "in" ? c3.to.node === id && c3.to.portIndex === 0 : c3.from.node === id && c3.from.portIndex === 0));
+  if (!has("in", true)) {
+    for (const node of nodes) {
+      const id = idOf2.get(node.id);
+      if ((profileOf(node.id).audioInputs ?? 0) > 0 && !mainAudio(id, "in")) {
+        connections.push({ from: { node: null, portIndex: 0 }, to: { node: id, portIndex: 0 }, signalKind: AUDIO3 });
+        counters.set(`in|${AUDIO3}`, 1);
+      }
+    }
+  }
+  if (!has("out", true)) {
+    for (const node of nodes) {
+      const id = idOf2.get(node.id);
+      if ((profileOf(node.id).audioOutputs ?? 0) > 0 && !mainAudio(id, "out")) {
+        connections.push({ from: { node: id, portIndex: 0 }, to: { node: null, portIndex: 0 }, signalKind: AUDIO3 });
+        counters.set(`out|${AUDIO3}`, 1);
+      }
+    }
+  }
+  const track = project.track(nodes[0].track);
+  if (track?.midiInput && selected.has(track.midiInput) && !has("in", false)) {
+    connections.push({ from: { node: null, portIndex: 0 }, to: { node: idOf2.get(track.midiInput), portIndex: 0 }, signalKind: MIDI3 });
+    counters.set(`in|${MIDI3}`, 1);
+  }
+  const audioInputs = Math.max(0, ...connections.filter((c3) => c3.from.node === null && !isMidi(c3.signalKind)).map((c3) => c3.from.portIndex + 1));
+  const audioOutputs = Math.max(0, ...connections.filter((c3) => c3.to.node === null && !isMidi(c3.signalKind)).map((c3) => c3.to.portIndex + 1));
+  const midiIn = connections.some((c3) => c3.from.node === null && isMidi(c3.signalKind));
+  const midiOut = connections.some((c3) => c3.to.node === null && isMidi(c3.signalKind));
+  const midiInside = connections.some((c3) => c3.from.node !== null && c3.to.node !== null && isMidi(c3.signalKind));
+  const members = [];
+  const ports = [];
+  for (const node of nodes) {
+    const id = idOf2.get(node.id);
+    const profile = profileOf(node.id);
+    const settings = [];
+    for (const [symbol, value2] of node.settings) {
+      const port = (profile.ports ?? []).find((p) => p.symbol === symbol);
+      if (expose === "set" && port && Number.isFinite(port.minimum) && Number.isFinite(port.maximum)) {
+        let name2 = `${symbolOf(id)}_${symbol}`;
+        for (let n2 = 2; ports.some((p) => p.symbol === name2); n2++) name2 = `${symbolOf(id)}_${symbol}_${n2}`;
+        ports.push({
+          symbol: name2,
+          name: `${node.label ?? id} ${port.name ?? symbol}`,
+          minimum: port.minimum,
+          maximum: port.maximum,
+          defaultValue: Math.min(port.maximum, Math.max(port.minimum, value2)),
+          drives: [{ member: id, symbol }]
+        });
+      } else {
+        if (expose === "set") warnings.push(`${node.label ?? id}'s parameter "${symbol}" has no declared range, so it is fixed in the composite and not offered as a control`);
+        settings.push({ symbol, value: value2 });
+      }
+    }
+    if (node.state) warnings.push(`${node.label ?? id} has saved state, which a composite does not carry: it starts from its defaults`);
+    if (project.envelopes.some((e) => e.target.node === node.id)) warnings.push(`the automation on ${node.label ?? id} is not carried`);
+    members.push({ id, plugin: node.pluginIri, settings });
+  }
+  const effect = audioInputs > 0;
+  return {
+    members,
+    connections: connections.map(({ _boundary, ...rest }) => rest),
+    ports,
+    audioInputs,
+    audioOutputs,
+    roles: effect ? [trn4("AudioEffect")] : audioOutputs > 0 || midiIn ? [trn4("Instrument"), trn4("AudioInstrument")] : [trn4("Utility")],
+    accepts: [...effect ? [AUDIO3] : [], ...midiIn ? [MIDI3] : []],
+    produces: audioOutputs > 0 || !midiOut ? [AUDIO3] : [MIDI3],
+    requires: midiIn || midiOut || midiInside ? [MIDI_EVENTS] : [],
+    warnings
+  };
+}
+
+// src/rdf/CompositeWriter.js
+var TRN2 = "trn:";
+var BOUNDARY = "<>";
+var literal4 = (text) => `"${String(text).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")}"`;
+var number2 = (value2) => {
+  if (!Number.isFinite(value2)) throw new Error(`cannot write ${value2} as a number`);
+  return String(value2);
+};
+var compact2 = (iri4) => String(iri4).startsWith("http://purl.org/stuff/transmissions/") ? `${TRN2}${String(iri4).slice("http://purl.org/stuff/transmissions/".length)}` : `<${iri4}>`;
+function writeComposite(spec) {
+  const out = [];
+  const line = (text) => out.push(text);
+  const frag = (id) => `<#${id}>`;
+  const end = (e) => e.node === null ? BOUNDARY : frag(e.node);
+  line(`@base <${spec.iri}> .`);
+  line("");
+  for (const [prefix, iri4] of [
+    ["jig", "http://purl.org/stuff/jigdaw/"],
+    ["trn", "http://purl.org/stuff/transmissions/"],
+    ["lv2", "http://lv2plug.in/ns/lv2core#"],
+    ["rdfs", "http://www.w3.org/2000/01/rdf-schema#"],
+    ["foaf", "http://xmlns.com/foaf/0.1/"]
+  ]) {
+    line(`@prefix ${`${prefix}:`.padEnd(6)} <${iri4}> .`);
+  }
+  line("");
+  const connectionIds = spec.connections.map((_, i2) => `c${i2 + 1}`);
+  const head = [
+    "a jig:CompositePlugin , trn:PluginProfile",
+    `rdfs:label ${literal4(spec.label)}`,
+    ...spec.comment ? [`rdfs:comment ${literal4(spec.comment)}`] : [],
+    ...spec.vendor ? [`trn:vendor ${literal4(spec.vendor)}`] : [],
+    "foaf:homepage <>",
+    ...spec.roles.map((r) => `trn:role ${compact2(r)}`),
+    ...spec.accepts.map((a2) => `trn:accepts ${compact2(a2)}`),
+    ...spec.produces.map((p) => `trn:produces ${compact2(p)}`),
+    "trn:format trn:Jig",
+    ...(spec.requires ?? []).map((r) => `trn:requires ${compact2(r)}`),
+    `jig:audioInputs ${spec.audioInputs}`,
+    ...spec.inputChannels ? [`jig:inputChannels ${spec.inputChannels}`] : [],
+    `jig:audioOutputs ${spec.audioOutputs}`,
+    ...spec.outputChannels ? [`jig:outputChannels ${spec.outputChannels}`] : [],
+    `jig:member ${spec.members.map((m) => frag(m.id)).join(" , ")}`,
+    `jig:connection ${connectionIds.map(frag).join(" , ")}`,
+    ...spec.ports.length > 0 ? [`lv2:port ${spec.ports.map((p) => frag(p.symbol)).join(" , ")}`] : []
+  ];
+  line("<>");
+  head.forEach((statement2, i2) => line(`    ${statement2}${i2 === head.length - 1 ? " ." : " ;"}`));
+  line("");
+  for (const member of spec.members) {
+    const statements = ["a jig:Member", `jig:plugin <${member.plugin}>`];
+    if (member.pinnedDigest) statements.push(`jig:pinnedDigest ${literal4(member.pinnedDigest)}`);
+    const settings = member.settings ?? [];
+    if (settings.length > 0) statements.push(`jig:setting ${settings.map((s) => frag(`${member.id}-${s.symbol}`)).join(" , ")}`);
+    line(`${frag(member.id)} ${statements.join(" ;\n    ")} .`);
+    for (const s of settings) {
+      line(`${frag(`${member.id}-${s.symbol}`)} a jig:ParameterSetting ; jig:symbol ${literal4(s.symbol)} ; jig:value ${number2(s.value)} .`);
+    }
+    line("");
+  }
+  spec.connections.forEach((c3, i2) => {
+    const id = connectionIds[i2];
+    const port = (e) => e.portSymbol !== void 0 ? `jig:portSymbol ${literal4(e.portSymbol)}` : `jig:portIndex ${e.portIndex}`;
+    line(`${frag(id)} a jig:Connection ; jig:from ${frag(`${id}-from`)} ; jig:to ${frag(`${id}-to`)} ; jig:signalKind ${compact2(c3.signalKind)} .`);
+    line(`${frag(`${id}-from`)} a jig:Endpoint ; jig:endpointNode ${end(c3.from)} ; ${port(c3.from)} .`);
+    line(`${frag(`${id}-to`)} a jig:Endpoint ; jig:endpointNode ${end(c3.to)} ; ${port(c3.to)} .`);
+  });
+  line("");
+  for (const port of spec.ports) {
+    line(`${frag(port.symbol)}`);
+    line("    a lv2:InputPort , lv2:ControlPort ;");
+    line(`    lv2:symbol ${literal4(port.symbol)} ; lv2:name ${literal4(port.name)} ;`);
+    line(`    lv2:default ${number2(port.defaultValue)} ; lv2:minimum ${number2(port.minimum)} ; lv2:maximum ${number2(port.maximum)} ;`);
+    line(`    jig:drives ${port.drives.map((_, k) => frag(`${port.symbol}-target-${k + 1}`)).join(" , ")} .`);
+    port.drives.forEach((d, k) => {
+      line(`${frag(`${port.symbol}-target-${k + 1}`)} a jig:Endpoint ; jig:endpointNode ${frag(d.member)} ; jig:portSymbol ${literal4(d.symbol)} .`);
+    });
+    line("");
+  }
+  return `${out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd()}
+`;
+}
+
 // src/engine/Transport.js
 var MINUTE = 60;
 var SMOOTH_LEGS = 16;
@@ -22490,6 +22852,95 @@ var OpDispatcher = class {
     if (position2) this.#project.moveNode(nodeId, position2.x, position2.y);
     this.#emit({ type: "plugin-added", nodeId, trackId: track, entry });
     return { ...result, nodeId, trackId: track, entry };
+  }
+  /**
+   * Turn a composite plugin's node back into its members, as ordinary nodes on the same track, joined to what was around it, with
+   * the value each had inside the rack so it sounds the same. One undoable edit. docs/nested-plugins.md section 12.
+   *
+   * The members are added first and the composite is removed last, in the same change as the wiring, so a member that will not load
+   * leaves the rack exactly as it was and no stray nodes behind. A composite with automation on it is refused: an envelope is on one
+   * of its exposed parameters, which will not exist, and dropping it silently would lose a person's work.
+   */
+  async unpackComposite(nodeId) {
+    const composite = this.#composites.get(nodeId);
+    if (!composite) return { ok: false, kind: "change", message: `${nodeId} is not a composite plugin, so there is nothing to unpack` };
+    if (this.#project.envelopes.some((e) => e.target.node === nodeId)) {
+      return { ok: false, kind: "change", message: `${composite.entry.profile.label} has automation on it, which unpacking would lose. Remove its envelopes first.` };
+    }
+    const plan2 = planUnpack({ project: this.#project, nodeId, tree: composite.entry.tree, state: await this.getNodeState(nodeId) });
+    return this.grouped(async () => {
+      const made = /* @__PURE__ */ new Map();
+      const abandon = async (failure) => {
+        for (const id of made.values()) this.apply([{ op: "removeNode", id }]);
+        return failure;
+      };
+      for (const member of plan2.members) {
+        const added = await this.addPlugin(member.plugin, {
+          track: plan2.track,
+          label: member.label,
+          ...member.state === null ? {} : { state: encodeState(member.state) }
+        });
+        if (!added.ok) return abandon({ ...added, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${added.message}` });
+        made.set(member.key, added.nodeId);
+        for (const [symbol, value2] of Object.entries(member.settings)) {
+          const set = this.setParameter(added.nodeId, symbol, value2);
+          if (!set.ok) return abandon({ ...set, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${set.message}` });
+        }
+        if (plan2.bypassed) this.apply([{ op: "setNode", id: added.nodeId, bypassed: true }]);
+      }
+      const idOf2 = (e) => e.member === void 0 ? e : { node: made.get(e.member), ...Object.fromEntries(Object.entries(e).filter(([k]) => k !== "member")) };
+      const changes = [
+        { op: "removeNode", id: nodeId },
+        ...plan2.connections.map((c3) => ({ op: "addConnection", from: idOf2(c3.from), to: idOf2(c3.to), signalKind: c3.signalKind })),
+        ...plan2.midiInput ? [{ op: "setTrack", id: plan2.track, midiInput: made.get(plan2.midiInput) }] : [],
+        ...plan2.audioInput ? [{ op: "setTrack", id: plan2.track, audioInput: made.get(plan2.audioInput) }] : []
+      ];
+      const result = this.apply(changes);
+      if (!result.ok) return abandon(result);
+      return { ...result, nodeIds: [...made.values()] };
+    });
+  }
+  /**
+   * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
+   * a composite is a plugin at an IRI, and an IRI is where only its author can put it, so what comes back is a document and not a node.
+   * Each member is pinned to the digest of the profile fetched for it now. docs/nested-plugins.md section 12.
+   *
+   * `iri` is where it will be published, `https:` or loopback `http:`. Returns `{ ok, turtle, summary, warnings }`, the warnings saying
+   * what a composite cannot carry (bypass, saved state, automation, a connection into a member's own parameter).
+   */
+  async packSelection({ nodeIds, iri: iri4, label, comment = null, expose = "set" } = {}) {
+    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri4 ?? "")) {
+      return { ok: false, kind: "change", message: "a composite is published at an https IRI, or an http one on loopback, and needs one to be named by" };
+    }
+    if (typeof label !== "string" || label.trim() === "") return { ok: false, kind: "change", message: "a composite needs a name" };
+    let plan2;
+    try {
+      plan2 = planPack({ project: this.#project, nodeIds, profileOf: (id) => this.engineNode(id)?.profile ?? null, expose });
+    } catch (error2) {
+      return { ok: false, kind: "change", message: error2.message };
+    }
+    const warnings = [...plan2.warnings];
+    const pins = /* @__PURE__ */ new Map();
+    for (const plugin of new Set(plan2.members.map((m) => m.plugin))) {
+      try {
+        pins.set(plugin, await this.#engine.profileDigest(plugin));
+      } catch (error2) {
+        warnings.push(`${plugin} could not be pinned (${error2.message}), so a signature on this composite would not reach it`);
+      }
+    }
+    const turtle = writeComposite({
+      iri: iri4,
+      label: label.trim(),
+      comment,
+      ...plan2,
+      members: plan2.members.map((m) => ({ ...m, pinnedDigest: pins.get(m.plugin) ?? null }))
+    });
+    return {
+      ok: true,
+      turtle,
+      summary: { members: plan2.members.length, controls: plan2.ports.length, audioInputs: plan2.audioInputs, audioOutputs: plan2.audioOutputs, pinned: pins.size },
+      warnings
+    };
   }
   /**
    * Fetch a foreign profile, load it through its adapter, and adopt it.
@@ -27047,16 +27498,16 @@ function chainSwapChanges(project, nodeId, delta, { passesAudio }) {
 }
 
 // src/catalogue/facets.js
-var TRN2 = "http://purl.org/stuff/transmissions/";
+var TRN3 = "http://purl.org/stuff/transmissions/";
 var FACETS = Object.freeze({
-  role: `${TRN2}role`,
-  accepts: `${TRN2}accepts`,
-  produces: `${TRN2}produces`,
-  requires: `${TRN2}requires`,
-  format: `${TRN2}format`
+  role: `${TRN3}role`,
+  accepts: `${TRN3}accepts`,
+  produces: `${TRN3}produces`,
+  requires: `${TRN3}requires`,
+  format: `${TRN3}format`
 });
 var FACET_NAMES = Object.freeze(Object.keys(FACETS));
-var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN2}${value2}`;
+var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) : `${TRN3}${value2}`;
 
 // src/mcp/tools.js
 var POINT_SCHEMA = { type: "object", properties: { atBeat: { type: "number", minimum: 0 }, value: { type: "number" }, curve: { type: "string", enum: ["step", "linear", "smooth"] } }, required: ["atBeat", "value"] };
@@ -27665,6 +28116,39 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         } catch (error2) {
           return failed(error2.message, { kind: "change" });
         }
+      }
+    },
+    {
+      name: "node_unpack",
+      description: "Turn a composite plugin (a plugin made of other plugins, such as an effects rack) back into its members: ordinary nodes on the same track, joined to what the composite was joined to, each with the value it had inside so it sounds the same. One edit, one undo. Refused for a node that is not a composite, for one with automation on it, and when a member will not load, in which case the composite is left exactly as it was.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" } },
+        required: ["nodeId"]
+      },
+      async handler({ nodeId } = {}) {
+        if (typeof nodeId !== "string" || nodeId === "") return failed("node_unpack needs a nodeId");
+        const result = await dispatcher.unpackComposite(nodeId);
+        return result.ok ? ok({ revision: result.revision, unpacked: nodeId, nodeIds: result.nodeIds }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "composite_pack",
+      description: "Describe a selection of loaded plugins as a composite plugin: the Turtle profile of one plugin made of them, wired as they are wired, with a control for every parameter you have moved and each member pinned to its profile as fetched now. It changes nothing in the project. A composite is a plugin at an IRI, so the profile is a document to publish at the iri you give. The warnings say what it cannot carry: bypass, saved state, automation, a connection into a member's own parameter.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          nodeIds: { type: "array", items: { type: "string" }, description: "The plugins to pack, all on one track." },
+          iri: { type: "string", description: "Where it will be published: https, or http on loopback." },
+          label: { type: "string", description: "Its name." },
+          comment: { type: "string", description: "What it is for." },
+          expose: { type: "string", enum: ["set", "none"], description: "set (default) makes a control of each parameter moved by hand; none fixes them." }
+        },
+        required: ["nodeIds", "iri", "label"]
+      },
+      async handler({ nodeIds, iri: iri4, label, comment, expose } = {}) {
+        const result = await dispatcher.packSelection({ nodeIds, iri: iri4, label, comment, expose });
+        return result.ok ? ok({ turtle: result.turtle, summary: result.summary, warnings: result.warnings }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -29877,6 +30361,26 @@ function createRack(ctx2) {
         drawRack();
       });
       header.append(toggle);
+    }
+    if (profile?.composite) {
+      const unpack = document2.createElement("button");
+      unpack.type = "button";
+      unpack.className = "unpack";
+      unpack.id = `unpack-${node.id}`;
+      unpack.textContent = "Unpack";
+      unpack.setAttribute("aria-label", `Unpack ${labelFor(node.id)} into the plugins it is made of`);
+      unpack.addEventListener("click", async () => {
+        unpack.disabled = true;
+        const result = await dispatcher.unpackComposite(node.id);
+        if (!result.ok) {
+          unpack.disabled = false;
+          log2(result.message, "error");
+          return;
+        }
+        forgetNode(node.id);
+        log2(`unpacked ${node.label} into ${result.nodeIds.length} plugins`, "ok");
+      });
+      header.append(unpack);
     }
     const remove = document2.createElement("button");
     remove.className = "remove";
@@ -33593,7 +34097,7 @@ function createBrowser(ctx2) {
     return new CollectionLoader({
       parse: parseText,
       validator,
-      verify: (iri4) => verifier.loadProfile(iri4)
+      verify: (iri4) => verifier.loadListing(iri4)
     }).load(url);
   }
   async function openCollection(input) {
@@ -33694,7 +34198,7 @@ init_parse();
 
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
-var { jig: jig5, trn: trn4 } = vocabulary;
+var { jig: jig5, trn: trn5 } = vocabulary;
 var PREFIXES2 = [
   ["jig", JIG],
   ["trn", TRN],
@@ -33795,7 +34299,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
     lines.push(`<#${clip.id}>`);
     const statements = [
       `a ${term3(clip.kind === "midi" ? jig5.MidiClip : jig5.AudioClip)}`,
-      `${term3(trn4.startBeat)} ${decimal(clip.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(clip.lengthBeats)}`
+      `${term3(trn5.startBeat)} ${decimal(clip.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(clip.lengthBeats)}`
     ];
     if (clip.muted) statements.push(`${term3(jig5.muted)} true`);
     if (clip.locked) statements.push(`${term3(jig5.locked)} true`);
@@ -33809,7 +34313,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
     }
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
     clip.notes.forEach((note, i2) => {
-      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig5.Note)} ; ${term3(trn4.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn4.pitch)} ${integer(note.pitch)} ; ${term3(trn4.velocity)} ${integer(note.velocity)} .`);
+      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig5.Note)} ; ${term3(trn5.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn5.pitch)} ${integer(note.pitch)} ; ${term3(trn5.velocity)} ${integer(note.velocity)} .`);
     });
   }
   for (const node of nodes) {
@@ -33878,7 +34382,7 @@ function writeArrangement(lines, project) {
     lines.push("", `<#${m.id}> a ${term3(jig5.Marker)} ; ${term3(jig5.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
   }
   for (const r of [...project.regions].sort(byId)) {
-    lines.push("", `<#${r.id}> a ${term3(jig5.Region)} ; ${term3(trn4.startBeat)} ${decimal(r.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
+    lines.push("", `<#${r.id}> a ${term3(jig5.Region)} ; ${term3(trn5.startBeat)} ${decimal(r.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
   }
   for (const e of [...project.envelopes].sort(byId)) {
     const target2 = e.target.kind ? `${term3(jig5.targetKind)} ${term3(jig5[KIND_TERM[e.target.kind]])}` : `${term3(jig5.targetNode)} <#${e.target.node}> ; ${term3(jig5.targetSymbol)} ${string(e.target.symbol)}`;
@@ -33939,7 +34443,7 @@ function writeScripts(project, { iri: iri4, savedAt = null } = {}) {
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
-var { jig: jig6, trn: trn5 } = vocabulary;
+var { jig: jig6, trn: trn6 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 function objects3(dataset2, subject, predicate) {
@@ -33953,7 +34457,7 @@ function objects3(dataset2, subject, predicate) {
 }
 var one2 = (dataset2, subject, predicate) => objects3(dataset2, subject, predicate)[0] ?? null;
 var value = (term5) => term5 ? term5.value : null;
-function number2(term5, what) {
+function number3(term5, what) {
   if (!term5) return null;
   const n2 = Number(term5.value);
   if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term5.value}`);
@@ -33990,7 +34494,7 @@ function readEndpoint2(dataset2, iri4, projectIri, what) {
     throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
   }
   const endpoint2 = { node: idOf(node, projectIri, `${what} endpointNode`) };
-  if (index !== null) endpoint2.portIndex = number2(index, `${what} portIndex`);
+  if (index !== null) endpoint2.portIndex = number3(index, `${what} portIndex`);
   else endpoint2.portSymbol = symbol.value;
   return endpoint2;
 }
@@ -34005,8 +34509,8 @@ function mintedOrder(a2, b) {
 }
 function readChannel(dataset2, subject, id) {
   const channel = {};
-  const gain = number2(one2(dataset2, subject, jig6.gain), `gain on ${id}`);
-  const pan = number2(one2(dataset2, subject, jig6.pan), `pan on ${id}`);
+  const gain = number3(one2(dataset2, subject, jig6.gain), `gain on ${id}`);
+  const pan = number3(one2(dataset2, subject, jig6.pan), `pan on ${id}`);
   const muted = one2(dataset2, subject, jig6.muted);
   const soloed = one2(dataset2, subject, jig6.soloed);
   if (gain !== null) channel.gain = gain;
@@ -34074,19 +34578,19 @@ function readArrangement(dataset2, iri4, tracks) {
       id,
       from: idOf(value(one2(dataset2, subject, jig6.sendFrom)), iri4, `sendFrom of ${id}`),
       to: idOf(value(one2(dataset2, subject, jig6.sendTo)), iri4, `sendTo of ${id}`),
-      level: number2(one2(dataset2, subject, jig6.level), `level of ${id}`) ?? 1,
+      level: number3(one2(dataset2, subject, jig6.level), `level of ${id}`) ?? 1,
       tap: named(TAP_OF, value(one2(dataset2, subject, jig6.tap)), `tap of ${id}`)
     });
   }
   for (const { subject, id } of each(jig6.marker, "marker")) {
-    changes.push({ op: "addMarker", id, atBeat: number2(one2(dataset2, subject, jig6.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
+    changes.push({ op: "addMarker", id, atBeat: number3(one2(dataset2, subject, jig6.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
   }
   for (const { subject, id } of each(jig6.region, "region")) {
     changes.push({
       op: "addRegion",
       id,
-      startBeat: number2(one2(dataset2, subject, trn5.startBeat), `startBeat of ${id}`),
-      lengthBeats: number2(one2(dataset2, subject, trn5.lengthBeats), `lengthBeats of ${id}`),
+      startBeat: number3(one2(dataset2, subject, trn6.startBeat), `startBeat of ${id}`),
+      lengthBeats: number3(one2(dataset2, subject, trn6.lengthBeats), `lengthBeats of ${id}`),
       label: value(one2(dataset2, subject, RDFS_LABEL))
     });
   }
@@ -34095,8 +34599,8 @@ function readArrangement(dataset2, iri4, tracks) {
     const targetNode = value(one2(dataset2, subject, jig6.targetNode));
     const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri4, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig6.targetSymbol)) };
     const points = objects3(dataset2, subject, jig6.envelopePoint).map((x) => x.value).map((pointIri) => ({
-      atBeat: number2(one2(dataset2, pointIri, jig6.atBeat), `atBeat of a point in ${id}`),
-      value: number2(one2(dataset2, pointIri, jig6.pointValue), `pointValue of a point in ${id}`),
+      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), `atBeat of a point in ${id}`),
+      value: number3(one2(dataset2, pointIri, jig6.pointValue), `pointValue of a point in ${id}`),
       curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig6.curve)), `curve of a point in ${id}`)
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     changes.push({ op: "addEnvelope", id, target: target2, points });
@@ -34128,8 +34632,8 @@ function readProject(dataset2) {
         id,
         track,
         kind,
-        startBeat: number2(one2(dataset2, clipIri, trn5.startBeat), `startBeat of clip ${id}`),
-        lengthBeats: number2(one2(dataset2, clipIri, trn5.lengthBeats), `lengthBeats of clip ${id}`)
+        startBeat: number3(one2(dataset2, clipIri, trn6.startBeat), `startBeat of clip ${id}`),
+        lengthBeats: number3(one2(dataset2, clipIri, trn6.lengthBeats), `lengthBeats of clip ${id}`)
       };
       const muted = one2(dataset2, clipIri, jig6.muted);
       if (muted !== null) clip.muted = muted.value === "true";
@@ -34137,18 +34641,18 @@ function readProject(dataset2) {
       if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
         clip.notes = objects3(dataset2, clipIri, jig6.note).map((t) => t.value).map((noteIri) => ({
-          startBeat: number2(one2(dataset2, noteIri, trn5.startBeat), `startBeat of a note in ${id}`),
-          lengthBeats: number2(one2(dataset2, noteIri, trn5.lengthBeats), `lengthBeats of a note in ${id}`),
-          pitch: number2(one2(dataset2, noteIri, trn5.pitch), `pitch of a note in ${id}`),
-          velocity: number2(one2(dataset2, noteIri, trn5.velocity), `velocity of a note in ${id}`)
+          startBeat: number3(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
+          lengthBeats: number3(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
+          pitch: number3(one2(dataset2, noteIri, trn6.pitch), `pitch of a note in ${id}`),
+          velocity: number3(one2(dataset2, noteIri, trn6.velocity), `velocity of a note in ${id}`)
         }));
       } else {
         const source = value(one2(dataset2, clipIri, jig6.source));
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
         clip.source = source;
-        clip.offsetSeconds = number2(one2(dataset2, clipIri, jig6.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
-        clip.fadeInBeats = number2(one2(dataset2, clipIri, jig6.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
-        clip.fadeOutBeats = number2(one2(dataset2, clipIri, jig6.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
+        clip.offsetSeconds = number3(one2(dataset2, clipIri, jig6.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
+        clip.fadeInBeats = number3(one2(dataset2, clipIri, jig6.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
+        clip.fadeOutBeats = number3(one2(dataset2, clipIri, jig6.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
       }
       clips.push(clip);
     }
@@ -34166,7 +34670,7 @@ function readProject(dataset2) {
       const setting = one2(dataset2, settingIri, jig6.value);
       if (!symbol) throw new Error(`a setting on ${id} names no jig:symbol`);
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
-      settings[symbol] = number2(setting, `setting ${symbol} on ${id}`);
+      settings[symbol] = number3(setting, `setting ${symbol} on ${id}`);
     }
     const onTrack = value(one2(dataset2, nodeIri, jig6.onTrack));
     nodes.push({
@@ -34220,14 +34724,14 @@ function readProject(dataset2) {
   const transportIri = value(one2(dataset2, iri4, jig6.transport));
   if (transportIri) {
     const points = objects3(dataset2, transportIri, jig6.tempoPoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number2(one2(dataset2, pointIri, jig6.atBeat), "atBeat") ?? 0,
-      bpm: number2(one2(dataset2, pointIri, jig6.bpm), "bpm") ?? 120
+      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), "atBeat") ?? 0,
+      bpm: number3(one2(dataset2, pointIri, jig6.bpm), "bpm") ?? 120
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     const transport2 = {};
-    const beatsPerBar = number2(one2(dataset2, transportIri, jig6.beatsPerBar), "beatsPerBar");
-    const beatUnit = number2(one2(dataset2, transportIri, jig6.beatUnit), "beatUnit");
-    const loopStart = number2(one2(dataset2, transportIri, jig6.loopStart), "loopStart");
-    const loopEnd = number2(one2(dataset2, transportIri, jig6.loopEnd), "loopEnd");
+    const beatsPerBar = number3(one2(dataset2, transportIri, jig6.beatsPerBar), "beatsPerBar");
+    const beatUnit = number3(one2(dataset2, transportIri, jig6.beatUnit), "beatUnit");
+    const loopStart = number3(one2(dataset2, transportIri, jig6.loopStart), "loopStart");
+    const loopEnd = number3(one2(dataset2, transportIri, jig6.loopEnd), "loopEnd");
     const loopEnabled = one2(dataset2, transportIri, jig6.loopEnabled);
     if (beatsPerBar !== null) transport2.beatsPerBar = beatsPerBar;
     if (beatUnit !== null) transport2.beatUnit = beatUnit;
@@ -34236,9 +34740,9 @@ function readProject(dataset2) {
     if (loopEnabled !== null) transport2.loopEnabled = loopEnabled.value === "true";
     if (points.length > 0) transport2.tempoPoints = points;
     const signatures = objects3(dataset2, transportIri, jig6.signaturePoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number2(one2(dataset2, pointIri, jig6.atBeat), "atBeat of a signature point"),
-      beatsPerBar: number2(one2(dataset2, pointIri, jig6.beatsPerBar), "beatsPerBar of a signature point"),
-      beatUnit: number2(one2(dataset2, pointIri, jig6.beatUnit), "beatUnit of a signature point")
+      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), "atBeat of a signature point"),
+      beatsPerBar: number3(one2(dataset2, pointIri, jig6.beatsPerBar), "beatsPerBar of a signature point"),
+      beatUnit: number3(one2(dataset2, pointIri, jig6.beatUnit), "beatUnit of a signature point")
     }));
     if (signatures.length > 0) transport2.signaturePoints = signatures.sort((a2, b) => a2.atBeat - b.atBeat);
     if (Object.keys(transport2).length > 0) changes.push({ op: "setTransport", ...transport2 });
@@ -34246,7 +34750,7 @@ function readProject(dataset2) {
   return {
     iri: iri4,
     label: value(one2(dataset2, iri4, RDFS_LABEL)),
-    revision: number2(one2(dataset2, iri4, jig6.revision), "revision") ?? 0,
+    revision: number3(one2(dataset2, iri4, jig6.revision), "revision") ?? 0,
     changes
   };
 }
@@ -34262,7 +34766,7 @@ function readEditor(dataset2, projectIri) {
       at[p === jig6.x ? "x" : "y"] = Number(quad3.object.value);
       positions.set(id, at);
     } else if (p === jig6.order) {
-      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number2(quad3.object, "order");
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number3(quad3.object, "order");
     } else if (p === jig6.color) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
     } else if (p === jig6.laneSize) {
@@ -35171,7 +35675,7 @@ var Tokens = class {
     return r.trim();
   }
 };
-function number3(t) {
+function number4(t) {
   t.skipSpace();
   const m = /^\d+(\.\d+)?|^\.\d+/.exec(t.text.slice(t.pos));
   if (!m) return null;
@@ -35221,7 +35725,7 @@ function factor(t, depth) {
     t.pos++;
     return { type: "negate", operand: factor(t, depth + 1) };
   }
-  const n2 = number3(t);
+  const n2 = number4(t);
   if (n2) return n2;
   const name2 = t.ident();
   if (!name2) throw new LineError("expected a number, a name or a call", column);
@@ -35257,7 +35761,7 @@ function position(t) {
   return { bar, beat };
 }
 function duration(t) {
-  const n2 = number3(t);
+  const n2 = number4(t);
   if (!n2 || n2.unit) throw new LineError("expected a length such as 2 bars", t.pos + 1);
   const unit = t.ident();
   if (!["bar", "bars", "beat", "beats"].includes(unit)) throw new LineError('expected "bars" or "beats" after the length', t.pos + 1);
@@ -35296,7 +35800,7 @@ function statement(text) {
     t.expect("=");
     s = { type: "let", name: name2, expr: expression(t), column };
   } else if (t.keyword("seed")) {
-    const n2 = number3(t);
+    const n2 = number4(t);
     if (!n2 || n2.unit) throw new LineError("expected a whole number for the seed", t.pos + 1);
     s = { type: "seed", value: Math.trunc(n2.value), column };
   } else if (t.keyword("connect")) {
@@ -35369,7 +35873,7 @@ var portDimension = (unit) => {
   return PORT[local] ? { dim: PORT[local][0], factor: PORT[local][1], name: local } : { dim: void 0, factor: 1, name: local };
 };
 var q = (v, dim = null) => ({ v, dim });
-function literal4(node) {
+function literal5(node) {
   if (node.unit === null) return q(node.value);
   const [dim, factor2] = LITERAL[node.unit];
   return q(node.value * factor2, dim);
@@ -35408,7 +35912,7 @@ function evaluate(node, env, rng, budget = { left: 2e3 }) {
   if (--budget.left < 0) throw new ReelError("this expression is too large to run inside a tick", null, node.column);
   switch (node.type) {
     case "number":
-      return literal4(node);
+      return literal5(node);
     case "variable": {
       need(env.has(node.name), `"${node.name}" is not defined; use let ${node.name} = ... first`, node);
       return env.get(node.name);
@@ -35435,7 +35939,7 @@ function bounds(node, env) {
   const i2 = (lo, hi, dim) => ({ lo: Math.min(lo, hi), hi: Math.max(lo, hi), dim });
   switch (node.type) {
     case "number": {
-      const v = literal4(node);
+      const v = literal5(node);
       return i2(v.v, v.v, v.dim);
     }
     case "variable": {
@@ -35824,12 +36328,22 @@ function createPluginValidator(loader) {
   const verified = /* @__PURE__ */ new Map();
   return async function resolvePlugin(iri4) {
     try {
-      const { profile } = await loader.loadProfile(iri4);
-      const resources = [
-        ["processor", profile.processor],
-        ["module", profile.module],
-        ...(profile.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
-      ].filter(([, resource]) => resource);
+      let profile;
+      let code;
+      try {
+        profile = (await loader.loadProfile(iri4)).profile;
+        code = [profile];
+      } catch (error2) {
+        if (!(error2 instanceof CompositeFound)) throw error2;
+        const tree = await resolveComposite(iri4, { loader, bundled: (target2) => target2 === iri4 ? error2.dataset : null });
+        profile = compositeProfile(tree.composite);
+        code = pluginsOf(tree).map((plugin) => plugin.profile);
+      }
+      const resources = code.flatMap((p) => [
+        ["processor", p.processor],
+        ["module", p.module],
+        ...(p.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
+      ]).filter(([, resource]) => resource);
       const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(" ");
       if (verified.get(iri4) !== key) {
         for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind });
@@ -35845,7 +36359,7 @@ function createPluginValidator(loader) {
     }
   };
 }
-var slug = (label) => {
+var slug2 = (label) => {
   const s = String(label ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   return /^[a-z_]/.test(s) ? s : s ? `_${s}` : "";
 };
@@ -35862,7 +36376,7 @@ function existingPlugins(dispatcher, session) {
   }
   const bySlug = /* @__PURE__ */ new Map();
   for (const node of dispatcher.project.nodes) {
-    const name2 = slug(node.label ?? dispatcher.engineNode(node.id)?.profile?.label);
+    const name2 = slug2(node.label ?? dispatcher.engineNode(node.id)?.profile?.label);
     if (!name2) continue;
     if (!bySlug.has(name2)) bySlug.set(name2, []);
     bySlug.get(name2).push(node.id);

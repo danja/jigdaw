@@ -10,7 +10,7 @@ import { readProfile } from '../rdf/ProfileReader.js'
 import { verifyIntegrity } from './Integrity.js'
 import { negotiate, explainMissing, detectCapabilities } from './Capabilities.js'
 import { LoadError, CompositeFound, STEPS } from './LoadError.js'
-import { isComposite } from '../rdf/CompositeReader.js'
+import { isComposite, readComposite, compositeProfile } from '../rdf/CompositeReader.js'
 import { instantiate } from './Instantiate.js'
 
 const PROFILE_ACCEPT = 'text/turtle, application/ld+json;q=0.9'
@@ -50,6 +50,24 @@ export class PluginLoader {
     this.#capabilities = capabilities
     this.#validate = validate
     this.#processorUrlFor = processorUrl
+  }
+
+  /**
+   * Contract section 3.1 steps 1 and 2 for a plugin of either kind, as a listing needs them: the profile, and whether
+   * this host can run it, with no code fetched. A composite is read as its own profile and its own `trn:requires`; the
+   * members are checked when it is loaded, as nested-plugins.md section 6 says, and a collection of forty racks does not
+   * fetch forty trees to draw a list.
+   */
+  async loadListing (iri) {
+    const dataset = await this.fetchDataset(iri)
+    if (!isComposite(dataset)) return this.profileFrom(dataset, iri)
+    let profile
+    try {
+      profile = compositeProfile(readComposite(dataset))
+    } catch (cause) {
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri })
+    }
+    return { profile, granted: this.checkCapabilities(profile, iri) }
   }
 
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */

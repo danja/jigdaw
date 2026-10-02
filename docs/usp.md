@@ -15,7 +15,7 @@ checkout, so what is said of it comes from its README only. None of the three wa
 
 **Built.** A Jig is loaded from one IRI. Fetching it returns a description, its code, and a
 digest for each. Publishing a plugin is putting files where a browser can fetch them: no
-installer, no registry, no rebuild of the host. The tree holds **26 plugins** written this way,
+installer, no registry, no rebuild of the host. The tree holds **27 plugins** written this way,
 in Rust, JavaScript, JSFX and hand-written WebAssembly.
 
 The others compile their instruments and effects into the application. openDAW's stock devices
@@ -84,7 +84,7 @@ this on the track is Phase T3 in TODO.md.
 
 ### The agent uses the same Ops as the person
 
-**Built.** **50 tools** are offered to an agent through WebMCP, over the one dispatcher the page
+**Built.** **52 tools** are offered to an agent through WebMCP, over the one dispatcher the page
 uses. A changeset carries the revision it expects and can be run as a dry run first, so an
 agent checks a chain before committing it and a stale edit is refused with the current
 revision.

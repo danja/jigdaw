@@ -8,7 +8,9 @@
 // instantiating it can prove, and a plugin that does not is refused with the step it failed at.
 //
 // `existingPlugins` tells the planner which plugin names a script may already use.
-import { LoadError } from '../host/LoadError.js'
+import { LoadError, CompositeFound } from '../host/LoadError.js'
+import { resolveComposite, pluginsOf } from '../host/CompositeResolver.js'
+import { compositeProfile } from '../rdf/CompositeReader.js'
 
 /**
  * @param loader a PluginLoader, or anything with loadProfile(iri) and fetchVerified(resource, {kind})
@@ -22,12 +24,24 @@ export function createPluginValidator (loader) {
   const verified = new Map()
   return async function resolvePlugin (iri) {
     try {
-      const { profile } = await loader.loadProfile(iri)
-      const resources = [
-        ['processor', profile.processor],
-        ['module', profile.module],
-        ...(profile.assets ?? []).map(a => [`asset "${a.iri?.split('#').pop() ?? a.iri}"`, a])
-      ].filter(([, resource]) => resource)
+      // A composite plugin has no code of its own, so what is verified is every member's, and what a script sees is the
+      // parameters the composite exposes (docs/nested-plugins.md).
+      let profile
+      let code
+      try {
+        profile = (await loader.loadProfile(iri)).profile
+        code = [profile]
+      } catch (error) {
+        if (!(error instanceof CompositeFound)) throw error
+        const tree = await resolveComposite(iri, { loader, bundled: target => (target === iri ? error.dataset : null) })
+        profile = compositeProfile(tree.composite)
+        code = pluginsOf(tree).map(plugin => plugin.profile)
+      }
+      const resources = code.flatMap(p => [
+        ['processor', p.processor],
+        ['module', p.module],
+        ...(p.assets ?? []).map(a => [`asset "${a.iri?.split('#').pop() ?? a.iri}"`, a])
+      ]).filter(([, resource]) => resource)
       const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(' ')
       if (verified.get(iri) !== key) {
         for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind })

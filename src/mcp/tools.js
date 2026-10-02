@@ -712,6 +712,51 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     },
 
     {
+      name: 'node_unpack',
+      description:
+        'Turn a composite plugin (a plugin made of other plugins, such as an effects rack) back into its members: ordinary nodes on ' +
+        'the same track, joined to what the composite was joined to, each with the value it had inside so it sounds the same. One ' +
+        'edit, one undo. Refused for a node that is not a composite, for one with automation on it, and when a member will not ' +
+        'load, in which case the composite is left exactly as it was.',
+      inputSchema: {
+        type: 'object',
+        properties: { nodeId: { type: 'string' } },
+        required: ['nodeId']
+      },
+      async handler ({ nodeId } = {}) {
+        if (typeof nodeId !== 'string' || nodeId === '') return failed('node_unpack needs a nodeId')
+        const result = await dispatcher.unpackComposite(nodeId)
+        return result.ok
+          ? ok({ revision: result.revision, unpacked: nodeId, nodeIds: result.nodeIds })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+    {
+      name: 'composite_pack',
+      description:
+        'Describe a selection of loaded plugins as a composite plugin: the Turtle profile of one plugin made of them, wired as they ' +
+        'are wired, with a control for every parameter you have moved and each member pinned to its profile as fetched now. It ' +
+        'changes nothing in the project. A composite is a plugin at an IRI, so the profile is a document to publish at the iri you ' +
+        'give. The warnings say what it cannot carry: bypass, saved state, automation, a connection into a member\'s own parameter.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          nodeIds: { type: 'array', items: { type: 'string' }, description: 'The plugins to pack, all on one track.' },
+          iri: { type: 'string', description: 'Where it will be published: https, or http on loopback.' },
+          label: { type: 'string', description: 'Its name.' },
+          comment: { type: 'string', description: 'What it is for.' },
+          expose: { type: 'string', enum: ['set', 'none'], description: 'set (default) makes a control of each parameter moved by hand; none fixes them.' }
+        },
+        required: ['nodeIds', 'iri', 'label']
+      },
+      async handler ({ nodeIds, iri, label, comment, expose } = {}) {
+        const result = await dispatcher.packSelection({ nodeIds, iri, label, comment, expose })
+        return result.ok
+          ? ok({ turtle: result.turtle, summary: result.summary, warnings: result.warnings })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+    {
       name: 'node_bypass',
       description:
         'Take a plugin out of the signal, or put it back, keeping its state. A bypassed effect passes what ' +

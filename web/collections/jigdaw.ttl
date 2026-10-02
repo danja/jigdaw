@@ -49,6 +49,7 @@
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
         <../plugins/squelch/> ,
+        <../plugins/stomp-rack/> ,
         <../plugins/tremolo/> .
 
 <../plugins/8b8/> rdfs:label "8-Bit 8asterd" .
@@ -76,4 +77,5 @@
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/squelch/> rdfs:label "Squelch" .
+<../plugins/stomp-rack/> rdfs:label "Stomp rack" .
 <../plugins/tremolo/> rdfs:label "Tremolo" .

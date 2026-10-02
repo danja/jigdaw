@@ -51,7 +51,8 @@ describe('CollectionLoader', () => {
       fetch,
       parse: parseText,
       validator,
-      verify: verify ?? (iri => plugins.loadProfile(iri)),
+      // loadListing, which is what a collection checks with: it reads a composite plugin as its own profile.
+      verify: verify ?? (iri => plugins.loadListing(iri)),
       ...(concurrency ? { concurrency } : {})
     })
   }

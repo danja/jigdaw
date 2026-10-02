@@ -9,7 +9,10 @@ import { LoadError, CompositeFound, STEPS } from '../host/LoadError.js'
 import { resolveComposite } from '../host/CompositeResolver.js'
 import { restoreState } from '../host/CompositeState.js'
 import { voicing } from '../host/CompositeParameters.js'
-import { compositeProfile } from '../rdf/CompositeReader.js'
+import { compositeProfile, readComposite, isComposite } from '../rdf/CompositeReader.js'
+import { readProfile } from '../rdf/ProfileReader.js'
+import { pluginForm } from '../rdf/Canonical.js'
+import { digestOf } from '../host/Integrity.js'
 
 let counter = 0
 const nextId = () => `node-${++counter}`
@@ -105,6 +108,16 @@ export class Engine {
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass, state })
     return this.adopt({ iri, profile, node, ready, descriptors, granted })
+  }
+
+  /**
+   * The canonical digest of a plugin's profile, which is what a composite pins it by (docs/nested-plugins.md section 9.1). Over the
+   * identity the profile states and not the URL it was fetched from. Fetches the profile and nothing else.
+   */
+  async profileDigest (iri) {
+    const dataset = await this.#loader.fetchDataset(iri)
+    const identity = isComposite(dataset) ? readComposite(dataset).iri : readProfile(dataset).iri
+    return digestOf(new TextEncoder().encode(pluginForm(dataset, identity)), 'sha384')
   }
 
   /**

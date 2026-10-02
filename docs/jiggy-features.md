@@ -55,7 +55,11 @@ starts on the simple page.
   governed by its Drive control, a composite pinned to a profile that has since changed is refused with the session untouched, and remove
   and undo restore it. A second run covered a MIDI clip played from the transport through Pulse and the rack (silent at Drive 0, a peak of
   0.25 at the default), saving a session and reopening it with the setting and the author's voicing restored, and the Routing and Mixer
-  tabs. Not yet done: a phone, and listening to it.
+  tabs. Its catalogue search lists it as loadable, and `plugins/stomp-rack/` is the worked example. Not yet done: a phone, listening to it, and loading it from a
+  search result, which fetches the canonical address and so waits for the rack to be deployed. A composite's card has an **Unpack** button, on
+  composites only: it turns the rack back into the plugins it is made of, each with the value it had inside, joined to what the rack was joined
+  to, as one undo step (checked in Chrome: Drive 0.6 became Boost's Gain 0.6, and the author's tremolo rate became a knob). The agent tools
+  `node_unpack` and `composite_pack` do the same, and the second describes a selection as a composite profile to publish and changes nothing.
   See [nested-plugins.md](nested-plugins.md).
 - **Routing matrix.** Every output against every input, joined or not, by pointer or arrow keys.
 - **Connections.** Audio and MIDI, within a track or across tracks. A connection that would make a loop
@@ -112,7 +116,7 @@ starts on the simple page.
 
 ## For agents
 
-- **50 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **52 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).
@@ -123,7 +127,7 @@ starts on the simple page.
 
 ## The plugins
 
-**26 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**27 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).

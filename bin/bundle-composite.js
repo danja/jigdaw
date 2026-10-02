@@ -22,7 +22,7 @@ import { pluginForm } from '../src/rdf/Canonical.js'
 import { digestOf } from '../src/host/Integrity.js'
 import { vocabulary } from '../src/rdf/Vocabulary.js'
 import { canonicalDigest } from '../src/host/Signature.js'
-import { collectPlugin, inlineFiles, zip, provenance, SEPARATOR } from './bundle.js'
+import { collectPlugin, inlineFiles, zip, provenance, SEPARATOR } from './bundle-core.js'
 
 const encoder = new TextEncoder()
 

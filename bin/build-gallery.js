@@ -16,7 +16,7 @@ import { resolve, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pluginDirs } from '../src/catalogue/PluginDirectories.js'
 import { parseText } from '../src/rdf/parse.js'
-import { readProfile } from '../src/rdf/ProfileReader.js'
+import { readPlugin } from '../src/rdf/PluginReader.js'
 import {
   escapeHtml, listLocalPlugins, dirNameOf, renderPanelHTML, shotPanel
 } from './jig.js'
@@ -54,7 +54,7 @@ const BLURBS = {
 
 async function loadEntry (name) {
   const file = join(root, 'plugins', name, 'profile.ttl')
-  const profile = readProfile(await parseText(await readFile(file, 'utf8'), `file://${file}`))
+  const profile = readPlugin(await parseText(await readFile(file, 'utf8'), `file://${file}`))
   return profile
 }
 

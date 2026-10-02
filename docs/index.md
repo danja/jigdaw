@@ -110,7 +110,7 @@ Honestly, because a specification that overstates itself is worse than none.
 **Works.** Loading a plugin from its IRI, profile validation, integrity verification,
 WebAssembly instantiation, generated panels, parameter automation, MIDI routed by the host,
 transport, latency compensation, cycle refusal, undo and redo, a catalogue search, and an
-agent tool surface. 26 worked plugins: a subtractive synth, a bass line generator, a
+agent tool surface. 27 worked plugins: a subtractive synth, a bass line generator, a
 reverb, a compressor/expander/limiter/clipper with a side chain input, the firmware of a
 three-chip AY-3-8910 synthesiser compiled unedited from C++, an OPL3 FM General MIDI
 instrument, three REAPER JSFX effects

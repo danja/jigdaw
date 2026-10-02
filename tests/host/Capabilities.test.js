@@ -133,7 +133,7 @@ describe('the host offers what its own plugins ask for', () => {
     const { readFile } = await import('node:fs/promises')
     const { resolve, join } = await import('node:path')
     const { parseTurtleFile } = await import('../../src/validate/files.js')
-    const { readProfile } = await import('../../src/rdf/ProfileReader.js')
+    const { readPlugin } = await import('../../src/rdf/PluginReader.js')
     const { pluginDirs } = await import('../../src/catalogue/PluginDirectories.js')
 
     const root = resolve(import.meta.dirname, '../..')
@@ -146,7 +146,7 @@ describe('the host offers what its own plugins ask for', () => {
     for (const name of plugins) {
       const file = join(root, 'plugins', name, 'profile.ttl')
       const iri = `https://strandz.it/jigdaw/plugins/${name}/`
-      const profile = readProfile(await parseTurtleFile(file, iri), iri)
+      const profile = readPlugin(await parseTurtleFile(file, iri), iri)
       for (const required of [...(profile.requires ?? []), ...(profile.module?.wasmFeatures ?? [])]) {
         expect(offered.has(required),
           `${profile.label} requires ${compact(required)}, which this host does not offer`)

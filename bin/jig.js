@@ -29,7 +29,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { parseHTML } from 'linkedom'
 import { parseText } from '../src/rdf/parse.js'
-import { readProfile } from '../src/rdf/ProfileReader.js'
+import { readPlugin } from '../src/rdf/PluginReader.js'
 import { pluginDirs } from '../src/catalogue/PluginDirectories.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { renderChain } from '../src/host/ReferenceHost.js'
@@ -74,7 +74,7 @@ function usage () {
 /** Read a profile.ttl file and return the host's profile object. */
 async function profileFromFile (file) {
   const text = await readFile(file, 'utf8')
-  return readProfile(await parseText(text, pathToFileURL(file).href))
+  return readPlugin(await parseText(text, pathToFileURL(file).href))
 }
 
 /** Fetch an IRI's profile text, honouring --root mappings onto local dirs. */
@@ -107,7 +107,7 @@ export async function resolveProfile (target, roots = {}) {
     return { profile: await profileFromFile(file), name }
   }
   const text = await fetchProfileText(target, roots)
-  const profile = readProfile(await parseText(text, target), { baseIRI: target })
+  const profile = readPlugin(await parseText(text, target), { baseIRI: target })
   return { profile, name: dirNameOf(profile.iri) }
 }
 

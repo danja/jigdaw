@@ -315,13 +315,48 @@ by flattening it into its chain, applying the author's voicing, and checking pin
 a loop, a modulation connection or MIDI between members, by name, because it renders chains and not graphs (`src/host/ReferenceHost.js`
 says why). Jiggy runs those.
 
-### 9.4 Exchanging one
+### 9.4 Making one from what you have, and taking one apart
+
+A host that has composites can turn a composite into its members and a selection of its members into a composite. Neither is a new kind of
+thing; each is an operation over what is specified above.
+
+**Unpacking** replaces a composite's node with its members as ordinary nodes on the same track. A host that offers it:
+
+- MUST give each member the value it had inside: the author's voicing, then each exposed port's value (the person's setting, else the port's
+  default) written onto the member parameter it drives. A member that is itself a composite receives settings in its own exposed symbols.
+- MUST join the members to what the composite was joined to, by the same expansion that wires the engine (section 7.1), taken one level deep.
+- MUST give the track's MIDI or audio input to the member the composite's boundary input was wired to, when the composite was that input.
+- MUST keep a bypassed composite bypassed, member by member.
+- MUST refuse a composite that has automation on it, rather than lose the envelope.
+- MUST leave the composite exactly as it was when any member will not load, and make the whole a single undo step otherwise.
+
+**Packing** describes a selection of nodes as a composite profile, to be published by a person at an IRI they name. A host that offers it:
+
+- MUST NOT change the project. A composite is a plugin at an IRI, which is somewhere only its author can put it, so the result is a document.
+- MUST pin each member by the canonical digest of the profile it fetched for it, and say so for any it could not.
+- MUST read the boundary from what crosses the selection, one port for each distinct member port touched, and where nothing crosses give an
+  effect an input at its start and an output at its end, so the composite can be connected.
+- SHOULD expose every parameter the person has moved, in the member's own declared range with the value it has as the default, and fix the rest
+  as the member's own default. An exposed parameter is never also a member setting (section 5).
+- MUST refuse a selection on more than one track, one containing a bypassed node, or one that is not loaded, and MUST say, and not hide, what a
+  composite cannot carry: saved state, automation, and a connection into a member's own parameter.
+
+`src/ops/CompositeUnpack.js` and `src/ops/CompositePack.js` are the plans, `src/rdf/CompositeWriter.js` writes the profile, and `unpackComposite`
+and `packSelection` on the dispatcher carry them out. Jiggy offers unpacking as a button on a composite's card, and both as the agent tools
+`node_unpack` and `composite_pack`. Replacing a selection in place with the composite it describes needs that composite to be somewhere a host
+can fetch it from, and is not offered.
+
+### 9.5 Exchanging one
 
 - **By IRI.** A composite is served as a profile at its IRI with the requirements of contract section 1, and its members are fetched from
   theirs. A collection lists it as any plugin: `dcterms:hasPart` takes a plugin IRI.
 - **As a file.** A bundle of a composite holds the composite and, recursively, every member, in both forms. The rules are
   [plugin-bundles.md](plugin-bundles.md) section 9. A composite with an unpinned member cannot be bundled, and `bin/bundle.js` refuses it
   naming the member.
+- **Being found.** A catalogue lists a composite as any plugin: `src/rdf/PluginReader.js` reads either kind into the same shape, so the
+  local index, the gallery, the shipped collection and the `jig` tool treat a composite as they treat a Jig, and it is offered as one the
+  host can run. A collection checks it as its own profile and does not fetch its members (plugin-collections.md section 3.2), and a script's
+  `load` verifies every member's files before it runs. The worked example is `plugins/stomp-rack/`.
 - **Opening a flattened file.** A host looks for a member's profile in the document it is reading before it goes to the network, so a
   flattened composite opens with no network at all.
 
@@ -363,12 +398,22 @@ failure rather than a surprise.
 | Bypass is applied to the composite as one node | 7.3 | `tests/ops/CompositeDispatcher.test.js`, "takes a bypassed rack out of the signal as one node" |
 | State is keyed by member IRI, and an unknown key is ignored | 8 | `tests/host/CompositeState.test.js`, "ignores a key that names no member" |
 | A session saves a composite as one node and reopens it | 8 | `tests/ops/CompositeDispatcher.test.js`, "saves and reopens as one node" |
-| A bundle holds every member | 9.4 | `tests/host/compositeBundle.test.js`, "holds every member" |
-| A bundle of an unpinned member is refused | 9.4 | `tests/host/compositeBundle.test.js`, "a member with no pin" |
-| A flattened composite opens with no network | 9.4 | `tests/host/compositeBundle.test.js`, "opens through the resolver from the flattened file alone" |
+| A bundle holds every member | 9.5 | `tests/host/compositeBundle.test.js`, "holds every member" |
+| A bundle of an unpinned member is refused | 9.5 | `tests/host/compositeBundle.test.js`, "a member with no pin" |
+| A flattened composite opens with no network | 9.5 | `tests/host/compositeBundle.test.js`, "opens through the resolver from the flattened file alone" |
+| Unpacking gives each member the value it had, and the result sounds the same | 9.4 | `tests/ops/CompositeUnpack.test.js`, "sounds the same as the rack did" |
+| Unpacking joins what fed the composite to its first member | 9.4 | `tests/ops/CompositeUnpack.test.js`, "joins what fed the rack to its first member" |
+| Unpacking leaves the composite untouched when a member will not load | 9.4 | `tests/ops/CompositeUnpack.test.js`, "leaves the rack exactly as it was" |
+| Unpacking refuses automation and a node that is not a composite | 9.4 | `tests/ops/CompositeUnpack.test.js`, "refuses a node that is not a composite" |
+| Packing a taken-apart rack gives a composite that sounds like the rack | 9.4 | `tests/ops/CompositePack.test.js`, "loads as a composite and sounds the same as the rack it came from" |
+| Packing changes nothing in the project, and pins every member | 9.4 | `tests/ops/CompositePack.test.js`, "changes nothing in the project" |
+| Packing says what a composite cannot carry, and refuses a selection it cannot describe | 9.4 | `tests/ops/CompositePack.test.js`, "says, rather than hides, what a composite cannot carry" |
 | `bin/pin.js` reports a pin as current only when it is | 9.2 | `tests/bin/pin.test.js`, "calls the placeholder pins stale" |
 | A straight rack renders in the reference host, and its author's voicing is applied | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "is silent when its author sets Drive to zero" |
 | A host that cannot run a composite says it is one | 1, 12 | `native/jigdaw-adapter/tests/profile_test.cpp`, "a composite plugin is refused, saying that it is one" |
+| A collection checks a composite as its own profile and fetches no code | 9.5 | `tests/host/CompositeListing.test.js`, "reads a composite as its own profile" |
+| A script's `load` verifies every member's files | 9.5 | `tests/host/CompositeListing.test.js`, "files and offers the script the controls" |
+| The worked composite's pins are current, and it loads | 9.2 | `tests/host/StompRackPins.test.js`, "is pinned to every member as it is now" |
 | A composite that is not a straight chain is refused by name | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "refuses a split, a join, a loop" |
 
 ## 12. Not in this version
@@ -378,8 +423,8 @@ failure rather than a surprise.
   document grows no formula language.
 - **A composite's own interface.** A composite has the generated panel. A `jig:ui` that talks to its members would need
   [messaging.md](messaging.md) to address a member through the host. Every plugin without one gets the generated panel.
-- **Packing and unpacking.** Turning a selection of nodes on a track into a composite, and a composite instance back into its members as
-  ordinary nodes, are Ops over what is specified here and need no rule of their own.
+- **Packing a selection and putting the composite in its place.** Packing produces a profile (section 9.4), and a host cannot publish it. Swapping
+  the selection for a node of the published composite needs that address to be reachable, which a person arranges.
 - **Revealing an unexposed parameter on one instance.** The author's voicing is fixed.
 - **A native host.** `native/jigdaw-adapter` runs Jigs as a serial chain and has no graph to expand a composite into. It says that the
   plugin is a composite and that it cannot run one, which the sibling class (section 1) makes possible, and a host that cannot run

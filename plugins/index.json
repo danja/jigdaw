@@ -1196,6 +1196,34 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/stomp-rack/",
+      "label": "Stomp rack",
+      "comment": "A boost into a tremolo into a plate reverb, as one plugin: Drive, Tremolo depth and Reverb mix are all it exposes. The rack is built from three published Jigs by reference, and is the worked example of a composite plugin.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/stomp-rack/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [],
+      "parameters": [
+        "depth",
+        "drive",
+        "room"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/tremolo/",
       "label": "Tremolo",
       "comment": "Amplitude modulation by a sine LFO. Its whole signal path is JavaScript: no WebAssembly module, the worked example for a plugin whose processing does not need one.",
