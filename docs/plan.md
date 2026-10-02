@@ -661,8 +661,13 @@ Checked against plugin-universe's own shapes the same day (its validator resolve
 from inside that repository): the reference composite conforms once it declares `trn:Jig` and not the deprecated `trn:WebAudio`, which
 the existing generated profiles still carry.
 
-Not done: a session saved and reopened in the page, the Mixer and Routing tabs, a phone, listening, the native adapter naming the class, and
-`npm run check-plugin` rendering one. TODO.md has the order.
+A second browser run the same day covered the rest: a clip played from the transport through Pulse and the rack (peak 0.2469 at the default, exactly 0 at
+Drive 0), a session saved and reopened (the setting back, the boost's gain 0, the voicing intact), and the Routing and Mixer tabs. It also removed a
+suspect: a silent result in the first run was the page's own meter, which polls on `requestAnimationFrame` and does not run in a background tab, so the
+recorder built on it saw nothing. Measuring at the track input from an audio callback does not have that problem. The native adapter now names a
+composite when it refuses one, and `npm run check-plugin` renders a straight chain.
+
+Not done: a phone, listening, and running a linear composite in the native adapter. TODO.md has the order.
 
 ## What it found
 

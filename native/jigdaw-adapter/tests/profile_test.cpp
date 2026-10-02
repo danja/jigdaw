@@ -96,6 +96,16 @@ int main(int argc, char** argv) {
     check(!notAProfile.ok && notAProfile.error.find("jig:WebPlugin") != std::string::npos,
           "a document with no plugin in it is refused, saying so");
 
+    // A composite plugin (docs/nested-plugins.md) is not a jig:WebPlugin and declares no module, so this
+    // host, a serial chain, cannot run it. It has to say what the document is, because "no jig:WebPlugin"
+    // sends a person looking for a defect in a profile that is correct.
+    auto composite = jigdaw::parseProfile(readText(root + "/examples/reference-composite.ttl"),
+                                          "https://example.org/racks/stomp/");
+    check(!composite.ok && composite.error.find("composite plugin") != std::string::npos,
+          "a composite plugin is refused, saying that it is one");
+    check(!composite.ok && composite.error.find("cannot run") != std::string::npos,
+          "and saying that this host cannot run it");
+
     auto broken = jigdaw::parseProfile("this is not turtle <<<", "https://x/");
     check(!broken.ok, "unparseable Turtle is refused");
 

@@ -32,7 +32,10 @@ and "Drive 0 still sounds" looked like sound bypassing the boost. A second readi
 analyser including the test's own sanity oscillator, and homemade stage analysers read zero while the master heard sound. The wiring log, a
 positive control and a narrowed recorder separated them, and the corrected result (master peak 0.139 at Drive 1, exactly 0 at Drive 0) is in
 docs/plan.md. Prevention: a scripted browser step asserts `ok` on every call and throws, and a measurement gets a positive control and a
-recorder that counts only the thing under test before it is believed in either direction.
+recorder that counts only the thing under test before it is believed in either direction. A later run found a fourth way to measure nothing: the
+page's meter polls on `requestAnimationFrame`, which does not run in a background tab, so a recorder built on it read 0 for a clip that was playing
+(0 meter calls, which was the clue). Tap the signal where it enters the thing under test and measure from an audio callback, and print how many
+samples were taken.
 
 ## Freestanding math is wrong until it is measured against libm
 

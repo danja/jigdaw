@@ -4,7 +4,10 @@
 // local plugins. These tests bind its list to the plugin directories and its
 // panel output to the profile it claims to show, so the two cannot drift.
 import { describe, it, expect } from 'vitest'
-import { resolve } from 'node:path'
+import { mkdtempSync, symlinkSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
 import {
   listLocalPlugins, dirNameOf, resolveProfile, renderPanelHTML, escapeHtml, panelStyle
 } from '../../bin/jig.js'
@@ -62,6 +65,26 @@ describe('renderPanelHTML', () => {
     // A stylesheet link would resolve to nothing under file://.
     expect(html).not.toMatch(/<link[^>]+stylesheet/)
   })
+
+  // A checkout reached by two names is ordinary: ~/github/jigdaw symlinked or
+  // bind mounted at another path, then `node that/bin/jig.js list` printed
+  // nothing and exited 0, because the entry point test compared two strings.
+  // plugin-universe's screenshot path worked around it upstream rather than
+  // reporting it. Nothing else here can see it: every other call in this file
+  // imports the module rather than running it.
+  it('runs its entry point when the same file is reached by another name', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'jig-entry-'))
+    const link = join(dir, 'jig.js')
+    try {
+      symlinkSync(resolve(root, 'bin/jig.js'), link)
+      const result = spawnSync(process.execPath, [link, 'list'], { encoding: 'utf8' })
+      expect(result.status, `stderr: ${result.stderr}`).toBe(0)
+      expect(result.stdout.trim(), 'the process exited 0 having done nothing').not.toBe('')
+      expect(result.stdout).toContain('Boost')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }, 120000)
 
   it('treats profile strings as data, never as markup', async () => {
     const { profile } = await resolveProfile('pulse')

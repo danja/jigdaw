@@ -22,7 +22,7 @@
 // that name. Anything else is an IRI, fetched from the network unless a
 // --root prefix maps it onto a local directory, exactly like bin/host.js.
 import { readFile, writeFile, mkdtemp } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { resolve, dirname, join, basename } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -343,5 +343,23 @@ async function main () {
 // file usually needs a second file to change with it).
 export { pluginDirs }
 
-const invoked = process.argv[1] === fileURLToPath(import.meta.url)
-if (invoked) await main()
+// Whether this file is the entry point, compared on resolved paths.
+//
+// The raw comparison is wrong whenever the same file is reached by two names,
+// which is ordinary: a checkout at ~/github/jigdaw symlinked or bind mounted
+// at another path, then `node that/bin/jig.js list` printed nothing and exited
+// 0. Nothing anywhere reports it, because a process that decides it was not
+// invoked has no reason to complain. Measured 2026-10-02 on this machine,
+// where /home/danny/github/jigdaw and /chalet/github/jigdaw are one directory
+// under two names.
+const isEntryPoint = () => {
+  if (!process.argv[1]) return false
+  const self = fileURLToPath(import.meta.url)
+  if (process.argv[1] === self) return true
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(self)
+  } catch {
+    return false
+  }
+}
+if (isEntryPoint()) await main()

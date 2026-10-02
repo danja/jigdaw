@@ -368,6 +368,7 @@ failure rather than a surprise.
 | A flattened composite opens with no network | 9.4 | `tests/host/compositeBundle.test.js`, "opens through the resolver from the flattened file alone" |
 | `bin/pin.js` reports a pin as current only when it is | 9.2 | `tests/bin/pin.test.js`, "calls the placeholder pins stale" |
 | A straight rack renders in the reference host, and its author's voicing is applied | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "is silent when its author sets Drive to zero" |
+| A host that cannot run a composite says it is one | 1, 12 | `native/jigdaw-adapter/tests/profile_test.cpp`, "a composite plugin is refused, saying that it is one" |
 | A composite that is not a straight chain is refused by name | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "refuses a split, a join, a loop" |
 
 ## 12. Not in this version
@@ -380,8 +381,9 @@ failure rather than a surprise.
 - **Packing and unpacking.** Turning a selection of nodes on a track into a composite, and a composite instance back into its members as
   ordinary nodes, are Ops over what is specified here and need no rule of their own.
 - **Revealing an unexposed parameter on one instance.** The author's voicing is fixed.
-- **A native host.** `native/jigdaw-adapter` runs Jigs as a serial chain and has no graph to expand a composite into. It MUST say that the
-  plugin is a composite and that it cannot run one, and the sibling class (section 1) makes that possible. A later step can run a
+- **A native host.** `native/jigdaw-adapter` runs Jigs as a serial chain and has no graph to expand a composite into. It says that the
+  plugin is a composite and that it cannot run one, which the sibling class (section 1) makes possible, and a host that cannot run
+  composites MUST do the same. A later step can run a
   linear composite, one input to one output with no branch, because that is a chain already.
 
 ## 13. Why it is shaped this way

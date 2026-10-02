@@ -331,8 +331,9 @@ The steps, for a rack of existing Jigs:
 
 Things worth knowing. A composite has no module, no processor and no `jig:ui`, and MUST NOT declare latency or a tail: they are worked out
 from the members. It runs code from every origin it names, and a person loading it should be told so. A pin has no override in a host: a
-changed member needs a rack of its own, re-pinned. `npm run check-plugin` does not yet render a composite, so test one by loading it in a
-host.
+changed member needs a rack of its own, re-pinned. `npm run check-plugin` renders a composite that is a straight chain (`--members plugins` reads its
+members from disk, `--root IRI=dir` its own profile) and refuses one with a branch by name: see
+[nested-plugins.md](nested-plugins.md) section 9.3.
 
 ## Checklist
 

@@ -140,6 +140,20 @@ ParseResult parseProfile(const std::string& turtleText, const std::string& retri
     }
 
     if (subjects.empty()) {
+        // A composite plugin (docs/nested-plugins.md) is a plugin made of other plugins, with no module of its own.
+        // It is runnable by a host with a graph, and this one is a serial chain, so it says what the document is
+        // rather than sending a person to look for a defect in a profile that is correct.
+        for (const auto& [subject, predicates] : bySubject) {
+            const auto types = predicates.find(RDF_TYPE);
+            if (types == predicates.end()) continue;
+            for (const auto& t : types->second) {
+                if (t.object == jig("CompositePlugin")) {
+                    result.error = "this is a composite plugin, a plugin made of other plugins (docs/nested-plugins.md). "
+                                   "This host runs a chain of plugins, each with its own module, and cannot run a composite yet.";
+                    return result;
+                }
+            }
+        }
         result.error = "no jig:WebPlugin in this document. It may be a catalogue entry for a "
                        "plugin that does not run in a host like this one.";
         return result;

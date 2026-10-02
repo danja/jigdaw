@@ -53,7 +53,9 @@ starts on the simple page.
   behind it and compensated for latency as if wired by hand, and a bad member refuses the whole thing, naming it. The page generates its
   panel from the controls the author exposed. This was run in Chrome on 2026-10-02: it loads from an IRI, a real key played through it is
   governed by its Drive control, a composite pinned to a profile that has since changed is refused with the session untouched, and remove
-  and undo restore it. Not yet run in the page: saving and reopening a session, the Mixer and Routing tabs, a phone, and listening to it.
+  and undo restore it. A second run covered a MIDI clip played from the transport through Pulse and the rack (silent at Drive 0, a peak of
+  0.25 at the default), saving a session and reopening it with the setting and the author's voicing restored, and the Routing and Mixer
+  tabs. Not yet done: a phone, and listening to it.
   See [nested-plugins.md](nested-plugins.md).
 - **Routing matrix.** Every output against every input, joined or not, by pointer or arrow keys.
 - **Connections.** Audio and MIDI, within a track or across tracks. A connection that would make a loop
