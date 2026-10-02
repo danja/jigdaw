@@ -22,7 +22,7 @@
 //
 // Ed25519 through WebCrypto, which node and every current browser implement, so
 // the same code verifies in the page and at the command line.
-import { profileForm, documentForm, proofConfigForm, proofsOf } from '../rdf/Canonical.js'
+import { profileForm, pluginForm, documentForm, proofConfigForm, proofsOf } from '../rdf/Canonical.js'
 import { vocabulary } from '../rdf/Vocabulary.js'
 import { digestOf } from './Integrity.js'
 import { multibaseEncode, multibaseDecode, encodeMultikey, decodeMultikey } from './Multibase.js'
@@ -71,9 +71,13 @@ const rawDigest = async (text, subtle) => new Uint8Array(await subtle.digest('SH
 
 /**
  * The digest a bundle states as jig:canonicalDigest, over the plugin alone.
+ *
+ * `plugin` names the plugin when the graph holds more than one, as a flattened composite does:
+ * the digest is then over that plugin's own triples (plugin-bundles.md section 9). Left out, it is
+ * over the whole graph less the provenance, which for a lone plugin is the same thing.
  */
-export async function canonicalDigest (dataset, { subtle = crypto.subtle } = {}) {
-  return digestOf(encoder.encode(profileForm(dataset)), 'sha384', { subtle })
+export async function canonicalDigest (dataset, { subtle = crypto.subtle, plugin = null } = {}) {
+  return digestOf(encoder.encode(plugin === null ? profileForm(dataset) : pluginForm(dataset, plugin)), 'sha384', { subtle })
 }
 
 /**
@@ -128,11 +132,12 @@ const originOf = iri => { try { return new URL(iri).origin } catch { return null
  * is a hard failure, because that is somebody claiming a key they do not have.
  */
 export async function verifyProfile (dataset, profileIri, {
-  resolveKey = null, subtle = crypto.subtle
+  resolveKey = null, subtle = crypto.subtle, composite = false
 } = {}) {
   const { jig, sec, prov, dcterms } = vocabulary
 
-  const digest = await canonicalDigest(dataset, { subtle })
+  // A composite's bundle can hold its members in the same graph, so its digest is over its own triples.
+  const digest = await canonicalDigest(dataset, { subtle, plugin: composite ? profileIri : null })
   const bundle = [...dataset].find(q =>
     q.predicate.value === vocabulary.rdf.type && q.object.value === jig.Bundle)?.subject.value ?? null
   const declared = bundle ? one(dataset, bundle, jig.canonicalDigest)?.value ?? null : null

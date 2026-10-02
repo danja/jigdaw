@@ -135,6 +135,11 @@ so the caller can retry against it.
 building a signal chain should use it before applying, because a graph that fails validation
 halfway is worse than one that was never touched.
 
+A composite plugin ([nested-plugins.md](nested-plugins.md)) needs no tool of its own. `plugin_load` and `node_add` take its IRI, and it is one node:
+its parameters are the ones it exposes, so `parameter_set` and the envelope tools address them by those symbols, and `node_bypass` acts on it as
+a whole. Its members are not nodes and have no ids an agent can use. `diagnostics` reports the compiled graph, whose `order` and
+`compensation` name the members of a composite by flat ids, which are opaque keys and not something to parse.
+
 ### Tracks
 
 | Tool | Arguments | Returns |

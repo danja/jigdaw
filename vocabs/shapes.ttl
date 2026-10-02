@@ -864,3 +864,119 @@ jig:CollectionMemberShape a sh:NodeShape ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:Literal ;
         sh:message "A plugin in a collection must have exactly one name there, as rdfs:label, so that a host can list the collection before any profile has arrived."
     ] .
+
+## -- Nested plugins (docs/nested-plugins.md) -----------------------------------
+##
+## What SHACL Core can say. Four rules cannot be said without sh:sparql and are
+## checked by src/rdf/CompositeReader.js instead: the boundary connections agree
+## with jig:audioInputs and jig:audioOutputs, every endpoint names a member or
+## the composite itself, no member setting is on a symbol an exposed port drives,
+## and nothing is both a member and the composite.
+##
+## The shape targets jig:CompositePlugin and never jig:WebPlugin, which would ask
+## for a processor. A composite is also a trn:PluginProfile, so plugin-universe's
+## own shape reads it, and it carries the same catalogue statements a Jig does.
+
+jig:CompositePluginShape a sh:NodeShape ;
+    sh:targetClass jig:CompositePlugin ;
+    rdfs:label "Composite plugin shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A composite plugin must be identified by an IRI, as any plugin is." ;
+
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "A plugin needs exactly one name." ] ;
+    sh:property [ sh:path rdfs:comment ; sh:minCount 1 ; sh:datatype xsd:string ; sh:severity sh:Warning ; sh:message "A plugin with no description is findable only by name." ] ;
+    sh:property [ sh:path foaf:homepage ; sh:minCount 1 ; sh:nodeKind sh:IRI ; sh:message "A plugin must link to a page a person can read." ] ;
+    sh:property [ sh:path trn:role ; sh:minCount 1 ; sh:nodeKind sh:IRI ; sh:message "A plugin must declare at least one role." ] ;
+    sh:property [ sh:path trn:produces ; sh:minCount 1 ; sh:nodeKind sh:IRI ; sh:message "A plugin must say what it produces." ] ;
+    sh:property [ sh:path doap:revision ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^[0-9]+\\.[0-9]+\\.[0-9]+" ] ;
+    sh:property [ sh:path doap:developer ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+
+    sh:property [
+        sh:path jig:audioInputs ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A composite declares its audio input count, because an outer graph needs it before any member has been looked at."
+    ] ;
+    sh:property [
+        sh:path jig:audioOutputs ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A composite declares its audio output count, because an outer graph needs it before any member has been looked at."
+    ] ;
+    sh:property [ sh:path jig:inputChannels  ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path jig:outputChannels ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+
+    sh:property [
+        sh:path jig:member ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A composite needs at least one member. One with none is a plugin that does nothing."
+    ] ;
+    sh:property [
+        sh:path jig:connection ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A composite needs at least one connection, or its members have no signal path between them and the boundary."
+    ] ;
+
+    # A composite has no code of its own. Latency and tail are derived from its
+    # members, and a declared figure could only be wrong when a member's moves.
+    sh:property [ sh:path jig:processor ; sh:maxCount 0 ; sh:message "A composite has no processor of its own. Its members carry the code." ] ;
+    sh:property [ sh:path jig:module ; sh:maxCount 0 ; sh:message "A composite has no module of its own. Its members carry the code." ] ;
+    sh:property [ sh:path jig:ui ; sh:maxCount 0 ; sh:message "A composite has the generated panel. It has no interface of its own in this version." ] ;
+    sh:property [ sh:path jig:latencyFrames ; sh:maxCount 0 ; sh:message "A composite MUST NOT declare latency. It is derived from its members, which can change it." ] ;
+    sh:property [ sh:path jig:tailFrames ; sh:maxCount 0 ; sh:message "A composite MUST NOT declare a tail. It is derived from its members." ] ;
+    sh:property [
+        sh:path lv2:port ;
+        sh:node jig:ExposedPortShape ;
+        sh:message "Every control a composite offers must say which member parameter it drives."
+    ] .
+
+jig:ExposedPortShape a sh:NodeShape ;
+    rdfs:label "Exposed port shape" ;
+    sh:property [
+        sh:path jig:drives ;
+        sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "An exposed port must drive at least one member parameter with jig:drives."
+    ] ;
+    sh:property [
+        sh:path jig:drives ;
+        sh:node jig:DriveTargetShape ;
+        sh:message "A jig:drives target names a member and a parameter symbol."
+    ] .
+
+jig:DriveTargetShape a sh:NodeShape ;
+    rdfs:label "Drive target shape" ;
+    sh:property [
+        sh:path jig:portSymbol ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A jig:drives target names a parameter by jig:portSymbol, never by an index."
+    ] ;
+    sh:property [
+        sh:path jig:portIndex ;
+        sh:maxCount 0 ;
+        sh:message "A jig:drives target names a parameter, not a numbered port."
+    ] .
+
+jig:MemberShape a sh:NodeShape ;
+    sh:targetClass jig:Member ;
+    rdfs:label "Member shape" ;
+
+    sh:nodeKind sh:IRI ;
+    sh:message "A member must have an IRI, a fragment of the composite's, so that its state and its diagnostics can name it." ;
+
+    sh:property [
+        sh:path jig:plugin ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        # Contract section 1.1: https, or http on loopback only, so a composite can be tried against members served locally.
+        sh:pattern "^(https://|http://(localhost|127\\.0\\.0\\.1|\\[::1\\])(:[0-9]+)?/)" ;
+        sh:message "A member names the plugin it instantiates by an https IRI, or an http IRI on loopback. Contract section 1.1."
+    ] ;
+    sh:property [
+        sh:path jig:pinnedDigest ;
+        sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:pattern "^sha384-[A-Za-z0-9+/]+={0,2}$" ;
+        sh:message "A pin is the canonical digest of the member's profile, as sha384- followed by base64."
+    ] ;
+    sh:property [
+        sh:path jig:onTrack ;
+        sh:maxCount 0 ;
+        sh:message "A member is on no track. The composite is the thing on a track."
+    ] .

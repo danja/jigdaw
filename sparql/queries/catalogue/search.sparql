@@ -25,9 +25,10 @@ WHERE {
     OPTIONAL { ?plugin trn:format ?format }
 
     # Loadable here, as opposed to merely known about. A catalogue entry that
-    # is not a jig:WebPlugin is a real plugin that this host cannot run, and
-    # saying so is more useful than hiding it.
-    BIND(EXISTS { ?plugin a jig:WebPlugin } AS ?web)
+    # is neither a jig:WebPlugin nor a jig:CompositePlugin (a plugin made of
+    # other plugins, docs/nested-plugins.md) is a real plugin that this host
+    # cannot run, and saying so is more useful than hiding it.
+    BIND(EXISTS { ?plugin a jig:WebPlugin } || EXISTS { ?plugin a jig:CompositePlugin } AS ?web)
 
     ${filters}
   }

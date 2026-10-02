@@ -1237,24 +1237,24 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const lo = first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
+      const lo = first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
       const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
       return BigInt(lo) + (BigInt(hi) << BigInt(32));
     });
     Buffer3.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const hi = first * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
+      const hi = first2 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
       return (BigInt(hi) << BigInt(32)) + BigInt(lo);
     });
@@ -1317,23 +1317,23 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
       const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-      return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
+      return (BigInt(val) << BigInt(32)) + BigInt(first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
     });
     Buffer3.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first = this[offset];
+      const first2 = this[offset];
       const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
+      if (first2 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const val = (first << 24) + // Overflow
+      const val = (first2 << 24) + // Overflow
       this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
     });
@@ -7931,24 +7931,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number3) {
-      number3 = Number2(number3);
-      if (NumberIsNaN(number3)) {
+    function toIntegerOrInfinity(number4) {
+      number4 = Number2(number4);
+      if (NumberIsNaN(number4)) {
         return 0;
       }
-      if (number3 < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number3);
+      if (number4 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number4);
       }
-      return number3;
+      return number4;
     }
-    function drop(number3, options = void 0) {
+    function drop(number4, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number3 = toIntegerOrInfinity(number3);
+      number4 = toIntegerOrInfinity(number4);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7959,20 +7959,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number3-- <= 0) {
+          if (number4-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number3, options = void 0) {
+    function take2(number4, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number3 = toIntegerOrInfinity(number3);
+      number4 = toIntegerOrInfinity(number4);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7983,10 +7983,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number3-- > 0) {
+          if (number4-- > 0) {
             yield val;
           }
-          if (number3 <= 0) {
+          if (number4 <= 0) {
             return;
           }
         }
@@ -8603,29 +8603,29 @@ var require_NQuads = __commonJS({
     "use strict";
     var RDF3 = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     var RDF_LANGSTRING = RDF3 + "langString";
-    var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
+    var XSD_STRING2 = "http://www.w3.org/2001/XMLSchema#string";
     var TYPE_NAMED_NODE = "NamedNode";
     var TYPE_BLANK_NODE = "BlankNode";
     var TYPE_LITERAL = "Literal";
     var TYPE_DEFAULT_GRAPH = "DefaultGraph";
     var REGEX = {};
     (() => {
-      const iri2 = "(?:<([^:]+:[^>]*)>)";
+      const iri3 = "(?:<([^:]+:[^>]*)>)";
       const PN_CHARS_BASE = "A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD";
       const PN_CHARS_U = PN_CHARS_BASE + "_";
       const PN_CHARS = PN_CHARS_U + "0-9-\xB7\u0300-\u036F\u203F-\u2040";
       const BLANK_NODE_LABEL = "(_:(?:[" + PN_CHARS_U + "0-9])(?:(?:[" + PN_CHARS + ".])*(?:[" + PN_CHARS + "]))?)";
       const bnode = BLANK_NODE_LABEL;
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
-      const datatype = "(?:\\^\\^" + iri2 + ")";
+      const datatype = "(?:\\^\\^" + iri3 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
       const literal5 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
-      const subject = "(?:" + iri2 + "|" + bnode + ")" + ws;
-      const property = iri2 + ws;
-      const object = "(?:" + iri2 + "|" + bnode + "|" + literal5 + ")" + wso;
-      const graphName = "(?:\\.|(?:(?:" + iri2 + "|" + bnode + ")" + wso + "\\.))";
+      const subject = "(?:" + iri3 + "|" + bnode + ")" + ws;
+      const property = iri3 + ws;
+      const object = "(?:" + iri3 + "|" + bnode + "|" + literal5 + ")" + wso;
+      const graphName = "(?:\\.|(?:(?:" + iri3 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
       REGEX.quad = new RegExp(
@@ -8679,7 +8679,7 @@ var require_NQuads = __commonJS({
               quad3.object.datatype.value = RDF_LANGSTRING;
               quad3.object.language = match[8];
             } else {
-              quad3.object.datatype.value = XSD_STRING;
+              quad3.object.datatype.value = XSD_STRING2;
             }
             quad3.object.value = _unescape(match[6]);
           }
@@ -8764,7 +8764,7 @@ var require_NQuads = __commonJS({
             if (o2.language) {
               nquad += `@${o2.language}`;
             }
-          } else if (o2.datatype.value !== XSD_STRING) {
+          } else if (o2.datatype.value !== XSD_STRING2) {
             nquad += `^^<${o2.datatype.value}>`;
           }
         }
@@ -8829,7 +8829,7 @@ var require_NQuads = __commonJS({
                   }
                   newComponent.language = oldComponent.language;
                 } else if (!("datatype" in oldComponent)) {
-                  newComponent.datatype.value = XSD_STRING;
+                  newComponent.datatype.value = XSD_STRING2;
                 }
               }
               quad3[componentName] = newComponent;
@@ -9982,8 +9982,8 @@ var NamedNode, NamedNode_default;
 var init_NamedNode = __esm({
   "node_modules/@rdfjs/data-model/lib/NamedNode.js"() {
     NamedNode = class {
-      constructor(iri2) {
-        this.value = iri2;
+      constructor(iri3) {
+        this.value = iri3;
       }
       equals(other) {
         return !!other && other.termType === this.termType && other.value === this.value;
@@ -10182,7 +10182,7 @@ var init_data_model = __esm({
 
 // node_modules/@rdfjs/namespace/index.js
 function namespace(baseIRI, { factory: factory3 = data_model_default } = {}) {
-  const builder111 = (term4 = "") => factory3.namedNode(`${baseIRI}${term4.raw || term4}`);
+  const builder111 = (term5 = "") => factory3.namedNode(`${baseIRI}${term5.raw || term5}`);
   return typeof Proxy === "undefined" ? builder111 : new Proxy(builder111, handler);
 }
 var handler, namespace_default;
@@ -11664,11 +11664,11 @@ function literal(value2, languageOrDatatype, factory3) {
     }
     return factory3.literal(value2.toString(), languageOrDatatype);
   }
-  const term4 = toLiteral(value2, factory3);
-  if (!term4) {
+  const term5 = toLiteral(value2, factory3);
+  if (!term5) {
     throw new Error("The value cannot be converted to a literal node");
   }
-  return term4;
+  return term5;
 }
 function namedNode(value2, factory3) {
   if (typeof value2 !== "string") {
@@ -11736,8 +11736,8 @@ function mapLiteralsByLanguage(map, current2) {
   }
   return map;
 }
-function createLanguageMapper(objects3) {
-  const literalsByLanguage = objects3.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
+function createLanguageMapper(objects4) {
+  const literalsByLanguage = objects4.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
   const langMapEntries = [...literalsByLanguage.entries()];
   return (language) => {
     const languageLowerCase = language.toLowerCase();
@@ -11795,11 +11795,11 @@ var init_Context = __esm({
         });
       }
       out(predicate, { language } = {}) {
-        let objects3 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
+        let objects4 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
         if (typeof language !== "undefined") {
-          objects3 = filterTaggedLiterals(objects3, { language });
+          objects4 = filterTaggedLiterals(objects4, { language });
         }
-        return objects3.map((object) => {
+        return objects4.map((object) => {
           return this.clone({ value: object });
         });
       }
@@ -11815,10 +11815,10 @@ var init_Context = __esm({
         }
         return context;
       }
-      addOut(predicates, objects3) {
+      addOut(predicates, objects4) {
         const context = [];
         if (this.term) {
-          objects3.forEach((object) => {
+          objects4.forEach((object) => {
             predicates.forEach((predicate) => {
               this.dataset.add(this.factory.quad(this.term, predicate, object, this.graph));
             });
@@ -11843,8 +11843,8 @@ var init_Context = __esm({
       deleteIn(predicate, subject) {
         this.deleteMatch(subject, predicate, toArray(this.term), toArray(this.graph));
       }
-      deleteOut(predicate, objects3) {
-        this.deleteMatch(toArray(this.term), predicate, objects3, toArray(this.graph));
+      deleteOut(predicate, objects4) {
+        this.deleteMatch(toArray(this.term), predicate, objects4, toArray(this.graph));
       }
       deleteList(predicates) {
         predicates.forEach((predicate) => {
@@ -11906,16 +11906,16 @@ var init_Clownface = __esm({
     init_toTermArray();
     init_Context();
     Clownface = class _Clownface {
-      constructor({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3, _context }) {
+      constructor({ dataset: dataset2, graph, term: term5, value: value2, factory: factory3, _context }) {
         this.factory = factory3;
         this.namespace = namespace_default2(factory3);
         if (_context) {
           this._context = _context;
           return;
         }
-        const terms = term4 && toArray(term4) || value2 && toArray(value2) || [null];
-        this._context = terms.map((term5) => {
-          return new Context({ dataset: dataset2, graph, value: term5, factory: this.factory, namespace: this.namespace });
+        const terms = term5 && toArray(term5) || value2 && toArray(value2) || [null];
+        this._context = terms.map((term6) => {
+          return new Context({ dataset: dataset2, graph, value: term6, factory: this.factory, namespace: this.namespace });
         });
       }
       /**
@@ -11944,8 +11944,8 @@ var init_Clownface = __esm({
        * @returns {undefined|string}
        */
       get value() {
-        const term4 = this.term;
-        return term4 && term4.value;
+        const term5 = this.term;
+        return term5 && term5.value;
       }
       /**
        * Gets the string representation of terms
@@ -11953,7 +11953,7 @@ var init_Clownface = __esm({
        * @returns {string[]}
        */
       get values() {
-        return this.terms.map((term4) => term4.value);
+        return this.terms.map((term5) => term5.value);
       }
       /**
        * Gets the current context's dataset, or undefined if there are multiple
@@ -12162,10 +12162,10 @@ var init_Clownface = __esm({
        * @param {*} [objects] object values to match
        * @returns {Clownface}
        */
-      has(predicates, objects3) {
+      has(predicates, objects4) {
         predicates = this._toTermArray(predicates);
-        objects3 = this._toTermArray(objects3);
-        const context = this._context.reduce((all, current2) => all.concat(current2.has(predicates, objects3)), []);
+        objects4 = this._toTermArray(objects4);
+        const context = this._context.reduce((all, current2) => all.concat(current2.has(predicates, objects4)), []);
         return _Clownface.fromContext(context, this);
       }
       /**
@@ -12200,17 +12200,17 @@ var init_Clownface = __esm({
        * @param {GraphPointerCallback} [callback] called for each subject, with object pointer as parameter
        * @returns {Clownface} current graph pointer
        */
-      addOut(predicates, objects3, callback) {
+      addOut(predicates, objects4, callback) {
         if (!predicates) {
           throw new Error("predicate parameter is required");
         }
-        if (typeof objects3 === "function") {
-          callback = objects3;
-          objects3 = null;
+        if (typeof objects4 === "function") {
+          callback = objects4;
+          objects4 = null;
         }
         predicates = this._toTermArray(predicates);
-        objects3 = this._toTermArray(objects3) || [this.factory.blankNode()];
-        const context = this._context.map((context2) => context2.addOut(predicates, objects3));
+        objects4 = this._toTermArray(objects4) || [this.factory.blankNode()];
+        const context = this._context.map((context2) => context2.addOut(predicates, objects4));
         if (callback) {
           _Clownface.fromContext(context, this).forEach(callback);
         }
@@ -12252,10 +12252,10 @@ var init_Clownface = __esm({
        * @param {Term|Term[]|Clownface|Clownface[]} [objects]
        * @returns {Clownface} current graph pointer
        */
-      deleteOut(predicates, objects3) {
+      deleteOut(predicates, objects4) {
         predicates = this._toTermArray(predicates);
-        objects3 = this._toTermArray(objects3);
-        this._context.forEach((context) => context.deleteOut(predicates, objects3));
+        objects4 = this._toTermArray(objects4);
+        this._context.forEach((context) => context.deleteOut(predicates, objects4));
         return this;
       }
       /**
@@ -12283,8 +12283,8 @@ var init_Clownface = __esm({
 });
 
 // node_modules/clownface/index.js
-function factory2({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3 = environment_default, _context }) {
-  return new Clownface({ dataset: dataset2, graph, term: term4, value: value2, factory: factory3, _context });
+function factory2({ dataset: dataset2, graph, term: term5, value: value2, factory: factory3 = environment_default, _context }) {
+  return new Clownface({ dataset: dataset2, graph, term: term5, value: value2, factory: factory3, _context });
 }
 var init_clownface = __esm({
   "node_modules/clownface/index.js"() {
@@ -12418,32 +12418,32 @@ var init_variable = __esm({
 });
 
 // node_modules/@rdfjs/to-ntriples/index.js
-function toNT(term4) {
-  if (!term4) {
+function toNT(term5) {
+  if (!term5) {
     return null;
   }
-  if (term4.termType === "BlankNode") {
-    return blankNode_default(term4);
+  if (term5.termType === "BlankNode") {
+    return blankNode_default(term5);
   }
-  if (term4.termType === "DefaultGraph") {
+  if (term5.termType === "DefaultGraph") {
     return defaultGraph_default();
   }
-  if (term4.termType === "Literal") {
-    return literal_default(term4);
+  if (term5.termType === "Literal") {
+    return literal_default(term5);
   }
-  if (term4.termType === "NamedNode") {
-    return namedNode_default(term4);
+  if (term5.termType === "NamedNode") {
+    return namedNode_default(term5);
   }
-  if (term4.termType === "Quad" || term4.subject && term4.predicate && term4.object && term4.graph) {
-    return quad_default(term4, toNT);
+  if (term5.termType === "Quad" || term5.subject && term5.predicate && term5.object && term5.graph) {
+    return quad_default(term5, toNT);
   }
-  if (term4.termType === "Variable") {
-    return variable_default(term4);
+  if (term5.termType === "Variable") {
+    return variable_default(term5);
   }
-  if (term4[Symbol.iterator]) {
-    return dataset_default(term4, toNT);
+  if (term5[Symbol.iterator]) {
+    return dataset_default(term5, toNT);
   }
-  throw new Error(`unknown termType ${term4.termType}`);
+  throw new Error(`unknown termType ${term5.termType}`);
 }
 var to_ntriples_default;
 var init_to_ntriples = __esm({
@@ -12468,8 +12468,8 @@ var init_TermMap = __esm({
       constructor(entries) {
         this.index = /* @__PURE__ */ new Map();
         if (entries) {
-          for (const [term4, value2] of entries) {
-            this.set(term4, value2);
+          for (const [term5, value2] of entries) {
+            this.set(term5, value2);
           }
         }
       }
@@ -12479,12 +12479,12 @@ var init_TermMap = __esm({
       clear() {
         this.index.clear();
       }
-      delete(term4) {
-        return this.index.delete(to_ntriples_default(term4));
+      delete(term5) {
+        return this.index.delete(to_ntriples_default(term5));
       }
       *entries() {
-        for (const [, { term: term4, value: value2 }] of this.index) {
-          yield [term4, value2];
+        for (const [, { term: term5, value: value2 }] of this.index) {
+          yield [term5, value2];
         }
       }
       forEach(callback, thisArg) {
@@ -12492,21 +12492,21 @@ var init_TermMap = __esm({
           callback.call(thisArg, entry[1], entry[0], this);
         }
       }
-      get(term4) {
-        const item = this.index.get(to_ntriples_default(term4));
+      get(term5) {
+        const item = this.index.get(to_ntriples_default(term5));
         return item && item.value;
       }
-      has(term4) {
-        return this.index.has(to_ntriples_default(term4));
+      has(term5) {
+        return this.index.has(to_ntriples_default(term5));
       }
       *keys() {
-        for (const [, { term: term4 }] of this.index) {
-          yield term4;
+        for (const [, { term: term5 }] of this.index) {
+          yield term5;
         }
       }
-      set(term4, value2) {
-        const key = to_ntriples_default(term4);
-        this.index.set(key, { term: term4, value: value2 });
+      set(term5, value2) {
+        const key = to_ntriples_default(term5);
+        this.index.set(key, { term: term5, value: value2 });
         return this;
       }
       *values() {
@@ -12538,9 +12538,9 @@ var init_Factory6 = __esm({
 });
 
 // node_modules/@rdfjs/term-set/TermSet.js
-function quietToNT(term4) {
+function quietToNT(term5) {
   try {
-    return to_ntriples_default(term4);
+    return to_ntriples_default(term5);
   } catch (err) {
     return null;
   }
@@ -12553,29 +12553,29 @@ var init_TermSet = __esm({
       constructor(terms) {
         this.index = /* @__PURE__ */ new Map();
         if (terms) {
-          for (const term4 of terms) {
-            this.add(term4);
+          for (const term5 of terms) {
+            this.add(term5);
           }
         }
       }
       get size() {
         return this.index.size;
       }
-      add(term4) {
-        const key = to_ntriples_default(term4);
+      add(term5) {
+        const key = to_ntriples_default(term5);
         if (!this.index.has(key)) {
-          this.index.set(key, term4);
+          this.index.set(key, term5);
         }
         return this;
       }
       clear() {
         this.index.clear();
       }
-      delete(term4) {
-        if (!term4) {
+      delete(term5) {
+        if (!term5) {
           return false;
         }
-        return this.index.delete(quietToNT(term4));
+        return this.index.delete(quietToNT(term5));
       }
       entries() {
         return this.values().entries();
@@ -12583,11 +12583,11 @@ var init_TermSet = __esm({
       forEach(callbackfn, thisArg) {
         return this.values().forEach(callbackfn, thisArg);
       }
-      has(term4) {
-        if (!term4) {
+      has(term5) {
+        if (!term5) {
           return false;
         }
-        return this.index.has(quietToNT(term4));
+        return this.index.has(quietToNT(term5));
       }
       values() {
         return new Set(this.index.values());
@@ -12619,8 +12619,8 @@ var init_Factory7 = __esm({
 });
 
 // node_modules/@rdfjs/traverser/Traverser.js
-function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term4, visited = new Visisted() }) {
-  const next = (term5, level) => {
+function forEach({ backward, callback, dataset: dataset2, filter, forward, term: term5, visited = new Visisted() }) {
+  const next = (term6, level) => {
     const checkMatches = (matches) => {
       for (const quad3 of matches) {
         if (visited.has(quad3, level)) {
@@ -12640,13 +12640,13 @@ function forEach({ backward, callback, dataset: dataset2, filter, forward, term:
       }
     };
     if (forward) {
-      checkMatches(dataset2.match(term5));
+      checkMatches(dataset2.match(term6));
     }
     if (backward) {
-      checkMatches(dataset2.match(null, null, term5));
+      checkMatches(dataset2.match(null, null, term6));
     }
   };
-  next(term4, 0);
+  next(term5, 0);
 }
 var Visisted, Traverser, Traverser_default;
 var init_Traverser = __esm({
@@ -12674,17 +12674,17 @@ var init_Traverser = __esm({
         this.filter = filter;
         this.forward = forward;
       }
-      forEach({ term: term4, dataset: dataset2 }, callback) {
+      forEach({ term: term5, dataset: dataset2 }, callback) {
         forEach({
           backward: this.backward,
           callback,
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term4
+          term: term5
         });
       }
-      match({ term: term4, dataset: dataset2 }) {
+      match({ term: term5, dataset: dataset2 }) {
         const result = this.factory.dataset();
         forEach({
           backward: this.backward,
@@ -12692,11 +12692,11 @@ var init_Traverser = __esm({
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term4
+          term: term5
         });
         return result;
       }
-      reduce({ term: term4, dataset: dataset2 }, callback, initialValue) {
+      reduce({ term: term5, dataset: dataset2 }, callback, initialValue) {
         let result = initialValue;
         forEach({
           backward: this.backward,
@@ -12706,7 +12706,7 @@ var init_Traverser = __esm({
           dataset: dataset2,
           filter: this.filter,
           forward: this.forward,
-          term: term4
+          term: term5
         });
         return result;
       }
@@ -12760,39 +12760,39 @@ var init_env_no_dataset = __esm({
 function isString(s) {
   return typeof s === "string" || s instanceof String;
 }
-function termToId(term4) {
-  if (typeof term4 === "string") {
-    return term4;
+function termToId(term5) {
+  if (typeof term5 === "string") {
+    return term5;
   }
-  if (!term4) {
+  if (!term5) {
     return "";
   }
-  if (typeof term4.id !== "undefined" && term4.termType !== "Quad") {
-    return term4.id;
+  if (typeof term5.id !== "undefined" && term5.termType !== "Quad") {
+    return term5.id;
   }
   let subject, predicate, object, graph;
-  switch (term4.termType) {
+  switch (term5.termType) {
     case "NamedNode":
-      return term4.value;
+      return term5.value;
     case "BlankNode":
-      return `_:${term4.value}`;
+      return `_:${term5.value}`;
     case "Variable":
-      return `?${term4.value}`;
+      return `?${term5.value}`;
     case "DefaultGraph":
       return "";
     case "Literal":
-      if (term4.language) {
-        return `"${term4.value}"@${term4.language}${term4.direction ? `--${term4.direction}` : ""}`;
+      if (term5.language) {
+        return `"${term5.value}"@${term5.language}${term5.direction ? `--${term5.direction}` : ""}`;
       }
-      return `"${term4.value}"${term4.datatype && term4.datatype.value !== xsdString ? `^^${term4.datatype.value}` : ""}`;
+      return `"${term5.value}"${term5.datatype && term5.datatype.value !== xsdString ? `^^${term5.datatype.value}` : ""}`;
     case "Quad":
-      subject = escapeQuotes(termToId(term4.subject));
-      predicate = escapeQuotes(termToId(term4.predicate));
-      object = escapeQuotes(termToId(term4.object));
-      graph = term4.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term4.graph)}`;
+      subject = escapeQuotes(termToId(term5.subject));
+      predicate = escapeQuotes(termToId(term5.predicate));
+      object = escapeQuotes(termToId(term5.object));
+      graph = term5.graph.termType === "DefaultGraph" ? "" : ` ${termToId(term5.graph)}`;
       return `<<${subject} ${predicate} ${object}${graph}>>`;
     default:
-      throw new Error(`Unexpected termType: ${term4.termType}`);
+      throw new Error(`Unexpected termType: ${term5.termType}`);
   }
 }
 function escapeQuotes(id) {
@@ -13399,6 +13399,12 @@ var init_Vocabulary = __esm({
         entryPoint: `${JIG}entryPoint`,
         // Collections. docs/plugin-collections.md.
         PluginCollection: `${JIG}PluginCollection`,
+        // Nested plugins. docs/nested-plugins.md.
+        CompositePlugin: `${JIG}CompositePlugin`,
+        Member: `${JIG}Member`,
+        member: `${JIG}member`,
+        pinnedDigest: `${JIG}pinnedDigest`,
+        drives: `${JIG}drives`,
         // Bundles and provenance
         Bundle: `${JIG}Bundle`,
         Bundling: `${JIG}Bundling`,
@@ -13446,11 +13452,11 @@ function objects(dataset2, subject, predicate) {
 function one(dataset2, subject, predicate) {
   return objects(dataset2, subject, predicate)[0] ?? null;
 }
-function asBoolean(term4) {
-  if (!term4) return false;
-  if (term4.value === "true" || term4.value === "1") return true;
-  if (term4.value === "false" || term4.value === "0") return false;
-  throw new Error(`not a boolean: ${term4.value}`);
+function asBoolean(term5) {
+  if (!term5) return false;
+  if (term5.value === "true" || term5.value === "1") return true;
+  if (term5.value === "false" || term5.value === "0") return false;
+  throw new Error(`not a boolean: ${term5.value}`);
 }
 function sidechainIndex(dataset2, subject) {
   const index = asNumber(one(dataset2, subject, jig.sidechainInput));
@@ -13461,10 +13467,10 @@ function sidechainIndex(dataset2, subject) {
   }
   return index;
 }
-function asNumber(term4) {
-  if (!term4) return null;
-  const n2 = Number(term4.value);
-  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term4.value}`);
+function asNumber(term5) {
+  if (!term5) return null;
+  const n2 = Number(term5.value);
+  if (!Number.isFinite(n2)) throw new Error(`not a number: ${term5.value}`);
   return n2;
 }
 function resolveLocation(location2, baseIRI) {
@@ -13474,18 +13480,18 @@ function rebaseLocation(location2, canonical, retrieval) {
   if (!location2 || !canonical || !retrieval || canonical === retrieval) return location2;
   return location2.startsWith(canonical) ? retrieval + location2.slice(canonical.length) : location2;
 }
-function readResource(dataset2, term4, baseIRI, canonical) {
-  if (!term4) return null;
-  const location2 = one(dataset2, term4, jig.location);
+function readResource(dataset2, term5, baseIRI, canonical) {
+  if (!term5) return null;
+  const location2 = one(dataset2, term5, jig.location);
   const resolved = location2 ? resolveLocation(location2.value, baseIRI) : null;
   return {
-    iri: term4.value,
+    iri: term5.value,
     location: rebaseLocation(resolved, canonical, baseIRI),
-    integrity: asString(one(dataset2, term4, jig.integrity)),
-    mediaType: asString(one(dataset2, term4, jig.mediaType)),
-    registeredName: asString(one(dataset2, term4, jig.registeredName)),
-    wasmFeatures: values(dataset2, term4, jig.wasmFeature),
-    userReplaceable: asBoolean(one(dataset2, term4, jig.userReplaceable))
+    integrity: asString(one(dataset2, term5, jig.integrity)),
+    mediaType: asString(one(dataset2, term5, jig.mediaType)),
+    registeredName: asString(one(dataset2, term5, jig.registeredName)),
+    wasmFeatures: values(dataset2, term5, jig.wasmFeature),
+    userReplaceable: asBoolean(one(dataset2, term5, jig.userReplaceable))
   };
 }
 function readScalePoints(dataset2, port) {
@@ -13505,29 +13511,29 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
-function readPort(dataset2, term4) {
-  const properties = values(dataset2, term4, lv2.portProperty);
+function readPort(dataset2, term5) {
+  const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
-    iri: term4.value,
-    symbol: asString(one(dataset2, term4, lv2.symbol)),
-    name: asString(one(dataset2, term4, lv2.name)),
-    defaultValue: asNumber(one(dataset2, term4, lv2.default)),
-    minimum: asNumber(one(dataset2, term4, lv2.minimum)),
-    maximum: asNumber(one(dataset2, term4, lv2.maximum)),
-    unit: asString(one(dataset2, term4, units.unit)),
+    iri: term5.value,
+    symbol: asString(one(dataset2, term5, lv2.symbol)),
+    name: asString(one(dataset2, term5, lv2.name)),
+    defaultValue: asNumber(one(dataset2, term5, lv2.default)),
+    minimum: asNumber(one(dataset2, term5, lv2.minimum)),
+    maximum: asNumber(one(dataset2, term5, lv2.maximum)),
+    unit: asString(one(dataset2, term5, units.unit)),
     toggled: properties.includes(lv2.toggled),
     enumeration: properties.includes(lv2.enumeration),
-    scalePoints: readScalePoints(dataset2, term4),
+    scalePoints: readScalePoints(dataset2, term5),
     // The MIDI controller driving this port, if the profile binds one. Absent
     // means no claim, the same discipline as userReplaceable: a port the
     // profile does not bind answers to no controller.
-    controller: readController(dataset2, term4),
+    controller: readController(dataset2, term5),
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
-    group: asString(one(dataset2, term4, jig.controlGroup)),
+    group: asString(one(dataset2, term5, jig.controlGroup)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
-    automationRate: one(dataset2, term4, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
+    automationRate: one(dataset2, term5, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
   };
   port.widget = widgetFor(port);
   return port;
@@ -13539,6 +13545,11 @@ function findSubject(dataset2) {
     if (foreign.length > 0) {
       throw new Error(
         "this is a foreign plugin (contract section 12). It runs with this page's privileges and is not loaded without being asked for, and never on opening a project."
+      );
+    }
+    if (dataset2.match(null, iri(rdfTerms.type), iri(jig.CompositePlugin)).size > 0) {
+      throw new Error(
+        "this is a composite plugin (docs/nested-plugins.md): a plugin made of other plugins, with no module or processor of its own. It is read by readComposite and loaded as a tree, not read as one plugin."
       );
     }
     throw new Error("no jig:WebPlugin in this document. A profile that does not declare itself loadable is a valid catalogue entry, but it cannot be run here.");
@@ -13591,7 +13602,7 @@ function readForeignProfile(dataset2, { baseIRI } = {}) {
     // fetched. What the host actually draws comes from the adapter at run time,
     // because the plugin is the authority on its own parameters and these are
     // a description of it written by whoever wrote the profile.
-    ports: objects(dataset2, subject, lv2.port).map((term4) => readPort(dataset2, term4))
+    ports: objects(dataset2, subject, lv2.port).map((term5) => readPort(dataset2, term5))
   };
 }
 function readProfile(dataset2, { baseIRI } = {}) {
@@ -13637,7 +13648,7 @@ var init_ProfileReader = __esm({
     init_Vocabulary();
     ({ jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
     iri = (value2) => env_default.namedNode(value2);
-    asString = (term4) => term4 ? term4.value : null;
+    asString = (term5) => term5 ? term5.value : null;
     values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
   }
 });
@@ -13658,6 +13669,12 @@ function toBase64(buffer) {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
+}
+async function digestOf(bytes, algorithm = "sha384", { subtle = crypto.subtle } = {}) {
+  const subtleName = ALGORITHMS[algorithm];
+  if (!subtleName) throw new Error(`unsupported digest algorithm: ${algorithm}`);
+  const hash = await subtle.digest(subtleName, bytes);
+  return `${algorithm}-${toBase64(hash)}`;
 }
 async function verifyIntegrity(bytes, integrity, { subtle = crypto.subtle } = {}) {
   const { algorithm, subtleName, expected } = parseIntegrity(integrity);
@@ -13682,18 +13699,25 @@ var init_Integrity = __esm({
 });
 
 // src/host/LoadError.js
-var LoadError, STEPS;
+var LoadError, CompositeFound, STEPS;
 var init_LoadError = __esm({
   "src/host/LoadError.js"() {
     LoadError = class extends Error {
-      constructor(step, message, { cause, iri: iri2 } = {}) {
+      constructor(step, message, { cause, iri: iri3 } = {}) {
         super(message, { cause });
         this.name = "LoadError";
         this.step = step;
-        this.iri = iri2 ?? null;
+        this.iri = iri3 ?? null;
       }
       toString() {
         return `${this.name} [${this.step}]: ${this.message}`;
+      }
+    };
+    CompositeFound = class extends LoadError {
+      constructor(iri3, dataset2) {
+        super("composite", `${iri3} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri: iri3 });
+        this.name = "CompositeFound";
+        this.dataset = dataset2;
       }
     };
     STEPS = Object.freeze({
@@ -13701,6 +13725,7 @@ var init_LoadError = __esm({
       parseProfile: "parse-profile",
       validateProfile: "validate-profile",
       capabilities: "capabilities",
+      composite: "composite",
       fetchResource: "fetch-resource",
       integrity: "integrity",
       compileModule: "compile-module",
@@ -14354,8 +14379,8 @@ var init_N3Lexer = __esm({
 });
 
 // node_modules/n3/src/N3DataFactory.js
-function namedNode3(iri2) {
-  return new NamedNode2(iri2);
+function namedNode3(iri3) {
+  return new NamedNode2(iri3);
 }
 function blankNode3(name) {
   return new BlankNode2(name || `n3-${_blankNodeCounter++}`);
@@ -14394,24 +14419,24 @@ function defaultGraph2() {
 function quad2(subject, predicate, object, graph) {
   return new Quad2(subject, predicate, object, graph);
 }
-function fromTerm2(term4) {
-  if (term4 instanceof Term)
-    return term4;
-  switch (term4.termType) {
+function fromTerm2(term5) {
+  if (term5 instanceof Term)
+    return term5;
+  switch (term5.termType) {
     case "NamedNode":
-      return namedNode3(term4.value);
+      return namedNode3(term5.value);
     case "BlankNode":
-      return blankNode3(term4.value);
+      return blankNode3(term5.value);
     case "Variable":
-      return variable2(term4.value);
+      return variable2(term5.value);
     case "DefaultGraph":
       return DEFAULTGRAPH;
     case "Literal":
-      return literal3(term4.value, term4.language || term4.datatype);
+      return literal3(term5.value, term5.language || term5.datatype);
     case "Quad":
-      return fromQuad(term4);
+      return fromQuad(term5);
     default:
-      throw new Error(`Unexpected termType: ${term4.termType}`);
+      throw new Error(`Unexpected termType: ${term5.termType}`);
   }
 }
 function fromQuad(inQuad) {
@@ -14473,8 +14498,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.namedNode(iri)`), so that term validation can be applied;
        * the constructor assumes an already-validated IRI.
        */
-      constructor(iri2) {
-        super(iri2);
+      constructor(iri3) {
+        super(iri3);
       }
       // ### The term type of this term
       get termType() {
@@ -14698,7 +14723,7 @@ var init_N3Parser = __esm({
         this._implicitEmptyPrefix = !!options.implicitEmptyPrefix;
         this._emptyFormulaAsTrue = !!options.emptyFormulaAsTrue;
         if (isLineMode)
-          this._resolveRelativeIRI = (iri2) => {
+          this._resolveRelativeIRI = (iri3) => {
             return null;
           };
         this._blankNodePrefix = typeof options.blankNodePrefix !== "string" ? "" : options.blankNodePrefix.replace(/^(?!_:)/, "_:");
@@ -14857,10 +14882,10 @@ var init_N3Parser = __esm({
           // Read a relative or absolute IRI
           case "IRI":
           case "typeIRI":
-            const iri2 = this._resolveIRI(token.value);
-            if (iri2 === null)
+            const iri3 = this._resolveIRI(token.value);
+            if (iri3 === null)
               return this._error("Invalid IRI", token);
-            value2 = this._factory.namedNode(iri2);
+            value2 = this._factory.namedNode(iri3);
             break;
           // Read a prefixed name
           case "type":
@@ -15136,20 +15161,20 @@ var init_N3Parser = __esm({
       }
       // ### `_readIriPropertyListId` replaces a property list's blank node with its IRI
       _readIriPropertyListId(token) {
-        const iri2 = this._readEntity(token);
-        if (iri2 === void 0)
+        const iri3 = this._readEntity(token);
+        if (iri3 === void 0)
           return;
-        if (iri2.termType !== "NamedNode")
+        if (iri3.termType !== "NamedNode")
           return this._error(`Expected IRI after id but got ${token.type}`, token);
         const placeholder = this._subject;
-        this._subject = iri2;
+        this._subject = iri3;
         const context = this._contextStack[this._contextStack.length - 1];
         if (context.subject === placeholder)
-          context.subject = iri2;
+          context.subject = iri3;
         if (context.predicate === placeholder)
-          context.predicate = iri2;
+          context.predicate = iri3;
         if (context.object === placeholder)
-          context.object = iri2;
+          context.object = iri3;
         this._predicate = null;
         return this._readIriPropertyListPredicate;
       }
@@ -15353,13 +15378,13 @@ var init_N3Parser = __esm({
       _readDirCode(token) {
         const component = this._literalComponent, listItem = this._literalListItem;
         if (token.type === "dircode") {
-          const term4 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
+          const term5 = this._factory.literal(this._literalValue, { language: this._literalLanguage, direction: token.value });
           if (component === "subject")
-            this._subject = term4;
+            this._subject = term5;
           else if (component === "predicate")
-            this._predicate = term4;
+            this._predicate = term5;
           else
-            this._object = term4;
+            this._object = term5;
           this._literalLanguage = void 0;
           token = null;
         }
@@ -15580,10 +15605,10 @@ var init_N3Parser = __esm({
       }
       // ### `_readBaseIRI` reads the IRI of a base declaration
       _readBaseIRI(token) {
-        const iri2 = token.type === "IRI" && this._resolveIRI(token.value);
-        if (!iri2)
+        const iri3 = token.type === "IRI" && this._resolveIRI(token.value);
+        if (!iri3)
           return this._error("Expected valid IRI to follow base declaration", token);
-        this._setBase(iri2);
+        this._setBase(iri3);
         return this._readDeclarationPunctuation;
       }
       // ### `_isValidVersion` checks if the given version is valid for this parser to handle.
@@ -15907,42 +15932,42 @@ var init_N3Parser = __esm({
         this._callback = noop;
       }
       // ### `_resolveIRI` resolves an IRI against the base path
-      _resolveIRI(iri2) {
-        return /^[a-z][a-z0-9+.-]*:/i.test(iri2) ? iri2 : this._resolveRelativeIRI(iri2);
+      _resolveIRI(iri3) {
+        return /^[a-z][a-z0-9+.-]*:/i.test(iri3) ? iri3 : this._resolveRelativeIRI(iri3);
       }
       // ### `_resolveRelativeIRI` resolves an IRI against the base path,
       // assuming that a base path has been set and that the IRI is indeed relative
-      _resolveRelativeIRI(iri2) {
-        if (!iri2.length)
+      _resolveRelativeIRI(iri3) {
+        if (!iri3.length)
           return this._base;
-        switch (iri2[0]) {
+        switch (iri3[0]) {
           // Resolve relative fragment IRIs against the base IRI
           case "#":
-            return this._base + iri2;
+            return this._base + iri3;
           // Resolve relative query string IRIs by replacing the query string
           case "?":
-            return this._base.replace(/(?:\?.*)?$/, iri2);
+            return this._base.replace(/(?:\?.*)?$/, iri3);
           // Resolve root-relative IRIs at the root of the base IRI
           case "/":
-            return (iri2[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri2);
+            return (iri3[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri3);
           // Resolve all other IRIs at the base IRI's path
           default:
-            return /^[^/:]*:/.test(iri2) ? null : this._removeDotSegments(this._basePath + iri2);
+            return /^[^/:]*:/.test(iri3) ? null : this._removeDotSegments(this._basePath + iri3);
         }
       }
       // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
-      _removeDotSegments(iri2) {
-        if (!/(^|\/)\.\.?($|[/#?])/.test(iri2))
-          return iri2;
-        const length = iri2.length;
+      _removeDotSegments(iri3) {
+        if (!/(^|\/)\.\.?($|[/#?])/.test(iri3))
+          return iri3;
+        const length = iri3.length;
         let result = "", i2 = -1, pathStart = -1, segmentStart = 0, next = "/";
         while (i2 < length) {
           switch (next) {
             // The path starts with the first slash after the authority
             case ":":
               if (pathStart < 0) {
-                if (iri2[++i2] === "/" && iri2[++i2] === "/")
-                  while ((pathStart = i2 + 1) < length && iri2[pathStart] !== "/")
+                if (iri3[++i2] === "/" && iri3[++i2] === "/")
+                  while ((pathStart = i2 + 1) < length && iri3[pathStart] !== "/")
                     i2 = pathStart;
               }
               break;
@@ -15953,36 +15978,36 @@ var init_N3Parser = __esm({
               break;
             // Handle '/.' or '/..' path segments
             case "/":
-              if (iri2[i2 + 1] === ".") {
-                next = iri2[++i2 + 1];
+              if (iri3[i2 + 1] === ".") {
+                next = iri3[++i2 + 1];
                 switch (next) {
                   // Remove a '/.' segment
                   case "/":
-                    result += iri2.substring(segmentStart, i2 - 1);
+                    result += iri3.substring(segmentStart, i2 - 1);
                     segmentStart = i2 + 1;
                     break;
                   // Remove a trailing '/.' segment
                   case void 0:
                   case "?":
                   case "#":
-                    return result + iri2.substring(segmentStart, i2) + iri2.substr(i2 + 1);
+                    return result + iri3.substring(segmentStart, i2) + iri3.substr(i2 + 1);
                   // Remove a '/..' segment
                   case ".":
-                    next = iri2[++i2 + 1];
+                    next = iri3[++i2 + 1];
                     if (next === void 0 || next === "/" || next === "?" || next === "#") {
-                      result += iri2.substring(segmentStart, i2 - 2);
+                      result += iri3.substring(segmentStart, i2 - 2);
                       if ((segmentStart = result.lastIndexOf("/")) >= pathStart)
                         result = result.substr(0, segmentStart);
                       if (next !== "/")
-                        return `${result}/${iri2.substr(i2 + 1)}`;
+                        return `${result}/${iri3.substr(i2 + 1)}`;
                       segmentStart = i2 + 1;
                     }
                 }
               }
           }
-          next = iri2[++i2];
+          next = iri3[++i2];
         }
-        return result + iri2.substring(segmentStart);
+        return result + iri3.substring(segmentStart);
       }
       // ## Public methods
       // ### `parse` parses the N3 input and emits each parsed quad through the onQuad callback.
@@ -17212,11 +17237,11 @@ var require_rdf_literal = __commonJS({
       }
       return translator.toRdf(value2, options);
     }
-    function getTermRaw(term4, validate) {
-      if (term4.termType === "Literal") {
-        return fromRdf2(term4, validate);
+    function getTermRaw(term5, validate) {
+      if (term5.termType === "Literal") {
+        return fromRdf2(term5, validate);
       }
-      return term4.value;
+      return term5.value;
     }
     function getSupportedRdfDatatypes() {
       return translator.getSupportedRdfDatatypes();
@@ -17231,7 +17256,7 @@ var require_rdf_literal = __commonJS({
 var keyFor, ConsentRequired, ForeignTrust;
 var init_ForeignTrust = __esm({
   "src/host/ForeignTrust.js"() {
-    keyFor = (iri2, digest) => `${iri2}\0${digest}`;
+    keyFor = (iri3, digest) => `${iri3}\0${digest}`;
     ConsentRequired = class extends Error {
       constructor(request) {
         super(
@@ -17254,14 +17279,14 @@ var init_ForeignTrust = __esm({
        * The three statements are what section 12.4 requires: which plugin, which
        * format, and what privilege it gets.
        */
-      static request({ iri: iri2, label, format, digest }) {
+      static request({ iri: iri3, label, format, digest }) {
         return Object.freeze({
-          iri: iri2,
-          label: label ?? iri2,
+          iri: iri3,
+          label: label ?? iri3,
           format,
           digest,
           statements: Object.freeze([
-            `${label ?? iri2} is a ${format ?? "foreign"} plugin.`,
+            `${label ?? iri3} is a ${format ?? "foreign"} plugin.`,
             "It runs in this page, with this page's privileges. It can read this project, anything this page has stored, and every other plugin loaded here.",
             "It is not sandboxed and its capabilities cannot be limited.",
             `Only this exact copy is being agreed to (${(digest ?? "").slice(0, 19)}\u2026). If it is updated, you will be asked again.`
@@ -17269,9 +17294,9 @@ var init_ForeignTrust = __esm({
         });
       }
       /** True only for this plugin and only for this container. */
-      isConsented(iri2, digest) {
-        if (!iri2 || !digest) return false;
-        return this.#store.get(keyFor(iri2, digest)) === true;
+      isConsented(iri3, digest) {
+        if (!iri3 || !digest) return false;
+        return this.#store.get(keyFor(iri3, digest)) === true;
       }
       /**
        * Record a person's decision.
@@ -17279,13 +17304,13 @@ var init_ForeignTrust = __esm({
        * Takes the digest as an argument rather than reading it from anywhere later,
        * so that consenting to one body of code cannot be made to cover another.
        */
-      consent(iri2, digest) {
-        if (!iri2 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
-        this.#store.set(keyFor(iri2, digest), true);
+      consent(iri3, digest) {
+        if (!iri3 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
+        this.#store.set(keyFor(iri3, digest), true);
       }
       /** Withdraw it. The next load asks again. */
-      revoke(iri2, digest) {
-        this.#store.delete(keyFor(iri2, digest));
+      revoke(iri3, digest) {
+        this.#store.delete(keyFor(iri3, digest));
       }
       /**
        * Throws unless this exact container has been consented to.
@@ -17293,9 +17318,9 @@ var init_ForeignTrust = __esm({
        * Throws rather than returning false so that a caller cannot proceed by
        * forgetting to check, which is the same reason verifyIntegrity throws.
        */
-      require({ iri: iri2, label, format, digest }) {
-        if (!this.isConsented(iri2, digest)) {
-          throw new ConsentRequired(_ForeignTrust.request({ iri: iri2, label, format, digest }));
+      require({ iri: iri3, label, format, digest }) {
+        if (!this.isConsented(iri3, digest)) {
+          throw new ConsentRequired(_ForeignTrust.request({ iri: iri3, label, format, digest }));
         }
         return true;
       }
@@ -17898,19 +17923,19 @@ var init_ForeignSupport = __esm({
        * A surface uses this to decide whether it is about to ask a person a
        * question, before it asks.
        */
-      async classify(iri2) {
-        const response = await this.#fetch(iri2, { headers: { accept: PROFILE_ACCEPT2 } });
+      async classify(iri3) {
+        const response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT2 } });
         if (!response.ok) {
-          throw new LoadError(STEPS.fetchProfile, `${iri2} returned ${response.status}`);
+          throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`);
         }
-        const dataset2 = await parseText(await response.text(), iri2);
+        const dataset2 = await parseText(await response.text(), iri3);
         return { kind: kindOf(dataset2), dataset: dataset2 };
       }
       /** The profile of a foreign plugin, validated, without running anything. */
-      async profileOf(iri2) {
-        const { kind, dataset: dataset2 } = await this.classify(iri2);
+      async profileOf(iri3) {
+        const { kind, dataset: dataset2 } = await this.classify(iri3);
         if (kind !== "foreign") {
-          throw new LoadError(STEPS.parseProfile, `${iri2} is not a foreign plugin`);
+          throw new LoadError(STEPS.parseProfile, `${iri3} is not a foreign plugin`);
         }
         if (this.#validator) {
           const report = await this.#validator.validate(dataset2);
@@ -17918,12 +17943,12 @@ var init_ForeignSupport = __esm({
             const seen = report.violations.map((v) => `${v.focusNode} ${v.path ?? "(node)"}`);
             throw new LoadError(
               STEPS.validateProfile,
-              `${iri2} does not validate:
+              `${iri3} does not validate:
   - ${seen.join("\n  - ")}`
             );
           }
         }
-        return readForeignProfile(dataset2, { baseIRI: iri2 });
+        return readForeignProfile(dataset2, { baseIRI: iri3 });
       }
       /**
        * Everything the engine needs to adopt one.
@@ -17931,8 +17956,8 @@ var init_ForeignSupport = __esm({
        * Throws ConsentRequired when this container has not been agreed to, which
        * the dispatcher turns into a result a surface can act on.
        */
-      async add(iri2, context) {
-        const profile = await this.profileOf(iri2);
+      async add(iri3, context) {
+        const profile = await this.profileOf(iri3);
         return loadForeignPlugin(profile, context, {
           trust: this.trust,
           origin: this.#origin,
@@ -17956,18 +17981,18 @@ function createMedia(document2) {
      * preset's IRI is the preset file and media imported afterwards goes
      * beside it, under the base the session saves with.
      */
-    rebase(iri2) {
-      base = new URL("./", iri2).href;
+    rebase(iri3) {
+      base = new URL("./", iri3).href;
     },
-    has(iri2) {
-      return files.has(iri2);
+    has(iri3) {
+      return files.has(iri3);
     },
-    get(iri2) {
-      return files.get(iri2) ?? null;
+    get(iri3) {
+      return files.get(iri3) ?? null;
     },
     /** Keep a file's bytes under its IRI. */
-    put(iri2, bytes, mediaType = null) {
-      files.set(iri2, { bytes, mediaType });
+    put(iri3, bytes, mediaType = null) {
+      files.set(iri3, { bytes, mediaType });
     },
     /** Where an imported file lives, named by its content. */
     iriFor(hex, extension) {
@@ -17975,13 +18000,13 @@ function createMedia(document2) {
     },
     /** The files a saved session carries: held here, and under its base. */
     heldUnderBase(iris) {
-      return iris.filter((iri2) => files.has(iri2) && iri2.startsWith(base));
+      return iris.filter((iri3) => files.has(iri3) && iri3.startsWith(base));
     },
     /** A file's bytes, from what is held or else the network. */
-    async fetchBytes(iri2) {
-      if (files.has(iri2)) return files.get(iri2).bytes.slice().buffer;
-      const response = await fetch(iri2);
-      if (!response.ok) throw new Error(`${iri2} answered ${response.status}`);
+    async fetchBytes(iri3) {
+      if (files.has(iri3)) return files.get(iri3).bytes.slice().buffer;
+      const response = await fetch(iri3);
+      if (!response.ok) throw new Error(`${iri3} answered ${response.status}`);
       return response.arrayBuffer();
     }
   };
@@ -18144,11 +18169,11 @@ var WASM_FEATURE_PROBES = Object.freeze({
     11
   )
 });
-function compact(iri2) {
+function compact(iri3) {
   for (const [prefix, namespace2] of PREFIXES) {
-    if (iri2.startsWith(namespace2)) return prefix + iri2.slice(namespace2.length);
+    if (iri3.startsWith(namespace2)) return prefix + iri3.slice(namespace2.length);
   }
-  return iri2;
+  return iri3;
 }
 function detectCapabilities(env = globalThis) {
   const offered = /* @__PURE__ */ new Set([
@@ -18194,6 +18219,119 @@ function explainMissing(profile, missing) {
 
 // src/host/PluginLoader.js
 init_LoadError();
+
+// src/rdf/CompositeReader.js
+init_env();
+init_Vocabulary();
+init_ProfileReader();
+var { jig: jig3, lv2: lv22, rdf: rdfTerms2, trn: trn3 } = vocabulary;
+var iri2 = (value2) => env_default.namedNode(value2);
+var objects2 = (dataset2, subject, predicate) => [...dataset2.match(typeof subject === "string" ? iri2(subject) : subject, iri2(predicate), null)].map((q2) => q2.object);
+var first = (dataset2, subject, predicate) => objects2(dataset2, subject, predicate)[0]?.value ?? null;
+var number = (value2) => value2 === null ? null : Number(value2);
+function readEndpoint(dataset2, node) {
+  const index = number(first(dataset2, node, jig3.portIndex));
+  const symbol = first(dataset2, node, jig3.portSymbol);
+  return { node: first(dataset2, node, jig3.endpointNode), ...index !== null ? { portIndex: index } : {}, ...symbol !== null ? { portSymbol: symbol } : {} };
+}
+var isComposite = (dataset2) => dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.CompositePlugin)).size > 0;
+function readComposite(dataset2, { iri: wanted = null } = {}) {
+  const subjects = [...dataset2.match(null, iri2(rdfTerms2.type), iri2(jig3.CompositePlugin))].map((q2) => q2.subject).filter((subject2) => wanted === null || subject2.value === wanted);
+  if (subjects.length === 0) throw new Error("the document declares no jig:CompositePlugin");
+  if (subjects.length > 1) {
+    throw new Error(`the document declares ${subjects.length} composites (${subjects.map((s) => s.value).join(", ")}); a composite document holds one`);
+  }
+  const subject = subjects[0];
+  const byId2 = (a2, b) => a2.id.localeCompare(b.id);
+  const members = objects2(dataset2, subject, jig3.member).map((m) => ({
+    id: m.value,
+    plugin: first(dataset2, m, jig3.plugin),
+    pinnedDigest: first(dataset2, m, jig3.pinnedDigest),
+    settings: objects2(dataset2, m, jig3.setting).map((s) => ({ symbol: first(dataset2, s, jig3.symbol), value: number(first(dataset2, s, jig3.value)) })).sort((a2, b) => a2.symbol.localeCompare(b.symbol))
+  })).sort(byId2);
+  const connections = objects2(dataset2, subject, jig3.connection).map((c3) => ({
+    id: c3.value,
+    from: readEndpoint(dataset2, objects2(dataset2, c3, jig3.from)[0]),
+    to: readEndpoint(dataset2, objects2(dataset2, c3, jig3.to)[0]),
+    signalKind: first(dataset2, c3, jig3.signalKind)
+  })).sort(byId2);
+  const ports = objects2(dataset2, subject, lv22.port).map((p) => ({
+    ...readPort(dataset2, p),
+    drives: objects2(dataset2, p, jig3.drives).map((d) => readEndpoint(dataset2, d))
+  })).sort((a2, b) => a2.symbol.localeCompare(b.symbol));
+  return {
+    iri: subject.value,
+    label: first(dataset2, subject, vocabulary.rdfs.label),
+    comment: first(dataset2, subject, vocabulary.rdfs.comment),
+    roles: objects2(dataset2, subject, trn3.role).map((o2) => o2.value),
+    accepts: objects2(dataset2, subject, trn3.accepts).map((o2) => o2.value),
+    produces: objects2(dataset2, subject, trn3.produces).map((o2) => o2.value),
+    audioInputs: number(first(dataset2, subject, jig3.audioInputs)),
+    audioOutputs: number(first(dataset2, subject, jig3.audioOutputs)),
+    requires: objects2(dataset2, subject, trn3.requires).map((o2) => o2.value),
+    members,
+    connections,
+    ports
+  };
+}
+var compositeProfile = (composite) => ({
+  iri: composite.iri,
+  label: composite.label,
+  comment: composite.comment,
+  roles: composite.roles,
+  accepts: composite.accepts,
+  produces: composite.produces,
+  requires: composite.requires,
+  prefers: [],
+  audioInputs: composite.audioInputs ?? 0,
+  audioOutputs: composite.audioOutputs ?? 0,
+  stateless: false,
+  composite: true,
+  ports: composite.ports
+});
+function checkComposite(composite) {
+  const problems = [];
+  const problem = (rule, message) => problems.push({ rule, message });
+  const memberIds = new Set(composite.members.map((m) => m.id));
+  const known = (id) => id === composite.iri || memberIds.has(id);
+  const AUDIO3 = trn3.Audio;
+  if (memberIds.has(composite.iri)) {
+    problem("member-is-composite", `${composite.iri} lists itself as a member`);
+  }
+  const exposed = new Set(composite.ports.map((p) => p.symbol));
+  const endpoints = composite.connections.flatMap((c3) => [["from", c3], ["to", c3]].map(([end, conn]) => ({ conn, end, ...conn[end] })));
+  for (const e of endpoints) {
+    if (!known(e.node)) problem("unknown-node", `${e.conn.id} ${e.end} names ${e.node}, which is neither a member nor the composite`);
+    if (e.node === composite.iri && e.portSymbol !== void 0 && !exposed.has(e.portSymbol)) {
+      problem("unknown-port", `${e.conn.id} targets the composite's parameter "${e.portSymbol}", which it does not expose`);
+    }
+  }
+  const audio = composite.connections.filter((c3) => c3.signalKind === AUDIO3);
+  const inputIndices = audio.filter((c3) => c3.from.node === composite.iri && c3.from.portIndex !== void 0).map((c3) => c3.from.portIndex);
+  const outputIndices = audio.filter((c3) => c3.to.node === composite.iri && c3.to.portIndex !== void 0).map((c3) => c3.to.portIndex);
+  for (const index of inputIndices) {
+    if (index >= composite.audioInputs) problem("boundary-count", `a connection leaves input ${index}, but the composite declares ${composite.audioInputs} audio input(s)`);
+  }
+  for (const index of outputIndices) {
+    if (index >= composite.audioOutputs) problem("boundary-count", `a connection arrives at output ${index}, but the composite declares ${composite.audioOutputs} audio output(s)`);
+  }
+  for (let index = 0; index < composite.audioOutputs; index++) {
+    if (!outputIndices.includes(index)) problem("boundary-count", `audio output ${index} has nothing connected to it`);
+  }
+  for (const port of composite.ports) {
+    for (const target2 of port.drives) {
+      if (!memberIds.has(target2.node)) {
+        problem("unknown-node", `port "${port.symbol}" drives ${target2.node}, which is not a member`);
+        continue;
+      }
+      const member = composite.members.find((m) => m.id === target2.node);
+      if (member.settings.some((s) => s.symbol === target2.portSymbol)) {
+        problem("setting-on-driven", `${member.id} sets "${target2.portSymbol}", which port "${port.symbol}" drives`);
+      }
+    }
+  }
+  return problems;
+}
 
 // src/host/Instantiate.js
 init_Integrity();
@@ -18391,49 +18529,69 @@ var PluginLoader = class {
     this.#processorUrlFor = processorUrl;
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
-  async loadProfile(iri2) {
+  async loadProfile(iri3) {
+    const dataset2 = await this.fetchDataset(iri3);
+    if (isComposite(dataset2)) throw new CompositeFound(iri3, dataset2);
+    return this.profileFrom(dataset2, iri3);
+  }
+  /**
+   * Steps 1 to 3 up to the capability check: fetch, parse and validate. Split out so a composite plugin, which
+   * reads differently, goes through the same fetch and validation as any plugin (docs/nested-plugins.md).
+   */
+  async fetchDataset(iri3) {
     let response;
     try {
-      response = await this.#fetch(iri2, { headers: { accept: PROFILE_ACCEPT } });
+      response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT } });
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchProfile,
-        `could not fetch ${iri2}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
-        { cause, iri: iri2 }
+        `could not fetch ${iri3}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, iri: iri3 }
       );
     }
     if (!response.ok) {
-      throw new LoadError(STEPS.fetchProfile, `${iri2} returned ${response.status}`, { iri: iri2 });
+      throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`, { iri: iri3 });
     }
     const text = await response.text();
     let dataset2;
     try {
-      dataset2 = await this.#parse(text, iri2);
+      dataset2 = await this.#parse(text, iri3);
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, `${iri2} is not parseable RDF: ${cause.message}`, { cause, iri: iri2 });
+      throw new LoadError(STEPS.parseProfile, `${iri3} is not parseable RDF: ${cause.message}`, { cause, iri: iri3 });
     }
     if (this.#validator) {
       const report = await this.#validator.validate(dataset2);
       if (!report.conforms) {
-        const first = report.violations[0];
+        const first2 = report.violations[0];
         throw new LoadError(
           STEPS.validateProfile,
-          `${iri2} is not a valid profile: ${first.message} (at ${first.focusNode}${first.path ? ` ${first.path}` : ""})`,
-          { iri: iri2 }
+          `${iri3} is not a valid profile: ${first2.message} (at ${first2.focusNode}${first2.path ? ` ${first2.path}` : ""})`,
+          { iri: iri3 }
         );
       }
     }
+    return dataset2;
+  }
+  /** Read a fetched profile and check its capabilities before any code is fetched. Contract section 2.1. */
+  profileFrom(dataset2, iri3) {
     let profile;
     try {
-      profile = readProfile(dataset2, { baseIRI: iri2 });
+      profile = readProfile(dataset2, { baseIRI: iri3 });
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri2 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri3 });
     }
+    return { profile, granted: this.checkCapabilities(profile, iri3) };
+  }
+  /**
+   * Contract section 2.1, evaluated BEFORE any code is fetched. Takes anything with `requires`, so a
+   * composite, which has no module, is checked by the same rule as a plugin. Returns what is granted.
+   */
+  checkCapabilities(profile, iri3) {
     const negotiation = negotiate(profile, this.#capabilities);
     if (!negotiation.satisfied) {
-      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri2 });
+      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri3 });
     }
-    return { profile, granted: negotiation.granted };
+    return negotiation.granted;
   }
   /** Steps 4 and 5 for one resource: fetch it and verify its digest. */
   async fetchVerified(resource, { kind }) {
@@ -20053,8 +20211,8 @@ function extractPropertyPath(pathNode, ns2, allowNamedNodeInList) {
     return pathNode.term;
   }
   if (pathNode.term.termType === "BlankNode" || pathNode.term.termType === "NamedNode") {
-    const first = pathNode.out(ns2.rdf.first).term;
-    if (first) {
+    const first2 = pathNode.out(ns2.rdf.first).term;
+    if (first2) {
       const paths = [...pathNode.list()];
       return paths.map((path) => extractPropertyPath(path, ns2, allowNamedNodeInList));
     }
@@ -20172,8 +20330,8 @@ function* extractSourceShapeStructure(shape, dataset2, startNode, visited = new 
   }
   const { factory: factory3 } = shape.context;
   const { sh, rdfs: rdfs2 } = shape.context.ns;
-  const inListSize = (term4) => {
-    const inConstraint = shape.constraints.find((x) => term4.equals(x.paramValue));
+  const inListSize = (term5) => {
+    const inConstraint = shape.constraints.find((x) => term5.equals(x.paramValue));
     return inConstraint?.nodeSet.size || -1;
   };
   visited.add(startNode);
@@ -20212,7 +20370,7 @@ function isInstanceOf(instance, cls, ns2) {
   return types.some((type) => classes.has(type));
 }
 function rdfListToArray(listNode) {
-  return [...listNode.list?.() || []].map(({ term: term4 }) => term4);
+  return [...listNode.list?.() || []].map(({ term: term5 }) => term5);
 }
 
 // node_modules/rdf-validate-shacl/src/shapes-graph.js
@@ -20454,8 +20612,8 @@ var Shape = class _Shape {
       results.addAll(subjects);
     });
     this.shapeNodePointer.out(sh.targetObjectsOf).terms.forEach((predicate) => {
-      const objects3 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
-      results.addAll(objects3);
+      const objects4 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
+      results.addAll(objects4);
     });
     return [...results];
   }
@@ -20975,13 +21133,13 @@ validators.register(strict68.XMLLiteral, () => true);
 validators.register(strict68.HTML, () => true);
 
 // node_modules/rdf-validate-datatype/src/validate-term.js
-function validateTerm(term4) {
-  if (term4.termType !== "Literal") {
+function validateTerm(term5) {
+  if (term5.termType !== "Literal") {
     throw new Error("Cannot validate non-literal terms");
   }
-  const validator = validators.find(term4.datatype);
+  const validator = validators.find(term5.datatype);
   if (validator) {
-    return validator(term4.value);
+    return validator(term5.value);
   }
   return true;
 }
@@ -21017,7 +21175,7 @@ var validateClosed = {
     if (!trueTerm.equals(closedNode)) {
       return;
     }
-    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term4) => term4.termType === "NamedNode"));
+    const allowed = new node_set_default(context.$shapes.node(currentShape).out(sh.property).out(sh.path).terms.filter((term5) => term5.termType === "NamedNode"));
     if (ignoredPropertiesNode) {
       allowed.addAll(rdfListToArray(context.$shapes.node(ignoredPropertiesNode)));
     }
@@ -21321,7 +21479,7 @@ function validateQualifiedHelper(context, focusNode, constraint) {
   const trueTerm = context.factory.literal("true", xsd4.boolean);
   const siblingShapes = new node_set_default();
   if (trueTerm.equals(qualifiedValueShapesDisjointNode)) {
-    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term4 }) => !term4.equals(qualifiedValueShapeNode)).terms;
+    const qualifiedSiblingShapes = context.$shapes.node(currentShapeNode).in(sh.property).out(sh.property).out(sh.qualifiedValueShape).filter(({ term: term5 }) => !term5.equals(qualifiedValueShapeNode)).terms;
     siblingShapes.addAll(qualifiedSiblingShapes);
   }
   const path = constraint.shape.pathObject;
@@ -21604,6 +21762,235 @@ var ShapeValidator = class {
 
 // src/engine/Engine.js
 init_LoadError();
+
+// src/host/CompositeResolver.js
+init_env();
+
+// src/rdf/Canonical.js
+init_Vocabulary();
+var XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
+var RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+var OMITTED_PREDICATES = Object.freeze([vocabulary.jig.location, vocabulary.sec.proof]);
+var ESCAPES = { "\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r", "	": "\\t" };
+function escapeLiteral(value2) {
+  let out = "";
+  for (const char of value2) {
+    if (ESCAPES[char]) {
+      out += ESCAPES[char];
+      continue;
+    }
+    const code = char.codePointAt(0);
+    out += code < 32 || code === 127 ? `\\u${code.toString(16).toUpperCase().padStart(4, "0")}` : char;
+  }
+  return out;
+}
+function term2(node) {
+  if (node.termType === "BlankNode") {
+    throw new Error(
+      `cannot canonicalise a graph containing a blank node (_:${node.value}). A signed profile must name everything it says, so that the same statement serialises the same way twice. Skolemise it as a fragment of the document IRI.`
+    );
+  }
+  if (node.termType === "NamedNode") return `<${escapeLiteral(node.value)}>`;
+  if (node.termType === "Literal") {
+    const text = `"${escapeLiteral(node.value)}"`;
+    if (node.language) return `${text}@${node.language.toLowerCase()}`;
+    const datatype = node.datatype?.value;
+    if (!datatype || datatype === XSD_STRING || datatype === RDF_LANG_STRING) return text;
+    return `${text}^^<${escapeLiteral(datatype)}>`;
+  }
+  throw new Error(`cannot canonicalise a ${node.termType} term`);
+}
+function byCodePoint(a2, b) {
+  const left = [...a2];
+  const right = [...b];
+  for (let i2 = 0; i2 < Math.min(left.length, right.length); i2++) {
+    const difference = left[i2].codePointAt(0) - right[i2].codePointAt(0);
+    if (difference !== 0) return difference;
+  }
+  return left.length - right.length;
+}
+var inPluginTree = (subject, plugin) => subject === plugin || subject.startsWith(`${plugin}#`);
+function canonicalForm(dataset2, { omitSubjects = [], onlySubject = null, onlyPluginTree = null, omitPredicates = [] } = {}) {
+  const omitted = new Set(omitSubjects);
+  const lines = [];
+  for (const quad3 of dataset2) {
+    if (OMITTED_PREDICATES.includes(quad3.predicate.value)) continue;
+    if (omitPredicates.includes(quad3.predicate.value)) continue;
+    if (onlySubject !== null && quad3.subject.value !== onlySubject) continue;
+    if (onlyPluginTree !== null && !inPluginTree(quad3.subject.value, onlyPluginTree)) continue;
+    if (omitted.has(quad3.subject.value)) continue;
+    lines.push(`${term2(quad3.subject)} ${term2(quad3.predicate)} ${term2(quad3.object)} .`);
+  }
+  if (lines.length === 0) {
+    throw new Error("nothing to canonicalise: the graph is empty once the omissions are applied");
+  }
+  return [...new Set(lines)].sort(byCodePoint).join("\n") + "\n";
+}
+function proofSubjects(dataset2) {
+  const { sec } = vocabulary;
+  const subjects = /* @__PURE__ */ new Set();
+  const proofs = [...dataset2].filter((q2) => q2.predicate.value === sec.proof).map((q2) => q2.object.value);
+  for (const proof of proofs) {
+    subjects.add(proof);
+    for (const quad3 of dataset2) {
+      if (quad3.subject.value === proof && quad3.predicate.value === sec.verificationMethod) {
+        subjects.add(quad3.object.value);
+      }
+    }
+  }
+  return [...subjects];
+}
+function bundleSubjects(dataset2) {
+  const { jig: jig6, prov, rdf: rdf2 } = vocabulary;
+  const subjects = /* @__PURE__ */ new Set();
+  for (const quad3 of dataset2) {
+    if (quad3.predicate.value !== rdf2.type || quad3.object.value !== jig6.Bundle) continue;
+    subjects.add(quad3.subject.value);
+    for (const other of dataset2) {
+      if (other.subject.value === quad3.subject.value && other.predicate.value === prov.wasGeneratedBy) {
+        subjects.add(other.object.value);
+      }
+    }
+  }
+  return [...subjects];
+}
+var pluginForm = (dataset2, plugin) => canonicalForm(dataset2, {
+  omitSubjects: [...bundleSubjects(dataset2), ...proofSubjects(dataset2)],
+  onlyPluginTree: plugin
+});
+
+// src/host/CompositeResolver.js
+init_Integrity();
+init_LoadError();
+var MINIMUM_DEPTH = 4;
+var encoder = new TextEncoder();
+async function resolveComposite(iri3, { loader, bundled = () => null, maxDepth = 8, subtle = crypto.subtle } = {}) {
+  if (!loader) throw new Error("resolveComposite needs a loader");
+  if (!(maxDepth >= MINIMUM_DEPTH)) throw new Error(`a host must support at least ${MINIMUM_DEPTH} levels of nesting, not ${maxDepth}`);
+  const fetched = /* @__PURE__ */ new Map();
+  const datasetOf = (target2) => {
+    if (!fetched.has(target2)) fetched.set(target2, bundled(target2) ?? loader.fetchDataset(target2));
+    return fetched.get(target2);
+  };
+  async function visit(target2, chain) {
+    const dataset2 = await datasetOf(target2);
+    if (!isComposite(dataset2)) {
+      return { kind: "plugin", iri: target2, ...loader.profileFrom(dataset2, target2) };
+    }
+    if (chain.includes(target2)) {
+      throw new LoadError(STEPS.composite, `${target2} contains itself: ${[...chain, target2].join(" > ")}`, { iri: target2 });
+    }
+    if (chain.length >= maxDepth) {
+      throw new LoadError(
+        STEPS.composite,
+        `${target2} is nested ${chain.length + 1} composites deep, and this host's limit is ${maxDepth}: ${[...chain, target2].join(" > ")}`,
+        { iri: target2 }
+      );
+    }
+    let composite;
+    try {
+      composite = readComposite(dataset2);
+    } catch (cause) {
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: target2 });
+    }
+    const problems = checkComposite(composite);
+    if (problems.length > 0) {
+      throw new LoadError(
+        STEPS.composite,
+        `${target2} is not a sound composite: ${problems.map((p) => p.message).join("; ")}`,
+        { iri: target2 }
+      );
+    }
+    const granted = new Set(loader.checkCapabilities({ iri: target2, label: composite.label, requires: composite.requires }, target2));
+    const members = [];
+    for (const member of composite.members) {
+      if (!member.plugin) {
+        throw new LoadError(STEPS.composite, `${target2} has a member, ${member.id}, that names no plugin`, { iri: target2 });
+      }
+      let tree;
+      try {
+        tree = await visit(member.plugin, [...chain, target2]);
+      } catch (cause) {
+        if (!(cause instanceof LoadError)) throw cause;
+        throw new LoadError(cause.step, `${target2}, member ${member.id}: ${cause.message}`, { cause, iri: cause.iri ?? member.plugin });
+      }
+      if (member.pinnedDigest !== null) {
+        const memberDataset = await datasetOf(member.plugin);
+        const identity2 = tree.kind === "plugin" ? tree.profile.iri : tree.composite.iri;
+        const actual = await digestOf(encoder.encode(pluginForm(memberDataset, identity2)), "sha384", { subtle });
+        if (actual !== member.pinnedDigest) {
+          throw new LoadError(
+            STEPS.composite,
+            `${target2} pins ${member.plugin} as ${member.pinnedDigest}, and the profile fetched for it is ${actual}. The member has changed since the composite was made, and a pin offers no way past that.`,
+            { iri: member.plugin }
+          );
+        }
+      }
+      for (const capability of tree.granted) granted.add(capability);
+      members.push({ id: member.id, plugin: member.plugin, tree });
+    }
+    checkDrives(target2, composite, members);
+    return { kind: "composite", iri: target2, composite, granted: [...granted], members };
+  }
+  return visit(iri3, []);
+}
+function checkDrives(iri3, composite, members) {
+  for (const port of composite.ports) {
+    for (const drive of port.drives) {
+      const member = members.find((m) => m.id === drive.node);
+      if (!member) continue;
+      const available = member.tree.kind === "plugin" ? member.tree.profile.ports : member.tree.composite.ports;
+      const target2 = available.find((p) => p.symbol === drive.portSymbol);
+      const where = `${iri3}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
+      if (!target2) {
+        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri3 });
+      }
+      if ((port.minimum ?? -Infinity) < (target2.minimum ?? -Infinity) || (port.maximum ?? Infinity) > (target2.maximum ?? Infinity)) {
+        throw new LoadError(
+          STEPS.composite,
+          `${where}, whose range is ${target2.minimum} to ${target2.maximum}, and the port declares ${port.minimum} to ${port.maximum}. A port must lie within the range of what it drives.`,
+          { iri: iri3 }
+        );
+      }
+    }
+  }
+}
+
+// src/host/CompositeState.js
+async function collectState(tree, ask, path = []) {
+  const members = {};
+  for (const member of tree.members) {
+    const here = [...path, member.id];
+    const state = member.tree.kind === "composite" ? await collectState(member.tree, ask, here) : member.tree.profile.stateless === true ? void 0 : await ask(here);
+    if (state !== void 0) members[member.id] = state;
+  }
+  return Object.keys(members).length === 0 ? void 0 : { members };
+}
+function restoreState(tree, saved, give, path = []) {
+  const members = saved !== null && typeof saved === "object" && typeof saved.members === "object" ? saved.members : {};
+  for (const member of tree.members) {
+    if (!Object.hasOwn(members, member.id)) continue;
+    const here = [...path, member.id];
+    if (member.tree.kind === "composite") restoreState(member.tree, members[member.id], give, here);
+    else give(here, members[member.id]);
+  }
+}
+
+// src/host/CompositeParameters.js
+function parameterTargets(tree, symbol) {
+  const port = tree.composite.ports.find((p) => p.symbol === symbol);
+  if (!port) return [];
+  return port.drives.flatMap((drive) => {
+    const member = tree.members.find((m) => m.id === drive.node);
+    if (!member) return [];
+    if (member.tree.kind === "composite") {
+      return parameterTargets(member.tree, drive.portSymbol).map((t) => ({ ...t, path: [member.id, ...t.path] }));
+    }
+    return [{ path: [member.id], symbol: drive.portSymbol }];
+  });
+}
+
+// src/engine/Engine.js
 var counter = 0;
 var nextId = () => `node-${++counter}`;
 var Engine = class {
@@ -21673,15 +22060,95 @@ var Engine = class {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin(iri2, { state = null } = {}) {
-    const { profile, granted } = await this.#loader.loadProfile(iri2);
+  async addPlugin(iri3, { state = null } = {}) {
+    let loaded;
+    try {
+      loaded = await this.#loader.loadProfile(iri3);
+    } catch (error2) {
+      if (error2 instanceof CompositeFound) return this.#addComposite(iri3, error2.dataset, { state });
+      throw error2;
+    }
+    const { profile, granted } = loaded;
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile,
       granted,
       this.#context,
       { AudioWorkletNode: this.#nodeClass, state }
     );
-    return this.adopt({ iri: iri2, profile, node, ready, descriptors, granted });
+    return this.adopt({ iri: iri3, profile, node, ready, descriptors, granted });
+  }
+  /**
+   * A composite plugin, loaded whole or not at all: the tree is checked first (CompositeResolver, which
+   * fetches no code), then each member is instantiated as a plugin in its own right, and a failure
+   * removes the members already made and fails the composite naming the member.
+   *
+   * Returns one entry, not the members' own, for the dispatcher to hold for the node: `composite: true`,
+   * `profile` as the rest of the host reads a plugin's, `tree`, and `members` as `{ path, entry }` with
+   * the path of member IRIs from the composite inward. It has no `id` and no `node` of its own.
+   * docs/nested-plugins.md.
+   */
+  async #addComposite(iri3, dataset2, { state }) {
+    const tree = await resolveComposite(iri3, { loader: this.#loader, bundled: (target2) => target2 === iri3 ? dataset2 : null });
+    const saved = /* @__PURE__ */ new Map();
+    restoreState(tree, state, (path, value2) => saved.set(JSON.stringify(path), value2));
+    const members = [];
+    const byPath = /* @__PURE__ */ new Map();
+    const walk = async (composite, path) => {
+      for (const member of composite.members) {
+        const here = [...path, member.id];
+        if (member.tree.kind === "composite") {
+          await walk(member.tree, here);
+          continue;
+        }
+        const { profile, granted } = member.tree;
+        try {
+          const { node, ready, descriptors } = await this.#loader.instantiate(
+            profile,
+            granted,
+            this.#context,
+            { AudioWorkletNode: this.#nodeClass, state: saved.get(JSON.stringify(here)) ?? null }
+          );
+          const adopted = this.adopt({ iri: member.tree.iri, profile, node, ready, descriptors, granted });
+          members.push({ path: here, entry: adopted });
+          byPath.set(JSON.stringify(here), adopted);
+        } catch (cause) {
+          throw new LoadError(cause.step ?? STEPS.composite, `${iri3}, member ${here.join(" > ")}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri });
+        }
+      }
+    };
+    try {
+      await walk(tree, []);
+      this.#voice(tree, [], byPath);
+    } catch (error2) {
+      for (const { entry } of members) this.remove(entry.id);
+      throw error2;
+    }
+    return { composite: true, iri: iri3, tree, profile: compositeProfile(tree.composite), members };
+  }
+  /**
+   * Set what the composite's author set, before anything is heard: each exposed port's default on the
+   * parameters it drives, and each member's own settings, which are the voicing a person using the composite
+   * cannot reach. Inner composites first, so the outer author's choice is the last word. A person's own
+   * settings, from a saved session, arrive after this through the dispatcher and win over all of it.
+   */
+  #voice(tree, prefix, byPath) {
+    const set = (path, symbol, value2) => {
+      const entry = byPath.get(JSON.stringify(path));
+      if (entry && value2 !== null && value2 !== void 0) this.setParameter(entry.id, symbol, value2);
+    };
+    for (const member of tree.members) {
+      if (member.tree.kind === "composite") this.#voice(member.tree, [...prefix, member.id], byPath);
+    }
+    for (const port of tree.composite.ports) {
+      for (const target2 of parameterTargets(tree, port.symbol)) set([...prefix, ...target2.path], target2.symbol, port.defaultValue);
+    }
+    for (const member of tree.composite.members) {
+      const inner = tree.members.find((m) => m.id === member.id).tree;
+      for (const setting of member.settings) {
+        if (inner.kind === "plugin") set([...prefix, member.id], setting.symbol, setting.value);
+        else for (const target2 of parameterTargets(inner, setting.symbol)) set([...prefix, member.id, ...target2.path], target2.symbol, setting.value);
+      }
+    }
   }
   /**
    * Take an instantiated node into the graph.
@@ -21691,7 +22158,7 @@ var Engine = class {
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
-  adopt({ iri: iri2, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
+  adopt({ iri: iri3, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
     let driver = null;
     if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
       driver = this.#context.createConstantSource();
@@ -21700,7 +22167,7 @@ var Engine = class {
       driver.start();
     }
     const id = nextId();
-    const entry = { id, iri: iri2, profile, node, ready, descriptors, granted, driver };
+    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -23701,6 +24168,82 @@ function effectiveConnections(connections, { bypassed, passes }) {
   return list.filter((c3) => !bypassed(c3.from.node) && !(bypassed(c3.to.node) && passes(c3.to.node, kindOf2(c3)) && intoMain(c3)));
 }
 
+// src/ops/CompositeExpansion.js
+var innerId = (parentId, memberIri) => JSON.stringify([parentId, memberIri]);
+var flatIdOf = (nodeId, path) => path.reduce(innerId, nodeId);
+var keyOf = (kind, index) => `${kind}\0${index}`;
+function boundaryOf(parent, composite) {
+  const rename = (e) => ({ ...e, node: innerId(parent.id, e.node) });
+  const inputs = /* @__PURE__ */ new Map();
+  const outputs = /* @__PURE__ */ new Map();
+  const params = new Map(composite.ports.map((p) => [p.symbol, p.drives.map(rename)]));
+  const inner = [];
+  const add = (map, key, value2) => map.set(key, [...map.get(key) ?? [], value2]);
+  for (const c3 of composite.connections) {
+    const fromBoundary = c3.from.node === composite.iri;
+    const toBoundary = c3.to.node === composite.iri;
+    if (fromBoundary && toBoundary) {
+      add(outputs, keyOf(c3.signalKind, c3.to.portIndex), { passFrom: keyOf(c3.signalKind, c3.from.portIndex) });
+    } else if (fromBoundary) {
+      add(inputs, keyOf(c3.signalKind, c3.from.portIndex), rename(c3.to));
+    } else if (toBoundary && c3.to.portSymbol !== void 0) {
+      for (const target2 of params.get(c3.to.portSymbol) ?? []) {
+        inner.push({ id: innerId(parent.id, c3.id), from: rename(c3.from), to: target2, signalKind: c3.signalKind });
+      }
+    } else if (toBoundary) {
+      add(outputs, keyOf(c3.signalKind, c3.to.portIndex), rename(c3.from));
+    } else {
+      inner.push({ id: innerId(parent.id, c3.id), from: rename(c3.from), to: rename(c3.to), signalKind: c3.signalKind });
+    }
+  }
+  return { inputs, outputs, params, inner };
+}
+function expandComposites({ nodes, connections, treeOf = () => null, bypassed = () => false }) {
+  let pending = nodes.map((n2) => ({
+    id: n2.id,
+    path: [n2.id],
+    plugin: n2.plugin ?? null,
+    bypassed: bypassed(n2.id) === true,
+    tree: treeOf(n2.id)?.kind === "composite" ? treeOf(n2.id) : null
+  }));
+  let list = connections.map((c3) => c3);
+  for (let guard = pending.length + 1e3; guard > 0; guard--) {
+    const parent = pending.find((n2) => n2.tree !== null);
+    if (!parent) break;
+    const { composite, members } = parent.tree;
+    const { inputs, outputs, params, inner } = boundaryOf(parent, composite);
+    const intoParent = (key) => list.filter((c3) => c3.to.node === parent.id && c3.to.portSymbol === void 0 && keyOf(c3.signalKind, c3.to.portIndex) === key).map((c3) => c3.from);
+    const rewritten = [];
+    for (const c3 of list) {
+      if (c3.from.node !== parent.id && c3.to.node !== parent.id) {
+        rewritten.push(c3);
+        continue;
+      }
+      const sources = c3.from.node !== parent.id ? [c3.from] : (outputs.get(keyOf(c3.signalKind, c3.from.portIndex)) ?? []).flatMap((e) => e.passFrom === void 0 ? [e] : intoParent(e.passFrom));
+      const targets = c3.to.node !== parent.id ? [c3.to] : c3.to.portSymbol !== void 0 ? params.get(c3.to.portSymbol) ?? [] : (inputs.get(keyOf(c3.signalKind, c3.to.portIndex)) ?? []).filter((e) => e.passFrom === void 0);
+      sources.forEach((from, i2) => targets.forEach((to, j) => {
+        rewritten.push({ id: sources.length * targets.length === 1 ? c3.id : `${c3.id}#${i2}.${j}`, from, to, signalKind: c3.signalKind });
+      }));
+    }
+    pending = [
+      ...pending.filter((n2) => n2 !== parent),
+      ...composite.members.map((m) => {
+        const tree = members.find((x) => x.id === m.id).tree;
+        return {
+          id: innerId(parent.id, m.id),
+          path: [...parent.path, m.id],
+          plugin: m.plugin,
+          bypassed: parent.bypassed,
+          tree: tree.kind === "composite" ? tree : null
+        };
+      })
+    ];
+    list = [...rewritten, ...inner];
+  }
+  if (pending.some((n2) => n2.tree !== null)) throw new Error("a composite did not finish expanding");
+  return { nodes: pending.map(({ id, path, plugin, bypassed: out }) => ({ id, path, plugin, bypassed: out })), connections: list };
+}
+
 // src/engine/Transport.js
 var MINUTE = 60;
 var SMOOTH_LEGS = 16;
@@ -23900,11 +24443,11 @@ var Inspections = class {
   }
   /** Record what happened loading `iri`. `outcome` is free text, per
    * jig:loadOutcome: "loaded", or "failed: <reason>". */
-  record({ iri: iri2, outcome }) {
+  record({ iri: iri3, outcome }) {
     if (!this.#storage) return;
     const records = this.#read();
     records.push({
-      inspectionOf: iri2,
+      inspectionOf: iri3,
       inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
       hostVersion: HOST_VERSION,
       loadOutcome: outcome
@@ -23916,8 +24459,8 @@ var Inspections = class {
     }
   }
   /** Every inspection recorded of one plugin, oldest first. */
-  forPlugin(iri2) {
-    return this.#read().filter((r) => r.inspectionOf === iri2);
+  forPlugin(iri3) {
+    return this.#read().filter((r) => r.inspectionOf === iri3);
   }
   /** Every inspection recorded, oldest first. */
   all() {
@@ -24148,6 +24691,11 @@ var OpDispatcher = class {
   #engine;
   #listeners = /* @__PURE__ */ new Set();
   #nodeIds = /* @__PURE__ */ new Map();
+  // A composite plugin is one model node and several engine nodes (docs/nested-plugins.md). Its entry is held
+  // here by node id, and each member's engine id by its flat id, which is the id the compiler and the engine
+  // links use. `#nodeIds` keeps only plain nodes, so what read it before reads the same thing.
+  #composites = /* @__PURE__ */ new Map();
+  #memberIds = /* @__PURE__ */ new Map();
   #router = null;
   #inspections;
   // The compensation delays the running graph holds, by project connection
@@ -24225,8 +24773,22 @@ var OpDispatcher = class {
   }
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents(nodeId, events) {
+    if (!this.#router) return false;
+    const composite = this.#composites.get(nodeId);
+    if (composite) {
+      const kind = composite.entry.tree.composite.connections.find((c3) => c3.from.node === composite.entry.iri && isMidi(c3.signalKind))?.signalKind;
+      if (!kind) return false;
+      const probe = "\0outside";
+      const { connections } = this.#expand(
+        [{ id: probe }, { id: nodeId }],
+        [{ id: probe, from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 }, signalKind: kind }]
+      );
+      const targets = connections.map((c3) => this.#memberIds.get(c3.to.node)).filter(Boolean);
+      for (const target2 of targets) this.#router.send(target2, events);
+      return targets.length > 0;
+    }
     const engineId = this.#nodeIds.get(nodeId);
-    if (!engineId || !this.#router) return false;
+    if (!engineId) return false;
     this.#router.send(engineId, events);
     return true;
   }
@@ -24304,8 +24866,12 @@ var OpDispatcher = class {
   #trackFrames(compiled) {
     return new Map(this.#project.tracks.map((track) => [
       track.id,
-      this.#project.nodes.filter((n2) => n2.track === track.id).reduce((most, n2) => Math.max(most, (compiled.arrival.get(n2.id) ?? 0) + this.#latencyOf(n2.id)), 0)
+      this.#project.nodes.filter((n2) => n2.track === track.id).flatMap((n2) => this.#flatIdsOf(n2.id)).reduce((most, id) => Math.max(most, (compiled.arrival.get(id) ?? 0) + this.#latencyOf(id)), 0)
     ]));
+  }
+  /** The ids a model node has in the flat graph: its own, or its members'. */
+  #flatIdsOf(nodeId) {
+    return this.#composites.get(nodeId)?.flatIds ?? [nodeId];
   }
   /** Give each track the delay that lines it up, asking the engine only where it changed. */
   #applyTrackDelays(compiled) {
@@ -24324,9 +24890,27 @@ var OpDispatcher = class {
     }
     for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id);
   }
+  /** The engine node behind a flat id: a plain node, or a member of a composite. */
+  #engineIdOf(flatId) {
+    return this.#nodeIds.get(flatId) ?? this.#memberIds.get(flatId);
+  }
+  /** The nodes and connections the compiler and the engine see: composites replaced by their members. */
+  #expand(nodes, connections, { bypassed = () => false } = {}) {
+    return expandComposites({
+      nodes: nodes.map((n2) => ({ id: n2.id })),
+      connections,
+      treeOf: (id) => this.#composites.get(id)?.entry.tree ?? null,
+      bypassed
+    });
+  }
+  /** compileGraph over a project, after expansion. `project` may be a trial copy. */
+  #compileProject(project) {
+    const flat = this.#expand(project.nodes, project.connections);
+    return compileGraph({ nodes: flat.nodes, connections: flat.connections }, { latencyOf: (id) => this.#latencyOf(id) });
+  }
   /** The latency each node declares, from what the engine actually loaded. */
   #latencyOf(nodeId) {
-    const engineId = this.#nodeIds.get(nodeId);
+    const engineId = this.#engineIdOf(nodeId);
     if (!engineId || !this.#engine) return 0;
     try {
       return this.#engine.get(engineId).ready?.latencyFrames ?? 0;
@@ -24353,7 +24937,7 @@ var OpDispatcher = class {
     }
     const trial = this.#clone();
     trial.apply(changes);
-    const compiled = compileGraph(trial, { latencyOf: (id) => this.#latencyOf(id) });
+    const compiled = this.#compileProject(trial);
     if (!compiled.ok) {
       return {
         ok: false,
@@ -24514,19 +25098,19 @@ var OpDispatcher = class {
    * input, since it is the only node there for notes to go to. On an existing
    * track nothing is guessed: which node takes the notes is a person's call.
    */
-  async addPlugin(iri2, { position: position2, foreign = false, ...node } = {}) {
+  async addPlugin(iri3, { position: position2, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
-      entry = foreign ? await this.#addForeign(iri2) : await this.#engine.addPlugin(iri2, { state: decodeState(node.state ?? null) });
+      entry = foreign ? await this.#addForeign(iri3) : await this.#engine.addPlugin(iri3, { state: decodeState(node.state ?? null) });
     } catch (error2) {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
       }
-      this.#inspections.record({ iri: iri2, outcome: `failed: ${error2.message}` });
+      this.#inspections.record({ iri: iri3, outcome: `failed: ${error2.message}` });
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    this.#inspections.record({ iri: iri2, outcome: "loaded" });
+    this.#inspections.record({ iri: iri3, outcome: "loaded" });
     const label = node.label ?? entry.profile.label;
     const changes = [];
     let newTrack = null;
@@ -24535,15 +25119,16 @@ var OpDispatcher = class {
       changes.push({ op: "addTrack", id: newTrack, label });
     }
     const nodeId = node.id ?? this.#project.nextId("node");
-    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri2, label });
+    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
     if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
       changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
     }
     const result = this.apply(changes);
     if (!result.ok) {
-      this.#engine.remove(entry.id);
+      for (const id of entry.composite ? entry.members.map((m) => m.entry.id) : [entry.id]) this.#engine.remove(id);
       return result;
     }
+    if (entry.composite) return this.#adoptComposite(nodeId, entry, { result, track: node.track ?? newTrack, position: position2 });
     this.#nodeIds.set(nodeId, entry.id);
     this.#rebuildLinks(this.compile());
     this.#router?.observe(entry.id);
@@ -24557,20 +25142,44 @@ var OpDispatcher = class {
     return { ...result, nodeId, trackId: node.track ?? newTrack, entry };
   }
   /**
+   * Take a loaded composite into the graph under one model node. Its members are engine nodes keyed by flat id,
+   * and everything the model says about the node (settings, bypass, track) is read through the composite's
+   * exposed ports and boundary, never by reaching a member directly.
+   */
+  #adoptComposite(nodeId, entry, { result, track, position: position2 }) {
+    const flatIds = [];
+    for (const { path, entry: member } of entry.members) {
+      const flat = flatIdOf(nodeId, path);
+      flatIds.push(flat);
+      this.#memberIds.set(flat, member.id);
+    }
+    this.#composites.set(nodeId, { entry, flatIds });
+    this.#rebuildLinks(this.compile());
+    for (const [i2, { entry: member }] of entry.members.entries()) {
+      this.#router?.observe(member.id);
+      this.#engine.onMessage(member.id, (message) => {
+        if (message?.type === "latency") this.#onLatency(flatIds[i2], member.id, message, nodeId);
+      });
+    }
+    if (position2) this.#project.moveNode(nodeId, position2.x, position2.y);
+    this.#emit({ type: "plugin-added", nodeId, trackId: track, entry });
+    return { ...result, nodeId, trackId: track, entry };
+  }
+  /**
    * Fetch a foreign profile, load it through its adapter, and adopt it.
    *
    * Private because there must be exactly one way into running foreign code,
    * and it is the branch in addPlugin above.
    */
-  async #addForeign(iri2) {
+  async #addForeign(iri3) {
     if (!this.#foreign) {
       throw new Error(
         "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
       );
     }
-    const loaded = await this.#foreign.add(iri2, this.#engine.context);
+    const loaded = await this.#foreign.add(iri3, this.#engine.context);
     return this.#engine.adopt({
-      iri: iri2,
+      iri: iri3,
       profile: loaded.profile,
       node: loaded.node,
       ready: loaded.ready
@@ -24588,8 +25197,8 @@ var OpDispatcher = class {
    * is reported and skipped: the next full rebuild wires it with the current
    * figures.
    */
-  #onLatency(nodeId, engineId, message) {
-    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return;
+  #onLatency(nodeId, engineId, message, outerNodeId = nodeId) {
+    if (this.#engineIdOf(nodeId) !== engineId || !this.#engine) return;
     let entry;
     try {
       entry = this.#engine.get(engineId);
@@ -24632,7 +25241,7 @@ var OpDispatcher = class {
     }
     this.#compensation = after;
     this.#applyTrackDelays(compiled);
-    this.#emit({ type: "latency", nodeId, latencyFrames, fromFrame, compiled });
+    this.#emit({ type: "latency", nodeId: outerNodeId, latencyFrames, fromFrame, compiled });
   }
   /**
    * Set a parameter. Goes to the model and the AudioParam, never a message.
@@ -24645,20 +25254,44 @@ var OpDispatcher = class {
    * second went straight to the project, around this dispatcher's own gate.
    */
   setParameter(nodeId, symbol, value2) {
-    const engineId = this.#nodeIds.get(nodeId);
-    let applied = value2;
-    if (engineId && this.#engine) {
-      try {
-        applied = this.#engine.clampParameter(engineId, symbol, value2);
-      } catch (error2) {
-        return { ok: false, kind: "change", message: error2.message };
-      }
+    let prepared;
+    try {
+      prepared = this.#prepareParameter(nodeId, symbol, value2);
+    } catch (error2) {
+      return { ok: false, kind: "change", message: error2.message };
     }
-    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: applied }]);
+    const result = this.apply([{ op: "setSetting", node: nodeId, symbol, value: prepared.applied }]);
     if (!result.ok) return result;
-    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
-    this.#emit({ type: "parameter", nodeId, symbol, value: applied });
-    return { ...result, value: applied };
+    prepared.push();
+    this.#emit({ type: "parameter", nodeId, symbol, value: prepared.applied });
+    return { ...result, value: prepared.applied };
+  }
+  /**
+   * What a write to one parameter would do: the value as the plugin will hold it, and how to send it.
+   *
+   * A plain node's value is clamped by the plugin's declared range. A composite's is clamped by the range its
+   * exposed port declares and sent unchanged to every real parameter that port drives (section 2.2), each of
+   * which clamps it again to its own. Throws, before anything has changed, for a parameter that is not there.
+   */
+  #prepareParameter(nodeId, symbol, value2) {
+    const composite = this.#composites.get(nodeId);
+    if (composite) {
+      const port = composite.entry.profile.ports.find((p) => p.symbol === symbol);
+      if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`);
+      const bounded = Math.min(port.maximum ?? Infinity, Math.max(port.minimum ?? -Infinity, value2));
+      const targets = parameterTargets(composite.entry.tree, symbol).map((target2) => {
+        const engineId2 = this.#memberIds.get(flatIdOf(nodeId, target2.path));
+        return { engineId: engineId2, symbol: target2.symbol, value: this.#engine ? this.#engine.clampParameter(engineId2, target2.symbol, bounded) : bounded };
+      });
+      return { applied: bounded, push: () => {
+        for (const t of targets) this.#engine?.setParameter(t.engineId, t.symbol, t.value);
+      } };
+    }
+    const engineId = this.#nodeIds.get(nodeId);
+    const applied = engineId && this.#engine ? this.#engine.clampParameter(engineId, symbol, value2) : value2;
+    return { applied, push: () => {
+      if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied);
+    } };
   }
   /**
    * Put a parameter back to its plugin's default and forget its setting, so
@@ -24668,17 +25301,30 @@ var OpDispatcher = class {
    * and an open editor all at the value being undone.
    */
   resetParameter(nodeId, symbol) {
-    const engineId = this.#nodeIds.get(nodeId);
+    const composite = this.#composites.get(nodeId);
     let value2 = null;
-    if (engineId && this.#engine) {
-      try {
-        value2 = this.#engine.defaultParameter(engineId, symbol);
-      } catch (error2) {
-        return { ok: false, kind: "change", message: error2.message };
+    let prepared = null;
+    try {
+      if (composite) {
+        const port = composite.entry.profile.ports.find((p) => p.symbol === symbol);
+        if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`);
+        value2 = port.defaultValue;
+        prepared = this.#prepareParameter(nodeId, symbol, value2);
+      } else {
+        const engineId2 = this.#nodeIds.get(nodeId);
+        if (engineId2 && this.#engine) value2 = this.#engine.defaultParameter(engineId2, symbol);
       }
+    } catch (error2) {
+      return { ok: false, kind: "change", message: error2.message };
     }
     const result = this.apply([{ op: "clearSetting", node: nodeId, symbol }]);
     if (!result.ok) return result;
+    if (prepared) {
+      prepared.push();
+      this.#emit({ type: "parameter", nodeId, symbol, value: prepared.applied });
+      return { ...result, value: prepared.applied };
+    }
+    const engineId = this.#nodeIds.get(nodeId);
     if (engineId && this.#engine && value2 !== null) {
       this.#engine.setParameter(engineId, symbol, value2);
       this.#emit({ type: "parameter", nodeId, symbol, value: value2 });
@@ -24697,6 +25343,11 @@ var OpDispatcher = class {
    * plugin that never answers, which are both ordinary rather than errors.
    */
   async getNodeState(nodeId) {
+    const composite = this.#composites.get(nodeId);
+    if (composite && this.#engine) {
+      const state = await collectState(composite.entry.tree, (path) => this.#engine.requestState(this.#memberIds.get(flatIdOf(nodeId, path))));
+      return state ?? null;
+    }
     const engineId = this.#nodeIds.get(nodeId);
     if (!engineId || !this.#engine) return null;
     if (this.#engine.get(engineId)?.profile?.stateless) return null;
@@ -24712,6 +25363,7 @@ var OpDispatcher = class {
    */
   loadAsset(nodeId, key, bytes) {
     const engineId = this.#nodeIds.get(nodeId);
+    if (this.#composites.has(nodeId)) return { ok: false, message: "a composite plugin has no assets of its own to replace" };
     if (!engineId || !this.#engine) {
       return { ok: false, message: "no such node, or nothing to load an asset into" };
     }
@@ -24747,6 +25399,17 @@ var OpDispatcher = class {
       } catch {
       }
       this.#nodeIds.delete(nodeId);
+    }
+    for (const [nodeId, composite] of [...this.#composites]) {
+      if (this.#project.node(nodeId)) continue;
+      for (const flat of composite.flatIds) {
+        try {
+          this.#engine.remove(this.#memberIds.get(flat));
+        } catch {
+        }
+        this.#memberIds.delete(flat);
+      }
+      this.#composites.delete(nodeId);
     }
   }
   /**
@@ -24825,26 +25488,27 @@ var OpDispatcher = class {
    */
   #linkSinksToTracks() {
     if (!this.#engine) return;
+    const flat = this.#expandedInUse(this.#stepOverBypassed());
     const feedsSomething = /* @__PURE__ */ new Set();
-    for (const connection of this.#connectionsInUse()) {
+    for (const connection of flat.connections) {
       if (isMidi(connection.signalKind)) continue;
       feedsSomething.add(connection.from.node);
     }
-    for (const node of this.#project.nodes) {
+    for (const node of flat.nodes) {
       if (feedsSomething.has(node.id)) continue;
       if (node.bypassed) continue;
-      const engineId = this.#nodeIds.get(node.id);
+      const engineId = this.#engineIdOf(node.id);
       if (!engineId) continue;
       const entry = this.#engine.get(engineId);
       if (!(entry?.node?.numberOfOutputs > 0)) continue;
-      this.#engine.linkToTrack(engineId, node.track);
+      this.#engine.linkToTrack(engineId, this.#project.node(node.path[0]).track);
     }
   }
   /**
    * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
    * model keeps every connection; bypass changes only what is wired.
    */
-  #connectionsInUse() {
+  #stepOverBypassed() {
     const passes = (nodeId, kind) => {
       const profile = this.engineNode(nodeId)?.profile;
       if (!profile) return false;
@@ -24856,6 +25520,13 @@ var OpDispatcher = class {
       passes
     });
   }
+  /** What the engine is wired from: bypass applied to the project's own connections, then composites expanded. */
+  #connectionsInUse() {
+    return this.#expandedInUse(this.#stepOverBypassed()).connections;
+  }
+  #expandedInUse(connections) {
+    return this.#expand(this.#project.nodes, connections, { bypassed: (id) => this.#project.node(id)?.bypassed === true });
+  }
   #rebuildLinks(compiled) {
     if (!this.#engine) return;
     const delayFor = new Map(compiled.compensation.map((c3) => [c3.connection, c3.delayFrames]));
@@ -24865,8 +25536,8 @@ var OpDispatcher = class {
     this.#applyRouting();
     const midiRoutes = [];
     for (const connection of this.#connectionsInUse()) {
-      const from = this.#nodeIds.get(connection.from.node);
-      const to = this.#nodeIds.get(connection.to.node);
+      const from = this.#engineIdOf(connection.from.node);
+      const to = this.#engineIdOf(connection.to.node);
       if (!from || !to) continue;
       if (isMidi(connection.signalKind)) {
         midiRoutes.push({ from, to });
@@ -24900,16 +25571,12 @@ var OpDispatcher = class {
     }
     const applied = [];
     for (const { nodeId, symbol, value: value2 } of settings) {
-      const engineId = this.#nodeIds.get(nodeId);
-      let clamped = value2;
-      if (engineId && this.#engine) {
-        try {
-          clamped = this.#engine.clampParameter(engineId, symbol, value2);
-        } catch (error2) {
-          return { ok: false, kind: "change", message: error2.message };
-        }
+      try {
+        const prepared = this.#prepareParameter(nodeId, symbol, value2);
+        applied.push({ nodeId, symbol, value: prepared.applied, push: prepared.push });
+      } catch (error2) {
+        return { ok: false, kind: "change", message: error2.message };
       }
-      applied.push({ nodeId, symbol, value: clamped, engineId });
     }
     const result = this.apply(
       applied.map((a2) => ({ op: "setSetting", node: a2.nodeId, symbol: a2.symbol, value: a2.value })),
@@ -24917,7 +25584,7 @@ var OpDispatcher = class {
     );
     if (!result.ok) return result;
     for (const a2 of applied) {
-      if (a2.engineId && this.#engine) this.#engine.setParameter(a2.engineId, a2.symbol, a2.value);
+      a2.push();
       this.#emit({ type: "parameter", nodeId: a2.nodeId, symbol: a2.symbol, value: a2.value });
     }
     return { ...result, applied: applied.map(({ nodeId, symbol, value: value2 }) => ({ nodeId, symbol, value: value2 })) };
@@ -24926,14 +25593,28 @@ var OpDispatcher = class {
   setTrackChannel(trackId, change, { expectedRevision } = {}) {
     return this.apply([{ op: "setTrackChannel", track: trackId, ...change }], { expectedRevision });
   }
+  /**
+   * The AudioParams a node's parameter is, for automation: one for a plugin, and for a composite one for every
+   * member parameter the exposed port drives. Empty for a parameter that is not there or a node not loaded.
+   */
+  audioParams(nodeId, symbol) {
+    const composite = this.#composites.get(nodeId);
+    if (composite && this.#engine) {
+      return parameterTargets(composite.entry.tree, symbol).map((target2) => this.#engine.get(this.#memberIds.get(flatIdOf(nodeId, target2.path))).node.parameters?.get(target2.symbol)).filter(Boolean);
+    }
+    const param = this.engineNode(nodeId)?.node?.parameters?.get(symbol);
+    return param ? [param] : [];
+  }
   /** The engine node behind a model node, if it has been loaded. */
   engineNode(nodeId) {
+    const composite = this.#composites.get(nodeId);
+    if (composite) return composite.entry;
     const engineId = this.#nodeIds.get(nodeId);
     return engineId && this.#engine ? this.#engine.get(engineId) : null;
   }
   /** Compile without changing anything, for diagnostics. */
   compile() {
-    return compileGraph(this.#project, { latencyOf: (id) => this.#latencyOf(id) });
+    return this.#compileProject(this.#project);
   }
 };
 
@@ -24957,46 +25638,46 @@ var ClipPlayer = class {
     this.#fetchBytes = fetchBytes;
   }
   /** The decoded audio, or null while it loads or if it failed. */
-  buffer(iri2) {
-    return this.#buffers.get(iri2) ?? null;
+  buffer(iri3) {
+    return this.#buffers.get(iri3) ?? null;
   }
   /** Why a source could not be loaded, or null. */
-  failure(iri2) {
-    return this.#failures.get(iri2) ?? null;
+  failure(iri3) {
+    return this.#failures.get(iri3) ?? null;
   }
   /**
    * Decode a source, once. Resolves with the AudioBuffer, or with null if it
    * cannot be had, in which case failure(iri) says why. Never rejects: one
    * missing file is one silent clip, not a session that will not play.
    */
-  load(iri2) {
-    if (this.#buffers.has(iri2)) return Promise.resolve(this.#buffers.get(iri2));
-    if (this.#loading.has(iri2)) return this.#loading.get(iri2);
+  load(iri3) {
+    if (this.#buffers.has(iri3)) return Promise.resolve(this.#buffers.get(iri3));
+    if (this.#loading.has(iri3)) return this.#loading.get(iri3);
     const loading = (async () => {
       try {
-        const bytes = await this.#fetchBytes(iri2);
+        const bytes = await this.#fetchBytes(iri3);
         const buffer = await this.#context.decodeAudioData(bytes);
-        this.#buffers.set(iri2, buffer);
-        this.#failures.delete(iri2);
+        this.#buffers.set(iri3, buffer);
+        this.#failures.delete(iri3);
         return buffer;
       } catch (error2) {
-        this.#failures.set(iri2, error2);
+        this.#failures.set(iri3, error2);
         return null;
       } finally {
-        this.#loading.delete(iri2);
+        this.#loading.delete(iri3);
       }
     })();
-    this.#loading.set(iri2, loading);
+    this.#loading.set(iri3, loading);
     return loading;
   }
   /**
    * The loudest sample in each of `count` equal stretches of the first
    * channel, for drawing a waveform. Computed once per source and count.
    */
-  peaks(iri2, count) {
-    const buffer = this.buffer(iri2);
+  peaks(iri3, count) {
+    const buffer = this.buffer(iri3);
     if (!buffer || !(count > 0)) return null;
-    const key = `${count} ${iri2}`;
+    const key = `${count} ${iri3}`;
     if (this.#peaks.has(key)) return this.#peaks.get(key);
     const data = buffer.getChannelData(0);
     const out = new Float32Array(count);
@@ -25018,8 +25699,8 @@ var ClipPlayer = class {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start({ iri: iri2, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
-    const buffer = this.buffer(iri2);
+  start({ iri: iri3, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
+    const buffer = this.buffer(iri3);
     if (!buffer) return false;
     const source = this.#context.createBufferSource();
     source.buffer = buffer;
@@ -25137,12 +25818,12 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
     throw new Error("the cut must fall inside the clip");
   }
-  const first = atBeat - clip.startBeat;
-  const second = clip.lengthBeats - first;
+  const first2 = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first2;
   if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first);
+    const { left, right } = partition(clip.notes, first2);
     return [
-      { op: "setClip", id, lengthBeats: first },
+      { op: "setClip", id, lengthBeats: first2 },
       { op: "setClipNotes", id, notes: left },
       { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
     ];
@@ -25150,7 +25831,7 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   if (!transport) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
   const offsetSeconds = clip.offsetSeconds + (transport.secondsAtBeat(atBeat) - transport.secondsAtBeat(clip.startBeat));
   return [
-    { op: "setClip", id, lengthBeats: first, fadeOutBeats: 0 },
+    { op: "setClip", id, lengthBeats: first2, fadeOutBeats: 0 },
     { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
   ];
 }
@@ -25302,12 +25983,12 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri2 } = {}) {
+      async handler({ iri: iri3 } = {}) {
         const unavailable2 = requireCatalogue();
         if (unavailable2) return unavailable2;
-        if (!iri2) return failed("plugin_describe needs an iri");
+        if (!iri3) return failed("plugin_describe needs an iri");
         try {
-          return ok(await catalogue.describe(iri2));
+          return ok(await catalogue.describe(iri3));
         } catch (error2) {
           return failed(`catalogue: ${error2.message}`);
         }
@@ -25326,11 +26007,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         if (unavailable2) return unavailable2;
         if (iris.length < 2) return failed("a chain needs at least two plugins");
         const described = [];
-        for (const iri2 of iris) {
+        for (const iri3 of iris) {
           try {
-            described.push(await catalogue.describe(iri2));
+            described.push(await catalogue.describe(iri3));
           } catch (error2) {
-            return failed(`could not describe ${iri2}: ${error2.message}`);
+            return failed(`could not describe ${iri3}: ${error2.message}`);
           }
         }
         const problems = [];
@@ -25363,11 +26044,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri2 } = {}) {
-        if (!iri2) return failed("collection_open needs an iri");
+      async handler({ iri: iri3 } = {}) {
+        if (!iri3) return failed("collection_open needs an iri");
         if (!openCollection) return failed("this host cannot open collections");
         try {
-          const { collection, warnings, members } = await openCollection(iri2);
+          const { collection, warnings, members } = await openCollection(iri3);
           return ok({
             label: collection.label,
             comment: collection.comment ?? null,
@@ -25390,10 +26071,10 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["iri"]
       },
-      async handler({ iri: iri2, track } = {}) {
-        if (!iri2) return failed("plugin_load needs an iri");
+      async handler({ iri: iri3, track } = {}) {
+        if (!iri3) return failed("plugin_load needs an iri");
         if (!loadPlugin) return failed("this host cannot load plugins");
-        const result = await loadPlugin(iri2, track ? { track } : {});
+        const result = await loadPlugin(iri3, track ? { track } : {});
         if (!result.ok) return failed(result.message, { step: result.step ?? null });
         return ok({
           nodeId: result.nodeId,
@@ -26236,7 +26917,7 @@ function createRuntime(ctx2) {
       output: analyser,
       maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
-    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri2) => ctx2.media.fetchBytes(iri2) });
+    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3) });
     const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
     const dispatcher = new OpDispatcher({
       engine: ctx2.engine,
@@ -26261,8 +26942,8 @@ function createRuntime(ctx2) {
       const registration = registerTools({
         dispatcher,
         catalogue: ctx2.browser.catalogue(),
-        loadPlugin: (iri2, options) => dispatcher.addPlugin(iri2, options),
-        openCollection: (iri2) => ctx2.browser.loadCollection(iri2),
+        loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
+        openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
         onPlay: () => ctx2.transport.play(),
         onStop: async () => {
           ctx2.transport.stop();
@@ -26275,7 +26956,7 @@ function createRuntime(ctx2) {
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
     } else if (ctx2.script) {
-      const tools = createTools({ dispatcher, loadPlugin: (iri2, options) => dispatcher.addPlugin(iri2, options), reel: ctx2.script.agentReel() });
+      const tools = createTools({ dispatcher, loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options), reel: ctx2.script.agentReel() });
       ctx2.script.attach({ dispatcher, tools, loader: ctx2.loader });
     }
     ctx2.transport.meterLoop();
@@ -26291,9 +26972,9 @@ function createAutomationHost(ctx2) {
   const { log: log2 } = ctx2;
   const touched = /* @__PURE__ */ new Map();
   const warned = /* @__PURE__ */ new Set();
-  const keyOf = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const keyOf2 = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
   const MASTER = { masterGain: "gain", masterPan: "pan" };
-  const paramOf = (target2) => target2.kind !== void 0 ? MASTER[target2.kind] ? ctx2.engine.masterParam(MASTER[target2.kind]) : null : ctx2.dispatcher.engineNode(target2.node)?.node?.parameters?.get(target2.symbol);
+  const paramsOf = (target2) => target2.kind !== void 0 ? [MASTER[target2.kind] ? ctx2.engine.masterParam(MASTER[target2.kind]) : null].filter(Boolean) : ctx2.dispatcher.audioParams(target2.node, target2.symbol);
   const hold = (target2, on) => {
     if (MASTER[target2.kind]) ctx2.engine.holdMaster(MASTER[target2.kind], on);
   };
@@ -26322,25 +27003,25 @@ function createAutomationHost(ctx2) {
     envelopes: () => ctx2.dispatcher.project.envelopes.filter((e) => (e.target.node !== void 0 || MASTER[e.target.kind]) && e.points.length > 0),
     apply(envelope, instruction) {
       listen();
-      const param = paramOf(envelope.target);
-      if (!param) return;
-      const state = touched.get(param) ?? { target: envelope.target, suspended: false };
-      touched.set(param, state);
-      if (state.suspended) return;
-      if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) return;
-      if (!state.held) {
-        hold(envelope.target, true);
-        state.held = true;
-        masterAtStart ??= masterSnapshot();
-      }
-      try {
-        if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
-        else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
-        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
-      } catch (error2) {
-        if (!warned.has(envelope.id)) {
-          warned.add(envelope.id);
-          log2(`automation ${envelope.id}: ${error2.message}`, "error");
+      for (const param of paramsOf(envelope.target)) {
+        const state = touched.get(param) ?? { target: envelope.target, suspended: false };
+        touched.set(param, state);
+        if (state.suspended) continue;
+        if (envelope.target.kind === "masterGain" && ctx2.dispatcher.project.master.muted) continue;
+        if (!state.held) {
+          hold(envelope.target, true);
+          state.held = true;
+          masterAtStart ??= masterSnapshot();
+        }
+        try {
+          if (instruction.kind === "set") param.setValueAtTime(instruction.value, instruction.at);
+          else if (instruction.kind === "ramp") param.linearRampToValueAtTime(instruction.endValue, instruction.end);
+          else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration);
+        } catch (error2) {
+          if (!warned.has(envelope.id)) {
+            warned.add(envelope.id);
+            log2(`automation ${envelope.id}: ${error2.message}`, "error");
+          }
         }
       }
     },
@@ -26348,7 +27029,7 @@ function createAutomationHost(ctx2) {
     edited(nodeId, symbol, value2) {
       const target2 = { node: nodeId, symbol };
       for (const [param, state] of touched) {
-        if (keyOf(state.target) !== keyOf(target2) || state.suspended) continue;
+        if (keyOf2(state.target) !== keyOf2(target2) || state.suspended) continue;
         const now = ctx2.engine.context.currentTime;
         param.cancelScheduledValues(now);
         param.setValueAtTime(value2, now);
@@ -26785,12 +27466,12 @@ function createTransport(ctx2) {
       for (const { at, accent } of pre.clicks) click(startedAt + at, accent);
     }
     $2("play").setAttribute("aria-pressed", "true");
-    const first = d.project.nodes[0];
-    const startsWithEffect = first && (d.engineNode(first.id)?.profile.audioInputs ?? 0) > 0;
+    const first2 = d.project.nodes[0];
+    const startsWithEffect = first2 && (d.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
     if (startsWithEffect) {
       source = makeSource(engine.context);
       source.start();
-      const entry = d.engineNode(first.id);
+      const entry = d.engineNode(first2.id);
       if (entry) source.connect(entry.node, 0, 0);
     }
     sendTransport();
@@ -26807,9 +27488,9 @@ function createTransport(ctx2) {
       automation
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
-    await Promise.all(sources.map((iri2) => clipPlayer.load(iri2)));
-    const failed2 = sources.filter((iri2) => clipPlayer.failure(iri2));
-    for (const iri2 of failed2) log2(`audio clip source ${iri2}: ${clipPlayer.failure(iri2).message}`, "error");
+    await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
+    const failed2 = sources.filter((iri3) => clipPlayer.failure(iri3));
+    for (const iri3 of failed2) log2(`audio clip source ${iri3}: ${clipPlayer.failure(iri3).message}`, "error");
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt);
     scheduler.tick();
@@ -26965,7 +27646,7 @@ init_parse();
 
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
-var { jig: jig3, trn: trn3 } = vocabulary;
+var { jig: jig4, trn: trn4 } = vocabulary;
 var PREFIXES2 = [
   ["jig", JIG],
   ["trn", TRN],
@@ -26973,11 +27654,11 @@ var PREFIXES2 = [
   ["dcterms", "http://purl.org/dc/terms/"],
   ["xsd", "http://www.w3.org/2001/XMLSchema#"]
 ];
-function term2(iri2) {
+function term3(iri3) {
   for (const [prefix, namespace2] of PREFIXES2) {
-    if (iri2.startsWith(namespace2)) return `${prefix}:${iri2.slice(namespace2.length)}`;
+    if (iri3.startsWith(namespace2)) return `${prefix}:${iri3.slice(namespace2.length)}`;
   }
-  return `<${iri2}>`;
+  return `<${iri3}>`;
 }
 function string(value2) {
   return JSON.stringify(String(value2));
@@ -27004,129 +27685,129 @@ function endpoint(lines, base, id, e) {
   if (hasIndex === hasSymbol) {
     throw new Error(`endpoint ${id} must give exactly one of portIndex or portSymbol`);
   }
-  const port = hasIndex ? `${term2(jig3.portIndex)} ${integer(e.portIndex)}` : `${term2(jig3.portSymbol)} ${string(e.portSymbol)}`;
-  lines.push(`<#${id}> a ${term2(jig3.Endpoint)} ; ${term2(jig3.endpointNode)} <#${e.node}> ; ${port} .`);
+  const port = hasIndex ? `${term3(jig4.portIndex)} ${integer(e.portIndex)}` : `${term3(jig4.portSymbol)} ${string(e.portSymbol)}`;
+  lines.push(`<#${id}> a ${term3(jig4.Endpoint)} ; ${term3(jig4.endpointNode)} <#${e.node}> ; ${port} .`);
 }
-function writeProject(project, { iri: iri2, created = null } = {}) {
-  if (!iri2) throw new Error("writeProject needs the project IRI, which becomes the @base");
+function writeProject(project, { iri: iri3, created = null } = {}) {
+  if (!iri3) throw new Error("writeProject needs the project IRI, which becomes the @base");
   const tracks = [...project.tracks].sort(byId);
   const nodes = [...project.nodes].sort(byId);
   const connections = [...project.connections].sort(byId);
   const transport = project.transport;
   const lines = [];
-  lines.push(`@base <${iri2}> .`);
+  lines.push(`@base <${iri3}> .`);
   lines.push("");
   for (const [prefix, namespace2] of PREFIXES2) lines.push(`@prefix ${prefix}: <${namespace2}> .`);
   lines.push("");
   lines.push("<>");
-  lines.push(`    a ${term2(jig3.Project)} ;`);
+  lines.push(`    a ${term3(jig4.Project)} ;`);
   if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
-  lines.push(`    ${term2(jig3.revision)} ${integer(project.revision)} ;`);
+  lines.push(`    ${term3(jig4.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
-    lines.push(`    ${term2(jig3.track)} ${tracks.map((t) => `<#${t.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig4.track)} ${tracks.map((t) => `<#${t.id}>`).join(" , ")} ;`);
   }
   if (nodes.length > 0) {
-    lines.push(`    ${term2(jig3.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig4.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
   }
   if (connections.length > 0) {
-    lines.push(`    ${term2(jig3.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig4.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
   }
   const master = project.master;
   const masterIsDefault = master.gain === 1 && master.pan === 0 && !master.muted;
-  if (!masterIsDefault) lines.push(`    ${term2(jig3.master)} <#master> ;`);
+  if (!masterIsDefault) lines.push(`    ${term3(jig4.master)} <#master> ;`);
   for (const [property, items] of [
-    [jig3.send, project.sends],
-    [jig3.marker, project.markers],
-    [jig3.region, project.regions],
-    [jig3.envelope, project.envelopes]
+    [jig4.send, project.sends],
+    [jig4.marker, project.markers],
+    [jig4.region, project.regions],
+    [jig4.envelope, project.envelopes]
   ]) {
-    if (items.length > 0) lines.push(`    ${term2(property)} ${[...items].sort(byId).map((x) => `<#${x.id}>`).join(" , ")} ;`);
+    if (items.length > 0) lines.push(`    ${term3(property)} ${[...items].sort(byId).map((x) => `<#${x.id}>`).join(" , ")} ;`);
   }
-  lines.push(`    ${term2(jig3.transport)} <#transport> .`);
+  lines.push(`    ${term3(jig4.transport)} <#transport> .`);
   for (const track of tracks) {
     lines.push("");
     lines.push(`<#${track.id}>`);
-    const statements = [`a ${term2(jig3.Track)}`];
+    const statements = [`a ${term3(jig4.Track)}`];
     if (track.label) statements.push(`rdfs:label ${string(track.label)}`);
     const channel = track.channel;
-    if (channel.gain !== 1) statements.push(`${term2(jig3.gain)} ${decimal(channel.gain)}`);
-    if (channel.pan !== 0) statements.push(`${term2(jig3.pan)} ${decimal(channel.pan)}`);
-    if (channel.muted) statements.push(`${term2(jig3.muted)} true`);
-    if (channel.soloed) statements.push(`${term2(jig3.soloed)} true`);
-    if (track.midiInput) statements.push(`${term2(jig3.midiInput)} <#${track.midiInput}>`);
-    if (track.audioInput) statements.push(`${term2(jig3.audioInput)} <#${track.audioInput}>`);
-    if (track.output) statements.push(`${term2(jig3.output)} <#${track.output}>`);
+    if (channel.gain !== 1) statements.push(`${term3(jig4.gain)} ${decimal(channel.gain)}`);
+    if (channel.pan !== 0) statements.push(`${term3(jig4.pan)} ${decimal(channel.pan)}`);
+    if (channel.muted) statements.push(`${term3(jig4.muted)} true`);
+    if (channel.soloed) statements.push(`${term3(jig4.soloed)} true`);
+    if (track.midiInput) statements.push(`${term3(jig4.midiInput)} <#${track.midiInput}>`);
+    if (track.audioInput) statements.push(`${term3(jig4.audioInput)} <#${track.audioInput}>`);
+    if (track.output) statements.push(`${term3(jig4.output)} <#${track.output}>`);
     const clips = (project.clips ?? []).filter((c3) => c3.track === track.id).sort(byId);
-    if (clips.length > 0) statements.push(`${term2(jig3.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
+    if (clips.length > 0) statements.push(`${term3(jig4.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
   }
   for (const clip of [...project.clips ?? []].sort(byId)) {
     lines.push("");
     lines.push(`<#${clip.id}>`);
     const statements = [
-      `a ${term2(clip.kind === "midi" ? jig3.MidiClip : jig3.AudioClip)}`,
-      `${term2(trn3.startBeat)} ${decimal(clip.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(clip.lengthBeats)}`
+      `a ${term3(clip.kind === "midi" ? jig4.MidiClip : jig4.AudioClip)}`,
+      `${term3(trn4.startBeat)} ${decimal(clip.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(clip.lengthBeats)}`
     ];
-    if (clip.muted) statements.push(`${term2(jig3.muted)} true`);
-    if (clip.locked) statements.push(`${term2(jig3.locked)} true`);
+    if (clip.muted) statements.push(`${term3(jig4.muted)} true`);
+    if (clip.locked) statements.push(`${term3(jig4.locked)} true`);
     if (clip.kind === "audio") {
-      statements.push(`${term2(jig3.source)} <${relativeTo(clip.source, iri2)}>`);
-      if (clip.offsetSeconds !== 0) statements.push(`${term2(jig3.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
-      if (clip.fadeInBeats > 0) statements.push(`${term2(jig3.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
-      if (clip.fadeOutBeats > 0) statements.push(`${term2(jig3.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
+      statements.push(`${term3(jig4.source)} <${relativeTo(clip.source, iri3)}>`);
+      if (clip.offsetSeconds !== 0) statements.push(`${term3(jig4.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
+      if (clip.fadeInBeats > 0) statements.push(`${term3(jig4.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
+      if (clip.fadeOutBeats > 0) statements.push(`${term3(jig4.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else if (clip.notes.length > 0) {
-      statements.push(`${term2(jig3.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+      statements.push(`${term3(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
     }
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
     clip.notes.forEach((note, i2) => {
-      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term2(jig3.Note)} ; ${term2(trn3.startBeat)} ${decimal(note.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term2(trn3.pitch)} ${integer(note.pitch)} ; ${term2(trn3.velocity)} ${integer(note.velocity)} .`);
+      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig4.Note)} ; ${term3(trn4.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn4.pitch)} ${integer(note.pitch)} ; ${term3(trn4.velocity)} ${integer(note.velocity)} .`);
     });
   }
   for (const node of nodes) {
     lines.push("");
     lines.push(`<#${node.id}>`);
-    lines.push(`    a ${term2(jig3.Node)} ;`);
+    lines.push(`    a ${term3(jig4.Node)} ;`);
     if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`);
-    lines.push(`    ${term2(jig3.onTrack)} <#${node.track}> ;`);
+    lines.push(`    ${term3(jig4.onTrack)} <#${node.track}> ;`);
     const settings = [...node.settings.keys()].sort();
     if (settings.length > 0) {
-      lines.push(`    ${term2(jig3.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
+      lines.push(`    ${term3(jig4.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
-    if (node.bypassed) lines.push(`    ${term2(jig3.bypassed)} true ;`);
-    if (node.state) lines.push(`    ${term2(jig3.nodeState)} ${string(node.state)} ;`);
-    lines.push(`    ${term2(jig3.plugin)} <${node.pluginIri}> .`);
+    if (node.bypassed) lines.push(`    ${term3(jig4.bypassed)} true ;`);
+    if (node.state) lines.push(`    ${term3(jig4.nodeState)} ${string(node.state)} ;`);
+    lines.push(`    ${term3(jig4.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
-      lines.push(`<#${node.id}-${symbol}> a ${term2(jig3.ParameterSetting)} ; ${term2(jig3.symbol)} ${string(symbol)} ; ${term2(jig3.value)} ${decimal(node.settings.get(symbol))} .`);
+      lines.push(`<#${node.id}-${symbol}> a ${term3(jig4.ParameterSetting)} ; ${term3(jig4.symbol)} ${string(symbol)} ; ${term3(jig4.value)} ${decimal(node.settings.get(symbol))} .`);
     }
   }
   for (const c3 of connections) {
     lines.push("");
     lines.push(`<#${c3.id}>`);
-    lines.push(`    a ${term2(jig3.Connection)} ;`);
-    lines.push(`    ${term2(jig3.from)} <#${c3.id}-from> ; ${term2(jig3.to)} <#${c3.id}-to> ;`);
-    lines.push(`    ${term2(jig3.signalKind)} ${term2(c3.signalKind)} .`);
-    endpoint(lines, iri2, `${c3.id}-from`, c3.from);
-    endpoint(lines, iri2, `${c3.id}-to`, c3.to);
+    lines.push(`    a ${term3(jig4.Connection)} ;`);
+    lines.push(`    ${term3(jig4.from)} <#${c3.id}-from> ; ${term3(jig4.to)} <#${c3.id}-to> ;`);
+    lines.push(`    ${term3(jig4.signalKind)} ${term3(c3.signalKind)} .`);
+    endpoint(lines, iri3, `${c3.id}-from`, c3.from);
+    endpoint(lines, iri3, `${c3.id}-to`, c3.to);
   }
   writeArrangement(lines, project);
   const points = [...transport.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   lines.push("");
   lines.push("<#transport>");
-  lines.push(`    a ${term2(jig3.Transport)} ;`);
-  lines.push(`    ${term2(jig3.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term2(jig3.beatUnit)} ${integer(transport.beatUnit)} ;`);
-  const loop = transport.loopEnd > transport.loopStart ? `${term2(jig3.loopStart)} ${decimal(transport.loopStart)} ; ${term2(jig3.loopEnd)} ${decimal(transport.loopEnd)} ; ` : "";
-  lines.push(`    ${loop}${term2(jig3.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
+  lines.push(`    a ${term3(jig4.Transport)} ;`);
+  lines.push(`    ${term3(jig4.beatsPerBar)} ${integer(transport.beatsPerBar)} ; ${term3(jig4.beatUnit)} ${integer(transport.beatUnit)} ;`);
+  const loop = transport.loopEnd > transport.loopStart ? `${term3(jig4.loopStart)} ${decimal(transport.loopStart)} ; ${term3(jig4.loopEnd)} ${decimal(transport.loopEnd)} ; ` : "";
+  lines.push(`    ${loop}${term3(jig4.loopEnabled)} ${transport.loopEnabled ? "true" : "false"} ;`);
   const signatures = [...transport.signaturePoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   if (signatures.length > 0) {
-    lines.push(`    ${term2(jig3.signaturePoint)} ${signatures.map((_, i2) => `<#s${i2}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig4.signaturePoint)} ${signatures.map((_, i2) => `<#s${i2}>`).join(" , ")} ;`);
   }
-  lines.push(`    ${term2(jig3.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
+  lines.push(`    ${term3(jig4.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
   signatures.forEach((point, i2) => {
-    lines.push(`<#s${i2}> a ${term2(jig3.SignaturePoint)} ; ${term2(jig3.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig3.beatsPerBar)} ${integer(point.beatsPerBar)} ; ${term2(jig3.beatUnit)} ${integer(point.beatUnit)} .`);
+    lines.push(`<#s${i2}> a ${term3(jig4.SignaturePoint)} ; ${term3(jig4.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig4.beatsPerBar)} ${integer(point.beatsPerBar)} ; ${term3(jig4.beatUnit)} ${integer(point.beatUnit)} .`);
   });
   points.forEach((point, i2) => {
-    lines.push(`<#t${i2}> a ${term2(jig3.TempoPoint)} ; ${term2(jig3.atBeat)} ${decimal(point.atBeat)} ; ${term2(jig3.bpm)} ${decimal(point.bpm)} .`);
+    lines.push(`<#t${i2}> a ${term3(jig4.TempoPoint)} ; ${term3(jig4.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig4.bpm)} ${decimal(point.bpm)} .`);
   });
   return lines.join("\n") + "\n";
 }
@@ -27136,59 +27817,59 @@ var KIND_TERM = { masterGain: "MasterGain", masterPan: "MasterPan", tempo: "Temp
 function writeArrangement(lines, project) {
   const master = project.master;
   if (master.gain !== 1 || master.pan !== 0 || master.muted) {
-    const st = [`a ${term2(jig3.Master)}`];
-    if (master.gain !== 1) st.push(`${term2(jig3.gain)} ${decimal(master.gain)}`);
-    if (master.pan !== 0) st.push(`${term2(jig3.pan)} ${decimal(master.pan)}`);
-    if (master.muted) st.push(`${term2(jig3.muted)} true`);
+    const st = [`a ${term3(jig4.Master)}`];
+    if (master.gain !== 1) st.push(`${term3(jig4.gain)} ${decimal(master.gain)}`);
+    if (master.pan !== 0) st.push(`${term3(jig4.pan)} ${decimal(master.pan)}`);
+    if (master.muted) st.push(`${term3(jig4.muted)} true`);
     lines.push("", `<#master> ${st.join(" ; ")} .`);
   }
   for (const s of [...project.sends].sort(byId)) {
-    lines.push("", `<#${s.id}> a ${term2(jig3.Send)} ; ${term2(jig3.sendFrom)} <#${s.from}> ; ${term2(jig3.sendTo)} <#${s.to}> ; ${term2(jig3.level)} ${decimal(s.level)} ; ${term2(jig3.tap)} ${term2(jig3[TAP_TERM[s.tap]])} .`);
+    lines.push("", `<#${s.id}> a ${term3(jig4.Send)} ; ${term3(jig4.sendFrom)} <#${s.from}> ; ${term3(jig4.sendTo)} <#${s.to}> ; ${term3(jig4.level)} ${decimal(s.level)} ; ${term3(jig4.tap)} ${term3(jig4[TAP_TERM[s.tap]])} .`);
   }
   for (const m of [...project.markers].sort(byId)) {
-    lines.push("", `<#${m.id}> a ${term2(jig3.Marker)} ; ${term2(jig3.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
+    lines.push("", `<#${m.id}> a ${term3(jig4.Marker)} ; ${term3(jig4.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
   }
   for (const r of [...project.regions].sort(byId)) {
-    lines.push("", `<#${r.id}> a ${term2(jig3.Region)} ; ${term2(trn3.startBeat)} ${decimal(r.startBeat)} ; ${term2(trn3.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
+    lines.push("", `<#${r.id}> a ${term3(jig4.Region)} ; ${term3(trn4.startBeat)} ${decimal(r.startBeat)} ; ${term3(trn4.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
   }
   for (const e of [...project.envelopes].sort(byId)) {
-    const target2 = e.target.kind ? `${term2(jig3.targetKind)} ${term2(jig3[KIND_TERM[e.target.kind]])}` : `${term2(jig3.targetNode)} <#${e.target.node}> ; ${term2(jig3.targetSymbol)} ${string(e.target.symbol)}`;
+    const target2 = e.target.kind ? `${term3(jig4.targetKind)} ${term3(jig4[KIND_TERM[e.target.kind]])}` : `${term3(jig4.targetNode)} <#${e.target.node}> ; ${term3(jig4.targetSymbol)} ${string(e.target.symbol)}`;
     const points = e.points;
-    lines.push("", `<#${e.id}> a ${term2(jig3.Envelope)} ; ${target2}${points.length > 0 ? ` ; ${term2(jig3.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
+    lines.push("", `<#${e.id}> a ${term3(jig4.Envelope)} ; ${target2}${points.length > 0 ? ` ; ${term3(jig4.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
     points.forEach((p, i2) => {
-      lines.push(`<#${e.id}-p${i2}> a ${term2(jig3.EnvelopePoint)} ; ${term2(jig3.atBeat)} ${decimal(p.atBeat)} ; ${term2(jig3.pointValue)} ${decimal(p.value)} ; ${term2(jig3.curve)} ${term2(jig3[CURVE_TERM[p.curve]])} .`);
+      lines.push(`<#${e.id}-p${i2}> a ${term3(jig4.EnvelopePoint)} ; ${term3(jig4.atBeat)} ${decimal(p.atBeat)} ; ${term3(jig4.pointValue)} ${decimal(p.value)} ; ${term3(jig4.curve)} ${term3(jig4[CURVE_TERM[p.curve]])} .`);
     });
   }
 }
-function writeEditor(project, { iri: iri2 } = {}) {
-  if (!iri2) throw new Error("writeEditor needs the project IRI");
+function writeEditor(project, { iri: iri3 } = {}) {
+  if (!iri3) throw new Error("writeEditor needs the project IRI");
   const editor = project.editor;
-  const lines = [`@base <${iri2}> .`, "", `@prefix jig: <${JIG}> .`, ""];
+  const lines = [`@base <${iri3}> .`, "", `@prefix jig: <${JIG}> .`, ""];
   for (const node of [...project.nodes].sort(byId)) {
     const { x, y } = editor.position(node.id);
     if (x === 0 && y === 0) continue;
-    lines.push(`<#${node.id}> ${term2(jig3.x)} ${decimal(x)} ; ${term2(jig3.y)} ${decimal(y)} .`);
+    lines.push(`<#${node.id}> ${term3(jig4.x)} ${decimal(x)} ; ${term3(jig4.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
     const { order, color, laneSize } = editor.track(track.id);
     const parts = [];
-    if (order !== null) parts.push(`${term2(jig3.order)} ${integer(order)}`);
-    if (color !== null) parts.push(`${term2(jig3.color)} ${string(color)}`);
-    if (laneSize !== "medium") parts.push(`${term2(jig3.laneSize)} ${string(laneSize)}`);
+    if (order !== null) parts.push(`${term3(jig4.order)} ${integer(order)}`);
+    if (color !== null) parts.push(`${term3(jig4.color)} ${string(color)}`);
+    if (laneSize !== "medium") parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
     const { color } = editor.clip(clip.id);
-    if (color !== null) lines.push(`<#${clip.id}> ${term2(jig3.color)} ${string(color)} .`);
+    if (color !== null) lines.push(`<#${clip.id}> ${term3(jig4.color)} ${string(color)} .`);
   }
   return lines.join("\n") + "\n";
 }
-function writeScripts(project, { iri: iri2, savedAt = null } = {}) {
-  if (!iri2) throw new Error("writeScripts needs the project IRI");
+function writeScripts(project, { iri: iri3, savedAt = null } = {}) {
+  if (!iri3) throw new Error("writeScripts needs the project IRI");
   const scripts = project.scripts.all;
   if (scripts.length === 0) return null;
   const lines = [
-    `@base <${iri2}> .`,
+    `@base <${iri3}> .`,
     "",
     `@prefix jig: <${JIG}> .`,
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
@@ -27197,10 +27878,10 @@ function writeScripts(project, { iri: iri2, savedAt = null } = {}) {
     ""
   ];
   for (const s of scripts) {
-    const parts = [`a ${term2(jig3.Script)}`];
+    const parts = [`a ${term3(jig4.Script)}`];
     if (s.label) parts.push(`rdfs:label ${string(s.label)}`);
-    parts.push(`${term2(jig3.scriptLanguage)} ${term2(s.language)}`);
-    parts.push(`${term2(jig3.scriptSource)} ${string(s.source)}`);
+    parts.push(`${term3(jig4.scriptLanguage)} ${term3(s.language)}`);
+    parts.push(`${term3(jig4.scriptSource)} ${string(s.source)}`);
     const when = s.savedAt ?? savedAt;
     if (when) parts.push(`dcterms:modified ${string(when)}^^xsd:dateTime`);
     lines.push(`<#${s.id}> ${parts.join(" ;\n    ")} .`, "");
@@ -27210,10 +27891,10 @@ function writeScripts(project, { iri: iri2, savedAt = null } = {}) {
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
-var { jig: jig4, trn: trn4 } = vocabulary;
+var { jig: jig5, trn: trn5 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
-function objects2(dataset2, subject, predicate) {
+function objects3(dataset2, subject, predicate) {
   const out = [];
   for (const quad3 of dataset2) {
     if (quad3.subject.value === subject && quad3.predicate.value === predicate) {
@@ -27222,18 +27903,18 @@ function objects2(dataset2, subject, predicate) {
   }
   return out;
 }
-var one2 = (dataset2, subject, predicate) => objects2(dataset2, subject, predicate)[0] ?? null;
-var value = (term4) => term4 ? term4.value : null;
-function number(term4, what) {
-  if (!term4) return null;
-  const n2 = Number(term4.value);
-  if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term4.value}`);
+var one2 = (dataset2, subject, predicate) => objects3(dataset2, subject, predicate)[0] ?? null;
+var value = (term5) => term5 ? term5.value : null;
+function number2(term5, what) {
+  if (!term5) return null;
+  const n2 = Number(term5.value);
+  if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term5.value}`);
   return n2;
 }
 function findProject(dataset2) {
   const found = [];
   for (const quad3 of dataset2) {
-    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig4.Project) {
+    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig5.Project) {
       found.push(quad3.subject.value);
     }
   }
@@ -27243,25 +27924,25 @@ function findProject(dataset2) {
   }
   return found[0];
 }
-function idOf(iri2, projectIri, what) {
-  if (!iri2) throw new Error(`${what} is missing`);
-  const hash = iri2.indexOf("#");
-  if (hash < 0 || !iri2.startsWith(projectIri.split("#")[0])) {
-    throw new Error(`${what} is not a fragment of the project: ${iri2}`);
+function idOf(iri3, projectIri, what) {
+  if (!iri3) throw new Error(`${what} is missing`);
+  const hash = iri3.indexOf("#");
+  if (hash < 0 || !iri3.startsWith(projectIri.split("#")[0])) {
+    throw new Error(`${what} is not a fragment of the project: ${iri3}`);
   }
-  return iri2.slice(hash + 1);
+  return iri3.slice(hash + 1);
 }
-function readEndpoint(dataset2, iri2, projectIri, what) {
-  if (!iri2) throw new Error(`${what} is missing`);
-  const node = value(one2(dataset2, iri2, jig4.endpointNode));
+function readEndpoint2(dataset2, iri3, projectIri, what) {
+  if (!iri3) throw new Error(`${what} is missing`);
+  const node = value(one2(dataset2, iri3, jig5.endpointNode));
   if (!node) throw new Error(`${what} names no jig:endpointNode`);
-  const index = one2(dataset2, iri2, jig4.portIndex);
-  const symbol = one2(dataset2, iri2, jig4.portSymbol);
+  const index = one2(dataset2, iri3, jig5.portIndex);
+  const symbol = one2(dataset2, iri3, jig5.portSymbol);
   if (index === null === (symbol === null)) {
     throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
   }
   const endpoint2 = { node: idOf(node, projectIri, `${what} endpointNode`) };
-  if (index !== null) endpoint2.portIndex = number(index, `${what} portIndex`);
+  if (index !== null) endpoint2.portIndex = number2(index, `${what} portIndex`);
   else endpoint2.portSymbol = symbol.value;
   return endpoint2;
 }
@@ -27276,10 +27957,10 @@ function mintedOrder(a2, b) {
 }
 function readChannel(dataset2, subject, id) {
   const channel = {};
-  const gain = number(one2(dataset2, subject, jig4.gain), `gain on ${id}`);
-  const pan = number(one2(dataset2, subject, jig4.pan), `pan on ${id}`);
-  const muted = one2(dataset2, subject, jig4.muted);
-  const soloed = one2(dataset2, subject, jig4.soloed);
+  const gain = number2(one2(dataset2, subject, jig5.gain), `gain on ${id}`);
+  const pan = number2(one2(dataset2, subject, jig5.pan), `pan on ${id}`);
+  const muted = one2(dataset2, subject, jig5.muted);
+  const soloed = one2(dataset2, subject, jig5.soloed);
   if (gain !== null) channel.gain = gain;
   if (pan !== null) channel.pan = pan;
   if (muted !== null) channel.muted = muted.value === "true";
@@ -27315,17 +27996,17 @@ function foldIntoTracks(nodes, connections) {
   }
   return { tracks, trackOf };
 }
-var TAP_OF = { [jig4.PreFader]: "pre", [jig4.PostFader]: "post" };
-var CURVE_OF = { [jig4.Step]: "step", [jig4.Linear]: "linear", [jig4.Smooth]: "smooth" };
-var KIND_OF = { [jig4.MasterGain]: "masterGain", [jig4.MasterPan]: "masterPan", [jig4.Tempo]: "tempo" };
-function named(table, iri2, what) {
-  if (iri2 === null) throw new Error(`${what} is missing`);
-  if (!(iri2 in table)) throw new Error(`${what} is not one this format defines: ${iri2}`);
-  return table[iri2];
+var TAP_OF = { [jig5.PreFader]: "pre", [jig5.PostFader]: "post" };
+var CURVE_OF = { [jig5.Step]: "step", [jig5.Linear]: "linear", [jig5.Smooth]: "smooth" };
+var KIND_OF = { [jig5.MasterGain]: "masterGain", [jig5.MasterPan]: "masterPan", [jig5.Tempo]: "tempo" };
+function named(table, iri3, what) {
+  if (iri3 === null) throw new Error(`${what} is missing`);
+  if (!(iri3 in table)) throw new Error(`${what} is not one this format defines: ${iri3}`);
+  return table[iri3];
 }
-function readArrangement(dataset2, iri2, tracks) {
+function readArrangement(dataset2, iri3, tracks) {
   const changes = [];
-  const masterIri = value(one2(dataset2, iri2, jig4.master));
+  const masterIri = value(one2(dataset2, iri3, jig5.master));
   if (masterIri) {
     const channel = readChannel(dataset2, masterIri, "master");
     changes.push({
@@ -27336,134 +28017,134 @@ function readArrangement(dataset2, iri2, tracks) {
     });
   }
   for (const t of tracks) {
-    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri2, `output of track ${t.id}`) });
+    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri3, `output of track ${t.id}`) });
   }
-  const each = (property, what) => objects2(dataset2, iri2, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri2, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
-  for (const { subject, id } of each(jig4.send, "send")) {
+  const each = (property, what) => objects3(dataset2, iri3, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri3, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
+  for (const { subject, id } of each(jig5.send, "send")) {
     changes.push({
       op: "addSend",
       id,
-      from: idOf(value(one2(dataset2, subject, jig4.sendFrom)), iri2, `sendFrom of ${id}`),
-      to: idOf(value(one2(dataset2, subject, jig4.sendTo)), iri2, `sendTo of ${id}`),
-      level: number(one2(dataset2, subject, jig4.level), `level of ${id}`) ?? 1,
-      tap: named(TAP_OF, value(one2(dataset2, subject, jig4.tap)), `tap of ${id}`)
+      from: idOf(value(one2(dataset2, subject, jig5.sendFrom)), iri3, `sendFrom of ${id}`),
+      to: idOf(value(one2(dataset2, subject, jig5.sendTo)), iri3, `sendTo of ${id}`),
+      level: number2(one2(dataset2, subject, jig5.level), `level of ${id}`) ?? 1,
+      tap: named(TAP_OF, value(one2(dataset2, subject, jig5.tap)), `tap of ${id}`)
     });
   }
-  for (const { subject, id } of each(jig4.marker, "marker")) {
-    changes.push({ op: "addMarker", id, atBeat: number(one2(dataset2, subject, jig4.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
+  for (const { subject, id } of each(jig5.marker, "marker")) {
+    changes.push({ op: "addMarker", id, atBeat: number2(one2(dataset2, subject, jig5.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
   }
-  for (const { subject, id } of each(jig4.region, "region")) {
+  for (const { subject, id } of each(jig5.region, "region")) {
     changes.push({
       op: "addRegion",
       id,
-      startBeat: number(one2(dataset2, subject, trn4.startBeat), `startBeat of ${id}`),
-      lengthBeats: number(one2(dataset2, subject, trn4.lengthBeats), `lengthBeats of ${id}`),
+      startBeat: number2(one2(dataset2, subject, trn5.startBeat), `startBeat of ${id}`),
+      lengthBeats: number2(one2(dataset2, subject, trn5.lengthBeats), `lengthBeats of ${id}`),
       label: value(one2(dataset2, subject, RDFS_LABEL))
     });
   }
-  for (const { subject, id } of each(jig4.envelope, "envelope")) {
-    const kind = value(one2(dataset2, subject, jig4.targetKind));
-    const targetNode = value(one2(dataset2, subject, jig4.targetNode));
-    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri2, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig4.targetSymbol)) };
-    const points = objects2(dataset2, subject, jig4.envelopePoint).map((x) => x.value).map((pointIri) => ({
-      atBeat: number(one2(dataset2, pointIri, jig4.atBeat), `atBeat of a point in ${id}`),
-      value: number(one2(dataset2, pointIri, jig4.pointValue), `pointValue of a point in ${id}`),
-      curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig4.curve)), `curve of a point in ${id}`)
+  for (const { subject, id } of each(jig5.envelope, "envelope")) {
+    const kind = value(one2(dataset2, subject, jig5.targetKind));
+    const targetNode = value(one2(dataset2, subject, jig5.targetNode));
+    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri3, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig5.targetSymbol)) };
+    const points = objects3(dataset2, subject, jig5.envelopePoint).map((x) => x.value).map((pointIri) => ({
+      atBeat: number2(one2(dataset2, pointIri, jig5.atBeat), `atBeat of a point in ${id}`),
+      value: number2(one2(dataset2, pointIri, jig5.pointValue), `pointValue of a point in ${id}`),
+      curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig5.curve)), `curve of a point in ${id}`)
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     changes.push({ op: "addEnvelope", id, target: target2, points });
   }
   return changes;
 }
 function readProject(dataset2) {
-  const iri2 = findProject(dataset2);
+  const iri3 = findProject(dataset2);
   const changes = [];
-  const trackIris = objects2(dataset2, iri2, jig4.track).map((t) => t.value);
-  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri2, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
+  const trackIris = objects3(dataset2, iri3, jig5.track).map((t) => t.value);
+  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri3, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
     id,
     label: value(one2(dataset2, trackIri, RDFS_LABEL)),
     channel: readChannel(dataset2, trackIri, id),
-    midiInput: value(one2(dataset2, trackIri, jig4.midiInput)),
-    audioInput: value(one2(dataset2, trackIri, jig4.audioInput)),
-    output: value(one2(dataset2, trackIri, jig4.output))
+    midiInput: value(one2(dataset2, trackIri, jig5.midiInput)),
+    audioInput: value(one2(dataset2, trackIri, jig5.audioInput)),
+    output: value(one2(dataset2, trackIri, jig5.output))
   }));
   const clips = [];
   for (const trackIri of trackIris) {
-    const track = idOf(trackIri, iri2, "track");
-    for (const clipIri of objects2(dataset2, trackIri, jig4.clip).map((t) => t.value)) {
-      const id = idOf(clipIri, iri2, `clip of track ${track}`);
-      const types = objects2(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
-      const kind = types.includes(jig4.MidiClip) ? "midi" : types.includes(jig4.AudioClip) ? "audio" : null;
+    const track = idOf(trackIri, iri3, "track");
+    for (const clipIri of objects3(dataset2, trackIri, jig5.clip).map((t) => t.value)) {
+      const id = idOf(clipIri, iri3, `clip of track ${track}`);
+      const types = objects3(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
+      const kind = types.includes(jig5.MidiClip) ? "midi" : types.includes(jig5.AudioClip) ? "audio" : null;
       if (!kind) throw new Error(`clip ${id} is neither a jig:MidiClip nor a jig:AudioClip`);
       const clip = {
         op: "addClip",
         id,
         track,
         kind,
-        startBeat: number(one2(dataset2, clipIri, trn4.startBeat), `startBeat of clip ${id}`),
-        lengthBeats: number(one2(dataset2, clipIri, trn4.lengthBeats), `lengthBeats of clip ${id}`)
+        startBeat: number2(one2(dataset2, clipIri, trn5.startBeat), `startBeat of clip ${id}`),
+        lengthBeats: number2(one2(dataset2, clipIri, trn5.lengthBeats), `lengthBeats of clip ${id}`)
       };
-      const muted = one2(dataset2, clipIri, jig4.muted);
+      const muted = one2(dataset2, clipIri, jig5.muted);
       if (muted !== null) clip.muted = muted.value === "true";
-      const locked = one2(dataset2, clipIri, jig4.locked);
+      const locked = one2(dataset2, clipIri, jig5.locked);
       if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
-        clip.notes = objects2(dataset2, clipIri, jig4.note).map((t) => t.value).map((noteIri) => ({
-          startBeat: number(one2(dataset2, noteIri, trn4.startBeat), `startBeat of a note in ${id}`),
-          lengthBeats: number(one2(dataset2, noteIri, trn4.lengthBeats), `lengthBeats of a note in ${id}`),
-          pitch: number(one2(dataset2, noteIri, trn4.pitch), `pitch of a note in ${id}`),
-          velocity: number(one2(dataset2, noteIri, trn4.velocity), `velocity of a note in ${id}`)
+        clip.notes = objects3(dataset2, clipIri, jig5.note).map((t) => t.value).map((noteIri) => ({
+          startBeat: number2(one2(dataset2, noteIri, trn5.startBeat), `startBeat of a note in ${id}`),
+          lengthBeats: number2(one2(dataset2, noteIri, trn5.lengthBeats), `lengthBeats of a note in ${id}`),
+          pitch: number2(one2(dataset2, noteIri, trn5.pitch), `pitch of a note in ${id}`),
+          velocity: number2(one2(dataset2, noteIri, trn5.velocity), `velocity of a note in ${id}`)
         }));
       } else {
-        const source = value(one2(dataset2, clipIri, jig4.source));
+        const source = value(one2(dataset2, clipIri, jig5.source));
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
         clip.source = source;
-        clip.offsetSeconds = number(one2(dataset2, clipIri, jig4.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
-        clip.fadeInBeats = number(one2(dataset2, clipIri, jig4.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
-        clip.fadeOutBeats = number(one2(dataset2, clipIri, jig4.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
+        clip.offsetSeconds = number2(one2(dataset2, clipIri, jig5.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
+        clip.fadeInBeats = number2(one2(dataset2, clipIri, jig5.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
+        clip.fadeOutBeats = number2(one2(dataset2, clipIri, jig5.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
       }
       clips.push(clip);
     }
   }
   clips.sort((a2, b) => mintedOrder(a2.id, b.id));
   const nodes = [];
-  const nodeIris = objects2(dataset2, iri2, jig4.node).map((t) => t.value).sort();
+  const nodeIris = objects3(dataset2, iri3, jig5.node).map((t) => t.value).sort();
   for (const nodeIri of nodeIris) {
-    const id = idOf(nodeIri, iri2, "node");
-    const pluginIri = value(one2(dataset2, nodeIri, jig4.plugin));
+    const id = idOf(nodeIri, iri3, "node");
+    const pluginIri = value(one2(dataset2, nodeIri, jig5.plugin));
     if (!pluginIri) throw new Error(`node ${id} names no jig:plugin, so nothing says what to load`);
     const settings = {};
-    for (const settingIri of objects2(dataset2, nodeIri, jig4.setting).map((t) => t.value).sort()) {
-      const symbol = value(one2(dataset2, settingIri, jig4.symbol));
-      const setting = one2(dataset2, settingIri, jig4.value);
+    for (const settingIri of objects3(dataset2, nodeIri, jig5.setting).map((t) => t.value).sort()) {
+      const symbol = value(one2(dataset2, settingIri, jig5.symbol));
+      const setting = one2(dataset2, settingIri, jig5.value);
       if (!symbol) throw new Error(`a setting on ${id} names no jig:symbol`);
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
-      settings[symbol] = number(setting, `setting ${symbol} on ${id}`);
+      settings[symbol] = number2(setting, `setting ${symbol} on ${id}`);
     }
-    const onTrack = value(one2(dataset2, nodeIri, jig4.onTrack));
+    const onTrack = value(one2(dataset2, nodeIri, jig5.onTrack));
     nodes.push({
       id,
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
-      track: onTrack === null ? null : idOf(onTrack, iri2, `track of node ${id}`),
+      track: onTrack === null ? null : idOf(onTrack, iri3, `track of node ${id}`),
       settings,
-      state: value(one2(dataset2, nodeIri, jig4.nodeState)),
-      ...one2(dataset2, nodeIri, jig4.bypassed)?.value === "true" ? { bypassed: true } : {},
+      state: value(one2(dataset2, nodeIri, jig5.nodeState)),
+      ...one2(dataset2, nodeIri, jig5.bypassed)?.value === "true" ? { bypassed: true } : {},
       // Only read to fold a session from before tracks, below.
       channel: readChannel(dataset2, nodeIri, id)
     });
   }
   const connections = [];
-  for (const connIri of objects2(dataset2, iri2, jig4.connection).map((t) => t.value).sort()) {
-    const id = idOf(connIri, iri2, "connection");
-    const signalKind = value(one2(dataset2, connIri, jig4.signalKind));
+  for (const connIri of objects3(dataset2, iri3, jig5.connection).map((t) => t.value).sort()) {
+    const id = idOf(connIri, iri3, "connection");
+    const signalKind = value(one2(dataset2, connIri, jig5.signalKind));
     if (!signalKind) {
       throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
     }
     connections.push({
       op: "addConnection",
       id,
-      from: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.from)), iri2, `connection ${id} from`),
-      to: readEndpoint(dataset2, value(one2(dataset2, connIri, jig4.to)), iri2, `connection ${id} to`),
+      from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.from)), iri3, `connection ${id} from`),
+      to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.to)), iri3, `connection ${id} to`),
       signalKind
     });
   }
@@ -27482,42 +28163,42 @@ function readProject(dataset2) {
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue;
-    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri2, `${what} of track ${t.id}`);
+    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri3, `${what} of track ${t.id}`);
     changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
   }
   changes.push(...connections);
   changes.push(...clips);
-  changes.push(...readArrangement(dataset2, iri2, tracks));
-  const transportIri = value(one2(dataset2, iri2, jig4.transport));
+  changes.push(...readArrangement(dataset2, iri3, tracks));
+  const transportIri = value(one2(dataset2, iri3, jig5.transport));
   if (transportIri) {
-    const points = objects2(dataset2, transportIri, jig4.tempoPoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number(one2(dataset2, pointIri, jig4.atBeat), "atBeat") ?? 0,
-      bpm: number(one2(dataset2, pointIri, jig4.bpm), "bpm") ?? 120
+    const points = objects3(dataset2, transportIri, jig5.tempoPoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number2(one2(dataset2, pointIri, jig5.atBeat), "atBeat") ?? 0,
+      bpm: number2(one2(dataset2, pointIri, jig5.bpm), "bpm") ?? 120
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     const transport = {};
-    const beatsPerBar = number(one2(dataset2, transportIri, jig4.beatsPerBar), "beatsPerBar");
-    const beatUnit = number(one2(dataset2, transportIri, jig4.beatUnit), "beatUnit");
-    const loopStart = number(one2(dataset2, transportIri, jig4.loopStart), "loopStart");
-    const loopEnd = number(one2(dataset2, transportIri, jig4.loopEnd), "loopEnd");
-    const loopEnabled = one2(dataset2, transportIri, jig4.loopEnabled);
+    const beatsPerBar = number2(one2(dataset2, transportIri, jig5.beatsPerBar), "beatsPerBar");
+    const beatUnit = number2(one2(dataset2, transportIri, jig5.beatUnit), "beatUnit");
+    const loopStart = number2(one2(dataset2, transportIri, jig5.loopStart), "loopStart");
+    const loopEnd = number2(one2(dataset2, transportIri, jig5.loopEnd), "loopEnd");
+    const loopEnabled = one2(dataset2, transportIri, jig5.loopEnabled);
     if (beatsPerBar !== null) transport.beatsPerBar = beatsPerBar;
     if (beatUnit !== null) transport.beatUnit = beatUnit;
     if (loopStart !== null) transport.loopStart = loopStart;
     if (loopEnd !== null) transport.loopEnd = loopEnd;
     if (loopEnabled !== null) transport.loopEnabled = loopEnabled.value === "true";
     if (points.length > 0) transport.tempoPoints = points;
-    const signatures = objects2(dataset2, transportIri, jig4.signaturePoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number(one2(dataset2, pointIri, jig4.atBeat), "atBeat of a signature point"),
-      beatsPerBar: number(one2(dataset2, pointIri, jig4.beatsPerBar), "beatsPerBar of a signature point"),
-      beatUnit: number(one2(dataset2, pointIri, jig4.beatUnit), "beatUnit of a signature point")
+    const signatures = objects3(dataset2, transportIri, jig5.signaturePoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number2(one2(dataset2, pointIri, jig5.atBeat), "atBeat of a signature point"),
+      beatsPerBar: number2(one2(dataset2, pointIri, jig5.beatsPerBar), "beatsPerBar of a signature point"),
+      beatUnit: number2(one2(dataset2, pointIri, jig5.beatUnit), "beatUnit of a signature point")
     }));
     if (signatures.length > 0) transport.signaturePoints = signatures.sort((a2, b) => a2.atBeat - b.atBeat);
     if (Object.keys(transport).length > 0) changes.push({ op: "setTransport", ...transport });
   }
   return {
-    iri: iri2,
-    label: value(one2(dataset2, iri2, RDFS_LABEL)),
-    revision: number(one2(dataset2, iri2, jig4.revision), "revision") ?? 0,
+    iri: iri3,
+    label: value(one2(dataset2, iri3, RDFS_LABEL)),
+    revision: number2(one2(dataset2, iri3, jig5.revision), "revision") ?? 0,
     changes
   };
 }
@@ -27527,16 +28208,16 @@ function readEditor(dataset2, projectIri) {
   const layout = (id) => tracks.get(id) ?? tracks.set(id, {}).get(id);
   for (const quad3 of dataset2) {
     const p = quad3.predicate.value;
-    if (p === jig4.x || p === jig4.y) {
+    if (p === jig5.x || p === jig5.y) {
       const id = idOf(quad3.subject.value, projectIri, "position");
       const at = positions.get(id) ?? { x: 0, y: 0 };
-      at[p === jig4.x ? "x" : "y"] = Number(quad3.object.value);
+      at[p === jig5.x ? "x" : "y"] = Number(quad3.object.value);
       positions.set(id, at);
-    } else if (p === jig4.order) {
-      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number(quad3.object, "order");
-    } else if (p === jig4.color) {
+    } else if (p === jig5.order) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number2(quad3.object, "order");
+    } else if (p === jig5.color) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
-    } else if (p === jig4.laneSize) {
+    } else if (p === jig5.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
     }
   }
@@ -27547,10 +28228,10 @@ function readScripts(dataset2, projectIri) {
   const at = (id) => found.get(id) ?? found.set(id, { id, label: null, language: null, source: null, savedAt: null }).get(id);
   for (const quad3 of dataset2) {
     const p = quad3.predicate.value;
-    if (p === jig4.scriptSource || p === jig4.scriptLanguage || p === vocabulary.rdfs.label || p === vocabulary.dcterms.modified) {
+    if (p === jig5.scriptSource || p === jig5.scriptLanguage || p === vocabulary.rdfs.label || p === vocabulary.dcterms.modified) {
       const script = at(idOf(quad3.subject.value, projectIri, "script"));
-      if (p === jig4.scriptSource) script.source = quad3.object.value;
-      else if (p === jig4.scriptLanguage) script.language = quad3.object.value;
+      if (p === jig5.scriptSource) script.source = quad3.object.value;
+      else if (p === jig5.scriptLanguage) script.language = quad3.object.value;
       else if (p === vocabulary.dcterms.modified) script.savedAt = quad3.object.value;
       else script.label = quad3.object.value;
     }
@@ -27681,7 +28362,7 @@ function checkName(name) {
   if (name.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name}`);
 }
 function writeZip(entries) {
-  const encoder = new TextEncoder();
+  const encoder2 = new TextEncoder();
   const parts = [];
   const central = [];
   let offset = 0;
@@ -27689,7 +28370,7 @@ function writeZip(entries) {
     checkName(name);
     const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (data.length > 4294967294) throw new Error(`${name} is too large for a zip without zip64`);
-    const nameBytes = encoder.encode(name);
+    const nameBytes = encoder2.encode(name);
     const crc = crc32(data);
     const local = new DataView(new ArrayBuffer(30));
     local.setUint32(0, LOCAL, true);
@@ -27824,7 +28505,7 @@ function createSessions(ctx2) {
       turtle,
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       scripts: writeScripts(dispatcher.project, { iri: media.base, savedAt }),
-      media: held.map((iri2) => ({ name: iri2.slice(media.base.length), bytes: media.get(iri2).bytes }))
+      media: held.map((iri3) => ({ name: iri3.slice(media.base.length), bytes: media.get(iri3).bytes }))
     });
     return {
       kind: packed.kind,
@@ -27872,7 +28553,7 @@ function createSessions(ctx2) {
       ctx2.media.put(new URL(name, ctx2.media.base).href, bytes);
     }
     const opened = await openProject(d, read, {
-      onLoading: (iri2) => log2(`GET ${iri2}`),
+      onLoading: (iri3) => log2(`GET ${iri3}`),
       onCleared: () => {
         ctx2.rack.reset();
         ctx2.editors.closeAll();
@@ -28304,17 +28985,17 @@ function createVoice(ctx2, { getUserMedia: getUserMedia2, processorUrl = null, W
     } else {
       const sampleRate = engine.context.sampleRate;
       const bytes = takes.encode(carrier, sampleRate);
-      const iri2 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
-      ctx2.media.put(iri2, bytes, "audio/wav");
-      const buffer = await ctx2.clipPlayer.load(iri2);
-      if (!buffer) throw new Error(ctx2.clipPlayer.failure(iri2)?.message ?? "the recording could not be decoded");
+      const iri3 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+      ctx2.media.put(iri3, bytes, "audio/wav");
+      const buffer = await ctx2.clipPlayer.load(iri3);
+      if (!buffer) throw new Error(ctx2.clipPlayer.failure(iri3)?.message ?? "the recording could not be decoded");
       const transport = dispatcher.transport();
       const lengthBeats = transport.beatAtSeconds(transport.secondsAtBeat(startBeat) + takes.frames(carrier) / sampleRate) - startBeat;
       const count = dispatcher.project.tracks.filter((t) => /^Recording \d+$/.test(t.label ?? "")).length + 1;
       made = dispatcher.project.nextId("track");
       changes = [
         { op: "addTrack", id: made, label: `Recording ${count}` },
-        { op: "addClip", track: made, kind: "audio", startBeat, lengthBeats, source: iri2, offsetSeconds: 0 },
+        { op: "addClip", track: made, kind: "audio", startBeat, lengthBeats, source: iri3, offsetSeconds: 0 },
         ...changes
       ];
     }
@@ -28375,8 +29056,8 @@ async function bounce({
   }
   const clipPlayer = new ClipPlayer({ context, fetchBytes });
   const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
-  await Promise.all(sources.map((iri2) => clipPlayer.load(iri2)));
-  const errors = [...opened.errors, ...sources.filter((iri2) => clipPlayer.failure(iri2)).map((iri2) => `audio ${iri2}: ${clipPlayer.failure(iri2).message}`)];
+  await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
+  const errors = [...opened.errors, ...sources.filter((iri3) => clipPlayer.failure(iri3)).map((iri3) => `audio ${iri3}: ${clipPlayer.failure(iri3).message}`)];
   const playAudioClip = (clip, { when, offset, duration: duration2 }) => {
     const track = dispatcher.project.track(clip.track);
     if (!track) return;
@@ -28460,7 +29141,7 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       const result = await bounceFn({
         snapshot: d.project.snapshot(),
         makeLoader: () => new PluginLoader({ parse: parseText, validator, capabilities: ctx2.hostCapabilities }),
-        fetchBytes: (iri2) => ctx2.media.fetchBytes(iri2),
+        fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3),
         hostConfig: ctx2.hostConfig,
         seconds,
         sampleRate: ctx2.engine.context.sampleRate,
@@ -28537,18 +29218,18 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       return null;
     }
     const bytes = wavOf(buffer);
-    const iri2 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
-    ctx2.media.put(iri2, bytes, "audio/wav");
+    const iri3 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
+    ctx2.media.put(iri3, bytes, "audio/wav");
     const frozen = d.project.nextId("track");
     const lengthBeats = d.transport().beatAtSeconds(seconds);
     const result = d.apply([
       { op: "addTrack", id: frozen, label: `${label} (frozen)` },
-      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri2, offsetSeconds: 0 },
+      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri3, offsetSeconds: 0 },
       { op: "setTrackChannel", track: trackId, muted: true }
     ]);
     if (!result.ok) throw new Error(result.message);
     log2(`froze ${label} into "${label} (frozen)"; the original is muted, not removed. Undo brings it back`, "ok");
-    return { frozen, iri: iri2, seconds };
+    return { frozen, iri: iri3, seconds };
   }
   return { render, exportWav, exportStems, freezeTrack, get busy() {
     return busy || stemming;
@@ -28885,7 +29566,7 @@ var Tokens = class {
     return r.trim();
   }
 };
-function number2(t) {
+function number3(t) {
   t.skipSpace();
   const m = /^\d+(\.\d+)?|^\.\d+/.exec(t.text.slice(t.pos));
   if (!m) return null;
@@ -28902,17 +29583,17 @@ function number2(t) {
 }
 function expression(t, depth = 0) {
   if (depth > MAX_EXPRESSION_DEPTH) throw new LineError("expression nested too deeply", t.pos + 1);
-  let left = term3(t, depth);
+  let left = term4(t, depth);
   for (; ; ) {
     t.skipSpace();
     const c3 = t.text[t.pos];
     if (c3 === "+" || c3 === "-" && t.text[t.pos + 1] !== ">") {
       t.pos++;
-      left = { type: "binary", op: c3, left, right: term3(t, depth) };
+      left = { type: "binary", op: c3, left, right: term4(t, depth) };
     } else return left;
   }
 }
-function term3(t, depth) {
+function term4(t, depth) {
   let left = factor(t, depth);
   for (; ; ) {
     t.skipSpace();
@@ -28935,7 +29616,7 @@ function factor(t, depth) {
     t.pos++;
     return { type: "negate", operand: factor(t, depth + 1) };
   }
-  const n2 = number2(t);
+  const n2 = number3(t);
   if (n2) return n2;
   const name = t.ident();
   if (!name) throw new LineError("expected a number, a name or a call", column);
@@ -28971,7 +29652,7 @@ function position(t) {
   return { bar, beat };
 }
 function duration(t) {
-  const n2 = number2(t);
+  const n2 = number3(t);
   if (!n2 || n2.unit) throw new LineError("expected a length such as 2 bars", t.pos + 1);
   const unit = t.ident();
   if (!["bar", "bars", "beat", "beats"].includes(unit)) throw new LineError('expected "bars" or "beats" after the length', t.pos + 1);
@@ -29000,9 +29681,9 @@ function statement(text) {
     const name = t.ident();
     if (!name) throw new LineError("expected a name for the plugin", t.pos + 1);
     t.expect("=");
-    const iri2 = t.rest();
-    if (!/^https?:\/\/\S+$/.test(iri2)) throw new LineError("expected an http or https address, written out in full", t.pos - iri2.length + 1);
-    return { type: "load", name, iri: iri2, column };
+    const iri3 = t.rest();
+    if (!/^https?:\/\/\S+$/.test(iri3)) throw new LineError("expected an http or https address, written out in full", t.pos - iri3.length + 1);
+    return { type: "load", name, iri: iri3, column };
   }
   if (t.keyword("let")) {
     const name = t.ident();
@@ -29010,7 +29691,7 @@ function statement(text) {
     t.expect("=");
     s = { type: "let", name, expr: expression(t), column };
   } else if (t.keyword("seed")) {
-    const n2 = number2(t);
+    const n2 = number3(t);
     if (!n2 || n2.unit) throw new LineError("expected a whole number for the seed", t.pos + 1);
     s = { type: "seed", value: Math.trunc(n2.value), column };
   } else if (t.keyword("connect")) {
@@ -29252,7 +29933,7 @@ async function plan(statements, context) {
     }
   }
   const lets = /* @__PURE__ */ new Map();
-  const out = { seed: 1, loads: loads.map(({ name, iri: iri2, line }) => ({ name, iri: iri2, line })), lets: [], steps: [] };
+  const out = { seed: 1, loads: loads.map(({ name, iri: iri3, line }) => ({ name, iri: iri3, line })), lets: [], steps: [] };
   const portOf = (name, symbol, line, column) => {
     if (!scope.has(name)) {
       fail(line, `no plugin called "${name}"${hint(name, scope.keys())}`, column);
@@ -29536,18 +30217,18 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
 init_LoadError();
 function createPluginValidator(loader) {
   const verified = /* @__PURE__ */ new Map();
-  return async function resolvePlugin(iri2) {
+  return async function resolvePlugin(iri3) {
     try {
-      const { profile } = await loader.loadProfile(iri2);
+      const { profile } = await loader.loadProfile(iri3);
       const resources = [
         ["processor", profile.processor],
         ["module", profile.module],
         ...(profile.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
       ].filter(([, resource]) => resource);
       const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(" ");
-      if (verified.get(iri2) !== key) {
+      if (verified.get(iri3) !== key) {
         for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind });
-        verified.set(iri2, key);
+        verified.set(iri3, key);
       }
       return {
         ok: true,
@@ -29685,7 +30366,7 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
 function describePlan(plan2) {
   return {
     seed: plan2.seed,
-    loads: plan2.loads.map(({ name, iri: iri2, line }) => ({ name, iri: iri2, line })),
+    loads: plan2.loads.map(({ name, iri: iri3, line }) => ({ name, iri: iri3, line })),
     steps: plan2.steps.map((s) => ({
       line: s.line,
       when: s.when.kind === "now" ? "now" : s.when.kind === "at" ? `at beat ${s.when.beat}` : `every ${s.when.beats} beats`,

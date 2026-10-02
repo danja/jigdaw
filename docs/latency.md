@@ -89,6 +89,14 @@ ever, and a plugin that answers each note with another would make a storm. A hos
 a set of MIDI connections that forms a loop, including a plugin connected to itself, and
 SHOULD say which plugins are in it. Jiggy refuses it with the error kind `midi-cycle`.
 
+### Through a composite plugin
+
+A composite plugin ([nested-plugins.md](nested-plugins.md)) declares no latency of its own, and a host MUST NOT take one from its profile.
+It is derived. The compiler is given the graph with each composite replaced by its members, so the rule in section 3 acts on every member:
+a dry path outside a composite and a wet path through it are aligned by what is actually on each, exactly as if the members had been wired
+by hand. The composite's own figure, for track alignment and for a recording, is the greatest accumulated latency from any boundary input to
+any boundary output, and a feedback loop through its boundary is found after expansion and refused by the same rule as any other.
+
 ## 5. Tails
 
 `jig:tailFrames` is how long a plugin keeps producing output after its input falls silent.

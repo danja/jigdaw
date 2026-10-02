@@ -48,6 +48,13 @@ starts on the simple page.
 - **Chain strip.** Under each track, its plugins in signal order with what each takes and gives. Bypass a
   plugin (it keeps its state, passes the signal on, and is put back instantly). Move one earlier or later
   (Alt with Left or Right, or the buttons), which rewires the joins as one edit.
+- **Composite plugins.** A plugin made of other plugins, such as an effects rack, loads as one plugin: one node, with the few
+  controls its author exposed, which saves and reopens, undoes as one edit and is bypassed as a whole. Its members are loaded and wired
+  behind it and compensated for latency as if wired by hand, and a bad member refuses the whole thing, naming it. The page generates its
+  panel from the controls the author exposed. This was run in Chrome on 2026-10-02: it loads from an IRI, a real key played through it is
+  governed by its Drive control, a composite pinned to a profile that has since changed is refused with the session untouched, and remove
+  and undo restore it. Not yet run in the page: saving and reopening a session, the Mixer and Routing tabs, a phone, and listening to it.
+  See [nested-plugins.md](nested-plugins.md).
 - **Routing matrix.** Every output against every input, joined or not, by pointer or arrow keys.
 - **Connections.** Audio and MIDI, within a track or across tracks. A connection that would make a loop
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
@@ -114,7 +121,7 @@ starts on the simple page.
 
 ## The plugins
 
-**25 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**26 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).

@@ -90,13 +90,18 @@
   .connection-remove { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                        border:1px solid var(--line); border-radius:4px;
                        background:transparent; color:var(--dim); cursor:pointer; }
+  .connection-watch { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
+                      border:1px solid var(--line); border-radius:4px;
+                      background:transparent; color:var(--dim); cursor:pointer; }
+  .connection-watch[aria-pressed="true"] { border-color:#ffd166; color:var(--fg); }
+  .connection-log { margin:0 0 8px 28px; padding:0 0 0 16px; font-size:12px; color:var(--dim); max-height:12rem; overflow:auto; }
   /* A gap where a wire is not, so a stack of slots does not imply a chain. */
   .gap { height:20px; }
 
   @media (max-width: 760px) {
     .port { min-height:44px; flex:1 1 auto; }
     .connection { flex-wrap:wrap; }
-    .connection-remove { min-height:44px; }
+    .connection-remove, .connection-watch { min-height:44px; }
   }
 
 
@@ -104,7 +109,7 @@
   .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
     padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
   .brand { font-weight:700; letter-spacing:.5px; margin-right:4px; }
-  .transport button { min-height:40px; min-width:44px; padding:8px 14px; font-size:15px;
+  .transport button { min-height:44px; min-width:44px; padding:8px 14px; font-size:15px;
     background:#242a33; color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
   .transport button:hover { background:#2d343f; }
   .transport button[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
@@ -126,33 +131,26 @@
   /* minmax(0, 1fr), not 1fr: a 1fr track grows to the widest thing in it,
      and a timeline or a piano roll is as wide as the music. They scroll in
      their own boxes, so the column must be allowed to be narrower than they are. */
-  main { display:grid; grid-template-columns: 300px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
-  /* The browser collapsed: a 48px rail holding only the expand arrow, the
-     stage taking the rest. The panel's contents are display:none, so they
-     leave the accessibility tree exactly as hidden would. */
-  main.no-browser { grid-template-columns: 48px minmax(0, 1fr); }
-  main.no-browser .browser { padding:14px 2px; }
-  main.no-browser .browser > :not(.browser-head) { display:none; }
-  main.no-browser .browser-head { margin:0; }
-  main.no-browser .browser-head h2 { display:none; }
+  main { display:grid; grid-template-columns: 240px minmax(0, 1fr); gap:0; min-height:calc(100vh - 62px); }
+  /* The browser closed: it is hidden, and the stage has the whole width. */
+  main.no-browser { grid-template-columns: minmax(0, 1fr); }
+  .browser[hidden] { display:none; }
   .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
-  /* The collapse arrow. A 44px target that lives in the sidebar header, so the
-     transport bar keeps only Play, Stop and the session controls. The glyph
-     points at the sidebar it collapses, and the accessible name says what
-     pressing it does; aria-expanded says which it is. */
+  /* The Browser's header: its name and a Close button. Opening it is the Browser
+     button in the transport bar, which aria-expanded keeps honest. */
   .browser-head { display:flex; align-items:center; gap:8px; margin:0 0 10px; }
   .browser-head h2 { margin:0; flex:1 1 auto; }
-  #toggle-browser { flex:none; width:44px; height:44px; font-size:20px; line-height:1;
-    background:transparent; color:var(--dim); border:1px solid var(--line);
-    border-radius:4px; cursor:pointer; }
-  #toggle-browser:hover { color:var(--fg); border-color:var(--accent); }
+  #close-browser { flex:none; min-height:44px; padding:0 14px; background:transparent; color:var(--dim);
+    border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #close-browser:hover { color:var(--fg); border-color:var(--accent); }
+  .transport button[aria-expanded=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
   .stage { padding:14px; display:flex; flex-direction:column; gap:12px; min-width:0; }
   h2 { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
 
   /* Tabs. src/ui/Tabs.js builds the buttons; this only draws them. The
      selected tab is said by aria-selected, for a screen reader, and shown by
      weight and an underline together, never by colour alone. */
-  .tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:2px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; border-bottom:1px solid var(--line); margin-bottom:2px; }
   .tab { min-height:44px; padding:10px 18px; font-size:14px; font-weight:400;
     background:transparent; color:var(--dim); border:0; border-bottom:2px solid transparent;
     cursor:pointer; margin-bottom:-1px; }
@@ -167,14 +165,40 @@
   .searchbar select { flex:1 1 100%; min-height:40px; }
   .searchbar button { flex:1 1 100%; min-height:44px; background:var(--accent); color:#fff;
     border:0; border-radius:4px; font-size:15px; cursor:pointer; }
-  .result { padding:8px 10px; border:1px solid var(--line); border-radius:5px; margin-bottom:6px; background:var(--panel); }
-  .result .name { font-weight:600; font-size:13px; }
-  .result .meta { color:var(--dim); font-size:11px; }
-  .result button { margin-top:6px; min-height:36px; padding:6px 12px; font-size:13px;
+  .result { padding:6px 10px; border:1px solid var(--line); border-radius:5px; margin-bottom:4px; background:var(--panel); }
+  .result .head { display:flex; align-items:center; gap:8px; }
+  .result .name { flex:1 1 auto; min-width:0; font-weight:600; font-size:13px; overflow-wrap:anywhere; }
+  .result .meta { color:var(--dim); font-size:11px; margin-top:1px; }
+  .result button { flex:none; min-height:28px; padding:1px 8px; font-size:11px;
     background:var(--accent); color:#fff; border:0; border-radius:4px; cursor:pointer; }
   .result .native { color:var(--dim); font-size:11px; font-style:italic; }
-  .badge { font-size:10px; padding:1px 6px; border-radius:99px; background:var(--accent); color:#fff; vertical-align:middle; }
   .note { color:var(--dim); font-size:11px; margin:6px 0; }
+  /* Script tab (src/ui/ScriptPanel.js). The text area is 16px so iOS does not zoom the page in on it, and the
+     buttons are 44px. An error is the word "Error" first and a bold line number, never colour alone. */
+  .script { display:flex; flex-direction:column; gap:10px; max-width:60rem; }
+  .script-label { font-size:12px; color:var(--dim); }
+  .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
+                   font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+                   background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .script-button { min-height:44px; padding:8px 16px; font-size:16px; background:var(--panel); color:var(--fg);
+                   border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  #script-run { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .script-status { margin:0; min-height:1.5em; color:var(--fg); }
+  .script h3 { font-size:13px; margin:6px 0 4px; }
+  .script ol, .script ul { margin:0; padding-left:1.4rem; }
+  .script-problems-list li { margin-bottom:6px; overflow-wrap:anywhere; }
+  .script-problems-list .script-button { min-height:44px; margin-left:6px; padding:4px 12px; font-size:14px; }
+  .script-error-word { font-weight:700; color:var(--err); }
+  .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:12px; }
+  .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
+  .script-log-error { color:var(--err); }
+  /* No display:flex here: it removes the disclosure triangle, which is what says this opens. */
+  .script-syntax summary { cursor:pointer; color:var(--dim); font-size:14px; padding:12px 0; min-height:44px; }
+  .script-syntax dt { margin-top:8px; }
+  .script-syntax dd { margin:2px 0 0 1.2rem; color:var(--dim); font-size:12px; }
+  @media (max-width: 720px) { .script-button { flex:1 1 100%; } }
+
   .collection-name { margin:4px 0 0; font-size:14px; }
   .result.native { opacity:.62; }
 
@@ -249,16 +273,126 @@
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
   .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
+  .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
+  button[data-icon] { min-width:44px; min-height:44px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
+  button[data-icon] .icon { display:block; }
+  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
+  #carry[hidden] { display:none; }
+  #carry-text { flex:1 1 14rem; }
+  #carry button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .clip-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; font:inherit; }
+  .timeline-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
+  .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg);
+                           border:1px solid var(--line); border-radius:6px; }
+  .timeline-tools select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg);
+                           border:1px solid var(--line); border-radius:6px; }
+  .timeline-zoom { color:var(--dim); font-size:13px; min-width:5.5em; }
+  .timeline .empty { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px; margin-left:var(--head); }
+  .timeline .empty p { flex:1 1 100%; margin:0; color:var(--dim); }
+  .timeline .empty button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  /* The chain under a lane stays in view as the lanes scroll, and wraps inside what is visible. */
+  .timeline-chain { position:sticky; left:var(--head); margin-left:var(--head); width:calc(var(--view, 100vw) - var(--head) - 16px); box-sizing:border-box;
+    padding:4px 8px 8px; }
+  .timeline-chain[hidden], .timeline[data-routing="off"] .timeline-chain, .timeline-row[data-size="small"] .timeline-chain { display:none; }
+  .chain-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+  .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
+    border:1px solid var(--line); border-radius:6px; background:#161a20; }
+  .chain-item.failed { border-style:dashed; border-color:var(--err); }
+  .master-row { margin-top:8px; padding:6px 0; border-top:2px solid var(--line); }
+  .master-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 8px 6px; }
+  .master-title { font-weight:600; }
+  .master-head button { min-height:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
+  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
+  .envelope-head { display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
+  .envelope-title { flex:1 1 auto; }
+  .envelope-add, .envelope-remove { min-height:44px; min-width:44px; padding:0 10px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
+  .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
+  .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
+  .envelope-line path { fill:none; stroke:var(--accent); stroke-width:2; }
+  .envelope-point { position:absolute; width:44px; height:44px; padding:0; border:0; background:transparent; cursor:grab; touch-action:none;
+    display:flex; align-items:center; justify-content:center; }
+  .envelope-dot { width:12px; height:12px; border-radius:50%; background:var(--fg); border:2px solid var(--accent); }
+  .envelope-point:focus-visible .envelope-dot { outline:3px solid #ffd166; outline-offset:2px; }
+  .chain-head { display:flex; gap:4px; }
+  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-head .chain-node { flex:1 1 auto; min-width:0; }
+  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-item.bypassed { border-style:dotted; opacity:.75; }
+  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:5px; cursor:pointer; font-size:13px; }
+  .chain-node[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-io { font-size:11px; color:var(--dim); }
+  .chain-links { list-style:none; margin:0; padding:0; font-size:11px; color:var(--dim); }
+  .chain-links li.other { color:var(--fg); }
+  .chain-links li.other::before { content:'\21C4  '; }
+  /* The routing table scrolls inside its own box, so a wide graph never makes the page scroll sideways. */
+  .routing-matrix { overflow:auto; max-height:70vh; border:1px solid var(--line); border-radius:7px; }
+  .routing-matrix table { border-collapse:separate; border-spacing:0; font-size:12px; }
+  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:#13161b; border-bottom:1px solid var(--line); }
+  .routing-matrix thead th[scope="col"] { max-width:9rem; vertical-align:bottom; }
+  .routing-matrix tbody th { position:sticky; left:0; z-index:1; text-align:left; white-space:nowrap; border-right:1px solid var(--line); }
+  .routing-matrix td { padding:0; border-bottom:1px solid var(--line); border-right:1px solid var(--line); text-align:center; }
+  .matrix-cell { width:44px; height:44px; padding:0; background:transparent; color:var(--dim); border:0; cursor:pointer; font-size:16px; }
+  .matrix-cell[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .matrix-cell:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .head-routing { flex:1 1 100%; margin:0; font-size:12px; color:var(--fg); }
+  .timeline-head[data-size="small"] .head-routing { display:none; }
+  .sends-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .sends-panel h3 { margin:6px 0 0; font-size:13px; }
+  .send-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  .send-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
+  .send-level { display:inline-flex; align-items:center; gap:6px; }
+  .send-level input { min-height:44px; width:8rem; }
+  .send-row select, .send-add select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .master-channel { border-color:var(--accent); }
+  .align { margin:0 0 10px; }
+  .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
+  .align input { width:24px; height:24px; }
+  .timeline-loop { position:relative; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
+  .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
+    border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
+  .loop-brace.on { border:2px solid var(--accent); background:rgba(127,179,255,.18); }
+  .loop-brace span { display:block; padding:0 6px; font-size:11px; color:var(--dim); overflow:hidden; white-space:nowrap; }
+  .loop-brace.on span { color:var(--fg); }
+  .loop-handle { position:absolute; top:0; width:44px; height:44px; padding:0; background:transparent; border:0;
+    cursor:ew-resize; touch-action:none; }
+  .loop-handle::after { content:''; position:absolute; left:20px; top:8px; width:4px; height:28px;
+    background:var(--accent); border-radius:2px; }
+  .loop-handle:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .timeline-ruler i { position:absolute; bottom:0; height:6px; border-left:1px solid var(--line); }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
-  .timeline { --head:9rem; }
-  .timeline-row { display:flex; align-items:stretch; border-top:1px solid var(--line); width:max-content; }
+  .timeline { --head:13rem; }
+  .timeline-row { border-top:1px solid var(--line); width:max-content; }
+  .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
-    flex-direction:column; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
+    flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
   .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
   .timeline-head .show-track { min-height:44px; text-align:left; background:none; border:0; color:var(--fg);
     padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
   .timeline-head button { min-height:44px; font-size:12px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .timeline-head .show-track, .head-mix { flex:1 1 100%; }
+  .timeline-head > button:not(.show-track) { flex:1 1 45%; }
+  .head-mix { display:flex; flex-wrap:wrap; gap:4px; }
+  .head-mix[hidden] { display:none; }
+  .head-mix .strip-toggle { flex:1 1 4rem; }
+  .head-slider { flex:1 1 100%; display:grid; grid-template-columns:2.4rem 1fr 3.8rem; align-items:center; gap:4px; font-size:12px; }
+  .head-slider input { min-height:44px; margin:0; width:100%; }
+  .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
+  .midi-state { color:var(--dim); font-size:12px; max-width:16rem; }
+  .timeline-head > .head-arm.head-arm { flex:1 1 100%; }
+  .head-arm[aria-pressed="true"] { background:var(--err); color:#111; border-color:var(--err); }
+  .head-latency { flex:1 1 100%; margin:0; font-size:12px; color:var(--dim); }
+  .timeline-head[data-size="small"] .head-latency { display:none; }
+  .head-silent { flex:1 1 100%; font-size:12px; color:var(--dim); border:1px dashed var(--line); border-radius:4px; padding:2px 6px; }
   .timeline-lane { position:relative; min-height:56px;
     background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); }
   .clip { position:absolute; top:6px; bottom:6px; min-width:12px; min-height:44px; padding:0 14px 0 6px;
@@ -266,12 +400,55 @@
     font-size:12px; text-align:left; cursor:grab; overflow:hidden; touch-action:none; }
   .clip-audio { background:#2f3b27; border-color:var(--ok); }
   .clip-orphan { border-style:dashed; }
+  .clip-colored { border-color:var(--clip-color); border-top-width:5px; }
+  .clip-muted { opacity:.5; border-style:dotted; }
+  .clip-locked { cursor:not-allowed; }
   .clip-wave { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
   .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
     border-left:1px solid var(--accent); }
 
+  .dock { margin-top:14px; border:1px solid var(--accent); border-radius:7px; background:var(--panel); }
+  .dock h2 { margin:0; padding:6px 12px 0; font-size:14px; }
+  .dock-splitter { height:44px; cursor:row-resize; border-radius:7px 7px 0 0; touch-action:none;
+    background:linear-gradient(var(--line), var(--line)) center / 48px 3px no-repeat; }
+  .dock-splitter:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .dock-body { overflow:auto; padding:0 12px 12px; }
+  .dock-slot[hidden] { display:none; }
+  /* With nothing selected the dock is a line of text, not a 320px empty box. */
+  .dock-body.idle { height:auto !important; padding-bottom:12px; }
+  .dock-splitter[hidden] { display:none; }
+  .dock .piano-roll { margin-top:0; border:0; padding:0; }
+  .dock-hint, .audio-source { color:var(--dim); font-size:13px; overflow-wrap:anywhere; }
+  .audio-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:6px 0; font-size:13px; }
+  .audio-field input { min-height:44px; width:8rem; font-size:16px; background:#0e1116; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; padding:0 8px; }
+  .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .track-panel { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .track-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
+  .track-field input, .track-field select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; padding:0 8px; }
+  .track-field input { width:min(16rem, 100%); }
+  .track-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .swatch { width:44px; height:44px; padding:0; border:2px solid var(--line); border-radius:6px; cursor:pointer;
+    color:var(--fg); background:#2a2f38; font-size:18px; }
+  .swatch[aria-pressed="true"] { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+  .swatch[aria-pressed="true"]::after { content:'✓'; color:#0b1220; font-weight:700; mix-blend-mode:normal; }
+  .track-color-said { font-size:13px; color:var(--dim); }
+  .track-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .track-position { font-size:13px; color:var(--dim); margin-right:auto; }
+  .track-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .track-panel .danger { border-color:var(--err); }
+  .timeline-row { border-left:4px solid var(--track-color, transparent); }
+  .timeline-row[data-size="small"] .timeline-lane { min-height:56px; }
+  .timeline-row[data-size="large"] .timeline-lane { min-height:320px; }
+  .timeline-head[data-size="small"] .head-slider, .timeline-head[data-size="small"] > button:not(.show-track) { display:none; }
+  .timeline-head[data-size="small"] .head-mix { flex-wrap:nowrap; }
+  .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
+  .clip.selected, .timeline-head.selected { outline:2px solid #ffd166; outline-offset:-2px; }
   .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
   .piano-roll header { display:flex; align-items:center; gap:10px; }
   .piano-roll h3 { margin:0; font-size:14px; flex:1; }
@@ -313,61 +490,7 @@
   .mixer-channel h3 { margin:0; padding:10px 14px 0; font-size:14px; }
   .mixer-channel .strip { border-bottom:0; }
 
-  /* Controls.
-
-     A grid of knobs rather than a stack of sliders. A slider needs the width
-     of the panel and a knob needs about 50px, which is the difference between
-     a 42 control plugin being two thousand pixels of scrolling and being one
-     screen. auto-fill, so the number of columns comes from the width the
-     panel is given rather than from a count written here. */
-  .controls { display:grid; gap:12px 8px; align-items:start;
-    grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
-  /* One named section per control group. A fieldset names its controls to
-     assistive technology; the legend is the visible section heading. */
-  .control-group { border:1px solid var(--line); border-radius:7px;
-    padding:10px 12px 12px; margin:0 0 12px; min-width:0; }
-  .control-group:last-child { margin-bottom:0; }
-  .control-group legend { font-size:12px; color:var(--dim); padding:0 6px; }
-  .control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
-  .control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
-    overflow-wrap:anywhere; }
-  .control .value { font-family:ui-monospace,monospace; font-size:11px; text-align:center; }
-  /* A dropdown cannot be read at 84px, so it takes two cells and its own
-     control stretches to fill them. */
-  .control-selector { grid-column:span 2; }
-  .control-selector select { width:100%; }
-  /* A file input is wider than 84px lets on and left-aligned reads more like
-     a form field than a knob, the same reasoning behind a selector's own
-     two-cell span. */
-  .control-asset { grid-column:span 2; align-items:flex-start; }
-  .control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
-
-  /* The knob. The input is still the control: it is laid over the face,
-     invisible, and keeps the role, the value and every key. pointer-events
-     are off it so a drag reaches .dial, which turns vertical movement into
-     input events; Dial.js explains why that is not the native behaviour. */
-  .dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize;
-    border-radius:50%; }
-  /* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
-     so the ring goes on the wrapper. */
-  .dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
-  .dial-face { display:block; width:100%; height:100%; }
-  .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
-  .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
-  .dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
-  /* Not display:none and not visibility:hidden: either takes it out of the
-     tab order, which is the whole thing this is trying not to lose. It keeps
-     its size so a pointer that does reach it lands where the knob is. */
-  .dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0;
-    opacity:0; pointer-events:none; }
-
-  /* :not, because input[type=range] is a more specific selector than
-     .dial-input and would otherwise give the knob's hidden input a 40px box
-     inside a 52px knob. Invisible today, since it is out of flow and takes no
-     pointer events, and exactly the kind of thing that is not invisible the
-     day one of those changes. */
-  input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
-  input[type=checkbox] { width:22px; height:22px; }
+  /* The generated panel and the knob are in panel.css, shared with the simple page. */
   select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
     padding:8px; font-size:16px; min-height:40px; max-width:100%; }
 
@@ -411,7 +534,6 @@
   @media (max-width: 760px) {
     main { grid-template-columns:minmax(0, 1fr); }
     main.no-browser { grid-template-columns:minmax(0, 1fr); }
-    main.no-browser .browser { padding:8px 14px; }
     .browser { border-right:0; border-bottom:1px solid var(--line); }
     /* The knobs already wrap, so nothing about them changes on a phone: a
        390px viewport gets four columns of 44px targets. Only the dropdowns
@@ -419,8 +541,81 @@
     .control-selector { grid-column:1 / -1; }
     .control-asset { grid-column:1 / -1; }
     .links { margin-left:0; }
+    /* Wrapped onto several rows the bar is a third of a phone's height, so it scrolls away
+       with the page rather than staying put. */
+    .transport { position:static; }
+    /* Four tabs must fit a phone's width without the page scrolling sideways. */
+    .tab { padding:10px 10px; }
+    /* The lanes get the width: a narrower header, and the empty state uses all of it. */
+    .timeline { --head:10.5rem; }
+    .timeline .empty { margin-left:0; }
+    .timeline-head { padding:4px 6px; }
+    .head-slider { grid-template-columns:2.2rem 1fr 3.2rem; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
+
+
+/* web/panel.css
+   The generated control panel and the knob (src/ui/Panel.js, src/ui/Dial.js), shared by the
+   studio page and the simple page so the two draw a plugin's controls the same way.
+   Expects the colour tokens --line, --accent, --fg and --dim on :root. */
+/* Controls.
+
+   A grid of knobs rather than a stack of sliders. A slider needs the width
+   of the panel and a knob needs about 50px, which is the difference between
+   a 42 control plugin being two thousand pixels of scrolling and being one
+   screen. auto-fill, so the number of columns comes from the width the
+   panel is given rather than from a count written here. */
+.controls { display:grid; gap:12px 8px; align-items:start;
+  grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); }
+/* One named section per control group. A fieldset names its controls to
+   assistive technology; the legend is the visible section heading. */
+.control-group { border:1px solid var(--line); border-radius:7px;
+  padding:10px 12px 12px; margin:0 0 12px; min-width:0; }
+.control-group:last-child { margin-bottom:0; }
+.control-group legend { font-size:12px; color:var(--dim); padding:0 6px; }
+.control { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+.control label { color:var(--dim); font-size:11px; line-height:1.25; text-align:center;
+  overflow-wrap:anywhere; }
+.control .value { font-family:ui-monospace,monospace; font-size:11px; text-align:center; }
+/* A dropdown cannot be read at 84px, so it takes two cells and its own
+   control stretches to fill them. */
+.control-selector { grid-column:span 2; }
+.control-selector select { width:100%; }
+/* A file input is wider than 84px lets on and left-aligned reads more like
+   a form field than a knob, the same reasoning behind a selector's own
+   two-cell span. */
+.control-asset { grid-column:span 2; align-items:flex-start; }
+.control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
+
+/* The knob. The input is still the control: it is laid over the face,
+   invisible, and keeps the role, the value and every key. pointer-events
+   are off it so a drag reaches .dial, which turns vertical movement into
+   input events; Dial.js explains why that is not the native behaviour. */
+.dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize;
+  border-radius:50%; }
+/* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
+   so the ring goes on the wrapper. */
+.dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+.dial-face { display:block; width:100%; height:100%; }
+.dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
+.dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
+.dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
+/* Not display:none and not visibility:hidden: either takes it out of the
+   tab order, which is the whole thing this is trying not to lose. It keeps
+   its size so a pointer that does reach it lands where the knob is. */
+.dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0;
+  opacity:0; pointer-events:none; }
+
+/* :not, because input[type=range] is a more specific selector than
+   .dial-input and would otherwise give the knob's hidden input a 40px box
+   inside a 52px knob. Invisible today, since it is out of flow and takes no
+   pointer events, and exactly the kind of thing that is not invisible the
+   day one of those changes. */
+input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
+input[type=checkbox] { width:22px; height:22px; }
+/* A touch target is 44px (CLAUDE.md): on a phone the generated switches and triggers are that size. */
+@media (max-width: 720px) { input[type=checkbox] { width:44px; height:44px; } }
 </style>
 <style>body{max-width:900px;margin:24px auto;padding:0 16px}</style>
 </head>

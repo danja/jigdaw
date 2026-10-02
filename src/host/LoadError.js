@@ -21,11 +21,25 @@ export class LoadError extends Error {
   }
 }
 
+/**
+ * Thrown by PluginLoader.loadProfile for a composite plugin, carrying the fetched document so the
+ * caller that goes on to resolve the tree does not fetch it again. A subclass because it is not a failure
+ * of a plugin that cannot load: it is the answer to "what kind of thing is at this IRI".
+ */
+export class CompositeFound extends LoadError {
+  constructor (iri, dataset) {
+    super('composite', `${iri} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri })
+    this.name = 'CompositeFound'
+    this.dataset = dataset
+  }
+}
+
 export const STEPS = Object.freeze({
   fetchProfile: 'fetch-profile',
   parseProfile: 'parse-profile',
   validateProfile: 'validate-profile',
   capabilities: 'capabilities',
+  composite: 'composite',
   fetchResource: 'fetch-resource',
   integrity: 'integrity',
   compileModule: 'compile-module',

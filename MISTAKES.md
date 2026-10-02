@@ -5,6 +5,50 @@ newest first inside each; the one-off narratives are gone, the tests that guard
 each lesson are named. Retired 2026-09-30 from a 1466-line chronological log: a lesson that lives in
 CLAUDE.md is a pointer, a fix held by a test alone is dropped, everything else is below.
 
+## A refusal test passed because two different refusals print the same thing
+
+**2026-10-02 the composite cycle test passed with the cycle check deleted, and the engine loaded a composite without applying
+its author's settings.** The first: `tests/host/CompositeResolver.test.js` asserted that a loop of two composites was refused with
+the chain `A > B > A` in the message, and with the check removed the depth limit refused it instead, with a message that also
+prints that chain. Found only by deleting the check on purpose and watching nothing fail. The test now requires "contains itself".
+The second: docs/nested-plugins.md said a member's `jig:setting` is the author's fixed voicing and an exposed port's default
+reaches what it drives, and the engine's first version instantiated the members and applied neither. Found by listing what the
+loader does for a plugin at load and asking which of those a composite owes, before any test existed to notice; the audio
+equivalence test (rack against the same plugins wired by hand) and a mutation that removes the call now both fail.
+Prevention: a test for a refusal asserts the reason, not a string another reason also produces, and every new guard is broken on
+purpose once. A sentence in a design that says what a load does gets a line in the code that does it the same day.
+
+## A screenshot looked wrong, and the wrongness was in the harness
+
+**2026-10-02 a gallery screenshot of a 31 control plugin came back as one unstyled slider per screenful, and the browser was blamed first.**
+The plugin's own panel had been drawn correctly in a test, so the first assumption was that headless Chrome was unavailable or slow.
+`/usr/bin/google-chrome` was there and had been used all along; the mistake was not checking, which AGENTS.md says not to do. Chrome was fine and the page was not: `bin/jig.js`'s `panelStyle()` inlined the `<style>` block from `web/index.html`, but the generated panel and the knob had moved out of it into `web/panel.css`, which that page only links. A standalone page opened as `file://` cannot resolve the link, so `.controls` kept its default `display: block` and every control stacked full width. Measured with `--dump-dom` and a script reporting `getComputedStyle`, on cascade, drumkit, boost and tremolo alike: all four `block`, so every gallery screenshot taken since the stylesheet moved was of an unstyled page. The 20 committed PNGs were correct because they predate the move, and regenerating all 26 after the fix reproduced all 20 byte for byte, which is what confirmed the diagnosis rather than a new one. `tests/bin/jig.test.js` now asserts the panel selectors are present and that the page carries no stylesheet link. Prevention: a screenshot path is a build step, and a step whose output nobody looks at until something looks wrong is one that was broken for as long as nobody checked.
+
+## A browser experiment that does not check what its calls returned measures the default
+
+**2026-10-02 the first A/B of the composite's Drive control compared Drive 1 with Drive 1, and nearly reported a defect.** `parameter_set`
+takes `node`, not `nodeId`; every call returned `{ ok: false }` and the script ignored the result, so the rack sat at its default throughout
+and "Drive 0 still sounds" looked like sound bypassing the boost. A second reading was contaminated by a recorder that counted every
+analyser including the test's own sanity oscillator, and homemade stage analysers read zero while the master heard sound. The wiring log, a
+positive control and a narrowed recorder separated them, and the corrected result (master peak 0.139 at Drive 1, exactly 0 at Drive 0) is in
+docs/plan.md. Prevention: a scripted browser step asserts `ok` on every call and throws, and a measurement gets a positive control and a
+recorder that counts only the thing under test before it is believed in either direction.
+
+## Freestanding math is wrong until it is measured against libm
+
+**2026-10-02 Parameq's first build filtered nothing, then filtered at the wrong corner, then boosted at half gain.**
+Three defects in the coefficient update's hand-rolled transcendental functions, each found by driving the module
+against cookbook figures rather than by reading the code. First, a cosine-by-phase-shift that negated its result for
+positive angles, turning the high pass into a near-zero filter: the bypass path worked, which isolated it to the
+coefficients in one run. Second, a cosine accurate to 1e-4 moved the 80 Hz high pass corner to 170 Hz, because poles
+next to z = 1 amplify absolute coefficient error into a square-rooted shift of the corner; the coefficient update now
+runs in f64 and only the final rounding to f32 remains. Third, a Horner chain with six updates for a degree-7
+exponential series, which shifted every coefficient one power up and halved every boost; found by compiling the same
+functions natively and comparing against libm, which takes minutes and would have caught the first two as well.
+`tests/dsp/parameq.test.js` pins each shape to its cookbook figure so all three fail loudly if reintroduced.
+Prevention: a freestanding approximation gets a native libm cross-check the day it is written, and a filter gets a
+per-shape sine drive before anything is wired to it.
+
 ## A design sentence described the offline algorithm and the plugin is live
 
 **2026-10-01 Keyframe's design said a time rate of 200 "fills twice the output span", and its first build froze.**

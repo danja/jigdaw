@@ -406,7 +406,20 @@ one unused clause. None is started.
 - [ ] **Nested plugins: meta-plugins built from simpler components.** From the inbox, 2026-09-26 (a guitar effects rack assembled
       from existing effects). Needs design before code: what nesting is in the project graph (a node holding a subgraph, or a
       profile listing member plugins), how the compiler flattens it and accounts latency through it, how state and presets address
-      the inside, and whether a nested graph can itself nest.
+      the inside, and whether a nested graph can itself nest. **Designed and specified 2026-10-02:**
+      [docs/nested-plugins.md](docs/nested-plugins.md); vocabulary, shapes, examples, `CompositeReader` and contract section 14 done. A composite is a Jig (`jig:CompositePlugin`) whose profile lists member
+      Jigs, internal connections and exposed ports; the model keeps one node and the compiler is given the flattened graph,
+      beside `Bypass.js`. Built and tested 2026-10-02, including the dispatcher: a composite
+      loads whole or not at all, is one node over several engine nodes, wires through `CompositeExpansion` after bypass, takes
+      its exposed settings (and the author's voicing at load), saves and reopens, undoes as one edit, and plays headless to the
+      same sound as its members wired by hand (`tests/ops/CompositeDispatcher.test.js`). Still to do, in order: **save and reopen a
+      session with a composite in the page** (the run in Chrome on 2026-10-02 covered load, the panel, controls, the signal path, a stale
+      pin and undo, but not the session file), **look at the Mixer and Routing tabs and a phone with one loaded** (the panel is drawn from the
+      exposed ports and works; a composite has no `jig:ui`), **the clip and transport route into a rack** (a MIDI clip played through the
+      transport into Pulse gave silence in that run with the rack bypassed too, so it is not the rack, and is unexplained), a composite in the catalogue and `plugin_load`, an Op to pack a selection into a composite and
+      unpack one, the MIDI monitor across a composite's boundary (`midiActivity` shows nothing for it), the native adapter saying
+      "composite" when it refuses one, `npm run check-plugin` rendering a composite (it loads through `loadProfile`, which now
+      reports one as a composite and stops), and running `reference-composite.ttl` through plugin-universe's validator.
 - [ ] **A plugin that prefers shared memory, and an isolated host mode to run it in.** Covers contract section 2.3. Smallest
       plugin: declares `jig:prefers jig:SharedMemory` with the mandated fallback to port transfer. Host side: an opt-in isolated
       serve mode, since the baseline must not require isolation of itself. Test both paths.

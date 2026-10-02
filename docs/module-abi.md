@@ -291,7 +291,8 @@ is a load-time figure, so it should declare the worst case in the profile.
 ## An implementation
 
 `native/jigdaw-adapter` is a VST3 that loads Jigs by IRI using this ABI, and it is
-the reason the ABI exists. Six of the worked plugins declare it (Cascade, Pulse and Dynamix
-at version 1; BassGen and the 8-Bit 8asterd, which need the transport and MIDI version 2
-adds; Quefrency at version 2 for MIDI in alone, an audio effect steered by control
-changes), and [for-plugin-authors.md](for-plugin-authors.md) recommends that yours does too.
+the reason the ABI exists. Eighteen of the worked plugins declare it, eight at
+version 1 and ten at version 2. The version 2 declarations are the plugins that
+need what version 2 adds: BassGen and the 8-Bit 8asterd need the transport and
+MIDI, and Quefrency, an audio effect steered by control changes, needs MIDI in
+alone. [for-plugin-authors.md](for-plugin-authors.md) recommends that yours does too.

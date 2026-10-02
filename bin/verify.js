@@ -15,14 +15,17 @@
 // that distinction rather than collapsing it into a tick, because collapsing it
 // is how a person comes to believe a bundle is safe when what they were told is
 // that it is internally consistent.
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { parseText } from '../src/rdf/parse.js'
 import { readProfile } from '../src/rdf/ProfileReader.js'
 import { readProvenance } from '../src/rdf/ProvenanceDocument.js'
 import { verifyProfile } from '../src/host/Signature.js'
-import { verifyIntegrity } from '../src/host/Integrity.js'
+import { verifyIntegrity, digestOf } from '../src/host/Integrity.js'
+import { readComposite, isComposite } from '../src/rdf/CompositeReader.js'
+import { pluginForm } from '../src/rdf/Canonical.js'
+import { bundledFromGraph } from '../src/host/CompositeResolver.js'
 import { vocabulary } from '../src/rdf/Vocabulary.js'
 import { unzip } from './bundle.js'
 
@@ -42,7 +45,8 @@ export async function openBundle (path) {
     const profileText = await readFile(join(at, 'profile.ttl'), 'utf8')
     let provenanceText = null
     try { provenanceText = await readFile(join(at, 'provenance.ttl'), 'utf8') } catch { }
-    return { kind: 'directory', profileText, provenanceText, read: name => readFile(join(at, name)) }
+    const names = (await readdir(at, { recursive: true })).map(n => n.split('\\').join('/'))
+    return { kind: 'directory', profileText, provenanceText, names, read: name => readFile(join(at, name)) }
   }
 
   if (at.endsWith('.jig')) {
@@ -53,6 +57,7 @@ export async function openBundle (path) {
       kind: 'archive',
       profileText: profile.toString('utf8'),
       provenanceText: entries.get('provenance.ttl')?.toString('utf8') ?? null,
+      names: [...entries.keys()],
       read: async name => entries.get(name) ?? null
     }
   }
@@ -63,24 +68,17 @@ export async function openBundle (path) {
     kind: 'profile',
     profileText: await readFile(at, 'utf8'),
     provenanceText: null,
+    names: [],
     read: async () => null
   }
 }
 
-/** The three answers, as data. */
-export async function inspect (path, { resolveKey = null } = {}) {
-  const opened = await openBundle(path)
-
-  const profileDataset = await parseText(opened.profileText, 'urn:jigdaw:bundle')
-  const profile = readProfile(profileDataset)
-
-  const provenanceDataset = opened.provenanceText
-    ? await parseText(opened.provenanceText, `${profile.iri}provenance.ttl`)
-    : []
-
-  // A plain array, because everything that reads a graph here only iterates.
-  const graph = [...profileDataset, ...provenanceDataset]
-
+/**
+ * Check every file a plugin declares against its digest. `read(name)` returns the bytes the bundle
+ * carries under that name, or null; a data: location carries its own bytes. State is `verified`, `failed`
+ * or `absent`, and `prefix` puts a member's directory in front of the names it reads.
+ */
+async function verifyResources (profile, read, { label = '' } = {}) {
   const resources = []
   for (const [what, resource] of [
     ['jig:module', profile.module],
@@ -96,17 +94,94 @@ export async function inspect (path, { resolveKey = null } = {}) {
     if (resource.location.startsWith('data:')) {
       bytes = new Uint8Array(await (await fetch(resource.location)).arrayBuffer())
     } else if (name) {
-      const read = await opened.read(name)
-      bytes = read ? new Uint8Array(read) : null
+      const found = await read(name)
+      bytes = found ? new Uint8Array(found) : null
     }
-    if (!bytes) { resources.push({ what, name, state: 'absent' }); continue }
+    if (!bytes) { resources.push({ what: label + what, name, state: 'absent' }); continue }
     try {
       await verifyIntegrity(bytes, resource.integrity)
-      resources.push({ what, name, state: 'verified', bytes: bytes.length })
+      resources.push({ what: label + what, name, state: 'verified', bytes: bytes.length })
     } catch (error) {
-      resources.push({ what, name, state: 'failed', reason: error.message })
+      resources.push({ what: label + what, name, state: 'failed', reason: error.message })
     }
   }
+  return resources
+}
+
+/**
+ * A composite plugin's bundle, section 9: each member's profile against the pin that names it, and
+ * each member's files against its own profile. A pin is what carries the signature down to a member,
+ * so one that fails is as serious as a file that fails.
+ */
+async function inspectComposite (opened, profileDataset, { resolveKey }) {
+  const provenanceDataset = opened.provenanceText ? await parseText(opened.provenanceText, 'urn:jigdaw:bundle-provenance') : []
+  const graph = [...profileDataset, ...provenanceDataset]
+  const provenance = readProvenance(graph)
+  // A flattened file holds every member beside the composite, so the record says which one it is a copy of.
+  const root = readComposite(profileDataset, { iri: provenance?.of ?? null })
+
+  // Where each member's profile and files are: in the same graph for a flattened file, in
+  // members/<directory>/ for an archive or a directory.
+  const inGraph = bundledFromGraph(graph)
+  const directories = new Map()
+  for (const name of opened.names ?? []) {
+    const match = /^members\/([^/]+)\/profile\.ttl$/.exec(name)
+    if (!match) continue
+    const dataset = await parseText((await opened.read(name)).toString('utf8'), 'urn:jigdaw:bundle')
+    const iri = isComposite(dataset) ? readComposite(dataset).iri : readProfile(dataset).iri
+    directories.set(iri, { dataset, directory: match[1] })
+  }
+  const datasetFor = iri => directories.get(iri)?.dataset ?? inGraph(iri)
+
+  const resources = []
+  const walked = new Set()
+  const walk = async composite => {
+    for (const member of composite.members) {
+      const dataset = datasetFor(member.plugin)
+      if (!dataset) { resources.push({ what: 'member', name: member.plugin, state: 'absent' }); continue }
+      if (member.pinnedDigest === null) {
+        resources.push({ what: 'pin', name: member.plugin, state: 'absent' })
+      } else {
+        const actual = await digestOf(new TextEncoder().encode(pluginForm(dataset, member.plugin)), 'sha384')
+        resources.push(actual === member.pinnedDigest
+          ? { what: 'pin', name: member.plugin, state: 'verified', bytes: 0 }
+          : { what: 'pin', name: member.plugin, state: 'failed', reason: `the profile is ${actual}, and the composite pins ${member.pinnedDigest}` })
+      }
+      if (walked.has(member.plugin)) continue
+      walked.add(member.plugin)
+      if (isComposite(dataset)) { await walk(readComposite(dataset, { iri: member.plugin })); continue }
+      const profile = readProfile(dataset)
+      const where = directories.get(member.plugin)?.directory
+      resources.push(...await verifyResources(profile, name => opened.read(`members/${where}/${name}`), { label: `${profile.label} ` }))
+    }
+  }
+  await walk(root)
+
+  return {
+    kind: opened.kind,
+    profile: { iri: root.iri, label: root.label },
+    provenance: readProvenance(graph),
+    signature: await verifyProfile(graph, root.iri, { resolveKey, composite: true }),
+    resources
+  }
+}
+
+/** The three answers, as data. */
+export async function inspect (path, { resolveKey = null } = {}) {
+  const opened = await openBundle(path)
+
+  const profileDataset = await parseText(opened.profileText, 'urn:jigdaw:bundle')
+  if (isComposite(profileDataset)) return inspectComposite(opened, profileDataset, { resolveKey })
+  const profile = readProfile(profileDataset)
+
+  const provenanceDataset = opened.provenanceText
+    ? await parseText(opened.provenanceText, `${profile.iri}provenance.ttl`)
+    : []
+
+  // A plain array, because everything that reads a graph here only iterates.
+  const graph = [...profileDataset, ...provenanceDataset]
+
+  const resources = await verifyResources(profile, name => opened.read(name))
 
   return {
     kind: opened.kind,

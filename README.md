@@ -10,7 +10,7 @@ WebAssembly module, its AudioWorklet processor and its user interface are, each 
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
 The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 25 worked plugins, and a validator that
+browser, a second host that runs them as a VST3, 26 worked plugins, and a validator that
 enforces the specification on its own files.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -97,7 +97,7 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-25 worked plugins are in [plugins/](plugins/): a subtractive synth,
+26 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, a transport-synced
 bass line generator, a transport-synced drum pattern generator, a synthesised drum
 instrument, a phrase-aware melody generator, a long-form bass section planner, a
@@ -125,7 +125,9 @@ and harmonics and shifts each independently, the first plugin here with latency 
 compensate ([its design](docs/plugins/quefrency-design.md)); and
 [Lookahead](plugins/lookahead/), a switchable lookahead delay in plain JavaScript whose
 latency changes while running and which the host recompensates
-([its design](docs/plugins/lookahead-design.md)).
+([its design](docs/plugins/lookahead-design.md)); and
+[Parameq](plugins/parameq/), a six-band stereo parametric equalizer in C++ with peak,
+shelf, pass and notch shapes per band and a graphic curve editor of its own.
 Each is a directory holding a `profile.json`, a build script, the `.wasm`, the processor and a
 generated `profile.ttl`. The profile is generated because a digest written by hand goes stale
 on the next build, silently.

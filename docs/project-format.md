@@ -190,6 +190,15 @@ Settings are addressed by `lv2:symbol`. An index is a property of a build and ch
 the plugin is rebuilt; a symbol is a property of the plugin and contract section 5.1
 requires it to be stable.
 
+### A node may be a composite plugin
+
+A node's `jig:plugin` may name a composite plugin ([nested-plugins.md](nested-plugins.md)): a plugin made of other plugins. The project
+holds one node for it, on one track, and nothing about the members: they are the composite's business, and a project that named them
+would stop being valid the day the composite's author changed one. The node's settings are keyed by the symbols of the ports the
+composite exposes, and its `jig:nodeState` is an object keyed by member IRI, which the host assembles, since a composite has no
+processor to ask. A connection names the node and one of its audio ports or exposed parameters like any other. A reader MUST NOT
+expand a composite when reading a project, and a writer MUST NOT write its members.
+
 ## Master, sends, markers, regions, signatures and envelopes
 
 Facts about the sound and the arrangement, in the project graph, so each bumps the revision. The

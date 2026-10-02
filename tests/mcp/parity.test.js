@@ -47,6 +47,7 @@ const CLASSIFIED = {
   foreignSupport: { kind: 'plumbing', why: 'what the host can run, read by the loader' },
   sendTransport: { kind: 'plumbing', why: 'the transport clock, one message per quantum' },
   midiActivity: { kind: 'plumbing', why: 'a meter for the editor' },
+  audioParams: { kind: 'plumbing', why: 'the envelope player finding the AudioParams a parameter is, one per member parameter for a composite' },
   sendEvents: { kind: 'plumbing', why: 'the scheduler sending notes, at stream positions' },
   relayToPlugin: { kind: 'plumbing', why: 'a plugin\'s own user interface talking to its processor' },
   onPluginMessage: { kind: 'plumbing', why: 'a plugin\'s own user interface listening to its processor' },

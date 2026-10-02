@@ -91,6 +91,16 @@ describe('search', () => {
     expect(result.formats).toEqual(['VST3', 'LV2'])
   })
 
+  it('counts a composite plugin as one this host can run', async () => {
+    // A plugin made of other plugins is a trn:PluginProfile and not a jig:WebPlugin, and the search used to mark
+    // everything that was not the second as one it cannot run. No SPARQL engine is installed (HUMANS.md), so
+    // this checks the text sent: the query has to ask about the composite class as well as the web one.
+    const { fetch, sent } = fakeEndpoint([row({ web: { value: 'true' } })])
+    await new Catalogue({ fetch }).search({})
+    const query = decodeURIComponent(sent[0].body).replace(/\+/g, ' ')
+    expect(query).toMatch(/BIND\(EXISTS \{ \?plugin a jig:WebPlugin \} \|\| EXISTS \{ \?plugin a jig:CompositePlugin \} AS \?web\)/)
+  })
+
   it('marks a plugin this host can actually run', async () => {
     const { fetch } = fakeEndpoint([row({ web: { value: 'true' } })])
     const [result] = await new Catalogue({ fetch }).search({})

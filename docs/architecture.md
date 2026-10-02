@@ -73,6 +73,14 @@ What this costs is spelled out in section 1.3 of the contract: CORS becomes a ha
 requirement, and cross-origin isolation cannot be assumed. Those are not incidental. They
 are the price of the design and they shape the capability negotiation.
 
+## Why a composite is a plugin
+
+A plugin made of other plugins could have been a feature of the project, a group of nodes saved with a session. It is a plugin instead,
+because a plugin is already the unit of identity, discovery, packaging, signing and installation, and a group has none of those. The model
+holds one node for it. Between the model and the compiler an expansion, a pure function beside the one that steps over bypassed nodes,
+replaces it with its members, so the compiler and the engine see a flat graph of ordinary plugins and no new trust boundary exists. The
+reasoning, and the designs it replaced, are in [nested-plugins.md](nested-plugins.md) section 13.
+
 ## The catalogue
 
 **What runs today has no store.** `src/catalogue/LocalCatalogue.js` indexes the plugins this

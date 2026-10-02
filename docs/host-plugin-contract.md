@@ -601,8 +601,8 @@ is the expected case rather than a degraded one.
 
 ## 13. Conformance
 
-A host conforms if it implements sections 1 through 11 as written. Section 12 is optional and
-a host that implements none of it conforms.
+A host conforms if it implements sections 1 through 11 as written. Sections 12 and 14 are optional and
+a host that implements none of them conforms.
 
 A plugin conforms if its profile validates against `vocabs/shapes.ttl` and its processor
 obeys sections 3.3, 3.4, 4, 5.2, 6.2 and 8.
@@ -610,3 +610,34 @@ obeys sections 3.3, 3.4, 4, 5.2, 6.2 and 8.
 A plugin profile that validates but whose processor violates section 4.1 is not conformant
 and will not be reported as such by any automated check. That is a known gap, and it is why
 section 10.2 exists.
+
+---
+
+## 14. Composite plugins (optional)
+
+A host MAY support plugins made of other plugins, defined in [nested-plugins.md](nested-plugins.md). A host that
+implements none of this section conforms.
+
+A composite is a `jig:CompositePlugin`, which is not a `jig:WebPlugin`, declares no module or processor, and
+is not mistaken for one that does. A host that does not support composites MUST say that the plugin is a
+composite and cannot be run by it, rather than reporting a missing file.
+
+A host that supports them MUST:
+
+1. fetch and validate the profile of the composite and of every member, recursively, before fetching any code, and evaluate
+   `trn:requires` and `jig:wasmFeature` over all of them (section 2.1);
+2. check that every parameter an exposed port drives exists on its member and that the port's range lies within it, and refuse the
+   composite otherwise;
+3. check each `jig:pinnedDigest` against the canonical digest of the member's profile, and refuse on a mismatch;
+4. refuse a composite that contains itself, directly or through its members, naming the chain, and support at least four levels of
+   composite inside composite, naming its limit when it refuses for one;
+5. load the members as plugins, each by section 3, and load the composite whole or not at all, naming the composite, the member and the
+   step on a failure (section 10.2);
+6. apply the author's settings and each exposed port's default when the composite loads;
+7. give the compiler the flattened graph, so that latency compensation and cycle detection (latency.md) act on every member;
+8. derive the composite's latency and tail, and never take them from its profile;
+9. key a composite's saved state by member IRI, ignore a key that names no member, and give a member with no key its defaults
+   (section 8.1).
+
+A host SHOULD list a composite's members and their origins before its first load, since a composite runs code from
+every author it names. Section 11 of nested-plugins.md lists each rule beside the test that guards it.

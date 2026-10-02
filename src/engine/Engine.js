@@ -5,7 +5,11 @@
 //
 // The engine holds no policy. It does what it is told and reports what
 // happened; deciding what to tell it is the dispatcher's job.
-import { LoadError } from '../host/LoadError.js'
+import { LoadError, CompositeFound, STEPS } from '../host/LoadError.js'
+import { resolveComposite } from '../host/CompositeResolver.js'
+import { restoreState } from '../host/CompositeState.js'
+import { parameterTargets } from '../host/CompositeParameters.js'
+import { compositeProfile } from '../rdf/CompositeReader.js'
 
 let counter = 0
 const nextId = () => `node-${++counter}`
@@ -90,10 +94,88 @@ export class Engine {
    * says so.
    */
   async addPlugin (iri, { state = null } = {}) {
-    const { profile, granted } = await this.#loader.loadProfile(iri)
+    let loaded
+    try {
+      loaded = await this.#loader.loadProfile(iri)
+    } catch (error) {
+      if (error instanceof CompositeFound) return this.#addComposite(iri, error.dataset, { state })
+      throw error
+    }
+    const { profile, granted } = loaded
     const { node, ready, descriptors } = await this.#loader.instantiate(
       profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass, state })
     return this.adopt({ iri, profile, node, ready, descriptors, granted })
+  }
+
+  /**
+   * A composite plugin, loaded whole or not at all: the tree is checked first (CompositeResolver, which
+   * fetches no code), then each member is instantiated as a plugin in its own right, and a failure
+   * removes the members already made and fails the composite naming the member.
+   *
+   * Returns one entry, not the members' own, for the dispatcher to hold for the node: `composite: true`,
+   * `profile` as the rest of the host reads a plugin's, `tree`, and `members` as `{ path, entry }` with
+   * the path of member IRIs from the composite inward. It has no `id` and no `node` of its own.
+   * docs/nested-plugins.md.
+   */
+  async #addComposite (iri, dataset, { state }) {
+    const tree = await resolveComposite(iri, { loader: this.#loader, bundled: target => (target === iri ? dataset : null) })
+    const saved = new Map()
+    restoreState(tree, state, (path, value) => saved.set(JSON.stringify(path), value))
+
+    const members = []
+    const byPath = new Map()
+    const walk = async (composite, path) => {
+      for (const member of composite.members) {
+        const here = [...path, member.id]
+        if (member.tree.kind === 'composite') { await walk(member.tree, here); continue }
+        const { profile, granted } = member.tree
+        try {
+          const { node, ready, descriptors } = await this.#loader.instantiate(
+            profile, granted, this.#context, { AudioWorkletNode: this.#nodeClass, state: saved.get(JSON.stringify(here)) ?? null })
+          const adopted = this.adopt({ iri: member.tree.iri, profile, node, ready, descriptors, granted })
+          members.push({ path: here, entry: adopted })
+          byPath.set(JSON.stringify(here), adopted)
+        } catch (cause) {
+          // Whatever went wrong, the person needs to know which member of which composite, and the step
+          // when the failure had one. An error that is not a LoadError is reported as the composite's.
+          throw new LoadError(cause.step ?? STEPS.composite, `${iri}, member ${here.join(' > ')}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri })
+        }
+      }
+    }
+    try {
+      await walk(tree, [])
+      this.#voice(tree, [], byPath)
+    } catch (error) {
+      for (const { entry } of members) this.remove(entry.id)
+      throw error
+    }
+    return { composite: true, iri, tree, profile: compositeProfile(tree.composite), members }
+  }
+
+  /**
+   * Set what the composite's author set, before anything is heard: each exposed port's default on the
+   * parameters it drives, and each member's own settings, which are the voicing a person using the composite
+   * cannot reach. Inner composites first, so the outer author's choice is the last word. A person's own
+   * settings, from a saved session, arrive after this through the dispatcher and win over all of it.
+   */
+  #voice (tree, prefix, byPath) {
+    const set = (path, symbol, value) => {
+      const entry = byPath.get(JSON.stringify(path))
+      if (entry && value !== null && value !== undefined) this.setParameter(entry.id, symbol, value)
+    }
+    for (const member of tree.members) {
+      if (member.tree.kind === 'composite') this.#voice(member.tree, [...prefix, member.id], byPath)
+    }
+    for (const port of tree.composite.ports) {
+      for (const target of parameterTargets(tree, port.symbol)) set([...prefix, ...target.path], target.symbol, port.defaultValue)
+    }
+    for (const member of tree.composite.members) {
+      const inner = tree.members.find(m => m.id === member.id).tree
+      for (const setting of member.settings) {
+        if (inner.kind === 'plugin') set([...prefix, member.id], setting.symbol, setting.value)
+        else for (const target of parameterTargets(inner, setting.symbol)) set([...prefix, member.id, ...target.path], target.symbol, setting.value)
+      }
+    }
   }
 
   /**

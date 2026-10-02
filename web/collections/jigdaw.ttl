@@ -45,6 +45,7 @@
         <../plugins/melgen/> ,
         <../plugins/midifilter/> ,
         <../plugins/mop/> ,
+        <../plugins/parameq/> ,
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
         <../plugins/squelch/> ,
@@ -71,6 +72,7 @@
 <../plugins/melgen/> rdfs:label "MelGen" .
 <../plugins/midifilter/> rdfs:label "MIDI Filter" .
 <../plugins/mop/> rdfs:label "Mop" .
+<../plugins/parameq/> rdfs:label "Parameq" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/squelch/> rdfs:label "Squelch" .

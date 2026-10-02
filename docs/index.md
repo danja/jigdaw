@@ -95,6 +95,7 @@ authority where any other page, including this one, disagrees with them.
 | [module-abi.md](module-abi.md) | The optional portable ABI a native host can load without a JavaScript engine. |
 | [plugin-bundles.md](plugin-bundles.md) | Packaging a plugin as one signed archive. |
 | [plugin-collections.md](plugin-collections.md) | Publishing a list of plugins at one URL, and what a host checks when opening it. |
+| [nested-plugins.md](nested-plugins.md) | A plugin made of other plugins, such as an effects rack, declared, bundled and installed as one. Normative, and optional for a host. |
 
 Background rather than normative: [plan.md](plan.md) is the phased build log,
 [first-thoughts.md](first-thoughts.md) and [local-references.md](local-references.md) are
@@ -109,7 +110,7 @@ Honestly, because a specification that overstates itself is worse than none.
 **Works.** Loading a plugin from its IRI, profile validation, integrity verification,
 WebAssembly instantiation, generated panels, parameter automation, MIDI routed by the host,
 transport, latency compensation, cycle refusal, undo and redo, a catalogue search, and an
-agent tool surface. 25 worked plugins: a subtractive synth, a bass line generator, a
+agent tool surface. 26 worked plugins: a subtractive synth, a bass line generator, a
 reverb, a compressor/expander/limiter/clipper with a side chain input, the firmware of a
 three-chip AY-3-8910 synthesiser compiled unedited from C++, an OPL3 FM General MIDI
 instrument, three REAPER JSFX effects
@@ -121,8 +122,8 @@ follower, also plain JavaScript, a cepstral formant and pitch shifter, the first
 latency, a transport-synced drum pattern generator, a synthesised drum instrument,
 a phrase-aware melody generator, a long-form bass section planner, a learning MIDI
 harmonizer, a learned counter-melody processor, a twelve-voice tonal instrument,
-and a switchable lookahead delay whose latency the host recompensates while
-running. Foreign plugins (Web Audio Modules) load and play, marked
+a switchable lookahead delay whose latency the host recompensates while running,
+and a six-band stereo parametric equalizer with a graphic curve editor. Foreign plugins (Web Audio Modules) load and play, marked
 and consented to, per contract section 12.
 
 **Exists but is thin.** Jiggy, the reference host: tracks, each a chain of plugins ending in

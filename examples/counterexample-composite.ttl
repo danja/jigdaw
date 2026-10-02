@@ -1,0 +1,66 @@
+# examples/counterexample-composite.ttl
+#
+# Composite plugins that break each constraint in jig:CompositePluginShape,
+# jig:ExposedPortShape, jig:DriveTargetShape and jig:MemberShape once. It exists
+# so the shapes are known to fire: a shape that has never rejected anything is
+# indistinguishable from one that does not run. tests/validate/ShapeValidator.test.js
+# counts the violations.
+#
+# The four rules the shapes cannot say are in src/rdf/CompositeReader.js, and
+# examples/counterexample-composite-wiring.ttl breaks each of those once.
+
+@base <https://example.org/racks/broken/> .
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+# Says almost nothing: no name, no homepage, no role, no output type, no
+# input or output count, no member and no connection.
+<#bare> a jig:CompositePlugin .
+
+# Declares code, latency and a tail of its own, and has a control that drives nothing.
+<#loaded>
+    a jig:CompositePlugin ;
+    rdfs:label "Loaded" ;
+    foaf:homepage <#loaded> ;
+    trn:role trn:AudioEffect ;
+    trn:produces trn:Audio ;
+    jig:audioInputs 1 ;
+    jig:audioOutputs 1 ;
+    jig:member <#fine> ;
+    jig:connection <#c> ;
+    jig:processor <#p> ;
+    jig:module <#m> ;
+    jig:ui <#u> ;
+    jig:latencyFrames 64 ;
+    jig:tailFrames 4800 ;
+    lv2:port <#idle> , <#byindex> .
+
+<#fine> a jig:Member ; jig:plugin <https://strandz.it/jigdaw/plugins/boost/> .
+
+<#c> a jig:Connection ; jig:from <#c-from> ; jig:to <#c-to> ; jig:signalKind trn:Audio .
+<#c-from> a jig:Endpoint ; jig:endpointNode <#loaded> ; jig:portIndex 0 .
+<#c-to>   a jig:Endpoint ; jig:endpointNode <#fine> ;   jig:portIndex 0 .
+
+# Drives nothing.
+<#idle> a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "idle" ; lv2:name "Idle" ; lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 .
+
+# Drives a numbered port, which is not a parameter.
+<#byindex> a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "byindex" ; lv2:name "By index" ; lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:drives <#byindex-target> .
+<#byindex-target> a jig:Endpoint ; jig:endpointNode <#fine> ; jig:portIndex 0 .
+
+# Names no plugin.
+<#unnamed> a jig:Member .
+
+# Names a plugin over http, which is not loopback, carries a pin that is not a digest,
+# and is on a track.
+<#plain> a jig:Member ;
+    jig:plugin <http://example.org/plugins/boost/> ;
+    jig:pinnedDigest "not-a-digest" ;
+    jig:onTrack <#some-track> .

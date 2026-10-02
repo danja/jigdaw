@@ -25,7 +25,7 @@ Five programs load Jigs, and a sixth packages them for someone else's host.
 
 ## Plugins
 
-There are 25 worked plugins in [plugins/](../plugins/), each a directory holding
+There are 26 worked plugins in [plugins/](../plugins/), each a directory holding
 `profile.json`, a build script, the processor and a generated `profile.ttl`. They were
 written to cover different parts of the contract, and each one's row says which.
 
@@ -47,12 +47,13 @@ written to cover different parts of the contract, and each one's row says which.
 | [Boost](../plugins/boost/) | A gain stage in C++, meant to be copied: everything beyond one line of DSP is ABI wiring. | Module ABI version 1 at its smallest. `trn:Utility`. |
 | [Ferrite](../plugins/ferrite/) | A neural amp model in series with a convolution cabinet, in Rust, depending on nam-rs. | Two `jig:asset` resources marked `jig:userReplaceable`, verified like the module (contract 3.2) and replaced while running (messaging.md 1.2, `asset`). State (contract 8, messaging.md `stateRequest` and `state`): the only plugin that answers a state request. |
 | [JigDAW Gain Trim](../plugins/jsfx-gain-trim/), [One-Pole Filter](../plugins/jsfx-one-pole-filter/), [Soft Clipper](../plugins/jsfx-soft-clipper/) | Three REAPER JSFX effects converted by `bin/jsfx-import.js`, run by the shared bytecode interpreter in [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md). | A module with no `jig:abi`, private to its processor, which module-abi.md says a native host must refuse. The compiled script carried as a `jig:asset`. Converting from another plugin format. |
-| [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The only plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. Contract 5.2: the only plugin declaring an a-rate port, read per sample. Messaging.md 2.4: the only interface drawing the processor's own snapshots, a live gain readout. |
+| [Tremolo](../plugins/tremolo/) | A sine tremolo in plain JavaScript, with no WebAssembly module. | `jig:module` being optional. The first plugin with its own `jig:ui`: a sandboxed frame on another origin (contract 9.1) speaking messaging.md section 2, with `ready`, `parameter`, `gesture` and `resize`. Contract 5.2: the only plugin declaring an a-rate port, read per sample. Messaging.md 2.4: the only interface drawing the processor's own snapshots, a live gain readout. |
 | [Squelch](../plugins/squelch/) | A resonant lowpass swept by an envelope follower, in plain JavaScript. | A second plugin with no module, and the one the "Acid" preset chains after BassGen and Pulse. |
 | [Quefrency](../plugins/quefrency/) | A cepstral formant and pitch shifter, in Rust ([design](../docs/plugins/quefrency-design.md)). | [latency.md](latency.md) sections 1 and 3: a constant latency, reported in `ready` for the actual sample rate. Module ABI version 2 MIDI in on an audio effect, taking `trn:ControlMidi`. The host's rule that a plugin taking only control changes gets no keyboard or clip. |
 | [Lookahead](../plugins/lookahead/) | A switchable lookahead delay in plain JavaScript, direct or held back by 512 frames ([design](../docs/plugins/lookahead-design.md)). | [latency.md](latency.md) section 2: the only plugin whose latency changes, reporting the actual figure in `ready` and posting `latency` with `fromFrame` on change, with the worst case in the profile. The host half: the dispatcher recompiles compensation and retimes the moved delays scheduled against `fromFrame`. |
 | [Dice](../plugins/dice/) | A MIDI probability gate in plain JavaScript, with no WebAssembly module ([design](../docs/plugins/dice-design.md)). | Contract section 8: genuine non-parameter state (the xorshift32 generator) answered over the state channel, and the joint round trip with Ferrite proving two `state` replies route by token. |
 | [MIDI Filter](../plugins/midifilter/) | Steers MIDI in plain JavaScript: a channel filter, a channel remap, transpose and a note range, so two of them split a keyboard. | Contract section 6 (MIDI over the message port, delivered by stream position, and kept at its own frame), and that a note-off follows the note-on it answers even when a setting changes mid-note. Stateless: it answers no state request. |
+| [Parameq](../plugins/parameq/) | A six-band stereo parametric equalizer in C++, with peak, shelf, pass and notch shapes per band. | Module ABI version 1 with 31 parameters. The second plugin with its own `jig:ui`: a graphic equalizer in the manner of Reaper's ReaEQ, drawing the combined response from the same cookbook formulae the module uses, with one draggable node per band, rendering from the host echo rather than its own input. |
 
 [plugins/_jsfx-runtime/](../plugins/_jsfx-runtime/README.md) is not a plugin itself: it is the
 interpreter the three converted JSFX plugins copy.
@@ -124,7 +125,11 @@ These are the modules the hosts are built from, in the layers
 - [GraphCompiler.js](../src/compiler/GraphCompiler.js): [latency.md](latency.md) sections 3 and
   4, compensating delay on parallel paths and refusing a cycle with no delay in it.
 - [Engine.js](../src/engine/Engine.js): one `AudioWorkletNode` per plugin; contract 10.2, a
-  failed plugin muted while the rest keep playing.
+  failed plugin muted while the rest keep playing. Loads a composite plugin whole or not at all, contract 14.
+- [CompositeResolver.js](../src/host/CompositeResolver.js), [CompositeExpansion.js](../src/ops/CompositeExpansion.js),
+  [CompositeState.js](../src/host/CompositeState.js): [nested-plugins.md](nested-plugins.md), the tree check before any code is fetched,
+  the expansion of a composite into its members for the compiler, and the state a composite saves. Each rule is listed beside its test in
+  that document's section 11.
 - [EventRouter.js](../src/engine/EventRouter.js): contract 6.1, MIDI carried by the host
   between processors.
 - [Scheduler.js](../src/engine/Scheduler.js): contract 6.2, clip notes sent ahead at absolute
@@ -197,9 +202,15 @@ These are the modules the hosts are built from, in the layers
 
 ## What nothing exercises yet
 
+
 These clauses are specified and, as of 2026-09-29, either no plugin depends on them or no host
 acts on them. Each is a place where the specification is untested by use.
 
+- **Composite plugins, beyond one browser run** ([nested-plugins.md](nested-plugins.md)). The tree check, the expansion, the engine, the dispatcher,
+  bundling and verification are exercised against the real boost, tremolo and cascade plugins, headless, and Jiggy's page was driven with one
+  in Chrome on 2026-10-02 (load, generated panel, exposed controls, signal path, a stale pin refused, remove and undo). Nothing has saved and
+  reopened one in the page, drawn one in the Mixer or Routing tabs, or played one on a phone, and the native adapter, a serial chain,
+  refuses one.
 - **Shared memory** (contract 2.3). The host offers `jig:SharedMemory`; no plugin requires it.
 - **State from more than one plugin** (contract 8). Ferrite is the only plugin that answers a
   state request.

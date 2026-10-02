@@ -87,6 +87,9 @@ function byCodePoint (a, b) {
   return left.length - right.length
 }
 
+/** A plugin's own subjects: its IRI, and the fragments of it that skolemise what it names. */
+export const inPluginTree = (subject, plugin) => subject === plugin || subject.startsWith(`${plugin}#`)
+
 /**
  * The canonical form of a dataset, as N-Triples sorted in code point order.
  *
@@ -94,13 +97,14 @@ function byCodePoint (a, b) {
  * caller passes the proof node when signing, and the provenance record when
  * taking the digest the provenance record is about.
  */
-export function canonicalForm (dataset, { omitSubjects = [], onlySubject = null, omitPredicates = [] } = {}) {
+export function canonicalForm (dataset, { omitSubjects = [], onlySubject = null, onlyPluginTree = null, omitPredicates = [] } = {}) {
   const omitted = new Set(omitSubjects)
   const lines = []
   for (const quad of dataset) {
     if (OMITTED_PREDICATES.includes(quad.predicate.value)) continue
     if (omitPredicates.includes(quad.predicate.value)) continue
     if (onlySubject !== null && quad.subject.value !== onlySubject) continue
+    if (onlyPluginTree !== null && !inPluginTree(quad.subject.value, onlyPluginTree)) continue
     if (omitted.has(quad.subject.value)) continue
     lines.push(`${term(quad.subject)} ${term(quad.predicate)} ${term(quad.object)} .`)
   }
@@ -169,6 +173,18 @@ export function bundleSubjects (dataset) {
  */
 export const profileForm = dataset =>
   canonicalForm(dataset, { omitSubjects: [...bundleSubjects(dataset), ...proofSubjects(dataset)] })
+
+/**
+ * One plugin's profile inside a graph that may hold several: the triples whose subject is the plugin's
+ * IRI or begins with it followed by `#`, with the same omissions as profileForm. This is what a
+ * composite's jig:pinnedDigest is taken over (docs/plugin-bundles.md section 9). For a plugin served
+ * alone there are no other triples, so it is profileForm.
+ */
+export const pluginForm = (dataset, plugin) =>
+  canonicalForm(dataset, {
+    omitSubjects: [...bundleSubjects(dataset), ...proofSubjects(dataset)],
+    onlyPluginTree: plugin
+  })
 
 /**
  * The plugin and the provenance record together. What a signature covers.

@@ -833,7 +833,7 @@
       "cautions": [
         "The algorithm is Matthew Nielsen's, Keyframe Time Stretching via Extrema Sampling, DAFx26, CC BY 4.0. This implementation is written from the paper.",
         "It colours the sound: added saturation and some blurring of spectral detail. It is at its best on dense, layered material and percussion, and at its weakest on solo voice and bells.",
-        "On a live input a time rate above 100 percent cannot run ahead of the input, so it repeats a short stretch and skips back; below 100 percent it falls behind the input by up to eight seconds and then skips forward. Both are splices, and both are audible.",
+        "A live input cannot be played faster than it arrives, so a time rate above 100 percent plays at the input's own rate, and with a pitch shift it splices back repeatedly. Below 100 percent the output falls behind the input by up to eight seconds and then skips forward. Both skips are splices, and both are audible.",
         "Economy quality joins the extrema with straight lines, which is the roughest reconstruction. Balanced and Full use a smooth curve between them. Full also places each extremum between samples.",
         "Changing Quality or Stereo empties the capture and restarts it, so it is heard as a short gap.",
         "Latency is a fixed 512 frames, which is two forced keyframe hops."
@@ -1018,6 +1018,65 @@
         "tuning",
         "vel_sense",
         "voices"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/parameq/",
+      "label": "Parameq",
+      "comment": "Six-band stereo parametric equalizer in C++: peak, low and high shelf, low and high pass, band pass and notch shapes per band, each with its own enable, frequency, gain and Q.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/parameq/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "A low pass or high pass corner within a few percent of Nyquist (half the sample rate) behaves like a gentler slope than the shape suggests, because the bilinear transform compresses the top octave."
+      ],
+      "parameters": [
+        "b1_freq",
+        "b1_gain",
+        "b1_on",
+        "b1_q",
+        "b1_type",
+        "b2_freq",
+        "b2_gain",
+        "b2_on",
+        "b2_q",
+        "b2_type",
+        "b3_freq",
+        "b3_gain",
+        "b3_on",
+        "b3_q",
+        "b3_type",
+        "b4_freq",
+        "b4_gain",
+        "b4_on",
+        "b4_q",
+        "b4_type",
+        "b5_freq",
+        "b5_gain",
+        "b5_on",
+        "b5_q",
+        "b5_type",
+        "b6_freq",
+        "b6_gain",
+        "b6_on",
+        "b6_q",
+        "b6_type",
+        "enabled"
       ]
     },
     {

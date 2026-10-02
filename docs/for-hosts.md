@@ -123,6 +123,28 @@ cycle without one outputs silence. Refusing the graph and naming the cycle is st
 better than the platform's own failure, which is to go quiet. And never compensate an edge
 inside a cycle: the delay in a feedback loop is the effect the user asked for.
 
+## Composite plugins (optional)
+
+A host MAY support plugins made of other plugins, and one that does not conforms. [nested-plugins.md](nested-plugins.md) is the
+specification and contract section 14 is its summary. A host that does not support them still has to say so by name when it meets one:
+a `jig:CompositePlugin` declares no module or processor, so the loading sequence above would otherwise report a missing file.
+
+If you support them, the order matters more than anything else in it:
+
+1. Fetch the composite's profile and the profile of every member, recursively, and **no code**. Check capabilities over all of them, check
+   each member's `jig:pinnedDigest` against the canonical digest of what you fetched, check that every parameter an exposed port drives
+   exists and that the port's range lies within it, and refuse a composite that contains itself. `resolveComposite` in
+   `src/host/CompositeResolver.js` is this step.
+2. Then load each member as a plugin, one instance per use, and **all or none**: a member that fails fails the composite, naming it, and the
+   ones already made are released.
+3. Hold one node in the project and give your compiler the flat graph, expanded after bypass.
+   `src/ops/CompositeExpansion.js` is a pure function that does it, so the model keeps what the person made.
+4. Apply the author's voicing when it loads: each member's own settings, and each exposed port's default on what it drives. A person's
+   settings, restored from a saved session, go on top.
+
+Do not read a composite's latency from its profile, and do not call a member by its position: state is keyed by member IRI so that a
+composite can gain a member without breaking a session saved before it.
+
 ## What will bite you
 
 | Symptom | Cause |
@@ -132,6 +154,7 @@ inside a cycle: the delay in a feedback loop is the effect the user asked for.
 | Two `Access-Control-Allow-Origin` headers | A proxy adding one the upstream already sent. Browsers reject that outright. |
 | Everything silent, no error | A feedback cycle with no delay in it, or a processor writing fewer channels than it declared. |
 | Intermittently late notes | Events located by block index rather than stream position. |
+| A composite loads and sounds wrong, with nothing in error | The author's member settings, or an exposed port's default, were not applied at load; or a drive went to the wrong member. Compare it with the same members wired by hand. |
 
 ## Checklist
 

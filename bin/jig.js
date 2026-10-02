@@ -112,13 +112,30 @@ export async function resolveProfile (target, roots = {}) {
 }
 
 let cachedStyle = null
-/** The page stylesheet, so a standalone panel looks like the one in Jiggy. */
+/**
+ * The styles a standalone panel page needs, so a screenshot of it is a
+ * screenshot of the real control surface.
+ *
+ * Both sources, and the second one is not optional. web/index.html links
+ * web/panel.css for the generated panel and the knob, and its own inline block
+ * only carries the tokens and the studio layout. Reading the inline block
+ * alone, which is what this did until a screenshot of a six-band equalizer
+ * came back as one unstyled slider per screenful, leaves `.controls` at its
+ * default `display: block`: every control stacks full width. Measured in
+ * Chrome, 2026-10-02, on cascade, drumkit, boost and tremolo alike, so every
+ * gallery screenshot taken since panel.css existed was of an unstyled page.
+ * panel.css goes last so the page's own rules still win where they overlap.
+ */
 export async function panelStyle () {
   if (cachedStyle) return cachedStyle
   const page = await readFile(join(root, 'web/index.html'), 'utf8')
-  const match = /<style>([\s\S]*)<\/style>/.exec(page)
-  if (!match) throw new Error('web/index.html holds no <style> block to reuse')
-  cachedStyle = match[1]
+  // Non-greedy and every match: a greedy pattern takes everything from the
+  // first <style> to the last </style>, which is the document between them
+  // rather than the styles.
+  const blocks = [...page.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1])
+  if (blocks.length === 0) throw new Error('web/index.html holds no <style> block to reuse')
+  const panel = await readFile(join(root, 'web/panel.css'), 'utf8')
+  cachedStyle = `${blocks.join('\n')}\n\n${panel}`
   return cachedStyle
 }
 

@@ -1,0 +1,69 @@
+# examples/counterexample-composite-wiring.ttl
+#
+# A composite that jig:CompositePluginShape accepts and src/rdf/CompositeReader.js
+# refuses, for each rule SHACL Core cannot say: a boundary that disagrees with the
+# declared counts, an endpoint that names nothing in the composite, a setting on
+# a parameter an exposed port drives, a control that drives a node that is not a
+# member, and a composite that lists itself as a member. tests/rdf/CompositeReader.test.js
+# names the rules.
+
+@base <https://example.org/racks/wired-wrongly/> .
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+<>
+    a jig:CompositePlugin ;
+    rdfs:label "Wired wrongly" ;
+    foaf:homepage <> ;
+    trn:role trn:AudioEffect ;
+    trn:produces trn:Audio ;
+    jig:audioInputs 1 ;
+    jig:audioOutputs 2 ;
+    jig:member <#a> , <> ;
+    jig:connection <#in> , <#in-high> , <#stray> , <#out> , <#toggle> ;
+    lv2:port <#level> , <#elsewhere> .
+
+<#a> a jig:Member ;
+    jig:plugin <https://strandz.it/jigdaw/plugins/boost/> ;
+    jig:setting <#a-gain> .
+<#a-gain> a jig:ParameterSetting ; jig:symbol "gain" ; jig:value 1 .
+
+<#in> a jig:Connection ; jig:from <#in-f> ; jig:to <#in-t> ; jig:signalKind trn:Audio .
+<#in-f> a jig:Endpoint ; jig:endpointNode <> ;   jig:portIndex 0 .
+<#in-t> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portIndex 0 .
+
+# Leaves an input the composite does not declare.
+<#in-high> a jig:Connection ; jig:from <#ih-f> ; jig:to <#ih-t> ; jig:signalKind trn:Audio .
+<#ih-f> a jig:Endpoint ; jig:endpointNode <> ;   jig:portIndex 3 .
+<#ih-t> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portIndex 0 .
+
+# Names a node nothing declares.
+<#stray> a jig:Connection ; jig:from <#s-f> ; jig:to <#s-t> ; jig:signalKind trn:Audio .
+<#s-f> a jig:Endpoint ; jig:endpointNode <#ghost> ; jig:portIndex 0 .
+<#s-t> a jig:Endpoint ; jig:endpointNode <#a> ;     jig:portIndex 0 .
+
+# Feeds output 0 and leaves output 1, which is declared, with nothing.
+<#out> a jig:Connection ; jig:from <#o-f> ; jig:to <#o-t> ; jig:signalKind trn:Audio .
+<#o-f> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portIndex 0 .
+<#o-t> a jig:Endpoint ; jig:endpointNode <> ;   jig:portIndex 0 .
+
+# Modulates a parameter the composite does not expose.
+<#toggle> a jig:Connection ; jig:from <#t-f> ; jig:to <#t-t> ; jig:signalKind trn:Audio .
+<#t-f> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portIndex 0 .
+<#t-t> a jig:Endpoint ; jig:endpointNode <> ;   jig:portSymbol "nothing" .
+
+# Drives "gain", which member #a also sets.
+<#level> a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "level" ; lv2:name "Level" ; lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 2 ;
+    jig:drives <#level-target> .
+<#level-target> a jig:Endpoint ; jig:endpointNode <#a> ; jig:portSymbol "gain" .
+
+# Drives a node that is not a member.
+<#elsewhere> a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "elsewhere" ; lv2:name "Elsewhere" ; lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:drives <#elsewhere-target> .
+<#elsewhere-target> a jig:Endpoint ; jig:endpointNode <#ghost> ; jig:portSymbol "x" .

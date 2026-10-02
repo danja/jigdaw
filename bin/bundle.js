@@ -30,6 +30,7 @@ import { resolve, join, basename, dirname, relative } from 'node:path'
 import { deflateRawSync, inflateRawSync, crc32 } from 'node:zlib'
 import { parseText } from '../src/rdf/parse.js'
 import { readProfile } from '../src/rdf/ProfileReader.js'
+import { isComposite } from '../src/rdf/CompositeReader.js'
 import { digestOf } from '../src/host/Integrity.js'
 import { vocabulary, JIG } from '../src/rdf/Vocabulary.js'
 import {
@@ -47,7 +48,7 @@ import {
 const TOOL = `${JIG}tool/bundle`
 const TOOL_NAME = 'bin/bundle.js'
 
-/** The two root names an archive reserves. Section 2.2. */
+/** The names an archive reserves at its root. Section 2.2, and section 9 for `members/`. */
 export const RESERVED = Object.freeze(['profile.ttl', 'provenance.ttl'])
 
 const MEDIA_TYPES = {
@@ -120,7 +121,7 @@ const u32 = n => { const b = Buffer.alloc(4); b.writeUInt32LE(n >>> 0); return b
  * same bytes, for the same reason the profile writer is deterministic: a diff
  * should show what changed rather than when it was made.
  */
-function zip (entries) {
+export function zip (entries) {
   const locals = []
   const central = []
   let offset = 0
@@ -197,13 +198,13 @@ export function unzip (buffer) {
 
 // ── Making the two forms ───────────────────────────────────────────────────
 
-export async function bundle (dir, {
-  now = new Date(),
-  attributedTo = null,
-  atLocation = null,
-  documentIri = null,
-  signer = null
-} = {}) {
+/**
+ * Read a plugin directory and check everything a bundle of it would carry: the profile, its
+ * declared files, and each file's digest. Throws one error naming every problem, so a plugin that
+ * cannot be bundled says all the reasons at once. Shared with bundle-composite.js, which collects
+ * a composite's members the same way.
+ */
+export async function collectPlugin (dir) {
   const profileText = await readFile(join(dir, 'profile.ttl'), 'utf8')
   // The profile IRI is its own subject, so the document says where it belongs
   // and nothing here has to be told.
@@ -257,6 +258,41 @@ export async function bundle (dir, {
   if (problems.length > 0) {
     throw new Error(`${iri} cannot be bundled:\n  - ` + problems.join('\n  - '))
   }
+  return { iri, label: profile.label, profileText, dataset, files }
+}
+
+/** A profile's text with every relative file location replaced by the bytes themselves, as a data: URI. */
+export function inlineFiles (profileText, files) {
+  let flat = profileText
+  for (const file of files) {
+    const inline = `data:${file.mediaType};base64,${file.bytes.toString('base64')}`
+    const before = flat
+    flat = flat.replace(`<${file.name}>`, `<${inline}>`)
+    if (flat === before) {
+      throw new Error(`could not inline ${file.name}: the profile does not name it relatively. ` +
+        'A bundle needs relative locations, per docs/plugin-bundles.md section 2.2.')
+    }
+  }
+  return flat
+}
+
+export async function bundle (dir, options = {}) {
+  const {
+    now = new Date(),
+    attributedTo = null,
+    atLocation = null,
+    documentIri = null,
+    signer = null
+  } = options
+
+  // A composite plugin declares no files of its own, so its bundle is its members'. Section 9.
+  const text = await readFile(join(dir, 'profile.ttl'), 'utf8')
+  if (isComposite(await parseText(text, 'urn:jigdaw:bundle'))) {
+    const { bundleComposite } = await import('./bundle-composite.js')
+    return bundleComposite(dir, options)
+  }
+
+  const { iri, label, profileText, dataset, files } = await collectPlugin(dir)
 
   // One digest for both forms, because it is taken over the graph with
   // jig:location omitted and the two forms differ in nothing else. That is the
@@ -269,16 +305,7 @@ export async function bundle (dir, {
 
   // Flattened: every location becomes the bytes themselves. A legal profile,
   // which is why this needs no reader of its own.
-  let flat = profileText
-  for (const file of files) {
-    const inline = `data:${file.mediaType};base64,${file.bytes.toString('base64')}`
-    const before = flat
-    flat = flat.replace(`<${file.name}>`, `<${inline}>`)
-    if (flat === before) {
-      throw new Error(`could not inline ${file.name}: the profile does not name it relatively. ` +
-        'A bundle needs relative locations, per docs/plugin-bundles.md section 2.2.')
-    }
-  }
+  let flat = inlineFiles(profileText, files)
 
   // The flattened form is one file, so its provenance goes in that file. The
   // record names its nodes absolutely, so appending it changes nothing about
@@ -296,7 +323,7 @@ export async function bundle (dir, {
 
   return {
     iri,
-    label: profile.label,
+    label,
     files,
     flat,
     archive,
@@ -306,7 +333,7 @@ export async function bundle (dir, {
   }
 }
 
-const SEPARATOR =
+export const SEPARATOR =
   '# ── Provenance ─────────────────────────────────────────────────────────────'
 
 /**
@@ -321,7 +348,7 @@ const SEPARATOR =
  * The union of the two graphs is a plain array of quads, because everything
  * that reads it only iterates.
  */
-async function provenance ({
+export async function provenance ({
   dataset, profileIri, form, digest, now, attributedTo, atLocation, documentIri, signer
 }) {
   const at = documentIri ?? provenanceIriFor(profileIri)
@@ -360,7 +387,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const options = {}
   const positional = []
   for (let i = 0; i < args.length; i++) {
-    const flag = /^--(by|key|at|date)$/.exec(args[i])
+    const flag = /^--(by|key|at|date|members)$/.exec(args[i])
     if (flag) { options[flag[1]] = args[++i]; continue }
     positional.push(args[i])
   }
@@ -373,7 +400,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       '  --by <iri>    who to attribute the bundle to, in its provenance record',
       '  --key <file>  a key file from bin/keys.js, to sign the bundle with',
       '  --at <iri>    where the provenance record itself will be published',
-      '  --date <iso>  the bundling time, for a reproducible record'
+      '  --date <iso>  the bundling time, for a reproducible record',
+      '  --members <dir>  for a composite: a directory holding each member plugin, named as its IRI ends'
     ].join('\n'))
     process.exit(2)
   }
@@ -381,7 +409,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   try {
     const { loadSigner } = await import('./keys.js')
+    const { memberDirectoryUnder } = await import('./bundle-composite.js')
     const made = await bundle(resolve(dir), {
+      resolveMember: options.members ? memberDirectoryUnder(options.members) : undefined,
       attributedTo: options.by ?? null,
       documentIri: options.at ?? null,
       now: options.date ? new Date(options.date) : new Date(),

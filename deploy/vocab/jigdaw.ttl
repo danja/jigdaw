@@ -449,13 +449,18 @@ jig:revision a owl:DatatypeProperty ;
 
 jig:node a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Node .
 jig:track a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Track .
-jig:connection a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Connection .
+## No domain: a project holds connections between its nodes, and a composite plugin holds
+## connections between its members (docs/nested-plugins.md), and a domain per class would
+## say they are one thing. The vocabulary may not use a blank-node union to say both.
+jig:connection a owl:ObjectProperty ; rdfs:range jig:Connection .
 jig:transport a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Transport .
 
+## No domain, because a node and a composite's member both name a plugin. The range is
+## trn:PluginProfile so that the plugin may be a jig:WebPlugin or a jig:CompositePlugin.
 jig:plugin a owl:ObjectProperty ;
-    rdfs:domain jig:Node ; rdfs:range jig:WebPlugin ;
+    rdfs:range trn:PluginProfile ;
     rdfs:label "plugin" ;
-    rdfs:comment """The plugin IRI this node instantiates. Dereferenceable, so a project
+    rdfs:comment """The plugin IRI this node, or this member of a composite, instantiates. Dereferenceable, so a project
         carries everything needed to reconstruct itself on a machine that has never seen
         these plugins.""" .
 
@@ -610,7 +615,8 @@ jig:offsetSeconds a owl:DatatypeProperty ;
         than beats of the transport, because a recording does not change length when the
         tempo does. Absent means the start of the file.""" .
 
-jig:setting a owl:ObjectProperty ; rdfs:domain jig:Node ; rdfs:range jig:ParameterSetting .
+## No domain: stated on a node in a project and on a member in a composite.
+jig:setting a owl:ObjectProperty ; rdfs:range jig:ParameterSetting .
 
 jig:from a owl:ObjectProperty ; rdfs:domain jig:Connection ; rdfs:range jig:Endpoint .
 jig:to a owl:ObjectProperty ; rdfs:domain jig:Connection ; rdfs:range jig:Endpoint .
@@ -622,7 +628,9 @@ jig:signalKind a owl:ObjectProperty ;
         connections are Web Audio edges; MIDI connections are host-routed message traffic,
         which is why the kind has to be stated rather than inferred from the endpoints.""" .
 
-jig:endpointNode a owl:ObjectProperty ; rdfs:domain jig:Endpoint ; rdfs:range jig:Node .
+## No range: in a project it is a jig:Node, in a composite it is a jig:Member or the
+## composite itself, which names the composite's own boundary.
+jig:endpointNode a owl:ObjectProperty ; rdfs:domain jig:Endpoint .
 
 jig:portIndex a owl:DatatypeProperty ;
     rdfs:domain jig:Endpoint ; rdfs:range xsd:integer ;
@@ -934,3 +942,43 @@ jig:PluginCollection a owl:Class ;
         publisher's opinion about what is worth finding: it confers no trust, carries no
         code and no digests, and the profile each IRI returns governs wherever the two
         disagree.""" .
+
+## -- Nested plugins ------------------------------------------------------------
+##
+## docs/nested-plugins.md. A plugin made of other plugins, declared, bundled and
+## installed as one. Members, wires and settings reuse jig:plugin, jig:connection,
+## jig:Endpoint and jig:setting as a project uses them, and the composite's
+## controls are lv2:ports, so only the terms below are new.
+
+jig:CompositePlugin a owl:Class ;
+    rdfs:subClassOf trn:PluginProfile ;
+    rdfs:label "Composite Plugin" ;
+    rdfs:comment """A plugin whose profile declares a graph of other plugins instead of a
+        module and a processor. Not a subclass of jig:WebPlugin, which requires a processor,
+        so a host that does not know composites does not mistake one for a plugin it can
+        load. Its latency and tail are derived from its members and never declared.""" .
+
+jig:Member a owl:Class ;
+    rdfs:label "Member" ;
+    rdfs:comment """One instance of a plugin inside a composite. The counterpart of jig:Node
+        in a project, with no track, because the composite is what is on a track.""" .
+
+jig:member a owl:ObjectProperty ;
+    rdfs:domain jig:CompositePlugin ; rdfs:range jig:Member ;
+    rdfs:label "member" ;
+    rdfs:comment "A member of this composite. Membership is stated here and carries no order." .
+
+jig:pinnedDigest a owl:DatatypeProperty ;
+    rdfs:domain jig:Member ; rdfs:range xsd:string ;
+    rdfs:label "pinned digest" ;
+    rdfs:comment """The jig:canonicalDigest of the profile the composite was made against,
+        as sha384-<base64>. A host MUST refuse the composite when the profile it fetched for
+        this member has another. It is what lets one signature on a composite reach every byte
+        of its members, and a composite whose members are not all pinned cannot be bundled.""" .
+
+jig:drives a owl:ObjectProperty ;
+    rdfs:domain lv2:Port ; rdfs:range jig:Endpoint ;
+    rdfs:label "drives" ;
+    rdfs:comment """The member parameter, as a jig:Endpoint with a jig:portSymbol, that an
+        exposed port of a composite sets. A port may drive several, each given the value
+        unchanged.""" .

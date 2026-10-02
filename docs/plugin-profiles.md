@@ -218,6 +218,14 @@ rebuilt.
 Load failures are recorded too. Which plugins work in which browsers is a fact about the
 ecosystem, and it is discoverable only if unsuccessful loads are written down.
 
+## A plugin made of plugins
+
+A profile can describe a plugin that is made of others instead of one that has code of its own: a guitar rack of three pedals, with the few
+controls worth exposing. It is a `jig:CompositePlugin`, and it lists its members by IRI, the wiring between them, and the parameters it
+offers, each saying which member parameter it moves. It is a plugin like any other: it has an IRI, it is fetched by it, a collection lists it,
+a bundle carries it and a signature covers it. It declares no module or processor, so it is deliberately not a `jig:WebPlugin`. The
+full description, with an example that is checked against the shapes, is [nested-plugins.md](nested-plugins.md).
+
 ## Getting one
 
 The quickest route is to copy `examples/reference-profile.ttl` and edit it. It is a complete

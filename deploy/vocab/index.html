@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  159 terms.
+  164 terms.
 </p>
 
 <h2>Classes</h2>
@@ -67,6 +67,11 @@
   <dt id="Clip"><code>jig:Clip</code></dt>
   <dd>A span of a track's timeline, from trn:startBeat for
         trn:lengthBeats, in beats of the transport.</dd>
+  <dt id="CompositePlugin"><code>jig:CompositePlugin</code> <span class="label">Composite Plugin</span></dt>
+  <dd>A plugin whose profile declares a graph of other plugins instead of a
+        module and a processor. Not a subclass of jig:WebPlugin, which requires a processor,
+        so a host that does not know composites does not mistake one for a plugin it can
+        load. Its latency and tail are derived from its members and never declared.</dd>
   <dt id="Connection"><code>jig:Connection</code></dt>
   <dd>A directed link between two endpoints. Topology is modelled as explicit
         connections with named endpoints, never as a list, so the graph is a faithful
@@ -100,6 +105,9 @@
   <dt id="Master"><code>jig:Master</code></dt>
   <dd>The last gain, pan and mute before the destination. At most one per
         project. Absent means unity, centred, unmuted.</dd>
+  <dt id="Member"><code>jig:Member</code></dt>
+  <dd>One instance of a plugin inside a composite. The counterpart of jig:Node
+        in a project, with no track, because the composite is what is on a track.</dd>
   <dt id="MidiClip"><code>jig:MidiClip</code> <span class="label">MIDI Clip</span></dt>
   <dd>A clip of notes, played into the track's jig:midiInput.</dd>
   <dt id="Module"><code>jig:Module</code></dt>
@@ -214,6 +222,10 @@
         resolves inside these bytes or is refused. Contract section 12.3.</dd>
   <dt id="curve"><code>jig:curve</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="drives"><code>jig:drives</code></dt>
+  <dd>The member parameter, as a jig:Endpoint with a jig:portSymbol, that an
+        exposed port of a composite sets. A port may drive several, each given the value
+        unchanged.</dd>
   <dt id="endpointNode"><code>jig:endpointNode</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="envelope"><code>jig:envelope</code></dt>
@@ -233,6 +245,8 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="master"><code>jig:master</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="member"><code>jig:member</code></dt>
+  <dd>A member of this composite. Membership is stated here and carries no order.</dd>
   <dt id="midiInput"><code>jig:midiInput</code> <span class="label">MIDI input</span></dt>
   <dd>The node a track's MIDI clips play into. Named rather than inferred
         from the chain, because a track can hold a MIDI effect before an instrument, or
@@ -252,7 +266,7 @@
   <dd>The track this track's output goes to instead of the master. Makes the
         target a bus. Absent means the master. Cycles are refused.</dd>
   <dt id="plugin"><code>jig:plugin</code></dt>
-  <dd>The plugin IRI this node instantiates. Dereferenceable, so a project
+  <dd>The plugin IRI this node, or this member of a composite, instantiates. Dereferenceable, so a project
         carries everything needed to reconstruct itself on a machine that has never seen
         these plugins.</dd>
   <dt id="prefers"><code>jig:prefers</code></dt>
@@ -422,6 +436,11 @@
         StereoPannerNode takes it. Absent means centre.</dd>
   <dt id="paramIndex"><code>jig:paramIndex</code> <span class="label">parameter index</span></dt>
   <dd>Which index this parameter has in jig_set_param. Required on every port of a module declaring an ABI, because a host loading the module directly has no processor to hold the mapping and cannot infer it: a position in the profile is a property of the document, not of the module.</dd>
+  <dt id="pinnedDigest"><code>jig:pinnedDigest</code> <span class="label">pinned digest</span></dt>
+  <dd>The jig:canonicalDigest of the profile the composite was made against,
+        as sha384-&lt;base64&gt;. A host MUST refuse the composite when the profile it fetched for
+        this member has another. It is what lets one signature on a composite reach every byte
+        of its members, and a composite whose members are not all pinned cannot be bundled.</dd>
   <dt id="pointValue"><code>jig:pointValue</code></dt>
   <dd>In the target parameter's own units.</dd>
   <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>

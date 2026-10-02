@@ -135,7 +135,7 @@ export function widgetFor (port) {
   return 'dial'
 }
 
-function readPort (dataset, term) {
+export function readPort (dataset, term) {
   const properties = values(dataset, term, lv2.portProperty)
   const port = {
     iri: term.value,
@@ -183,6 +183,12 @@ export function findSubject (dataset) {
       throw new Error(
         'this is a foreign plugin (contract section 12). It runs with this page\'s privileges ' +
         'and is not loaded without being asked for, and never on opening a project.')
+    }
+    // Likewise a composite, which is runnable and is read by CompositeReader, not here.
+    if (dataset.match(null, iri(rdfTerms.type), iri(jig.CompositePlugin)).size > 0) {
+      throw new Error(
+        'this is a composite plugin (docs/nested-plugins.md): a plugin made of other plugins, with no module or ' +
+        'processor of its own. It is read by readComposite and loaded as a tree, not read as one plugin.')
     }
     throw new Error('no jig:WebPlugin in this document. A profile that does not declare itself loadable is a valid catalogue entry, but it cannot be run here.')
   }

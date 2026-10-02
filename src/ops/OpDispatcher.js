@@ -17,6 +17,9 @@ import { findPort } from '../model/Endpoints.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
 import { EventRouter, isMidi, carriesNotes } from '../engine/EventRouter.js'
 import { effectiveConnections } from './Bypass.js'
+import { expandComposites, flatIdOf } from './CompositeExpansion.js'
+import { parameterTargets } from '../host/CompositeParameters.js'
+import { collectState } from '../host/CompositeState.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
 import { decodeState } from '../host/StateCodec.js'
@@ -27,6 +30,11 @@ export class OpDispatcher {
   #engine
   #listeners = new Set()
   #nodeIds = new Map()
+  // A composite plugin is one model node and several engine nodes (docs/nested-plugins.md). Its entry is held
+  // here by node id, and each member's engine id by its flat id, which is the id the compiler and the engine
+  // links use. `#nodeIds` keeps only plain nodes, so what read it before reads the same thing.
+  #composites = new Map()
+  #memberIds = new Map()
   #router = null
   #inspections
 
@@ -119,8 +127,22 @@ export class OpDispatcher {
 
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents (nodeId, events) {
+    if (!this.#router) return false
+    const composite = this.#composites.get(nodeId)
+    if (composite) {
+      // Into a composite is into whatever its MIDI input is wired to inside. Found by expanding a connection
+      // from nowhere to the composite, so the boundary is read by the same code that wires the engine.
+      const kind = composite.entry.tree.composite.connections.find(c => c.from.node === composite.entry.iri && isMidi(c.signalKind))?.signalKind
+      if (!kind) return false
+      const probe = '\u0000outside'
+      const { connections } = this.#expand([{ id: probe }, { id: nodeId }],
+        [{ id: probe, from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 }, signalKind: kind }])
+      const targets = connections.map(c => this.#memberIds.get(c.to.node)).filter(Boolean)
+      for (const target of targets) this.#router.send(target, events)
+      return targets.length > 0
+    }
     const engineId = this.#nodeIds.get(nodeId)
-    if (!engineId || !this.#router) return false
+    if (!engineId) return false
     this.#router.send(engineId, events)
     return true
   }
@@ -201,8 +223,14 @@ export class OpDispatcher {
       track.id,
       this.#project.nodes
         .filter(n => n.track === track.id)
-        .reduce((most, n) => Math.max(most, (compiled.arrival.get(n.id) ?? 0) + this.#latencyOf(n.id)), 0)
+        .flatMap(n => this.#flatIdsOf(n.id))
+        .reduce((most, id) => Math.max(most, (compiled.arrival.get(id) ?? 0) + this.#latencyOf(id)), 0)
     ]))
+  }
+
+  /** The ids a model node has in the flat graph: its own, or its members'. */
+  #flatIdsOf (nodeId) {
+    return this.#composites.get(nodeId)?.flatIds ?? [nodeId]
   }
 
   /** Give each track the delay that lines it up, asking the engine only where it changed. */
@@ -224,9 +252,30 @@ export class OpDispatcher {
     for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id)
   }
 
+  /** The engine node behind a flat id: a plain node, or a member of a composite. */
+  #engineIdOf (flatId) {
+    return this.#nodeIds.get(flatId) ?? this.#memberIds.get(flatId)
+  }
+
+  /** The nodes and connections the compiler and the engine see: composites replaced by their members. */
+  #expand (nodes, connections, { bypassed = () => false } = {}) {
+    return expandComposites({
+      nodes: nodes.map(n => ({ id: n.id })),
+      connections,
+      treeOf: id => this.#composites.get(id)?.entry.tree ?? null,
+      bypassed
+    })
+  }
+
+  /** compileGraph over a project, after expansion. `project` may be a trial copy. */
+  #compileProject (project) {
+    const flat = this.#expand(project.nodes, project.connections)
+    return compileGraph({ nodes: flat.nodes, connections: flat.connections }, { latencyOf: id => this.#latencyOf(id) })
+  }
+
   /** The latency each node declares, from what the engine actually loaded. */
   #latencyOf (nodeId) {
-    const engineId = this.#nodeIds.get(nodeId)
+    const engineId = this.#engineIdOf(nodeId)
     if (!engineId || !this.#engine) return 0
     try { return this.#engine.get(engineId).ready?.latencyFrames ?? 0 } catch { return 0 }
   }
@@ -263,7 +312,7 @@ export class OpDispatcher {
     // Commit to a scratch project to see what the graph would become.
     const trial = this.#clone()
     trial.apply(changes)
-    const compiled = compileGraph(trial, { latencyOf: id => this.#latencyOf(id) })
+    const compiled = this.#compileProject(trial)
 
     if (!compiled.ok) {
       return {
@@ -487,10 +536,11 @@ export class OpDispatcher {
     const result = this.apply(changes)
     if (!result.ok) {
       // The model refused it, so the engine must not keep it either.
-      this.#engine.remove(entry.id)
+      for (const id of entry.composite ? entry.members.map(m => m.entry.id) : [entry.id]) this.#engine.remove(id)
       return result
     }
 
+    if (entry.composite) return this.#adoptComposite(nodeId, entry, { result, track: node.track ?? newTrack, position })
     this.#nodeIds.set(nodeId, entry.id)
     // The links were rebuilt inside that apply, when this node was in the model
     // and not yet in #nodeIds, so nothing could be wired to it. For a connection
@@ -512,6 +562,31 @@ export class OpDispatcher {
 
     this.#emit({ type: 'plugin-added', nodeId, trackId: node.track ?? newTrack, entry })
     return { ...result, nodeId, trackId: node.track ?? newTrack, entry }
+  }
+
+  /**
+   * Take a loaded composite into the graph under one model node. Its members are engine nodes keyed by flat id,
+   * and everything the model says about the node (settings, bypass, track) is read through the composite's
+   * exposed ports and boundary, never by reaching a member directly.
+   */
+  #adoptComposite (nodeId, entry, { result, track, position }) {
+    const flatIds = []
+    for (const { path, entry: member } of entry.members) {
+      const flat = flatIdOf(nodeId, path)
+      flatIds.push(flat)
+      this.#memberIds.set(flat, member.id)
+    }
+    this.#composites.set(nodeId, { entry, flatIds })
+    this.#rebuildLinks(this.compile())
+    for (const [i, { entry: member }] of entry.members.entries()) {
+      this.#router?.observe(member.id)
+      this.#engine.onMessage(member.id, message => {
+        if (message?.type === 'latency') this.#onLatency(flatIds[i], member.id, message, nodeId)
+      })
+    }
+    if (position) this.#project.moveNode(nodeId, position.x, position.y)
+    this.#emit({ type: 'plugin-added', nodeId, trackId: track, entry })
+    return { ...result, nodeId, trackId: track, entry }
   }
 
   /**
@@ -547,8 +622,8 @@ export class OpDispatcher {
    * is reported and skipped: the next full rebuild wires it with the current
    * figures.
    */
-  #onLatency (nodeId, engineId, message) {
-    if (this.#nodeIds.get(nodeId) !== engineId || !this.#engine) return
+  #onLatency (nodeId, engineId, message, outerNodeId = nodeId) {
+    if (this.#engineIdOf(nodeId) !== engineId || !this.#engine) return
     let entry
     try {
       entry = this.#engine.get(engineId)
@@ -593,7 +668,7 @@ export class OpDispatcher {
     }
     this.#compensation = after
     this.#applyTrackDelays(compiled)
-    this.#emit({ type: 'latency', nodeId, latencyFrames, fromFrame, compiled })
+    this.#emit({ type: 'latency', nodeId: outerNodeId, latencyFrames, fromFrame, compiled })
   }
 
   /**
@@ -607,23 +682,42 @@ export class OpDispatcher {
    * second went straight to the project, around this dispatcher's own gate.
    */
   setParameter (nodeId, symbol, value) {
-    const engineId = this.#nodeIds.get(nodeId)
-    let applied = value
-    if (engineId && this.#engine) {
-      try {
-        applied = this.#engine.clampParameter(engineId, symbol, value)
-      } catch (error) {
-        return { ok: false, kind: 'change', message: error.message }
-      }
+    let prepared
+    try {
+      prepared = this.#prepareParameter(nodeId, symbol, value)
+    } catch (error) {
+      return { ok: false, kind: 'change', message: error.message }
     }
-
-    const result = this.apply([{ op: 'setSetting', node: nodeId, symbol, value: applied }])
+    const result = this.apply([{ op: 'setSetting', node: nodeId, symbol, value: prepared.applied }])
     if (!result.ok) return result
 
-    if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied)
+    prepared.push()
+    this.#emit({ type: 'parameter', nodeId, symbol, value: prepared.applied })
+    return { ...result, value: prepared.applied }
+  }
 
-    this.#emit({ type: 'parameter', nodeId, symbol, value: applied })
-    return { ...result, value: applied }
+  /**
+   * What a write to one parameter would do: the value as the plugin will hold it, and how to send it.
+   *
+   * A plain node's value is clamped by the plugin's declared range. A composite's is clamped by the range its
+   * exposed port declares and sent unchanged to every real parameter that port drives (section 2.2), each of
+   * which clamps it again to its own. Throws, before anything has changed, for a parameter that is not there.
+   */
+  #prepareParameter (nodeId, symbol, value) {
+    const composite = this.#composites.get(nodeId)
+    if (composite) {
+      const port = composite.entry.profile.ports.find(p => p.symbol === symbol)
+      if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`)
+      const bounded = Math.min(port.maximum ?? Infinity, Math.max(port.minimum ?? -Infinity, value))
+      const targets = parameterTargets(composite.entry.tree, symbol).map(target => {
+        const engineId = this.#memberIds.get(flatIdOf(nodeId, target.path))
+        return { engineId, symbol: target.symbol, value: this.#engine ? this.#engine.clampParameter(engineId, target.symbol, bounded) : bounded }
+      })
+      return { applied: bounded, push: () => { for (const t of targets) this.#engine?.setParameter(t.engineId, t.symbol, t.value) } }
+    }
+    const engineId = this.#nodeIds.get(nodeId)
+    const applied = engineId && this.#engine ? this.#engine.clampParameter(engineId, symbol, value) : value
+    return { applied, push: () => { if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied) } }
   }
 
   /**
@@ -634,17 +728,30 @@ export class OpDispatcher {
    * and an open editor all at the value being undone.
    */
   resetParameter (nodeId, symbol) {
-    const engineId = this.#nodeIds.get(nodeId)
+    const composite = this.#composites.get(nodeId)
     let value = null
-    if (engineId && this.#engine) {
-      try {
-        value = this.#engine.defaultParameter(engineId, symbol)
-      } catch (error) {
-        return { ok: false, kind: 'change', message: error.message }
+    let prepared = null
+    try {
+      if (composite) {
+        const port = composite.entry.profile.ports.find(p => p.symbol === symbol)
+        if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`)
+        value = port.defaultValue
+        prepared = this.#prepareParameter(nodeId, symbol, value)
+      } else {
+        const engineId = this.#nodeIds.get(nodeId)
+        if (engineId && this.#engine) value = this.#engine.defaultParameter(engineId, symbol)
       }
+    } catch (error) {
+      return { ok: false, kind: 'change', message: error.message }
     }
     const result = this.apply([{ op: 'clearSetting', node: nodeId, symbol }])
     if (!result.ok) return result
+    if (prepared) {
+      prepared.push()
+      this.#emit({ type: 'parameter', nodeId, symbol, value: prepared.applied })
+      return { ...result, value: prepared.applied }
+    }
+    const engineId = this.#nodeIds.get(nodeId)
     if (engineId && this.#engine && value !== null) {
       this.#engine.setParameter(engineId, symbol, value)
       this.#emit({ type: 'parameter', nodeId, symbol, value })
@@ -664,6 +771,12 @@ export class OpDispatcher {
    * plugin that never answers, which are both ordinary rather than errors.
    */
   async getNodeState (nodeId) {
+    // A composite has no processor to ask, so the host assembles its state from its members (section 6).
+    const composite = this.#composites.get(nodeId)
+    if (composite && this.#engine) {
+      const state = await collectState(composite.entry.tree, path => this.#engine.requestState(this.#memberIds.get(flatIdOf(nodeId, path))))
+      return state ?? null
+    }
     const engineId = this.#nodeIds.get(nodeId)
     if (!engineId || !this.#engine) return null
     // A plugin that declares jig:stateless never answers: asking would only wait out the timeout.
@@ -681,6 +794,7 @@ export class OpDispatcher {
    */
   loadAsset (nodeId, key, bytes) {
     const engineId = this.#nodeIds.get(nodeId)
+    if (this.#composites.has(nodeId)) return { ok: false, message: 'a composite plugin has no assets of its own to replace' }
     if (!engineId || !this.#engine) {
       return { ok: false, message: 'no such node, or nothing to load an asset into' }
     }
@@ -714,6 +828,14 @@ export class OpDispatcher {
       if (this.#project.node(nodeId)) continue
       try { this.#engine.remove(engineId) } catch { /* already gone */ }
       this.#nodeIds.delete(nodeId)
+    }
+    for (const [nodeId, composite] of [...this.#composites]) {
+      if (this.#project.node(nodeId)) continue
+      for (const flat of composite.flatIds) {
+        try { this.#engine.remove(this.#memberIds.get(flat)) } catch { /* already gone */ }
+        this.#memberIds.delete(flat)
+      }
+      this.#composites.delete(nodeId)
     }
   }
 
@@ -798,21 +920,23 @@ export class OpDispatcher {
   #linkSinksToTracks () {
     if (!this.#engine) return
 
+    const flat = this.#expandedInUse(this.#stepOverBypassed())
     const feedsSomething = new Set()
-    for (const connection of this.#connectionsInUse()) {
+    for (const connection of flat.connections) {
       if (isMidi(connection.signalKind)) continue
       feedsSomething.add(connection.from.node)
     }
 
-    for (const node of this.#project.nodes) {
+    for (const node of flat.nodes) {
       if (feedsSomething.has(node.id)) continue
       // A bypassed node is out of the signal: what it would make is not to be heard.
       if (node.bypassed) continue
-      const engineId = this.#nodeIds.get(node.id)
+      const engineId = this.#engineIdOf(node.id)
       if (!engineId) continue
       const entry = this.#engine.get(engineId)
       if (!(entry?.node?.numberOfOutputs > 0)) continue
-      this.#engine.linkToTrack(engineId, node.track)
+      // A member is on the track of the composite it is in.
+      this.#engine.linkToTrack(engineId, this.#project.node(node.path[0]).track)
     }
   }
 
@@ -820,7 +944,7 @@ export class OpDispatcher {
    * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
    * model keeps every connection; bypass changes only what is wired.
    */
-  #connectionsInUse () {
+  #stepOverBypassed () {
     const passes = (nodeId, kind) => {
       const profile = this.engineNode(nodeId)?.profile
       if (!profile) return false
@@ -831,6 +955,16 @@ export class OpDispatcher {
       bypassed: nodeId => this.#project.node(nodeId)?.bypassed === true,
       passes
     })
+  }
+
+  /** What the engine is wired from: bypass applied to the project's own connections, then composites expanded. */
+  #connectionsInUse () {
+    // After bypass, so a bypassed composite is stepped over as one node and its members are left alone.
+    return this.#expandedInUse(this.#stepOverBypassed()).connections
+  }
+
+  #expandedInUse (connections) {
+    return this.#expand(this.#project.nodes, connections, { bypassed: id => this.#project.node(id)?.bypassed === true })
   }
 
   #rebuildLinks (compiled) {
@@ -845,8 +979,8 @@ export class OpDispatcher {
     const midiRoutes = []
 
     for (const connection of this.#connectionsInUse()) {
-      const from = this.#nodeIds.get(connection.from.node)
-      const to = this.#nodeIds.get(connection.to.node)
+      const from = this.#engineIdOf(connection.from.node)
+      const to = this.#engineIdOf(connection.to.node)
       // A connection between nodes that are not both loaded is in the model
       // but not yet in the audio graph, which is normal while loading.
       if (!from || !to) continue
@@ -893,16 +1027,12 @@ export class OpDispatcher {
 
     const applied = []
     for (const { nodeId, symbol, value } of settings) {
-      const engineId = this.#nodeIds.get(nodeId)
-      let clamped = value
-      if (engineId && this.#engine) {
-        try {
-          clamped = this.#engine.clampParameter(engineId, symbol, value)
-        } catch (error) {
-          return { ok: false, kind: 'change', message: error.message }
-        }
+      try {
+        const prepared = this.#prepareParameter(nodeId, symbol, value)
+        applied.push({ nodeId, symbol, value: prepared.applied, push: prepared.push })
+      } catch (error) {
+        return { ok: false, kind: 'change', message: error.message }
       }
-      applied.push({ nodeId, symbol, value: clamped, engineId })
     }
 
     const result = this.apply(
@@ -912,7 +1042,7 @@ export class OpDispatcher {
     if (!result.ok) return result
 
     for (const a of applied) {
-      if (a.engineId && this.#engine) this.#engine.setParameter(a.engineId, a.symbol, a.value)
+      a.push()
       this.#emit({ type: 'parameter', nodeId: a.nodeId, symbol: a.symbol, value: a.value })
     }
 
@@ -924,14 +1054,32 @@ export class OpDispatcher {
     return this.apply([{ op: 'setTrackChannel', track: trackId, ...change }], { expectedRevision })
   }
 
+  /**
+   * The AudioParams a node's parameter is, for automation: one for a plugin, and for a composite one for every
+   * member parameter the exposed port drives. Empty for a parameter that is not there or a node not loaded.
+   */
+  audioParams (nodeId, symbol) {
+    const composite = this.#composites.get(nodeId)
+    if (composite && this.#engine) {
+      return parameterTargets(composite.entry.tree, symbol)
+        .map(target => this.#engine.get(this.#memberIds.get(flatIdOf(nodeId, target.path))).node.parameters?.get(target.symbol))
+        .filter(Boolean)
+    }
+    const param = this.engineNode(nodeId)?.node?.parameters?.get(symbol)
+    return param ? [param] : []
+  }
+
   /** The engine node behind a model node, if it has been loaded. */
   engineNode (nodeId) {
+    // A composite has no engine node of its own: its entry carries the profile the rest of the host reads.
+    const composite = this.#composites.get(nodeId)
+    if (composite) return composite.entry
     const engineId = this.#nodeIds.get(nodeId)
     return engineId && this.#engine ? this.#engine.get(engineId) : null
   }
 
   /** Compile without changing anything, for diagnostics. */
   compile () {
-    return compileGraph(this.#project, { latencyOf: id => this.#latencyOf(id) })
+    return this.#compileProject(this.#project)
   }
 }

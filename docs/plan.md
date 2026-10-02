@@ -633,6 +633,33 @@ The format is in [project-format.md](project-format.md) "Tracks" and "Clips".
 Still thin: no automation, no master strip. See [index.md](index.md) for the
 current honest summary, published alongside the specification.
 
+## Phase 12. Nested plugins. Specified, built, and run once in the browser.
+
+2026-10-02. The case was a guitar effects rack: several pedals, declared, exchanged and installed as one. [nested-plugins.md](nested-plugins.md)
+is the specification and contract section 14 its summary.
+
+The decision that shaped the rest was that a composite is a plugin and not a feature of the project. A group of nodes has no IRI, so nothing
+can find it, sign it or send it. A plugin already has all of that, so a composite inherits discovery, bundling, signing and installation, and
+the new work is only what a composite is: members, wiring, exposed controls, and pins.
+
+What was built, in the order it was found to be needed: the vocabulary and shapes, with a valid example and a counterexample that breaks each
+shape once; `CompositeReader`, for the four rules SHACL Core cannot say; the tree check that fetches every profile and no code, with pins,
+cycles and depth; the expansion that gives the compiler a flat graph; state keyed by member IRI; bundling and verification with the pins that
+carry a signature down to the members; then the engine and the dispatcher; then `bin/pin.js`, because an author could not compute a pin without
+writing code.
+
+Two mistakes are in [MISTAKES.md](../MISTAKES.md): a cycle test that passed with the cycle check deleted, because the depth limit printed the
+same chain, and a loader that did not apply the author's settings. Both were found by deleting the code and watching for a failure.
+
+Run in Chrome on 2026-10-02, against the rebuilt bundle, with a composite served from a second local origin and its members from the app's own
+server. It loaded, drew a panel from its exposed ports, passed a real key through the boost under the Drive control (master peak 0.139 at Drive 1,
+0 at Drive 0), refused a stale pin leaving the session untouched, and was removed and restored by Undo, with no console errors. The run found two
+real defects before it began: a pin taken over the URL a member was fetched from rather than the identity its profile states, which made a
+local copy of a member fail, and a member shape that refused `http:` on loopback, against the contract.
+
+Not done: a session saved and reopened in the page, the Mixer and Routing tabs, a phone, listening, the native adapter naming the class, and
+`npm run check-plugin` rendering one. TODO.md has the order.
+
 ## What it found
 
 `native/jigdaw-adapter` is a VST3, built with DPF in the shape downspout uses, that loads

@@ -34,6 +34,9 @@ stated here as a requirement on the author and it is the one rule that makes the
 A tool that makes a bundle MUST include every declared resource and MUST NOT include anything
 else. The plugin's source, its build script and its tests are not part of the plugin.
 
+A composite plugin declares no resource of its own and is the one exception: its bundle also
+holds its members, section 9.
+
 ## 2. Two forms, for two jobs
 
 Both carry the same plugin. Which to use is a question about the job, not about the plugin.
@@ -82,7 +85,8 @@ does not require guessing. Every `jig:location` in it MUST be relative, and MUST
 path inside the archive.
 
 The archive root reserves exactly two names, `profile.ttl` and `provenance.ttl`, and a
-resource MUST NOT be called either of them. Apart from those two, an archive MUST NOT contain
+resource MUST NOT be called either of them. The archive of a composite plugin also reserves
+`members/`, section 9. Apart from those two, an archive MUST NOT contain
 a file no resource names. `provenance.ttl` is section 5 and is the only thing in an archive
 that is not the plugin.
 
@@ -280,6 +284,11 @@ node bin/bundle.js plugins/pulse --by https://danny.example/#me --key ~/.config/
 node bin/verify.js plugins/pulse/pulse.jig --online
 ```
 
+For a composite plugin, `--members <directory>` says where its members are: a directory holding one
+plugin directory per member, named as the end of the member's IRI, as `plugins/` is. `bin/bundle.js`
+then writes the same two forms with every member in them (section 9), and `bin/verify.js` checks every pin
+and every member's files as well as the signature.
+
 `bin/keys.js` refuses to write a private key anywhere inside a git working tree, and prints the
 document to serve at the verification method IRI. `bin/verify.js` prints the three answers of
 section 6.2 separately and exits non-zero if any of them fails.
@@ -308,3 +317,39 @@ inventing a format for it.
 And the one thing that MUST be said to a person rather than assumed, which signing narrows
 rather than removes: **opening a bundle runs code from whoever made the bundle.** A signature
 tells you which key that was. It does not tell you that the code is safe.
+
+## 9. A composite plugin closes over its members
+
+[nested-plugins.md](nested-plugins.md) defines a plugin made of other plugins. Section 1's rule, that a
+bundle holds what the profile declares, would give a composite a bundle with no code in it, pointing at
+members that may not be reachable. So a bundle of a composite holds the composite and, recursively, every
+member.
+
+**A composite whose members are not all pinned cannot be bundled.** `jig:pinnedDigest` (made with `node bin/pin.js`, [nested-plugins.md](nested-plugins.md) section 9.2) is the canonical
+digest (section 5) of the member's profile, written in the composite's published profile. A tool MUST refuse
+to bundle a composite with an unpinned member, naming it, as it refuses a plugin with an undeclared file. The pin
+cannot be added at bundling, because the canonical digest names one plugin whichever way it was delivered,
+and a tool that edited the profile would be making a different plugin. The pin is also what makes the
+signature reach the members: section 6.1 signs the composite's profile and the provenance record, a pin
+in it names the member's profile, and that profile states the digest of every file it names.
+
+**Archive.** The root holds `profile.ttl` for the composite and `provenance.ttl`, and a `members/` directory.
+Each entry in `members/` is a directory holding the member's own `profile.ttl` at its root and the files it
+names, laid out as section 2.2 lays out an archive. A composite among the members contributes its members
+beside it in `members/`, flat, so that a member used twice is held once. A directory's name carries no
+meaning: a host reads the subject of its `profile.ttl` to learn which IRI it is a copy of, and treats it as a
+bundle of that IRI, which section 3 already permits. The composite's own `provenance.ttl` is the only record,
+and a member directory MUST NOT hold one.
+
+**Flattened.** One Turtle file holding the composite's profile and every member's profile as one graph, each
+resource a `data:` URI. A host looks for a member's profile in the document it is reading before it goes to the
+network.
+
+**A member's canonical digest is over its own triples.** In a flattened file the graph holds more than one
+plugin, so the canonical form of section 5 is taken over the triples whose subject is the member plugin's IRI
+or begins with that IRI followed by `#`, with the same three omissions. A plugin served alone has no other
+triples, so for it this is the whole document and nothing changes.
+
+**Verification.** A host MUST verify each member as section 4 requires of any plugin, and MUST check each pin
+against the canonical digest of the profile it read for that member, whether from the bundle or the network. A
+mismatch refuses the composite, and the host offers no way past it: a pin says the author meant these bytes.

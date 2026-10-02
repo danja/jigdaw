@@ -307,6 +307,33 @@ everywhere, including in a copy-pasted message with no surrounding context left 
 it against. A collection you publish yourself, served beside your own plugins, is the one
 deliberate exception, for the reason that section explains.
 
+## A plugin made of plugins
+
+If what you have is a chain of plugins that already exist, you do not need any code. A **composite plugin** is a profile that lists them,
+wires them, and exposes the few controls that matter. It is published, found, bundled and signed as one plugin, and a person uses it
+as one. [nested-plugins.md](nested-plugins.md) is the specification, and its section 2 is a complete example.
+
+The steps, for a rack of existing Jigs:
+
+1. In a directory of its own, such as `racks/yourrack/`, not under `plugins/` (the local catalogue reads that as Jigs only, see TODO.md), copy
+   `examples/reference-composite.ttl` to `profile.ttl` and change the members, the wiring and the label. A member is a plugin IRI with, optionally, the
+   settings you want it to start with and keep. A connection to or from `<>`, the composite itself, is its input or its output.
+2. Expose only what a person should change. Each `lv2:port` you declare says, with `jig:drives`, which member parameter it sets. The
+   rest is your voicing, fixed. A port's range must lie within the range of what it drives.
+3. Pin every member. Run `node bin/pin.js racks/yourrack --members plugins`, which says whether each member is `current`, `stale` or `missing`
+   and prints the line to write, then `--check` to fail a build on any that is not current. Re-run it whenever a member is rebuilt.
+4. Validate it as any profile: `npm run validate -- racks/yourrack/profile.ttl`. That checks the shapes. The rules that compare two parts of the
+   document, such as every output being wired, are checked when a host loads it, and `src/rdf/CompositeReader.js` is where to read them.
+5. Publish it at its own IRI. Its members are fetched from theirs, so each of them must already be served with the CORS headers the contract
+   asks of any plugin.
+6. To send it to somebody, `node bin/bundle.js racks/yourrack --members plugins`. A rack with an unpinned member is refused, naming it, because
+   a signature on it would not reach what it runs.
+
+Things worth knowing. A composite has no module, no processor and no `jig:ui`, and MUST NOT declare latency or a tail: they are worked out
+from the members. It runs code from every origin it names, and a person loading it should be told so. A pin has no override in a host: a
+changed member needs a rack of its own, re-pinned. `npm run check-plugin` does not yet render a composite, so test one by loading it in a
+host.
+
 ## Checklist
 
 - The profile validates against the shapes.
@@ -316,6 +343,7 @@ deliberate exception, for the reason that section explains.
 - `process()` allocates nothing and never throws.
 - You write every output channel every quantum.
 - CORS headers are present, and there is exactly one of each.
+- A composite: every member is pinned and `bin/pin.js --check` passes, and every port drives something inside its range.
 - Loading it in a host actually makes the sound you expect. `npm run check-plugin --
   YOUR_IRI --note 69@0:1` (an instrument) or `-- YOUR_IRI` (an effect, fed
   `ReferenceHost`'s own impulse) renders it headless and reports whether it produced audio,

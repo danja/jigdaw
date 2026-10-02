@@ -1,0 +1,560 @@
+<!doctype html>
+<!--
+  plugins/parameq/ui/index.html
+
+  Parameq's own editor, a graphic equalizer in the manner of Reaper's ReaEQ:
+  a combined response curve with one draggable node per band, a band strip,
+  and an editor for the selected band. The host loads it into a sandboxed
+  frame on the plugin's origin and talks to it only by postMessage
+  (contract section 9, docs/messaging.md section 2).
+
+  One file with its script inline, so the profile's jig:integrity digest
+  covers everything that runs here.
+
+  It renders from what the host says, never from its own input: a value it
+  asks for may come back clamped, and messaging.md 2.3 requires the frame to
+  show the value the host applied. Dragging a node sends requests; the node
+  moves to whatever comes back.
+
+  The curve is drawn from the same RBJ cookbook formulae the module uses, at
+  a nominal 48 kHz: the display is a guide, and the profile's caution says
+  the top octave near Nyquist is where it stops being one.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parameq</title>
+<style>
+  :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd;
+    --panel:#1a1e24; --plot:#0e1116; --grid:#2a3038; --zero:#4a525c; }
+  html { height:auto; }
+  body { margin:0; padding:12px; background:var(--panel); color:var(--fg);
+    font:16px/1.4 system-ui, sans-serif; }
+  h1 { font-size:14px; margin:0; color:var(--dim); font-weight:600; letter-spacing:.04em; }
+  header.top { display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .master { display:flex; align-items:center; gap:8px; margin-left:auto; min-height:44px; }
+  .master label { color:var(--dim); }
+  #plot { width:100%; height:220px; display:block; background:var(--plot);
+    border:1px solid var(--grid); border-radius:6px; touch-action:none; }
+  #plot:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .bands { display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; margin:10px 0; }
+  .bands button { min-height:44px; border:1px solid var(--grid); border-radius:6px;
+    background:#22272f; color:var(--fg); font-size:14px; cursor:pointer; padding:4px; }
+  .bands button .n { display:block; font-weight:700; font-size:16px; }
+  .bands button .t { display:block; color:var(--dim); font-size:12px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bands button[aria-pressed="true"] { border-color:var(--accent); outline:2px solid var(--accent); }
+  .bands button.off .n { color:var(--dim); text-decoration:line-through; }
+  .bands button.off .n::after { content:" (off)"; font-weight:400; font-size:12px; }
+  fieldset { border:1px solid var(--grid); border-radius:6px; margin:0 0 10px; padding:10px 12px 12px; }
+  legend { color:var(--dim); padding:0 6px; font-size:14px; }
+  .row { display:grid; grid-template-columns:6.5rem 1fr 7rem; gap:10px; align-items:center; min-height:44px; }
+  .row label { color:var(--dim); }
+  .row output { font-family:ui-monospace, monospace; text-align:right; font-size:14px; }
+  input[type=range] { width:100%; min-width:0; height:44px; accent-color:var(--accent); }
+  input[type=range]:focus-visible, input[type=number]:focus-visible,
+    select:focus-visible, input[type=checkbox]:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  input[type=number] { width:7rem; font-size:16px; background:#22272f; color:var(--fg);
+    border:1px solid var(--grid); border-radius:4px; padding:8px; }
+  select { font-size:16px; background:#22272f; color:var(--fg);
+    border:1px solid var(--grid); border-radius:4px; padding:8px; max-width:100%; }
+  input[type=checkbox] { width:24px; height:24px; accent-color:var(--accent); }
+  .hint { color:var(--dim); font-size:13px; margin:6px 0 0; }
+  .waiting { color:var(--dim); }
+  @media (max-width: 720px) {
+    .bands { grid-template-columns:repeat(3, 1fr); }
+    .row { grid-template-columns:1fr; gap:2px; }
+    .row output { text-align:left; }
+    input[type=number] { width:100%; }
+  }
+</style>
+</head>
+<body>
+<main id="root">
+  <header class="top">
+    <h1>Parameq</h1>
+    <div class="master">
+      <label for="enabled">Enabled</label>
+      <input type="checkbox" id="enabled" checked>
+    </div>
+  </header>
+  <div id="stage"><p class="waiting">Waiting for the host.</p></div>
+</main>
+<script>
+  'use strict'
+  // The host's origin, learnt from its init. Until then nothing is sent but
+  // ready, which carries nothing, and nothing received is trusted.
+  let host = null
+
+  const BANDS = 6
+  // The port layout this editor is written for. Ranges and defaults repeat
+  // profile.json by hand, because the host's init carries only
+  // symbol/name/minimum/maximum/default per port and no scale points
+  // (src/rdf/ProfileJsonLd.js): the type names below are this editor's own
+  // knowledge of its own plugin.
+  const TYPE_NAMES = ['Peak', 'Low Shelf', 'High Shelf', 'Low Pass', 'High Pass', 'Band Pass', 'Notch']
+  const GAIN_TYPES = new Set([0, 1, 2])
+  const DEFAULT_TYPE = [4, 1, 0, 0, 2, 3]
+  const DEFAULT_FREQ = [80, 250, 1000, 4000, 8000, 16000]
+  const DEFAULT_Q = [0.7, 1, 1, 1, 1, 0.7]
+  const DISPLAY_RATE = 48000
+  const FMIN = 20, FMAX = 20000, DB_RANGE = 24
+
+  const values = { enabled: 1 }
+  for (let b = 1; b <= BANDS; b++) {
+    values[`b${b}_on`] = 1
+    values[`b${b}_type`] = DEFAULT_TYPE[b - 1]
+    values[`b${b}_freq`] = DEFAULT_FREQ[b - 1]
+    values[`b${b}_gain`] = 0
+    values[`b${b}_q`] = DEFAULT_Q[b - 1]
+  }
+  let selected = 3
+
+  const COLORS = ['#e06c75', '#d19a66', '#e5c07b', '#98c379', '#56b6c2', '#c678dd']
+
+  function send (message) {
+    if (host) parent.postMessage(message, host)
+  }
+
+  function request (symbol, value) {
+    send({ type: 'parameter', symbol, value })
+  }
+
+  // --- response curve ---------------------------------------------------------
+  // The RBJ cookbook, the same formulae plugins/parameq/parameq.cpp uses, so
+  // the display agrees with the module up to the polynomial error in the
+  // module's own freestanding approximations.
+  function coeffs (type, freq, gainDb, q) {
+    const w0 = 2 * Math.PI * freq / DISPLAY_RATE
+    const cosw0 = Math.cos(w0), sinw0 = Math.sin(w0)
+    const A = Math.pow(10, gainDb / 40)
+    const alpha = sinw0 / (2 * q)
+    let b0, b1, b2, a0, a1, a2
+    if (type === 0) {
+      b0 = 1 + alpha * A; b1 = -2 * cosw0; b2 = 1 - alpha * A
+      a0 = 1 + alpha / A; a1 = -2 * cosw0; a2 = 1 - alpha / A
+    } else if (type === 1 || type === 2) {
+      const S = Math.min(5, Math.max(0.1, q))
+      const as = sinw0 / 2 * Math.sqrt((A + 1 / A) * (1 / S - 1) + 2)
+      const ap1 = A + 1, am1 = A - 1, mul = 2 * Math.sqrt(A) * as
+      if (type === 1) {
+        b0 = A * (ap1 - am1 * cosw0 + mul); b1 = 2 * A * (am1 - ap1 * cosw0); b2 = A * (ap1 - am1 * cosw0 - mul)
+        a0 = ap1 + am1 * cosw0 + mul; a1 = -2 * (am1 + ap1 * cosw0); a2 = ap1 + am1 * cosw0 - mul
+      } else {
+        b0 = A * (ap1 + am1 * cosw0 + mul); b1 = -2 * A * (am1 + ap1 * cosw0); b2 = A * (ap1 + am1 * cosw0 - mul)
+        a0 = ap1 - am1 * cosw0 + mul; a1 = 2 * (am1 - ap1 * cosw0); a2 = ap1 - am1 * cosw0 - mul
+      }
+    } else {
+      a0 = 1 + alpha; a1 = -2 * cosw0; a2 = 1 - alpha
+      if (type === 3) { const c = 1 - cosw0; b0 = c / 2; b1 = c; b2 = c / 2 }
+      else if (type === 4) { const c = 1 + cosw0; b0 = c / 2; b1 = -c; b2 = c / 2 }
+      else if (type === 5) { b0 = alpha; b1 = 0; b2 = -alpha }
+      else { b0 = 1; b1 = -2 * cosw0; b2 = 1 }
+    }
+    return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0]
+  }
+
+  function bandDb (band, freq) {
+    const t = Math.round(values[`b${band}_type`])
+    const [b0, b1, b2, a1, a2] = coeffs(t, values[`b${band}_freq`], values[`b${band}_gain`], values[`b${band}_q`])
+    const w = 2 * Math.PI * freq / DISPLAY_RATE
+    const cw = Math.cos(w), sw = Math.sin(w)
+    const cw2 = Math.cos(2 * w), sw2 = Math.sin(2 * w)
+    const numRe = b0 + b1 * cw + b2 * cw2, numIm = -(b1 * sw + b2 * sw2)
+    const denRe = 1 + a1 * cw + a2 * cw2, denIm = -(a1 * sw + a2 * sw2)
+    const mag = Math.sqrt((numRe * numRe + numIm * numIm) / Math.max(1e-12, denRe * denRe + denIm * denIm))
+    return 20 * Math.log10(Math.max(1e-9, mag))
+  }
+
+  function totalDb (freq) {
+    if (!values.enabled) return 0
+    let db = 0
+    for (let b = 1; b <= BANDS; b++) {
+      if (values[`b${b}_on`]) db += bandDb(b, freq)
+    }
+    return db
+  }
+
+  // --- controls ----------------------------------------------------------------
+  let canvas, ctx, bandButtons = [], editorBox
+  let freqSlider, freqNumber, freqOut, gainRow, gainRow2, gainSlider, gainNumber, gainOut
+  let qSlider, qNumber, qOut, onBox, typeSelect
+
+  const fmtFreq = v => v >= 1000 ? `${(v / 1000).toFixed(v >= 10000 ? 1 : 2)} kHz` : `${Math.round(v)} Hz`
+  const fmtGain = v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(1)} dB`
+  const fmtQ = v => `Q ${Number(v).toFixed(2)}`
+
+  const freqToX = (f, w) => Math.log(f / FMIN) / Math.log(FMAX / FMIN) * w
+  const xToFreq = (x, w) => FMIN * Math.pow(FMAX / FMIN, Math.min(1, Math.max(0, x / w)))
+  const dbToY = (db, h) => h / 2 - db / (DB_RANGE + 6) * h / 2
+  const yToDb = (y, h) => (h / 2 - y) / (h / 2) * (DB_RANGE + 6)
+
+  function draw () {
+    if (!canvas) return
+    const ratio = window.devicePixelRatio || 1
+    const w = canvas.clientWidth, h = canvas.clientHeight
+    if (canvas.width !== Math.round(w * ratio) || canvas.height !== Math.round(h * ratio)) {
+      canvas.width = Math.round(w * ratio)
+      canvas.height = Math.round(h * ratio)
+    }
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+    ctx.clearRect(0, 0, w, h)
+    const css = getComputedStyle(document.documentElement)
+    const grid = css.getPropertyValue('--grid').trim() || '#2a3038'
+    const zero = css.getPropertyValue('--zero').trim() || '#4a525c'
+    const dim = css.getPropertyValue('--dim').trim() || '#9aa3ad'
+
+    ctx.lineWidth = 1
+    ctx.font = '11px system-ui, sans-serif'
+    // Octave grid with labels, then 6 dB steps with the 0 dB line stronger.
+    for (let f = FMIN; f <= FMAX * 1.001; f *= 2) {
+      const x = freqToX(f, w)
+      ctx.strokeStyle = grid
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke()
+      ctx.fillStyle = dim
+      ctx.fillText(f >= 1000 ? `${f / 1000}k` : `${f}`, x + 3, h - 5)
+    }
+    for (let db = -DB_RANGE; db <= DB_RANGE; db += 6) {
+      const y = dbToY(db, h)
+      ctx.strokeStyle = db === 0 ? zero : grid
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke()
+      ctx.fillStyle = dim
+      ctx.fillText(`${db > 0 ? '+' : ''}${db}`, 4, y - 3)
+    }
+    // One faint curve per enabled band, then the combined curve on top.
+    const N = 120
+    ctx.lineWidth = 1
+    for (let b = 1; b <= BANDS; b++) {
+      if (!values[`b${b}_on`] || !values.enabled) continue
+      ctx.strokeStyle = COLORS[b - 1] + '88'
+      ctx.beginPath()
+      for (let i = 0; i <= N; i++) {
+        const f = FMIN * Math.pow(FMAX / FMIN, i / N)
+        const x = freqToX(f, w), y = dbToY(Math.max(-DB_RANGE - 6, Math.min(DB_RANGE + 6, bandDb(b, f))), h)
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+    ctx.lineWidth = 2.5
+    ctx.strokeStyle = '#e6e8eb'
+    ctx.beginPath()
+    for (let i = 0; i <= N; i++) {
+      const f = FMIN * Math.pow(FMAX / FMIN, i / N)
+      const x = freqToX(f, w), y = dbToY(Math.max(-DB_RANGE - 6, Math.min(DB_RANGE + 6, totalDb(f))), h)
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+    // Nodes: number, colour, and a ring on the selected one. State is carried
+    // by text as well as colour: off bands are struck through in the strip.
+    ctx.font = 'bold 12px system-ui, sans-serif'
+    for (let b = 1; b <= BANDS; b++) {
+      const f = values[`b${b}_freq`]
+      const x = freqToX(f, w)
+      const gainApplies = GAIN_TYPES.has(Math.round(values[`b${b}_type`]))
+      const y = dbToY(gainApplies ? Math.max(-DB_RANGE, Math.min(DB_RANGE, values[`b${b}_gain`])) : 0, h)
+      const on = values[`b${b}_on`] && values.enabled
+      ctx.beginPath()
+      ctx.arc(x, y, b === selected ? 11 : 9, 0, 2 * Math.PI)
+      ctx.fillStyle = on ? COLORS[b - 1] : '#3a4048'
+      ctx.fill()
+      if (b === selected) {
+        ctx.lineWidth = 2
+        ctx.strokeStyle = '#ffffff'
+        ctx.stroke()
+      }
+      ctx.fillStyle = '#0e1116'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText(String(b), x, y + 0.5)
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'
+  }
+
+  function refreshBandStrip () {
+    for (let b = 1; b <= BANDS; b++) {
+      const button = bandButtons[b - 1]
+      if (!button) continue
+      button.setAttribute('aria-pressed', String(b === selected))
+      button.classList.toggle('off', !values[`b${b}_on`])
+      button.querySelector('.t').textContent = TYPE_NAMES[Math.round(values[`b${b}_type`])] ?? ''
+      button.setAttribute('aria-label',
+        `Band ${b}, ${TYPE_NAMES[Math.round(values[`b${b}_type`])]}, ${values[`b${b}_on`] ? 'on' : 'off'}`)
+    }
+  }
+
+  function refreshEditor () {
+    const b = selected
+    onBox.checked = Boolean(values[`b${b}_on`])
+    typeSelect.value = String(Math.round(values[`b${b}_type`]))
+    const f = values[`b${b}_freq`]
+    freqSlider.value = String(Math.log(f / FMIN) / Math.log(FMAX / FMIN) * 1000)
+    freqNumber.value = String(Math.round(f * 10) / 10)
+    freqOut.textContent = fmtFreq(f)
+    freqSlider.setAttribute('aria-valuetext', fmtFreq(f))
+    const gainApplies = GAIN_TYPES.has(Math.round(values[`b${b}_type`]))
+    // A control nobody can use is left out, not shown disabled: gain does
+    // nothing on pass and notch shapes, so it is not drawn for them.
+    gainRow.hidden = !gainApplies
+    gainRow2.hidden = !gainApplies
+    if (gainApplies) {
+      gainSlider.value = String(values[`b${b}_gain`])
+      gainNumber.value = String(values[`b${b}_gain`])
+      gainOut.textContent = fmtGain(values[`b${b}_gain`])
+      gainSlider.setAttribute('aria-valuetext', fmtGain(values[`b${b}_gain`]))
+    }
+    qSlider.value = String(values[`b${b}_q`])
+    qNumber.value = String(values[`b${b}_q`])
+    qOut.textContent = fmtQ(values[`b${b}_q`])
+    qSlider.setAttribute('aria-valuetext', fmtQ(values[`b${b}_q`]))
+    document.getElementById('enabled').checked = Boolean(values.enabled)
+    editorBox.querySelector('legend').textContent =
+      `Band ${b}: ${TYPE_NAMES[Math.round(values[`b${b}_type`])]}, ${fmtFreq(values[`b${b}_freq`])}`
+  }
+
+  function refresh () {
+    refreshBandStrip()
+    refreshEditor()
+    draw()
+  }
+
+  function show (symbol, value) {
+    if (!(symbol in values)) return
+    values[symbol] = value
+    refresh()
+  }
+
+  function sliderRow (id, label, symbolOf, min, max, step, numberMin, numberMax, numberStep, commit) {
+    const row = document.createElement('div')
+    row.className = 'row'
+    const tag = document.createElement('label')
+    tag.setAttribute('for', id)
+    tag.textContent = label
+    const slider = document.createElement('input')
+    slider.type = 'range'
+    slider.id = id
+    slider.min = String(min); slider.max = String(max); slider.step = String(step)
+    const out = document.createElement('output')
+    out.setAttribute('for', id)
+    out.setAttribute('aria-hidden', 'true')
+    row.append(tag, slider, out)
+    const row2 = document.createElement('div')
+    row2.className = 'row'
+    const tag2 = document.createElement('label')
+    tag2.setAttribute('for', `${id}-number`)
+    tag2.textContent = `${label} (type a value)`
+    const number = document.createElement('input')
+    number.type = 'number'
+    number.id = `${id}-number`
+    number.min = String(numberMin); number.max = String(numberMax); number.step = String(numberStep)
+    row2.append(tag2, number)
+    // A drag is one gesture, so automation records it as one. The symbol is
+    // read when the gesture starts: the selected band cannot change mid-drag.
+    slider.addEventListener('pointerdown', () => send({ type: 'gesture', symbol: symbolOf(), phase: 'begin' }))
+    slider.addEventListener('pointerup', () => send({ type: 'gesture', symbol: symbolOf(), phase: 'end' }))
+    slider.addEventListener('input', () => commit(Number(slider.value), 'slider'))
+    number.addEventListener('change', () => commit(Number(number.value), 'number'))
+    return { row, row2, slider, number, out }
+  }
+
+  function build () {
+    const stage = document.getElementById('stage')
+    stage.replaceChildren()
+
+    canvas = document.createElement('canvas')
+    canvas.id = 'plot'
+    ctx = canvas.getContext('2d')
+    canvas.setAttribute('role', 'img')
+    canvas.setAttribute('aria-label',
+      'Combined frequency response from 20 hertz to 20 kilohertz, plus and minus 24 decibels. ' +
+      'Drag a band node to change its frequency and gain, or edit the selected band below.')
+    stage.append(canvas)
+
+    const strip = document.createElement('div')
+    strip.className = 'bands'
+    strip.setAttribute('role', 'group')
+    strip.setAttribute('aria-label', 'Bands')
+    bandButtons = []
+    for (let b = 1; b <= BANDS; b++) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.setAttribute('aria-pressed', String(b === selected))
+      const n = document.createElement('span')
+      n.className = 'n'
+      n.textContent = String(b)
+      const t = document.createElement('span')
+      t.className = 't'
+      button.append(n, t)
+      button.addEventListener('click', () => { selected = b; refresh() })
+      strip.append(button)
+      bandButtons.push(button)
+    }
+    stage.append(strip)
+
+    editorBox = document.createElement('fieldset')
+    const legend = document.createElement('legend')
+    editorBox.append(legend)
+
+    const onRow = document.createElement('div')
+    onRow.className = 'row'
+    const onLabel = document.createElement('label')
+    onLabel.setAttribute('for', 'band-on')
+    onLabel.textContent = 'Band on'
+    onBox = document.createElement('input')
+    onBox.type = 'checkbox'
+    onBox.id = 'band-on'
+    onBox.addEventListener('change', () => request(`b${selected}_on`, onBox.checked ? 1 : 0))
+    onRow.append(onLabel, onBox)
+    editorBox.append(onRow)
+
+    const typeRow = document.createElement('div')
+    typeRow.className = 'row'
+    const typeLabel = document.createElement('label')
+    typeLabel.setAttribute('for', 'band-type')
+    typeLabel.textContent = 'Type'
+    typeSelect = document.createElement('select')
+    typeSelect.id = 'band-type'
+    for (let i = 0; i < TYPE_NAMES.length; i++) {
+      const option = document.createElement('option')
+      option.value = String(i)
+      option.textContent = TYPE_NAMES[i]
+      typeSelect.append(option)
+    }
+    typeSelect.addEventListener('change', () => request(`b${selected}_type`, Number(typeSelect.value)))
+    typeRow.append(typeLabel, typeSelect)
+    editorBox.append(typeRow)
+
+    // The frequency slider is logarithmic over 20 Hz..20 kHz; the number
+    // box takes hertz directly.
+    const freq = sliderRow('band-freq', 'Frequency', () => `b${selected}_freq`, 0, 1000, 1, FMIN, FMAX, 0.1,
+      (v, from) => {
+        if (from === 'slider') {
+          if (Number.isFinite(v)) request(`b${selected}_freq`, sliderToFreq(v))
+        } else {
+          const clamped = Math.min(FMAX, Math.max(FMIN, v))
+          if (Number.isFinite(clamped)) request(`b${selected}_freq`, clamped)
+        }
+      })
+    freqSlider = freq.slider; freqNumber = freq.number; freqOut = freq.out
+    editorBox.append(freq.row, freq.row2)
+
+    const gain = sliderRow('band-gain', 'Gain', () => `b${selected}_gain`, -24, 24, 0.1, -24, 24, 0.1,
+      (v, from) => {
+        const clamped = Math.min(24, Math.max(-24, v))
+        if (Number.isFinite(clamped)) request(`b${selected}_gain`, clamped)
+      })
+    gainRow = gain.row
+    gainRow2 = gain.row2
+    gainSlider = gain.slider; gainNumber = gain.number; gainOut = gain.out
+    editorBox.append(gainRow, gain.row2)
+
+    const q = sliderRow('band-q', 'Q', () => `b${selected}_q`, 0.1, 10, 0.05, 0.1, 10, 0.05,
+      (v, from) => {
+        const clamped = Math.min(10, Math.max(0.1, v))
+        if (Number.isFinite(clamped)) request(`b${selected}_q`, clamped)
+      })
+    qSlider = q.slider; qNumber = q.number; qOut = q.out
+    editorBox.append(q.row, q.row2)
+
+    const hint = document.createElement('p')
+    hint.className = 'hint'
+    hint.textContent = 'Drag a node on the curve: across for frequency, up and down for gain. ' +
+      'Gain applies to peak and shelf shapes only. The sliders below reach every band by keyboard.'
+    editorBox.append(hint)
+    stage.append(editorBox)
+
+    document.getElementById('enabled').addEventListener('change', event => {
+      request('enabled', event.target.checked ? 1 : 0)
+    })
+
+    // Node dragging: across for frequency on every shape, up and down for
+    // gain where the shape has one. One gesture per drag so automation
+    // records it as one.
+    let drag = null
+    const nodeAt = event => {
+      const rect = canvas.getBoundingClientRect()
+      const x = event.clientX - rect.left, y = event.clientY - rect.top
+      let best = -1, bestD = 24 * 24
+      for (let b = 1; b <= BANDS; b++) {
+        const f = values[`b${b}_freq`]
+        const nx = freqToX(f, rect.width)
+        const gainApplies = GAIN_TYPES.has(Math.round(values[`b${b}_type`]))
+        const ny = dbToY(gainApplies ? Math.max(-DB_RANGE, Math.min(DB_RANGE, values[`b${b}_gain`])) : 0, rect.height)
+        const d = (x - nx) * (x - nx) + (y - ny) * (y - ny)
+        if (d < bestD) { bestD = d; best = b }
+      }
+      return best
+    }
+    canvas.addEventListener('pointerdown', event => {
+      const b = nodeAt(event)
+      if (b < 0) return
+      selected = b
+      const rect = canvas.getBoundingClientRect()
+      drag = { band: b, width: rect.width, height: rect.height }
+      canvas.setPointerCapture(event.pointerId)
+      send({ type: 'gesture', symbol: `b${b}_freq`, phase: 'begin' })
+      if (GAIN_TYPES.has(Math.round(values[`b${b}_type`]))) {
+        send({ type: 'gesture', symbol: `b${b}_gain`, phase: 'begin' })
+      }
+      refresh()
+    })
+    canvas.addEventListener('pointermove', event => {
+      if (!drag) return
+      const rect = canvas.getBoundingClientRect()
+      const x = event.clientX - rect.left, y = event.clientY - rect.top
+      request(`b${drag.band}_freq`, xToFreq(x, rect.width))
+      if (GAIN_TYPES.has(Math.round(values[`b${drag.band}_type`]))) {
+        request(`b${drag.band}_gain`, Math.max(-24, Math.min(24, yToDb(y, rect.height))))
+      }
+    })
+    const endDrag = () => {
+      if (!drag) return
+      send({ type: 'gesture', symbol: `b${drag.band}_freq`, phase: 'end' })
+      if (GAIN_TYPES.has(Math.round(values[`b${drag.band}_type`]))) {
+        send({ type: 'gesture', symbol: `b${drag.band}_gain`, phase: 'end' })
+      }
+      drag = null
+    }
+    canvas.addEventListener('pointerup', endDrag)
+    canvas.addEventListener('pointercancel', endDrag)
+
+    window.addEventListener('resize', draw)
+    refresh()
+  }
+
+  function sliderToFreq (position) {
+    return FMIN * Math.pow(FMAX / FMIN, position / 1000)
+  }
+
+  // Ask for the height the content takes, whenever that changes. Measured by
+  // an observer rather than once after building, because a single measurement
+  // taken before layout settled asks for less than half the height needed.
+  const root = document.getElementById('root')
+  const wanted = () => Math.ceil(document.documentElement.getBoundingClientRect().height)
+  new ResizeObserver(() => {
+    send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+  }).observe(root)
+
+  window.addEventListener('message', event => {
+    if (event.source !== parent) return
+    if (host === null) {
+      if (event.data?.type !== 'init') return
+      host = event.origin
+      const parameters = event.data.parameters ?? {}
+      for (const symbol of Object.keys(values)) {
+        if (Number.isFinite(parameters[symbol])) values[symbol] = parameters[symbol]
+      }
+      build()
+      send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+      return
+    }
+    if (event.origin !== host) return
+    const message = event.data
+    if (message?.type === 'parameter') show(message.symbol, message.value)
+  })
+
+  // The host's origin is not known yet, so ready goes to any. It carries
+  // nothing, and every later message goes to the origin init came from.
+  parent.postMessage({ type: 'ready' }, '*')
+</script>
+</body>
+</html>

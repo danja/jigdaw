@@ -36,6 +36,7 @@ function setup () {
     engine: { context: { currentTime: 5 } },
     dispatcher: {
       subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) },
+      audioParams: (id, symbol) => [params.get(`${id}:${symbol}`)].filter(Boolean),
       engineNode: id => ({ node: { parameters: { get: symbol => params.get(`${id}:${symbol}`) } }, profile: { ports: [{ symbol: 'cutoff', defaultValue: 1000 }] } }),
       project: {
         envelopes: [

@@ -19,6 +19,10 @@ is wrong in INBOX.md.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
   position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track
   against the live one, and an exported WAV and a stems zip opened in another program.
+- **Listen to a composite** (new 2026-10-02): a rack of boost, tremolo and cascade, `examples/reference-composite.ttl`, loaded after Pulse in
+  Jiggy. It was driven in Chrome and measured at the master, never heard. Say whether Drive, Tremolo depth and Reverb mix do what their names
+  say and whether the three together sound like a pedal board. Loading one needs its members served and its pins current: see
+  `docs/nested-plugins.md` section 9.2.
 - **Listen to Keyframe** (`plugins/keyframe/`, new 2026-10-01): a time rate of 50 on a drum loop, a pitch shift of 7 on a
   chord, and each Quality and Stereo setting against the others. Say whether Economy is usable or only Balanced is, and whether
   Linked stereo moves the image on a wide clip. Nothing here has been heard, only measured.
@@ -73,6 +77,17 @@ ReaScript API (`ExecProcess`, `GetUserInputs`, `InsertMedia`) rather than a real
 action. Install it (`reaper/README.md`), run it once against a disposable project, and see
 whether `ExecProcess`'s exit-code parsing and `InsertMedia`'s track-insert mode behave as
 documented; those are the two most likely to have moved between REAPER versions.
+
+**A SPARQL parser, such as `sparqljs`, as a dev dependency.** The catalogue queries in `sparql/queries/` are tested only by
+checking the text that is sent, because nothing installed here can parse or run SPARQL. On 2026-10-02 `search.sparql` was changed to
+treat a composite plugin as runnable (`BIND(EXISTS {...} || EXISTS {...} AS ?web)`), which is valid SPARQL 1.1 by reading and has not
+been parsed. With a parser, a test could load every `.sparql` file after filling its placeholders and fail on a syntax error, and
+with an in-memory store it could run `search.sparql` over the example profiles and check the `?web` column. Until then a query edit
+is checked by eye.
+
+```sh
+npm install --save-dev sparqljs
+```
 
 ## Updating a deployment
 

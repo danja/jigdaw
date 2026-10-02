@@ -199,3 +199,12 @@ describe('a plugin that keeps no state', () => {
     expect(() => readProfile(dataset)).toThrow(/not a boolean/)
   })
 })
+
+describe('a composite plugin is not read as one plugin', () => {
+  it('says what it is, in place of saying there is no jig:WebPlugin', async () => {
+    const { parseTurtleFile } = await import('../../src/validate/files.js')
+    const { resolve } = await import('node:path')
+    const composite = await parseTurtleFile(resolve(import.meta.dirname, '../../examples/reference-composite.ttl'))
+    expect(() => readProfile(composite)).toThrow(/composite plugin.*readComposite/s)
+  })
+})

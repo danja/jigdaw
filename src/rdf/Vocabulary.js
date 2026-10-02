@@ -280,6 +280,13 @@ export const vocabulary = Object.freeze({
     // Collections. docs/plugin-collections.md.
     PluginCollection: `${JIG}PluginCollection`,
 
+    // Nested plugins. docs/nested-plugins.md.
+    CompositePlugin: `${JIG}CompositePlugin`,
+    Member: `${JIG}Member`,
+    member: `${JIG}member`,
+    pinnedDigest: `${JIG}pinnedDigest`,
+    drives: `${JIG}drives`,
+
     // Bundles and provenance
     Bundle: `${JIG}Bundle`,
     Bundling: `${JIG}Bundling`,

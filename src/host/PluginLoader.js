@@ -9,7 +9,8 @@
 import { readProfile } from '../rdf/ProfileReader.js'
 import { verifyIntegrity } from './Integrity.js'
 import { negotiate, explainMissing, detectCapabilities } from './Capabilities.js'
-import { LoadError, STEPS } from './LoadError.js'
+import { LoadError, CompositeFound, STEPS } from './LoadError.js'
+import { isComposite } from '../rdf/CompositeReader.js'
 import { instantiate } from './Instantiate.js'
 
 const PROFILE_ACCEPT = 'text/turtle, application/ld+json;q=0.9'
@@ -53,6 +54,17 @@ export class PluginLoader {
 
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
   async loadProfile (iri) {
+    const dataset = await this.fetchDataset(iri)
+    // A composite has no module or processor, so it is not read as a plugin. Section 14 of the contract.
+    if (isComposite(dataset)) throw new CompositeFound(iri, dataset)
+    return this.profileFrom(dataset, iri)
+  }
+
+  /**
+   * Steps 1 to 3 up to the capability check: fetch, parse and validate. Split out so a composite plugin, which
+   * reads differently, goes through the same fetch and validation as any plugin (docs/nested-plugins.md).
+   */
+  async fetchDataset (iri) {
     let response
     try {
       response = await this.#fetch(iri, { headers: { accept: PROFILE_ACCEPT } })
@@ -93,6 +105,11 @@ export class PluginLoader {
       }
     }
 
+    return dataset
+  }
+
+  /** Read a fetched profile and check its capabilities before any code is fetched. Contract section 2.1. */
+  profileFrom (dataset, iri) {
     let profile
     try {
       profile = readProfile(dataset, { baseIRI: iri })
@@ -100,13 +117,19 @@ export class PluginLoader {
       throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri })
     }
 
-    // Contract section 2.1: evaluated BEFORE any code is fetched.
+    return { profile, granted: this.checkCapabilities(profile, iri) }
+  }
+
+  /**
+   * Contract section 2.1, evaluated BEFORE any code is fetched. Takes anything with `requires`, so a
+   * composite, which has no module, is checked by the same rule as a plugin. Returns what is granted.
+   */
+  checkCapabilities (profile, iri) {
     const negotiation = negotiate(profile, this.#capabilities)
     if (!negotiation.satisfied) {
       throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri })
     }
-
-    return { profile, granted: negotiation.granted }
+    return negotiation.granted
   }
 
   /** Steps 4 and 5 for one resource: fetch it and verify its digest. */

@@ -82,7 +82,8 @@ sidechain input, a transport-synced bass line generator, the firmware of a three
 synthesiser compiled unmodified from C++, three REAPER JSFX effects, and a plugin whose entire
 signal path is JavaScript. A native VST3/CLAP/LV2 adapter fetches, verifies and sounds the
 plugins that declare a portable ABI. The session format saves and reopens carrying the IRIs
-that make it portable. Plugin user interfaces of their own, as opposed to a panel generated
+that make it portable. A plugin can also be made of other plugins, such as an effects rack of three pedals, declared, bundled and
+installed as one: specified, written, tested headless and run once in the browser page, though not yet listened to or used on a phone. Plugin user interfaces of their own, as opposed to a panel generated
 from declared parameters, are specified and not yet implemented.
 
 Source and specification: [github.com/danja/jigdaw](https://github.com/danja/jigdaw). Apache

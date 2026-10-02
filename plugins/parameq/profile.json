@@ -1,0 +1,366 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/parameq/",
+  "label": "Parameq",
+  "comment": "Six-band stereo parametric equalizer in C++: peak, low and high shelf, low and high pass, band pass and notch shapes per band, each with its own enable, frequency, gain and Q.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "parameq",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "EQ"
+  ],
+  "cautions": [
+    "A low pass or high pass corner within a few percent of Nyquist (half the sample rate) behaves like a gentler slope than the shape suggests, because the bilinear transform compresses the top octave."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "stateless": true
+  },
+  "resources": {
+    "module": "parameq.wasm",
+    "processor": "parameq-processor.js",
+    "ui": "ui/index.html"
+  },
+  "ports": [
+    {
+      "symbol": "enabled",
+      "name": "Enabled",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "b1_on",
+      "name": "Band 1 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 1
+    },
+    {
+      "symbol": "b1_type",
+      "name": "Band 1 Type",
+      "default": 4,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 2,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b1_freq",
+      "name": "Band 1 Freq",
+      "default": 80,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 3
+    },
+    {
+      "symbol": "b1_gain",
+      "name": "Band 1 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "b1_q",
+      "name": "Band 1 Q",
+      "default": 0.7,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "b2_on",
+      "name": "Band 2 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "b2_type",
+      "name": "Band 2 Type",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 7,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b2_freq",
+      "name": "Band 2 Freq",
+      "default": 250,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 8
+    },
+    {
+      "symbol": "b2_gain",
+      "name": "Band 2 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 9
+    },
+    {
+      "symbol": "b2_q",
+      "name": "Band 2 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "b3_on",
+      "name": "Band 3 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "b3_type",
+      "name": "Band 3 Type",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 12,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b3_freq",
+      "name": "Band 3 Freq",
+      "default": 1000,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 13
+    },
+    {
+      "symbol": "b3_gain",
+      "name": "Band 3 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 14
+    },
+    {
+      "symbol": "b3_q",
+      "name": "Band 3 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 15
+    },
+    {
+      "symbol": "b4_on",
+      "name": "Band 4 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 16
+    },
+    {
+      "symbol": "b4_type",
+      "name": "Band 4 Type",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 17,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b4_freq",
+      "name": "Band 4 Freq",
+      "default": 4000,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 18
+    },
+    {
+      "symbol": "b4_gain",
+      "name": "Band 4 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 19
+    },
+    {
+      "symbol": "b4_q",
+      "name": "Band 4 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 20
+    },
+    {
+      "symbol": "b5_on",
+      "name": "Band 5 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 21
+    },
+    {
+      "symbol": "b5_type",
+      "name": "Band 5 Type",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 22,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b5_freq",
+      "name": "Band 5 Freq",
+      "default": 8000,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 23
+    },
+    {
+      "symbol": "b5_gain",
+      "name": "Band 5 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 24
+    },
+    {
+      "symbol": "b5_q",
+      "name": "Band 5 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 25
+    },
+    {
+      "symbol": "b6_on",
+      "name": "Band 6 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 26
+    },
+    {
+      "symbol": "b6_type",
+      "name": "Band 6 Type",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 6,
+      "paramIndex": 27,
+      "scalePoints": [
+        { "label": "Peak", "value": 0 },
+        { "label": "Low Shelf", "value": 1 },
+        { "label": "High Shelf", "value": 2 },
+        { "label": "Low Pass", "value": 3 },
+        { "label": "High Pass", "value": 4 },
+        { "label": "Band Pass", "value": 5 },
+        { "label": "Notch", "value": 6 }
+      ]
+    },
+    {
+      "symbol": "b6_freq",
+      "name": "Band 6 Freq",
+      "default": 16000,
+      "minimum": 20,
+      "maximum": 20000,
+      "unit": "hz",
+      "paramIndex": 28
+    },
+    {
+      "symbol": "b6_gain",
+      "name": "Band 6 Gain",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "unit": "db",
+      "paramIndex": 29
+    },
+    {
+      "symbol": "b6_q",
+      "name": "Band 6 Q",
+      "default": 0.7,
+      "minimum": 0.1,
+      "maximum": 10,
+      "paramIndex": 30
+    }
+  ],
+  "abi": "jig:Abi1"
+}

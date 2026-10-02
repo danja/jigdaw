@@ -16,9 +16,10 @@ export function createAutomationHost (ctx) {
   const warned = new Set()
   const keyOf = ({ node, symbol, kind }) => (kind !== undefined ? `master:${kind}` : `${node}:${symbol}`)
   const MASTER = { masterGain: 'gain', masterPan: 'pan' }
-  const paramOf = target => (target.kind !== undefined
-    ? (MASTER[target.kind] ? ctx.engine.masterParam(MASTER[target.kind]) : null)
-    : ctx.dispatcher.engineNode(target.node)?.node?.parameters?.get(target.symbol))
+  // A list, because an exposed parameter of a composite plugin is several AudioParams at once.
+  const paramsOf = target => (target.kind !== undefined
+    ? [MASTER[target.kind] ? ctx.engine.masterParam(MASTER[target.kind]) : null].filter(Boolean)
+    : ctx.dispatcher.audioParams(target.node, target.symbol))
   // The master is held while an envelope plays on it (Engine.holdMaster), released on stop or on a hand edit.
   const hold = (target, on) => { if (MASTER[target.kind]) ctx.engine.holdMaster(MASTER[target.kind], on) }
   const masterSnapshot = () => JSON.stringify(ctx.dispatcher.project.master)
@@ -49,20 +50,20 @@ export function createAutomationHost (ctx) {
 
     apply (envelope, instruction) {
       listen()
-      const param = paramOf(envelope.target)
-      if (!param) return
-      const state = touched.get(param) ?? { target: envelope.target, suspended: false }
-      touched.set(param, state)
-      if (state.suspended) return
-      if (envelope.target.kind === 'masterGain' && ctx.dispatcher.project.master.muted) return
-      if (!state.held) { hold(envelope.target, true); state.held = true; masterAtStart ??= masterSnapshot() }
-      try {
-        if (instruction.kind === 'set') param.setValueAtTime(instruction.value, instruction.at)
-        else if (instruction.kind === 'ramp') param.linearRampToValueAtTime(instruction.endValue, instruction.end)
-        else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration)
-      } catch (error) {
-        // Said once per envelope: a refusal repeats on every tick otherwise.
-        if (!warned.has(envelope.id)) { warned.add(envelope.id); log(`automation ${envelope.id}: ${error.message}`, 'error') }
+      for (const param of paramsOf(envelope.target)) {
+        const state = touched.get(param) ?? { target: envelope.target, suspended: false }
+        touched.set(param, state)
+        if (state.suspended) continue
+        if (envelope.target.kind === 'masterGain' && ctx.dispatcher.project.master.muted) continue
+        if (!state.held) { hold(envelope.target, true); state.held = true; masterAtStart ??= masterSnapshot() }
+        try {
+          if (instruction.kind === 'set') param.setValueAtTime(instruction.value, instruction.at)
+          else if (instruction.kind === 'ramp') param.linearRampToValueAtTime(instruction.endValue, instruction.end)
+          else param.setValueCurveAtTime(instruction.values, instruction.at, instruction.duration)
+        } catch (error) {
+          // Said once per envelope: a refusal repeats on every tick otherwise.
+          if (!warned.has(envelope.id)) { warned.add(envelope.id); log(`automation ${envelope.id}: ${error.message}`, 'error') }
+        }
       }
     },
 
