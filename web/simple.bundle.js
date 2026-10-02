@@ -25502,7 +25502,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_set",
-      description: "Rename a track, or name the plugins on it that its MIDI clips and audio clips play into. Pass null to clear an input.",
+      description: "Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its output to another track instead of the master (a bus). Pass null to clear an input or an output.",
       inputSchema: {
         type: "object",
         properties: {
@@ -25510,13 +25510,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           label: { type: ["string", "null"] },
           midiInput: { type: ["string", "null"], description: "A node on this track" },
           audioInput: { type: ["string", "null"], description: "A node on this track" },
+          output: { type: ["string", "null"], description: "The track this one feeds instead of the master, which makes it a bus. null for the master. A cycle is refused." },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId"]
       },
       async handler({ trackId, expectedRevision, ...fields } = {}) {
         const change = { op: "setTrack", id: trackId };
-        for (const key of ["label", "midiInput", "audioInput"]) {
+        for (const key of ["label", "midiInput", "audioInput", "output"]) {
           if (fields[key] !== void 0) change[key] = fields[key];
         }
         const result = dispatcher.apply([change], { expectedRevision });
@@ -25543,6 +25544,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         return result.ok ? ok({ revision: result.revision, channel: dispatcher.project.track(trackId).channel }) : failed(result.message, { kind: result.kind });
       }
     },
+    ...arrangementTools(),
     {
       name: "node_move_to_track",
       description: "Move a plugin to another track. It stops being the old track's clip input, if it was one.",
@@ -26047,6 +26049,113 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     }
   ];
+  function arrangementTools() {
+    const num = (description) => ({ type: "number", description });
+    const one3 = ({ name, description, properties = {}, required = [], op, id, pick = (args) => args, returns = "id" }) => ({
+      name,
+      description,
+      inputSchema: { type: "object", properties: { ...properties, expectedRevision: { type: "integer" } }, required },
+      async handler({ expectedRevision, ...args } = {}) {
+        const fields = pick(args);
+        const result = dispatcher.apply([{ op, ...fields }], { expectedRevision });
+        if (!result.ok) return failed(result.message, { kind: result.kind });
+        return ok({ revision: result.revision, ...returns === "id" ? { [id]: result.results[0] } : {} });
+      }
+    });
+    const keep = (names) => (args) => Object.fromEntries(Object.entries(args).filter(([k]) => names.includes(k)));
+    const withId = (key, names) => (args) => ({ id: args[key], ...keep(names)(args) });
+    return [
+      one3({
+        name: "master_set",
+        description: "Set the master bus: linear gain (1 is unity), pan (-1 to 1) and mute. Any of them; the rest stay.",
+        properties: { gain: num("Linear, zero or more"), pan: num("-1 to 1"), muted: { type: "boolean" } },
+        op: "setMaster",
+        returns: "none",
+        pick: keep(["gain", "pan", "muted"])
+      }),
+      one3({
+        name: "send_add",
+        description: "Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.",
+        properties: { from: { type: "string" }, to: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        required: ["from", "to"],
+        op: "addSend",
+        id: "sendId",
+        pick: keep(["from", "to", "level", "tap"])
+      }),
+      one3({
+        name: "send_set",
+        description: "Change a send's level or whether it takes the signal before or after the fader.",
+        properties: { sendId: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        required: ["sendId"],
+        op: "setSend",
+        returns: "none",
+        pick: withId("sendId", ["level", "tap"])
+      }),
+      one3({
+        name: "send_remove",
+        description: "Remove a send, by the id send_add returned or project_get lists.",
+        properties: { sendId: { type: "string" } },
+        required: ["sendId"],
+        op: "removeSend",
+        returns: "none",
+        pick: withId("sendId", [])
+      }),
+      one3({
+        name: "marker_add",
+        description: "Name a position in the arrangement, in beats from the start.",
+        properties: { atBeat: num("Zero or more"), label: { type: ["string", "null"] } },
+        required: ["atBeat"],
+        op: "addMarker",
+        id: "markerId",
+        pick: keep(["atBeat", "label"])
+      }),
+      one3({
+        name: "marker_set",
+        description: "Move a marker to another beat, or rename it. Either, or both.",
+        properties: { markerId: { type: "string" }, atBeat: num("Zero or more"), label: { type: ["string", "null"] } },
+        required: ["markerId"],
+        op: "setMarker",
+        returns: "none",
+        pick: withId("markerId", ["atBeat", "label"])
+      }),
+      one3({
+        name: "marker_remove",
+        description: "Remove a marker, by the id marker_add returned or project_get lists.",
+        properties: { markerId: { type: "string" } },
+        required: ["markerId"],
+        op: "removeMarker",
+        returns: "none",
+        pick: withId("markerId", [])
+      }),
+      one3({
+        name: "region_add",
+        description: "Name a range of the arrangement: where it starts and how long it lasts, both in beats.",
+        properties: { startBeat: num("Zero or more"), lengthBeats: num("Above zero"), label: { type: ["string", "null"] } },
+        required: ["startBeat", "lengthBeats"],
+        op: "addRegion",
+        id: "regionId",
+        pick: keep(["startBeat", "lengthBeats", "label"])
+      }),
+      one3({
+        name: "region_set",
+        description: "Move a region, change how long it lasts, or rename it. Any of them.",
+        properties: { regionId: { type: "string" }, startBeat: num("Zero or more"), lengthBeats: num("Above zero"), label: { type: ["string", "null"] } },
+        required: ["regionId"],
+        op: "setRegion",
+        returns: "none",
+        pick: withId("regionId", ["startBeat", "lengthBeats", "label"])
+      }),
+      one3({
+        name: "region_remove",
+        description: "Remove a region, by the id region_add returned or project_get lists.",
+        properties: { regionId: { type: "string" } },
+        required: ["regionId"],
+        op: "removeRegion",
+        returns: "none",
+        pick: withId("regionId", [])
+      })
+    ];
+  }
   return tools;
 }
 
@@ -26528,6 +26637,97 @@ var Scheduler = class {
   }
 };
 
+// src/engine/Metronome.js
+function clicksBetween(transport, start, end) {
+  const found = [];
+  const bar = transport.beatsPerBar;
+  for (const seg of segments(transport, start, end)) {
+    const lo = Math.max(seg.lo, start - seg.shift);
+    const hi = Math.min(seg.hi, end - seg.shift);
+    if (hi <= lo) continue;
+    for (let beat = Math.ceil(transport.beatAtSeconds(lo) - 1e-9); ; beat++) {
+      const song = transport.secondsAtBeat(beat);
+      if (song >= hi) break;
+      if (song < lo - 1e-9) continue;
+      found.push({ at: song + seg.shift, accent: beat % bar === 0 });
+    }
+  }
+  return found;
+}
+function countIn(transport, bars) {
+  if (!Number.isInteger(bars) || bars < 0) throw new Error(`a count-in is a whole number of bars, not ${bars}`);
+  const beats = bars * transport.beatsPerBar;
+  const length = transport.secondsAtBeat(1);
+  const clicks = [];
+  for (let i2 = 0; i2 < beats; i2++) clicks.push({ at: -(beats - i2) * length, accent: i2 % transport.beatsPerBar === 0 });
+  return { clicks, duration: beats * length };
+}
+var Metronome = class {
+  #now;
+  #lookahead;
+  #transport;
+  #click;
+  #enabled;
+  #origin = null;
+  #until = 0;
+  /**
+   * - `now()`: the audio clock in seconds.
+   * - `lookahead`: seconds ahead of the clock to schedule to, from configuration, never defaulted here.
+   * - `transport()`: the Transport as it is now.
+   * - `click(when, accent)`: make the sound at `when` on the audio clock.
+   * - `enabled()`: whether to click, read every tick so the switch is heard at the next one.
+   */
+  constructor({ now, lookahead, transport, click, enabled }) {
+    if ([now, transport, click, enabled].some((f) => typeof f !== "function")) throw new Error("Metronome needs now, transport, click and enabled");
+    if (!(lookahead > 0)) throw new Error("Metronome needs a lookahead in seconds, from configuration");
+    this.#now = now;
+    this.#lookahead = lookahead;
+    this.#transport = transport;
+    this.#click = click;
+    this.#enabled = enabled;
+  }
+  get running() {
+    return this.#origin !== null;
+  }
+  /** Start at the clock time beat zero is heard. */
+  start(atTime) {
+    this.#origin = atTime;
+    this.#until = 0;
+  }
+  /** Schedule every click up to the lookahead. */
+  tick() {
+    if (!this.running) return;
+    const elapsed = this.#now() - this.#origin;
+    const end = elapsed + this.#lookahead;
+    const start = Math.max(this.#until, elapsed);
+    if (end <= start) return;
+    if (this.#enabled()) {
+      for (const { at, accent } of clicksBetween(this.#transport(), start, end)) this.#click(this.#origin + at, accent);
+    }
+    this.#until = end;
+  }
+  stop() {
+    this.#origin = null;
+  }
+};
+
+// web/app/Click.js
+var ACCENT_HZ = 1568;
+var BEAT_HZ = 1046;
+var LENGTH_S = 0.06;
+function createClickVoice(context) {
+  return function click(when, accent) {
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    osc.frequency.value = accent ? ACCENT_HZ : BEAT_HZ;
+    gain.gain.setValueAtTime(accent ? 0.5 : 0.3, when);
+    gain.gain.exponentialRampToValueAtTime(1e-3, when + LENGTH_S);
+    osc.connect(gain).connect(context.destination);
+    osc.start(when);
+    osc.stop(when + LENGTH_S + 0.01);
+  };
+}
+
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -26544,6 +26744,7 @@ function makeSource(context) {
   node.loop = true;
   return node;
 }
+var CLICK_LEAD = 0.1;
 function createTransport(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   const automation = createAutomationHost(ctx2);
@@ -26551,6 +26752,9 @@ function createTransport(ctx2) {
   let startedAt = 0;
   let source = null;
   let scheduler = null;
+  let metronome = null;
+  let clickOn = false;
+  let countInBars = 0;
   let schedulerTimer = null;
   let playheadFrame = null;
   function followPlayhead() {
@@ -26574,7 +26778,12 @@ function createTransport(ctx2) {
     const { engine, clipPlayer, hostConfig } = ctx2;
     if (playing) return;
     playing = true;
-    startedAt = engine.context.currentTime;
+    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 };
+    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    if (pre.duration > 0) {
+      const click = createClickVoice(engine.context);
+      for (const { at, accent } of pre.clicks) click(startedAt + at, accent);
+    }
     $2("play").setAttribute("aria-pressed", "true");
     const first = d.project.nodes[0];
     const startsWithEffect = first && (d.engineNode(first.id)?.profile.audioInputs ?? 0) > 0;
@@ -26604,10 +26813,20 @@ function createTransport(ctx2) {
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt);
     scheduler.tick();
+    metronome ??= new Metronome({
+      now: () => engine.context.currentTime,
+      lookahead: hostConfig.schedulerLookaheadMs / 1e3,
+      transport: () => d.transport(),
+      click: createClickVoice(engine.context),
+      enabled: () => clickOn
+    });
+    metronome.start(startedAt);
+    metronome.tick();
     ctx2.script?.clockStart(startedAt);
     ctx2.script?.clockTick();
     schedulerTimer = setInterval(() => {
       scheduler.tick();
+      metronome.tick();
       ctx2.script?.clockTick();
     }, hostConfig.schedulerTickMs);
     followPlayhead();
@@ -26618,6 +26837,7 @@ function createTransport(ctx2) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
     scheduler?.stop();
+    metronome?.stop();
     ctx2.script?.clockStop();
     cancelAnimationFrame(playheadFrame);
     ctx2.arrangement.playhead(null);
@@ -26725,7 +26945,19 @@ function createTransport(ctx2) {
     const result = ctx2.dispatcher.apply([{ op: "setTransport", loopStart: start, loopEnd: end, loopEnabled: true }]);
     if (!result.ok) log2(result.message, "error");
   }
-  return { play, stop, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  function setClick(on) {
+    clickOn = Boolean(on);
+    $2("metronome")?.setAttribute("aria-pressed", String(clickOn));
+  }
+  function setCountIn(bars) {
+    if (![0, 1, 2].includes(bars)) throw new Error(`a count-in is 0, 1 or 2 bars, not ${bars}`);
+    countInBars = bars;
+  }
+  async function untilStart() {
+    const { engine } = ctx2;
+    while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // web/app/Sessions.js
@@ -29150,6 +29382,16 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",
+  master_set: "a mixer gesture; wanted, and not in version one",
+  send_add: "arrangement editing, not yet a statement",
+  send_set: "a mixer gesture; wanted, and not in version one",
+  send_remove: "arrangement editing, not yet a statement",
+  marker_add: "arrangement editing, not yet a statement",
+  marker_set: "arrangement editing, not yet a statement",
+  marker_remove: "arrangement editing, not yet a statement",
+  region_add: "arrangement editing, not yet a statement",
+  region_set: "arrangement editing, not yet a statement",
+  region_remove: "arrangement editing, not yet a statement",
   node_move_to_track: "arrangement editing, not yet a statement",
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",

@@ -115,6 +115,8 @@ $('tempo').addEventListener('change', async () => {
   if (!result.ok) log(result.message, 'error')
 })
 $('loop').addEventListener('click', () => transport.toggleLoop())
+$('metronome').addEventListener('click', () => transport.setClick($('metronome').getAttribute('aria-pressed') !== 'true'))
+$('count-in').addEventListener('change', () => transport.setCountIn(Number($('count-in').value)))
 $('signature').addEventListener('change', async () => {
   await ctx.runtime.ensureRunning()
   transport.setSignature($('signature').value)

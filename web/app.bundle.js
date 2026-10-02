@@ -26662,7 +26662,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_set",
-      description: "Rename a track, or name the plugins on it that its MIDI clips and audio clips play into. Pass null to clear an input.",
+      description: "Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its output to another track instead of the master (a bus). Pass null to clear an input or an output.",
       inputSchema: {
         type: "object",
         properties: {
@@ -26670,13 +26670,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           label: { type: ["string", "null"] },
           midiInput: { type: ["string", "null"], description: "A node on this track" },
           audioInput: { type: ["string", "null"], description: "A node on this track" },
+          output: { type: ["string", "null"], description: "The track this one feeds instead of the master, which makes it a bus. null for the master. A cycle is refused." },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId"]
       },
       async handler({ trackId, expectedRevision, ...fields } = {}) {
         const change = { op: "setTrack", id: trackId };
-        for (const key of ["label", "midiInput", "audioInput"]) {
+        for (const key of ["label", "midiInput", "audioInput", "output"]) {
           if (fields[key] !== void 0) change[key] = fields[key];
         }
         const result = dispatcher.apply([change], { expectedRevision });
@@ -26703,6 +26704,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         return result.ok ? ok({ revision: result.revision, channel: dispatcher.project.track(trackId).channel }) : failed(result.message, { kind: result.kind });
       }
     },
+    ...arrangementTools(),
     {
       name: "node_move_to_track",
       description: "Move a plugin to another track. It stops being the old track's clip input, if it was one.",
@@ -27207,6 +27209,113 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     }
   ];
+  function arrangementTools() {
+    const num = (description) => ({ type: "number", description });
+    const one3 = ({ name: name2, description, properties = {}, required = [], op, id, pick = (args) => args, returns = "id" }) => ({
+      name: name2,
+      description,
+      inputSchema: { type: "object", properties: { ...properties, expectedRevision: { type: "integer" } }, required },
+      async handler({ expectedRevision, ...args } = {}) {
+        const fields = pick(args);
+        const result = dispatcher.apply([{ op, ...fields }], { expectedRevision });
+        if (!result.ok) return failed(result.message, { kind: result.kind });
+        return ok({ revision: result.revision, ...returns === "id" ? { [id]: result.results[0] } : {} });
+      }
+    });
+    const keep = (names) => (args) => Object.fromEntries(Object.entries(args).filter(([k]) => names.includes(k)));
+    const withId = (key, names) => (args) => ({ id: args[key], ...keep(names)(args) });
+    return [
+      one3({
+        name: "master_set",
+        description: "Set the master bus: linear gain (1 is unity), pan (-1 to 1) and mute. Any of them; the rest stay.",
+        properties: { gain: num("Linear, zero or more"), pan: num("-1 to 1"), muted: { type: "boolean" } },
+        op: "setMaster",
+        returns: "none",
+        pick: keep(["gain", "pan", "muted"])
+      }),
+      one3({
+        name: "send_add",
+        description: "Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.",
+        properties: { from: { type: "string" }, to: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        required: ["from", "to"],
+        op: "addSend",
+        id: "sendId",
+        pick: keep(["from", "to", "level", "tap"])
+      }),
+      one3({
+        name: "send_set",
+        description: "Change a send's level or whether it takes the signal before or after the fader.",
+        properties: { sendId: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        required: ["sendId"],
+        op: "setSend",
+        returns: "none",
+        pick: withId("sendId", ["level", "tap"])
+      }),
+      one3({
+        name: "send_remove",
+        description: "Remove a send, by the id send_add returned or project_get lists.",
+        properties: { sendId: { type: "string" } },
+        required: ["sendId"],
+        op: "removeSend",
+        returns: "none",
+        pick: withId("sendId", [])
+      }),
+      one3({
+        name: "marker_add",
+        description: "Name a position in the arrangement, in beats from the start.",
+        properties: { atBeat: num("Zero or more"), label: { type: ["string", "null"] } },
+        required: ["atBeat"],
+        op: "addMarker",
+        id: "markerId",
+        pick: keep(["atBeat", "label"])
+      }),
+      one3({
+        name: "marker_set",
+        description: "Move a marker to another beat, or rename it. Either, or both.",
+        properties: { markerId: { type: "string" }, atBeat: num("Zero or more"), label: { type: ["string", "null"] } },
+        required: ["markerId"],
+        op: "setMarker",
+        returns: "none",
+        pick: withId("markerId", ["atBeat", "label"])
+      }),
+      one3({
+        name: "marker_remove",
+        description: "Remove a marker, by the id marker_add returned or project_get lists.",
+        properties: { markerId: { type: "string" } },
+        required: ["markerId"],
+        op: "removeMarker",
+        returns: "none",
+        pick: withId("markerId", [])
+      }),
+      one3({
+        name: "region_add",
+        description: "Name a range of the arrangement: where it starts and how long it lasts, both in beats.",
+        properties: { startBeat: num("Zero or more"), lengthBeats: num("Above zero"), label: { type: ["string", "null"] } },
+        required: ["startBeat", "lengthBeats"],
+        op: "addRegion",
+        id: "regionId",
+        pick: keep(["startBeat", "lengthBeats", "label"])
+      }),
+      one3({
+        name: "region_set",
+        description: "Move a region, change how long it lasts, or rename it. Any of them.",
+        properties: { regionId: { type: "string" }, startBeat: num("Zero or more"), lengthBeats: num("Above zero"), label: { type: ["string", "null"] } },
+        required: ["regionId"],
+        op: "setRegion",
+        returns: "none",
+        pick: withId("regionId", ["startBeat", "lengthBeats", "label"])
+      }),
+      one3({
+        name: "region_remove",
+        description: "Remove a region, by the id region_add returned or project_get lists.",
+        properties: { regionId: { type: "string" } },
+        required: ["regionId"],
+        op: "removeRegion",
+        returns: "none",
+        pick: withId("regionId", [])
+      })
+    ];
+  }
   return tools;
 }
 
@@ -27337,6 +27446,97 @@ function createRuntime(ctx2) {
   return { ensureRunning, shapeValidator };
 }
 
+// src/engine/Metronome.js
+function clicksBetween(transport2, start, end) {
+  const found = [];
+  const bar = transport2.beatsPerBar;
+  for (const seg of segments(transport2, start, end)) {
+    const lo = Math.max(seg.lo, start - seg.shift);
+    const hi = Math.min(seg.hi, end - seg.shift);
+    if (hi <= lo) continue;
+    for (let beat = Math.ceil(transport2.beatAtSeconds(lo) - 1e-9); ; beat++) {
+      const song = transport2.secondsAtBeat(beat);
+      if (song >= hi) break;
+      if (song < lo - 1e-9) continue;
+      found.push({ at: song + seg.shift, accent: beat % bar === 0 });
+    }
+  }
+  return found;
+}
+function countIn(transport2, bars) {
+  if (!Number.isInteger(bars) || bars < 0) throw new Error(`a count-in is a whole number of bars, not ${bars}`);
+  const beats2 = bars * transport2.beatsPerBar;
+  const length = transport2.secondsAtBeat(1);
+  const clicks = [];
+  for (let i2 = 0; i2 < beats2; i2++) clicks.push({ at: -(beats2 - i2) * length, accent: i2 % transport2.beatsPerBar === 0 });
+  return { clicks, duration: beats2 * length };
+}
+var Metronome = class {
+  #now;
+  #lookahead;
+  #transport;
+  #click;
+  #enabled;
+  #origin = null;
+  #until = 0;
+  /**
+   * - `now()`: the audio clock in seconds.
+   * - `lookahead`: seconds ahead of the clock to schedule to, from configuration, never defaulted here.
+   * - `transport()`: the Transport as it is now.
+   * - `click(when, accent)`: make the sound at `when` on the audio clock.
+   * - `enabled()`: whether to click, read every tick so the switch is heard at the next one.
+   */
+  constructor({ now, lookahead, transport: transport2, click, enabled }) {
+    if ([now, transport2, click, enabled].some((f) => typeof f !== "function")) throw new Error("Metronome needs now, transport, click and enabled");
+    if (!(lookahead > 0)) throw new Error("Metronome needs a lookahead in seconds, from configuration");
+    this.#now = now;
+    this.#lookahead = lookahead;
+    this.#transport = transport2;
+    this.#click = click;
+    this.#enabled = enabled;
+  }
+  get running() {
+    return this.#origin !== null;
+  }
+  /** Start at the clock time beat zero is heard. */
+  start(atTime) {
+    this.#origin = atTime;
+    this.#until = 0;
+  }
+  /** Schedule every click up to the lookahead. */
+  tick() {
+    if (!this.running) return;
+    const elapsed = this.#now() - this.#origin;
+    const end = elapsed + this.#lookahead;
+    const start = Math.max(this.#until, elapsed);
+    if (end <= start) return;
+    if (this.#enabled()) {
+      for (const { at, accent } of clicksBetween(this.#transport(), start, end)) this.#click(this.#origin + at, accent);
+    }
+    this.#until = end;
+  }
+  stop() {
+    this.#origin = null;
+  }
+};
+
+// web/app/Click.js
+var ACCENT_HZ = 1568;
+var BEAT_HZ = 1046;
+var LENGTH_S = 0.06;
+function createClickVoice(context) {
+  return function click(when, accent) {
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    osc.frequency.value = accent ? ACCENT_HZ : BEAT_HZ;
+    gain.gain.setValueAtTime(accent ? 0.5 : 0.3, when);
+    gain.gain.exponentialRampToValueAtTime(1e-3, when + LENGTH_S);
+    osc.connect(gain).connect(context.destination);
+    osc.start(when);
+    osc.stop(when + LENGTH_S + 0.01);
+  };
+}
+
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -27353,6 +27553,7 @@ function makeSource(context) {
   node.loop = true;
   return node;
 }
+var CLICK_LEAD = 0.1;
 function createTransport(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   const automation = createAutomationHost(ctx2);
@@ -27360,6 +27561,9 @@ function createTransport(ctx2) {
   let startedAt = 0;
   let source = null;
   let scheduler = null;
+  let metronome = null;
+  let clickOn = false;
+  let countInBars = 0;
   let schedulerTimer = null;
   let playheadFrame = null;
   function followPlayhead() {
@@ -27383,7 +27587,12 @@ function createTransport(ctx2) {
     const { engine, clipPlayer, hostConfig } = ctx2;
     if (playing) return;
     playing = true;
-    startedAt = engine.context.currentTime;
+    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 };
+    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    if (pre.duration > 0) {
+      const click = createClickVoice(engine.context);
+      for (const { at, accent } of pre.clicks) click(startedAt + at, accent);
+    }
     $2("play").setAttribute("aria-pressed", "true");
     const first2 = d.project.nodes[0];
     const startsWithEffect = first2 && (d.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
@@ -27413,10 +27622,20 @@ function createTransport(ctx2) {
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt);
     scheduler.tick();
+    metronome ??= new Metronome({
+      now: () => engine.context.currentTime,
+      lookahead: hostConfig.schedulerLookaheadMs / 1e3,
+      transport: () => d.transport(),
+      click: createClickVoice(engine.context),
+      enabled: () => clickOn
+    });
+    metronome.start(startedAt);
+    metronome.tick();
     ctx2.script?.clockStart(startedAt);
     ctx2.script?.clockTick();
     schedulerTimer = setInterval(() => {
       scheduler.tick();
+      metronome.tick();
       ctx2.script?.clockTick();
     }, hostConfig.schedulerTickMs);
     followPlayhead();
@@ -27427,6 +27646,7 @@ function createTransport(ctx2) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
     scheduler?.stop();
+    metronome?.stop();
     ctx2.script?.clockStop();
     cancelAnimationFrame(playheadFrame);
     ctx2.arrangement.playhead(null);
@@ -27534,7 +27754,19 @@ function createTransport(ctx2) {
     const result = ctx2.dispatcher.apply([{ op: "setTransport", loopStart: start, loopEnd: end, loopEnabled: true }]);
     if (!result.ok) log2(result.message, "error");
   }
-  return { play, stop, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  function setClick(on) {
+    clickOn = Boolean(on);
+    $2("metronome")?.setAttribute("aria-pressed", String(clickOn));
+  }
+  function setCountIn(bars) {
+    if (![0, 1, 2].includes(bars)) throw new Error(`a count-in is 0, 1 or 2 bars, not ${bars}`);
+    countInBars = bars;
+  }
+  async function untilStart() {
+    const { engine } = ctx2;
+    while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // src/engine/TrackRecorder.js
@@ -27740,6 +27972,7 @@ function createRecord(ctx2, { processorUrl = null, WorkletNode = globalThis.Audi
     recorder ??= new TrackRecorder({ engine, context: engine.context, processorUrl: resolvedUrl, WorkletNode });
     const started = ctx2.transport.playing();
     if (!started) await ctx2.transport.play();
+    if (!started) await ctx2.transport.untilStart();
     const startBeat = ctx2.transport.position().beat;
     await recorder.start(trackIds);
     recording = { trackIds, startBeat };
@@ -29920,6 +30153,143 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   };
 }
 
+// src/ui/ClipText.js
+function barBeat(beat, beatsPerBar) {
+  const bar = Math.floor(beat / beatsPerBar) + 1;
+  const within = beat - (bar - 1) * beatsPerBar + 1;
+  return `bar ${bar} beat ${Number.isInteger(within) ? within : within.toFixed(2).replace(/0+$/, "")}`;
+}
+var plural = (n2, word) => `${n2} ${word}${n2 === 1 ? "" : "s"}`;
+function describeClip(clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
+  const what = clip.kind === "midi" ? `MIDI clip, ${plural(clip.notes.length, "note")}` : "Audio clip";
+  const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
+  return `${what}${clip.muted ? ", muted" : ""}${clip.locked ? ", locked" : ""}${color ? `, coloured ${colorName(color)}` : ""}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
+}
+
+// src/ui/ClipButton.js
+function createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim }) {
+  function clipButton(clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = `clip-${clip.id}`;
+    button.className = `clip clip-${clip.kind}${playsIntoNothing ? " clip-orphan" : ""}${clip.muted ? " clip-muted" : ""}${clip.locked ? " clip-locked" : ""}`;
+    button.style.left = `${clip.startBeat * ppb()}px`;
+    button.style.width = `${clip.lengthBeats * ppb()}px`;
+    const description = describeClip(clip, { beatsPerBar, playsIntoNothing, color }) + (problem ? `, cannot play: ${problem}` : "");
+    button.setAttribute("aria-label", description);
+    button.title = description;
+    button.textContent = clip.kind === "midi" ? `${clip.notes.length}\u266A${playsIntoNothing ? " !" : ""}` : `\u223F${problem ? " !" : ""}`;
+    if (problem) button.classList.add("clip-orphan");
+    if (color) {
+      button.classList.add("clip-colored");
+      button.style.setProperty("--clip-color", color);
+    }
+    if (clip.muted) button.textContent = `\u2298 ${button.textContent}`;
+    if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`;
+    if (peaks) button.append(waveform(peaks));
+    button.addEventListener("keydown", (event) => {
+      const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      if (direction !== 0) {
+        event.preventDefault();
+        const step = direction * (view.step(beatsPerBar) ?? 1);
+        if (event.shiftKey) {
+          const length = clip.lengthBeats + step;
+          if (length > 0) onResize(clip.id, length);
+        } else {
+          const start = clip.startBeat + step;
+          if (start >= 0) onMove(clip.id, start);
+        }
+      } else if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        onRemove(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        onSplit(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "d") {
+        event.preventDefault();
+        onDuplicate(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        onMute(clip.id, !clip.muted);
+      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && ["c", "x", "v"].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+        const which = event.key.toLowerCase();
+        if (which === "c") onCopy(clip.id);
+        else if (which === "x") onCut(clip.id);
+        else onPaste(clip.id);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        onLock(clip.id, !clip.locked);
+      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && (event.key === "[" || event.key === "]")) {
+        event.preventDefault();
+        onTrim(clip.id, event.key === "[" ? "start" : "end");
+      }
+    });
+    button.addEventListener("click", (event) => {
+      if (dragged) return;
+      if (event.shiftKey || event.ctrlKey || event.metaKey) {
+        selection.toggle("clip", clip.id);
+        return;
+      }
+      selection.set("clip", [clip.id]);
+      onOpen(clip.id);
+    });
+    const selected = selection.has("clip", clip.id);
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-current", String(selected));
+    const handle = document2.createElement("span");
+    handle.className = "clip-resize";
+    handle.setAttribute("aria-hidden", "true");
+    button.append(handle);
+    let dragged = false;
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const resizing = event.target === handle;
+      const originX = event.clientX;
+      dragged = false;
+      const step = view.step(beatsPerBar);
+      const min = step ?? 0.25;
+      const target2 = (e) => {
+        const at = (resizing ? clip.startBeat + clip.lengthBeats : clip.startBeat) + (e.clientX - originX) / ppb();
+        return view.snap(at, beatsPerBar, { bypass: e.altKey });
+      };
+      const place = (e) => resizing ? { length: Math.max(min, target2(e) - clip.startBeat) } : { start: Math.max(0, target2(e)) };
+      const move = (e) => {
+        const to = place(e);
+        if (resizing ? to.length !== clip.lengthBeats : to.start !== clip.startBeat) dragged = true;
+        if (resizing) button.style.width = `${to.length * ppb()}px`;
+        else button.style.left = `${to.start * ppb()}px`;
+      };
+      const up = (e) => {
+        document2.removeEventListener("pointermove", move);
+        document2.removeEventListener("pointerup", up);
+        const to = place(e);
+        if (resizing) {
+          if (to.length !== clip.lengthBeats) onResize(clip.id, to.length);
+        } else if (to.start !== clip.startBeat) onMove(clip.id, to.start);
+      };
+      document2.addEventListener("pointermove", move);
+      document2.addEventListener("pointerup", up);
+    });
+    return button;
+  }
+  function waveform(peaks) {
+    const ns2 = "http://www.w3.org/2000/svg";
+    const svg = document2.createElementNS(ns2, "svg");
+    svg.setAttribute("class", "clip-wave");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("viewBox", `0 -1 ${peaks.length} 2`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    const path = document2.createElementNS(ns2, "path");
+    let d = "";
+    for (let i2 = 0; i2 < peaks.length; i2++) d += `M${i2 + 0.5} ${-peaks[i2]}V${peaks[i2]}`;
+    path.setAttribute("d", d);
+    svg.append(path);
+    return svg;
+  }
+  return clipButton;
+}
+
 // src/ui/TimeView.js
 var MIN_PIXELS_PER_BEAT = 2;
 var MAX_PIXELS_PER_BEAT = 240;
@@ -30010,17 +30380,6 @@ function finite(n2, what) {
 }
 
 // src/ui/Timeline.js
-function barBeat(beat, beatsPerBar) {
-  const bar = Math.floor(beat / beatsPerBar) + 1;
-  const within = beat - (bar - 1) * beatsPerBar + 1;
-  return `bar ${bar} beat ${Number.isInteger(within) ? within : within.toFixed(2).replace(/0+$/, "")}`;
-}
-var plural = (n2, word) => `${n2} ${word}${n2 === 1 ? "" : "s"}`;
-function describeClip(clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
-  const what = clip.kind === "midi" ? `MIDI clip, ${plural(clip.notes.length, "note")}` : "Audio clip";
-  const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
-  return `${what}${clip.muted ? ", muted" : ""}${clip.locked ? ", locked" : ""}${color ? `, coloured ${colorName(color)}` : ""}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
-}
 function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
@@ -30264,6 +30623,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const rect = scroller.getBoundingClientRect();
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx());
   }, { passive: false });
+  const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim });
   function draw(args) {
     lastArgs = args;
     scroller.style.setProperty("--view", `${scroller.clientWidth}px`);
@@ -30397,125 +30757,6 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const expected = [head, ruler, loopRow, ...wanted, masterRow.element];
     const same = current.length === expected.length && current.every((child, k) => child === expected[k]);
     if (!same) scroller.replaceChildren(...expected);
-  }
-  function clipButton(clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.id = `clip-${clip.id}`;
-    button.className = `clip clip-${clip.kind}${playsIntoNothing ? " clip-orphan" : ""}${clip.muted ? " clip-muted" : ""}${clip.locked ? " clip-locked" : ""}`;
-    button.style.left = `${clip.startBeat * ppb()}px`;
-    button.style.width = `${clip.lengthBeats * ppb()}px`;
-    const description = describeClip(clip, { beatsPerBar, playsIntoNothing, color }) + (problem ? `, cannot play: ${problem}` : "");
-    button.setAttribute("aria-label", description);
-    button.title = description;
-    button.textContent = clip.kind === "midi" ? `${clip.notes.length}\u266A${playsIntoNothing ? " !" : ""}` : `\u223F${problem ? " !" : ""}`;
-    if (problem) button.classList.add("clip-orphan");
-    if (color) {
-      button.classList.add("clip-colored");
-      button.style.setProperty("--clip-color", color);
-    }
-    if (clip.muted) button.textContent = `\u2298 ${button.textContent}`;
-    if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`;
-    if (peaks) button.append(waveform(peaks));
-    button.addEventListener("keydown", (event) => {
-      const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-      if (direction !== 0) {
-        event.preventDefault();
-        const step = direction * (view.step(beatsPerBar) ?? 1);
-        if (event.shiftKey) {
-          const length = clip.lengthBeats + step;
-          if (length > 0) onResize(clip.id, length);
-        } else {
-          const start = clip.startBeat + step;
-          if (start >= 0) onMove(clip.id, start);
-        }
-      } else if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault();
-        onRemove(clip.id);
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        onSplit(clip.id);
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "d") {
-        event.preventDefault();
-        onDuplicate(clip.id);
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "m") {
-        event.preventDefault();
-        onMute(clip.id, !clip.muted);
-      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && ["c", "x", "v"].includes(event.key.toLowerCase())) {
-        event.preventDefault();
-        const which = event.key.toLowerCase();
-        if (which === "c") onCopy(clip.id);
-        else if (which === "x") onCut(clip.id);
-        else onPaste(clip.id);
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "l") {
-        event.preventDefault();
-        onLock(clip.id, !clip.locked);
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && (event.key === "[" || event.key === "]")) {
-        event.preventDefault();
-        onTrim(clip.id, event.key === "[" ? "start" : "end");
-      }
-    });
-    button.addEventListener("click", (event) => {
-      if (dragged) return;
-      if (event.shiftKey || event.ctrlKey || event.metaKey) {
-        selection.toggle("clip", clip.id);
-        return;
-      }
-      selection.set("clip", [clip.id]);
-      onOpen(clip.id);
-    });
-    const selected = selection.has("clip", clip.id);
-    button.classList.toggle("selected", selected);
-    button.setAttribute("aria-current", String(selected));
-    const handle2 = document2.createElement("span");
-    handle2.className = "clip-resize";
-    handle2.setAttribute("aria-hidden", "true");
-    button.append(handle2);
-    let dragged = false;
-    button.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
-      const resizing = event.target === handle2;
-      const originX = event.clientX;
-      dragged = false;
-      const step = view.step(beatsPerBar);
-      const min = step ?? 0.25;
-      const target2 = (e) => {
-        const at = (resizing ? clip.startBeat + clip.lengthBeats : clip.startBeat) + (e.clientX - originX) / ppb();
-        return view.snap(at, beatsPerBar, { bypass: e.altKey });
-      };
-      const place = (e) => resizing ? { length: Math.max(min, target2(e) - clip.startBeat) } : { start: Math.max(0, target2(e)) };
-      const move = (e) => {
-        const to = place(e);
-        if (resizing ? to.length !== clip.lengthBeats : to.start !== clip.startBeat) dragged = true;
-        if (resizing) button.style.width = `${to.length * ppb()}px`;
-        else button.style.left = `${to.start * ppb()}px`;
-      };
-      const up = (e) => {
-        document2.removeEventListener("pointermove", move);
-        document2.removeEventListener("pointerup", up);
-        const to = place(e);
-        if (resizing) {
-          if (to.length !== clip.lengthBeats) onResize(clip.id, to.length);
-        } else if (to.start !== clip.startBeat) onMove(clip.id, to.start);
-      };
-      document2.addEventListener("pointermove", move);
-      document2.addEventListener("pointerup", up);
-    });
-    return button;
-  }
-  function waveform(peaks) {
-    const ns2 = "http://www.w3.org/2000/svg";
-    const svg = document2.createElementNS(ns2, "svg");
-    svg.setAttribute("class", "clip-wave");
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("viewBox", `0 -1 ${peaks.length} 2`);
-    svg.setAttribute("preserveAspectRatio", "none");
-    const path = document2.createElementNS(ns2, "path");
-    let d = "";
-    for (let i2 = 0; i2 < peaks.length; i2++) d += `M${i2 + 0.5} ${-peaks[i2]}V${peaks[i2]}`;
-    path.setAttribute("d", d);
-    svg.append(path);
-    return svg;
   }
   function playhead(beat) {
     head.hidden = beat === null;
@@ -34746,6 +34987,16 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",
+  master_set: "a mixer gesture; wanted, and not in version one",
+  send_add: "arrangement editing, not yet a statement",
+  send_set: "a mixer gesture; wanted, and not in version one",
+  send_remove: "arrangement editing, not yet a statement",
+  marker_add: "arrangement editing, not yet a statement",
+  marker_set: "arrangement editing, not yet a statement",
+  marker_remove: "arrangement editing, not yet a statement",
+  region_add: "arrangement editing, not yet a statement",
+  region_set: "arrangement editing, not yet a statement",
+  region_remove: "arrangement editing, not yet a statement",
   node_move_to_track: "arrangement editing, not yet a statement",
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",
@@ -35435,6 +35686,8 @@ $("tempo").addEventListener("change", async () => {
   if (!result.ok) log(result.message, "error");
 });
 $("loop").addEventListener("click", () => transport.toggleLoop());
+$("metronome").addEventListener("click", () => transport.setClick($("metronome").getAttribute("aria-pressed") !== "true"));
+$("count-in").addEventListener("change", () => transport.setCountIn(Number($("count-in").value)));
 $("signature").addEventListener("change", async () => {
   await ctx.runtime.ensureRunning();
   transport.setSignature($("signature").value);

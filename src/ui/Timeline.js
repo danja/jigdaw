@@ -41,27 +41,16 @@ import { createEnvelopeLanes } from './EnvelopeLanes.js'
 import { createMasterRow } from './MasterRow.js'
 import { Selection } from '../model/Selection.js'
 import { setIcon } from './Icons.js'
-import { colorName } from './TrackPanel.js'
+import { barBeat, describeClip } from './ClipText.js'
+import { createClipButton } from './ClipButton.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT, GRIDS } from './TimeView.js'
+
+// The text a clip says about itself is ClipText.js and the clip itself is ClipButton.js; both are re-exported here so
+// callers keep one front door.
+export { barBeat, describeClip }
 
 /** CSS pixels per beat at the default zoom. */
 export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
-
-/** Bar and beat, counting from one, as a musician reads a position. */
-export function barBeat (beat, beatsPerBar) {
-  const bar = Math.floor(beat / beatsPerBar) + 1
-  const within = beat - (bar - 1) * beatsPerBar + 1
-  return `bar ${bar} beat ${Number.isInteger(within) ? within : within.toFixed(2).replace(/0+$/, '')}`
-}
-
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
-
-/** What a clip says about itself to a screen reader, and on hover. */
-export function describeClip (clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
-  const what = clip.kind === 'midi' ? `MIDI clip, ${plural(clip.notes.length, 'note')}` : 'Audio clip'
-  const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, 'beat')}`
-  return `${what}${clip.muted ? ', muted' : ''}${clip.locked ? ', locked' : ''}${color ? `, coloured ${colorName(color)}` : ''}, ${where}${playsIntoNothing ? ', plays into nothing: this track has no MIDI input' : ''}`
-}
 
 /**
  * Build a timeline.
@@ -349,6 +338,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx())
   }, { passive: false })
 
+  const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim })
+
   function draw (args) {
     lastArgs = args
     // How much of the lanes is on screen, for anything that must wrap inside it.
@@ -468,136 +459,6 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const expected = [head, ruler, loopRow, ...wanted, masterRow.element]
     const same = current.length === expected.length && current.every((child, k) => child === expected[k])
     if (!same) scroller.replaceChildren(...expected)
-  }
-
-  function clipButton (clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.id = `clip-${clip.id}`
-    button.className = `clip clip-${clip.kind}${playsIntoNothing ? ' clip-orphan' : ''}${clip.muted ? ' clip-muted' : ''}${clip.locked ? ' clip-locked' : ''}`
-    button.style.left = `${clip.startBeat * ppb()}px`
-    button.style.width = `${clip.lengthBeats * ppb()}px`
-    const description = describeClip(clip, { beatsPerBar, playsIntoNothing, color }) + (problem ? `, cannot play: ${problem}` : '')
-    button.setAttribute('aria-label', description)
-    button.title = description
-    // Shown as well as said: a clip that plays into nothing, or cannot play,
-    // is marked in text, not only by a colour.
-    button.textContent = clip.kind === 'midi' ? `${clip.notes.length}♪${playsIntoNothing ? ' !' : ''}` : `∿${problem ? ' !' : ''}`
-    if (problem) button.classList.add('clip-orphan')
-    // The colour is a person's mark, said in the spoken name too, never the only thing telling clips apart.
-    if (color) { button.classList.add('clip-colored'); button.style.setProperty('--clip-color', color) }
-    // Said in the label as well as faded, so it is not colour or opacity alone.
-    if (clip.muted) button.textContent = `\u2298 ${button.textContent}`
-    if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`
-    if (peaks) button.append(waveform(peaks))
-
-    button.addEventListener('keydown', event => {
-      const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-      if (direction !== 0) {
-        event.preventDefault()
-        // One grid step, or a beat when snapping is off: an arrow key that moved
-        // by nothing would do nothing.
-        const step = direction * (view.step(beatsPerBar) ?? 1)
-        if (event.shiftKey) {
-          const length = clip.lengthBeats + step
-          if (length > 0) onResize(clip.id, length)
-        } else {
-          const start = clip.startBeat + step
-          if (start >= 0) onMove(clip.id, start)
-        }
-      } else if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault()
-        onRemove(clip.id)
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 's') {
-        event.preventDefault()
-        onSplit(clip.id)
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'd') {
-        event.preventDefault()
-        onDuplicate(clip.id)
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'm') {
-        event.preventDefault()
-        onMute(clip.id, !clip.muted)
-      } else if ((event.ctrlKey || event.metaKey) && !event.altKey && ['c', 'x', 'v'].includes(event.key.toLowerCase())) {
-        event.preventDefault()
-        const which = event.key.toLowerCase()
-        if (which === 'c') onCopy(clip.id)
-        else if (which === 'x') onCut(clip.id)
-        else onPaste(clip.id)
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'l') {
-        event.preventDefault()
-        onLock(clip.id, !clip.locked)
-      } else if (!event.ctrlKey && !event.metaKey && !event.altKey && (event.key === '[' || event.key === ']')) {
-        event.preventDefault()
-        onTrim(clip.id, event.key === '[' ? 'start' : 'end')
-      }
-    })
-    button.addEventListener('click', event => {
-      if (dragged) return
-      // Shift or Ctrl adds to the selection; a plain click selects and opens.
-      if (event.shiftKey || event.ctrlKey || event.metaKey) { selection.toggle('clip', clip.id); return }
-      selection.set('clip', [clip.id])
-      onOpen(clip.id)
-    })
-    const selected = selection.has('clip', clip.id)
-    button.classList.toggle('selected', selected)
-    button.setAttribute('aria-current', String(selected))
-
-    const handle = document.createElement('span')
-    handle.className = 'clip-resize'
-    handle.setAttribute('aria-hidden', 'true')
-    button.append(handle)
-
-    let dragged = false
-    button.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return
-      const resizing = event.target === handle
-      const originX = event.clientX
-      dragged = false
-      // Where the clip's edge lands: the pointer's movement in beats, on the
-      // grid unless Alt is held. `min` is the shortest a clip may be.
-      const step = view.step(beatsPerBar)
-      const min = step ?? 0.25
-      const target = e => {
-        const at = (resizing ? clip.startBeat + clip.lengthBeats : clip.startBeat) + (e.clientX - originX) / ppb()
-        return view.snap(at, beatsPerBar, { bypass: e.altKey })
-      }
-      const place = e => (resizing
-        ? { length: Math.max(min, target(e) - clip.startBeat) }
-        : { start: Math.max(0, target(e)) })
-      const move = e => {
-        const to = place(e)
-        // A drag only once the clip has actually moved, so a click with a little jitter still opens it.
-        if (resizing ? to.length !== clip.lengthBeats : to.start !== clip.startBeat) dragged = true
-        // Shown while dragging; sent once, on release.
-        if (resizing) button.style.width = `${to.length * ppb()}px`
-        else button.style.left = `${to.start * ppb()}px`
-      }
-      const up = e => {
-        document.removeEventListener('pointermove', move)
-        document.removeEventListener('pointerup', up)
-        const to = place(e)
-        if (resizing) { if (to.length !== clip.lengthBeats) onResize(clip.id, to.length) } else if (to.start !== clip.startBeat) onMove(clip.id, to.start)
-      }
-      document.addEventListener('pointermove', move)
-      document.addEventListener('pointerup', up)
-    })
-    return button
-  }
-
-  /** A waveform, drawn and not read: the clip's own label says what it is. */
-  function waveform (peaks) {
-    const ns = 'http://www.w3.org/2000/svg'
-    const svg = document.createElementNS(ns, 'svg')
-    svg.setAttribute('class', 'clip-wave')
-    svg.setAttribute('aria-hidden', 'true')
-    svg.setAttribute('viewBox', `0 -1 ${peaks.length} 2`)
-    svg.setAttribute('preserveAspectRatio', 'none')
-    const path = document.createElementNS(ns, 'path')
-    let d = ''
-    for (let i = 0; i < peaks.length; i++) d += `M${i + 0.5} ${-peaks[i]}V${peaks[i]}`
-    path.setAttribute('d', d)
-    svg.append(path)
-    return svg
   }
 
   /** Show the transport at `beat`, or nothing for null. */

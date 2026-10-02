@@ -101,9 +101,15 @@ a screen reader and usable at phone width. [docs/usp.md](docs/usp.md) says where
 ### T1. The main view shell
 
 - [ ] **A view module of its own.** `src/ui/Arrange.js` with a header column and a lane area sharing one vertical
-      scroll, built from `Timeline.js` (now past 600 lines), `Strip.js` and `Panel.js` rather than a rewrite.
-- [ ] **Transport.** The metronome (the scheduler unrolls a click source through the loop the way it does notes; a
-      count-in with it), tap tempo, a seconds or SMPTE readout, and a compact phone transport bar.
+      scroll, built from `Timeline.js`, `Strip.js` and `Panel.js` rather than a rewrite. `Timeline.js` is down from 626 to 487
+      lines (2026-10-01): `ClipText.js` and `ClipButton.js` came out along existing seams and it still re-exports. Next seam: the
+      loop brace and the lane drawing.
+- [ ] **Transport, what is left.** Built 2026-10-01, tested offline and not yet heard: a Click button and a count-in of 0, 1 or
+      2 bars (`src/engine/Metronome.js`, `web/app/Click.js`). The click goes straight to the destination, so it is never in
+      a bounce or the meter; recording waits through a count-in so a take starts at beat zero. **Check in Chrome with the window in
+      front:** that it clicks in time, accents the bar, keeps time through a loop, and that a count-in leaves the playhead at the
+      top and then starts everything together (a script's clock starts in the future during one). The accent assumes one
+      signature, like `barBeat`. Left: tap tempo, a seconds or SMPTE readout, and a compact phone transport bar.
 - [ ] **Playhead and loop.** Seek by clicking the ruler, drag the whole loop, a loop range from a selection or
       region, and follow for the piano roll.
 - [ ] **Zoom and snap.** Pinch on touch, zoom to selection, seconds as an alternative ruler, the piano roll reading

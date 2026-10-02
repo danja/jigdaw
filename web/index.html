@@ -579,6 +579,15 @@
     <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
   </span>
   <button id="loop" data-icon="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
+  <button id="metronome" type="button" aria-pressed="false" title="Click on every beat, louder on the first of a bar. Heard by you only: never in an export">Click</button>
+  <span class="tempo">
+    <label for="count-in" class="visually-hidden">Count-in before play, in bars</label>
+    <select id="count-in" title="Bars of click before the music starts">
+      <option value="0">No count-in</option>
+      <option value="1">Count in 1 bar</option>
+      <option value="2">Count in 2 bars</option>
+    </select>
+  </span>
   <span class="position" id="position" aria-live="off">1 . 1</span>
   <button id="midi-in" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
   <span id="midi-state" class="midi-state" role="status"></span>

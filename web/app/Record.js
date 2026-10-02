@@ -55,6 +55,8 @@ export function createRecord (ctx, { processorUrl = null, WorkletNode = globalTh
     recorder ??= new TrackRecorder({ engine, context: engine.context, processorUrl: resolvedUrl, WorkletNode })
     const started = ctx.transport.playing()
     if (!started) await ctx.transport.play()
+    // Through a count-in, so the take starts at beat zero and not at the first click.
+    if (!started) await ctx.transport.untilStart()
     // The beat under the punch, for the clips' placement; their length comes
     // from the captured frames further down, so a tempo change mid-take moves
     // the end by the beat math rather than by the clock.

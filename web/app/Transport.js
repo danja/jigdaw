@@ -5,6 +5,8 @@
 // and every plugin is told where the transport is (contract section 7).
 import { createAutomationHost } from '../../src/engine/AutomationHost.js'
 import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
+import { Metronome, countIn } from '../../src/engine/Metronome.js'
+import { createClickVoice } from './Click.js'
 
 /** A repeating impulse, so an effect has something to work on. */
 function makeSource (context) {
@@ -23,6 +25,9 @@ function makeSource (context) {
   return node
 }
 
+/** Seconds between asking for the count-in and its first click. */
+const CLICK_LEAD = 0.1
+
 export function createTransport (ctx) {
   const { document, $, log } = ctx
   // Envelopes on plugin parameters, played by the scheduler; a hand edit while one plays suspends it (AutomationHost.js).
@@ -32,6 +37,10 @@ export function createTransport (ctx) {
   let source = null
   // Plays the tracks' clips while the transport runs, and its timer.
   let scheduler = null
+  // The click, and the bars of it before beat zero. A host aid: never in the graph, a bounce or a session.
+  let metronome = null
+  let clickOn = false
+  let countInBars = 0
   let schedulerTimer = null
   // The playhead's animation, while the transport runs.
   let playheadFrame = null
@@ -67,7 +76,13 @@ export function createTransport (ctx) {
     const { engine, clipPlayer, hostConfig } = ctx
     if (playing) return
     playing = true
-    startedAt = engine.context.currentTime
+    // A count-in puts beat zero back by its length, with a little lead so the first click is not already past.
+    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 }
+    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0)
+    if (pre.duration > 0) {
+      const click = createClickVoice(engine.context)
+      for (const { at, accent } of pre.clicks) click(startedAt + at, accent)
+    }
     $('play').setAttribute('aria-pressed', 'true')
 
     // Only run the impulse source if the chain starts with something that takes
@@ -108,10 +123,19 @@ export function createTransport (ctx) {
     if (failed.length > 0) ctx.rack.draw()
     scheduler.start(startedAt)
     scheduler.tick()
+    metronome ??= new Metronome({
+      now: () => engine.context.currentTime,
+      lookahead: hostConfig.schedulerLookaheadMs / 1000,
+      transport: () => d.transport(),
+      click: createClickVoice(engine.context),
+      enabled: () => clickOn
+    })
+    metronome.start(startedAt)
+    metronome.tick()
     // A script's timed statements are fired from the same tick, against the same beat zero.
     ctx.script?.clockStart(startedAt)
     ctx.script?.clockTick()
-    schedulerTimer = setInterval(() => { scheduler.tick(); ctx.script?.clockTick() }, hostConfig.schedulerTickMs)
+    schedulerTimer = setInterval(() => { scheduler.tick(); metronome.tick(); ctx.script?.clockTick() }, hostConfig.schedulerTickMs)
     followPlayhead()
     log('playing', 'ok')
   }
@@ -122,6 +146,7 @@ export function createTransport (ctx) {
     clearInterval(schedulerTimer)
     schedulerTimer = null
     scheduler?.stop()
+    metronome?.stop()
     ctx.script?.clockStop()
     cancelAnimationFrame(playheadFrame)
     ctx.arrangement.playhead(null)
@@ -240,5 +265,23 @@ export function createTransport (ctx) {
     if (!result.ok) log(result.message, 'error')
   }
 
-  return { play, stop, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
+  /** Switch the click on or off, while playing or not. */
+  function setClick (on) {
+    clickOn = Boolean(on)
+    $('metronome')?.setAttribute('aria-pressed', String(clickOn))
+  }
+
+  /** Whole bars of count-in before beat zero when the transport starts: 0, 1 or 2. */
+  function setCountIn (bars) {
+    if (![0, 1, 2].includes(bars)) throw new Error(`a count-in is 0, 1 or 2 bars, not ${bars}`)
+    countInBars = bars
+  }
+
+  /** Resolves when beat zero is heard, which is at once unless a count-in is running. */
+  async function untilStart () {
+    const { engine } = ctx
+    while (playing && engine && engine.context.currentTime < startedAt) await new Promise(resolve => setTimeout(resolve, 20))
+  }
+
+  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
 }

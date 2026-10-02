@@ -61,6 +61,7 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
   const mediaFiles = new Map()
   const mediaBase = 'https://s.test/sessions/1/'
   let played = 0
+  const order = []
   let beat = 4
   const dispatcher = new OpDispatcher()
   dispatcher.apply(tracks.map(id => ({ op: 'addTrack', id })))
@@ -83,7 +84,8 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
     clipPlayer: { load: async () => ({ duration: 1 }), failure: () => null },
     transport: {
       playing: () => playing,
-      play: async () => { played += 1 },
+      play: async () => { played += 1; order.push('play') },
+      untilStart: async () => { order.push('untilStart') },
       position: () => ({ beat })
     }
   }
@@ -95,7 +97,7 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
     const chunk = new Float32Array(CAPTURE_FRAMES * 2).fill(value)
     node.port.onmessage({ data: chunk })
   }
-  return { ctx, page, record, dispatcher, logLines, mediaFiles, nodes, feed, played: () => played }
+  return { ctx, page, record, dispatcher, logLines, mediaFiles, nodes, feed, order, played: () => played }
 }
 
 describe('record', () => {
@@ -132,6 +134,16 @@ describe('record', () => {
     await setup.record.toggle()
     expect(setup.played()).toBe(0)
     expect(setup.record.isRecording()).toBe(true)
+  })
+
+  it('waits for beat zero after starting the transport, so a count-in is not recorded into the take', async () => {
+    await setup.record.toggle()
+    expect(setup.order).toEqual(['play', 'untilStart'])
+    await setup.record.finishTake()
+    // Punching into a transport that is already playing has no beat zero to wait for.
+    setup = build({ playing: true })
+    await setup.record.toggle()
+    expect(setup.order).toEqual([])
   })
 
   it('keeps a sounding track as an audio clip, and skips a silent one', async () => {
