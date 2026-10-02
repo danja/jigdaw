@@ -46,7 +46,7 @@ Its pins are placeholders (section 9 says how to get real ones).
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     jig:audioInputs 1 ;
     jig:audioOutputs 1 ;
     jig:member <#boost> , <#trem> ;
@@ -106,6 +106,10 @@ and the automation names. The terms new to composites are `jig:CompositePlugin`,
 | `jig:connection` | the composite | at least one | a wire between members, or between a member and the boundary |
 | `lv2:port` | the composite | any number | a control the composite offers, with `jig:drives` |
 | `jig:processor`, `jig:module`, `jig:ui`, `jig:latencyFrames`, `jig:tailFrames` | the composite | MUST NOT appear | a composite has no code of its own, and its latency and tail are derived (section 7.4) |
+
+A composite SHOULD declare `trn:format trn:Jig` and not `trn:WebAudio`, which plugin-universe has deprecated and maps only on ingest: its own shape
+rejects the raw term. The reference composite was checked against plugin-universe's shapes on 2026-10-02 and conforms, which is what
+makes a composite a valid catalogue entry there.
 
 A composite MUST NOT contain a blank node, for the reason the rest of the format gives (CLAUDE.md, RDF conventions): a graph with one
 has no canonical form and cannot be signed.
@@ -299,7 +303,19 @@ rewrite the profile, because the pin has to be in the profile as published and a
 different plugin. With `--check` it exits 1 if any member is not current, which is the check to run before publishing and again whenever a
 member is rebuilt.
 
-### 9.3 Exchanging one
+### 9.3 Trying one before publishing
+
+```sh
+node bin/check-plugin.js --members plugins --root https://example.org/racks/stomp/=racks/stomp-rack https://example.org/racks/stomp/
+```
+
+`--members` maps every plugin directory under it to the IRI its own profile states, so the members are read from disk and not from the
+network, and `--root` maps the composite's own IRI to its directory. The reference host renders a composite that is a **straight chain**
+by flattening it into its chain, applying the author's voicing, and checking pins as any host does. It refuses one with a branch, a join,
+a loop, a modulation connection or MIDI between members, by name, because it renders chains and not graphs (`src/host/ReferenceHost.js`
+says why). Jiggy runs those.
+
+### 9.4 Exchanging one
 
 - **By IRI.** A composite is served as a profile at its IRI with the requirements of contract section 1, and its members are fetched from
   theirs. A collection lists it as any plugin: `dcterms:hasPart` takes a plugin IRI.
@@ -325,7 +341,7 @@ A host supports composites if it does everything in sections 4 to 8 and section 
 tools, and a host that supports none of this conforms (contract section 13).
 
 A tool that makes a composite conforms if its output validates against `jig:CompositePluginShape` and passes the checks in sections 4 and 5.
-A tool that bundles one MUST refuse an unpinned or mismatched member.
+A tool that bundles one MUST refuse an unpinned or mismatched member. A host that renders only chains MAY support a composite that is a straight chain and MUST refuse any other by name.
 
 Each rule above has a test. This table names the test, so that a rule changed in this document and not in the code, or the reverse, is a
 failure rather than a surprise.
@@ -347,10 +363,12 @@ failure rather than a surprise.
 | Bypass is applied to the composite as one node | 7.3 | `tests/ops/CompositeDispatcher.test.js`, "takes a bypassed rack out of the signal as one node" |
 | State is keyed by member IRI, and an unknown key is ignored | 8 | `tests/host/CompositeState.test.js`, "ignores a key that names no member" |
 | A session saves a composite as one node and reopens it | 8 | `tests/ops/CompositeDispatcher.test.js`, "saves and reopens as one node" |
-| A bundle holds every member | 9.3 | `tests/host/compositeBundle.test.js`, "holds every member" |
-| A bundle of an unpinned member is refused | 9.3 | `tests/host/compositeBundle.test.js`, "a member with no pin" |
-| A flattened composite opens with no network | 9.3 | `tests/host/compositeBundle.test.js`, "opens through the resolver from the flattened file alone" |
+| A bundle holds every member | 9.4 | `tests/host/compositeBundle.test.js`, "holds every member" |
+| A bundle of an unpinned member is refused | 9.4 | `tests/host/compositeBundle.test.js`, "a member with no pin" |
+| A flattened composite opens with no network | 9.4 | `tests/host/compositeBundle.test.js`, "opens through the resolver from the flattened file alone" |
 | `bin/pin.js` reports a pin as current only when it is | 9.2 | `tests/bin/pin.test.js`, "calls the placeholder pins stale" |
+| A straight rack renders in the reference host, and its author's voicing is applied | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "is silent when its author sets Drive to zero" |
+| A composite that is not a straight chain is refused by name | 9.3 | `tests/host/ReferenceHostComposite.test.js`, "refuses a split, a join, a loop" |
 
 ## 12. Not in this version
 

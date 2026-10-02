@@ -12,18 +12,40 @@
 // it. See PluginCheck.js for what it can and cannot tell you.
 //
 // Usage:
-//   node bin/check-plugin.js [--root PREFIX=DIR]... [--seconds N]
+//   node bin/check-plugin.js [--root PREFIX=DIR]... [--members DIR] [--seconds N]
 //                             [--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N]
 //                             [--measure-budget] [--no-validate] IRI...
+//
+// --members DIR maps every plugin directory under DIR to the IRI its own profile states, so a composite
+// plugin's members are read from disk and not from the network: the same as one --root per member. A
+// composite that is a straight chain is rendered; one with a branch is refused by name (nested-plugins.md).
 //
 // Examples:
 //   node bin/check-plugin.js https://strandz.it/jigdaw/plugins/cascade/
 //   node bin/check-plugin.js --root https://strandz.it/jigdaw/plugins/pulse/=plugins/pulse \
 //     https://strandz.it/jigdaw/plugins/pulse/ --note 69@0:1
-import { resolve, dirname } from 'node:path'
+import { resolve, dirname, join } from 'node:path'
+import { readdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { checkPlugin, checkRenderBudget } from '../src/host/PluginCheck.js'
 import { shapeValidatorFromFile } from '../src/validate/files.js'
+import { parseText } from '../src/rdf/parse.js'
+import { readProfile } from '../src/rdf/ProfileReader.js'
+import { readComposite, isComposite } from '../src/rdf/CompositeReader.js'
+
+/** One root per plugin directory under `directory`, keyed by the IRI its profile states. */
+async function rootsFromMembers (directory) {
+  const roots = {}
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const file = join(directory, entry.name, 'profile.ttl')
+    try {
+      const dataset = await parseText(await readFile(file, 'utf8'), 'urn:jigdaw:members')
+      roots[isComposite(dataset) ? readComposite(dataset).iri : readProfile(dataset).iri] = join(directory, entry.name)
+    } catch { /* not a plugin directory */ }
+  }
+  return roots
+}
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -31,6 +53,7 @@ function parseArgs (argv) {
   const iris = []
   const roots = {}
   const notes = []
+  const members = []
   let seconds = 2
   let sampleRate = 48000
   let peakBound = 1
@@ -44,6 +67,10 @@ function parseArgs (argv) {
       const eq = value?.indexOf('=') ?? -1
       if (!value || eq < 1) throw new Error('--root needs PREFIX=DIR')
       roots[value.slice(0, eq)] = resolve(value.slice(eq + 1))
+    } else if (arg === '--members') {
+      const value = argv[++i]
+      if (!value) throw new Error('--members needs a directory')
+      members.push(resolve(value))
     } else if (arg === '--seconds') {
       seconds = Number(argv[++i])
       if (!Number.isFinite(seconds) || seconds <= 0) throw new Error('--seconds needs a positive number')
@@ -67,12 +94,12 @@ function parseArgs (argv) {
       iris.push(arg)
     }
   }
-  return { iris, roots, notes, seconds, sampleRate, peakBound, validate, measureBudget }
+  return { iris, roots, members, notes, seconds, sampleRate, peakBound, validate, measureBudget }
 }
 
 function usage () {
   console.error('usage: node bin/check-plugin.js [--root PREFIX=DIR]... [--seconds N] ' +
-    '[--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--measure-budget] [--no-validate] IRI...')
+    '[--members DIR] [--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--measure-budget] [--no-validate] IRI...')
 }
 
 async function main () {
@@ -89,6 +116,8 @@ async function main () {
     usage()
     process.exit(2)
   }
+
+  for (const directory of args.members) Object.assign(args.roots, { ...await rootsFromMembers(directory), ...args.roots })
 
   const validator = args.validate
     ? await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))

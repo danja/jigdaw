@@ -43,6 +43,16 @@ describe('docs/nested-plugins.md', () => {
     expect(composite.members.find(m => m.plugin.endsWith('/tremolo/')).settings).toEqual([{ symbol: 'rate', value: 4.5 }])
   })
 
+  it('declares trn:Jig as its format and not the deprecated trn:WebAudio, in the example and in examples/', async () => {
+    // plugin-universe deprecated trn:WebAudio for trn:Jig and its raw shape rejects the old term, so a composite that
+    // used it would be a catalogue entry that fails there. Checked by hand against that repository on 2026-10-02.
+    const TRN = 'http://purl.org/stuff/transmissions/'
+    const formatsOf = async text => [...(await parseText(text, 'https://example.org/racks/stomp/'))]
+      .filter(q => q.predicate.value === `${TRN}format`).map(q => q.object.value)
+    expect(await formatsOf(turtleBlocks[0])).toEqual([`${TRN}Jig`])
+    expect(await formatsOf(read('examples/reference-composite.ttl'))).toEqual([`${TRN}Jig`])
+  })
+
   it('names only jig: terms the vocabulary declares', () => {
     const vocabulary = read('vocabs/jigdaw.ttl')
     const declared = new Set([...vocabulary.matchAll(/^jig:([A-Za-z]+)\s/gm)].map(m => m[1]))

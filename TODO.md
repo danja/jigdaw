@@ -398,6 +398,12 @@ as research, not committed.
       processor-to-host message saying a parameter changed. Needs that message, the host updating its AudioParam and the model
       from it, and a guard so the update is not written straight back to the processor.
 
+- [ ] **This project's generated profiles still declare the deprecated `trn:WebAudio`.** Found 2026-10-02 by running a composite through
+      plugin-universe's own validator: it has deprecated `trn:WebAudio` for `trn:Jig` (its harvester maps the old term on ingest) and its
+      raw shape rejects it, so every profile `bin/write-profile.js` emits, boost included, fails that shape with one violation. Fixing the
+      generator changes every plugin's canonical digest, and so every pin on it and every signed bundle, so it is a decision, not a drive-by.
+      A composite declares only `trn:Jig` and conforms.
+
 ## Before there is code
 
 Determined 2026-09-26 from testbed.md's "What nothing exercises yet". Each item is the smallest plugin or host behaviour covering
@@ -419,7 +425,7 @@ one unused clause. None is started.
       transport into Pulse gave silence in that run with the rack bypassed too, so it is not the rack, and is unexplained), a composite in the catalogue and `plugin_load`, an Op to pack a selection into a composite and
       unpack one, the MIDI monitor across a composite's boundary (`midiActivity` shows nothing for it), the native adapter saying
       "composite" when it refuses one, `npm run check-plugin` rendering a composite (it loads through `loadProfile`, which now
-      reports one as a composite and stops), and running `reference-composite.ttl` through plugin-universe's validator.
+      reports one as a composite and stops).
 - [ ] **A plugin that prefers shared memory, and an isolated host mode to run it in.** Covers contract section 2.3. Smallest
       plugin: declares `jig:prefers jig:SharedMemory` with the mandated fallback to port transfer. Host side: an opt-in isolated
       serve mode, since the baseline must not require isolation of itself. Test both paths.

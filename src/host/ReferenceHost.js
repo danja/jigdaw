@@ -19,11 +19,19 @@
 // would duplicate src/compiler/GraphCompiler.js's topological order and
 // compensation logic in a place it can drift from the one the app itself
 // uses.
+//
+// A composite plugin (docs/nested-plugins.md) that is a straight chain is flattened into the chain and
+// rendered. One with a branch needs a graph and is refused by name, which is the same line the native
+// adapter draws.
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, basename } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { PluginLoader } from './PluginLoader.js'
+import { CompositeFound } from './LoadError.js'
+import { resolveComposite } from './CompositeResolver.js'
+import { chainOrder } from './CompositeChain.js'
+import { voicing } from './CompositeParameters.js'
 import { detectCapabilities } from './Capabilities.js'
 import { parseText } from '../rdf/parse.js'
 import { OfflineContext, OfflineWorkletNode, directoryFetch, QUANTUM } from '../testing/OfflineHost.js'
@@ -55,6 +63,31 @@ function fileProcessorUrl (dir, index) {
     const path = join(dir, `plugin-${index}-${basename(originalUrl) || 'processor.js'}`)
     await writeFile(path, bytes)
     return pathToFileURL(path).href
+  }
+}
+
+/**
+ * A composite plugin as the chain it is: the tree is resolved (profiles only, then pins and the rest), the members are
+ * instantiated in signal order, and the author's voicing is written to their parameters before anything is heard.
+ * Throws, naming why, for a composite that is not a straight chain.
+ */
+async function loadCompositeChain ({ iri, dataset, loader, makeLoader, context }) {
+  const tree = await resolveComposite(iri, { loader, bundled: target => (target === iri ? dataset : null) })
+  const stages = chainOrder(tree)
+  const made = new Map()
+  let tailFrames = 0
+  for (const [k, { path, tree: leaf }] of stages.entries()) {
+    const { node, ready } = await makeLoader(k).instantiate(leaf.profile, leaf.granted, context, { AudioWorkletNode: OfflineWorkletNode })
+    made.set(JSON.stringify(path), node)
+    tailFrames = Math.max(tailFrames, ready.tailFrames ?? leaf.profile.tailFrames ?? 0)
+  }
+  for (const { path, symbol, value } of voicing(tree)) {
+    const param = made.get(JSON.stringify(path))?.parameters.get(symbol)
+    if (param) param.value = value
+  }
+  return {
+    nodes: stages.map(({ path }) => made.get(JSON.stringify(path))),
+    loaded: { iri, label: tree.composite.label, audioInputs: tree.composite.audioInputs, tailFrames }
   }
 }
 
@@ -99,7 +132,19 @@ export async function renderChain ({
         capabilities,
         processorUrl: fileProcessorUrl(tmp, index)
       })
-      const { profile, granted } = await loader.loadProfile(iri)
+      let found
+      try {
+        found = await loader.loadProfile(iri)
+      } catch (error) {
+        if (!(error instanceof CompositeFound)) throw error
+        const stage = await loadCompositeChain({ iri, dataset: error.dataset, loader, index, makeLoader: member => new PluginLoader({
+          fetch: fetchImpl, parse: parseText, validator, capabilities, processorUrl: fileProcessorUrl(tmp, `${index}-${member}`)
+        }), context })
+        nodes.push(...stage.nodes)
+        loaded.push(stage.loaded)
+        continue
+      }
+      const { profile, granted } = found
       const { node, ready } = await loader.instantiate(profile, granted, context, {
         AudioWorkletNode: OfflineWorkletNode
       })

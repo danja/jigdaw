@@ -32,3 +32,36 @@ describe('parameterTargets', () => {
     expect(parameterTargets(tree, 'ghost')).toEqual([])
   })
 })
+
+import { voicing } from '../../src/host/CompositeParameters.js'
+
+describe('voicing', () => {
+  const withSettings = (ports, members) => ({
+    kind: 'composite',
+    composite: { ports, members: members.map(([id, settings]) => ({ id, settings })) },
+    members: members.map(([id, , tree]) => ({ id, tree: tree ?? plugin() }))
+  })
+  const port2 = (symbol, defaultValue, ...drives) => ({ symbol, defaultValue, drives: drives.map(([node, portSymbol]) => ({ node, portSymbol })) })
+
+  it('writes each port default on what it drives, then each member setting', () => {
+    const tree = withSettings([port2('depth', 0.5, ['#trem', 'depth'])], [['#trem', [{ symbol: 'rate', value: 4.5 }]]])
+    expect(voicing(tree)).toEqual([
+      { path: ['#trem'], symbol: 'depth', value: 0.5 },
+      { path: ['#trem'], symbol: 'rate', value: 4.5 }
+    ])
+  })
+
+  it('writes inner composites first, so the outer author has the last word', () => {
+    const inner = withSettings([port2('wet', 0.2, ['#verb', 'mix'])], [['#verb', []]])
+    const outer = withSettings([], [['#room', [{ symbol: 'wet', value: 0.9 }], inner]])
+    expect(voicing(outer)).toEqual([
+      { path: ['#room', '#verb'], symbol: 'mix', value: 0.2 },
+      { path: ['#room', '#verb'], symbol: 'mix', value: 0.9 }
+    ])
+  })
+
+  it('writes nothing for a port with no default or a setting with no value', () => {
+    const tree = withSettings([port2('x', null, ['#a', 'x'])], [['#a', [{ symbol: 'y', value: null }]]])
+    expect(voicing(tree)).toEqual([])
+  })
+})

@@ -8,7 +8,7 @@
 import { LoadError, CompositeFound, STEPS } from '../host/LoadError.js'
 import { resolveComposite } from '../host/CompositeResolver.js'
 import { restoreState } from '../host/CompositeState.js'
-import { parameterTargets } from '../host/CompositeParameters.js'
+import { voicing } from '../host/CompositeParameters.js'
 import { compositeProfile } from '../rdf/CompositeReader.js'
 
 let counter = 0
@@ -144,7 +144,7 @@ export class Engine {
     }
     try {
       await walk(tree, [])
-      this.#voice(tree, [], byPath)
+      this.#voice(tree, byPath)
     } catch (error) {
       for (const { entry } of members) this.remove(entry.id)
       throw error
@@ -158,23 +158,10 @@ export class Engine {
    * cannot reach. Inner composites first, so the outer author's choice is the last word. A person's own
    * settings, from a saved session, arrive after this through the dispatcher and win over all of it.
    */
-  #voice (tree, prefix, byPath) {
-    const set = (path, symbol, value) => {
+  #voice (tree, byPath) {
+    for (const { path, symbol, value } of voicing(tree)) {
       const entry = byPath.get(JSON.stringify(path))
-      if (entry && value !== null && value !== undefined) this.setParameter(entry.id, symbol, value)
-    }
-    for (const member of tree.members) {
-      if (member.tree.kind === 'composite') this.#voice(member.tree, [...prefix, member.id], byPath)
-    }
-    for (const port of tree.composite.ports) {
-      for (const target of parameterTargets(tree, port.symbol)) set([...prefix, ...target.path], target.symbol, port.defaultValue)
-    }
-    for (const member of tree.composite.members) {
-      const inner = tree.members.find(m => m.id === member.id).tree
-      for (const setting of member.settings) {
-        if (inner.kind === 'plugin') set([...prefix, member.id], setting.symbol, setting.value)
-        else for (const target of parameterTargets(inner, setting.symbol)) set([...prefix, member.id, ...target.path], target.symbol, setting.value)
-      }
+      if (entry) this.setParameter(entry.id, symbol, value)
     }
   }
 

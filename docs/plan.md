@@ -657,6 +657,10 @@ server. It loaded, drew a panel from its exposed ports, passed a real key throug
 real defects before it began: a pin taken over the URL a member was fetched from rather than the identity its profile states, which made a
 local copy of a member fail, and a member shape that refused `http:` on loopback, against the contract.
 
+Checked against plugin-universe's own shapes the same day (its validator resolves `vocabs/shapes.ttl` from the working directory, so it has to be run
+from inside that repository): the reference composite conforms once it declares `trn:Jig` and not the deprecated `trn:WebAudio`, which
+the existing generated profiles still carry.
+
 Not done: a session saved and reopened in the page, the Mixer and Routing tabs, a phone, listening, the native adapter naming the class, and
 `npm run check-plugin` rendering one. TODO.md has the order.
 

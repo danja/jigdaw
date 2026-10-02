@@ -26,3 +26,33 @@ export function parameterTargets (tree, symbol) {
     return [{ path: [member.id], symbol: drive.portSymbol }]
   })
 }
+
+/**
+ * What the composite's author set, as writes in the order to apply them: each exposed port's default on the
+ * parameters it drives, and each member's own settings. Inner composites come first, so the outer author's
+ * choice is the last word, and a person's own settings from a saved session go on top of all of it.
+ *
+ * @returns {{ path: string[], symbol: string, value: number }[]} located by member IRIs from the composite inward;
+ *   a port with no declared default writes nothing.
+ */
+export function voicing (tree, prefix = []) {
+  const writes = []
+  for (const member of tree.members) {
+    if (member.tree.kind === 'composite') writes.push(...voicing(member.tree, [...prefix, member.id]))
+  }
+  for (const port of tree.composite.ports) {
+    if (port.defaultValue === null || port.defaultValue === undefined) continue
+    for (const target of parameterTargets(tree, port.symbol)) {
+      writes.push({ path: [...prefix, ...target.path], symbol: target.symbol, value: port.defaultValue })
+    }
+  }
+  for (const member of tree.composite.members) {
+    const inner = tree.members.find(m => m.id === member.id).tree
+    for (const setting of member.settings) {
+      if (setting.value === null || setting.value === undefined) continue
+      if (inner.kind === 'plugin') writes.push({ path: [...prefix, member.id], symbol: setting.symbol, value: setting.value })
+      else for (const target of parameterTargets(inner, setting.symbol)) writes.push({ path: [...prefix, member.id, ...target.path], symbol: target.symbol, value: setting.value })
+    }
+  }
+  return writes
+}

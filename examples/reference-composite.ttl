@@ -24,7 +24,7 @@
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;
     trn:produces trn:Audio ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
 
     jig:audioInputs 1 ;
     jig:inputChannels 2 ;
