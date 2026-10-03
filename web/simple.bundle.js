@@ -30274,6 +30274,7 @@ var FUNCTIONS = {
   rand: { min: 2, max: 2 },
   round: { min: 1, max: 1 }
 };
+var FUNCTION_NAMES = Object.freeze(Object.keys(FUNCTIONS));
 function checkCall(node) {
   const f = FUNCTIONS[node.name];
   need(f, `unknown function "${node.name}"; Reel has ${Object.keys(FUNCTIONS).join(", ")}`, node);
@@ -30571,6 +30572,8 @@ var NOT_SCRIPTABLE = Object.freeze({
   node_move_in_chain: "chain editing, not yet a statement",
   node_bypass: "wanted for performance, and not in version one",
   node_remove: "destructive, and not a gesture in a set",
+  node_unpack: "it replaces one node with several, so a name a script already holds for it would change meaning under it",
+  composite_pack: "it writes a profile for a person to publish and changes nothing a script plays",
   connection_remove: "not yet a statement",
   parameters_set_batch: "a script sets parameters one statement at a time, each checked",
   parameter_reset: "not yet a statement",
@@ -30983,6 +30986,23 @@ function createScriptPanel(document2, { mount, onRun, onCheck, onStop, storage =
       source.value = value2;
       write(value2);
     },
+    /**
+     * Add text at the caret, as a line of its own. A selection is replaced. The caret ends after what was added,
+     * so a second insert follows the first.
+     */
+    insert(added) {
+      const start = source.selectionStart ?? source.value.length;
+      const end = source.selectionEnd ?? start;
+      const before = source.value.slice(0, start);
+      const after = source.value.slice(end);
+      const lead = before === "" || before.endsWith("\n") ? "" : "\n";
+      const trail = after.startsWith("\n") ? "" : "\n";
+      const text2 = `${lead}${added}${trail}`;
+      source.value = before + text2 + after;
+      const caret = before.length + text2.length;
+      source.selectionStart = source.selectionEnd = caret;
+      write(source.value);
+    },
     /** A line of text for the status region, which a screen reader announces. Empty clears it. */
     status(message) {
       status.textContent = message ?? "";
@@ -31174,7 +31194,7 @@ function createScript(ctx2) {
     panel.status("Stopped.");
     panel.log("stopped");
   }
-  return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop };
+  return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop, run, check };
 }
 
 // src/ui/Dial.js

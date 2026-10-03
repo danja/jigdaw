@@ -9,7 +9,7 @@
 
 export const MAX_EXPRESSION_DEPTH = 32
 
-const UNITS = ['kHz', 'Hz', 'ms', 's', 'dB', 'st', '%', 'cents']
+export const UNITS = ['kHz', 'Hz', 'ms', 's', 'dB', 'st', '%', 'cents']
 
 /** One source line with its comment removed. */
 function stripComment (text) {

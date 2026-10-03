@@ -309,3 +309,45 @@ describe('the status and the log', () => {
     expect(items[49].textContent).toBe('m30')
   })
 })
+
+describe('inserting a line', () => {
+  const caretAt = (panel, start, end = start) => {
+    const box = panel.elements.source
+    box.selectionStart = start
+    box.selectionEnd = end
+  }
+
+  it('adds the text as a line of its own at the caret, and moves the caret after it', () => {
+    const panel = make()
+    panel.setSource('a = 1\nb = 2')
+    caretAt(panel, 5)
+    panel.insert('c = 3')
+    expect(panel.source()).toBe('a = 1\nc = 3\nb = 2')
+    expect(panel.elements.source.selectionStart).toBe('a = 1\nc = 3'.length)
+  })
+
+  it('starts a new line when the caret is in the middle of one, and ends the line it adds', () => {
+    const panel = make()
+    panel.setSource('abc')
+    caretAt(panel, 3)
+    panel.insert('x = 1')
+    expect(panel.source()).toBe('abc\nx = 1\n')
+  })
+
+  it('replaces a selection', () => {
+    const panel = make()
+    panel.setSource('a\nOLD\nb')
+    caretAt(panel, 2, 5)
+    panel.insert('new = 1')
+    expect(panel.source()).toBe('a\nnew = 1\nb')
+  })
+
+  it('keeps the insert in the draft, so a reload does not lose it', () => {
+    const saved = {}
+    const panel = make({ storage: { getItem: k => saved[k] ?? null, setItem: (k, v) => { saved[k] = v } } })
+    panel.setSource('')
+    caretAt(panel, 0)
+    panel.insert('q = 1')
+    expect(Object.values(saved).at(-1)).toBe('q = 1\n')
+  })
+})

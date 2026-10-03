@@ -66,6 +66,8 @@ const FUNCTIONS = {
   round: { min: 1, max: 1 }
 }
 
+export const FUNCTION_NAMES = Object.freeze(Object.keys(FUNCTIONS))
+
 function checkCall (node) {
   const f = FUNCTIONS[node.name]
   need(f, `unknown function "${node.name}"; Reel has ${Object.keys(FUNCTIONS).join(', ')}`, node)

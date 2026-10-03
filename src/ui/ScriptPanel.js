@@ -130,6 +130,24 @@ export function createScriptPanel (document, { mount, onRun, onCheck, onStop, st
     source: text,
     setSource (value) { source.value = value; write(value) },
 
+    /**
+     * Add text at the caret, as a line of its own. A selection is replaced. The caret ends after what was added,
+     * so a second insert follows the first.
+     */
+    insert (added) {
+      const start = source.selectionStart ?? source.value.length
+      const end = source.selectionEnd ?? start
+      const before = source.value.slice(0, start)
+      const after = source.value.slice(end)
+      const lead = before === '' || before.endsWith('\n') ? '' : '\n'
+      const trail = after.startsWith('\n') ? '' : '\n'
+      const text = `${lead}${added}${trail}`
+      source.value = before + text + after
+      const caret = before.length + text.length
+      source.selectionStart = source.selectionEnd = caret
+      write(source.value)
+    },
+
     /** A line of text for the status region, which a screen reader announces. Empty clears it. */
     status (message) { status.textContent = message ?? '' },
 

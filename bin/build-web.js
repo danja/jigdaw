@@ -6,10 +6,11 @@ import { dirname, resolve } from 'node:path'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const result = await build({
-  // The studio page and the simple page: two front ends over the same modules.
+  // The studio page, the simple page and the Reel page: three front ends over the same modules.
   entryPoints: {
     'app.bundle': resolve(root, 'web/app.js'),
-    'simple.bundle': resolve(root, 'web/simple.js')
+    'simple.bundle': resolve(root, 'web/simple.js'),
+    'reel.bundle': resolve(root, 'web/reel.js')
   },
   bundle: true,
   format: 'esm',

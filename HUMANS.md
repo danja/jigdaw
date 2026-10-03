@@ -27,6 +27,11 @@ is wrong in INBOX.md.
 - **Listen to Keyframe** (`plugins/keyframe/`, new 2026-10-01): a time rate of 50 on a drum loop, a pitch shift of 7 on a
   chord, and each Quality and Stereo setting against the others. Say whether Economy is usable or only Balanced is, and whether
   Linked stereo moves the image on a wide clip. Nothing here has been heard, only measured.
+- **Open `reel.html` and use it** (new 2026-10-03): it has only been checked by tests and a build, because the Chrome extension was not
+  connected when it was written. Open it at phone width, choose "Open the filter" under Examples and press "Play it", and say
+  whether the piece opens, the music starts, the script runs and the filter is heard to open. Then check the Insert buttons on
+  This piece, the Save and Open script file buttons, and that nothing scrolls sideways. The one example not written is a
+  `connect`, because wiring a loaded plugin into a piece has not been heard.
 - **Use the Script tab with a screen reader and a real phone** (new 2026-10-01): run a script with an error and listen to whether
   "Problems" and the status are announced and the "Go to line" buttons make sense, run one that plays, and use Control+Enter. The
   studio page sends a phone to the simple page, so add `?studio` to the address to reach the tab on one.

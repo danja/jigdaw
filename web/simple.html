@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#14171d">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="panel.css">
+<link rel="stylesheet" href="script.css">
 <title>Jiggy, simple</title>
 <style>
   :root {
@@ -71,33 +72,6 @@
   .actions a { display:inline-flex; align-items:center; min-height:44px; }
   #status { min-height:1.5em; color:var(--dim); font-size:16px; }
   #status.error { color:var(--err); }
-  /* The tabs under the player: the music, and a script (src/ui/Tabs.js, src/ui/ScriptPanel.js). */
-  .tabs { display:flex; flex-wrap:wrap; gap:4px; border-bottom:2px solid var(--line); margin-top:20px; }
-  .tab { min-height:44px; padding:0 20px; background:none; border:0; border-bottom:4px solid transparent; border-radius:0; color:var(--dim); font-size:18px; }
-  .tab[aria-selected="true"] { color:var(--fg); font-weight:600; border-bottom-color:var(--accent); }
-  .tabpanel[hidden] { display:none; }
-  /* The script's text area is 16px so iOS does not zoom the page in on it; every button is 44px. An error is
-     the word "Error" first and a bold line number, never colour alone. */
-  .script { display:flex; flex-direction:column; gap:10px; }
-  .script-label { font-size:16px; color:var(--dim); }
-  .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
-                   font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
-                   background:#0e1013; color:var(--fg); border:2px solid var(--line); border-radius:8px; }
-  .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
-  #script-run { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .script-status { margin:0; min-height:1.5em; }
-  .script h3 { font-size:18px; margin:6px 0 4px; }
-  .script ol, .script ul { margin:0; padding-left:1.4rem; }
-  .script-problems-list li { margin-bottom:6px; overflow-wrap:anywhere; }
-  .script-problems-list .script-button { min-height:44px; margin-left:6px; }
-  .script-error-word { font-weight:700; color:var(--err); }
-  .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:15px; }
-  .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
-  .script-log-error { color:var(--err); }
-  .script-syntax summary { cursor:pointer; color:var(--dim); padding:12px 0; min-height:44px; }
-  .script-syntax dt { margin-top:8px; }
-  .script-syntax dd { margin:2px 0 0 1.2rem; color:var(--dim); font-size:16px; }
-  @media (max-width:720px) { .script-button { flex:1 1 100%; } }
   @media (max-width:520px) {
     body { font-size:18px; }
     .player button { flex:1 1 40%; }

@@ -155,5 +155,5 @@ export function createScript (ctx) {
     panel.log('stopped')
   }
 
-  return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop }
+  return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop, run, check }
 }

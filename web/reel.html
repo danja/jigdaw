@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="view.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14171d">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="panel.css">
+<link rel="stylesheet" href="script.css">
+<title>Jiggy, Reel</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#a3abb8;
+    --line:#2a2f38; --accent:#3e8ef7; --ok:#7ddc8e; --err:#ff8a8a;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font:18px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  :focus-visible { outline:3px solid #7fb3ff; outline-offset:2px; }
+  .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  header, main { max-width:60rem; margin:0 auto; padding:12px 16px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; }
+  header h1 { font-size:26px; margin:0; flex:1 1 auto; }
+  header a { display:inline-flex; align-items:center; min-height:44px; }
+  h2 { font-size:22px; margin:20px 0 8px; }
+  h3 { font-size:19px; margin:18px 0 6px; }
+  a { color:#8fc0ff; }
+  /* 44px is the floor for a touch target (CLAUDE.md). The text on any input is 16px or more so iOS does not zoom. */
+  button, select { font:inherit; min-height:44px; padding:0 18px; background:#242a33; color:var(--fg);
+    border:2px solid var(--line); border-radius:12px; cursor:pointer; }
+  select { font-size:18px; max-width:100%; }
+  button:hover { background:#2d343f; }
+  button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  code, pre { font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  pre { margin:6px 0; padding:10px; background:#0e1013; border:1px solid var(--line); border-radius:8px; overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .note { color:var(--dim); font-size:16px; margin:6px 0; }
+  .about { color:var(--dim); font-size:16px; margin:0 0 8px; }
+  #status { min-height:1.5em; color:var(--dim); font-size:16px; margin:4px 0; }
+  #status.error { color:var(--err); }
+
+  /* The piece the script works on: a menu and an Open button, never opened by choosing from the menu (WCAG 3.2.2). */
+  #piece-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+  #piece-form label { flex:1 1 100%; font-size:16px; color:var(--dim); }
+  #piece { flex:1 1 12rem; }
+  #piece-now { margin:4px 0 0; }
+
+  /* Under the tabs. */
+  .tabpanel { padding-bottom:16px; }
+  .file-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+  .file-actions button { flex:1 1 40%; }
+
+  /* Examples, the plugin names and the reference are lists of small blocks. */
+  .examples, .parameters { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+  .example { background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:4px 16px 14px; }
+  .example h3 { margin:10px 0 4px; }
+  .example-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .example-actions button { flex:1 1 40%; }
+  .example-play { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .name { background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:4px 16px 12px; margin-bottom:12px; }
+  .parameters { gap:6px; }
+  .parameter { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; padding:6px 0; border-top:1px solid var(--line); }
+  .parameter .symbol { font-weight:600; }
+  .parameter .value { flex:1 1 12rem; color:var(--dim); font-size:16px; overflow-wrap:anywhere; }
+  .choices { flex:1 1 100%; }
+  .choices summary { cursor:pointer; min-height:44px; display:flex; align-items:center; color:var(--dim); }
+  .insert { min-height:44px; padding:0 14px; font-size:16px; }
+  .ref-section { margin-bottom:8px; }
+  .ref-entry { border-top:1px solid var(--line); padding:8px 0; }
+  .ref-entry .form { font-weight:600; overflow-wrap:anywhere; }
+  .ref-section ul { margin:0; padding-left:1.4rem; }
+  .ref-section li { margin-bottom:6px; }
+
+  /* Play, stop and the meter stay at the foot of the screen, so the script can be edited with the music in reach. */
+  .player-bar { position:sticky; bottom:0; background:var(--panel); border-top:2px solid var(--line); }
+  .player { max-width:60rem; margin:0 auto; padding:10px 16px calc(10px + env(safe-area-inset-bottom)); display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+  .player button { min-width:6rem; font-size:20px; font-weight:600; }
+  .speed { display:flex; align-items:center; gap:8px; flex:1 1 14rem; }
+  .speed input { flex:1; min-height:44px; min-width:0; }
+  .value-text { font-variant-numeric:tabular-nums; color:var(--dim); font-size:15px; }
+  .meter { display:flex; gap:3px; align-items:flex-end; height:28px; }
+  .meter i { display:block; width:6px; background:#232a33; border-radius:2px; height:100%; }
+  .meter i.on { background:var(--ok); }
+  .meter i.hot { background:var(--err); }
+  #position { font-variant-numeric:tabular-nums; min-width:4.5rem; }
+  @media (max-width:520px) { .player button { flex:1 1 30%; } }
+  @media (min-width:721px) { .example-actions button, .file-actions button { flex:0 0 auto; } }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration:.01ms !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Reel</h1>
+  <a href="simple.html">Simple page</a>
+  <a id="studio-link" href="./?studio">Full studio</a>
+  <button id="install" type="button" hidden>Install app</button>
+  <span id="net-state" class="note" role="status"></span>
+</header>
+
+<main>
+  <p id="update-notice" class="note" role="status" hidden></p>
+  <p id="status" role="status"></p>
+
+  <section aria-labelledby="piece-heading">
+    <h2 id="piece-heading">The piece</h2>
+    <form id="piece-form">
+      <label for="piece">A script changes the plugins of a piece while it plays</label>
+      <select id="piece"></select>
+      <button id="piece-open" type="submit">Open piece</button>
+    </form>
+    <p id="piece-now" class="note">No piece is open yet.</p>
+  </section>
+
+  <div id="tabs-mount"></div>
+
+  <div class="tabpanel" id="script-panel">
+    <h2>Script</h2>
+    <p class="note">Open a piece, press Play, then Run. Or choose an example and press "Play it".</p>
+    <div id="script-mount" class="script"></div>
+    <div class="file-actions">
+      <button id="script-save" type="button">Save script as a file</button>
+      <button id="script-open" type="button">Open a script file</button>
+      <input id="script-file" type="file" accept=".reel,.txt,text/plain" hidden>
+    </div>
+  </div>
+
+  <div class="tabpanel" id="examples-panel" hidden>
+    <h2>Examples</h2>
+    <p class="note">Each is written for one of the bundled pieces. "Edit this" puts it in the Script tab. "Play it" opens the piece if it is not open, starts the music and runs the script.</p>
+    <div id="examples-mount"></div>
+  </div>
+
+  <div class="tabpanel" id="names-panel" hidden>
+    <h2>This piece</h2>
+    <p class="note">The names a script can use for the plugins in the open piece, and their parameters. "Insert" adds a line setting that parameter to the Script tab.</p>
+    <div id="names-mount"></div>
+  </div>
+
+  <div class="tabpanel" id="reference-panel" hidden>
+    <h2>Reference</h2>
+    <div id="reference-mount"></div>
+  </div>
+
+  <p id="inserted" class="visually-hidden" role="status"></p>
+</main>
+
+<div class="player-bar">
+  <div class="player" role="group" aria-label="Playback">
+    <button id="play" type="button" aria-pressed="false">Play</button>
+    <button id="stop" type="button">Stop</button>
+    <span id="position" class="value-text" aria-label="Position, bar and beat"></span>
+    <span class="meter" id="meter" role="img" aria-label="How loud it is"></span>
+    <div class="speed">
+      <label for="tempo">Speed</label>
+      <input type="range" id="tempo" min="50" max="200" step="1" value="120">
+      <span id="tempo-value" class="value-text"></span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="reel.bundle.js"></script>
+</body>
+</html>

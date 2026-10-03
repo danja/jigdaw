@@ -108,6 +108,12 @@ starts on the simple page.
 - Record your voice into a new track, save the piece, and make a sound file (a WAV).
 - Targets are 44px and the layout is one column with no sideways scroll at phone width.
 
+## The Reel page
+
+- `reel.html` is for writing Reel scripts ([livecoding.md](livecoding.md)), on a phone first. A menu and an Open button pick one of the bundled pieces; Play, Stop, speed and the meter stay at the foot of the screen.
+- Four tabs. **Script** is the editor with Run, Check only and Stop, and saves or opens a `.reel` file (opening one does not run it). **Examples** has ready-made scripts, each written for one bundled piece: "Edit this" puts it in the editor, "Play it" opens the piece, starts the music and runs it. **This piece** lists the names a script can use in the open piece and their parameters, with an Insert button that writes the line to set one. **Reference** is the language: statements, units, functions, naming and limits, with an Insert button on each example.
+- The examples, the reference and the Insert lines are checked by tests against the real pieces, plugin profiles and parser, so none of them can name a parameter or a form that is not there.
+
 ## Installing and offline
 
 - A web app manifest and icons, a service worker that keeps the page and what you have opened, an update
