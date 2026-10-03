@@ -28,6 +28,10 @@ describe('the Reel page markup', () => {
     for (const id of ['examples-panel', 'names-panel', 'reference-panel']) expect(html).toMatch(new RegExp(`id="${id}"[^>]*hidden`))
   })
 
+  it('does not load view.js, which sends a narrow screen to the simple page and so would bounce this one', () => {
+    expect(html).not.toContain('view.js')
+  })
+
   it('is a page for a phone: a viewport, and a menu that is opened by a button', () => {
     expect(html).toContain('name="viewport" content="width=device-width, initial-scale=1"')
     expect(html).toMatch(/<form id="piece-form">[\s\S]*type="submit"/)
