@@ -327,9 +327,10 @@
   .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
   .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
   .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
-  .envelope-head { display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
+  /* Stuck to the left of the scroll box, so Fold, Add point and Remove are in reach however far along the piece is scrolled. */
+  .envelope-head { position:sticky; left:0; width:max-content; max-width:calc(100vw - 4rem); display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
   .envelope-title { flex:1 1 auto; }
-  .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:#2a2f38; color:var(--fg);
+  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
   .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
   .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
@@ -424,6 +425,8 @@
   .clip-locked { cursor:not-allowed; }
   .clip-wave { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
+  .clip-notes { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
+  .clip-notes path { stroke:var(--fg); stroke-width:2; vector-effect:non-scaling-stroke; opacity:.75; fill:none; }
   .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
     border-left:1px solid var(--accent); }
@@ -501,7 +504,7 @@
   .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
   /* A mouse hits 28px easily (WCAG 2.2 asks 24); a finger needs the full 44 on a touch screen or a phone. */
   @media (pointer: coarse), (max-width: 760px) {
-    .timeline-head .show-track, .timeline-head button, .head-slider input, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
+    .timeline-head .show-track, .timeline-head button, .head-slider input, .envelope-fold, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
   }
   @media (pointer: coarse) {
     .piano-roll-grid { --cell:44px; }

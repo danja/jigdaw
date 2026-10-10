@@ -91,7 +91,7 @@ describe('the layout', () => {
     expect(wave.getAttribute('aria-hidden')).toBe('true')
     expect(clip('c3').getAttribute('aria-label')).toMatch(/cannot play: 404 for loop.wav/)
     expect(clip('c3').textContent).toContain('!')
-    expect(clip('c1').querySelector('svg')).toBeNull()
+    expect(clip('c1').querySelector('.clip-wave')).toBeNull()
   })
 })
 
@@ -635,5 +635,35 @@ describe('seeking', () => {
     document.body.replaceChildren()
     const timeline = createTimeline(document, Object.fromEntries(['onAdd', 'onAddAudio', 'onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onBypass', 'onMoveInChain', 'onEnvelope', 'onRemoveEnvelope', 'onAutomateMaster', 'onMute', 'onTrim', 'onCopy', 'onCut', 'onPaste', 'onLock', 'onChannel', 'onSetLoop', 'onMoveTrack', 'onArm'].map(n => [n, () => {}])))
     expect(timeline.element.querySelector('input[type=number]')).toBeNull()
+  })
+})
+
+describe('the notes drawn in a MIDI clip', () => {
+  const notesOf = id => document.getElementById(`clip-${id}`).querySelector('.clip-notes path')
+
+  it('draws one line per note, hidden from assistive technology, and none for an empty clip or an audio clip', () => {
+    document.body.replaceChildren()
+    const { timeline } = (() => { const t = build(); return t })()
+    timeline.draw({
+      tracks, labelFor: t => t.label, playsIntoNothing: () => false, beatsPerBar: 4,
+      clips: [
+        { id: 'n1', track: 't1', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60 }, { startBeat: 2, lengthBeats: 1, pitch: 72 }] },
+        { id: 'n2', track: 't1', kind: 'midi', startBeat: 4, lengthBeats: 4, notes: [] }
+      ]
+    })
+    const svg = document.getElementById('clip-n1').querySelector('.clip-notes')
+    expect(svg.getAttribute('aria-hidden')).toBe('true')
+    expect(notesOf('n1').getAttribute('d')).toBe('M0 0.9h1M2 0.1h1')
+    expect(document.getElementById('clip-n2').querySelector('.clip-notes')).toBeNull()
+  })
+
+  it('centres notes that all share a pitch, and cuts one that runs past the end of the clip', () => {
+    document.body.replaceChildren()
+    const { timeline } = build()
+    timeline.draw({
+      tracks, labelFor: t => t.label, playsIntoNothing: () => false, beatsPerBar: 4,
+      clips: [{ id: 'n3', track: 't1', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [{ startBeat: 3, lengthBeats: 4, pitch: 60 }] }]
+    })
+    expect(notesOf('n3').getAttribute('d')).toBe('M3 0.5h1')
   })
 })

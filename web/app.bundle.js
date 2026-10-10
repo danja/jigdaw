@@ -31525,7 +31525,11 @@ function createEnvelopeLane(document2, { onChange, onRemove, view }) {
   const remove = document2.createElement("button");
   remove.type = "button";
   remove.className = "envelope-remove";
-  head.append(title, add, remove);
+  const fold = document2.createElement("button");
+  fold.type = "button";
+  fold.className = "envelope-fold";
+  let folded = false;
+  head.append(title, fold, add, remove);
   const body = document2.createElement("div");
   body.className = "envelope-body";
   const svg = document2.createElementNS(SVG_NS3, "svg");
@@ -31626,6 +31630,16 @@ function createEnvelopeLane(document2, { onChange, onRemove, view }) {
     const next = last ? { atBeat: last.atBeat + shown.beatsPerBar, value: last.value, curve: "linear" } : { atBeat: 0, value: clampValue(current.start), curve: "linear" };
     commit([...current.points, next]);
   });
+  const showFold = () => {
+    fold.textContent = folded ? "Unfold" : "Fold";
+    fold.setAttribute("aria-label", `${folded ? "Unfold" : "Fold"} the automation lane for ${current?.label ?? ""}`);
+    body.hidden = folded;
+    add.hidden = folded;
+  };
+  fold.addEventListener("click", () => {
+    folded = !folded;
+    showFold();
+  });
   remove.addEventListener("click", () => onRemove(current.id));
   setIcon(document2, remove, "delete", "Remove lane");
   return {
@@ -31647,6 +31661,7 @@ function createEnvelopeLane(document2, { onChange, onRemove, view }) {
       svg.setAttribute("height", String(LANE_HEIGHT));
       path.setAttribute("d", envelopePath(lane.points, { ppb: ppb(), height: LANE_HEIGHT, min: lane.min, max: lane.max, width }));
       body.replaceChildren(svg, ...lane.points.map(pointButton));
+      showFold();
     }
   };
 }
@@ -31950,6 +31965,7 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
     if (clip.muted) button.textContent = `\u2298 ${button.textContent}`;
     if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`;
     if (peaks) button.append(waveform(peaks));
+    else if (clip.kind === "midi" && clip.notes.length > 0) button.append(noteGlyph(clip));
     button.addEventListener("keydown", (event) => {
       const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
       if (direction !== 0) {
@@ -32046,6 +32062,31 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
     const path = document2.createElementNS(ns2, "path");
     let d = "";
     for (let i2 = 0; i2 < peaks.length; i2++) d += `M${i2 + 0.5} ${-peaks[i2]}V${peaks[i2]}`;
+    path.setAttribute("d", d);
+    svg.append(path);
+    return svg;
+  }
+  function noteGlyph(clip) {
+    const ns2 = "http://www.w3.org/2000/svg";
+    const svg = document2.createElementNS(ns2, "svg");
+    svg.setAttribute("class", "clip-notes");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("viewBox", `0 0 ${clip.lengthBeats} 1`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    let low = Infinity;
+    let high = -Infinity;
+    for (const n2 of clip.notes) {
+      low = Math.min(low, n2.pitch);
+      high = Math.max(high, n2.pitch);
+    }
+    const span = high - low;
+    let d = "";
+    for (const n2 of clip.notes) {
+      if (n2.startBeat >= clip.lengthBeats) continue;
+      const y = span === 0 ? 0.5 : Math.round((0.1 + 0.8 * (high - n2.pitch) / span) * 1e3) / 1e3;
+      d += `M${n2.startBeat} ${y}h${Math.min(n2.lengthBeats, clip.lengthBeats - n2.startBeat)}`;
+    }
+    const path = document2.createElementNS(ns2, "path");
     path.setAttribute("d", d);
     svg.append(path);
     return svg;

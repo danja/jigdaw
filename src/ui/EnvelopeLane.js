@@ -66,7 +66,13 @@ export function createEnvelopeLane (document, { onChange, onRemove, view }) {
   const remove = document.createElement('button')
   remove.type = 'button'
   remove.className = 'envelope-remove'
-  head.append(title, add, remove)
+  // A lane takes the better part of a track's height again; folding leaves its title and nothing else, and the lane keeps its
+  // points. The fold lives on this element, which the lanes list keeps from one draw to the next.
+  const fold = document.createElement('button')
+  fold.type = 'button'
+  fold.className = 'envelope-fold'
+  let folded = false
+  head.append(title, fold, add, remove)
   const body = document.createElement('div')
   body.className = 'envelope-body'
   const svg = document.createElementNS(SVG_NS, 'svg')
@@ -184,6 +190,13 @@ export function createEnvelopeLane (document, { onChange, onRemove, view }) {
       : { atBeat: 0, value: clampValue(current.start), curve: 'linear' }
     commit([...current.points, next])
   })
+  const showFold = () => {
+    fold.textContent = folded ? 'Unfold' : 'Fold'
+    fold.setAttribute('aria-label', `${folded ? 'Unfold' : 'Fold'} the automation lane for ${current?.label ?? ''}`)
+    body.hidden = folded
+    add.hidden = folded
+  }
+  fold.addEventListener('click', () => { folded = !folded; showFold() })
   remove.addEventListener('click', () => onRemove(current.id))
   setIcon(document, remove, 'delete', 'Remove lane')
 
@@ -206,6 +219,7 @@ export function createEnvelopeLane (document, { onChange, onRemove, view }) {
       svg.setAttribute('height', String(LANE_HEIGHT))
       path.setAttribute('d', envelopePath(lane.points, { ppb: ppb(), height: LANE_HEIGHT, min: lane.min, max: lane.max, width }))
       body.replaceChildren(svg, ...lane.points.map(pointButton))
+      showFold()
     }
   }
 }

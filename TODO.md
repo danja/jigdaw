@@ -13,9 +13,9 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       says); the arrangement is a box no taller than the screen that scrolls both ways inside itself, so its horizontal bar is at the bottom of
       the window and not down the page, with the ruler and loop row pinned above the lanes and the playhead as tall as the lanes
       (`web/app/Arrangement.js` fits the box to the window and `.timeline-scroll` in `web/index.html`); an automation lane is 64 px of plot, not 96.
-      No horizontal overflow at 386 px, measured in an iframe. **Left:** an automation lane still adds about 125 px per lane, so a piece with
-      four of them is still tall, and they could fold away or share a strip; the master row and the editor dock below the arrangement are
-      untouched; the clip lanes could show their notes at small size; and a person should look at it on a phone.
+      No horizontal overflow at 386 px, measured in an iframe. **Done since:** small tracks are one row (45 px), buttons are 28 px under a mouse and 44 px on touch or below 760 px, and
+      an automation lane has a Fold button (106 px to 42 px; the fold is kept across redraws, not across a reload). **Left:** the master row and the editor dock below the arrangement are
+      untouched; a MIDI clip now draws its notes as lines (one path per clip), and an automation lane's buttons stay at the left edge while scrolling; a person should look at it on a phone.
 - [ ] **Glass Hours, and what making it showed.** 2026-10-10. A 40 bar piece in D minor, built through the WebMCP tools in the browser and
       balanced by playing it and reading per-track peaks (no clipping, master worst peak -2.5 dB), is `examples/songs/glass-hours.ttl` and the
       bundled preset `web/presets/glass-hours.ttl`, both written by `examples/songs/glass-hours.js`, and `tests/rdf/SongExamples.test.js` binds

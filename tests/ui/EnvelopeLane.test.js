@@ -162,3 +162,28 @@ describe('the lane', () => {
     expect(() => createEnvelopeLane(document, { onChange () {}, onRemove () {} })).toThrow(/view/)
   })
 })
+
+describe('folding the lane', () => {
+  it('hides the line, the points and Add point when folded, and says what the button will do', () => {
+    const { l } = build([point(0, 10), point(4, 90)])
+    const fold = l.element.querySelector('.envelope-fold')
+    expect(fold.textContent).toBe('Fold')
+    expect(fold.getAttribute('aria-label')).toBe('Fold the automation lane for Synth, cutoff')
+    fold.dispatchEvent(new window.Event('click'))
+    expect(l.element.querySelector('.envelope-body').hidden).toBe(true)
+    expect(l.element.querySelector('.envelope-add').hidden).toBe(true)
+    expect(fold.textContent).toBe('Unfold')
+    expect(fold.getAttribute('aria-label')).toBe('Unfold the automation lane for Synth, cutoff')
+  })
+
+  it('stays folded across a redraw, and unfolds again with the points intact', () => {
+    const { l, buttons } = build([point(0, 10), point(4, 90)])
+    const fold = l.element.querySelector('.envelope-fold')
+    fold.dispatchEvent(new window.Event('click'))
+    l.update(lane([point(0, 10), point(4, 90)]), { beatsPerBar: 4, width: 480 })
+    expect(l.element.querySelector('.envelope-body').hidden).toBe(true)
+    fold.dispatchEvent(new window.Event('click'))
+    expect(l.element.querySelector('.envelope-body').hidden).toBe(false)
+    expect(buttons()).toHaveLength(2)
+  })
+})

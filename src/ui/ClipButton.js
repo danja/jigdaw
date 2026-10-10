@@ -35,6 +35,7 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
     if (clip.muted) button.textContent = `\u2298 ${button.textContent}`
     if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`
     if (peaks) button.append(waveform(peaks))
+    else if (clip.kind === 'midi' && clip.notes.length > 0) button.append(noteGlyph(clip))
 
     button.addEventListener('keydown', event => {
       const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
@@ -140,6 +141,34 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
     const path = document.createElementNS(ns, 'path')
     let d = ''
     for (let i = 0; i < peaks.length; i++) d += `M${i + 0.5} ${-peaks[i]}V${peaks[i]}`
+    path.setAttribute('d', d)
+    svg.append(path)
+    return svg
+  }
+
+  /**
+   * The notes as short lines, time across and pitch up, scaled to the clip's own range so even a one-octave
+   * figure fills the height. One path per clip, because a song has thousands of notes; drawn and not read, as
+   * the waveform is: the clip's label already gives the note count.
+   */
+  function noteGlyph (clip) {
+    const ns = 'http://www.w3.org/2000/svg'
+    const svg = document.createElementNS(ns, 'svg')
+    svg.setAttribute('class', 'clip-notes')
+    svg.setAttribute('aria-hidden', 'true')
+    svg.setAttribute('viewBox', `0 0 ${clip.lengthBeats} 1`)
+    svg.setAttribute('preserveAspectRatio', 'none')
+    let low = Infinity
+    let high = -Infinity
+    for (const n of clip.notes) { low = Math.min(low, n.pitch); high = Math.max(high, n.pitch) }
+    const span = high - low
+    let d = ''
+    for (const n of clip.notes) {
+      if (n.startBeat >= clip.lengthBeats) continue
+      const y = span === 0 ? 0.5 : Math.round((0.1 + 0.8 * (high - n.pitch) / span) * 1000) / 1000
+      d += `M${n.startBeat} ${y}h${Math.min(n.lengthBeats, clip.lengthBeats - n.startBeat)}`
+    }
+    const path = document.createElementNS(ns, 'path')
     path.setAttribute('d', d)
     svg.append(path)
     return svg
