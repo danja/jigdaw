@@ -100,3 +100,28 @@ describe('say', () => {
     expect(say({ label: 'Y', failed: null, loaded: false, takes: [], gives: [], sends: [], receives: [] })).toBe('Y; not loaded yet')
   })
 })
+
+describe('the master chain', () => {
+  const project = {
+    track: () => null,
+    master: { gain: 1, pan: 0, muted: false, audioInput: 'verb' },
+    nodes: [{ id: 'verb', track: 'master', label: 'Hall' }, { id: 'pad', track: 'a', label: 'Pad' }],
+    connections: []
+  }
+  const hooks = { profileOf: () => ({ ports: [], audioInputs: 1, audioOutputs: 1 }), labelOf: id => id, failedOf: () => null, trackLabelOf: id => id }
+
+  it('is the nodes on the master, with the one the mix arrives at marked and said', () => {
+    const chain = describeChain(project, 'master', hooks)
+    expect(chain.nodes.map(n => n.id)).toEqual(['verb'])
+    expect(chain.nodes[0].takesMix).toBe(true)
+    expect(chain.nodes[0].takesAudioFromTrack).toBe(false)
+    expect(say(chain.nodes[0])).toContain('the mix of every track arrives at it')
+  })
+
+  it('does not mark a track\'s node as taking the mix, and says what a track\'s audio input takes', () => {
+    const track = { id: 'a', audioInput: 'pad', midiInput: null }
+    const chain = describeChain({ ...project, track: () => track }, 'a', hooks)
+    expect(chain.nodes[0].takesMix).toBe(false)
+    expect(say(chain.nodes[0])).toContain('audio sent to the track, and its audio clips, arrive at it')
+  })
+})

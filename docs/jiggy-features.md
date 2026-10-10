@@ -65,6 +65,8 @@ starts on the simple page.
 - **Connections.** Audio and MIDI, within a track or across tracks. A connection that would make a loop
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
   connection can be watched: the last 24 events over it, in words.
+- **Output meter with a clip hold.** The meter beside the transport shows the level of the mix, and a Clip button appears when it
+  reached full scale and stays until pressed. The Mixer tab's Master channel lists the plugins on the master.
 - **Sends, buses and the master.** Sends before or after the fader, a track's output to another track, and
   a master with level, pan and mute, all acting on the sound. A cycle of them is refused. Audio sent or bused to
   a track arrives at the plugin the track names as its audio input, so a reverb on a bus is in the path, and the

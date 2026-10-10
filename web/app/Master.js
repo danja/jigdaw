@@ -3,7 +3,14 @@
 // The master strip on the Mixer tab: level, pan and mute of everything that
 // reaches the speakers, as the project's own master (docs/track-view-terms.md).
 // The same strip the tracks use, without Solo, which has nothing to act on here.
+//
+// Under it, what is on the master: its plugins in signal order and the one the
+// mix arrives at, with the way to their controls on the Tracks tab. Left out
+// when nothing is on the master, as there is then nothing to say.
 import { createStrip } from '../../src/ui/Strip.js'
+import { createChainSummary } from '../../src/ui/ChainSummary.js'
+import { inSignalOrder } from '../../src/ops/OpenProject.js'
+import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
 export function createMaster (ctx) {
   const { $, log } = ctx
@@ -12,19 +19,35 @@ export function createMaster (ctx) {
     if (result && !result.ok) log(result.message, 'error')
   }, { label: 'Master', id: 'strip-master', solo: false })
 
+  const summary = createChainSummary(ctx.document, {
+    onShowPlugins: () => {
+      ctx.tabs.select('tracks')
+      ctx.document.getElementById(`track-group-${MASTER_TRACK}`)?.scrollIntoView({ block: 'start' })
+      ctx.document.getElementById(`audio-input-${MASTER_TRACK}`)?.focus({ preventScroll: true })
+    }
+  })
+  summary.element.hidden = true
+
   return {
     mount () {
       const heading = ctx.document.createElement('h3')
       heading.textContent = 'Master'
       const wrapper = ctx.document.createElement('div')
       wrapper.className = 'mixer-channel master-channel'
-      wrapper.append(heading, strip.element)
+      wrapper.append(heading, strip.element, summary.element)
       $('master-mount').append(wrapper)
     },
     /** Show the project's master, whoever changed it. */
     update () {
-      const master = ctx.dispatcher?.project.master
-      if (master) strip.update(master, { label: 'Master' })
+      const { project } = ctx.dispatcher ?? {}
+      if (!project) return
+      strip.update(project.master, { label: 'Master' })
+      const nodes = inSignalOrder(project.nodes.filter(n => n.track === MASTER_TRACK), project.connections)
+      summary.element.hidden = nodes.length === 0
+      if (nodes.length === 0) return
+      const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id
+      const input = project.master.audioInput ? project.node(project.master.audioInput) : null
+      summary.show({ label: 'Master', nodes, labelOf, mixInputLabel: input ? labelOf(input) : null })
     }
   }
 }

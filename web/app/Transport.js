@@ -7,6 +7,7 @@ import { createAutomationHost } from '../../src/engine/AutomationHost.js'
 import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
 import { Metronome, countIn } from '../../src/engine/Metronome.js'
 import { createClickVoice } from './Click.js'
+import { createClipHold } from '../../src/ui/ClipHold.js'
 
 /** A repeating impulse, so an effect has something to work on. */
 function makeSource (context) {
@@ -196,11 +197,17 @@ export function createTransport (ctx) {
     for (let i = 0; i < bars; i++) meter.append(document.createElement('i'))
     const { analyser } = ctx
     const data = new Float32Array(analyser.fftSize)
+    // A clip is over in a few samples, so it is held and said until the person clears it. The button is there
+    // only while there is something to clear, and says what happened in words rather than by colour.
+    const hold = createClipHold()
+    const clip = $('clip')
+    clip.addEventListener('click', () => { hold.clear(); clip.hidden = true })
 
     const frame = () => {
       analyser.getFloatTimeDomainData(data)
       let peak = 0
       for (const v of data) peak = Math.max(peak, Math.abs(v))
+      if (hold.update(peak) && clip.hidden) clip.hidden = false
       const lit = Math.round(Math.min(1, peak) * bars)
       meter.querySelectorAll('i').forEach((bar, i) => {
         bar.className = i < lit ? (i >= bars - 2 ? 'hot' : 'on') : ''

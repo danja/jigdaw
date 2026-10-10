@@ -354,6 +354,45 @@ describe('how late each track is', () => {
   })
 })
 
+describe('aligning tracks through a bus', () => {
+  /** Two tracks into a bus that has a plugin of its own, and a third straight to the master. */
+  async function bus (options = {}) {
+    const engine = fakeEngine({ latency: 512 })
+    const d = new OpDispatcher({ engine, ...options })
+    d.apply([
+      { op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }, { op: 'addTrack', id: 'bus' }, { op: 'addTrack', id: 'c' }
+    ])
+    await d.addPlugin(IRI, { track: 'a' })
+    const b1 = (await d.addPlugin(IRI, { track: 'b' })).nodeId
+    const b2 = (await d.addPlugin(IRI, { track: 'b' })).nodeId
+    d.apply([edge(b1, b2)])
+    await d.addPlugin(IRI, { track: 'bus' })
+    await d.addPlugin(IRI, { track: 'c' })
+    d.apply([{ op: 'setTrack', id: 'a', output: 'bus' }, { op: 'setTrack', id: 'b', output: 'bus' }])
+    return { d, engine }
+  }
+
+  it('lines the tracks into a bus up with each other, and the rest up with what the bus adds', async () => {
+    const { d, engine } = await bus({ alignTracks: true })
+    // a is 512 and b is 1024, so a waits 512 for b at the bus. The bus then adds its own 512, so what comes
+    // out of it is 1536 late, and c, which is 512 late and goes straight to the master, waits 1024 for it.
+    expect(Object.fromEntries(engine.delays)).toEqual({ a: 512, b: 0, bus: 0, c: 1024 })
+    expect(Object.fromEntries(d.trackLatencies().map(l => [l.trackId, l.alignFrames]))).toEqual({ a: 512, b: 0, bus: 0, c: 1024 })
+    // What each track says it has is its own chain, not what it is fed.
+    expect(Object.fromEntries(d.trackLatencies().map(l => [l.trackId, l.frames]))).toEqual({ a: 512, b: 1024, bus: 512, c: 512 })
+  })
+
+  it('does nothing when off, and follows a track being sent to the master instead', async () => {
+    const { d, engine } = await bus()
+    expect(d.trackLatencies().every(l => l.alignFrames === 0)).toBe(true)
+    d.setAlignTracks(true)
+    d.apply([{ op: 'setTrack', id: 'a', output: null }])
+    // a is now a peer of c and of the bus, which is 1536 with b alone feeding it, and so waits for all of them.
+    expect(engine.delays.get('a')).toBe(1536 - 512)
+    expect(engine.delays.get('c')).toBe(1536 - 512)
+  })
+})
+
 describe('aligning tracks', () => {
   async function twoTracks (options = {}) {
     const engine = fakeEngine({ latency: 512 })

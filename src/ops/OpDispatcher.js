@@ -206,19 +206,46 @@ export class OpDispatcher {
   /**
    * How late each track's signal is, in frames: the longest declared latency
    * along its chain, counting what the compiler found ahead of each node.
-   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * `alignFrames` is the delay added to line it up with the others arriving at the same place, which
    * is zero when alignment is off, and `frames` is what the track itself has
    * (docs/latency.md, "Between tracks").
    */
   trackLatencies () {
     const compiled = this.compile()
-    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map(t => [t.id, 0]))
-    const slowest = Math.max(0, ...frames.values())
+    const own = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map(t => [t.id, 0]))
+    const delays = this.#alignment(own)
     return this.#project.tracks.map(track => ({
       trackId: track.id,
-      frames: frames.get(track.id) ?? 0,
-      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+      frames: own.get(track.id) ?? 0,
+      alignFrames: delays.get(track.id) ?? 0
     }))
+  }
+
+  /**
+   * The delay each track is given so that tracks arriving at the same place arrive together, in frames.
+   *
+   * A place is the master or a bus. Tracks feeding it are lined up with the slowest of them, and what a
+   * track arrives with is its own chain plus the slowest of the tracks that feed it, so a bus that is itself
+   * a track with latency passes that on to everything it takes to the master. Aligning everything to one
+   * slowest figure, as before, left a bus's latency out of the sum, and so a track through a bus arrived
+   * late by exactly what the bus adds. A send is a parallel copy and is not aligned here (docs/latency.md).
+   */
+  #alignment (own) {
+    const tracks = this.#project.tracks
+    const arrival = new Map()
+    const arrivalOf = id => {
+      if (!arrival.has(id)) {
+        const before = Math.max(0, ...tracks.filter(t => t.output === id).map(t => arrivalOf(t.id)))
+        arrival.set(id, (own.get(id) ?? 0) + before)
+      }
+      return arrival.get(id)
+    }
+    const slowest = new Map()
+    for (const t of tracks) {
+      const place = t.output ?? null
+      slowest.set(place, Math.max(slowest.get(place) ?? 0, arrivalOf(t.id)))
+    }
+    return new Map(tracks.map(t => [t.id, this.#alignTracks ? slowest.get(t.output ?? null) - arrivalOf(t.id) : 0]))
   }
 
   #trackFrames (compiled) {
@@ -239,10 +266,9 @@ export class OpDispatcher {
   /** Give each track the delay that lines it up, asking the engine only where it changed. */
   #applyTrackDelays (compiled) {
     if (!this.#engine) return
-    const frames = this.#trackFrames(compiled)
-    const slowest = Math.max(0, ...frames.values())
+    const delays = this.#alignment(this.#trackFrames(compiled))
     for (const track of this.#project.tracks) {
-      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+      const wanted = delays.get(track.id) ?? 0
       if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue
       try {
         this.#engine.setTrackDelay(track.id, wanted)

@@ -67,10 +67,13 @@ not joined by connections: each track's output goes to its own fader and then to
 a track holding a plugin that declares 2047 frames of latency arrives at the master 2047 frames
 later than a track with none, unless the host does something about it.
 
-A host SHOULD delay each track that has less latency than the slowest by the difference, at the
-track's output, so parallel tracks arrive together, and SHOULD let the person turn this off. A
+A host SHOULD delay each track that has less latency than the slowest arriving at the same place by
+the difference, at the track's output, so parallel tracks arrive together, and SHOULD let the person turn this off. A
 track's latency is the longest latency along its chain, counting what section 3 found ahead of
-each plugin. The delay is applied at the end of the track, after its fader, so what a take
+each plugin. A place is the master or a bus, a track made the target of other tracks' outputs. The tracks feeding a bus are
+lined up with one another at it, and what comes out of the bus is as late as its own chain plus the slowest of
+them, which is what the tracks going straight to the master are lined up with: a bus adds its latency to the
+tracks through it and the others wait for it. A send is a parallel copy of a track and is not aligned. The delay is applied at the end of the track, after its fader, so what a take
 recorder hears from a track is the track as it was made. The host MUST say how much each track
 was delayed, and what the setting is.
 

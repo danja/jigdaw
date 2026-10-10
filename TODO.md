@@ -17,8 +17,11 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       "Everything together" card opens to Hall's controls; the studio shows the Master bus section with its audio input menu
       and "The master bus" under Load onto; no console errors. **Left:** (1) a screen reader pass over the new controls; (2) **MIDI sends are built** (2026-10-10: `jig:Send` with `jig:signalKind trn:Midi`, in the model, router, RDF, shapes,
       WebMCP `send_add` `kind`, and the dock's Add send; Gamelan's Conductor uses two), seen in Chrome: the dock lists "MIDI to Sprout" and "MIDI to Markov" and the preset plays; a MIDI send
-      from a composite and a note-range split on one are open; (3) a track's alignment delay does not count the latency of a bus or
-      the master chain; (4) the master has no meter or clip hold in the mixer view, and the mixer does not draw its chain.
+      from a composite and a note-range split on one are open; (3) **alignment through a bus is built** (2026-10-10: tracks feeding a bus are lined up with each other at it, and the
+      others with what the bus adds; a send is not aligned, and the master chain's own latency delays everything alike); (4) **the master's chain is summarised on the Mixer tab and the output meter holds a clip** (2026-10-10: the Master channel lists
+      its plugins and where the mix arrives, with Show plugins; a "Clip" button appears beside the meter when the output reached full
+      scale and clears when pressed, on the studio, simple and reel pages; seen in Chrome); a per-track meter and a peak readout in
+      decibels are open.
 - [ ] **Finish the Downspout ports: Moka, Sprout, Markov, Retune.** 2026-10-10. All four are plain JavaScript Jigs in `plugins/`
       (no module), ported from `~/github/downspout/plugins/`, each with a host test (`tests/host/{moka,sprout,markov,retune}.test.js`)
       that loads it through the real loader and engine and checks the music, not just that it loads. Retune's scale is a

@@ -9,6 +9,7 @@
 // speaking it in words are both done from this, so they cannot disagree.
 import { outputsOf, inputsOf, isMidiSignal } from '../model/Endpoints.js'
 import { inSignalOrder } from '../ops/OpenProject.js'
+import { MASTER_TRACK } from '../model/ArrangementOps.js'
 
 /** 'MIDI', 'audio', or 'modulation' for a connection to a parameter. */
 export function kindOf (connection) {
@@ -63,6 +64,8 @@ export function describeChain (project, trackId, { profileOf, labelOf, failedOf,
       gives: kindsOf(outputsOf(profile)),
       takesMidiFromTrack: track?.midiInput === node.id,
       takesAudioFromTrack: track?.audioInput === node.id,
+      // On the master, the node the mix of every track arrives at.
+      takesMix: trackId === MASTER_TRACK && project.master.audioInput === node.id,
       sends,
       receives
     }
@@ -81,7 +84,8 @@ export function say (node) {
     parts.push(node.gives.length ? `gives ${join(node.gives)}` : 'gives no signal')
   }
   if (node.takesMidiFromTrack) parts.push("the track's MIDI clips play into it")
-  if (node.takesAudioFromTrack) parts.push("the track's audio clips play into it")
+  if (node.takesAudioFromTrack) parts.push("audio sent to the track, and its audio clips, arrive at it")
+  if (node.takesMix) parts.push('the mix of every track arrives at it')
   for (const s of node.sends) {
     parts.push(`sends ${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ''}${s.other ? ` on ${s.toTrackLabel}` : ''}`)
   }

@@ -25248,19 +25248,45 @@ var OpDispatcher = class {
   /**
    * How late each track's signal is, in frames: the longest declared latency
    * along its chain, counting what the compiler found ahead of each node.
-   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * `alignFrames` is the delay added to line it up with the others arriving at the same place, which
    * is zero when alignment is off, and `frames` is what the track itself has
    * (docs/latency.md, "Between tracks").
    */
   trackLatencies() {
     const compiled = this.compile();
-    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
-    const slowest = Math.max(0, ...frames.values());
+    const own = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
+    const delays = this.#alignment(own);
     return this.#project.tracks.map((track) => ({
       trackId: track.id,
-      frames: frames.get(track.id) ?? 0,
-      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+      frames: own.get(track.id) ?? 0,
+      alignFrames: delays.get(track.id) ?? 0
     }));
+  }
+  /**
+   * The delay each track is given so that tracks arriving at the same place arrive together, in frames.
+   *
+   * A place is the master or a bus. Tracks feeding it are lined up with the slowest of them, and what a
+   * track arrives with is its own chain plus the slowest of the tracks that feed it, so a bus that is itself
+   * a track with latency passes that on to everything it takes to the master. Aligning everything to one
+   * slowest figure, as before, left a bus's latency out of the sum, and so a track through a bus arrived
+   * late by exactly what the bus adds. A send is a parallel copy and is not aligned here (docs/latency.md).
+   */
+  #alignment(own) {
+    const tracks = this.#project.tracks;
+    const arrival = /* @__PURE__ */ new Map();
+    const arrivalOf = (id) => {
+      if (!arrival.has(id)) {
+        const before = Math.max(0, ...tracks.filter((t) => t.output === id).map((t) => arrivalOf(t.id)));
+        arrival.set(id, (own.get(id) ?? 0) + before);
+      }
+      return arrival.get(id);
+    };
+    const slowest = /* @__PURE__ */ new Map();
+    for (const t of tracks) {
+      const place = t.output ?? null;
+      slowest.set(place, Math.max(slowest.get(place) ?? 0, arrivalOf(t.id)));
+    }
+    return new Map(tracks.map((t) => [t.id, this.#alignTracks ? slowest.get(t.output ?? null) - arrivalOf(t.id) : 0]));
   }
   #trackFrames(compiled) {
     return new Map(this.#project.tracks.map((track) => [
@@ -25275,10 +25301,9 @@ var OpDispatcher = class {
   /** Give each track the delay that lines it up, asking the engine only where it changed. */
   #applyTrackDelays(compiled) {
     if (!this.#engine) return;
-    const frames = this.#trackFrames(compiled);
-    const slowest = Math.max(0, ...frames.values());
+    const delays = this.#alignment(this.#trackFrames(compiled));
     for (const track of this.#project.tracks) {
-      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0;
+      const wanted = delays.get(track.id) ?? 0;
       if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
       try {
         this.#engine.setTrackDelay(track.id, wanted);
@@ -27979,6 +28004,26 @@ function createClickVoice(context) {
   };
 }
 
+// src/ui/ClipHold.js
+var CLIP_LEVEL = 0.999;
+function createClipHold({ level = CLIP_LEVEL } = {}) {
+  if (!(level > 0 && level <= 1)) throw new Error(`a clip level is above 0 and at most 1: ${level}`);
+  let clipped = false;
+  return {
+    /** Feed the largest absolute sample of a frame. Returns whether the output has clipped since it was cleared. */
+    update(peak) {
+      if (peak >= level) clipped = true;
+      return clipped;
+    },
+    clear() {
+      clipped = false;
+    },
+    get clipped() {
+      return clipped;
+    }
+  };
+}
+
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -28141,10 +28186,17 @@ function createTransport(ctx2) {
     for (let i2 = 0; i2 < bars; i2++) meter.append(document2.createElement("i"));
     const { analyser } = ctx2;
     const data = new Float32Array(analyser.fftSize);
+    const hold = createClipHold();
+    const clip = $2("clip");
+    clip.addEventListener("click", () => {
+      hold.clear();
+      clip.hidden = true;
+    });
     const frame = () => {
       analyser.getFloatTimeDomainData(data);
       let peak = 0;
       for (const v of data) peak = Math.max(peak, Math.abs(v));
+      if (hold.update(peak) && clip.hidden) clip.hidden = false;
       const lit = Math.round(Math.min(1, peak) * bars);
       meter.querySelectorAll("i").forEach((bar, i2) => {
         bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";

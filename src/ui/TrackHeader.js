@@ -164,10 +164,10 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       if (!latency.hidden) {
         const ms = n => (late.rate ? `, ${((n / late.rate) * 1000).toFixed(1)} ms` : '')
         const own = late.frames > 0 ? `Latency ${late.frames} frames${ms(late.frames)}` : 'No latency'
-        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the slowest track` : ''
+        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the tracks it arrives with` : ''
         latency.textContent = own + aligned
         latency.title = late.alignFrames > 0
-          ? 'Aligned: this track is delayed so it arrives with the slowest one. Change it on the Mixer tab.'
+          ? 'Aligned: this track is delayed so it arrives with the others going to the same place. Change it on the Mixer tab.'
           : 'How far this track lags a track with no latency. Tracks are not aligned to each other.'
       }
     }

@@ -45,6 +45,8 @@
   .player button { min-width:8rem; min-height:48px; font-size:22px; font-weight:600; }
   .speed { display:flex; align-items:center; gap:12px; flex:1 1 16rem; }
   .speed input { flex:1; min-height:44px; }
+  .level { display:inline-flex; align-items:center; gap:8px; }
+  .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:4px; align-items:flex-end; height:36px; }
   .meter i { display:block; width:8px; background:#232a33; border-radius:2px; height:100%; }
   .meter i.on { background:var(--ok); }
@@ -113,7 +115,7 @@
         <input type="range" id="tempo" min="50" max="200" step="1" value="120">
         <span id="tempo-value" class="value"></span>
       </div>
-      <span class="meter" id="meter" role="img" aria-label="How loud it is"></span>
+      <span class="level"><span class="meter" id="meter" role="img" aria-label="How loud it is"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
       <span id="position" class="visually-hidden"></span>
     </div>
 

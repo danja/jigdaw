@@ -264,16 +264,16 @@ on the master bus: the host writes `<#master> a jig:Master` whenever a node is o
 and mute are the defaults. `master` is therefore a reserved id and no track may take it. The chain is found from
 the connections like a track's, its sinks reach the master's fader, and `jig:audioInput` on the master names
 the node the sum of every track arrives at. Removing that node, or moving it off the master, clears the input.
-The master's chain is not counted in any track's latency, and a track's alignment delay does not count the latency of
-a chain the track feeds.
+The master's chain is not counted in any track's latency, because every track passes through it and so it delays them all
+alike.
 
 Status of behaviour: the host reads, writes, edits, undoes and validates all of this. Sends,
 bus outputs and the master reach the audio: a send is a gain into another track's arrival
 point, taken before or after the fader; a bus output feeds a track's strip into another's
 instead of the master; the master's level, pan and mute act on everything that reaches the
 speakers. Envelopes and signature changes are not yet acted on by the scheduler. A track's
-alignment delay (latency.md, "Between tracks") does not yet count the latency of a bus it
-feeds.
+alignment delay (latency.md, "Between tracks") lines up the tracks feeding one place, the master or a bus, and counts
+the latency of a bus on what comes out of it; a send is a parallel copy and is not aligned.
 
 ## Revision
 

@@ -40,3 +40,17 @@ describe('the chain summary', () => {
     expect(summary.element.querySelector('p').textContent).toBe('Bass: 1 plugin.')
   })
 })
+
+describe('the chain summary for audio arriving from other tracks and for the master', () => {
+  it('says audio from sends and buses arrives at a track\'s audio input, not only its clips', () => {
+    const summary = createChainSummary(document, { onShowPlugins () {} })
+    summary.show({ label: 'Reverb', nodes: [{ id: 'a' }], labelOf: n => `Plugin ${n.id}`, audioInputLabel: 'Plugin a' })
+    expect(summary.element.querySelector('p').textContent).toBe('Reverb: 1 plugin. Audio clips, sends and buses arrive at Plugin a.')
+  })
+
+  it('says where the mix of every track arrives on the master', () => {
+    const summary = createChainSummary(document, { onShowPlugins () {} })
+    summary.show({ label: 'Master', nodes: [{ id: 'a' }, { id: 'b' }], labelOf: n => `Plugin ${n.id}`, mixInputLabel: 'Plugin a' })
+    expect(summary.element.querySelector('p').textContent).toBe('Master: 2 plugins. The mix of every track arrives at Plugin a.')
+  })
+})

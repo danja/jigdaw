@@ -24,7 +24,7 @@ export function createChainSummary (document, { onShowPlugins }) {
 
   return {
     element,
-    show ({ label, nodes, labelOf, midiInputLabel = null, audioInputLabel = null }) {
+    show ({ label, nodes, labelOf, midiInputLabel = null, audioInputLabel = null, mixInputLabel = null }) {
       if (nodes.length === 0) {
         intro.textContent = `${label} has no plugins. Its clips, if any, play straight to its fader.`
         list.replaceChildren()
@@ -35,9 +35,11 @@ export function createChainSummary (document, { onShowPlugins }) {
       const many = nodes.length === 1 ? '1 plugin' : `${nodes.length} plugins`
       const inputs = [
         midiInputLabel ? `MIDI clips play into ${midiInputLabel}` : null,
-        audioInputLabel ? `audio clips play into ${audioInputLabel}` : null
+        audioInputLabel ? `audio clips, sends and buses arrive at ${audioInputLabel}` : null,
+        mixInputLabel ? `the mix of every track arrives at ${mixInputLabel}` : null
       ].filter(Boolean)
-      intro.textContent = `${label}: ${many}${inputs.length ? `. ${inputs.join('; ')}` : ''}.`
+      const where = inputs.join('; ')
+      intro.textContent = `${label}: ${many}${where ? `. ${where[0].toUpperCase()}${where.slice(1)}` : ''}.`
       list.hidden = false
       show.hidden = false
       list.replaceChildren(...nodes.map(node => {

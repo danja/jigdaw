@@ -22618,19 +22618,45 @@ var OpDispatcher = class {
   /**
    * How late each track's signal is, in frames: the longest declared latency
    * along its chain, counting what the compiler found ahead of each node.
-   * `alignFrames` is the delay added to line it up with the slowest track, which
+   * `alignFrames` is the delay added to line it up with the others arriving at the same place, which
    * is zero when alignment is off, and `frames` is what the track itself has
    * (docs/latency.md, "Between tracks").
    */
   trackLatencies() {
     const compiled = this.compile();
-    const frames = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
-    const slowest = Math.max(0, ...frames.values());
+    const own = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
+    const delays = this.#alignment(own);
     return this.#project.tracks.map((track) => ({
       trackId: track.id,
-      frames: frames.get(track.id) ?? 0,
-      alignFrames: this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0
+      frames: own.get(track.id) ?? 0,
+      alignFrames: delays.get(track.id) ?? 0
     }));
+  }
+  /**
+   * The delay each track is given so that tracks arriving at the same place arrive together, in frames.
+   *
+   * A place is the master or a bus. Tracks feeding it are lined up with the slowest of them, and what a
+   * track arrives with is its own chain plus the slowest of the tracks that feed it, so a bus that is itself
+   * a track with latency passes that on to everything it takes to the master. Aligning everything to one
+   * slowest figure, as before, left a bus's latency out of the sum, and so a track through a bus arrived
+   * late by exactly what the bus adds. A send is a parallel copy and is not aligned here (docs/latency.md).
+   */
+  #alignment(own) {
+    const tracks = this.#project.tracks;
+    const arrival = /* @__PURE__ */ new Map();
+    const arrivalOf = (id) => {
+      if (!arrival.has(id)) {
+        const before = Math.max(0, ...tracks.filter((t) => t.output === id).map((t) => arrivalOf(t.id)));
+        arrival.set(id, (own.get(id) ?? 0) + before);
+      }
+      return arrival.get(id);
+    };
+    const slowest = /* @__PURE__ */ new Map();
+    for (const t of tracks) {
+      const place = t.output ?? null;
+      slowest.set(place, Math.max(slowest.get(place) ?? 0, arrivalOf(t.id)));
+    }
+    return new Map(tracks.map((t) => [t.id, this.#alignTracks ? slowest.get(t.output ?? null) - arrivalOf(t.id) : 0]));
   }
   #trackFrames(compiled) {
     return new Map(this.#project.tracks.map((track) => [
@@ -22645,10 +22671,9 @@ var OpDispatcher = class {
   /** Give each track the delay that lines it up, asking the engine only where it changed. */
   #applyTrackDelays(compiled) {
     if (!this.#engine) return;
-    const frames = this.#trackFrames(compiled);
-    const slowest = Math.max(0, ...frames.values());
+    const delays = this.#alignment(this.#trackFrames(compiled));
     for (const track of this.#project.tracks) {
-      const wanted = this.#alignTracks ? slowest - (frames.get(track.id) ?? 0) : 0;
+      const wanted = delays.get(track.id) ?? 0;
       if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
       try {
         this.#engine.setTrackDelay(track.id, wanted);
@@ -28832,6 +28857,26 @@ function createClickVoice(context) {
   };
 }
 
+// src/ui/ClipHold.js
+var CLIP_LEVEL = 0.999;
+function createClipHold({ level = CLIP_LEVEL } = {}) {
+  if (!(level > 0 && level <= 1)) throw new Error(`a clip level is above 0 and at most 1: ${level}`);
+  let clipped = false;
+  return {
+    /** Feed the largest absolute sample of a frame. Returns whether the output has clipped since it was cleared. */
+    update(peak) {
+      if (peak >= level) clipped = true;
+      return clipped;
+    },
+    clear() {
+      clipped = false;
+    },
+    get clipped() {
+      return clipped;
+    }
+  };
+}
+
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -28994,10 +29039,17 @@ function createTransport(ctx2) {
     for (let i2 = 0; i2 < bars; i2++) meter.append(document2.createElement("i"));
     const { analyser } = ctx2;
     const data = new Float32Array(analyser.fftSize);
+    const hold = createClipHold();
+    const clip = $2("clip");
+    clip.addEventListener("click", () => {
+      hold.clear();
+      clip.hidden = true;
+    });
     const frame = () => {
       analyser.getFloatTimeDomainData(data);
       let peak = 0;
       for (const v of data) peak = Math.max(peak, Math.abs(v));
+      if (hold.update(peak) && clip.hidden) clip.hidden = false;
       const lit = Math.round(Math.min(1, peak) * bars);
       meter.querySelectorAll("i").forEach((bar, i2) => {
         bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";
@@ -30914,9 +30966,9 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       if (!latency.hidden) {
         const ms = (n2) => late.rate ? `, ${(n2 / late.rate * 1e3).toFixed(1)} ms` : "";
         const own = late.frames > 0 ? `Latency ${late.frames} frames${ms(late.frames)}` : "No latency";
-        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the slowest track` : "";
+        const aligned = late.alignFrames > 0 ? `; delayed ${late.alignFrames} frames${ms(late.alignFrames)} to line up with the tracks it arrives with` : "";
         latency.textContent = own + aligned;
-        latency.title = late.alignFrames > 0 ? "Aligned: this track is delayed so it arrives with the slowest one. Change it on the Mixer tab." : "How far this track lags a track with no latency. Tracks are not aligned to each other.";
+        latency.title = late.alignFrames > 0 ? "Aligned: this track is delayed so it arrives with the others going to the same place. Change it on the Mixer tab." : "How far this track lags a track with no latency. Tracks are not aligned to each other.";
       }
     }
   };
@@ -30971,6 +31023,8 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
       gives: kindsOf(outputsOf(profile)),
       takesMidiFromTrack: track?.midiInput === node.id,
       takesAudioFromTrack: track?.audioInput === node.id,
+      // On the master, the node the mix of every track arrives at.
+      takesMix: trackId === MASTER_TRACK && project.master.audioInput === node.id,
       sends,
       receives
     };
@@ -30987,7 +31041,8 @@ function say(node) {
     parts.push(node.gives.length ? `gives ${join(node.gives)}` : "gives no signal");
   }
   if (node.takesMidiFromTrack) parts.push("the track's MIDI clips play into it");
-  if (node.takesAudioFromTrack) parts.push("the track's audio clips play into it");
+  if (node.takesAudioFromTrack) parts.push("audio sent to the track, and its audio clips, arrive at it");
+  if (node.takesMix) parts.push("the mix of every track arrives at it");
   for (const s of node.sends) {
     parts.push(`sends ${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ""}${s.other ? ` on ${s.toTrackLabel}` : ""}`);
   }
@@ -33120,7 +33175,7 @@ function createChainSummary(document2, { onShowPlugins }) {
   element.append(intro, list, show);
   return {
     element,
-    show({ label, nodes, labelOf, midiInputLabel = null, audioInputLabel = null }) {
+    show({ label, nodes, labelOf, midiInputLabel = null, audioInputLabel = null, mixInputLabel = null }) {
       if (nodes.length === 0) {
         intro.textContent = `${label} has no plugins. Its clips, if any, play straight to its fader.`;
         list.replaceChildren();
@@ -33131,9 +33186,11 @@ function createChainSummary(document2, { onShowPlugins }) {
       const many = nodes.length === 1 ? "1 plugin" : `${nodes.length} plugins`;
       const inputs = [
         midiInputLabel ? `MIDI clips play into ${midiInputLabel}` : null,
-        audioInputLabel ? `audio clips play into ${audioInputLabel}` : null
+        audioInputLabel ? `audio clips, sends and buses arrive at ${audioInputLabel}` : null,
+        mixInputLabel ? `the mix of every track arrives at ${mixInputLabel}` : null
       ].filter(Boolean);
-      intro.textContent = `${label}: ${many}${inputs.length ? `. ${inputs.join("; ")}` : ""}.`;
+      const where = inputs.join("; ");
+      intro.textContent = `${label}: ${many}${where ? `. ${where[0].toUpperCase()}${where.slice(1)}` : ""}.`;
       list.hidden = false;
       show.hidden = false;
       list.replaceChildren(...nodes.map((node) => {
@@ -35659,19 +35716,34 @@ function createMaster(ctx2) {
     const result = ctx2.dispatcher?.apply([{ op: "setMaster", ...change }]);
     if (result && !result.ok) log2(result.message, "error");
   }, { label: "Master", id: "strip-master", solo: false });
+  const summary = createChainSummary(ctx2.document, {
+    onShowPlugins: () => {
+      ctx2.tabs.select("tracks");
+      ctx2.document.getElementById(`track-group-${MASTER_TRACK}`)?.scrollIntoView({ block: "start" });
+      ctx2.document.getElementById(`audio-input-${MASTER_TRACK}`)?.focus({ preventScroll: true });
+    }
+  });
+  summary.element.hidden = true;
   return {
     mount() {
       const heading = ctx2.document.createElement("h3");
       heading.textContent = "Master";
       const wrapper = ctx2.document.createElement("div");
       wrapper.className = "mixer-channel master-channel";
-      wrapper.append(heading, strip.element);
+      wrapper.append(heading, strip.element, summary.element);
       $2("master-mount").append(wrapper);
     },
     /** Show the project's master, whoever changed it. */
     update() {
-      const master = ctx2.dispatcher?.project.master;
-      if (master) strip.update(master, { label: "Master" });
+      const { project } = ctx2.dispatcher ?? {};
+      if (!project) return;
+      strip.update(project.master, { label: "Master" });
+      const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === MASTER_TRACK), project.connections);
+      summary.element.hidden = nodes.length === 0;
+      if (nodes.length === 0) return;
+      const labelOf = (node) => node.label ?? ctx2.dispatcher.engineNode(node.id)?.profile?.label ?? node.id;
+      const input = project.master.audioInput ? project.node(project.master.audioInput) : null;
+      summary.show({ label: "Master", nodes, labelOf, mixInputLabel: input ? labelOf(input) : null });
     }
   };
 }

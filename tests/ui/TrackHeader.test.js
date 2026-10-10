@@ -128,9 +128,9 @@ describe('a track header', () => {
     const { header, state } = build()
     const shown = () => header.element.querySelector('.head-latency').textContent
     header.update({ ...state, latency: { frames: 512, alignFrames: 1535, rate: 48000 } })
-    expect(shown()).toBe('Latency 512 frames, 10.7 ms; delayed 1535 frames, 32.0 ms to line up with the slowest track')
+    expect(shown()).toBe('Latency 512 frames, 10.7 ms; delayed 1535 frames, 32.0 ms to line up with the tracks it arrives with')
     header.update({ ...state, latency: { frames: 0, alignFrames: 2047, rate: 48000 } })
-    expect(shown()).toBe('No latency; delayed 2047 frames, 42.6 ms to line up with the slowest track')
+    expect(shown()).toBe('No latency; delayed 2047 frames, 42.6 ms to line up with the tracks it arrives with')
   })
 
   it('offers Arm only where there is a MIDI input to play into, and says whether it is on', () => {
