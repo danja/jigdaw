@@ -8,7 +8,13 @@
 // The model and the file carry all of it. The compiler and scheduler do not
 // yet act on sends, bus outputs or envelopes; see TODO.md, phases T3 and T5.
 
-export const DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false })
+// The id a node's `track` has when it is on the master rather than on a track. Reserved: no track may
+// take it, so a node's `track` names a track or the master and never both.
+export const MASTER_TRACK = 'master'
+
+// `audioInput` is the node on the master that takes the mix of every track, as a track's does what
+// arrives from a bus output or a send; absent, the mix goes straight to the master's fader.
+export const DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false, audioInput: null })
 export const TAPS = Object.freeze(['pre', 'post'])
 export const CURVES = Object.freeze(['step', 'linear', 'smooth'])
 export const TARGET_KINDS = Object.freeze(['masterGain', 'masterPan', 'tempo'])
@@ -113,6 +119,14 @@ export const ARRANGEMENT_OPERATIONS = {
       next.pan = change.pan
     }
     if (change.muted !== undefined) next.muted = Boolean(change.muted)
+    if (change.audioInput !== undefined) {
+      if (change.audioInput !== null) {
+        const node = state.nodes.get(change.audioInput)
+        if (!node) throw new Error(`the master's audioInput names no such node: ${change.audioInput}`)
+        if (node.track !== MASTER_TRACK) throw new Error(`the master's audioInput ${change.audioInput} is not on the master`)
+      }
+      next.audioInput = change.audioInput
+    }
     state.master = next
     return 'master'
   },

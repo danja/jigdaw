@@ -18905,12 +18905,282 @@ function voicing(tree, prefix = []) {
 // src/engine/Engine.js
 init_ProfileReader();
 init_Integrity();
+
+// src/model/ArrangementOps.js
+var MASTER_TRACK = "master";
+var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false, audioInput: null });
+var TAPS = Object.freeze(["pre", "post"]);
+var CURVES = Object.freeze(["step", "linear", "smooth"]);
+var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
+var EPSILON = 1e-9;
+function emptyArrangement() {
+  return { master: { ...DEFAULT_MASTER }, sends: /* @__PURE__ */ new Map(), markers: /* @__PURE__ */ new Map(), regions: /* @__PURE__ */ new Map(), envelopes: /* @__PURE__ */ new Map() };
+}
+function cloneArrangement(state) {
+  return {
+    master: { ...state.master },
+    sends: new Map([...state.sends].map(([id, s]) => [id, { ...s }])),
+    markers: new Map([...state.markers].map(([id, m]) => [id, { ...m }])),
+    regions: new Map([...state.regions].map(([id, r]) => [id, { ...r }])),
+    envelopes: new Map([...state.envelopes].map(([id, e]) => [id, {
+      id,
+      target: { ...e.target },
+      points: e.points.map((p) => ({ ...p }))
+    }]))
+  };
+}
+var finiteAtLeast = (n2, min, what) => {
+  if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
+};
+function reaches(state, from, to) {
+  const seen = /* @__PURE__ */ new Set();
+  const stack = [from];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === to) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const track = state.tracks.get(id);
+    if (track?.output) stack.push(track.output);
+    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
+  }
+  return false;
+}
+function checkNoCycle(state, from, to, what) {
+  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
+}
+function checkTrackOutput(state, trackId, output) {
+  if (output === null) return;
+  if (!state.tracks.has(output)) throw new Error(`no such track: ${output}`);
+  checkNoCycle(state, trackId, output, "an output");
+}
+function mint(state, counters, key, prefix, id, what) {
+  const table = state[key];
+  const minted = id ?? `${prefix}-${++counters[prefix]}`;
+  if (table.has(minted)) throw new Error(`${what} already exists: ${minted}`);
+  const m = new RegExp(`^${prefix}-(\\d+)$`).exec(minted);
+  if (m) counters[prefix] = Math.max(counters[prefix], Number(m[1]));
+  return minted;
+}
+function checkPoints(points, target2) {
+  if (!Array.isArray(points)) throw new Error("points must be an array");
+  const seen = /* @__PURE__ */ new Set();
+  for (const p of points) {
+    finiteAtLeast(p.atBeat, 0, "an envelope point atBeat");
+    if (seen.has(p.atBeat)) throw new Error(`two envelope points at beat ${p.atBeat}`);
+    seen.add(p.atBeat);
+    if (!Number.isFinite(p.value)) throw new Error(`an envelope point needs a finite value: ${p.value}`);
+    if (!CURVES.includes(p.curve ?? "linear")) throw new Error(`curve must be one of ${CURVES.join(", ")}`);
+    if (target2.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
+    if (target2.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
+    if (target2.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
+  }
+  return points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve ?? "linear" })).sort((a2, b) => a2.atBeat - b.atBeat);
+}
+function checkTarget(state, target2) {
+  if (!target2 || typeof target2 !== "object") throw new Error("an envelope needs a target");
+  if (target2.kind !== void 0) {
+    if (!TARGET_KINDS.includes(target2.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
+    return { kind: target2.kind };
+  }
+  if (!state.nodes.has(target2.node)) throw new Error(`target names no such node: ${target2.node}`);
+  if (typeof target2.symbol !== "string" || target2.symbol === "") throw new Error("a node target needs the parameter symbol");
+  return { node: target2.node, symbol: target2.symbol };
+}
+var ARRANGEMENT_OPERATIONS = {
+  setMaster(state, change) {
+    const next = { ...state.master };
+    if (change.gain !== void 0) {
+      finiteAtLeast(change.gain, 0, "master gain");
+      next.gain = change.gain;
+    }
+    if (change.pan !== void 0) {
+      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) throw new Error(`pan must be between -1 and 1: ${change.pan}`);
+      next.pan = change.pan;
+    }
+    if (change.muted !== void 0) next.muted = Boolean(change.muted);
+    if (change.audioInput !== void 0) {
+      if (change.audioInput !== null) {
+        const node = state.nodes.get(change.audioInput);
+        if (!node) throw new Error(`the master's audioInput names no such node: ${change.audioInput}`);
+        if (node.track !== MASTER_TRACK) throw new Error(`the master's audioInput ${change.audioInput} is not on the master`);
+      }
+      next.audioInput = change.audioInput;
+    }
+    state.master = next;
+    return "master";
+  },
+  addSend(state, change, counters) {
+    for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
+    checkNoCycle(state, change.from, change.to, "a send");
+    for (const s of state.sends.values()) {
+      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
+    }
+    const level = change.level ?? 1;
+    finiteAtLeast(level, 0, "a send level");
+    const tap = change.tap ?? "post";
+    if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
+    const id = mint(state, counters, "sends", "send", change.id, "send");
+    state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
+    return id;
+  },
+  setSend(state, change) {
+    const send = state.sends.get(change.id);
+    if (!send) throw new Error(`no such send: ${change.id}`);
+    if (change.level !== void 0) {
+      finiteAtLeast(change.level, 0, "a send level");
+      send.level = change.level;
+    }
+    if (change.tap !== void 0) {
+      if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
+      send.tap = change.tap;
+    }
+    return change.id;
+  },
+  removeSend(state, change) {
+    if (!state.sends.delete(change.id)) throw new Error(`no such send: ${change.id}`);
+    return change.id;
+  },
+  addMarker(state, change, counters) {
+    finiteAtLeast(change.atBeat, 0, "a marker atBeat");
+    const id = mint(state, counters, "markers", "marker", change.id, "marker");
+    state.markers.set(id, { id, atBeat: change.atBeat, label: change.label ?? null });
+    return id;
+  },
+  setMarker(state, change) {
+    const marker = state.markers.get(change.id);
+    if (!marker) throw new Error(`no such marker: ${change.id}`);
+    if (change.atBeat !== void 0) {
+      finiteAtLeast(change.atBeat, 0, "a marker atBeat");
+      marker.atBeat = change.atBeat;
+    }
+    if (change.label !== void 0) marker.label = change.label;
+    return change.id;
+  },
+  removeMarker(state, change) {
+    if (!state.markers.delete(change.id)) throw new Error(`no such marker: ${change.id}`);
+    return change.id;
+  },
+  addRegion(state, change, counters) {
+    finiteAtLeast(change.startBeat, 0, "a region startBeat");
+    if (!(Number.isFinite(change.lengthBeats) && change.lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
+    const id = mint(state, counters, "regions", "region", change.id, "region");
+    state.regions.set(id, { id, startBeat: change.startBeat, lengthBeats: change.lengthBeats, label: change.label ?? null });
+    return id;
+  },
+  setRegion(state, change) {
+    const region = state.regions.get(change.id);
+    if (!region) throw new Error(`no such region: ${change.id}`);
+    const startBeat = change.startBeat ?? region.startBeat;
+    const lengthBeats = change.lengthBeats ?? region.lengthBeats;
+    finiteAtLeast(startBeat, 0, "a region startBeat");
+    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
+    region.startBeat = startBeat;
+    region.lengthBeats = lengthBeats;
+    if (change.label !== void 0) region.label = change.label;
+    return change.id;
+  },
+  removeRegion(state, change) {
+    if (!state.regions.delete(change.id)) throw new Error(`no such region: ${change.id}`);
+    return change.id;
+  },
+  addEnvelope(state, change, counters) {
+    const target2 = checkTarget(state, change.target);
+    for (const e of state.envelopes.values()) {
+      if (JSON.stringify(e.target) === JSON.stringify(target2)) throw new Error(`${e.id} already automates that target`);
+    }
+    const points = checkPoints(change.points ?? [], target2);
+    const id = mint(state, counters, "envelopes", "envelope", change.id, "envelope");
+    state.envelopes.set(id, { id, target: target2, points });
+    return id;
+  },
+  /** Replace the whole point list at once, so one drawn gesture is one edit and one undo. */
+  setEnvelope(state, change) {
+    const envelope = state.envelopes.get(change.id);
+    if (!envelope) throw new Error(`no such envelope: ${change.id}`);
+    envelope.points = checkPoints(change.points, envelope.target);
+    return change.id;
+  },
+  removeEnvelope(state, change) {
+    if (!state.envelopes.delete(change.id)) throw new Error(`no such envelope: ${change.id}`);
+    return change.id;
+  }
+};
+function dropForTrack(state, trackId) {
+  for (const [id, s] of [...state.sends]) if (s.from === trackId || s.to === trackId) state.sends.delete(id);
+  for (const t of state.tracks.values()) if (t.output === trackId) t.output = null;
+}
+function dropForNode(state, nodeId) {
+  for (const [id, e] of [...state.envelopes]) if (e.target.node === nodeId) state.envelopes.delete(id);
+}
+function checkSignaturePoints(initialBeatsPerBar, points) {
+  if (!Array.isArray(points)) throw new Error("signaturePoints must be an array");
+  const sorted = [...points].sort((a2, b) => a2.atBeat - b.atBeat);
+  let barStart = 0;
+  let bar = initialBeatsPerBar;
+  for (const p of sorted) {
+    if (!(Number.isFinite(p.atBeat) && p.atBeat > 0)) throw new Error(`a signature point comes after beat zero: ${p.atBeat}`);
+    if (!Number.isInteger(p.beatsPerBar) || p.beatsPerBar < 1) throw new Error(`a bar has at least one beat: ${p.beatsPerBar}`);
+    if (!Number.isInteger(p.beatUnit) || p.beatUnit < 1) throw new Error(`a beat unit is a note value: ${p.beatUnit}`);
+    const bars = (p.atBeat - barStart) / bar;
+    if (Math.abs(bars - Math.round(bars)) > EPSILON) {
+      throw new Error(`a signature change must fall on a bar line: beat ${p.atBeat} is not one`);
+    }
+    if (p.atBeat === barStart && barStart !== 0) throw new Error(`two signature points at beat ${p.atBeat}`);
+    barStart = p.atBeat;
+    bar = p.beatsPerBar;
+  }
+  return sorted.map((p) => ({ atBeat: p.atBeat, beatsPerBar: p.beatsPerBar, beatUnit: p.beatUnit }));
+}
+function arrangementChanges(snapshot) {
+  return [
+    { op: "setMaster", ...snapshot.master },
+    ...snapshot.tracks.filter((t) => t.output).map((t) => ({ op: "setTrack", id: t.id, output: t.output })),
+    ...snapshot.sends.map((s) => ({ op: "addSend", ...s })),
+    ...snapshot.markers.map((m) => ({ op: "addMarker", ...m })),
+    ...snapshot.regions.map((r) => ({ op: "addRegion", ...r })),
+    ...snapshot.envelopes.map((e) => ({ op: "addEnvelope", id: e.id, target: e.target, points: e.points }))
+  ];
+}
+function arrangementReconcile(current, target2) {
+  const changes = [];
+  const table = [
+    ["sends", "removeSend", "addSend"],
+    ["markers", "removeMarker", "addMarker"],
+    ["regions", "removeRegion", "addRegion"],
+    ["envelopes", "removeEnvelope", "addEnvelope"]
+  ];
+  const same = (a2, b) => JSON.stringify(a2) === JSON.stringify(b);
+  for (const [key, remove] of table) {
+    const wanted = new Map(target2[key].map((x) => [x.id, x]));
+    for (const item of current[key]) if (!same(wanted.get(item.id), item)) changes.push({ op: remove, id: item.id });
+  }
+  const outputs = (t) => t.output ?? null;
+  const currentTracks = new Map(current.tracks.map((t) => [t.id, t]));
+  for (const t of target2.tracks) {
+    if (outputs(currentTracks.get(t.id) ?? {}) !== outputs(t)) changes.push({ op: "setTrack", id: t.id, output: outputs(t) });
+  }
+  if (!same(current.master, target2.master)) changes.push({ op: "setMaster", ...target2.master });
+  for (const [key, , add] of table) {
+    const live = new Map(current[key].map((x) => [x.id, x]));
+    for (const item of target2[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
+  }
+  return changes;
+}
+
+// src/engine/Engine.js
 var counter = 0;
 var nextId = () => `node-${++counter}`;
 var Engine = class {
   #context;
   #master = null;
   #masterPanner = null;
+  // The master's chain, as a track's strip has one: the mix of every track lands on #masterArrive, which
+  // feeds the master's audio input node if it has one and #masterPre if not, and a plugin on the master
+  // sounds through #masterPre, then the pan and the level. #masterArrival is that node, or null.
+  #masterArrive = null;
+  #masterPre = null;
+  #masterArrival = null;
   #sends = [];
   #inputs = /* @__PURE__ */ new Map();
   #masterHeld = /* @__PURE__ */ new Set();
@@ -18943,6 +19213,10 @@ var Engine = class {
       this.#master.connect(output ?? context.destination);
       this.#masterPanner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
       if (this.#masterPanner) this.#masterPanner.connect(this.#master);
+      this.#masterPre = context.createGain();
+      this.#masterPre.connect(this.#masterPanner ?? this.#master);
+      this.#masterArrive = context.createGain();
+      this.#masterArrive.connect(this.#masterPre);
     }
   }
   /**
@@ -18956,7 +19230,7 @@ var Engine = class {
   }
   /** Where a track's output arrives: the master's pan when there is one, else the master. */
   get #mixInput() {
-    return this.#masterPanner ?? this.master;
+    return this.#masterArrive ?? this.#masterPanner ?? this.master;
   }
   get context() {
     return this.#context;
@@ -19219,6 +19493,8 @@ var Engine = class {
   addTrack(trackId) {
     if (this.#tracks.has(trackId)) throw new Error(`track strip already exists: ${trackId}`);
     const pre = this.#context.createGain();
+    const arrive = this.#context.createGain();
+    arrive.connect(pre);
     const gain = this.#context.createGain();
     const panner = typeof this.#context.createStereoPanner === "function" ? this.#context.createStereoPanner() : null;
     pre.connect(gain);
@@ -19228,13 +19504,14 @@ var Engine = class {
     const out = delay ?? last;
     if (delay) last.connect(delay);
     out.connect(this.#mixInput);
-    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre });
+    this.#tracks.set(trackId, { pre, arrive, arrival: null, gain, panner, delay, out, to: null, input: pre });
   }
   removeTrack(trackId) {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
     this.closeInput(trackId);
     try {
+      strip.arrive.disconnect();
       strip.pre.disconnect();
       strip.gain.disconnect();
       strip.panner?.disconnect();
@@ -19275,8 +19552,44 @@ var Engine = class {
       strip.out.disconnect();
     } catch {
     }
-    strip.out.connect(target2 ? target2.pre : this.#mixInput);
+    strip.out.connect(target2 ? target2.arrive : this.#mixInput);
     strip.to = toTrackId;
+  }
+  /**
+   * Where audio that arrives from another track goes: into `nodeId`, the track's audio input node, so that
+   * the plugins on a bus process what is sent to it, or to the track's fader when it is null. Only touches
+   * the graph when the destination changed, since the dispatcher says it for every track on every rebuild.
+   * A node with no audio input cannot take it, and is refused here rather than failing inside Web Audio.
+   */
+  setTrackArrival(trackId, nodeId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    const node = this.#arrivalNode(nodeId);
+    if (node === strip.arrival) return;
+    try {
+      strip.arrive.disconnect();
+    } catch {
+    }
+    strip.arrive.connect(node ?? strip.pre);
+    strip.arrival = node;
+  }
+  /** The same for the master: where the mix of every track goes before the master's fader. */
+  setMasterArrival(nodeId) {
+    if (!this.#masterArrive) return;
+    const node = this.#arrivalNode(nodeId);
+    if (node === this.#masterArrival) return;
+    try {
+      this.#masterArrive.disconnect();
+    } catch {
+    }
+    this.#masterArrive.connect(node ?? this.#masterPre);
+    this.#masterArrival = node;
+  }
+  #arrivalNode(nodeId) {
+    if (nodeId === null || nodeId === void 0) return null;
+    const node = this.get(nodeId).node;
+    if (!(node.numberOfInputs > 0)) throw new Error(`node ${nodeId} has no audio input, so nothing can arrive at it`);
+    return node;
   }
   /**
    * A send: a copy of one track's signal, at `level`, into another track. Taken
@@ -19294,7 +19607,7 @@ var Engine = class {
     gain.gain.setValueAtTime(level, this.#context.currentTime);
     const source = tap === "pre" ? from.pre : from.panner ?? from.gain;
     source.connect(gain);
-    gain.connect(to.pre);
+    gain.connect(to.arrive);
     this.#sends.push({ id, source, gain });
   }
   /** Change one send's level without remaking it. */
@@ -19349,6 +19662,10 @@ var Engine = class {
    * clip with nowhere else to go.
    */
   trackInput(trackId) {
+    if (trackId === MASTER_TRACK) {
+      if (!this.#masterPre) throw new Error("this context has no master to take a plugin on it");
+      return this.#masterPre;
+    }
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
     return strip.input;
@@ -20221,259 +20538,6 @@ var ScriptState = class _ScriptState {
   }
 };
 
-// src/model/ArrangementOps.js
-var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false });
-var TAPS = Object.freeze(["pre", "post"]);
-var CURVES = Object.freeze(["step", "linear", "smooth"]);
-var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
-var EPSILON = 1e-9;
-function emptyArrangement() {
-  return { master: { ...DEFAULT_MASTER }, sends: /* @__PURE__ */ new Map(), markers: /* @__PURE__ */ new Map(), regions: /* @__PURE__ */ new Map(), envelopes: /* @__PURE__ */ new Map() };
-}
-function cloneArrangement(state) {
-  return {
-    master: { ...state.master },
-    sends: new Map([...state.sends].map(([id, s]) => [id, { ...s }])),
-    markers: new Map([...state.markers].map(([id, m]) => [id, { ...m }])),
-    regions: new Map([...state.regions].map(([id, r]) => [id, { ...r }])),
-    envelopes: new Map([...state.envelopes].map(([id, e]) => [id, {
-      id,
-      target: { ...e.target },
-      points: e.points.map((p) => ({ ...p }))
-    }]))
-  };
-}
-var finiteAtLeast = (n2, min, what) => {
-  if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
-};
-function reaches(state, from, to) {
-  const seen = /* @__PURE__ */ new Set();
-  const stack = [from];
-  while (stack.length > 0) {
-    const id = stack.pop();
-    if (id === to) return true;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    const track = state.tracks.get(id);
-    if (track?.output) stack.push(track.output);
-    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
-  }
-  return false;
-}
-function checkNoCycle(state, from, to, what) {
-  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
-}
-function checkTrackOutput(state, trackId, output) {
-  if (output === null) return;
-  if (!state.tracks.has(output)) throw new Error(`no such track: ${output}`);
-  checkNoCycle(state, trackId, output, "an output");
-}
-function mint(state, counters, key, prefix, id, what) {
-  const table = state[key];
-  const minted = id ?? `${prefix}-${++counters[prefix]}`;
-  if (table.has(minted)) throw new Error(`${what} already exists: ${minted}`);
-  const m = new RegExp(`^${prefix}-(\\d+)$`).exec(minted);
-  if (m) counters[prefix] = Math.max(counters[prefix], Number(m[1]));
-  return minted;
-}
-function checkPoints(points, target2) {
-  if (!Array.isArray(points)) throw new Error("points must be an array");
-  const seen = /* @__PURE__ */ new Set();
-  for (const p of points) {
-    finiteAtLeast(p.atBeat, 0, "an envelope point atBeat");
-    if (seen.has(p.atBeat)) throw new Error(`two envelope points at beat ${p.atBeat}`);
-    seen.add(p.atBeat);
-    if (!Number.isFinite(p.value)) throw new Error(`an envelope point needs a finite value: ${p.value}`);
-    if (!CURVES.includes(p.curve ?? "linear")) throw new Error(`curve must be one of ${CURVES.join(", ")}`);
-    if (target2.kind === "masterGain") finiteAtLeast(p.value, 0, "a master gain value");
-    if (target2.kind === "masterPan" && (p.value < -1 || p.value > 1)) throw new Error(`a master pan value is between -1 and 1: ${p.value}`);
-    if (target2.kind === "tempo" && !(p.value > 0)) throw new Error(`a tempo value is above zero: ${p.value}`);
-  }
-  return points.map((p) => ({ atBeat: p.atBeat, value: p.value, curve: p.curve ?? "linear" })).sort((a2, b) => a2.atBeat - b.atBeat);
-}
-function checkTarget(state, target2) {
-  if (!target2 || typeof target2 !== "object") throw new Error("an envelope needs a target");
-  if (target2.kind !== void 0) {
-    if (!TARGET_KINDS.includes(target2.kind)) throw new Error(`target kind must be one of ${TARGET_KINDS.join(", ")}`);
-    return { kind: target2.kind };
-  }
-  if (!state.nodes.has(target2.node)) throw new Error(`target names no such node: ${target2.node}`);
-  if (typeof target2.symbol !== "string" || target2.symbol === "") throw new Error("a node target needs the parameter symbol");
-  return { node: target2.node, symbol: target2.symbol };
-}
-var ARRANGEMENT_OPERATIONS = {
-  setMaster(state, change) {
-    const next = { ...state.master };
-    if (change.gain !== void 0) {
-      finiteAtLeast(change.gain, 0, "master gain");
-      next.gain = change.gain;
-    }
-    if (change.pan !== void 0) {
-      if (!Number.isFinite(change.pan) || change.pan < -1 || change.pan > 1) throw new Error(`pan must be between -1 and 1: ${change.pan}`);
-      next.pan = change.pan;
-    }
-    if (change.muted !== void 0) next.muted = Boolean(change.muted);
-    state.master = next;
-    return "master";
-  },
-  addSend(state, change, counters) {
-    for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
-    checkNoCycle(state, change.from, change.to, "a send");
-    for (const s of state.sends.values()) {
-      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
-    }
-    const level = change.level ?? 1;
-    finiteAtLeast(level, 0, "a send level");
-    const tap = change.tap ?? "post";
-    if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-    const id = mint(state, counters, "sends", "send", change.id, "send");
-    state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
-    return id;
-  },
-  setSend(state, change) {
-    const send = state.sends.get(change.id);
-    if (!send) throw new Error(`no such send: ${change.id}`);
-    if (change.level !== void 0) {
-      finiteAtLeast(change.level, 0, "a send level");
-      send.level = change.level;
-    }
-    if (change.tap !== void 0) {
-      if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-      send.tap = change.tap;
-    }
-    return change.id;
-  },
-  removeSend(state, change) {
-    if (!state.sends.delete(change.id)) throw new Error(`no such send: ${change.id}`);
-    return change.id;
-  },
-  addMarker(state, change, counters) {
-    finiteAtLeast(change.atBeat, 0, "a marker atBeat");
-    const id = mint(state, counters, "markers", "marker", change.id, "marker");
-    state.markers.set(id, { id, atBeat: change.atBeat, label: change.label ?? null });
-    return id;
-  },
-  setMarker(state, change) {
-    const marker = state.markers.get(change.id);
-    if (!marker) throw new Error(`no such marker: ${change.id}`);
-    if (change.atBeat !== void 0) {
-      finiteAtLeast(change.atBeat, 0, "a marker atBeat");
-      marker.atBeat = change.atBeat;
-    }
-    if (change.label !== void 0) marker.label = change.label;
-    return change.id;
-  },
-  removeMarker(state, change) {
-    if (!state.markers.delete(change.id)) throw new Error(`no such marker: ${change.id}`);
-    return change.id;
-  },
-  addRegion(state, change, counters) {
-    finiteAtLeast(change.startBeat, 0, "a region startBeat");
-    if (!(Number.isFinite(change.lengthBeats) && change.lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
-    const id = mint(state, counters, "regions", "region", change.id, "region");
-    state.regions.set(id, { id, startBeat: change.startBeat, lengthBeats: change.lengthBeats, label: change.label ?? null });
-    return id;
-  },
-  setRegion(state, change) {
-    const region = state.regions.get(change.id);
-    if (!region) throw new Error(`no such region: ${change.id}`);
-    const startBeat = change.startBeat ?? region.startBeat;
-    const lengthBeats = change.lengthBeats ?? region.lengthBeats;
-    finiteAtLeast(startBeat, 0, "a region startBeat");
-    if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a region needs a lengthBeats above zero");
-    region.startBeat = startBeat;
-    region.lengthBeats = lengthBeats;
-    if (change.label !== void 0) region.label = change.label;
-    return change.id;
-  },
-  removeRegion(state, change) {
-    if (!state.regions.delete(change.id)) throw new Error(`no such region: ${change.id}`);
-    return change.id;
-  },
-  addEnvelope(state, change, counters) {
-    const target2 = checkTarget(state, change.target);
-    for (const e of state.envelopes.values()) {
-      if (JSON.stringify(e.target) === JSON.stringify(target2)) throw new Error(`${e.id} already automates that target`);
-    }
-    const points = checkPoints(change.points ?? [], target2);
-    const id = mint(state, counters, "envelopes", "envelope", change.id, "envelope");
-    state.envelopes.set(id, { id, target: target2, points });
-    return id;
-  },
-  /** Replace the whole point list at once, so one drawn gesture is one edit and one undo. */
-  setEnvelope(state, change) {
-    const envelope = state.envelopes.get(change.id);
-    if (!envelope) throw new Error(`no such envelope: ${change.id}`);
-    envelope.points = checkPoints(change.points, envelope.target);
-    return change.id;
-  },
-  removeEnvelope(state, change) {
-    if (!state.envelopes.delete(change.id)) throw new Error(`no such envelope: ${change.id}`);
-    return change.id;
-  }
-};
-function dropForTrack(state, trackId) {
-  for (const [id, s] of [...state.sends]) if (s.from === trackId || s.to === trackId) state.sends.delete(id);
-  for (const t of state.tracks.values()) if (t.output === trackId) t.output = null;
-}
-function dropForNode(state, nodeId) {
-  for (const [id, e] of [...state.envelopes]) if (e.target.node === nodeId) state.envelopes.delete(id);
-}
-function checkSignaturePoints(initialBeatsPerBar, points) {
-  if (!Array.isArray(points)) throw new Error("signaturePoints must be an array");
-  const sorted = [...points].sort((a2, b) => a2.atBeat - b.atBeat);
-  let barStart = 0;
-  let bar = initialBeatsPerBar;
-  for (const p of sorted) {
-    if (!(Number.isFinite(p.atBeat) && p.atBeat > 0)) throw new Error(`a signature point comes after beat zero: ${p.atBeat}`);
-    if (!Number.isInteger(p.beatsPerBar) || p.beatsPerBar < 1) throw new Error(`a bar has at least one beat: ${p.beatsPerBar}`);
-    if (!Number.isInteger(p.beatUnit) || p.beatUnit < 1) throw new Error(`a beat unit is a note value: ${p.beatUnit}`);
-    const bars = (p.atBeat - barStart) / bar;
-    if (Math.abs(bars - Math.round(bars)) > EPSILON) {
-      throw new Error(`a signature change must fall on a bar line: beat ${p.atBeat} is not one`);
-    }
-    if (p.atBeat === barStart && barStart !== 0) throw new Error(`two signature points at beat ${p.atBeat}`);
-    barStart = p.atBeat;
-    bar = p.beatsPerBar;
-  }
-  return sorted.map((p) => ({ atBeat: p.atBeat, beatsPerBar: p.beatsPerBar, beatUnit: p.beatUnit }));
-}
-function arrangementChanges(snapshot) {
-  return [
-    { op: "setMaster", ...snapshot.master },
-    ...snapshot.tracks.filter((t) => t.output).map((t) => ({ op: "setTrack", id: t.id, output: t.output })),
-    ...snapshot.sends.map((s) => ({ op: "addSend", ...s })),
-    ...snapshot.markers.map((m) => ({ op: "addMarker", ...m })),
-    ...snapshot.regions.map((r) => ({ op: "addRegion", ...r })),
-    ...snapshot.envelopes.map((e) => ({ op: "addEnvelope", id: e.id, target: e.target, points: e.points }))
-  ];
-}
-function arrangementReconcile(current, target2) {
-  const changes = [];
-  const table = [
-    ["sends", "removeSend", "addSend"],
-    ["markers", "removeMarker", "addMarker"],
-    ["regions", "removeRegion", "addRegion"],
-    ["envelopes", "removeEnvelope", "addEnvelope"]
-  ];
-  const same = (a2, b) => JSON.stringify(a2) === JSON.stringify(b);
-  for (const [key, remove] of table) {
-    const wanted = new Map(target2[key].map((x) => [x.id, x]));
-    for (const item of current[key]) if (!same(wanted.get(item.id), item)) changes.push({ op: remove, id: item.id });
-  }
-  const outputs = (t) => t.output ?? null;
-  const currentTracks = new Map(current.tracks.map((t) => [t.id, t]));
-  for (const t of target2.tracks) {
-    if (outputs(currentTracks.get(t.id) ?? {}) !== outputs(t)) changes.push({ op: "setTrack", id: t.id, output: outputs(t) });
-  }
-  if (!same(current.master, target2.master)) changes.push({ op: "setMaster", ...target2.master });
-  for (const [key, , add] of table) {
-    const live = new Map(current[key].map((x) => [x.id, x]));
-    for (const item of target2[key]) if (!same(live.get(item.id), item)) changes.push({ op: add, ...item });
-  }
-  return changes;
-}
-
 // src/model/Project.js
 var RevisionConflict = class extends Error {
   constructor(expected, actual) {
@@ -20603,11 +20667,16 @@ function releaseInputs(state, nodeId) {
     if (track.midiInput === nodeId) track.midiInput = null;
     if (track.audioInput === nodeId) track.audioInput = null;
   }
+  if (state.master.audioInput === nodeId) state.master = { ...state.master, audioInput: null };
+}
+function checkPlace(state, track) {
+  if (track !== MASTER_TRACK && !state.tracks.has(track)) throw new Error(`no such track: ${track}`);
 }
 var OPERATIONS = {
   ...ARRANGEMENT_OPERATIONS,
   addTrack(state, change, counters) {
     const id = change.id ?? `track-${++counters.track}`;
+    if (id === MASTER_TRACK) throw new Error(`${MASTER_TRACK} is the master's id and cannot be a track's`);
     if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`);
     noteExplicitId(counters, "track", "track", id);
     state.tracks.set(id, {
@@ -20679,7 +20748,7 @@ var OPERATIONS = {
   moveNodeToTrack(state, change) {
     const node = state.nodes.get(change.id);
     if (!node) throw new Error(`no such node: ${change.id}`);
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    checkPlace(state, change.track);
     if (node.track === change.track) return change.id;
     releaseInputs(state, change.id);
     node.track = change.track;
@@ -20764,7 +20833,7 @@ var OPERATIONS = {
       throw new Error(`pluginIri must be an https IRI, or http on localhost: ${change.pluginIri}`);
     }
     if (!change.track) throw new Error("needs a track");
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`);
+    checkPlace(state, change.track);
     const id = change.id ?? `node-${++counters.node}`;
     if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`);
     noteExplicitId(counters, "node", "node", id);
@@ -22723,6 +22792,12 @@ var OpDispatcher = class {
   /** The first end of a new connection that names a port its node has not got. */
   #unroutable(changes) {
     for (const change of changes ?? []) {
+      if ((change?.op === "setTrack" || change?.op === "setMaster") && change.audioInput) {
+        const profile = this.engineNode(change.audioInput)?.profile;
+        if (profile && (profile.audioInputs ?? 0) < 1) {
+          return `${change.audioInput} has no audio input, so audio cannot arrive at it`;
+        }
+      }
       if (change?.op !== "addConnection") continue;
       for (const direction of ["from", "to"]) {
         const endpoint2 = change[direction];
@@ -23240,8 +23315,16 @@ var OpDispatcher = class {
     for (const send of this.#project.sends) {
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
     }
-    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null);
+    for (const track of this.#project.tracks) {
+      this.#engine.setTrackOutput(track.id, track.output ?? null);
+      this.#engine.setTrackArrival(track.id, this.#arrivalEngineId(track.audioInput));
+    }
+    this.#engine.setMasterArrival(this.#arrivalEngineId(this.#project.master.audioInput));
     this.#engine.setMaster(this.#project.master);
+  }
+  /** The engine node audio arriving at a track or the master goes to, or null for the fader. */
+  #arrivalEngineId(nodeId) {
+    return nodeId && this.#engineIdOf(nodeId) || null;
   }
   #applyChannels() {
     if (!this.#engine) return;
@@ -27673,12 +27756,12 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "plugin_load",
-      description: "Fetch, validate and instantiate a plugin by IRI, adding it to the session. Without a track it gets a new track of its own, named after it. This is the only tool that reaches the network. Reports which step failed if it does.",
+      description: 'Fetch, validate and instantiate a plugin by IRI, adding it to the session. Without a track it gets a new track of its own, named after it; the track "master" puts it on the master bus. This is the only tool that reaches the network. Reports which step failed if it does.',
       inputSchema: {
         type: "object",
         properties: {
           iri: { type: "string" },
-          track: { type: "string", description: "The id of an existing track to add it to" }
+          track: { type: "string", description: 'The id of an existing track to add it to, or "master" for the master bus' }
         },
         required: ["iri"]
       },
@@ -27794,14 +27877,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_set",
-      description: "Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its output to another track instead of the master (a bus). Pass null to clear an input or an output.",
+      description: "Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its output to another track instead of the master (a bus). The audio input is also where audio from another track arrives, a bus output or a send, so a plugin on a bus is in the path; it must take an audio input. Pass null to clear an input or an output.",
       inputSchema: {
         type: "object",
         properties: {
           trackId: { type: "string" },
           label: { type: ["string", "null"] },
           midiInput: { type: ["string", "null"], description: "A node on this track" },
-          audioInput: { type: ["string", "null"], description: "A node on this track" },
+          audioInput: { type: ["string", "null"], description: "A node on this track, with an audio input. Its audio clips and anything sent or bused to the track arrive at it; without one they go to the fader" },
           output: { type: ["string", "null"], description: "The track this one feeds instead of the master, which makes it a bus. null for the master. A cycle is refused." },
           expectedRevision: { type: "integer" }
         },
@@ -27839,7 +27922,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     ...arrangementTools(),
     {
       name: "node_move_to_track",
-      description: "Move a plugin to another track. It stops being the old track's clip input, if it was one.",
+      description: `Move a plugin to another track, or to the master bus with the track "master". It stops being the old track's clip input, if it was one.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -28392,11 +28475,16 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     return [
       one3({
         name: "master_set",
-        description: "Set the master bus: linear gain (1 is unity), pan (-1 to 1) and mute. Any of them; the rest stay.",
-        properties: { gain: num("Linear, zero or more"), pan: num("-1 to 1"), muted: { type: "boolean" } },
+        description: 'Set the master bus: linear gain (1 is unity), pan (-1 to 1), mute, and the plugin on the master that the mix of every track arrives at (audioInput, null for the fader). Any of them; the rest stay. Plugins go on the master with plugin_load or node_move_to_track and the track "master".',
+        properties: {
+          gain: num("Linear, zero or more"),
+          pan: num("-1 to 1"),
+          muted: { type: "boolean" },
+          audioInput: { type: ["string", "null"], description: "A node on the master, with an audio input" }
+        },
         op: "setMaster",
         returns: "none",
-        pick: keep(["gain", "pan", "muted"])
+        pick: keep(["gain", "pan", "muted", "audioInput"])
       }),
       one3({
         name: "send_add",
@@ -30037,6 +30125,7 @@ function describeMidi(bytes) {
 
 // web/app/Rack.js
 var NEW_TRACK = "";
+var MASTER_TARGET = MASTER_TRACK;
 function slotTitle(node, profile, name2) {
   const plugin = profile?.label ?? null;
   if (plugin && node.label && node.label !== plugin) return `${plugin}: ${name2}`;
@@ -30095,6 +30184,7 @@ function createRack(ctx2) {
     const tracks = ctx2.dispatcher?.project.orderedTracks ?? [];
     const options = [
       ...tracks.map((track) => ({ value: track.id, label: trackLabel(track, made.indexOf(track)) })),
+      { value: MASTER_TARGET, label: "The master bus" },
       { value: NEW_TRACK, label: "A new track" }
     ];
     select.replaceChildren(...options.map(({ value: value2, label }) => {
@@ -30148,7 +30238,8 @@ function createRack(ctx2) {
     ctx2.arrangement.draw(tracks, labelOfTrack);
     ctx2.matrix.draw();
     ctx2.master.update();
-    if (tracks.length === 0) {
+    const masterNodes = nodes.filter((n2) => n2.track === MASTER_TRACK);
+    if (tracks.length === 0 && masterNodes.length === 0) {
       const empty = document2.createElement("div");
       empty.className = "empty";
       empty.textContent = "Nothing loaded. Search for a plugin, or press Load to add the synth.";
@@ -30164,6 +30255,9 @@ function createRack(ctx2) {
         nodes: nodes.filter((n2) => n2.track === track.id),
         allNodes: nodes
       }));
+    }
+    if (masterNodes.length > 0) {
+      rack.append(drawMaster({ tracks, labelOfTrack, labelFor, connections, nodes: masterNodes, allNodes: nodes }));
     }
     const heading = document2.createElement("h3");
     heading.className = "connections-heading";
@@ -30224,6 +30318,8 @@ function createRack(ctx2) {
       });
       header.append(midi2);
     }
+    const takesAudio = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.audioInputs ?? 0) > 0);
+    if (takesAudio.length > 0) header.append(audioInputSelect({ id: track.id, title, nodes: takesAudio, current: track.audioInput, labelFor }));
     if (nodes.length === 0) {
       const remove = document2.createElement("button");
       remove.type = "button";
@@ -30245,6 +30341,10 @@ function createRack(ctx2) {
       group.append(empty);
       return group;
     }
+    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track });
+    return group;
+  }
+  function drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track }) {
     for (const node of nodes) {
       const previous = nodes[nodes.indexOf(node) - 1];
       const joining = previous && connections.find((c3) => c3.from.node === previous.id && c3.to.node === node.id);
@@ -30253,7 +30353,46 @@ function createRack(ctx2) {
       }
       drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track });
     }
+  }
+  function drawMaster({ tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
+    const { dispatcher } = ctx2;
+    const group = document2.createElement("section");
+    group.className = "track master";
+    group.id = `track-group-${MASTER_TRACK}`;
+    group.setAttribute("aria-label", "Master bus");
+    const header = document2.createElement("div");
+    header.className = "track-header";
+    const heading = document2.createElement("h3");
+    heading.textContent = "Master bus";
+    header.append(heading);
+    const takesAudio = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.audioInputs ?? 0) > 0);
+    if (takesAudio.length > 0) {
+      header.append(audioInputSelect({ id: MASTER_TRACK, title: "the master bus", nodes: takesAudio, current: dispatcher.project.master.audioInput, labelFor }));
+    }
+    group.append(header);
+    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track: { id: MASTER_TRACK } });
     return group;
+  }
+  function audioInputSelect({ id, title, nodes, current, labelFor }) {
+    const { dispatcher } = ctx2;
+    const select = document2.createElement("select");
+    select.id = `audio-input-${id}`;
+    select.setAttribute("aria-label", `Where audio arriving at ${title} goes: its clips, sends and buses`);
+    const where = id === MASTER_TRACK ? "The mix arrives at" : "Audio arrives at";
+    for (const [value2, text] of [["", "Audio goes to the fader"], ...nodes.map((n2) => [n2.id, `${where} ${labelFor(n2.id)}`])]) {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = text;
+      select.append(option);
+    }
+    select.value = current ?? "";
+    select.addEventListener("change", () => {
+      const audioInput = select.value || null;
+      const change = id === MASTER_TRACK ? { op: "setMaster", audioInput } : { op: "setTrack", id, audioInput };
+      const result = dispatcher.apply([change]);
+      if (!result.ok) log2(result.message, "error");
+    });
+    return select;
   }
   function drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track }) {
     const { dispatcher, engine } = ctx2;
@@ -30326,22 +30465,23 @@ function createRack(ctx2) {
       const result = dispatcher.apply(changes);
       if (!result.ok) log2(result.message, "error");
     });
-    if (tracks.length > 1) {
+    {
       const move = document2.createElement("select");
       move.className = "move-track";
       move.id = `track-of-${node.id}`;
       move.setAttribute("aria-label", `Track for ${labelFor(node.id)}`);
-      for (const t of tracks) {
+      const places = [...tracks.map((t) => [t.id, labelOfTrack(t)]), [MASTER_TRACK, "Master bus"]];
+      for (const [value2, text] of places) {
         const option = document2.createElement("option");
-        option.value = t.id;
-        option.textContent = labelOfTrack(t);
+        option.value = value2;
+        option.textContent = text;
         move.append(option);
       }
       move.value = node.track;
       move.addEventListener("change", () => {
         const result = dispatcher.apply([{ op: "moveNodeToTrack", id: node.id, track: move.value }]);
         if (!result.ok) log2(result.message, "error");
-        else log2(`moved ${labelFor(node.id)} to ${labelOfTrack(dispatcher.project.track(move.value))}`);
+        else log2(`moved ${labelFor(node.id)} to ${places.find(([value2]) => value2 === move.value)[1]}`);
       });
       header.append(move);
     }
@@ -33466,7 +33606,7 @@ function createDockPanel(ctx2) {
         const n2 = project.node(id);
         return n2?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
       };
-      const tl = (id) => trackLabel(project.track(id));
+      const tl = (id) => id === MASTER_TRACK ? "Master bus" : trackLabel(project.track(id));
       nodeTrack = node.track;
       nodeView.show({
         node,
@@ -33860,6 +34000,10 @@ function createLoading(ctx2) {
         }]);
         if (!chained.ok) log2(chained.message, "error");
       }
+    }
+    if (trackId === MASTER_TRACK && d.project.master.audioInput === null && (entry.profile.audioInputs ?? 0) > 0) {
+      const routed = d.apply([{ op: "setMaster", audioInput: nodeId }]);
+      if (!routed.ok) log2(routed.message, "error");
     }
     ctx2.rack.draw();
     ctx2.expose();
@@ -34265,9 +34409,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
   if (connections.length > 0) {
     lines.push(`    ${term3(jig5.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
   }
-  const master = project.master;
-  const masterIsDefault = master.gain === 1 && master.pan === 0 && !master.muted;
-  if (!masterIsDefault) lines.push(`    ${term3(jig5.master)} <#master> ;`);
+  if (masterIsUsed(project)) lines.push(`    ${term3(jig5.master)} <#master> ;`);
   for (const [property, items] of [
     [jig5.send, project.sends],
     [jig5.marker, project.markers],
@@ -34365,11 +34507,16 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
 }
 var TAP_TERM = { pre: "PreFader", post: "PostFader" };
 var CURVE_TERM = { step: "Step", linear: "Linear", smooth: "Smooth" };
+function masterIsUsed(project) {
+  const master = project.master;
+  return master.gain !== 1 || master.pan !== 0 || master.muted || master.audioInput !== null || project.nodes.some((n2) => n2.track === MASTER_TRACK);
+}
 var KIND_TERM = { masterGain: "MasterGain", masterPan: "MasterPan", tempo: "Tempo" };
 function writeArrangement(lines, project) {
   const master = project.master;
-  if (master.gain !== 1 || master.pan !== 0 || master.muted) {
+  if (masterIsUsed(project)) {
     const st = [`a ${term3(jig5.Master)}`];
+    if (master.audioInput) st.push(`${term3(jig5.audioInput)} <#${master.audioInput}>`);
     if (master.gain !== 1) st.push(`${term3(jig5.gain)} ${decimal(master.gain)}`);
     if (master.pan !== 0) st.push(`${term3(jig5.pan)} ${decimal(master.pan)}`);
     if (master.muted) st.push(`${term3(jig5.muted)} true`);
@@ -34561,11 +34708,13 @@ function readArrangement(dataset2, iri4, tracks) {
   const masterIri = value(one2(dataset2, iri4, jig6.master));
   if (masterIri) {
     const channel = readChannel(dataset2, masterIri, "master");
+    const input = value(one2(dataset2, masterIri, jig6.audioInput));
     changes.push({
       op: "setMaster",
       ...channel.gain !== void 0 ? { gain: channel.gain } : {},
       ...channel.pan !== void 0 ? { pan: channel.pan } : {},
-      ...channel.muted !== void 0 ? { muted: channel.muted } : {}
+      ...channel.muted !== void 0 ? { muted: channel.muted } : {},
+      ...input !== null ? { audioInput: idOf(input, iri4, "audioInput of the master") } : {}
     });
   }
   for (const t of tracks) {
@@ -34700,7 +34849,7 @@ function readProject(dataset2) {
       signalKind
     });
   }
-  if (tracks.length === 0 && nodes.length > 0) {
+  if (tracks.length === 0 && nodes.length > 0 && nodes.every((n2) => n2.track === null)) {
     const folded = foldIntoTracks(nodes, connections);
     for (const t of folded.tracks) tracks.push({ ...t, midiInput: null, audioInput: null });
     for (const node of nodes) node.track = folded.trackOf.get(node.id);

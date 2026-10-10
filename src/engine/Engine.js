@@ -13,6 +13,7 @@ import { compositeProfile, readComposite, isComposite } from '../rdf/CompositeRe
 import { readProfile } from '../rdf/ProfileReader.js'
 import { pluginForm } from '../rdf/Canonical.js'
 import { digestOf } from '../host/Integrity.js'
+import { MASTER_TRACK } from '../model/ArrangementOps.js'
 
 let counter = 0
 const nextId = () => `node-${++counter}`
@@ -21,6 +22,12 @@ export class Engine {
   #context
   #master = null
   #masterPanner = null
+  // The master's chain, as a track's strip has one: the mix of every track lands on #masterArrive, which
+  // feeds the master's audio input node if it has one and #masterPre if not, and a plugin on the master
+  // sounds through #masterPre, then the pan and the level. #masterArrival is that node, or null.
+  #masterArrive = null
+  #masterPre = null
+  #masterArrival = null
   #sends = []
   #inputs = new Map()
   #masterHeld = new Set()
@@ -67,6 +74,10 @@ export class Engine {
       // node the speakers hang off, as it always was.
       this.#masterPanner = typeof context.createStereoPanner === 'function' ? context.createStereoPanner() : null
       if (this.#masterPanner) this.#masterPanner.connect(this.#master)
+      this.#masterPre = context.createGain()
+      this.#masterPre.connect(this.#masterPanner ?? this.#master)
+      this.#masterArrive = context.createGain()
+      this.#masterArrive.connect(this.#masterPre)
     }
   }
 
@@ -79,7 +90,7 @@ export class Engine {
   get master () { return this.#master ?? this.#context.destination }
 
   /** Where a track's output arrives: the master's pan when there is one, else the master. */
-  get #mixInput () { return this.#masterPanner ?? this.master }
+  get #mixInput () { return this.#masterArrive ?? this.#masterPanner ?? this.master }
 
   get context () { return this.#context }
 
@@ -356,6 +367,10 @@ export class Engine {
     // taken, before the fader; a track fed by another track's output or send
     // arrives here too.
     const pre = this.#context.createGain()
+    // Where audio from another track lands (a bus output or a send). It goes to the track's audio input
+    // node when it has one, so a plugin on a bus is in the path, and to `pre` when it has not.
+    const arrive = this.#context.createGain()
+    arrive.connect(pre)
     const gain = this.#context.createGain()
     const panner = typeof this.#context.createStereoPanner === 'function'
       ? this.#context.createStereoPanner()
@@ -372,14 +387,14 @@ export class Engine {
     if (delay) last.connect(delay)
     out.connect(this.#mixInput)
     // `to` is where the strip's output goes: null is the master.
-    this.#tracks.set(trackId, { pre, gain, panner, delay, out, to: null, input: pre })
+    this.#tracks.set(trackId, { pre, arrive, arrival: null, gain, panner, delay, out, to: null, input: pre })
   }
 
   removeTrack (trackId) {
     const strip = this.#tracks.get(trackId)
     if (!strip) throw new Error(`no such track strip: ${trackId}`)
     this.closeInput(trackId)
-    try { strip.pre.disconnect(); strip.gain.disconnect(); strip.panner?.disconnect(); strip.delay?.disconnect() } catch { /* already torn down */ }
+    try { strip.arrive.disconnect(); strip.pre.disconnect(); strip.gain.disconnect(); strip.panner?.disconnect(); strip.delay?.disconnect() } catch { /* already torn down */ }
     this.#tracks.delete(trackId)
   }
 
@@ -413,8 +428,41 @@ export class Engine {
     if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`)
     if (strip.to === toTrackId) return
     try { strip.out.disconnect() } catch { /* nothing was connected */ }
-    strip.out.connect(target ? target.pre : this.#mixInput)
+    strip.out.connect(target ? target.arrive : this.#mixInput)
     strip.to = toTrackId
+  }
+
+  /**
+   * Where audio that arrives from another track goes: into `nodeId`, the track's audio input node, so that
+   * the plugins on a bus process what is sent to it, or to the track's fader when it is null. Only touches
+   * the graph when the destination changed, since the dispatcher says it for every track on every rebuild.
+   * A node with no audio input cannot take it, and is refused here rather than failing inside Web Audio.
+   */
+  setTrackArrival (trackId, nodeId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    const node = this.#arrivalNode(nodeId)
+    if (node === strip.arrival) return
+    try { strip.arrive.disconnect() } catch { /* nothing was connected */ }
+    strip.arrive.connect(node ?? strip.pre)
+    strip.arrival = node
+  }
+
+  /** The same for the master: where the mix of every track goes before the master's fader. */
+  setMasterArrival (nodeId) {
+    if (!this.#masterArrive) return
+    const node = this.#arrivalNode(nodeId)
+    if (node === this.#masterArrival) return
+    try { this.#masterArrive.disconnect() } catch { /* nothing was connected */ }
+    this.#masterArrive.connect(node ?? this.#masterPre)
+    this.#masterArrival = node
+  }
+
+  #arrivalNode (nodeId) {
+    if (nodeId === null || nodeId === undefined) return null
+    const node = this.get(nodeId).node
+    if (!(node.numberOfInputs > 0)) throw new Error(`node ${nodeId} has no audio input, so nothing can arrive at it`)
+    return node
   }
 
   /**
@@ -433,7 +481,7 @@ export class Engine {
     gain.gain.setValueAtTime(level, this.#context.currentTime)
     const source = tap === 'pre' ? from.pre : (from.panner ?? from.gain)
     source.connect(gain)
-    gain.connect(to.pre)
+    gain.connect(to.arrive)
     this.#sends.push({ id, source, gain })
   }
 
@@ -487,6 +535,10 @@ export class Engine {
    * clip with nowhere else to go.
    */
   trackInput (trackId) {
+    if (trackId === MASTER_TRACK) {
+      if (!this.#masterPre) throw new Error('this context has no master to take a plugin on it')
+      return this.#masterPre
+    }
     const strip = this.#tracks.get(trackId)
     if (!strip) throw new Error(`no such track strip: ${trackId}`)
     return strip.input

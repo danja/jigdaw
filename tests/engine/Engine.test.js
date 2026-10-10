@@ -42,6 +42,14 @@ function fakeNode (parameters = {}) {
   }
 }
 
+/** Whether a signal leaving `from` can reach `to` through the recorded connections. */
+function reaches (from, to, seen = new Set()) {
+  if (from === to) return true
+  if (!from || seen.has(from)) return false
+  seen.add(from)
+  return (from.outgoing ?? []).some(o => reaches(o.destination, to, seen))
+}
+
 function fakeContext () {
   return {
     sampleRate: 48000,
@@ -243,8 +251,11 @@ describe('track strips', () => {
     const fader = arrival.outgoing[0].destination
     const panner = fader.outgoing[0].destination
     expect(panner.pan).toBeDefined()
-    // The master's own pan sits in front of the master, which is still what the speakers hang off.
-    const masterPan = panner.outgoing[0].destination
+    // Then the master's arrival, its fader input, and its own pan in front of the master, which is still
+    // what the speakers hang off.
+    const masterArrive = panner.outgoing[0].destination
+    const masterPre = masterArrive.outgoing[0].destination
+    const masterPan = masterPre.outgoing[0].destination
     expect(masterPan.pan).toBeDefined()
     expect(masterPan.outgoing.map(o => o.destination)).toEqual([engine.master])
     expect(engine.trackIds()).toEqual(['t1'])
@@ -379,10 +390,10 @@ describe('Engine track delay (aligning tracks)', () => {
     const { context, engine } = make({ maxTrackDelaySeconds: 2 })
     engine.addTrack('t1')
     const strip = engine.trackTap('t1')
-    // gain -> panner -> delay -> the master's pan
+    // gain -> panner -> delay -> the master
     const delay = strip.outgoing[0].destination
     expect(delay.maxDelayTime).toBe(2)
-    expect(delay.outgoing[0].destination.outgoing[0].destination).toBe(engine.master)
+    expect(reaches(delay, engine.master)).toBe(true)
     context.currentTime = 1.5
     engine.setTrackDelay('t1', 4800)
     expect(delay.delayTime.scheduled).toEqual([{ value: 0.1, at: 1.5 }])
@@ -404,7 +415,7 @@ describe('Engine track delay (aligning tracks)', () => {
   it('leaves the strip wired straight to the master when no delay is built', () => {
     const { engine } = make()
     engine.addTrack('t1')
-    expect(engine.trackTap('t1').outgoing[0].destination.outgoing[0].destination).toBe(engine.master)
+    expect(reaches(engine.trackTap('t1').outgoing[0].destination, engine.master)).toBe(true)
   })
 })
 
@@ -426,7 +437,7 @@ describe('Engine sends, bus outputs and the master', () => {
     const { engine } = make()
     engine.addSend('s1', 'a', 'b', { level: 0.4, tap: 'post' })
     const { panner } = strip(engine, 'a')
-    const sendGain = panner.outgoing.find(o => o.destination.gain && o.destination !== undefined && o.destination.outgoing?.some(x => x.destination === engine.trackInput('b')))
+    const sendGain = panner.outgoing.find(o => o.destination.gain && o.destination.outgoing?.some(x => x.destination.outgoing.some(y => y.destination === engine.trackInput('b'))))
     expect(sendGain).toBeDefined()
     expect(sendGain.destination.gain.scheduled.at(-1).value).toBe(0.4)
   })
@@ -435,14 +446,14 @@ describe('Engine sends, bus outputs and the master', () => {
     const { engine } = make()
     engine.addSend('s1', 'a', 'b', { level: 1, tap: 'pre' })
     const { pre } = strip(engine, 'a')
-    expect(pre.outgoing.some(o => o.destination.outgoing?.some(x => x.destination === engine.trackInput('b')))).toBe(true)
+    expect(pre.outgoing.some(o => o.destination.outgoing?.some(x => x.destination.outgoing.some(y => y.destination === engine.trackInput('b'))))).toBe(true)
   })
 
   it('changes a level in place, and clears every send', () => {
     const { engine } = make()
     engine.addSend('s1', 'a', 'b')
     const { panner } = strip(engine, 'a')
-    const gain = panner.outgoing.find(o => o.destination.gain && o.destination.outgoing.length).destination
+    const gain = panner.outgoing.find(o => o.destination.gain && o.destination.outgoing.some(x => x.destination.outgoing.some(y => y.destination === engine.trackInput('b')))).destination
     engine.setSendLevel('s1', 0.25)
     expect(gain.gain.scheduled.at(-1).value).toBe(0.25)
     engine.clearSends()
@@ -461,12 +472,14 @@ describe('Engine sends, bus outputs and the master', () => {
     const { engine } = make()
     const out = engine.trackTap('a')
     engine.setTrackOutput('a', 'b')
-    expect(out.outgoing.at(-1).destination).toBe(engine.trackInput('b'))
+    // Into the other track's arrival, which feeds its fader when it has no audio input node.
+    expect(out.outgoing.at(-1).destination.outgoing[0].destination).toBe(engine.trackInput('b'))
     const count = out.outgoing.length
     engine.setTrackOutput('a', 'b')
     expect(out.outgoing).toHaveLength(count)
     engine.setTrackOutput('a', null)
-    expect(out.outgoing.at(-1).destination.pan).toBeDefined()
+    expect(reaches(out.outgoing.at(-1).destination, engine.master)).toBe(true)
+    expect(reaches(out.outgoing.at(-1).destination, engine.trackInput('b'))).toBe(false)
     expect(() => engine.setTrackOutput('a', 'ghost')).toThrow(/no such track strip/)
     expect(() => engine.setTrackOutput('ghost', null)).toThrow(/no such track strip/)
   })
@@ -478,6 +491,87 @@ describe('Engine sends, bus outputs and the master', () => {
     expect(engine.master.gain.scheduled.at(-1)).toEqual({ value: 0.5, at: 2 })
     engine.setMaster({ gain: 0.5, pan: 0, muted: true })
     expect(engine.master.gain.scheduled.at(-1).value).toBe(0)
+  })
+})
+
+describe('arrival points and the master chain', () => {
+  const make = () => {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    engine.addTrack('a')
+    engine.addTrack('bus')
+    // Entries are placed directly: the thing under test is the wiring, which only ever sees entries.
+    const effect = Object.assign(fakeNode(), { numberOfInputs: 1 })
+    const instrument = Object.assign(fakeNode(), { numberOfInputs: 0 })
+    engine.get = id => ({ effect: { id, node: effect }, instrument: { id, node: instrument } }[id])
+    return { engine, effect, instrument }
+  }
+
+  it('lets audio from another track reach the fader when the track has no audio input node', () => {
+    const { engine } = make()
+    engine.setTrackOutput('a', 'bus')
+    expect(reaches(engine.trackTap('a'), engine.trackInput('bus'))).toBe(true)
+  })
+
+  it('sends it through the audio input node instead, so a plugin on a bus is in the path', () => {
+    const { engine, effect } = make()
+    engine.setTrackOutput('a', 'bus')
+    engine.setTrackArrival('bus', 'effect')
+    expect(reaches(engine.trackTap('a'), effect)).toBe(true)
+    // The arrival no longer reaches the fader by itself: only what the effect passes on does.
+    expect(reaches(engine.trackTap('a'), engine.trackInput('bus'))).toBe(false)
+    engine.linkToTrack('effect', 'bus')
+    expect(reaches(engine.trackTap('a'), engine.trackInput('bus'))).toBe(true)
+    expect(reaches(effect, engine.master)).toBe(true)
+  })
+
+  it('does the same for a send, and goes back to the fader when the input is cleared', () => {
+    const { engine, effect } = make()
+    engine.addSend('s1', 'a', 'bus', { level: 1, tap: 'post' })
+    engine.setTrackArrival('bus', 'effect')
+    expect(reaches(engine.trackTap('a'), effect)).toBe(true)
+    engine.setTrackArrival('bus', null)
+    expect(reaches(engine.trackTap('a'), engine.trackInput('bus'))).toBe(true)
+    expect(reaches(engine.trackTap('a'), effect)).toBe(false)
+  })
+
+  it('touches the graph only when the destination changed', () => {
+    const { engine } = make()
+    const before = engine.trackTap('a').outgoing.length
+    engine.setTrackArrival('bus', 'effect')
+    engine.setTrackArrival('bus', 'effect')
+    expect(engine.trackTap('a').outgoing).toHaveLength(before)
+  })
+
+  it('refuses a node with no audio input, and a track that is not there', () => {
+    const { engine } = make()
+    expect(() => engine.setTrackArrival('bus', 'instrument')).toThrow(/no audio input/)
+    expect(() => engine.setTrackArrival('ghost', null)).toThrow(/no such track strip/)
+    expect(() => engine.setMasterArrival('instrument')).toThrow(/no audio input/)
+  })
+
+  it('puts the mix of every track through the master\'s audio input node, then its pan and level', () => {
+    const { engine, effect } = make()
+    // Without one, the tracks reach the master directly.
+    expect(reaches(engine.trackTap('a'), engine.master)).toBe(true)
+    engine.setMasterArrival('effect')
+    expect(reaches(engine.trackTap('a'), effect)).toBe(true)
+    // The master's pre-fader input is where a plugin on the master sounds through.
+    expect(reaches(engine.trackTap('a'), engine.trackInput('master'))).toBe(false)
+    engine.linkToTrack('effect', 'master')
+    expect(reaches(engine.trackTap('a'), engine.master)).toBe(true)
+    expect(reaches(effect, engine.master)).toBe(true)
+    engine.setMasterArrival(null)
+    expect(reaches(engine.trackTap('a'), effect)).toBe(false)
+    expect(reaches(engine.trackTap('a'), engine.master)).toBe(true)
+  })
+
+  it('has a master fader input only where the context can make a gain', () => {
+    const context = fakeContext()
+    delete context.createGain
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    expect(() => engine.trackInput('master')).toThrow(/no master/)
+    expect(() => engine.setMasterArrival(null)).not.toThrow()
   })
 })
 

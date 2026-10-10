@@ -427,6 +427,14 @@ export class OpDispatcher {
   /** The first end of a new connection that names a port its node has not got. */
   #unroutable (changes) {
     for (const change of changes ?? []) {
+      // Audio arrives at a track's or the master's audio input node, so the node must have an audio input.
+      // A node whose plugin is not loaded yet is not refused: it cannot be checked, and is not wired until it is.
+      if ((change?.op === 'setTrack' || change?.op === 'setMaster') && change.audioInput) {
+        const profile = this.engineNode(change.audioInput)?.profile
+        if (profile && (profile.audioInputs ?? 0) < 1) {
+          return `${change.audioInput} has no audio input, so audio cannot arrive at it`
+        }
+      }
       if (change?.op !== 'addConnection') continue
       for (const direction of ['from', 'to']) {
         const endpoint = change[direction]
@@ -987,8 +995,17 @@ export class OpDispatcher {
     for (const send of this.#project.sends) {
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap })
     }
-    for (const track of this.#project.tracks) this.#engine.setTrackOutput(track.id, track.output ?? null)
+    for (const track of this.#project.tracks) {
+      this.#engine.setTrackOutput(track.id, track.output ?? null)
+      this.#engine.setTrackArrival(track.id, this.#arrivalEngineId(track.audioInput))
+    }
+    this.#engine.setMasterArrival(this.#arrivalEngineId(this.#project.master.audioInput))
     this.#engine.setMaster(this.#project.master)
+  }
+
+  /** The engine node audio arriving at a track or the master goes to, or null for the fader. */
+  #arrivalEngineId (nodeId) {
+    return (nodeId && this.#engineIdOf(nodeId)) || null
   }
 
   #applyChannels () {

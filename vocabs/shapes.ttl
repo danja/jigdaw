@@ -335,8 +335,9 @@ jig:NodeShape_ a sh:NodeShape ;
     sh:property [ sh:path jig:bypassed ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:message "A node is bypassed or it is not: jig:bypassed is one true or false." ] ;
     sh:property [
         sh:path jig:onTrack ;
-        sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Track ;
-        sh:message "A node must be on exactly one track. The track is where its sound goes: a node on none would be heard by nobody, and on two would be summed twice."
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:or ( [ sh:class jig:Track ] [ sh:class jig:Master ] ) ;
+        sh:message "A node must be on exactly one track, or on the master. That is where its sound goes: a node on none would be heard by nobody, and on two would be summed twice."
     ] .
 
 jig:TrackShape a sh:NodeShape ;
@@ -524,7 +525,12 @@ jig:MasterShape a sh:NodeShape ;
     sh:targetClass jig:Master ;
     sh:property [ sh:path jig:gain ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "Master gain is linear and cannot be negative." ] ;
     sh:property [ sh:path jig:pan ; sh:maxCount 1 ; sh:minInclusive -1 ; sh:maxInclusive 1 ; sh:message "Master pan is between -1 and 1." ] ;
-    sh:property [ sh:path jig:muted ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .
+    sh:property [ sh:path jig:muted ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [
+        sh:path jig:audioInput ;
+        sh:maxCount 1 ; sh:class jig:Node ;
+        sh:message "The mix of every track arrives at one node on the master, and it must be a node of the project."
+    ] .
 
 jig:SendShape a sh:NodeShape ;
     sh:targetClass jig:Send ;

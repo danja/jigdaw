@@ -290,6 +290,55 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/conductor/",
+      "label": "Conductor",
+      "comment": "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as a fixed form or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/conductor/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [],
+      "produces": [
+        "Midi",
+        "ControlMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw differs, so a seed gives a different form from the VST3's.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "base_note",
+        "break_weight",
+        "channel",
+        "coda_weight",
+        "density_cc",
+        "develop_weight",
+        "energy_cc",
+        "intro_weight",
+        "jump_to",
+        "max_bars",
+        "min_bars",
+        "mode",
+        "mutation_cc",
+        "reprise_weight",
+        "reset_cc",
+        "scene_cc",
+        "seed"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/counterpointer/",
       "label": "Counterpointer",
       "comment": "Transport synced MIDI processor that learns an incoming cycle and answers it with a monophonic counter-melody, in counterpoint or a descending bass register.",

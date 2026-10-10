@@ -1,6 +1,6 @@
 // tests/model/ArrangementOps.test.js
 import { describe, it, expect, beforeEach } from 'vitest'
-import { Project } from '../../src/model/Project.js'
+import { Project, changesFor } from '../../src/model/Project.js'
 
 const IRI = 'https://example.org/plugins/cascade/'
 let project
@@ -15,14 +15,64 @@ const refused = (changes, pattern) => expect(() => project.apply(changes)).toThr
 
 describe('the master', () => {
   it('starts at unity and takes gain, pan and mute', () => {
-    expect(project.master).toEqual({ gain: 1, pan: 0, muted: false })
+    expect(project.master).toEqual({ gain: 1, pan: 0, muted: false, audioInput: null })
     project.apply([{ op: 'setMaster', gain: 0.5, muted: true }])
-    expect(project.master).toEqual({ gain: 0.5, pan: 0, muted: true })
+    expect(project.master).toEqual({ gain: 0.5, pan: 0, muted: true, audioInput: null })
   })
   it('refuses a negative gain and a pan off the edge', () => {
     refused([{ op: 'setMaster', gain: -1 }], /gain/)
     refused([{ op: 'setMaster', pan: 1.5 }], /pan/)
     expect(project.master.gain).toBe(1)
+  })
+})
+
+describe('a chain on the master', () => {
+  beforeEach(() => {
+    project.apply([{ op: 'addNode', id: 'verb', track: 'master', pluginIri: IRI }])
+  })
+
+  it('takes a node, which is on the master and on no track', () => {
+    expect(project.node('verb').track).toBe('master')
+    expect(project.tracks.map(t => t.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('reserves the master\'s id, so a node\'s track names a track or the master and never both', () => {
+    refused([{ op: 'addTrack', id: 'master' }], /master/)
+    refused([{ op: 'addNode', id: 'x', track: 'nowhere', pluginIri: IRI }], /no such track/)
+  })
+
+  it('moves a node onto the master and off it again', () => {
+    project.apply([{ op: 'moveNodeToTrack', id: 'n', track: 'master' }])
+    expect(project.node('n').track).toBe('master')
+    project.apply([{ op: 'moveNodeToTrack', id: 'n', track: 'b' }])
+    expect(project.node('n').track).toBe('b')
+    refused([{ op: 'moveNodeToTrack', id: 'n', track: 'ghost' }], /no such track/)
+  })
+
+  it('names the node the mix arrives at, and only a node on the master', () => {
+    project.apply([{ op: 'setMaster', audioInput: 'verb' }])
+    expect(project.master.audioInput).toBe('verb')
+    refused([{ op: 'setMaster', audioInput: 'n' }], /not on the master/)
+    refused([{ op: 'setMaster', audioInput: 'ghost' }], /no such node/)
+    expect(project.master.audioInput).toBe('verb')
+    project.apply([{ op: 'setMaster', audioInput: null }])
+    expect(project.master.audioInput).toBeNull()
+  })
+
+  it('forgets the input when its node is removed or moved away, as a track does', () => {
+    project.apply([{ op: 'setMaster', audioInput: 'verb' }, { op: 'removeNode', id: 'verb' }])
+    expect(project.master.audioInput).toBeNull()
+    project.apply([{ op: 'addNode', id: 'verb', track: 'master', pluginIri: IRI }, { op: 'setMaster', audioInput: 'verb' }])
+    project.apply([{ op: 'moveNodeToTrack', id: 'verb', track: 'a' }])
+    expect(project.master.audioInput).toBeNull()
+  })
+
+  it('survives being copied through a snapshot, which is how the dispatcher tries a changeset', () => {
+    project.apply([{ op: 'setMaster', audioInput: 'verb', gain: 0.8 }])
+    const copy = new Project()
+    copy.apply(changesFor(project.snapshot()))
+    expect(copy.master).toEqual(project.master)
+    expect(copy.node('verb').track).toBe('master')
   })
 })
 

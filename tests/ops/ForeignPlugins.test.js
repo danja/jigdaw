@@ -44,6 +44,8 @@ function stubEngine () {
     clearSends () {},
     addSend () {},
     setTrackOutput () {},
+    setTrackArrival () {},
+    setMasterArrival () {},
     setMaster () {},
     link () {},
     clampParameter (_id, _symbol, value) { return value },

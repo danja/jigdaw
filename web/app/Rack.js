@@ -16,9 +16,12 @@ import { preserveFocus } from '../../src/ui/Focus.js'
 import { isMidi, carriesNotes } from '../../src/engine/EventRouter.js'
 import { compact } from '../../src/host/Capabilities.js'
 import { describeMidi } from '../../src/ui/MidiText.js'
+import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
 // Where Load puts a plugin: a track id, or NEW_TRACK for a track of its own.
 export const NEW_TRACK = ''
+// The master bus is a place a plugin can go, and its id is the model's (src/model/ArrangementOps.js).
+export const MASTER_TARGET = MASTER_TRACK
 
 /**
  * What a plugin's slot is headed. A node named for its purpose ("Subject")
@@ -111,6 +114,7 @@ export function createRack (ctx) {
     const tracks = ctx.dispatcher?.project.orderedTracks ?? []
     const options = [
       ...tracks.map(track => ({ value: track.id, label: trackLabel(track, made.indexOf(track)) })),
+      { value: MASTER_TARGET, label: 'The master bus' },
       { value: NEW_TRACK, label: 'A new track' }
     ]
     select.replaceChildren(...options.map(({ value, label }) => {
@@ -193,7 +197,8 @@ export function createRack (ctx) {
     ctx.matrix.draw()
     ctx.master.update()
 
-    if (tracks.length === 0) {
+    const masterNodes = nodes.filter(n => n.track === MASTER_TRACK)
+    if (tracks.length === 0 && masterNodes.length === 0) {
       const empty = document.createElement('div')
       empty.className = 'empty'
       empty.textContent = 'Nothing loaded. Search for a plugin, or press Load to add the synth.'
@@ -207,6 +212,11 @@ export function createRack (ctx) {
         nodes: nodes.filter(n => n.track === track.id),
         allNodes: nodes
       }))
+    }
+    // Where the mix of every track goes through, after the tracks that feed it. Drawn only when a plugin is
+    // on it: an empty master has nothing to show but a way to put one there, which Load onto already is.
+    if (masterNodes.length > 0) {
+      rack.append(drawMaster({ tracks, labelOfTrack, labelFor, connections, nodes: masterNodes, allNodes: nodes }))
     }
 
     // Derived from the connections, and the only place in the interface that can
@@ -288,6 +298,11 @@ export function createRack (ctx) {
       header.append(midi)
     }
 
+    // Where audio that arrives at this track goes: its audio clips, a send, a bus output. Only where a plugin
+    // on it takes audio in, for the same reason as the MIDI menu above.
+    const takesAudio = nodes.filter(n => (dispatcher.engineNode(n.id)?.profile?.audioInputs ?? 0) > 0)
+    if (takesAudio.length > 0) header.append(audioInputSelect({ id: track.id, title, nodes: takesAudio, current: track.audioInput, labelFor }))
+
     if (nodes.length === 0) {
       const remove = document.createElement('button')
       remove.type = 'button'
@@ -311,6 +326,12 @@ export function createRack (ctx) {
       return group
     }
 
+    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track })
+    return group
+  }
+
+  /** The plugins of a track or of the master, in order, with a wire between two that are joined. */
+  function drawChain (group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track }) {
     for (const node of nodes) {
       // The wire is drawn only where a connection actually runs between these two
       // in the order they are listed. It used to be drawn unconditionally, which
@@ -327,7 +348,53 @@ export function createRack (ctx) {
       }
       drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track })
     }
+  }
+
+  /**
+   * The master bus: a header, then its plugins. Its controls are the ones that make sense for it, which
+   * is only where the mix arrives. It has no name to change and cannot be removed.
+   */
+  function drawMaster ({ tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
+    const { dispatcher } = ctx
+    const group = document.createElement('section')
+    group.className = 'track master'
+    group.id = `track-group-${MASTER_TRACK}`
+    group.setAttribute('aria-label', 'Master bus')
+    const header = document.createElement('div')
+    header.className = 'track-header'
+    const heading = document.createElement('h3')
+    heading.textContent = 'Master bus'
+    header.append(heading)
+    const takesAudio = nodes.filter(n => (dispatcher.engineNode(n.id)?.profile?.audioInputs ?? 0) > 0)
+    if (takesAudio.length > 0) {
+      header.append(audioInputSelect({ id: MASTER_TRACK, title: 'the master bus', nodes: takesAudio, current: dispatcher.project.master.audioInput, labelFor }))
+    }
+    group.append(header)
+    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track: { id: MASTER_TRACK } })
     return group
+  }
+
+  /** The menu naming the plugin audio arriving at a track, or at the master, goes into. */
+  function audioInputSelect ({ id, title, nodes, current, labelFor }) {
+    const { dispatcher } = ctx
+    const select = document.createElement('select')
+    select.id = `audio-input-${id}`
+    select.setAttribute('aria-label', `Where audio arriving at ${title} goes: its clips, sends and buses`)
+    const where = id === MASTER_TRACK ? 'The mix arrives at' : 'Audio arrives at'
+    for (const [value, text] of [['', 'Audio goes to the fader'], ...nodes.map(n => [n.id, `${where} ${labelFor(n.id)}`])]) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = text
+      select.append(option)
+    }
+    select.value = current ?? ''
+    select.addEventListener('change', () => {
+      const audioInput = select.value || null
+      const change = id === MASTER_TRACK ? { op: 'setMaster', audioInput } : { op: 'setTrack', id, audioInput }
+      const result = dispatcher.apply([change])
+      if (!result.ok) log(result.message, 'error')
+    })
+    return select
   }
 
   /** One plugin on a track: its header, its ports, its panel and its keyboard. */
@@ -435,22 +502,24 @@ export function createRack (ctx) {
 
     // Moving between tracks by keyboard, the equivalent of dragging a plugin
     // onto another track. Only offered when there is another track to go to.
-    if (tracks.length > 1) {
+    {
       const move = document.createElement('select')
       move.className = 'move-track'
       move.id = `track-of-${node.id}`
       move.setAttribute('aria-label', `Track for ${labelFor(node.id)}`)
-      for (const t of tracks) {
+      // The master bus is a place to go as well as a track, so there is always somewhere else to move to.
+      const places = [...tracks.map(t => [t.id, labelOfTrack(t)]), [MASTER_TRACK, 'Master bus']]
+      for (const [value, text] of places) {
         const option = document.createElement('option')
-        option.value = t.id
-        option.textContent = labelOfTrack(t)
+        option.value = value
+        option.textContent = text
         move.append(option)
       }
       move.value = node.track
       move.addEventListener('change', () => {
         const result = dispatcher.apply([{ op: 'moveNodeToTrack', id: node.id, track: move.value }])
         if (!result.ok) log(result.message, 'error')
-        else log(`moved ${labelFor(node.id)} to ${labelOfTrack(dispatcher.project.track(move.value))}`)
+        else log(`moved ${labelFor(node.id)} to ${places.find(([value]) => value === move.value)[1]}`)
       })
       header.append(move)
     }

@@ -14,6 +14,7 @@ import { createSendsPanel } from '../../src/ui/SendsPanel.js'
 import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
 import { describeMidi } from '../../src/ui/MidiText.js'
+import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
 export function createDockPanel (ctx) {
   const { document, window, log } = ctx
@@ -161,7 +162,7 @@ export function createDockPanel (ctx) {
     const node = selection.kind === 'node' && only ? project?.node(only) : null
     if (node) {
       const labelOf = id => { const n = project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id }
-      const tl = id => trackLabel(project.track(id))
+      const tl = id => (id === MASTER_TRACK ? 'Master bus' : trackLabel(project.track(id)))
       nodeTrack = node.track
       nodeView.show({
         node,

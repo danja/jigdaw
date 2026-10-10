@@ -155,7 +155,7 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 
 | Tool | Arguments | Returns |
 |---|---|---|
-| `master_set` | `gain?`, `pan?`, `muted?` | |
+| `master_set` | `gain?`, `pan?`, `muted?`, `audioInput?` | |
 | `send_add` | `from`, `to`, `level?`, `tap?` | Send id |
 | `send_set` | `sendId`, `level?`, `tap?` | |
 | `send_remove` | `sendId` | |
@@ -169,6 +169,10 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 Each is one Op through the dispatcher, so each is one undo step and takes `expectedRevision`. A send is
 `pre` or `post` fader and its level is linear. `track_set` with `output` sends a track to another track
 instead of the master, which makes the target a bus; a cycle is refused, for sends and outputs alike.
+What a send or a bus output delivers arrives at the target track's `audioInput` node when it has one, so a
+plugin on a bus processes it, and at the target's fader when it has not. The master is the same: plugins go
+on it with `plugin_load` or `node_move_to_track` and the track `master`, and `master_set` with `audioInput`
+names the one the mix of every track arrives at. A node with no audio input is refused as an `audioInput`.
 
 ### Clips
 
@@ -199,8 +203,8 @@ A track is a mixer strip and a line of the arrangement, per
 [project-format.md](project-format.md) "Tracks". Every plugin is on exactly one, and whatever
 a track's chain produces reaches its fader before the master. `track_remove` is refused while
 plugins are on the track unless `moveNodesTo` says where they go, so removing a track never
-removes plugins as a side effect. `track_set` names the node a track's MIDI clips or audio
-clips play into, and refuses one that is not on that track.
+removes plugins as a side effect. `track_set` names the node a track's MIDI clips play into, and the node its audio clips, sends and bus
+outputs arrive at, and refuses one that is not on that track.
 
 ### Parameters and transport
 

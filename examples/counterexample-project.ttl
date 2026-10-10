@@ -15,7 +15,7 @@
     a jig:Project ;
     rdfs:label "Broken" ;
     # No jig:revision, so no changeset can be checked against it.
-    jig:node <#a> , <#b> ;
+    jig:node <#a> , <#b> , <#on-a-node> ;
     jig:track <#track> ;
     jig:connection <#c> ;
     jig:master <#master> , <#master2> ;
@@ -37,6 +37,13 @@
     jig:plugin <https://example.org/plugins/pulse/> .
 
 <#other-track> a jig:Track .
+
+# On a node, which is neither a track nor the master.
+<#on-a-node>
+    a jig:Node ;
+    jig:onTrack <#a> ;
+    jig:plugin <https://example.org/plugins/pulse/> .
+
 
 <#track>
     a jig:Track ;
@@ -113,8 +120,8 @@
 
 # The track view. Each is a violation of one constraint above.
 
-# A second master, gain below zero and pan beyond the edge.
-<#master> a jig:Master ; jig:gain -1.0 ; jig:pan 2.0 .
+# A second master, gain below zero and pan beyond the edge, and the mix arriving at two nodes at once.
+<#master> a jig:Master ; jig:gain -1.0 ; jig:pan 2.0 ; jig:audioInput <#a> , <#b> .
 <#master2> a jig:Master .
 
 # A send back to its own track, at a negative level, tapped nowhere in particular.

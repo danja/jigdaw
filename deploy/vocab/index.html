@@ -200,9 +200,11 @@
         wavetable. Listed so a host can prefetch, cache and integrity-check it, and so an
         offline or archived copy of a plugin is known to be complete.</dd>
   <dt id="audioInput"><code>jig:audioInput</code> <span class="label">audio input</span></dt>
-  <dd>The node a track's audio clips play into. Absent means the clips go
-        straight to the track's fader, which is the case for a track that only plays
-        back recorded audio. The node MUST be on this track.</dd>
+  <dd>The node a track's audio arrives at: its audio clips, and what another
+        track sends it or feeds it as a bus. Absent means all of that goes straight to the
+        track's fader, which is the case for a track that only plays back recorded audio.
+        The node MUST be on this track and MUST take an audio input. On a jig:Master it is
+        the node the mix of every track arrives at, and MUST be on the master.</dd>
   <dt id="automationRate"><code>jig:automationRate</code> <span class="label">automation rate</span></dt>
   <dd>Whether the parameter is sampled once per render quantum or once per
         frame, which is the AudioParamDescriptor automationRate. LV2 has no equivalent
@@ -259,9 +261,11 @@
   <dt id="note"><code>jig:note</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="onTrack"><code>jig:onTrack</code> <span class="label">on track</span></dt>
-  <dd>The track a node belongs to. Exactly one. Stated on the node rather
-        than listed on the track, so moving a node between tracks is one triple, and so
-        that nothing about membership is an ordering.</dd>
+  <dd>The track a node belongs to, or the jig:Master when it is a plugin on the
+        master bus. Exactly one. Stated on the node rather than listed on the track, so
+        moving a node between tracks is one triple, and so that nothing about membership is
+        an ordering. It has no rdfs:range, because the range is a jig:Track or a jig:Master
+        and a union is a blank node, which this file does not have; the shape says it.</dd>
   <dt id="output"><code>jig:output</code></dt>
   <dd>The track this track's output goes to instead of the master. Makes the
         target a bus. Absent means the master. Cycles are refused.</dd>

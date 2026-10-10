@@ -30,6 +30,7 @@
         <../plugins/cadence/> ,
         <../plugins/canticle/> ,
         <../plugins/cascade/> ,
+        <../plugins/conductor/> ,
         <../plugins/counterpointer/> ,
         <../plugins/dice/> ,
         <../plugins/drumgen/> ,
@@ -62,6 +63,7 @@
 <../plugins/cadence/> rdfs:label "Cadence" .
 <../plugins/canticle/> rdfs:label "Canticle" .
 <../plugins/cascade/> rdfs:label "Cascade" .
+<../plugins/conductor/> rdfs:label "Conductor" .
 <../plugins/counterpointer/> rdfs:label "Counterpointer" .
 <../plugins/dice/> rdfs:label "Dice" .
 <../plugins/drumgen/> rdfs:label "DrumGen" .

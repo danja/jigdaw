@@ -4,6 +4,7 @@
 // collection, onto the track the Load onto menu names. A foreign plugin is
 // asked about first (contract section 12.4).
 import { outputsOf, inputsOf, compatible } from '../../src/model/Endpoints.js'
+import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
 /**
  * Ask about a foreign plugin. Contract section 12.4.
@@ -137,6 +138,14 @@ export function createLoading (ctx) {
         }])
         if (!chained.ok) log(chained.message, 'error')
       }
+    }
+
+    // The first plugin loaded onto the master that takes audio becomes where the mix arrives, since a master
+    // plugin the mix never reaches would do nothing, and nobody loads one for that. A track is not done the
+    // same way: what arrives at a track is a choice about its clips, sends and buses, made in its header.
+    if (trackId === MASTER_TRACK && d.project.master.audioInput === null && (entry.profile.audioInputs ?? 0) > 0) {
+      const routed = d.apply([{ op: 'setMaster', audioInput: nodeId }])
+      if (!routed.ok) log(routed.message, 'error')
     }
 
     // Nothing here connects anything to the speakers. The dispatcher links every

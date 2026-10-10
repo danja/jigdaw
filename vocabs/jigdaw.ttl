@@ -486,11 +486,13 @@ jig:nodeState a owl:DatatypeProperty ;
 ## them on a node.
 
 jig:onTrack a owl:ObjectProperty ;
-    rdfs:domain jig:Node ; rdfs:range jig:Track ;
+    rdfs:domain jig:Node ;
     rdfs:label "on track" ;
-    rdfs:comment """The track a node belongs to. Exactly one. Stated on the node rather
-        than listed on the track, so moving a node between tracks is one triple, and so
-        that nothing about membership is an ordering.""" .
+    rdfs:comment """The track a node belongs to, or the jig:Master when it is a plugin on the
+        master bus. Exactly one. Stated on the node rather than listed on the track, so
+        moving a node between tracks is one triple, and so that nothing about membership is
+        an ordering. It has no rdfs:range, because the range is a jig:Track or a jig:Master
+        and a union is a blank node, which this file does not have; the shape says it.""" .
 
 jig:bypassed a owl:DatatypeProperty ;
     rdfs:domain jig:Node ; rdfs:range xsd:boolean ;
@@ -511,9 +513,11 @@ jig:midiInput a owl:ObjectProperty ;
 jig:audioInput a owl:ObjectProperty ;
     rdfs:domain jig:Track ; rdfs:range jig:Node ;
     rdfs:label "audio input" ;
-    rdfs:comment """The node a track's audio clips play into. Absent means the clips go
-        straight to the track's fader, which is the case for a track that only plays
-        back recorded audio. The node MUST be on this track.""" .
+    rdfs:comment """The node a track's audio arrives at: its audio clips, and what another
+        track sends it or feeds it as a bus. Absent means all of that goes straight to the
+        track's fader, which is the case for a track that only plays back recorded audio.
+        The node MUST be on this track and MUST take an audio input. On a jig:Master it is
+        the node the mix of every track arrives at, and MUST be on the master.""" .
 
 jig:gain a owl:DatatypeProperty ;
     rdfs:domain jig:Track ; rdfs:range xsd:decimal ;

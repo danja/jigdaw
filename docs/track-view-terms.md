@@ -33,6 +33,12 @@ track. Absent means unity, centred, unmuted, so every existing session opens unc
 one, so the shape says `sh:maxCount 1`. Every track's output reaches the master gain before the
 destination. Automation of it uses the envelope term below with the master as target.
 
+**Built, 2026-10-10: a chain on the master.** A node's `jig:onTrack` may name the `jig:Master` instead of
+a track, and the master has a `jig:audioInput` as a track does. The sum of every track arrives at that node
+and what the chain produces goes through the master's pan and level. The master's id is reserved, so a node's
+track is a track or the master and never both. The same term now also names where audio sent or bused to a
+track arrives, which before went to the fader past any plugin on the track.
+
 ## Sends and returns
 
 **Decision needed:** whether a send is a `jig:Connection` or a new thing.

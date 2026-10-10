@@ -20,6 +20,7 @@
 // because dragging a node on screen must not invalidate a compiled audio graph.
 // `writeEditor` serialises that second graph separately.
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
+import { MASTER_TRACK } from '../model/ArrangementOps.js'
 
 const { jig, trn } = v
 
@@ -129,9 +130,7 @@ export function writeProject (project, { iri, created = null } = {}) {
   if (connections.length > 0) {
     lines.push(`    ${term(jig.connection)} ${connections.map(c => `<#${c.id}>`).join(' , ')} ;`)
   }
-  const master = project.master
-  const masterIsDefault = master.gain === 1 && master.pan === 0 && !master.muted
-  if (!masterIsDefault) lines.push(`    ${term(jig.master)} <#master> ;`)
+  if (masterIsUsed(project)) lines.push(`    ${term(jig.master)} <#master> ;`)
   for (const [property, items] of [
     [jig.send, project.sends], [jig.marker, project.markers],
     [jig.region, project.regions], [jig.envelope, project.envelopes]
@@ -266,13 +265,25 @@ export function writeProject (project, { iri, created = null } = {}) {
 
 const TAP_TERM = { pre: 'PreFader', post: 'PostFader' }
 const CURVE_TERM = { step: 'Step', linear: 'Linear', smooth: 'Smooth' }
+/**
+ * Whether the master is stated at all. A project that does not use it is written without one, so a
+ * session from before the master is unchanged when saved; a plugin on it needs it to be there, since
+ * `jig:onTrack` names it.
+ */
+function masterIsUsed (project) {
+  const master = project.master
+  return master.gain !== 1 || master.pan !== 0 || master.muted || master.audioInput !== null ||
+    project.nodes.some(n => n.track === MASTER_TRACK)
+}
+
 const KIND_TERM = { masterGain: 'MasterGain', masterPan: 'MasterPan', tempo: 'Tempo' }
 
 /** The master, sends, markers, regions and envelopes: docs/track-view-terms.md. */
 function writeArrangement (lines, project) {
   const master = project.master
-  if (master.gain !== 1 || master.pan !== 0 || master.muted) {
+  if (masterIsUsed(project)) {
     const st = [`a ${term(jig.Master)}`]
+    if (master.audioInput) st.push(`${term(jig.audioInput)} <#${master.audioInput}>`)
     if (master.gain !== 1) st.push(`${term(jig.gain)} ${decimal(master.gain)}`)
     if (master.pan !== 0) st.push(`${term(jig.pan)} ${decimal(master.pan)}`)
     if (master.muted) st.push(`${term(jig.muted)} true`)

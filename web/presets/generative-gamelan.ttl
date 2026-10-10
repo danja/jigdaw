@@ -4,13 +4,15 @@
 # encoded as src/host/StateCodec.js encodes a saved session. Relative IRIs and no @base, for the
 # reason web/presets/amp-into-room.ttl gives.
 #
-# Two generators, each through its own Retune into its own Moka, both Mokas into one plate-and-hall
-# reverb on a third track. Sprout plays a Tree grammar and Markov walks a pentatonic style; both are
-# set to the chromatic scale so that each note step is one step of the gamelan scale, which Retune
-# then tunes. The scale is illustrative, not a measured gamelan. The two Mokas feed the reverb by
-# connections rather than by track outputs, because a bus track's input arrives at its fader and
-# not at the plugins on it. That means the two line tracks' faders do not reach the reverb; the
-# reverb track's fader is the level of the whole mix.
+# A Conductor on its own track sends its section notes and CCs (channel 16) to both generators,
+# which are set to follow it: it moves Sprout's probability, velocity and seed and Markov's density,
+# velocity and chaos, and restarts both at intro and coda. Each generator goes through its own
+# Retune into its own Moka, and the two Mokas are summed on the master bus, where one Cascade in
+# Hall mode is the master's audio input, so the mix of the two lines goes through it before the
+# master's level. Each line track's own loudness still sets how much of that line reaches the
+# reverb. Sprout plays a Tree grammar and Markov walks a pentatonic style; both are set to the
+# chromatic scale so that each note step is one step of the gamelan scale, which Retune then
+# tunes. The scale is illustrative, not a measured gamelan.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .
 @prefix trn:  <http://purl.org/stuff/transmissions/> .
@@ -20,21 +22,29 @@
     a jig:Project ;
     rdfs:label "Generative Gamelan" ;
     jig:revision 1 ;
-    jig:track <#track-1> , <#track-2> , <#track-3> ;
-    jig:node <#sprout> , <#tune-1> , <#moka-1> , <#markov> , <#tune-2> , <#moka-2> , <#verb> ;
+    jig:track <#track-1> , <#track-2> , <#track-4> ;
+    jig:master <#master> ;
+    jig:node <#conductor> , <#sprout> , <#tune-1> , <#moka-1> , <#markov> , <#tune-2> , <#moka-2> , <#verb> ;
     jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> ;
     jig:transport <#transport> .
 
 <#track-1> a jig:Track ; rdfs:label "Sprout" .
 <#track-2> a jig:Track ; rdfs:label "Markov" .
-<#track-3> a jig:Track ; rdfs:label "Reverb" .
+<#track-4> a jig:Track ; rdfs:label "Conductor" .
+
+<#conductor>
+    a jig:Node ;
+    jig:onTrack <#track-4> ;
+    rdfs:label "Conductor" ;
+    jig:plugin <../plugins/conductor/> ;
+    jig:setting <#conductor-mode> , <#conductor-min_bars> , <#conductor-max_bars> , <#conductor-base_note> , <#conductor-channel> , <#conductor-seed> .
 
 <#sprout>
     a jig:Node ;
     jig:onTrack <#track-1> ;
     rdfs:label "Sprout" ;
     jig:plugin <../plugins/sprout/> ;
-    jig:setting <#sprout-preset> , <#sprout-generations> , <#sprout-grow_bars> , <#sprout-scale> , <#sprout-root> , <#sprout-step_size> , <#sprout-range> , <#sprout-grid> , <#sprout-gate> , <#sprout-probability> , <#sprout-velocity> , <#sprout-seed> .
+    jig:setting <#sprout-preset> , <#sprout-generations> , <#sprout-grow_bars> , <#sprout-scale> , <#sprout-root> , <#sprout-step_size> , <#sprout-range> , <#sprout-grid> , <#sprout-gate> , <#sprout-probability> , <#sprout-velocity> , <#sprout-seed> , <#sprout-conductor_ch> .
 
 <#tune-1>
     a jig:Node ;
@@ -56,7 +66,7 @@
     jig:onTrack <#track-2> ;
     rdfs:label "Markov" ;
     jig:plugin <../plugins/markov/> ;
-    jig:setting <#markov-root> , <#markov-scale> , <#markov-low> , <#markov-octaves> , <#markov-order> , <#markov-chaos> , <#markov-grid> , <#markov-gate> , <#markov-density> , <#markov-velocity> , <#markov-seed> , <#markov-phrase_bars> , <#markov-style> .
+    jig:setting <#markov-root> , <#markov-scale> , <#markov-low> , <#markov-octaves> , <#markov-order> , <#markov-chaos> , <#markov-grid> , <#markov-gate> , <#markov-density> , <#markov-velocity> , <#markov-seed> , <#markov-phrase_bars> , <#markov-style> , <#markov-conductor_ch> .
 
 <#tune-2>
     a jig:Node ;
@@ -75,11 +85,17 @@
 
 <#verb>
     a jig:Node ;
-    jig:onTrack <#track-3> ;
+    jig:onTrack <#master> ;
     rdfs:label "Hall" ;
     jig:plugin <../plugins/cascade/> ;
     jig:setting <#verb-mode> , <#verb-mix> , <#verb-size> , <#verb-damping> .
 
+<#conductor-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 0.0 .
+<#conductor-min_bars> a jig:ParameterSetting ; jig:symbol "min_bars" ; jig:value 4.0 .
+<#conductor-max_bars> a jig:ParameterSetting ; jig:symbol "max_bars" ; jig:value 4.0 .
+<#conductor-base_note> a jig:ParameterSetting ; jig:symbol "base_note" ; jig:value 24.0 .
+<#conductor-channel> a jig:ParameterSetting ; jig:symbol "channel" ; jig:value 16.0 .
+<#conductor-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 2909.0 .
 <#sprout-preset> a jig:ParameterSetting ; jig:symbol "preset" ; jig:value 6.0 .
 <#sprout-generations> a jig:ParameterSetting ; jig:symbol "generations" ; jig:value 4.0 .
 <#sprout-grow_bars> a jig:ParameterSetting ; jig:symbol "grow_bars" ; jig:value 0.0 .
@@ -92,6 +108,7 @@
 <#sprout-probability> a jig:ParameterSetting ; jig:symbol "probability" ; jig:value 0.85 .
 <#sprout-velocity> a jig:ParameterSetting ; jig:symbol "velocity" ; jig:value 90.0 .
 <#sprout-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 3.0 .
+<#sprout-conductor_ch> a jig:ParameterSetting ; jig:symbol "conductor_ch" ; jig:value 16.0 .
 <#tune-1-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
 <#tune-1-bend_range> a jig:ParameterSetting ; jig:symbol "bend_range" ; jig:value 2.0 .
 <#moka-1-instrument> a jig:ParameterSetting ; jig:symbol "instrument" ; jig:value 4.0 .
@@ -117,6 +134,7 @@
 <#markov-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 5.0 .
 <#markov-phrase_bars> a jig:ParameterSetting ; jig:symbol "phrase_bars" ; jig:value 2.0 .
 <#markov-style> a jig:ParameterSetting ; jig:symbol "style" ; jig:value 3.0 .
+<#markov-conductor_ch> a jig:ParameterSetting ; jig:symbol "conductor_ch" ; jig:value 16.0 .
 <#tune-2-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
 <#tune-2-bend_range> a jig:ParameterSetting ; jig:symbol "bend_range" ; jig:value 2.0 .
 <#moka-2-instrument> a jig:ParameterSetting ; jig:symbol "instrument" ; jig:value 1.0 .
@@ -169,18 +187,20 @@
 <#c5>
     a jig:Connection ;
     jig:from <#c5-from> ; jig:to <#c5-to> ;
-    jig:signalKind trn:Audio .
+    jig:signalKind trn:Midi .
 
-<#c5-from> a jig:Endpoint ; jig:endpointNode <#moka-1> ; jig:portIndex 0 .
-<#c5-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#conductor> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#sprout> ; jig:portIndex 0 .
 
 <#c6>
     a jig:Connection ;
     jig:from <#c6-from> ; jig:to <#c6-to> ;
-    jig:signalKind trn:Audio .
+    jig:signalKind trn:Midi .
 
-<#c6-from> a jig:Endpoint ; jig:endpointNode <#moka-2> ; jig:portIndex 0 .
-<#c6-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#conductor> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#markov> ; jig:portIndex 0 .
+
+<#master> a jig:Master ; jig:audioInput <#verb> .
 
 <#transport>
     a jig:Transport ;

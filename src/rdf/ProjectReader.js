@@ -173,8 +173,10 @@ function readArrangement (dataset, iri, tracks) {
   const masterIri = value(one(dataset, iri, jig.master))
   if (masterIri) {
     const channel = readChannel(dataset, masterIri, 'master')
+    const input = value(one(dataset, masterIri, jig.audioInput))
     changes.push({ op: 'setMaster', ...(channel.gain !== undefined ? { gain: channel.gain } : {}),
-      ...(channel.pan !== undefined ? { pan: channel.pan } : {}), ...(channel.muted !== undefined ? { muted: channel.muted } : {}) })
+      ...(channel.pan !== undefined ? { pan: channel.pan } : {}), ...(channel.muted !== undefined ? { muted: channel.muted } : {}),
+      ...(input !== null ? { audioInput: idOf(input, iri, 'audioInput of the master') } : {}) })
   }
   for (const t of tracks) {
     if (t.output) changes.push({ op: 'setTrack', id: t.id, output: idOf(t.output, iri, `output of track ${t.id}`) })
@@ -330,7 +332,7 @@ export function readProject (dataset) {
     })
   }
 
-  if (tracks.length === 0 && nodes.length > 0) {
+  if (tracks.length === 0 && nodes.length > 0 && nodes.every(n => n.track === null)) {
     // A session from before tracks. Folded, never refused: project-format.md.
     const folded = foldIntoTracks(nodes, connections)
     for (const t of folded.tracks) tracks.push({ ...t, midiInput: null, audioInput: null })

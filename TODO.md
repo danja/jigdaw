@@ -7,6 +7,17 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
+- [ ] **Master chain and track receives, what is left.** From the inbox, 2026-10-10. **Built, 2026-10-10:** a track's `jig:audioInput`
+      is now also where a send or a bus output arrives, so a plugin on a bus is in the path; the master has a chain (nodes with
+      `jig:onTrack <#master>`, `jig:audioInput` on the master for the node the mix arrives at, id `master` reserved), in the model,
+      engine, RDF, shapes with a counterexample, WebMCP (`master_set` `audioInput`, `plugin_load` and `node_move_to_track` with the
+      track `master`), the studio rack (a Master bus section, Load onto, an audio input menu on a track) and the simple page (an
+      "Everything together" card). Generative Gamelan has its reverb on the master. Tested through the real engine in
+      `tests/host/presetRender.test.js` and mutation checked. **Left:** (1) **not seen in a browser**: the studio rack's Master bus
+      section and the simple page's card; (2) MIDI between tracks is a connection between two plugins and works (Conductor drives
+      both Gamelan lines), but there is no track-level MIDI send, so a send-and-return arrangement for MIDI, or one MIDI source
+      feeding every track without a connection each, is open; (3) a track's alignment delay does not count the latency of a bus or
+      the master chain; (4) the master has no meter or clip hold in the mixer view, and the mixer does not draw its chain.
 - [ ] **Finish the Downspout ports: Moka, Sprout, Markov, Retune.** 2026-10-10. All four are plain JavaScript Jigs in `plugins/`
       (no module), ported from `~/github/downspout/plugins/`, each with a host test (`tests/host/{moka,sprout,markov,retune}.test.js`)
       that loads it through the real loader and engine and checks the music, not just that it loads. Retune's scale is a
@@ -328,8 +339,8 @@ as research, not committed.
       settings, not a new format.
 - [ ] **MIDI learn and parameter mapping.** Bind a controller to a parameter explicitly, on top of the declared CC bindings
       Quefrency and 8-Bit 8asterd have. Pairs with "Show a controller's value on the panel" below.
-- [ ] **Input, master and monitoring FX chains.** Where a chain may sit besides a track: an input monitoring chain, a master
-      chain, a monitoring-only chain that never renders. The render path must exclude the monitoring chain by construction.
+- [ ] **Input and monitoring FX chains.** Where a chain may sit besides a track and the master: an input monitoring chain, a
+      monitoring-only chain that never renders. The render path must exclude the monitoring chain by construction.
 - [ ] **Channel strip EQ modal.** A small built-in EQ view per strip using existing plugins, if strips need one at all.
 
 ### Phase E. Render, export and delivery

@@ -66,7 +66,11 @@ starts on the simple page.
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
   connection can be watched: the last 24 events over it, in words.
 - **Sends, buses and the master.** Sends before or after the fader, a track's output to another track, and
-  a master with level, pan and mute, all acting on the sound. A cycle of them is refused.
+  a master with level, pan and mute, all acting on the sound. A cycle of them is refused. Audio sent or bused to
+  a track arrives at the plugin the track names as its audio input, so a reverb on a bus is in the path, and the
+  master has a chain of its own the same way: plugins on the master, and the one the mix of every track arrives
+  at. Generative Gamelan has its reverb there. MIDI between tracks is a connection between two plugins, and is
+  how its Conductor drives both lines.
 - **Sidechain.** A plugin can mark an input as a key, and the matrix names it "Sidechain key". Dynamix
   ducks from a kick on another track.
 - **Latency.** Declared latency is compensated between connected plugins, and tracks are delayed so that
@@ -133,7 +137,7 @@ starts on the simple page.
 
 ## The plugins
 
-**31 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**32 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).
@@ -145,7 +149,7 @@ profile and loadable by its IRI:
   Boost, and three JSFX effects (gain trim, one-pole filter, soft clipper).
 
 **8 presets** are bundled: Chiptune, Acid, Generative through effects, Amp into a room, Fender into the
-Ropery, Fugue, Generative Gamelan, and Through Keyframe. Each is played offline in a test and must put sound on every track that has a sound maker, or on the track its audio is routed to.
+Ropery, Fugue, Generative Gamelan, and Through Keyframe. Each is played offline in a test and must put sound on every track that has a sound maker.
 
 ## Built to be used by everyone
 

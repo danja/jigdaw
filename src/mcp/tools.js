@@ -218,13 +218,13 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       name: 'plugin_load',
       description:
         'Fetch, validate and instantiate a plugin by IRI, adding it to the session. ' +
-        'Without a track it gets a new track of its own, named after it. ' +
+        'Without a track it gets a new track of its own, named after it; the track "master" puts it on the master bus. ' +
         'This is the only tool that reaches the network. Reports which step failed if it does.',
       inputSchema: {
         type: 'object',
         properties: {
           iri: { type: 'string' },
-          track: { type: 'string', description: 'The id of an existing track to add it to' }
+          track: { type: 'string', description: 'The id of an existing track to add it to, or "master" for the master bus' }
         },
         required: ['iri']
       },
@@ -353,14 +353,16 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       name: 'track_set',
       description:
         'Rename a track, name the plugins on it that its MIDI clips and audio clips play into, or send its ' +
-        'output to another track instead of the master (a bus). Pass null to clear an input or an output.',
+        'output to another track instead of the master (a bus). The audio input is also where audio from ' +
+        'another track arrives, a bus output or a send, so a plugin on a bus is in the path; it must take an ' +
+        'audio input. Pass null to clear an input or an output.',
       inputSchema: {
         type: 'object',
         properties: {
           trackId: { type: 'string' },
           label: { type: ['string', 'null'] },
           midiInput: { type: ['string', 'null'], description: 'A node on this track' },
-          audioInput: { type: ['string', 'null'], description: 'A node on this track' },
+          audioInput: { type: ['string', 'null'], description: 'A node on this track, with an audio input. Its audio clips and anything sent or bused to the track arrive at it; without one they go to the fader' },
           output: { type: ['string', 'null'], description: 'The track this one feeds instead of the master, which makes it a bus. null for the master. A cycle is refused.' },
           expectedRevision: { type: 'integer' }
         },
@@ -403,7 +405,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
 
     {
       name: 'node_move_to_track',
-      description: 'Move a plugin to another track. It stops being the old track\'s clip input, if it was one.',
+      description: 'Move a plugin to another track, or to the master bus with the track "master". It stops being the old track\'s clip input, if it was one.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1042,9 +1044,14 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     return [
       one({
         name: 'master_set',
-        description: 'Set the master bus: linear gain (1 is unity), pan (-1 to 1) and mute. Any of them; the rest stay.',
-        properties: { gain: num('Linear, zero or more'), pan: num('-1 to 1'), muted: { type: 'boolean' } },
-        op: 'setMaster', returns: 'none', pick: keep(['gain', 'pan', 'muted'])
+        description: 'Set the master bus: linear gain (1 is unity), pan (-1 to 1), mute, and the plugin on the master ' +
+          'that the mix of every track arrives at (audioInput, null for the fader). Any of them; the rest stay. ' +
+          'Plugins go on the master with plugin_load or node_move_to_track and the track "master".',
+        properties: {
+          gain: num('Linear, zero or more'), pan: num('-1 to 1'), muted: { type: 'boolean' },
+          audioInput: { type: ['string', 'null'], description: 'A node on the master, with an audio input' }
+        },
+        op: 'setMaster', returns: 'none', pick: keep(['gain', 'pan', 'muted', 'audioInput'])
       }),
       one({
         name: 'send_add',

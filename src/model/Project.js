@@ -19,11 +19,11 @@
 import { EditorState } from './EditorState.js'
 import { ScriptState } from './ScriptState.js'
 import {
-  ARRANGEMENT_OPERATIONS, emptyArrangement, cloneArrangement, checkTrackOutput,
+  ARRANGEMENT_OPERATIONS, MASTER_TRACK, emptyArrangement, cloneArrangement, checkTrackOutput,
   dropForTrack, dropForNode, checkSignaturePoints, arrangementChanges, arrangementReconcile
 } from './ArrangementOps.js'
 
-export { arrangementReconcile }
+export { arrangementReconcile, MASTER_TRACK }
 
 export class RevisionConflict extends Error {
   constructor (expected, actual) {
@@ -220,12 +220,19 @@ function releaseInputs (state, nodeId) {
     if (track.midiInput === nodeId) track.midiInput = null
     if (track.audioInput === nodeId) track.audioInput = null
   }
+  if (state.master.audioInput === nodeId) state.master = { ...state.master, audioInput: null }
+}
+
+/** A node is on a track, or on the master: the two places its sound can go. */
+function checkPlace (state, track) {
+  if (track !== MASTER_TRACK && !state.tracks.has(track)) throw new Error(`no such track: ${track}`)
 }
 
 const OPERATIONS = {
   ...ARRANGEMENT_OPERATIONS,
   addTrack (state, change, counters) {
     const id = change.id ?? `track-${++counters.track}`
+    if (id === MASTER_TRACK) throw new Error(`${MASTER_TRACK} is the master's id and cannot be a track's`)
     if (state.tracks.has(id)) throw new Error(`track already exists: ${id}`)
     noteExplicitId(counters, 'track', 'track', id)
     // Inputs are set with setTrack once the nodes exist, never here: a new
@@ -302,7 +309,7 @@ const OPERATIONS = {
   moveNodeToTrack (state, change) {
     const node = state.nodes.get(change.id)
     if (!node) throw new Error(`no such node: ${change.id}`)
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`)
+    checkPlace(state, change.track)
     if (node.track === change.track) return change.id
     releaseInputs(state, change.id)
     node.track = change.track
@@ -398,7 +405,7 @@ const OPERATIONS = {
     // project-format.md: every node is on exactly one track, which is where
     // its sound goes. A node on none would be heard by nobody.
     if (!change.track) throw new Error('needs a track')
-    if (!state.tracks.has(change.track)) throw new Error(`no such track: ${change.track}`)
+    checkPlace(state, change.track)
     const id = change.id ?? `node-${++counters.node}`
     if (state.nodes.has(id)) throw new Error(`node already exists: ${id}`)
     noteExplicitId(counters, 'node', 'node', id)

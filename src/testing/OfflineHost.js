@@ -122,6 +122,9 @@ export class OfflineWorkletNode {
     this.context = context
     this.name = name
     this.options = options
+    // As a real AudioWorkletNode reports them: the engine reads both to decide what can be connected to
+    // what, and a node with no input cannot be the target of one.
+    this.numberOfInputs = options.numberOfInputs ?? 1
     this.numberOfOutputs = options.numberOfOutputs ?? 1
     this.channels = (options.outputChannelCount ?? [2])[0]
 

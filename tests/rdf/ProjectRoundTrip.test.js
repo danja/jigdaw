@@ -31,6 +31,8 @@ function builtProject () {
     { op: 'addTrack', id: 'track-10', label: 'Room' },
     { op: 'addNode', id: 'pad', track: 'track-1', pluginIri: 'https://example.org/plugins/pulse/', label: 'Pad' },
     { op: 'addNode', id: 'verb', track: 'track-10', pluginIri: 'https://example.org/plugins/cascade/', label: 'Verb' },
+    // A plugin on the master, where the mix of every track arrives.
+    { op: 'addNode', id: 'glue', track: 'master', pluginIri: 'https://example.org/plugins/dynamix/', label: 'Glue' },
     { op: 'setTrack', id: 'track-1', midiInput: 'pad' },
     { op: 'setTrack', id: 'track-10', audioInput: 'verb' },
     { op: 'setSetting', node: 'pad', symbol: 'gain', value: 0.62 },
@@ -79,7 +81,7 @@ function builtProject () {
       signaturePoints: [{ atBeat: 20, beatsPerBar: 3, beatUnit: 4 }, { atBeat: 12, beatsPerBar: 4, beatUnit: 4 }]
     },
     // The track view: docs/track-view-terms.md.
-    { op: 'setMaster', gain: 0.9, pan: -0.25, muted: false },
+    { op: 'setMaster', gain: 0.9, pan: -0.25, muted: false, audioInput: 'glue' },
     { op: 'setTrack', id: 'track-1', output: 'track-10' },
     { op: 'addSend', id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
     { op: 'addMarker', id: 'marker-1', atBeat: 8, label: 'Chorus' },
@@ -171,7 +173,8 @@ describe('a project survives being written and read back', () => {
     const { project: reopened } = await reopen(writeProject(original, { iri: IRI }))
     const a = shapeOf(original)
     const b = shapeOf(reopened)
-    expect(b.master).toEqual({ gain: 0.9, pan: -0.25, muted: false })
+    expect(b.master).toEqual({ gain: 0.9, pan: -0.25, muted: false, audioInput: 'glue' })
+    expect(reopened.node('glue').track).toBe('master')
     expect(b.sends).toEqual([{ id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' }])
     expect(reopened.track('track-1').output).toBe('track-10')
     expect(b.markers).toEqual(a.markers)
@@ -182,6 +185,18 @@ describe('a project survives being written and read back', () => {
     expect(b.envelopes.find(e => e.id === 'envelope-3').points).toEqual([])
     expect(b.transport.signaturePoints).toEqual([{ atBeat: 12, beatsPerBar: 4, beatUnit: 4 }, { atBeat: 20, beatsPerBar: 3, beatUnit: 4 }])
     expect(reopened.nextId('send')).toBe(original.nextId('send'))
+  })
+
+  it('writes the master when only a plugin is on it, and reads the plugin back on the master', async () => {
+    const project = new Project()
+    project.apply([{ op: 'addNode', id: 'glue', track: 'master', pluginIri: 'https://example.org/plugins/dynamix/' }])
+    const turtle = writeProject(project, { iri: IRI })
+    expect(turtle).toMatch(/<#master> a jig:Master/)
+    expect(turtle).toContain('jig:onTrack <#master>')
+    const { project: reopened } = await reopen(turtle)
+    expect(reopened.node('glue').track).toBe('master')
+    expect(reopened.tracks).toEqual([])
+    expect(reopened.master.audioInput).toBeNull()
   })
 
   it('writes nothing for a default master and no sends, so an old session is unchanged', () => {
@@ -232,6 +247,7 @@ describe('a project survives being written and read back', () => {
     const { project } = await reopen(writeProject(builtProject(), { iri: IRI }))
     expect(project.nodes.map(n => n.pluginIri).sort()).toEqual([
       'https://example.org/plugins/cascade/',
+      'https://example.org/plugins/dynamix/',
       'https://example.org/plugins/pulse/'
     ])
   })

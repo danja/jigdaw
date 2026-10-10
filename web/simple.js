@@ -24,6 +24,7 @@ import { createTabs } from '../src/ui/Tabs.js'
 import { createTunePicker } from '../src/ui/TunePicker.js'
 import { listPresets, fetchPreset } from '../src/ui/Presets.js'
 import { inSignalOrder } from '../src/ops/OpenProject.js'
+import { MASTER_TRACK } from '../src/model/ArrangementOps.js'
 
 const $ = id => document.getElementById(id)
 
@@ -118,12 +119,17 @@ function syncPanels () {
 }
 
 const cards = createTrackCards(document, {
+  // The master is a card of its own when something is on it, and its level and switch are the master's.
   onSwitch: (trackId, on) => {
-    const result = ctx.dispatcher.setTrackChannel(trackId, { muted: !on })
+    const result = trackId === MASTER_TRACK
+      ? ctx.dispatcher.apply([{ op: 'setMaster', muted: !on }])
+      : ctx.dispatcher.setTrackChannel(trackId, { muted: !on })
     if (!result.ok) log(result.message, 'error')
   },
   onLevel: (trackId, gain) => {
-    const result = ctx.dispatcher.setTrackChannel(trackId, { gain })
+    const result = trackId === MASTER_TRACK
+      ? ctx.dispatcher.apply([{ op: 'setMaster', gain }])
+      : ctx.dispatcher.setTrackChannel(trackId, { gain })
     if (!result.ok) log(result.message, 'error')
   },
   onOpen: trackId => openRack(trackId)
@@ -147,12 +153,24 @@ function pluginsOf (trackId) {
   })
 }
 
+/** What the master is called here: it is what everything sounds through together. */
+const MASTER_LABEL = 'Everything together'
+
+/** Whether a rack can be shown for this id: a track, or the master when something is on it. */
+function hasRack (trackId) {
+  const { project } = ctx.dispatcher
+  return trackId === MASTER_TRACK ? project.nodes.some(n => n.track === MASTER_TRACK) : Boolean(project.track(trackId))
+}
+
 function openRack (trackId, { push = true } = {}) {
   const d = ctx.dispatcher
-  const track = d?.project.track(trackId)
-  if (!track) return
+  if (!d || !hasRack(trackId)) return
+  const track = d.project.track(trackId)
   rackTrack = trackId
-  rack.show({ label: track.label ?? `Track ${d.project.tracks.indexOf(track) + 1}`, plugins: pluginsOf(trackId) })
+  rack.show({
+    label: track ? (track.label ?? `Track ${d.project.tracks.indexOf(track) + 1}`) : MASTER_LABEL,
+    plugins: pluginsOf(trackId)
+  })
   $('instruments').hidden = true
   if (push) history.pushState({ rack: trackId }, '', '#sound')
   syncPanels()
@@ -182,15 +200,20 @@ redraw = () => {
   if (!d) return
   const { project } = d
   const made = project.tracks
-  cards.draw(project.orderedTracks.map(track => ({
-    id: track.id,
-    label: track.label ?? `Track ${made.indexOf(track) + 1}`,
-    on: !track.channel.muted,
-    level: track.channel.gain
-  })))
+  cards.draw([
+    ...project.orderedTracks.map(track => ({
+      id: track.id,
+      label: track.label ?? `Track ${made.indexOf(track) + 1}`,
+      on: !track.channel.muted,
+      level: track.channel.gain
+    })),
+    // Last, because the tracks are what it is the sum of. Left out when nothing is on it, as then it has no
+    // sound of its own to change and the tracks' own loudness is all there is.
+    ...(hasRack(MASTER_TRACK) ? [{ id: MASTER_TRACK, label: MASTER_LABEL, on: !project.master.muted, level: project.master.gain }] : [])
+  ])
   // The rack follows the piece: its plugins redrawn if they changed, and closed if its track has gone.
   if (rackTrack !== null) {
-    if (project.track(rackTrack)) rack.update(pluginsOf(rackTrack))
+    if (hasRack(rackTrack)) rack.update(pluginsOf(rackTrack))
     else closeRack()
   }
   syncPanels()

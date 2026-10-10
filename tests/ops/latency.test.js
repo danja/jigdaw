@@ -69,6 +69,8 @@ function fakeEngine () {
     clearSends () {},
     addSend () {},
     setTrackOutput () {},
+    setTrackArrival () {},
+    setMasterArrival () {},
     setMaster () {},
     link (from, to, options = {}) { this.links.push({ from, to, ...options }) },
     defaultParameter () { return 0 },

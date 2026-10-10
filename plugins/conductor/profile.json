@@ -1,0 +1,213 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/conductor/",
+  "label": "Conductor",
+  "comment": "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as a fixed form or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "conductor",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [],
+  "produces": [
+    "trn:Midi",
+    "trn:ControlMidi"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw differs, so a seed gives a different form from the VST3's.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "MIT",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "stateless": true,
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "conductor-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "mode",
+      "name": "Form",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "Fixed form",
+          "value": 0
+        },
+        {
+          "label": "Weighted random",
+          "value": 1
+        }
+      ],
+      "paramIndex": 0
+    },
+    {
+      "symbol": "min_bars",
+      "name": "Minimum bars",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 32,
+      "paramIndex": 1
+    },
+    {
+      "symbol": "max_bars",
+      "name": "Maximum bars",
+      "default": 12,
+      "minimum": 1,
+      "maximum": 64,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "intro_weight",
+      "name": "Intro weight",
+      "default": 0.35,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "develop_weight",
+      "name": "Development weight",
+      "default": 0.9,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "break_weight",
+      "name": "Break weight",
+      "default": 0.4,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "reprise_weight",
+      "name": "Reprise weight",
+      "default": 0.65,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "coda_weight",
+      "name": "Coda weight",
+      "default": 0.2,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "base_note",
+      "name": "Section base note",
+      "default": 24,
+      "minimum": 0,
+      "maximum": 119,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "channel",
+      "name": "MIDI channel",
+      "default": 16,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "scene_cc",
+      "name": "Scene CC",
+      "default": 20,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "density_cc",
+      "name": "Density CC",
+      "default": 21,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "energy_cc",
+      "name": "Energy CC",
+      "default": 22,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "mutation_cc",
+      "name": "Mutation CC",
+      "default": 23,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 13
+    },
+    {
+      "symbol": "reset_cc",
+      "name": "Reset CC",
+      "default": 24,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 2909,
+      "minimum": 1,
+      "maximum": 65535,
+      "paramIndex": 15
+    },
+    {
+      "symbol": "jump_to",
+      "name": "Jump to section at next bar line",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "None",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "paramIndex": 16
+    }
+  ]
+}

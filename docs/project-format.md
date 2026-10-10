@@ -115,7 +115,13 @@ optional and both MUST name a node on that track. A track with no `jig:midiInput
 MIDI clips into nothing, and a host SHOULD say so where it draws them; the clips are kept,
 because removing the instrument they were written for must not delete the music. A track with
 no `jig:audioInput` plays its audio clips straight into its fader,
-which is the ordinary case for a track of recorded audio. Inferring either from the chain
+which is the ordinary case for a track of recorded audio.
+
+**The same node is where audio from other tracks arrives.** A send into a track, and the output of a
+track made a bus, deliver to the track's `jig:audioInput` when it has one, so a plugin on a bus processes what
+is sent to it, and to the track's fader when it has not. The node MUST take an audio input: one that does not
+is refused as a `jig:audioInput`, as a connection into a port that is not there is. What the node produces
+goes to the track's fader like the end of any other chain. Inferring either from the chain
 would mean guessing which of two instruments, or which side of a MIDI effect, the notes were
 meant for, and a wrong guess is silent.
 
@@ -208,7 +214,7 @@ unchanged when saved.
 
 | Subject | Terms |
 |---|---|
-| `jig:Master`, one, linked by `jig:master` | `jig:gain`, `jig:pan`, `jig:muted`; absent means unity, centred, heard |
+| `jig:Master`, one, linked by `jig:master` | `jig:gain`, `jig:pan`, `jig:muted`; absent means unity, centred, heard. `jig:audioInput`, the node on the master the mix of every track arrives at; absent means the mix goes straight to the master's fader |
 | `jig:Send`, linked by `jig:send` | `jig:sendFrom`, `jig:sendTo` (tracks, not the same), `jig:level` (linear, at least 0), `jig:tap` (`jig:PreFader` or `jig:PostFader`) |
 | a track | `jig:output`, the track it feeds instead of the master, which makes that track a bus |
 | `jig:Marker`, linked by `jig:marker` | `jig:atBeat`, `rdfs:label` |
@@ -244,6 +250,14 @@ Three rules the shapes cannot say, and the model enforces:
 
 Removing a track removes the sends that touch it and clears outputs that name it. Removing a
 node removes its envelopes.
+
+**A chain on the master.** A node's `jig:onTrack` may name the `jig:Master`, as `<#master>`, and then it is a plugin
+on the master bus: the host writes `<#master> a jig:Master` whenever a node is on it, even when its level, pan
+and mute are the defaults. `master` is therefore a reserved id and no track may take it. The chain is found from
+the connections like a track's, its sinks reach the master's fader, and `jig:audioInput` on the master names
+the node the sum of every track arrives at. Removing that node, or moving it off the master, clears the input.
+The master's chain is not counted in any track's latency, and a track's alignment delay does not count the latency of
+a chain the track feeds.
 
 Status of behaviour: the host reads, writes, edits, undoes and validates all of this. Sends,
 bus outputs and the master reach the audio: a send is a gain into another track's arrival

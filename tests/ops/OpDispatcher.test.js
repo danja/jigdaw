@@ -27,7 +27,7 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
         id,
         iri,
         // numberOfOutputs is what decides whether a sink reaches the speakers.
-        node: { numberOfOutputs: outputs, parameters: new Map([['mix', {}]]) },
+        node: { numberOfOutputs: outputs, numberOfInputs: 1, parameters: new Map([['mix', {}]]) },
         // The port counts, because the dispatcher now refuses an edge to a
         // port that is not there. They were missing and every test here
         // connected audio through a plugin that declared none, which is the
@@ -79,6 +79,19 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
       this.outputs.set(id, to)
     },
     setMaster (m) { this.master = { ...m } },
+    // Where audio arriving from another track goes, refusing what the real engine refuses: a strip that is
+    // not there, and a node with no audio input.
+    arrivals: new Map(),
+    masterArrival: null,
+    setTrackArrival (id, nodeId) {
+      if (!this.tracks.has(id)) throw new Error(`no such track strip: ${id}`)
+      if (nodeId !== null && !(this.get(nodeId).node.numberOfInputs > 0)) throw new Error(`node ${nodeId} has no audio input, so nothing can arrive at it`)
+      this.arrivals.set(id, nodeId)
+    },
+    setMasterArrival (nodeId) {
+      if (nodeId !== null && !(this.get(nodeId).node.numberOfInputs > 0)) throw new Error(`node ${nodeId} has no audio input, so nothing can arrive at it`)
+      this.masterArrival = nodeId
+    },
     // Track delays, refusing what the real engine refuses: a strip that is not there.
     delays: new Map(),
     setTrackDelay (id, frames) {
@@ -86,7 +99,7 @@ function fakeEngine ({ latency = 0, failWith = null, outputs = 1 } = {}) {
       this.delays.set(id, frames)
     },
     linkToTrack (from, track) {
-      if (!this.tracks.has(track)) throw new Error(`no such track strip: ${track}`)
+      if (track !== 'master' && !this.tracks.has(track)) throw new Error(`no such track strip: ${track}`)
       this.links.push({ from, to: 'track', track })
     },
     channels: new Map(),
@@ -133,6 +146,8 @@ const trackStrips = () => {
     clearSends: () => {},
     addSend: () => {},
     setTrackOutput: () => {},
+    setTrackArrival: () => {},
+    setMasterArrival: () => {},
     setMaster: () => {}
   }
 }
@@ -430,10 +445,79 @@ describe('sends, bus outputs and the master reach the engine', () => {
     const d = new OpDispatcher({ engine })
     d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
     d.apply([{ op: 'setMaster', gain: 0.5, pan: -0.25, muted: true }, { op: 'addSend', id: 's1', from: 'a', to: 'b' }])
-    expect(engine.master).toEqual({ gain: 0.5, pan: -0.25, muted: true })
+    expect(engine.master).toEqual({ gain: 0.5, pan: -0.25, muted: true, audioInput: null })
     await d.undo()
     expect(engine.sends).toEqual([])
-    expect(engine.master).toEqual({ gain: 1, pan: 0, muted: false })
+    expect(engine.master).toEqual({ gain: 1, pan: 0, muted: false, audioInput: null })
+  })
+})
+
+describe('audio arriving at a track or the master reaches the engine', () => {
+  it('sends a bus to the plugin the bus names as its audio input, and back to the fader when it is cleared', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'bus' }])
+    const { nodeId } = await d.addPlugin(IRI, { track: 'bus' })
+    expect(engine.arrivals.get('bus')).toBeNull()
+    d.apply([{ op: 'setTrack', id: 'a', output: 'bus' }, { op: 'setTrack', id: 'bus', audioInput: nodeId }])
+    expect(engine.arrivals.get('bus')).toBe('engine-1')
+    d.apply([{ op: 'setTrack', id: 'bus', audioInput: null }])
+    expect(engine.arrivals.get('bus')).toBeNull()
+  })
+
+  it('follows the audio input when the plugin is removed, so nothing is left wired to a plugin that is gone', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'bus' }])
+    const { nodeId } = await d.addPlugin(IRI, { track: 'bus' })
+    d.apply([{ op: 'setTrack', id: 'bus', audioInput: nodeId }])
+    d.apply([{ op: 'removeNode', id: nodeId }])
+    expect(engine.arrivals.get('bus')).toBeNull()
+  })
+
+  it('refuses an audio input that has no audio input of its own', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'bus' }])
+    const { nodeId } = await d.addPlugin(IRI, { track: 'bus' })
+    d.engineNode(nodeId).profile.audioInputs = 0
+    const refused = d.apply([{ op: 'setTrack', id: 'bus', audioInput: nodeId }])
+    expect(refused.ok).toBe(false)
+    expect(refused.message).toMatch(/no audio input/)
+    expect(d.project.track('bus').audioInput).toBeNull()
+    d.apply([{ op: 'moveNodeToTrack', id: nodeId, track: 'master' }])
+    expect(d.apply([{ op: 'setMaster', audioInput: nodeId }]).message).toMatch(/no audio input/)
+  })
+
+  it('puts a plugin on the master, links its sound to the master\'s fader, and sends the mix through its input', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'a' }])
+    const { nodeId, trackId } = await d.addPlugin(IRI, { track: 'master' })
+    expect(trackId).toBe('master')
+    expect(d.project.node(nodeId).track).toBe('master')
+    // A sink on the master reaches the master's fader, as a sink on a track reaches the track's.
+    expect(engine.links.filter(l => l.to === 'track' && l.track === 'master').map(l => l.from)).toEqual(['engine-1'])
+    d.apply([{ op: 'setMaster', audioInput: nodeId }])
+    expect(engine.masterArrival).toBe('engine-1')
+    d.apply([{ op: 'setMaster', audioInput: null }])
+    expect(engine.masterArrival).toBeNull()
+  })
+
+  it('undoes and redoes a chain on the master, input and all', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    const { nodeId } = await d.addPlugin(IRI, { track: 'master' })
+    d.apply([{ op: 'setMaster', audioInput: nodeId }])
+    await d.undo()
+    expect(d.project.master.audioInput).toBeNull()
+    expect(engine.masterArrival).toBeNull()
+    await d.undo()
+    expect(d.project.nodes).toEqual([])
+    await d.redo()
+    await d.redo()
+    expect(d.project.master.audioInput).toBe(nodeId)
+    expect(d.project.node(nodeId).track).toBe('master')
   })
 })
 
