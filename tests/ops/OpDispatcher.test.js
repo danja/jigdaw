@@ -521,6 +521,67 @@ describe('audio arriving at a track or the master reaches the engine', () => {
   })
 })
 
+describe('a MIDI send between tracks reaches the router', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+
+  /** A track `src` with a MIDI generator and a track `dst` whose MIDI clips play into an instrument. */
+  async function setup () {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'src' }, { op: 'addTrack', id: 'dst' }])
+    const gen = await d.addPlugin(IRI, { track: 'src' })
+    const inst = await d.addPlugin(IRI, { track: 'dst' })
+    d.engineNode(gen.nodeId).profile.produces = [MIDI]
+    d.engineNode(inst.nodeId).profile.accepts = [MIDI]
+    return { engine, d, gen: gen.nodeId, inst: inst.nodeId }
+  }
+  const routes = d => d.router.routes
+
+  it('routes the MIDI end of the source track to the node the target plays its clips into', async () => {
+    const { d, gen, inst } = await setup()
+    d.apply([{ op: 'setTrack', id: 'dst', midiInput: inst }, { op: 'addSend', id: 's1', from: 'src', to: 'dst', kind: 'midi' }])
+    expect(routes(d)).toEqual([{ from: 'engine-1', to: 'engine-2' }])
+    // Taking the send away takes the route with it.
+    d.apply([{ op: 'removeSend', id: 's1' }])
+    expect(routes(d)).toEqual([])
+    void gen
+  })
+
+  it('routes to nothing when the target has no MIDI input, as its clips would play into nothing', async () => {
+    const { d } = await setup()
+    d.apply([{ op: 'addSend', id: 's1', from: 'src', to: 'dst', kind: 'midi' }])
+    expect(routes(d)).toEqual([])
+  })
+
+  it('leaves out a node that already passes its MIDI on by a connection, and sees through one that is bypassed', async () => {
+    const { d, gen, inst } = await setup()
+    const second = await d.addPlugin(IRI, { track: 'src' })
+    d.engineNode(second.nodeId).profile.produces = [MIDI]
+    d.engineNode(second.nodeId).profile.accepts = [MIDI]
+    d.apply([
+      { op: 'setTrack', id: 'dst', midiInput: inst },
+      { op: 'addConnection', from: { node: gen, portIndex: 0 }, to: { node: second.nodeId, portIndex: 0 }, signalKind: MIDI },
+      { op: 'addSend', id: 's1', from: 'src', to: 'dst', kind: 'midi' }
+    ])
+    // The generator feeds the second plugin, so only the second is the end of the chain.
+    expect(routes(d).filter(r => r.to === 'engine-2').map(r => r.from)).toEqual(['engine-3'])
+    d.apply([{ op: 'setNode', id: second.nodeId, bypassed: true }])
+    // Bypassed, it passes what it gets straight through, so the generator is the end of the chain again.
+    expect(routes(d).filter(r => r.to === 'engine-2').map(r => r.from)).toEqual(['engine-1'])
+  })
+
+  it('does not carry audio, and an audio send does not carry MIDI', async () => {
+    const { engine, d, inst } = await setup()
+    d.apply([{ op: 'setTrack', id: 'dst', midiInput: inst }, { op: 'addSend', id: 's1', from: 'src', to: 'dst' }])
+    expect(routes(d)).toEqual([])
+    expect(engine.sends.map(x => x.id)).toEqual(['s1'])
+    d.apply([{ op: 'addSend', id: 's2', from: 'src', to: 'dst', kind: 'midi' }])
+    // The MIDI send is not an audio send: the engine, which makes audio sends, is told of one only.
+    expect(engine.sends.map(x => x.id)).toEqual(['s1'])
+    expect(routes(d)).toHaveLength(1)
+  })
+})
+
 describe('setParameter', () => {
   it('records in the model and applies to the AudioParam', async () => {
     const engine = fakeEngine()

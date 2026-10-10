@@ -7,8 +7,11 @@
 // same rule the model enforces (src/model/ArrangementOps.js), so the page does
 // not offer what would be refused.
 
-/** Tracks reachable from `from` by outputs and sends, including itself. */
-function reachable (project, from) {
+/**
+ * Tracks reachable from `from`, including itself: by outputs and audio sends for audio, and by MIDI sends
+ * alone for MIDI, as the model counts them, so MIDI one way and audio the other is not a loop.
+ */
+function reachable (project, from, kind) {
   const seen = new Set()
   const stack = [from]
   while (stack.length > 0) {
@@ -16,21 +19,21 @@ function reachable (project, from) {
     if (seen.has(id)) continue
     seen.add(id)
     const output = project.track(id)?.output
-    if (output) stack.push(output)
-    for (const send of project.sends) if (send.from === id) stack.push(send.to)
+    if (kind === 'audio' && output) stack.push(output)
+    for (const send of project.sends) if (send.from === id && (send.kind ?? 'audio') === kind) stack.push(send.to)
   }
   return seen
 }
 
 /** Whether a route from `from` to `to` (send or output) would make a loop of tracks. */
-export function wouldLoop (project, from, to) {
-  return from === to || reachable(project, to).has(from)
+export function wouldLoop (project, from, to, kind = 'audio') {
+  return from === to || reachable(project, to, kind).has(from)
 }
 
-/** Tracks a new send from `trackId` may go to: not itself, not one it already sends to, no loops. */
-export function sendTargets (project, trackId) {
-  const already = new Set(project.sends.filter(s => s.from === trackId).map(s => s.to))
-  return project.orderedTracks.filter(t => t.id !== trackId && !already.has(t.id) && !wouldLoop(project, trackId, t.id))
+/** Tracks a new send of `kind` from `trackId` may go to: not itself, not one it already sends that kind to, no loops. */
+export function sendTargets (project, trackId, kind = 'audio') {
+  const already = new Set(project.sends.filter(s => s.from === trackId && (s.kind ?? 'audio') === kind).map(s => s.to))
+  return project.orderedTracks.filter(t => t.id !== trackId && !already.has(t.id) && !wouldLoop(project, trackId, t.id, kind))
 }
 
 /** Tracks this one's output may be sent to instead of the master: no loops. */
@@ -45,7 +48,7 @@ export function describeRouting (project, trackId, labelOf) {
   if (track?.output) parts.push(`Output to ${labelOf(track.output)}`)
   const sends = project.sends.filter(s => s.from === trackId)
   if (sends.length > 0) {
-    parts.push(`Sends to ${sends.map(s => `${labelOf(s.to)} (${s.tap === 'pre' ? 'pre' : 'post'})`).join(', ')}`)
+    parts.push(`Sends to ${sends.map(s => (s.kind === 'midi' ? `${labelOf(s.to)} (MIDI)` : `${labelOf(s.to)} (${s.tap === 'pre' ? 'pre' : 'post'})`)).join(', ')}`)
   }
   const buses = [...project.tracks.filter(t => t.output === trackId).map(t => t.id), ...project.sends.filter(s => s.to === trackId).map(s => s.from)]
   const from = [...new Set(buses)]

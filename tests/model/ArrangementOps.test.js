@@ -26,6 +26,36 @@ describe('the master', () => {
   })
 })
 
+describe('MIDI sends', () => {
+  it('adds one with no level and no tap, and an audio send is unchanged beside it', () => {
+    project.apply([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi' }, { op: 'addSend', from: 'a', to: 'b' }])
+    expect(project.sends).toEqual([
+      { id: 'send-1', from: 'a', to: 'b', kind: 'midi' },
+      { id: 'send-2', from: 'a', to: 'b', level: 1, tap: 'post' }
+    ])
+  })
+  it('refuses a level or a tap on one, a kind that is neither, and a second between the same tracks', () => {
+    refused([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi', level: 0.5 }], /no level or tap/)
+    refused([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi', tap: 'pre' }], /no level or tap/)
+    refused([{ op: 'addSend', from: 'a', to: 'b', kind: 'sideways' }], /audio or midi/)
+    project.apply([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi' }])
+    refused([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi' }], /already sends midi/)
+  })
+  it('refuses a loop of MIDI sends, but not MIDI one way and audio the other', () => {
+    project.apply([{ op: 'addSend', from: 'a', to: 'b', kind: 'midi' }])
+    refused([{ op: 'addSend', from: 'b', to: 'a', kind: 'midi' }], /feed itself/)
+    project.apply([{ op: 'addSend', from: 'b', to: 'a' }])
+    expect(project.sends).toHaveLength(2)
+  })
+  it('does not change kind, and takes no level or tap once made', () => {
+    project.apply([{ op: 'addSend', id: 'm', from: 'a', to: 'b', kind: 'midi' }, { op: 'addSend', id: 'x', from: 'a', to: 'c' }])
+    refused([{ op: 'setSend', id: 'm', level: 0.5 }], /no level or tap/)
+    refused([{ op: 'setSend', id: 'x', kind: 'midi' }], /does not change kind/)
+    project.apply([{ op: 'setSend', id: 'x', level: 0.5 }])
+    expect(project.sends.find(s => s.id === 'x').level).toBe(0.5)
+  })
+})
+
 describe('a chain on the master', () => {
   beforeEach(() => {
     project.apply([{ op: 'addNode', id: 'verb', track: 'master', pluginIri: IRI }])

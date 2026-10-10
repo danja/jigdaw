@@ -57,7 +57,7 @@ describe('the sends panel', () => {
     chosen(document.getElementById('send-to'), 'bus')
     document.getElementById('send-to').dispatchEvent(event('change'))
     document.querySelector('.send-add').dispatchEvent(event('submit'))
-    expect(calls).toEqual([['add', 'rv'], ['add', 'bus']])
+    expect(calls).toEqual([['add', 'rv', 'audio'], ['add', 'bus', 'audio']])
   })
 
   it('leaves out Add when there is nowhere to send, and the list when there are no sends', () => {
@@ -89,5 +89,37 @@ describe('the sends panel', () => {
 
   it('will not be built without its handlers', () => {
     expect(() => createSendsPanel(document, { onOutput () {} })).toThrow(/onAdd/)
+  })
+})
+
+describe('the sends panel with MIDI sends', () => {
+  const midiState = { midiAddOptions: [{ id: 'drums', label: 'Drums' }] }
+
+  it('offers the kind only when MIDI could go somewhere, and sends the choice to the track chosen', () => {
+    const { calls } = build()
+    expect(document.getElementById('send-kind').closest('label').hidden).toBe(true)
+    document.body.replaceChildren()
+    const withMidi = build(midiState)
+    expect(document.getElementById('send-kind').closest('label').hidden).toBe(false)
+    // MIDI, then its own list of destinations.
+    for (const option of document.getElementById('send-kind').options) option.selected = option.value === 'midi'
+    document.getElementById('send-kind').dispatchEvent(event('change'))
+    expect([...document.querySelectorAll('#send-to option')].map(o => o.textContent)).toEqual(['Drums'])
+    document.querySelector('.send-add').dispatchEvent(event('submit'))
+    expect(withMidi.calls).toEqual([['add', 'drums', 'midi']])
+    void calls
+  })
+
+  it('draws a MIDI send without a level or a tap, which it has none of, and says what it is in words', () => {
+    build({ sends: [{ id: 'm1', toLabel: 'Drums', kind: 'midi' }] })
+    expect(document.querySelector('.send-name').textContent).toBe('MIDI to Drums')
+    expect(document.querySelector('.send-level').hidden).toBe(true)
+    expect(document.getElementById('send-m1-tap').hidden).toBe(true)
+    expect(document.querySelector('.send-row button').getAttribute('aria-label')).toBe('Remove the MIDI send from Lead to Drums')
+  })
+
+  it('leaves out the form when neither kind has anywhere to go', () => {
+    build({ addOptions: [], midiAddOptions: [] })
+    expect(document.querySelector('.send-add').hidden).toBe(true)
   })
 })

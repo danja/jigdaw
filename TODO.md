@@ -13,10 +13,11 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       engine, RDF, shapes with a counterexample, WebMCP (`master_set` `audioInput`, `plugin_load` and `node_move_to_track` with the
       track `master`), the studio rack (a Master bus section, Load onto, an audio input menu on a track) and the simple page (an
       "Everything together" card). Generative Gamelan has its reverb on the master. Tested through the real engine in
-      `tests/host/presetRender.test.js` and mutation checked. **Left:** (1) **not seen in a browser**: the studio rack's Master bus
-      section and the simple page's card; (2) MIDI between tracks is a connection between two plugins and works (Conductor drives
-      both Gamelan lines), but there is no track-level MIDI send, so a send-and-return arrangement for MIDI, or one MIDI source
-      feeding every track without a connection each, is open; (3) a track's alignment delay does not count the latency of a bus or
+      `tests/host/presetRender.test.js` and mutation checked. **Seen in Chrome, 2026-10-10:** Generative Gamelan on the simple page plays with the meter lit and the
+      "Everything together" card opens to Hall's controls; the studio shows the Master bus section with its audio input menu
+      and "The master bus" under Load onto; no console errors. **Left:** (1) a screen reader pass over the new controls; (2) **MIDI sends are built** (2026-10-10: `jig:Send` with `jig:signalKind trn:Midi`, in the model, router, RDF, shapes,
+      WebMCP `send_add` `kind`, and the dock's Add send; Gamelan's Conductor uses two), seen in Chrome: the dock lists "MIDI to Sprout" and "MIDI to Markov" and the preset plays; a MIDI send
+      from a composite and a note-range split on one are open; (3) a track's alignment delay does not count the latency of a bus or
       the master chain; (4) the master has no meter or clip hold in the mixer view, and the mixer does not draw its chain.
 - [ ] **Finish the Downspout ports: Moka, Sprout, Markov, Retune.** 2026-10-10. All four are plain JavaScript Jigs in `plugins/`
       (no module), ported from `~/github/downspout/plugins/`, each with a host test (`tests/host/{moka,sprout,markov,retune}.test.js`)

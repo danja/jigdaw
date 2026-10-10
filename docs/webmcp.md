@@ -156,8 +156,8 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 | Tool | Arguments | Returns |
 |---|---|---|
 | `master_set` | `gain?`, `pan?`, `muted?`, `audioInput?` | |
-| `send_add` | `from`, `to`, `level?`, `tap?` | Send id |
-| `send_set` | `sendId`, `level?`, `tap?` | |
+| `send_add` | `from`, `to`, `kind?`, `level?`, `tap?` | Send id |
+| `send_set` | `sendId`, `level?`, `tap?` | An audio send only |
 | `send_remove` | `sendId` | |
 | `marker_add` | `atBeat`, `label?` | Marker id |
 | `marker_set` | `markerId`, `atBeat?`, `label?` | |
@@ -167,7 +167,8 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 | `region_remove` | `regionId` | |
 
 Each is one Op through the dispatcher, so each is one undo step and takes `expectedRevision`. A send is
-`pre` or `post` fader and its level is linear. `track_set` with `output` sends a track to another track
+`pre` or `post` fader and its level is linear. With `kind: "midi"` a send routes the MIDI the source track makes to the plugin
+the target's MIDI clips play into (its `midiInput`), and takes no level or tap; a target with no `midiInput` receives nothing. `track_set` with `output` sends a track to another track
 instead of the master, which makes the target a bus; a cycle is refused, for sends and outputs alike.
 What a send or a bus output delivers arrives at the target track's `audioInput` node when it has one, so a
 plugin on a bus processes it, and at the target's fader when it has not. The master is the same: plugins go

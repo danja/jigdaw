@@ -630,7 +630,8 @@ jig:signalKind a owl:ObjectProperty ;
     rdfs:label "signal kind" ;
     rdfs:comment """What travels along this connection, as a trn: signal type. Audio
         connections are Web Audio edges; MIDI connections are host-routed message traffic,
-        which is why the kind has to be stated rather than inferred from the endpoints.""" .
+        which is why the kind has to be stated rather than inferred from the endpoints.
+        Also stated on a jig:Send that carries MIDI; absent there, the send is audio.""" .
 
 ## No range: in a project it is a jig:Node, in a composite it is a jig:Member or the
 ## composite itself, which names the composite's own boundary.
@@ -679,14 +680,16 @@ jig:Send a owl:Class ;
     rdfs:label "Send" ;
     rdfs:comment """A copy of one track's signal, at a level and a tap point, into another
         track. A return is an ordinary track that is the target of a send; nothing marks
-        it. Joins tracks, where a jig:Connection joins ports on nodes.""" .
+        it. Joins tracks, where a jig:Connection joins ports on nodes. With jig:signalKind
+        trn:Midi it is instead a route for the MIDI the source track makes, to the node the
+        target track's MIDI clips play into (jig:midiInput), with no level and no tap.""" .
 jig:send a owl:ObjectProperty ; rdfs:domain jig:Project ; rdfs:range jig:Send .
 jig:sendFrom a owl:ObjectProperty ; rdfs:domain jig:Send ; rdfs:range jig:Track .
 jig:sendTo a owl:ObjectProperty ; rdfs:domain jig:Send ; rdfs:range jig:Track .
 jig:level a owl:DatatypeProperty ;
     rdfs:domain jig:Send ; rdfs:range xsd:decimal ;
     rdfs:label "level" ;
-    rdfs:comment "Linear, as jig:gain: zero or more." .
+    rdfs:comment "Linear, as jig:gain: zero or more. Of an audio send; a MIDI send has none." .
 jig:TapPoint a owl:Class ; rdfs:label "Tap point" .
 jig:PreFader a owl:NamedIndividual , jig:TapPoint ;
     rdfs:label "pre-fader" ;

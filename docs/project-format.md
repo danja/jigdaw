@@ -215,7 +215,7 @@ unchanged when saved.
 | Subject | Terms |
 |---|---|
 | `jig:Master`, one, linked by `jig:master` | `jig:gain`, `jig:pan`, `jig:muted`; absent means unity, centred, heard. `jig:audioInput`, the node on the master the mix of every track arrives at; absent means the mix goes straight to the master's fader |
-| `jig:Send`, linked by `jig:send` | `jig:sendFrom`, `jig:sendTo` (tracks, not the same), `jig:level` (linear, at least 0), `jig:tap` (`jig:PreFader` or `jig:PostFader`) |
+| `jig:Send`, linked by `jig:send` | `jig:sendFrom`, `jig:sendTo` (tracks, not the same), `jig:level` (linear, at least 0), `jig:tap` (`jig:PreFader` or `jig:PostFader`); or, with `jig:signalKind trn:Midi`, those two and nothing else |
 | a track | `jig:output`, the track it feeds instead of the master, which makes that track a bus |
 | `jig:Marker`, linked by `jig:marker` | `jig:atBeat`, `rdfs:label` |
 | `jig:Region`, linked by `jig:region` | `trn:startBeat`, `trn:lengthBeats` (above 0), `rdfs:label` |
@@ -250,6 +250,14 @@ Three rules the shapes cannot say, and the model enforces:
 
 Removing a track removes the sends that touch it and clears outputs that name it. Removing a
 node removes its envelopes.
+
+**A MIDI send** is a `jig:Send` with `jig:signalKind trn:Midi`, and says no level and no tap, which MIDI has no meaning for; an
+audio send says no kind, so a project without a MIDI send is written as it always was. It routes the MIDI the source track
+makes, from the plugins at the end of its chain that make MIDI and pass it on by no connection (a bypassed one is seen
+through, and a composite is not routed from), to the node the target track's `jig:midiInput` names. A target with no
+`jig:midiInput` receives nothing, as its clips would play into nothing, and a host SHOULD say so where it draws the send.
+A cycle is refused over MIDI sends alone, so MIDI one way and audio the other is not a loop, and one MIDI send and one audio
+send between the same two tracks is allowed.
 
 **A chain on the master.** A node's `jig:onTrack` may name the `jig:Master`, as `<#master>`, and then it is a plugin
 on the master bus: the host writes `<#master> a jig:Master` whenever a node is on it, even when its level, pan

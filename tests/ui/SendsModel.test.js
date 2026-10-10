@@ -52,3 +52,29 @@ describe('describeRouting', () => {
     expect(describeRouting(project, 'c', label)).toBe('Output to B.')
   })
 })
+
+describe('MIDI sends in the sends model', () => {
+  const project = (sends, tracks = ['a', 'b', 'c']) => ({
+    orderedTracks: tracks.map(id => ({ id })),
+    tracks: tracks.map(id => ({ id, output: null })),
+    track: id => ({ id, output: null }),
+    sends
+  })
+
+  it('offers a MIDI target by the MIDI sends alone, so audio the other way is not a loop', () => {
+    const p = project([{ id: 's1', from: 'a', to: 'b', level: 1, tap: 'post' }])
+    expect(sendTargets(p, 'b', 'audio').map(t => t.id)).toEqual(['c'])
+    expect(sendTargets(p, 'b', 'midi').map(t => t.id)).toEqual(['a', 'c'])
+  })
+
+  it('does not offer a MIDI target already sent MIDI, or one that would loop it', () => {
+    const p = project([{ id: 'm1', from: 'a', to: 'b', kind: 'midi' }])
+    expect(sendTargets(p, 'a', 'midi').map(t => t.id)).toEqual(['c'])
+    expect(sendTargets(p, 'b', 'midi').map(t => t.id)).toEqual(['c'])
+  })
+
+  it('says a MIDI send in the routing text', () => {
+    const p = project([{ id: 'm1', from: 'a', to: 'b', kind: 'midi' }])
+    expect(describeRouting(p, 'a', id => id.toUpperCase())).toBe('Sends to B (MIDI).')
+  })
+})

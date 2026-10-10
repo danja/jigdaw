@@ -16,6 +16,8 @@ export const MASTER_TRACK = 'master'
 // arrives from a bus output or a send; absent, the mix goes straight to the master's fader.
 export const DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false, audioInput: null })
 export const TAPS = Object.freeze(['pre', 'post'])
+// What a send carries. Absent means audio, so a project without a MIDI send is written as it always was.
+export const SEND_KINDS = Object.freeze(['audio', 'midi'])
 export const CURVES = Object.freeze(['step', 'linear', 'smooth'])
 export const TARGET_KINDS = Object.freeze(['masterGain', 'masterPan', 'tempo'])
 
@@ -42,11 +44,11 @@ const finiteAtLeast = (n, min, what) => {
 }
 
 /**
- * Whether a route from `from` reaches `to` over bus outputs and sends. The
- * track graph is the one place a cycle could hide, because a connection cannot
- * cross tracks and these can.
+ * Whether a route from `from` reaches `to`, of one kind. The track graph is the one place a cycle could
+ * hide, because a connection cannot cross tracks and these can. Audio goes over bus outputs and audio
+ * sends; MIDI over MIDI sends alone, so MIDI one way and audio the other is not a loop.
  */
-function reaches (state, from, to) {
+function reaches (state, from, to, kind = 'audio') {
   const seen = new Set()
   const stack = [from]
   while (stack.length > 0) {
@@ -55,14 +57,14 @@ function reaches (state, from, to) {
     if (seen.has(id)) continue
     seen.add(id)
     const track = state.tracks.get(id)
-    if (track?.output) stack.push(track.output)
-    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to)
+    if (kind === 'audio' && track?.output) stack.push(track.output)
+    for (const send of state.sends.values()) if (send.from === id && (send.kind ?? 'audio') === kind) stack.push(send.to)
   }
   return false
 }
 
-function checkNoCycle (state, from, to, what) {
-  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`)
+function checkNoCycle (state, from, to, what, kind = 'audio') {
+  if (from === to || reaches(state, to, from, kind)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`)
 }
 
 /** `output` is a track id, or null for the master. Used by setTrack. */
@@ -133,15 +135,25 @@ export const ARRANGEMENT_OPERATIONS = {
 
   addSend (state, change, counters) {
     for (const key of ['from', 'to']) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`)
-    checkNoCycle(state, change.from, change.to, 'a send')
+    const kind = change.kind ?? 'audio'
+    if (!SEND_KINDS.includes(kind)) throw new Error(`a send is ${SEND_KINDS.join(' or ')}, not ${kind}`)
+    checkNoCycle(state, change.from, change.to, 'a send', kind)
     for (const s of state.sends.values()) {
-      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`)
+      if (s.from === change.from && s.to === change.to && (s.kind ?? 'audio') === kind) {
+        throw new Error(`${change.from} already sends ${kind} to ${change.to}`)
+      }
+    }
+    const id = mint(state, counters, 'sends', 'send', change.id, 'send')
+    if (kind === 'midi') {
+      // MIDI has no level to set and no fader to take it before or after: stating one would be stating nothing.
+      if (change.level !== undefined || change.tap !== undefined) throw new Error('a MIDI send has no level or tap')
+      state.sends.set(id, { id, from: change.from, to: change.to, kind })
+      return id
     }
     const level = change.level ?? 1
     finiteAtLeast(level, 0, 'a send level')
     const tap = change.tap ?? 'post'
     if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(', ')}`)
-    const id = mint(state, counters, 'sends', 'send', change.id, 'send')
     state.sends.set(id, { id, from: change.from, to: change.to, level, tap })
     return id
   },
@@ -149,6 +161,8 @@ export const ARRANGEMENT_OPERATIONS = {
   setSend (state, change) {
     const send = state.sends.get(change.id)
     if (!send) throw new Error(`no such send: ${change.id}`)
+    if (change.kind !== undefined && change.kind !== (send.kind ?? 'audio')) throw new Error('a send does not change kind: remove it and add another')
+    if (send.kind === 'midi' && (change.level !== undefined || change.tap !== undefined)) throw new Error('a MIDI send has no level or tap')
     if (change.level !== undefined) { finiteAtLeast(change.level, 0, 'a send level'); send.level = change.level }
     if (change.tap !== undefined) {
       if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(', ')}`)

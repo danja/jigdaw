@@ -154,7 +154,9 @@
   <dt id="Send"><code>jig:Send</code></dt>
   <dd>A copy of one track's signal, at a level and a tap point, into another
         track. A return is an ordinary track that is the target of a send; nothing marks
-        it. Joins tracks, where a jig:Connection joins ports on nodes.</dd>
+        it. Joins tracks, where a jig:Connection joins ports on nodes. With jig:signalKind
+        trn:Midi it is instead a route for the MIDI the source track makes, to the node the
+        target track's MIDI clips play into (jig:midiInput), with no level and no tap.</dd>
   <dt id="SignaturePoint"><code>jig:SignaturePoint</code> <span class="label">Signature point</span></dt>
   <dd>A time signature from a given beat onward, which MUST fall on a bar line
         of the signature before it and after beat zero. The transport's own
@@ -295,7 +297,8 @@
   <dt id="signalKind"><code>jig:signalKind</code> <span class="label">signal kind</span></dt>
   <dd>What travels along this connection, as a trn: signal type. Audio
         connections are Web Audio edges; MIDI connections are host-routed message traffic,
-        which is why the kind has to be stated rather than inferred from the endpoints.</dd>
+        which is why the kind has to be stated rather than inferred from the endpoints.
+        Also stated on a jig:Send that carries MIDI; absent there, the send is audio.</dd>
   <dt id="signaturePoint"><code>jig:signaturePoint</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="source"><code>jig:source</code></dt>
@@ -393,7 +396,7 @@
   <dt id="latencyFrames"><code>jig:latencyFrames</code> <span class="label">latency frames</span></dt>
   <dd>Frames of delay the plugin introduces, for the host to compensate.</dd>
   <dt id="level"><code>jig:level</code></dt>
-  <dd>Linear, as jig:gain: zero or more.</dd>
+  <dd>Linear, as jig:gain: zero or more. Of an audio send; a MIDI send has none.</dd>
   <dt id="loadOutcome"><code>jig:loadOutcome</code> <span class="label">load outcome</span></dt>
   <dd>What happened: loaded, refused, or failed, with the reason. A plugin
         that fails to load is a recorded result, not an error, so that a catalogue can

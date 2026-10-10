@@ -69,8 +69,9 @@ starts on the simple page.
   a master with level, pan and mute, all acting on the sound. A cycle of them is refused. Audio sent or bused to
   a track arrives at the plugin the track names as its audio input, so a reverb on a bus is in the path, and the
   master has a chain of its own the same way: plugins on the master, and the one the mix of every track arrives
-  at. Generative Gamelan has its reverb there. MIDI between tracks is a connection between two plugins, and is
-  how its Conductor drives both lines.
+  at. Generative Gamelan has its reverb there. MIDI between tracks is a connection between two plugins, or a MIDI send
+  from one track to another, which delivers to the plugin the target plays its MIDI into; Generative Gamelan's
+  Conductor drives both lines by two MIDI sends.
 - **Sidechain.** A plugin can mark an input as a key, and the matrix names it "Sidechain key". Dynamix
   ducks from a kick on another track.
 - **Latency.** Declared latency is compensated between connected plugins, and tracks are delayed so that

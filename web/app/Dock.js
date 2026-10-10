@@ -131,7 +131,7 @@ export function createDockPanel (ctx) {
   }
   const sendsPanel = createSendsPanel(document, {
     onOutput: to => apply([{ op: 'setTrack', id: chainTrack, output: to }]),
-    onAdd: to => apply([{ op: 'addSend', from: chainTrack, to, level: 1, tap: 'post' }]),
+    onAdd: (to, kind) => apply([kind === 'midi' ? { op: 'addSend', from: chainTrack, to, kind } : { op: 'addSend', from: chainTrack, to, level: 1, tap: 'post' }]),
     onLevel: (id, level) => apply([{ op: 'setSend', id, level }]),
     onTap: (id, tap) => apply([{ op: 'setSend', id, tap }]),
     onRemove: id => apply([{ op: 'removeSend', id }])
@@ -223,8 +223,10 @@ export function createDockPanel (ctx) {
         label: trackLabel(track),
         output: track.output,
         outputOptions: outputTargets(project, track.id).map(asOption),
-        sends: project.sends.filter(s => s.from === track.id).map(s => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), level: s.level, tap: s.tap })),
-        addOptions: sendTargets(project, track.id).map(asOption)
+        sends: project.sends.filter(s => s.from === track.id).map(s => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? 'audio', level: s.level, tap: s.tap })),
+        addOptions: sendTargets(project, track.id).map(asOption),
+        // Only where the target has somewhere for MIDI to play, which is its MIDI input.
+        midiAddOptions: sendTargets(project, track.id, 'midi').filter(t => t.midiInput).map(asOption)
       })
       dock.show('track', `Editor: ${trackLabel(track)}`)
     } else {

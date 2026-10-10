@@ -18910,6 +18910,7 @@ init_Integrity();
 var MASTER_TRACK = "master";
 var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false, audioInput: null });
 var TAPS = Object.freeze(["pre", "post"]);
+var SEND_KINDS = Object.freeze(["audio", "midi"]);
 var CURVES = Object.freeze(["step", "linear", "smooth"]);
 var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
 var EPSILON = 1e-9;
@@ -18932,7 +18933,7 @@ function cloneArrangement(state) {
 var finiteAtLeast = (n2, min, what) => {
   if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
 };
-function reaches(state, from, to) {
+function reaches(state, from, to, kind = "audio") {
   const seen = /* @__PURE__ */ new Set();
   const stack = [from];
   while (stack.length > 0) {
@@ -18941,13 +18942,13 @@ function reaches(state, from, to) {
     if (seen.has(id)) continue;
     seen.add(id);
     const track = state.tracks.get(id);
-    if (track?.output) stack.push(track.output);
-    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
+    if (kind === "audio" && track?.output) stack.push(track.output);
+    for (const send of state.sends.values()) if (send.from === id && (send.kind ?? "audio") === kind) stack.push(send.to);
   }
   return false;
 }
-function checkNoCycle(state, from, to, what) {
-  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
+function checkNoCycle(state, from, to, what, kind = "audio") {
+  if (from === to || reaches(state, to, from, kind)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
 }
 function checkTrackOutput(state, trackId, output) {
   if (output === null) return;
@@ -19012,21 +19013,32 @@ var ARRANGEMENT_OPERATIONS = {
   },
   addSend(state, change, counters) {
     for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
-    checkNoCycle(state, change.from, change.to, "a send");
+    const kind = change.kind ?? "audio";
+    if (!SEND_KINDS.includes(kind)) throw new Error(`a send is ${SEND_KINDS.join(" or ")}, not ${kind}`);
+    checkNoCycle(state, change.from, change.to, "a send", kind);
     for (const s of state.sends.values()) {
-      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
+      if (s.from === change.from && s.to === change.to && (s.kind ?? "audio") === kind) {
+        throw new Error(`${change.from} already sends ${kind} to ${change.to}`);
+      }
+    }
+    const id = mint(state, counters, "sends", "send", change.id, "send");
+    if (kind === "midi") {
+      if (change.level !== void 0 || change.tap !== void 0) throw new Error("a MIDI send has no level or tap");
+      state.sends.set(id, { id, from: change.from, to: change.to, kind });
+      return id;
     }
     const level = change.level ?? 1;
     finiteAtLeast(level, 0, "a send level");
     const tap = change.tap ?? "post";
     if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-    const id = mint(state, counters, "sends", "send", change.id, "send");
     state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
     return id;
   },
   setSend(state, change) {
     const send = state.sends.get(change.id);
     if (!send) throw new Error(`no such send: ${change.id}`);
+    if (change.kind !== void 0 && change.kind !== (send.kind ?? "audio")) throw new Error("a send does not change kind: remove it and add another");
+    if (send.kind === "midi" && (change.level !== void 0 || change.tap !== void 0)) throw new Error("a MIDI send has no level or tap");
     if (change.level !== void 0) {
       finiteAtLeast(change.level, 0, "a send level");
       send.level = change.level;
@@ -23313,6 +23325,7 @@ var OpDispatcher = class {
     if (!this.#engine) return;
     this.#engine.clearSends();
     for (const send of this.#project.sends) {
+      if (send.kind === "midi") continue;
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
     }
     for (const track of this.#project.tracks) {
@@ -23414,7 +23427,30 @@ var OpDispatcher = class {
     this.#linkSinksToTracks();
     this.#applyTrackDelays(compiled);
     this.#applyChannels();
-    this.#router?.setRoutes(midiRoutes);
+    this.#router?.setRoutes([...midiRoutes, ...this.#midiSendRoutes(midiRoutes)]);
+  }
+  /**
+   * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
+   * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
+   * target with no such node receives nothing, as its clips would play into nothing. A composite and a
+   * bypassed node are not routed from: the first has no single MIDI output to name, the second passes nothing.
+   */
+  #midiSendRoutes(routes) {
+    const routed = new Set(routes.map((r) => r.from));
+    const out = [];
+    for (const send of this.#project.sends) {
+      if (send.kind !== "midi") continue;
+      const to = this.#arrivalEngineId(this.#project.track(send.to)?.midiInput);
+      if (!to) continue;
+      for (const node of this.#project.nodes) {
+        if (node.track !== send.from || node.bypassed || this.#composites.has(node.id)) continue;
+        const from = this.#engineIdOf(node.id);
+        if (!from || from === to || routed.has(from)) continue;
+        if (!(this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi)) continue;
+        out.push({ from, to });
+      }
+    }
+    return out;
   }
   /**
    * Set several parameters as one edit.
@@ -28488,16 +28524,22 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }),
       one3({
         name: "send_add",
-        description: "Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.",
-        properties: { from: { type: "string" }, to: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        description: "Send one track to another. Audio (the default) is a copy of the signal as an effect send: level is linear (default 1) and tap is pre or post fader (default post); it arrives at the target's audioInput, or its fader. With kind midi it routes the MIDI the source track makes to the plugin the target's MIDI clips play into (its midiInput), and takes no level or tap. A cycle, or a second send of one kind between the same two tracks, is refused.",
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          kind: { type: "string", enum: ["audio", "midi"] },
+          level: num("Linear, zero or more; audio only"),
+          tap: { type: "string", enum: ["pre", "post"], description: "Audio only" }
+        },
         required: ["from", "to"],
         op: "addSend",
         id: "sendId",
-        pick: keep(["from", "to", "level", "tap"])
+        pick: keep(["from", "to", "kind", "level", "tap"])
       }),
       one3({
         name: "send_set",
-        description: "Change a send's level or whether it takes the signal before or after the fader.",
+        description: "Change an audio send's level or whether it takes the signal before or after the fader. A MIDI send has neither.",
         properties: { sendId: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
         required: ["sendId"],
         op: "setSend",
@@ -32426,7 +32468,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
 }
 
 // src/ui/SendsModel.js
-function reachable(project, from) {
+function reachable(project, from, kind) {
   const seen = /* @__PURE__ */ new Set();
   const stack = [from];
   while (stack.length > 0) {
@@ -32434,17 +32476,17 @@ function reachable(project, from) {
     if (seen.has(id)) continue;
     seen.add(id);
     const output = project.track(id)?.output;
-    if (output) stack.push(output);
-    for (const send of project.sends) if (send.from === id) stack.push(send.to);
+    if (kind === "audio" && output) stack.push(output);
+    for (const send of project.sends) if (send.from === id && (send.kind ?? "audio") === kind) stack.push(send.to);
   }
   return seen;
 }
-function wouldLoop(project, from, to) {
-  return from === to || reachable(project, to).has(from);
+function wouldLoop(project, from, to, kind = "audio") {
+  return from === to || reachable(project, to, kind).has(from);
 }
-function sendTargets(project, trackId) {
-  const already = new Set(project.sends.filter((s) => s.from === trackId).map((s) => s.to));
-  return project.orderedTracks.filter((t) => t.id !== trackId && !already.has(t.id) && !wouldLoop(project, trackId, t.id));
+function sendTargets(project, trackId, kind = "audio") {
+  const already = new Set(project.sends.filter((s) => s.from === trackId && (s.kind ?? "audio") === kind).map((s) => s.to));
+  return project.orderedTracks.filter((t) => t.id !== trackId && !already.has(t.id) && !wouldLoop(project, trackId, t.id, kind));
 }
 function outputTargets(project, trackId) {
   return project.orderedTracks.filter((t) => t.id !== trackId && !wouldLoop(project, trackId, t.id));
@@ -32455,7 +32497,7 @@ function describeRouting(project, trackId, labelOf) {
   if (track?.output) parts.push(`Output to ${labelOf(track.output)}`);
   const sends = project.sends.filter((s) => s.from === trackId);
   if (sends.length > 0) {
-    parts.push(`Sends to ${sends.map((s) => `${labelOf(s.to)} (${s.tap === "pre" ? "pre" : "post"})`).join(", ")}`);
+    parts.push(`Sends to ${sends.map((s) => s.kind === "midi" ? `${labelOf(s.to)} (MIDI)` : `${labelOf(s.to)} (${s.tap === "pre" ? "pre" : "post"})`).join(", ")}`);
   }
   const buses = [...project.tracks.filter((t) => t.output === trackId).map((t) => t.id), ...project.sends.filter((s) => s.to === trackId).map((s) => s.from)];
   const from = [...new Set(buses)];
@@ -33347,9 +33389,21 @@ function createSendsPanel(document2, { onOutput, onAdd, onLevel, onTap, onRemove
   list.setAttribute("aria-label", "Sends from this track");
   const addForm = document2.createElement("form");
   addForm.className = "send-add";
+  const kindLabel = document2.createElement("label");
+  kindLabel.className = "track-field";
+  kindLabel.append(document2.createTextNode("Send "));
+  const addKind = document2.createElement("select");
+  addKind.id = "send-kind";
+  for (const [value2, text] of [["audio", "Audio"], ["midi", "MIDI"]]) {
+    const option = document2.createElement("option");
+    option.value = value2;
+    option.textContent = text;
+    addKind.append(option);
+  }
+  kindLabel.append(addKind);
   const addLabel = document2.createElement("label");
   addLabel.className = "track-field";
-  addLabel.append(document2.createTextNode("Send to "));
+  addLabel.append(document2.createTextNode("to "));
   const addTo = document2.createElement("select");
   addTo.id = "send-to";
   addLabel.append(addTo);
@@ -33357,19 +33411,29 @@ function createSendsPanel(document2, { onOutput, onAdd, onLevel, onTap, onRemove
   addButton.type = "submit";
   addButton.id = "send-add";
   addButton.textContent = "Add send";
-  addForm.append(addLabel, addButton);
+  addForm.append(kindLabel, addLabel, addButton);
   let addChoice = null;
+  let options = { audio: [], midi: [] };
+  const chosenKind = () => [...addKind.options].find((o2) => o2.selected)?.value ?? "audio";
   addTo.addEventListener("change", () => {
     addChoice = addTo.value;
   });
+  addKind.addEventListener("change", () => drawTargets());
   addForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (addChoice !== null) onAdd(addChoice);
+    if (addChoice !== null) onAdd(addChoice, chosenKind());
   });
+  function drawTargets() {
+    const list2 = options[chosenKind()] ?? [];
+    fill(addTo, list2, list2[0]?.id);
+    addChoice = list2[0]?.id ?? null;
+    addButton.hidden = list2.length === 0;
+    addLabel.hidden = list2.length === 0;
+  }
   element.append(outLabel, heading, list, addForm);
   const rows = /* @__PURE__ */ new Map();
-  function fill(select, options, chosen, { blank = null } = {}) {
-    const items = blank ? [{ id: "", label: blank }, ...options] : options;
+  function fill(select, options2, chosen, { blank = null } = {}) {
+    const items = blank ? [{ id: "", label: blank }, ...options2] : options2;
     select.replaceChildren(...items.map((o2) => {
       const option = document2.createElement("option");
       option.value = o2.id;
@@ -33416,16 +33480,17 @@ function createSendsPanel(document2, { onOutput, onAdd, onLevel, onTap, onRemove
       input.setAttribute("aria-valuetext", `${decibels(n2)} decibels`);
     };
     li.append(name2, level, tap, remove);
-    return { li, name: name2, input, tap, remove, show };
+    return { li, name: name2, level, input, tap, remove, show };
   }
   return {
     element,
     /**
      * `output` is the track this one's output goes to, or null for the master;
      * `outputOptions` and `addOptions` are `{ id, label }` lists; `sends` are
-     * `{ id, toLabel, level, tap }`.
+     * `{ id, toLabel, kind, level, tap }`, `kind` being 'midi' for a MIDI send, which has no level or tap.
+     * `midiAddOptions` are the tracks a new MIDI send could go to, and the kind menu is offered when there are some.
      */
-    show({ label, output: current, outputOptions, sends, addOptions }) {
+    show({ label, output: current, outputOptions, sends, addOptions, midiAddOptions = [] }) {
       fill(output, outputOptions, current ?? "", { blank: "Master" });
       output.setAttribute("aria-label", `Output of ${label}`);
       for (const id of [...rows.keys()]) {
@@ -33440,20 +33505,29 @@ function createSendsPanel(document2, { onOutput, onAdd, onLevel, onTap, onRemove
           row = makeRow(send);
           rows.set(send.id, row);
         }
-        row.name.textContent = `To ${send.toLabel}`;
+        const midi2 = send.kind === "midi";
+        row.name.textContent = midi2 ? `MIDI to ${send.toLabel}` : `To ${send.toLabel}`;
+        row.level.hidden = midi2;
+        row.tap.hidden = midi2;
         row.input.setAttribute("aria-label", `Level of the send from ${label} to ${send.toLabel}`);
         row.tap.setAttribute("aria-label", `Where the send from ${label} to ${send.toLabel} is taken`);
-        row.remove.setAttribute("aria-label", `Remove the send from ${label} to ${send.toLabel}`);
-        if (document2.activeElement !== row.input) row.input.value = String(send.level);
-        row.show(send.level);
+        row.remove.setAttribute("aria-label", `Remove the ${midi2 ? "MIDI " : ""}send from ${label} to ${send.toLabel}`);
+        if (!midi2 && document2.activeElement !== row.input) row.input.value = String(send.level);
+        if (!midi2) row.show(send.level);
         for (const option of row.tap.options) option.selected = option.value === send.tap;
         list.append(row.li);
       }
       list.hidden = sends.length === 0;
       heading.hidden = false;
-      addForm.hidden = addOptions.length === 0;
-      fill(addTo, addOptions, addOptions[0]?.id);
-      addChoice = addOptions[0]?.id ?? null;
+      options = { audio: addOptions, midi: midiAddOptions };
+      const kinds = [["audio", addOptions.length > 0], ["midi", midiAddOptions.length > 0]].filter(([, any]) => any).map(([k]) => k);
+      kindLabel.hidden = kinds.length < 2;
+      for (const option of addKind.options) option.hidden = !kinds.includes(option.value);
+      if (!kinds.includes(chosenKind())) {
+        for (const option of addKind.options) option.selected = option.value === (kinds[0] ?? "audio");
+      }
+      addForm.hidden = kinds.length === 0;
+      drawTargets();
     }
   };
 }
@@ -33578,7 +33652,7 @@ function createDockPanel(ctx2) {
   };
   const sendsPanel = createSendsPanel(document2, {
     onOutput: (to) => apply([{ op: "setTrack", id: chainTrack, output: to }]),
-    onAdd: (to) => apply([{ op: "addSend", from: chainTrack, to, level: 1, tap: "post" }]),
+    onAdd: (to, kind) => apply([kind === "midi" ? { op: "addSend", from: chainTrack, to, kind } : { op: "addSend", from: chainTrack, to, level: 1, tap: "post" }]),
     onLevel: (id, level) => apply([{ op: "setSend", id, level }]),
     onTap: (id, tap) => apply([{ op: "setSend", id, tap }]),
     onRemove: (id) => apply([{ op: "removeSend", id }])
@@ -33671,8 +33745,10 @@ function createDockPanel(ctx2) {
         label: trackLabel(track),
         output: track.output,
         outputOptions: outputTargets(project, track.id).map(asOption),
-        sends: project.sends.filter((s) => s.from === track.id).map((s) => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), level: s.level, tap: s.tap })),
-        addOptions: sendTargets(project, track.id).map(asOption)
+        sends: project.sends.filter((s) => s.from === track.id).map((s) => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? "audio", level: s.level, tap: s.tap })),
+        addOptions: sendTargets(project, track.id).map(asOption),
+        // Only where the target has somewhere for MIDI to play, which is its MIDI input.
+        midiAddOptions: sendTargets(project, track.id, "midi").filter((t) => t.midiInput).map(asOption)
       });
       dock.show("track", `Editor: ${trackLabel(track)}`);
     } else {
@@ -34523,7 +34599,8 @@ function writeArrangement(lines, project) {
     lines.push("", `<#master> ${st.join(" ; ")} .`);
   }
   for (const s of [...project.sends].sort(byId)) {
-    lines.push("", `<#${s.id}> a ${term3(jig5.Send)} ; ${term3(jig5.sendFrom)} <#${s.from}> ; ${term3(jig5.sendTo)} <#${s.to}> ; ${term3(jig5.level)} ${decimal(s.level)} ; ${term3(jig5.tap)} ${term3(jig5[TAP_TERM[s.tap]])} .`);
+    const ends = `<#${s.id}> a ${term3(jig5.Send)} ; ${term3(jig5.sendFrom)} <#${s.from}> ; ${term3(jig5.sendTo)} <#${s.to}>`;
+    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig5.signalKind)} ${term3(trn5.Midi)} .` : `${ends} ; ${term3(jig5.level)} ${decimal(s.level)} ; ${term3(jig5.tap)} ${term3(jig5[TAP_TERM[s.tap]])} .`);
   }
   for (const m of [...project.markers].sort(byId)) {
     lines.push("", `<#${m.id}> a ${term3(jig5.Marker)} ; ${term3(jig5.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
@@ -34722,11 +34799,18 @@ function readArrangement(dataset2, iri4, tracks) {
   }
   const each = (property, what) => objects3(dataset2, iri4, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri4, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
   for (const { subject, id } of each(jig6.send, "send")) {
+    const from = idOf(value(one2(dataset2, subject, jig6.sendFrom)), iri4, `sendFrom of ${id}`);
+    const to = idOf(value(one2(dataset2, subject, jig6.sendTo)), iri4, `sendTo of ${id}`);
+    const kind = value(one2(dataset2, subject, jig6.signalKind));
+    if (kind === trn6.Midi) {
+      changes.push({ op: "addSend", id, from, to, kind: "midi" });
+      continue;
+    }
     changes.push({
       op: "addSend",
       id,
-      from: idOf(value(one2(dataset2, subject, jig6.sendFrom)), iri4, `sendFrom of ${id}`),
-      to: idOf(value(one2(dataset2, subject, jig6.sendTo)), iri4, `sendTo of ${id}`),
+      from,
+      to,
       level: number3(one2(dataset2, subject, jig6.level), `level of ${id}`) ?? 1,
       tap: named(TAP_OF, value(one2(dataset2, subject, jig6.tap)), `tap of ${id}`)
     });

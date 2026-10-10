@@ -1055,13 +1055,16 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       }),
       one({
         name: 'send_add',
-        description: 'Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.',
-        properties: { from: { type: 'string' }, to: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] } },
-        required: ['from', 'to'], op: 'addSend', id: 'sendId', pick: keep(['from', 'to', 'level', 'tap'])
+        description: 'Send one track to another. Audio (the default) is a copy of the signal as an effect send: level is linear (default 1) and tap is pre or post fader (default post); it arrives at the target\'s audioInput, or its fader. With kind midi it routes the MIDI the source track makes to the plugin the target\'s MIDI clips play into (its midiInput), and takes no level or tap. A cycle, or a second send of one kind between the same two tracks, is refused.',
+        properties: {
+          from: { type: 'string' }, to: { type: 'string' }, kind: { type: 'string', enum: ['audio', 'midi'] },
+          level: num('Linear, zero or more; audio only'), tap: { type: 'string', enum: ['pre', 'post'], description: 'Audio only' }
+        },
+        required: ['from', 'to'], op: 'addSend', id: 'sendId', pick: keep(['from', 'to', 'kind', 'level', 'tap'])
       }),
       one({
         name: 'send_set',
-        description: 'Change a send\'s level or whether it takes the signal before or after the fader.',
+        description: 'Change an audio send\'s level or whether it takes the signal before or after the fader. A MIDI send has neither.',
         properties: { sendId: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] } },
         required: ['sendId'], op: 'setSend', returns: 'none', pick: withId('sendId', ['level', 'tap'])
       }),

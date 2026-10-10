@@ -792,6 +792,18 @@ describe('the master, sends, markers and regions', () => {
     expect((await call('send_remove', { sendId: 'ghost' })).ok).toBe(false)
   })
 
+  it('adds a MIDI send with no level or tap, refusing one that is given, and lets audio go the other way', async () => {
+    twoTracks()
+    const added = await call('send_add', { from: 'a', to: 'b', kind: 'midi' })
+    expect(added.ok).toBe(true)
+    expect(dispatcher.project.sends.find(s => s.id === added.sendId)).toEqual({ id: added.sendId, from: 'a', to: 'b', kind: 'midi' })
+    expect((await call('send_add', { from: 'a', to: 'b', kind: 'midi' })).ok).toBe(false)
+    expect((await call('send_add', { from: 'a', to: 'b', kind: 'midi', level: 0.5 })).ok).toBe(false)
+    expect((await call('send_add', { from: 'b', to: 'a', kind: 'midi' })).ok).toBe(false)
+    expect((await call('send_add', { from: 'b', to: 'a' })).ok).toBe(true)
+    expect((await call('send_set', { sendId: added.sendId, level: 0.5 })).ok).toBe(false)
+  })
+
   it('makes a track a bus with output, refusing a loop', async () => {
     twoTracks()
     expect((await call('track_set', { trackId: 'a', output: 'b' })).ok).toBe(true)

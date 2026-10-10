@@ -290,8 +290,10 @@ function writeArrangement (lines, project) {
     lines.push('', `<#master> ${st.join(' ; ')} .`)
   }
   for (const s of [...project.sends].sort(byId)) {
-    lines.push('', `<#${s.id}> a ${term(jig.Send)} ; ${term(jig.sendFrom)} <#${s.from}> ; ${term(jig.sendTo)} <#${s.to}> ; ` +
-      `${term(jig.level)} ${decimal(s.level)} ; ${term(jig.tap)} ${term(jig[TAP_TERM[s.tap]])} .`)
+    const ends = `<#${s.id}> a ${term(jig.Send)} ; ${term(jig.sendFrom)} <#${s.from}> ; ${term(jig.sendTo)} <#${s.to}>`
+    lines.push('', s.kind === 'midi'
+      ? `${ends} ; ${term(jig.signalKind)} ${term(trn.Midi)} .`
+      : `${ends} ; ${term(jig.level)} ${decimal(s.level)} ; ${term(jig.tap)} ${term(jig[TAP_TERM[s.tap]])} .`)
   }
   for (const m of [...project.markers].sort(byId)) {
     lines.push('', `<#${m.id}> a ${term(jig.Marker)} ; ${term(jig.atBeat)} ${decimal(m.atBeat)}` +

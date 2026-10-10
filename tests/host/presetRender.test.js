@@ -141,3 +141,24 @@ describe('audio arriving at a track or the master, through the real engine', () 
     expect(dispatcher.project.master.audioInput).toBe('verb')
   })
 })
+
+describe('MIDI between tracks, through the real router', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+
+  it('has the Conductor drive both generators of Generative Gamelan by MIDI sends, with no connection between them', async () => {
+    const { engine, dispatcher } = await open('generative-gamelan.ttl', validator)
+    expect(dispatcher.project.connections.filter(c => [c.from.node, c.to.node].includes('conductor'))).toEqual([])
+    expect(dispatcher.project.sends.map(x => [x.from, x.to, x.kind])).toEqual([['track-4', 'track-1', 'midi'], ['track-4', 'track-2', 'midi']])
+    const id = node => dispatcher.engineNode(node).id
+    expect(dispatcher.router.routes).toEqual(expect.arrayContaining([
+      { from: id('conductor'), to: id('sprout') }, { from: id('conductor'), to: id('markov') }
+    ]))
+    // And what it says arrives: each generator holds a parameter the Conductor moved, until the panel moves it back.
+    await renderChain(dispatcher, engine, { quanta: Math.ceil(10 * 48000 / 128) })
+    for (const generator of ['sprout', 'markov']) {
+      const moved = Array.from(dispatcher.engineNode(generator).node.processor.override).some(v => !Number.isNaN(v))
+      expect(moved, `${generator} was moved by the Conductor`).toBe(true)
+    }
+  })
+})

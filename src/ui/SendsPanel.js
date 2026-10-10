@@ -36,9 +36,23 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
 
   const addForm = document.createElement('form')
   addForm.className = 'send-add'
+  // What the send carries. Offered only where MIDI could go somewhere, so with nowhere to send it there is
+  // no choice to make and the form is as it was.
+  const kindLabel = document.createElement('label')
+  kindLabel.className = 'track-field'
+  kindLabel.append(document.createTextNode('Send '))
+  const addKind = document.createElement('select')
+  addKind.id = 'send-kind'
+  for (const [value, text] of [['audio', 'Audio'], ['midi', 'MIDI']]) {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = text
+    addKind.append(option)
+  }
+  kindLabel.append(addKind)
   const addLabel = document.createElement('label')
   addLabel.className = 'track-field'
-  addLabel.append(document.createTextNode('Send to '))
+  addLabel.append(document.createTextNode('to '))
   const addTo = document.createElement('select')
   addTo.id = 'send-to'
   addLabel.append(addTo)
@@ -46,11 +60,23 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
   addButton.type = 'submit'
   addButton.id = 'send-add'
   addButton.textContent = 'Add send'
-  addForm.append(addLabel, addButton)
+  addForm.append(kindLabel, addLabel, addButton)
   // What is chosen, kept from the change event so the first option counts before anyone touches it.
   let addChoice = null
+  let options = { audio: [], midi: [] }
+  // Read from the options rather than the select's value, so the first one counts before anyone touches it.
+  const chosenKind = () => [...addKind.options].find(o => o.selected)?.value ?? 'audio'
   addTo.addEventListener('change', () => { addChoice = addTo.value })
-  addForm.addEventListener('submit', event => { event.preventDefault(); if (addChoice !== null) onAdd(addChoice) })
+  addKind.addEventListener('change', () => drawTargets())
+  addForm.addEventListener('submit', event => { event.preventDefault(); if (addChoice !== null) onAdd(addChoice, chosenKind()) })
+  /** The destinations for the chosen kind: what the model would accept of that kind. */
+  function drawTargets () {
+    const list = options[chosenKind()] ?? []
+    fill(addTo, list, list[0]?.id)
+    addChoice = list[0]?.id ?? null
+    addButton.hidden = list.length === 0
+    addLabel.hidden = list.length === 0
+  }
 
   element.append(outLabel, heading, list, addForm)
   const rows = new Map()
@@ -101,7 +127,7 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
       input.setAttribute('aria-valuetext', `${decibels(n)} decibels`)
     }
     li.append(name, level, tap, remove)
-    return { li, name, input, tap, remove, show }
+    return { li, name, level, input, tap, remove, show }
   }
 
   return {
@@ -109,9 +135,10 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
     /**
      * `output` is the track this one's output goes to, or null for the master;
      * `outputOptions` and `addOptions` are `{ id, label }` lists; `sends` are
-     * `{ id, toLabel, level, tap }`.
+     * `{ id, toLabel, kind, level, tap }`, `kind` being 'midi' for a MIDI send, which has no level or tap.
+     * `midiAddOptions` are the tracks a new MIDI send could go to, and the kind menu is offered when there are some.
      */
-    show ({ label, output: current, outputOptions, sends, addOptions }) {
+    show ({ label, output: current, outputOptions, sends, addOptions, midiAddOptions = [] }) {
       // A track already outputting somewhere is offered even if it is no longer a
       // free choice, so the select never shows something it cannot say.
       fill(output, outputOptions, current ?? '', { blank: 'Master' })
@@ -123,21 +150,32 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
       for (const send of sends) {
         let row = rows.get(send.id)
         if (!row) { row = makeRow(send); rows.set(send.id, row) }
-        row.name.textContent = `To ${send.toLabel}`
+        const midi = send.kind === 'midi'
+        row.name.textContent = midi ? `MIDI to ${send.toLabel}` : `To ${send.toLabel}`
+        // A MIDI send has no level and no fader to take it by, so those controls are left out, not shown disabled.
+        row.level.hidden = midi
+        row.tap.hidden = midi
         row.input.setAttribute('aria-label', `Level of the send from ${label} to ${send.toLabel}`)
         row.tap.setAttribute('aria-label', `Where the send from ${label} to ${send.toLabel} is taken`)
-        row.remove.setAttribute('aria-label', `Remove the send from ${label} to ${send.toLabel}`)
-        if (document.activeElement !== row.input) row.input.value = String(send.level)
-        row.show(send.level)
+        row.remove.setAttribute('aria-label', `Remove the ${midi ? 'MIDI ' : ''}send from ${label} to ${send.toLabel}`)
+        if (!midi && document.activeElement !== row.input) row.input.value = String(send.level)
+        if (!midi) row.show(send.level)
         for (const option of row.tap.options) option.selected = option.value === send.tap
         list.append(row.li)
       }
       list.hidden = sends.length === 0
       heading.hidden = false
 
-      addForm.hidden = addOptions.length === 0
-      fill(addTo, addOptions, addOptions[0]?.id)
-      addChoice = addOptions[0]?.id ?? null
+      options = { audio: addOptions, midi: midiAddOptions }
+      // The kind menu is there only when MIDI could go somewhere too. A kind that has nowhere to go is not offered.
+      const kinds = [['audio', addOptions.length > 0], ['midi', midiAddOptions.length > 0]].filter(([, any]) => any).map(([k]) => k)
+      kindLabel.hidden = kinds.length < 2
+      for (const option of addKind.options) option.hidden = !kinds.includes(option.value)
+      if (!kinds.includes(chosenKind())) {
+        for (const option of addKind.options) option.selected = option.value === (kinds[0] ?? 'audio')
+      }
+      addForm.hidden = kinds.length === 0
+      drawTargets()
     }
   }
 }

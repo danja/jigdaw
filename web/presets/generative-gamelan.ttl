@@ -4,8 +4,9 @@
 # encoded as src/host/StateCodec.js encodes a saved session. Relative IRIs and no @base, for the
 # reason web/presets/amp-into-room.ttl gives.
 #
-# A Conductor on its own track sends its section notes and CCs (channel 16) to both generators,
-# which are set to follow it: it moves Sprout's probability, velocity and seed and Markov's density,
+# A Conductor on its own track sends its section notes and CCs (channel 16) by two MIDI sends to the
+# Sprout and Markov tracks, which deliver them to the generator each track plays its MIDI into, and
+# both generators are set to follow it: it moves Sprout's probability, velocity and seed and Markov's density,
 # velocity and chaos, and restarts both at intro and coda. Each generator goes through its own
 # Retune into its own Moka, and the two Mokas are summed on the master bus, where one Cascade in
 # Hall mode is the master's audio input, so the mix of the two lines goes through it before the
@@ -25,11 +26,12 @@
     jig:track <#track-1> , <#track-2> , <#track-4> ;
     jig:master <#master> ;
     jig:node <#conductor> , <#sprout> , <#tune-1> , <#moka-1> , <#markov> , <#tune-2> , <#moka-2> , <#verb> ;
-    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> ;
+    jig:send <#send-1> , <#send-2> ;
     jig:transport <#transport> .
 
-<#track-1> a jig:Track ; rdfs:label "Sprout" .
-<#track-2> a jig:Track ; rdfs:label "Markov" .
+<#track-1> a jig:Track ; rdfs:label "Sprout" ; jig:midiInput <#sprout> .
+<#track-2> a jig:Track ; rdfs:label "Markov" ; jig:midiInput <#markov> .
 <#track-4> a jig:Track ; rdfs:label "Conductor" .
 
 <#conductor>
@@ -184,21 +186,8 @@
 <#c4-from> a jig:Endpoint ; jig:endpointNode <#tune-2> ; jig:portIndex 0 .
 <#c4-to>   a jig:Endpoint ; jig:endpointNode <#moka-2> ; jig:portIndex 0 .
 
-<#c5>
-    a jig:Connection ;
-    jig:from <#c5-from> ; jig:to <#c5-to> ;
-    jig:signalKind trn:Midi .
-
-<#c5-from> a jig:Endpoint ; jig:endpointNode <#conductor> ; jig:portIndex 0 .
-<#c5-to>   a jig:Endpoint ; jig:endpointNode <#sprout> ; jig:portIndex 0 .
-
-<#c6>
-    a jig:Connection ;
-    jig:from <#c6-from> ; jig:to <#c6-to> ;
-    jig:signalKind trn:Midi .
-
-<#c6-from> a jig:Endpoint ; jig:endpointNode <#conductor> ; jig:portIndex 0 .
-<#c6-to>   a jig:Endpoint ; jig:endpointNode <#markov> ; jig:portIndex 0 .
+<#send-1> a jig:Send ; jig:sendFrom <#track-4> ; jig:sendTo <#track-1> ; jig:signalKind trn:Midi .
+<#send-2> a jig:Send ; jig:sendFrom <#track-4> ; jig:sendTo <#track-2> ; jig:signalKind trn:Midi .
 
 <#master> a jig:Master ; jig:audioInput <#verb> .
 

@@ -129,6 +129,11 @@
     jig:sendFrom <#track> ; jig:sendTo <#track> ;
     jig:level -0.5 ; jig:tap <https://example.org/nowhere> .
 
+# Neither audio with a level and a tap, nor MIDI, and a kind this format does not define.
+<#send-2> a jig:Send ;
+    jig:sendFrom <#track> ; jig:sendTo <#other-track> ;
+    jig:signalKind <https://example.org/Sideways> .
+
 # A marker before the start.
 <#marker-1> a jig:Marker ; jig:atBeat -2.0 .
 

@@ -993,6 +993,8 @@ export class OpDispatcher {
     if (!this.#engine) return
     this.#engine.clearSends()
     for (const send of this.#project.sends) {
+      // A MIDI send is a route for the router, made with the connections' (#midiSendRoutes), not a gain.
+      if (send.kind === 'midi') continue
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap })
     }
     for (const track of this.#project.tracks) {
@@ -1120,7 +1122,31 @@ export class OpDispatcher {
     this.#linkSinksToTracks()
     this.#applyTrackDelays(compiled)
     this.#applyChannels()
-    this.#router?.setRoutes(midiRoutes)
+    this.#router?.setRoutes([...midiRoutes, ...this.#midiSendRoutes(midiRoutes)])
+  }
+
+  /**
+   * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
+   * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
+   * target with no such node receives nothing, as its clips would play into nothing. A composite and a
+   * bypassed node are not routed from: the first has no single MIDI output to name, the second passes nothing.
+   */
+  #midiSendRoutes (routes) {
+    const routed = new Set(routes.map(r => r.from))
+    const out = []
+    for (const send of this.#project.sends) {
+      if (send.kind !== 'midi') continue
+      const to = this.#arrivalEngineId(this.#project.track(send.to)?.midiInput)
+      if (!to) continue
+      for (const node of this.#project.nodes) {
+        if (node.track !== send.from || node.bypassed || this.#composites.has(node.id)) continue
+        const from = this.#engineIdOf(node.id)
+        if (!from || from === to || routed.has(from)) continue
+        if (!(this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi)) continue
+        out.push({ from, to })
+      }
+    }
+    return out
   }
 
   /**

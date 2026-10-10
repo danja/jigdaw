@@ -84,6 +84,8 @@ function builtProject () {
     { op: 'setMaster', gain: 0.9, pan: -0.25, muted: false, audioInput: 'glue' },
     { op: 'setTrack', id: 'track-1', output: 'track-10' },
     { op: 'addSend', id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
+    // MIDI between the same two tracks: no level, no tap, and the kind written.
+    { op: 'addSend', id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi' },
     { op: 'addMarker', id: 'marker-1', atBeat: 8, label: 'Chorus' },
     { op: 'addMarker', id: 'marker-2', atBeat: 24 },
     { op: 'addRegion', id: 'region-1', startBeat: 8, lengthBeats: 16, label: 'Verse two' },
@@ -175,7 +177,10 @@ describe('a project survives being written and read back', () => {
     const b = shapeOf(reopened)
     expect(b.master).toEqual({ gain: 0.9, pan: -0.25, muted: false, audioInput: 'glue' })
     expect(reopened.node('glue').track).toBe('master')
-    expect(b.sends).toEqual([{ id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' }])
+    expect(b.sends).toEqual([
+      { id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
+      { id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi' }
+    ])
     expect(reopened.track('track-1').output).toBe('track-10')
     expect(b.markers).toEqual(a.markers)
     expect(b.regions).toEqual(a.regions)
@@ -204,6 +209,13 @@ describe('a project survives being written and read back', () => {
     for (const word of ['Master', 'Send', 'Marker', 'Region', 'Envelope', 'signaturePoint', 'output']) {
       expect(turtle).not.toContain(word)
     }
+  })
+
+  it('writes a MIDI send with its kind and without a level or a tap, and an audio send as it always was', () => {
+    const turtle = writeProject(builtProject(), { iri: IRI })
+    expect(turtle).toMatch(/<#send-3> a jig:Send ; jig:sendFrom <#track-1> ; jig:sendTo <#track-10> ; jig:signalKind trn:Midi \./)
+    expect(turtle).toMatch(/<#send-2> a jig:Send [^\n]*jig:level 0\.4[^\n]*jig:tap jig:PreFader/)
+    expect(turtle).not.toMatch(/<#send-2>[^\n]*signalKind/)
   })
 
   it('refuses an individual this format does not define', async () => {

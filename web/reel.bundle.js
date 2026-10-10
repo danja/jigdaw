@@ -22026,6 +22026,7 @@ init_Integrity();
 var MASTER_TRACK = "master";
 var DEFAULT_MASTER = Object.freeze({ gain: 1, pan: 0, muted: false, audioInput: null });
 var TAPS = Object.freeze(["pre", "post"]);
+var SEND_KINDS = Object.freeze(["audio", "midi"]);
 var CURVES = Object.freeze(["step", "linear", "smooth"]);
 var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
 var EPSILON = 1e-9;
@@ -22048,7 +22049,7 @@ function cloneArrangement(state) {
 var finiteAtLeast = (n2, min, what) => {
   if (!(Number.isFinite(n2) && n2 >= min)) throw new Error(`${what} must be a number at or above ${min}: ${n2}`);
 };
-function reaches(state, from, to) {
+function reaches(state, from, to, kind = "audio") {
   const seen = /* @__PURE__ */ new Set();
   const stack = [from];
   while (stack.length > 0) {
@@ -22057,13 +22058,13 @@ function reaches(state, from, to) {
     if (seen.has(id)) continue;
     seen.add(id);
     const track = state.tracks.get(id);
-    if (track?.output) stack.push(track.output);
-    for (const send of state.sends.values()) if (send.from === id) stack.push(send.to);
+    if (kind === "audio" && track?.output) stack.push(track.output);
+    for (const send of state.sends.values()) if (send.from === id && (send.kind ?? "audio") === kind) stack.push(send.to);
   }
   return false;
 }
-function checkNoCycle(state, from, to, what) {
-  if (from === to || reaches(state, to, from)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
+function checkNoCycle(state, from, to, what, kind = "audio") {
+  if (from === to || reaches(state, to, from, kind)) throw new Error(`${what} would make a track feed itself: ${from} to ${to}`);
 }
 function checkTrackOutput(state, trackId, output) {
   if (output === null) return;
@@ -22128,21 +22129,32 @@ var ARRANGEMENT_OPERATIONS = {
   },
   addSend(state, change, counters) {
     for (const key of ["from", "to"]) if (!state.tracks.has(change[key])) throw new Error(`no such track: ${change[key]}`);
-    checkNoCycle(state, change.from, change.to, "a send");
+    const kind = change.kind ?? "audio";
+    if (!SEND_KINDS.includes(kind)) throw new Error(`a send is ${SEND_KINDS.join(" or ")}, not ${kind}`);
+    checkNoCycle(state, change.from, change.to, "a send", kind);
     for (const s of state.sends.values()) {
-      if (s.from === change.from && s.to === change.to) throw new Error(`${change.from} already sends to ${change.to}`);
+      if (s.from === change.from && s.to === change.to && (s.kind ?? "audio") === kind) {
+        throw new Error(`${change.from} already sends ${kind} to ${change.to}`);
+      }
+    }
+    const id = mint(state, counters, "sends", "send", change.id, "send");
+    if (kind === "midi") {
+      if (change.level !== void 0 || change.tap !== void 0) throw new Error("a MIDI send has no level or tap");
+      state.sends.set(id, { id, from: change.from, to: change.to, kind });
+      return id;
     }
     const level = change.level ?? 1;
     finiteAtLeast(level, 0, "a send level");
     const tap = change.tap ?? "post";
     if (!TAPS.includes(tap)) throw new Error(`tap must be one of ${TAPS.join(", ")}`);
-    const id = mint(state, counters, "sends", "send", change.id, "send");
     state.sends.set(id, { id, from: change.from, to: change.to, level, tap });
     return id;
   },
   setSend(state, change) {
     const send = state.sends.get(change.id);
     if (!send) throw new Error(`no such send: ${change.id}`);
+    if (change.kind !== void 0 && change.kind !== (send.kind ?? "audio")) throw new Error("a send does not change kind: remove it and add another");
+    if (send.kind === "midi" && (change.level !== void 0 || change.tap !== void 0)) throw new Error("a MIDI send has no level or tap");
     if (change.level !== void 0) {
       finiteAtLeast(change.level, 0, "a send level");
       send.level = change.level;
@@ -25943,6 +25955,7 @@ var OpDispatcher = class {
     if (!this.#engine) return;
     this.#engine.clearSends();
     for (const send of this.#project.sends) {
+      if (send.kind === "midi") continue;
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
     }
     for (const track of this.#project.tracks) {
@@ -26044,7 +26057,30 @@ var OpDispatcher = class {
     this.#linkSinksToTracks();
     this.#applyTrackDelays(compiled);
     this.#applyChannels();
-    this.#router?.setRoutes(midiRoutes);
+    this.#router?.setRoutes([...midiRoutes, ...this.#midiSendRoutes(midiRoutes)]);
+  }
+  /**
+   * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
+   * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
+   * target with no such node receives nothing, as its clips would play into nothing. A composite and a
+   * bypassed node are not routed from: the first has no single MIDI output to name, the second passes nothing.
+   */
+  #midiSendRoutes(routes) {
+    const routed = new Set(routes.map((r) => r.from));
+    const out = [];
+    for (const send of this.#project.sends) {
+      if (send.kind !== "midi") continue;
+      const to = this.#arrivalEngineId(this.#project.track(send.to)?.midiInput);
+      if (!to) continue;
+      for (const node of this.#project.nodes) {
+        if (node.track !== send.from || node.bypassed || this.#composites.has(node.id)) continue;
+        const from = this.#engineIdOf(node.id);
+        if (!from || from === to || routed.has(from)) continue;
+        if (!(this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi)) continue;
+        out.push({ from, to });
+      }
+    }
+    return out;
   }
   /**
    * Set several parameters as one edit.
@@ -27284,16 +27320,22 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }),
       one3({
         name: "send_add",
-        description: "Send some of one track to another, as an effect send. Level is linear (default 1) and tap is pre or post fader (default post). A cycle, or a second send between the same two tracks, is refused.",
-        properties: { from: { type: "string" }, to: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        description: "Send one track to another. Audio (the default) is a copy of the signal as an effect send: level is linear (default 1) and tap is pre or post fader (default post); it arrives at the target's audioInput, or its fader. With kind midi it routes the MIDI the source track makes to the plugin the target's MIDI clips play into (its midiInput), and takes no level or tap. A cycle, or a second send of one kind between the same two tracks, is refused.",
+        properties: {
+          from: { type: "string" },
+          to: { type: "string" },
+          kind: { type: "string", enum: ["audio", "midi"] },
+          level: num("Linear, zero or more; audio only"),
+          tap: { type: "string", enum: ["pre", "post"], description: "Audio only" }
+        },
         required: ["from", "to"],
         op: "addSend",
         id: "sendId",
-        pick: keep(["from", "to", "level", "tap"])
+        pick: keep(["from", "to", "kind", "level", "tap"])
       }),
       one3({
         name: "send_set",
-        description: "Change a send's level or whether it takes the signal before or after the fader.",
+        description: "Change an audio send's level or whether it takes the signal before or after the fader. A MIDI send has neither.",
         properties: { sendId: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
         required: ["sendId"],
         op: "setSend",
@@ -28355,7 +28397,8 @@ function writeArrangement(lines, project) {
     lines.push("", `<#master> ${st.join(" ; ")} .`);
   }
   for (const s of [...project.sends].sort(byId)) {
-    lines.push("", `<#${s.id}> a ${term3(jig4.Send)} ; ${term3(jig4.sendFrom)} <#${s.from}> ; ${term3(jig4.sendTo)} <#${s.to}> ; ${term3(jig4.level)} ${decimal(s.level)} ; ${term3(jig4.tap)} ${term3(jig4[TAP_TERM[s.tap]])} .`);
+    const ends = `<#${s.id}> a ${term3(jig4.Send)} ; ${term3(jig4.sendFrom)} <#${s.from}> ; ${term3(jig4.sendTo)} <#${s.to}>`;
+    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig4.signalKind)} ${term3(trn5.Midi)} .` : `${ends} ; ${term3(jig4.level)} ${decimal(s.level)} ; ${term3(jig4.tap)} ${term3(jig4[TAP_TERM[s.tap]])} .`);
   }
   for (const m of [...project.markers].sort(byId)) {
     lines.push("", `<#${m.id}> a ${term3(jig4.Marker)} ; ${term3(jig4.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
@@ -28554,11 +28597,18 @@ function readArrangement(dataset2, iri3, tracks) {
   }
   const each = (property, what) => objects3(dataset2, iri3, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri3, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
   for (const { subject, id } of each(jig5.send, "send")) {
+    const from = idOf(value(one2(dataset2, subject, jig5.sendFrom)), iri3, `sendFrom of ${id}`);
+    const to = idOf(value(one2(dataset2, subject, jig5.sendTo)), iri3, `sendTo of ${id}`);
+    const kind = value(one2(dataset2, subject, jig5.signalKind));
+    if (kind === trn6.Midi) {
+      changes.push({ op: "addSend", id, from, to, kind: "midi" });
+      continue;
+    }
     changes.push({
       op: "addSend",
       id,
-      from: idOf(value(one2(dataset2, subject, jig5.sendFrom)), iri3, `sendFrom of ${id}`),
-      to: idOf(value(one2(dataset2, subject, jig5.sendTo)), iri3, `sendTo of ${id}`),
+      from,
+      to,
       level: number3(one2(dataset2, subject, jig5.level), `level of ${id}`) ?? 1,
       tap: named(TAP_OF, value(one2(dataset2, subject, jig5.tap)), `tap of ${id}`)
     });

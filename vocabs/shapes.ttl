@@ -543,11 +543,21 @@ jig:SendShape a sh:NodeShape ;
         sh:disjoint jig:sendFrom ;
         sh:message "A send goes to exactly one track, and not the one it comes from."
     ] ;
-    sh:property [ sh:path jig:level ; sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "A send has a level of zero or more." ] ;
+    sh:property [ sh:path jig:level ; sh:maxCount 1 ; sh:minInclusive 0 ; sh:message "A send has a level of zero or more." ] ;
     sh:property [
-        sh:path jig:tap ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( jig:PreFader jig:PostFader ) ;
+        sh:path jig:tap ; sh:maxCount 1 ; sh:in ( jig:PreFader jig:PostFader ) ;
         sh:message "A send takes its signal pre-fader or post-fader, and nothing else."
-    ] .
+    ] ;
+    sh:property [
+        sh:path jig:signalKind ; sh:maxCount 1 ; sh:in ( trn:Audio trn:Midi ) ;
+        sh:message "A send carries audio, which is what it does when it says nothing, or MIDI."
+    ] ;
+    # Audio has a level and a tap, which MIDI has no meaning for, so a send is one or the other.
+    sh:or (
+        [ sh:property [ sh:path jig:signalKind ; sh:hasValue trn:Midi ] ]
+        [ sh:property [ sh:path jig:level ; sh:minCount 1 ] ; sh:property [ sh:path jig:tap ; sh:minCount 1 ] ]
+    ) ;
+    sh:message "A send is MIDI, or audio with a level and a tap." .
 
 jig:MarkerShape a sh:NodeShape ;
     sh:targetClass jig:Marker ;

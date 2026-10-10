@@ -184,10 +184,16 @@ function readArrangement (dataset, iri, tracks) {
   const each = (property, what) => objects(dataset, iri, property).map(x => x.value)
     .map(subject => ({ subject, id: idOf(subject, iri, what) })).sort((a, b) => mintedOrder(a.id, b.id))
   for (const { subject, id } of each(jig.send, 'send')) {
+    const from = idOf(value(one(dataset, subject, jig.sendFrom)), iri, `sendFrom of ${id}`)
+    const to = idOf(value(one(dataset, subject, jig.sendTo)), iri, `sendTo of ${id}`)
+    const kind = value(one(dataset, subject, jig.signalKind))
+    if (kind === trn.Midi) {
+      // A MIDI send has no level and no tap, so none is read: the model refuses one that is given.
+      changes.push({ op: 'addSend', id, from, to, kind: 'midi' })
+      continue
+    }
     changes.push({
-      op: 'addSend', id,
-      from: idOf(value(one(dataset, subject, jig.sendFrom)), iri, `sendFrom of ${id}`),
-      to: idOf(value(one(dataset, subject, jig.sendTo)), iri, `sendTo of ${id}`),
+      op: 'addSend', id, from, to,
       level: number(one(dataset, subject, jig.level), `level of ${id}`) ?? 1,
       tap: named(TAP_OF, value(one(dataset, subject, jig.tap)), `tap of ${id}`)
     })
