@@ -881,6 +881,62 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/markov/",
+      "label": "Markov",
+      "comment": "Markov-chain melody generator: a random walk over the twelve pitch classes driven by a 12 by 12 transition matrix, filled by one of eight styles or learned from a melodic line on its MIDI input, and played in time with the host transport.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/markov/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi",
+        "ControlMidi"
+      ],
+      "produces": [
+        "Midi",
+        "MelodyMidi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's.",
+        "The matrix is set by Style and Randomise, or learned. The VST3's cell-by-cell matrix editor is not carried over. The matrix and what it has learned are the plugin's saved state, so a reopened session plays the same melody.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "channel",
+        "chaos",
+        "clear_learned",
+        "conductor_ch",
+        "density",
+        "gate",
+        "grid",
+        "learn",
+        "learn_channel",
+        "learned_mix",
+        "low",
+        "octaves",
+        "order",
+        "phrase_bars",
+        "randomise",
+        "root",
+        "scale",
+        "seed",
+        "style",
+        "velocity"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/melgen/",
       "label": "MelGen",
       "comment": "Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.",
@@ -977,6 +1033,48 @@
         "low_note",
         "out_channel",
         "transpose"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/moka/",
+      "label": "Moka",
+      "comment": "A stereo MIDI synth built on modal synthesis: each voice is a bank of eight damped sine modes struck by a short mallet transient, giving xylophone, glockenspiel, woodblock, glass bowl, metal sheet and tube voices.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/moka/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "Follows per-channel pitch bend (2 semitones, or the range set by RPN 0), so Retune can drive it microtonally. Ported from the Downspout VST3 of the same name; its factory presets and panel are not carried over.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "decay",
+        "instrument",
+        "level",
+        "mallet",
+        "position",
+        "release",
+        "spread",
+        "tone",
+        "voices",
+        "width"
       ]
     },
     {
@@ -1160,6 +1258,93 @@
         "output",
         "pitch_fine",
         "pitch_shift"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/retune/",
+      "label": "Retune",
+      "comment": "Retunes a note stream to a Scala (.scl) scale by sending each held note on its own channel (2 to 16) behind a per-note pitch bend, so any synth that follows per-channel pitch bend can play microtonally.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/retune/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiProcessor"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Midi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut"
+      ],
+      "cautions": [
+        "The receiving synth must apply pitch bend per channel at the configured Bend range, in a one channel per note mode. Incoming pitch bend, channel aftertouch and system messages are dropped.",
+        "The scale is a jig:asset the person replaces with a .scl file of their own; it is saved with the session. Ported from the Downspout VST3 of the same name, whose .kbm keyboard maps and MPE zone setup are also not supported here.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "bend_range",
+        "root"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/sprout/",
+      "label": "Sprout",
+      "comment": "L-system MIDI generator: a grammar is rewritten for up to 16 generations, read as a turtle, and played as a monophonic, scale-quantised line locked to the host transport, optionally growing by one generation every few bars.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/sprout/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "MidiGenerator"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi",
+        "ControlMidi"
+      ],
+      "produces": [
+        "Midi"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "http://purl.org/stuff/jigdaw/MidiOut",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's.",
+        "Monophonic by design. A new note ends the note before it rather than overlapping. An expansion longer than 131,072 symbols is not used; the deepest generation that fits plays instead.",
+        "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+      ],
+      "parameters": [
+        "cc_channel",
+        "channel",
+        "conductor_ch",
+        "gate",
+        "generations",
+        "grid",
+        "grow_bars",
+        "input_channel",
+        "pitch_source",
+        "preset",
+        "probability",
+        "range",
+        "root",
+        "scale",
+        "seed",
+        "step_size",
+        "velocity"
       ]
     },
     {

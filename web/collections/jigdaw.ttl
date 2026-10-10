@@ -42,12 +42,16 @@
         <../plugins/jsfx-soft-clipper/> ,
         <../plugins/keyframe/> ,
         <../plugins/lookahead/> ,
+        <../plugins/markov/> ,
         <../plugins/melgen/> ,
         <../plugins/midifilter/> ,
+        <../plugins/moka/> ,
         <../plugins/mop/> ,
         <../plugins/parameq/> ,
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
+        <../plugins/retune/> ,
+        <../plugins/sprout/> ,
         <../plugins/squelch/> ,
         <../plugins/stomp-rack/> ,
         <../plugins/tremolo/> .
@@ -70,12 +74,16 @@
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .
 <../plugins/keyframe/> rdfs:label "Keyframe" .
 <../plugins/lookahead/> rdfs:label "Lookahead" .
+<../plugins/markov/> rdfs:label "Markov" .
 <../plugins/melgen/> rdfs:label "MelGen" .
 <../plugins/midifilter/> rdfs:label "MIDI Filter" .
+<../plugins/moka/> rdfs:label "Moka" .
 <../plugins/mop/> rdfs:label "Mop" .
 <../plugins/parameq/> rdfs:label "Parameq" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
+<../plugins/retune/> rdfs:label "Retune" .
+<../plugins/sprout/> rdfs:label "Sprout" .
 <../plugins/squelch/> rdfs:label "Squelch" .
 <../plugins/stomp-rack/> rdfs:label "Stomp rack" .
 <../plugins/tremolo/> rdfs:label "Tremolo" .

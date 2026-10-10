@@ -1,0 +1,51 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/retune/",
+  "label": "Retune",
+  "comment": "Retunes a note stream to a Scala (.scl) scale by sending each held note on its own channel (2 to 16) behind a per-note pitch bend, so any synth that follows per-channel pitch bend can play microtonally.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "retune",
+  "roles": [
+    "trn:MidiProcessor"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Midi"
+  ],
+  "cautions": [
+    "The receiving synth must apply pitch bend per channel at the configured Bend range, in a one channel per note mode. Incoming pitch bend, channel aftertouch and system messages are dropped.",
+    "The scale is a jig:asset the person replaces with a .scl file of their own; it is saved with the session. Ported from the Downspout VST3 of the same name, whose .kbm keyboard maps and MPE zone setup are also not supported here.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "MIT",
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "retune-processor.js"
+  },
+  "assets": [
+    {
+      "key": "scl",
+      "file": "12-tet.scl",
+      "mediaType": "text/plain",
+      "userReplaceable": true
+    }
+  ],
+  "ports": [
+    { "symbol": "root", "name": "Root note", "default": 60, "minimum": 0, "maximum": 127, "paramIndex": 0 },
+    { "symbol": "bend_range", "name": "Bend range (semitones)", "default": 2, "minimum": 1, "maximum": 24, "paramIndex": 1 }
+  ]
+}

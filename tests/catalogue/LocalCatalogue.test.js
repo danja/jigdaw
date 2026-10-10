@@ -29,7 +29,8 @@ describe('the plugins this host serves', () => {
       const file = join(root, 'plugins', name, 'profile.ttl')
       expected.push(readPlugin(await parseTurtleFile(file)).iri)
     }
-    const found = (await catalogue.search({})).map(e => e.iri)
+    // Asks for more than the default page: this checks that all of them are found, not that a page of them is.
+    const found = (await catalogue.search({ limit: 200 })).map(e => e.iri)
     expect(found.sort()).toEqual(expected.sort())
     expect(found.length, 'no plugins found, so this checked nothing').toBeGreaterThan(0)
   })
@@ -50,14 +51,14 @@ describe('the plugins this host serves', () => {
     // role and format are singular as facets and plural as fields. Reading the
     // entry by the facet name meant those two silently matched nothing.
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
-      .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Mop', 'Pulse'])
+      .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Moka', 'Mop', 'Pulse'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
       .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
     // BassGen accepts MIDI too: it can be steered from a keyboard. DrumKit
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
-      .toEqual(['8-Bit 8asterd', 'BassGen', 'Cadence', 'Canticle', 'Counterpointer', 'Dice', 'DrumKit', 'MIDI Filter', 'MelGen', 'Mop', 'Pulse'])
-    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'Cadence', 'Counterpointer', 'Dice', 'DrumGen', 'Ground', 'MelGen', 'MIDI Filter'])
+      .toEqual(['8-Bit 8asterd', 'BassGen', 'Cadence', 'Canticle', 'Counterpointer', 'Dice', 'DrumKit', 'MIDI Filter', 'Markov', 'MelGen', 'Moka', 'Mop', 'Pulse', 'Retune', 'Sprout'])
+    expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'Cadence', 'Counterpointer', 'Dice', 'DrumGen', 'Ground', 'Markov', 'MelGen', 'MIDI Filter', 'Retune', 'Sprout'])
   })
 
   it('takes a full IRI for a facet as well as a bare name', async () => {

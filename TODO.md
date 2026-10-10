@@ -7,6 +7,18 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
+- [ ] **Finish the Downspout ports: Moka, Sprout, Markov, Retune.** 2026-10-10. All four are plain JavaScript Jigs in `plugins/`
+      (no module), ported from `~/github/downspout/plugins/`, each with a host test (`tests/host/{moka,sprout,markov,retune}.test.js`)
+      that loads it through the real loader and engine and checks the music, not just that it loads. Retune's scale is a
+      `jig:asset` the person replaces and is its saved state; Markov's matrix and learned counts are its saved state, in the VST3's
+      own text format. **Left:** (1) **not yet seen in a browser**: load each in Chrome with the window in front, play Moka from the
+      keyboard, run Sprout and Markov against the transport, and chain Retune into Moka with a `.scl` loaded from the panel (the tests
+      render offline and use the offline host's fake port); (2) the VST3 panels did more than the generated panel can: Moka's presets
+      and partial ladder, Markov's clickable 12 by 12 matrix, Sprout's and Retune's status read-outs. Presets and the matrix editor
+      want a `jig:ui` or a preset mechanism for plugins; (3) Sprout and Markov draw with a 32-bit mix where the VST3 uses a 64-bit one
+      (64-bit integers are BigInt in JavaScript and allocate in `process()`), so a seed gives a different line from the VST3's;
+      (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
+      and now hides 6 of 31.
 - [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
       decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built, tested and checked in
       Chrome, 2026-10-01:** everything in `src/reel/`, `OpDispatcher.grouped`, `script_run`, saving a script in a session

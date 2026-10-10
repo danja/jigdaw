@@ -15,7 +15,7 @@ checkout, so what is said of it comes from its README only. None of the three wa
 
 **Built.** A Jig is loaded from one IRI. Fetching it returns a description, its code, and a
 digest for each. Publishing a plugin is putting files where a browser can fetch them: no
-installer, no registry, no rebuild of the host. The tree holds **27 plugins** written this way,
+installer, no registry, no rebuild of the host. The tree holds **31 plugins** written this way,
 in Rust, JavaScript, JSFX and hand-written WebAssembly.
 
 The others compile their instruments and effects into the application. openDAW's stock devices
@@ -103,7 +103,7 @@ REAPER session for the render script (testbed.md).
 
 **Built.** MelGen, BassGen, DrumGen, Cadence, Counterpointer and Ground write music from a seed,
 in time with the transport, as plugins like any other, and can be chained and steered from
-another plugin's output. **7 presets** are bundled, one of them a chiptune piece across six
+another plugin's output. **8 presets** are bundled, one of them a chiptune piece across six
 tracks. The others are sample and clip based, as one would expect of a DAW; none of them was
 seen to ship generators as plugins.
 

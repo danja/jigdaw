@@ -1,0 +1,190 @@
+# web/presets/generative-gamelan.ttl
+#
+# GENERATED: the two Retune jig:nodeState literals are plugins/retune/scales/pelog-approx.scl,
+# encoded as src/host/StateCodec.js encodes a saved session. Relative IRIs and no @base, for the
+# reason web/presets/amp-into-room.ttl gives.
+#
+# Two generators, each through its own Retune into its own Moka, both Mokas into one plate-and-hall
+# reverb on a third track. Sprout plays a Tree grammar and Markov walks a pentatonic style; both are
+# set to the chromatic scale so that each note step is one step of the gamelan scale, which Retune
+# then tunes. The scale is illustrative, not a measured gamelan. The two Mokas feed the reverb by
+# connections rather than by track outputs, because a bus track's input arrives at its fader and
+# not at the plugins on it. That means the two line tracks' faders do not reach the reverb; the
+# reverb track's fader is the level of the whole mix.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Generative Gamelan" ;
+    jig:revision 1 ;
+    jig:track <#track-1> , <#track-2> , <#track-3> ;
+    jig:node <#sprout> , <#tune-1> , <#moka-1> , <#markov> , <#tune-2> , <#moka-2> , <#verb> ;
+    jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> ;
+    jig:transport <#transport> .
+
+<#track-1> a jig:Track ; rdfs:label "Sprout" .
+<#track-2> a jig:Track ; rdfs:label "Markov" .
+<#track-3> a jig:Track ; rdfs:label "Reverb" .
+
+<#sprout>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Sprout" ;
+    jig:plugin <../plugins/sprout/> ;
+    jig:setting <#sprout-preset> , <#sprout-generations> , <#sprout-grow_bars> , <#sprout-scale> , <#sprout-root> , <#sprout-step_size> , <#sprout-range> , <#sprout-grid> , <#sprout-gate> , <#sprout-probability> , <#sprout-velocity> , <#sprout-seed> .
+
+<#tune-1>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Retune (pelog)" ;
+    jig:plugin <../plugins/retune/> ;
+    jig:setting <#tune-1-root> , <#tune-1-bend_range> ;
+    jig:nodeState "{\"scl\":{\"__jigdawArrayBuffer\":\"ISBwZWxvZy1hcHByb3guc2NsCiEKISBBbiBpbGx1c3RyYXRpdmUgcGVsb2ctbGlrZSBzZXZlbi1ub3RlIHNjYWxlOiBzbWFsbCBzdGVwcyBhdCB0aGUgc3RhcnQgYW5kIGEKISBsYXJnZSBnYXAgYmV0d2VlbiB0aGUgdGhpcmQgYW5kIGZvdXJ0aCBub3Rlcy4gVGhlIGNlbnRzIGFyZSByb3VuZGVkIGFuZCBjaG9zZW4KISBmb3IgaWxsdXN0cmF0aW9uLiBSZWFsIGdhbWVsYW5zIHZhcnkgd2lkZWx5IGFuZCB0aGlzIGlzIG5vdCBhIG1lYXN1cmVtZW50IG9mIGFueQohIHBhcnRpY3VsYXIgaW5zdHJ1bWVudDsgbG9hZCBhIG1lYXN1cmVkIC5zY2wgZm9yIGFuIGF1dGhlbnRpYyB0dW5pbmcuCiEgUGVsb2cgaXMgdXN1YWxseSBwbGF5ZWQgYXMgZml2ZS1ub3RlIHN1YnNldHMgKHBhdGV0KSBvZiB0aGUgc2V2ZW4uCiEKUGVsb2ctbGlrZSBzZXZlbi1ub3RlIHNjYWxlIChpbGx1c3RyYXRpdmUpCiA3CiEKIDEyMC4wCiAyNzAuMAogNTQwLjAKIDY3MC4wCiA4MDAuMAogOTUwLjAKIDEyMDAuMAo=\"}}" .
+
+<#moka-1>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Moka (metal sheet)" ;
+    jig:plugin <../plugins/moka/> ;
+    jig:setting <#moka-1-instrument> , <#moka-1-decay> , <#moka-1-mallet> , <#moka-1-tone> , <#moka-1-spread> , <#moka-1-position> , <#moka-1-voices> , <#moka-1-level> , <#moka-1-release> , <#moka-1-width> .
+
+<#markov>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Markov" ;
+    jig:plugin <../plugins/markov/> ;
+    jig:setting <#markov-root> , <#markov-scale> , <#markov-low> , <#markov-octaves> , <#markov-order> , <#markov-chaos> , <#markov-grid> , <#markov-gate> , <#markov-density> , <#markov-velocity> , <#markov-seed> , <#markov-phrase_bars> , <#markov-style> .
+
+<#tune-2>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Retune (pelog)" ;
+    jig:plugin <../plugins/retune/> ;
+    jig:setting <#tune-2-root> , <#tune-2-bend_range> ;
+    jig:nodeState "{\"scl\":{\"__jigdawArrayBuffer\":\"ISBwZWxvZy1hcHByb3guc2NsCiEKISBBbiBpbGx1c3RyYXRpdmUgcGVsb2ctbGlrZSBzZXZlbi1ub3RlIHNjYWxlOiBzbWFsbCBzdGVwcyBhdCB0aGUgc3RhcnQgYW5kIGEKISBsYXJnZSBnYXAgYmV0d2VlbiB0aGUgdGhpcmQgYW5kIGZvdXJ0aCBub3Rlcy4gVGhlIGNlbnRzIGFyZSByb3VuZGVkIGFuZCBjaG9zZW4KISBmb3IgaWxsdXN0cmF0aW9uLiBSZWFsIGdhbWVsYW5zIHZhcnkgd2lkZWx5IGFuZCB0aGlzIGlzIG5vdCBhIG1lYXN1cmVtZW50IG9mIGFueQohIHBhcnRpY3VsYXIgaW5zdHJ1bWVudDsgbG9hZCBhIG1lYXN1cmVkIC5zY2wgZm9yIGFuIGF1dGhlbnRpYyB0dW5pbmcuCiEgUGVsb2cgaXMgdXN1YWxseSBwbGF5ZWQgYXMgZml2ZS1ub3RlIHN1YnNldHMgKHBhdGV0KSBvZiB0aGUgc2V2ZW4uCiEKUGVsb2ctbGlrZSBzZXZlbi1ub3RlIHNjYWxlIChpbGx1c3RyYXRpdmUpCiA3CiEKIDEyMC4wCiAyNzAuMAogNTQwLjAKIDY3MC4wCiA4MDAuMAogOTUwLjAKIDEyMDAuMAo=\"}}" .
+
+<#moka-2>
+    a jig:Node ;
+    jig:onTrack <#track-2> ;
+    rdfs:label "Moka (glockenspiel)" ;
+    jig:plugin <../plugins/moka/> ;
+    jig:setting <#moka-2-instrument> , <#moka-2-decay> , <#moka-2-mallet> , <#moka-2-tone> , <#moka-2-spread> , <#moka-2-position> , <#moka-2-voices> , <#moka-2-level> , <#moka-2-release> , <#moka-2-width> .
+
+<#verb>
+    a jig:Node ;
+    jig:onTrack <#track-3> ;
+    rdfs:label "Hall" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#verb-mode> , <#verb-mix> , <#verb-size> , <#verb-damping> .
+
+<#sprout-preset> a jig:ParameterSetting ; jig:symbol "preset" ; jig:value 6.0 .
+<#sprout-generations> a jig:ParameterSetting ; jig:symbol "generations" ; jig:value 4.0 .
+<#sprout-grow_bars> a jig:ParameterSetting ; jig:symbol "grow_bars" ; jig:value 0.0 .
+<#sprout-scale> a jig:ParameterSetting ; jig:symbol "scale" ; jig:value 0.0 .
+<#sprout-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
+<#sprout-step_size> a jig:ParameterSetting ; jig:symbol "step_size" ; jig:value 1.0 .
+<#sprout-range> a jig:ParameterSetting ; jig:symbol "range" ; jig:value 10.0 .
+<#sprout-grid> a jig:ParameterSetting ; jig:symbol "grid" ; jig:value 5.0 .
+<#sprout-gate> a jig:ParameterSetting ; jig:symbol "gate" ; jig:value 0.8 .
+<#sprout-probability> a jig:ParameterSetting ; jig:symbol "probability" ; jig:value 0.85 .
+<#sprout-velocity> a jig:ParameterSetting ; jig:symbol "velocity" ; jig:value 90.0 .
+<#sprout-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 3.0 .
+<#tune-1-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
+<#tune-1-bend_range> a jig:ParameterSetting ; jig:symbol "bend_range" ; jig:value 2.0 .
+<#moka-1-instrument> a jig:ParameterSetting ; jig:symbol "instrument" ; jig:value 4.0 .
+<#moka-1-decay> a jig:ParameterSetting ; jig:symbol "decay" ; jig:value 0.6 .
+<#moka-1-mallet> a jig:ParameterSetting ; jig:symbol "mallet" ; jig:value 0.6 .
+<#moka-1-tone> a jig:ParameterSetting ; jig:symbol "tone" ; jig:value 0.55 .
+<#moka-1-spread> a jig:ParameterSetting ; jig:symbol "spread" ; jig:value 0.3 .
+<#moka-1-position> a jig:ParameterSetting ; jig:symbol "position" ; jig:value 0.45 .
+<#moka-1-voices> a jig:ParameterSetting ; jig:symbol "voices" ; jig:value 6.0 .
+<#moka-1-level> a jig:ParameterSetting ; jig:symbol "level" ; jig:value 0.3 .
+<#moka-1-release> a jig:ParameterSetting ; jig:symbol "release" ; jig:value 0.4 .
+<#moka-1-width> a jig:ParameterSetting ; jig:symbol "width" ; jig:value 0.7 .
+<#markov-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
+<#markov-scale> a jig:ParameterSetting ; jig:symbol "scale" ; jig:value 0.0 .
+<#markov-low> a jig:ParameterSetting ; jig:symbol "low" ; jig:value 48.0 .
+<#markov-octaves> a jig:ParameterSetting ; jig:symbol "octaves" ; jig:value 2.0 .
+<#markov-order> a jig:ParameterSetting ; jig:symbol "order" ; jig:value 1.0 .
+<#markov-chaos> a jig:ParameterSetting ; jig:symbol "chaos" ; jig:value 0.45 .
+<#markov-grid> a jig:ParameterSetting ; jig:symbol "grid" ; jig:value 4.0 .
+<#markov-gate> a jig:ParameterSetting ; jig:symbol "gate" ; jig:value 0.9 .
+<#markov-density> a jig:ParameterSetting ; jig:symbol "density" ; jig:value 0.6 .
+<#markov-velocity> a jig:ParameterSetting ; jig:symbol "velocity" ; jig:value 80.0 .
+<#markov-seed> a jig:ParameterSetting ; jig:symbol "seed" ; jig:value 5.0 .
+<#markov-phrase_bars> a jig:ParameterSetting ; jig:symbol "phrase_bars" ; jig:value 2.0 .
+<#markov-style> a jig:ParameterSetting ; jig:symbol "style" ; jig:value 3.0 .
+<#tune-2-root> a jig:ParameterSetting ; jig:symbol "root" ; jig:value 60.0 .
+<#tune-2-bend_range> a jig:ParameterSetting ; jig:symbol "bend_range" ; jig:value 2.0 .
+<#moka-2-instrument> a jig:ParameterSetting ; jig:symbol "instrument" ; jig:value 1.0 .
+<#moka-2-decay> a jig:ParameterSetting ; jig:symbol "decay" ; jig:value 0.55 .
+<#moka-2-mallet> a jig:ParameterSetting ; jig:symbol "mallet" ; jig:value 0.55 .
+<#moka-2-tone> a jig:ParameterSetting ; jig:symbol "tone" ; jig:value 0.6 .
+<#moka-2-spread> a jig:ParameterSetting ; jig:symbol "spread" ; jig:value 0.3 .
+<#moka-2-position> a jig:ParameterSetting ; jig:symbol "position" ; jig:value 0.4 .
+<#moka-2-voices> a jig:ParameterSetting ; jig:symbol "voices" ; jig:value 6.0 .
+<#moka-2-level> a jig:ParameterSetting ; jig:symbol "level" ; jig:value 0.3 .
+<#moka-2-release> a jig:ParameterSetting ; jig:symbol "release" ; jig:value 0.4 .
+<#moka-2-width> a jig:ParameterSetting ; jig:symbol "width" ; jig:value 0.8 .
+<#verb-mode> a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#verb-mix> a jig:ParameterSetting ; jig:symbol "mix" ; jig:value 0.35 .
+<#verb-size> a jig:ParameterSetting ; jig:symbol "size" ; jig:value 30.0 .
+<#verb-damping> a jig:ParameterSetting ; jig:symbol "damping" ; jig:value 5000.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#sprout> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#tune-1> ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Midi .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#tune-1> ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#moka-1> ; jig:portIndex 0 .
+
+<#c3>
+    a jig:Connection ;
+    jig:from <#c3-from> ; jig:to <#c3-to> ;
+    jig:signalKind trn:Midi .
+
+<#c3-from> a jig:Endpoint ; jig:endpointNode <#markov> ; jig:portIndex 0 .
+<#c3-to>   a jig:Endpoint ; jig:endpointNode <#tune-2> ; jig:portIndex 0 .
+
+<#c4>
+    a jig:Connection ;
+    jig:from <#c4-from> ; jig:to <#c4-to> ;
+    jig:signalKind trn:Midi .
+
+<#c4-from> a jig:Endpoint ; jig:endpointNode <#tune-2> ; jig:portIndex 0 .
+<#c4-to>   a jig:Endpoint ; jig:endpointNode <#moka-2> ; jig:portIndex 0 .
+
+<#c5>
+    a jig:Connection ;
+    jig:from <#c5-from> ; jig:to <#c5-to> ;
+    jig:signalKind trn:Audio .
+
+<#c5-from> a jig:Endpoint ; jig:endpointNode <#moka-1> ; jig:portIndex 0 .
+<#c5-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+
+<#c6>
+    a jig:Connection ;
+    jig:from <#c6-from> ; jig:to <#c6-to> ;
+    jig:signalKind trn:Audio .
+
+<#c6-from> a jig:Endpoint ; jig:endpointNode <#moka-2> ; jig:portIndex 0 .
+<#c6-to>   a jig:Endpoint ; jig:endpointNode <#verb> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 84.0 .

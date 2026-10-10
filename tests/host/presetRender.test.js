@@ -49,7 +49,13 @@ describe('the bundled presets, played', () => {
     it(`${file}: every track with something that makes sound gets sound`, async () => {
       const { dispatcher, engine } = await open(file, validator)
       const peaks = await renderChain(dispatcher, engine, { quanta: Math.ceil(SECONDS * 48000 / 128) })
-      const makesSound = track => dispatcher.project.nodes.some(n => n.track === track.id && (dispatcher.engineNode(n.id)?.profile.audioOutputs ?? 0) > 0)
+      const makesAudio = n => (dispatcher.engineNode(n.id)?.profile.audioOutputs ?? 0) > 0
+      // A node's audio goes to its track's fader unless it feeds another node, so a track whose audio
+      // all feeds a node on another track (a shared reverb) has nothing at its own fader. That
+      // reverb's track is the one that must hear it.
+      const feedsOtherTrack = n => dispatcher.project.connections.some(c => c.from.node === n.id &&
+        dispatcher.project.node(c.to.node).track !== n.track)
+      const makesSound = track => dispatcher.project.nodes.some(n => n.track === track.id && makesAudio(n) && !feedsOtherTrack(n))
       const expected = dispatcher.project.tracks.filter(makesSound)
       expect(expected.length, 'a preset with nothing that makes sound').toBeGreaterThan(0)
       for (const track of expected) {

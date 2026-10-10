@@ -96,7 +96,7 @@ starts on the simple page.
 - A session is RDF (Turtle), or a zip of it with its audio and a separate `editor.ttl` for layout, colours and
   positions. Layout is kept apart from the model and is not part of undo.
 - Undo and redo cover every edit; a changeset is atomic and carries a revision.
-- Save and Open, seven bundled presets that play a generated piece on their own, and a piece carried between
+- Save and Open, eight bundled presets that play a generated piece on their own, and a piece carried between
   the two pages: following the link to the other page keeps the open session and the other page offers it.
 
 ## The simple page
@@ -133,7 +133,7 @@ starts on the simple page.
 
 ## The plugins
 
-**27 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**31 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).
@@ -144,8 +144,8 @@ profile and loadable by its IRI:
   clipper, with a sidechain key), Squelch (acid filter), Tremolo, Quefrency (formant and pitch), Lookahead,
   Boost, and three JSFX effects (gain trim, one-pole filter, soft clipper).
 
-**7 presets** are bundled: Chiptune, Acid, Generative through effects, Amp into a room, Fender into the
-Ropery, Fugue, and Through Keyframe. Each is played offline in a test and must put sound on every track that has a sound maker.
+**8 presets** are bundled: Chiptune, Acid, Generative through effects, Amp into a room, Fender into the
+Ropery, Fugue, Generative Gamelan, and Through Keyframe. Each is played offline in a test and must put sound on every track that has a sound maker, or on the track its audio is routed to.
 
 ## Built to be used by everyone
 

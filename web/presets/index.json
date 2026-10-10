@@ -10,6 +10,10 @@
       "label": "Generative, through effects"
     },
     {
+      "file": "generative-gamelan.ttl",
+      "label": "Generative Gamelan"
+    },
+    {
       "file": "amp-into-room.ttl",
       "label": "Amp into a room"
     },

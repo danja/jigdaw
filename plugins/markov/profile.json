@@ -1,0 +1,389 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/markov/",
+  "label": "Markov",
+  "comment": "Markov-chain melody generator: a random walk over the twelve pitch classes driven by a 12 by 12 transition matrix, filled by one of eight styles or learned from a melodic line on its MIDI input, and played in time with the host transport.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "MIT",
+  "prefers": [],
+  "registeredName": "markov",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:Midi",
+    "trn:ControlMidi"
+  ],
+  "produces": [
+    "trn:Midi",
+    "trn:MelodyMidi"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's.",
+    "The matrix is set by Style and Randomise, or learned. The VST3's cell-by-cell matrix editor is not carried over. The matrix and what it has learned are the plugin's saved state, so a reopened session plays the same melody.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "markov-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "root",
+      "name": "Root note",
+      "default": 60,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "scale",
+      "name": "Scale",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 23,
+      "scalePoints": [
+        {
+          "label": "Chromatic",
+          "value": 0
+        },
+        {
+          "label": "Major",
+          "value": 1
+        },
+        {
+          "label": "Ionian",
+          "value": 2
+        },
+        {
+          "label": "Minor",
+          "value": 3
+        },
+        {
+          "label": "Harmonic Minor",
+          "value": 4
+        },
+        {
+          "label": "Melodic Minor",
+          "value": 5
+        },
+        {
+          "label": "Dorian",
+          "value": 6
+        },
+        {
+          "label": "Phrygian",
+          "value": 7
+        },
+        {
+          "label": "Lydian",
+          "value": 8
+        },
+        {
+          "label": "Mixolydian",
+          "value": 9
+        },
+        {
+          "label": "Locrian",
+          "value": 10
+        },
+        {
+          "label": "Phrygian Dominant",
+          "value": 11
+        },
+        {
+          "label": "Neapolitan Major",
+          "value": 12
+        },
+        {
+          "label": "Neapolitan Minor",
+          "value": 13
+        },
+        {
+          "label": "Pentatonic Major",
+          "value": 14
+        },
+        {
+          "label": "Pentatonic Minor",
+          "value": 15
+        },
+        {
+          "label": "Blues",
+          "value": 16
+        },
+        {
+          "label": "Whole Tone",
+          "value": 17
+        },
+        {
+          "label": "Altered",
+          "value": 18
+        },
+        {
+          "label": "Half-Whole Dim",
+          "value": 19
+        },
+        {
+          "label": "Whole-Half Dim",
+          "value": 20
+        },
+        {
+          "label": "Bebop Dominant",
+          "value": 21
+        },
+        {
+          "label": "Bebop Major",
+          "value": 22
+        },
+        {
+          "label": "Bebop Minor",
+          "value": 23
+        }
+      ],
+      "paramIndex": 1
+    },
+    {
+      "symbol": "low",
+      "name": "Lowest note",
+      "default": 48,
+      "minimum": 12,
+      "maximum": 96,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "octaves",
+      "name": "Octaves",
+      "default": 2,
+      "minimum": 1,
+      "maximum": 4,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "order",
+      "name": "Order",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 2,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "chaos",
+      "name": "Chaos",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "grid",
+      "name": "Step grid",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 11,
+      "scalePoints": [
+        {
+          "label": "1/32",
+          "value": 0
+        },
+        {
+          "label": "1/16T",
+          "value": 1
+        },
+        {
+          "label": "1/16",
+          "value": 2
+        },
+        {
+          "label": "1/16.",
+          "value": 3
+        },
+        {
+          "label": "1/8T",
+          "value": 4
+        },
+        {
+          "label": "1/8",
+          "value": 5
+        },
+        {
+          "label": "1/8.",
+          "value": 6
+        },
+        {
+          "label": "1/4T",
+          "value": 7
+        },
+        {
+          "label": "1/4",
+          "value": 8
+        },
+        {
+          "label": "1/4.",
+          "value": 9
+        },
+        {
+          "label": "1/2",
+          "value": 10
+        },
+        {
+          "label": "1 bar",
+          "value": 11
+        }
+      ],
+      "paramIndex": 6
+    },
+    {
+      "symbol": "gate",
+      "name": "Gate",
+      "default": 0.7,
+      "minimum": 0.1,
+      "maximum": 1,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "density",
+      "name": "Density",
+      "default": 0.85,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "velocity",
+      "name": "Velocity",
+      "default": 90,
+      "minimum": 1,
+      "maximum": 127,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "channel",
+      "name": "Channel",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 65535,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "phrase_bars",
+      "name": "Phrase bars",
+      "default": 2,
+      "minimum": 1,
+      "maximum": 8,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "style",
+      "name": "Style",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 7,
+      "scalePoints": [
+        {
+          "label": "Stepwise",
+          "value": 0
+        },
+        {
+          "label": "Triadic",
+          "value": 1
+        },
+        {
+          "label": "Fifths",
+          "value": 2
+        },
+        {
+          "label": "Pentatonic",
+          "value": 3
+        },
+        {
+          "label": "Blues",
+          "value": 4
+        },
+        {
+          "label": "Chromatic",
+          "value": 5
+        },
+        {
+          "label": "Tonic pull",
+          "value": 6
+        },
+        {
+          "label": "Uniform",
+          "value": 7
+        }
+      ],
+      "paramIndex": 13
+    },
+    {
+      "symbol": "randomise",
+      "name": "Randomise matrix",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "learn",
+      "name": "Learn",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 15
+    },
+    {
+      "symbol": "learn_channel",
+      "name": "Learn channel (0 = all)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 16
+    },
+    {
+      "symbol": "learned_mix",
+      "name": "Learned mix",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 17
+    },
+    {
+      "symbol": "clear_learned",
+      "name": "Clear learned",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 18
+    },
+    {
+      "symbol": "conductor_ch",
+      "name": "Conductor channel (0 = off)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 19
+    }
+  ]
+}

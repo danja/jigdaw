@@ -1,0 +1,372 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/sprout/",
+  "label": "Sprout",
+  "comment": "L-system MIDI generator: a grammar is rewritten for up to 16 generations, read as a turtle, and played as a monophonic, scale-quantised line locked to the host transport, optionally growing by one generation every few bars.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "MIT",
+  "prefers": [],
+  "registeredName": "sprout",
+  "roles": [
+    "trn:MidiGenerator"
+  ],
+  "accepts": [
+    "trn:Midi",
+    "trn:ControlMidi"
+  ],
+  "produces": [
+    "trn:Midi"
+  ],
+  "cautions": [
+    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's.",
+    "Monophonic by design. A new note ends the note before it rather than overlapping. An expansion longer than 131,072 symbols is not used; the deepest generation that fits plays instead.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "requires": [
+    "jig:MidiEvents",
+    "jig:MidiOut",
+    "trn:HostTransport"
+  ],
+  "shape": {
+    "stateless": true,
+    "audioInputs": 0,
+    "audioOutputs": 0,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "sprout-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "preset",
+      "name": "Grammar",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 6,
+      "scalePoints": [
+        {
+          "label": "Plant",
+          "value": 0
+        },
+        {
+          "label": "Koch",
+          "value": 1
+        },
+        {
+          "label": "Dragon",
+          "value": 2
+        },
+        {
+          "label": "Sierpinski",
+          "value": 3
+        },
+        {
+          "label": "Cantor",
+          "value": 4
+        },
+        {
+          "label": "Levy",
+          "value": 5
+        },
+        {
+          "label": "Tree",
+          "value": 6
+        }
+      ],
+      "paramIndex": 0
+    },
+    {
+      "symbol": "generations",
+      "name": "Generations",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 1
+    },
+    {
+      "symbol": "grow_bars",
+      "name": "Grow every (bars, 0 = off)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "scale",
+      "name": "Scale",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 23,
+      "scalePoints": [
+        {
+          "label": "Chromatic",
+          "value": 0
+        },
+        {
+          "label": "Major",
+          "value": 1
+        },
+        {
+          "label": "Ionian",
+          "value": 2
+        },
+        {
+          "label": "Minor",
+          "value": 3
+        },
+        {
+          "label": "Harmonic Minor",
+          "value": 4
+        },
+        {
+          "label": "Melodic Minor",
+          "value": 5
+        },
+        {
+          "label": "Dorian",
+          "value": 6
+        },
+        {
+          "label": "Phrygian",
+          "value": 7
+        },
+        {
+          "label": "Lydian",
+          "value": 8
+        },
+        {
+          "label": "Mixolydian",
+          "value": 9
+        },
+        {
+          "label": "Locrian",
+          "value": 10
+        },
+        {
+          "label": "Phrygian Dominant",
+          "value": 11
+        },
+        {
+          "label": "Neapolitan Major",
+          "value": 12
+        },
+        {
+          "label": "Neapolitan Minor",
+          "value": 13
+        },
+        {
+          "label": "Pentatonic Major",
+          "value": 14
+        },
+        {
+          "label": "Pentatonic Minor",
+          "value": 15
+        },
+        {
+          "label": "Blues",
+          "value": 16
+        },
+        {
+          "label": "Whole Tone",
+          "value": 17
+        },
+        {
+          "label": "Altered",
+          "value": 18
+        },
+        {
+          "label": "Half-Whole Dim",
+          "value": 19
+        },
+        {
+          "label": "Whole-Half Dim",
+          "value": 20
+        },
+        {
+          "label": "Bebop Dominant",
+          "value": 21
+        },
+        {
+          "label": "Bebop Major",
+          "value": 22
+        },
+        {
+          "label": "Bebop Minor",
+          "value": 23
+        }
+      ],
+      "paramIndex": 3
+    },
+    {
+      "symbol": "root",
+      "name": "Root note",
+      "default": 60,
+      "minimum": 0,
+      "maximum": 127,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "step_size",
+      "name": "Step size (degrees)",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 3,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "range",
+      "name": "Range (degrees)",
+      "default": 14,
+      "minimum": 3,
+      "maximum": 28,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "grid",
+      "name": "Step grid",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 11,
+      "scalePoints": [
+        {
+          "label": "1/32",
+          "value": 0
+        },
+        {
+          "label": "1/16T",
+          "value": 1
+        },
+        {
+          "label": "1/16",
+          "value": 2
+        },
+        {
+          "label": "1/16.",
+          "value": 3
+        },
+        {
+          "label": "1/8T",
+          "value": 4
+        },
+        {
+          "label": "1/8",
+          "value": 5
+        },
+        {
+          "label": "1/8.",
+          "value": 6
+        },
+        {
+          "label": "1/4T",
+          "value": 7
+        },
+        {
+          "label": "1/4",
+          "value": 8
+        },
+        {
+          "label": "1/4.",
+          "value": 9
+        },
+        {
+          "label": "1/2",
+          "value": 10
+        },
+        {
+          "label": "1 bar",
+          "value": 11
+        }
+      ],
+      "paramIndex": 7
+    },
+    {
+      "symbol": "gate",
+      "name": "Gate",
+      "default": 0.7,
+      "minimum": 0.1,
+      "maximum": 1,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "probability",
+      "name": "Probability",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 9
+    },
+    {
+      "symbol": "velocity",
+      "name": "Velocity",
+      "default": 90,
+      "minimum": 1,
+      "maximum": 127,
+      "paramIndex": 10
+    },
+    {
+      "symbol": "channel",
+      "name": "Channel",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 16,
+      "paramIndex": 11
+    },
+    {
+      "symbol": "seed",
+      "name": "Seed",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 65535,
+      "paramIndex": 12
+    },
+    {
+      "symbol": "pitch_source",
+      "name": "Pitch source",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "scalePoints": [
+        {
+          "label": "Scale",
+          "value": 0
+        },
+        {
+          "label": "Held notes",
+          "value": 1
+        },
+        {
+          "label": "Latched notes",
+          "value": 2
+        }
+      ],
+      "paramIndex": 13
+    },
+    {
+      "symbol": "input_channel",
+      "name": "Input channel (0 = all)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "cc_channel",
+      "name": "CC channel (0 = off)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 15
+    },
+    {
+      "symbol": "conductor_ch",
+      "name": "Conductor channel (0 = off)",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 16,
+      "paramIndex": 16
+    }
+  ]
+}

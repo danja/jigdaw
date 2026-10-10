@@ -1,0 +1,148 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/moka/",
+  "label": "Moka",
+  "comment": "A stereo MIDI synth built on modal synthesis: each voice is a bank of eight damped sine modes struck by a short mallet transient, giving xylophone, glockenspiel, woodblock, glass bowl, metal sheet and tube voices.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "format": "trn:Jig , trn:WebAudio",
+  "licenceId": "MIT",
+  "prefers": [],
+  "registeredName": "moka",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "cautions": [
+    "Follows per-channel pitch bend (2 semitones, or the range set by RPN 0), so Retune can drive it microtonally. Ported from the Downspout VST3 of the same name; its factory presets and panel are not carried over.",
+    "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
+  ],
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "shape": {
+    "stateless": true,
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0
+  },
+  "resources": {
+    "processor": "moka-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "instrument",
+      "name": "Instrument",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "Xylophone",
+          "value": 0
+        },
+        {
+          "label": "Glockenspiel",
+          "value": 1
+        },
+        {
+          "label": "Woodblock",
+          "value": 2
+        },
+        {
+          "label": "Glass Bowl",
+          "value": 3
+        },
+        {
+          "label": "Metal Sheet",
+          "value": 4
+        },
+        {
+          "label": "Tube",
+          "value": 5
+        }
+      ],
+      "paramIndex": 0
+    },
+    {
+      "symbol": "decay",
+      "name": "Decay",
+      "default": 0.55,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 1
+    },
+    {
+      "symbol": "mallet",
+      "name": "Mallet hardness",
+      "default": 0.75,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 2
+    },
+    {
+      "symbol": "tone",
+      "name": "Tone",
+      "default": 0.65,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 3
+    },
+    {
+      "symbol": "spread",
+      "name": "Spread",
+      "default": 0.3,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 4
+    },
+    {
+      "symbol": "position",
+      "name": "Strike position",
+      "default": 0.45,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "voices",
+      "name": "Voices",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 12,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "level",
+      "name": "Level",
+      "default": 0.7,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 7
+    },
+    {
+      "symbol": "release",
+      "name": "Release",
+      "default": 0.3,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 8
+    },
+    {
+      "symbol": "width",
+      "name": "Width",
+      "default": 0.7,
+      "minimum": 0,
+      "maximum": 1,
+      "paramIndex": 9
+    }
+  ]
+}
