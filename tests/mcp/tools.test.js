@@ -318,6 +318,27 @@ describe('transport_play and transport_stop', () => {
     expect(played).toEqual(['play', 'stop'])
   })
 
+  it('starts at the beat it is asked for, and says nothing extra when it is not asked', async () => {
+    const asked = []
+    const tools = createTools({ dispatcher, onPlay: async options => { asked.push(options) } })
+    const play = input => tools.find(t => t.name === 'transport_play').handler(input)
+    expect((await play({ fromBeat: 96 })).ok).toBe(true)
+    expect((await play()).ok).toBe(true)
+    expect(asked).toEqual([{ fromBeat: 96 }, {}])
+  })
+
+  it('refuses a start that is not a beat, before it reaches the transport', async () => {
+    const asked = []
+    const tools = createTools({ dispatcher, onPlay: async options => { asked.push(options) } })
+    const play = input => tools.find(t => t.name === 'transport_play').handler(input)
+    for (const fromBeat of [-1, Number.NaN, Infinity]) {
+      const result = await play({ fromBeat })
+      expect(result.ok).toBe(false)
+      expect(result.error).toMatch(/fromBeat is a beat/)
+    }
+    expect(asked).toEqual([])
+  })
+
   it('explains itself when no transport is connected, rather than vanishing', async () => {
     const tools = createTools({ dispatcher })
     expect((await tools.find(t => t.name === 'transport_play').handler()).ok).toBe(false)
@@ -709,6 +730,29 @@ describe('audio clips', () => {
     const added = await call('clip_add_audio', { trackId, source: 'https://example.org/loop.wav', startBeat: 0, lengthBeats: 8, offsetSeconds: 1 })
     expect(dispatcher.project.clip(added.clipId)).toMatchObject({ kind: 'audio', source: 'https://example.org/loop.wav', offsetSeconds: 1 })
     expect((await call('clip_add_audio', { trackId, source: 'loop.wav', startBeat: 0, lengthBeats: 8 })).ok).toBe(false)
+  })
+})
+
+describe('naming the node of a parameter', () => {
+  const mix = () => dispatcher.project.nodes.find(n => n.id === 'a').settings.get('mix')
+
+  it('takes nodeId, as every other tool does, and node, as it used to', async () => {
+    addNodes()
+    expect((await call('parameter_set', { nodeId: 'a', symbol: 'mix', value: 0.3 })).ok).toBe(true)
+    expect(mix()).toBe(0.3)
+    expect((await call('parameter_set', { node: 'a', symbol: 'mix', value: 0.4 })).ok).toBe(true)
+    expect(mix()).toBe(0.4)
+    expect((await call('parameter_reset', { nodeId: 'a', symbol: 'mix' })).ok).toBe(true)
+    expect(mix()).toBeUndefined()
+  })
+
+  it('says what is missing rather than looking for a node called undefined', async () => {
+    addNodes()
+    for (const tool of ['parameter_set', 'parameter_reset']) {
+      const result = await call(tool, { symbol: 'mix', value: 0.3 })
+      expect(result.ok).toBe(false)
+      expect(result.error).toMatch(/needs nodeId/)
+    }
   })
 })
 

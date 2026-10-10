@@ -103,21 +103,14 @@ describe('the Browser panel', () => {
     expect(focused).toBe('q')
   })
 
-  it('remembers the choice in this browser only, and restores an open panel on mount', () => {
-    layout.mount()
-    click(toggle)
-    expect(store.data['jigdaw.browserOpen']).toBe('1')
-    click(toggle)
-    expect(store.data['jigdaw.browserOpen']).toBe('0')
+  it('starts closed whatever an earlier visit left behind, and keeps nothing about it', () => {
     ;({ browser, toggle, layout } = build({ 'jigdaw.browserOpen': '1' }))
     layout.mount()
-    expect(browser.hidden).toBe(false)
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
-  })
-
-  it('does not write the remembered state just for mounting', () => {
-    layout.mount()
-    expect(store.data['jigdaw.browserOpen']).toBeUndefined()
+    expect(browser.hidden).toBe(true)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    click(toggle)
+    click(toggle)
+    expect(store.data['jigdaw.browserOpen']).toBe('1') // untouched: this page neither reads nor writes it
   })
 
   it('starts closed when storage is blocked or absent, and does not throw', () => {

@@ -249,3 +249,74 @@ describe('automation through the scheduler', () => {
     expect(() => new Scheduler({ now: () => 0, sampleRate: 48000, lookahead: 0.5, notes: () => new Map(), transport: () => ({}), send: () => {}, automation: { envelopes () {} } })).toThrow(/automation/)
   })
 })
+
+describe('starting part way into the song', () => {
+  it('sends nothing from before the start, and the notes after it where they fall', () => {
+    const p = projectWith([note(0, 60), note(8, 62), note(12, 64)], { clipLength: 16 })
+    const { scheduler, sent, at, advance } = rig(p)
+    // Beat 8 is 4 seconds in at 120 bpm. Beat zero was heard 4 seconds before the clock started.
+    scheduler.start(-4, { from: 4 })
+    at(0)
+    advance(4)
+    const on = sent.filter(e => e.kind === 'on')
+    expect(on.map(e => e.pitch)).toEqual([62, 64])
+    expect(on[0].frame).toBe(0) // beat 8 is heard at clock zero
+    expect(on[1].frame).toBe(2 * RATE)
+    expect(sent.every(e => e.frame >= 0)).toBe(true)
+  })
+
+  it('does not strike a note that began before the start, even though it is still sounding', () => {
+    const p = projectWith([note(6, 60, 4)], { clipLength: 16 })
+    const { scheduler, sent, at, advance } = rig(p)
+    scheduler.start(-4, { from: 4 }) // beat 8, in the middle of the note
+    at(0)
+    advance(2)
+    expect(sent).toEqual([])
+  })
+
+  it('refuses a start before the beginning', () => {
+    const { scheduler } = rig(projectWith([]))
+    expect(() => scheduler.start(0, { from: -1 })).toThrow(/zero or more seconds/)
+  })
+
+  it('starts inside a loop and plays it round: from the start point to the end, then the loop from its start', () => {
+    const p = projectWith([note(4, 60, 0.5), note(6, 62, 0.5)], { clipLength: 16 })
+    const t = transport({ loopStart: 4, loopEnd: 8, loopEnabled: true })
+    const { scheduler, sent, at, advance } = rig(p, { t })
+    scheduler.start(-2, { from: 2 }) // beat 4, the loop's own start
+    at(0)
+    advance(5)
+    const on = sent.filter(e => e.kind === 'on')
+    // 60 at 0 s, 62 at 1 s, then the next pass: 60 at 2 s, 62 at 3 s, and so on (the one at 5 s is inside the lookahead).
+    expect(on.map(e => [e.pitch, e.frame / RATE])).toEqual([[60, 0], [62, 1], [60, 2], [62, 3], [60, 4], [62, 5]])
+  })
+})
+
+describe('envelopes when starting part way in', () => {
+  const env = { id: 'e', target: { node: 'n', symbol: 'cutoff' }, points: [{ atBeat: 0, value: 100, curve: 'linear' }, { atBeat: 8, value: 900, curve: 'linear' }] }
+  const run = (from, loop = { enabled: false }) => {
+    const applied = []
+    const transport = { secondsAtBeat: b => b / 2, loop }
+    const scheduler = new Scheduler({
+      now: () => 10, sampleRate: 48000, lookahead: 0.5, notes: () => new Map(), transport: () => transport, send: () => {},
+      automation: { envelopes: () => [env], apply: (e, i) => applied.push(i), stop: () => {} }
+    })
+    scheduler.start(10 - from, { from })
+    scheduler.tick()
+    return applied
+  }
+
+  it('sets the value the envelope has at the start and carries the rest of the segment on, so a section does not begin with whatever was left', () => {
+    // At beat 4 (2 s) the line from 100 to 900 over 4 s is at 500, and has 2 s of its climb to go.
+    const applied = run(2)
+    expect(applied[0]).toMatchObject({ kind: 'set', value: 500 })
+    expect(applied[1]).toMatchObject({ kind: 'ramp', value: 500, endValue: 900 })
+    expect(applied[1].end - applied[1].at).toBeCloseTo(2, 6)
+  })
+
+  it('seeds nothing when it starts at the beginning, which the first point already covers', () => {
+    const applied = run(0)
+    expect(applied.filter(i => i.kind === 'set')).toHaveLength(1)
+    expect(applied[0]).toMatchObject({ value: 100 })
+  })
+})

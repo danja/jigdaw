@@ -885,11 +885,14 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       inputSchema: {
         type: 'object',
         properties: {
-          node: { type: 'string' }, symbol: { type: 'string' }, value: { type: 'number' }
+          nodeId: { type: 'string', description: 'The node, as every other tool names it' },
+          node: { type: 'string', description: 'The same, under the name this tool used before the others agreed on nodeId' },
+          symbol: { type: 'string' }, value: { type: 'number' }
         },
-        required: ['node', 'symbol', 'value']
+        required: ['symbol', 'value']
       },
-      async handler ({ node, symbol, value } = {}) {
+      async handler ({ nodeId, node = nodeId, symbol, value } = {}) {
+        if (!node) return failed('parameter_set needs nodeId, the node whose parameter it sets')
         const result = dispatcher.setParameter(node, symbol, value)
         return result.ok
           ? ok({ value: result.value, revision: result.revision })
@@ -904,10 +907,11 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         'a node that was never touched says. Returns the default the plugin now holds.',
       inputSchema: {
         type: 'object',
-        properties: { node: { type: 'string' }, symbol: { type: 'string' } },
-        required: ['node', 'symbol']
+        properties: { nodeId: { type: 'string' }, node: { type: 'string', description: 'The older name for nodeId' }, symbol: { type: 'string' } },
+        required: ['symbol']
       },
-      async handler ({ node, symbol } = {}) {
+      async handler ({ nodeId, node = nodeId, symbol } = {}) {
+        if (!node) return failed('parameter_reset needs nodeId, the node whose parameter it resets')
         const result = dispatcher.resetParameter(node, symbol)
         return result.ok
           ? ok({ value: result.value, revision: result.revision })
@@ -973,13 +977,16 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     {
       name: 'transport_play',
       description:
-        'Start the transport, so clips play and plugins receive transport position. ' +
+        'Start the transport, so clips play and plugins receive transport position. It starts at fromBeat when given, ' +
+        'and otherwise at the start of the loop when a loop is on, and at the beginning when not: so a section is ' +
+        'heard by looping it, and a piece can be joined part way. ' +
         'Needs audio already started by a person: a browser starts no AudioContext without a click.',
-      inputSchema: { type: 'object', properties: {} },
-      async handler () {
+      inputSchema: { type: 'object', properties: { fromBeat: { type: 'number', description: 'The beat to start at, zero or more' } } },
+      async handler ({ fromBeat } = {}) {
         if (!onPlay) return failed('this host cannot play: no transport is connected')
+        if (fromBeat !== undefined && !(Number.isFinite(fromBeat) && fromBeat >= 0)) return failed(`fromBeat is a beat at or after zero: ${fromBeat}`)
         try {
-          await onPlay()
+          await onPlay(fromBeat === undefined ? {} : { fromBeat })
           return ok({})
         } catch (error) {
           return failed(`play failed: ${error?.message ?? error}`)

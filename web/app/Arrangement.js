@@ -44,6 +44,7 @@ export function createArrangement (ctx) {
     // The timeline has already selected it; the dock shows what that calls for.
     onOpen: id => openClip(id),
     onSetLoop: range => ctx.transport.setLoopRange(range),
+    onSeek: beat => ctx.transport.seek(beat),
     onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
@@ -325,6 +326,7 @@ export function createArrangement (ctx) {
       unplayable: clip => clipPlayer?.failure(clip.source)?.message ?? null
     })
     restore()
+    fitTimeline()
     if (pianoRoll.clipId) {
       const clip = project?.clip(pianoRoll.clipId)
       if (clip) pianoRoll.draw(clip)
@@ -360,7 +362,22 @@ export function createArrangement (ctx) {
   }
 
   /** Wire the file picker and put the timeline and piano roll on the page. */
+  /**
+   * Make the box the lanes scroll in end where the window does, so its horizontal scrollbar is at the bottom of the screen
+   * and not down the page past every track. It is measured from where the box is, because what is above it (the transport
+   * bar wraps, the tabs, the tools) is not a number the stylesheet can know. A hidden box measures nothing and is left.
+   */
+  function fitTimeline () {
+    const box = timeline.element.querySelector?.('.timeline-scroll') ?? timeline.element
+    if (!box || box.getClientRects().length === 0) return
+    const top = box.getBoundingClientRect().top + window.scrollY
+    box.style.maxHeight = `${Math.max(192, Math.floor(window.innerHeight - top - 12))}px`
+  }
+
   function mount () {
+    window.addEventListener('resize', fitTimeline)
+    // The page's own height changes when the browser panel opens, a tab is chosen or the toolbar wraps.
+    new ResizeObserver(fitTimeline).observe(document.body)
     $('audiofile').addEventListener('change', event => {
       const file = event.target.files?.[0]
       event.target.value = ''

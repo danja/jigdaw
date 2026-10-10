@@ -216,11 +216,11 @@ outputs arrive at, and refuses one that is not on that track.
 |---|---|---|
 | `parameter_set` | `nodeId`, `symbol`, `value`, `atFrame?` | |
 | `parameters_set_batch` | `settings[]` | |
-| `parameter_reset` | `node`, `symbol` | `value`, the default now held |
+| `parameter_reset` | `nodeId`, `symbol` | `value`, the default now held |
 | `history_undo` | | `revision`, `canUndo`, `canRedo` |
 | `history_redo` | | `revision`, `canUndo`, `canRedo` |
 | `script_run` | `source`, `dryRun?`, `now?` | `swapped`, or the `plan` for a dry run, or the `errors` with their lines |
-| `transport_play` | | |
+| `transport_play` | `fromBeat?` | Starts there; without it, at the loop's start when a loop is on, else at the beginning |
 | `transport_stop` | | |
 | `transport_configure` | `tempo?`, `timeSignature?`, `loop?`, `position?` | |
 

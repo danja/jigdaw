@@ -46,6 +46,8 @@ export function createTransport (ctx) {
   let schedulerTimer = null
   // The playhead's animation, while the transport runs.
   let playheadFrame = null
+  // Where playing will begin when it is next started without a beat, set by a click on the ruler while stopped.
+  let cue = null
 
   /** Move the playheads to the transport's beat, every frame while it runs. */
   function followPlayhead () {
@@ -73,17 +75,28 @@ export function createTransport (ctx) {
     ctx.clipPlayer.start({ iri: clip.source, when, offset, duration, destination, fadeIn, fadeOut })
   }
 
-  async function play () {
+  /**
+   * Start the transport. `fromBeat` is where in the piece playing begins; without it, playing begins at the start of the loop
+   * when a loop is on, and at the beginning otherwise, so a section can be heard by looping it. Beat zero is then heard in
+   * the past, by as long as it is to `fromBeat`, which is all the rest of the page (the position, the clicks, the plugins'
+   * transport) needs to follow.
+   */
+  async function play ({ fromBeat = null } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const { engine, clipPlayer, hostConfig } = ctx
     if (playing) return
+    if (fromBeat !== null && !(Number.isFinite(fromBeat) && fromBeat >= 0)) throw new Error(`fromBeat is a beat at or after zero: ${fromBeat}`)
     playing = true
-    // A count-in puts beat zero back by its length, with a little lead so the first click is not already past.
-    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 }
-    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0)
+    const timing = d.transport()
+    const startBeat = fromBeat ?? cue ?? (timing.loop.enabled ? timing.loop.start : 0)
+    const from = timing.secondsAtBeat(startBeat)
+    // A count-in puts the start back by its length, with a little lead so the first click is not already past.
+    const pre = countInBars > 0 ? countIn(timing, countInBars) : { clicks: [], duration: 0 }
+    const heardAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0)
+    startedAt = heardAt - from
     if (pre.duration > 0) {
       const click = createClickVoice(engine.context)
-      for (const { at, accent } of pre.clicks) click(startedAt + at, accent)
+      for (const { at, accent } of pre.clicks) click(heardAt + at, accent)
     }
     $('play').setAttribute('aria-pressed', 'true')
 
@@ -123,7 +136,7 @@ export function createTransport (ctx) {
     for (const iri of failed) log(`audio clip source ${iri}: ${clipPlayer.failure(iri).message}`, 'error')
     // So each clip that cannot play says so where it is drawn, too.
     if (failed.length > 0) ctx.rack.draw()
-    scheduler.start(startedAt)
+    scheduler.start(startedAt, { from })
     scheduler.tick()
     metronome ??= new Metronome({
       now: () => engine.context.currentTime,
@@ -142,7 +155,32 @@ export function createTransport (ctx) {
     log('playing', 'ok')
   }
 
+  /**
+   * Move to `beat`. While playing, the clips, clicks and script restart from there against a new beat zero, and notes sounding
+   * are released; while stopped, the beat is kept as the place Play will start from.
+   */
+  function seek (beat) {
+    if (!(Number.isFinite(beat) && beat >= 0)) throw new Error(`a position is a beat at or after zero: ${beat}`)
+    if (!playing) {
+      cue = beat
+      ctx.arrangement.playhead(beat)
+      return
+    }
+    const { engine } = ctx
+    const timing = ctx.dispatcher.transport()
+    scheduler.stop()
+    for (const entry of engine.nodes()) engine.post(entry.id, { type: 'events', events: [{ frame: 0, bytes: Uint8Array.from([0xb0, 123, 0]) }] })
+    const from = timing.secondsAtBeat(beat)
+    startedAt = engine.context.currentTime - from
+    scheduler.start(startedAt, { from })
+    scheduler.tick()
+    metronome?.start(startedAt)
+    ctx.script?.clockStart(startedAt)
+    sendTransport()
+  }
+
   function stop () {
+    cue = null
     playing = false
     // Before all-notes-off, so the notes it started get their own ends too.
     clearInterval(schedulerTimer)
@@ -291,5 +329,5 @@ export function createTransport (ctx) {
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise(resolve => setTimeout(resolve, 20))
   }
 
-  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
+  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
 }

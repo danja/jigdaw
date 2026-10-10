@@ -20049,6 +20049,8 @@ var Scheduler = class {
   #until = 0;
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
   #sounding = [];
+  // Where the song was entered, until the first tick has seeded the envelopes there; null otherwise.
+  #seed = null;
   /**
    * - `now()`: the audio clock in seconds, AudioContext.currentTime.
    * - `lookahead`: seconds ahead of the clock each tick schedules to. From
@@ -20095,10 +20097,18 @@ var Scheduler = class {
   #frame(elapsed) {
     return Math.round((this.#origin + elapsed) * this.#sampleRate);
   }
-  /** Start at the clock time the transport's beat zero is heard. */
-  start(atTime) {
+  /**
+   * Start at the clock time the transport's beat zero is heard.
+   *
+   * `from` is where in the song, in elapsed seconds, playing begins. Beat zero is then heard in the past, by that much, and
+   * nothing before `from` is scheduled: a note that began earlier is not struck late. The first tick sets every envelope to
+   * the value it has at `from`, and carries on from the middle of the segment it is in, as a loop's pass start does.
+   */
+  start(atTime, { from = 0 } = {}) {
+    if (!(from >= 0)) throw new Error(`a start position is zero or more seconds: ${from}`);
     this.#origin = atTime;
-    this.#until = 0;
+    this.#until = from;
+    this.#seed = from > 0 ? from : null;
     this.#sounding = [];
   }
   /** Schedule everything up to the lookahead. Call often; a tick with nothing new sends nothing. */
@@ -20126,7 +20136,9 @@ var Scheduler = class {
       }
     }
     if (this.#automation) {
-      const passes = [...segments(transport2, start, end)];
+      const normal = [...segments(transport2, start, end)];
+      const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
+      this.#seed = null;
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport2, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin));
@@ -20400,6 +20412,7 @@ function createAutomationHost(ctx2) {
 
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
+var DEFAULT_LANE_SIZE = "small";
 var COLOR = /^#[0-9a-f]{6}$/;
 var EditorState = class _EditorState {
   #positions = /* @__PURE__ */ new Map();
@@ -20424,7 +20437,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, laneSize: "medium", ...this.#tracks.get(id) };
+    return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -28529,13 +28542,15 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       inputSchema: {
         type: "object",
         properties: {
-          node: { type: "string" },
+          nodeId: { type: "string", description: "The node, as every other tool names it" },
+          node: { type: "string", description: "The same, under the name this tool used before the others agreed on nodeId" },
           symbol: { type: "string" },
           value: { type: "number" }
         },
-        required: ["node", "symbol", "value"]
+        required: ["symbol", "value"]
       },
-      async handler({ node, symbol, value: value2 } = {}) {
+      async handler({ nodeId, node = nodeId, symbol, value: value2 } = {}) {
+        if (!node) return failed("parameter_set needs nodeId, the node whose parameter it sets");
         const result = dispatcher.setParameter(node, symbol, value2);
         return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
       }
@@ -28545,10 +28560,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       description: "Put a parameter back to its plugin default and forget its setting, so the project says what a node that was never touched says. Returns the default the plugin now holds.",
       inputSchema: {
         type: "object",
-        properties: { node: { type: "string" }, symbol: { type: "string" } },
-        required: ["node", "symbol"]
+        properties: { nodeId: { type: "string" }, node: { type: "string", description: "The older name for nodeId" }, symbol: { type: "string" } },
+        required: ["symbol"]
       },
-      async handler({ node, symbol } = {}) {
+      async handler({ nodeId, node = nodeId, symbol } = {}) {
+        if (!node) return failed("parameter_reset needs nodeId, the node whose parameter it resets");
         const result = dispatcher.resetParameter(node, symbol);
         return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
       }
@@ -28597,12 +28613,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "transport_play",
-      description: "Start the transport, so clips play and plugins receive transport position. Needs audio already started by a person: a browser starts no AudioContext without a click.",
-      inputSchema: { type: "object", properties: {} },
-      async handler() {
+      description: "Start the transport, so clips play and plugins receive transport position. It starts at fromBeat when given, and otherwise at the start of the loop when a loop is on, and at the beginning when not: so a section is heard by looping it, and a piece can be joined part way. Needs audio already started by a person: a browser starts no AudioContext without a click.",
+      inputSchema: { type: "object", properties: { fromBeat: { type: "number", description: "The beat to start at, zero or more" } } },
+      async handler({ fromBeat } = {}) {
         if (!onPlay) return failed("this host cannot play: no transport is connected");
+        if (fromBeat !== void 0 && !(Number.isFinite(fromBeat) && fromBeat >= 0)) return failed(`fromBeat is a beat at or after zero: ${fromBeat}`);
         try {
-          await onPlay();
+          await onPlay(fromBeat === void 0 ? {} : { fromBeat });
           return ok({});
         } catch (error2) {
           return failed(`play failed: ${error2?.message ?? error2}`);
@@ -28902,7 +28919,7 @@ function createRuntime(ctx2) {
         catalogue: ctx2.browser.catalogue(),
         loadPlugin: (iri4, options) => dispatcher.addPlugin(iri4, options),
         openCollection: (iri4) => ctx2.browser.loadCollection(iri4),
-        onPlay: () => ctx2.transport.play(),
+        onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
         },
@@ -29097,6 +29114,7 @@ function createTransport(ctx2) {
   let countInBars = 0;
   let schedulerTimer = null;
   let playheadFrame = null;
+  let cue = null;
   function followPlayhead() {
     if (!playing) return;
     const position2 = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
@@ -29113,16 +29131,21 @@ function createTransport(ctx2) {
     const fadeOut = clip.fadeOutBeats > 0 ? transport2.secondsAtBeat(clip.off) - transport2.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
     ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration: duration2, destination, fadeIn, fadeOut });
   }
-  async function play() {
+  async function play({ fromBeat = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const { engine, clipPlayer, hostConfig } = ctx2;
     if (playing) return;
+    if (fromBeat !== null && !(Number.isFinite(fromBeat) && fromBeat >= 0)) throw new Error(`fromBeat is a beat at or after zero: ${fromBeat}`);
     playing = true;
-    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 };
-    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    const timing = d.transport();
+    const startBeat = fromBeat ?? cue ?? (timing.loop.enabled ? timing.loop.start : 0);
+    const from = timing.secondsAtBeat(startBeat);
+    const pre = countInBars > 0 ? countIn(timing, countInBars) : { clicks: [], duration: 0 };
+    const heardAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    startedAt = heardAt - from;
     if (pre.duration > 0) {
       const click = createClickVoice(engine.context);
-      for (const { at, accent } of pre.clicks) click(startedAt + at, accent);
+      for (const { at, accent } of pre.clicks) click(heardAt + at, accent);
     }
     $2("play").setAttribute("aria-pressed", "true");
     const first3 = d.project.nodes[0];
@@ -29151,7 +29174,7 @@ function createTransport(ctx2) {
     const failed2 = sources.filter((iri4) => clipPlayer.failure(iri4));
     for (const iri4 of failed2) log2(`audio clip source ${iri4}: ${clipPlayer.failure(iri4).message}`, "error");
     if (failed2.length > 0) ctx2.rack.draw();
-    scheduler.start(startedAt);
+    scheduler.start(startedAt, { from });
     scheduler.tick();
     metronome ??= new Metronome({
       now: () => engine.context.currentTime,
@@ -29172,7 +29195,27 @@ function createTransport(ctx2) {
     followPlayhead();
     log2("playing", "ok");
   }
+  function seek(beat) {
+    if (!(Number.isFinite(beat) && beat >= 0)) throw new Error(`a position is a beat at or after zero: ${beat}`);
+    if (!playing) {
+      cue = beat;
+      ctx2.arrangement.playhead(beat);
+      return;
+    }
+    const { engine } = ctx2;
+    const timing = ctx2.dispatcher.transport();
+    scheduler.stop();
+    for (const entry of engine.nodes()) engine.post(entry.id, { type: "events", events: [{ frame: 0, bytes: Uint8Array.from([176, 123, 0]) }] });
+    const from = timing.secondsAtBeat(beat);
+    startedAt = engine.context.currentTime - from;
+    scheduler.start(startedAt, { from });
+    scheduler.tick();
+    metronome?.start(startedAt);
+    ctx2.script?.clockStart(startedAt);
+    sendTransport();
+  }
   function stop() {
+    cue = null;
     playing = false;
     clearInterval(schedulerTimer);
     schedulerTimer = null;
@@ -29304,7 +29347,7 @@ function createTransport(ctx2) {
     const { engine } = ctx2;
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // src/engine/TrackRecorder.js
@@ -31229,7 +31272,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = "medium", latency: late = null, canArm = false, armed = false, routing: routed = null }) {
+    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null }) {
       name2.textContent = label;
       name2.setAttribute("aria-label", `Select ${label}`);
       name2.setAttribute("aria-pressed", String(selected));
@@ -31440,7 +31483,7 @@ function createChainStrip(document2, { onSelect, onBypass, onMove }) {
 // src/ui/EnvelopeLane.js
 var SVG_NS3 = "http://www.w3.org/2000/svg";
 var CURVE_ORDER = ["step", "linear", "smooth"];
-var LANE_HEIGHT = 96;
+var LANE_HEIGHT = 64;
 var DRAG_SLOP = 3;
 var smooth2 = (u2) => u2 * u2 * (3 - 2 * u2);
 function envelopePath(points, { ppb, height, min, max, width }) {
@@ -32100,7 +32143,7 @@ function finite(n2, what) {
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -32160,6 +32203,22 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     routingButton.setAttribute("aria-pressed", String(on));
     element.dataset.routing = on ? "on" : "off";
   };
+  const seekLabel = document2.createElement("label");
+  seekLabel.textContent = "Go to bar ";
+  const seekInput = document2.createElement("input");
+  seekInput.type = "number";
+  seekInput.min = "1";
+  seekInput.step = "1";
+  seekInput.value = "1";
+  seekInput.addEventListener("change", () => {
+    const bar = Math.floor(Number(seekInput.value));
+    if (!Number.isFinite(bar) || bar < 1) {
+      seekInput.value = "1";
+      return;
+    }
+    onSeek((bar - 1) * bpb());
+  });
+  seekLabel.append(seekInput);
   tools.append(
     iconTool("zoomOut", "Zoom out", () => zoom(1 / 1.5)),
     iconTool("zoomIn", "Zoom in", () => zoom(1.5)),
@@ -32167,7 +32226,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     followButton,
     routingButton,
     zoomStatus,
-    snapLabel
+    snapLabel,
+    ...onSeek ? [seekLabel] : []
   );
   element.append(tools, scroller);
   setRouting(true);
@@ -32180,6 +32240,10 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   const ruler = document2.createElement("div");
   ruler.className = "timeline-ruler";
   ruler.setAttribute("aria-hidden", "true");
+  ruler.addEventListener("click", (e) => {
+    if (!onSeek) return;
+    onSeek(Math.max(0, snapBeat((e.clientX - ruler.getBoundingClientRect().left) / ppb(), e)));
+  });
   const rows = /* @__PURE__ */ new Map();
   const masterRow = createMasterRow(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view });
   const loopRow = document2.createElement("div");
@@ -32360,7 +32424,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       loop = null,
       lanesFor = () => [],
       masterFor = () => ({ list: [], available: [] }),
-      layoutFor = () => ({ color: null, laneSize: "medium" }),
+      layoutFor = () => ({ color: null, laneSize: DEFAULT_LANE_SIZE }),
       colorFor = () => null,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
@@ -32477,6 +32541,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const expected = [head, ruler, loopRow, ...wanted, masterRow.element];
     const same = current.length === expected.length && current.every((child, k) => child === expected[k]);
     if (!same) scroller.replaceChildren(...expected);
+    head.style.height = `${scroller.scrollHeight}px`;
   }
   function playhead(beat) {
     head.hidden = beat === null;
@@ -32938,6 +33003,7 @@ function createArrangement(ctx2) {
     // The timeline has already selected it; the dock shows what that calls for.
     onOpen: (id) => openClip(id),
     onSetLoop: (range) => ctx2.transport.setLoopRange(range),
+    onSeek: (beat) => ctx2.transport.seek(beat),
     onArm: (trackId, on) => {
       ctx2.midiIn.arm(trackId, on);
       ctx2.rack.draw();
@@ -33220,6 +33286,7 @@ function createArrangement(ctx2) {
       unplayable: (clip) => clipPlayer?.failure(clip.source)?.message ?? null
     });
     restore();
+    fitTimeline();
     if (pianoRoll.clipId) {
       const clip = project?.clip(pianoRoll.clipId);
       if (clip) pianoRoll.draw(clip);
@@ -33252,7 +33319,15 @@ function createArrangement(ctx2) {
     const result = edit([{ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri4, offsetSeconds: 0 }]);
     if (result.ok) log2(`added ${file.name}, ${buffer.duration.toFixed(2)} seconds`, "ok");
   }
+  function fitTimeline() {
+    const box = timeline.element.querySelector?.(".timeline-scroll") ?? timeline.element;
+    if (!box || box.getClientRects().length === 0) return;
+    const top = box.getBoundingClientRect().top + window.scrollY;
+    box.style.maxHeight = `${Math.max(192, Math.floor(window.innerHeight - top - 12))}px`;
+  }
   function mount() {
+    window.addEventListener("resize", fitTimeline);
+    new ResizeObserver(fitTimeline).observe(document2.body);
     $2("audiofile").addEventListener("change", (event) => {
       const file = event.target.files?.[0];
       event.target.value = "";
@@ -35002,7 +35077,7 @@ function writeEditor(project, { iri: iri4 } = {}) {
     const parts = [];
     if (order !== null) parts.push(`${term3(jig5.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig5.color)} ${string(color)}`);
-    if (laneSize !== "medium") parts.push(`${term3(jig5.laneSize)} ${string(laneSize)}`);
+    if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig5.laneSize)} ${string(laneSize)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
@@ -35841,20 +35916,13 @@ function createBridgeLink(ctx2) {
 }
 
 // web/app/Layout.js
-var KEY3 = "jigdaw.browserOpen";
 function createLayout(ctx2) {
   const { document: document2, window: window2, $: $2 } = ctx2;
-  function show(open, { focus = false, remember = true } = {}) {
+  function show(open, { focus = false } = {}) {
     $2("browser").hidden = !open;
     document2.querySelector("main").classList.toggle("no-browser", !open);
     const button = $2("toggle-browser");
     button.setAttribute("aria-expanded", String(open));
-    if (remember) {
-      try {
-        window2.localStorage.setItem(KEY3, open ? "1" : "0");
-      } catch {
-      }
-    }
     if (focus) {
       if (open) $2("q").focus();
       else button.focus();
@@ -35864,12 +35932,7 @@ function createLayout(ctx2) {
     show(open, { focus: true });
   }
   function mount() {
-    let open = false;
-    try {
-      open = window2.localStorage.getItem(KEY3) === "1";
-    } catch {
-    }
-    show(open, { remember: false });
+    show(false);
     $2("toggle-browser").addEventListener("click", () => show($2("browser").hidden, { focus: true }));
     $2("close-browser").addEventListener("click", () => show(false, { focus: true }));
     $2("browser").addEventListener("keydown", (event) => {
@@ -36004,12 +36067,12 @@ function createMidiIn(ctx2) {
 }
 
 // web/app/Align.js
-var KEY4 = "jigdaw.alignTracks";
+var KEY3 = "jigdaw.alignTracks";
 function createAlign(ctx2) {
   const { window: window2, $: $2, log: log2 } = ctx2;
   function preferred(fallback) {
     try {
-      const stored = window2.localStorage.getItem(KEY4);
+      const stored = window2.localStorage.getItem(KEY3);
       if (stored === "1") return true;
       if (stored === "0") return false;
     } catch {
@@ -36026,7 +36089,7 @@ function createAlign(ctx2) {
     $2("align-tracks").addEventListener("change", async () => {
       const on = $2("align-tracks").checked;
       try {
-        window2.localStorage.setItem(KEY4, on ? "1" : "0");
+        window2.localStorage.setItem(KEY3, on ? "1" : "0");
       } catch {
       }
       const d = await ctx2.runtime.ensureRunning().catch((error2) => {

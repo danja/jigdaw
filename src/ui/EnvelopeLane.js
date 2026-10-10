@@ -19,7 +19,7 @@ import { setIcon } from './Icons.js'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 export const CURVE_ORDER = ['step', 'linear', 'smooth']
-export const LANE_HEIGHT = 96
+export const LANE_HEIGHT = 64
 const DRAG_SLOP = 3
 
 const smooth = u => u * u * (3 - 2 * u)

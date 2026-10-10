@@ -21,6 +21,7 @@
 // `writeEditor` serialises that second graph separately.
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
 import { MASTER_TRACK } from '../model/ArrangementOps.js'
+import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
 const { jig, trn } = v
 
@@ -344,7 +345,7 @@ export function writeEditor (project, { iri } = {}) {
     const parts = []
     if (order !== null) parts.push(`${term(jig.order)} ${integer(order)}`)
     if (color !== null) parts.push(`${term(jig.color)} ${string(color)}`)
-    if (laneSize !== 'medium') parts.push(`${term(jig.laneSize)} ${string(laneSize)}`)
+    if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term(jig.laneSize)} ${string(laneSize)}`)
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(' ; ')} .`)
   }
   for (const clip of [...project.clips].sort(byId)) {

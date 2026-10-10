@@ -131,6 +131,8 @@ export class Scheduler {
   #until = 0
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
   #sounding = []
+  // Where the song was entered, until the first tick has seeded the envelopes there; null otherwise.
+  #seed = null
 
   /**
    * - `now()`: the audio clock in seconds, AudioContext.currentTime.
@@ -179,10 +181,18 @@ export class Scheduler {
     return Math.round((this.#origin + elapsed) * this.#sampleRate)
   }
 
-  /** Start at the clock time the transport's beat zero is heard. */
-  start (atTime) {
+  /**
+   * Start at the clock time the transport's beat zero is heard.
+   *
+   * `from` is where in the song, in elapsed seconds, playing begins. Beat zero is then heard in the past, by that much, and
+   * nothing before `from` is scheduled: a note that began earlier is not struck late. The first tick sets every envelope to
+   * the value it has at `from`, and carries on from the middle of the segment it is in, as a loop's pass start does.
+   */
+  start (atTime, { from = 0 } = {}) {
+    if (!(from >= 0)) throw new Error(`a start position is zero or more seconds: ${from}`)
     this.#origin = atTime
-    this.#until = 0
+    this.#until = from
+    this.#seed = from > 0 ? from : null
     this.#sounding = []
   }
 
@@ -215,7 +225,13 @@ export class Scheduler {
     }
     // Envelopes move a parameter on the audio clock: the same windows, looped the same way as the notes.
     if (this.#automation) {
-      const passes = [...segments(transport, start, end)]
+      const normal = [...segments(transport, start, end)]
+      // The first window of a start part way in: a pass that begins at `from` and reads the song from there, in place of
+      // the stretch of the first pass that has already gone by.
+      const passes = this.#seed === null
+        ? normal
+        : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter(p => p.from > 0)]
+      this.#seed = null
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin))

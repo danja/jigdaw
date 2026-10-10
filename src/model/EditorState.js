@@ -7,6 +7,9 @@
 // docs/project-format.md, "Two graphs".
 
 export const LANE_SIZES = Object.freeze(['small', 'medium', 'large'])
+// Small, so that a piece of seven tracks fits a screen: a row is the track's name and its mute and solo, and the rest of its
+// controls are a size up or in the Mixer tab. Absent in a file means this, and it is not written.
+export const DEFAULT_LANE_SIZE = 'small'
 const COLOR = /^#[0-9a-f]{6}$/
 
 export class EditorState {
@@ -30,7 +33,7 @@ export class EditorState {
   }
 
   /** Layout of one track. `order` is null until a person has placed it. */
-  track (id) { return { order: null, color: null, laneSize: 'medium', ...this.#tracks.get(id) } }
+  track (id) { return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
 
   setTrack (id, patch) {
     const next = { ...this.#tracks.get(id) }

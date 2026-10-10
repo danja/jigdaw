@@ -12,6 +12,7 @@
 // Level, pan, mute and solo are left out for a track that has nothing to hear:
 // four controls that move and change nothing are worse than none (CLAUDE.md).
 import { decibels, panPosition } from './Strip.js'
+import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
 export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
@@ -125,7 +126,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = 'medium', latency: late = null, canArm = false, armed = false, routing: routed = null }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null }) {
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
       name.setAttribute('aria-pressed', String(selected))

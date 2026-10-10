@@ -44,6 +44,7 @@ import { setIcon } from './Icons.js'
 import { barBeat, describeClip } from './ClipText.js'
 import { createClipButton } from './ClipButton.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT, GRIDS } from './TimeView.js'
+import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
 // The text a clip says about itself is ClipText.js and the clip itself is ClipButton.js; both are re-exported here so
 // callers keep one front door.
@@ -75,7 +76,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm }, { view = new TimeView(), selection = new Selection() } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -135,11 +136,25 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     routingButton.setAttribute('aria-pressed', String(on))
     element.dataset.routing = on ? 'on' : 'off'
   }
+  // The keyboard and screen reader route to the same seek the ruler click makes; bars count from one.
+  const seekLabel = document.createElement('label')
+  seekLabel.textContent = 'Go to bar '
+  const seekInput = document.createElement('input')
+  seekInput.type = 'number'
+  seekInput.min = '1'
+  seekInput.step = '1'
+  seekInput.value = '1'
+  seekInput.addEventListener('change', () => {
+    const bar = Math.floor(Number(seekInput.value))
+    if (!Number.isFinite(bar) || bar < 1) { seekInput.value = '1'; return }
+    onSeek((bar - 1) * bpb())
+  })
+  seekLabel.append(seekInput)
   tools.append(
     iconTool('zoomOut', 'Zoom out', () => zoom(1 / 1.5)),
     iconTool('zoomIn', 'Zoom in', () => zoom(1.5)),
     tool('Fit', () => fit()),
-    followButton, routingButton, zoomStatus, snapLabel)
+    followButton, routingButton, zoomStatus, snapLabel, ...(onSeek ? [seekLabel] : []))
   element.append(tools, scroller)
   setRouting(true)
   // Where the transport is. Drawn over the lanes, never read: the position
@@ -162,6 +177,11 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   const ruler = document.createElement('div')
   ruler.className = 'timeline-ruler'
   ruler.setAttribute('aria-hidden', 'true')
+  // A click on the ruler cues or moves the playhead there. Not a drag: the loop brace beneath has its own.
+  ruler.addEventListener('click', e => {
+    if (!onSeek) return
+    onSeek(Math.max(0, snapBeat((e.clientX - ruler.getBoundingClientRect().left) / ppb(), e)))
+  })
   const rows = new Map()
   // The master's own row after the tracks: its automation lanes and the way to add one.
   const masterRow = createMasterRow(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view })
@@ -347,7 +367,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const {
       tracks, clips, beatsPerBar, labelFor, playsIntoNothing, peaksFor = () => null, unplayable = () => null,
       mixable = () => true, silent = () => false, loop = null, lanesFor = () => [], masterFor = () => ({ list: [], available: [] }),
-      layoutFor = () => ({ color: null, laneSize: 'medium' }),
+      layoutFor = () => ({ color: null, laneSize: DEFAULT_LANE_SIZE }),
       colorFor = () => null,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
@@ -459,6 +479,9 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const expected = [head, ruler, loopRow, ...wanted, masterRow.element]
     const same = current.length === expected.length && current.every((child, k) => child === expected[k])
     if (!same) scroller.replaceChildren(...expected)
+    // The playhead is as tall as everything that scrolls, not as the box it is seen through: the box is shorter than the
+    // lanes now, and a head the height of the box would scroll away with the first track.
+    head.style.height = `${scroller.scrollHeight}px`
   }
 
   /** Show the transport at `beat`, or nothing for null. */

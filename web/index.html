@@ -281,14 +281,17 @@
 
   /* Arrangement. The lanes scroll inside their own box, never the page. The
      track names stay put on the left while the lanes scroll under them. */
-  .timeline-scroll { position:relative; overflow-x:auto; border:1px solid var(--line); border-radius:7px;
-    background:#13161b; padding-bottom:6px; }
+  /* The box scrolls both ways inside itself and is no taller than the screen, so its horizontal bar is always in
+     view at the bottom of it and never down the page past every track. The ruler and the loop row stay at the top, and
+     the track names stay at the left, while the lanes scroll under them. */
+  .timeline-scroll { position:relative; overflow:auto; max-height:calc(100vh - 11.5rem); min-height:12rem;
+    border:1px solid var(--line); border-radius:7px; background:#13161b; }
   /* Where the transport is, in the timeline and the piano roll. Drawn over,
      never in the way of a press. */
-  .playhead { position:absolute; top:0; bottom:0; width:2px; background:#ffd166; z-index:3; pointer-events:none; }
+  .playhead { position:absolute; top:0; width:2px; height:100%; background:#ffd166; z-index:3; pointer-events:none; }
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
   .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-  .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
+  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:#13161b; }
   .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
   button[data-icon] { min-width:44px; min-height:44px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
@@ -372,7 +375,7 @@
   .align { margin:0 0 10px; }
   .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
   .align input { width:24px; height:24px; }
-  .timeline-loop { position:relative; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
+  .timeline-loop { position:sticky; top:22px; z-index:2; background:#13161b; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
   .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
     border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
   .loop-brace.on { border:2px solid var(--accent); background:rgba(127,179,255,.18); }

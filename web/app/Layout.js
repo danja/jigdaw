@@ -11,21 +11,18 @@
 // the focus to the search box, and closing puts it back on the button that
 // opened it, so a keyboard user is never left on something that has gone.
 //
-// Remembered in this browser only, as a per-viewer convenience: nothing about
-// a session depends on it, so a storage that is blocked or cleared only means
-// the panel starts closed.
-
-const KEY = 'jigdaw.browserOpen'
+// Not remembered. It was, and a person who had opened it once to load a preset got it open on every visit after,
+// squeezing the arrangement they came to look at; the page now starts the way a first look wants, and opening it
+// is one press when it is wanted.
 
 export function createLayout (ctx) {
   const { document, window, $ } = ctx
 
-  function show (open, { focus = false, remember = true } = {}) {
+  function show (open, { focus = false } = {}) {
     $('browser').hidden = !open
     document.querySelector('main').classList.toggle('no-browser', !open)
     const button = $('toggle-browser')
     button.setAttribute('aria-expanded', String(open))
-    if (remember) { try { window.localStorage.setItem(KEY, open ? '1' : '0') } catch { /* storage unavailable */ } }
     if (focus) { if (open) $('q').focus(); else button.focus() }
   }
 
@@ -33,9 +30,7 @@ export function createLayout (ctx) {
   function showBrowser (open) { show(open, { focus: true }) }
 
   function mount () {
-    let open = false
-    try { open = window.localStorage.getItem(KEY) === '1' } catch { /* storage unavailable */ }
-    show(open, { remember: false })
+    show(false)
     $('toggle-browser').addEventListener('click', () => show($('browser').hidden, { focus: true }))
     $('close-browser').addEventListener('click', () => show(false, { focus: true }))
     $('browser').addEventListener('keydown', event => {

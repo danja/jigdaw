@@ -109,7 +109,7 @@ export function createRuntime (ctx) {
         catalogue: ctx.browser.catalogue(),
         loadPlugin: (iri, options) => dispatcher.addPlugin(iri, options),
         openCollection: iri => ctx.browser.loadCollection(iri),
-        onPlay: () => ctx.transport.play(),
+        onPlay: options => ctx.transport.play(options),
         onStop: async () => { ctx.transport.stop() },
         // script_run, built before the reel exists and calling it once it does.
         reel: ctx.script.agentReel()

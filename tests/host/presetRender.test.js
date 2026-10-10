@@ -48,7 +48,12 @@ describe('the bundled presets, played', () => {
   for (const file of onDisk) {
     it(`${file}: every track with something that makes sound gets sound`, async () => {
       const { dispatcher, engine } = await open(file, validator)
-      const peaks = await renderChain(dispatcher, engine, { quanta: Math.ceil(SECONDS * 48000 / 128) })
+      // Long enough that everything in the piece has begun: a piece of clips has tracks that wait for their bars, and each one
+      // gets a few seconds after its first clip starts.
+      const timing = dispatcher.transport()
+      const firstClips = dispatcher.project.tracks.map(t => Math.min(...dispatcher.project.clips.filter(c => c.track === t.id).map(c => c.startBeat))).filter(Number.isFinite)
+      const seconds = Math.max(SECONDS, ...firstClips.map(beat => timing.secondsAtBeat(beat) + 3))
+      const peaks = await renderChain(dispatcher, engine, { quanta: Math.ceil(seconds * 48000 / 128) })
       const makesSound = track => dispatcher.project.nodes.some(n => n.track === track.id && (dispatcher.engineNode(n.id)?.profile.audioOutputs ?? 0) > 0)
       const expected = dispatcher.project.tracks.filter(makesSound)
       expect(expected.length, 'a preset with nothing that makes sound').toBeGreaterThan(0)

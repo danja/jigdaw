@@ -325,7 +325,7 @@ The subjects are fragments of the project IRI, as everywhere else. What it may s
 | a track | `jig:order` | integer position among tracks, from zero |
 | a track | `jig:color` | lower case `#rrggbb` |
 | a clip | `jig:color` | lower case `#rrggbb`, a person's mark on one clip; absent means the clip is drawn in its track's own way |
-| a track | `jig:laneSize` | `small`, `medium` (the default, so not written) or `large` |
+| a track | `jig:laneSize` | `small` (the default, so not written; it was `medium` until 2026-10-10), `medium` or `large` |
 
 A track with no `jig:order` follows the placed tracks in the order it was made. Anything
 naming a node or track the session does not hold is dropped. None of these changes the

@@ -28,11 +28,15 @@ describe('the songs', () => {
     describe(name, () => {
       const file = resolve(root, `examples/songs/${name}.ttl`)
 
-      it('is exactly what its script writes', () => {
-        const out = join(mkdtempSync(join(tmpdir(), 'song-')), `${name}.ttl`)
-        const run = spawnSync(process.execPath, [resolve(root, `examples/songs/${name}.js`), out], { cwd: root, encoding: 'utf8' })
+      it('is exactly what its script writes, and so is its bundled preset', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'song-'))
+        const out = join(dir, `${name}.ttl`)
+        const preset = join(dir, `${name}-preset.ttl`)
+        const run = spawnSync(process.execPath, [resolve(root, `examples/songs/${name}.js`), out, preset], { cwd: root, encoding: 'utf8' })
         expect(run.status, run.stderr).toBe(0)
         expect(readFileSync(out, 'utf8')).toBe(readFileSync(file, 'utf8'))
+        // The preset is the same piece, written for the page that serves the plugins beside it.
+        expect(readFileSync(preset, 'utf8')).toBe(readFileSync(resolve(root, `web/presets/${name}.ttl`), 'utf8'))
       })
 
       it('conforms to the shapes', async () => {

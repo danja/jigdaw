@@ -6,7 +6,7 @@ describe('EditorState', () => {
   it('starts as the default and says so', () => {
     const editor = new EditorState()
     expect(editor.isDefault).toBe(true)
-    expect(editor.track('t')).toEqual({ order: null, color: null, laneSize: 'medium' })
+    expect(editor.track('t')).toEqual({ order: null, color: null, laneSize: 'small' })
     expect(editor.position('n')).toEqual({ x: 0, y: 0 })
   })
 

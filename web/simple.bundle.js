@@ -23079,6 +23079,7 @@ var Engine = class {
 
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
+var DEFAULT_LANE_SIZE = "small";
 var COLOR = /^#[0-9a-f]{6}$/;
 var EditorState = class _EditorState {
   #positions = /* @__PURE__ */ new Map();
@@ -23103,7 +23104,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, laneSize: "medium", ...this.#tracks.get(id) };
+    return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -27369,13 +27370,15 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       inputSchema: {
         type: "object",
         properties: {
-          node: { type: "string" },
+          nodeId: { type: "string", description: "The node, as every other tool names it" },
+          node: { type: "string", description: "The same, under the name this tool used before the others agreed on nodeId" },
           symbol: { type: "string" },
           value: { type: "number" }
         },
-        required: ["node", "symbol", "value"]
+        required: ["symbol", "value"]
       },
-      async handler({ node, symbol, value: value2 } = {}) {
+      async handler({ nodeId, node = nodeId, symbol, value: value2 } = {}) {
+        if (!node) return failed("parameter_set needs nodeId, the node whose parameter it sets");
         const result = dispatcher.setParameter(node, symbol, value2);
         return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
       }
@@ -27385,10 +27388,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       description: "Put a parameter back to its plugin default and forget its setting, so the project says what a node that was never touched says. Returns the default the plugin now holds.",
       inputSchema: {
         type: "object",
-        properties: { node: { type: "string" }, symbol: { type: "string" } },
-        required: ["node", "symbol"]
+        properties: { nodeId: { type: "string" }, node: { type: "string", description: "The older name for nodeId" }, symbol: { type: "string" } },
+        required: ["symbol"]
       },
-      async handler({ node, symbol } = {}) {
+      async handler({ nodeId, node = nodeId, symbol } = {}) {
+        if (!node) return failed("parameter_reset needs nodeId, the node whose parameter it resets");
         const result = dispatcher.resetParameter(node, symbol);
         return result.ok ? ok({ value: result.value, revision: result.revision }) : failed(result.message);
       }
@@ -27437,12 +27441,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "transport_play",
-      description: "Start the transport, so clips play and plugins receive transport position. Needs audio already started by a person: a browser starts no AudioContext without a click.",
-      inputSchema: { type: "object", properties: {} },
-      async handler() {
+      description: "Start the transport, so clips play and plugins receive transport position. It starts at fromBeat when given, and otherwise at the start of the loop when a loop is on, and at the beginning when not: so a section is heard by looping it, and a piece can be joined part way. Needs audio already started by a person: a browser starts no AudioContext without a click.",
+      inputSchema: { type: "object", properties: { fromBeat: { type: "number", description: "The beat to start at, zero or more" } } },
+      async handler({ fromBeat } = {}) {
         if (!onPlay) return failed("this host cannot play: no transport is connected");
+        if (fromBeat !== void 0 && !(Number.isFinite(fromBeat) && fromBeat >= 0)) return failed(`fromBeat is a beat at or after zero: ${fromBeat}`);
         try {
-          await onPlay();
+          await onPlay(fromBeat === void 0 ? {} : { fromBeat });
           return ok({});
         } catch (error2) {
           return failed(`play failed: ${error2?.message ?? error2}`);
@@ -27742,7 +27747,7 @@ function createRuntime(ctx2) {
         catalogue: ctx2.browser.catalogue(),
         loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
         openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
-        onPlay: () => ctx2.transport.play(),
+        onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
         },
@@ -28000,6 +28005,8 @@ var Scheduler = class {
   #until = 0;
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
   #sounding = [];
+  // Where the song was entered, until the first tick has seeded the envelopes there; null otherwise.
+  #seed = null;
   /**
    * - `now()`: the audio clock in seconds, AudioContext.currentTime.
    * - `lookahead`: seconds ahead of the clock each tick schedules to. From
@@ -28046,10 +28053,18 @@ var Scheduler = class {
   #frame(elapsed) {
     return Math.round((this.#origin + elapsed) * this.#sampleRate);
   }
-  /** Start at the clock time the transport's beat zero is heard. */
-  start(atTime) {
+  /**
+   * Start at the clock time the transport's beat zero is heard.
+   *
+   * `from` is where in the song, in elapsed seconds, playing begins. Beat zero is then heard in the past, by that much, and
+   * nothing before `from` is scheduled: a note that began earlier is not struck late. The first tick sets every envelope to
+   * the value it has at `from`, and carries on from the middle of the segment it is in, as a loop's pass start does.
+   */
+  start(atTime, { from = 0 } = {}) {
+    if (!(from >= 0)) throw new Error(`a start position is zero or more seconds: ${from}`);
     this.#origin = atTime;
-    this.#until = 0;
+    this.#until = from;
+    this.#seed = from > 0 ? from : null;
     this.#sounding = [];
   }
   /** Schedule everything up to the lookahead. Call often; a tick with nothing new sends nothing. */
@@ -28077,7 +28092,9 @@ var Scheduler = class {
       }
     }
     if (this.#automation) {
-      const passes = [...segments(transport, start, end)];
+      const normal = [...segments(transport, start, end)];
+      const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
+      this.#seed = null;
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin));
@@ -28269,6 +28286,7 @@ function createTransport(ctx2) {
   let countInBars = 0;
   let schedulerTimer = null;
   let playheadFrame = null;
+  let cue = null;
   function followPlayhead() {
     if (!playing) return;
     const position2 = ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames());
@@ -28285,16 +28303,21 @@ function createTransport(ctx2) {
     const fadeOut = clip.fadeOutBeats > 0 ? transport.secondsAtBeat(clip.off) - transport.secondsAtBeat(clip.off - clip.fadeOutBeats) : 0;
     ctx2.clipPlayer.start({ iri: clip.source, when, offset, duration: duration2, destination, fadeIn, fadeOut });
   }
-  async function play() {
+  async function play({ fromBeat = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const { engine, clipPlayer, hostConfig } = ctx2;
     if (playing) return;
+    if (fromBeat !== null && !(Number.isFinite(fromBeat) && fromBeat >= 0)) throw new Error(`fromBeat is a beat at or after zero: ${fromBeat}`);
     playing = true;
-    const pre = countInBars > 0 ? countIn(d.transport(), countInBars) : { clicks: [], duration: 0 };
-    startedAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    const timing = d.transport();
+    const startBeat = fromBeat ?? cue ?? (timing.loop.enabled ? timing.loop.start : 0);
+    const from = timing.secondsAtBeat(startBeat);
+    const pre = countInBars > 0 ? countIn(timing, countInBars) : { clicks: [], duration: 0 };
+    const heardAt = engine.context.currentTime + (pre.duration > 0 ? CLICK_LEAD + pre.duration : 0);
+    startedAt = heardAt - from;
     if (pre.duration > 0) {
       const click = createClickVoice(engine.context);
-      for (const { at, accent } of pre.clicks) click(startedAt + at, accent);
+      for (const { at, accent } of pre.clicks) click(heardAt + at, accent);
     }
     $2("play").setAttribute("aria-pressed", "true");
     const first2 = d.project.nodes[0];
@@ -28323,7 +28346,7 @@ function createTransport(ctx2) {
     const failed2 = sources.filter((iri3) => clipPlayer.failure(iri3));
     for (const iri3 of failed2) log2(`audio clip source ${iri3}: ${clipPlayer.failure(iri3).message}`, "error");
     if (failed2.length > 0) ctx2.rack.draw();
-    scheduler.start(startedAt);
+    scheduler.start(startedAt, { from });
     scheduler.tick();
     metronome ??= new Metronome({
       now: () => engine.context.currentTime,
@@ -28344,7 +28367,27 @@ function createTransport(ctx2) {
     followPlayhead();
     log2("playing", "ok");
   }
+  function seek(beat) {
+    if (!(Number.isFinite(beat) && beat >= 0)) throw new Error(`a position is a beat at or after zero: ${beat}`);
+    if (!playing) {
+      cue = beat;
+      ctx2.arrangement.playhead(beat);
+      return;
+    }
+    const { engine } = ctx2;
+    const timing = ctx2.dispatcher.transport();
+    scheduler.stop();
+    for (const entry of engine.nodes()) engine.post(entry.id, { type: "events", events: [{ frame: 0, bytes: Uint8Array.from([176, 123, 0]) }] });
+    const from = timing.secondsAtBeat(beat);
+    startedAt = engine.context.currentTime - from;
+    scheduler.start(startedAt, { from });
+    scheduler.tick();
+    metronome?.start(startedAt);
+    ctx2.script?.clockStart(startedAt);
+    sendTransport();
+  }
   function stop() {
+    cue = null;
     playing = false;
     clearInterval(schedulerTimer);
     schedulerTimer = null;
@@ -28476,7 +28519,7 @@ function createTransport(ctx2) {
     const { engine } = ctx2;
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  return { play, stop, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // web/app/Sessions.js
@@ -28700,7 +28743,7 @@ function writeEditor(project, { iri: iri3 } = {}) {
     const parts = [];
     if (order !== null) parts.push(`${term3(jig4.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig4.color)} ${string(color)}`);
-    if (laneSize !== "medium") parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
+    if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {

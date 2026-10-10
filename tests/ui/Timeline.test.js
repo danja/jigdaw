@@ -30,7 +30,7 @@ function build () {
   const calls = []
   const record = name => (...args) => calls.push([name, ...args])
   const timeline = createTimeline(document, {
-    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onBypass: record('bypass'), onMoveInChain: record('moveInChain'), onEnvelope: record('envelope'), onAutomateMaster: record('automateMaster'), onRemoveEnvelope: record('removeEnvelope'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm')
+    onAdd: record('add'), onAddAudio: record('addAudio'), onMove: record('move'), onResize: record('resize'), onOpen: record('open'), onRemove: record('remove'), onSplit: record('split'), onDuplicate: record('duplicate'), onBypass: record('bypass'), onMoveInChain: record('moveInChain'), onEnvelope: record('envelope'), onAutomateMaster: record('automateMaster'), onRemoveEnvelope: record('removeEnvelope'), onMute: record('mute'), onLock: record('lock'), onTrim: record('trim'), onCopy: record('copy'), onCut: record('cut'), onPaste: record('paste'), onChannel: record('channel'), onSetLoop: record('loop'), onMoveTrack: record('moveTrack'), onArm: record('arm'), onSeek: record('seek')
   })
   document.body.append(timeline.element)
   timeline.draw({
@@ -609,5 +609,31 @@ describe('the chain under each lane', () => {
     const row = document.querySelector('.timeline-row')
     expect([...row.children].map(c => c.className)).toEqual(['timeline-body', 'envelope-lanes', 'timeline-chain'])
     expect([...row.querySelector('.timeline-body').children].map(c => c.className.split(' ')[0])).toEqual(['timeline-head', 'timeline-lane'])
+  })
+})
+
+describe('seeking', () => {
+  it('goes to a bar typed in the labelled box, counting bars from one', () => {
+    const { calls } = build()
+    const input = document.querySelector('.timeline-tools input[type=number]')
+    expect(input.closest('label').textContent).toMatch(/Go to bar/)
+    input.value = '3'
+    input.dispatchEvent(new window.Event('change'))
+    expect(calls.filter(c => c[0] === 'seek')).toEqual([['seek', 8]])
+  })
+
+  it('refuses a bar below one and puts one back in the box', () => {
+    const { calls } = build()
+    const input = document.querySelector('.timeline-tools input[type=number]')
+    input.value = '0'
+    input.dispatchEvent(new window.Event('change'))
+    expect(calls.filter(c => c[0] === 'seek')).toEqual([])
+    expect(input.value).toBe('1')
+  })
+
+  it('draws no box when nothing can seek', () => {
+    document.body.replaceChildren()
+    const timeline = createTimeline(document, Object.fromEntries(['onAdd', 'onAddAudio', 'onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onBypass', 'onMoveInChain', 'onEnvelope', 'onRemoveEnvelope', 'onAutomateMaster', 'onMute', 'onTrim', 'onCopy', 'onCut', 'onPaste', 'onLock', 'onChannel', 'onSetLoop', 'onMoveTrack', 'onArm'].map(n => [n, () => {}])))
+    expect(timeline.element.querySelector('input[type=number]')).toBeNull()
   })
 })

@@ -7,16 +7,27 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
+- [ ] **Studio layout, what was done and what is left** (from the inbox, 2026-10-10, after playing Glass Hours). **Done, seen in Chrome:**
+      the plugin browser starts closed on every visit (it had been remembered open); a track row defaults to the small size (105 px, not 261 or
+      more: `DEFAULT_LANE_SIZE` in `src/model/EditorState.js`, and a session that said nothing is now drawn small, which `docs/project-format.md`
+      says); the arrangement is a box no taller than the screen that scrolls both ways inside itself, so its horizontal bar is at the bottom of
+      the window and not down the page, with the ruler and loop row pinned above the lanes and the playhead as tall as the lanes
+      (`web/app/Arrangement.js` fits the box to the window and `.timeline-scroll` in `web/index.html`); an automation lane is 64 px of plot, not 96.
+      No horizontal overflow at 386 px, measured in an iframe. **Left:** an automation lane still adds about 125 px per lane, so a piece with
+      four of them is still tall, and they could fold away or share a strip; the master row and the editor dock below the arrangement are
+      untouched; the clip lanes could show their notes at small size; and a person should look at it on a phone.
 - [ ] **Glass Hours, and what making it showed.** 2026-10-10. A 40 bar piece in D minor, built through the WebMCP tools in the browser and
-      balanced by playing it and reading per-track peaks (no clipping, master worst peak -2.5 dB), is `examples/songs/glass-hours.ttl`, written by
-      `examples/songs/glass-hours.js`, and `tests/rdf/SongExamples.test.js` binds the two and checks the file opens. **Left:** (1) it names the
-      plugins by their canonical `strandz.it` addresses, so it opens only where the 2026-10 plugins are deployed; (2) **a clip-based piece cannot be a
-      bundled preset yet**, because `tests/host/presetRender.test.js` plays no clips (`src/testing/ChainRender.js` drives the transport and the
-      generators, not the Scheduler), so a preset whose tracks are all clips would fail "every track gets sound"; running the Scheduler in
-      `renderChain` is the fix, and would also let a preset be heard rather than only wired; (3) the first reading of a real piece took ninety seconds,
-      fixed in `ProjectReader` (see MISTAKES.md), and the other readers have the same shape on small documents; (4) with a loop on, playback still
-      starts at beat zero and loops only after it, so a section cannot be auditioned by looping it, and the agent tools offer no seek; (5) `parameter_set`
-      returned failure for a valid call that `parameters_set_batch` accepted, and was not investigated.
+      balanced by playing it and reading per-track peaks (no clipping, master worst peak -2.5 dB), is `examples/songs/glass-hours.ttl` and the
+      bundled preset `web/presets/glass-hours.ttl`, both written by `examples/songs/glass-hours.js`, and `tests/rdf/SongExamples.test.js` binds
+      the script to both. **Done from the limits it hit:** the plugins are deployed, so its `strandz.it` addresses resolve and it opened in
+      Chrome from the file; `renderChain` now plays the clips with the real Scheduler and follows sends and bus outputs to the receiving
+      track's audio input, so a piece of clips is a preset and the render check hears it (mutation checked: with clips off, Drums is silent);
+      `transport_play` takes `fromBeat`, and playing with a loop on starts at the loop's start, so a section is heard by looping it, with the
+      envelopes seeded at the start point (`Scheduler.start(atTime, { from })`); `parameter_set` and `parameter_reset` take `nodeId`, as every
+      other tool does, and say so when it is missing (it had taken `node`, and the docs said `nodeId`). The other RDF readers were timed:
+      28 ms for the largest plugin profile, so they were left alone. **Done since:** clicking the ruler, or typing a bar in "Go to bar", cues the start while stopped and seeks while playing
+      (`Transport.seek`). **Left:** a master chain and the clips' audio are not in the offline render, so what it
+      checks is that sound reaches each track, not how it sounds.
 - [ ] **Master chain and track receives, what is left.** From the inbox, 2026-10-10. **Built, 2026-10-10:** a track's `jig:audioInput`
       is now also where a send or a bus output arrives, so a plugin on a bus is in the path; the master has a chain (nodes with
       `jig:onTrack <#master>`, `jig:audioInput` on the master for the node the mix arrives at, id `master` reserved), in the model,
