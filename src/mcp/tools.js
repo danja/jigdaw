@@ -613,23 +613,27 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
 
     {
       name: 'connection_add',
-      description: 'Connect one node to another. signalKind is Audio or Midi, or a full IRI.',
+      description: 'Connect one node to another. signalKind is Audio or Midi, or a full IRI. A MIDI connection may carry lowNote and highNote, and then lets only the notes from one to the other through.',
       inputSchema: {
         type: 'object',
         properties: {
           from: { type: 'string' }, to: { type: 'string' },
           fromPort: { type: 'integer' }, toPort: { type: 'integer' },
           toParameter: { type: 'string', description: 'Target a parameter by symbol instead of a port' },
-          signalKind: { type: 'string' }
+          signalKind: { type: 'string' },
+          lowNote: { type: 'integer', description: 'MIDI only: the lowest note let through, 0 to 127' },
+          highNote: { type: 'integer', description: 'MIDI only: the highest note let through, 0 to 127' }
         },
         required: ['from', 'to']
       },
-      async handler ({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = 'Audio' } = {}) {
+      async handler ({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = 'Audio', lowNote, highNote } = {}) {
         const change = {
           op: 'addConnection',
           from: { node: from, portIndex: fromPort },
           to: toParameter ? { node: to, portSymbol: toParameter } : { node: to, portIndex: toPort },
-          signalKind: expand(signalKind)
+          signalKind: expand(signalKind),
+          ...(lowNote === undefined ? {} : { lowNote }),
+          ...(highNote === undefined ? {} : { highNote })
         }
         const result = dispatcher.apply([change])
         return result.ok
@@ -802,6 +806,28 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
             connectionsRemoved: before - dispatcher.project.connections.length
           })
           : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'connection_set',
+      description:
+        'Change the notes a MIDI connection lets through: only those from lowNote to highNote, 0 to 127. An end you ' +
+        'leave out stays as it was, and null takes it away, so a connection with neither passes everything. Two ' +
+        'connections from one source with ranges that meet split a keyboard between two instruments.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          connectionId: { type: 'string' },
+          lowNote: { type: ['integer', 'null'] }, highNote: { type: ['integer', 'null'] },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['connectionId']
+      },
+      async handler ({ connectionId, lowNote, highNote, expectedRevision } = {}) {
+        const change = { op: 'setConnection', id: connectionId, ...(lowNote === undefined ? {} : { lowNote }), ...(highNote === undefined ? {} : { highNote }) }
+        const result = dispatcher.apply([change], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
       }
     },
 
@@ -1058,15 +1084,20 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         description: 'Send one track to another. Audio (the default) is a copy of the signal as an effect send: level is linear (default 1) and tap is pre or post fader (default post); it arrives at the target\'s audioInput, or its fader. With kind midi it routes the MIDI the source track makes to the plugin the target\'s MIDI clips play into (its midiInput), and takes no level or tap. A cycle, or a second send of one kind between the same two tracks, is refused.',
         properties: {
           from: { type: 'string' }, to: { type: 'string' }, kind: { type: 'string', enum: ['audio', 'midi'] },
-          level: num('Linear, zero or more; audio only'), tap: { type: 'string', enum: ['pre', 'post'], description: 'Audio only' }
+          level: num('Linear, zero or more; audio only'), tap: { type: 'string', enum: ['pre', 'post'], description: 'Audio only' },
+          lowNote: { type: 'integer', description: 'MIDI only: the lowest note let through, 0 to 127' },
+          highNote: { type: 'integer', description: 'MIDI only: the highest note let through, 0 to 127' }
         },
-        required: ['from', 'to'], op: 'addSend', id: 'sendId', pick: keep(['from', 'to', 'kind', 'level', 'tap'])
+        required: ['from', 'to'], op: 'addSend', id: 'sendId', pick: keep(['from', 'to', 'kind', 'level', 'tap', 'lowNote', 'highNote'])
       }),
       one({
         name: 'send_set',
-        description: 'Change an audio send\'s level or whether it takes the signal before or after the fader. A MIDI send has neither.',
-        properties: { sendId: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] } },
-        required: ['sendId'], op: 'setSend', returns: 'none', pick: withId('sendId', ['level', 'tap'])
+        description: 'Change an audio send\'s level or whether it takes the signal before or after the fader. A MIDI send has neither, and takes a note range instead: lowNote and highNote, an end left out staying as it was and null taking it away.',
+        properties: {
+          sendId: { type: 'string' }, level: num('Linear, zero or more'), tap: { type: 'string', enum: ['pre', 'post'] },
+          lowNote: { type: ['integer', 'null'] }, highNote: { type: ['integer', 'null'] }
+        },
+        required: ['sendId'], op: 'setSend', returns: 'none', pick: withId('sendId', ['level', 'tap', 'lowNote', 'highNote'])
       }),
       one({
         name: 'send_remove',

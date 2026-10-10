@@ -57,6 +57,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   node_unpack: 'it replaces one node with several, so a name a script already holds for it would change meaning under it',
   composite_pack: 'it writes a profile for a person to publish and changes nothing a script plays',
   connection_remove: 'not yet a statement',
+  connection_set: 'a routing edit (a note range on a MIDI connection), not yet a statement',
   parameters_set_batch: 'a script sets parameters one statement at a time, each checked',
   parameter_reset: 'not yet a statement',
   history_undo: 'a script must not undo a person\'s edits',

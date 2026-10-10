@@ -62,6 +62,16 @@ function builtProject () {
       signalKind: trn.Audio
     },
     {
+      // MIDI that lets only the notes from C2 to B3 through: the range is the connection's own.
+      op: 'addConnection',
+      id: 'c-midi',
+      from: { node: 'glue', portIndex: 0 },
+      to: { node: 'pad', portIndex: 0 },
+      signalKind: trn.Midi,
+      lowNote: 36,
+      highNote: 59
+    },
+    {
       // A parameter edge names its port by symbol, not by index.
       op: 'addConnection',
       id: 'c2',
@@ -85,7 +95,7 @@ function builtProject () {
     { op: 'setTrack', id: 'track-1', output: 'track-10' },
     { op: 'addSend', id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
     // MIDI between the same two tracks: no level, no tap, and the kind written.
-    { op: 'addSend', id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi' },
+    { op: 'addSend', id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi', lowNote: 60 },
     { op: 'addMarker', id: 'marker-1', atBeat: 8, label: 'Chorus' },
     { op: 'addMarker', id: 'marker-2', atBeat: 24 },
     { op: 'addRegion', id: 'region-1', startBeat: 8, lengthBeats: 16, label: 'Verse two' },
@@ -179,7 +189,7 @@ describe('a project survives being written and read back', () => {
     expect(reopened.node('glue').track).toBe('master')
     expect(b.sends).toEqual([
       { id: 'send-2', from: 'track-1', to: 'track-10', level: 0.4, tap: 'pre' },
-      { id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi' }
+      { id: 'send-3', from: 'track-1', to: 'track-10', kind: 'midi', lowNote: 60 }
     ])
     expect(reopened.track('track-1').output).toBe('track-10')
     expect(b.markers).toEqual(a.markers)
@@ -191,6 +201,39 @@ describe('a project survives being written and read back', () => {
     expect(b.transport.signaturePoints).toEqual([{ atBeat: 12, beatsPerBar: 4, beatUnit: 4 }, { atBeat: 20, beatsPerBar: 3, beatUnit: 4 }])
     expect(reopened.nextId('send')).toBe(original.nextId('send'))
   })
+
+  it('writes the ends of a note range that are set and no others, and reads them back, on a connection and a send', async () => {
+    const original = builtProject()
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toMatch(/jig:signalKind trn:Midi ; jig:lowNote 36 ; jig:highNote 59 \./)
+    expect(turtle).not.toMatch(/jig:highNote 60/)
+    const { project } = await reopen(turtle)
+    expect(project.connection('c-midi')).toMatchObject({ lowNote: 36, highNote: 59 })
+    const send = project.sends.find(x => x.id === 'send-3')
+    expect(send.lowNote).toBe(60)
+    expect('highNote' in send).toBe(false)
+    const plain = project.connection('c1')
+    expect('lowNote' in plain || 'highNote' in plain).toBe(false)
+  })
+
+  it('reads a project with thousands of notes in a moment, not in the time it takes to make tea', async () => {
+    // A lookup used to scan every triple in the file, so a read cost lookups times triples: 1228 notes took ninety
+    // seconds, and opening a real piece hung the page. The cost now grows with the size of the file and no faster.
+    const project = new Project()
+    project.apply([{ op: 'addTrack', id: 't' }, { op: 'addNode', id: 'n', track: 't', pluginIri: 'https://example.org/plugins/pulse/' }, { op: 'setTrack', id: 't', midiInput: 'n' }])
+    for (let c = 0; c < 12; c++) {
+      project.apply([{
+        op: 'addClip', id: `clip-${c}`, track: 't', kind: 'midi', startBeat: c * 64, lengthBeats: 64,
+        notes: Array.from({ length: 250 }, (_, i) => ({ startBeat: i * 0.25, lengthBeats: 0.2, pitch: 40 + (i % 40), velocity: 80 }))
+      }])
+    }
+    const turtle = writeProject(project, { iri: IRI })
+    const started = performance.now()
+    const { project: reopened } = await reopen(turtle)
+    const took = performance.now() - started
+    expect(reopened.clips.reduce((n, c) => n + c.notes.length, 0)).toBe(3000)
+    expect(took, `reading 3000 notes took ${Math.round(took)} ms`).toBeLessThan(5000)
+  }, 60000)
 
   it('writes the master when only a plugin is on it, and reads the plugin back on the master', async () => {
     const project = new Project()
@@ -213,7 +256,7 @@ describe('a project survives being written and read back', () => {
 
   it('writes a MIDI send with its kind and without a level or a tap, and an audio send as it always was', () => {
     const turtle = writeProject(builtProject(), { iri: IRI })
-    expect(turtle).toMatch(/<#send-3> a jig:Send ; jig:sendFrom <#track-1> ; jig:sendTo <#track-10> ; jig:signalKind trn:Midi \./)
+    expect(turtle).toMatch(/<#send-3> a jig:Send ; jig:sendFrom <#track-1> ; jig:sendTo <#track-10> ; jig:signalKind trn:Midi ; jig:lowNote 60 \./)
     expect(turtle).toMatch(/<#send-2> a jig:Send [^\n]*jig:level 0\.4[^\n]*jig:tap jig:PreFader/)
     expect(turtle).not.toMatch(/<#send-2>[^\n]*signalKind/)
   })

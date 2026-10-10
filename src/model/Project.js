@@ -18,8 +18,9 @@
 
 import { EditorState } from './EditorState.js'
 import { ScriptState } from './ScriptState.js'
+import { isMidiSignal } from './Endpoints.js'
 import {
-  ARRANGEMENT_OPERATIONS, MASTER_TRACK, emptyArrangement, cloneArrangement, checkTrackOutput,
+  ARRANGEMENT_OPERATIONS, MASTER_TRACK, checkNoteRange, emptyArrangement, cloneArrangement, checkTrackOutput,
   dropForTrack, dropForNode, checkSignaturePoints, arrangementChanges, arrangementReconcile
 } from './ArrangementOps.js'
 
@@ -589,14 +590,35 @@ const OPERATIONS = {
     }
     const id = change.id ?? `conn-${++counters.connection}`
     noteExplicitId(counters, 'conn', 'connection', id)
+    if ((change.lowNote != null || change.highNote != null) && !isMidiSignal(change.signalKind)) throw new Error('a note range is for a MIDI connection')
     state.connections.set(id, {
       id,
       from: { ...change.from },
       to: { ...change.to },
       signalKind: change.signalKind,
-      delayFrames: change.delayFrames ?? 0
+      delayFrames: change.delayFrames ?? 0,
+      ...checkNoteRange(change, 'a MIDI connection')
     })
     return id
+  },
+
+  /**
+   * Change the notes a MIDI connection lets through: only those from `lowNote` to `highNote`. An end not
+   * mentioned stays as it was and null takes it away, so a connection with neither passes everything, which
+   * is what one that never had a range does.
+   */
+  setConnection (state, change) {
+    const connection = state.connections.get(change.id)
+    if (!connection) throw new Error(`no such connection: ${change.id}`)
+    if (!isMidiSignal(connection.signalKind)) throw new Error('a note range is for a MIDI connection')
+    const next = checkNoteRange({
+      lowNote: change.lowNote === undefined ? connection.lowNote : change.lowNote,
+      highNote: change.highNote === undefined ? connection.highNote : change.highNote
+    }, 'a MIDI connection')
+    delete connection.lowNote
+    delete connection.highNote
+    Object.assign(connection, next)
+    return change.id
   },
 
   removeConnection (state, change) {
@@ -702,7 +724,8 @@ export function changesFor (snapshot) {
       .filter(t => t.midiInput !== null || t.audioInput !== null)
       .map(t => ({ op: 'setTrack', id: t.id, midiInput: t.midiInput, audioInput: t.audioInput })),
     ...snapshot.connections.map(c => ({
-      op: 'addConnection', id: c.id, from: c.from, to: c.to, signalKind: c.signalKind, delayFrames: c.delayFrames
+      op: 'addConnection', id: c.id, from: c.from, to: c.to, signalKind: c.signalKind, delayFrames: c.delayFrames,
+      ...(c.lowNote === undefined ? {} : { lowNote: c.lowNote }), ...(c.highNote === undefined ? {} : { highNote: c.highNote })
     })),
     ...snapshot.clips.map(clipChange),
     { op: 'setTransport', ...snapshot.transport },

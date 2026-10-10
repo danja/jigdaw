@@ -47,6 +47,9 @@ export class EventRouter {
   #dropped = new Map()
   #onDropped
   #recent = new Map()
+  // For a route with a note range: the notes it let through that have not been released, by `from>to`, as
+  // `channel:note`. A note-off follows its note-on, so changing the range mid-note leaves nothing sounding.
+  #sounding = new Map()
 
   constructor ({ engine, onDropped = null }) {
     if (!engine) throw new Error('EventRouter needs an engine')
@@ -64,7 +67,9 @@ export class EventRouter {
   }
 
   get routes () {
-    return [...this.#routes].flatMap(([from, targets]) => targets.map(to => ({ from, to })))
+    return [...this.#routes].flatMap(([from, targets]) => targets.map(({ to, lowNote, highNote }) => ({
+      from, to, ...(lowNote === undefined ? {} : { lowNote }), ...(highNote === undefined ? {} : { highNote })
+    })))
   }
 
   /** How many events a node has reported dropping, since it last said. */
@@ -82,9 +87,10 @@ export class EventRouter {
     // A route that is gone takes its history with it.
     const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`))
     for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key)
-    for (const { from, to } of pairs) {
+    for (const key of [...this.#sounding.keys()]) if (!kept.has(key)) this.#sounding.delete(key)
+    for (const { from, to, lowNote, highNote } of pairs) {
       if (!this.#routes.has(from)) this.#routes.set(from, [])
-      this.#routes.get(from).push(to)
+      this.#routes.get(from).push({ to, lowNote, highNote })
       this.observe(from)
     }
   }
@@ -117,10 +123,43 @@ export class EventRouter {
   #forward (fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId)
     if (!targets || !events?.length) return
-    for (const target of targets) {
-      this.#remember(fromEngineId, target, events)
-      this.send(target, events)
+    for (const { to, lowNote, highNote } of targets) {
+      const passing = lowNote === undefined && highNote === undefined
+        ? events
+        : this.#withinRange(`${fromEngineId}>${to}`, events, lowNote ?? 0, highNote ?? 127)
+      if (passing.length === 0) continue
+      this.#remember(fromEngineId, to, passing)
+      this.send(to, passing)
     }
+  }
+
+  /**
+   * The events of a route with a note range that pass it: notes inside the range, with a note-off only for a
+   * note-on that passed, and everything that is not a note as it came. All-notes-off and all-sound-off
+   * release what the route is holding. Anything outside the range is dropped, not moved.
+   */
+  #withinRange (key, events, low, high) {
+    let held = this.#sounding.get(key)
+    if (!held) { held = new Set(); this.#sounding.set(key, held) }
+    const passing = []
+    for (const event of events) {
+      const [status = 0, data1 = 0, data2 = 0] = event.bytes ?? []
+      const kind = status & 0xf0
+      const channel = status & 0x0f
+      if (kind === 0x90 && data2 > 0) {
+        if (data1 < low || data1 > high) continue
+        held.add(`${channel}:${data1}`)
+      } else if (kind === 0x80 || kind === 0x90) {
+        if (!held.delete(`${channel}:${data1}`)) continue
+      } else if (kind === 0xa0) {
+        // Poly aftertouch is a note's own, so it follows the note.
+        if (!held.has(`${channel}:${data1}`)) continue
+      } else if (kind === 0xb0 && (data1 === 120 || data1 === 123)) {
+        for (const note of [...held]) if (Number(note.split(':')[0]) === channel) held.delete(note)
+      }
+      passing.push(event)
+    }
+    return passing
   }
 
   #remember (from, to, events) {

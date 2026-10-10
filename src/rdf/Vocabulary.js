@@ -232,6 +232,8 @@ export const vocabulary = Object.freeze({
     sendTo: `${JIG}sendTo`,
     level: `${JIG}level`,
     tap: `${JIG}tap`,
+    lowNote: `${JIG}lowNote`,
+    highNote: `${JIG}highNote`,
     PreFader: `${JIG}PreFader`,
     PostFader: `${JIG}PostFader`,
     output: `${JIG}output`,

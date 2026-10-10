@@ -621,6 +621,55 @@ describe('a MIDI send between tracks reaches the router', () => {
   })
 })
 
+describe('a note range on MIDI routes reaches the router, and undo puts it back', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+
+  it('carries a connection\'s range, changes it live, and undoes the change', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 't' }])
+    const a = (await d.addPlugin(IRI, { track: 't' })).nodeId
+    const b = (await d.addPlugin(IRI, { track: 't' })).nodeId
+    for (const id of [a, b]) { d.engineNode(id).profile.produces = [MIDI]; d.engineNode(id).profile.accepts = [MIDI] }
+    d.apply([{ op: 'addConnection', id: 'c1', from: { node: a, portIndex: 0 }, to: { node: b, portIndex: 0 }, signalKind: MIDI, lowNote: 36, highNote: 59 }])
+    expect(d.router.routes).toEqual([{ from: 'engine-1', to: 'engine-2', lowNote: 36, highNote: 59 }])
+    d.apply([{ op: 'setConnection', id: 'c1', highNote: 71 }])
+    expect(d.router.routes).toEqual([{ from: 'engine-1', to: 'engine-2', lowNote: 36, highNote: 71 }])
+    d.apply([{ op: 'setConnection', id: 'c1', lowNote: null, highNote: null }])
+    expect(d.router.routes).toEqual([{ from: 'engine-1', to: 'engine-2' }])
+    await d.undo()
+    expect(d.router.routes).toEqual([{ from: 'engine-1', to: 'engine-2', lowNote: 36, highNote: 71 }])
+    await d.undo()
+    expect(d.router.routes).toEqual([{ from: 'engine-1', to: 'engine-2', lowNote: 36, highNote: 59 }])
+    await d.redo()
+    expect(d.project.connection('c1')).toMatchObject({ lowNote: 36, highNote: 71 })
+  })
+
+  it('carries a MIDI send\'s range to the route it makes, and a second send to the same target splits the source', async () => {
+    const engine = fakeEngine()
+    const d = new OpDispatcher({ engine })
+    d.apply([{ op: 'addTrack', id: 'src' }, { op: 'addTrack', id: 'low' }, { op: 'addTrack', id: 'high' }])
+    const gen = (await d.addPlugin(IRI, { track: 'src' })).nodeId
+    const lo = (await d.addPlugin(IRI, { track: 'low' })).nodeId
+    const hi = (await d.addPlugin(IRI, { track: 'high' })).nodeId
+    d.engineNode(gen).profile.produces = [MIDI]
+    d.apply([
+      { op: 'setTrack', id: 'low', midiInput: lo }, { op: 'setTrack', id: 'high', midiInput: hi },
+      { op: 'addSend', id: 's1', from: 'src', to: 'low', kind: 'midi', highNote: 59 },
+      { op: 'addSend', id: 's2', from: 'src', to: 'high', kind: 'midi', lowNote: 60 }
+    ])
+    expect(d.router.routes).toEqual([
+      { from: 'engine-1', to: 'engine-2', highNote: 59 },
+      { from: 'engine-1', to: 'engine-3', lowNote: 60 }
+    ])
+    const toLow = () => d.router.routes.find(r => r.to === 'engine-2')
+    d.apply([{ op: 'setSend', id: 's1', highNote: 71 }])
+    expect(toLow()).toEqual({ from: 'engine-1', to: 'engine-2', highNote: 71 })
+    await d.undo()
+    expect(toLow()).toEqual({ from: 'engine-1', to: 'engine-2', highNote: 59 })
+  })
+})
+
 describe('setParameter', () => {
   it('records in the model and applies to the AudioParam', async () => {
     const engine = fakeEngine()

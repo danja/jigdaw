@@ -57,6 +57,10 @@ export function createDockPanel (ctx) {
       const result = ctx.dispatcher.apply([{ op: 'removeConnection', id }])
       if (!result.ok) log(result.message, 'error')
     },
+    onRange: (id, change) => {
+      const result = ctx.dispatcher.apply([{ op: 'setConnection', id, ...change }])
+      if (!result.ok) log(result.message, 'error')
+    },
     onConnect: ({ from, to }) => {
       const result = ctx.dispatcher.apply([{
         op: 'addConnection',
@@ -134,7 +138,8 @@ export function createDockPanel (ctx) {
     onAdd: (to, kind) => apply([kind === 'midi' ? { op: 'addSend', from: chainTrack, to, kind } : { op: 'addSend', from: chainTrack, to, level: 1, tap: 'post' }]),
     onLevel: (id, level) => apply([{ op: 'setSend', id, level }]),
     onTap: (id, tap) => apply([{ op: 'setSend', id, tap }]),
-    onRemove: id => apply([{ op: 'removeSend', id }])
+    onRemove: id => apply([{ op: 'removeSend', id }]),
+    onRange: (id, change) => apply([{ op: 'setSend', id, ...change }])
   })
   dock.slot('track').append(trackPanel.element, sendsPanel.element, chain.element)
 
@@ -223,7 +228,7 @@ export function createDockPanel (ctx) {
         label: trackLabel(track),
         output: track.output,
         outputOptions: outputTargets(project, track.id).map(asOption),
-        sends: project.sends.filter(s => s.from === track.id).map(s => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? 'audio', level: s.level, tap: s.tap })),
+        sends: project.sends.filter(s => s.from === track.id).map(s => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? 'audio', level: s.level, tap: s.tap, lowNote: s.lowNote, highNote: s.highNote })),
         addOptions: sendTargets(project, track.id).map(asOption),
         // Only where the target has somewhere for MIDI to play, which is its MIDI input.
         midiAddOptions: sendTargets(project, track.id, 'midi').filter(t => t.midiInput).map(asOption)

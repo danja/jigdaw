@@ -229,6 +229,11 @@ export function createRack (ctx) {
       connections,
       labelFor,
       monitor: id => dispatcher.midiActivity(id).map(e => describeMidi(e.bytes)),
+      onRange: (id, change) => {
+        const result = dispatcher.apply([{ op: 'setConnection', id, ...change }])
+        if (!result.ok) log(result.message, 'error')
+        drawRack()
+      },
       onRemove: id => {
         const result = dispatcher.apply([{ op: 'removeConnection', id }])
         if (!result.ok) log(result.message, 'error')
@@ -678,6 +683,8 @@ export function createRack (ctx) {
     targetTrack () { return $('target').value === NEW_TRACK ? null : $('target').value },
     /** Where the next Load goes: where this one went. */
     loadedOnto (trackId) { loadTarget = trackId; drawTargets() },
+    /** The meter of each track strip on the Mixer tab, by track id. */
+    meters: () => mixer.meters(),
     /** Put the mixer on the page and listen to the Load onto menu. */
     mount () {
       $('mixer').replaceWith(mixer.element)

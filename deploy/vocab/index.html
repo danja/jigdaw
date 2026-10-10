@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  164 terms.
+  166 terms.
 </p>
 
 <h2>Classes</h2>
@@ -377,6 +377,8 @@
   <dd>Linear fader gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean
         converting back in every reader. Absent means unity.</dd>
+  <dt id="highNote"><code>jig:highNote</code> <span class="label">highest note</span></dt>
+  <dd>The highest MIDI note, 0 to 127, a MIDI route lets through. Absent means 127.</dd>
   <dt id="hostVersion"><code>jig:hostVersion</code> <span class="label">host version</span></dt>
   <dd>Which host produced this reading. Inspections from different host
         versions are not comparable, for the same reason plugin-universe refuses to
@@ -411,6 +413,8 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="loopStart"><code>jig:loopStart</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="lowNote"><code>jig:lowNote</code> <span class="label">lowest note</span></dt>
+  <dd>The lowest MIDI note, 0 to 127, a MIDI route lets through. Absent means 0.</dd>
   <dt id="mediaType"><code>jig:mediaType</code> <span class="label">media type</span></dt>
   <dd>The media type the resource is expected to be served as. A statement
         of intent that lets a host report a misconfigured server precisely, rather than a

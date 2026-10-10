@@ -214,3 +214,72 @@ describe('the dispatcher path', () => {
     expect(project.markers).toEqual([])
   })
 })
+
+describe('a note range on MIDI routes', () => {
+  const MIDI = 'http://purl.org/stuff/transmissions/Midi'
+  const AUDIO = 'http://purl.org/stuff/transmissions/Audio'
+  const edge = (from, to, kind, over = {}) => ({ op: 'addConnection', id: `${from}-${to}-${kind.slice(-5)}`, from: { node: from, portIndex: 0 }, to: { node: to, portIndex: 0 }, signalKind: kind, ...over })
+  beforeEach(() => {
+    project.apply([{ op: 'addNode', id: 'm', track: 'b', pluginIri: IRI }, { op: 'addNode', id: 'k', track: 'b', pluginIri: IRI }])
+  })
+
+  it('keeps a range on a MIDI connection, and says nothing for one that passes everything', () => {
+    project.apply([edge('n', 'm', MIDI, { lowNote: 60, highNote: 71 }), edge('n', 'k', MIDI)])
+    expect(project.connections.find(c => c.to.node === 'm')).toMatchObject({ lowNote: 60, highNote: 71 })
+    const plain = project.connections.find(c => c.to.node === 'k')
+    expect('lowNote' in plain || 'highNote' in plain).toBe(false)
+  })
+
+  it('writes a whole-range end as no end, so the same notes are the same route', () => {
+    project.apply([edge('n', 'm', MIDI, { lowNote: 0, highNote: 127 })])
+    const c = project.connections[0]
+    expect('lowNote' in c || 'highNote' in c).toBe(false)
+    project.apply([{ op: 'setConnection', id: c.id, lowNote: 36, highNote: 127 }])
+    expect(project.connections[0].lowNote).toBe(36)
+    expect('highNote' in project.connections[0]).toBe(false)
+  })
+
+  it('refuses notes that are not notes, a low above the high, and a range on audio', () => {
+    refused([edge('n', 'm', MIDI, { lowNote: 128 })], /MIDI note from 0 to 127/)
+    refused([edge('n', 'm', MIDI, { lowNote: -1 })], /MIDI note from 0 to 127/)
+    refused([edge('n', 'm', MIDI, { highNote: 60.5 })], /MIDI note from 0 to 127/)
+    refused([edge('n', 'm', MIDI, { lowNote: 72, highNote: 60 })], /lowest note is above the highest/)
+    refused([edge('n', 'm', AUDIO, { lowNote: 60 })], /for a MIDI connection/)
+    expect(project.connections).toHaveLength(0)
+  })
+
+  it('changes one end and leaves the other, and null takes an end away', () => {
+    project.apply([edge('n', 'm', MIDI, { lowNote: 60, highNote: 71 })])
+    const id = project.connections[0].id
+    project.apply([{ op: 'setConnection', id, highNote: 84 }])
+    expect(project.connections[0]).toMatchObject({ lowNote: 60, highNote: 84 })
+    project.apply([{ op: 'setConnection', id, lowNote: null }])
+    expect('lowNote' in project.connections[0]).toBe(false)
+    expect(project.connections[0].highNote).toBe(84)
+    refused([{ op: 'setConnection', id, lowNote: 90 }], /lowest note is above the highest/)
+    refused([{ op: 'setConnection', id: 'ghost', lowNote: 1 }], /no such connection/)
+  })
+
+  it('refuses a range on an audio connection set later', () => {
+    project.apply([edge('n', 'm', AUDIO)])
+    refused([{ op: 'setConnection', id: project.connections[0].id, lowNote: 60 }], /for a MIDI connection/)
+  })
+
+  it('survives a snapshot, which is how the dispatcher tries a changeset', () => {
+    project.apply([edge('n', 'm', MIDI, { lowNote: 60, highNote: 71 })])
+    const copy = new Project()
+    copy.apply(changesFor(project.snapshot()))
+    expect(copy.connections[0]).toMatchObject({ lowNote: 60, highNote: 71 })
+  })
+
+  it('puts a range on a MIDI send, changes it, and refuses one on an audio send', () => {
+    project.apply([{ op: 'addSend', id: 'm1', from: 'a', to: 'b', kind: 'midi', lowNote: 48, highNote: 59 }])
+    expect(project.sends[0]).toEqual({ id: 'm1', from: 'a', to: 'b', kind: 'midi', lowNote: 48, highNote: 59 })
+    project.apply([{ op: 'setSend', id: 'm1', lowNote: null, highNote: 64 }])
+    expect(project.sends[0]).toEqual({ id: 'm1', from: 'a', to: 'b', kind: 'midi', highNote: 64 })
+    refused([{ op: 'addSend', from: 'a', to: 'c', lowNote: 60 }], /for a MIDI send/)
+    project.apply([{ op: 'addSend', id: 'x', from: 'a', to: 'c' }])
+    refused([{ op: 'setSend', id: 'x', highNote: 60 }], /for a MIDI send/)
+    refused([{ op: 'addSend', from: 'b', to: 'c', kind: 'midi', lowNote: 80, highNote: 20 }], /lowest note is above the highest/)
+  })
+})

@@ -138,3 +138,37 @@ describe('control ids', () => {
     expect(ids).toContain('strip-b-level')
   })
 })
+
+describe('a level meter on each strip', () => {
+  const nodes = [{ id: 'synth', track: 'lead' }, { id: 'verb', track: 'keys' }]
+  const tracks = [track('lead', 'Lead'), track('keys', 'Keys')]
+
+  it('gives every strip its own meter, named for its track, and hands them to the page by track id', () => {
+    const { mixer } = drawn({ tracks, nodes })
+    const meters = mixer.meters()
+    expect([...meters.keys()]).toEqual(['lead', 'keys'])
+    expect(meters.get('lead').element.getAttribute('aria-label')).toBe('Level of Lead')
+    expect(mixer.element.querySelectorAll('.meter-group')).toHaveLength(2)
+    // The page drives them: nothing on its own.
+    expect(meters.get('lead').element.querySelector('.meter-readout').textContent).toBe('-inf dB')
+  })
+
+  it('keeps a track\'s meter across a redraw, and renames it with the track', () => {
+    const { mixer, draw } = drawn({ tracks, nodes })
+    const before = mixer.meters().get('lead')
+    draw([track('lead', 'Renamed'), track('keys', 'Keys')])
+    expect(mixer.meters().get('lead')).toBe(before)
+    expect(before.element.getAttribute('aria-label')).toBe('Level of Renamed')
+  })
+
+  it('lets a track\'s meter go with the track', () => {
+    const { mixer, draw } = drawn({ tracks, nodes })
+    draw([track('lead', 'Lead')])
+    expect([...mixer.meters().keys()]).toEqual(['lead'])
+  })
+
+  it('has no meter for a track with no strip, which has nothing to measure', () => {
+    const { mixer } = drawn({ tracks: [track('lines', 'Lines')], nodes: [{ id: 'gen', track: 'lines' }] })
+    expect(mixer.meters().size).toBe(0)
+  })
+})

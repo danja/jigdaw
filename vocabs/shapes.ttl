@@ -466,6 +466,8 @@ jig:ConnectionShape a sh:NodeShape ;
         sh:minCount 1 ; sh:maxCount 1 ;
         sh:message "A connection needs exactly one destination endpoint."
     ] ;
+    sh:property [ sh:path jig:lowNote ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ; sh:message "A route's lowest note is a MIDI note, from 0 to 127." ] ;
+    sh:property [ sh:path jig:highNote ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ; sh:message "A route's highest note is a MIDI note, from 0 to 127." ] ;
     sh:property [
         sh:path jig:signalKind ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
@@ -548,6 +550,8 @@ jig:SendShape a sh:NodeShape ;
         sh:path jig:tap ; sh:maxCount 1 ; sh:in ( jig:PreFader jig:PostFader ) ;
         sh:message "A send takes its signal pre-fader or post-fader, and nothing else."
     ] ;
+    sh:property [ sh:path jig:lowNote ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ; sh:message "A route's lowest note is a MIDI note, from 0 to 127." ] ;
+    sh:property [ sh:path jig:highNote ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ; sh:message "A route's highest note is a MIDI note, from 0 to 127." ] ;
     sh:property [
         sh:path jig:signalKind ; sh:maxCount 1 ; sh:in ( trn:Audio trn:Midi ) ;
         sh:message "A send carries audio, which is what it does when it says nothing, or MIDI."

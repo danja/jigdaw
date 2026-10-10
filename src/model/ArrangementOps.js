@@ -23,6 +23,24 @@ export const TARGET_KINDS = Object.freeze(['masterGain', 'masterPan', 'tempo'])
 
 const EPSILON = 1e-9
 
+/**
+ * The note range of a MIDI route, checked and made canonical: each end a MIDI note from 0 to 127 or absent,
+ * the low no higher than the high, and an end that is the whole of the range (0 for the low, 127 for the
+ * high) absent, so two routes that let the same notes through are the same route and are written the same.
+ * `null` clears an end. Returns only the ends that are set, as `lowNote` and `highNote`.
+ */
+export function checkNoteRange ({ lowNote, highNote }, what = 'a note range') {
+  for (const [name, value] of [['lowNote', lowNote], ['highNote', highNote]]) {
+    if (value === undefined || value === null) continue
+    if (!(Number.isInteger(value) && value >= 0 && value <= 127)) throw new Error(`${what}: ${name} is a MIDI note from 0 to 127: ${value}`)
+  }
+  if (lowNote != null && highNote != null && lowNote > highNote) throw new Error(`${what}: the lowest note is above the highest: ${lowNote} to ${highNote}`)
+  return {
+    ...(lowNote != null && lowNote > 0 ? { lowNote } : {}),
+    ...(highNote != null && highNote < 127 ? { highNote } : {})
+  }
+}
+
 export function emptyArrangement () {
   return { master: { ...DEFAULT_MASTER }, sends: new Map(), markers: new Map(), regions: new Map(), envelopes: new Map() }
 }
@@ -147,9 +165,10 @@ export const ARRANGEMENT_OPERATIONS = {
     if (kind === 'midi') {
       // MIDI has no level to set and no fader to take it before or after: stating one would be stating nothing.
       if (change.level !== undefined || change.tap !== undefined) throw new Error('a MIDI send has no level or tap')
-      state.sends.set(id, { id, from: change.from, to: change.to, kind })
+      state.sends.set(id, { id, from: change.from, to: change.to, kind, ...checkNoteRange(change, 'a MIDI send') })
       return id
     }
+    if (change.lowNote !== undefined || change.highNote !== undefined) throw new Error('a note range is for a MIDI send')
     const level = change.level ?? 1
     finiteAtLeast(level, 0, 'a send level')
     const tap = change.tap ?? 'post'
@@ -163,6 +182,17 @@ export const ARRANGEMENT_OPERATIONS = {
     if (!send) throw new Error(`no such send: ${change.id}`)
     if (change.kind !== undefined && change.kind !== (send.kind ?? 'audio')) throw new Error('a send does not change kind: remove it and add another')
     if (send.kind === 'midi' && (change.level !== undefined || change.tap !== undefined)) throw new Error('a MIDI send has no level or tap')
+    if (send.kind !== 'midi' && (change.lowNote !== undefined || change.highNote !== undefined)) throw new Error('a note range is for a MIDI send')
+    if (send.kind === 'midi' && (change.lowNote !== undefined || change.highNote !== undefined)) {
+      // An end not mentioned stays as it was; null clears one.
+      const next = checkNoteRange({
+        lowNote: change.lowNote === undefined ? send.lowNote : change.lowNote,
+        highNote: change.highNote === undefined ? send.highNote : change.highNote
+      }, 'a MIDI send')
+      delete send.lowNote
+      delete send.highNote
+      Object.assign(send, next)
+    }
     if (change.level !== undefined) { finiteAtLeast(change.level, 0, 'a send level'); send.level = change.level }
     if (change.tap !== undefined) {
       if (!TAPS.includes(change.tap)) throw new Error(`tap must be one of ${TAPS.join(', ')}`)

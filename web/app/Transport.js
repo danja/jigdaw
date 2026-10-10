@@ -8,6 +8,7 @@ import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
 import { Metronome, countIn } from '../../src/engine/Metronome.js'
 import { createClickVoice } from './Click.js'
 import { createClipHold } from '../../src/ui/ClipHold.js'
+import { litBars } from '../../src/ui/MeterModel.js'
 
 /** A repeating impulse, so an effect has something to work on. */
 function makeSource (context) {
@@ -208,7 +209,7 @@ export function createTransport (ctx) {
       let peak = 0
       for (const v of data) peak = Math.max(peak, Math.abs(v))
       if (hold.update(peak) && clip.hidden) clip.hidden = false
-      const lit = Math.round(Math.min(1, peak) * bars)
+      const lit = litBars(peak, bars)
       meter.querySelectorAll('i').forEach((bar, i) => {
         bar.className = i < lit ? (i >= bars - 2 ? 'hot' : 'on') : ''
       })

@@ -85,6 +85,8 @@
 
 <#c>
     a jig:Connection ;
+    # A lowest note that is not a MIDI note, and a highest that is not a number.
+    jig:lowNote 200 ; jig:highNote "top" ;
     jig:from <#c-from> ; jig:to <#c-to> .
     # No jig:signalKind, so nothing knows whether this is an audio edge or
     # host-routed MIDI.

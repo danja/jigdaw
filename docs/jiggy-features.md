@@ -66,14 +66,16 @@ starts on the simple page.
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
   connection can be watched: the last 24 events over it, in words.
 - **Output meter with a clip hold.** The meter beside the transport shows the level of the mix, and a Clip button appears when it
-  reached full scale and stays until pressed. The Mixer tab's Master channel lists the plugins on the master.
+  reached full scale and stays until pressed. Every strip on the Mixer tab has a level meter of its own with the held peak in decibels
+  beside it, and the Master channel lists the plugins on the master.
 - **Sends, buses and the master.** Sends before or after the fader, a track's output to another track, and
   a master with level, pan and mute, all acting on the sound. A cycle of them is refused. Audio sent or bused to
   a track arrives at the plugin the track names as its audio input, so a reverb on a bus is in the path, and the
   master has a chain of its own the same way: plugins on the master, and the one the mix of every track arrives
   at. Generative Gamelan has its reverb there. MIDI between tracks is a connection between two plugins, or a MIDI send
   from one track to another, which delivers to the plugin the target plays its MIDI into; Generative Gamelan's
-  Conductor drives both lines by two MIDI sends.
+  Conductor drives both lines by two MIDI sends. A MIDI send or connection can carry a note range, so one keyboard is
+  split between two instruments, and either end of a send can be a composite plugin.
 - **Sidechain.** A plugin can mark an input as a key, and the matrix names it "Sidechain key". Dynamix
   ducks from a kick on another track.
 - **Latency.** Declared latency is compensated between connected plugins, and tracks are delayed so that
@@ -129,7 +131,7 @@ starts on the simple page.
 
 ## For agents
 
-- **52 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **53 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).

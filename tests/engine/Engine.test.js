@@ -38,7 +38,13 @@ function fakeNode (parameters = {}) {
         destination.incoming.push({ from: this, output })
       }
     },
-    disconnect () { this.outgoing = [] }
+    // As a real node does: with no argument, everything; with a destination, only that, and an error if it was
+    // not connected, which is how a caller that disconnects too much or too little is found out.
+    disconnect (destination) {
+      if (destination === undefined) { this.outgoing = []; return }
+      if (!this.outgoing.some(o => o.destination === destination)) throw new Error('InvalidAccessError: not connected')
+      this.outgoing = this.outgoing.filter(o => o.destination !== destination)
+    }
   }
 }
 
@@ -59,6 +65,11 @@ function fakeContext () {
       const gain = fakeNode()
       gain.gain = { ...fakeParam(), value: 1 }
       return gain
+    },
+    createAnalyser () {
+      const analyser = fakeNode()
+      analyser.fftSize = 2048
+      return analyser
     },
     createStereoPanner () {
       const panner = fakeNode()
@@ -491,6 +502,47 @@ describe('Engine sends, bus outputs and the master', () => {
     expect(engine.master.gain.scheduled.at(-1)).toEqual({ value: 0.5, at: 2 })
     engine.setMaster({ gain: 0.5, pan: 0, muted: true })
     expect(engine.master.gain.scheduled.at(-1).value).toBe(0)
+  })
+})
+
+describe('a track meter tap', () => {
+  const make = () => {
+    const context = fakeContext()
+    const engine = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    engine.addTrack('a')
+    engine.addTrack('b')
+    return { context, engine }
+  }
+
+  it('listens after the fader and the pan, and is the same analyser each time it is asked for', () => {
+    const { engine } = make()
+    const meter = engine.trackMeter('a')
+    expect(meter.fftSize).toBe(1024)
+    expect(engine.trackTap('a').outgoing.map(o => o.destination)).toContain(meter)
+    expect(engine.trackMeter('a')).toBe(meter)
+    // Not stacked: one tap however often it is asked for.
+    expect(engine.trackTap('a').outgoing.filter(o => o.destination === meter)).toHaveLength(1)
+  })
+
+  it('stays connected when the track is sent to a bus and back, which only moves where its sound goes', () => {
+    const { engine } = make()
+    const meter = engine.trackMeter('a')
+    engine.setTrackOutput('a', 'b')
+    expect(engine.trackTap('a').outgoing.map(o => o.destination)).toContain(meter)
+    expect(reaches(engine.trackTap('a'), engine.trackInput('b'))).toBe(true)
+    engine.setTrackOutput('a', null)
+    expect(engine.trackTap('a').outgoing.map(o => o.destination)).toContain(meter)
+    expect(reaches(engine.trackTap('a'), engine.master)).toBe(true)
+  })
+
+  it('refuses a track that is not there, and a context that cannot make an analyser', () => {
+    const { engine } = make()
+    expect(() => engine.trackMeter('ghost')).toThrow(/no such track strip/)
+    const context = fakeContext()
+    delete context.createAnalyser
+    const bare = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorkletNode })
+    bare.addTrack('a')
+    expect(() => bare.trackMeter('a')).toThrow(/cannot make an analyser/)
   })
 })
 

@@ -156,7 +156,7 @@ export class OfflineWorkletNode {
     return destination
   }
 
-  disconnect () { this.connections = []; return this }
+  disconnect (destination) { this.connections = destination === undefined ? [] : this.connections.filter(c => c.destination !== destination); return this }
 
   /** Run one render quantum. Returns the output channels. */
   render (inputChannels = null) {
@@ -205,7 +205,7 @@ export class OfflineContext {
           if (destination && Array.isArray(destination.incoming)) destination.incoming.push(this)
           return destination
         },
-        disconnect () { this.connections = []; return this }
+        disconnect (destination) { this.connections = destination === undefined ? [] : this.connections.filter(c => c.destination !== destination); return this }
       }
       this.gains.push(gain)
       return gain
@@ -222,7 +222,7 @@ export class OfflineContext {
         delayTime: { value: 0, scheduled: [], setValueAtTime (value, time) { this.scheduled.push({ value, time }) } },
         connections: [],
         connect (destination, output = 0, input = 0) { this.connections.push({ destination, output, input }); return destination },
-        disconnect () { this.connections = []; return this }
+        disconnect (destination) { this.connections = destination === undefined ? [] : this.connections.filter(c => c.destination !== destination); return this }
       }
       this.delays.push(delay)
       return delay

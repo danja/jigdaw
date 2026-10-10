@@ -5,6 +5,29 @@ newest first inside each; the one-off narratives are gone, the tests that guard
 each lesson are named. Retired 2026-09-30 from a 1466-line chronological log: a lesson that lives in
 CLAUDE.md is a pointer, a fix held by a test alone is dropped, everything else is below.
 
+## A reader that scanned the whole file for every lookup
+
+**2026-10-10 reading a project with 1228 notes took ninety seconds, and every session until then had been too small to notice.** `ProjectReader`'s
+`objects()` looped over every triple in the dataset to find the ones for one subject and predicate, and a note is read with six lookups, so a read cost
+lookups times triples. Parsing the same file took 0.1 s and applying what was read took 0.01 s. Found by writing the first piece long enough to be
+music, through the agent tools, saving it as a file and trying to test that the file opened: the test hit its 30 s limit, and a stopwatch around each
+stage put the whole of it in the reader. The datasets are indexed by subject and predicate once per read, which keeps the order, and the read is
+87 ms. `tests/rdf/ProjectRoundTrip.test.js` reads 3000 notes and fails past five seconds, which the old reader took many minutes to do.
+Prevention: a test that opens something real, not only something small, and a read path timed at the size a person would actually make. The other
+readers (`PluginReader`, `ProfileReader`, `CompositeReader`) read small documents and were not changed; if one is ever given a large one, it has this
+shape and this fix.
+
+## An element was left out, and it was still on the screen
+
+**2026-10-10 a MIDI send drew a Level slider that did nothing, and 73 passing tests said it did not.** `SendsPanel` set `hidden` on the
+send's level control, tests asserted `.hidden` was true, and in Chrome the slider was there: `.send-level { display: flex }` is an author rule
+and an author `display` beats the browser's `[hidden] { display: none }`, which is only a default. A DOM without a renderer has no cascade, so
+nothing short of a browser can see it. Found by looking at a screenshot taken to check something else (the note range fields). The CLAUDE.md
+rule "a control nobody can use is left out, not shown disabled" had been followed in the code and not in the page.
+Prevention: `web/index.html` now says `[hidden] { display: none !important; }`, and `tests/web/HiddenAttribute.test.js` fails if the studio
+page loses it. The simple and reel pages do not draw anything with `hidden` and a class that sets `display`; if one ever does, it needs the same
+rule. A control left out is checked by whether it has a box (`getClientRects().length`), never by its attribute.
+
 ## A refusal test passed because two different refusals print the same thing
 
 **2026-10-02 the composite cycle test passed with the cycle check deleted, and the engine loaded a composite without applying

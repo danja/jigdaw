@@ -127,6 +127,15 @@
   .links { display:flex; gap:14px; font-size:13px; margin-left:auto; }
   .links a { color:var(--dim); text-decoration:none; padding:6px 2px; }
   .links a:hover { color:var(--fg); text-decoration:underline; }
+  /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
+     nothing to act on because .send-level sets a display and that beat the attribute. */
+  [hidden] { display:none !important; }
+  .note-range { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
+  .note-range-end { display:inline-flex; align-items:center; gap:6px; }
+  .note-range input { width:5.5rem; min-height:44px; font-size:16px; }
+  .note-name { min-width:3.5ch; color:var(--muted, #9aa4b2); font-size:13px; }
+  .meter-group { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, #9aa4b2); }
   .level { display:inline-flex; align-items:center; gap:8px; }
   .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:3px; align-items:flex-end; height:26px; }

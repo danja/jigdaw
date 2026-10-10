@@ -119,7 +119,8 @@ first to find out whether it will run here. Load a chosen member afterwards with
 | `graph_apply_changes` | `changes[]`, `expectedRevision`, `dryRun?` | New revision, or a conflict |
 | `node_add` | `pluginIri`, `position?` | Node id |
 | `node_remove` | `nodeId` | |
-| `connection_add` | `from`, `to`, `fromPort`, `toPort`, `kind` | |
+| `connection_add` | `from`, `to`, `fromPort`, `toPort`, `kind`, `lowNote?`, `highNote?` | |
+| `connection_set` | `connectionId`, `lowNote?`, `highNote?` | A MIDI connection only |
 | `connection_remove` | `from`, `to`, `fromPort`, `toPort` | |
 
 `graph_apply_changes` is the primitive and the rest are conveniences over it. Every
@@ -156,8 +157,8 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 | Tool | Arguments | Returns |
 |---|---|---|
 | `master_set` | `gain?`, `pan?`, `muted?`, `audioInput?` | |
-| `send_add` | `from`, `to`, `kind?`, `level?`, `tap?` | Send id |
-| `send_set` | `sendId`, `level?`, `tap?` | An audio send only |
+| `send_add` | `from`, `to`, `kind?`, `level?`, `tap?`, `lowNote?`, `highNote?` | Send id |
+| `send_set` | `sendId`, `level?`, `tap?`, `lowNote?`, `highNote?` | Level and tap on an audio send, the range on a MIDI one |
 | `send_remove` | `sendId` | |
 | `marker_add` | `atBeat`, `label?` | Marker id |
 | `marker_set` | `markerId`, `atBeat?`, `label?` | |
@@ -168,7 +169,9 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 
 Each is one Op through the dispatcher, so each is one undo step and takes `expectedRevision`. A send is
 `pre` or `post` fader and its level is linear. With `kind: "midi"` a send routes the MIDI the source track makes to the plugin
-the target's MIDI clips play into (its `midiInput`), and takes no level or tap; a target with no `midiInput` receives nothing. `track_set` with `output` sends a track to another track
+the target's MIDI clips play into (its `midiInput`), and takes no level or tap, and may carry `lowNote` and `highNote`, so that only the notes from one to the other go. The same range is on a MIDI
+connection (`connection_add`, `connection_set`). Two routes from one source with ranges that meet split a keyboard between two instruments,
+and a note-off follows its note-on, so changing a range mid-note leaves nothing sounding. A target with no `midiInput` receives nothing. `track_set` with `output` sends a track to another track
 instead of the master, which makes the target a bus; a cycle is refused, for sends and outputs alike.
 What a send or a bus output delivers arrives at the target track's `audioInput` node when it has one, so a
 plugin on a bus processes it, and at the target's fader when it has not. The master is the same: plugins go
@@ -278,3 +281,11 @@ written for.
   apply, with the node id as the join.
 - Whether `jigdaw://plugins` should federate to the catalogue live or serve only what the
   local store holds. See `docs/architecture.md`.
+
+## A worked example
+
+[examples/songs/glass-hours.js](../examples/songs/glass-hours.js) is a 40 bar piece for six instrument tracks, a reverb return and a glue
+compressor on the master, made through these tools: `plugin_load` for each instrument and effect, `track_set` to say what plays into what,
+`clip_add` for the music, `send_add` and `master_set` for the routing, `envelope_add` for the movement, and `marker_add` and `region_add` for the
+sections. It was then balanced by playing it and reading the meters, and the script writes the same file the page held. It is the quickest way to
+see what a whole session looks like in these operations.

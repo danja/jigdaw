@@ -18,15 +18,31 @@ const { jig, trn } = v
 const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
 const RDFS_LABEL = 'http://www.w3.org/2000/01/rdf-schema#label'
 
-/** Every object of subject/predicate, as plain strings. */
-function objects (dataset, subject, predicate) {
-  const out = []
-  for (const quad of dataset) {
-    if (quad.subject.value === subject && quad.predicate.value === predicate) {
-      out.push(quad.object)
+// A dataset indexed by subject then predicate, built once per dataset. Looking a triple up by scanning the
+// whole dataset made a read cost the number of lookups times the number of triples, which is a pause of a minute
+// and a half for a piece with a thousand notes (MISTAKES.md). The index keeps the order the dataset had, so what
+// is read, and the ids and order of the changes made from it, are what they were.
+const indexes = new WeakMap()
+
+function indexOf (dataset) {
+  let index = indexes.get(dataset)
+  if (!index) {
+    index = new Map()
+    for (const quad of dataset) {
+      let predicates = index.get(quad.subject.value)
+      if (!predicates) index.set(quad.subject.value, predicates = new Map())
+      const list = predicates.get(quad.predicate.value)
+      if (list) list.push(quad.object)
+      else predicates.set(quad.predicate.value, [quad.object])
     }
+    indexes.set(dataset, index)
   }
-  return out
+  return index
+}
+
+/** Every object of subject/predicate, as terms, in the dataset's order. */
+function objects (dataset, subject, predicate) {
+  return [...(indexOf(dataset).get(subject)?.get(predicate) ?? [])]
 }
 
 const one = (dataset, subject, predicate) => objects(dataset, subject, predicate)[0] ?? null
@@ -164,6 +180,15 @@ function named (table, iri, what) {
   return table[iri]
 }
 
+/** The ends of a note range a MIDI connection or send states, as the model's `lowNote` and `highNote`. */
+function readNoteRange (dataset, subject, id) {
+  const end = (property, name) => {
+    const term = one(dataset, subject, property)
+    return term === null ? {} : { [name]: number(term, `${name} of ${id}`) }
+  }
+  return { ...end(jig.lowNote, 'lowNote'), ...end(jig.highNote, 'highNote') }
+}
+
 /**
  * The master, bus outputs, sends, markers, regions and envelopes, as changes.
  * Everything here is keyed by its own id or by beat and never by position.
@@ -189,7 +214,7 @@ function readArrangement (dataset, iri, tracks) {
     const kind = value(one(dataset, subject, jig.signalKind))
     if (kind === trn.Midi) {
       // A MIDI send has no level and no tap, so none is read: the model refuses one that is given.
-      changes.push({ op: 'addSend', id, from, to, kind: 'midi' })
+      changes.push({ op: 'addSend', id, from, to, kind: 'midi', ...readNoteRange(dataset, subject, id) })
       continue
     }
     changes.push({
@@ -331,6 +356,7 @@ export function readProject (dataset) {
     }
     connections.push({
       op: 'addConnection',
+      ...readNoteRange(dataset, connIri, id),
       id,
       from: readEndpoint(dataset, value(one(dataset, connIri, jig.from)), iri, `connection ${id} from`),
       to: readEndpoint(dataset, value(one(dataset, connIri, jig.to)), iri, `connection ${id} to`),

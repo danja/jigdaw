@@ -20,6 +20,7 @@
 // that has gone takes its channel with it on the next draw; nothing else has
 // to remember to clear the cache.
 import { createStrip } from './Strip.js'
+import { createMeter } from './Meter.js'
 
 /**
  * Whether a track has anything for a fader to act on.
@@ -39,7 +40,7 @@ export function mixable (track, nodes, audioOutputsOf) {
  * Build a mixer.
  *
  * `onChange(trackId, change)` receives the part of one strip that changed.
- * Returns `{ element, draw }`; `draw` is called with the project's tracks and
+ * Returns `{ element, draw, meters }`; `draw` is called with the project's tracks and
  * nodes, what the dispatcher says each track sounds like after solo, and how
  * to read a node's audio outputs.
  */
@@ -78,11 +79,14 @@ export function createMixer (document, { onChange }) {
         const wrapper = document.createElement('div')
         wrapper.className = 'mixer-channel'
         const heading = document.createElement('h3')
-        wrapper.append(heading, strip.element)
-        channel = { wrapper, heading, strip }
+        // What the track sounds like after its fader, which the page animates from the engine (web/app/Meters.js).
+        const meter = createMeter(document, { label })
+        wrapper.append(heading, strip.element, meter.element)
+        channel = { wrapper, heading, strip, meter }
         channels.set(track.id, channel)
       }
       channel.heading.textContent = label
+      channel.meter.element.setAttribute('aria-label', `Level of ${label}`)
       channel.strip.update(track.channel, { silent: silent.get(track.id) === true, label })
       return channel.wrapper
     })
@@ -93,5 +97,8 @@ export function createMixer (document, { onChange }) {
     if (!same) element.replaceChildren(...wanted)
   }
 
-  return { element, draw }
+  /** The meter of each strip drawn, by track id, for the page to feed. */
+  const meters = () => new Map([...channels].map(([id, channel]) => [id, channel.meter]))
+
+  return { element, draw, meters }
 }

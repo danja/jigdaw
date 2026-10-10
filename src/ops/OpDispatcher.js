@@ -28,6 +28,12 @@ import { Inspections } from '../host/Inspections.js'
 import { decodeState, encodeState } from '../host/StateCodec.js'
 import { UndoHistory } from './UndoHistory.js'
 
+/** The note range of a MIDI connection or send, as the router takes it: only the ends that are set. */
+const rangeOf = ({ lowNote, highNote }) => ({
+  ...(lowNote === undefined ? {} : { lowNote }),
+  ...(highNote === undefined ? {} : { highNote })
+})
+
 export class OpDispatcher {
   #project
   #engine
@@ -128,19 +134,35 @@ export class OpDispatcher {
     return from && to ? this.#router.recent(from, to) : []
   }
 
+  /**
+   * The engine nodes a composite's MIDI boundary is wired to inside: where MIDI delivered into it goes
+   * (`'in'`), or what makes the MIDI that leaves it (`'out'`). Found by expanding a connection between the
+   * composite and nowhere, so the boundary is read by the same code that wires the engine. Empty when the
+   * composite has no MIDI boundary in that direction.
+   */
+  #compositeMidiEnds (nodeId, direction) {
+    const composite = this.#composites.get(nodeId)
+    const own = composite.entry.iri
+    const boundary = composite.entry.tree.composite.connections
+      .find(c => (direction === 'in' ? c.from.node === own : c.to.node === own) && isMidi(c.signalKind))
+    if (!boundary) return []
+    const probe = '\u0000outside'
+    const edge = direction === 'in'
+      ? { from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 } }
+      : { from: { node: nodeId, portIndex: 0 }, to: { node: probe, portIndex: 0 } }
+    const { connections } = this.#expand([{ id: probe }, { id: nodeId }], [{ id: probe, ...edge, signalKind: boundary.signalKind }])
+    // Only the connection to or from nowhere: the expansion also returns the composite's own wiring, whose ends are
+    // members that are not the boundary, and MIDI delivered to those would skip the plugins in front of them.
+    const crossing = connections.filter(c => (direction === 'in' ? c.from.node === probe : c.to.node === probe))
+    return crossing.map(c => this.#memberIds.get(direction === 'in' ? c.to.node : c.from.node)).filter(Boolean)
+  }
+
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents (nodeId, events) {
     if (!this.#router) return false
-    const composite = this.#composites.get(nodeId)
-    if (composite) {
-      // Into a composite is into whatever its MIDI input is wired to inside. Found by expanding a connection
-      // from nowhere to the composite, so the boundary is read by the same code that wires the engine.
-      const kind = composite.entry.tree.composite.connections.find(c => c.from.node === composite.entry.iri && isMidi(c.signalKind))?.signalKind
-      if (!kind) return false
-      const probe = '\u0000outside'
-      const { connections } = this.#expand([{ id: probe }, { id: nodeId }],
-        [{ id: probe, from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 }, signalKind: kind }])
-      const targets = connections.map(c => this.#memberIds.get(c.to.node)).filter(Boolean)
+    if (this.#composites.has(nodeId)) {
+      // Into a composite is into whatever its MIDI input is wired to inside.
+      const targets = this.#compositeMidiEnds(nodeId, 'in')
       for (const target of targets) this.#router.send(target, events)
       return targets.length > 0
     }
@@ -1128,7 +1150,7 @@ export class OpDispatcher {
       // A MIDI connection is not an audio edge. It is the host carrying
       // messages between two ports, so it must not reach connect().
       if (isMidi(connection.signalKind)) {
-        midiRoutes.push({ from, to })
+        midiRoutes.push({ from, to, ...rangeOf(connection) })
         continue
       }
 
@@ -1154,22 +1176,27 @@ export class OpDispatcher {
   /**
    * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
    * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
-   * target with no such node receives nothing, as its clips would play into nothing. A composite and a
-   * bypassed node are not routed from: the first has no single MIDI output to name, the second passes nothing.
+   * target with no such node receives nothing, as its clips would play into nothing. A bypassed node is not
+   * routed from, as it passes nothing. A composite is read at its boundary: its MIDI output is what leaves
+   * it, and its MIDI input is where what arrives goes, as for any connection to it.
    */
   #midiSendRoutes (routes) {
     const routed = new Set(routes.map(r => r.from))
     const out = []
     for (const send of this.#project.sends) {
       if (send.kind !== 'midi') continue
-      const to = this.#arrivalEngineId(this.#project.track(send.to)?.midiInput)
-      if (!to) continue
+      const input = this.#project.track(send.to)?.midiInput
+      const targets = !input ? [] : this.#composites.has(input) ? this.#compositeMidiEnds(input, 'in') : [this.#arrivalEngineId(input)].filter(Boolean)
+      if (targets.length === 0) continue
       for (const node of this.#project.nodes) {
-        if (node.track !== send.from || node.bypassed || this.#composites.has(node.id)) continue
-        const from = this.#engineIdOf(node.id)
-        if (!from || from === to || routed.has(from)) continue
-        if (!(this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi)) continue
-        out.push({ from, to })
+        if (node.track !== send.from || node.bypassed) continue
+        const sources = this.#composites.has(node.id)
+          ? this.#compositeMidiEnds(node.id, 'out')
+          : (this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi) ? [this.#engineIdOf(node.id)].filter(Boolean) : []
+        for (const from of sources) {
+          if (routed.has(from)) continue
+          for (const to of targets) if (to !== from) out.push({ from, to, ...rangeOf(send) })
+        }
       }
     }
     return out

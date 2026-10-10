@@ -940,7 +940,7 @@ var require_buffer = __commonJS({
     Buffer3.prototype.includes = function includes(val, byteOffset, encoding) {
       return this.indexOf(val, byteOffset, encoding) !== -1;
     };
-    Buffer3.prototype.indexOf = function indexOf(val, byteOffset, encoding) {
+    Buffer3.prototype.indexOf = function indexOf2(val, byteOffset, encoding) {
       return bidirectionalIndexOf(this, val, byteOffset, encoding, true);
     };
     Buffer3.prototype.lastIndexOf = function lastIndexOf(val, byteOffset, encoding) {
@@ -13355,6 +13355,8 @@ var init_Vocabulary = __esm({
         sendTo: `${JIG}sendTo`,
         level: `${JIG}level`,
         tap: `${JIG}tap`,
+        lowNote: `${JIG}lowNote`,
+        highNote: `${JIG}highNote`,
         PreFader: `${JIG}PreFader`,
         PostFader: `${JIG}PostFader`,
         output: `${JIG}output`,
@@ -22074,6 +22076,17 @@ var SEND_KINDS = Object.freeze(["audio", "midi"]);
 var CURVES = Object.freeze(["step", "linear", "smooth"]);
 var TARGET_KINDS = Object.freeze(["masterGain", "masterPan", "tempo"]);
 var EPSILON = 1e-9;
+function checkNoteRange({ lowNote, highNote }, what = "a note range") {
+  for (const [name, value2] of [["lowNote", lowNote], ["highNote", highNote]]) {
+    if (value2 === void 0 || value2 === null) continue;
+    if (!(Number.isInteger(value2) && value2 >= 0 && value2 <= 127)) throw new Error(`${what}: ${name} is a MIDI note from 0 to 127: ${value2}`);
+  }
+  if (lowNote != null && highNote != null && lowNote > highNote) throw new Error(`${what}: the lowest note is above the highest: ${lowNote} to ${highNote}`);
+  return {
+    ...lowNote != null && lowNote > 0 ? { lowNote } : {},
+    ...highNote != null && highNote < 127 ? { highNote } : {}
+  };
+}
 function emptyArrangement() {
   return { master: { ...DEFAULT_MASTER }, sends: /* @__PURE__ */ new Map(), markers: /* @__PURE__ */ new Map(), regions: /* @__PURE__ */ new Map(), envelopes: /* @__PURE__ */ new Map() };
 }
@@ -22184,9 +22197,10 @@ var ARRANGEMENT_OPERATIONS = {
     const id = mint(state, counters, "sends", "send", change.id, "send");
     if (kind === "midi") {
       if (change.level !== void 0 || change.tap !== void 0) throw new Error("a MIDI send has no level or tap");
-      state.sends.set(id, { id, from: change.from, to: change.to, kind });
+      state.sends.set(id, { id, from: change.from, to: change.to, kind, ...checkNoteRange(change, "a MIDI send") });
       return id;
     }
+    if (change.lowNote !== void 0 || change.highNote !== void 0) throw new Error("a note range is for a MIDI send");
     const level = change.level ?? 1;
     finiteAtLeast(level, 0, "a send level");
     const tap = change.tap ?? "post";
@@ -22199,6 +22213,16 @@ var ARRANGEMENT_OPERATIONS = {
     if (!send) throw new Error(`no such send: ${change.id}`);
     if (change.kind !== void 0 && change.kind !== (send.kind ?? "audio")) throw new Error("a send does not change kind: remove it and add another");
     if (send.kind === "midi" && (change.level !== void 0 || change.tap !== void 0)) throw new Error("a MIDI send has no level or tap");
+    if (send.kind !== "midi" && (change.lowNote !== void 0 || change.highNote !== void 0)) throw new Error("a note range is for a MIDI send");
+    if (send.kind === "midi" && (change.lowNote !== void 0 || change.highNote !== void 0)) {
+      const next = checkNoteRange({
+        lowNote: change.lowNote === void 0 ? send.lowNote : change.lowNote,
+        highNote: change.highNote === void 0 ? send.highNote : change.highNote
+      }, "a MIDI send");
+      delete send.lowNote;
+      delete send.highNote;
+      Object.assign(send, next);
+    }
     if (change.level !== void 0) {
       finiteAtLeast(change.level, 0, "a send level");
       send.level = change.level;
@@ -22721,7 +22745,7 @@ var Engine = class {
     if (toTrackId !== null && !target2) throw new Error(`no such track strip: ${toTrackId}`);
     if (strip.to === toTrackId) return;
     try {
-      strip.out.disconnect();
+      strip.out.disconnect(strip.to === null ? this.#mixInput : this.#tracks.get(strip.to)?.arrive);
     } catch {
     }
     strip.out.connect(target2 ? target2.arrive : this.#mixInput);
@@ -22852,6 +22876,22 @@ var Engine = class {
     const strip = this.#tracks.get(trackId);
     if (!strip) throw new Error(`no such track strip: ${trackId}`);
     return pre ? strip.pre : strip.panner ?? strip.gain;
+  }
+  /**
+   * An analyser on what a track sounds like, after its fader and pan, for a level meter. Made the first time
+   * it is asked for and kept, so a meter that is redrawn does not stack up taps on the track.
+   */
+  trackMeter(trackId) {
+    const strip = this.#tracks.get(trackId);
+    if (!strip) throw new Error(`no such track strip: ${trackId}`);
+    if (!strip.meter) {
+      if (typeof this.#context.createAnalyser !== "function") throw new Error("this context cannot make an analyser");
+      const analyser = this.#context.createAnalyser();
+      analyser.fftSize = 1024;
+      (strip.panner ?? strip.gain).connect(analyser);
+      strip.meter = analyser;
+    }
+    return strip.meter;
   }
   /**
    * Feed a live stream (a microphone) into a track's arrival point. One stream
@@ -23228,6 +23268,49 @@ var ScriptState = class _ScriptState {
     this.#changed();
   }
 };
+
+// src/model/Endpoints.js
+var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
+var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
+var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
+function outputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
+  }
+  if ((profile?.produces ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
+  }
+  return found;
+}
+function inputsOf(profile) {
+  const found = [];
+  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
+    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: i2 === profile.sidechainInput ? "Sidechain key" : `Audio in ${i2 + 1}`, ...i2 === profile.sidechainInput ? { sidechain: true } : {} });
+  }
+  if ((profile?.accepts ?? []).some(isMidiSignal)) {
+    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
+  }
+  for (const port of profile?.ports ?? []) {
+    found.push({
+      kind: AUDIO_SIGNAL,
+      portSymbol: port.symbol,
+      name: `${port.name || port.symbol} (modulate)`
+    });
+  }
+  return found;
+}
+function findPort(profile, endpoint2, direction, signalKind) {
+  if (!profile) return { ok: true, port: null };
+  const ports = direction === "from" ? outputsOf(profile) : inputsOf(profile);
+  const what = direction === "from" ? "output" : "input";
+  const label = profile.label ?? "the plugin";
+  const port = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? ports.find((p) => p.portSymbol === endpoint2.portSymbol) : ports.find((p) => p.portSymbol === void 0 && p.portIndex === endpoint2.portIndex && p.kind === signalKind);
+  if (port) return { ok: true, port };
+  const named2 = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? `parameter "${endpoint2.portSymbol}"` : `${signalKind === MIDI_SIGNAL ? "MIDI" : "audio"} ${what} at index ${endpoint2.portIndex}`;
+  const has = ports.length === 0 ? `${label} has nothing to connect ${direction === "from" ? "from" : "to"}.` : `It has: ${ports.map((p) => p.name).join(", ")}.`;
+  return { ok: false, message: `${label} has no ${named2}. ${has}` };
+}
 
 // src/model/Project.js
 var RevisionConflict = class extends Error {
@@ -23683,14 +23766,34 @@ var OPERATIONS = {
     }
     const id = change.id ?? `conn-${++counters.connection}`;
     noteExplicitId(counters, "conn", "connection", id);
+    if ((change.lowNote != null || change.highNote != null) && !isMidiSignal(change.signalKind)) throw new Error("a note range is for a MIDI connection");
     state.connections.set(id, {
       id,
       from: { ...change.from },
       to: { ...change.to },
       signalKind: change.signalKind,
-      delayFrames: change.delayFrames ?? 0
+      delayFrames: change.delayFrames ?? 0,
+      ...checkNoteRange(change, "a MIDI connection")
     });
     return id;
+  },
+  /**
+   * Change the notes a MIDI connection lets through: only those from `lowNote` to `highNote`. An end not
+   * mentioned stays as it was and null takes it away, so a connection with neither passes everything, which
+   * is what one that never had a range does.
+   */
+  setConnection(state, change) {
+    const connection = state.connections.get(change.id);
+    if (!connection) throw new Error(`no such connection: ${change.id}`);
+    if (!isMidiSignal(connection.signalKind)) throw new Error("a note range is for a MIDI connection");
+    const next = checkNoteRange({
+      lowNote: change.lowNote === void 0 ? connection.lowNote : change.lowNote,
+      highNote: change.highNote === void 0 ? connection.highNote : change.highNote
+    }, "a MIDI connection");
+    delete connection.lowNote;
+    delete connection.highNote;
+    Object.assign(connection, next);
+    return change.id;
   },
   removeConnection(state, change) {
     if (!state.connections.has(change.id)) throw new Error(`no such connection: ${change.id}`);
@@ -23783,7 +23886,9 @@ function changesFor(snapshot) {
       from: c3.from,
       to: c3.to,
       signalKind: c3.signalKind,
-      delayFrames: c3.delayFrames
+      delayFrames: c3.delayFrames,
+      ...c3.lowNote === void 0 ? {} : { lowNote: c3.lowNote },
+      ...c3.highNote === void 0 ? {} : { highNote: c3.highNote }
     })),
     ...snapshot.clips.map(clipChange),
     { op: "setTransport", ...snapshot.transport },
@@ -23978,49 +24083,6 @@ var Project = class {
   }
 };
 
-// src/model/Endpoints.js
-var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
-var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
-var isMidiSignal = (signal) => typeof signal === "string" && signal.includes("Midi");
-function outputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioOutputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: `Audio out ${i2 + 1}` });
-  }
-  if ((profile?.produces ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI out" });
-  }
-  return found;
-}
-function inputsOf(profile) {
-  const found = [];
-  for (let i2 = 0; i2 < (profile?.audioInputs ?? 0); i2++) {
-    found.push({ kind: AUDIO_SIGNAL, portIndex: i2, name: i2 === profile.sidechainInput ? "Sidechain key" : `Audio in ${i2 + 1}`, ...i2 === profile.sidechainInput ? { sidechain: true } : {} });
-  }
-  if ((profile?.accepts ?? []).some(isMidiSignal)) {
-    found.push({ kind: MIDI_SIGNAL, portIndex: 0, name: "MIDI in" });
-  }
-  for (const port of profile?.ports ?? []) {
-    found.push({
-      kind: AUDIO_SIGNAL,
-      portSymbol: port.symbol,
-      name: `${port.name || port.symbol} (modulate)`
-    });
-  }
-  return found;
-}
-function findPort(profile, endpoint2, direction, signalKind) {
-  if (!profile) return { ok: true, port: null };
-  const ports = direction === "from" ? outputsOf(profile) : inputsOf(profile);
-  const what = direction === "from" ? "output" : "input";
-  const label = profile.label ?? "the plugin";
-  const port = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? ports.find((p) => p.portSymbol === endpoint2.portSymbol) : ports.find((p) => p.portSymbol === void 0 && p.portIndex === endpoint2.portIndex && p.kind === signalKind);
-  if (port) return { ok: true, port };
-  const named2 = endpoint2.portSymbol !== void 0 && endpoint2.portSymbol !== null ? `parameter "${endpoint2.portSymbol}"` : `${signalKind === MIDI_SIGNAL ? "MIDI" : "audio"} ${what} at index ${endpoint2.portIndex}`;
-  const has = ports.length === 0 ? `${label} has nothing to connect ${direction === "from" ? "from" : "to"}.` : `It has: ${ports.map((p) => p.name).join(", ")}.`;
-  return { ok: false, message: `${label} has no ${named2}. ${has}` };
-}
-
 // src/compiler/GraphCompiler.js
 var AUDIO = "http://purl.org/stuff/transmissions/Audio";
 var isAudio = (connection) => connection.signalKind === AUDIO;
@@ -24191,6 +24253,9 @@ var EventRouter = class {
   #dropped = /* @__PURE__ */ new Map();
   #onDropped;
   #recent = /* @__PURE__ */ new Map();
+  // For a route with a note range: the notes it let through that have not been released, by `from>to`, as
+  // `channel:note`. A note-off follows its note-on, so changing the range mid-note leaves nothing sounding.
+  #sounding = /* @__PURE__ */ new Map();
   constructor({ engine, onDropped = null }) {
     if (!engine) throw new Error("EventRouter needs an engine");
     this.#engine = engine;
@@ -24205,7 +24270,12 @@ var EventRouter = class {
     return [...this.#recent.get(`${fromEngineId}>${toEngineId}`) ?? []];
   }
   get routes() {
-    return [...this.#routes].flatMap(([from, targets]) => targets.map((to) => ({ from, to })));
+    return [...this.#routes].flatMap(([from, targets]) => targets.map(({ to, lowNote, highNote }) => ({
+      from,
+      to,
+      ...lowNote === void 0 ? {} : { lowNote },
+      ...highNote === void 0 ? {} : { highNote }
+    })));
   }
   /** How many events a node has reported dropping, since it last said. */
   droppedFor(engineId) {
@@ -24222,9 +24292,10 @@ var EventRouter = class {
     this.#routes = /* @__PURE__ */ new Map();
     const kept = new Set(pairs.map(({ from, to }) => `${from}>${to}`));
     for (const key of [...this.#recent.keys()]) if (!kept.has(key)) this.#recent.delete(key);
-    for (const { from, to } of pairs) {
+    for (const key of [...this.#sounding.keys()]) if (!kept.has(key)) this.#sounding.delete(key);
+    for (const { from, to, lowNote, highNote } of pairs) {
       if (!this.#routes.has(from)) this.#routes.set(from, []);
-      this.#routes.get(from).push(to);
+      this.#routes.get(from).push({ to, lowNote, highNote });
       this.observe(from);
     }
   }
@@ -24252,10 +24323,42 @@ var EventRouter = class {
   #forward(fromEngineId, events) {
     const targets = this.#routes.get(fromEngineId);
     if (!targets || !events?.length) return;
-    for (const target2 of targets) {
-      this.#remember(fromEngineId, target2, events);
-      this.send(target2, events);
+    for (const { to, lowNote, highNote } of targets) {
+      const passing = lowNote === void 0 && highNote === void 0 ? events : this.#withinRange(`${fromEngineId}>${to}`, events, lowNote ?? 0, highNote ?? 127);
+      if (passing.length === 0) continue;
+      this.#remember(fromEngineId, to, passing);
+      this.send(to, passing);
     }
+  }
+  /**
+   * The events of a route with a note range that pass it: notes inside the range, with a note-off only for a
+   * note-on that passed, and everything that is not a note as it came. All-notes-off and all-sound-off
+   * release what the route is holding. Anything outside the range is dropped, not moved.
+   */
+  #withinRange(key, events, low, high) {
+    let held = this.#sounding.get(key);
+    if (!held) {
+      held = /* @__PURE__ */ new Set();
+      this.#sounding.set(key, held);
+    }
+    const passing = [];
+    for (const event of events) {
+      const [status = 0, data1 = 0, data2 = 0] = event.bytes ?? [];
+      const kind = status & 240;
+      const channel = status & 15;
+      if (kind === 144 && data2 > 0) {
+        if (data1 < low || data1 > high) continue;
+        held.add(`${channel}:${data1}`);
+      } else if (kind === 128 || kind === 144) {
+        if (!held.delete(`${channel}:${data1}`)) continue;
+      } else if (kind === 160) {
+        if (!held.has(`${channel}:${data1}`)) continue;
+      } else if (kind === 176 && (data1 === 120 || data1 === 123)) {
+        for (const note of [...held]) if (Number(note.split(":")[0]) === channel) held.delete(note);
+      }
+      passing.push(event);
+    }
+    return passing;
   }
   #remember(from, to, events) {
     const key = `${from}>${to}`;
@@ -25094,6 +25197,13 @@ var UndoHistory = class {
       for (const id of currentConnIds) {
         if (!targetConnIds.has(id)) reconcile.push({ op: "removeConnection", id });
       }
+      const liveConnections = new Map(dispatcher.project.connections.map((c3) => [c3.id, c3]));
+      for (const connection of target2.connections) {
+        const live = liveConnections.get(connection.id);
+        if (live && (live.lowNote !== connection.lowNote || live.highNote !== connection.highNote)) {
+          reconcile.push({ op: "setConnection", id: connection.id, lowNote: connection.lowNote ?? null, highNote: connection.highNote ?? null });
+        }
+      }
       for (const connection of target2.connections) {
         if (currentConnIds.has(connection.id)) continue;
         if (!liveIds.has(connection.from.node) || !liveIds.has(connection.to.node)) continue;
@@ -25103,7 +25213,9 @@ var UndoHistory = class {
           from: connection.from,
           to: connection.to,
           signalKind: connection.signalKind,
-          delayFrames: connection.delayFrames
+          delayFrames: connection.delayFrames,
+          ...connection.lowNote === void 0 ? {} : { lowNote: connection.lowNote },
+          ...connection.highNote === void 0 ? {} : { highNote: connection.highNote }
         });
       }
       if (JSON.stringify(dispatcher.project.snapshot().transport) !== JSON.stringify(target2.transport)) {
@@ -25129,6 +25241,10 @@ var UndoHistory = class {
 };
 
 // src/ops/OpDispatcher.js
+var rangeOf = ({ lowNote, highNote }) => ({
+  ...lowNote === void 0 ? {} : { lowNote },
+  ...highNote === void 0 ? {} : { highNote }
+});
 var OpDispatcher = class {
   #project;
   #engine;
@@ -25214,19 +25330,28 @@ var OpDispatcher = class {
     const to = this.#nodeIds.get(connection.to.node);
     return from && to ? this.#router.recent(from, to) : [];
   }
+  /**
+   * The engine nodes a composite's MIDI boundary is wired to inside: where MIDI delivered into it goes
+   * (`'in'`), or what makes the MIDI that leaves it (`'out'`). Found by expanding a connection between the
+   * composite and nowhere, so the boundary is read by the same code that wires the engine. Empty when the
+   * composite has no MIDI boundary in that direction.
+   */
+  #compositeMidiEnds(nodeId, direction) {
+    const composite = this.#composites.get(nodeId);
+    const own = composite.entry.iri;
+    const boundary = composite.entry.tree.composite.connections.find((c3) => (direction === "in" ? c3.from.node === own : c3.to.node === own) && isMidi(c3.signalKind));
+    if (!boundary) return [];
+    const probe = "\0outside";
+    const edge = direction === "in" ? { from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 } } : { from: { node: nodeId, portIndex: 0 }, to: { node: probe, portIndex: 0 } };
+    const { connections } = this.#expand([{ id: probe }, { id: nodeId }], [{ id: probe, ...edge, signalKind: boundary.signalKind }]);
+    const crossing = connections.filter((c3) => direction === "in" ? c3.from.node === probe : c3.to.node === probe);
+    return crossing.map((c3) => this.#memberIds.get(direction === "in" ? c3.to.node : c3.from.node)).filter(Boolean);
+  }
   /** Deliver MIDI into a node, as if from outside the graph. */
   sendEvents(nodeId, events) {
     if (!this.#router) return false;
-    const composite = this.#composites.get(nodeId);
-    if (composite) {
-      const kind = composite.entry.tree.composite.connections.find((c3) => c3.from.node === composite.entry.iri && isMidi(c3.signalKind))?.signalKind;
-      if (!kind) return false;
-      const probe = "\0outside";
-      const { connections } = this.#expand(
-        [{ id: probe }, { id: nodeId }],
-        [{ id: probe, from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 }, signalKind: kind }]
-      );
-      const targets = connections.map((c3) => this.#memberIds.get(c3.to.node)).filter(Boolean);
+    if (this.#composites.has(nodeId)) {
+      const targets = this.#compositeMidiEnds(nodeId, "in");
       for (const target2 of targets) this.#router.send(target2, events);
       return targets.length > 0;
     }
@@ -26112,7 +26237,7 @@ var OpDispatcher = class {
       const to = this.#engineIdOf(connection.to.node);
       if (!from || !to) continue;
       if (isMidi(connection.signalKind)) {
-        midiRoutes.push({ from, to });
+        midiRoutes.push({ from, to, ...rangeOf(connection) });
         continue;
       }
       this.#engine.link(from, to, {
@@ -26131,22 +26256,25 @@ var OpDispatcher = class {
   /**
    * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
    * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
-   * target with no such node receives nothing, as its clips would play into nothing. A composite and a
-   * bypassed node are not routed from: the first has no single MIDI output to name, the second passes nothing.
+   * target with no such node receives nothing, as its clips would play into nothing. A bypassed node is not
+   * routed from, as it passes nothing. A composite is read at its boundary: its MIDI output is what leaves
+   * it, and its MIDI input is where what arrives goes, as for any connection to it.
    */
   #midiSendRoutes(routes) {
     const routed = new Set(routes.map((r) => r.from));
     const out = [];
     for (const send of this.#project.sends) {
       if (send.kind !== "midi") continue;
-      const to = this.#arrivalEngineId(this.#project.track(send.to)?.midiInput);
-      if (!to) continue;
+      const input = this.#project.track(send.to)?.midiInput;
+      const targets = !input ? [] : this.#composites.has(input) ? this.#compositeMidiEnds(input, "in") : [this.#arrivalEngineId(input)].filter(Boolean);
+      if (targets.length === 0) continue;
       for (const node of this.#project.nodes) {
-        if (node.track !== send.from || node.bypassed || this.#composites.has(node.id)) continue;
-        const from = this.#engineIdOf(node.id);
-        if (!from || from === to || routed.has(from)) continue;
-        if (!(this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi)) continue;
-        out.push({ from, to });
+        if (node.track !== send.from || node.bypassed) continue;
+        const sources = this.#composites.has(node.id) ? this.#compositeMidiEnds(node.id, "out") : (this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi) ? [this.#engineIdOf(node.id)].filter(Boolean) : [];
+        for (const from of sources) {
+          if (routed.has(from)) continue;
+          for (const to of targets) if (to !== from) out.push({ from, to, ...rangeOf(send) });
+        }
       }
     }
     return out;
@@ -27012,7 +27140,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "connection_add",
-      description: "Connect one node to another. signalKind is Audio or Midi, or a full IRI.",
+      description: "Connect one node to another. signalKind is Audio or Midi, or a full IRI. A MIDI connection may carry lowNote and highNote, and then lets only the notes from one to the other through.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27021,16 +27149,20 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           fromPort: { type: "integer" },
           toPort: { type: "integer" },
           toParameter: { type: "string", description: "Target a parameter by symbol instead of a port" },
-          signalKind: { type: "string" }
+          signalKind: { type: "string" },
+          lowNote: { type: "integer", description: "MIDI only: the lowest note let through, 0 to 127" },
+          highNote: { type: "integer", description: "MIDI only: the highest note let through, 0 to 127" }
         },
         required: ["from", "to"]
       },
-      async handler({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = "Audio" } = {}) {
+      async handler({ from, to, fromPort = 0, toPort = 0, toParameter, signalKind = "Audio", lowNote, highNote } = {}) {
         const change = {
           op: "addConnection",
           from: { node: from, portIndex: fromPort },
           to: toParameter ? { node: to, portSymbol: toParameter } : { node: to, portIndex: toPort },
-          signalKind: expandTerm(signalKind)
+          signalKind: expandTerm(signalKind),
+          ...lowNote === void 0 ? {} : { lowNote },
+          ...highNote === void 0 ? {} : { highNote }
         };
         const result = dispatcher.apply([change]);
         return result.ok ? ok({ revision: result.revision, connection: result.results[0] }) : failed(result.message, { kind: result.kind });
@@ -27170,6 +27302,25 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           // cannot see from the changeset it sent.
           connectionsRemoved: before - dispatcher.project.connections.length
         }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "connection_set",
+      description: "Change the notes a MIDI connection lets through: only those from lowNote to highNote, 0 to 127. An end you leave out stays as it was, and null takes it away, so a connection with neither passes everything. Two connections from one source with ranges that meet split a keyboard between two instruments.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          connectionId: { type: "string" },
+          lowNote: { type: ["integer", "null"] },
+          highNote: { type: ["integer", "null"] },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["connectionId"]
+      },
+      async handler({ connectionId, lowNote, highNote, expectedRevision } = {}) {
+        const change = { op: "setConnection", id: connectionId, ...lowNote === void 0 ? {} : { lowNote }, ...highNote === void 0 ? {} : { highNote } };
+        const result = dispatcher.apply([change], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -27395,21 +27546,29 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           to: { type: "string" },
           kind: { type: "string", enum: ["audio", "midi"] },
           level: num("Linear, zero or more; audio only"),
-          tap: { type: "string", enum: ["pre", "post"], description: "Audio only" }
+          tap: { type: "string", enum: ["pre", "post"], description: "Audio only" },
+          lowNote: { type: "integer", description: "MIDI only: the lowest note let through, 0 to 127" },
+          highNote: { type: "integer", description: "MIDI only: the highest note let through, 0 to 127" }
         },
         required: ["from", "to"],
         op: "addSend",
         id: "sendId",
-        pick: keep(["from", "to", "kind", "level", "tap"])
+        pick: keep(["from", "to", "kind", "level", "tap", "lowNote", "highNote"])
       }),
       one3({
         name: "send_set",
-        description: "Change an audio send's level or whether it takes the signal before or after the fader. A MIDI send has neither.",
-        properties: { sendId: { type: "string" }, level: num("Linear, zero or more"), tap: { type: "string", enum: ["pre", "post"] } },
+        description: "Change an audio send's level or whether it takes the signal before or after the fader. A MIDI send has neither, and takes a note range instead: lowNote and highNote, an end left out staying as it was and null taking it away.",
+        properties: {
+          sendId: { type: "string" },
+          level: num("Linear, zero or more"),
+          tap: { type: "string", enum: ["pre", "post"] },
+          lowNote: { type: ["integer", "null"] },
+          highNote: { type: ["integer", "null"] }
+        },
         required: ["sendId"],
         op: "setSend",
         returns: "none",
-        pick: withId("sendId", ["level", "tap"])
+        pick: withId("sendId", ["level", "tap", "lowNote", "highNote"])
       }),
       one3({
         name: "send_remove",
@@ -27541,7 +27700,7 @@ function createRuntime(ctx2) {
     await context.resume();
     const validator = await shapeValidator();
     const analyser = context.createAnalyser();
-    analyser.fftSize = 256;
+    analyser.fftSize = 1024;
     analyser.connect(context.destination);
     ctx2.analyser = analyser;
     const response = await fetch(new URL("host.json", document2.baseURI));
@@ -28068,6 +28227,19 @@ function createClipHold({ level = CLIP_LEVEL } = {}) {
   };
 }
 
+// src/ui/MeterModel.js
+var FLOOR_DB = -48;
+function peakDb(peak) {
+  return peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+}
+function litBars(peak, bars, { floorDb = FLOOR_DB } = {}) {
+  if (!(bars > 0)) throw new Error(`a meter has at least one bar: ${bars}`);
+  if (!(floorDb < 0)) throw new Error(`a meter's floor is below 0 dB: ${floorDb}`);
+  const db = peakDb(peak);
+  if (!(db > floorDb)) return 0;
+  return Math.min(bars, Math.max(1, Math.round((db - floorDb) / -floorDb * bars)));
+}
+
 // web/app/Transport.js
 function makeSource(context) {
   const length = Math.floor(context.sampleRate * 2);
@@ -28241,7 +28413,7 @@ function createTransport(ctx2) {
       let peak = 0;
       for (const v of data) peak = Math.max(peak, Math.abs(v));
       if (hold.update(peak) && clip.hidden) clip.hidden = false;
-      const lit = Math.round(Math.min(1, peak) * bars);
+      const lit = litBars(peak, bars);
       meter.querySelectorAll("i").forEach((bar, i2) => {
         bar.className = i2 < lit ? i2 >= bars - 2 ? "hot" : "on" : "";
       });
@@ -28450,7 +28622,7 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     lines.push(`<#${c3.id}>`);
     lines.push(`    a ${term3(jig4.Connection)} ;`);
     lines.push(`    ${term3(jig4.from)} <#${c3.id}-from> ; ${term3(jig4.to)} <#${c3.id}-to> ;`);
-    lines.push(`    ${term3(jig4.signalKind)} ${term3(c3.signalKind)} .`);
+    lines.push(`    ${term3(jig4.signalKind)} ${term3(c3.signalKind)}${noteRange(c3)} .`);
     endpoint(lines, iri3, `${c3.id}-from`, c3.from);
     endpoint(lines, iri3, `${c3.id}-to`, c3.to);
   }
@@ -28477,6 +28649,9 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
 }
 var TAP_TERM = { pre: "PreFader", post: "PostFader" };
 var CURVE_TERM = { step: "Step", linear: "Linear", smooth: "Smooth" };
+function noteRange({ lowNote, highNote }) {
+  return `${lowNote === void 0 ? "" : ` ; ${term3(jig4.lowNote)} ${integer(lowNote)}`}${highNote === void 0 ? "" : ` ; ${term3(jig4.highNote)} ${integer(highNote)}`}`;
+}
 function masterIsUsed(project) {
   const master = project.master;
   return master.gain !== 1 || master.pan !== 0 || master.muted || master.audioInput !== null || project.nodes.some((n2) => n2.track === MASTER_TRACK);
@@ -28494,7 +28669,7 @@ function writeArrangement(lines, project) {
   }
   for (const s of [...project.sends].sort(byId)) {
     const ends = `<#${s.id}> a ${term3(jig4.Send)} ; ${term3(jig4.sendFrom)} <#${s.from}> ; ${term3(jig4.sendTo)} <#${s.to}>`;
-    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig4.signalKind)} ${term3(trn5.Midi)} .` : `${ends} ; ${term3(jig4.level)} ${decimal(s.level)} ; ${term3(jig4.tap)} ${term3(jig4[TAP_TERM[s.tap]])} .`);
+    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig4.signalKind)} ${term3(trn5.Midi)}${noteRange(s)} .` : `${ends} ; ${term3(jig4.level)} ${decimal(s.level)} ; ${term3(jig4.tap)} ${term3(jig4[TAP_TERM[s.tap]])} .`);
   }
   for (const m of [...project.markers].sort(byId)) {
     lines.push("", `<#${m.id}> a ${term3(jig4.Marker)} ; ${term3(jig4.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
@@ -28564,14 +28739,24 @@ init_Vocabulary();
 var { jig: jig5, trn: trn6 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
-function objects3(dataset2, subject, predicate) {
-  const out = [];
-  for (const quad3 of dataset2) {
-    if (quad3.subject.value === subject && quad3.predicate.value === predicate) {
-      out.push(quad3.object);
+var indexes = /* @__PURE__ */ new WeakMap();
+function indexOf(dataset2) {
+  let index = indexes.get(dataset2);
+  if (!index) {
+    index = /* @__PURE__ */ new Map();
+    for (const quad3 of dataset2) {
+      let predicates = index.get(quad3.subject.value);
+      if (!predicates) index.set(quad3.subject.value, predicates = /* @__PURE__ */ new Map());
+      const list = predicates.get(quad3.predicate.value);
+      if (list) list.push(quad3.object);
+      else predicates.set(quad3.predicate.value, [quad3.object]);
     }
+    indexes.set(dataset2, index);
   }
-  return out;
+  return index;
+}
+function objects3(dataset2, subject, predicate) {
+  return [...indexOf(dataset2).get(subject)?.get(predicate) ?? []];
 }
 var one2 = (dataset2, subject, predicate) => objects3(dataset2, subject, predicate)[0] ?? null;
 var value = (term5) => term5 ? term5.value : null;
@@ -28674,6 +28859,13 @@ function named(table, iri3, what) {
   if (!(iri3 in table)) throw new Error(`${what} is not one this format defines: ${iri3}`);
   return table[iri3];
 }
+function readNoteRange(dataset2, subject, id) {
+  const end = (property, name) => {
+    const term5 = one2(dataset2, subject, property);
+    return term5 === null ? {} : { [name]: number3(term5, `${name} of ${id}`) };
+  };
+  return { ...end(jig5.lowNote, "lowNote"), ...end(jig5.highNote, "highNote") };
+}
 function readArrangement(dataset2, iri3, tracks) {
   const changes = [];
   const masterIri = value(one2(dataset2, iri3, jig5.master));
@@ -28697,7 +28889,7 @@ function readArrangement(dataset2, iri3, tracks) {
     const to = idOf(value(one2(dataset2, subject, jig5.sendTo)), iri3, `sendTo of ${id}`);
     const kind = value(one2(dataset2, subject, jig5.signalKind));
     if (kind === trn6.Midi) {
-      changes.push({ op: "addSend", id, from, to, kind: "midi" });
+      changes.push({ op: "addSend", id, from, to, kind: "midi", ...readNoteRange(dataset2, subject, id) });
       continue;
     }
     changes.push({
@@ -28821,6 +29013,7 @@ function readProject(dataset2) {
     }
     connections.push({
       op: "addConnection",
+      ...readNoteRange(dataset2, connIri, id),
       id,
       from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.from)), iri3, `connection ${id} from`),
       to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.to)), iri3, `connection ${id} to`),
@@ -30770,6 +30963,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   node_unpack: "it replaces one node with several, so a name a script already holds for it would change meaning under it",
   composite_pack: "it writes a profile for a person to publish and changes nothing a script plays",
   connection_remove: "not yet a statement",
+  connection_set: "a routing edit (a note range on a MIDI connection), not yet a statement",
   parameters_set_batch: "a script sets parameters one statement at a time, each checked",
   parameter_reset: "not yet a statement",
   history_undo: "a script must not undo a person's edits",

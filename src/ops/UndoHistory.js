@@ -179,6 +179,14 @@ export class UndoHistory {
       for (const id of currentConnIds) {
         if (!targetConnIds.has(id)) reconcile.push({ op: 'removeConnection', id })
       }
+      // A connection that stays can still have had its note range changed, which is one Op and not a new edge.
+      const liveConnections = new Map(dispatcher.project.connections.map(c => [c.id, c]))
+      for (const connection of target.connections) {
+        const live = liveConnections.get(connection.id)
+        if (live && (live.lowNote !== connection.lowNote || live.highNote !== connection.highNote)) {
+          reconcile.push({ op: 'setConnection', id: connection.id, lowNote: connection.lowNote ?? null, highNote: connection.highNote ?? null })
+        }
+      }
       for (const connection of target.connections) {
         if (currentConnIds.has(connection.id)) continue
         // Both ends must actually be loaded, the same guard openSession
@@ -191,7 +199,9 @@ export class UndoHistory {
           from: connection.from,
           to: connection.to,
           signalKind: connection.signalKind,
-          delayFrames: connection.delayFrames
+          delayFrames: connection.delayFrames,
+          ...(connection.lowNote === undefined ? {} : { lowNote: connection.lowNote }),
+          ...(connection.highNote === undefined ? {} : { highNote: connection.highNote })
         })
       }
 

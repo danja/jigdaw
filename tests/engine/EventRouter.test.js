@@ -194,3 +194,82 @@ describe('carriesNotes', () => {
     expect(carriesNotes(vocabulary.trn.Audio)).toBe(false)
   })
 })
+
+describe('a route with a note range', () => {
+  const on = (n, frame = 0, ch = 0) => note(frame, [0x90 | ch, n, 100])
+  const off = (n, frame = 0, ch = 0) => note(frame, [0x80 | ch, n, 0])
+  const delivered = engine => engine.posts.flatMap(p => p.message.events.map(e => Array.from(e.bytes)))
+  const setup = pairs => {
+    const engine = fakeEngine()
+    const router = new EventRouter({ engine })
+    router.setRoutes(pairs)
+    return { engine, router, say: events => engine.emit('a', { type: 'events', events }) }
+  }
+
+  it('passes the notes from the lowest to the highest and drops the rest, with their note-offs', () => {
+    const { engine, say } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 71 }])
+    say([on(59), on(60), on(71), on(72), off(59), off(60), off(71), off(72)])
+    expect(delivered(engine)).toEqual([[0x90, 60, 100], [0x90, 71, 100], [0x80, 60, 0], [0x80, 71, 0]])
+  })
+
+  it('takes either end alone, and no range at all passes everything', () => {
+    const lowOnly = setup([{ from: 'a', to: 'b', lowNote: 64 }])
+    lowOnly.say([on(63), on(64), on(127)])
+    expect(delivered(lowOnly.engine)).toEqual([[0x90, 64, 100], [0x90, 127, 100]])
+    const highOnly = setup([{ from: 'a', to: 'b', highNote: 60 }])
+    highOnly.say([on(0), on(60), on(61)])
+    expect(delivered(highOnly.engine)).toEqual([[0x90, 0, 100], [0x90, 60, 100]])
+    const none = setup([{ from: 'a', to: 'b' }])
+    none.say([on(0), on(127)])
+    expect(delivered(none.engine)).toHaveLength(2)
+  })
+
+  it('lets a note-off through for a note that passed even when the range has moved since, and leaks no other', () => {
+    const { engine, router, say } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 72 }])
+    say([on(65)])
+    // The range moves up past the held note: its off must still go, or it sounds for ever downstream.
+    router.setRoutes([{ from: 'a', to: 'b', lowNote: 70, highNote: 80 }])
+    say([off(65), off(66)])
+    expect(delivered(engine)).toEqual([[0x90, 65, 100], [0x80, 65, 0]])
+  })
+
+  it('treats a note-on with no velocity as a note-off, and keeps channels apart', () => {
+    const { engine, say } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 72 }])
+    say([on(65, 0, 0), on(65, 0, 1), note(0, [0x90, 65, 0]), off(65, 0, 1)])
+    expect(delivered(engine)).toEqual([[0x90, 65, 100], [0x91, 65, 100], [0x90, 65, 0], [0x81, 65, 0]])
+  })
+
+  it('passes everything that is not a note as it came, and polyphonic pressure only for a held note', () => {
+    const { engine, say } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 72 }])
+    say([note(0, [0xb0, 1, 50]), note(0, [0xe0, 0, 64]), note(0, [0xc0, 5]), on(65), note(0, [0xa0, 65, 30]), note(0, [0xa0, 40, 30])])
+    expect(delivered(engine)).toEqual([[0xb0, 1, 50], [0xe0, 0, 64], [0xc0, 5], [0x90, 65, 100], [0xa0, 65, 30]])
+  })
+
+  it('lets all-notes-off through and forgets what that channel held', () => {
+    const { engine, say } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 72 }])
+    say([on(65), note(0, [0xb0, 123, 0]), off(65)])
+    expect(delivered(engine)).toEqual([[0x90, 65, 100], [0xb0, 123, 0]])
+  })
+
+  it('splits one source between two targets, each with its own range, so a keyboard can be shared', () => {
+    const { engine, say } = setup([{ from: 'a', to: 'b', highNote: 59 }, { from: 'a', to: 'c', lowNote: 60 }])
+    say([on(48), on(72)])
+    const to = id => engine.posts.filter(p => p.id === id).flatMap(p => p.message.events.map(e => Array.from(e.bytes)))
+    expect(to('b')).toEqual([[0x90, 48, 100]])
+    expect(to('c')).toEqual([[0x90, 72, 100]])
+  })
+
+  it('says nothing to a target when nothing passed, and remembers only what passed for the monitor', () => {
+    const { engine, router, say } = setup([{ from: 'a', to: 'b', lowNote: 100 }])
+    say([on(10)])
+    expect(engine.posts).toEqual([])
+    expect(router.recent('a', 'b')).toEqual([])
+    say([on(101)])
+    expect(router.recent('a', 'b')).toHaveLength(1)
+  })
+
+  it('reports the range with the route, and only where one is set', () => {
+    const { router } = setup([{ from: 'a', to: 'b', lowNote: 60, highNote: 71 }, { from: 'a', to: 'c' }])
+    expect(router.routes).toEqual([{ from: 'a', to: 'b', lowNote: 60, highNote: 71 }, { from: 'a', to: 'c' }])
+  })
+})

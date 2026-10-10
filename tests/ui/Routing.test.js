@@ -282,3 +282,37 @@ describe('telling two instances of one plugin apart', () => {
     expect(new Set(labels).size).toBe(2)
   })
 })
+
+describe('the note range on a MIDI connection in the list', () => {
+  const MIDI_KIND = 'http://purl.org/stuff/transmissions/Midi'
+  const labelFor = id => ({ a: 'Keys', b: 'Bass' })[id] ?? id
+  const make = (connections, onRange) => {
+    const calls = []
+    const element = createConnectionList(document, {
+      connections, labelFor, onRemove: () => {}, monitor: () => [], ...(onRange === false ? {} : { onRange: (id, change) => calls.push([id, change]) })
+    })
+    document.body.append(element)
+    return { element, calls }
+  }
+  const midi = { id: 'c1', from: { node: 'a', portIndex: 0 }, to: { node: 'b', portIndex: 0 }, signalKind: MIDI_KIND, lowNote: 36, highNote: 59 }
+
+  it('gives a MIDI connection its two fields, filled in, and an audio one none', () => {
+    const { element } = make([midi, { ...midi, id: 'c2', signalKind: AUDIO, lowNote: undefined, highNote: undefined }])
+    expect(element.querySelector('#connection-c1-lowNote').value).toBe('36')
+    expect(element.querySelector('#connection-c1-highNote').value).toBe('59')
+    expect(element.querySelector('#connection-c2-lowNote')).toBeNull()
+  })
+
+  it('reports an edit against the connection, with both ends', () => {
+    const { element, calls } = make([midi])
+    const low = element.querySelector('#connection-c1-lowNote')
+    low.value = '48'
+    low.dispatchEvent(new document.defaultView.Event('change', { bubbles: true }))
+    expect(calls).toEqual([['c1', { lowNote: 48, highNote: 59 }]])
+  })
+
+  it('leaves the fields out where the page has no way to change them', () => {
+    const { element } = make([midi], false)
+    expect(element.querySelector('.note-range')).toBeNull()
+  })
+})

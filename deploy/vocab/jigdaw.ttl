@@ -690,6 +690,18 @@ jig:level a owl:DatatypeProperty ;
     rdfs:domain jig:Send ; rdfs:range xsd:decimal ;
     rdfs:label "level" ;
     rdfs:comment "Linear, as jig:gain: zero or more. Of an audio send; a MIDI send has none." .
+## A note range on a MIDI route: only the notes from jig:lowNote to jig:highNote pass, and everything that is not a
+## note passes as it came. Either end absent means that end of the keyboard (0 and 127). On a jig:Connection that
+## carries MIDI and on a jig:Send of kind trn:Midi, and nowhere else; there is no rdfs:domain because the domain is
+## those two classes and a union is a blank node, which this file does not have. The shapes say it.
+jig:lowNote a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "lowest note" ;
+    rdfs:comment "The lowest MIDI note, 0 to 127, a MIDI route lets through. Absent means 0." .
+jig:highNote a owl:DatatypeProperty ;
+    rdfs:range xsd:integer ;
+    rdfs:label "highest note" ;
+    rdfs:comment "The highest MIDI note, 0 to 127, a MIDI route lets through. Absent means 127." .
 jig:TapPoint a owl:Class ; rdfs:label "Tap point" .
 jig:PreFader a owl:NamedIndividual , jig:TapPoint ;
     rdfs:label "pre-fader" ;

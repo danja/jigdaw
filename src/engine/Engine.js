@@ -427,7 +427,8 @@ export class Engine {
     const target = toTrackId === null ? null : this.#tracks.get(toTrackId)
     if (toTrackId !== null && !target) throw new Error(`no such track strip: ${toTrackId}`)
     if (strip.to === toTrackId) return
-    try { strip.out.disconnect() } catch { /* nothing was connected */ }
+    // Only where it went before, so a meter tapped off the same node is left connected.
+    try { strip.out.disconnect(strip.to === null ? this.#mixInput : this.#tracks.get(strip.to)?.arrive) } catch { /* nothing was connected */ }
     strip.out.connect(target ? target.arrive : this.#mixInput)
     strip.to = toTrackId
   }
@@ -557,6 +558,24 @@ export class Engine {
     // mute or solo say, which is what a recording of a microphone needs so that
     // silencing the track (to keep it out of the speakers) does not silence the take.
     return pre ? strip.pre : (strip.panner ?? strip.gain)
+  }
+
+  /**
+   * An analyser on what a track sounds like, after its fader and pan, for a level meter. Made the first time
+   * it is asked for and kept, so a meter that is redrawn does not stack up taps on the track.
+   */
+  trackMeter (trackId) {
+    const strip = this.#tracks.get(trackId)
+    if (!strip) throw new Error(`no such track strip: ${trackId}`)
+    if (!strip.meter) {
+      if (typeof this.#context.createAnalyser !== 'function') throw new Error('this context cannot make an analyser')
+      const analyser = this.#context.createAnalyser()
+      // 1024 samples is about 21 ms, longer than a frame, so a short peak between two reads is not missed.
+      analyser.fftSize = 1024
+      ;(strip.panner ?? strip.gain).connect(analyser)
+      strip.meter = analyser
+    }
+    return strip.meter
   }
 
   /**

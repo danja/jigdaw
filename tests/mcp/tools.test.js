@@ -256,6 +256,40 @@ describe('connection_add', () => {
   })
 })
 
+describe('a note range on a MIDI connection', () => {
+  it('is given when the connection is made, changed with connection_set, and cleared with null', async () => {
+    addNodes()
+    const made = await call('connection_add', { from: 'a', to: 'b', signalKind: 'Midi', lowNote: 36, highNote: 59 })
+    expect(made.ok).toBe(true)
+    const id = made.connection
+    expect(dispatcher.project.connection(id)).toMatchObject({ lowNote: 36, highNote: 59 })
+    expect((await call('connection_set', { connectionId: id, highNote: 71 })).ok).toBe(true)
+    expect(dispatcher.project.connection(id)).toMatchObject({ lowNote: 36, highNote: 71 })
+    expect((await call('connection_set', { connectionId: id, lowNote: null, highNote: null })).ok).toBe(true)
+    const plain = dispatcher.project.connection(id)
+    expect('lowNote' in plain || 'highNote' in plain).toBe(false)
+  })
+
+  it('refuses notes that are not notes, an inverted range, audio, and a connection that is not there', async () => {
+    addNodes()
+    const audio = (await call('connection_add', { from: 'a', to: 'b', signalKind: 'Audio' })).connection
+    expect((await call('connection_set', { connectionId: audio, lowNote: 60 })).ok).toBe(false)
+    expect((await call('connection_add', { from: 'a', to: 'b', signalKind: 'Midi', lowNote: 200 })).ok).toBe(false)
+    expect((await call('connection_add', { from: 'a', to: 'b', signalKind: 'Midi', lowNote: 80, highNote: 20 })).ok).toBe(false)
+    expect((await call('connection_set', { connectionId: 'ghost', lowNote: 1 })).ok).toBe(false)
+  })
+
+  it('goes on a MIDI send too, and changes there with send_set', async () => {
+    dispatcher.apply([{ op: 'addTrack', id: 'a' }, { op: 'addTrack', id: 'b' }])
+    const added = await call('send_add', { from: 'a', to: 'b', kind: 'midi', lowNote: 60 })
+    expect(added.ok).toBe(true)
+    expect(dispatcher.project.sends[0]).toMatchObject({ kind: 'midi', lowNote: 60 })
+    expect((await call('send_set', { sendId: added.sendId, highNote: 72 })).ok).toBe(true)
+    expect(dispatcher.project.sends[0]).toMatchObject({ lowNote: 60, highNote: 72 })
+    expect((await call('send_add', { from: 'b', to: 'a', lowNote: 60 })).ok).toBe(false)
+  })
+})
+
 describe('transport_configure', () => {
   it('sets a tempo', async () => {
     const result = await call('transport_configure', { tempo: 96 })

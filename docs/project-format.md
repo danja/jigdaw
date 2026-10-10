@@ -75,6 +75,12 @@ system applied to its own file format.
 the graph and are handled by entirely different machinery, one by Web Audio and one by the
 host's message routing, so the kind cannot be inferred from the endpoints.
 
+**A MIDI connection may say which notes it lets through** with `jig:lowNote` and `jig:highNote`, each a MIDI note from 0 to 127, the
+lowest and the highest that pass. An end that is absent is the end of the keyboard, and an end that is the whole of it (a lowest note of
+0, a highest of 127) is not written, so two connections that let through the same notes are written the same. Everything that is not a note
+passes as it came. A note-off passes only for a note-on that passed, so changing a range while a note is held leaves nothing sounding.
+Two connections from one source with ranges that meet split a keyboard between two instruments. A range on an audio connection is refused.
+
 **An endpoint names its port exactly one way.** `jig:portIndex` for an audio or MIDI port,
 which Web Audio numbers, or `jig:portSymbol` for a parameter, which `lv2:symbol` names.
 Never both and never neither. Modulating a parameter is an edge to a named thing; carrying
@@ -256,7 +262,9 @@ audio send says no kind, so a project without a MIDI send is written as it alway
 makes, from the plugins at the end of its chain that make MIDI and pass it on by no connection (a bypassed one is seen
 through, and a composite is not routed from), to the node the target track's `jig:midiInput` names. A target with no
 `jig:midiInput` receives nothing, as its clips would play into nothing, and a host SHOULD say so where it draws the send.
-A cycle is refused over MIDI sends alone, so MIDI one way and audio the other is not a loop, and one MIDI send and one audio
+A MIDI send takes the same `jig:lowNote` and `jig:highNote` as a MIDI connection. A composite is read at its MIDI boundary, at either end:
+what leaves it is the member its MIDI output is wired to, and what arrives goes to the member its MIDI input is wired to, never to a member
+behind that one. A cycle is refused over MIDI sends alone, so MIDI one way and audio the other is not a loop, and one MIDI send and one audio
 send between the same two tracks is allowed.
 
 **A chain on the master.** A node's `jig:onTrack` may name the `jig:Master`, as `<#master>`, and then it is a plugin

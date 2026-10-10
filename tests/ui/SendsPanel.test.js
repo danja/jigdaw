@@ -123,3 +123,50 @@ describe('the sends panel with MIDI sends', () => {
     expect(document.querySelector('.send-add').hidden).toBe(true)
   })
 })
+
+describe('the sends panel with a note range on a MIDI send', () => {
+  const build = ({ withRange = true, over = {} } = {}) => {
+    const calls = []
+    const rec = name => (...a) => calls.push([name, ...a])
+    const panel = createSendsPanel(document, {
+      onOutput: rec('output'), onAdd: rec('add'), onLevel: rec('level'), onTap: rec('tap'), onRemove: rec('remove'),
+      ...(withRange ? { onRange: rec('range') } : {})
+    })
+    document.body.append(panel.element)
+    panel.show({
+      label: 'Keys', output: null, outputOptions: [],
+      sends: [{ id: 'm1', toLabel: 'Bass', kind: 'midi', lowNote: 36, highNote: 59 }, { id: 'a1', toLabel: 'Verb', level: 1, tap: 'post' }],
+      addOptions: [], ...over
+    })
+    return { panel, calls }
+  }
+
+  it('gives a MIDI send its two fields, filled in, and an audio send none', () => {
+    build()
+    expect(document.getElementById('send-m1-lowNote').value).toBe('36')
+    expect(document.getElementById('send-m1-highNote').value).toBe('59')
+    expect(document.getElementById('send-a1-lowNote')).toBeNull()
+    expect(document.querySelector('.note-range').getAttribute('aria-label')).toBe('Notes let through by the MIDI send from Keys to Bass')
+  })
+
+  it('reports an edit as the send and both ends, null for an empty one', () => {
+    const { calls } = build()
+    const high = document.getElementById('send-m1-highNote')
+    high.value = ''
+    high.dispatchEvent(event('change'))
+    expect(calls).toEqual([['range', 'm1', { lowNote: 36, highNote: null }]])
+  })
+
+  it('leaves the fields out where the page cannot change them', () => {
+    build({ withRange: false })
+    expect(document.querySelector('.note-range')).toBeNull()
+  })
+
+  it('keeps the fields across a redraw and updates them, without taking one from under a hand typing', () => {
+    const { panel } = build()
+    const low = document.getElementById('send-m1-lowNote')
+    panel.show({ label: 'Keys', output: null, outputOptions: [], sends: [{ id: 'm1', toLabel: 'Bass', kind: 'midi', lowNote: 48, highNote: 59 }], addOptions: [] })
+    expect(document.getElementById('send-m1-lowNote')).toBe(low)
+    expect(low.value).toBe('48')
+  })
+})

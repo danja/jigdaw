@@ -35,6 +35,11 @@ is wrong in INBOX.md.
 - **Use the Script tab with a screen reader and a real phone** (new 2026-10-01): run a script with an error and listen to whether
   "Problems" and the status are announced and the "Go to line" buttons make sense, run one that plays, and use Control+Enter. The
   studio page sends a phone to the simple page, so add `?studio` to the address to reach the tab on one.
+- **Use the new routing controls with a screen reader** (new 2026-10-10): the Master bus section and its audio input menu on the
+  Tracks tab, the Add send form with its Audio and MIDI choice, the Lowest note and Highest note fields on a MIDI send and on a
+  MIDI connection, the Clip button beside the meter (it hides when pressed, so listen to where the focus goes), and the level
+  meters on the Mixer tab, which are meant to say nothing and leave the held peak as text to be read where it is. Say whether the
+  names make sense and whether anything is announced that should not be.
 - **Use the keys and buttons with real hands:** the clip keys (S, D, M, L, [, ], Ctrl+C, X, V), the chain strip's Alt with Left or
   Right, the automation points (arrows, C, Delete), and the icon buttons, with real key presses and not dispatched events.
 - **Record your voice on the simple page** with a real microphone: the browser's permission prompt, the device it picks and how

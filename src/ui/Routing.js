@@ -22,6 +22,7 @@
 // exported here so nothing that draws a port bar has to know that.
 export { outputsOf, inputsOf, compatible } from '../model/Endpoints.js'
 import { outputsOf, inputsOf, compatible, isMidiSignal } from '../model/Endpoints.js'
+import { createNoteRange } from './NoteRange.js'
 
 /**
  * The ports of one node, as buttons.
@@ -124,7 +125,7 @@ export function createPortBar (document, { node, profile, pending, onPick, onCan
  * point: this is the first thing in the interface that tells the truth about a
  * graph that is not a chain.
  */
-export function createConnectionList (document, { connections, labelFor, onRemove, monitor }) {
+export function createConnectionList (document, { connections, labelFor, onRemove, monitor, onRange = null }) {
   if (typeof monitor !== 'function') throw new Error('createConnectionList needs monitor')
   const refreshers = []
   const element = document.createElement('div')
@@ -202,6 +203,13 @@ export function createConnectionList (document, { connections, labelFor, onRemov
         }))
       }
       row.append(watch)
+      // Which notes it lets through, for a keyboard shared between two instruments. Left out where the page
+      // has no way to change it, rather than shown and ignored.
+      if (onRange) {
+        const range = createNoteRange(document, { idBase: `connection-${connection.id}`, what: `on ${description}`, onChange: change => onRange(connection.id, change) })
+        range.show(connection)
+        row.append(range.element)
+      }
       element.append(log)
       refreshers.push(refresh)
     }

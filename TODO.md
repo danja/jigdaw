@@ -7,6 +7,16 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 ## From the inbox
 
+- [ ] **Glass Hours, and what making it showed.** 2026-10-10. A 40 bar piece in D minor, built through the WebMCP tools in the browser and
+      balanced by playing it and reading per-track peaks (no clipping, master worst peak -2.5 dB), is `examples/songs/glass-hours.ttl`, written by
+      `examples/songs/glass-hours.js`, and `tests/rdf/SongExamples.test.js` binds the two and checks the file opens. **Left:** (1) it names the
+      plugins by their canonical `strandz.it` addresses, so it opens only where the 2026-10 plugins are deployed; (2) **a clip-based piece cannot be a
+      bundled preset yet**, because `tests/host/presetRender.test.js` plays no clips (`src/testing/ChainRender.js` drives the transport and the
+      generators, not the Scheduler), so a preset whose tracks are all clips would fail "every track gets sound"; running the Scheduler in
+      `renderChain` is the fix, and would also let a preset be heard rather than only wired; (3) the first reading of a real piece took ninety seconds,
+      fixed in `ProjectReader` (see MISTAKES.md), and the other readers have the same shape on small documents; (4) with a loop on, playback still
+      starts at beat zero and loops only after it, so a section cannot be auditioned by looping it, and the agent tools offer no seek; (5) `parameter_set`
+      returned failure for a valid call that `parameters_set_batch` accepted, and was not investigated.
 - [ ] **Master chain and track receives, what is left.** From the inbox, 2026-10-10. **Built, 2026-10-10:** a track's `jig:audioInput`
       is now also where a send or a bus output arrives, so a plugin on a bus is in the path; the master has a chain (nodes with
       `jig:onTrack <#master>`, `jig:audioInput` on the master for the node the mix arrives at, id `master` reserved), in the model,
@@ -17,11 +27,13 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       "Everything together" card opens to Hall's controls; the studio shows the Master bus section with its audio input menu
       and "The master bus" under Load onto; no console errors. **Left:** (1) a screen reader pass over the new controls; (2) **MIDI sends are built** (2026-10-10: `jig:Send` with `jig:signalKind trn:Midi`, in the model, router, RDF, shapes,
       WebMCP `send_add` `kind`, and the dock's Add send; Gamelan's Conductor uses two), seen in Chrome: the dock lists "MIDI to Sprout" and "MIDI to Markov" and the preset plays; a MIDI send
-      from a composite and a note-range split on one are open; (3) **alignment through a bus is built** (2026-10-10: tracks feeding a bus are lined up with each other at it, and the
+      from or to a composite is built (read at the composite's MIDI boundary, which also fixed MIDI sent into a composite reaching members
+      behind its input), and so is a note range on a MIDI send or connection (`jig:lowNote`, `jig:highNote`, `setConnection`,
+      `connection_set`, fields in the Sends panel and the connection list, the router filtering with note-off pairing); (3) **alignment through a bus is built** (2026-10-10: tracks feeding a bus are lined up with each other at it, and the
       others with what the bus adds; a send is not aligned, and the master chain's own latency delays everything alike); (4) **the master's chain is summarised on the Mixer tab and the output meter holds a clip** (2026-10-10: the Master channel lists
       its plugins and where the mix arrives, with Show plugins; a "Clip" button appears beside the meter when the output reached full
-      scale and clears when pressed, on the studio, simple and reel pages; seen in Chrome); a per-track meter and a peak readout in
-      decibels are open.
+      scale and clears when pressed, on the studio, simple and reel pages; seen in Chrome); every Mixer strip now has a meter with the held peak in dB (`src/ui/Meter.js`,
+      `web/app/Meters.js`, `Engine.trackMeter`).
 - [ ] **Finish the Downspout ports: Moka, Sprout, Markov, Retune.** 2026-10-10. All four are plain JavaScript Jigs in `plugins/`
       (no module), ported from `~/github/downspout/plugins/`, each with a host test (`tests/host/{moka,sprout,markov,retune}.test.js`)
       that loads it through the real loader and engine and checks the music, not just that it loads. Retune's scale is a

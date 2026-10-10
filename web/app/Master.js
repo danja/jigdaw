@@ -9,6 +9,7 @@
 // when nothing is on the master, as there is then nothing to say.
 import { createStrip } from '../../src/ui/Strip.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
+import { createMeter } from '../../src/ui/Meter.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
 import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
@@ -27,14 +28,17 @@ export function createMaster (ctx) {
     }
   })
   summary.element.hidden = true
+  // The level of the whole mix, from the same analyser as the transport bar's (web/app/Meters.js feeds it).
+  const meter = createMeter(ctx.document, { label: 'the master' })
 
   return {
+    meter,
     mount () {
       const heading = ctx.document.createElement('h3')
       heading.textContent = 'Master'
       const wrapper = ctx.document.createElement('div')
       wrapper.className = 'mixer-channel master-channel'
-      wrapper.append(heading, strip.element, summary.element)
+      wrapper.append(heading, strip.element, meter.element, summary.element)
       $('master-mount').append(wrapper)
     },
     /** Show the project's master, whoever changed it. */

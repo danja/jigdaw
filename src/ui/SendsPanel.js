@@ -12,8 +12,9 @@
 // Destinations offered are only those the model would accept (src/ui/SendsModel.js);
 // a control that cannot act is left out, so with nowhere to send there is no Add.
 import { decibels } from './Strip.js'
+import { createNoteRange } from './NoteRange.js'
 
-export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, onRemove }) {
+export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, onRemove, onRange = null }) {
   for (const [name, fn] of Object.entries({ onOutput, onAdd, onLevel, onTap, onRemove })) {
     if (typeof fn !== 'function') throw new Error(`createSendsPanel needs ${name}`)
   }
@@ -127,7 +128,14 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
       input.setAttribute('aria-valuetext', `${decibels(n)} decibels`)
     }
     li.append(name, level, tap, remove)
-    return { li, name, level, input, tap, remove, show }
+    // A MIDI send says which notes it lets through, so a keyboard can be shared by two tracks. Not drawn where the
+    // page cannot change it, and only on a MIDI send, since a kind does not change.
+    let range = null
+    if (send.kind === 'midi' && onRange) {
+      range = createNoteRange(document, { idBase: `send-${send.id}`, what: 'by this send', onChange: change => onRange(send.id, change) })
+      li.append(range.element)
+    }
+    return { li, name, level, input, tap, remove, show, range }
   }
 
   return {
@@ -158,6 +166,8 @@ export function createSendsPanel (document, { onOutput, onAdd, onLevel, onTap, o
         row.input.setAttribute('aria-label', `Level of the send from ${label} to ${send.toLabel}`)
         row.tap.setAttribute('aria-label', `Where the send from ${label} to ${send.toLabel} is taken`)
         row.remove.setAttribute('aria-label', `Remove the ${midi ? 'MIDI ' : ''}send from ${label} to ${send.toLabel}`)
+        row.range?.element.setAttribute('aria-label', `Notes let through by the MIDI send from ${label} to ${send.toLabel}`)
+        row.range?.show(send, document.activeElement)
         if (!midi && document.activeElement !== row.input) row.input.value = String(send.level)
         if (!midi) row.show(send.level)
         for (const option of row.tap.options) option.selected = option.value === send.tap

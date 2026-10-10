@@ -52,7 +52,8 @@ connection cycles are, over the track graph. Latency through a send is accounted
 compiler as through any other path.
 
 **Built, 2026-10-10: a MIDI send.** A `jig:Send` with `jig:signalKind trn:Midi` routes a track's MIDI to the node
-the target's `jig:midiInput` names, with no level and no tap. Absent means audio, so no existing file changes.
+the target's `jig:midiInput` names, with no level and no tap. Absent means audio, so no existing file changes. It and a MIDI
+connection take `jig:lowNote` and `jig:highNote`, a note range, and either end may be a composite plugin.
 
 ## Markers and regions
 

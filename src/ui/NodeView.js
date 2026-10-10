@@ -12,7 +12,7 @@
 import { outputsOf, inputsOf, compatible } from '../model/Endpoints.js'
 import { createConnectionList } from './Routing.js'
 
-export function createNodeView (document, { onDisconnect, onConnect, onShowPlugin, onAutomate }) {
+export function createNodeView (document, { onDisconnect, onConnect, onShowPlugin, onAutomate, onRange = null }) {
   for (const [name, fn] of Object.entries({ onDisconnect, onConnect, onShowPlugin, onAutomate })) {
     if (typeof fn !== 'function') throw new Error(`createNodeView needs ${name}`)
   }
@@ -124,7 +124,7 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
         ? `Takes: ${ins.join(', ') || 'nothing'}. Gives: ${outs.join(', ') || 'nothing'}.`
         : 'Not loaded, so its ports are not known.'
       list = createConnectionList(document, {
-        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect, monitor
+        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect, monitor, onRange
       })
       listMount.replaceChildren(list)
 

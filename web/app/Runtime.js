@@ -49,7 +49,7 @@ export function createRuntime (ctx) {
     // which means one meter measures what you actually hear rather than one voice
     // of several.
     const analyser = context.createAnalyser()
-    analyser.fftSize = 256
+    analyser.fftSize = 1024
     analyser.connect(context.destination)
     ctx.analyser = analyser
 

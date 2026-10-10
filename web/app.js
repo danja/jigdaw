@@ -35,6 +35,7 @@ import { createLayout } from './app/Layout.js'
 import { createMidiIn } from './app/MidiIn.js'
 import { createAlign } from './app/Align.js'
 import { createMaster } from './app/Master.js'
+import { createMeters } from './app/Meters.js'
 import { createPwa } from './app/Pwa.js'
 import { createScript } from './app/Script.js'
 
@@ -79,6 +80,7 @@ ctx.matrix = createMatrix(ctx)
 ctx.bounce = createBounce(ctx)
 ctx.carry = createCarry(ctx, { self: 'studio', offerText: 'You have a piece open on the simple page. Open it here?' })
 ctx.master = createMaster(ctx)
+ctx.meters = createMeters(ctx)
 ctx.pwa = createPwa(ctx)
 ctx.rack = createRack(ctx)
 ctx.loading = createLoading(ctx)
@@ -134,6 +136,7 @@ for (const link of document.querySelectorAll('a[href="simple.html"]')) ctx.carry
 ctx.carry.offer()
 ctx.pwa.mount()
 ctx.rack.mount()
+ctx.meters.start()
 ctx.bridge.mount()
 ctx.layout.mount()
 ctx.midiIn.mount()

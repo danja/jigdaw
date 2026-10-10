@@ -222,7 +222,7 @@ export function writeProject (project, { iri, created = null } = {}) {
     // Required. An audio edge and a host-routed MIDI edge look identical in the
     // graph and are handled by entirely different machinery, so the kind cannot
     // be inferred from the endpoints.
-    lines.push(`    ${term(jig.signalKind)} ${term(c.signalKind)} .`)
+    lines.push(`    ${term(jig.signalKind)} ${term(c.signalKind)}${noteRange(c)} .`)
     endpoint(lines, iri, `${c.id}-from`, c.from)
     endpoint(lines, iri, `${c.id}-to`, c.to)
   }
@@ -265,6 +265,11 @@ export function writeProject (project, { iri, created = null } = {}) {
 
 const TAP_TERM = { pre: 'PreFader', post: 'PostFader' }
 const CURVE_TERM = { step: 'Step', linear: 'Linear', smooth: 'Smooth' }
+/** The note range of a MIDI connection or send, as properties to append to a statement: only the ends that are set. */
+function noteRange ({ lowNote, highNote }) {
+  return `${lowNote === undefined ? '' : ` ; ${term(jig.lowNote)} ${integer(lowNote)}`}${highNote === undefined ? '' : ` ; ${term(jig.highNote)} ${integer(highNote)}`}`
+}
+
 /**
  * Whether the master is stated at all. A project that does not use it is written without one, so a
  * session from before the master is unchanged when saved; a plugin on it needs it to be there, since
@@ -292,7 +297,7 @@ function writeArrangement (lines, project) {
   for (const s of [...project.sends].sort(byId)) {
     const ends = `<#${s.id}> a ${term(jig.Send)} ; ${term(jig.sendFrom)} <#${s.from}> ; ${term(jig.sendTo)} <#${s.to}>`
     lines.push('', s.kind === 'midi'
-      ? `${ends} ; ${term(jig.signalKind)} ${term(trn.Midi)} .`
+      ? `${ends} ; ${term(jig.signalKind)} ${term(trn.Midi)}${noteRange(s)} .`
       : `${ends} ; ${term(jig.level)} ${decimal(s.level)} ; ${term(jig.tap)} ${term(jig[TAP_TERM[s.tap]])} .`)
   }
   for (const m of [...project.markers].sort(byId)) {
