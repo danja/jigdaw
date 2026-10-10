@@ -26,8 +26,8 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       envelopes seeded at the start point (`Scheduler.start(atTime, { from })`); `parameter_set` and `parameter_reset` take `nodeId`, as every
       other tool does, and say so when it is missing (it had taken `node`, and the docs said `nodeId`). The other RDF readers were timed:
       28 ms for the largest plugin profile, so they were left alone. **Done since:** clicking the ruler, or typing a bar in "Go to bar", cues the start while stopped and seeks while playing
-      (`Transport.seek`). **Left:** a master chain and the clips' audio are not in the offline render, so what it
-      checks is that sound reaches each track, not how it sounds.
+      (`Transport.seek`). **Done since:** the offline render reports the master too (the sum of the tracks through its plugin). **Left:** the clips' audio is
+      not in it, and no fader is applied, so what it checks is that sound reaches each place, not how it sounds.
 - [ ] **Master chain and track receives, what is left.** From the inbox, 2026-10-10. **Built, 2026-10-10:** a track's `jig:audioInput`
       is now also where a send or a bus output arrives, so a plugin on a bus is in the path; the master has a chain (nodes with
       `jig:onTrack <#master>`, `jig:audioInput` on the master for the node the mix arrives at, id `master` reserved), in the model,
@@ -242,7 +242,7 @@ a screen reader and usable at phone width. [docs/usp.md](docs/usp.md) says where
 ### T6. Mixer, aligned with the track view
 
 - [ ] **Mixer as a dock or a page** built from the same track list and selection.
-- [ ] **Master strip, what is left:** meters with clip hold, a mono switch, and controls beyond level, pan and mute (a
+- [ ] **Master strip, what is left** (every meter, tracks and master, now holds a clip until its Clip button is pressed): a mono switch, and controls beyond level, pan and mute (a
       master bus with its own chain, Phase D).
 - [ ] **Insert slots on the strip** mirroring the chain strip, so both views edit one list.
 - [ ] **Snapshots, render in place, consolidate** (Phase C; they share the bounce path, which Freeze already uses).

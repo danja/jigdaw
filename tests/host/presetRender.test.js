@@ -60,6 +60,8 @@ describe('the bundled presets, played', () => {
       for (const track of expected) {
         expect(peaks.get(track.id), `${track.label ?? track.id} in ${file}`).toBeGreaterThan(1e-4)
       }
+      // And the sum of them is heard at the master, through its plugin where it has one.
+      expect(peaks.get('master'), `the master in ${file}`).toBeGreaterThan(1e-4)
     }, 120000)
   }
 })

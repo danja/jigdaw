@@ -135,6 +135,8 @@
   .note-range input { width:5.5rem; min-height:44px; font-size:16px; }
   .note-name { min-width:3.5ch; color:var(--muted, #9aa4b2); font-size:13px; }
   .meter-group { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .meter-clip { min-height:28px; padding:0 8px; background:var(--err); color:#111; border:1px solid var(--err); border-radius:4px; font:inherit; font-size:12px; cursor:pointer; }
+  @media (pointer: coarse), (max-width: 760px) { .meter-clip { min-height:44px; min-width:44px; } }
   .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, #9aa4b2); }
   .level { display:inline-flex; align-items:center; gap:8px; }
   .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }

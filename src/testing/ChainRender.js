@@ -12,11 +12,15 @@
 // only a piece of generators; and the routing between tracks is followed: a send, and a track's output sent to another
 // track, arrive at the receiving track's audio input node, or at its fader when it has none.
 //
+// The master is reported under its own id, MASTER_TRACK: the sum of every track with no bus, through the master's audio
+// input plugin when it has one.
+//
 // Not a mixer: only the first audio input of a node is fed, a track's level is
 // the peak of what reaches its input, and faders and the master are not
 // applied (a send's own level is). It answers "does anything reach this track", not "how loud is it".
 
 import { Scheduler, clipNotes } from '../engine/Scheduler.js'
+import { MASTER_TRACK } from '../model/ArrangementOps.js'
 
 const settle = () => new Promise(resolve => setImmediate(resolve))
 
@@ -27,8 +31,10 @@ const settle = () => new Promise(resolve => setImmediate(resolve))
 export async function renderChain (dispatcher, engine, { quanta = 1500, quantum = 128, clips = true, lookaheadSeconds = 0.12 } = {}) {
   const entries = engine.nodes()
   const byNode = new Map(entries.map(e => [e.node, e]))
-  const trackOf = new Map(dispatcher.project.tracks.map(t => [engine.trackInput(t.id), t.id]))
-  const peaks = new Map(dispatcher.project.tracks.map(t => [t.id, 0]))
+  // The master is a place sound arrives like a track, under its own id.
+  const places = [...dispatcher.project.tracks.map(t => t.id), MASTER_TRACK]
+  const trackOf = new Map(places.map(id => [engine.trackInput(id), id]))
+  const peaks = new Map(places.map(id => [id, 0]))
 
   // Order: a node after everything that feeds it, by audio connections the engine made and MIDI
   // connections the model holds.
@@ -47,11 +53,16 @@ export async function renderChain (dispatcher, engine, { quanta = 1500, quantum 
   const arrivals = new Map()
   const arrive = (to, from, level) => arrivals.set(to, [...(arrivals.get(to) ?? []), { from, level }])
   for (const send of project.sends) if ((send.kind ?? 'audio') === 'audio') arrive(send.to, send.from, send.level)
-  for (const track of project.tracks) if (track.output) arrive(track.output, track.id, 1)
+  // A track with no bus goes to the master, which is where the sum of the tracks is heard.
+  for (const track of project.tracks) arrive(track.output ?? MASTER_TRACK, track.id, 1)
   const takesArrivals = new Map()
+  const inputNodeOf = id => {
+    const audioInput = id === MASTER_TRACK ? project.master.audioInput : project.track(id)?.audioInput
+    return audioInput ? dispatcher.engineNode(audioInput)?.node ?? null : null
+  }
   const nodesOn = id => project.nodes.filter(n => n.track === id).map(n => dispatcher.engineNode(n.id)?.node).filter(Boolean)
   for (const [to, sources] of arrivals) {
-    const node = project.track(to)?.audioInput ? dispatcher.engineNode(project.track(to).audioInput)?.node : null
+    const node = inputNodeOf(to)
     if (!node || !feeds.has(node)) continue
     takesArrivals.set(node, to)
     for (const { from } of sources) for (const source of nodesOn(from)) feeds.get(node).add(source)
@@ -118,12 +129,12 @@ export async function renderChain (dispatcher, engine, { quanta = 1500, quantum 
         }
       }
     }
-    // A track fed by others with no audio input node takes what is sent to it straight to its fader.
+    // A track, or the master, fed by others with no audio input node takes what is sent to it straight to its fader.
     for (const [to, sources] of arrivals) {
-      if (project.track(to) === null || project.track(to).audioInput) continue
-      for (const { from, level } of sources) {
-        for (const channel of atFader.get(from) ?? []) for (const v of channel) peaks.set(to, Math.max(peaks.get(to), Math.abs(v) * level))
-      }
+      if (!peaks.has(to) || inputNodeOf(to)) continue
+      const mixed = silent()
+      for (const { from, level } of sources) if (atFader.has(from)) addInto(mixed, atFader.get(from), level)
+      for (const channel of mixed) for (const v of channel) peaks.set(to, Math.max(peaks.get(to), Math.abs(v)))
     }
     await settle()
   }

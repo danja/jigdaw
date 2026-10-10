@@ -30020,7 +30020,18 @@ function createMeter(document2, { label, bars = 12 } = {}) {
   const number5 = document2.createElement("span");
   number5.className = "meter-readout";
   number5.textContent = readout(0);
-  element.append(strip, number5);
+  const clipHold = createClipHold();
+  const clip = document2.createElement("button");
+  clip.type = "button";
+  clip.className = "meter-clip";
+  clip.textContent = "Clip";
+  clip.hidden = true;
+  clip.setAttribute("aria-label", `${label} clipped. Press to clear`);
+  clip.addEventListener("click", () => {
+    clipHold.clear();
+    clip.hidden = true;
+  });
+  element.append(strip, number5, clip);
   const hold = createPeakHold();
   let lit = -1;
   let shown = number5.textContent;
@@ -30034,6 +30045,7 @@ function createMeter(document2, { label, bars = 12 } = {}) {
           cell.className = i2 < count ? i2 >= bars - 2 ? "hot" : "on" : "";
         });
       }
+      if (clipHold.update(peak) && clip.hidden) clip.hidden = false;
       const text = readout(hold.update(peak, nowMs));
       if (text !== shown) {
         shown = text;

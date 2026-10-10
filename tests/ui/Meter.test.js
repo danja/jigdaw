@@ -3,8 +3,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { createMeter } from '../../src/ui/Meter.js'
 
-let document
-beforeEach(() => { ({ document } = parseHTML('<!doctype html><body></body>')) })
+let document, window
+beforeEach(() => { ({ document, window } = parseHTML('<!doctype html><body></body>')) })
 const classes = meter => [...meter.element.querySelectorAll('.meter i')].map(i => i.className)
 
 describe('the meter', () => {
@@ -44,5 +44,24 @@ describe('the meter', () => {
     expect(cell.className).toBe('marked')
     meter.set(0, 48)
     expect(cell.className).toBe('')
+  })
+})
+
+describe('the clip hold on a meter', () => {
+  const button = meter => meter.element.querySelector('.meter-clip')
+
+  it('draws no button until the level has clipped, then holds it until pressed', () => {
+    const meter = createMeter(document, { label: 'Pad' })
+    expect(button(meter).hidden).toBe(true)
+    meter.set(0.5, 0)
+    expect(button(meter).hidden).toBe(true)
+    meter.set(1, 16)
+    meter.set(0.1, 32)
+    expect(button(meter).hidden).toBe(false)
+    expect(button(meter).getAttribute('aria-label')).toBe('Pad clipped. Press to clear')
+    button(meter).dispatchEvent(new window.Event('click'))
+    expect(button(meter).hidden).toBe(true)
+    meter.set(0.1, 48)
+    expect(button(meter).hidden).toBe(true)
   })
 })
