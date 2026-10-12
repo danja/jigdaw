@@ -28,7 +28,7 @@
     trn:role trn:MidiGenerator ;
     trn:accepts trn:Midi , trn:ControlMidi ;
     trn:produces trn:Midi ;
-    trn:caution "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's." ;
+    trn:caution "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw is the VST3's 64-bit mix." ;
     trn:caution "Monophonic by design. A new note ends the note before it rather than overlapping. An expansion longer than 131,072 symbols is not used; the deepest generation that fits plays instead." ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
     trn:format trn:Jig , trn:WebAudio ;
@@ -52,7 +52,7 @@
     jig:location <sprout-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "sprout" ;
-    jig:integrity "sha384-Gl0n6rwLGOFbJlH7owXNF4QH5JGRaTaMEi+U+n89vPlh4I3RVVZe2vl4gQ5xdtVQ" .
+    jig:integrity "sha384-JBIsZw9OSq2G2Emo/yKHA/bdYix9zyblj8rRfxxQraobqQurzpnOHqmZd3rFAShs" .
 
 <#preset>
     a lv2:InputPort , lv2:ControlPort ;

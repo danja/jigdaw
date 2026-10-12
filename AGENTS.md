@@ -264,6 +264,106 @@ real request with an error message that blamed CORS instead. Both fakes now refu
 real thing refuses, mutation tested by reverting each fix and watching the suite fail the way
 the browser did.
 
+## Lessons kept from the mistakes log
+
+`MISTAKES.md` was cleared on 2026-10-12 and these are what it held. Each names the guard that
+exists where there is one.
+
+**Testing and measuring**
+
+- **Break every guard once, on purpose.** A refusal test must assert the reason, not a string
+  that a different refusal also prints (the composite cycle test passed with the cycle check
+  deleted because the depth limit printed the same chain). A mutation of a digested artefact
+  changes behaviour and digest together, so regenerate the profile first or the refusal comes
+  from the digest and proves nothing. A good mutation fails exactly one test.
+- **Test the default, the first and the empty.** Undoing the first change did nothing, and
+  every session saved before a loop was set was invalid. Fixtures include the case a person
+  meets first, not only the configured one.
+- **Test at the size a person would make.** `ProjectReader` scanned every triple for every
+  lookup and took 90 s on 1228 notes. `tests/rdf/ProjectRoundTrip.test.js` reads 3000 notes
+  with a time limit. `PluginReader`, `ProfileReader` and `CompositeReader` read small
+  documents and have the same shape if ever given a large one.
+- **A scripted browser step asserts `ok` on every call and throws.** One A/B compared Drive 1
+  with Drive 1 because `parameter_set` returned `{ ok: false }` and nothing looked. A
+  measurement also gets a positive control and a recorder that counts only the thing under
+  test, and prints how many samples it took. `requestAnimationFrame` does not run in a
+  background tab, so a meter-based recorder reads zero there; tap the signal and measure from
+  an audio callback.
+- **A command line gets a subprocess test.** `bin/bundle.js` wrote nothing for any plugin
+  because of an import cycle through the entry module, exit code 0, every library test green
+  (`tests/bin/bundle-cli.test.js`). A command that exits 0 having produced nothing is a failure.
+- **`[hidden]` loses to an author `display` rule**, so a control "left out" with the
+  attribute stayed on screen while 73 tests said it was hidden. `web/index.html` carries
+  `[hidden] { display: none !important; }` and `tests/web/HiddenAttribute.test.js` binds it.
+  Check that a control is absent by `getClientRects().length`, never by its attribute.
+- **State cached by an id is wrong when ids are reused.** Every piece numbers its nodes from
+  `node-1`, so the simple page showed the previous piece's panel. Key by the thing behind the
+  id, and ask what else can be given that id.
+- **A screenshot path is a build step.** Gallery shots were of an unstyled page for as long
+  as a stylesheet was linked and not inlined (`tests/bin/jig.test.js`). Look at what a
+  harness produces, and check that Chrome is there before blaming it.
+- **Suites must not build into one folder** (`DOCS_OUT`), guards walk
+  `git ls-files --cached --others --exclude-standard` so new files are in scope, and
+  `web/app.bundle.js` is rebuilt immediately before a browser check, with the service worker
+  unregistered and its caches deleted, or the check measures the old code. Suite wiring lives
+  in `bin/check-suites.js`, outside vitest's include list.
+
+**Real time and native hosts**
+
+- **Measure on the slowest host.** Mop ran at 0.06x realtime under node's JIT and 1.70x
+  under the adapter's WAMR interpreter, so it dropped out in Reaper with every suite green.
+  Timing stays diagnostic, since machines differ: record the figures with the diagnosis and
+  do not assert them.
+- **Ask what the first call allocates.** wasm3 compiles on first call, so the audio thread
+  was compiling; `m3_CompileModule` runs after load. An atomic swap publishes and does not
+  reclaim: the audio thread announces the chain it runs and only unannounced chains are
+  freed. A state restore can grow memory, so views are taken after it and `refreshViews()`
+  follows any call that might grow it.
+- **Freestanding math is wrong until measured against libm.** Parameq had a sign error, a
+  cosine too coarse for poles near z = 1, and a Horner chain one power off. Compile the same
+  functions natively and compare on the day they are written, and drive a filter per shape
+  with a sine before wiring it.
+- **A design that adapts offline work to a live graph lists first what the stream's
+  direction of time forbids.** Keyframe's "time rate 200 fills twice the output span" was
+  wrong before any code existed, because live input cannot be played faster than it arrives.
+- **Wire formats parse in the classic locale** (`std::stof` stops at the point under
+  `it_IT`), a capability negotiated with browsers proves nothing about a native runtime
+  (wasm3 has no SIMD, WAMR does), a host API optional per format is a runtime fact (DPF's
+  `updateStateValue` is discarded under VST3), and instant properties move with each slice,
+  not once per buffer.
+- **A function that handles a case needs a caller that supplies it.** The `output` branch
+  existed while nothing could express it, and nothing reached the speakers; the DPF wrapper
+  overwrote module defaults and the adapter was silent. Assert that a fresh plugin is audible
+  untouched, and that a removed plugin stops (`#releaseRemoved`).
+
+**Process**
+
+- **Read a region back after an edit that deletes, and anchor a scripted replace on text
+  that occurs once.** One edit deleted two live TODO items; a replace of `<#transport>` hit
+  the project header instead of the node. Run a Turtle file through its parser before moving on.
+- **Do not run git to compare, undo or tidy.** `git stash`, `git rm --cached` and
+  `git checkout` were each run without approval and the index, stash and working tree are the
+  maintainer's. Compare with `cp` to the scratchpad, delete with `rm`, and make a script's
+  edit minimal instead of reformatting and reverting.
+- **Serve from an allowlist.** The site once served `.git`; `SERVED_FROM_ROOT` lists what is
+  served and the tests assert refusals. Widen `.gitignore` patterns and check their siblings
+  (Cargo's `target/` had been tracked all along).
+- **Report symptoms, not guesses.** A "hang" was a hidden tab, and an error message that
+  asserted missing CORS headers was `Illegal invocation`. Say what happened, then the likely
+  cause. A service worker intercepts only clients it controls, and scope and prefix differ.
+- **Never `pkill -f`**: it matches its own command line, and exit 144 with no output means the
+  diagnostic killed its runner. Kill by exact name or by port.
+- **A rule remembered as a slogan is not the rule.** "No blank nodes" is not "no blank nodes
+  for anything addressable". A specification written before any implementation stays
+  unimplemented, and one written with one host in mind makes itself that host's (it had made
+  itself browser-only until the native adapter differed).
+- **A new plugin changes counts in several places.** Add it, then run `tests/docs`,
+  `tests/catalogue` and `tests/ui/Keyboard.test.js` and fix what they name. Profile,
+  processor and module name every parameter three times, and `tests/host/*.test.js` bind them.
+- **Dice was silent in Chrome for weeks** because the fake gave a processor an output it would
+  not get from a real node with `jig:audioOutputs 0`. Measure a preset track by track in a
+  real browser, never by the master alone (`tests/host/presetRender.test.js`).
+
 ## Working rules
 
 - API keys are sacred. They must not be shared, and nor may anything that merely looks like

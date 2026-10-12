@@ -53,9 +53,9 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       keyboard, run Sprout and Markov against the transport, and chain Retune into Moka with a `.scl` loaded from the panel (the tests
       render offline and use the offline host's fake port); (2) the VST3 panels did more than the generated panel can: Moka's presets
       and partial ladder, Markov's clickable 12 by 12 matrix, Sprout's and Retune's status read-outs. Presets and the matrix editor
-      want a `jig:ui` or a preset mechanism for plugins; (3) Sprout and Markov draw with a 32-bit mix where the VST3 uses a 64-bit one
-      (64-bit integers are BigInt in JavaScript and allocate in `process()`), so a seed gives a different line from the VST3's;
-      (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
+      want a `jig:ui` or a preset mechanism for plugins; (3) Sprout and Markov now draw with the VST3's 64-bit mix, held as pairs of 32-bit halves so nothing allocates
+      (2026-10-12, `tests/host/mix64.test.js` checks it against BigInt); whether a seed now gives the VST3's exact line is unchecked, since
+      the rest of the port may differ, and Conductor still uses its own draw; (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
       and now hides 6 of 31.
 - [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
       decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built, tested and checked in

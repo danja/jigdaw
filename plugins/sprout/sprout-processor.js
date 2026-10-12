@@ -14,10 +14,10 @@
 // from counting blocks (contract section 7). A step is placed by the stream
 // position of its boundary, in the block that contains it (CLAUDE.md).
 //
-// One departure from the VST3: its random draw is a 64-bit mix, and this one is
-// a 32-bit mix, because 64-bit integers in JavaScript are BigInt and allocate.
-// The same seed gives the same line every time, but not the same line as the
-// VST3 gave.
+// The random draw is the VST3's 64-bit mix, held as pairs of 32-bit halves because
+// 64-bit integers in JavaScript are BigInt and allocate (tests/host/mix64.test.js
+// holds it to a BigInt reference).
+// The same seed gives the same line every time.
 
 const QUEUE_CAPACITY = 256
 const RENDER_QUANTUM = 128
@@ -82,19 +82,41 @@ const GRID_BAR = 11
 
 function floorDiv (a, b) { return Math.floor(a / b) }
 
-/** A 32-bit integer finaliser, the stand-in for the VST3's 64-bit mix. */
-function mix32 (x) {
-  x = Math.imul(x ^ (x >>> 16), 0x7feb352d)
-  x = Math.imul(x ^ (x >>> 15), 0x846ca68b)
-  return (x ^ (x >>> 16)) >>> 0
+// The VST3's 64-bit mix (splitmix64 finaliser) as pairs of 32-bit halves. 64-bit integers are
+// BigInt in JavaScript and allocate, so the halves are held in MIX_HI and MIX_LO instead.
+let MIX_HI = 0
+let MIX_LO = 0
+
+/** The low 64 bits of (hi, lo) times (bHi, bLo), left in MIX_HI and MIX_LO. */
+function mul64 (hi, lo, bHi, bLo) {
+  const a0 = lo & 0xffff
+  const a1 = lo >>> 16
+  const b0 = bLo & 0xffff
+  const b1 = bLo >>> 16
+  const p00 = a0 * b0
+  const mid = a0 * b1 + a1 * b0 + (p00 >>> 16)
+  MIX_LO = (((mid & 0xffff) << 16) | (p00 & 0xffff)) >>> 0
+  MIX_HI = (a1 * b1 + Math.floor(mid / 65536) + Math.imul(hi, bLo) + Math.imul(lo, bHi)) >>> 0
 }
 
-/** A unit-interval draw fixed by (seed, index), in [0, 1). */
-function randomUnit (seed, index) {
-  const lo = index >>> 0
-  const hi = Math.floor(index / 4294967296) | 0
-  const h = mix32((seed ^ mix32(lo ^ mix32(hi + 0x9e3779b9))) >>> 0)
-  return (h >>> 8) / 16777216
+/** mix64 of the 64-bit value (hi, lo), left in MIX_HI and MIX_LO. */
+function mix64 (hi, lo) {
+  const sum = lo + 0x7f4a7c15
+  hi = (hi + 0x9e3779b9 + (sum > 0xffffffff ? 1 : 0)) >>> 0
+  lo = sum >>> 0
+  mul64(hi ^ (hi >>> 30), lo ^ ((lo >>> 30) | (hi << 2)), 0xbf58476d, 0x1ce4e5b9)
+  hi = MIX_HI
+  lo = MIX_LO
+  mul64(hi ^ (hi >>> 27), lo ^ ((lo >>> 27) | (hi << 5)), 0x94d049bb, 0x133111eb)
+  MIX_LO = (MIX_LO ^ ((MIX_LO >>> 31) | (MIX_HI << 1))) >>> 0
+  MIX_HI = (MIX_HI ^ (MIX_HI >>> 31)) >>> 0
+}
+
+/** A unit-interval draw fixed by (seed, index), as the VST3 makes it: the top 24 bits of mix64(seed ^ mix64(index)). The seed is (seedHi, seedLo) and the index is any integer, negatives wrapping as a uint64 does. */
+function randomUnit (seedHi, seedLo, index) {
+  mix64(Math.floor(index / 4294967296) >>> 0, index >>> 0)
+  mix64((seedHi ^ MIX_HI) >>> 0, (seedLo ^ MIX_LO) >>> 0)
+  return (MIX_HI >>> 8) / 16777216
 }
 
 /** Fold a degree into [-range, +range] by reflection at the edges. */
@@ -482,7 +504,7 @@ class SproutProcessor extends AudioWorkletProcessor {
         let pos = (step - startStep - this.restartStep) % total
         if (pos < 0) pos += total
 
-        if (seq.note[pos] === 1 && randomUnit(seed, step) <= probability) {
+        if (seq.note[pos] === 1 && randomUnit(0, seed, step) <= probability) {
           const degree = foldDegree(seq.unit[pos] * stepSize, range)
           const note = heldPitch ? this.heldDegreeToNote(degree) : degreeToNote(v[P.scale], v[P.root], degree)
           if (note >= 0) { // held-notes mode with nothing held is a rest

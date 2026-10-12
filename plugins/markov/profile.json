@@ -21,7 +21,7 @@
     "trn:MelodyMidi"
   ],
   "cautions": [
-    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw differs, so a seed gives a different line from the VST3's.",
+    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to an instrument. Ported from the Downspout VST3 of the same name; the status read-outs and the panel are not carried over, and the random draw is the VST3's 64-bit mix.",
     "The matrix is set by Style and Randomise, or learned. The VST3's cell-by-cell matrix editor is not carried over. The matrix and what it has learned are the plugin's saved state, so a reopened session plays the same melody.",
     "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
   ],

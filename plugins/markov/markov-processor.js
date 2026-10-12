@@ -19,10 +19,10 @@
 // Timing comes from the transport's beat position, never from counting blocks
 // (contract section 7). process() allocates nothing beyond the outgoing batch.
 //
-// One departure from the VST3: its random draw is a 64-bit mix, and this one is
-// a 32-bit mix, because 64-bit integers in JavaScript are BigInt and allocate.
-// The same seed gives the same melody every time, but not the same melody as
-// the VST3 gave.
+// The random draw is the VST3's 64-bit mix, held as pairs of 32-bit halves because
+// 64-bit integers in JavaScript are BigInt and allocate (tests/host/mix64.test.js
+// holds it to a BigInt reference).
+// The same seed gives the same melody every time.
 
 const QUEUE_CAPACITY = 256
 const RENDER_QUANTUM = 128
@@ -90,19 +90,41 @@ const TONIC_BONUS = [3, 0, 1, 0, 1, 0, 0, 2, 0, 0, 0, 0]
 
 function floorDiv (a, b) { return Math.floor(a / b) }
 
-/** A 32-bit integer finaliser, the stand-in for the VST3's 64-bit mix. */
-function mix32 (x) {
-  x = Math.imul(x ^ (x >>> 16), 0x7feb352d)
-  x = Math.imul(x ^ (x >>> 15), 0x846ca68b)
-  return (x ^ (x >>> 16)) >>> 0
+// The VST3's 64-bit mix (splitmix64 finaliser) as pairs of 32-bit halves. 64-bit integers are
+// BigInt in JavaScript and allocate, so the halves are held in MIX_HI and MIX_LO instead.
+let MIX_HI = 0
+let MIX_LO = 0
+
+/** The low 64 bits of (hi, lo) times (bHi, bLo), left in MIX_HI and MIX_LO. */
+function mul64 (hi, lo, bHi, bLo) {
+  const a0 = lo & 0xffff
+  const a1 = lo >>> 16
+  const b0 = bLo & 0xffff
+  const b1 = bLo >>> 16
+  const p00 = a0 * b0
+  const mid = a0 * b1 + a1 * b0 + (p00 >>> 16)
+  MIX_LO = (((mid & 0xffff) << 16) | (p00 & 0xffff)) >>> 0
+  MIX_HI = (a1 * b1 + Math.floor(mid / 65536) + Math.imul(hi, bLo) + Math.imul(lo, bHi)) >>> 0
 }
 
-/** A unit-interval draw fixed by (seed, index), in [0, 1). */
-function randomUnit (seed, index) {
-  const lo = index >>> 0
-  const hi = Math.floor(index / 4294967296) | 0
-  const h = mix32((seed ^ mix32(lo ^ mix32(hi + 0x9e3779b9))) >>> 0)
-  return (h >>> 8) / 16777216
+/** mix64 of the 64-bit value (hi, lo), left in MIX_HI and MIX_LO. */
+function mix64 (hi, lo) {
+  const sum = lo + 0x7f4a7c15
+  hi = (hi + 0x9e3779b9 + (sum > 0xffffffff ? 1 : 0)) >>> 0
+  lo = sum >>> 0
+  mul64(hi ^ (hi >>> 30), lo ^ ((lo >>> 30) | (hi << 2)), 0xbf58476d, 0x1ce4e5b9)
+  hi = MIX_HI
+  lo = MIX_LO
+  mul64(hi ^ (hi >>> 27), lo ^ ((lo >>> 27) | (hi << 5)), 0x94d049bb, 0x133111eb)
+  MIX_LO = (MIX_LO ^ ((MIX_LO >>> 31) | (MIX_HI << 1))) >>> 0
+  MIX_HI = (MIX_HI ^ (MIX_HI >>> 31)) >>> 0
+}
+
+/** A unit-interval draw fixed by (seed, index), as the VST3 makes it: the top 24 bits of mix64(seed ^ mix64(index)). The seed is (seedHi, seedLo) and the index is any integer, negatives wrapping as a uint64 does. */
+function randomUnit (seedHi, seedLo, index) {
+  mix64(Math.floor(index / 4294967296) >>> 0, index >>> 0)
+  mix64((seedHi ^ MIX_HI) >>> 0, (seedLo ^ MIX_LO) >>> 0)
+  return (MIX_HI >>> 8) / 16777216
 }
 
 const clampWeight = w => Math.min(MAX_WEIGHT, Math.max(0, w))
@@ -127,7 +149,7 @@ function loadStyle (base, style) {
 function randomiseBase (base, seed) {
   for (let i = 0; i < CELLS; i++) {
     // About a third of the moves are never taken, which gives the matrix some character.
-    base[i] = randomUnit(seed, i * 2) < 0.34 ? 0 : clampWeight(1 + Math.floor(randomUnit(seed, i * 2 + 1) * MAX_WEIGHT))
+    base[i] = randomUnit(0, seed, i * 2) < 0.34 ? 0 : clampWeight(1 + Math.floor(randomUnit(0, seed, i * 2 + 1) * MAX_WEIGHT))
   }
 }
 
@@ -463,7 +485,12 @@ class MarkovProcessor extends AudioWorkletProcessor {
     const octaves = v[P.octaves]
     const high = low + octaves * 12 - 1
     const centre = low + octaves * 6
-    const phraseSeed = mix32((seed + mix32((phrase + 1) >>> 0)) >>> 0)
+    // mix64(seed + mix64(phrase + 1)), the sum taken over 64 bits
+    mix64(Math.floor((phrase + 1) / 4294967296) >>> 0, (phrase + 1) >>> 0)
+    const sumLo = MIX_LO + (seed >>> 0)
+    mix64((MIX_HI + Math.floor(seed / 4294967296) + (sumLo > 0xffffffff ? 1 : 0)) >>> 0, sumLo >>> 0)
+    const phraseHi = MIX_HI
+    const phraseLo = MIX_LO
 
     let previous2 = -1
     let previous1 = 0 // each phrase starts as if the last note was the tonic
@@ -471,7 +498,7 @@ class MarkovProcessor extends AudioWorkletProcessor {
     const result = this.walk
     for (let i = 0; i <= Math.max(0, k); i++) {
       this.nextRow(previous2, previous1, this.row)
-      const state = this.sampleRow(this.row, randomUnit(phraseSeed, i))
+      const state = this.sampleRow(this.row, randomUnit(phraseHi, phraseLo, i))
 
       // Place it in the register: the octave nearest the last note, or the middle of the range for the first.
       const target = previousNote >= 0 ? previousNote : centre
@@ -599,10 +626,10 @@ class MarkovProcessor extends AudioWorkletProcessor {
       const relative = step - this.restartStep
       const phrase = floorDiv(relative, phraseSteps)
       const k = relative - phrase * phraseSteps
-      const walkSeed = (seedParam * 7919 + this.salt * 104729) >>> 0
+      const walkSeed = seedParam * 7919 + this.salt * 104729
       const walk = this.walkNote(walkSeed, phrase, k)
 
-      if (randomUnit((seedParam * 131 + this.salt) >>> 0, step) < density) {
+      if (randomUnit(0, seedParam * 131 + this.salt, step) < density) {
         const onBeat = Math.abs(boundary - Math.round(boundary)) < 1e-6
         const velocity = Math.min(127, Math.max(1, baseVelocity + (k === 0 ? 12 : 0) + (onBeat ? 6 : 0)))
         out.push({ frame: blockStart + frame, bytes: Uint8Array.of(0x90 | (channel - 1), walk.note, velocity) })
