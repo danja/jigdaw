@@ -183,6 +183,18 @@ describe('markov, a Markov-chain melody generator', () => {
     expect(l1).toBe('2:1') // only C to D
   })
 
+  it('does not learn Conductor\'s section notes, which arrive on the Conductor channel', async () => {
+    const { engine, entry, node } = await load(validator, { learn: 1, conductor_ch: 16 })
+    const heard = notes => {
+      node.port.postMessage({ type: 'events', events: notes.map(([channel, n]) => ({ frame: node.frame, bytes: Uint8Array.of(0x90 | (channel - 1), n, 100) })) })
+    }
+    heard([[16, 24], [16, 25], [1, 60], [16, 26], [1, 62]]) // the section notes between a player's two notes
+    await settle()
+    node.render()
+    await settle()
+    expect(parseModel((await engine.requestState(entry.id)).model).l1).toBe('2:1') // C to D only
+  })
+
   it('counts second-order transitions, and Order 2 with nothing learned is Order 1', async () => {
     const { engine, entry, node } = await load(validator, { learn: 1 })
     await hear(node, [60, 62, 64, 60])

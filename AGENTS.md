@@ -85,8 +85,10 @@ and real-time processing.
 - Named graph per source. Every triple lives in a graph saying where it came from, with
   `prov:` metadata. Never write to a shared catch-all graph. Re-crawling a source is a DROP
   and reload of its graph alone.
-- Plugin user interfaces are loaded cross-origin into a sandboxed frame. Never into the
-  host document, by any means.
+- Plugin user interface code is loaded cross-origin into a sandboxed frame. Never into the
+  host document, by any means. A skin (SVG artwork and RDF bindings, no code) is data and
+  may be drawn by the host, but only by building nodes from an allowlist, never by inserting
+  the file ([docs/svg-skins.md](docs/svg-skins.md), contract section 9.4).
 
 ## RDF conventions
 

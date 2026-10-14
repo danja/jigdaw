@@ -55,8 +55,25 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       and partial ladder, Markov's clickable 12 by 12 matrix, Sprout's and Retune's status read-outs. Presets and the matrix editor
       want a `jig:ui` or a preset mechanism for plugins; (3) Sprout and Markov now draw with the VST3's 64-bit mix, held as pairs of 32-bit halves so nothing allocates
       (2026-10-12, `tests/host/mix64.test.js` checks it against BigInt); whether a seed now gives the VST3's exact line is unchecked, since
-      the rest of the port may differ, and Conductor still uses its own draw; (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
+      the rest of the port may differ, and Conductor was changed to the same draw on 2026-10-13; (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
       and now hides 6 of 31.
+- [ ] **SVG skins.** 2026-10-13. Specified in `docs/svg-skins.md`, with contract section 9.4, the vocabulary terms (`jig:skin`,
+      `jig:Artwork`, `jig:Rotary` and the rest) and their shapes, the `AGENTS.md` rule amended. Nothing implemented. Order: (1) a
+      `SkinReader` and the allowlist builder in `src/ui/`, with tests that refuse each disallowed element; (2) the cross-file check
+      (every element id and port symbol exists, none bound twice) as a test over `plugins/`; (3) one skin, Tremolo, to settle the
+      vocabulary before more; (4) Panel.js chooses `jig:ui`, then the skin, then the generated panel, and draws unbound ports after
+      the artwork; (5) a pointer drag and a keyboard run in a real browser, per the interface rules. Meters wait for a named meter feed.
+
+- [ ] **Conductor, what is left.** 2026-10-13. Built: an editable form of up to 12 steps (`form_1` to `form_12`, ending at the first
+      0), a minimum and maximum bars per section (0 uses the general limits), and a scene, density, energy, mutation and restart value per section; the
+      defaults reproduce the VST3, tested in `tests/host/conductor.test.js`. **`jig:ui` built 2026-10-13** (`plugins/conductor/ui/index.html`, `tests/ui/conductor-ui.test.js`): the form as a row of selectors, then a block per section; not yet looked at in a browser. **Left:** (1) the editor is not seen in a browser; (2) a section count that is
+      not fixed at five, a transition CC ramping across the bar before a boundary, a lead-in before the boundary, and a time signature
+      override are not built; (3) not heard or seen in a browser; **downstream, 2026-10-13:** Sprout, Markov and MelGen now ignore notes on the Conductor channel (the
+      section note had been taken as a held key, a line to learn and a line to follow), tested in each plugin's host test; not changed, and
+      left as it is, by decision: MelGen takes CC 21 (Conductor's density) as its *scale* and CC 22 (energy) as its density, so editing a section's
+      density changes the key; Sprout now takes CC 20 (scene) as its generations, tested in `tests/host/sprout.test.js`, and still takes CC 23 (mutation) as its seed; Markov ignores CC 20 (scene); Ground and DrumGen
+      have no way to say which section they are in beyond CC values; (4) a current-section read-out needs the processor-to-panel message
+      (see the Quefrency item).
 - [ ] **Finish Reel, the livecoding language.** 2026-10-01 (DIM task `/farelo/task/t4600ce199d2f`). Designed and its four questions
       decided in [docs/livecoding.md](docs/livecoding.md); live performance is the principle. **Built, tested and checked in
       Chrome, 2026-10-01:** everything in `src/reel/`, `OpDispatcher.grouped`, `script_run`, saving a script in a session
@@ -106,7 +123,7 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       **decide whether `quality` should default to Balanced** (measured 2026-10-01 under WAMR: Economy is about 15 percent cheaper than Full and every setting is 0.1 to 0.2 of realtime, so Economy stands as the cheapest; the figures and the driver are in the design); reduce the 10 dB the forced keyframes cost at Balanced and Full; listen to it, including
       Linked stereo on a wide clip (HUMANS.md). Checked in Chrome 2026-10-01: loads through Jiggy's own loader into a real
       AudioWorklet in 0.6 s, generated panel complete and labelled with spoken values. Not checked: sound through it in the live
-      page, since no source was connected. The panel lists ports alphabetically by symbol, which puts Time rate last.
+      page, since no source was connected. The panel now follows a profile's `paramIndex` (2026-10-13, `ProfileReader`), so check Time rate's place.
 - [ ] **An additive resynthesis effect that builds harmonics from the input.** 2026-09-26 (r/synthesizers idea):
       pitch-shift the input to 2x, 3x and 5x, then use feedback to supply the intermediate non-prime harmonics (4x
       from 2x fed back, 6x from 2x and 3x combined, and so on). Needs design before code: what the pitch shifters

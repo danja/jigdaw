@@ -208,3 +208,20 @@ describe('a composite plugin is not read as one plugin', () => {
     expect(() => readProfile(composite)).toThrow(/composite plugin.*readComposite/s)
   })
 })
+
+describe('port order', () => {
+  it('follows the author\'s paramIndex when every port has one, so form_2 comes before form_10', async () => {
+    const profile = readProfile(await parseTurtle(at('plugins/conductor/profile.ttl'), 'urn:test'))
+    const symbols = profile.ports.map(p => p.symbol)
+    expect(symbols.slice(0, 3)).toEqual(['mode', 'min_bars', 'max_bars'])
+    expect(symbols.indexOf('form_2')).toBeLessThan(symbols.indexOf('form_10'))
+    expect(profile.ports.map(p => p.paramIndex)).toEqual(profile.ports.map((_, i) => i))
+  })
+
+  it('sorts by symbol when a profile gives no order', async () => {
+    const profile = readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test'))
+    expect(profile.ports.every(p => p.paramIndex == null)).toBe(true)
+    const symbols = profile.ports.map(p => p.symbol)
+    expect(symbols).toEqual([...symbols].sort((a, b) => a.localeCompare(b)))
+  })
+})

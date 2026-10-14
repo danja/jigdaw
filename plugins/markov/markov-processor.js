@@ -383,7 +383,9 @@ class MarkovProcessor extends AudioWorkletProcessor {
       const d1 = this.queueBytes[i * 3 + 1] & 0x7f
       const d2 = this.queueBytes[i * 3 + 2] & 0x7f
       const learnChannel = v[P.learn_channel]
-      if (kind === 0x90 && d2 > 0 && learning && (learnChannel === 0 || channel === learnChannel)) {
+      // Conductor's section note rides its own channel and is not a line to learn from.
+      const onConductorChannel = v[P.conductor_ch] > 0 && channel === v[P.conductor_ch]
+      if (kind === 0x90 && d2 > 0 && learning && !onConductorChannel && (learnChannel === 0 || channel === learnChannel)) {
         const state = (((d1 - rootPc) % 12) + 12) % 12
         if (this.learnPrevious1 >= 0) {
           bumpCount(this.model.learned1, this.learnPrevious1 * STATES + state)

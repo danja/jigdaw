@@ -215,4 +215,42 @@ describe('conductor, a section generator', () => {
     const found = sections(await render(node, blocksForBars(5)))
     expect(found.map(([, s]) => s)).toEqual([0, 1, 1])
   })
+  it('plays a form of its own, ending at the first empty step, and then goes round again', async () => {
+    // Coda, intro, break: three steps, then step 4 is empty.
+    const { node } = await load(validator, { min_bars: 1, max_bars: 1, form_1: 5, form_2: 1, form_3: 3, form_4: 0, form_5: 2 })
+    roll(node)
+    const found = sections(await render(node, blocksForBars(7)))
+    expect(found.slice(0, 7).map(([, s]) => s)).toEqual([4, 0, 2, 4, 0, 2, 4])
+  })
+
+  it('uses a section\'s own length where it has one and the general limits where it has none', async () => {
+    // Fixed form from the default: intro 3 bars, development 2 bars by the general limits, the next development again.
+    const { node } = await load(validator, { min_bars: 2, max_bars: 2, intro_min_bars: 3, intro_max_bars: 3, develop_max_bars: 0 })
+    roll(node)
+    const found = sections(await render(node, blocksForBars(10)))
+    expect(found.slice(0, 4)).toEqual([[0, 0], [3, 1], [5, 1], [7, 2]])
+    // A section that has only a minimum is held to at least it, whatever the general maximum says.
+    const b = await load(validator, { min_bars: 1, max_bars: 1, break_min_bars: 4 })
+    roll(b.node)
+    const second = sections(await render(b.node, blocksForBars(12)))
+    expect(second[3]).toEqual([3, 2]) // the break starts at bar 3 (intro, development, development, one bar each)
+    expect(second[4][0] - second[3][0]).toBe(4) // and then lasts four bars
+  })
+
+  it('sends a section\'s own density, energy and mutation, and keeps scene and reset fixed', async () => {
+    const { node } = await load(validator, { develop_density: 11, develop_energy: 22, develop_mutation: 33, min_bars: 1, max_bars: 1 })
+    roll(node)
+    const events = await render(node, blocksForBars(3))
+    const atBar = bar => ccs(events.filter(e => e[0] === bar * BAR)).map(e => e[3])
+    expect(atBar(0)).toEqual(VALUES[0]) // the intro keeps its own
+    expect(atBar(1)).toEqual([32, 11, 22, 33, 0])
+  })
+  it('sends a section\'s own scene, and restarts the generators only in the sections that ask', async () => {
+    const { node } = await load(validator, { min_bars: 1, max_bars: 1, develop_scene: 99, develop_reset: 1, intro_reset: 0 })
+    roll(node)
+    const events = await render(node, blocksForBars(3))
+    const atBar = bar => ccs(events.filter(e => e[0] === bar * BAR)).map(e => e[3])
+    expect(atBar(0)).toEqual([0, 30, 28, 12, 0]) // the intro no longer restarts anything
+    expect(atBar(1)).toEqual([99, 74, 68, 54, 127]) // the development does
+  })
 })

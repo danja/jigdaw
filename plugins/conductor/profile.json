@@ -1,7 +1,7 @@
 {
   "iri": "https://strandz.it/jigdaw/plugins/conductor/",
   "label": "Conductor",
-  "comment": "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as a fixed form or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel.",
+  "comment": "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as an editable form of up to 12 steps or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel. Each section can have its own length limits and its own scene, density, energy and mutation values, and may restart the generators listening to it.",
   "vendor": "danja",
   "developer": "http://danny.ayers.name",
   "version": "1.0.0",
@@ -15,7 +15,7 @@
     "trn:ControlMidi"
   ],
   "cautions": [
-    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw differs, so a seed gives a different form from the VST3's.",
+    "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw is the VST3's 64-bit mix.",
     "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
   ],
   "format": "trn:Jig , trn:WebAudio",
@@ -34,7 +34,8 @@
     "latencyFrames": 0
   },
   "resources": {
-    "processor": "conductor-processor.js"
+    "processor": "conductor-processor.js",
+    "ui": "ui/index.html"
   },
   "ports": [
     {
@@ -53,6 +54,7 @@
           "value": 1
         }
       ],
+      "group": "Form",
       "paramIndex": 0
     },
     {
@@ -61,6 +63,7 @@
       "default": 4,
       "minimum": 1,
       "maximum": 32,
+      "group": "Section length",
       "paramIndex": 1
     },
     {
@@ -69,6 +72,7 @@
       "default": 12,
       "minimum": 1,
       "maximum": 64,
+      "group": "Section length",
       "paramIndex": 2
     },
     {
@@ -77,6 +81,7 @@
       "default": 0.35,
       "minimum": 0,
       "maximum": 1,
+      "group": "Random weights",
       "paramIndex": 3
     },
     {
@@ -85,6 +90,7 @@
       "default": 0.9,
       "minimum": 0,
       "maximum": 1,
+      "group": "Random weights",
       "paramIndex": 4
     },
     {
@@ -93,6 +99,7 @@
       "default": 0.4,
       "minimum": 0,
       "maximum": 1,
+      "group": "Random weights",
       "paramIndex": 5
     },
     {
@@ -101,6 +108,7 @@
       "default": 0.65,
       "minimum": 0,
       "maximum": 1,
+      "group": "Random weights",
       "paramIndex": 6
     },
     {
@@ -109,6 +117,7 @@
       "default": 0.2,
       "minimum": 0,
       "maximum": 1,
+      "group": "Random weights",
       "paramIndex": 7
     },
     {
@@ -117,6 +126,7 @@
       "default": 24,
       "minimum": 0,
       "maximum": 119,
+      "group": "MIDI output",
       "paramIndex": 8
     },
     {
@@ -125,6 +135,7 @@
       "default": 16,
       "minimum": 1,
       "maximum": 16,
+      "group": "MIDI output",
       "paramIndex": 9
     },
     {
@@ -133,6 +144,7 @@
       "default": 20,
       "minimum": 0,
       "maximum": 127,
+      "group": "MIDI output",
       "paramIndex": 10
     },
     {
@@ -141,6 +153,7 @@
       "default": 21,
       "minimum": 0,
       "maximum": 127,
+      "group": "MIDI output",
       "paramIndex": 11
     },
     {
@@ -149,6 +162,7 @@
       "default": 22,
       "minimum": 0,
       "maximum": 127,
+      "group": "MIDI output",
       "paramIndex": 12
     },
     {
@@ -157,6 +171,7 @@
       "default": 23,
       "minimum": 0,
       "maximum": 127,
+      "group": "MIDI output",
       "paramIndex": 13
     },
     {
@@ -165,6 +180,7 @@
       "default": 24,
       "minimum": 0,
       "maximum": 127,
+      "group": "MIDI output",
       "paramIndex": 14
     },
     {
@@ -173,6 +189,7 @@
       "default": 2909,
       "minimum": 1,
       "maximum": 65535,
+      "group": "Form",
       "paramIndex": 15
     },
     {
@@ -207,7 +224,849 @@
           "value": 5
         }
       ],
+      "group": "Form",
       "paramIndex": 16
+    },
+    {
+      "symbol": "form_1",
+      "name": "Form step 1",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 17
+    },
+    {
+      "symbol": "form_2",
+      "name": "Form step 2",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 18
+    },
+    {
+      "symbol": "form_3",
+      "name": "Form step 3",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 19
+    },
+    {
+      "symbol": "form_4",
+      "name": "Form step 4",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 20
+    },
+    {
+      "symbol": "form_5",
+      "name": "Form step 5",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 21
+    },
+    {
+      "symbol": "form_6",
+      "name": "Form step 6",
+      "default": 4,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 22
+    },
+    {
+      "symbol": "form_7",
+      "name": "Form step 7",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 23
+    },
+    {
+      "symbol": "form_8",
+      "name": "Form step 8",
+      "default": 5,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 24
+    },
+    {
+      "symbol": "form_9",
+      "name": "Form step 9",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 25
+    },
+    {
+      "symbol": "form_10",
+      "name": "Form step 10",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 26
+    },
+    {
+      "symbol": "form_11",
+      "name": "Form step 11",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 27
+    },
+    {
+      "symbol": "form_12",
+      "name": "Form step 12",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 5,
+      "scalePoints": [
+        {
+          "label": "End of form",
+          "value": 0
+        },
+        {
+          "label": "Intro",
+          "value": 1
+        },
+        {
+          "label": "Development",
+          "value": 2
+        },
+        {
+          "label": "Break",
+          "value": 3
+        },
+        {
+          "label": "Reprise",
+          "value": 4
+        },
+        {
+          "label": "Coda",
+          "value": 5
+        }
+      ],
+      "group": "Form steps",
+      "paramIndex": 28
+    },
+    {
+      "symbol": "intro_min_bars",
+      "name": "Intro minimum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 32,
+      "scalePoints": [
+        {
+          "label": "Use Minimum bars",
+          "value": 0
+        }
+      ],
+      "group": "Intro",
+      "paramIndex": 29
+    },
+    {
+      "symbol": "intro_max_bars",
+      "name": "Intro maximum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 64,
+      "scalePoints": [
+        {
+          "label": "Use Maximum bars",
+          "value": 0
+        }
+      ],
+      "group": "Intro",
+      "paramIndex": 30
+    },
+    {
+      "symbol": "develop_min_bars",
+      "name": "Development minimum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 32,
+      "scalePoints": [
+        {
+          "label": "Use Minimum bars",
+          "value": 0
+        }
+      ],
+      "group": "Development",
+      "paramIndex": 31
+    },
+    {
+      "symbol": "develop_max_bars",
+      "name": "Development maximum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 64,
+      "scalePoints": [
+        {
+          "label": "Use Maximum bars",
+          "value": 0
+        }
+      ],
+      "group": "Development",
+      "paramIndex": 32
+    },
+    {
+      "symbol": "break_min_bars",
+      "name": "Break minimum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 32,
+      "scalePoints": [
+        {
+          "label": "Use Minimum bars",
+          "value": 0
+        }
+      ],
+      "group": "Break",
+      "paramIndex": 33
+    },
+    {
+      "symbol": "break_max_bars",
+      "name": "Break maximum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 64,
+      "scalePoints": [
+        {
+          "label": "Use Maximum bars",
+          "value": 0
+        }
+      ],
+      "group": "Break",
+      "paramIndex": 34
+    },
+    {
+      "symbol": "reprise_min_bars",
+      "name": "Reprise minimum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 32,
+      "scalePoints": [
+        {
+          "label": "Use Minimum bars",
+          "value": 0
+        }
+      ],
+      "group": "Reprise",
+      "paramIndex": 35
+    },
+    {
+      "symbol": "reprise_max_bars",
+      "name": "Reprise maximum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 64,
+      "scalePoints": [
+        {
+          "label": "Use Maximum bars",
+          "value": 0
+        }
+      ],
+      "group": "Reprise",
+      "paramIndex": 36
+    },
+    {
+      "symbol": "coda_min_bars",
+      "name": "Coda minimum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 32,
+      "scalePoints": [
+        {
+          "label": "Use Minimum bars",
+          "value": 0
+        }
+      ],
+      "group": "Coda",
+      "paramIndex": 37
+    },
+    {
+      "symbol": "coda_max_bars",
+      "name": "Coda maximum bars",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 64,
+      "scalePoints": [
+        {
+          "label": "Use Maximum bars",
+          "value": 0
+        }
+      ],
+      "group": "Coda",
+      "paramIndex": 38
+    },
+    {
+      "symbol": "intro_density",
+      "name": "Intro density",
+      "default": 30,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Intro",
+      "paramIndex": 39
+    },
+    {
+      "symbol": "intro_energy",
+      "name": "Intro energy",
+      "default": 28,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Intro",
+      "paramIndex": 40
+    },
+    {
+      "symbol": "intro_mutation",
+      "name": "Intro mutation",
+      "default": 12,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Intro",
+      "paramIndex": 41
+    },
+    {
+      "symbol": "develop_density",
+      "name": "Development density",
+      "default": 74,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Development",
+      "paramIndex": 42
+    },
+    {
+      "symbol": "develop_energy",
+      "name": "Development energy",
+      "default": 68,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Development",
+      "paramIndex": 43
+    },
+    {
+      "symbol": "develop_mutation",
+      "name": "Development mutation",
+      "default": 54,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Development",
+      "paramIndex": 44
+    },
+    {
+      "symbol": "break_density",
+      "name": "Break density",
+      "default": 18,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Break",
+      "paramIndex": 45
+    },
+    {
+      "symbol": "break_energy",
+      "name": "Break energy",
+      "default": 20,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Break",
+      "paramIndex": 46
+    },
+    {
+      "symbol": "break_mutation",
+      "name": "Break mutation",
+      "default": 38,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Break",
+      "paramIndex": 47
+    },
+    {
+      "symbol": "reprise_density",
+      "name": "Reprise density",
+      "default": 62,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Reprise",
+      "paramIndex": 48
+    },
+    {
+      "symbol": "reprise_energy",
+      "name": "Reprise energy",
+      "default": 58,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Reprise",
+      "paramIndex": 49
+    },
+    {
+      "symbol": "reprise_mutation",
+      "name": "Reprise mutation",
+      "default": 32,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Reprise",
+      "paramIndex": 50
+    },
+    {
+      "symbol": "coda_density",
+      "name": "Coda density",
+      "default": 20,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Coda",
+      "paramIndex": 51
+    },
+    {
+      "symbol": "coda_energy",
+      "name": "Coda energy",
+      "default": 42,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Coda",
+      "paramIndex": 52
+    },
+    {
+      "symbol": "coda_mutation",
+      "name": "Coda mutation",
+      "default": 8,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Coda",
+      "paramIndex": 53
+    },
+    {
+      "symbol": "intro_scene",
+      "name": "Intro scene",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Intro",
+      "paramIndex": 54
+    },
+    {
+      "symbol": "intro_reset",
+      "name": "Intro restarts the generators",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "No",
+          "value": 0
+        },
+        {
+          "label": "Yes",
+          "value": 1
+        }
+      ],
+      "group": "Intro",
+      "paramIndex": 55
+    },
+    {
+      "symbol": "develop_scene",
+      "name": "Development scene",
+      "default": 32,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Development",
+      "paramIndex": 56
+    },
+    {
+      "symbol": "develop_reset",
+      "name": "Development restarts the generators",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "No",
+          "value": 0
+        },
+        {
+          "label": "Yes",
+          "value": 1
+        }
+      ],
+      "group": "Development",
+      "paramIndex": 57
+    },
+    {
+      "symbol": "break_scene",
+      "name": "Break scene",
+      "default": 64,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Break",
+      "paramIndex": 58
+    },
+    {
+      "symbol": "break_reset",
+      "name": "Break restarts the generators",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "No",
+          "value": 0
+        },
+        {
+          "label": "Yes",
+          "value": 1
+        }
+      ],
+      "group": "Break",
+      "paramIndex": 59
+    },
+    {
+      "symbol": "reprise_scene",
+      "name": "Reprise scene",
+      "default": 96,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Reprise",
+      "paramIndex": 60
+    },
+    {
+      "symbol": "reprise_reset",
+      "name": "Reprise restarts the generators",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "No",
+          "value": 0
+        },
+        {
+          "label": "Yes",
+          "value": 1
+        }
+      ],
+      "group": "Reprise",
+      "paramIndex": 61
+    },
+    {
+      "symbol": "coda_scene",
+      "name": "Coda scene",
+      "default": 127,
+      "minimum": 0,
+      "maximum": 127,
+      "group": "Coda",
+      "paramIndex": 62
+    },
+    {
+      "symbol": "coda_reset",
+      "name": "Coda restarts the generators",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "scalePoints": [
+        {
+          "label": "No",
+          "value": 0
+        },
+        {
+          "label": "Yes",
+          "value": 1
+        }
+      ],
+      "group": "Coda",
+      "paramIndex": 63
     }
   ]
 }

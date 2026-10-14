@@ -205,6 +205,19 @@ describe('sprout, an L-system MIDI generator', () => {
     expect(played.every(e => [0, 4, 7].includes(((e[2] - 60) % 12 + 12) % 12))).toBe(true)
   })
 
+  it('does not take Conductor\'s section note on the Conductor channel as a held note', async () => {
+    // Conductor holds a note (base note plus the section) on its own channel; heard as a key it would make Sprout play it.
+    const { node } = await load(validator, { preset: 1, generations: 2, pitch_source: 1, range: 28, conductor_ch: 16 })
+    roll(node)
+    node.port.postMessage({ type: 'events', events: [{ frame: node.frame, bytes: Uint8Array.of(0x9f, 24, 100) }] })
+    expect(ons(await render(node, blocksFor(4)))).toEqual([])
+    // The same note on another channel is a key like any other.
+    const keyed = await load(validator, { preset: 1, generations: 2, pitch_source: 1, range: 28, conductor_ch: 16 })
+    roll(keyed.node)
+    keyed.node.port.postMessage({ type: 'events', events: [{ frame: keyed.node.frame, bytes: Uint8Array.of(0x90, 60, 100) }] })
+    expect(ons(await render(keyed.node, blocksFor(4))).length).toBeGreaterThan(0)
+  })
+
   it('keeps a latched chord after the keys are released', async () => {
     const { node } = await load(validator, { preset: 1, generations: 2, pitch_source: 2 })
     roll(node)
@@ -231,6 +244,24 @@ describe('sprout, an L-system MIDI generator', () => {
     // Moving the parameter again ends the override.
     engine.setParameter(entry.id, 'probability', 0.9)
     expect(ons(await render(node, blocksFor(4))).length).toBeGreaterThan(0)
+  })
+
+  it('takes its generations from the Conductor scene, CC 20, on its channel only', async () => {
+    const { node } = await load(validator, { preset: 1, generations: 1, conductor_ch: 1 })
+    roll(node)
+    const quiet = ons(await render(node, blocksFor(8)))
+    const scened = await load(validator, { preset: 1, generations: 1, conductor_ch: 1 })
+    roll(scened.node)
+    // Scene 127 is the top of the generations range, taken up at the next bar.
+    scened.node.port.postMessage({ type: 'events', events: [{ frame: scened.node.frame, bytes: Uint8Array.of(0xb0, 20, 127) }] })
+    const grown = ons(await render(scened.node, blocksFor(8)))
+    expect(grown.map(e => e[2]).join()).not.toBe(quiet.map(e => e[2]).join())
+    // The same CC on another channel is not addressed to it.
+    const other = await load(validator, { preset: 1, generations: 1, conductor_ch: 2 })
+    roll(other.node)
+    other.node.port.postMessage({ type: 'events', events: [{ frame: other.node.frame, bytes: Uint8Array.of(0xb0, 20, 127) }] })
+    const same = ons(await render(other.node, blocksFor(8)))
+    expect(same.map(e => e[2]).join()).toBe(quiet.map(e => e[2]).join())
   })
 
   it('restarts the pattern at the next bar line on Conductor CC 24', async () => {

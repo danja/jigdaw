@@ -199,6 +199,11 @@ impl State {
                 }
                 continue;
             }
+            // Notes on the conductor channel are the Conductor's section note,
+            // not a line to follow, so they are dropped with its CCs.
+            if event.size >= 3 && (event.data[0] & 0xe0) == 0x80 && (event.data[0] & 0x0f) == (conductor - 1) as u8 {
+                continue;
+            }
             // Anything that is not a conductor CC stays in the buffer for
             // the follow tracker, which reads the same queue.
             self.midi_in[kept] = event;

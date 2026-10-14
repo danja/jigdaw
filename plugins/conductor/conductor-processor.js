@@ -5,9 +5,11 @@
 //
 // Ported from the Downspout VST3 of the same name. It cuts the transport into
 // sections of whole bars, intro, development, break, reprise and coda, either as
-// a fixed form or by weighted random choice, and at each section boundary sends
+// a form set by its step ports or by weighted random choice, and at each section boundary sends
 // one note (base note plus the section number, held until the next section) and
-// five CCs: scene, density, energy, mutation and reset. It never touches the
+// five CCs: scene, density, energy, mutation and reset. Beyond the VST3, the form, each
+// section's length limits and its density, energy and mutation values are ports; their
+// defaults are the VST3's. It never touches the
 // host graph; whatever listens to those CCs on its channel does the arranging.
 //
 // The schedule is a pure function of the seed and the bar, rebuilt from bar 0 on
@@ -15,10 +17,9 @@
 // route to it. Boundaries are placed by the transport's beat position, never by
 // counting blocks (contract section 7), and by stream position (CLAUDE.md).
 //
-// One departure from the VST3: its random draw is a 64-bit mix, and this one is
-// a 32-bit mix, because 64-bit integers in JavaScript are BigInt and allocate.
-// The same seed gives the same form every time, but not the same form as the
-// VST3 gave.
+// The random draw is the VST3's 64-bit mix, held as pairs of 32-bit halves because
+// 64-bit integers in JavaScript are BigInt and allocate (tests/host/mix64.test.js
+// holds it to a BigInt reference). The same seed gives the same form every time.
 
 const RENDER_QUANTUM = 128
 const SECTION_COUNT = 5
@@ -47,36 +48,84 @@ const PARAMS = [
   { name: 'seed', min: 1, max: 65535, def: 2909 },
   { name: 'jump_to', min: 0, max: 5, def: 0 }
 ]
+// Per section, in the order intro, development, break, reprise, coda. A section length of 0 uses the
+// general Minimum bars or Maximum bars. The defaults reproduce the VST3's form and values.
+const SECTION_NAMES = ['intro', 'develop', 'break', 'reprise', 'coda']
+const DEFAULT_DENSITY = [30, 74, 18, 62, 20]
+const DEFAULT_ENERGY = [28, 68, 20, 58, 42]
+const DEFAULT_MUTATION = [12, 54, 38, 32, 8]
+const DEFAULT_SCENE = [0, 32, 64, 96, 127]
+const DEFAULT_RESET = [1, 0, 0, 0, 1] // whether the section sends CC 24 at 127, which restarts what listens
+// The form: up to 12 steps, each a section from 1 to 5, ending at the first 0. The default is the
+// VST3's fixed form, intro, development twice around a break, development, reprise, development, coda.
+const FORM_STEPS = 12
+const DEFAULT_FORM = [1, 2, 2, 3, 2, 4, 2, 5]
+for (let k = 0; k < FORM_STEPS; k++) PARAMS.push({ name: `form_${k + 1}`, min: k === 0 ? 1 : 0, max: 5, def: DEFAULT_FORM[k] ?? 0 })
+for (const name of SECTION_NAMES) PARAMS.push({ name: `${name}_min_bars`, min: 0, max: 32, def: 0 }, { name: `${name}_max_bars`, min: 0, max: 64, def: 0 })
+SECTION_NAMES.forEach((name, i) => {
+  PARAMS.push({ name: `${name}_density`, min: 0, max: 127, def: DEFAULT_DENSITY[i] })
+  PARAMS.push({ name: `${name}_energy`, min: 0, max: 127, def: DEFAULT_ENERGY[i] })
+  PARAMS.push({ name: `${name}_mutation`, min: 0, max: 127, def: DEFAULT_MUTATION[i] })
+  PARAMS.push({ name: `${name}_scene`, min: 0, max: 127, def: DEFAULT_SCENE[i] })
+  PARAMS.push({ name: `${name}_reset`, min: 0, max: 1, def: DEFAULT_RESET[i] })
+})
 const P = Object.freeze(Object.fromEntries(PARAMS.map((p, i) => [p.name, i])))
 const WEIGHTS = [P.intro_weight, P.develop_weight, P.break_weight, P.reprise_weight, P.coda_weight]
 const CC_PORTS = [P.scene_cc, P.density_cc, P.energy_cc, P.mutation_cc, P.reset_cc]
+const MIN_BARS = SECTION_NAMES.map(n => P[`${n}_min_bars`])
+const MAX_BARS = SECTION_NAMES.map(n => P[`${n}_max_bars`])
+const FORM_PORTS = Array.from({ length: FORM_STEPS }, (_, k) => P[`form_${k + 1}`])
+// What each section sends, in the order of CC_PORTS.
+const SECTION_CC_PORTS = SECTION_NAMES.map(n => [P[`${n}_scene`], P[`${n}_density`], P[`${n}_energy`], P[`${n}_mutation`], P[`${n}_reset`]])
 
-// The fixed form: intro, development twice around a break, development, reprise, development, coda.
-const FORM = [0, 1, 1, 2, 1, 3, 1, 4]
+// The VST3's 64-bit mix (splitmix64 finaliser) as pairs of 32-bit halves. 64-bit integers are
+// BigInt in JavaScript and allocate, so the halves are held in MIX_HI and MIX_LO instead.
+let MIX_HI = 0
+let MIX_LO = 0
 
-// What each section sends: scene, density, energy, mutation, reset, in the order of CC_PORTS.
-const SECTION_VALUES = [
-  [0, 30, 28, 12, 127],
-  [32, 74, 68, 54, 0],
-  [64, 18, 20, 38, 0],
-  [96, 62, 58, 32, 0],
-  [127, 20, 42, 8, 127]
-]
-
-/** A 32-bit integer finaliser, the stand-in for the VST3's 64-bit mix. */
-function mix32 (x) {
-  x = Math.imul(x ^ (x >>> 16), 0x7feb352d)
-  x = Math.imul(x ^ (x >>> 15), 0x846ca68b)
-  return (x ^ (x >>> 16)) >>> 0
+/** The low 64 bits of (hi, lo) times (bHi, bLo), left in MIX_HI and MIX_LO. */
+function mul64 (hi, lo, bHi, bLo) {
+  const a0 = lo & 0xffff
+  const a1 = lo >>> 16
+  const b0 = bLo & 0xffff
+  const b1 = bLo >>> 16
+  const p00 = a0 * b0
+  const mid = a0 * b1 + a1 * b0 + (p00 >>> 16)
+  MIX_LO = (((mid & 0xffff) << 16) | (p00 & 0xffff)) >>> 0
+  MIX_HI = (a1 * b1 + Math.floor(mid / 65536) + Math.imul(hi, bLo) + Math.imul(lo, bHi)) >>> 0
 }
 
+/** mix64 of the 64-bit value (hi, lo), left in MIX_HI and MIX_LO. */
+function mix64 (hi, lo) {
+  const sum = lo + 0x7f4a7c15
+  hi = (hi + 0x9e3779b9 + (sum > 0xffffffff ? 1 : 0)) >>> 0
+  lo = sum >>> 0
+  mul64(hi ^ (hi >>> 30), lo ^ ((lo >>> 30) | (hi << 2)), 0xbf58476d, 0x1ce4e5b9)
+  hi = MIX_HI
+  lo = MIX_LO
+  mul64(hi ^ (hi >>> 27), lo ^ ((lo >>> 27) | (hi << 5)), 0x94d049bb, 0x133111eb)
+  MIX_LO = (MIX_LO ^ ((MIX_LO >>> 31) | (MIX_HI << 1))) >>> 0
+  MIX_HI = (MIX_HI ^ (MIX_HI >>> 31)) >>> 0
+}
+
+/** The 64-bit draw mix64(seed ^ mix64(index)), the seed being a small integer, left in MIX_HI and MIX_LO. */
+function draw (seed, index) {
+  mix64(Math.floor(index / 4294967296) >>> 0, index >>> 0)
+  mix64(MIX_HI, (seed ^ MIX_LO) >>> 0)
+}
+
+/** A unit-interval draw fixed by (seed, index), as the VST3 makes it: the top 24 bits of the 64-bit draw. */
 function randomUnit (seed, index) {
-  return (mix32((seed ^ mix32(index >>> 0)) >>> 0) >>> 8) / 16777216
+  draw(seed, index)
+  return (MIX_HI >>> 8) / 16777216
 }
 
+/** An integer in [min, max], the 64-bit draw taken modulo the span (the halves are reduced separately, so no 64-bit integer is formed). */
 function randomInt (seed, index, min, max) {
   if (max <= min) return min
-  return min + (mix32((seed ^ mix32(index >>> 0)) >>> 0) % (max - min + 1))
+  const span = max - min + 1
+  draw(seed, index)
+  return min + (((MIX_HI % span) * (4294967296 % span)) + (MIX_LO % span)) % span
 }
 
 class ConductorProcessor extends AudioWorkletProcessor {
@@ -129,7 +178,7 @@ class ConductorProcessor extends AudioWorkletProcessor {
 
   chooseSection (previous, serial) {
     const v = this.values
-    if (v[P.mode] === 0) return FORM[serial % FORM.length]
+    if (v[P.mode] === 0) return v[FORM_PORTS[serial % this.formLength()]] - 1
     const w = this.weights
     let total = 0
     for (let i = 0; i < SECTION_COUNT; i++) { w[i] = v[WEIGHTS[i]]; if (i === previous) w[i] *= 0.18 }
@@ -142,9 +191,27 @@ class ConductorProcessor extends AudioWorkletProcessor {
     return 1
   }
 
+  /** Steps in the form: up to the first 0, and at least one since the first step cannot be 0. */
+  formLength () {
+    const v = this.values
+    let n = 1
+    while (n < FORM_STEPS && v[FORM_PORTS[n]] > 0) n++
+    return n
+  }
+
+  /** Bars in the section just chosen, between its own limits where it has them and the general ones where it does not. */
   duration (serial) {
     const v = this.values
-    return randomInt(v[P.seed], serial + 901, v[P.min_bars], Math.max(v[P.min_bars], v[P.max_bars]))
+    const own = v[MIN_BARS[this.section]]
+    const min = own > 0 ? own : v[P.min_bars]
+    const ownMax = v[MAX_BARS[this.section]]
+    return randomInt(v[P.seed], serial + 901, min, Math.max(min, ownMax > 0 ? ownMax : v[P.max_bars]))
+  }
+
+  /** The value of the i-th CC for a section, in the order of CC_PORTS. */
+  ccValue (section, i) {
+    const value = this.values[SECTION_CC_PORTS[section][i]]
+    return i === 4 ? (value > 0 ? 127 : 0) : value
   }
 
   /** Walk the schedule from bar 0 until the section holding `targetBar` is current. */
@@ -173,7 +240,7 @@ class ConductorProcessor extends AudioWorkletProcessor {
     this.activeNote = Math.min(127, v[P.base_note] + this.section)
     out.push({ frame, bytes: Uint8Array.of(0x90 | channel, this.activeNote, NOTE_VELOCITY) })
     for (let i = 0; i < CC_PORTS.length; i++) {
-      out.push({ frame, bytes: Uint8Array.of(0xb0 | channel, v[CC_PORTS[i]], SECTION_VALUES[this.section][i]) })
+      out.push({ frame, bytes: Uint8Array.of(0xb0 | channel, v[CC_PORTS[i]], this.ccValue(this.section, i)) })
     }
   }
 

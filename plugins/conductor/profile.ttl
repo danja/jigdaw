@@ -20,14 +20,14 @@
 <>
     a jig:WebPlugin , trn:PluginProfile ;
     rdfs:label "Conductor" ;
-    rdfs:comment "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as a fixed form or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel." ;
+    rdfs:comment "Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as an editable form of up to 12 steps or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel. Each section can have its own length limits and its own scene, density, energy and mutation values, and may restart the generators listening to it." ;
     trn:vendor "danja" ;
     doap:revision "1.0.0" ;
     doap:developer <http://danny.ayers.name> ;
     foaf:homepage <> ;
     trn:role trn:MidiGenerator ;
     trn:produces trn:Midi , trn:ControlMidi ;
-    trn:caution "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw differs, so a seed gives a different form from the VST3's." ;
+    trn:caution "Silent until the host transport is rolling and reports a tempo and a beat position. Pure MIDI, no audio: route its MIDI output to the plugins that should follow it, and set their Conductor channel to this plugin's MIDI channel (16 by default). Ported from the Downspout VST3 of the same name; its panel and status read-outs are not carried over, and the random draw is the VST3's 64-bit mix." ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
     trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "MIT" ;
@@ -42,21 +42,29 @@
     jig:latencyFrames 0 ;
 
     jig:processor <#processor> ;
+    jig:ui <#ui> ;
 
-    lv2:port <#mode> , <#min_bars> , <#max_bars> , <#intro_weight> , <#develop_weight> , <#break_weight> , <#reprise_weight> , <#coda_weight> , <#base_note> , <#channel> , <#scene_cc> , <#density_cc> , <#energy_cc> , <#mutation_cc> , <#reset_cc> , <#seed> , <#jump_to> .
+    lv2:port <#mode> , <#min_bars> , <#max_bars> , <#intro_weight> , <#develop_weight> , <#break_weight> , <#reprise_weight> , <#coda_weight> , <#base_note> , <#channel> , <#scene_cc> , <#density_cc> , <#energy_cc> , <#mutation_cc> , <#reset_cc> , <#seed> , <#jump_to> , <#form_1> , <#form_2> , <#form_3> , <#form_4> , <#form_5> , <#form_6> , <#form_7> , <#form_8> , <#form_9> , <#form_10> , <#form_11> , <#form_12> , <#intro_min_bars> , <#intro_max_bars> , <#develop_min_bars> , <#develop_max_bars> , <#break_min_bars> , <#break_max_bars> , <#reprise_min_bars> , <#reprise_max_bars> , <#coda_min_bars> , <#coda_max_bars> , <#intro_density> , <#intro_energy> , <#intro_mutation> , <#develop_density> , <#develop_energy> , <#develop_mutation> , <#break_density> , <#break_energy> , <#break_mutation> , <#reprise_density> , <#reprise_energy> , <#reprise_mutation> , <#coda_density> , <#coda_energy> , <#coda_mutation> , <#intro_scene> , <#intro_reset> , <#develop_scene> , <#develop_reset> , <#break_scene> , <#break_reset> , <#reprise_scene> , <#reprise_reset> , <#coda_scene> , <#coda_reset> .
 
 <#processor>
     a jig:Processor ;
     jig:location <conductor-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "conductor" ;
-    jig:integrity "sha384-qyzK10m87b5nxTdzwxmOCpFEg5qZlfPDRrobuc2CczBFocxW3taMUpM43EWVh6U8" .
+    jig:integrity "sha384-Fm9LwT3HxxD6LAp2XBsxJ/kBlIPtA7LFnibI1fEU1quRAjf0ydbnAOrGEN55XMdt" .
+
+<#ui>
+    a jig:UserInterface ;
+    jig:location <ui/index.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-CLUtWCapWDSsvkWINxDF/wA9vW0qJEAO0Cjcoo4dwct3s1iPVUDtFQtMLUuum5Gs" .
 
 <#mode>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mode" ; lv2:name "Form" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 0 ;
+    jig:controlGroup "Form" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#mode-0> ,
@@ -70,97 +78,113 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "min_bars" ; lv2:name "Minimum bars" ;
     lv2:default 4 ; lv2:minimum 1 ; lv2:maximum 32 ;
-    jig:paramIndex 1 .
+    jig:paramIndex 1 ;
+    jig:controlGroup "Section length" .
 
 <#max_bars>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "max_bars" ; lv2:name "Maximum bars" ;
     lv2:default 12 ; lv2:minimum 1 ; lv2:maximum 64 ;
-    jig:paramIndex 2 .
+    jig:paramIndex 2 ;
+    jig:controlGroup "Section length" .
 
 <#intro_weight>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "intro_weight" ; lv2:name "Intro weight" ;
     lv2:default 0.35 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 3 .
+    jig:paramIndex 3 ;
+    jig:controlGroup "Random weights" .
 
 <#develop_weight>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "develop_weight" ; lv2:name "Development weight" ;
     lv2:default 0.9 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 4 .
+    jig:paramIndex 4 ;
+    jig:controlGroup "Random weights" .
 
 <#break_weight>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "break_weight" ; lv2:name "Break weight" ;
     lv2:default 0.4 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 5 .
+    jig:paramIndex 5 ;
+    jig:controlGroup "Random weights" .
 
 <#reprise_weight>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "reprise_weight" ; lv2:name "Reprise weight" ;
     lv2:default 0.65 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    jig:controlGroup "Random weights" .
 
 <#coda_weight>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "coda_weight" ; lv2:name "Coda weight" ;
     lv2:default 0.2 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    jig:controlGroup "Random weights" .
 
 <#base_note>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "base_note" ; lv2:name "Section base note" ;
     lv2:default 24 ; lv2:minimum 0 ; lv2:maximum 119 ;
-    jig:paramIndex 8 .
+    jig:paramIndex 8 ;
+    jig:controlGroup "MIDI output" .
 
 <#channel>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "channel" ; lv2:name "MIDI channel" ;
     lv2:default 16 ; lv2:minimum 1 ; lv2:maximum 16 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    jig:controlGroup "MIDI output" .
 
 <#scene_cc>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "scene_cc" ; lv2:name "Scene CC" ;
     lv2:default 20 ; lv2:minimum 0 ; lv2:maximum 127 ;
-    jig:paramIndex 10 .
+    jig:paramIndex 10 ;
+    jig:controlGroup "MIDI output" .
 
 <#density_cc>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "density_cc" ; lv2:name "Density CC" ;
     lv2:default 21 ; lv2:minimum 0 ; lv2:maximum 127 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    jig:controlGroup "MIDI output" .
 
 <#energy_cc>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "energy_cc" ; lv2:name "Energy CC" ;
     lv2:default 22 ; lv2:minimum 0 ; lv2:maximum 127 ;
-    jig:paramIndex 12 .
+    jig:paramIndex 12 ;
+    jig:controlGroup "MIDI output" .
 
 <#mutation_cc>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "mutation_cc" ; lv2:name "Mutation CC" ;
     lv2:default 23 ; lv2:minimum 0 ; lv2:maximum 127 ;
-    jig:paramIndex 13 .
+    jig:paramIndex 13 ;
+    jig:controlGroup "MIDI output" .
 
 <#reset_cc>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "reset_cc" ; lv2:name "Reset CC" ;
     lv2:default 24 ; lv2:minimum 0 ; lv2:maximum 127 ;
-    jig:paramIndex 14 .
+    jig:paramIndex 14 ;
+    jig:controlGroup "MIDI output" .
 
 <#seed>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "seed" ; lv2:name "Seed" ;
     lv2:default 2909 ; lv2:minimum 1 ; lv2:maximum 65535 ;
-    jig:paramIndex 15 .
+    jig:paramIndex 15 ;
+    jig:controlGroup "Form" .
 
 <#jump_to>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "jump_to" ; lv2:name "Jump to section at next bar line" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 5 ;
     jig:paramIndex 16 ;
+    jig:controlGroup "Form" ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#jump_to-0> ,
@@ -181,3 +205,659 @@
 <#jump_to-4> rdfs:label "Reprise" ; rdf:value 4 .
 
 <#jump_to-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_1>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_1" ; lv2:name "Form step 1" ;
+    lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 5 ;
+    jig:paramIndex 17 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_1-0> ,
+        <#form_1-1> ,
+        <#form_1-2> ,
+        <#form_1-3> ,
+        <#form_1-4> .
+
+<#form_1-0> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_1-1> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_1-2> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_1-3> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_1-4> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_2>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_2" ; lv2:name "Form step 2" ;
+    lv2:default 2 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 18 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_2-0> ,
+        <#form_2-1> ,
+        <#form_2-2> ,
+        <#form_2-3> ,
+        <#form_2-4> ,
+        <#form_2-5> .
+
+<#form_2-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_2-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_2-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_2-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_2-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_2-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_3>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_3" ; lv2:name "Form step 3" ;
+    lv2:default 2 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 19 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_3-0> ,
+        <#form_3-1> ,
+        <#form_3-2> ,
+        <#form_3-3> ,
+        <#form_3-4> ,
+        <#form_3-5> .
+
+<#form_3-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_3-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_3-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_3-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_3-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_3-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_4>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_4" ; lv2:name "Form step 4" ;
+    lv2:default 3 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 20 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_4-0> ,
+        <#form_4-1> ,
+        <#form_4-2> ,
+        <#form_4-3> ,
+        <#form_4-4> ,
+        <#form_4-5> .
+
+<#form_4-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_4-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_4-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_4-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_4-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_4-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_5>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_5" ; lv2:name "Form step 5" ;
+    lv2:default 2 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 21 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_5-0> ,
+        <#form_5-1> ,
+        <#form_5-2> ,
+        <#form_5-3> ,
+        <#form_5-4> ,
+        <#form_5-5> .
+
+<#form_5-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_5-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_5-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_5-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_5-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_5-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_6>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_6" ; lv2:name "Form step 6" ;
+    lv2:default 4 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 22 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_6-0> ,
+        <#form_6-1> ,
+        <#form_6-2> ,
+        <#form_6-3> ,
+        <#form_6-4> ,
+        <#form_6-5> .
+
+<#form_6-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_6-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_6-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_6-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_6-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_6-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_7>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_7" ; lv2:name "Form step 7" ;
+    lv2:default 2 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 23 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_7-0> ,
+        <#form_7-1> ,
+        <#form_7-2> ,
+        <#form_7-3> ,
+        <#form_7-4> ,
+        <#form_7-5> .
+
+<#form_7-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_7-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_7-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_7-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_7-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_7-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_8>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_8" ; lv2:name "Form step 8" ;
+    lv2:default 5 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 24 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_8-0> ,
+        <#form_8-1> ,
+        <#form_8-2> ,
+        <#form_8-3> ,
+        <#form_8-4> ,
+        <#form_8-5> .
+
+<#form_8-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_8-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_8-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_8-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_8-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_8-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_9>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_9" ; lv2:name "Form step 9" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 25 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_9-0> ,
+        <#form_9-1> ,
+        <#form_9-2> ,
+        <#form_9-3> ,
+        <#form_9-4> ,
+        <#form_9-5> .
+
+<#form_9-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_9-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_9-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_9-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_9-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_9-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_10>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_10" ; lv2:name "Form step 10" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 26 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_10-0> ,
+        <#form_10-1> ,
+        <#form_10-2> ,
+        <#form_10-3> ,
+        <#form_10-4> ,
+        <#form_10-5> .
+
+<#form_10-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_10-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_10-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_10-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_10-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_10-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_11>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_11" ; lv2:name "Form step 11" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 27 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_11-0> ,
+        <#form_11-1> ,
+        <#form_11-2> ,
+        <#form_11-3> ,
+        <#form_11-4> ,
+        <#form_11-5> .
+
+<#form_11-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_11-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_11-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_11-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_11-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_11-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#form_12>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "form_12" ; lv2:name "Form step 12" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 5 ;
+    jig:paramIndex 28 ;
+    jig:controlGroup "Form steps" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#form_12-0> ,
+        <#form_12-1> ,
+        <#form_12-2> ,
+        <#form_12-3> ,
+        <#form_12-4> ,
+        <#form_12-5> .
+
+<#form_12-0> rdfs:label "End of form" ; rdf:value 0 .
+
+<#form_12-1> rdfs:label "Intro" ; rdf:value 1 .
+
+<#form_12-2> rdfs:label "Development" ; rdf:value 2 .
+
+<#form_12-3> rdfs:label "Break" ; rdf:value 3 .
+
+<#form_12-4> rdfs:label "Reprise" ; rdf:value 4 .
+
+<#form_12-5> rdfs:label "Coda" ; rdf:value 5 .
+
+<#intro_min_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_min_bars" ; lv2:name "Intro minimum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 32 ;
+    jig:paramIndex 29 ;
+    jig:controlGroup "Intro" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#intro_min_bars-0> .
+
+<#intro_min_bars-0> rdfs:label "Use Minimum bars" ; rdf:value 0 .
+
+<#intro_max_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_max_bars" ; lv2:name "Intro maximum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
+    jig:paramIndex 30 ;
+    jig:controlGroup "Intro" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#intro_max_bars-0> .
+
+<#intro_max_bars-0> rdfs:label "Use Maximum bars" ; rdf:value 0 .
+
+<#develop_min_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_min_bars" ; lv2:name "Development minimum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 32 ;
+    jig:paramIndex 31 ;
+    jig:controlGroup "Development" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#develop_min_bars-0> .
+
+<#develop_min_bars-0> rdfs:label "Use Minimum bars" ; rdf:value 0 .
+
+<#develop_max_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_max_bars" ; lv2:name "Development maximum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
+    jig:paramIndex 32 ;
+    jig:controlGroup "Development" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#develop_max_bars-0> .
+
+<#develop_max_bars-0> rdfs:label "Use Maximum bars" ; rdf:value 0 .
+
+<#break_min_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_min_bars" ; lv2:name "Break minimum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 32 ;
+    jig:paramIndex 33 ;
+    jig:controlGroup "Break" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#break_min_bars-0> .
+
+<#break_min_bars-0> rdfs:label "Use Minimum bars" ; rdf:value 0 .
+
+<#break_max_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_max_bars" ; lv2:name "Break maximum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
+    jig:paramIndex 34 ;
+    jig:controlGroup "Break" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#break_max_bars-0> .
+
+<#break_max_bars-0> rdfs:label "Use Maximum bars" ; rdf:value 0 .
+
+<#reprise_min_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_min_bars" ; lv2:name "Reprise minimum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 32 ;
+    jig:paramIndex 35 ;
+    jig:controlGroup "Reprise" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#reprise_min_bars-0> .
+
+<#reprise_min_bars-0> rdfs:label "Use Minimum bars" ; rdf:value 0 .
+
+<#reprise_max_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_max_bars" ; lv2:name "Reprise maximum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
+    jig:paramIndex 36 ;
+    jig:controlGroup "Reprise" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#reprise_max_bars-0> .
+
+<#reprise_max_bars-0> rdfs:label "Use Maximum bars" ; rdf:value 0 .
+
+<#coda_min_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_min_bars" ; lv2:name "Coda minimum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 32 ;
+    jig:paramIndex 37 ;
+    jig:controlGroup "Coda" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#coda_min_bars-0> .
+
+<#coda_min_bars-0> rdfs:label "Use Minimum bars" ; rdf:value 0 .
+
+<#coda_max_bars>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_max_bars" ; lv2:name "Coda maximum bars" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 64 ;
+    jig:paramIndex 38 ;
+    jig:controlGroup "Coda" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#coda_max_bars-0> .
+
+<#coda_max_bars-0> rdfs:label "Use Maximum bars" ; rdf:value 0 .
+
+<#intro_density>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_density" ; lv2:name "Intro density" ;
+    lv2:default 30 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 39 ;
+    jig:controlGroup "Intro" .
+
+<#intro_energy>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_energy" ; lv2:name "Intro energy" ;
+    lv2:default 28 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 40 ;
+    jig:controlGroup "Intro" .
+
+<#intro_mutation>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_mutation" ; lv2:name "Intro mutation" ;
+    lv2:default 12 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 41 ;
+    jig:controlGroup "Intro" .
+
+<#develop_density>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_density" ; lv2:name "Development density" ;
+    lv2:default 74 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 42 ;
+    jig:controlGroup "Development" .
+
+<#develop_energy>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_energy" ; lv2:name "Development energy" ;
+    lv2:default 68 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 43 ;
+    jig:controlGroup "Development" .
+
+<#develop_mutation>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_mutation" ; lv2:name "Development mutation" ;
+    lv2:default 54 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 44 ;
+    jig:controlGroup "Development" .
+
+<#break_density>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_density" ; lv2:name "Break density" ;
+    lv2:default 18 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 45 ;
+    jig:controlGroup "Break" .
+
+<#break_energy>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_energy" ; lv2:name "Break energy" ;
+    lv2:default 20 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 46 ;
+    jig:controlGroup "Break" .
+
+<#break_mutation>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_mutation" ; lv2:name "Break mutation" ;
+    lv2:default 38 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 47 ;
+    jig:controlGroup "Break" .
+
+<#reprise_density>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_density" ; lv2:name "Reprise density" ;
+    lv2:default 62 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 48 ;
+    jig:controlGroup "Reprise" .
+
+<#reprise_energy>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_energy" ; lv2:name "Reprise energy" ;
+    lv2:default 58 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 49 ;
+    jig:controlGroup "Reprise" .
+
+<#reprise_mutation>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_mutation" ; lv2:name "Reprise mutation" ;
+    lv2:default 32 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 50 ;
+    jig:controlGroup "Reprise" .
+
+<#coda_density>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_density" ; lv2:name "Coda density" ;
+    lv2:default 20 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 51 ;
+    jig:controlGroup "Coda" .
+
+<#coda_energy>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_energy" ; lv2:name "Coda energy" ;
+    lv2:default 42 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 52 ;
+    jig:controlGroup "Coda" .
+
+<#coda_mutation>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_mutation" ; lv2:name "Coda mutation" ;
+    lv2:default 8 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 53 ;
+    jig:controlGroup "Coda" .
+
+<#intro_scene>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_scene" ; lv2:name "Intro scene" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 54 ;
+    jig:controlGroup "Intro" .
+
+<#intro_reset>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "intro_reset" ; lv2:name "Intro restarts the generators" ;
+    lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 55 ;
+    jig:controlGroup "Intro" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#intro_reset-0> ,
+        <#intro_reset-1> .
+
+<#intro_reset-0> rdfs:label "No" ; rdf:value 0 .
+
+<#intro_reset-1> rdfs:label "Yes" ; rdf:value 1 .
+
+<#develop_scene>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_scene" ; lv2:name "Development scene" ;
+    lv2:default 32 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 56 ;
+    jig:controlGroup "Development" .
+
+<#develop_reset>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "develop_reset" ; lv2:name "Development restarts the generators" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 57 ;
+    jig:controlGroup "Development" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#develop_reset-0> ,
+        <#develop_reset-1> .
+
+<#develop_reset-0> rdfs:label "No" ; rdf:value 0 .
+
+<#develop_reset-1> rdfs:label "Yes" ; rdf:value 1 .
+
+<#break_scene>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_scene" ; lv2:name "Break scene" ;
+    lv2:default 64 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 58 ;
+    jig:controlGroup "Break" .
+
+<#break_reset>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "break_reset" ; lv2:name "Break restarts the generators" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 59 ;
+    jig:controlGroup "Break" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#break_reset-0> ,
+        <#break_reset-1> .
+
+<#break_reset-0> rdfs:label "No" ; rdf:value 0 .
+
+<#break_reset-1> rdfs:label "Yes" ; rdf:value 1 .
+
+<#reprise_scene>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_scene" ; lv2:name "Reprise scene" ;
+    lv2:default 96 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 60 ;
+    jig:controlGroup "Reprise" .
+
+<#reprise_reset>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "reprise_reset" ; lv2:name "Reprise restarts the generators" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 61 ;
+    jig:controlGroup "Reprise" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#reprise_reset-0> ,
+        <#reprise_reset-1> .
+
+<#reprise_reset-0> rdfs:label "No" ; rdf:value 0 .
+
+<#reprise_reset-1> rdfs:label "Yes" ; rdf:value 1 .
+
+<#coda_scene>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_scene" ; lv2:name "Coda scene" ;
+    lv2:default 127 ; lv2:minimum 0 ; lv2:maximum 127 ;
+    jig:paramIndex 62 ;
+    jig:controlGroup "Coda" .
+
+<#coda_reset>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "coda_reset" ; lv2:name "Coda restarts the generators" ;
+    lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 63 ;
+    jig:controlGroup "Coda" ;
+    lv2:portProperty lv2:enumeration ;
+    lv2:scalePoint
+        <#coda_reset-0> ,
+        <#coda_reset-1> .
+
+<#coda_reset-0> rdfs:label "No" ; rdf:value 0 .
+
+<#coda_reset-1> rdfs:label "Yes" ; rdf:value 1 .

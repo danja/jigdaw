@@ -110,6 +110,7 @@ jig:WebPluginShape a sh:NodeShape ;
         sh:message "No WebAssembly module declared. Permitted, for a plugin whose processing is plain JavaScript, but unusual enough to be worth confirming."
     ] ;
     sh:property [ sh:path jig:ui ; sh:maxCount 1 ] ;
+    sh:property [ sh:path jig:skin ; sh:maxCount 1 ; sh:class jig:Skin ; sh:message "A plugin names at most one skin, and it is a jig:Skin resource." ] ;
 
     sh:property [ sh:path jig:audioInputs   ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:stateless ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
@@ -120,6 +121,58 @@ jig:WebPluginShape a sh:NodeShape ;
     sh:property [ sh:path jig:renderQuantum ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path jig:latencyFrames ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] ;
     sh:property [ sh:path jig:tailFrames    ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+## -- Skins -------------------------------------------------------------------
+##
+## The skin document is a separate file from the profile, so these shapes are
+## validated against it on its own. They target by the properties used, not by
+## class: the document's subject is its own IRI and need not carry a type.
+
+jig:SkinShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:artwork , jig:control ;
+    rdfs:label "Skin shape" ;
+    sh:property [
+        sh:path jig:artwork ; sh:minCount 1 ; sh:maxCount 1 ; sh:class jig:Artwork ;
+        sh:message "A skin names exactly one artwork, a jig:Artwork resource."
+    ] ;
+    sh:property [
+        sh:path jig:control ; sh:minCount 1 ; sh:nodeKind sh:IRI ;
+        sh:message "A skin binds at least one control. One with none is the generated panel with extra steps."
+    ] .
+
+jig:ArtworkShape a sh:NodeShape ;
+    sh:targetClass jig:Artwork ;
+    rdfs:label "Artwork shape" ;
+    sh:property [
+        sh:path jig:mediaType ; sh:minCount 1 ; sh:hasValue "image/svg+xml" ;
+        sh:message "Skin artwork is SVG: jig:mediaType must be image/svg+xml."
+    ] .
+
+jig:ControlShape a sh:NodeShape ;
+    sh:targetClass jig:Rotary , jig:Linear , jig:Toggle , jig:Selector , jig:Readout ;
+    rdfs:label "Control shape" ;
+    sh:property [
+        sh:path jig:portSymbol ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A control names the port it sets by its lv2:symbol, once."
+    ] ;
+    sh:property [
+        sh:path jig:element ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A control names the artwork element it moves by id, once."
+    ] ;
+    sh:property [ sh:path jig:hitElement ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+jig:RotaryShape a sh:NodeShape ;
+    sh:targetClass jig:Rotary ;
+    rdfs:label "Rotary shape" ;
+    sh:property [ sh:path jig:angleMin ; sh:minCount 1 ; sh:maxCount 1 ; sh:or ( [ sh:datatype xsd:integer ] [ sh:datatype xsd:decimal ] [ sh:datatype xsd:double ] ) ; sh:message "A rotary control needs jig:angleMin, in degrees clockwise." ] ;
+    sh:property [ sh:path jig:angleMax ; sh:minCount 1 ; sh:maxCount 1 ; sh:or ( [ sh:datatype xsd:integer ] [ sh:datatype xsd:decimal ] [ sh:datatype xsd:double ] ) ; sh:message "A rotary control needs jig:angleMax, in degrees clockwise." ] ;
+    sh:property [ sh:path jig:pivotElement ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+jig:LinearShape a sh:NodeShape ;
+    sh:targetClass jig:Linear ;
+    rdfs:label "Linear shape" ;
+    sh:property [ sh:path jig:trackElement ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "A linear control needs jig:trackElement, the element whose length is the travel." ] .
+
 
 ## -- Conditional rules, each as its own node shape ---------------------------
 ##
@@ -210,7 +263,7 @@ jig:DeclaredAbiShape a sh:NodeShape ;
 ## and a profile validated on its own does not carry it.
 
 jig:ResourceShape a sh:NodeShape ;
-    sh:targetClass jig:Resource , jig:Module , jig:Processor , jig:UserInterface ;
+    sh:targetClass jig:Resource , jig:Module , jig:Processor , jig:UserInterface , jig:Skin , jig:Artwork ;
     rdfs:label "Resource shape" ;
 
     sh:nodeKind sh:IRI ;
@@ -941,6 +994,7 @@ jig:CompositePluginShape a sh:NodeShape ;
     sh:property [ sh:path jig:processor ; sh:maxCount 0 ; sh:message "A composite has no processor of its own. Its members carry the code." ] ;
     sh:property [ sh:path jig:module ; sh:maxCount 0 ; sh:message "A composite has no module of its own. Its members carry the code." ] ;
     sh:property [ sh:path jig:ui ; sh:maxCount 0 ; sh:message "A composite has the generated panel. It has no interface of its own in this version." ] ;
+    sh:property [ sh:path jig:skin ; sh:maxCount 0 ; sh:message "A composite has the generated panel. It has no skin of its own in this version." ] ;
     sh:property [ sh:path jig:latencyFrames ; sh:maxCount 0 ; sh:message "A composite MUST NOT declare latency. It is derived from its members, which can change it." ] ;
     sh:property [ sh:path jig:tailFrames ; sh:maxCount 0 ; sh:message "A composite MUST NOT declare a tail. It is derived from its members." ] ;
     sh:property [

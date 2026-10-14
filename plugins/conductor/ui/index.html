@@ -1,0 +1,208 @@
+<!doctype html>
+<!--
+  plugins/conductor/ui/index.html
+
+  Conductor's own editor (contract section 9, docs/messaging.md section 2). A host
+  loads it into a sandboxed frame on another origin and talks to it only by
+  postMessage. One file with its script inline, so the profile's jig:integrity
+  digest covers everything that runs here.
+
+  The generated panel lists 64 ports. This lays them out as the piece is
+  thought of: the form as a row of selectors, then what each section does,
+  then the MIDI it sends. It renders from what the host says, never from its
+  own input, so a control shows the value the host applied (messaging.md 2.3).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conductor</title>
+<style>
+  :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --panel:#1a1e24; --edge:#2c333c; --field:#0e1116; }
+  html { height:auto; }
+  body { margin:0; padding:12px; background:var(--panel); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
+  fieldset { border:1px solid var(--edge); border-radius:6px; margin:0 0 12px; padding:8px 10px 10px; min-width:0; }
+  legend { color:var(--dim); padding:0 6px; font-size:14px; }
+  label { color:var(--dim); font-size:14px; display:block; }
+  select, input[type=number] { box-sizing:border-box; width:100%; min-height:44px; padding:4px 8px; font:inherit;
+    background:var(--field); color:var(--fg); border:1px solid var(--edge); border-radius:4px; }
+  select:focus-visible, input:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  input[type=checkbox] { width:24px; height:24px; accent-color:var(--accent); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(8.5rem, 1fr)); gap:8px 10px; }
+  .check { display:flex; align-items:center; gap:8px; min-height:44px; }
+  .check label { color:var(--fg); }
+  .waiting { color:var(--dim); }
+</style>
+</head>
+<body>
+<main id="root">
+<h1>Conductor</h1>
+<div id="controls"><p class="waiting">Waiting for the host.</p></div>
+</main>
+<script>
+  'use strict'
+  // The host's origin, learnt from its init. Until then nothing is sent but
+  // ready, which carries nothing, and nothing received is trusted.
+  let host = null
+  const controls = new Map()
+
+  const SECTIONS = [
+    ['intro', 'Intro'], ['develop', 'Development'], ['break', 'Break'], ['reprise', 'Reprise'], ['coda', 'Coda']
+  ]
+  const FORM_STEPS = 12
+
+  // Each group is a fieldset: a title and the controls in it, as [symbol, label, kind].
+  // A kind is 'number', 'toggle' or 'section' (a section chosen from the five, with End where 0 is allowed).
+  const GROUPS = [
+    { title: 'Form', items: [['mode', 'Form mode', 'mode'], ['seed', 'Seed', 'number'], ['jump_to', 'Jump to section', 'jump']] },
+    {
+      title: 'Form steps, in order. The first End stops the form.',
+      items: Array.from({ length: FORM_STEPS }, (_, k) => [`form_${k + 1}`, `Step ${k + 1}`, 'section'])
+    },
+    { title: 'Section length, in bars', items: [['min_bars', 'Shortest', 'number'], ['max_bars', 'Longest', 'number']] },
+    { title: 'Random weights', items: SECTIONS.map(([key, name]) => [`${key}_weight`, name, 'weight']) },
+    ...SECTIONS.map(([key, name]) => ({
+      title: `${name}. A length of 0 uses the general length.`,
+      items: [
+        [`${key}_min_bars`, 'Shortest bars', 'number'], [`${key}_max_bars`, 'Longest bars', 'number'],
+        [`${key}_density`, 'Density', 'number'], [`${key}_energy`, 'Energy', 'number'], [`${key}_mutation`, 'Mutation', 'number'],
+        [`${key}_scene`, 'Scene', 'number'], [`${key}_reset`, 'Reset on entry', 'toggle']
+      ]
+    })),
+    {
+      title: 'MIDI output',
+      items: [
+        ['channel', 'Channel', 'number'], ['base_note', 'Base note', 'number'],
+        ['scene_cc', 'Scene CC', 'number'], ['density_cc', 'Density CC', 'number'], ['energy_cc', 'Energy CC', 'number'],
+        ['mutation_cc', 'Mutation CC', 'number'], ['reset_cc', 'Reset CC', 'number']
+      ]
+    }
+  ]
+
+  function send (message) {
+    if (host) parent.postMessage(message, host)
+  }
+
+  function show (symbol, value) {
+    const control = controls.get(symbol)
+    if (!control) return
+    if (control.input.type === 'checkbox') control.input.checked = value >= 0.5
+    else if (control.input.tagName === 'SELECT') {
+      // Selecting one option deselects the rest of a single select.
+      const match = [...control.input.options].find(o => o.value === String(value))
+      if (match) match.selected = true
+    } else control.input.value = String(value)
+  }
+
+  function option (value, text) {
+    const o = document.createElement('option')
+    o.value = String(value)
+    o.textContent = text
+    return o
+  }
+
+  function field (port, label, kind) {
+    const id = `p-${port.symbol}`
+    const wrap = document.createElement('div')
+    const name = document.createElement('label')
+    name.setAttribute('for', id)
+    name.textContent = label
+    let input
+    if (kind === 'mode') {
+      input = document.createElement('select')
+      input.append(option(0, 'Fixed form'), option(1, 'Weighted random'))
+    } else if (kind === 'jump') {
+      input = document.createElement('select')
+      input.append(option(0, 'Off'), ...SECTIONS.map(([, text], k) => option(k + 1, text)))
+    } else if (kind === 'section') {
+      input = document.createElement('select')
+      if (port.minimum === 0) input.append(option(0, 'End'))
+      input.append(...SECTIONS.map(([, text], k) => option(k + 1, text)))
+    } else if (kind === 'toggle') {
+      input = document.createElement('input')
+      input.type = 'checkbox'
+      wrap.className = 'check'
+    } else {
+      input = document.createElement('input')
+      input.type = 'number'
+      input.min = String(port.minimum)
+      input.max = String(port.maximum)
+      input.step = kind === 'weight' ? '0.05' : '1'
+      input.inputMode = kind === 'weight' ? 'decimal' : 'numeric'
+    }
+    input.id = id
+    if (kind === 'toggle') wrap.append(input, name)
+    else wrap.append(name, input)
+    controls.set(port.symbol, { input })
+
+    const request = () => {
+      const raw = input.type === 'checkbox'
+        ? (input.checked ? 1 : 0)
+        : Number(input.tagName === 'SELECT' ? [...input.options].find(o => o.selected)?.value : input.value)
+      if (!Number.isFinite(raw)) return
+      // The host clamps and echoes; the control is repainted from the echo.
+      send({ type: 'parameter', symbol: port.symbol, value: raw })
+    }
+    // A select or a checkbox is one change; a number box is edited by typing, so it is sent on change too.
+    input.addEventListener('change', () => {
+      send({ type: 'gesture', symbol: port.symbol, phase: 'begin' })
+      request()
+      send({ type: 'gesture', symbol: port.symbol, phase: 'end' })
+    })
+    return wrap
+  }
+
+  function build (ports, parameters) {
+    const bySymbol = new Map(ports.map(p => [p.symbol, p]))
+    const box = document.getElementById('controls')
+    box.replaceChildren()
+    for (const group of GROUPS) {
+      const set = document.createElement('fieldset')
+      const legend = document.createElement('legend')
+      legend.textContent = group.title
+      const grid = document.createElement('div')
+      grid.className = 'grid'
+      for (const [symbol, label, kind] of group.items) {
+        const port = bySymbol.get(symbol)
+        // A port the profile does not declare is left out rather than drawn dead.
+        if (!port) continue
+        grid.append(field(port, label, kind))
+        show(symbol, parameters[symbol] ?? port.default)
+      }
+      set.append(legend, grid)
+      box.append(set)
+    }
+  }
+
+  // Ask for the height the content takes, whenever that changes.
+  const root = document.getElementById('root')
+  const wanted = () => Math.ceil(document.documentElement.getBoundingClientRect().height)
+  new ResizeObserver(() => {
+    send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+  }).observe(root)
+
+  function portsOf (profile) {
+    return (profile?.port ?? []).map(p => ({
+      symbol: p.symbol, minimum: Number(p.minimum), maximum: Number(p.maximum), default: Number(p.default)
+    }))
+  }
+
+  window.addEventListener('message', event => {
+    if (event.source !== parent) return
+    if (host === null) {
+      if (event.data?.type !== 'init') return
+      host = event.origin
+      build(portsOf(event.data.profile), event.data.parameters ?? {})
+      send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+      return
+    }
+    if (event.origin !== host) return
+    const message = event.data
+    if (message?.type === 'parameter') show(message.symbol, message.value)
+  })
+
+  parent.postMessage({ type: 'ready' }, '*')
+</script>
+</body>
+</html>

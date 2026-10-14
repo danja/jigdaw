@@ -53,7 +53,7 @@
     jig:location <melgen.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi2 ;
-    jig:integrity "sha384-pHlWAhyB90zxmrf8qS4iLtO3spP5ZDljlLSUxigyV035Z7N5DwbXWo5vdUYWv9Bu" .
+    jig:integrity "sha384-CxXCEi924/XK3fMiD8UhfyoSbEXxO4b70+dKoTm/aTJKz6TnpO4Uv/30jscaObwv" .
 
 <#processor>
     a jig:Processor ;

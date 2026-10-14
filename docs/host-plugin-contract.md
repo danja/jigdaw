@@ -402,9 +402,10 @@ disagree and it is not defined which wins.
 
 ### 9.1 Sandboxed
 
-A plugin's user interface MUST be loaded into an `iframe` with a `sandbox` attribute, and
+A plugin's user interface, where it is code, MUST be loaded into an `iframe` with a `sandbox` attribute, and
 that frame MUST NOT be same-origin with the host document. A host MUST NOT load plugin UI
-code into its own document by any means. A host MUST refuse to frame a user interface
+code into its own document by any means. A skin (section 9.4) is data and is the one thing
+a host MAY draw in its own document. A host MUST refuse to frame a user interface
 whose location is on the host's own origin, rather than framing it with an opaque origin,
 because [messaging.md](messaging.md) section 2.1 requires every message to be addressed to
 the frame's real origin.
@@ -414,7 +415,7 @@ the host's document could read the project, the user's storage, any credentials 
 every other plugin, and could rewire the audio graph directly. The sandbox is what makes
 section 1.1 a reasonable thing to propose.
 
-A plugin with no `jig:ui` gets a panel generated from its port declarations. This is the
+A plugin with neither `jig:ui` nor `jig:skin` gets a panel generated from its port declarations. This is the
 expected case, not a degraded one: a generated panel is consistent with every other plugin,
 it is accessible, and it costs the author nothing.
 
@@ -427,12 +428,41 @@ project model.
 
 Changes go from the UI, to the host's operation layer, to the model, to the compiled graph.
 A UI that mutates the running graph directly is a second implementation of every operation,
-and the two diverge.
+and the two diverge. A host drawing a skin is under the same rule: its gestures become the
+same operations the generated panel issues.
 
 ### 9.3 One operation layer
 
 The host's UI, its WebMCP surface and any other control surface MUST all be thin adapters
 over a single operation dispatcher. An operation MUST NOT be implemented twice.
+
+### 9.4 Skins (optional)
+
+A plugin MAY declare `jig:skin`: a Turtle document of control bindings that points at an SVG
+artwork, specified in [svg-skins.md](svg-skins.md). A host that implements skins applies this
+order: `jig:ui` where present, else `jig:skin`, else a generated panel. A host that does not
+implement skins ignores `jig:skin` and generates the panel.
+
+A skin is data. The sandbox in section 9.1 exists because UI code could read the host's
+storage and rewire the graph, and a skin has no code to do either. That holds only while the
+host keeps three rules, and a host that cannot keep them MUST draw the skin in a sandboxed
+frame or not at all.
+
+- The host MUST NOT insert the artwork's markup into its document. It MUST parse the file as
+  `image/svg+xml` and build new nodes from an allowlist of elements, attributes and style
+  properties, so that nothing the author wrote reaches the document except by being
+  recognised and copied.
+- An element in the SVG namespace outside the allowlist, any script, event attribute,
+  `foreignObject`, animation element, or reference to anything but a fragment of the same
+  file MUST make the host refuse the whole skin, with an error naming the element and its
+  line, and fall back to the generated panel (section 10.2).
+- The host MUST give the control its role, name, value text, keyboard handling and focus
+  indicator itself, taking the name and unit from the port declaration. The artwork supplies
+  none of them.
+
+A skin MUST NOT cause a port to become unreachable. The host draws every port the skin does
+not bind in a generated group beside it, and leaves out a binding to a port the profile does
+not declare.
 
 ---
 

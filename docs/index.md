@@ -82,6 +82,7 @@ authority where any other page, including this one, disagrees with them.
 | [host-plugin-contract.md](host-plugin-contract.md) | What a host guarantees and what a plugin must do. Everything else hangs off it. |
 | [plugin-profiles.md](plugin-profiles.md) | The profile format, as an extension of the one already published. |
 | [messaging.md](messaging.md) | The messages between host, processor and user interface. |
+| [svg-skins.md](svg-skins.md) | A plugin interface as data: SVG artwork and RDF bindings, drawn by the host. Draft. |
 | [latency.md](latency.md) | Latency compensation, and what happens in a graph with feedback. |
 | [project-format.md](project-format.md) | The session graph: nodes, connections, settings, transport. |
 | [track-view-terms.md](track-view-terms.md) | Proposed terms for master, sends, markers, automation and buses. Not yet normative. |

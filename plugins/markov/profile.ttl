@@ -51,7 +51,7 @@
     jig:location <markov-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "markov" ;
-    jig:integrity "sha384-lR4Z5RiN5p0OQc+gN8dOIrXyrWbzDFD5MvsljBNo0JKRrjowGefcB4WJ/aducBA0" .
+    jig:integrity "sha384-fjBA4eLkiqPSe8Zeb9afnoY8j/8NmCHiDAs/08Zy12b8vBz16IrnAdlTYIKsk7PK" .
 
 <#root>
     a lv2:InputPort , lv2:ControlPort ;

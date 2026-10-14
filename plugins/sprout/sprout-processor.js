@@ -340,7 +340,8 @@ class SproutProcessor extends AudioWorkletProcessor {
       const d1 = this.queueBytes[i * 3 + 1] & 0x7f
       const d2 = this.queueLengths[i] > 2 ? this.queueBytes[i * 3 + 2] & 0x7f : 0
       const inputChannel = v[P.input_channel]
-      const noteChannel = inputChannel === 0 || channel === inputChannel
+      // Conductor's section note rides its own channel and is not a key.
+      const noteChannel = (inputChannel === 0 || channel === inputChannel) && !(v[P.conductor_ch] > 0 && channel === v[P.conductor_ch])
       if (kind === 0x90 || kind === 0x80) {
         if (noteChannel) this.noteEvent(d1, kind === 0x90 && d2 > 0, latch)
       } else if (kind === 0xb0) {
@@ -359,7 +360,9 @@ class SproutProcessor extends AudioWorkletProcessor {
         }
         const conductor = v[P.conductor_ch]
         if (conductor > 0 && channel === conductor) {
-          if (d1 === 21) this.setFromCc(P.probability, d2)
+          // Scene sets the generations, so a later section grows a denser line (taken up at the next bar).
+          if (d1 === 20) this.setFromCc(P.generations, d2)
+          else if (d1 === 21) this.setFromCc(P.probability, d2)
           else if (d1 === 22) this.setFromCc(P.velocity, d2)
           else if (d1 === 23) this.setFromCc(P.seed, d2)
           else if (d1 === 24 && d2 === 127) this.restartPending = true

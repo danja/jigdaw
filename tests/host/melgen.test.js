@@ -202,6 +202,31 @@ describe('melgen, a phrase-aware melody generator', () => {
     }
   })
 
+  it('does not follow Conductor\'s section note, which arrives on the Conductor channel', async () => {
+    const note = (entry, channel) => entry.node.port.postMessage({
+      type: 'events',
+      events: [{ frame: entry.node.frame, bytes: Uint8Array.from([0x90 | (channel - 1), 72, 100]) }]
+    })
+    const plain = await makeEntry(validator)
+    plain.engine.setParameter(plain.entry.id, 'follow', 1)
+    const expected = signature(await drive(plain.node, 350))
+
+    const conducted = await makeEntry(validator)
+    conducted.engine.setParameter(conducted.entry.id, 'follow', 1)
+    conducted.engine.setParameter(conducted.entry.id, 'conductor_ch', 3)
+    note(conducted, 3)
+    await settle()
+    expect(signature(await drive(conducted.node, 350))).toEqual(expected)
+
+    // The same note on another channel is still something to follow.
+    const played = await makeEntry(validator)
+    played.engine.setParameter(played.entry.id, 'follow', 1)
+    played.engine.setParameter(played.entry.id, 'conductor_ch', 3)
+    note(played, 1)
+    await settle()
+    expect(signature(await drive(played.node, 350))).not.toEqual(expected)
+  })
+
   it('thins out when Conductor CC 22 closes the density', async () => {
     // The full loop length here is load-bearing, not arbitrary: at shorter
     // drives even full density yields barely an onset, leaving no margin for

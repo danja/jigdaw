@@ -49,6 +49,13 @@ h2{font-size:20px;margin:40px 0 4px}
 <p class="links"><a href="plugins/bassgen/">Profile</a> <a href="plugins/bassgen/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
+<a class="shot" href="gallery/shots/conductor.png" data-full="gallery/shots/conductor.png" data-label="Conductor" aria-haspopup="dialog" aria-label="View full-size Conductor panel"><img src="gallery/shots/conductor.png" alt="Conductor panel" loading="lazy"></a>
+<h3>Conductor</h3>
+<p>Cuts the transport into bar-aligned sections (intro, development, break, reprise, coda), as an editable form of up to 12 steps or by seeded weighted choice, and at each boundary sends a section note and CCs for scene, density, energy, mutation and reset to whatever listens on its channel. Each section can have its own length limits and its own scene, density, energy and mutation values, and may restart the generators listening to it.</p>
+<p class="meta">MidiGenerator . 64 controls . accepts nothing &rarr; produces Midi, ControlMidi</p>
+<p class="links"><a href="plugins/conductor/">Profile</a> <a href="plugins/conductor/profile.ttl">Turtle</a></p>
+</article>
+<article class="card">
 <a class="shot" href="gallery/shots/drumgen.png" data-full="gallery/shots/drumgen.png" data-label="DrumGen" aria-haspopup="dialog" aria-label="View full-size DrumGen panel"><img src="gallery/shots/drumgen.png" alt="DrumGen panel" loading="lazy"></a>
 <h3>DrumGen</h3>
 <p>Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.</p>
@@ -63,11 +70,25 @@ h2{font-size:20px;margin:40px 0 4px}
 <p class="links"><a href="plugins/ground/">Profile</a> <a href="plugins/ground/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
+<a class="shot" href="gallery/shots/markov.png" data-full="gallery/shots/markov.png" data-label="Markov" aria-haspopup="dialog" aria-label="View full-size Markov panel"><img src="gallery/shots/markov.png" alt="Markov panel" loading="lazy"></a>
+<h3>Markov</h3>
+<p>Markov-chain melody generator: a random walk over the twelve pitch classes driven by a 12 by 12 transition matrix, filled by one of eight styles or learned from a melodic line on its MIDI input, and played in time with the host transport.</p>
+<p class="meta">MidiGenerator . 20 controls . accepts Midi, ControlMidi &rarr; produces Midi, MelodyMidi</p>
+<p class="links"><a href="plugins/markov/">Profile</a> <a href="plugins/markov/profile.ttl">Turtle</a></p>
+</article>
+<article class="card">
 <a class="shot" href="gallery/shots/melgen.png" data-full="gallery/shots/melgen.png" data-label="MelGen" aria-haspopup="dialog" aria-label="View full-size MelGen panel"><img src="gallery/shots/melgen.png" alt="MelGen panel" loading="lazy"></a>
 <h3>MelGen</h3>
 <p>Transport synced phrase-aware melody generator. Period, contour and answer shape a seeded line that plays in time with the session, follows an incoming line when asked, and answers Conductor CCs.</p>
 <p class="meta">MidiGenerator . 26 controls . accepts Midi, ControlMidi &rarr; produces Midi, MelodyMidi</p>
 <p class="links"><a href="plugins/melgen/">Profile</a> <a href="plugins/melgen/profile.ttl">Turtle</a></p>
+</article>
+<article class="card">
+<a class="shot" href="gallery/shots/sprout.png" data-full="gallery/shots/sprout.png" data-label="Sprout" aria-haspopup="dialog" aria-label="View full-size Sprout panel"><img src="gallery/shots/sprout.png" alt="Sprout panel" loading="lazy"></a>
+<h3>Sprout</h3>
+<p>L-system MIDI generator: a grammar is rewritten for up to 16 generations, read as a turtle, and played as a monophonic, scale-quantised line locked to the host transport, optionally growing by one generation every few bars.</p>
+<p class="meta">MidiGenerator . 17 controls . accepts Midi, ControlMidi &rarr; produces Midi</p>
+<p class="links"><a href="plugins/sprout/">Profile</a> <a href="plugins/sprout/profile.ttl">Turtle</a></p>
 </article>
 </div>
 <h2 id="midi">MIDI</h2>
@@ -101,6 +122,13 @@ h2{font-size:20px;margin:40px 0 4px}
 <p class="meta">MidiProcessor . 5 controls . accepts Midi &rarr; produces Midi</p>
 <p class="links"><a href="plugins/midifilter/">Profile</a> <a href="plugins/midifilter/profile.ttl">Turtle</a></p>
 </article>
+<article class="card">
+<a class="shot" href="gallery/shots/retune.png" data-full="gallery/shots/retune.png" data-label="Retune" aria-haspopup="dialog" aria-label="View full-size Retune panel"><img src="gallery/shots/retune.png" alt="Retune panel" loading="lazy"></a>
+<h3>Retune</h3>
+<p>Retunes a note stream to a Scala (.scl) scale by sending each held note on its own channel (2 to 16) behind a per-note pitch bend, so any synth that follows per-channel pitch bend can play microtonally.</p>
+<p class="meta">MidiProcessor . 2 controls . accepts Midi &rarr; produces Midi</p>
+<p class="links"><a href="plugins/retune/">Profile</a> <a href="plugins/retune/profile.ttl">Turtle</a></p>
+</article>
 </div>
 <h2 id="instruments">Instruments</h2>
 <p>Playable sound sources: synths and drum instruments.</p>
@@ -125,6 +153,13 @@ h2{font-size:20px;margin:40px 0 4px}
 <p>Eleven voice synthesised drum instrument. MIDI notes trigger the voices, the master bus adds crush, drive and room, and per-instrument mutes cut voices immediately.</p>
 <p class="meta">Instrument, DrumInstrument . 75 controls . accepts Midi, DrumMidi &rarr; produces Audio</p>
 <p class="links"><a href="plugins/drumkit/">Profile</a> <a href="plugins/drumkit/profile.ttl">Turtle</a></p>
+</article>
+<article class="card">
+<a class="shot" href="gallery/shots/moka.png" data-full="gallery/shots/moka.png" data-label="Moka" aria-haspopup="dialog" aria-label="View full-size Moka panel"><img src="gallery/shots/moka.png" alt="Moka panel" loading="lazy"></a>
+<h3>Moka</h3>
+<p>A stereo MIDI synth built on modal synthesis: each voice is a bank of eight damped sine modes struck by a short mallet transient, giving xylophone, glockenspiel, woodblock, glass bowl, metal sheet and tube voices.</p>
+<p class="meta">Instrument, AudioInstrument . 10 controls . accepts Midi &rarr; produces Audio</p>
+<p class="links"><a href="plugins/moka/">Profile</a> <a href="plugins/moka/profile.ttl">Turtle</a></p>
 </article>
 <article class="card">
 <a class="shot" href="gallery/shots/mop.png" data-full="gallery/shots/mop.png" data-label="Mop" aria-haspopup="dialog" aria-label="View full-size Mop panel"><img src="gallery/shots/mop.png" alt="Mop panel" loading="lazy"></a>

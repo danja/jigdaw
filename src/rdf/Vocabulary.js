@@ -123,6 +123,26 @@ export const vocabulary = Object.freeze({
     Processor: `${JIG}Processor`,
     UserInterface: `${JIG}UserInterface`,
 
+    // Skins: a declarative interface, artwork plus bindings (docs/svg-skins.md)
+    Skin: `${JIG}Skin`,
+    Artwork: `${JIG}Artwork`,
+    Control: `${JIG}Control`,
+    Rotary: `${JIG}Rotary`,
+    Linear: `${JIG}Linear`,
+    Toggle: `${JIG}Toggle`,
+    Selector: `${JIG}Selector`,
+    Readout: `${JIG}Readout`,
+    skin: `${JIG}skin`,
+    artwork: `${JIG}artwork`,
+    control: `${JIG}control`,
+    portSymbol: `${JIG}portSymbol`,
+    element: `${JIG}element`,
+    hitElement: `${JIG}hitElement`,
+    pivotElement: `${JIG}pivotElement`,
+    trackElement: `${JIG}trackElement`,
+    angleMin: `${JIG}angleMin`,
+    angleMax: `${JIG}angleMax`,
+
     // Delivery
     module: `${JIG}module`,
     processor: `${JIG}processor`,

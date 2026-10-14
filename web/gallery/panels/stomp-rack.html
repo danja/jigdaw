@@ -122,6 +122,19 @@
   .links { display:flex; gap:14px; font-size:13px; margin-left:auto; }
   .links a { color:var(--dim); text-decoration:none; padding:6px 2px; }
   .links a:hover { color:var(--fg); text-decoration:underline; }
+  /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
+     nothing to act on because .send-level sets a display and that beat the attribute. */
+  [hidden] { display:none !important; }
+  .note-range { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
+  .note-range-end { display:inline-flex; align-items:center; gap:6px; }
+  .note-range input { width:5.5rem; min-height:44px; font-size:16px; }
+  .note-name { min-width:3.5ch; color:var(--muted, #9aa4b2); font-size:13px; }
+  .meter-group { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .meter-clip { min-height:28px; padding:0 8px; background:var(--err); color:#111; border:1px solid var(--err); border-radius:4px; font:inherit; font-size:12px; cursor:pointer; }
+  @media (pointer: coarse), (max-width: 760px) { .meter-clip { min-height:44px; min-width:44px; } }
+  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, #9aa4b2); }
+  .level { display:inline-flex; align-items:center; gap:8px; }
+  .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:3px; align-items:flex-end; height:26px; }
   .meter i { display:block; width:5px; background:#232a33; border-radius:1px; height:100%; }
   .meter i.on { background:var(--ok); }
@@ -256,7 +269,7 @@
   .editor { background:var(--panel); border:1px solid var(--accent); border-radius:7px; overflow:hidden; }
   .editor header { display:flex; align-items:center; gap:10px; padding:8px 12px; }
   .editor h3 { margin:0; font-size:14px; flex:1; }
-  .editor button, .slot .open-editor { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+  .editor button, .slot .open-editor, .slot .unpack { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
     color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   /* content-box: the height a frame asks for is for its document, and a
      border counted inside it leaves the document a pixel short and scrolling. */
@@ -265,17 +278,20 @@
 
   /* Arrangement. The lanes scroll inside their own box, never the page. The
      track names stay put on the left while the lanes scroll under them. */
-  .timeline-scroll { position:relative; overflow-x:auto; border:1px solid var(--line); border-radius:7px;
-    background:#13161b; padding-bottom:6px; }
+  /* The box scrolls both ways inside itself and is no taller than the screen, so its horizontal bar is always in
+     view at the bottom of it and never down the page past every track. The ruler and the loop row stay at the top, and
+     the track names stay at the left, while the lanes scroll under them. */
+  .timeline-scroll { position:relative; overflow:auto; max-height:calc(100vh - 11.5rem); min-height:12rem;
+    border:1px solid var(--line); border-radius:7px; background:#13161b; }
   /* Where the transport is, in the timeline and the piano roll. Drawn over,
      never in the way of a press. */
-  .playhead { position:absolute; top:0; bottom:0; width:2px; background:#ffd166; z-index:3; pointer-events:none; }
+  .playhead { position:absolute; top:0; width:2px; height:100%; background:#ffd166; z-index:3; pointer-events:none; }
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
   .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-  .timeline-ruler { position:relative; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; }
+  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:#13161b; }
   .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
-  button[data-icon] { min-width:44px; min-height:44px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
+  button[data-icon] { min-width:32px; min-height:32px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
   button[data-icon] .icon { display:block; }
   #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
   #carry[hidden] { display:none; }
@@ -308,9 +324,10 @@
   .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
   .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
   .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
-  .envelope-head { display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
+  /* Stuck to the left of the scroll box, so Fold, Add point and Remove are in reach however far along the piece is scrolled. */
+  .envelope-head { position:sticky; left:0; width:max-content; max-width:calc(100vw - 4rem); display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
   .envelope-title { flex:1 1 auto; }
-  .envelope-add, .envelope-remove { min-height:44px; min-width:44px; padding:0 10px; background:#2a2f38; color:var(--fg);
+  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
   .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
   .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
@@ -356,7 +373,7 @@
   .align { margin:0 0 10px; }
   .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
   .align input { width:24px; height:24px; }
-  .timeline-loop { position:relative; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
+  .timeline-loop { position:sticky; top:22px; z-index:2; background:#13161b; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
   .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
     border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
   .loop-brace.on { border:2px solid var(--accent); background:rgba(127,179,255,.18); }
@@ -375,9 +392,9 @@
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
     flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
   .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
-  .timeline-head .show-track { min-height:44px; text-align:left; background:none; border:0; color:var(--fg);
+  .timeline-head .show-track { min-height:28px; text-align:left; background:none; border:0; color:var(--fg);
     padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
-  .timeline-head button { min-height:44px; font-size:12px; background:#2a2f38; color:var(--fg);
+  .timeline-head button { min-height:28px; font-size:12px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .timeline-head .show-track, .head-mix { flex:1 1 100%; }
   .timeline-head > button:not(.show-track) { flex:1 1 45%; }
@@ -385,7 +402,7 @@
   .head-mix[hidden] { display:none; }
   .head-mix .strip-toggle { flex:1 1 4rem; }
   .head-slider { flex:1 1 100%; display:grid; grid-template-columns:2.4rem 1fr 3.8rem; align-items:center; gap:4px; font-size:12px; }
-  .head-slider input { min-height:44px; margin:0; width:100%; }
+  .head-slider input { min-height:28px; margin:0; width:100%; }
   .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
   .midi-state { color:var(--dim); font-size:12px; max-width:16rem; }
   .timeline-head > .head-arm.head-arm { flex:1 1 100%; }
@@ -405,6 +422,8 @@
   .clip-locked { cursor:not-allowed; }
   .clip-wave { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
+  .clip-notes { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
+  .clip-notes path { stroke:var(--fg); stroke-width:2; vector-effect:non-scaling-stroke; opacity:.75; fill:none; }
   .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
     border-left:1px solid var(--accent); }
@@ -443,10 +462,15 @@
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel .danger { border-color:var(--err); }
   .timeline-row { border-left:4px solid var(--track-color, transparent); }
-  .timeline-row[data-size="small"] .timeline-lane { min-height:56px; }
+  .timeline-row[data-size="small"] .timeline-lane { min-height:44px; }
   .timeline-row[data-size="large"] .timeline-lane { min-height:320px; }
   .timeline-head[data-size="small"] .head-slider, .timeline-head[data-size="small"] > button:not(.show-track) { display:none; }
   .timeline-head[data-size="small"] .head-mix { flex-wrap:nowrap; }
+  /* A small track is one row: the name takes what the Mute and Solo buttons leave. */
+  .timeline-head[data-size="small"] { align-items:center; align-content:center; flex-wrap:nowrap; }
+  .timeline-head[data-size="small"] .show-track { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="small"] .head-mix { flex:0 0 auto; }
+  .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; min-width:3.2rem; }
   .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
   .clip.selected, .timeline-head.selected { outline:2px solid #ffd166; outline-offset:-2px; }
   .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
@@ -475,6 +499,10 @@
   .piano-roll-cell.beyond { opacity:.5; }
   .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
   .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
+  /* A mouse hits 28px easily (WCAG 2.2 asks 24); a finger needs the full 44 on a touch screen or a phone. */
+  @media (pointer: coarse), (max-width: 760px) {
+    .timeline-head .show-track, .timeline-head button, .head-slider input, .envelope-fold, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
+  }
   @media (pointer: coarse) {
     .piano-roll-grid { --cell:44px; }
     .piano-roll-cell { height:44px; line-height:44px; }

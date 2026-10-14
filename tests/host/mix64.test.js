@@ -50,3 +50,29 @@ describe.each(['sprout/sprout-processor.js', 'markov/markov-processor.js'])('64-
     }
   })
 })
+
+describe('64-bit draws in conductor/conductor-processor.js', () => {
+  const src = readFileSync(new URL('../../plugins/conductor/conductor-processor.js', import.meta.url), 'utf8')
+  const start = src.indexOf('let MIX_HI')
+  const end = src.indexOf('class ConductorProcessor')
+  expect(start).toBeGreaterThan(-1)
+  const { randomUnit, randomInt } = new Function(`${src.slice(start, end)}\nreturn { randomUnit, randomInt }`)()
+
+  it('draws the VST3 unit value and the VST3 integer for a small seed and an index', () => {
+    const next = lcg(3)
+    for (let i = 0; i < 5000; i++) {
+      const seed = 1 + (next() % 65535)
+      const index = [0, 1, 901, 2 ** 33 + 5][i] ?? (next() % 100000)
+      const draw = ref(BigInt(seed) ^ ref(BigInt(index)))
+      expect(randomUnit(seed, index)).toBe(Number(draw >> 40n) / 16777216)
+      const min = 1 + (next() % 32)
+      const max = min + (next() % 64)
+      expect(randomInt(seed, index, min, max)).toBe(min + Number(draw % BigInt(max - min + 1)))
+    }
+  })
+
+  it('returns the minimum when the range is empty', () => {
+    expect(randomInt(5, 9, 4, 4)).toBe(4)
+    expect(randomInt(5, 9, 6, 4)).toBe(6)
+  })
+})

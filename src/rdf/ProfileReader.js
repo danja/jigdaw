@@ -135,6 +135,17 @@ export function widgetFor (port) {
   return 'dial'
 }
 
+/**
+ * Ports in the author's order when every one of them gives a paramIndex, and by symbol otherwise,
+ * since RDF has no order of its own. A partial order would not be a consistent comparison.
+ */
+function orderPorts (ports) {
+  const authored = ports.length > 0 && ports.every(p => p.paramIndex != null)
+  return ports.sort(authored
+    ? (a, b) => a.paramIndex - b.paramIndex
+    : (a, b) => (a.symbol ?? '').localeCompare(b.symbol ?? ''))
+}
+
 export function readPort (dataset, term) {
   const properties = values(dataset, term, lv2.portProperty)
   const port = {
@@ -155,6 +166,8 @@ export function readPort (dataset, term) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset, term, jig.controlGroup)),
+    // The author's order, where the profile gives one; the panel follows it.
+    paramIndex: asNumber(one(dataset, term, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset, term, jig.automationRate)?.value === jig.ARate ? 'a-rate' : 'k-rate'
@@ -314,9 +327,7 @@ export function readProfile (dataset, { baseIRI } = {}) {
     ui: readResource(dataset, one(dataset, subject, jig.ui), base, subject.value),
     assets: objects(dataset, subject, jig.asset).map(t => readResource(dataset, t, base, subject.value)),
 
-    ports: objects(dataset, subject, lv2.port)
-      .map(t => readPort(dataset, t))
-      .sort((a, b) => (a.symbol ?? '').localeCompare(b.symbol ?? ''))
+    ports: orderPorts(objects(dataset, subject, lv2.port).map(t => readPort(dataset, t)))
   }
 }
 

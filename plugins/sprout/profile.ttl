@@ -52,7 +52,7 @@
     jig:location <sprout-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "sprout" ;
-    jig:integrity "sha384-JBIsZw9OSq2G2Emo/yKHA/bdYix9zyblj8rRfxxQraobqQurzpnOHqmZd3rFAShs" .
+    jig:integrity "sha384-XNKS29b8Prw41IfmDBe2re9FbEKr6QI9ch6/j940NhRRbXpzsIW2kHDhukN7M8qm" .
 
 <#preset>
     a lv2:InputPort , lv2:ControlPort ;
