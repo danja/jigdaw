@@ -66,13 +66,34 @@
       "maximum": 6,
       "paramIndex": 2,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -118,13 +139,34 @@
       "maximum": 6,
       "paramIndex": 7,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -170,13 +212,34 @@
       "maximum": 6,
       "paramIndex": 12,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -222,13 +285,34 @@
       "maximum": 6,
       "paramIndex": 17,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -274,13 +358,34 @@
       "maximum": 6,
       "paramIndex": 22,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -326,13 +431,34 @@
       "maximum": 6,
       "paramIndex": 27,
       "scalePoints": [
-        { "label": "Peak", "value": 0 },
-        { "label": "Low Shelf", "value": 1 },
-        { "label": "High Shelf", "value": 2 },
-        { "label": "Low Pass", "value": 3 },
-        { "label": "High Pass", "value": 4 },
-        { "label": "Band Pass", "value": 5 },
-        { "label": "Notch", "value": 6 }
+        {
+          "label": "Peak",
+          "value": 0
+        },
+        {
+          "label": "Low Shelf",
+          "value": 1
+        },
+        {
+          "label": "High Shelf",
+          "value": 2
+        },
+        {
+          "label": "Low Pass",
+          "value": 3
+        },
+        {
+          "label": "High Pass",
+          "value": 4
+        },
+        {
+          "label": "Band Pass",
+          "value": 5
+        },
+        {
+          "label": "Notch",
+          "value": 6
+        }
       ]
     },
     {
@@ -362,5 +488,269 @@
       "paramIndex": 30
     }
   ],
-  "abi": "jig:Abi1"
+  "abi": "jig:Abi1",
+  "skin": {
+    "file": "skin/skin.ttl",
+    "artwork": "skin/panel.svg",
+    "controls": [
+      {
+        "id": "enabled",
+        "kind": "toggle",
+        "port": "enabled",
+        "element": "enabled-switch"
+      },
+      {
+        "id": "b1-on",
+        "kind": "toggle",
+        "port": "b1_on",
+        "element": "b1-on-switch"
+      },
+      {
+        "id": "b1-type",
+        "kind": "selector",
+        "port": "b1_type",
+        "element": "b1-type-steps"
+      },
+      {
+        "id": "b1-freq",
+        "kind": "rotary",
+        "port": "b1_freq",
+        "element": "b1-freq-knob",
+        "pivot": "b1-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b1-freq-value",
+        "kind": "readout",
+        "port": "b1_freq",
+        "element": "b1-freq-value"
+      },
+      {
+        "id": "b1-gain",
+        "kind": "rotary",
+        "port": "b1_gain",
+        "element": "b1-gain-knob",
+        "pivot": "b1-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b1-gain-value",
+        "kind": "readout",
+        "port": "b1_gain",
+        "element": "b1-gain-value"
+      },
+      {
+        "id": "b2-on",
+        "kind": "toggle",
+        "port": "b2_on",
+        "element": "b2-on-switch"
+      },
+      {
+        "id": "b2-type",
+        "kind": "selector",
+        "port": "b2_type",
+        "element": "b2-type-steps"
+      },
+      {
+        "id": "b2-freq",
+        "kind": "rotary",
+        "port": "b2_freq",
+        "element": "b2-freq-knob",
+        "pivot": "b2-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b2-freq-value",
+        "kind": "readout",
+        "port": "b2_freq",
+        "element": "b2-freq-value"
+      },
+      {
+        "id": "b2-gain",
+        "kind": "rotary",
+        "port": "b2_gain",
+        "element": "b2-gain-knob",
+        "pivot": "b2-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b2-gain-value",
+        "kind": "readout",
+        "port": "b2_gain",
+        "element": "b2-gain-value"
+      },
+      {
+        "id": "b3-on",
+        "kind": "toggle",
+        "port": "b3_on",
+        "element": "b3-on-switch"
+      },
+      {
+        "id": "b3-type",
+        "kind": "selector",
+        "port": "b3_type",
+        "element": "b3-type-steps"
+      },
+      {
+        "id": "b3-freq",
+        "kind": "rotary",
+        "port": "b3_freq",
+        "element": "b3-freq-knob",
+        "pivot": "b3-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b3-freq-value",
+        "kind": "readout",
+        "port": "b3_freq",
+        "element": "b3-freq-value"
+      },
+      {
+        "id": "b3-gain",
+        "kind": "rotary",
+        "port": "b3_gain",
+        "element": "b3-gain-knob",
+        "pivot": "b3-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b3-gain-value",
+        "kind": "readout",
+        "port": "b3_gain",
+        "element": "b3-gain-value"
+      },
+      {
+        "id": "b4-on",
+        "kind": "toggle",
+        "port": "b4_on",
+        "element": "b4-on-switch"
+      },
+      {
+        "id": "b4-type",
+        "kind": "selector",
+        "port": "b4_type",
+        "element": "b4-type-steps"
+      },
+      {
+        "id": "b4-freq",
+        "kind": "rotary",
+        "port": "b4_freq",
+        "element": "b4-freq-knob",
+        "pivot": "b4-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b4-freq-value",
+        "kind": "readout",
+        "port": "b4_freq",
+        "element": "b4-freq-value"
+      },
+      {
+        "id": "b4-gain",
+        "kind": "rotary",
+        "port": "b4_gain",
+        "element": "b4-gain-knob",
+        "pivot": "b4-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b4-gain-value",
+        "kind": "readout",
+        "port": "b4_gain",
+        "element": "b4-gain-value"
+      },
+      {
+        "id": "b5-on",
+        "kind": "toggle",
+        "port": "b5_on",
+        "element": "b5-on-switch"
+      },
+      {
+        "id": "b5-type",
+        "kind": "selector",
+        "port": "b5_type",
+        "element": "b5-type-steps"
+      },
+      {
+        "id": "b5-freq",
+        "kind": "rotary",
+        "port": "b5_freq",
+        "element": "b5-freq-knob",
+        "pivot": "b5-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b5-freq-value",
+        "kind": "readout",
+        "port": "b5_freq",
+        "element": "b5-freq-value"
+      },
+      {
+        "id": "b5-gain",
+        "kind": "rotary",
+        "port": "b5_gain",
+        "element": "b5-gain-knob",
+        "pivot": "b5-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b5-gain-value",
+        "kind": "readout",
+        "port": "b5_gain",
+        "element": "b5-gain-value"
+      },
+      {
+        "id": "b6-on",
+        "kind": "toggle",
+        "port": "b6_on",
+        "element": "b6-on-switch"
+      },
+      {
+        "id": "b6-type",
+        "kind": "selector",
+        "port": "b6_type",
+        "element": "b6-type-steps"
+      },
+      {
+        "id": "b6-freq",
+        "kind": "rotary",
+        "port": "b6_freq",
+        "element": "b6-freq-knob",
+        "pivot": "b6-freq-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b6-freq-value",
+        "kind": "readout",
+        "port": "b6_freq",
+        "element": "b6-freq-value"
+      },
+      {
+        "id": "b6-gain",
+        "kind": "rotary",
+        "port": "b6_gain",
+        "element": "b6-gain-knob",
+        "pivot": "b6-gain-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b6-gain-value",
+        "kind": "readout",
+        "port": "b6_gain",
+        "element": "b6-gain-value"
+      }
+    ]
+  }
 }

@@ -63,6 +63,8 @@ export function createSoundRack (document, { onBack, panelFor }) {
         return section
       }))
     },
+    /** Make the panels again at the next update even though the plugins are the same, for a panel that has a better version now (a skin that finished loading). */
+    invalidate () { built = null },
     hide () { element.hidden = true; built = null; plugins.replaceChildren() },
     get open () { return !element.hidden },
     /** Put the focus on the screen's title, where a screen reader should begin. */

@@ -32183,6 +32183,8 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
   const wrap = document2.createElement("div");
   wrap.className = "skin";
   wrap.append(skin.svg);
+  const natural = Number((skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/)[2]);
+  if (Number.isFinite(natural) && natural > 0) wrap.style.maxWidth = `${natural}px`;
   const ports = new Map(skin.ports.map((p) => [p.symbol, p]));
   const renderers = /* @__PURE__ */ new Map();
   const fitters = [];
@@ -32697,6 +32699,10 @@ function createSoundRack(document2, { onBack, panelFor: panelFor2 }) {
         return section;
       }));
     },
+    /** Make the panels again at the next update even though the plugins are the same, for a panel that has a better version now (a skin that finished loading). */
+    invalidate() {
+      built = null;
+    },
     hide() {
       element.hidden = true;
       built = null;
@@ -32844,7 +32850,10 @@ var ctx = {
 };
 ctx.media = createMedia(document);
 ctx.skins = createSkins(ctx);
-ctx.skins.onReady(() => redraw());
+ctx.skins.onReady(() => {
+  rack.invalidate();
+  redraw();
+});
 ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.sessions = createSessions(ctx);

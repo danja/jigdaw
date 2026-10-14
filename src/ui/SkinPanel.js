@@ -42,6 +42,11 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
   const wrap = document.createElement('div')
   wrap.className = 'skin'
   wrap.append(skin.svg)
+  // The viewBox width is the artwork's natural size in CSS pixels: it shrinks to fit a narrow panel and does not grow
+  // past what the author drew, so a 320 unit panel is not blown up to the width of a desktop and a 720 unit one is not
+  // squeezed to a size where its text is small. Without a viewBox, fit() refuses the artwork.
+  const natural = Number((skin.svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/)[2])
+  if (Number.isFinite(natural) && natural > 0) wrap.style.maxWidth = `${natural}px`
 
   const ports = new Map(skin.ports.map(p => [p.symbol, p]))
   const renderers = new Map()   // symbol -> [function (value)]

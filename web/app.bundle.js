@@ -29771,6 +29771,8 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
   const wrap = document2.createElement("div");
   wrap.className = "skin";
   wrap.append(skin.svg);
+  const natural = Number((skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/)[2]);
+  if (Number.isFinite(natural) && natural > 0) wrap.style.maxWidth = `${natural}px`;
   const ports = new Map(skin.ports.map((p) => [p.symbol, p]));
   const renderers = /* @__PURE__ */ new Map();
   const fitters = [];

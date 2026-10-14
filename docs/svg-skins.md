@@ -140,6 +140,8 @@ The artwork supplies pixels. The host supplies everything a person or a tool rel
   (contract section 9.3).
 - **Echo.** The control is drawn from the value the host applied, never from the pointer's own
   position (messaging.md section 2.3).
+- **Size.** The `viewBox` width is the artwork's natural size in CSS pixels. It shrinks to fit a narrow
+  panel and is never drawn larger than that.
 - **A phone.** The artwork scales with its `viewBox` to the width available. A target smaller
   than 44 CSS pixels at that scale is padded to 44, and a skin whose controls overlap once
   padded fails validation.

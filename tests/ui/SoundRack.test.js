@@ -32,6 +32,18 @@ describe('the sound rack', () => {
     expect(made).toEqual(['a', 'b'])
   })
 
+  it('makes the panels again after invalidate, for a panel that has a better version, and not before', () => {
+    const { rack, made } = build()
+    rack.show({ label: 'Lead', plugins })
+    const first = document.querySelector('.panel-a')
+    rack.update(plugins)
+    expect(document.querySelector('.panel-a')).toBe(first)
+    rack.invalidate()
+    rack.update(plugins)
+    expect(document.querySelector('.panel-a')).not.toBe(first)
+    expect(made).toEqual(['a', 'b', 'a', 'b'])
+  })
+
   it('goes back from its Back button', () => {
     const { rack, calls } = build()
     rack.show({ label: 'Lead', plugins })

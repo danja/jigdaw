@@ -68,9 +68,13 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       2026-10-14: a press and Space switch Freeze, a press and the arrow keys step Mode, focus stays on the control, Tab follows the picture
       (mix, size, damping, freeze, mode). **Not done:** (1) a Toggle's two-state text and a Selector's wrap on press are seen, but a skin with a
       vertical Linear control has not been drawn; (2) the
-      simple page (`web/simple.js`) is wired the same way but has not been looked at; (3) a screen reader and a phone-width touch drag
-      have not been tried; (4) `check:skins` is not part of `npm test` (Chrome); (5) a plugin with a `jig:ui` and a skin: the studio draws
-      the skin in the panel and offers the editor beside it, which is not the order the contract's 9.4 states, so decide which is meant;
+      simple page shows Cascade's skin since 2026-10-14, with the piece's own settings, after a fix: the sound rack kept the panels it had
+      when a skin finished loading, so `SoundRack.invalidate()` now makes them again; (3) a screen reader and a phone-width touch drag
+      have not been tried; (4) `check:skins` is not part of `npm test` (Chrome); (5) done 2026-10-14: Parameq has a skin (`plugins/parameq/skin/`, six bands of On, type, Freq and Gain; the six Q ports are left unbound on purpose and
+      appear under "Other controls") beside its `jig:ui`, and contract 9.4 now says the editor is offered beside the panel. Seen in Chrome: dragging the
+      skin's Band 3 gain knob to +12 dB moved the sandboxed editor's curve and slider, and a `setParameter` from outside moved the skin's knob. To see an
+      editor locally the plugin must be on another origin than the page, so load `http://localhost:8748/plugins/parameq/` into the page at
+      `127.0.0.1:8748`; on the same origin the Open editor button is correctly left out;
       (6) a flattened bundle's skin fetches its artwork from the canonical IRI. Meters wait for a named meter feed.
 
 - [ ] **Conductor, what is left.** 2026-10-13. Built: an editable form of up to 12 steps (`form_1` to `form_12`, ending at the first

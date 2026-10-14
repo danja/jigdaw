@@ -62,7 +62,9 @@ const ctx = {
 }
 ctx.media = createMedia(document)
 ctx.skins = createSkins(ctx)
-ctx.skins.onReady(() => redraw())
+// A panel built while its skin was still loading is replaced when it arrives. The rack keeps the panels it has
+// while the plugins are the same, so it is told these are stale.
+ctx.skins.onReady(() => { rack.invalidate(); redraw() })
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.sessions = createSessions(ctx)

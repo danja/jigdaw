@@ -203,6 +203,19 @@ describe('createSkinPanel, pressing', () => {
   })
 })
 
+describe('createSkinPanel, size', () => {
+  it('is no wider than the viewBox says, so the artwork has a natural size and still shrinks to fit', () => {
+    const { panel } = make()
+    expect(panel.element.style.maxWidth).toBe('200px')
+  })
+
+  it('sets no width for artwork with no viewBox, which fit() then refuses', () => {
+    const built = buildArtwork({ documentElement: el('svg', {}, [el('g', { id: 'thumb' }), el('rect', { id: 'slot' })]) }, { document, prefix: 's-' })
+    const panel = createSkinPanel(document, { svg: built.svg, elements: built.elements, ports, controls: [] }, () => {}, { scope: 'p', measure: () => BOXES.slot })
+    expect(panel.element.style.maxWidth).toBe('')
+  })
+})
+
 describe('createSkinPanel, tab order', () => {
   const order = panel => [...panel.element.querySelectorAll('input')].map(i => i.id.replace('panel-n1_', ''))
 
