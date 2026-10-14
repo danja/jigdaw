@@ -112,3 +112,20 @@ describe('the jig: vocabulary', () => {
     expect(missing, `trn: terms not declared upstream: ${missing.join(', ')}`).toEqual([])
   })
 })
+
+// Two skin terms were first minted over existing ones (jig:Linear, a curve
+// individual, and jig:portSymbol, a composite endpoint property) and every
+// test passed, because nothing asked whether a name was already taken.
+describe('vocabs/jigdaw.ttl declares each term once', () => {
+  it('has no jig: subject introduced with "a" twice', () => {
+    const lines = readFileSync(vocabFile, 'utf8').split('\n')
+    const seen = new Map()
+    for (const line of lines) {
+      const m = /^jig:([A-Za-z0-9_]+)\s+a\s/.exec(line)
+      if (m) seen.set(m[1], (seen.get(m[1]) ?? 0) + 1)
+    }
+    expect(seen.size).toBeGreaterThan(100)
+    const twice = [...seen].filter(([, n]) => n > 1).map(([t]) => t).sort()
+    expect(twice, `declared more than once: ${twice.join(', ')}`).toEqual([])
+  })
+})

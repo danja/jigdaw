@@ -143,7 +143,8 @@ and real-time processing.
   aspirational: almost every control a person touches in Jiggy is generated from an
   `lv2:port` declaration by `src/ui/Panel.js`, so one accessible generator makes every
   plugin accessible and one careless one makes every plugin unusable. A plugin author who
-  ships no `jig:ui` gets whatever that file does.
+  ships no `jig:skin` gets whatever that file does, and a `jig:ui` is offered beside the
+  panel and never instead of it.
 - Every control has a programmatic name, a role and a current value. A slider reports its
   value as text, not only as a number, because "4200" and "4200 Hz" are different
   information.

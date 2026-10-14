@@ -47,14 +47,14 @@
 
 <#trem> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/tremolo/> ;
-    jig:pinnedDigest "sha384-KfKgyd8ISMq5rDWpXOs3y5w15lo19/MQ1Em9UExL2HpanWACTqsntEeo9gwanuzH" ;
+    jig:pinnedDigest "sha384-QCo5cyOtayC3tzVEz2v3dV+3MN6gSFpmxMrD3BW0IUeDk5KveVOKepkJkLatxbw5" ;
     jig:setting <#trem-rate> .
 
 <#trem-rate> a jig:ParameterSetting ; jig:symbol "rate" ; jig:value 4.5 .
 
 <#verb> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/cascade/> ;
-    jig:pinnedDigest "sha384-NyVA8Oaw03CjRZz0ul4qUs3F2hFZgwpe9dS40kUQEGMA4o43CB2uDXL7bym/D5xc" .
+    jig:pinnedDigest "sha384-Pyic6s4gJzwKpPjRUcI8UXsC4QDfw7hZ8UqdmrPBim2hdQbZQvpwd+gjOuQgeGsF" .
 
 # The rack's own input 0 and output 0 are connections from and to the composite itself.
 <#c-in> a jig:Connection ; jig:from <#c-in-from> ; jig:to <#c-in-to> ; jig:signalKind trn:Audio .

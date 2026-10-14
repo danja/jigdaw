@@ -13250,6 +13250,25 @@ var init_Vocabulary = __esm({
         Module: `${JIG}Module`,
         Processor: `${JIG}Processor`,
         UserInterface: `${JIG}UserInterface`,
+        // Skins: a declarative interface, artwork plus bindings (docs/svg-skins.md)
+        Skin: `${JIG}Skin`,
+        Artwork: `${JIG}Artwork`,
+        Control: `${JIG}Control`,
+        RotaryControl: `${JIG}RotaryControl`,
+        LinearControl: `${JIG}LinearControl`,
+        ToggleControl: `${JIG}ToggleControl`,
+        SelectorControl: `${JIG}SelectorControl`,
+        ReadoutControl: `${JIG}ReadoutControl`,
+        skin: `${JIG}skin`,
+        artwork: `${JIG}artwork`,
+        control: `${JIG}control`,
+        boundSymbol: `${JIG}boundSymbol`,
+        element: `${JIG}element`,
+        hitElement: `${JIG}hitElement`,
+        pivotElement: `${JIG}pivotElement`,
+        trackElement: `${JIG}trackElement`,
+        angleMin: `${JIG}angleMin`,
+        angleMax: `${JIG}angleMax`,
         // Delivery
         module: `${JIG}module`,
         processor: `${JIG}processor`,
@@ -13513,6 +13532,10 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
+function orderPorts(ports) {
+  const authored = ports.length > 0 && ports.every((p) => p.paramIndex != null);
+  return ports.sort(authored ? (a2, b) => a2.paramIndex - b.paramIndex : (a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""));
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
@@ -13533,6 +13556,8 @@ function readPort(dataset2, term5) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset2, term5, jig.controlGroup)),
+    // The author's order, where the profile gives one; the panel follows it.
+    paramIndex: asNumber(one(dataset2, term5, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset2, term5, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
@@ -13639,8 +13664,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     module: readResource(dataset2, one(dataset2, subject, jig.module), base, subject.value),
     processor: readResource(dataset2, one(dataset2, subject, jig.processor), base, subject.value),
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
+    skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)).sort((a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""))
+    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;

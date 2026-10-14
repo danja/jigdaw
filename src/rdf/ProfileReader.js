@@ -325,6 +325,7 @@ export function readProfile (dataset, { baseIRI } = {}) {
     module: readResource(dataset, one(dataset, subject, jig.module), base, subject.value),
     processor: readResource(dataset, one(dataset, subject, jig.processor), base, subject.value),
     ui: readResource(dataset, one(dataset, subject, jig.ui), base, subject.value),
+    skin: readResource(dataset, one(dataset, subject, jig.skin), base, subject.value),
     assets: objects(dataset, subject, jig.asset).map(t => readResource(dataset, t, base, subject.value)),
 
     ports: orderPorts(objects(dataset, subject, lv2.port).map(t => readPort(dataset, t)))

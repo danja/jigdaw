@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  plugins/tremolo/skin/panel.svg
+
+  Tremolo's artwork. Plain SVG with no script: bindings are in skin.ttl, which
+  names elements by id. The knob is drawn pointing straight up and the host
+  turns it; the thumb is drawn at the low end of its slot and the host slides it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150">
+  <rect x="0" y="0" width="320" height="150" rx="8" fill="#1a1e24" stroke="#2c333c"/>
+
+  <text x="80" y="22" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Rate</text>
+  <g id="rate-knob">
+    <circle id="rate-hub" cx="80" cy="76" r="34" fill="#0e1116" stroke="#3d8bfd" stroke-width="3"/>
+    <line x1="80" y1="76" x2="80" y2="48" stroke="#e6e8eb" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text id="rate-value" x="80" y="132" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">5 Hz</text>
+
+  <text x="240" y="22" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Depth</text>
+  <rect id="depth-slot" x="190" y="72" width="100" height="8" rx="4" fill="#0e1116" stroke="#2c333c"/>
+  <rect id="depth-hit" x="180" y="56" width="120" height="40" fill="none"/>
+  <g id="depth-thumb">
+    <circle cx="190" cy="76" r="12" fill="#3d8bfd" stroke="#e6e8eb" stroke-width="2"/>
+  </g>
+  <text id="depth-value" x="240" y="132" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">50%</text>
+</svg>

@@ -174,7 +174,7 @@ function setSweep (circle, from, to) {
  * the unit tests passed, because a DOM with no layout has no pointer capture
  * to fail. The document always has the events.
  */
-function attachDrag (element, input, port) {
+export function attachDrag (element, input, port) {
   const span = port.maximum - port.minimum
   const owner = element.ownerDocument
   const Event = owner.defaultView?.Event

@@ -415,9 +415,11 @@ the host's document could read the project, the user's storage, any credentials 
 every other plugin, and could rewire the audio graph directly. The sandbox is what makes
 section 1.1 a reasonable thing to propose.
 
-A plugin with neither `jig:ui` nor `jig:skin` gets a panel generated from its port declarations. This is the
-expected case, not a degraded one: a generated panel is consistent with every other plugin,
-it is accessible, and it costs the author nothing.
+A plugin with no `jig:skin` gets a panel generated from its port declarations, whether or not it
+has a `jig:ui`. This is the expected case, not a degraded one: a generated panel is consistent
+with every other plugin, it is accessible, and it costs the author nothing. A `jig:ui` is an
+editor offered beside the panel (section 9.4), because the panel is the one interface the host
+knows to be accessible and a page the host did not write cannot be vouched for.
 
 ### 9.2 The UI never touches the graph
 
@@ -439,9 +441,11 @@ over a single operation dispatcher. An operation MUST NOT be implemented twice.
 ### 9.4 Skins (optional)
 
 A plugin MAY declare `jig:skin`: a Turtle document of control bindings that points at an SVG
-artwork, specified in [svg-skins.md](svg-skins.md). A host that implements skins applies this
-order: `jig:ui` where present, else `jig:skin`, else a generated panel. A host that does not
-implement skins ignores `jig:skin` and generates the panel.
+artwork, specified in [svg-skins.md](svg-skins.md). The panel a host draws for a plugin is its
+skin where it has one and the skin loads, and a generated panel otherwise. A `jig:ui`, where
+present, is an editor the host MAY offer beside the panel; it MUST NOT be the only way to reach
+a port. A host MAY show the editor in place of the panel when a person asks it to. A host that
+does not implement skins ignores `jig:skin` and generates the panel.
 
 A skin is data. The sandbox in section 9.1 exists because UI code could read the host's
 storage and rewire the graph, and a skin has no code to do either. That holds only while the
@@ -455,7 +459,7 @@ frame or not at all.
 - An element in the SVG namespace outside the allowlist, any script, event attribute,
   `foreignObject`, animation element, or reference to anything but a fragment of the same
   file MUST make the host refuse the whole skin, with an error naming the element and its
-  line, and fall back to the generated panel (section 10.2).
+  position in the tree, and fall back to the generated panel (section 10.2).
 - The host MUST give the control its role, name, value text, keyboard handling and focus
   indicator itself, taking the name and unit from the port declaration. The artwork supplies
   none of them.

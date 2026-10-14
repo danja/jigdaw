@@ -54,5 +54,40 @@
       "maximum": 1,
       "paramIndex": 1
     }
-  ]
+  ],
+  "skin": {
+    "file": "skin/skin.ttl",
+    "artwork": "skin/panel.svg",
+    "controls": [
+      {
+        "id": "rate",
+        "kind": "rotary",
+        "port": "rate",
+        "element": "rate-knob",
+        "pivot": "rate-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "rate-value",
+        "kind": "readout",
+        "port": "rate",
+        "element": "rate-value"
+      },
+      {
+        "id": "depth",
+        "kind": "linear",
+        "port": "depth",
+        "element": "depth-thumb",
+        "track": "depth-slot",
+        "hit": "depth-hit"
+      },
+      {
+        "id": "depth-value",
+        "kind": "readout",
+        "port": "depth",
+        "element": "depth-value"
+      }
+    ]
+  }
 }

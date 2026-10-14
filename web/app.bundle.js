@@ -1237,24 +1237,24 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first3 = this[offset];
+      const first4 = this[offset];
       const last = this[offset + 7];
-      if (first3 === void 0 || last === void 0) {
+      if (first4 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const lo = first3 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
+      const lo = first4 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
       const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
       return BigInt(lo) + (BigInt(hi) << BigInt(32));
     });
     Buffer3.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first3 = this[offset];
+      const first4 = this[offset];
       const last = this[offset + 7];
-      if (first3 === void 0 || last === void 0) {
+      if (first4 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const hi = first3 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
+      const hi = first4 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
       return (BigInt(hi) << BigInt(32)) + BigInt(lo);
     });
@@ -1317,23 +1317,23 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first3 = this[offset];
+      const first4 = this[offset];
       const last = this[offset + 7];
-      if (first3 === void 0 || last === void 0) {
+      if (first4 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
       const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-      return (BigInt(val) << BigInt(32)) + BigInt(first3 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
+      return (BigInt(val) << BigInt(32)) + BigInt(first4 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
     });
     Buffer3.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first3 = this[offset];
+      const first4 = this[offset];
       const last = this[offset + 7];
-      if (first3 === void 0 || last === void 0) {
+      if (first4 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const val = (first3 << 24) + // Overflow
+      const val = (first4 << 24) + // Overflow
       this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
     });
@@ -7931,24 +7931,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number5) {
-      number5 = Number2(number5);
-      if (NumberIsNaN(number5)) {
+    function toIntegerOrInfinity(number6) {
+      number6 = Number2(number6);
+      if (NumberIsNaN(number6)) {
         return 0;
       }
-      if (number5 < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number5);
+      if (number6 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number6);
       }
-      return number5;
+      return number6;
     }
-    function drop(number5, options = void 0) {
+    function drop(number6, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number5 = toIntegerOrInfinity(number5);
+      number6 = toIntegerOrInfinity(number6);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7959,20 +7959,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number5-- <= 0) {
+          if (number6-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number5, options = void 0) {
+    function take2(number6, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number5 = toIntegerOrInfinity(number5);
+      number6 = toIntegerOrInfinity(number6);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7983,10 +7983,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number5-- > 0) {
+          if (number6-- > 0) {
             yield val;
           }
-          if (number5 <= 0) {
+          if (number6 <= 0) {
             return;
           }
         }
@@ -8610,22 +8610,22 @@ var require_NQuads = __commonJS({
     var TYPE_DEFAULT_GRAPH = "DefaultGraph";
     var REGEX = {};
     (() => {
-      const iri4 = "(?:<([^:]+:[^>]*)>)";
+      const iri5 = "(?:<([^:]+:[^>]*)>)";
       const PN_CHARS_BASE = "A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD";
       const PN_CHARS_U = PN_CHARS_BASE + "_";
       const PN_CHARS = PN_CHARS_U + "0-9-\xB7\u0300-\u036F\u203F-\u2040";
       const BLANK_NODE_LABEL = "(_:(?:[" + PN_CHARS_U + "0-9])(?:(?:[" + PN_CHARS + ".])*(?:[" + PN_CHARS + "]))?)";
       const bnode = BLANK_NODE_LABEL;
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
-      const datatype = "(?:\\^\\^" + iri4 + ")";
+      const datatype = "(?:\\^\\^" + iri5 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
       const literal6 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
-      const subject = "(?:" + iri4 + "|" + bnode + ")" + ws;
-      const property = iri4 + ws;
-      const object = "(?:" + iri4 + "|" + bnode + "|" + literal6 + ")" + wso;
-      const graphName = "(?:\\.|(?:(?:" + iri4 + "|" + bnode + ")" + wso + "\\.))";
+      const subject = "(?:" + iri5 + "|" + bnode + ")" + ws;
+      const property = iri5 + ws;
+      const object = "(?:" + iri5 + "|" + bnode + "|" + literal6 + ")" + wso;
+      const graphName = "(?:\\.|(?:(?:" + iri5 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
       REGEX.quad = new RegExp(
@@ -9982,8 +9982,8 @@ var NamedNode, NamedNode_default;
 var init_NamedNode = __esm({
   "node_modules/@rdfjs/data-model/lib/NamedNode.js"() {
     NamedNode = class {
-      constructor(iri4) {
-        this.value = iri4;
+      constructor(iri5) {
+        this.value = iri5;
       }
       equals(other) {
         return !!other && other.termType === this.termType && other.value === this.value;
@@ -11736,8 +11736,8 @@ function mapLiteralsByLanguage(map, current) {
   }
   return map;
 }
-function createLanguageMapper(objects4) {
-  const literalsByLanguage = objects4.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
+function createLanguageMapper(objects5) {
+  const literalsByLanguage = objects5.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
   const langMapEntries = [...literalsByLanguage.entries()];
   return (language) => {
     const languageLowerCase = language.toLowerCase();
@@ -11795,11 +11795,11 @@ var init_Context = __esm({
         });
       }
       out(predicate, { language } = {}) {
-        let objects4 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
+        let objects5 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
         if (typeof language !== "undefined") {
-          objects4 = filterTaggedLiterals(objects4, { language });
+          objects5 = filterTaggedLiterals(objects5, { language });
         }
-        return objects4.map((object) => {
+        return objects5.map((object) => {
           return this.clone({ value: object });
         });
       }
@@ -11815,10 +11815,10 @@ var init_Context = __esm({
         }
         return context;
       }
-      addOut(predicates, objects4) {
+      addOut(predicates, objects5) {
         const context = [];
         if (this.term) {
-          objects4.forEach((object) => {
+          objects5.forEach((object) => {
             predicates.forEach((predicate) => {
               this.dataset.add(this.factory.quad(this.term, predicate, object, this.graph));
             });
@@ -11843,8 +11843,8 @@ var init_Context = __esm({
       deleteIn(predicate, subject) {
         this.deleteMatch(subject, predicate, toArray(this.term), toArray(this.graph));
       }
-      deleteOut(predicate, objects4) {
-        this.deleteMatch(toArray(this.term), predicate, objects4, toArray(this.graph));
+      deleteOut(predicate, objects5) {
+        this.deleteMatch(toArray(this.term), predicate, objects5, toArray(this.graph));
       }
       deleteList(predicates) {
         predicates.forEach((predicate) => {
@@ -12162,10 +12162,10 @@ var init_Clownface = __esm({
        * @param {*} [objects] object values to match
        * @returns {Clownface}
        */
-      has(predicates, objects4) {
+      has(predicates, objects5) {
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4);
-        const context = this._context.reduce((all, current) => all.concat(current.has(predicates, objects4)), []);
+        objects5 = this._toTermArray(objects5);
+        const context = this._context.reduce((all, current) => all.concat(current.has(predicates, objects5)), []);
         return _Clownface.fromContext(context, this);
       }
       /**
@@ -12200,17 +12200,17 @@ var init_Clownface = __esm({
        * @param {GraphPointerCallback} [callback] called for each subject, with object pointer as parameter
        * @returns {Clownface} current graph pointer
        */
-      addOut(predicates, objects4, callback) {
+      addOut(predicates, objects5, callback) {
         if (!predicates) {
           throw new Error("predicate parameter is required");
         }
-        if (typeof objects4 === "function") {
-          callback = objects4;
-          objects4 = null;
+        if (typeof objects5 === "function") {
+          callback = objects5;
+          objects5 = null;
         }
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4) || [this.factory.blankNode()];
-        const context = this._context.map((context2) => context2.addOut(predicates, objects4));
+        objects5 = this._toTermArray(objects5) || [this.factory.blankNode()];
+        const context = this._context.map((context2) => context2.addOut(predicates, objects5));
         if (callback) {
           _Clownface.fromContext(context, this).forEach(callback);
         }
@@ -12252,10 +12252,10 @@ var init_Clownface = __esm({
        * @param {Term|Term[]|Clownface|Clownface[]} [objects]
        * @returns {Clownface} current graph pointer
        */
-      deleteOut(predicates, objects4) {
+      deleteOut(predicates, objects5) {
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4);
-        this._context.forEach((context) => context.deleteOut(predicates, objects4));
+        objects5 = this._toTermArray(objects5);
+        this._context.forEach((context) => context.deleteOut(predicates, objects5));
         return this;
       }
       /**
@@ -13250,6 +13250,25 @@ var init_Vocabulary = __esm({
         Module: `${JIG}Module`,
         Processor: `${JIG}Processor`,
         UserInterface: `${JIG}UserInterface`,
+        // Skins: a declarative interface, artwork plus bindings (docs/svg-skins.md)
+        Skin: `${JIG}Skin`,
+        Artwork: `${JIG}Artwork`,
+        Control: `${JIG}Control`,
+        RotaryControl: `${JIG}RotaryControl`,
+        LinearControl: `${JIG}LinearControl`,
+        ToggleControl: `${JIG}ToggleControl`,
+        SelectorControl: `${JIG}SelectorControl`,
+        ReadoutControl: `${JIG}ReadoutControl`,
+        skin: `${JIG}skin`,
+        artwork: `${JIG}artwork`,
+        control: `${JIG}control`,
+        boundSymbol: `${JIG}boundSymbol`,
+        element: `${JIG}element`,
+        hitElement: `${JIG}hitElement`,
+        pivotElement: `${JIG}pivotElement`,
+        trackElement: `${JIG}trackElement`,
+        angleMin: `${JIG}angleMin`,
+        angleMax: `${JIG}angleMax`,
         // Delivery
         module: `${JIG}module`,
         processor: `${JIG}processor`,
@@ -13513,6 +13532,10 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
+function orderPorts(ports) {
+  const authored = ports.length > 0 && ports.every((p) => p.paramIndex != null);
+  return ports.sort(authored ? (a2, b) => a2.paramIndex - b.paramIndex : (a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""));
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
@@ -13533,6 +13556,8 @@ function readPort(dataset2, term5) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset2, term5, jig.controlGroup)),
+    // The author's order, where the profile gives one; the panel follows it.
+    paramIndex: asNumber(one(dataset2, term5, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset2, term5, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
@@ -13639,8 +13664,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     module: readResource(dataset2, one(dataset2, subject, jig.module), base, subject.value),
     processor: readResource(dataset2, one(dataset2, subject, jig.processor), base, subject.value),
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
+    skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)).sort((a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""))
+    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;
@@ -13705,19 +13731,19 @@ var LoadError, CompositeFound, STEPS;
 var init_LoadError = __esm({
   "src/host/LoadError.js"() {
     LoadError = class extends Error {
-      constructor(step, message, { cause, iri: iri4 } = {}) {
+      constructor(step, message, { cause, iri: iri5 } = {}) {
         super(message, { cause });
         this.name = "LoadError";
         this.step = step;
-        this.iri = iri4 ?? null;
+        this.iri = iri5 ?? null;
       }
       toString() {
         return `${this.name} [${this.step}]: ${this.message}`;
       }
     };
     CompositeFound = class extends LoadError {
-      constructor(iri4, dataset2) {
-        super("composite", `${iri4} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri: iri4 });
+      constructor(iri5, dataset2) {
+        super("composite", `${iri5} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri: iri5 });
         this.name = "CompositeFound";
         this.dataset = dataset2;
       }
@@ -14381,8 +14407,8 @@ var init_N3Lexer = __esm({
 });
 
 // node_modules/n3/src/N3DataFactory.js
-function namedNode3(iri4) {
-  return new NamedNode2(iri4);
+function namedNode3(iri5) {
+  return new NamedNode2(iri5);
 }
 function blankNode3(name2) {
   return new BlankNode2(name2 || `n3-${_blankNodeCounter++}`);
@@ -14500,8 +14526,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.namedNode(iri)`), so that term validation can be applied;
        * the constructor assumes an already-validated IRI.
        */
-      constructor(iri4) {
-        super(iri4);
+      constructor(iri5) {
+        super(iri5);
       }
       // ### The term type of this term
       get termType() {
@@ -14725,7 +14751,7 @@ var init_N3Parser = __esm({
         this._implicitEmptyPrefix = !!options.implicitEmptyPrefix;
         this._emptyFormulaAsTrue = !!options.emptyFormulaAsTrue;
         if (isLineMode)
-          this._resolveRelativeIRI = (iri4) => {
+          this._resolveRelativeIRI = (iri5) => {
             return null;
           };
         this._blankNodePrefix = typeof options.blankNodePrefix !== "string" ? "" : options.blankNodePrefix.replace(/^(?!_:)/, "_:");
@@ -14884,10 +14910,10 @@ var init_N3Parser = __esm({
           // Read a relative or absolute IRI
           case "IRI":
           case "typeIRI":
-            const iri4 = this._resolveIRI(token.value);
-            if (iri4 === null)
+            const iri5 = this._resolveIRI(token.value);
+            if (iri5 === null)
               return this._error("Invalid IRI", token);
-            value2 = this._factory.namedNode(iri4);
+            value2 = this._factory.namedNode(iri5);
             break;
           // Read a prefixed name
           case "type":
@@ -15163,20 +15189,20 @@ var init_N3Parser = __esm({
       }
       // ### `_readIriPropertyListId` replaces a property list's blank node with its IRI
       _readIriPropertyListId(token) {
-        const iri4 = this._readEntity(token);
-        if (iri4 === void 0)
+        const iri5 = this._readEntity(token);
+        if (iri5 === void 0)
           return;
-        if (iri4.termType !== "NamedNode")
+        if (iri5.termType !== "NamedNode")
           return this._error(`Expected IRI after id but got ${token.type}`, token);
         const placeholder = this._subject;
-        this._subject = iri4;
+        this._subject = iri5;
         const context = this._contextStack[this._contextStack.length - 1];
         if (context.subject === placeholder)
-          context.subject = iri4;
+          context.subject = iri5;
         if (context.predicate === placeholder)
-          context.predicate = iri4;
+          context.predicate = iri5;
         if (context.object === placeholder)
-          context.object = iri4;
+          context.object = iri5;
         this._predicate = null;
         return this._readIriPropertyListPredicate;
       }
@@ -15607,10 +15633,10 @@ var init_N3Parser = __esm({
       }
       // ### `_readBaseIRI` reads the IRI of a base declaration
       _readBaseIRI(token) {
-        const iri4 = token.type === "IRI" && this._resolveIRI(token.value);
-        if (!iri4)
+        const iri5 = token.type === "IRI" && this._resolveIRI(token.value);
+        if (!iri5)
           return this._error("Expected valid IRI to follow base declaration", token);
-        this._setBase(iri4);
+        this._setBase(iri5);
         return this._readDeclarationPunctuation;
       }
       // ### `_isValidVersion` checks if the given version is valid for this parser to handle.
@@ -15934,42 +15960,42 @@ var init_N3Parser = __esm({
         this._callback = noop;
       }
       // ### `_resolveIRI` resolves an IRI against the base path
-      _resolveIRI(iri4) {
-        return /^[a-z][a-z0-9+.-]*:/i.test(iri4) ? iri4 : this._resolveRelativeIRI(iri4);
+      _resolveIRI(iri5) {
+        return /^[a-z][a-z0-9+.-]*:/i.test(iri5) ? iri5 : this._resolveRelativeIRI(iri5);
       }
       // ### `_resolveRelativeIRI` resolves an IRI against the base path,
       // assuming that a base path has been set and that the IRI is indeed relative
-      _resolveRelativeIRI(iri4) {
-        if (!iri4.length)
+      _resolveRelativeIRI(iri5) {
+        if (!iri5.length)
           return this._base;
-        switch (iri4[0]) {
+        switch (iri5[0]) {
           // Resolve relative fragment IRIs against the base IRI
           case "#":
-            return this._base + iri4;
+            return this._base + iri5;
           // Resolve relative query string IRIs by replacing the query string
           case "?":
-            return this._base.replace(/(?:\?.*)?$/, iri4);
+            return this._base.replace(/(?:\?.*)?$/, iri5);
           // Resolve root-relative IRIs at the root of the base IRI
           case "/":
-            return (iri4[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri4);
+            return (iri5[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri5);
           // Resolve all other IRIs at the base IRI's path
           default:
-            return /^[^/:]*:/.test(iri4) ? null : this._removeDotSegments(this._basePath + iri4);
+            return /^[^/:]*:/.test(iri5) ? null : this._removeDotSegments(this._basePath + iri5);
         }
       }
       // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
-      _removeDotSegments(iri4) {
-        if (!/(^|\/)\.\.?($|[/#?])/.test(iri4))
-          return iri4;
-        const length = iri4.length;
+      _removeDotSegments(iri5) {
+        if (!/(^|\/)\.\.?($|[/#?])/.test(iri5))
+          return iri5;
+        const length = iri5.length;
         let result = "", i2 = -1, pathStart = -1, segmentStart = 0, next = "/";
         while (i2 < length) {
           switch (next) {
             // The path starts with the first slash after the authority
             case ":":
               if (pathStart < 0) {
-                if (iri4[++i2] === "/" && iri4[++i2] === "/")
-                  while ((pathStart = i2 + 1) < length && iri4[pathStart] !== "/")
+                if (iri5[++i2] === "/" && iri5[++i2] === "/")
+                  while ((pathStart = i2 + 1) < length && iri5[pathStart] !== "/")
                     i2 = pathStart;
               }
               break;
@@ -15980,36 +16006,36 @@ var init_N3Parser = __esm({
               break;
             // Handle '/.' or '/..' path segments
             case "/":
-              if (iri4[i2 + 1] === ".") {
-                next = iri4[++i2 + 1];
+              if (iri5[i2 + 1] === ".") {
+                next = iri5[++i2 + 1];
                 switch (next) {
                   // Remove a '/.' segment
                   case "/":
-                    result += iri4.substring(segmentStart, i2 - 1);
+                    result += iri5.substring(segmentStart, i2 - 1);
                     segmentStart = i2 + 1;
                     break;
                   // Remove a trailing '/.' segment
                   case void 0:
                   case "?":
                   case "#":
-                    return result + iri4.substring(segmentStart, i2) + iri4.substr(i2 + 1);
+                    return result + iri5.substring(segmentStart, i2) + iri5.substr(i2 + 1);
                   // Remove a '/..' segment
                   case ".":
-                    next = iri4[++i2 + 1];
+                    next = iri5[++i2 + 1];
                     if (next === void 0 || next === "/" || next === "?" || next === "#") {
-                      result += iri4.substring(segmentStart, i2 - 2);
+                      result += iri5.substring(segmentStart, i2 - 2);
                       if ((segmentStart = result.lastIndexOf("/")) >= pathStart)
                         result = result.substr(0, segmentStart);
                       if (next !== "/")
-                        return `${result}/${iri4.substr(i2 + 1)}`;
+                        return `${result}/${iri5.substr(i2 + 1)}`;
                       segmentStart = i2 + 1;
                     }
                 }
               }
           }
-          next = iri4[++i2];
+          next = iri5[++i2];
         }
-        return result + iri4.substring(segmentStart);
+        return result + iri5.substring(segmentStart);
       }
       // ## Public methods
       // ### `parse` parses the N3 input and emits each parsed quad through the onQuad callback.
@@ -17258,7 +17284,7 @@ var require_rdf_literal = __commonJS({
 var keyFor, ConsentRequired, ForeignTrust;
 var init_ForeignTrust = __esm({
   "src/host/ForeignTrust.js"() {
-    keyFor = (iri4, digest) => `${iri4}\0${digest}`;
+    keyFor = (iri5, digest) => `${iri5}\0${digest}`;
     ConsentRequired = class extends Error {
       constructor(request) {
         super(
@@ -17281,14 +17307,14 @@ var init_ForeignTrust = __esm({
        * The three statements are what section 12.4 requires: which plugin, which
        * format, and what privilege it gets.
        */
-      static request({ iri: iri4, label, format, digest }) {
+      static request({ iri: iri5, label, format, digest }) {
         return Object.freeze({
-          iri: iri4,
-          label: label ?? iri4,
+          iri: iri5,
+          label: label ?? iri5,
           format,
           digest,
           statements: Object.freeze([
-            `${label ?? iri4} is a ${format ?? "foreign"} plugin.`,
+            `${label ?? iri5} is a ${format ?? "foreign"} plugin.`,
             "It runs in this page, with this page's privileges. It can read this project, anything this page has stored, and every other plugin loaded here.",
             "It is not sandboxed and its capabilities cannot be limited.",
             `Only this exact copy is being agreed to (${(digest ?? "").slice(0, 19)}\u2026). If it is updated, you will be asked again.`
@@ -17296,9 +17322,9 @@ var init_ForeignTrust = __esm({
         });
       }
       /** True only for this plugin and only for this container. */
-      isConsented(iri4, digest) {
-        if (!iri4 || !digest) return false;
-        return this.#store.get(keyFor(iri4, digest)) === true;
+      isConsented(iri5, digest) {
+        if (!iri5 || !digest) return false;
+        return this.#store.get(keyFor(iri5, digest)) === true;
       }
       /**
        * Record a person's decision.
@@ -17306,13 +17332,13 @@ var init_ForeignTrust = __esm({
        * Takes the digest as an argument rather than reading it from anywhere later,
        * so that consenting to one body of code cannot be made to cover another.
        */
-      consent(iri4, digest) {
-        if (!iri4 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
-        this.#store.set(keyFor(iri4, digest), true);
+      consent(iri5, digest) {
+        if (!iri5 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
+        this.#store.set(keyFor(iri5, digest), true);
       }
       /** Withdraw it. The next load asks again. */
-      revoke(iri4, digest) {
-        this.#store.delete(keyFor(iri4, digest));
+      revoke(iri5, digest) {
+        this.#store.delete(keyFor(iri5, digest));
       }
       /**
        * Throws unless this exact container has been consented to.
@@ -17320,9 +17346,9 @@ var init_ForeignTrust = __esm({
        * Throws rather than returning false so that a caller cannot proceed by
        * forgetting to check, which is the same reason verifyIntegrity throws.
        */
-      require({ iri: iri4, label, format, digest }) {
-        if (!this.isConsented(iri4, digest)) {
-          throw new ConsentRequired(_ForeignTrust.request({ iri: iri4, label, format, digest }));
+      require({ iri: iri5, label, format, digest }) {
+        if (!this.isConsented(iri5, digest)) {
+          throw new ConsentRequired(_ForeignTrust.request({ iri: iri5, label, format, digest }));
         }
         return true;
       }
@@ -17925,19 +17951,19 @@ var init_ForeignSupport = __esm({
        * A surface uses this to decide whether it is about to ask a person a
        * question, before it asks.
        */
-      async classify(iri4) {
-        const response = await this.#fetch(iri4, { headers: { accept: PROFILE_ACCEPT2 } });
+      async classify(iri5) {
+        const response = await this.#fetch(iri5, { headers: { accept: PROFILE_ACCEPT2 } });
         if (!response.ok) {
-          throw new LoadError(STEPS.fetchProfile, `${iri4} returned ${response.status}`);
+          throw new LoadError(STEPS.fetchProfile, `${iri5} returned ${response.status}`);
         }
-        const dataset2 = await parseText(await response.text(), iri4);
+        const dataset2 = await parseText(await response.text(), iri5);
         return { kind: kindOf(dataset2), dataset: dataset2 };
       }
       /** The profile of a foreign plugin, validated, without running anything. */
-      async profileOf(iri4) {
-        const { kind, dataset: dataset2 } = await this.classify(iri4);
+      async profileOf(iri5) {
+        const { kind, dataset: dataset2 } = await this.classify(iri5);
         if (kind !== "foreign") {
-          throw new LoadError(STEPS.parseProfile, `${iri4} is not a foreign plugin`);
+          throw new LoadError(STEPS.parseProfile, `${iri5} is not a foreign plugin`);
         }
         if (this.#validator) {
           const report = await this.#validator.validate(dataset2);
@@ -17945,12 +17971,12 @@ var init_ForeignSupport = __esm({
             const seen = report.violations.map((v) => `${v.focusNode} ${v.path ?? "(node)"}`);
             throw new LoadError(
               STEPS.validateProfile,
-              `${iri4} does not validate:
+              `${iri5} does not validate:
   - ${seen.join("\n  - ")}`
             );
           }
         }
-        return readForeignProfile(dataset2, { baseIRI: iri4 });
+        return readForeignProfile(dataset2, { baseIRI: iri5 });
       }
       /**
        * Everything the engine needs to adopt one.
@@ -17958,8 +17984,8 @@ var init_ForeignSupport = __esm({
        * Throws ConsentRequired when this container has not been agreed to, which
        * the dispatcher turns into a result a surface can act on.
        */
-      async add(iri4, context) {
-        const profile = await this.profileOf(iri4);
+      async add(iri5, context) {
+        const profile = await this.profileOf(iri5);
         return loadForeignPlugin(profile, context, {
           trust: this.trust,
           origin: this.#origin,
@@ -18127,11 +18153,11 @@ var WASM_FEATURE_PROBES = Object.freeze({
     11
   )
 });
-function compact(iri4) {
+function compact(iri5) {
   for (const [prefix, namespace2] of PREFIXES) {
-    if (iri4.startsWith(namespace2)) return prefix + iri4.slice(namespace2.length);
+    if (iri5.startsWith(namespace2)) return prefix + iri5.slice(namespace2.length);
   }
-  return iri4;
+  return iri5;
 }
 function detectCapabilities(env = globalThis) {
   const offered = /* @__PURE__ */ new Set([
@@ -18517,79 +18543,79 @@ var PluginLoader = class {
    * members are checked when it is loaded, as nested-plugins.md section 6 says, and a collection of forty racks does not
    * fetch forty trees to draw a list.
    */
-  async loadListing(iri4) {
-    const dataset2 = await this.fetchDataset(iri4);
-    if (!isComposite(dataset2)) return this.profileFrom(dataset2, iri4);
+  async loadListing(iri5) {
+    const dataset2 = await this.fetchDataset(iri5);
+    if (!isComposite(dataset2)) return this.profileFrom(dataset2, iri5);
     let profile;
     try {
       profile = compositeProfile(readComposite(dataset2));
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri4 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri5 });
     }
-    return { profile, granted: this.checkCapabilities(profile, iri4) };
+    return { profile, granted: this.checkCapabilities(profile, iri5) };
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
-  async loadProfile(iri4) {
-    const dataset2 = await this.fetchDataset(iri4);
-    if (isComposite(dataset2)) throw new CompositeFound(iri4, dataset2);
-    return this.profileFrom(dataset2, iri4);
+  async loadProfile(iri5) {
+    const dataset2 = await this.fetchDataset(iri5);
+    if (isComposite(dataset2)) throw new CompositeFound(iri5, dataset2);
+    return this.profileFrom(dataset2, iri5);
   }
   /**
    * Steps 1 to 3 up to the capability check: fetch, parse and validate. Split out so a composite plugin, which
    * reads differently, goes through the same fetch and validation as any plugin (docs/nested-plugins.md).
    */
-  async fetchDataset(iri4) {
+  async fetchDataset(iri5) {
     let response;
     try {
-      response = await this.#fetch(iri4, { headers: { accept: PROFILE_ACCEPT } });
+      response = await this.#fetch(iri5, { headers: { accept: PROFILE_ACCEPT } });
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchProfile,
-        `could not fetch ${iri4}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
-        { cause, iri: iri4 }
+        `could not fetch ${iri5}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, iri: iri5 }
       );
     }
     if (!response.ok) {
-      throw new LoadError(STEPS.fetchProfile, `${iri4} returned ${response.status}`, { iri: iri4 });
+      throw new LoadError(STEPS.fetchProfile, `${iri5} returned ${response.status}`, { iri: iri5 });
     }
     const text = await response.text();
     let dataset2;
     try {
-      dataset2 = await this.#parse(text, iri4);
+      dataset2 = await this.#parse(text, iri5);
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, `${iri4} is not parseable RDF: ${cause.message}`, { cause, iri: iri4 });
+      throw new LoadError(STEPS.parseProfile, `${iri5} is not parseable RDF: ${cause.message}`, { cause, iri: iri5 });
     }
     if (this.#validator) {
       const report = await this.#validator.validate(dataset2);
       if (!report.conforms) {
-        const first3 = report.violations[0];
+        const first4 = report.violations[0];
         throw new LoadError(
           STEPS.validateProfile,
-          `${iri4} is not a valid profile: ${first3.message} (at ${first3.focusNode}${first3.path ? ` ${first3.path}` : ""})`,
-          { iri: iri4 }
+          `${iri5} is not a valid profile: ${first4.message} (at ${first4.focusNode}${first4.path ? ` ${first4.path}` : ""})`,
+          { iri: iri5 }
         );
       }
     }
     return dataset2;
   }
   /** Read a fetched profile and check its capabilities before any code is fetched. Contract section 2.1. */
-  profileFrom(dataset2, iri4) {
+  profileFrom(dataset2, iri5) {
     let profile;
     try {
-      profile = readProfile(dataset2, { baseIRI: iri4 });
+      profile = readProfile(dataset2, { baseIRI: iri5 });
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri4 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri5 });
     }
-    return { profile, granted: this.checkCapabilities(profile, iri4) };
+    return { profile, granted: this.checkCapabilities(profile, iri5) };
   }
   /**
    * Contract section 2.1, evaluated BEFORE any code is fetched. Takes anything with `requires`, so a
    * composite, which has no module, is checked by the same rule as a plugin. Returns what is granted.
    */
-  checkCapabilities(profile, iri4) {
+  checkCapabilities(profile, iri5) {
     const negotiation = negotiate(profile, this.#capabilities);
     if (!negotiation.satisfied) {
-      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri4 });
+      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri5 });
     }
     return negotiation.granted;
   }
@@ -18725,10 +18751,10 @@ function proofSubjects(dataset2) {
   return [...subjects];
 }
 function bundleSubjects(dataset2) {
-  const { jig: jig7, prov, rdf: rdf2 } = vocabulary;
+  const { jig: jig8, prov, rdf: rdf2 } = vocabulary;
   const subjects = /* @__PURE__ */ new Set();
   for (const quad3 of dataset2) {
-    if (quad3.predicate.value !== rdf2.type || quad3.object.value !== jig7.Bundle) continue;
+    if (quad3.predicate.value !== rdf2.type || quad3.object.value !== jig8.Bundle) continue;
     subjects.add(quad3.subject.value);
     for (const other of dataset2) {
       if (other.subject.value === quad3.subject.value && other.predicate.value === prov.wasGeneratedBy) {
@@ -18748,7 +18774,7 @@ init_Integrity();
 init_LoadError();
 var MINIMUM_DEPTH = 4;
 var encoder = new TextEncoder();
-async function resolveComposite(iri4, { loader, bundled = () => null, maxDepth = 8, subtle = crypto.subtle } = {}) {
+async function resolveComposite(iri5, { loader, bundled = () => null, maxDepth = 8, subtle = crypto.subtle } = {}) {
   if (!loader) throw new Error("resolveComposite needs a loader");
   if (!(maxDepth >= MINIMUM_DEPTH)) throw new Error(`a host must support at least ${MINIMUM_DEPTH} levels of nesting, not ${maxDepth}`);
   const fetched = /* @__PURE__ */ new Map();
@@ -18816,24 +18842,24 @@ async function resolveComposite(iri4, { loader, bundled = () => null, maxDepth =
     checkDrives(target2, composite, members);
     return { kind: "composite", iri: target2, composite, granted: [...granted], members };
   }
-  return visit(iri4, []);
+  return visit(iri5, []);
 }
-function checkDrives(iri4, composite, members) {
+function checkDrives(iri5, composite, members) {
   for (const port of composite.ports) {
     for (const drive of port.drives) {
       const member = members.find((m) => m.id === drive.node);
       if (!member) continue;
       const available = member.tree.kind === "plugin" ? member.tree.profile.ports : member.tree.composite.ports;
       const target2 = available.find((p) => p.symbol === drive.portSymbol);
-      const where = `${iri4}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
+      const where = `${iri5}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
       if (!target2) {
-        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri4 });
+        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri5 });
       }
       if ((port.minimum ?? -Infinity) < (target2.minimum ?? -Infinity) || (port.maximum ?? Infinity) > (target2.maximum ?? Infinity)) {
         throw new LoadError(
           STEPS.composite,
           `${where}, whose range is ${target2.minimum} to ${target2.maximum}, and the port declares ${port.minimum} to ${port.maximum}. A port must lie within the range of what it drives.`,
-          { iri: iri4 }
+          { iri: iri5 }
         );
       }
     }
@@ -19284,12 +19310,12 @@ var Engine = class {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin(iri4, { state = null } = {}) {
+  async addPlugin(iri5, { state = null } = {}) {
     let loaded;
     try {
-      loaded = await this.#loader.loadProfile(iri4);
+      loaded = await this.#loader.loadProfile(iri5);
     } catch (error2) {
-      if (error2 instanceof CompositeFound) return this.#addComposite(iri4, error2.dataset, { state });
+      if (error2 instanceof CompositeFound) return this.#addComposite(iri5, error2.dataset, { state });
       throw error2;
     }
     const { profile, granted } = loaded;
@@ -19299,14 +19325,14 @@ var Engine = class {
       this.#context,
       { AudioWorkletNode: this.#nodeClass, state }
     );
-    return this.adopt({ iri: iri4, profile, node, ready, descriptors, granted });
+    return this.adopt({ iri: iri5, profile, node, ready, descriptors, granted });
   }
   /**
    * The canonical digest of a plugin's profile, which is what a composite pins it by (docs/nested-plugins.md section 9.1). Over the
    * identity the profile states and not the URL it was fetched from. Fetches the profile and nothing else.
    */
-  async profileDigest(iri4) {
-    const dataset2 = await this.#loader.fetchDataset(iri4);
+  async profileDigest(iri5) {
+    const dataset2 = await this.#loader.fetchDataset(iri5);
     const identity2 = isComposite(dataset2) ? readComposite(dataset2).iri : readProfile(dataset2).iri;
     return digestOf(new TextEncoder().encode(pluginForm(dataset2, identity2)), "sha384");
   }
@@ -19320,8 +19346,8 @@ var Engine = class {
    * the path of member IRIs from the composite inward. It has no `id` and no `node` of its own.
    * docs/nested-plugins.md.
    */
-  async #addComposite(iri4, dataset2, { state }) {
-    const tree = await resolveComposite(iri4, { loader: this.#loader, bundled: (target2) => target2 === iri4 ? dataset2 : null });
+  async #addComposite(iri5, dataset2, { state }) {
+    const tree = await resolveComposite(iri5, { loader: this.#loader, bundled: (target2) => target2 === iri5 ? dataset2 : null });
     const saved = /* @__PURE__ */ new Map();
     restoreState(tree, state, (path, value2) => saved.set(JSON.stringify(path), value2));
     const members = [];
@@ -19345,7 +19371,7 @@ var Engine = class {
           members.push({ path: here, entry: adopted });
           byPath.set(JSON.stringify(here), adopted);
         } catch (cause) {
-          throw new LoadError(cause.step ?? STEPS.composite, `${iri4}, member ${here.join(" > ")}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri });
+          throw new LoadError(cause.step ?? STEPS.composite, `${iri5}, member ${here.join(" > ")}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri });
         }
       }
     };
@@ -19356,7 +19382,7 @@ var Engine = class {
       for (const { entry } of members) this.remove(entry.id);
       throw error2;
     }
-    return { composite: true, iri: iri4, tree, profile: compositeProfile(tree.composite), members };
+    return { composite: true, iri: iri5, tree, profile: compositeProfile(tree.composite), members };
   }
   /**
    * Set what the composite's author set, before anything is heard: each exposed port's default on the
@@ -19378,7 +19404,7 @@ var Engine = class {
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
-  adopt({ iri: iri4, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
+  adopt({ iri: iri5, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
     let driver = null;
     if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
       driver = this.#context.createConstantSource();
@@ -19387,7 +19413,7 @@ var Engine = class {
       driver.start();
     }
     const id = nextId();
-    const entry = { id, iri: iri4, profile, node, ready, descriptors, granted, driver };
+    const entry = { id, iri: iri5, profile, node, ready, descriptors, granted, driver };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -20197,46 +20223,46 @@ var ClipPlayer = class {
     this.#fetchBytes = fetchBytes;
   }
   /** The decoded audio, or null while it loads or if it failed. */
-  buffer(iri4) {
-    return this.#buffers.get(iri4) ?? null;
+  buffer(iri5) {
+    return this.#buffers.get(iri5) ?? null;
   }
   /** Why a source could not be loaded, or null. */
-  failure(iri4) {
-    return this.#failures.get(iri4) ?? null;
+  failure(iri5) {
+    return this.#failures.get(iri5) ?? null;
   }
   /**
    * Decode a source, once. Resolves with the AudioBuffer, or with null if it
    * cannot be had, in which case failure(iri) says why. Never rejects: one
    * missing file is one silent clip, not a session that will not play.
    */
-  load(iri4) {
-    if (this.#buffers.has(iri4)) return Promise.resolve(this.#buffers.get(iri4));
-    if (this.#loading.has(iri4)) return this.#loading.get(iri4);
+  load(iri5) {
+    if (this.#buffers.has(iri5)) return Promise.resolve(this.#buffers.get(iri5));
+    if (this.#loading.has(iri5)) return this.#loading.get(iri5);
     const loading2 = (async () => {
       try {
-        const bytes = await this.#fetchBytes(iri4);
+        const bytes = await this.#fetchBytes(iri5);
         const buffer = await this.#context.decodeAudioData(bytes);
-        this.#buffers.set(iri4, buffer);
-        this.#failures.delete(iri4);
+        this.#buffers.set(iri5, buffer);
+        this.#failures.delete(iri5);
         return buffer;
       } catch (error2) {
-        this.#failures.set(iri4, error2);
+        this.#failures.set(iri5, error2);
         return null;
       } finally {
-        this.#loading.delete(iri4);
+        this.#loading.delete(iri5);
       }
     })();
-    this.#loading.set(iri4, loading2);
+    this.#loading.set(iri5, loading2);
     return loading2;
   }
   /**
    * The loudest sample in each of `count` equal stretches of the first
    * channel, for drawing a waveform. Computed once per source and count.
    */
-  peaks(iri4, count) {
-    const buffer = this.buffer(iri4);
+  peaks(iri5, count) {
+    const buffer = this.buffer(iri5);
     if (!buffer || !(count > 0)) return null;
-    const key = `${count} ${iri4}`;
+    const key = `${count} ${iri5}`;
     if (this.#peaks.has(key)) return this.#peaks.get(key);
     const data = buffer.getChannelData(0);
     const out = new Float32Array(count);
@@ -20258,8 +20284,8 @@ var ClipPlayer = class {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start({ iri: iri4, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
-    const buffer = this.buffer(iri4);
+  start({ iri: iri5, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
+    const buffer = this.buffer(iri5);
     if (!buffer) return false;
     const source = this.#context.createBufferSource();
     source.buffer = buffer;
@@ -22054,7 +22080,7 @@ var number2 = (value2) => {
   if (!Number.isFinite(value2)) throw new Error(`cannot write ${value2} as a number`);
   return String(value2);
 };
-var compact2 = (iri4) => String(iri4).startsWith("http://purl.org/stuff/transmissions/") ? `${TRN2}${String(iri4).slice("http://purl.org/stuff/transmissions/".length)}` : `<${iri4}>`;
+var compact2 = (iri5) => String(iri5).startsWith("http://purl.org/stuff/transmissions/") ? `${TRN2}${String(iri5).slice("http://purl.org/stuff/transmissions/".length)}` : `<${iri5}>`;
 function writeComposite(spec) {
   const out = [];
   const line = (text) => out.push(text);
@@ -22062,14 +22088,14 @@ function writeComposite(spec) {
   const end = (e) => e.node === null ? BOUNDARY : frag(e.node);
   line(`@base <${spec.iri}> .`);
   line("");
-  for (const [prefix, iri4] of [
+  for (const [prefix, iri5] of [
     ["jig", "http://purl.org/stuff/jigdaw/"],
     ["trn", "http://purl.org/stuff/transmissions/"],
     ["lv2", "http://lv2plug.in/ns/lv2core#"],
     ["rdfs", "http://www.w3.org/2000/01/rdf-schema#"],
     ["foaf", "http://xmlns.com/foaf/0.1/"]
   ]) {
-    line(`@prefix ${`${prefix}:`.padEnd(6)} <${iri4}> .`);
+    line(`@prefix ${`${prefix}:`.padEnd(6)} <${iri5}> .`);
   }
   line("");
   const connectionIds = spec.connections.map((_, i2) => `c${i2 + 1}`);
@@ -22328,11 +22354,11 @@ var Inspections = class {
   }
   /** Record what happened loading `iri`. `outcome` is free text, per
    * jig:loadOutcome: "loaded", or "failed: <reason>". */
-  record({ iri: iri4, outcome }) {
+  record({ iri: iri5, outcome }) {
     if (!this.#storage) return;
     const records = this.#read();
     records.push({
-      inspectionOf: iri4,
+      inspectionOf: iri5,
       inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
       hostVersion: HOST_VERSION,
       loadOutcome: outcome
@@ -22344,8 +22370,8 @@ var Inspections = class {
     }
   }
   /** Every inspection recorded of one plugin, oldest first. */
-  forPlugin(iri4) {
-    return this.#read().filter((r) => r.inspectionOf === iri4);
+  forPlugin(iri5) {
+    return this.#read().filter((r) => r.inspectionOf === iri5);
   }
   /** Every inspection recorded, oldest first. */
   all() {
@@ -23036,19 +23062,19 @@ var OpDispatcher = class {
    * input, since it is the only node there for notes to go to. On an existing
    * track nothing is guessed: which node takes the notes is a person's call.
    */
-  async addPlugin(iri4, { position: position2, foreign = false, ...node } = {}) {
+  async addPlugin(iri5, { position: position2, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
-      entry = foreign ? await this.#addForeign(iri4) : await this.#engine.addPlugin(iri4, { state: decodeState(node.state ?? null) });
+      entry = foreign ? await this.#addForeign(iri5) : await this.#engine.addPlugin(iri5, { state: decodeState(node.state ?? null) });
     } catch (error2) {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
       }
-      this.#inspections.record({ iri: iri4, outcome: `failed: ${error2.message}` });
+      this.#inspections.record({ iri: iri5, outcome: `failed: ${error2.message}` });
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    this.#inspections.record({ iri: iri4, outcome: "loaded" });
+    this.#inspections.record({ iri: iri5, outcome: "loaded" });
     const label = node.label ?? entry.profile.label;
     const changes = [];
     let newTrack = null;
@@ -23057,7 +23083,7 @@ var OpDispatcher = class {
       changes.push({ op: "addTrack", id: newTrack, label });
     }
     const nodeId = node.id ?? this.#project.nextId("node");
-    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri4, label });
+    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri5, label });
     if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
       changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
     }
@@ -23158,8 +23184,8 @@ var OpDispatcher = class {
    * `iri` is where it will be published, `https:` or loopback `http:`. Returns `{ ok, turtle, summary, warnings }`, the warnings saying
    * what a composite cannot carry (bypass, saved state, automation, a connection into a member's own parameter).
    */
-  async packSelection({ nodeIds, iri: iri4, label, comment = null, expose = "set" } = {}) {
-    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri4 ?? "")) {
+  async packSelection({ nodeIds, iri: iri5, label, comment = null, expose = "set" } = {}) {
+    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri5 ?? "")) {
       return { ok: false, kind: "change", message: "a composite is published at an https IRI, or an http one on loopback, and needs one to be named by" };
     }
     if (typeof label !== "string" || label.trim() === "") return { ok: false, kind: "change", message: "a composite needs a name" };
@@ -23179,7 +23205,7 @@ var OpDispatcher = class {
       }
     }
     const turtle = writeComposite({
-      iri: iri4,
+      iri: iri5,
       label: label.trim(),
       comment,
       ...plan2,
@@ -23198,15 +23224,15 @@ var OpDispatcher = class {
    * Private because there must be exactly one way into running foreign code,
    * and it is the branch in addPlugin above.
    */
-  async #addForeign(iri4) {
+  async #addForeign(iri5) {
     if (!this.#foreign) {
       throw new Error(
         "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
       );
     }
-    const loaded = await this.#foreign.add(iri4, this.#engine.context);
+    const loaded = await this.#foreign.add(iri5, this.#engine.context);
     return this.#engine.adopt({
-      iri: iri4,
+      iri: iri5,
       profile: loaded.profile,
       node: loaded.node,
       ready: loaded.ready
@@ -23797,8 +23823,8 @@ async function bounce({
   }
   const clipPlayer = new ClipPlayer({ context, fetchBytes });
   const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
-  await Promise.all(sources.map((iri4) => clipPlayer.load(iri4)));
-  const errors = [...opened.errors, ...sources.filter((iri4) => clipPlayer.failure(iri4)).map((iri4) => `audio ${iri4}: ${clipPlayer.failure(iri4).message}`)];
+  await Promise.all(sources.map((iri5) => clipPlayer.load(iri5)));
+  const errors = [...opened.errors, ...sources.filter((iri5) => clipPlayer.failure(iri5)).map((iri5) => `audio ${iri5}: ${clipPlayer.failure(iri5).message}`)];
   const playAudioClip = (clip, { when, offset, duration: duration2 }) => {
     const track = dispatcher.project.track(clip.track);
     if (!track) return;
@@ -24056,7 +24082,7 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       const result = await bounceFn({
         snapshot: d.project.snapshot(),
         makeLoader: () => new PluginLoader({ parse: parseText, validator, capabilities: ctx2.hostCapabilities }),
-        fetchBytes: (iri4) => ctx2.media.fetchBytes(iri4),
+        fetchBytes: (iri5) => ctx2.media.fetchBytes(iri5),
         hostConfig: ctx2.hostConfig,
         seconds,
         sampleRate: ctx2.engine.context.sampleRate,
@@ -24133,18 +24159,18 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       return null;
     }
     const bytes = wavOf(buffer);
-    const iri4 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
-    ctx2.media.put(iri4, bytes, "audio/wav");
+    const iri5 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+    ctx2.media.put(iri5, bytes, "audio/wav");
     const frozen = d.project.nextId("track");
     const lengthBeats = d.transport().beatAtSeconds(seconds);
     const result = d.apply([
       { op: "addTrack", id: frozen, label: `${label} (frozen)` },
-      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri4, offsetSeconds: 0 },
+      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri5, offsetSeconds: 0 },
       { op: "setTrackChannel", track: trackId, muted: true }
     ]);
     if (!result.ok) throw new Error(result.message);
     log2(`froze ${label} into "${label} (frozen)"; the original is muted, not removed. Undo brings it back`, "ok");
-    return { frozen, iri: iri4, seconds };
+    return { frozen, iri: iri5, seconds };
   }
   return { render, exportWav, exportStems, freezeTrack, get busy() {
     return busy || stemming;
@@ -24444,18 +24470,18 @@ function createMedia(document2) {
      * preset's IRI is the preset file and media imported afterwards goes
      * beside it, under the base the session saves with.
      */
-    rebase(iri4) {
-      base = new URL("./", iri4).href;
+    rebase(iri5) {
+      base = new URL("./", iri5).href;
     },
-    has(iri4) {
-      return files.has(iri4);
+    has(iri5) {
+      return files.has(iri5);
     },
-    get(iri4) {
-      return files.get(iri4) ?? null;
+    get(iri5) {
+      return files.get(iri5) ?? null;
     },
     /** Keep a file's bytes under its IRI. */
-    put(iri4, bytes, mediaType = null) {
-      files.set(iri4, { bytes, mediaType });
+    put(iri5, bytes, mediaType = null) {
+      files.set(iri5, { bytes, mediaType });
     },
     /** Where an imported file lives, named by its content. */
     iriFor(hex2, extension) {
@@ -24463,13 +24489,13 @@ function createMedia(document2) {
     },
     /** The files a saved session carries: held here, and under its base. */
     heldUnderBase(iris) {
-      return iris.filter((iri4) => files.has(iri4) && iri4.startsWith(base));
+      return iris.filter((iri5) => files.has(iri5) && iri5.startsWith(base));
     },
     /** A file's bytes, from what is held or else the network. */
-    async fetchBytes(iri4) {
-      if (files.has(iri4)) return files.get(iri4).bytes.slice().buffer;
-      const response = await fetch(iri4);
-      if (!response.ok) throw new Error(`${iri4} answered ${response.status}`);
+    async fetchBytes(iri5) {
+      if (files.has(iri5)) return files.get(iri5).bytes.slice().buffer;
+      const response = await fetch(iri5);
+      if (!response.ok) throw new Error(`${iri5} answered ${response.status}`);
       return response.arrayBuffer();
     }
   };
@@ -26045,8 +26071,8 @@ function extractPropertyPath(pathNode, ns2, allowNamedNodeInList) {
     return pathNode.term;
   }
   if (pathNode.term.termType === "BlankNode" || pathNode.term.termType === "NamedNode") {
-    const first3 = pathNode.out(ns2.rdf.first).term;
-    if (first3) {
+    const first4 = pathNode.out(ns2.rdf.first).term;
+    if (first4) {
       const paths = [...pathNode.list()];
       return paths.map((path) => extractPropertyPath(path, ns2, allowNamedNodeInList));
     }
@@ -26446,8 +26472,8 @@ var Shape = class _Shape {
       results.addAll(subjects);
     });
     this.shapeNodePointer.out(sh.targetObjectsOf).terms.forEach((predicate) => {
-      const objects4 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
-      results.addAll(objects4);
+      const objects5 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
+      results.addAll(objects5);
     });
     return [...results];
   }
@@ -27664,12 +27690,12 @@ function splitClip(project, id, atBeat, { transport: transport2 = null, newId = 
   if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
     throw new Error("the cut must fall inside the clip");
   }
-  const first3 = atBeat - clip.startBeat;
-  const second = clip.lengthBeats - first3;
+  const first4 = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first4;
   if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first3);
+    const { left, right } = partition(clip.notes, first4);
     return [
-      { op: "setClip", id, lengthBeats: first3 },
+      { op: "setClip", id, lengthBeats: first4 },
       { op: "setClipNotes", id, notes: left },
       { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
     ];
@@ -27677,7 +27703,7 @@ function splitClip(project, id, atBeat, { transport: transport2 = null, newId = 
   if (!transport2) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
   const offsetSeconds = clip.offsetSeconds + (transport2.secondsAtBeat(atBeat) - transport2.secondsAtBeat(clip.startBeat));
   return [
-    { op: "setClip", id, lengthBeats: first3, fadeOutBeats: 0 },
+    { op: "setClip", id, lengthBeats: first4, fadeOutBeats: 0 },
     { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
   ];
 }
@@ -27719,11 +27745,11 @@ function copyClips(project, ids) {
     return clip;
   });
   if (clips.length === 0) throw new Error("there is nothing selected to copy");
-  const first3 = Math.min(...clips.map((c3) => c3.startBeat));
+  const first4 = Math.min(...clips.map((c3) => c3.startBeat));
   return clips.map((c3) => ({
     track: c3.track,
     kind: c3.kind,
-    offset: c3.startBeat - first3,
+    offset: c3.startBeat - first4,
     lengthBeats: c3.lengthBeats,
     muted: c3.muted,
     ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
@@ -27879,12 +27905,12 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri4 } = {}) {
+      async handler({ iri: iri5 } = {}) {
         const unavailable2 = requireCatalogue();
         if (unavailable2) return unavailable2;
-        if (!iri4) return failed("plugin_describe needs an iri");
+        if (!iri5) return failed("plugin_describe needs an iri");
         try {
-          return ok(await catalogue.describe(iri4));
+          return ok(await catalogue.describe(iri5));
         } catch (error2) {
           return failed(`catalogue: ${error2.message}`);
         }
@@ -27903,11 +27929,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         if (unavailable2) return unavailable2;
         if (iris.length < 2) return failed("a chain needs at least two plugins");
         const described = [];
-        for (const iri4 of iris) {
+        for (const iri5 of iris) {
           try {
-            described.push(await catalogue.describe(iri4));
+            described.push(await catalogue.describe(iri5));
           } catch (error2) {
-            return failed(`could not describe ${iri4}: ${error2.message}`);
+            return failed(`could not describe ${iri5}: ${error2.message}`);
           }
         }
         const problems = [];
@@ -27940,11 +27966,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri4 } = {}) {
-        if (!iri4) return failed("collection_open needs an iri");
+      async handler({ iri: iri5 } = {}) {
+        if (!iri5) return failed("collection_open needs an iri");
         if (!openCollection) return failed("this host cannot open collections");
         try {
-          const { collection, warnings, members } = await openCollection(iri4);
+          const { collection, warnings, members } = await openCollection(iri5);
           return ok({
             label: collection.label,
             comment: collection.comment ?? null,
@@ -27967,10 +27993,10 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["iri"]
       },
-      async handler({ iri: iri4, track } = {}) {
-        if (!iri4) return failed("plugin_load needs an iri");
+      async handler({ iri: iri5, track } = {}) {
+        if (!iri5) return failed("plugin_load needs an iri");
         if (!loadPlugin) return failed("this host cannot load plugins");
-        const result = await loadPlugin(iri4, track ? { track } : {});
+        const result = await loadPlugin(iri5, track ? { track } : {});
         if (!result.ok) return failed(result.message, { step: result.step ?? null });
         return ok({
           nodeId: result.nodeId,
@@ -28435,8 +28461,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["nodeIds", "iri", "label"]
       },
-      async handler({ nodeIds, iri: iri4, label, comment, expose } = {}) {
-        const result = await dispatcher.packSelection({ nodeIds, iri: iri4, label, comment, expose });
+      async handler({ nodeIds, iri: iri5, label, comment, expose } = {}) {
+        const result = await dispatcher.packSelection({ nodeIds, iri: iri5, label, comment, expose });
         return result.ok ? ok({ turtle: result.turtle, summary: result.summary, warnings: result.warnings }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -28892,7 +28918,7 @@ function createRuntime(ctx2) {
       output: analyser,
       maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
-    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri4) => ctx2.media.fetchBytes(iri4) });
+    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri5) => ctx2.media.fetchBytes(iri5) });
     const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
     const dispatcher = new OpDispatcher({
       engine: ctx2.engine,
@@ -28917,8 +28943,8 @@ function createRuntime(ctx2) {
       const registration = registerTools({
         dispatcher,
         catalogue: ctx2.browser.catalogue(),
-        loadPlugin: (iri4, options) => dispatcher.addPlugin(iri4, options),
-        openCollection: (iri4) => ctx2.browser.loadCollection(iri4),
+        loadPlugin: (iri5, options) => dispatcher.addPlugin(iri5, options),
+        openCollection: (iri5) => ctx2.browser.loadCollection(iri5),
         onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
@@ -28931,7 +28957,7 @@ function createRuntime(ctx2) {
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
     } else if (ctx2.script) {
-      const tools = createTools({ dispatcher, loadPlugin: (iri4, options) => dispatcher.addPlugin(iri4, options), reel: ctx2.script.agentReel() });
+      const tools = createTools({ dispatcher, loadPlugin: (iri5, options) => dispatcher.addPlugin(iri5, options), reel: ctx2.script.agentReel() });
       ctx2.script.attach({ dispatcher, tools, loader: ctx2.loader });
     }
     ctx2.transport.meterLoop();
@@ -29148,12 +29174,12 @@ function createTransport(ctx2) {
       for (const { at, accent } of pre.clicks) click(heardAt + at, accent);
     }
     $2("play").setAttribute("aria-pressed", "true");
-    const first3 = d.project.nodes[0];
-    const startsWithEffect = first3 && (d.engineNode(first3.id)?.profile.audioInputs ?? 0) > 0;
+    const first4 = d.project.nodes[0];
+    const startsWithEffect = first4 && (d.engineNode(first4.id)?.profile.audioInputs ?? 0) > 0;
     if (startsWithEffect) {
       source = makeSource(engine.context);
       source.start();
-      const entry = d.engineNode(first3.id);
+      const entry = d.engineNode(first4.id);
       if (entry) source.connect(entry.node, 0, 0);
     }
     sendTransport();
@@ -29170,9 +29196,9 @@ function createTransport(ctx2) {
       automation
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
-    await Promise.all(sources.map((iri4) => clipPlayer.load(iri4)));
-    const failed2 = sources.filter((iri4) => clipPlayer.failure(iri4));
-    for (const iri4 of failed2) log2(`audio clip source ${iri4}: ${clipPlayer.failure(iri4).message}`, "error");
+    await Promise.all(sources.map((iri5) => clipPlayer.load(iri5)));
+    const failed2 = sources.filter((iri5) => clipPlayer.failure(iri5));
+    for (const iri5 of failed2) log2(`audio clip source ${iri5}: ${clipPlayer.failure(iri5).message}`, "error");
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt, { from });
     scheduler.tick();
@@ -29581,15 +29607,15 @@ function createRecord(ctx2, { processorUrl = null, WorkletNode = globalThis.Audi
       }
       const frames = takes.frames(trackId);
       const bytes = takes.encode(trackId, sampleRate);
-      const iri4 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
-      ctx2.media.put(iri4, bytes, "audio/wav");
-      const buffer = await ctx2.clipPlayer.load(iri4);
+      const iri5 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
+      ctx2.media.put(iri5, bytes, "audio/wav");
+      const buffer = await ctx2.clipPlayer.load(iri5);
       if (!buffer) {
-        log2(`take for track ${trackId}: ${ctx2.clipPlayer.failure(iri4)?.message ?? "could not be decoded"}`, "error");
+        log2(`take for track ${trackId}: ${ctx2.clipPlayer.failure(iri5)?.message ?? "could not be decoded"}`, "error");
         continue;
       }
       const lengthBeats = transport2.beatAtSeconds(transport2.secondsAtBeat(startBeat) + frames / sampleRate) - startBeat;
-      changes.push({ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri4, offsetSeconds: 0 });
+      changes.push({ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri5, offsetSeconds: 0 });
     }
     if (changes.length === 0) {
       log2("nothing recorded");
@@ -29703,7 +29729,7 @@ function attachDrag(element, input, port) {
   });
 }
 
-// src/ui/Panel.js
+// src/ui/PortText.js
 var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "Hz",
   "http://lv2plug.in/ns/extensions/units#ms": "ms",
@@ -29732,7 +29758,227 @@ var spokenValue = (port, value2) => {
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
   return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
-function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri } = {}) {
+
+// src/ui/SkinPanel.js
+var clamp = (n2, low, high) => Math.min(high, Math.max(low, n2));
+var fractionOf = (port, value2) => {
+  const span = port.maximum - port.minimum;
+  return span === 0 ? 0 : clamp((value2 - port.minimum) / span, 0, 1);
+};
+var withTurn = (base, turn) => [base, turn].filter(Boolean).join(" ");
+var withSlide = (base, slide) => [slide, base].filter(Boolean).join(" ");
+function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => el.getBBox() }) {
+  const wrap = document2.createElement("div");
+  wrap.className = "skin";
+  wrap.append(skin.svg);
+  const ports = new Map(skin.ports.map((p) => [p.symbol, p]));
+  const renderers = /* @__PURE__ */ new Map();
+  const fitters = [];
+  const hits = [];
+  const bound = /* @__PURE__ */ new Set();
+  const render = (symbol, fn) => {
+    if (!renderers.has(symbol)) renderers.set(symbol, []);
+    renderers.get(symbol).push(fn);
+  };
+  function hitArea(control, port, input) {
+    const box = document2.createElement("div");
+    box.className = "skin-hit";
+    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
+    input.id = id;
+    input.className = "skin-input";
+    input.setAttribute("aria-label", port.name ?? port.symbol);
+    box.append(input);
+    wrap.append(box);
+    const target2 = skin.elements.get(control.hitElement ?? control.element);
+    const hit = { box, x: 0, y: 0, height: 0 };
+    hits.push(hit);
+    fitters.push(() => {
+      const [vx, vy, vw, vh] = (skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
+      if (![vx, vy, vw, vh].every(Number.isFinite) || vw <= 0 || vh <= 0) throw new Error("a skin artwork needs a viewBox, which is what the hit areas are placed by");
+      const vb = { x: vx, y: vy, width: vw, height: vh };
+      const b = measure(target2);
+      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, height: b.height });
+      box.style.left = `${(b.x + b.width / 2 - vb.x) / vb.width * 100}%`;
+      box.style.top = `${(b.y + b.height / 2 - vb.y) / vb.height * 100}%`;
+      box.style.width = `${b.width / vb.width * 100}%`;
+      box.style.height = `${b.height / vb.height * 100}%`;
+    });
+    return box;
+  }
+  const rangeInput = (port, steps) => {
+    const input = document2.createElement("input");
+    input.type = "range";
+    input.min = String(port.minimum);
+    input.max = String(port.maximum);
+    input.step = String(steps ?? (port.maximum - port.minimum) / 200);
+    input.value = String(port.defaultValue);
+    input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
+    return input;
+  };
+  for (const control of skin.controls) {
+    const port = ports.get(control.boundSymbol);
+    const element = skin.elements.get(control.element);
+    if (control.kind === "readout") {
+      element.setAttribute("aria-hidden", "true");
+      render(port.symbol, (v) => {
+        element.textContent = formatValue(port, v);
+      });
+      continue;
+    }
+    bound.add(port.symbol);
+    if (control.kind === "rotary") {
+      const input = rangeInput(port);
+      const box = hitArea(control, port, input);
+      attachDrag(box, input, port);
+      const base = element.getAttribute("transform") ?? "";
+      const pivot = skin.elements.get(control.pivotElement ?? control.element);
+      let centre = { x: 0, y: 0 };
+      fitters.push(() => {
+        const b = measure(pivot);
+        centre = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      });
+      render(port.symbol, (v) => {
+        input.value = String(v);
+        input.setAttribute("aria-valuetext", spokenValue(port, v));
+        const angle = control.angleMin + (control.angleMax - control.angleMin) * fractionOf(port, v);
+        element.setAttribute("transform", withTurn(base, `rotate(${angle} ${centre.x} ${centre.y})`));
+      });
+      fitters.push(() => {
+        const v = Number(input.value);
+        renderers.get(port.symbol).forEach((f) => f(v));
+      });
+    } else if (control.kind === "linear") {
+      const input = rangeInput(port);
+      const box = hitArea(control, port, input);
+      const track = skin.elements.get(control.trackElement);
+      const base = element.getAttribute("transform") ?? "";
+      let travel = { dx: 0, dy: 0, horizontal: true };
+      fitters.push(() => {
+        const b = measure(track);
+        const horizontal = b.width >= b.height;
+        travel = { dx: horizontal ? b.width : 0, dy: horizontal ? 0 : -b.height, horizontal };
+      });
+      attachTrackDrag(box, input, port, track, () => travel.horizontal);
+      render(port.symbol, (v) => {
+        input.value = String(v);
+        input.setAttribute("aria-valuetext", spokenValue(port, v));
+        if (!travel.horizontal) input.setAttribute("aria-orientation", "vertical");
+        const f = fractionOf(port, v);
+        element.setAttribute("transform", withSlide(base, `translate(${travel.dx * f} ${travel.dy * f})`));
+      });
+      fitters.push(() => {
+        const v = Number(input.value);
+        renderers.get(port.symbol).forEach((f) => f(v));
+      });
+    } else if (control.kind === "toggle") {
+      const input = document2.createElement("input");
+      input.type = "checkbox";
+      input.setAttribute("role", "switch");
+      const box = hitArea(control, port, input);
+      input.addEventListener("change", () => onChange(port.symbol, input.checked ? port.maximum : port.minimum));
+      box.addEventListener("click", (event) => {
+        if (event.target === input) return;
+        input.focus?.();
+        input.checked = !input.checked;
+        input.dispatchEvent(new document2.defaultView.Event("change", { bubbles: true }));
+      });
+      const [off, on] = [...element.children];
+      render(port.symbol, (v) => {
+        const isOn = v >= 0.5;
+        input.checked = isOn;
+        input.setAttribute("aria-checked", String(isOn));
+        off.setAttribute("display", isOn ? "none" : "inline");
+        on.setAttribute("display", isOn ? "inline" : "none");
+      });
+    } else if (control.kind === "selector") {
+      const steps = port.scalePoints.length > 0 ? port.scalePoints.map((p) => p.value) : null;
+      const count = steps ? steps.length : port.maximum - port.minimum + 1;
+      const input = document2.createElement("input");
+      input.type = "range";
+      input.min = "0";
+      input.max = String(count - 1);
+      input.step = "1";
+      input.value = "0";
+      const valueOf = (index) => steps ? steps[index] : port.minimum + index;
+      input.addEventListener("input", () => onChange(port.symbol, valueOf(Number(input.value))));
+      const box = hitArea(control, port, input);
+      box.addEventListener("click", (event) => {
+        if (event.target === input) return;
+        input.focus?.();
+        input.value = String((Number(input.value) + 1) % count);
+        input.dispatchEvent(new document2.defaultView.Event("input", { bubbles: true }));
+      });
+      const groups = [...element.children];
+      render(port.symbol, (v) => {
+        const index = Math.max(0, steps ? steps.indexOf(v) : Math.round(v - port.minimum));
+        input.value = String(index);
+        groups.forEach((g, i2) => g.setAttribute("display", i2 === index ? "inline" : "none"));
+        input.setAttribute("aria-valuetext", port.scalePoints?.[index]?.label ?? String(valueOf(index)));
+      });
+    }
+  }
+  return {
+    element: wrap,
+    bound,
+    update(symbol, value2) {
+      for (const fn of renderers.get(symbol) ?? []) fn(value2);
+    },
+    fit() {
+      for (const fn of fitters) fn();
+      followThePicture(wrap, hits);
+    }
+  };
+}
+function followThePicture(wrap, hits) {
+  const byY = [...hits].sort((a2, b) => a2.y - b.y);
+  const rows = [];
+  for (const hit of byY) {
+    const row = rows.find((r) => Math.abs(r.y - hit.y) < Math.max(r.height, hit.height) / 2);
+    if (row) row.hits.push(hit);
+    else rows.push({ y: hit.y, height: hit.height, hits: [hit] });
+  }
+  const wanted = rows.flatMap((r) => r.hits.sort((a2, b) => a2.x - b.x)).map((h2) => h2.box);
+  const current = [...wrap.children].filter((child) => wanted.includes(child));
+  if (wanted.every((box, i2) => box === current[i2])) return;
+  for (const box of wanted) wrap.append(box);
+}
+function attachTrackDrag(box, input, port, track, isHorizontal) {
+  const owner = box.ownerDocument;
+  const Event = owner.defaultView?.Event;
+  if (!Event) return;
+  let dragging = false;
+  const at = (event) => {
+    const r = track.getBoundingClientRect();
+    const t = isHorizontal() ? (event.clientX - r.left) / r.width : (r.bottom - event.clientY) / r.height;
+    const next = port.minimum + clamp(t, 0, 1) * (port.maximum - port.minimum);
+    if (Number(input.value) === next) return;
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const move = (event) => {
+    if (dragging) at(event);
+  };
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    owner.removeEventListener("pointermove", move);
+    owner.removeEventListener("pointerup", end);
+    owner.removeEventListener("pointercancel", end);
+  };
+  box.addEventListener("pointerdown", (event) => {
+    if (event.button !== void 0 && event.button !== 0) return;
+    dragging = true;
+    input.focus?.();
+    event.preventDefault?.();
+    at(event);
+    owner.addEventListener("pointermove", move);
+    owner.addEventListener("pointerup", end);
+    owner.addEventListener("pointercancel", end);
+  });
+}
+
+// src/ui/Panel.js
+function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null } = {}) {
   const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
@@ -29751,9 +29997,18 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     root.classList.add("is-foreign");
   }
   const setters = /* @__PURE__ */ new Map();
-  const ungrouped = profile.ports.filter((p) => p.group == null);
+  const skinPanel = skin ? createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope }) : null;
+  if (skinPanel) {
+    root.append(skinPanel.element);
+    root.classList.add("has-skin");
+    for (const port of profile.ports) skinPanel.update(port.symbol, port.defaultValue);
+    const Observer = document2.defaultView?.ResizeObserver;
+    if (Observer) new Observer(() => skinPanel.fit()).observe(skinPanel.element);
+  }
+  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : profile.ports;
+  const ungrouped = unskinned.filter((p) => p.group == null);
   const groups = [];
-  for (const port of profile.ports) {
+  for (const port of unskinned) {
     if (port.group == null) continue;
     const group = groups.find((g) => g.label === port.group);
     if (group) group.ports.push(port);
@@ -29829,7 +30084,17 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     parent.append(controls);
     for (const port of ports) addControl(controls, port);
   }
-  if (ungrouped.length > 0) addGrid(root, ungrouped);
+  if (ungrouped.length > 0) {
+    if (skinPanel) {
+      const field = document2.createElement("fieldset");
+      field.className = "control-group";
+      const legend = document2.createElement("legend");
+      legend.textContent = "Other controls";
+      field.append(legend);
+      root.append(field);
+      addGrid(field, ungrouped);
+    } else addGrid(root, ungrouped);
+  }
   for (const group of groups) {
     const field = document2.createElement("fieldset");
     field.className = "control-group";
@@ -29870,7 +30135,10 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     /** Called by the host when a value actually changed. */
     update(symbol, value2) {
       setters.get(symbol)?.(value2);
-    }
+      skinPanel?.update(symbol, value2);
+    },
+    /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
+    skinned: skinPanel !== null
   };
 }
 
@@ -30017,9 +30285,9 @@ function createMeter(document2, { label, bars = 12 } = {}) {
   strip.setAttribute("aria-hidden", "true");
   const cells = Array.from({ length: bars }, () => document2.createElement("i"));
   strip.append(...cells);
-  const number5 = document2.createElement("span");
-  number5.className = "meter-readout";
-  number5.textContent = readout(0);
+  const number6 = document2.createElement("span");
+  number6.className = "meter-readout";
+  number6.textContent = readout(0);
   const clipHold = createClipHold();
   const clip = document2.createElement("button");
   clip.type = "button";
@@ -30031,10 +30299,10 @@ function createMeter(document2, { label, bars = 12 } = {}) {
     clipHold.clear();
     clip.hidden = true;
   });
-  element.append(strip, number5, clip);
+  element.append(strip, number6, clip);
   const hold = createPeakHold();
   let lit = -1;
-  let shown = number5.textContent;
+  let shown = number6.textContent;
   return {
     element,
     set(peak, nowMs) {
@@ -30049,7 +30317,7 @@ function createMeter(document2, { label, bars = 12 } = {}) {
       const text = readout(hold.update(peak, nowMs));
       if (text !== shown) {
         shown = text;
-        number5.textContent = text;
+        number6.textContent = text;
       }
     }
   };
@@ -30445,7 +30713,7 @@ function octavesForWidth(width, { max = 2, minKeyWidth = MIN_KEY_WIDTH } = {}) {
 var playable = (profile) => (profile?.audioOutputs ?? 0) > 0 && (profile?.accepts ?? []).some(carriesNotes);
 var noteOn = (note, velocity = 100) => Uint8Array.from([144, note, velocity]);
 var noteOff = (note) => Uint8Array.from([128, note, 0]);
-function createKeyboard(document2, { first: first3 = 48, octaves = 2, onNote } = {}) {
+function createKeyboard(document2, { first: first4 = 48, octaves = 2, onNote } = {}) {
   const root = document2.createElement("div");
   root.className = "keyboard";
   root.setAttribute("role", "group");
@@ -30495,13 +30763,13 @@ function createKeyboard(document2, { first: first3 = 48, octaves = 2, onNote } =
   blacks.className = "keys-black";
   for (let octave = 0; octave < octaves; octave++) {
     for (const [index, semitone] of WHITE.entries()) {
-      whites.append(key(first3 + octave * 12 + semitone, "key key-white"));
+      whites.append(key(first4 + octave * 12 + semitone, "key key-white"));
       void index;
     }
   }
   for (let octave = 0; octave < octaves; octave++) {
     for (const [semitone, after] of Object.entries(BLACK)) {
-      const element = key(first3 + octave * 12 + Number(semitone), "key key-black");
+      const element = key(first4 + octave * 12 + Number(semitone), "key key-black");
       const position2 = octave * 7 + after;
       element.style.left = `calc(${position2 + 1} * var(--white-width) - var(--black-width) / 2)`;
       blacks.append(element);
@@ -31010,14 +31278,17 @@ function createRack(ctx2) {
     group.append(element);
     if (!profile) return;
     let panel = panels.get(node.id);
+    const skinReady = ctx2.skins.ready(profile);
+    if (panel && panel.skinned !== skinReady) panel = null;
     if (!panel) {
+      const skin = skinReady ? ctx2.skins.prepare(profile, `panel-${node.id}`) : null;
       panel = createPanel(document2, profile, (symbol, value2) => {
         const applied = dispatcher.setParameter(node.id, symbol, value2);
         if (applied.ok) panel.update(symbol, applied.value);
       }, async (key, file) => {
         const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
         if (!result.ok) log2(`${node.id}.${key}: ${result.message}`, "error");
-      }, { scope: `panel-${node.id}` });
+      }, { scope: `panel-${node.id}`, skin });
       panels.set(node.id, panel);
     }
     for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
@@ -31182,6 +31453,391 @@ function createEditors(ctx2) {
     /** Tell an open editor what a parameter now is. */
     parameter(nodeId, symbol, value2) {
       open.get(nodeId)?.frame.parameter(symbol, value2);
+    }
+  };
+}
+
+// web/app/Skins.js
+init_parse();
+
+// src/ui/SkinArtwork.js
+var SVG_NS3 = "http://www.w3.org/2000/svg";
+var SKIN_LIMITS = Object.freeze({ bytes: 512 * 1024, elements: 5e3 });
+var ELEMENTS = /* @__PURE__ */ new Set([
+  "svg",
+  "g",
+  "defs",
+  "title",
+  "desc",
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "text",
+  "tspan",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "clipPath",
+  "use"
+]);
+var ATTRIBUTES = /* @__PURE__ */ new Set([
+  "id",
+  "viewBox",
+  "width",
+  "height",
+  "preserveAspectRatio",
+  "x",
+  "y",
+  "x1",
+  "y1",
+  "x2",
+  "y2",
+  "cx",
+  "cy",
+  "r",
+  "rx",
+  "ry",
+  "fx",
+  "fy",
+  "fr",
+  "dx",
+  "dy",
+  "d",
+  "points",
+  "transform",
+  "offset",
+  "gradientUnits",
+  "gradientTransform",
+  "spreadMethod",
+  "clipPathUnits",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "clip-rule",
+  "clip-path",
+  "stroke",
+  "stroke-width",
+  "stroke-opacity",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stop-color",
+  "stop-opacity",
+  "opacity",
+  "display",
+  "visibility",
+  "paint-order",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "text-anchor",
+  "dominant-baseline",
+  "letter-spacing",
+  "style",
+  "href"
+]);
+var STYLE_PROPERTIES = new Set([...ATTRIBUTES].filter((a2) => a2.includes("-") || ["fill", "stroke", "opacity", "display", "visibility"].includes(a2)));
+var SkinError = class extends Error {
+  constructor(message, element = null) {
+    super(element === null ? message : `${message} (at ${element})`);
+    this.name = "SkinError";
+    this.element = element;
+  }
+};
+function parseSvg(text, DOMParserClass = globalThis.DOMParser) {
+  const doc = new DOMParserClass().parseFromString(text, "image/svg+xml");
+  const failure = doc.getElementsByTagName("parsererror")[0];
+  if (failure) throw new SkinError(`the artwork is not well formed XML: ${failure.textContent.trim().split("\n")[0]}`);
+  return doc;
+}
+var FRAGMENT = /^#([^\s()'"]+)$/;
+var URL_REFERENCE = /url\(\s*([^)]*?)\s*\)/gi;
+function checkValue(value2, where) {
+  if (/javascript:|@import|expression\(/i.test(value2)) throw new SkinError(`an attribute value runs or imports code: ${value2.slice(0, 40)}`, where);
+  for (const m of value2.matchAll(URL_REFERENCE)) {
+    if (!FRAGMENT.test(m[1].replace(/^['"]|['"]$/g, ""))) {
+      throw new SkinError(`a url() leaves the file: ${m[0]}`, where);
+    }
+  }
+}
+function pathOf(stack) {
+  return stack.join(" > ");
+}
+function buildArtwork(doc, { document: document2, prefix, limits = SKIN_LIMITS, size = 0 }) {
+  if (typeof prefix !== "string" || prefix === "") throw new TypeError("buildArtwork needs an id prefix, or two skins on one page can collide");
+  if (size > limits.bytes) throw new SkinError(`the artwork is ${size} bytes; the limit is ${limits.bytes}`);
+  const root = doc.documentElement;
+  if (!root || root.namespaceURI !== SVG_NS3 || root.localName !== "svg") {
+    throw new SkinError("the artwork root is not an svg element in the SVG namespace", root ? root.nodeName : "the document");
+  }
+  const ids = /* @__PURE__ */ new Map();
+  const elements = /* @__PURE__ */ new Map();
+  let count = 0;
+  const rename = (value2) => value2.replace(URL_REFERENCE, (all, ref) => {
+    const m = FRAGMENT.exec(ref.replace(/^['"]|['"]$/g, ""));
+    return m ? `url(#${prefix}${m[1]})` : all;
+  });
+  function copy(source, stack) {
+    const name2 = source.localName;
+    if (source.namespaceURI !== SVG_NS3) return null;
+    if (!ELEMENTS.has(name2)) throw new SkinError(`<${name2}> is not an allowed element`, pathOf(stack));
+    if (++count > limits.elements) throw new SkinError(`the artwork has more than ${limits.elements} elements`, pathOf(stack));
+    const target2 = document2.createElementNS(SVG_NS3, name2);
+    for (const attr of [...source.attributes]) {
+      const attrName = attr.localName ?? attr.name;
+      if (attr.namespaceURI && attr.namespaceURI !== SVG_NS3) continue;
+      if (/^on/i.test(attrName)) throw new SkinError(`event attribute ${attrName} is not allowed`, pathOf(stack));
+      if (!ATTRIBUTES.has(attrName)) continue;
+      let value2 = attr.value;
+      if (attrName === "href") {
+        const m = FRAGMENT.exec(value2);
+        if (!m) throw new SkinError(`href "${value2.slice(0, 40)}" leaves the file`, pathOf(stack));
+        target2.setAttribute("href", `#${prefix}${m[1]}`);
+        continue;
+      }
+      if (attrName === "style") {
+        if (value2.includes("\\")) throw new SkinError("a style attribute uses a CSS escape", pathOf(stack));
+        checkValue(value2, pathOf(stack));
+        const kept = value2.split(";").map((s) => s.trim()).filter(Boolean).flatMap((decl) => {
+          const at = decl.indexOf(":");
+          const property = decl.slice(0, at).trim().toLowerCase();
+          return at > 0 && STYLE_PROPERTIES.has(property) ? [`${property}:${rename(decl.slice(at + 1).trim())}`] : [];
+        });
+        if (kept.length) target2.setAttribute("style", kept.join(";"));
+        continue;
+      }
+      checkValue(value2, pathOf(stack));
+      if (attrName === "id") {
+        if (ids.has(value2)) throw new SkinError(`the id "${value2}" is used twice`, pathOf(stack));
+        ids.set(value2, 0);
+        elements.set(value2, target2);
+        value2 = prefix + value2;
+      } else value2 = rename(value2);
+      target2.setAttribute(attrName, value2);
+    }
+    const counts = /* @__PURE__ */ new Map();
+    for (const child of source.childNodes) {
+      if (child.nodeType === 1) {
+        const n2 = (counts.get(child.localName) ?? 0) + 1;
+        counts.set(child.localName, n2);
+        const made = copy(child, [...stack, `${child.localName}[${n2}]`]);
+        if (made) target2.append(made);
+      } else if (child.nodeType === 3 && (name2 === "text" || name2 === "tspan" || name2 === "title" || name2 === "desc")) {
+        target2.append(document2.createTextNode(child.nodeValue));
+      }
+    }
+    const authorId = source.getAttribute("id");
+    if (authorId !== null && ids.has(authorId)) ids.set(authorId, target2.children.length);
+    return target2;
+  }
+  const svg = copy(root, ["svg"]);
+  return { svg, ids, elements };
+}
+
+// src/rdf/SkinReader.js
+init_env();
+init_Vocabulary();
+var { jig: jig4, rdf: rdfTerms3 } = vocabulary;
+var KINDS = /* @__PURE__ */ new Map([
+  [jig4.RotaryControl, "rotary"],
+  [jig4.LinearControl, "linear"],
+  [jig4.ToggleControl, "toggle"],
+  [jig4.SelectorControl, "selector"],
+  [jig4.ReadoutControl, "readout"]
+]);
+var iri3 = (value2) => env_default.namedNode(value2);
+var objects3 = (dataset2, subject, predicate) => [...dataset2.match(typeof subject === "string" ? iri3(subject) : subject, iri3(predicate), null)].map((q2) => q2.object);
+var first2 = (dataset2, subject, predicate) => objects3(dataset2, subject, predicate)[0]?.value ?? null;
+var number3 = (value2) => value2 === null ? null : Number(value2);
+function readSkin(dataset2) {
+  const subjects = [...new Set([...dataset2.match(null, iri3(jig4.artwork), null)].map((q2) => q2.subject.value))];
+  if (subjects.length > 1) throw new Error(`a skin document describes one skin; this one has jig:artwork on ${subjects.join(", ")}`);
+  const documentIri = subjects[0] ?? null;
+  if (documentIri === null) return { iri: null, artwork: null, controls: [] };
+  const doc = iri3(documentIri);
+  const art = objects3(dataset2, doc, jig4.artwork)[0] ?? null;
+  const controls = objects3(dataset2, doc, jig4.control).map((node) => {
+    const kinds = objects3(dataset2, node, rdfTerms3.type).map((t) => KINDS.get(t.value)).filter(Boolean);
+    return {
+      id: node.value,
+      kind: kinds[0] ?? null,
+      boundSymbol: first2(dataset2, node, jig4.boundSymbol),
+      element: first2(dataset2, node, jig4.element),
+      hitElement: first2(dataset2, node, jig4.hitElement),
+      pivotElement: first2(dataset2, node, jig4.pivotElement),
+      trackElement: first2(dataset2, node, jig4.trackElement),
+      angleMin: number3(first2(dataset2, node, jig4.angleMin)),
+      angleMax: number3(first2(dataset2, node, jig4.angleMax))
+    };
+  }).sort((a2, b) => a2.id.localeCompare(b.id));
+  return {
+    iri: documentIri,
+    artwork: art === null ? null : {
+      iri: art.value,
+      location: first2(dataset2, art, jig4.location),
+      integrity: first2(dataset2, art, jig4.integrity),
+      mediaType: first2(dataset2, art, jig4.mediaType)
+    },
+    controls
+  };
+}
+function stepsOf(port) {
+  if (port.toggled) return 2;
+  if (port.scalePoints.length > 0) return port.scalePoints.length;
+  const span = port.maximum - port.minimum;
+  return Number.isInteger(span) ? span + 1 : null;
+}
+function checkSkin(skin, artwork, ports) {
+  const bySymbol = new Map(ports.map((p) => [p.symbol, p]));
+  const omitted = [];
+  const keep = [];
+  const bound = /* @__PURE__ */ new Set();
+  for (const control of skin.controls) {
+    const refuse = (reason) => omitted.push({ control: control.id, reason });
+    const port = bySymbol.get(control.boundSymbol);
+    if (control.kind === null) {
+      refuse("it has no control class");
+      continue;
+    }
+    if (!port) {
+      refuse(`the plugin declares no port "${control.boundSymbol}"`);
+      continue;
+    }
+    const sets = control.kind !== "readout";
+    if (sets && bound.has(control.boundSymbol)) {
+      refuse(`port "${control.boundSymbol}" is already bound by an earlier control`);
+      continue;
+    }
+    const named2 = [
+      ["jig:element", control.element],
+      ["jig:hitElement", control.hitElement],
+      ["jig:pivotElement", control.pivotElement],
+      ["jig:trackElement", control.trackElement]
+    ];
+    const missing = named2.filter(([, id]) => id !== null && !artwork.ids.has(id)).map(([term5, id]) => `${term5} "${id}"`);
+    if (control.element === null) missing.push("jig:element (none given)");
+    if (missing.length) {
+      refuse(`the artwork has no element for ${missing.join(", ")}`);
+      continue;
+    }
+    if (control.kind === "toggle") {
+      const children = artwork.ids.get(control.element);
+      if (children !== 2) {
+        refuse(`a toggle needs 2 child groups and "${control.element}" has ${children}`);
+        continue;
+      }
+    }
+    if (control.kind === "selector") {
+      const steps = stepsOf(port);
+      const children = artwork.ids.get(control.element);
+      if (steps === null) {
+        refuse(`port "${port.symbol}" has no whole number of steps to choose between`);
+        continue;
+      }
+      if (children !== steps) {
+        refuse(`a selector for "${port.symbol}" needs ${steps} child groups and "${control.element}" has ${children}`);
+        continue;
+      }
+    }
+    if (sets) bound.add(control.boundSymbol);
+    keep.push(control);
+  }
+  return { keep, omitted, unbound: ports.map((p) => p.symbol).filter((s) => !bound.has(s)) };
+}
+
+// src/host/SkinLoader.js
+init_ProfileReader();
+var SkinLoadError = class extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "SkinLoadError";
+  }
+};
+async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSvg2 }) {
+  if (!profile.skin) throw new SkinLoadError("the profile declares no skin");
+  const decoder = new TextDecoder();
+  const skinBytes = await fetchVerified(profile.skin, { kind: "skin" });
+  const skinIri = profile.skin.location;
+  let skin;
+  try {
+    skin = readSkin(await parseTurtle(decoder.decode(skinBytes), skinIri));
+  } catch (cause) {
+    throw new SkinLoadError(`the skin at ${skinIri} could not be read: ${cause.message}`, { cause });
+  }
+  if (!skin.artwork?.location || !skin.artwork.integrity) {
+    throw new SkinLoadError(`the skin at ${skinIri} names no artwork with a location and a digest`);
+  }
+  const directory = (iri5) => iri5.slice(0, iri5.lastIndexOf("/") + 1);
+  const artwork = skinIri.startsWith("data:") ? skin.artwork : { ...skin.artwork, location: rebaseLocation(skin.artwork.location, directory(skin.iri), directory(skinIri)) };
+  const artBytes = await fetchVerified(artwork, { kind: "skin artwork" });
+  let doc;
+  try {
+    doc = parseSvg2(decoder.decode(artBytes));
+  } catch (cause) {
+    throw new SkinLoadError(`the artwork at ${artwork.location}: ${cause.message}`, { cause });
+  }
+  return { skin, artwork: { doc, size: artBytes.byteLength } };
+}
+function prepareSkin(loaded, profile, { document: document2, prefix }) {
+  const built = buildArtwork(loaded.artwork.doc, { document: document2, prefix, size: loaded.artwork.size });
+  const { keep, omitted } = checkSkin(loaded.skin, { ids: built.ids }, profile.ports);
+  return { svg: built.svg, elements: built.elements, controls: keep, omitted };
+}
+
+// web/app/Skins.js
+function createSkins(ctx2) {
+  const { document: document2, log: log2 } = ctx2;
+  const loads = /* @__PURE__ */ new Map();
+  let redraw = () => {
+  };
+  const keyOf3 = (profile) => `${profile.skin.location}|${profile.skin.integrity}`;
+  function start(profile) {
+    const entry = { state: "loading", loaded: null };
+    loads.set(keyOf3(profile), entry);
+    loadSkin(profile, {
+      fetchVerified: (resource, options) => ctx2.loader.fetchVerified(resource, options),
+      parseTurtle: parseText,
+      parseSvg
+    }).then((loaded) => {
+      entry.loaded = loaded;
+      entry.state = "ready";
+      redraw();
+    }).catch((error2) => {
+      entry.state = "failed";
+      log2(`${profile.label ?? profile.iri} skin: ${error2.message}`, "error");
+    });
+    return entry;
+  }
+  return {
+    /** What to run when a skin that was loading is ready, so a panel drawn without it can be drawn with it. */
+    onReady(fn) {
+      redraw = fn;
+    },
+    /** Whether this profile's skin can be drawn now. Starts the fetch the first time it is asked. */
+    ready(profile) {
+      if (!profile?.skin || !ctx2.loader) return false;
+      const entry = loads.get(keyOf3(profile)) ?? start(profile);
+      return entry.state === "ready";
+    },
+    /** Artwork nodes of this panel's own, or null (reported) when the artwork breaks the allowlist. */
+    prepare(profile, scope) {
+      const entry = loads.get(keyOf3(profile));
+      try {
+        const prepared = prepareSkin(entry.loaded, profile, { document: document2, prefix: `skin-${scope.replace(/[^\w-]/g, "_")}-` });
+        for (const o2 of prepared.omitted) log2(`${profile.label ?? profile.iri} skin: left out ${o2.control}, because ${o2.reason}`, "error");
+        return prepared;
+      } catch (error2) {
+        entry.state = "failed";
+        log2(`${profile.label ?? profile.iri} skin: ${error2.message}`, "error");
+        return null;
+      }
     }
   };
 }
@@ -31493,7 +32149,7 @@ function createChainStrip(document2, { onSelect, onBypass, onMove }) {
 }
 
 // src/ui/EnvelopeLane.js
-var SVG_NS3 = "http://www.w3.org/2000/svg";
+var SVG_NS4 = "http://www.w3.org/2000/svg";
 var CURVE_ORDER = ["step", "linear", "smooth"];
 var LANE_HEIGHT = 64;
 var DRAG_SLOP = 3;
@@ -31544,11 +32200,11 @@ function createEnvelopeLane(document2, { onChange, onRemove, view }) {
   head.append(title, fold, add, remove);
   const body = document2.createElement("div");
   body.className = "envelope-body";
-  const svg = document2.createElementNS(SVG_NS3, "svg");
+  const svg = document2.createElementNS(SVG_NS4, "svg");
   svg.setAttribute("class", "envelope-line");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
-  const path = document2.createElementNS(SVG_NS3, "path");
+  const path = document2.createElementNS(SVG_NS4, "path");
   svg.append(path);
   body.append(svg);
   element.append(head, body);
@@ -31755,7 +32411,7 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
 }
 
 // src/model/Selection.js
-var KINDS = Object.freeze(["track", "clip", "note", "node", "lane"]);
+var KINDS2 = Object.freeze(["track", "clip", "note", "node", "lane"]);
 var Selection = class {
   #kind = null;
   #ids = /* @__PURE__ */ new Set();
@@ -31806,7 +32462,7 @@ var Selection = class {
     if (kept.length !== this.#ids.size) this.#replace(kept.length === 0 ? null : this.#kind, kept);
   }
   #check(kind) {
-    if (!KINDS.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS.join(", ")}`);
+    if (!KINDS2.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS2.join(", ")}`);
   }
   #replace(kind, ids) {
     const next = new Set(ids);
@@ -32143,13 +32799,13 @@ var TimeView = class {
   zoomBy(factor2, anchorX = 0) {
     if (!(factor2 > 0) || !Number.isFinite(factor2)) throw new Error("a zoom factor must be above zero");
     const anchorBeat = this.xToBeat(anchorX);
-    const pixelsPerBeat = clamp(this.#pixelsPerBeat * factor2, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
+    const pixelsPerBeat = clamp2(this.#pixelsPerBeat * factor2, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
     this.#update({ pixelsPerBeat, scrollBeat: Math.max(0, anchorBeat - anchorX / pixelsPerBeat) });
   }
   /** Show `lengthBeats` across `widthPx`, from the start. */
   fit(lengthBeats, widthPx) {
     if (!(lengthBeats > 0) || !(widthPx > 0)) throw new Error("fit needs a length and a width above zero");
-    this.#update({ pixelsPerBeat: clamp(widthPx / lengthBeats, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT), scrollBeat: 0 });
+    this.#update({ pixelsPerBeat: clamp2(widthPx / lengthBeats, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT), scrollBeat: 0 });
   }
   setGrid(grid) {
     if (!GRIDS.includes(grid)) throw new Error(`no such grid: ${grid}; one of ${GRIDS.join(", ")}`);
@@ -32187,7 +32843,7 @@ var TimeView = class {
     for (const fn of [...this.#listeners]) fn(this);
   }
 };
-function clamp(n2, lo, hi) {
+function clamp2(n2, lo, hi) {
   return Math.min(hi, Math.max(lo, n2));
 }
 function finite(n2, what) {
@@ -32831,10 +33487,10 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   };
   function dragged(kind, from, to, note) {
     if (kind === "draw") {
-      const first3 = Math.min(from.step, to.step);
+      const first4 = Math.min(from.step, to.step);
       const last = Math.max(from.step, to.step);
-      const lengthBeats2 = first3 === last ? 1 : beatOf(last - first3 + 1);
-      return [...clip.notes, { startBeat: beatOf(first3), lengthBeats: lengthBeats2, pitch: from.pitch, velocity: 100 }];
+      const lengthBeats2 = first4 === last ? 1 : beatOf(last - first4 + 1);
+      return [...clip.notes, { startBeat: beatOf(first4), lengthBeats: lengthBeats2, pitch: from.pitch, velocity: 100 }];
     }
     if (kind === "move") {
       const pitch = Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch));
@@ -32906,8 +33562,8 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       options = { beatsPerBar };
       heading.textContent = `Notes of the clip at ${barBeat(next.startBeat, beatsPerBar)} on ${label}`;
       close.setAttribute("aria-label", `Close the notes of the clip on ${label}`);
-      const first3 = next.notes[0];
-      cursor = first3 ? { pitch: first3.pitch, step: Math.round(first3.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
+      const first4 = next.notes[0];
+      cursor = first4 ? { pitch: first4.pitch, step: Math.round(first4.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2);
       showOpen(true);
       draw(next);
@@ -33359,17 +34015,17 @@ function createArrangement(ctx2) {
     const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
     const hex2 = [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
     const extension = (file.name.match(/\.([a-z0-9]+)$/i)?.[1] ?? "audio").toLowerCase();
-    const iri4 = ctx2.media.iriFor(hex2, extension);
-    ctx2.media.put(iri4, bytes, file.type);
-    const buffer = await ctx2.clipPlayer.load(iri4);
+    const iri5 = ctx2.media.iriFor(hex2, extension);
+    ctx2.media.put(iri5, bytes, file.type);
+    const buffer = await ctx2.clipPlayer.load(iri5);
     if (!buffer) {
-      log2(`${file.name}: ${ctx2.clipPlayer.failure(iri4).message}`, "error");
+      log2(`${file.name}: ${ctx2.clipPlayer.failure(iri5).message}`, "error");
       return;
     }
     const transport2 = ctx2.dispatcher.transport();
     const from = transport2.secondsAtBeat(startBeat);
     const lengthBeats = transport2.beatAtSeconds(from + buffer.duration) - startBeat;
-    const result = edit([{ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri4, offsetSeconds: 0 }]);
+    const result = edit([{ op: "addClip", track: trackId, kind: "audio", startBeat, lengthBeats, source: iri5, offsetSeconds: 0 }]);
     if (result.ok) log2(`added ${file.name}, ${buffer.duration.toFixed(2)} seconds`, "ok");
   }
   function fitTimeline() {
@@ -33421,7 +34077,7 @@ var DOCK_MAX = 720;
 var DOCK_DEFAULT = 320;
 var DOCK_STEP = 24;
 var KEY2 = "jigdaw.dockHeight";
-var clamp2 = (n2) => Math.min(DOCK_MAX, Math.max(DOCK_MIN, Math.round(n2)));
+var clamp3 = (n2) => Math.min(DOCK_MAX, Math.max(DOCK_MIN, Math.round(n2)));
 function createDock(document2, { slots, storage = null }) {
   if (!Array.isArray(slots) || slots.length === 0) throw new Error("a dock needs at least one slot");
   const element = document2.createElement("section");
@@ -33453,11 +34109,11 @@ function createDock(document2, { slots, storage = null }) {
   let height = DOCK_DEFAULT;
   try {
     const saved = Number(storage?.getItem(KEY2));
-    if (Number.isFinite(saved) && saved > 0) height = clamp2(saved);
+    if (Number.isFinite(saved) && saved > 0) height = clamp3(saved);
   } catch {
   }
   function setHeight(next, { remember = true } = {}) {
-    height = clamp2(next);
+    height = clamp3(next);
     body.style.height = `${height}px`;
     splitter.setAttribute("aria-valuenow", String(height));
     splitter.setAttribute("aria-valuetext", `${height} pixels tall`);
@@ -34363,7 +35019,7 @@ function createRoutingMatrix(document2, { onConnect, onDisconnect }) {
       head.append(groups, names);
       const body = document2.createElement("tbody");
       let previousTrack = null;
-      let first3 = null;
+      let first4 = null;
       for (const row of rows) {
         const tr = document2.createElement("tr");
         const th = document2.createElement("th");
@@ -34392,7 +35048,7 @@ function createRoutingMatrix(document2, { onConnect, onDisconnect }) {
               else onConnect(row, col);
             });
             td.append(button);
-            first3 ??= button;
+            first4 ??= button;
           }
           tr.append(td);
         }
@@ -34401,7 +35057,7 @@ function createRoutingMatrix(document2, { onConnect, onDisconnect }) {
       table.append(head, body);
       element.replaceChildren(table);
       const keep = cursor && document2.getElementById(cursor);
-      (keep && element.contains(keep) ? keep : first3).setAttribute("tabindex", "0");
+      (keep && element.contains(keep) ? keep : first4).setAttribute("tabindex", "0");
     }
   };
 }
@@ -34532,24 +35188,24 @@ function createLoading(ctx2) {
   const { document: document2, log: log2 } = ctx2;
   async function loadPlugin(input) {
     const d = await ctx2.runtime.ensureRunning();
-    const iri4 = new URL(input, document2.baseURI).href;
-    log2(`GET ${iri4}`);
+    const iri5 = new URL(input, document2.baseURI).href;
+    log2(`GET ${iri5}`);
     let foreign = false;
     const support = d.foreignSupport;
     if (support) {
-      const seen = await support.classify(iri4).catch(() => null);
+      const seen = await support.classify(iri5).catch(() => null);
       foreign = seen?.kind === "foreign";
     }
     const track = ctx2.rack.targetTrack();
     const where = { ...foreign ? { foreign: true } : {}, ...track ? { track } : {} };
-    let result = await d.addPlugin(iri4, where);
+    let result = await d.addPlugin(iri5, where);
     if (!result.ok && result.kind === "consent") {
       if (!await askConsent(document2, result.request)) {
         log2(`${result.request.label}: not loaded`, "error");
         return;
       }
       d.foreignTrust?.consent(result.request.iri, result.request.digest);
-      result = await d.addPlugin(iri4, { ...where, foreign: true });
+      result = await d.addPlugin(iri5, { ...where, foreign: true });
     }
     if (!result.ok) {
       log2(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
@@ -34586,21 +35242,21 @@ function createLoading(ctx2) {
 // src/rdf/CollectionReader.js
 init_env();
 init_Vocabulary();
-var { jig: jig4, rdfs: rdfs2, dcterms, rdf: rdfTerms3 } = vocabulary;
-var iri3 = (value2) => env_default.namedNode(value2);
-var first2 = (dataset2, subject, predicate) => [...dataset2.match(subject, iri3(predicate), null)][0]?.object.value ?? null;
+var { jig: jig5, rdfs: rdfs2, dcterms, rdf: rdfTerms4 } = vocabulary;
+var iri4 = (value2) => env_default.namedNode(value2);
+var first3 = (dataset2, subject, predicate) => [...dataset2.match(subject, iri4(predicate), null)][0]?.object.value ?? null;
 function readCollection(dataset2) {
-  const subjects = [...dataset2.match(null, iri3(rdfTerms3.type), iri3(jig4.PluginCollection))].map((q2) => q2.subject);
+  const subjects = [...dataset2.match(null, iri4(rdfTerms4.type), iri4(jig5.PluginCollection))].map((q2) => q2.subject);
   if (subjects.length === 0) throw new Error("the document declares no jig:PluginCollection");
   if (subjects.length > 1) {
     throw new Error(`the document declares ${subjects.length} collections (${subjects.map((s) => s.value).join(", ")}); a collection document holds one`);
   }
   const subject = subjects[0];
-  const members = [...dataset2.match(subject, iri3(dcterms.hasPart), null)].map((q2) => ({ iri: q2.object.value, label: first2(dataset2, q2.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
+  const members = [...dataset2.match(subject, iri4(dcterms.hasPart), null)].map((q2) => ({ iri: q2.object.value, label: first3(dataset2, q2.object, rdfs2.label) })).sort((a2, b) => (a2.label ?? a2.iri).localeCompare(b.label ?? b.iri));
   return {
     iri: subject.value,
-    label: first2(dataset2, subject, rdfs2.label),
-    comment: first2(dataset2, subject, rdfs2.comment),
+    label: first3(dataset2, subject, rdfs2.label),
+    comment: first3(dataset2, subject, rdfs2.comment),
     members
   };
 }
@@ -34753,8 +35409,8 @@ function browserCatalogue(document2) {
       if (!loadable) params.set("loadable", "false");
       return ask("search", params);
     },
-    async describe(iri4) {
-      return ask("describe", new URLSearchParams({ iri: iri4 }));
+    async describe(iri5) {
+      return ask("describe", new URLSearchParams({ iri: iri5 }));
     }
   };
 }
@@ -34813,7 +35469,7 @@ function createBrowser(ctx2) {
     return new CollectionLoader({
       parse: parseText,
       validator,
-      verify: (iri4) => verifier.loadListing(iri4)
+      verify: (iri5) => verifier.loadListing(iri5)
     }).load(url);
   }
   async function openCollection(input) {
@@ -34914,7 +35570,7 @@ init_parse();
 
 // src/rdf/ProjectWriter.js
 init_Vocabulary();
-var { jig: jig5, trn: trn5 } = vocabulary;
+var { jig: jig6, trn: trn5 } = vocabulary;
 var PREFIXES2 = [
   ["jig", JIG],
   ["trn", TRN],
@@ -34922,11 +35578,11 @@ var PREFIXES2 = [
   ["dcterms", "http://purl.org/dc/terms/"],
   ["xsd", "http://www.w3.org/2001/XMLSchema#"]
 ];
-function term3(iri4) {
+function term3(iri5) {
   for (const [prefix, namespace2] of PREFIXES2) {
-    if (iri4.startsWith(namespace2)) return `${prefix}:${iri4.slice(namespace2.length)}`;
+    if (iri5.startsWith(namespace2)) return `${prefix}:${iri5.slice(namespace2.length)}`;
   }
-  return `<${iri4}>`;
+  return `<${iri5}>`;
 }
 function string(value2) {
   return JSON.stringify(String(value2));
@@ -34953,134 +35609,134 @@ function endpoint(lines, base, id, e) {
   if (hasIndex === hasSymbol) {
     throw new Error(`endpoint ${id} must give exactly one of portIndex or portSymbol`);
   }
-  const port = hasIndex ? `${term3(jig5.portIndex)} ${integer(e.portIndex)}` : `${term3(jig5.portSymbol)} ${string(e.portSymbol)}`;
-  lines.push(`<#${id}> a ${term3(jig5.Endpoint)} ; ${term3(jig5.endpointNode)} <#${e.node}> ; ${port} .`);
+  const port = hasIndex ? `${term3(jig6.portIndex)} ${integer(e.portIndex)}` : `${term3(jig6.portSymbol)} ${string(e.portSymbol)}`;
+  lines.push(`<#${id}> a ${term3(jig6.Endpoint)} ; ${term3(jig6.endpointNode)} <#${e.node}> ; ${port} .`);
 }
-function writeProject(project, { iri: iri4, created = null } = {}) {
-  if (!iri4) throw new Error("writeProject needs the project IRI, which becomes the @base");
+function writeProject(project, { iri: iri5, created = null } = {}) {
+  if (!iri5) throw new Error("writeProject needs the project IRI, which becomes the @base");
   const tracks = [...project.tracks].sort(byId);
   const nodes = [...project.nodes].sort(byId);
   const connections = [...project.connections].sort(byId);
   const transport2 = project.transport;
   const lines = [];
-  lines.push(`@base <${iri4}> .`);
+  lines.push(`@base <${iri5}> .`);
   lines.push("");
   for (const [prefix, namespace2] of PREFIXES2) lines.push(`@prefix ${prefix}: <${namespace2}> .`);
   lines.push("");
   lines.push("<>");
-  lines.push(`    a ${term3(jig5.Project)} ;`);
+  lines.push(`    a ${term3(jig6.Project)} ;`);
   if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
-  lines.push(`    ${term3(jig5.revision)} ${integer(project.revision)} ;`);
+  lines.push(`    ${term3(jig6.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
-    lines.push(`    ${term3(jig5.track)} ${tracks.map((t) => `<#${t.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig6.track)} ${tracks.map((t) => `<#${t.id}>`).join(" , ")} ;`);
   }
   if (nodes.length > 0) {
-    lines.push(`    ${term3(jig5.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig6.node)} ${nodes.map((n2) => `<#${n2.id}>`).join(" , ")} ;`);
   }
   if (connections.length > 0) {
-    lines.push(`    ${term3(jig5.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig6.connection)} ${connections.map((c3) => `<#${c3.id}>`).join(" , ")} ;`);
   }
-  if (masterIsUsed(project)) lines.push(`    ${term3(jig5.master)} <#master> ;`);
+  if (masterIsUsed(project)) lines.push(`    ${term3(jig6.master)} <#master> ;`);
   for (const [property, items] of [
-    [jig5.send, project.sends],
-    [jig5.marker, project.markers],
-    [jig5.region, project.regions],
-    [jig5.envelope, project.envelopes]
+    [jig6.send, project.sends],
+    [jig6.marker, project.markers],
+    [jig6.region, project.regions],
+    [jig6.envelope, project.envelopes]
   ]) {
     if (items.length > 0) lines.push(`    ${term3(property)} ${[...items].sort(byId).map((x) => `<#${x.id}>`).join(" , ")} ;`);
   }
-  lines.push(`    ${term3(jig5.transport)} <#transport> .`);
+  lines.push(`    ${term3(jig6.transport)} <#transport> .`);
   for (const track of tracks) {
     lines.push("");
     lines.push(`<#${track.id}>`);
-    const statements = [`a ${term3(jig5.Track)}`];
+    const statements = [`a ${term3(jig6.Track)}`];
     if (track.label) statements.push(`rdfs:label ${string(track.label)}`);
     const channel = track.channel;
-    if (channel.gain !== 1) statements.push(`${term3(jig5.gain)} ${decimal(channel.gain)}`);
-    if (channel.pan !== 0) statements.push(`${term3(jig5.pan)} ${decimal(channel.pan)}`);
-    if (channel.muted) statements.push(`${term3(jig5.muted)} true`);
-    if (channel.soloed) statements.push(`${term3(jig5.soloed)} true`);
-    if (track.midiInput) statements.push(`${term3(jig5.midiInput)} <#${track.midiInput}>`);
-    if (track.audioInput) statements.push(`${term3(jig5.audioInput)} <#${track.audioInput}>`);
-    if (track.output) statements.push(`${term3(jig5.output)} <#${track.output}>`);
+    if (channel.gain !== 1) statements.push(`${term3(jig6.gain)} ${decimal(channel.gain)}`);
+    if (channel.pan !== 0) statements.push(`${term3(jig6.pan)} ${decimal(channel.pan)}`);
+    if (channel.muted) statements.push(`${term3(jig6.muted)} true`);
+    if (channel.soloed) statements.push(`${term3(jig6.soloed)} true`);
+    if (track.midiInput) statements.push(`${term3(jig6.midiInput)} <#${track.midiInput}>`);
+    if (track.audioInput) statements.push(`${term3(jig6.audioInput)} <#${track.audioInput}>`);
+    if (track.output) statements.push(`${term3(jig6.output)} <#${track.output}>`);
     const clips = (project.clips ?? []).filter((c3) => c3.track === track.id).sort(byId);
-    if (clips.length > 0) statements.push(`${term3(jig5.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
+    if (clips.length > 0) statements.push(`${term3(jig6.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
   }
   for (const clip of [...project.clips ?? []].sort(byId)) {
     lines.push("");
     lines.push(`<#${clip.id}>`);
     const statements = [
-      `a ${term3(clip.kind === "midi" ? jig5.MidiClip : jig5.AudioClip)}`,
+      `a ${term3(clip.kind === "midi" ? jig6.MidiClip : jig6.AudioClip)}`,
       `${term3(trn5.startBeat)} ${decimal(clip.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(clip.lengthBeats)}`
     ];
-    if (clip.muted) statements.push(`${term3(jig5.muted)} true`);
-    if (clip.locked) statements.push(`${term3(jig5.locked)} true`);
+    if (clip.muted) statements.push(`${term3(jig6.muted)} true`);
+    if (clip.locked) statements.push(`${term3(jig6.locked)} true`);
     if (clip.kind === "audio") {
-      statements.push(`${term3(jig5.source)} <${relativeTo(clip.source, iri4)}>`);
-      if (clip.offsetSeconds !== 0) statements.push(`${term3(jig5.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
-      if (clip.fadeInBeats > 0) statements.push(`${term3(jig5.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
-      if (clip.fadeOutBeats > 0) statements.push(`${term3(jig5.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
+      statements.push(`${term3(jig6.source)} <${relativeTo(clip.source, iri5)}>`);
+      if (clip.offsetSeconds !== 0) statements.push(`${term3(jig6.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
+      if (clip.fadeInBeats > 0) statements.push(`${term3(jig6.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
+      if (clip.fadeOutBeats > 0) statements.push(`${term3(jig6.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else if (clip.notes.length > 0) {
-      statements.push(`${term3(jig5.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+      statements.push(`${term3(jig6.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
     }
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
     clip.notes.forEach((note, i2) => {
-      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig5.Note)} ; ${term3(trn5.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn5.pitch)} ${integer(note.pitch)} ; ${term3(trn5.velocity)} ${integer(note.velocity)} .`);
+      lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig6.Note)} ; ${term3(trn5.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn5.pitch)} ${integer(note.pitch)} ; ${term3(trn5.velocity)} ${integer(note.velocity)} .`);
     });
   }
   for (const node of nodes) {
     lines.push("");
     lines.push(`<#${node.id}>`);
-    lines.push(`    a ${term3(jig5.Node)} ;`);
+    lines.push(`    a ${term3(jig6.Node)} ;`);
     if (node.label) lines.push(`    rdfs:label ${string(node.label)} ;`);
-    lines.push(`    ${term3(jig5.onTrack)} <#${node.track}> ;`);
+    lines.push(`    ${term3(jig6.onTrack)} <#${node.track}> ;`);
     const settings = [...node.settings.keys()].sort();
     if (settings.length > 0) {
-      lines.push(`    ${term3(jig5.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
+      lines.push(`    ${term3(jig6.setting)} ` + settings.map((s) => `<#${node.id}-${s}>`).join(" , ") + " ;");
     }
-    if (node.bypassed) lines.push(`    ${term3(jig5.bypassed)} true ;`);
-    if (node.state) lines.push(`    ${term3(jig5.nodeState)} ${string(node.state)} ;`);
-    lines.push(`    ${term3(jig5.plugin)} <${node.pluginIri}> .`);
+    if (node.bypassed) lines.push(`    ${term3(jig6.bypassed)} true ;`);
+    if (node.state) lines.push(`    ${term3(jig6.nodeState)} ${string(node.state)} ;`);
+    lines.push(`    ${term3(jig6.plugin)} <${node.pluginIri}> .`);
     for (const symbol of settings) {
-      lines.push(`<#${node.id}-${symbol}> a ${term3(jig5.ParameterSetting)} ; ${term3(jig5.symbol)} ${string(symbol)} ; ${term3(jig5.value)} ${decimal(node.settings.get(symbol))} .`);
+      lines.push(`<#${node.id}-${symbol}> a ${term3(jig6.ParameterSetting)} ; ${term3(jig6.symbol)} ${string(symbol)} ; ${term3(jig6.value)} ${decimal(node.settings.get(symbol))} .`);
     }
   }
   for (const c3 of connections) {
     lines.push("");
     lines.push(`<#${c3.id}>`);
-    lines.push(`    a ${term3(jig5.Connection)} ;`);
-    lines.push(`    ${term3(jig5.from)} <#${c3.id}-from> ; ${term3(jig5.to)} <#${c3.id}-to> ;`);
-    lines.push(`    ${term3(jig5.signalKind)} ${term3(c3.signalKind)}${noteRange(c3)} .`);
-    endpoint(lines, iri4, `${c3.id}-from`, c3.from);
-    endpoint(lines, iri4, `${c3.id}-to`, c3.to);
+    lines.push(`    a ${term3(jig6.Connection)} ;`);
+    lines.push(`    ${term3(jig6.from)} <#${c3.id}-from> ; ${term3(jig6.to)} <#${c3.id}-to> ;`);
+    lines.push(`    ${term3(jig6.signalKind)} ${term3(c3.signalKind)}${noteRange(c3)} .`);
+    endpoint(lines, iri5, `${c3.id}-from`, c3.from);
+    endpoint(lines, iri5, `${c3.id}-to`, c3.to);
   }
   writeArrangement(lines, project);
   const points = [...transport2.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   lines.push("");
   lines.push("<#transport>");
-  lines.push(`    a ${term3(jig5.Transport)} ;`);
-  lines.push(`    ${term3(jig5.beatsPerBar)} ${integer(transport2.beatsPerBar)} ; ${term3(jig5.beatUnit)} ${integer(transport2.beatUnit)} ;`);
-  const loop = transport2.loopEnd > transport2.loopStart ? `${term3(jig5.loopStart)} ${decimal(transport2.loopStart)} ; ${term3(jig5.loopEnd)} ${decimal(transport2.loopEnd)} ; ` : "";
-  lines.push(`    ${loop}${term3(jig5.loopEnabled)} ${transport2.loopEnabled ? "true" : "false"} ;`);
+  lines.push(`    a ${term3(jig6.Transport)} ;`);
+  lines.push(`    ${term3(jig6.beatsPerBar)} ${integer(transport2.beatsPerBar)} ; ${term3(jig6.beatUnit)} ${integer(transport2.beatUnit)} ;`);
+  const loop = transport2.loopEnd > transport2.loopStart ? `${term3(jig6.loopStart)} ${decimal(transport2.loopStart)} ; ${term3(jig6.loopEnd)} ${decimal(transport2.loopEnd)} ; ` : "";
+  lines.push(`    ${loop}${term3(jig6.loopEnabled)} ${transport2.loopEnabled ? "true" : "false"} ;`);
   const signatures = [...transport2.signaturePoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
   if (signatures.length > 0) {
-    lines.push(`    ${term3(jig5.signaturePoint)} ${signatures.map((_, i2) => `<#s${i2}>`).join(" , ")} ;`);
+    lines.push(`    ${term3(jig6.signaturePoint)} ${signatures.map((_, i2) => `<#s${i2}>`).join(" , ")} ;`);
   }
-  lines.push(`    ${term3(jig5.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
+  lines.push(`    ${term3(jig6.tempoPoint)} ` + points.map((_, i2) => `<#t${i2}>`).join(" , ") + " .");
   signatures.forEach((point, i2) => {
-    lines.push(`<#s${i2}> a ${term3(jig5.SignaturePoint)} ; ${term3(jig5.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig5.beatsPerBar)} ${integer(point.beatsPerBar)} ; ${term3(jig5.beatUnit)} ${integer(point.beatUnit)} .`);
+    lines.push(`<#s${i2}> a ${term3(jig6.SignaturePoint)} ; ${term3(jig6.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig6.beatsPerBar)} ${integer(point.beatsPerBar)} ; ${term3(jig6.beatUnit)} ${integer(point.beatUnit)} .`);
   });
   points.forEach((point, i2) => {
-    lines.push(`<#t${i2}> a ${term3(jig5.TempoPoint)} ; ${term3(jig5.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig5.bpm)} ${decimal(point.bpm)} .`);
+    lines.push(`<#t${i2}> a ${term3(jig6.TempoPoint)} ; ${term3(jig6.atBeat)} ${decimal(point.atBeat)} ; ${term3(jig6.bpm)} ${decimal(point.bpm)} .`);
   });
   return lines.join("\n") + "\n";
 }
 var TAP_TERM = { pre: "PreFader", post: "PostFader" };
 var CURVE_TERM = { step: "Step", linear: "Linear", smooth: "Smooth" };
 function noteRange({ lowNote, highNote }) {
-  return `${lowNote === void 0 ? "" : ` ; ${term3(jig5.lowNote)} ${integer(lowNote)}`}${highNote === void 0 ? "" : ` ; ${term3(jig5.highNote)} ${integer(highNote)}`}`;
+  return `${lowNote === void 0 ? "" : ` ; ${term3(jig6.lowNote)} ${integer(lowNote)}`}${highNote === void 0 ? "" : ` ; ${term3(jig6.highNote)} ${integer(highNote)}`}`;
 }
 function masterIsUsed(project) {
   const master = project.master;
@@ -35090,61 +35746,61 @@ var KIND_TERM = { masterGain: "MasterGain", masterPan: "MasterPan", tempo: "Temp
 function writeArrangement(lines, project) {
   const master = project.master;
   if (masterIsUsed(project)) {
-    const st = [`a ${term3(jig5.Master)}`];
-    if (master.audioInput) st.push(`${term3(jig5.audioInput)} <#${master.audioInput}>`);
-    if (master.gain !== 1) st.push(`${term3(jig5.gain)} ${decimal(master.gain)}`);
-    if (master.pan !== 0) st.push(`${term3(jig5.pan)} ${decimal(master.pan)}`);
-    if (master.muted) st.push(`${term3(jig5.muted)} true`);
+    const st = [`a ${term3(jig6.Master)}`];
+    if (master.audioInput) st.push(`${term3(jig6.audioInput)} <#${master.audioInput}>`);
+    if (master.gain !== 1) st.push(`${term3(jig6.gain)} ${decimal(master.gain)}`);
+    if (master.pan !== 0) st.push(`${term3(jig6.pan)} ${decimal(master.pan)}`);
+    if (master.muted) st.push(`${term3(jig6.muted)} true`);
     lines.push("", `<#master> ${st.join(" ; ")} .`);
   }
   for (const s of [...project.sends].sort(byId)) {
-    const ends = `<#${s.id}> a ${term3(jig5.Send)} ; ${term3(jig5.sendFrom)} <#${s.from}> ; ${term3(jig5.sendTo)} <#${s.to}>`;
-    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig5.signalKind)} ${term3(trn5.Midi)}${noteRange(s)} .` : `${ends} ; ${term3(jig5.level)} ${decimal(s.level)} ; ${term3(jig5.tap)} ${term3(jig5[TAP_TERM[s.tap]])} .`);
+    const ends = `<#${s.id}> a ${term3(jig6.Send)} ; ${term3(jig6.sendFrom)} <#${s.from}> ; ${term3(jig6.sendTo)} <#${s.to}>`;
+    lines.push("", s.kind === "midi" ? `${ends} ; ${term3(jig6.signalKind)} ${term3(trn5.Midi)}${noteRange(s)} .` : `${ends} ; ${term3(jig6.level)} ${decimal(s.level)} ; ${term3(jig6.tap)} ${term3(jig6[TAP_TERM[s.tap]])} .`);
   }
   for (const m of [...project.markers].sort(byId)) {
-    lines.push("", `<#${m.id}> a ${term3(jig5.Marker)} ; ${term3(jig5.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
+    lines.push("", `<#${m.id}> a ${term3(jig6.Marker)} ; ${term3(jig6.atBeat)} ${decimal(m.atBeat)}${m.label ? ` ; rdfs:label ${string(m.label)}` : ""} .`);
   }
   for (const r of [...project.regions].sort(byId)) {
-    lines.push("", `<#${r.id}> a ${term3(jig5.Region)} ; ${term3(trn5.startBeat)} ${decimal(r.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
+    lines.push("", `<#${r.id}> a ${term3(jig6.Region)} ; ${term3(trn5.startBeat)} ${decimal(r.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(r.lengthBeats)}${r.label ? ` ; rdfs:label ${string(r.label)}` : ""} .`);
   }
   for (const e of [...project.envelopes].sort(byId)) {
-    const target2 = e.target.kind ? `${term3(jig5.targetKind)} ${term3(jig5[KIND_TERM[e.target.kind]])}` : `${term3(jig5.targetNode)} <#${e.target.node}> ; ${term3(jig5.targetSymbol)} ${string(e.target.symbol)}`;
+    const target2 = e.target.kind ? `${term3(jig6.targetKind)} ${term3(jig6[KIND_TERM[e.target.kind]])}` : `${term3(jig6.targetNode)} <#${e.target.node}> ; ${term3(jig6.targetSymbol)} ${string(e.target.symbol)}`;
     const points = e.points;
-    lines.push("", `<#${e.id}> a ${term3(jig5.Envelope)} ; ${target2}${points.length > 0 ? ` ; ${term3(jig5.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
+    lines.push("", `<#${e.id}> a ${term3(jig6.Envelope)} ; ${target2}${points.length > 0 ? ` ; ${term3(jig6.envelopePoint)} ${points.map((_, i2) => `<#${e.id}-p${i2}>`).join(" , ")}` : ""} .`);
     points.forEach((p, i2) => {
-      lines.push(`<#${e.id}-p${i2}> a ${term3(jig5.EnvelopePoint)} ; ${term3(jig5.atBeat)} ${decimal(p.atBeat)} ; ${term3(jig5.pointValue)} ${decimal(p.value)} ; ${term3(jig5.curve)} ${term3(jig5[CURVE_TERM[p.curve]])} .`);
+      lines.push(`<#${e.id}-p${i2}> a ${term3(jig6.EnvelopePoint)} ; ${term3(jig6.atBeat)} ${decimal(p.atBeat)} ; ${term3(jig6.pointValue)} ${decimal(p.value)} ; ${term3(jig6.curve)} ${term3(jig6[CURVE_TERM[p.curve]])} .`);
     });
   }
 }
-function writeEditor(project, { iri: iri4 } = {}) {
-  if (!iri4) throw new Error("writeEditor needs the project IRI");
+function writeEditor(project, { iri: iri5 } = {}) {
+  if (!iri5) throw new Error("writeEditor needs the project IRI");
   const editor = project.editor;
-  const lines = [`@base <${iri4}> .`, "", `@prefix jig: <${JIG}> .`, ""];
+  const lines = [`@base <${iri5}> .`, "", `@prefix jig: <${JIG}> .`, ""];
   for (const node of [...project.nodes].sort(byId)) {
     const { x, y } = editor.position(node.id);
     if (x === 0 && y === 0) continue;
-    lines.push(`<#${node.id}> ${term3(jig5.x)} ${decimal(x)} ; ${term3(jig5.y)} ${decimal(y)} .`);
+    lines.push(`<#${node.id}> ${term3(jig6.x)} ${decimal(x)} ; ${term3(jig6.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
     const { order, color, laneSize } = editor.track(track.id);
     const parts = [];
-    if (order !== null) parts.push(`${term3(jig5.order)} ${integer(order)}`);
-    if (color !== null) parts.push(`${term3(jig5.color)} ${string(color)}`);
-    if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig5.laneSize)} ${string(laneSize)}`);
+    if (order !== null) parts.push(`${term3(jig6.order)} ${integer(order)}`);
+    if (color !== null) parts.push(`${term3(jig6.color)} ${string(color)}`);
+    if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig6.laneSize)} ${string(laneSize)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
     const { color } = editor.clip(clip.id);
-    if (color !== null) lines.push(`<#${clip.id}> ${term3(jig5.color)} ${string(color)} .`);
+    if (color !== null) lines.push(`<#${clip.id}> ${term3(jig6.color)} ${string(color)} .`);
   }
   return lines.join("\n") + "\n";
 }
-function writeScripts(project, { iri: iri4, savedAt = null } = {}) {
-  if (!iri4) throw new Error("writeScripts needs the project IRI");
+function writeScripts(project, { iri: iri5, savedAt = null } = {}) {
+  if (!iri5) throw new Error("writeScripts needs the project IRI");
   const scripts = project.scripts.all;
   if (scripts.length === 0) return null;
   const lines = [
-    `@base <${iri4}> .`,
+    `@base <${iri5}> .`,
     "",
     `@prefix jig: <${JIG}> .`,
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
@@ -35153,10 +35809,10 @@ function writeScripts(project, { iri: iri4, savedAt = null } = {}) {
     ""
   ];
   for (const s of scripts) {
-    const parts = [`a ${term3(jig5.Script)}`];
+    const parts = [`a ${term3(jig6.Script)}`];
     if (s.label) parts.push(`rdfs:label ${string(s.label)}`);
-    parts.push(`${term3(jig5.scriptLanguage)} ${term3(s.language)}`);
-    parts.push(`${term3(jig5.scriptSource)} ${string(s.source)}`);
+    parts.push(`${term3(jig6.scriptLanguage)} ${term3(s.language)}`);
+    parts.push(`${term3(jig6.scriptSource)} ${string(s.source)}`);
     const when = s.savedAt ?? savedAt;
     if (when) parts.push(`dcterms:modified ${string(when)}^^xsd:dateTime`);
     lines.push(`<#${s.id}> ${parts.join(" ;\n    ")} .`, "");
@@ -35166,7 +35822,7 @@ function writeScripts(project, { iri: iri4, savedAt = null } = {}) {
 
 // src/rdf/ProjectReader.js
 init_Vocabulary();
-var { jig: jig6, trn: trn6 } = vocabulary;
+var { jig: jig7, trn: trn6 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
 var indexes = /* @__PURE__ */ new WeakMap();
@@ -35185,12 +35841,12 @@ function indexOf(dataset2) {
   }
   return index;
 }
-function objects3(dataset2, subject, predicate) {
+function objects4(dataset2, subject, predicate) {
   return [...indexOf(dataset2).get(subject)?.get(predicate) ?? []];
 }
-var one2 = (dataset2, subject, predicate) => objects3(dataset2, subject, predicate)[0] ?? null;
+var one2 = (dataset2, subject, predicate) => objects4(dataset2, subject, predicate)[0] ?? null;
 var value = (term5) => term5 ? term5.value : null;
-function number3(term5, what) {
+function number4(term5, what) {
   if (!term5) return null;
   const n2 = Number(term5.value);
   if (!Number.isFinite(n2)) throw new Error(`${what} is not a number: ${term5.value}`);
@@ -35199,7 +35855,7 @@ function number3(term5, what) {
 function findProject(dataset2) {
   const found = [];
   for (const quad3 of dataset2) {
-    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig6.Project) {
+    if (quad3.predicate.value === RDF_TYPE && quad3.object.value === jig7.Project) {
       found.push(quad3.subject.value);
     }
   }
@@ -35209,25 +35865,25 @@ function findProject(dataset2) {
   }
   return found[0];
 }
-function idOf(iri4, projectIri, what) {
-  if (!iri4) throw new Error(`${what} is missing`);
-  const hash = iri4.indexOf("#");
-  if (hash < 0 || !iri4.startsWith(projectIri.split("#")[0])) {
-    throw new Error(`${what} is not a fragment of the project: ${iri4}`);
+function idOf(iri5, projectIri, what) {
+  if (!iri5) throw new Error(`${what} is missing`);
+  const hash = iri5.indexOf("#");
+  if (hash < 0 || !iri5.startsWith(projectIri.split("#")[0])) {
+    throw new Error(`${what} is not a fragment of the project: ${iri5}`);
   }
-  return iri4.slice(hash + 1);
+  return iri5.slice(hash + 1);
 }
-function readEndpoint2(dataset2, iri4, projectIri, what) {
-  if (!iri4) throw new Error(`${what} is missing`);
-  const node = value(one2(dataset2, iri4, jig6.endpointNode));
+function readEndpoint2(dataset2, iri5, projectIri, what) {
+  if (!iri5) throw new Error(`${what} is missing`);
+  const node = value(one2(dataset2, iri5, jig7.endpointNode));
   if (!node) throw new Error(`${what} names no jig:endpointNode`);
-  const index = one2(dataset2, iri4, jig6.portIndex);
-  const symbol = one2(dataset2, iri4, jig6.portSymbol);
+  const index = one2(dataset2, iri5, jig7.portIndex);
+  const symbol = one2(dataset2, iri5, jig7.portSymbol);
   if (index === null === (symbol === null)) {
     throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
   }
   const endpoint2 = { node: idOf(node, projectIri, `${what} endpointNode`) };
-  if (index !== null) endpoint2.portIndex = number3(index, `${what} portIndex`);
+  if (index !== null) endpoint2.portIndex = number4(index, `${what} portIndex`);
   else endpoint2.portSymbol = symbol.value;
   return endpoint2;
 }
@@ -35242,10 +35898,10 @@ function mintedOrder(a2, b) {
 }
 function readChannel(dataset2, subject, id) {
   const channel = {};
-  const gain = number3(one2(dataset2, subject, jig6.gain), `gain on ${id}`);
-  const pan = number3(one2(dataset2, subject, jig6.pan), `pan on ${id}`);
-  const muted = one2(dataset2, subject, jig6.muted);
-  const soloed = one2(dataset2, subject, jig6.soloed);
+  const gain = number4(one2(dataset2, subject, jig7.gain), `gain on ${id}`);
+  const pan = number4(one2(dataset2, subject, jig7.pan), `pan on ${id}`);
+  const muted = one2(dataset2, subject, jig7.muted);
+  const soloed = one2(dataset2, subject, jig7.soloed);
   if (gain !== null) channel.gain = gain;
   if (pan !== null) channel.pan = pan;
   if (muted !== null) channel.muted = muted.value === "true";
@@ -35281,43 +35937,43 @@ function foldIntoTracks(nodes, connections) {
   }
   return { tracks, trackOf };
 }
-var TAP_OF = { [jig6.PreFader]: "pre", [jig6.PostFader]: "post" };
-var CURVE_OF = { [jig6.Step]: "step", [jig6.Linear]: "linear", [jig6.Smooth]: "smooth" };
-var KIND_OF = { [jig6.MasterGain]: "masterGain", [jig6.MasterPan]: "masterPan", [jig6.Tempo]: "tempo" };
-function named(table, iri4, what) {
-  if (iri4 === null) throw new Error(`${what} is missing`);
-  if (!(iri4 in table)) throw new Error(`${what} is not one this format defines: ${iri4}`);
-  return table[iri4];
+var TAP_OF = { [jig7.PreFader]: "pre", [jig7.PostFader]: "post" };
+var CURVE_OF = { [jig7.Step]: "step", [jig7.Linear]: "linear", [jig7.Smooth]: "smooth" };
+var KIND_OF = { [jig7.MasterGain]: "masterGain", [jig7.MasterPan]: "masterPan", [jig7.Tempo]: "tempo" };
+function named(table, iri5, what) {
+  if (iri5 === null) throw new Error(`${what} is missing`);
+  if (!(iri5 in table)) throw new Error(`${what} is not one this format defines: ${iri5}`);
+  return table[iri5];
 }
 function readNoteRange(dataset2, subject, id) {
   const end = (property, name2) => {
     const term5 = one2(dataset2, subject, property);
-    return term5 === null ? {} : { [name2]: number3(term5, `${name2} of ${id}`) };
+    return term5 === null ? {} : { [name2]: number4(term5, `${name2} of ${id}`) };
   };
-  return { ...end(jig6.lowNote, "lowNote"), ...end(jig6.highNote, "highNote") };
+  return { ...end(jig7.lowNote, "lowNote"), ...end(jig7.highNote, "highNote") };
 }
-function readArrangement(dataset2, iri4, tracks) {
+function readArrangement(dataset2, iri5, tracks) {
   const changes = [];
-  const masterIri = value(one2(dataset2, iri4, jig6.master));
+  const masterIri = value(one2(dataset2, iri5, jig7.master));
   if (masterIri) {
     const channel = readChannel(dataset2, masterIri, "master");
-    const input = value(one2(dataset2, masterIri, jig6.audioInput));
+    const input = value(one2(dataset2, masterIri, jig7.audioInput));
     changes.push({
       op: "setMaster",
       ...channel.gain !== void 0 ? { gain: channel.gain } : {},
       ...channel.pan !== void 0 ? { pan: channel.pan } : {},
       ...channel.muted !== void 0 ? { muted: channel.muted } : {},
-      ...input !== null ? { audioInput: idOf(input, iri4, "audioInput of the master") } : {}
+      ...input !== null ? { audioInput: idOf(input, iri5, "audioInput of the master") } : {}
     });
   }
   for (const t of tracks) {
-    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri4, `output of track ${t.id}`) });
+    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri5, `output of track ${t.id}`) });
   }
-  const each = (property, what) => objects3(dataset2, iri4, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri4, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
-  for (const { subject, id } of each(jig6.send, "send")) {
-    const from = idOf(value(one2(dataset2, subject, jig6.sendFrom)), iri4, `sendFrom of ${id}`);
-    const to = idOf(value(one2(dataset2, subject, jig6.sendTo)), iri4, `sendTo of ${id}`);
-    const kind = value(one2(dataset2, subject, jig6.signalKind));
+  const each = (property, what) => objects4(dataset2, iri5, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri5, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
+  for (const { subject, id } of each(jig7.send, "send")) {
+    const from = idOf(value(one2(dataset2, subject, jig7.sendFrom)), iri5, `sendFrom of ${id}`);
+    const to = idOf(value(one2(dataset2, subject, jig7.sendTo)), iri5, `sendTo of ${id}`);
+    const kind = value(one2(dataset2, subject, jig7.signalKind));
     if (kind === trn6.Midi) {
       changes.push({ op: "addSend", id, from, to, kind: "midi", ...readNoteRange(dataset2, subject, id) });
       continue;
@@ -35327,117 +35983,117 @@ function readArrangement(dataset2, iri4, tracks) {
       id,
       from,
       to,
-      level: number3(one2(dataset2, subject, jig6.level), `level of ${id}`) ?? 1,
-      tap: named(TAP_OF, value(one2(dataset2, subject, jig6.tap)), `tap of ${id}`)
+      level: number4(one2(dataset2, subject, jig7.level), `level of ${id}`) ?? 1,
+      tap: named(TAP_OF, value(one2(dataset2, subject, jig7.tap)), `tap of ${id}`)
     });
   }
-  for (const { subject, id } of each(jig6.marker, "marker")) {
-    changes.push({ op: "addMarker", id, atBeat: number3(one2(dataset2, subject, jig6.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
+  for (const { subject, id } of each(jig7.marker, "marker")) {
+    changes.push({ op: "addMarker", id, atBeat: number4(one2(dataset2, subject, jig7.atBeat), `atBeat of ${id}`), label: value(one2(dataset2, subject, RDFS_LABEL)) });
   }
-  for (const { subject, id } of each(jig6.region, "region")) {
+  for (const { subject, id } of each(jig7.region, "region")) {
     changes.push({
       op: "addRegion",
       id,
-      startBeat: number3(one2(dataset2, subject, trn6.startBeat), `startBeat of ${id}`),
-      lengthBeats: number3(one2(dataset2, subject, trn6.lengthBeats), `lengthBeats of ${id}`),
+      startBeat: number4(one2(dataset2, subject, trn6.startBeat), `startBeat of ${id}`),
+      lengthBeats: number4(one2(dataset2, subject, trn6.lengthBeats), `lengthBeats of ${id}`),
       label: value(one2(dataset2, subject, RDFS_LABEL))
     });
   }
-  for (const { subject, id } of each(jig6.envelope, "envelope")) {
-    const kind = value(one2(dataset2, subject, jig6.targetKind));
-    const targetNode = value(one2(dataset2, subject, jig6.targetNode));
-    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri4, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig6.targetSymbol)) };
-    const points = objects3(dataset2, subject, jig6.envelopePoint).map((x) => x.value).map((pointIri) => ({
-      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), `atBeat of a point in ${id}`),
-      value: number3(one2(dataset2, pointIri, jig6.pointValue), `pointValue of a point in ${id}`),
-      curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig6.curve)), `curve of a point in ${id}`)
+  for (const { subject, id } of each(jig7.envelope, "envelope")) {
+    const kind = value(one2(dataset2, subject, jig7.targetKind));
+    const targetNode = value(one2(dataset2, subject, jig7.targetNode));
+    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri5, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig7.targetSymbol)) };
+    const points = objects4(dataset2, subject, jig7.envelopePoint).map((x) => x.value).map((pointIri) => ({
+      atBeat: number4(one2(dataset2, pointIri, jig7.atBeat), `atBeat of a point in ${id}`),
+      value: number4(one2(dataset2, pointIri, jig7.pointValue), `pointValue of a point in ${id}`),
+      curve: named(CURVE_OF, value(one2(dataset2, pointIri, jig7.curve)), `curve of a point in ${id}`)
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     changes.push({ op: "addEnvelope", id, target: target2, points });
   }
   return changes;
 }
 function readProject(dataset2) {
-  const iri4 = findProject(dataset2);
+  const iri5 = findProject(dataset2);
   const changes = [];
-  const trackIris = objects3(dataset2, iri4, jig6.track).map((t) => t.value);
-  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri4, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
+  const trackIris = objects4(dataset2, iri5, jig7.track).map((t) => t.value);
+  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri5, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
     id,
     label: value(one2(dataset2, trackIri, RDFS_LABEL)),
     channel: readChannel(dataset2, trackIri, id),
-    midiInput: value(one2(dataset2, trackIri, jig6.midiInput)),
-    audioInput: value(one2(dataset2, trackIri, jig6.audioInput)),
-    output: value(one2(dataset2, trackIri, jig6.output))
+    midiInput: value(one2(dataset2, trackIri, jig7.midiInput)),
+    audioInput: value(one2(dataset2, trackIri, jig7.audioInput)),
+    output: value(one2(dataset2, trackIri, jig7.output))
   }));
   const clips = [];
   for (const trackIri of trackIris) {
-    const track = idOf(trackIri, iri4, "track");
-    for (const clipIri of objects3(dataset2, trackIri, jig6.clip).map((t) => t.value)) {
-      const id = idOf(clipIri, iri4, `clip of track ${track}`);
-      const types = objects3(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
-      const kind = types.includes(jig6.MidiClip) ? "midi" : types.includes(jig6.AudioClip) ? "audio" : null;
+    const track = idOf(trackIri, iri5, "track");
+    for (const clipIri of objects4(dataset2, trackIri, jig7.clip).map((t) => t.value)) {
+      const id = idOf(clipIri, iri5, `clip of track ${track}`);
+      const types = objects4(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
+      const kind = types.includes(jig7.MidiClip) ? "midi" : types.includes(jig7.AudioClip) ? "audio" : null;
       if (!kind) throw new Error(`clip ${id} is neither a jig:MidiClip nor a jig:AudioClip`);
       const clip = {
         op: "addClip",
         id,
         track,
         kind,
-        startBeat: number3(one2(dataset2, clipIri, trn6.startBeat), `startBeat of clip ${id}`),
-        lengthBeats: number3(one2(dataset2, clipIri, trn6.lengthBeats), `lengthBeats of clip ${id}`)
+        startBeat: number4(one2(dataset2, clipIri, trn6.startBeat), `startBeat of clip ${id}`),
+        lengthBeats: number4(one2(dataset2, clipIri, trn6.lengthBeats), `lengthBeats of clip ${id}`)
       };
-      const muted = one2(dataset2, clipIri, jig6.muted);
+      const muted = one2(dataset2, clipIri, jig7.muted);
       if (muted !== null) clip.muted = muted.value === "true";
-      const locked = one2(dataset2, clipIri, jig6.locked);
+      const locked = one2(dataset2, clipIri, jig7.locked);
       if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
-        clip.notes = objects3(dataset2, clipIri, jig6.note).map((t) => t.value).map((noteIri) => ({
-          startBeat: number3(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
-          lengthBeats: number3(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
-          pitch: number3(one2(dataset2, noteIri, trn6.pitch), `pitch of a note in ${id}`),
-          velocity: number3(one2(dataset2, noteIri, trn6.velocity), `velocity of a note in ${id}`)
+        clip.notes = objects4(dataset2, clipIri, jig7.note).map((t) => t.value).map((noteIri) => ({
+          startBeat: number4(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
+          lengthBeats: number4(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
+          pitch: number4(one2(dataset2, noteIri, trn6.pitch), `pitch of a note in ${id}`),
+          velocity: number4(one2(dataset2, noteIri, trn6.velocity), `velocity of a note in ${id}`)
         }));
       } else {
-        const source = value(one2(dataset2, clipIri, jig6.source));
+        const source = value(one2(dataset2, clipIri, jig7.source));
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
         clip.source = source;
-        clip.offsetSeconds = number3(one2(dataset2, clipIri, jig6.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
-        clip.fadeInBeats = number3(one2(dataset2, clipIri, jig6.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
-        clip.fadeOutBeats = number3(one2(dataset2, clipIri, jig6.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
+        clip.offsetSeconds = number4(one2(dataset2, clipIri, jig7.offsetSeconds), `offsetSeconds of clip ${id}`) ?? 0;
+        clip.fadeInBeats = number4(one2(dataset2, clipIri, jig7.fadeInBeats), `fadeInBeats of clip ${id}`) ?? 0;
+        clip.fadeOutBeats = number4(one2(dataset2, clipIri, jig7.fadeOutBeats), `fadeOutBeats of clip ${id}`) ?? 0;
       }
       clips.push(clip);
     }
   }
   clips.sort((a2, b) => mintedOrder(a2.id, b.id));
   const nodes = [];
-  const nodeIris = objects3(dataset2, iri4, jig6.node).map((t) => t.value).sort();
+  const nodeIris = objects4(dataset2, iri5, jig7.node).map((t) => t.value).sort();
   for (const nodeIri of nodeIris) {
-    const id = idOf(nodeIri, iri4, "node");
-    const pluginIri = value(one2(dataset2, nodeIri, jig6.plugin));
+    const id = idOf(nodeIri, iri5, "node");
+    const pluginIri = value(one2(dataset2, nodeIri, jig7.plugin));
     if (!pluginIri) throw new Error(`node ${id} names no jig:plugin, so nothing says what to load`);
     const settings = {};
-    for (const settingIri of objects3(dataset2, nodeIri, jig6.setting).map((t) => t.value).sort()) {
-      const symbol = value(one2(dataset2, settingIri, jig6.symbol));
-      const setting = one2(dataset2, settingIri, jig6.value);
+    for (const settingIri of objects4(dataset2, nodeIri, jig7.setting).map((t) => t.value).sort()) {
+      const symbol = value(one2(dataset2, settingIri, jig7.symbol));
+      const setting = one2(dataset2, settingIri, jig7.value);
       if (!symbol) throw new Error(`a setting on ${id} names no jig:symbol`);
       if (setting === null) throw new Error(`setting ${symbol} on ${id} has no jig:value`);
-      settings[symbol] = number3(setting, `setting ${symbol} on ${id}`);
+      settings[symbol] = number4(setting, `setting ${symbol} on ${id}`);
     }
-    const onTrack = value(one2(dataset2, nodeIri, jig6.onTrack));
+    const onTrack = value(one2(dataset2, nodeIri, jig7.onTrack));
     nodes.push({
       id,
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
-      track: onTrack === null ? null : idOf(onTrack, iri4, `track of node ${id}`),
+      track: onTrack === null ? null : idOf(onTrack, iri5, `track of node ${id}`),
       settings,
-      state: value(one2(dataset2, nodeIri, jig6.nodeState)),
-      ...one2(dataset2, nodeIri, jig6.bypassed)?.value === "true" ? { bypassed: true } : {},
+      state: value(one2(dataset2, nodeIri, jig7.nodeState)),
+      ...one2(dataset2, nodeIri, jig7.bypassed)?.value === "true" ? { bypassed: true } : {},
       // Only read to fold a session from before tracks, below.
       channel: readChannel(dataset2, nodeIri, id)
     });
   }
   const connections = [];
-  for (const connIri of objects3(dataset2, iri4, jig6.connection).map((t) => t.value).sort()) {
-    const id = idOf(connIri, iri4, "connection");
-    const signalKind = value(one2(dataset2, connIri, jig6.signalKind));
+  for (const connIri of objects4(dataset2, iri5, jig7.connection).map((t) => t.value).sort()) {
+    const id = idOf(connIri, iri5, "connection");
+    const signalKind = value(one2(dataset2, connIri, jig7.signalKind));
     if (!signalKind) {
       throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
     }
@@ -35445,8 +36101,8 @@ function readProject(dataset2) {
       op: "addConnection",
       ...readNoteRange(dataset2, connIri, id),
       id,
-      from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig6.from)), iri4, `connection ${id} from`),
-      to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig6.to)), iri4, `connection ${id} to`),
+      from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig7.from)), iri5, `connection ${id} from`),
+      to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig7.to)), iri5, `connection ${id} to`),
       signalKind
     });
   }
@@ -35465,42 +36121,42 @@ function readProject(dataset2) {
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue;
-    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri4, `${what} of track ${t.id}`);
+    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri5, `${what} of track ${t.id}`);
     changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
   }
   changes.push(...connections);
   changes.push(...clips);
-  changes.push(...readArrangement(dataset2, iri4, tracks));
-  const transportIri = value(one2(dataset2, iri4, jig6.transport));
+  changes.push(...readArrangement(dataset2, iri5, tracks));
+  const transportIri = value(one2(dataset2, iri5, jig7.transport));
   if (transportIri) {
-    const points = objects3(dataset2, transportIri, jig6.tempoPoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), "atBeat") ?? 0,
-      bpm: number3(one2(dataset2, pointIri, jig6.bpm), "bpm") ?? 120
+    const points = objects4(dataset2, transportIri, jig7.tempoPoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number4(one2(dataset2, pointIri, jig7.atBeat), "atBeat") ?? 0,
+      bpm: number4(one2(dataset2, pointIri, jig7.bpm), "bpm") ?? 120
     })).sort((a2, b) => a2.atBeat - b.atBeat);
     const transport2 = {};
-    const beatsPerBar = number3(one2(dataset2, transportIri, jig6.beatsPerBar), "beatsPerBar");
-    const beatUnit = number3(one2(dataset2, transportIri, jig6.beatUnit), "beatUnit");
-    const loopStart = number3(one2(dataset2, transportIri, jig6.loopStart), "loopStart");
-    const loopEnd = number3(one2(dataset2, transportIri, jig6.loopEnd), "loopEnd");
-    const loopEnabled = one2(dataset2, transportIri, jig6.loopEnabled);
+    const beatsPerBar = number4(one2(dataset2, transportIri, jig7.beatsPerBar), "beatsPerBar");
+    const beatUnit = number4(one2(dataset2, transportIri, jig7.beatUnit), "beatUnit");
+    const loopStart = number4(one2(dataset2, transportIri, jig7.loopStart), "loopStart");
+    const loopEnd = number4(one2(dataset2, transportIri, jig7.loopEnd), "loopEnd");
+    const loopEnabled = one2(dataset2, transportIri, jig7.loopEnabled);
     if (beatsPerBar !== null) transport2.beatsPerBar = beatsPerBar;
     if (beatUnit !== null) transport2.beatUnit = beatUnit;
     if (loopStart !== null) transport2.loopStart = loopStart;
     if (loopEnd !== null) transport2.loopEnd = loopEnd;
     if (loopEnabled !== null) transport2.loopEnabled = loopEnabled.value === "true";
     if (points.length > 0) transport2.tempoPoints = points;
-    const signatures = objects3(dataset2, transportIri, jig6.signaturePoint).map((t) => t.value).map((pointIri) => ({
-      atBeat: number3(one2(dataset2, pointIri, jig6.atBeat), "atBeat of a signature point"),
-      beatsPerBar: number3(one2(dataset2, pointIri, jig6.beatsPerBar), "beatsPerBar of a signature point"),
-      beatUnit: number3(one2(dataset2, pointIri, jig6.beatUnit), "beatUnit of a signature point")
+    const signatures = objects4(dataset2, transportIri, jig7.signaturePoint).map((t) => t.value).map((pointIri) => ({
+      atBeat: number4(one2(dataset2, pointIri, jig7.atBeat), "atBeat of a signature point"),
+      beatsPerBar: number4(one2(dataset2, pointIri, jig7.beatsPerBar), "beatsPerBar of a signature point"),
+      beatUnit: number4(one2(dataset2, pointIri, jig7.beatUnit), "beatUnit of a signature point")
     }));
     if (signatures.length > 0) transport2.signaturePoints = signatures.sort((a2, b) => a2.atBeat - b.atBeat);
     if (Object.keys(transport2).length > 0) changes.push({ op: "setTransport", ...transport2 });
   }
   return {
-    iri: iri4,
-    label: value(one2(dataset2, iri4, RDFS_LABEL)),
-    revision: number3(one2(dataset2, iri4, jig6.revision), "revision") ?? 0,
+    iri: iri5,
+    label: value(one2(dataset2, iri5, RDFS_LABEL)),
+    revision: number4(one2(dataset2, iri5, jig7.revision), "revision") ?? 0,
     changes
   };
 }
@@ -35510,16 +36166,16 @@ function readEditor(dataset2, projectIri) {
   const layout = (id) => tracks.get(id) ?? tracks.set(id, {}).get(id);
   for (const quad3 of dataset2) {
     const p = quad3.predicate.value;
-    if (p === jig6.x || p === jig6.y) {
+    if (p === jig7.x || p === jig7.y) {
       const id = idOf(quad3.subject.value, projectIri, "position");
       const at = positions.get(id) ?? { x: 0, y: 0 };
-      at[p === jig6.x ? "x" : "y"] = Number(quad3.object.value);
+      at[p === jig7.x ? "x" : "y"] = Number(quad3.object.value);
       positions.set(id, at);
-    } else if (p === jig6.order) {
-      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number3(quad3.object, "order");
-    } else if (p === jig6.color) {
+    } else if (p === jig7.order) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).order = number4(quad3.object, "order");
+    } else if (p === jig7.color) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
-    } else if (p === jig6.laneSize) {
+    } else if (p === jig7.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
     }
   }
@@ -35530,10 +36186,10 @@ function readScripts(dataset2, projectIri) {
   const at = (id) => found.get(id) ?? found.set(id, { id, label: null, language: null, source: null, savedAt: null }).get(id);
   for (const quad3 of dataset2) {
     const p = quad3.predicate.value;
-    if (p === jig6.scriptSource || p === jig6.scriptLanguage || p === vocabulary.rdfs.label || p === vocabulary.dcterms.modified) {
+    if (p === jig7.scriptSource || p === jig7.scriptLanguage || p === vocabulary.rdfs.label || p === vocabulary.dcterms.modified) {
       const script = at(idOf(quad3.subject.value, projectIri, "script"));
-      if (p === jig6.scriptSource) script.source = quad3.object.value;
-      else if (p === jig6.scriptLanguage) script.language = quad3.object.value;
+      if (p === jig7.scriptSource) script.source = quad3.object.value;
+      else if (p === jig7.scriptLanguage) script.language = quad3.object.value;
       else if (p === vocabulary.dcterms.modified) script.savedAt = quad3.object.value;
       else script.label = quad3.object.value;
     }
@@ -35607,7 +36263,7 @@ function createSessions(ctx2) {
       turtle,
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       scripts: writeScripts(dispatcher.project, { iri: media.base, savedAt }),
-      media: held.map((iri4) => ({ name: iri4.slice(media.base.length), bytes: media.get(iri4).bytes }))
+      media: held.map((iri5) => ({ name: iri5.slice(media.base.length), bytes: media.get(iri5).bytes }))
     });
     return {
       kind: packed.kind,
@@ -35655,7 +36311,7 @@ function createSessions(ctx2) {
       ctx2.media.put(new URL(name2, ctx2.media.base).href, bytes);
     }
     const opened = await openProject(d, read, {
-      onLoading: (iri4) => log2(`GET ${iri4}`),
+      onLoading: (iri5) => log2(`GET ${iri5}`),
       onCleared: () => {
         ctx2.rack.reset();
         ctx2.editors.closeAll();
@@ -36469,7 +37125,7 @@ var Tokens = class {
     return r.trim();
   }
 };
-function number4(t) {
+function number5(t) {
   t.skipSpace();
   const m = /^\d+(\.\d+)?|^\.\d+/.exec(t.text.slice(t.pos));
   if (!m) return null;
@@ -36519,7 +37175,7 @@ function factor(t, depth) {
     t.pos++;
     return { type: "negate", operand: factor(t, depth + 1) };
   }
-  const n2 = number4(t);
+  const n2 = number5(t);
   if (n2) return n2;
   const name2 = t.ident();
   if (!name2) throw new LineError("expected a number, a name or a call", column);
@@ -36555,7 +37211,7 @@ function position(t) {
   return { bar, beat };
 }
 function duration(t) {
-  const n2 = number4(t);
+  const n2 = number5(t);
   if (!n2 || n2.unit) throw new LineError("expected a length such as 2 bars", t.pos + 1);
   const unit = t.ident();
   if (!["bar", "bars", "beat", "beats"].includes(unit)) throw new LineError('expected "bars" or "beats" after the length', t.pos + 1);
@@ -36584,9 +37240,9 @@ function statement(text) {
     const name2 = t.ident();
     if (!name2) throw new LineError("expected a name for the plugin", t.pos + 1);
     t.expect("=");
-    const iri4 = t.rest();
-    if (!/^https?:\/\/\S+$/.test(iri4)) throw new LineError("expected an http or https address, written out in full", t.pos - iri4.length + 1);
-    return { type: "load", name: name2, iri: iri4, column };
+    const iri5 = t.rest();
+    if (!/^https?:\/\/\S+$/.test(iri5)) throw new LineError("expected an http or https address, written out in full", t.pos - iri5.length + 1);
+    return { type: "load", name: name2, iri: iri5, column };
   }
   if (t.keyword("let")) {
     const name2 = t.ident();
@@ -36594,7 +37250,7 @@ function statement(text) {
     t.expect("=");
     s = { type: "let", name: name2, expr: expression(t), column };
   } else if (t.keyword("seed")) {
-    const n2 = number4(t);
+    const n2 = number5(t);
     if (!n2 || n2.unit) throw new LineError("expected a whole number for the seed", t.pos + 1);
     s = { type: "seed", value: Math.trunc(n2.value), column };
   } else if (t.keyword("connect")) {
@@ -36837,7 +37493,7 @@ async function plan(statements, context) {
     }
   }
   const lets = /* @__PURE__ */ new Map();
-  const out = { seed: 1, loads: loads.map(({ name: name2, iri: iri4, line }) => ({ name: name2, iri: iri4, line })), lets: [], steps: [] };
+  const out = { seed: 1, loads: loads.map(({ name: name2, iri: iri5, line }) => ({ name: name2, iri: iri5, line })), lets: [], steps: [] };
   const portOf = (name2, symbol, line, column) => {
     if (!scope.has(name2)) {
       fail(line, `no plugin called "${name2}"${hint(name2, scope.keys())}`, column);
@@ -37124,16 +37780,16 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
 init_LoadError();
 function createPluginValidator(loader) {
   const verified = /* @__PURE__ */ new Map();
-  return async function resolvePlugin(iri4) {
+  return async function resolvePlugin(iri5) {
     try {
       let profile;
       let code;
       try {
-        profile = (await loader.loadProfile(iri4)).profile;
+        profile = (await loader.loadProfile(iri5)).profile;
         code = [profile];
       } catch (error2) {
         if (!(error2 instanceof CompositeFound)) throw error2;
-        const tree = await resolveComposite(iri4, { loader, bundled: (target2) => target2 === iri4 ? error2.dataset : null });
+        const tree = await resolveComposite(iri5, { loader, bundled: (target2) => target2 === iri5 ? error2.dataset : null });
         profile = compositeProfile(tree.composite);
         code = pluginsOf(tree).map((plugin) => plugin.profile);
       }
@@ -37143,9 +37799,9 @@ function createPluginValidator(loader) {
         ...(p.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
       ]).filter(([, resource]) => resource);
       const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(" ");
-      if (verified.get(iri4) !== key) {
+      if (verified.get(iri5) !== key) {
         for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind });
-        verified.set(iri4, key);
+        verified.set(iri5, key);
       }
       return {
         ok: true,
@@ -37283,7 +37939,7 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
 function describePlan(plan2) {
   return {
     seed: plan2.seed,
-    loads: plan2.loads.map(({ name: name2, iri: iri4, line }) => ({ name: name2, iri: iri4, line })),
+    loads: plan2.loads.map(({ name: name2, iri: iri5, line }) => ({ name: name2, iri: iri5, line })),
     steps: plan2.steps.map((s) => ({
       line: s.line,
       when: s.when.kind === "now" ? "now" : s.when.kind === "at" ? `at beat ${s.when.beat}` : `every ${s.when.beats} beats`,
@@ -37649,6 +38305,7 @@ ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.record = createRecord(ctx);
 ctx.editors = createEditors(ctx);
+ctx.skins = createSkins(ctx);
 ctx.selection = new Selection();
 ctx.dock = createDockPanel(ctx);
 ctx.arrangement = createArrangement(ctx);
@@ -37659,6 +38316,7 @@ ctx.master = createMaster(ctx);
 ctx.meters = createMeters(ctx);
 ctx.pwa = createPwa(ctx);
 ctx.rack = createRack(ctx);
+ctx.skins.onReady(() => ctx.rack.draw());
 ctx.loading = createLoading(ctx);
 ctx.browser = createBrowser(ctx);
 ctx.sessions = createSessions(ctx);

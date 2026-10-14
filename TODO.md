@@ -57,12 +57,21 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       (2026-10-12, `tests/host/mix64.test.js` checks it against BigInt); whether a seed now gives the VST3's exact line is unchecked, since
       the rest of the port may differ, and Conductor was changed to the same draw on 2026-10-13; (4) the browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hid plugins at 27
       and now hides 6 of 31.
-- [ ] **SVG skins.** 2026-10-13. Specified in `docs/svg-skins.md`, with contract section 9.4, the vocabulary terms (`jig:skin`,
-      `jig:Artwork`, `jig:Rotary` and the rest) and their shapes, the `AGENTS.md` rule amended. Nothing implemented. Order: (1) a
-      `SkinReader` and the allowlist builder in `src/ui/`, with tests that refuse each disallowed element; (2) the cross-file check
-      (every element id and port symbol exists, none bound twice) as a test over `plugins/`; (3) one skin, Tremolo, to settle the
-      vocabulary before more; (4) Panel.js chooses `jig:ui`, then the skin, then the generated panel, and draws unbound ports after
-      the artwork; (5) a pointer drag and a keyboard run in a real browser, per the interface rules. Meters wait for a named meter feed.
+- [ ] **SVG skins.** 2026-10-14. Specified in `docs/svg-skins.md`, with contract section 9.4, the vocabulary and shapes, the `AGENTS.md`
+      rule amended. Built and seen working: Tremolo's skin (`plugins/tremolo/skin/`) drawn by `createPanel` in the studio page in Chrome,
+      2026-10-14: a drag that left the knob moved Rate, a press on the track set Depth, ten arrow presses moved it 0.05 with the focus
+      kept, readouts follow, hit boxes are 44px or more at a 300px width and sit inside the artwork. Parts: `src/ui/SkinArtwork.js`
+      (allowlist builder), `src/ui/SkinPanel.js` (moves it, native inputs under it), `src/rdf/SkinReader.js`, `src/host/SkinLoader.js`
+      (fetch, verify, rebase to where the skin came from), `web/app/Skins.js`, the `Panel.js` option, `web/panel.css`, and
+      `bin/write-profile.js` (writes `skin.ttl`, the `jig:skin` arc, and lists both files as assets so a bundle carries them).
+      `npm run check:skins` (`bin/check-skins.js`) runs the builder in real Chrome against hostile artwork. Cascade's skin (`plugins/cascade/skin/`) is the second and uses a toggle and a selector, seen in Chrome
+      2026-10-14: a press and Space switch Freeze, a press and the arrow keys step Mode, focus stays on the control, Tab follows the picture
+      (mix, size, damping, freeze, mode). **Not done:** (1) a Toggle's two-state text and a Selector's wrap on press are seen, but a skin with a
+      vertical Linear control has not been drawn; (2) the
+      simple page (`web/simple.js`) is wired the same way but has not been looked at; (3) a screen reader and a phone-width touch drag
+      have not been tried; (4) `check:skins` is not part of `npm test` (Chrome); (5) a plugin with a `jig:ui` and a skin: the studio draws
+      the skin in the panel and offers the editor beside it, which is not the order the contract's 9.4 states, so decide which is meant;
+      (6) a flattened bundle's skin fetches its artwork from the canonical IRI. Meters wait for a named meter feed.
 
 - [ ] **Conductor, what is left.** 2026-10-13. Built: an editable form of up to 12 steps (`form_1` to `form_12`, ending at the first
       0), a minimum and maximum bars per section (0 uses the general limits), and a scene, density, energy, mutation and restart value per section; the

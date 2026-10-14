@@ -26,7 +26,7 @@ ${artwork}
 ${body}`
 
 const rotary = `
-<#rate> a jig:Rotary ; jig:portSymbol "rate" ; jig:element "rate-knob" ; jig:angleMin -135 ; jig:angleMax 135 .`
+<#rate> a jig:RotaryControl ; jig:boundSymbol "rate" ; jig:element "rate-knob" ; jig:angleMin -135 ; jig:angleMax 135 .`
 
 describe('skin shapes', () => {
   let validator
@@ -39,7 +39,7 @@ describe('skin shapes', () => {
   })
 
   it('accepts a linear control with a track', async () => {
-    const linear = `<#rate> a jig:Linear ; jig:portSymbol "depth" ; jig:element "thumb" ; jig:trackElement "slot" .`
+    const linear = `<#rate> a jig:LinearControl ; jig:boundSymbol "depth" ; jig:element "thumb" ; jig:trackElement "slot" .`
     expect(await messages(skin(linear))).toEqual([])
   })
 
@@ -54,7 +54,7 @@ describe('skin shapes', () => {
   })
 
   it('refuses a control with no port symbol', async () => {
-    const text = skin(rotary.replace('jig:portSymbol "rate" ;', ''))
+    const text = skin(rotary.replace('jig:boundSymbol "rate" ;', ''))
     expect(await messages(text)).toEqual([expect.stringContaining('by its lv2:symbol')])
   })
 
@@ -64,7 +64,7 @@ describe('skin shapes', () => {
   })
 
   it('refuses a rotary with no angles, one message each', async () => {
-    const text = skin(`<#rate> a jig:Rotary ; jig:portSymbol "rate" ; jig:element "k" .`)
+    const text = skin(`<#rate> a jig:RotaryControl ; jig:boundSymbol "rate" ; jig:element "k" .`)
     const found = await messages(text)
     expect(found).toHaveLength(2)
     expect(found.join('\n')).toContain('jig:angleMin')
@@ -72,7 +72,7 @@ describe('skin shapes', () => {
   })
 
   it('refuses a linear control with no track', async () => {
-    const text = skin(`<#rate> a jig:Linear ; jig:portSymbol "depth" ; jig:element "thumb" .`)
+    const text = skin(`<#rate> a jig:LinearControl ; jig:boundSymbol "depth" ; jig:element "thumb" .`)
     expect(await messages(text)).toEqual([expect.stringContaining('jig:trackElement')])
   })
 

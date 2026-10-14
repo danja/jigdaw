@@ -1237,24 +1237,24 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first2 = this[offset];
+      const first3 = this[offset];
       const last = this[offset + 7];
-      if (first2 === void 0 || last === void 0) {
+      if (first3 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const lo = first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
+      const lo = first3 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
       const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
       return BigInt(lo) + (BigInt(hi) << BigInt(32));
     });
     Buffer3.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first2 = this[offset];
+      const first3 = this[offset];
       const last = this[offset + 7];
-      if (first2 === void 0 || last === void 0) {
+      if (first3 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const hi = first2 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
+      const hi = first3 * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
       return (BigInt(hi) << BigInt(32)) + BigInt(lo);
     });
@@ -1317,23 +1317,23 @@ var require_buffer = __commonJS({
     Buffer3.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first2 = this[offset];
+      const first3 = this[offset];
       const last = this[offset + 7];
-      if (first2 === void 0 || last === void 0) {
+      if (first3 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
       const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-      return (BigInt(val) << BigInt(32)) + BigInt(first2 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
+      return (BigInt(val) << BigInt(32)) + BigInt(first3 + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
     });
     Buffer3.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
       offset = offset >>> 0;
       validateNumber(offset, "offset");
-      const first2 = this[offset];
+      const first3 = this[offset];
       const last = this[offset + 7];
-      if (first2 === void 0 || last === void 0) {
+      if (first3 === void 0 || last === void 0) {
         boundsError(offset, this.length - 8);
       }
-      const val = (first2 << 24) + // Overflow
+      const val = (first3 << 24) + // Overflow
       this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
       return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
     });
@@ -7931,24 +7931,24 @@ var require_operators = __commonJS({
         }
       }.call(this);
     }
-    function toIntegerOrInfinity(number5) {
-      number5 = Number2(number5);
-      if (NumberIsNaN(number5)) {
+    function toIntegerOrInfinity(number6) {
+      number6 = Number2(number6);
+      if (NumberIsNaN(number6)) {
         return 0;
       }
-      if (number5 < 0) {
-        throw new ERR_OUT_OF_RANGE("number", ">= 0", number5);
+      if (number6 < 0) {
+        throw new ERR_OUT_OF_RANGE("number", ">= 0", number6);
       }
-      return number5;
+      return number6;
     }
-    function drop(number5, options = void 0) {
+    function drop(number6, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number5 = toIntegerOrInfinity(number5);
+      number6 = toIntegerOrInfinity(number6);
       return async function* drop2() {
         var _options$signal5;
         if (options !== null && options !== void 0 && (_options$signal5 = options.signal) !== null && _options$signal5 !== void 0 && _options$signal5.aborted) {
@@ -7959,20 +7959,20 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal6 = options.signal) !== null && _options$signal6 !== void 0 && _options$signal6.aborted) {
             throw new AbortError();
           }
-          if (number5-- <= 0) {
+          if (number6-- <= 0) {
             yield val;
           }
         }
       }.call(this);
     }
-    function take2(number5, options = void 0) {
+    function take2(number6, options = void 0) {
       if (options != null) {
         validateObject(options, "options");
       }
       if ((options === null || options === void 0 ? void 0 : options.signal) != null) {
         validateAbortSignal(options.signal, "options.signal");
       }
-      number5 = toIntegerOrInfinity(number5);
+      number6 = toIntegerOrInfinity(number6);
       return async function* take3() {
         var _options$signal7;
         if (options !== null && options !== void 0 && (_options$signal7 = options.signal) !== null && _options$signal7 !== void 0 && _options$signal7.aborted) {
@@ -7983,10 +7983,10 @@ var require_operators = __commonJS({
           if (options !== null && options !== void 0 && (_options$signal8 = options.signal) !== null && _options$signal8 !== void 0 && _options$signal8.aborted) {
             throw new AbortError();
           }
-          if (number5-- > 0) {
+          if (number6-- > 0) {
             yield val;
           }
-          if (number5 <= 0) {
+          if (number6 <= 0) {
             return;
           }
         }
@@ -8610,22 +8610,22 @@ var require_NQuads = __commonJS({
     var TYPE_DEFAULT_GRAPH = "DefaultGraph";
     var REGEX = {};
     (() => {
-      const iri3 = "(?:<([^:]+:[^>]*)>)";
+      const iri4 = "(?:<([^:]+:[^>]*)>)";
       const PN_CHARS_BASE = "A-Za-z\xC0-\xD6\xD8-\xF6\xF8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD";
       const PN_CHARS_U = PN_CHARS_BASE + "_";
       const PN_CHARS = PN_CHARS_U + "0-9-\xB7\u0300-\u036F\u203F-\u2040";
       const BLANK_NODE_LABEL = "(_:(?:[" + PN_CHARS_U + "0-9])(?:(?:[" + PN_CHARS + ".])*(?:[" + PN_CHARS + "]))?)";
       const bnode = BLANK_NODE_LABEL;
       const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
-      const datatype = "(?:\\^\\^" + iri3 + ")";
+      const datatype = "(?:\\^\\^" + iri4 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
       const literal6 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
-      const subject = "(?:" + iri3 + "|" + bnode + ")" + ws;
-      const property = iri3 + ws;
-      const object = "(?:" + iri3 + "|" + bnode + "|" + literal6 + ")" + wso;
-      const graphName = "(?:\\.|(?:(?:" + iri3 + "|" + bnode + ")" + wso + "\\.))";
+      const subject = "(?:" + iri4 + "|" + bnode + ")" + ws;
+      const property = iri4 + ws;
+      const object = "(?:" + iri4 + "|" + bnode + "|" + literal6 + ")" + wso;
+      const graphName = "(?:\\.|(?:(?:" + iri4 + "|" + bnode + ")" + wso + "\\.))";
       REGEX.eoln = /(?:\r\n)|(?:\n)|(?:\r)/g;
       REGEX.empty = new RegExp("^" + wso + "$");
       REGEX.quad = new RegExp(
@@ -9982,8 +9982,8 @@ var NamedNode, NamedNode_default;
 var init_NamedNode = __esm({
   "node_modules/@rdfjs/data-model/lib/NamedNode.js"() {
     NamedNode = class {
-      constructor(iri3) {
-        this.value = iri3;
+      constructor(iri4) {
+        this.value = iri4;
       }
       equals(other) {
         return !!other && other.termType === this.termType && other.value === this.value;
@@ -11736,8 +11736,8 @@ function mapLiteralsByLanguage(map, current2) {
   }
   return map;
 }
-function createLanguageMapper(objects4) {
-  const literalsByLanguage = objects4.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
+function createLanguageMapper(objects5) {
+  const literalsByLanguage = objects5.reduce(mapLiteralsByLanguage, /* @__PURE__ */ new Map());
   const langMapEntries = [...literalsByLanguage.entries()];
   return (language) => {
     const languageLowerCase = language.toLowerCase();
@@ -11795,11 +11795,11 @@ var init_Context = __esm({
         });
       }
       out(predicate, { language } = {}) {
-        let objects4 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
+        let objects5 = this.matchProperty(toArray(this.term), predicate, null, toArray(this.graph), "object");
         if (typeof language !== "undefined") {
-          objects4 = filterTaggedLiterals(objects4, { language });
+          objects5 = filterTaggedLiterals(objects5, { language });
         }
-        return objects4.map((object) => {
+        return objects5.map((object) => {
           return this.clone({ value: object });
         });
       }
@@ -11815,10 +11815,10 @@ var init_Context = __esm({
         }
         return context;
       }
-      addOut(predicates, objects4) {
+      addOut(predicates, objects5) {
         const context = [];
         if (this.term) {
-          objects4.forEach((object) => {
+          objects5.forEach((object) => {
             predicates.forEach((predicate) => {
               this.dataset.add(this.factory.quad(this.term, predicate, object, this.graph));
             });
@@ -11843,8 +11843,8 @@ var init_Context = __esm({
       deleteIn(predicate, subject) {
         this.deleteMatch(subject, predicate, toArray(this.term), toArray(this.graph));
       }
-      deleteOut(predicate, objects4) {
-        this.deleteMatch(toArray(this.term), predicate, objects4, toArray(this.graph));
+      deleteOut(predicate, objects5) {
+        this.deleteMatch(toArray(this.term), predicate, objects5, toArray(this.graph));
       }
       deleteList(predicates) {
         predicates.forEach((predicate) => {
@@ -12162,10 +12162,10 @@ var init_Clownface = __esm({
        * @param {*} [objects] object values to match
        * @returns {Clownface}
        */
-      has(predicates, objects4) {
+      has(predicates, objects5) {
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4);
-        const context = this._context.reduce((all, current2) => all.concat(current2.has(predicates, objects4)), []);
+        objects5 = this._toTermArray(objects5);
+        const context = this._context.reduce((all, current2) => all.concat(current2.has(predicates, objects5)), []);
         return _Clownface.fromContext(context, this);
       }
       /**
@@ -12200,17 +12200,17 @@ var init_Clownface = __esm({
        * @param {GraphPointerCallback} [callback] called for each subject, with object pointer as parameter
        * @returns {Clownface} current graph pointer
        */
-      addOut(predicates, objects4, callback) {
+      addOut(predicates, objects5, callback) {
         if (!predicates) {
           throw new Error("predicate parameter is required");
         }
-        if (typeof objects4 === "function") {
-          callback = objects4;
-          objects4 = null;
+        if (typeof objects5 === "function") {
+          callback = objects5;
+          objects5 = null;
         }
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4) || [this.factory.blankNode()];
-        const context = this._context.map((context2) => context2.addOut(predicates, objects4));
+        objects5 = this._toTermArray(objects5) || [this.factory.blankNode()];
+        const context = this._context.map((context2) => context2.addOut(predicates, objects5));
         if (callback) {
           _Clownface.fromContext(context, this).forEach(callback);
         }
@@ -12252,10 +12252,10 @@ var init_Clownface = __esm({
        * @param {Term|Term[]|Clownface|Clownface[]} [objects]
        * @returns {Clownface} current graph pointer
        */
-      deleteOut(predicates, objects4) {
+      deleteOut(predicates, objects5) {
         predicates = this._toTermArray(predicates);
-        objects4 = this._toTermArray(objects4);
-        this._context.forEach((context) => context.deleteOut(predicates, objects4));
+        objects5 = this._toTermArray(objects5);
+        this._context.forEach((context) => context.deleteOut(predicates, objects5));
         return this;
       }
       /**
@@ -13250,6 +13250,25 @@ var init_Vocabulary = __esm({
         Module: `${JIG}Module`,
         Processor: `${JIG}Processor`,
         UserInterface: `${JIG}UserInterface`,
+        // Skins: a declarative interface, artwork plus bindings (docs/svg-skins.md)
+        Skin: `${JIG}Skin`,
+        Artwork: `${JIG}Artwork`,
+        Control: `${JIG}Control`,
+        RotaryControl: `${JIG}RotaryControl`,
+        LinearControl: `${JIG}LinearControl`,
+        ToggleControl: `${JIG}ToggleControl`,
+        SelectorControl: `${JIG}SelectorControl`,
+        ReadoutControl: `${JIG}ReadoutControl`,
+        skin: `${JIG}skin`,
+        artwork: `${JIG}artwork`,
+        control: `${JIG}control`,
+        boundSymbol: `${JIG}boundSymbol`,
+        element: `${JIG}element`,
+        hitElement: `${JIG}hitElement`,
+        pivotElement: `${JIG}pivotElement`,
+        trackElement: `${JIG}trackElement`,
+        angleMin: `${JIG}angleMin`,
+        angleMax: `${JIG}angleMax`,
         // Delivery
         module: `${JIG}module`,
         processor: `${JIG}processor`,
@@ -13513,6 +13532,10 @@ function widgetFor(port) {
   if (port.enumeration && port.scalePoints.length > 2) return "selector";
   return "dial";
 }
+function orderPorts(ports) {
+  const authored = ports.length > 0 && ports.every((p) => p.paramIndex != null);
+  return ports.sort(authored ? (a2, b) => a2.paramIndex - b.paramIndex : (a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""));
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
@@ -13533,6 +13556,8 @@ function readPort(dataset2, term5) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset2, term5, jig.controlGroup)),
+    // The author's order, where the profile gives one; the panel follows it.
+    paramIndex: asNumber(one(dataset2, term5, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
     // Float32Array per quantum whether or not anything modulates it.
     automationRate: one(dataset2, term5, jig.automationRate)?.value === jig.ARate ? "a-rate" : "k-rate"
@@ -13639,8 +13664,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     module: readResource(dataset2, one(dataset2, subject, jig.module), base, subject.value),
     processor: readResource(dataset2, one(dataset2, subject, jig.processor), base, subject.value),
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
+    skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)).sort((a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""))
+    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;
@@ -13705,19 +13731,19 @@ var LoadError, CompositeFound, STEPS;
 var init_LoadError = __esm({
   "src/host/LoadError.js"() {
     LoadError = class extends Error {
-      constructor(step, message, { cause, iri: iri3 } = {}) {
+      constructor(step, message, { cause, iri: iri4 } = {}) {
         super(message, { cause });
         this.name = "LoadError";
         this.step = step;
-        this.iri = iri3 ?? null;
+        this.iri = iri4 ?? null;
       }
       toString() {
         return `${this.name} [${this.step}]: ${this.message}`;
       }
     };
     CompositeFound = class extends LoadError {
-      constructor(iri3, dataset2) {
-        super("composite", `${iri3} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri: iri3 });
+      constructor(iri4, dataset2) {
+        super("composite", `${iri4} is a composite plugin, which is resolved as a tree and not read as one plugin`, { iri: iri4 });
         this.name = "CompositeFound";
         this.dataset = dataset2;
       }
@@ -14381,8 +14407,8 @@ var init_N3Lexer = __esm({
 });
 
 // node_modules/n3/src/N3DataFactory.js
-function namedNode3(iri3) {
-  return new NamedNode2(iri3);
+function namedNode3(iri4) {
+  return new NamedNode2(iri4);
 }
 function blankNode3(name) {
   return new BlankNode2(name || `n3-${_blankNodeCounter++}`);
@@ -14500,8 +14526,8 @@ var init_N3DataFactory = __esm({
        * (`DataFactory.namedNode(iri)`), so that term validation can be applied;
        * the constructor assumes an already-validated IRI.
        */
-      constructor(iri3) {
-        super(iri3);
+      constructor(iri4) {
+        super(iri4);
       }
       // ### The term type of this term
       get termType() {
@@ -14725,7 +14751,7 @@ var init_N3Parser = __esm({
         this._implicitEmptyPrefix = !!options.implicitEmptyPrefix;
         this._emptyFormulaAsTrue = !!options.emptyFormulaAsTrue;
         if (isLineMode)
-          this._resolveRelativeIRI = (iri3) => {
+          this._resolveRelativeIRI = (iri4) => {
             return null;
           };
         this._blankNodePrefix = typeof options.blankNodePrefix !== "string" ? "" : options.blankNodePrefix.replace(/^(?!_:)/, "_:");
@@ -14884,10 +14910,10 @@ var init_N3Parser = __esm({
           // Read a relative or absolute IRI
           case "IRI":
           case "typeIRI":
-            const iri3 = this._resolveIRI(token.value);
-            if (iri3 === null)
+            const iri4 = this._resolveIRI(token.value);
+            if (iri4 === null)
               return this._error("Invalid IRI", token);
-            value2 = this._factory.namedNode(iri3);
+            value2 = this._factory.namedNode(iri4);
             break;
           // Read a prefixed name
           case "type":
@@ -15163,20 +15189,20 @@ var init_N3Parser = __esm({
       }
       // ### `_readIriPropertyListId` replaces a property list's blank node with its IRI
       _readIriPropertyListId(token) {
-        const iri3 = this._readEntity(token);
-        if (iri3 === void 0)
+        const iri4 = this._readEntity(token);
+        if (iri4 === void 0)
           return;
-        if (iri3.termType !== "NamedNode")
+        if (iri4.termType !== "NamedNode")
           return this._error(`Expected IRI after id but got ${token.type}`, token);
         const placeholder = this._subject;
-        this._subject = iri3;
+        this._subject = iri4;
         const context = this._contextStack[this._contextStack.length - 1];
         if (context.subject === placeholder)
-          context.subject = iri3;
+          context.subject = iri4;
         if (context.predicate === placeholder)
-          context.predicate = iri3;
+          context.predicate = iri4;
         if (context.object === placeholder)
-          context.object = iri3;
+          context.object = iri4;
         this._predicate = null;
         return this._readIriPropertyListPredicate;
       }
@@ -15607,10 +15633,10 @@ var init_N3Parser = __esm({
       }
       // ### `_readBaseIRI` reads the IRI of a base declaration
       _readBaseIRI(token) {
-        const iri3 = token.type === "IRI" && this._resolveIRI(token.value);
-        if (!iri3)
+        const iri4 = token.type === "IRI" && this._resolveIRI(token.value);
+        if (!iri4)
           return this._error("Expected valid IRI to follow base declaration", token);
-        this._setBase(iri3);
+        this._setBase(iri4);
         return this._readDeclarationPunctuation;
       }
       // ### `_isValidVersion` checks if the given version is valid for this parser to handle.
@@ -15934,42 +15960,42 @@ var init_N3Parser = __esm({
         this._callback = noop;
       }
       // ### `_resolveIRI` resolves an IRI against the base path
-      _resolveIRI(iri3) {
-        return /^[a-z][a-z0-9+.-]*:/i.test(iri3) ? iri3 : this._resolveRelativeIRI(iri3);
+      _resolveIRI(iri4) {
+        return /^[a-z][a-z0-9+.-]*:/i.test(iri4) ? iri4 : this._resolveRelativeIRI(iri4);
       }
       // ### `_resolveRelativeIRI` resolves an IRI against the base path,
       // assuming that a base path has been set and that the IRI is indeed relative
-      _resolveRelativeIRI(iri3) {
-        if (!iri3.length)
+      _resolveRelativeIRI(iri4) {
+        if (!iri4.length)
           return this._base;
-        switch (iri3[0]) {
+        switch (iri4[0]) {
           // Resolve relative fragment IRIs against the base IRI
           case "#":
-            return this._base + iri3;
+            return this._base + iri4;
           // Resolve relative query string IRIs by replacing the query string
           case "?":
-            return this._base.replace(/(?:\?.*)?$/, iri3);
+            return this._base.replace(/(?:\?.*)?$/, iri4);
           // Resolve root-relative IRIs at the root of the base IRI
           case "/":
-            return (iri3[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri3);
+            return (iri4[1] === "/" ? this._baseScheme : this._baseRoot) + this._removeDotSegments(iri4);
           // Resolve all other IRIs at the base IRI's path
           default:
-            return /^[^/:]*:/.test(iri3) ? null : this._removeDotSegments(this._basePath + iri3);
+            return /^[^/:]*:/.test(iri4) ? null : this._removeDotSegments(this._basePath + iri4);
         }
       }
       // ### `_removeDotSegments` resolves './' and '../' path segments in an IRI as per RFC3986
-      _removeDotSegments(iri3) {
-        if (!/(^|\/)\.\.?($|[/#?])/.test(iri3))
-          return iri3;
-        const length = iri3.length;
+      _removeDotSegments(iri4) {
+        if (!/(^|\/)\.\.?($|[/#?])/.test(iri4))
+          return iri4;
+        const length = iri4.length;
         let result = "", i2 = -1, pathStart = -1, segmentStart = 0, next = "/";
         while (i2 < length) {
           switch (next) {
             // The path starts with the first slash after the authority
             case ":":
               if (pathStart < 0) {
-                if (iri3[++i2] === "/" && iri3[++i2] === "/")
-                  while ((pathStart = i2 + 1) < length && iri3[pathStart] !== "/")
+                if (iri4[++i2] === "/" && iri4[++i2] === "/")
+                  while ((pathStart = i2 + 1) < length && iri4[pathStart] !== "/")
                     i2 = pathStart;
               }
               break;
@@ -15980,36 +16006,36 @@ var init_N3Parser = __esm({
               break;
             // Handle '/.' or '/..' path segments
             case "/":
-              if (iri3[i2 + 1] === ".") {
-                next = iri3[++i2 + 1];
+              if (iri4[i2 + 1] === ".") {
+                next = iri4[++i2 + 1];
                 switch (next) {
                   // Remove a '/.' segment
                   case "/":
-                    result += iri3.substring(segmentStart, i2 - 1);
+                    result += iri4.substring(segmentStart, i2 - 1);
                     segmentStart = i2 + 1;
                     break;
                   // Remove a trailing '/.' segment
                   case void 0:
                   case "?":
                   case "#":
-                    return result + iri3.substring(segmentStart, i2) + iri3.substr(i2 + 1);
+                    return result + iri4.substring(segmentStart, i2) + iri4.substr(i2 + 1);
                   // Remove a '/..' segment
                   case ".":
-                    next = iri3[++i2 + 1];
+                    next = iri4[++i2 + 1];
                     if (next === void 0 || next === "/" || next === "?" || next === "#") {
-                      result += iri3.substring(segmentStart, i2 - 2);
+                      result += iri4.substring(segmentStart, i2 - 2);
                       if ((segmentStart = result.lastIndexOf("/")) >= pathStart)
                         result = result.substr(0, segmentStart);
                       if (next !== "/")
-                        return `${result}/${iri3.substr(i2 + 1)}`;
+                        return `${result}/${iri4.substr(i2 + 1)}`;
                       segmentStart = i2 + 1;
                     }
                 }
               }
           }
-          next = iri3[++i2];
+          next = iri4[++i2];
         }
-        return result + iri3.substring(segmentStart);
+        return result + iri4.substring(segmentStart);
       }
       // ## Public methods
       // ### `parse` parses the N3 input and emits each parsed quad through the onQuad callback.
@@ -17258,7 +17284,7 @@ var require_rdf_literal = __commonJS({
 var keyFor, ConsentRequired, ForeignTrust;
 var init_ForeignTrust = __esm({
   "src/host/ForeignTrust.js"() {
-    keyFor = (iri3, digest) => `${iri3}\0${digest}`;
+    keyFor = (iri4, digest) => `${iri4}\0${digest}`;
     ConsentRequired = class extends Error {
       constructor(request) {
         super(
@@ -17281,14 +17307,14 @@ var init_ForeignTrust = __esm({
        * The three statements are what section 12.4 requires: which plugin, which
        * format, and what privilege it gets.
        */
-      static request({ iri: iri3, label, format, digest }) {
+      static request({ iri: iri4, label, format, digest }) {
         return Object.freeze({
-          iri: iri3,
-          label: label ?? iri3,
+          iri: iri4,
+          label: label ?? iri4,
           format,
           digest,
           statements: Object.freeze([
-            `${label ?? iri3} is a ${format ?? "foreign"} plugin.`,
+            `${label ?? iri4} is a ${format ?? "foreign"} plugin.`,
             "It runs in this page, with this page's privileges. It can read this project, anything this page has stored, and every other plugin loaded here.",
             "It is not sandboxed and its capabilities cannot be limited.",
             `Only this exact copy is being agreed to (${(digest ?? "").slice(0, 19)}\u2026). If it is updated, you will be asked again.`
@@ -17296,9 +17322,9 @@ var init_ForeignTrust = __esm({
         });
       }
       /** True only for this plugin and only for this container. */
-      isConsented(iri3, digest) {
-        if (!iri3 || !digest) return false;
-        return this.#store.get(keyFor(iri3, digest)) === true;
+      isConsented(iri4, digest) {
+        if (!iri4 || !digest) return false;
+        return this.#store.get(keyFor(iri4, digest)) === true;
       }
       /**
        * Record a person's decision.
@@ -17306,13 +17332,13 @@ var init_ForeignTrust = __esm({
        * Takes the digest as an argument rather than reading it from anywhere later,
        * so that consenting to one body of code cannot be made to cover another.
        */
-      consent(iri3, digest) {
-        if (!iri3 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
-        this.#store.set(keyFor(iri3, digest), true);
+      consent(iri4, digest) {
+        if (!iri4 || !digest) throw new Error("consent needs both the plugin IRI and its container digest");
+        this.#store.set(keyFor(iri4, digest), true);
       }
       /** Withdraw it. The next load asks again. */
-      revoke(iri3, digest) {
-        this.#store.delete(keyFor(iri3, digest));
+      revoke(iri4, digest) {
+        this.#store.delete(keyFor(iri4, digest));
       }
       /**
        * Throws unless this exact container has been consented to.
@@ -17320,9 +17346,9 @@ var init_ForeignTrust = __esm({
        * Throws rather than returning false so that a caller cannot proceed by
        * forgetting to check, which is the same reason verifyIntegrity throws.
        */
-      require({ iri: iri3, label, format, digest }) {
-        if (!this.isConsented(iri3, digest)) {
-          throw new ConsentRequired(_ForeignTrust.request({ iri: iri3, label, format, digest }));
+      require({ iri: iri4, label, format, digest }) {
+        if (!this.isConsented(iri4, digest)) {
+          throw new ConsentRequired(_ForeignTrust.request({ iri: iri4, label, format, digest }));
         }
         return true;
       }
@@ -17925,19 +17951,19 @@ var init_ForeignSupport = __esm({
        * A surface uses this to decide whether it is about to ask a person a
        * question, before it asks.
        */
-      async classify(iri3) {
-        const response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT2 } });
+      async classify(iri4) {
+        const response = await this.#fetch(iri4, { headers: { accept: PROFILE_ACCEPT2 } });
         if (!response.ok) {
-          throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`);
+          throw new LoadError(STEPS.fetchProfile, `${iri4} returned ${response.status}`);
         }
-        const dataset2 = await parseText(await response.text(), iri3);
+        const dataset2 = await parseText(await response.text(), iri4);
         return { kind: kindOf(dataset2), dataset: dataset2 };
       }
       /** The profile of a foreign plugin, validated, without running anything. */
-      async profileOf(iri3) {
-        const { kind, dataset: dataset2 } = await this.classify(iri3);
+      async profileOf(iri4) {
+        const { kind, dataset: dataset2 } = await this.classify(iri4);
         if (kind !== "foreign") {
-          throw new LoadError(STEPS.parseProfile, `${iri3} is not a foreign plugin`);
+          throw new LoadError(STEPS.parseProfile, `${iri4} is not a foreign plugin`);
         }
         if (this.#validator) {
           const report = await this.#validator.validate(dataset2);
@@ -17945,12 +17971,12 @@ var init_ForeignSupport = __esm({
             const seen = report.violations.map((v) => `${v.focusNode} ${v.path ?? "(node)"}`);
             throw new LoadError(
               STEPS.validateProfile,
-              `${iri3} does not validate:
+              `${iri4} does not validate:
   - ${seen.join("\n  - ")}`
             );
           }
         }
-        return readForeignProfile(dataset2, { baseIRI: iri3 });
+        return readForeignProfile(dataset2, { baseIRI: iri4 });
       }
       /**
        * Everything the engine needs to adopt one.
@@ -17958,8 +17984,8 @@ var init_ForeignSupport = __esm({
        * Throws ConsentRequired when this container has not been agreed to, which
        * the dispatcher turns into a result a surface can act on.
        */
-      async add(iri3, context) {
-        const profile = await this.profileOf(iri3);
+      async add(iri4, context) {
+        const profile = await this.profileOf(iri4);
         return loadForeignPlugin(profile, context, {
           trust: this.trust,
           origin: this.#origin,
@@ -17983,18 +18009,18 @@ function createMedia(document2) {
      * preset's IRI is the preset file and media imported afterwards goes
      * beside it, under the base the session saves with.
      */
-    rebase(iri3) {
-      base = new URL("./", iri3).href;
+    rebase(iri4) {
+      base = new URL("./", iri4).href;
     },
-    has(iri3) {
-      return files.has(iri3);
+    has(iri4) {
+      return files.has(iri4);
     },
-    get(iri3) {
-      return files.get(iri3) ?? null;
+    get(iri4) {
+      return files.get(iri4) ?? null;
     },
     /** Keep a file's bytes under its IRI. */
-    put(iri3, bytes, mediaType = null) {
-      files.set(iri3, { bytes, mediaType });
+    put(iri4, bytes, mediaType = null) {
+      files.set(iri4, { bytes, mediaType });
     },
     /** Where an imported file lives, named by its content. */
     iriFor(hex, extension) {
@@ -18002,13 +18028,13 @@ function createMedia(document2) {
     },
     /** The files a saved session carries: held here, and under its base. */
     heldUnderBase(iris) {
-      return iris.filter((iri3) => files.has(iri3) && iri3.startsWith(base));
+      return iris.filter((iri4) => files.has(iri4) && iri4.startsWith(base));
     },
     /** A file's bytes, from what is held or else the network. */
-    async fetchBytes(iri3) {
-      if (files.has(iri3)) return files.get(iri3).bytes.slice().buffer;
-      const response = await fetch(iri3);
-      if (!response.ok) throw new Error(`${iri3} answered ${response.status}`);
+    async fetchBytes(iri4) {
+      if (files.has(iri4)) return files.get(iri4).bytes.slice().buffer;
+      const response = await fetch(iri4);
+      if (!response.ok) throw new Error(`${iri4} answered ${response.status}`);
       return response.arrayBuffer();
     }
   };
@@ -18171,11 +18197,11 @@ var WASM_FEATURE_PROBES = Object.freeze({
     11
   )
 });
-function compact(iri3) {
+function compact(iri4) {
   for (const [prefix, namespace2] of PREFIXES) {
-    if (iri3.startsWith(namespace2)) return prefix + iri3.slice(namespace2.length);
+    if (iri4.startsWith(namespace2)) return prefix + iri4.slice(namespace2.length);
   }
-  return iri3;
+  return iri4;
 }
 function detectCapabilities(env = globalThis) {
   const offered = /* @__PURE__ */ new Set([
@@ -18561,79 +18587,79 @@ var PluginLoader = class {
    * members are checked when it is loaded, as nested-plugins.md section 6 says, and a collection of forty racks does not
    * fetch forty trees to draw a list.
    */
-  async loadListing(iri3) {
-    const dataset2 = await this.fetchDataset(iri3);
-    if (!isComposite(dataset2)) return this.profileFrom(dataset2, iri3);
+  async loadListing(iri4) {
+    const dataset2 = await this.fetchDataset(iri4);
+    if (!isComposite(dataset2)) return this.profileFrom(dataset2, iri4);
     let profile;
     try {
       profile = compositeProfile(readComposite(dataset2));
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri3 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri4 });
     }
-    return { profile, granted: this.checkCapabilities(profile, iri3) };
+    return { profile, granted: this.checkCapabilities(profile, iri4) };
   }
   /** Steps 1 to 3: fetch, parse, validate, and check capabilities. */
-  async loadProfile(iri3) {
-    const dataset2 = await this.fetchDataset(iri3);
-    if (isComposite(dataset2)) throw new CompositeFound(iri3, dataset2);
-    return this.profileFrom(dataset2, iri3);
+  async loadProfile(iri4) {
+    const dataset2 = await this.fetchDataset(iri4);
+    if (isComposite(dataset2)) throw new CompositeFound(iri4, dataset2);
+    return this.profileFrom(dataset2, iri4);
   }
   /**
    * Steps 1 to 3 up to the capability check: fetch, parse and validate. Split out so a composite plugin, which
    * reads differently, goes through the same fetch and validation as any plugin (docs/nested-plugins.md).
    */
-  async fetchDataset(iri3) {
+  async fetchDataset(iri4) {
     let response;
     try {
-      response = await this.#fetch(iri3, { headers: { accept: PROFILE_ACCEPT } });
+      response = await this.#fetch(iri4, { headers: { accept: PROFILE_ACCEPT } });
     } catch (cause) {
       throw new LoadError(
         STEPS.fetchProfile,
-        `could not fetch ${iri3}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
-        { cause, iri: iri3 }
+        `could not fetch ${iri4}: ${cause?.message ?? cause}. If the profile is on another origin, it must be served with Access-Control-Allow-Origin.`,
+        { cause, iri: iri4 }
       );
     }
     if (!response.ok) {
-      throw new LoadError(STEPS.fetchProfile, `${iri3} returned ${response.status}`, { iri: iri3 });
+      throw new LoadError(STEPS.fetchProfile, `${iri4} returned ${response.status}`, { iri: iri4 });
     }
     const text = await response.text();
     let dataset2;
     try {
-      dataset2 = await this.#parse(text, iri3);
+      dataset2 = await this.#parse(text, iri4);
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, `${iri3} is not parseable RDF: ${cause.message}`, { cause, iri: iri3 });
+      throw new LoadError(STEPS.parseProfile, `${iri4} is not parseable RDF: ${cause.message}`, { cause, iri: iri4 });
     }
     if (this.#validator) {
       const report = await this.#validator.validate(dataset2);
       if (!report.conforms) {
-        const first2 = report.violations[0];
+        const first3 = report.violations[0];
         throw new LoadError(
           STEPS.validateProfile,
-          `${iri3} is not a valid profile: ${first2.message} (at ${first2.focusNode}${first2.path ? ` ${first2.path}` : ""})`,
-          { iri: iri3 }
+          `${iri4} is not a valid profile: ${first3.message} (at ${first3.focusNode}${first3.path ? ` ${first3.path}` : ""})`,
+          { iri: iri4 }
         );
       }
     }
     return dataset2;
   }
   /** Read a fetched profile and check its capabilities before any code is fetched. Contract section 2.1. */
-  profileFrom(dataset2, iri3) {
+  profileFrom(dataset2, iri4) {
     let profile;
     try {
-      profile = readProfile(dataset2, { baseIRI: iri3 });
+      profile = readProfile(dataset2, { baseIRI: iri4 });
     } catch (cause) {
-      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri3 });
+      throw new LoadError(STEPS.parseProfile, cause.message, { cause, iri: iri4 });
     }
-    return { profile, granted: this.checkCapabilities(profile, iri3) };
+    return { profile, granted: this.checkCapabilities(profile, iri4) };
   }
   /**
    * Contract section 2.1, evaluated BEFORE any code is fetched. Takes anything with `requires`, so a
    * composite, which has no module, is checked by the same rule as a plugin. Returns what is granted.
    */
-  checkCapabilities(profile, iri3) {
+  checkCapabilities(profile, iri4) {
     const negotiation = negotiate(profile, this.#capabilities);
     if (!negotiation.satisfied) {
-      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri3 });
+      throw new LoadError(STEPS.capabilities, explainMissing(profile, negotiation.missing), { iri: iri4 });
     }
     return negotiation.granted;
   }
@@ -20255,8 +20281,8 @@ function extractPropertyPath(pathNode, ns2, allowNamedNodeInList) {
     return pathNode.term;
   }
   if (pathNode.term.termType === "BlankNode" || pathNode.term.termType === "NamedNode") {
-    const first2 = pathNode.out(ns2.rdf.first).term;
-    if (first2) {
+    const first3 = pathNode.out(ns2.rdf.first).term;
+    if (first3) {
       const paths = [...pathNode.list()];
       return paths.map((path) => extractPropertyPath(path, ns2, allowNamedNodeInList));
     }
@@ -20656,8 +20682,8 @@ var Shape = class _Shape {
       results.addAll(subjects);
     });
     this.shapeNodePointer.out(sh.targetObjectsOf).terms.forEach((predicate) => {
-      const objects4 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
-      results.addAll(objects4);
+      const objects5 = [...dataGraph.dataset.match(null, predicate, null)].map(({ object }) => object);
+      results.addAll(objects5);
     });
     return [...results];
   }
@@ -21885,10 +21911,10 @@ function proofSubjects(dataset2) {
   return [...subjects];
 }
 function bundleSubjects(dataset2) {
-  const { jig: jig6, prov, rdf: rdf2 } = vocabulary;
+  const { jig: jig7, prov, rdf: rdf2 } = vocabulary;
   const subjects = /* @__PURE__ */ new Set();
   for (const quad3 of dataset2) {
-    if (quad3.predicate.value !== rdf2.type || quad3.object.value !== jig6.Bundle) continue;
+    if (quad3.predicate.value !== rdf2.type || quad3.object.value !== jig7.Bundle) continue;
     subjects.add(quad3.subject.value);
     for (const other of dataset2) {
       if (other.subject.value === quad3.subject.value && other.predicate.value === prov.wasGeneratedBy) {
@@ -21908,7 +21934,7 @@ init_Integrity();
 init_LoadError();
 var MINIMUM_DEPTH = 4;
 var encoder = new TextEncoder();
-async function resolveComposite(iri3, { loader, bundled = () => null, maxDepth = 8, subtle = crypto.subtle } = {}) {
+async function resolveComposite(iri4, { loader, bundled = () => null, maxDepth = 8, subtle = crypto.subtle } = {}) {
   if (!loader) throw new Error("resolveComposite needs a loader");
   if (!(maxDepth >= MINIMUM_DEPTH)) throw new Error(`a host must support at least ${MINIMUM_DEPTH} levels of nesting, not ${maxDepth}`);
   const fetched = /* @__PURE__ */ new Map();
@@ -21976,24 +22002,24 @@ async function resolveComposite(iri3, { loader, bundled = () => null, maxDepth =
     checkDrives(target2, composite, members);
     return { kind: "composite", iri: target2, composite, granted: [...granted], members };
   }
-  return visit(iri3, []);
+  return visit(iri4, []);
 }
-function checkDrives(iri3, composite, members) {
+function checkDrives(iri4, composite, members) {
   for (const port of composite.ports) {
     for (const drive of port.drives) {
       const member = members.find((m) => m.id === drive.node);
       if (!member) continue;
       const available = member.tree.kind === "plugin" ? member.tree.profile.ports : member.tree.composite.ports;
       const target2 = available.find((p) => p.symbol === drive.portSymbol);
-      const where = `${iri3}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
+      const where = `${iri4}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
       if (!target2) {
-        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri3 });
+        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri4 });
       }
       if ((port.minimum ?? -Infinity) < (target2.minimum ?? -Infinity) || (port.maximum ?? Infinity) > (target2.maximum ?? Infinity)) {
         throw new LoadError(
           STEPS.composite,
           `${where}, whose range is ${target2.minimum} to ${target2.maximum}, and the port declares ${port.minimum} to ${port.maximum}. A port must lie within the range of what it drives.`,
-          { iri: iri3 }
+          { iri: iri4 }
         );
       }
     }
@@ -22444,12 +22470,12 @@ var Engine = class {
    * construct, await ready. The node is connected to nothing until the caller
    * says so.
    */
-  async addPlugin(iri3, { state = null } = {}) {
+  async addPlugin(iri4, { state = null } = {}) {
     let loaded;
     try {
-      loaded = await this.#loader.loadProfile(iri3);
+      loaded = await this.#loader.loadProfile(iri4);
     } catch (error2) {
-      if (error2 instanceof CompositeFound) return this.#addComposite(iri3, error2.dataset, { state });
+      if (error2 instanceof CompositeFound) return this.#addComposite(iri4, error2.dataset, { state });
       throw error2;
     }
     const { profile, granted } = loaded;
@@ -22459,14 +22485,14 @@ var Engine = class {
       this.#context,
       { AudioWorkletNode: this.#nodeClass, state }
     );
-    return this.adopt({ iri: iri3, profile, node, ready, descriptors, granted });
+    return this.adopt({ iri: iri4, profile, node, ready, descriptors, granted });
   }
   /**
    * The canonical digest of a plugin's profile, which is what a composite pins it by (docs/nested-plugins.md section 9.1). Over the
    * identity the profile states and not the URL it was fetched from. Fetches the profile and nothing else.
    */
-  async profileDigest(iri3) {
-    const dataset2 = await this.#loader.fetchDataset(iri3);
+  async profileDigest(iri4) {
+    const dataset2 = await this.#loader.fetchDataset(iri4);
     const identity2 = isComposite(dataset2) ? readComposite(dataset2).iri : readProfile(dataset2).iri;
     return digestOf(new TextEncoder().encode(pluginForm(dataset2, identity2)), "sha384");
   }
@@ -22480,8 +22506,8 @@ var Engine = class {
    * the path of member IRIs from the composite inward. It has no `id` and no `node` of its own.
    * docs/nested-plugins.md.
    */
-  async #addComposite(iri3, dataset2, { state }) {
-    const tree = await resolveComposite(iri3, { loader: this.#loader, bundled: (target2) => target2 === iri3 ? dataset2 : null });
+  async #addComposite(iri4, dataset2, { state }) {
+    const tree = await resolveComposite(iri4, { loader: this.#loader, bundled: (target2) => target2 === iri4 ? dataset2 : null });
     const saved = /* @__PURE__ */ new Map();
     restoreState(tree, state, (path, value2) => saved.set(JSON.stringify(path), value2));
     const members = [];
@@ -22505,7 +22531,7 @@ var Engine = class {
           members.push({ path: here, entry: adopted });
           byPath.set(JSON.stringify(here), adopted);
         } catch (cause) {
-          throw new LoadError(cause.step ?? STEPS.composite, `${iri3}, member ${here.join(" > ")}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri });
+          throw new LoadError(cause.step ?? STEPS.composite, `${iri4}, member ${here.join(" > ")}: ${cause.message}`, { cause, iri: cause.iri ?? member.tree.iri });
         }
       }
     };
@@ -22516,7 +22542,7 @@ var Engine = class {
       for (const { entry } of members) this.remove(entry.id);
       throw error2;
     }
-    return { composite: true, iri: iri3, tree, profile: compositeProfile(tree.composite), members };
+    return { composite: true, iri: iri4, tree, profile: compositeProfile(tree.composite), members };
   }
   /**
    * Set what the composite's author set, before anything is heard: each exposed port's default on the
@@ -22538,7 +22564,7 @@ var Engine = class {
    * its own adapter and arrives here rather than through addPlugin, and this is
    * the seam that stops that being a second copy of the code below.
    */
-  adopt({ iri: iri3, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
+  adopt({ iri: iri4, profile, node, ready = { latencyFrames: 0 }, descriptors = [], granted = null }) {
     let driver = null;
     if (node.jigdawNeedsDriving && typeof this.#context.createConstantSource === "function") {
       driver = this.#context.createConstantSource();
@@ -22547,7 +22573,7 @@ var Engine = class {
       driver.start();
     }
     const id = nextId();
-    const entry = { id, iri: iri3, profile, node, ready, descriptors, granted, driver };
+    const entry = { id, iri: iri4, profile, node, ready, descriptors, granted, driver };
     this.#nodes.set(id, entry);
     return entry;
   }
@@ -24716,7 +24742,7 @@ var number2 = (value2) => {
   if (!Number.isFinite(value2)) throw new Error(`cannot write ${value2} as a number`);
   return String(value2);
 };
-var compact2 = (iri3) => String(iri3).startsWith("http://purl.org/stuff/transmissions/") ? `${TRN2}${String(iri3).slice("http://purl.org/stuff/transmissions/".length)}` : `<${iri3}>`;
+var compact2 = (iri4) => String(iri4).startsWith("http://purl.org/stuff/transmissions/") ? `${TRN2}${String(iri4).slice("http://purl.org/stuff/transmissions/".length)}` : `<${iri4}>`;
 function writeComposite(spec) {
   const out = [];
   const line = (text) => out.push(text);
@@ -24724,14 +24750,14 @@ function writeComposite(spec) {
   const end = (e) => e.node === null ? BOUNDARY : frag(e.node);
   line(`@base <${spec.iri}> .`);
   line("");
-  for (const [prefix, iri3] of [
+  for (const [prefix, iri4] of [
     ["jig", "http://purl.org/stuff/jigdaw/"],
     ["trn", "http://purl.org/stuff/transmissions/"],
     ["lv2", "http://lv2plug.in/ns/lv2core#"],
     ["rdfs", "http://www.w3.org/2000/01/rdf-schema#"],
     ["foaf", "http://xmlns.com/foaf/0.1/"]
   ]) {
-    line(`@prefix ${`${prefix}:`.padEnd(6)} <${iri3}> .`);
+    line(`@prefix ${`${prefix}:`.padEnd(6)} <${iri4}> .`);
   }
   line("");
   const connectionIds = spec.connections.map((_, i2) => `c${i2 + 1}`);
@@ -24990,11 +25016,11 @@ var Inspections = class {
   }
   /** Record what happened loading `iri`. `outcome` is free text, per
    * jig:loadOutcome: "loaded", or "failed: <reason>". */
-  record({ iri: iri3, outcome }) {
+  record({ iri: iri4, outcome }) {
     if (!this.#storage) return;
     const records = this.#read();
     records.push({
-      inspectionOf: iri3,
+      inspectionOf: iri4,
       inspectedAt: (/* @__PURE__ */ new Date()).toISOString(),
       hostVersion: HOST_VERSION,
       loadOutcome: outcome
@@ -25006,8 +25032,8 @@ var Inspections = class {
     }
   }
   /** Every inspection recorded of one plugin, oldest first. */
-  forPlugin(iri3) {
-    return this.#read().filter((r) => r.inspectionOf === iri3);
+  forPlugin(iri4) {
+    return this.#read().filter((r) => r.inspectionOf === iri4);
   }
   /** Every inspection recorded, oldest first. */
   all() {
@@ -25698,19 +25724,19 @@ var OpDispatcher = class {
    * input, since it is the only node there for notes to go to. On an existing
    * track nothing is guessed: which node takes the notes is a person's call.
    */
-  async addPlugin(iri3, { position: position2, foreign = false, ...node } = {}) {
+  async addPlugin(iri4, { position: position2, foreign = false, ...node } = {}) {
     if (!this.#engine) throw new Error("no engine: this dispatcher can edit a project but not play it");
     let entry;
     try {
-      entry = foreign ? await this.#addForeign(iri3) : await this.#engine.addPlugin(iri3, { state: decodeState(node.state ?? null) });
+      entry = foreign ? await this.#addForeign(iri4) : await this.#engine.addPlugin(iri4, { state: decodeState(node.state ?? null) });
     } catch (error2) {
       if (error2.name === "ConsentRequired") {
         return { ok: false, kind: "consent", request: error2.request, message: error2.message };
       }
-      this.#inspections.record({ iri: iri3, outcome: `failed: ${error2.message}` });
+      this.#inspections.record({ iri: iri4, outcome: `failed: ${error2.message}` });
       return { ok: false, kind: "load", step: error2.step ?? null, message: error2.message };
     }
-    this.#inspections.record({ iri: iri3, outcome: "loaded" });
+    this.#inspections.record({ iri: iri4, outcome: "loaded" });
     const label = node.label ?? entry.profile.label;
     const changes = [];
     let newTrack = null;
@@ -25719,7 +25745,7 @@ var OpDispatcher = class {
       changes.push({ op: "addTrack", id: newTrack, label });
     }
     const nodeId = node.id ?? this.#project.nextId("node");
-    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri3, label });
+    changes.push({ op: "addNode", ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri4, label });
     if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
       changes.push({ op: "setTrack", id: newTrack, midiInput: nodeId });
     }
@@ -25820,8 +25846,8 @@ var OpDispatcher = class {
    * `iri` is where it will be published, `https:` or loopback `http:`. Returns `{ ok, turtle, summary, warnings }`, the warnings saying
    * what a composite cannot carry (bypass, saved state, automation, a connection into a member's own parameter).
    */
-  async packSelection({ nodeIds, iri: iri3, label, comment = null, expose = "set" } = {}) {
-    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri3 ?? "")) {
+  async packSelection({ nodeIds, iri: iri4, label, comment = null, expose = "set" } = {}) {
+    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri4 ?? "")) {
       return { ok: false, kind: "change", message: "a composite is published at an https IRI, or an http one on loopback, and needs one to be named by" };
     }
     if (typeof label !== "string" || label.trim() === "") return { ok: false, kind: "change", message: "a composite needs a name" };
@@ -25841,7 +25867,7 @@ var OpDispatcher = class {
       }
     }
     const turtle = writeComposite({
-      iri: iri3,
+      iri: iri4,
       label: label.trim(),
       comment,
       ...plan2,
@@ -25860,15 +25886,15 @@ var OpDispatcher = class {
    * Private because there must be exactly one way into running foreign code,
    * and it is the branch in addPlugin above.
    */
-  async #addForeign(iri3) {
+  async #addForeign(iri4) {
     if (!this.#foreign) {
       throw new Error(
         "this host does not load foreign plugins. Contract section 12 is optional and supporting none of it conforms."
       );
     }
-    const loaded = await this.#foreign.add(iri3, this.#engine.context);
+    const loaded = await this.#foreign.add(iri4, this.#engine.context);
     return this.#engine.adopt({
-      iri: iri3,
+      iri: iri4,
       profile: loaded.profile,
       node: loaded.node,
       ready: loaded.ready
@@ -26362,46 +26388,46 @@ var ClipPlayer = class {
     this.#fetchBytes = fetchBytes;
   }
   /** The decoded audio, or null while it loads or if it failed. */
-  buffer(iri3) {
-    return this.#buffers.get(iri3) ?? null;
+  buffer(iri4) {
+    return this.#buffers.get(iri4) ?? null;
   }
   /** Why a source could not be loaded, or null. */
-  failure(iri3) {
-    return this.#failures.get(iri3) ?? null;
+  failure(iri4) {
+    return this.#failures.get(iri4) ?? null;
   }
   /**
    * Decode a source, once. Resolves with the AudioBuffer, or with null if it
    * cannot be had, in which case failure(iri) says why. Never rejects: one
    * missing file is one silent clip, not a session that will not play.
    */
-  load(iri3) {
-    if (this.#buffers.has(iri3)) return Promise.resolve(this.#buffers.get(iri3));
-    if (this.#loading.has(iri3)) return this.#loading.get(iri3);
+  load(iri4) {
+    if (this.#buffers.has(iri4)) return Promise.resolve(this.#buffers.get(iri4));
+    if (this.#loading.has(iri4)) return this.#loading.get(iri4);
     const loading = (async () => {
       try {
-        const bytes = await this.#fetchBytes(iri3);
+        const bytes = await this.#fetchBytes(iri4);
         const buffer = await this.#context.decodeAudioData(bytes);
-        this.#buffers.set(iri3, buffer);
-        this.#failures.delete(iri3);
+        this.#buffers.set(iri4, buffer);
+        this.#failures.delete(iri4);
         return buffer;
       } catch (error2) {
-        this.#failures.set(iri3, error2);
+        this.#failures.set(iri4, error2);
         return null;
       } finally {
-        this.#loading.delete(iri3);
+        this.#loading.delete(iri4);
       }
     })();
-    this.#loading.set(iri3, loading);
+    this.#loading.set(iri4, loading);
     return loading;
   }
   /**
    * The loudest sample in each of `count` equal stretches of the first
    * channel, for drawing a waveform. Computed once per source and count.
    */
-  peaks(iri3, count) {
-    const buffer = this.buffer(iri3);
+  peaks(iri4, count) {
+    const buffer = this.buffer(iri4);
     if (!buffer || !(count > 0)) return null;
-    const key = `${count} ${iri3}`;
+    const key = `${count} ${iri4}`;
     if (this.#peaks.has(key)) return this.#peaks.get(key);
     const data = buffer.getChannelData(0);
     const out = new Float32Array(count);
@@ -26423,8 +26449,8 @@ var ClipPlayer = class {
    * file, for `duration` seconds, into `destination`. Returns false, and
    * starts nothing, when the source is not loaded.
    */
-  start({ iri: iri3, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
-    const buffer = this.buffer(iri3);
+  start({ iri: iri4, when, offset, duration: duration2, destination, fadeIn = 0, fadeOut = 0 }) {
+    const buffer = this.buffer(iri4);
     if (!buffer) return false;
     const source = this.#context.createBufferSource();
     source.buffer = buffer;
@@ -26542,12 +26568,12 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   if (!(atBeat > clip.startBeat && atBeat < clip.startBeat + clip.lengthBeats)) {
     throw new Error("the cut must fall inside the clip");
   }
-  const first2 = atBeat - clip.startBeat;
-  const second = clip.lengthBeats - first2;
+  const first3 = atBeat - clip.startBeat;
+  const second = clip.lengthBeats - first3;
   if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first2);
+    const { left, right } = partition(clip.notes, first3);
     return [
-      { op: "setClip", id, lengthBeats: first2 },
+      { op: "setClip", id, lengthBeats: first3 },
       { op: "setClipNotes", id, notes: left },
       { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
     ];
@@ -26555,7 +26581,7 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   if (!transport) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
   const offsetSeconds = clip.offsetSeconds + (transport.secondsAtBeat(atBeat) - transport.secondsAtBeat(clip.startBeat));
   return [
-    { op: "setClip", id, lengthBeats: first2, fadeOutBeats: 0 },
+    { op: "setClip", id, lengthBeats: first3, fadeOutBeats: 0 },
     { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
   ];
 }
@@ -26707,12 +26733,12 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri3 } = {}) {
+      async handler({ iri: iri4 } = {}) {
         const unavailable2 = requireCatalogue();
         if (unavailable2) return unavailable2;
-        if (!iri3) return failed("plugin_describe needs an iri");
+        if (!iri4) return failed("plugin_describe needs an iri");
         try {
-          return ok(await catalogue.describe(iri3));
+          return ok(await catalogue.describe(iri4));
         } catch (error2) {
           return failed(`catalogue: ${error2.message}`);
         }
@@ -26731,11 +26757,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         if (unavailable2) return unavailable2;
         if (iris.length < 2) return failed("a chain needs at least two plugins");
         const described = [];
-        for (const iri3 of iris) {
+        for (const iri4 of iris) {
           try {
-            described.push(await catalogue.describe(iri3));
+            described.push(await catalogue.describe(iri4));
           } catch (error2) {
-            return failed(`could not describe ${iri3}: ${error2.message}`);
+            return failed(`could not describe ${iri4}: ${error2.message}`);
           }
         }
         const problems = [];
@@ -26768,11 +26794,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         properties: { iri: { type: "string" } },
         required: ["iri"]
       },
-      async handler({ iri: iri3 } = {}) {
-        if (!iri3) return failed("collection_open needs an iri");
+      async handler({ iri: iri4 } = {}) {
+        if (!iri4) return failed("collection_open needs an iri");
         if (!openCollection) return failed("this host cannot open collections");
         try {
-          const { collection, warnings, members } = await openCollection(iri3);
+          const { collection, warnings, members } = await openCollection(iri4);
           return ok({
             label: collection.label,
             comment: collection.comment ?? null,
@@ -26795,10 +26821,10 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["iri"]
       },
-      async handler({ iri: iri3, track } = {}) {
-        if (!iri3) return failed("plugin_load needs an iri");
+      async handler({ iri: iri4, track } = {}) {
+        if (!iri4) return failed("plugin_load needs an iri");
         if (!loadPlugin) return failed("this host cannot load plugins");
-        const result = await loadPlugin(iri3, track ? { track } : {});
+        const result = await loadPlugin(iri4, track ? { track } : {});
         if (!result.ok) return failed(result.message, { step: result.step ?? null });
         return ok({
           nodeId: result.nodeId,
@@ -27263,8 +27289,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["nodeIds", "iri", "label"]
       },
-      async handler({ nodeIds, iri: iri3, label, comment, expose } = {}) {
-        const result = await dispatcher.packSelection({ nodeIds, iri: iri3, label, comment, expose });
+      async handler({ nodeIds, iri: iri4, label, comment, expose } = {}) {
+        const result = await dispatcher.packSelection({ nodeIds, iri: iri4, label, comment, expose });
         return result.ok ? ok({ turtle: result.turtle, summary: result.summary, warnings: result.warnings }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -27720,7 +27746,7 @@ function createRuntime(ctx2) {
       output: analyser,
       maxTrackDelaySeconds: ctx2.hostConfig.maxTrackDelayMs / 1e3
     });
-    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3) });
+    ctx2.clipPlayer = new ClipPlayer({ context, fetchBytes: (iri4) => ctx2.media.fetchBytes(iri4) });
     const { ForeignSupport: ForeignSupport2 } = await Promise.resolve().then(() => (init_ForeignSupport(), ForeignSupport_exports));
     const dispatcher = new OpDispatcher({
       engine: ctx2.engine,
@@ -27745,8 +27771,8 @@ function createRuntime(ctx2) {
       const registration = registerTools({
         dispatcher,
         catalogue: ctx2.browser.catalogue(),
-        loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options),
-        openCollection: (iri3) => ctx2.browser.loadCollection(iri3),
+        loadPlugin: (iri4, options) => dispatcher.addPlugin(iri4, options),
+        openCollection: (iri4) => ctx2.browser.loadCollection(iri4),
         onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
@@ -27759,7 +27785,7 @@ function createRuntime(ctx2) {
       log2(`host offers ${[...capabilities].map(compact).join(", ")}`);
       log2(`${registration.count} agent tools via ${registration.bound}`);
     } else if (ctx2.script) {
-      const tools = createTools({ dispatcher, loadPlugin: (iri3, options) => dispatcher.addPlugin(iri3, options), reel: ctx2.script.agentReel() });
+      const tools = createTools({ dispatcher, loadPlugin: (iri4, options) => dispatcher.addPlugin(iri4, options), reel: ctx2.script.agentReel() });
       ctx2.script.attach({ dispatcher, tools, loader: ctx2.loader });
     }
     ctx2.transport.meterLoop();
@@ -28320,12 +28346,12 @@ function createTransport(ctx2) {
       for (const { at, accent } of pre.clicks) click(heardAt + at, accent);
     }
     $2("play").setAttribute("aria-pressed", "true");
-    const first2 = d.project.nodes[0];
-    const startsWithEffect = first2 && (d.engineNode(first2.id)?.profile.audioInputs ?? 0) > 0;
+    const first3 = d.project.nodes[0];
+    const startsWithEffect = first3 && (d.engineNode(first3.id)?.profile.audioInputs ?? 0) > 0;
     if (startsWithEffect) {
       source = makeSource(engine.context);
       source.start();
-      const entry = d.engineNode(first2.id);
+      const entry = d.engineNode(first3.id);
       if (entry) source.connect(entry.node, 0, 0);
     }
     sendTransport();
@@ -28342,9 +28368,9 @@ function createTransport(ctx2) {
       automation
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
-    await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
-    const failed2 = sources.filter((iri3) => clipPlayer.failure(iri3));
-    for (const iri3 of failed2) log2(`audio clip source ${iri3}: ${clipPlayer.failure(iri3).message}`, "error");
+    await Promise.all(sources.map((iri4) => clipPlayer.load(iri4)));
+    const failed2 = sources.filter((iri4) => clipPlayer.failure(iri4));
+    for (const iri4 of failed2) log2(`audio clip source ${iri4}: ${clipPlayer.failure(iri4).message}`, "error");
     if (failed2.length > 0) ctx2.rack.draw();
     scheduler.start(startedAt, { from });
     scheduler.tick();
@@ -28535,11 +28561,11 @@ var PREFIXES2 = [
   ["dcterms", "http://purl.org/dc/terms/"],
   ["xsd", "http://www.w3.org/2001/XMLSchema#"]
 ];
-function term3(iri3) {
+function term3(iri4) {
   for (const [prefix, namespace2] of PREFIXES2) {
-    if (iri3.startsWith(namespace2)) return `${prefix}:${iri3.slice(namespace2.length)}`;
+    if (iri4.startsWith(namespace2)) return `${prefix}:${iri4.slice(namespace2.length)}`;
   }
-  return `<${iri3}>`;
+  return `<${iri4}>`;
 }
 function string(value2) {
   return JSON.stringify(String(value2));
@@ -28569,14 +28595,14 @@ function endpoint(lines, base, id, e) {
   const port = hasIndex ? `${term3(jig4.portIndex)} ${integer(e.portIndex)}` : `${term3(jig4.portSymbol)} ${string(e.portSymbol)}`;
   lines.push(`<#${id}> a ${term3(jig4.Endpoint)} ; ${term3(jig4.endpointNode)} <#${e.node}> ; ${port} .`);
 }
-function writeProject(project, { iri: iri3, created = null } = {}) {
-  if (!iri3) throw new Error("writeProject needs the project IRI, which becomes the @base");
+function writeProject(project, { iri: iri4, created = null } = {}) {
+  if (!iri4) throw new Error("writeProject needs the project IRI, which becomes the @base");
   const tracks = [...project.tracks].sort(byId);
   const nodes = [...project.nodes].sort(byId);
   const connections = [...project.connections].sort(byId);
   const transport = project.transport;
   const lines = [];
-  lines.push(`@base <${iri3}> .`);
+  lines.push(`@base <${iri4}> .`);
   lines.push("");
   for (const [prefix, namespace2] of PREFIXES2) lines.push(`@prefix ${prefix}: <${namespace2}> .`);
   lines.push("");
@@ -28631,7 +28657,7 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     if (clip.muted) statements.push(`${term3(jig4.muted)} true`);
     if (clip.locked) statements.push(`${term3(jig4.locked)} true`);
     if (clip.kind === "audio") {
-      statements.push(`${term3(jig4.source)} <${relativeTo(clip.source, iri3)}>`);
+      statements.push(`${term3(jig4.source)} <${relativeTo(clip.source, iri4)}>`);
       if (clip.offsetSeconds !== 0) statements.push(`${term3(jig4.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
       if (clip.fadeInBeats > 0) statements.push(`${term3(jig4.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig4.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
@@ -28666,8 +28692,8 @@ function writeProject(project, { iri: iri3, created = null } = {}) {
     lines.push(`    a ${term3(jig4.Connection)} ;`);
     lines.push(`    ${term3(jig4.from)} <#${c3.id}-from> ; ${term3(jig4.to)} <#${c3.id}-to> ;`);
     lines.push(`    ${term3(jig4.signalKind)} ${term3(c3.signalKind)}${noteRange(c3)} .`);
-    endpoint(lines, iri3, `${c3.id}-from`, c3.from);
-    endpoint(lines, iri3, `${c3.id}-to`, c3.to);
+    endpoint(lines, iri4, `${c3.id}-from`, c3.from);
+    endpoint(lines, iri4, `${c3.id}-to`, c3.to);
   }
   writeArrangement(lines, project);
   const points = [...transport.tempoPoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
@@ -28729,10 +28755,10 @@ function writeArrangement(lines, project) {
     });
   }
 }
-function writeEditor(project, { iri: iri3 } = {}) {
-  if (!iri3) throw new Error("writeEditor needs the project IRI");
+function writeEditor(project, { iri: iri4 } = {}) {
+  if (!iri4) throw new Error("writeEditor needs the project IRI");
   const editor = project.editor;
-  const lines = [`@base <${iri3}> .`, "", `@prefix jig: <${JIG}> .`, ""];
+  const lines = [`@base <${iri4}> .`, "", `@prefix jig: <${JIG}> .`, ""];
   for (const node of [...project.nodes].sort(byId)) {
     const { x, y } = editor.position(node.id);
     if (x === 0 && y === 0) continue;
@@ -28752,12 +28778,12 @@ function writeEditor(project, { iri: iri3 } = {}) {
   }
   return lines.join("\n") + "\n";
 }
-function writeScripts(project, { iri: iri3, savedAt = null } = {}) {
-  if (!iri3) throw new Error("writeScripts needs the project IRI");
+function writeScripts(project, { iri: iri4, savedAt = null } = {}) {
+  if (!iri4) throw new Error("writeScripts needs the project IRI");
   const scripts = project.scripts.all;
   if (scripts.length === 0) return null;
   const lines = [
-    `@base <${iri3}> .`,
+    `@base <${iri4}> .`,
     "",
     `@prefix jig: <${JIG}> .`,
     "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .",
@@ -28822,20 +28848,20 @@ function findProject(dataset2) {
   }
   return found[0];
 }
-function idOf(iri3, projectIri, what) {
-  if (!iri3) throw new Error(`${what} is missing`);
-  const hash = iri3.indexOf("#");
-  if (hash < 0 || !iri3.startsWith(projectIri.split("#")[0])) {
-    throw new Error(`${what} is not a fragment of the project: ${iri3}`);
+function idOf(iri4, projectIri, what) {
+  if (!iri4) throw new Error(`${what} is missing`);
+  const hash = iri4.indexOf("#");
+  if (hash < 0 || !iri4.startsWith(projectIri.split("#")[0])) {
+    throw new Error(`${what} is not a fragment of the project: ${iri4}`);
   }
-  return iri3.slice(hash + 1);
+  return iri4.slice(hash + 1);
 }
-function readEndpoint2(dataset2, iri3, projectIri, what) {
-  if (!iri3) throw new Error(`${what} is missing`);
-  const node = value(one2(dataset2, iri3, jig5.endpointNode));
+function readEndpoint2(dataset2, iri4, projectIri, what) {
+  if (!iri4) throw new Error(`${what} is missing`);
+  const node = value(one2(dataset2, iri4, jig5.endpointNode));
   if (!node) throw new Error(`${what} names no jig:endpointNode`);
-  const index = one2(dataset2, iri3, jig5.portIndex);
-  const symbol = one2(dataset2, iri3, jig5.portSymbol);
+  const index = one2(dataset2, iri4, jig5.portIndex);
+  const symbol = one2(dataset2, iri4, jig5.portSymbol);
   if (index === null === (symbol === null)) {
     throw new Error(`${what} must give exactly one of jig:portIndex or jig:portSymbol`);
   }
@@ -28897,10 +28923,10 @@ function foldIntoTracks(nodes, connections) {
 var TAP_OF = { [jig5.PreFader]: "pre", [jig5.PostFader]: "post" };
 var CURVE_OF = { [jig5.Step]: "step", [jig5.Linear]: "linear", [jig5.Smooth]: "smooth" };
 var KIND_OF = { [jig5.MasterGain]: "masterGain", [jig5.MasterPan]: "masterPan", [jig5.Tempo]: "tempo" };
-function named(table, iri3, what) {
-  if (iri3 === null) throw new Error(`${what} is missing`);
-  if (!(iri3 in table)) throw new Error(`${what} is not one this format defines: ${iri3}`);
-  return table[iri3];
+function named(table, iri4, what) {
+  if (iri4 === null) throw new Error(`${what} is missing`);
+  if (!(iri4 in table)) throw new Error(`${what} is not one this format defines: ${iri4}`);
+  return table[iri4];
 }
 function readNoteRange(dataset2, subject, id) {
   const end = (property, name) => {
@@ -28909,9 +28935,9 @@ function readNoteRange(dataset2, subject, id) {
   };
   return { ...end(jig5.lowNote, "lowNote"), ...end(jig5.highNote, "highNote") };
 }
-function readArrangement(dataset2, iri3, tracks) {
+function readArrangement(dataset2, iri4, tracks) {
   const changes = [];
-  const masterIri = value(one2(dataset2, iri3, jig5.master));
+  const masterIri = value(one2(dataset2, iri4, jig5.master));
   if (masterIri) {
     const channel = readChannel(dataset2, masterIri, "master");
     const input = value(one2(dataset2, masterIri, jig5.audioInput));
@@ -28920,16 +28946,16 @@ function readArrangement(dataset2, iri3, tracks) {
       ...channel.gain !== void 0 ? { gain: channel.gain } : {},
       ...channel.pan !== void 0 ? { pan: channel.pan } : {},
       ...channel.muted !== void 0 ? { muted: channel.muted } : {},
-      ...input !== null ? { audioInput: idOf(input, iri3, "audioInput of the master") } : {}
+      ...input !== null ? { audioInput: idOf(input, iri4, "audioInput of the master") } : {}
     });
   }
   for (const t of tracks) {
-    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri3, `output of track ${t.id}`) });
+    if (t.output) changes.push({ op: "setTrack", id: t.id, output: idOf(t.output, iri4, `output of track ${t.id}`) });
   }
-  const each = (property, what) => objects3(dataset2, iri3, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri3, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
+  const each = (property, what) => objects3(dataset2, iri4, property).map((x) => x.value).map((subject) => ({ subject, id: idOf(subject, iri4, what) })).sort((a2, b) => mintedOrder(a2.id, b.id));
   for (const { subject, id } of each(jig5.send, "send")) {
-    const from = idOf(value(one2(dataset2, subject, jig5.sendFrom)), iri3, `sendFrom of ${id}`);
-    const to = idOf(value(one2(dataset2, subject, jig5.sendTo)), iri3, `sendTo of ${id}`);
+    const from = idOf(value(one2(dataset2, subject, jig5.sendFrom)), iri4, `sendFrom of ${id}`);
+    const to = idOf(value(one2(dataset2, subject, jig5.sendTo)), iri4, `sendTo of ${id}`);
     const kind = value(one2(dataset2, subject, jig5.signalKind));
     if (kind === trn6.Midi) {
       changes.push({ op: "addSend", id, from, to, kind: "midi", ...readNoteRange(dataset2, subject, id) });
@@ -28959,7 +28985,7 @@ function readArrangement(dataset2, iri3, tracks) {
   for (const { subject, id } of each(jig5.envelope, "envelope")) {
     const kind = value(one2(dataset2, subject, jig5.targetKind));
     const targetNode = value(one2(dataset2, subject, jig5.targetNode));
-    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri3, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig5.targetSymbol)) };
+    const target2 = kind !== null ? { kind: named(KIND_OF, kind, `targetKind of ${id}`) } : { node: idOf(targetNode, iri4, `targetNode of ${id}`), symbol: value(one2(dataset2, subject, jig5.targetSymbol)) };
     const points = objects3(dataset2, subject, jig5.envelopePoint).map((x) => x.value).map((pointIri) => ({
       atBeat: number3(one2(dataset2, pointIri, jig5.atBeat), `atBeat of a point in ${id}`),
       value: number3(one2(dataset2, pointIri, jig5.pointValue), `pointValue of a point in ${id}`),
@@ -28970,10 +28996,10 @@ function readArrangement(dataset2, iri3, tracks) {
   return changes;
 }
 function readProject(dataset2) {
-  const iri3 = findProject(dataset2);
+  const iri4 = findProject(dataset2);
   const changes = [];
-  const trackIris = objects3(dataset2, iri3, jig5.track).map((t) => t.value);
-  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri3, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
+  const trackIris = objects3(dataset2, iri4, jig5.track).map((t) => t.value);
+  const tracks = trackIris.map((trackIri) => ({ trackIri, id: idOf(trackIri, iri4, "track") })).sort((a2, b) => mintedOrder(a2.id, b.id)).map(({ trackIri, id }) => ({
     id,
     label: value(one2(dataset2, trackIri, RDFS_LABEL)),
     channel: readChannel(dataset2, trackIri, id),
@@ -28983,9 +29009,9 @@ function readProject(dataset2) {
   }));
   const clips = [];
   for (const trackIri of trackIris) {
-    const track = idOf(trackIri, iri3, "track");
+    const track = idOf(trackIri, iri4, "track");
     for (const clipIri of objects3(dataset2, trackIri, jig5.clip).map((t) => t.value)) {
-      const id = idOf(clipIri, iri3, `clip of track ${track}`);
+      const id = idOf(clipIri, iri4, `clip of track ${track}`);
       const types = objects3(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
       const kind = types.includes(jig5.MidiClip) ? "midi" : types.includes(jig5.AudioClip) ? "audio" : null;
       if (!kind) throw new Error(`clip ${id} is neither a jig:MidiClip nor a jig:AudioClip`);
@@ -29021,9 +29047,9 @@ function readProject(dataset2) {
   }
   clips.sort((a2, b) => mintedOrder(a2.id, b.id));
   const nodes = [];
-  const nodeIris = objects3(dataset2, iri3, jig5.node).map((t) => t.value).sort();
+  const nodeIris = objects3(dataset2, iri4, jig5.node).map((t) => t.value).sort();
   for (const nodeIri of nodeIris) {
-    const id = idOf(nodeIri, iri3, "node");
+    const id = idOf(nodeIri, iri4, "node");
     const pluginIri = value(one2(dataset2, nodeIri, jig5.plugin));
     if (!pluginIri) throw new Error(`node ${id} names no jig:plugin, so nothing says what to load`);
     const settings = {};
@@ -29039,7 +29065,7 @@ function readProject(dataset2) {
       id,
       pluginIri,
       label: value(one2(dataset2, nodeIri, RDFS_LABEL)),
-      track: onTrack === null ? null : idOf(onTrack, iri3, `track of node ${id}`),
+      track: onTrack === null ? null : idOf(onTrack, iri4, `track of node ${id}`),
       settings,
       state: value(one2(dataset2, nodeIri, jig5.nodeState)),
       ...one2(dataset2, nodeIri, jig5.bypassed)?.value === "true" ? { bypassed: true } : {},
@@ -29048,8 +29074,8 @@ function readProject(dataset2) {
     });
   }
   const connections = [];
-  for (const connIri of objects3(dataset2, iri3, jig5.connection).map((t) => t.value).sort()) {
-    const id = idOf(connIri, iri3, "connection");
+  for (const connIri of objects3(dataset2, iri4, jig5.connection).map((t) => t.value).sort()) {
+    const id = idOf(connIri, iri4, "connection");
     const signalKind = value(one2(dataset2, connIri, jig5.signalKind));
     if (!signalKind) {
       throw new Error(`connection ${id} names no jig:signalKind, and it cannot be inferred from the endpoints: an audio edge and a host-routed MIDI edge look identical here`);
@@ -29058,8 +29084,8 @@ function readProject(dataset2) {
       op: "addConnection",
       ...readNoteRange(dataset2, connIri, id),
       id,
-      from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.from)), iri3, `connection ${id} from`),
-      to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.to)), iri3, `connection ${id} to`),
+      from: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.from)), iri4, `connection ${id} from`),
+      to: readEndpoint2(dataset2, value(one2(dataset2, connIri, jig5.to)), iri4, `connection ${id} to`),
       signalKind
     });
   }
@@ -29078,13 +29104,13 @@ function readProject(dataset2) {
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue;
-    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri3, `${what} of track ${t.id}`);
+    const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri4, `${what} of track ${t.id}`);
     changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
   }
   changes.push(...connections);
   changes.push(...clips);
-  changes.push(...readArrangement(dataset2, iri3, tracks));
-  const transportIri = value(one2(dataset2, iri3, jig5.transport));
+  changes.push(...readArrangement(dataset2, iri4, tracks));
+  const transportIri = value(one2(dataset2, iri4, jig5.transport));
   if (transportIri) {
     const points = objects3(dataset2, transportIri, jig5.tempoPoint).map((t) => t.value).map((pointIri) => ({
       atBeat: number3(one2(dataset2, pointIri, jig5.atBeat), "atBeat") ?? 0,
@@ -29111,9 +29137,9 @@ function readProject(dataset2) {
     if (Object.keys(transport).length > 0) changes.push({ op: "setTransport", ...transport });
   }
   return {
-    iri: iri3,
-    label: value(one2(dataset2, iri3, RDFS_LABEL)),
-    revision: number3(one2(dataset2, iri3, jig5.revision), "revision") ?? 0,
+    iri: iri4,
+    label: value(one2(dataset2, iri4, RDFS_LABEL)),
+    revision: number3(one2(dataset2, iri4, jig5.revision), "revision") ?? 0,
     changes
   };
 }
@@ -29420,7 +29446,7 @@ function createSessions(ctx2) {
       turtle,
       editor: dispatcher.project.hasEditorState ? writeEditor(dispatcher.project, { iri: media.base }) : null,
       scripts: writeScripts(dispatcher.project, { iri: media.base, savedAt }),
-      media: held.map((iri3) => ({ name: iri3.slice(media.base.length), bytes: media.get(iri3).bytes }))
+      media: held.map((iri4) => ({ name: iri4.slice(media.base.length), bytes: media.get(iri4).bytes }))
     });
     return {
       kind: packed.kind,
@@ -29468,7 +29494,7 @@ function createSessions(ctx2) {
       ctx2.media.put(new URL(name, ctx2.media.base).href, bytes);
     }
     const opened = await openProject(d, read, {
-      onLoading: (iri3) => log2(`GET ${iri3}`),
+      onLoading: (iri4) => log2(`GET ${iri4}`),
       onCleared: () => {
         ctx2.rack.reset();
         ctx2.editors.closeAll();
@@ -29900,17 +29926,17 @@ function createVoice(ctx2, { getUserMedia: getUserMedia2, processorUrl = null, W
     } else {
       const sampleRate = engine.context.sampleRate;
       const bytes = takes.encode(carrier, sampleRate);
-      const iri3 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
-      ctx2.media.put(iri3, bytes, "audio/wav");
-      const buffer = await ctx2.clipPlayer.load(iri3);
-      if (!buffer) throw new Error(ctx2.clipPlayer.failure(iri3)?.message ?? "the recording could not be decoded");
+      const iri4 = ctx2.media.iriFor(await sha256hex(bytes), "wav");
+      ctx2.media.put(iri4, bytes, "audio/wav");
+      const buffer = await ctx2.clipPlayer.load(iri4);
+      if (!buffer) throw new Error(ctx2.clipPlayer.failure(iri4)?.message ?? "the recording could not be decoded");
       const transport = dispatcher.transport();
       const lengthBeats = transport.beatAtSeconds(transport.secondsAtBeat(startBeat) + takes.frames(carrier) / sampleRate) - startBeat;
       const count = dispatcher.project.tracks.filter((t) => /^Recording \d+$/.test(t.label ?? "")).length + 1;
       made = dispatcher.project.nextId("track");
       changes = [
         { op: "addTrack", id: made, label: `Recording ${count}` },
-        { op: "addClip", track: made, kind: "audio", startBeat, lengthBeats, source: iri3, offsetSeconds: 0 },
+        { op: "addClip", track: made, kind: "audio", startBeat, lengthBeats, source: iri4, offsetSeconds: 0 },
         ...changes
       ];
     }
@@ -29971,8 +29997,8 @@ async function bounce({
   }
   const clipPlayer = new ClipPlayer({ context, fetchBytes });
   const sources = [...new Set(clipAudio(dispatcher.project).map((c3) => c3.source))];
-  await Promise.all(sources.map((iri3) => clipPlayer.load(iri3)));
-  const errors = [...opened.errors, ...sources.filter((iri3) => clipPlayer.failure(iri3)).map((iri3) => `audio ${iri3}: ${clipPlayer.failure(iri3).message}`)];
+  await Promise.all(sources.map((iri4) => clipPlayer.load(iri4)));
+  const errors = [...opened.errors, ...sources.filter((iri4) => clipPlayer.failure(iri4)).map((iri4) => `audio ${iri4}: ${clipPlayer.failure(iri4).message}`)];
   const playAudioClip = (clip, { when, offset, duration: duration2 }) => {
     const track = dispatcher.project.track(clip.track);
     if (!track) return;
@@ -30056,7 +30082,7 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       const result = await bounceFn({
         snapshot: d.project.snapshot(),
         makeLoader: () => new PluginLoader({ parse: parseText, validator, capabilities: ctx2.hostCapabilities }),
-        fetchBytes: (iri3) => ctx2.media.fetchBytes(iri3),
+        fetchBytes: (iri4) => ctx2.media.fetchBytes(iri4),
         hostConfig: ctx2.hostConfig,
         seconds,
         sampleRate: ctx2.engine.context.sampleRate,
@@ -30133,18 +30159,18 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
       return null;
     }
     const bytes = wavOf(buffer);
-    const iri3 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
-    ctx2.media.put(iri3, bytes, "audio/wav");
+    const iri4 = ctx2.media.iriFor(await sha256hex2(bytes), "wav");
+    ctx2.media.put(iri4, bytes, "audio/wav");
     const frozen = d.project.nextId("track");
     const lengthBeats = d.transport().beatAtSeconds(seconds);
     const result = d.apply([
       { op: "addTrack", id: frozen, label: `${label} (frozen)` },
-      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri3, offsetSeconds: 0 },
+      { op: "addClip", track: frozen, kind: "audio", startBeat: 0, lengthBeats, source: iri4, offsetSeconds: 0 },
       { op: "setTrackChannel", track: trackId, muted: true }
     ]);
     if (!result.ok) throw new Error(result.message);
     log2(`froze ${label} into "${label} (frozen)"; the original is muted, not removed. Undo brings it back`, "ok");
-    return { frozen, iri: iri3, seconds };
+    return { frozen, iri: iri4, seconds };
   }
   return { render, exportWav, exportStems, freezeTrack, get busy() {
     return busy || stemming;
@@ -30596,9 +30622,9 @@ function statement(text) {
     const name = t.ident();
     if (!name) throw new LineError("expected a name for the plugin", t.pos + 1);
     t.expect("=");
-    const iri3 = t.rest();
-    if (!/^https?:\/\/\S+$/.test(iri3)) throw new LineError("expected an http or https address, written out in full", t.pos - iri3.length + 1);
-    return { type: "load", name, iri: iri3, column };
+    const iri4 = t.rest();
+    if (!/^https?:\/\/\S+$/.test(iri4)) throw new LineError("expected an http or https address, written out in full", t.pos - iri4.length + 1);
+    return { type: "load", name, iri: iri4, column };
   }
   if (t.keyword("let")) {
     const name = t.ident();
@@ -30849,7 +30875,7 @@ async function plan(statements, context) {
     }
   }
   const lets = /* @__PURE__ */ new Map();
-  const out = { seed: 1, loads: loads.map(({ name, iri: iri3, line }) => ({ name, iri: iri3, line })), lets: [], steps: [] };
+  const out = { seed: 1, loads: loads.map(({ name, iri: iri4, line }) => ({ name, iri: iri4, line })), lets: [], steps: [] };
   const portOf = (name, symbol, line, column) => {
     if (!scope.has(name)) {
       fail(line, `no plugin called "${name}"${hint(name, scope.keys())}`, column);
@@ -31136,16 +31162,16 @@ function createRunner({ tools, scheduler, session, beatsPerBar, currentBeat = ()
 init_LoadError();
 function createPluginValidator(loader) {
   const verified = /* @__PURE__ */ new Map();
-  return async function resolvePlugin(iri3) {
+  return async function resolvePlugin(iri4) {
     try {
       let profile;
       let code;
       try {
-        profile = (await loader.loadProfile(iri3)).profile;
+        profile = (await loader.loadProfile(iri4)).profile;
         code = [profile];
       } catch (error2) {
         if (!(error2 instanceof CompositeFound)) throw error2;
-        const tree = await resolveComposite(iri3, { loader, bundled: (target2) => target2 === iri3 ? error2.dataset : null });
+        const tree = await resolveComposite(iri4, { loader, bundled: (target2) => target2 === iri4 ? error2.dataset : null });
         profile = compositeProfile(tree.composite);
         code = pluginsOf(tree).map((plugin) => plugin.profile);
       }
@@ -31155,9 +31181,9 @@ function createPluginValidator(loader) {
         ...(p.assets ?? []).map((a2) => [`asset "${a2.iri?.split("#").pop() ?? a2.iri}"`, a2])
       ]).filter(([, resource]) => resource);
       const key = resources.map(([, r]) => `${r.location}@${r.integrity}`).join(" ");
-      if (verified.get(iri3) !== key) {
+      if (verified.get(iri4) !== key) {
         for (const [kind, resource] of resources) await loader.fetchVerified(resource, { kind });
-        verified.set(iri3, key);
+        verified.set(iri4, key);
       }
       return {
         ok: true,
@@ -31295,7 +31321,7 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
 function describePlan(plan2) {
   return {
     seed: plan2.seed,
-    loads: plan2.loads.map(({ name, iri: iri3, line }) => ({ name, iri: iri3, line })),
+    loads: plan2.loads.map(({ name, iri: iri4, line }) => ({ name, iri: iri4, line })),
     steps: plan2.steps.map((s) => ({
       line: s.line,
       when: s.when.kind === "now" ? "now" : s.when.kind === "at" ? `at beat ${s.when.beat}` : `every ${s.when.beats} beats`,
@@ -31629,6 +31655,391 @@ function createScript(ctx2) {
   return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop, run, check };
 }
 
+// web/app/Skins.js
+init_parse();
+
+// src/ui/SkinArtwork.js
+var SVG_NS = "http://www.w3.org/2000/svg";
+var SKIN_LIMITS = Object.freeze({ bytes: 512 * 1024, elements: 5e3 });
+var ELEMENTS = /* @__PURE__ */ new Set([
+  "svg",
+  "g",
+  "defs",
+  "title",
+  "desc",
+  "path",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "text",
+  "tspan",
+  "linearGradient",
+  "radialGradient",
+  "stop",
+  "clipPath",
+  "use"
+]);
+var ATTRIBUTES = /* @__PURE__ */ new Set([
+  "id",
+  "viewBox",
+  "width",
+  "height",
+  "preserveAspectRatio",
+  "x",
+  "y",
+  "x1",
+  "y1",
+  "x2",
+  "y2",
+  "cx",
+  "cy",
+  "r",
+  "rx",
+  "ry",
+  "fx",
+  "fy",
+  "fr",
+  "dx",
+  "dy",
+  "d",
+  "points",
+  "transform",
+  "offset",
+  "gradientUnits",
+  "gradientTransform",
+  "spreadMethod",
+  "clipPathUnits",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "clip-rule",
+  "clip-path",
+  "stroke",
+  "stroke-width",
+  "stroke-opacity",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stop-color",
+  "stop-opacity",
+  "opacity",
+  "display",
+  "visibility",
+  "paint-order",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "text-anchor",
+  "dominant-baseline",
+  "letter-spacing",
+  "style",
+  "href"
+]);
+var STYLE_PROPERTIES = new Set([...ATTRIBUTES].filter((a2) => a2.includes("-") || ["fill", "stroke", "opacity", "display", "visibility"].includes(a2)));
+var SkinError = class extends Error {
+  constructor(message, element = null) {
+    super(element === null ? message : `${message} (at ${element})`);
+    this.name = "SkinError";
+    this.element = element;
+  }
+};
+function parseSvg(text, DOMParserClass = globalThis.DOMParser) {
+  const doc = new DOMParserClass().parseFromString(text, "image/svg+xml");
+  const failure = doc.getElementsByTagName("parsererror")[0];
+  if (failure) throw new SkinError(`the artwork is not well formed XML: ${failure.textContent.trim().split("\n")[0]}`);
+  return doc;
+}
+var FRAGMENT = /^#([^\s()'"]+)$/;
+var URL_REFERENCE = /url\(\s*([^)]*?)\s*\)/gi;
+function checkValue(value2, where) {
+  if (/javascript:|@import|expression\(/i.test(value2)) throw new SkinError(`an attribute value runs or imports code: ${value2.slice(0, 40)}`, where);
+  for (const m of value2.matchAll(URL_REFERENCE)) {
+    if (!FRAGMENT.test(m[1].replace(/^['"]|['"]$/g, ""))) {
+      throw new SkinError(`a url() leaves the file: ${m[0]}`, where);
+    }
+  }
+}
+function pathOf(stack) {
+  return stack.join(" > ");
+}
+function buildArtwork(doc, { document: document2, prefix, limits = SKIN_LIMITS, size = 0 }) {
+  if (typeof prefix !== "string" || prefix === "") throw new TypeError("buildArtwork needs an id prefix, or two skins on one page can collide");
+  if (size > limits.bytes) throw new SkinError(`the artwork is ${size} bytes; the limit is ${limits.bytes}`);
+  const root = doc.documentElement;
+  if (!root || root.namespaceURI !== SVG_NS || root.localName !== "svg") {
+    throw new SkinError("the artwork root is not an svg element in the SVG namespace", root ? root.nodeName : "the document");
+  }
+  const ids = /* @__PURE__ */ new Map();
+  const elements = /* @__PURE__ */ new Map();
+  let count = 0;
+  const rename = (value2) => value2.replace(URL_REFERENCE, (all, ref) => {
+    const m = FRAGMENT.exec(ref.replace(/^['"]|['"]$/g, ""));
+    return m ? `url(#${prefix}${m[1]})` : all;
+  });
+  function copy(source, stack) {
+    const name = source.localName;
+    if (source.namespaceURI !== SVG_NS) return null;
+    if (!ELEMENTS.has(name)) throw new SkinError(`<${name}> is not an allowed element`, pathOf(stack));
+    if (++count > limits.elements) throw new SkinError(`the artwork has more than ${limits.elements} elements`, pathOf(stack));
+    const target2 = document2.createElementNS(SVG_NS, name);
+    for (const attr of [...source.attributes]) {
+      const attrName = attr.localName ?? attr.name;
+      if (attr.namespaceURI && attr.namespaceURI !== SVG_NS) continue;
+      if (/^on/i.test(attrName)) throw new SkinError(`event attribute ${attrName} is not allowed`, pathOf(stack));
+      if (!ATTRIBUTES.has(attrName)) continue;
+      let value2 = attr.value;
+      if (attrName === "href") {
+        const m = FRAGMENT.exec(value2);
+        if (!m) throw new SkinError(`href "${value2.slice(0, 40)}" leaves the file`, pathOf(stack));
+        target2.setAttribute("href", `#${prefix}${m[1]}`);
+        continue;
+      }
+      if (attrName === "style") {
+        if (value2.includes("\\")) throw new SkinError("a style attribute uses a CSS escape", pathOf(stack));
+        checkValue(value2, pathOf(stack));
+        const kept = value2.split(";").map((s) => s.trim()).filter(Boolean).flatMap((decl) => {
+          const at = decl.indexOf(":");
+          const property = decl.slice(0, at).trim().toLowerCase();
+          return at > 0 && STYLE_PROPERTIES.has(property) ? [`${property}:${rename(decl.slice(at + 1).trim())}`] : [];
+        });
+        if (kept.length) target2.setAttribute("style", kept.join(";"));
+        continue;
+      }
+      checkValue(value2, pathOf(stack));
+      if (attrName === "id") {
+        if (ids.has(value2)) throw new SkinError(`the id "${value2}" is used twice`, pathOf(stack));
+        ids.set(value2, 0);
+        elements.set(value2, target2);
+        value2 = prefix + value2;
+      } else value2 = rename(value2);
+      target2.setAttribute(attrName, value2);
+    }
+    const counts = /* @__PURE__ */ new Map();
+    for (const child of source.childNodes) {
+      if (child.nodeType === 1) {
+        const n2 = (counts.get(child.localName) ?? 0) + 1;
+        counts.set(child.localName, n2);
+        const made = copy(child, [...stack, `${child.localName}[${n2}]`]);
+        if (made) target2.append(made);
+      } else if (child.nodeType === 3 && (name === "text" || name === "tspan" || name === "title" || name === "desc")) {
+        target2.append(document2.createTextNode(child.nodeValue));
+      }
+    }
+    const authorId = source.getAttribute("id");
+    if (authorId !== null && ids.has(authorId)) ids.set(authorId, target2.children.length);
+    return target2;
+  }
+  const svg = copy(root, ["svg"]);
+  return { svg, ids, elements };
+}
+
+// src/rdf/SkinReader.js
+init_env();
+init_Vocabulary();
+var { jig: jig6, rdf: rdfTerms3 } = vocabulary;
+var KINDS = /* @__PURE__ */ new Map([
+  [jig6.RotaryControl, "rotary"],
+  [jig6.LinearControl, "linear"],
+  [jig6.ToggleControl, "toggle"],
+  [jig6.SelectorControl, "selector"],
+  [jig6.ReadoutControl, "readout"]
+]);
+var iri3 = (value2) => env_default.namedNode(value2);
+var objects4 = (dataset2, subject, predicate) => [...dataset2.match(typeof subject === "string" ? iri3(subject) : subject, iri3(predicate), null)].map((q2) => q2.object);
+var first2 = (dataset2, subject, predicate) => objects4(dataset2, subject, predicate)[0]?.value ?? null;
+var number5 = (value2) => value2 === null ? null : Number(value2);
+function readSkin(dataset2) {
+  const subjects = [...new Set([...dataset2.match(null, iri3(jig6.artwork), null)].map((q2) => q2.subject.value))];
+  if (subjects.length > 1) throw new Error(`a skin document describes one skin; this one has jig:artwork on ${subjects.join(", ")}`);
+  const documentIri = subjects[0] ?? null;
+  if (documentIri === null) return { iri: null, artwork: null, controls: [] };
+  const doc = iri3(documentIri);
+  const art = objects4(dataset2, doc, jig6.artwork)[0] ?? null;
+  const controls = objects4(dataset2, doc, jig6.control).map((node) => {
+    const kinds = objects4(dataset2, node, rdfTerms3.type).map((t) => KINDS.get(t.value)).filter(Boolean);
+    return {
+      id: node.value,
+      kind: kinds[0] ?? null,
+      boundSymbol: first2(dataset2, node, jig6.boundSymbol),
+      element: first2(dataset2, node, jig6.element),
+      hitElement: first2(dataset2, node, jig6.hitElement),
+      pivotElement: first2(dataset2, node, jig6.pivotElement),
+      trackElement: first2(dataset2, node, jig6.trackElement),
+      angleMin: number5(first2(dataset2, node, jig6.angleMin)),
+      angleMax: number5(first2(dataset2, node, jig6.angleMax))
+    };
+  }).sort((a2, b) => a2.id.localeCompare(b.id));
+  return {
+    iri: documentIri,
+    artwork: art === null ? null : {
+      iri: art.value,
+      location: first2(dataset2, art, jig6.location),
+      integrity: first2(dataset2, art, jig6.integrity),
+      mediaType: first2(dataset2, art, jig6.mediaType)
+    },
+    controls
+  };
+}
+function stepsOf(port) {
+  if (port.toggled) return 2;
+  if (port.scalePoints.length > 0) return port.scalePoints.length;
+  const span = port.maximum - port.minimum;
+  return Number.isInteger(span) ? span + 1 : null;
+}
+function checkSkin(skin, artwork, ports) {
+  const bySymbol = new Map(ports.map((p) => [p.symbol, p]));
+  const omitted = [];
+  const keep = [];
+  const bound = /* @__PURE__ */ new Set();
+  for (const control of skin.controls) {
+    const refuse = (reason) => omitted.push({ control: control.id, reason });
+    const port = bySymbol.get(control.boundSymbol);
+    if (control.kind === null) {
+      refuse("it has no control class");
+      continue;
+    }
+    if (!port) {
+      refuse(`the plugin declares no port "${control.boundSymbol}"`);
+      continue;
+    }
+    const sets = control.kind !== "readout";
+    if (sets && bound.has(control.boundSymbol)) {
+      refuse(`port "${control.boundSymbol}" is already bound by an earlier control`);
+      continue;
+    }
+    const named2 = [
+      ["jig:element", control.element],
+      ["jig:hitElement", control.hitElement],
+      ["jig:pivotElement", control.pivotElement],
+      ["jig:trackElement", control.trackElement]
+    ];
+    const missing = named2.filter(([, id]) => id !== null && !artwork.ids.has(id)).map(([term5, id]) => `${term5} "${id}"`);
+    if (control.element === null) missing.push("jig:element (none given)");
+    if (missing.length) {
+      refuse(`the artwork has no element for ${missing.join(", ")}`);
+      continue;
+    }
+    if (control.kind === "toggle") {
+      const children = artwork.ids.get(control.element);
+      if (children !== 2) {
+        refuse(`a toggle needs 2 child groups and "${control.element}" has ${children}`);
+        continue;
+      }
+    }
+    if (control.kind === "selector") {
+      const steps = stepsOf(port);
+      const children = artwork.ids.get(control.element);
+      if (steps === null) {
+        refuse(`port "${port.symbol}" has no whole number of steps to choose between`);
+        continue;
+      }
+      if (children !== steps) {
+        refuse(`a selector for "${port.symbol}" needs ${steps} child groups and "${control.element}" has ${children}`);
+        continue;
+      }
+    }
+    if (sets) bound.add(control.boundSymbol);
+    keep.push(control);
+  }
+  return { keep, omitted, unbound: ports.map((p) => p.symbol).filter((s) => !bound.has(s)) };
+}
+
+// src/host/SkinLoader.js
+init_ProfileReader();
+var SkinLoadError = class extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "SkinLoadError";
+  }
+};
+async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSvg2 }) {
+  if (!profile.skin) throw new SkinLoadError("the profile declares no skin");
+  const decoder = new TextDecoder();
+  const skinBytes = await fetchVerified(profile.skin, { kind: "skin" });
+  const skinIri = profile.skin.location;
+  let skin;
+  try {
+    skin = readSkin(await parseTurtle(decoder.decode(skinBytes), skinIri));
+  } catch (cause) {
+    throw new SkinLoadError(`the skin at ${skinIri} could not be read: ${cause.message}`, { cause });
+  }
+  if (!skin.artwork?.location || !skin.artwork.integrity) {
+    throw new SkinLoadError(`the skin at ${skinIri} names no artwork with a location and a digest`);
+  }
+  const directory = (iri4) => iri4.slice(0, iri4.lastIndexOf("/") + 1);
+  const artwork = skinIri.startsWith("data:") ? skin.artwork : { ...skin.artwork, location: rebaseLocation(skin.artwork.location, directory(skin.iri), directory(skinIri)) };
+  const artBytes = await fetchVerified(artwork, { kind: "skin artwork" });
+  let doc;
+  try {
+    doc = parseSvg2(decoder.decode(artBytes));
+  } catch (cause) {
+    throw new SkinLoadError(`the artwork at ${artwork.location}: ${cause.message}`, { cause });
+  }
+  return { skin, artwork: { doc, size: artBytes.byteLength } };
+}
+function prepareSkin(loaded, profile, { document: document2, prefix }) {
+  const built = buildArtwork(loaded.artwork.doc, { document: document2, prefix, size: loaded.artwork.size });
+  const { keep, omitted } = checkSkin(loaded.skin, { ids: built.ids }, profile.ports);
+  return { svg: built.svg, elements: built.elements, controls: keep, omitted };
+}
+
+// web/app/Skins.js
+function createSkins(ctx2) {
+  const { document: document2, log: log2 } = ctx2;
+  const loads = /* @__PURE__ */ new Map();
+  let redraw2 = () => {
+  };
+  const keyOf3 = (profile) => `${profile.skin.location}|${profile.skin.integrity}`;
+  function start(profile) {
+    const entry = { state: "loading", loaded: null };
+    loads.set(keyOf3(profile), entry);
+    loadSkin(profile, {
+      fetchVerified: (resource, options) => ctx2.loader.fetchVerified(resource, options),
+      parseTurtle: parseText,
+      parseSvg
+    }).then((loaded) => {
+      entry.loaded = loaded;
+      entry.state = "ready";
+      redraw2();
+    }).catch((error2) => {
+      entry.state = "failed";
+      log2(`${profile.label ?? profile.iri} skin: ${error2.message}`, "error");
+    });
+    return entry;
+  }
+  return {
+    /** What to run when a skin that was loading is ready, so a panel drawn without it can be drawn with it. */
+    onReady(fn) {
+      redraw2 = fn;
+    },
+    /** Whether this profile's skin can be drawn now. Starts the fetch the first time it is asked. */
+    ready(profile) {
+      if (!profile?.skin || !ctx2.loader) return false;
+      const entry = loads.get(keyOf3(profile)) ?? start(profile);
+      return entry.state === "ready";
+    },
+    /** Artwork nodes of this panel's own, or null (reported) when the artwork breaks the allowlist. */
+    prepare(profile, scope) {
+      const entry = loads.get(keyOf3(profile));
+      try {
+        const prepared = prepareSkin(entry.loaded, profile, { document: document2, prefix: `skin-${scope.replace(/[^\w-]/g, "_")}-` });
+        for (const o2 of prepared.omitted) log2(`${profile.label ?? profile.iri} skin: left out ${o2.control}, because ${o2.reason}`, "error");
+        return prepared;
+      } catch (error2) {
+        entry.state = "failed";
+        log2(`${profile.label ?? profile.iri} skin: ${error2.message}`, "error");
+        return null;
+      }
+    }
+  };
+}
+
 // src/ui/Dial.js
 var START_DEGREES = 135;
 var SWEEP_DEGREES = 270;
@@ -31637,7 +32048,7 @@ var CENTRE = 50;
 var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 var TRAVEL = 160;
 var FINE = 6;
-var SVG_NS = "http://www.w3.org/2000/svg";
+var SVG_NS2 = "http://www.w3.org/2000/svg";
 var round = (n2) => Math.round(n2 * 100) / 100;
 function facePoint(fraction, radius) {
   const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180;
@@ -31654,13 +32065,13 @@ function createDial(document2, port, id) {
   input.max = String(port.maximum);
   input.step = String((port.maximum - port.minimum) / 200);
   input.value = String(port.defaultValue);
-  const svg = document2.createElementNS(SVG_NS, "svg");
+  const svg = document2.createElementNS(SVG_NS2, "svg");
   svg.setAttribute("viewBox", "0 0 100 100");
   svg.setAttribute("class", "dial-face");
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
   const arc = (className) => {
-    const circle = document2.createElementNS(SVG_NS, "circle");
+    const circle = document2.createElementNS(SVG_NS2, "circle");
     circle.setAttribute("class", className);
     circle.setAttribute("cx", String(CENTRE));
     circle.setAttribute("cy", String(CENTRE));
@@ -31673,7 +32084,7 @@ function createDial(document2, port, id) {
   setSweep(track, 0, 1);
   const value2 = arc("dial-value");
   const origin = port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
-  const pointer = document2.createElementNS(SVG_NS, "line");
+  const pointer = document2.createElementNS(SVG_NS2, "line");
   pointer.setAttribute("class", "dial-pointer");
   pointer.setAttribute("x1", String(CENTRE));
   pointer.setAttribute("y1", String(CENTRE));
@@ -31730,7 +32141,7 @@ function attachDrag(element, input, port) {
   });
 }
 
-// src/ui/Panel.js
+// src/ui/PortText.js
 var UNIT_LABELS = Object.freeze({
   "http://lv2plug.in/ns/extensions/units#hz": "Hz",
   "http://lv2plug.in/ns/extensions/units#ms": "ms",
@@ -31759,7 +32170,227 @@ var spokenValue = (port, value2) => {
   const decimals = port.maximum - port.minimum > 20 ? 0 : 2;
   return `${value2.toFixed(decimals)}${unit ? ` ${unit}` : ""}`;
 };
-function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri } = {}) {
+
+// src/ui/SkinPanel.js
+var clamp = (n2, low, high) => Math.min(high, Math.max(low, n2));
+var fractionOf = (port, value2) => {
+  const span = port.maximum - port.minimum;
+  return span === 0 ? 0 : clamp((value2 - port.minimum) / span, 0, 1);
+};
+var withTurn = (base, turn) => [base, turn].filter(Boolean).join(" ");
+var withSlide = (base, slide) => [slide, base].filter(Boolean).join(" ");
+function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => el.getBBox() }) {
+  const wrap = document2.createElement("div");
+  wrap.className = "skin";
+  wrap.append(skin.svg);
+  const ports = new Map(skin.ports.map((p) => [p.symbol, p]));
+  const renderers = /* @__PURE__ */ new Map();
+  const fitters = [];
+  const hits = [];
+  const bound = /* @__PURE__ */ new Set();
+  const render = (symbol, fn) => {
+    if (!renderers.has(symbol)) renderers.set(symbol, []);
+    renderers.get(symbol).push(fn);
+  };
+  function hitArea(control, port, input) {
+    const box = document2.createElement("div");
+    box.className = "skin-hit";
+    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
+    input.id = id;
+    input.className = "skin-input";
+    input.setAttribute("aria-label", port.name ?? port.symbol);
+    box.append(input);
+    wrap.append(box);
+    const target2 = skin.elements.get(control.hitElement ?? control.element);
+    const hit = { box, x: 0, y: 0, height: 0 };
+    hits.push(hit);
+    fitters.push(() => {
+      const [vx, vy, vw, vh] = (skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
+      if (![vx, vy, vw, vh].every(Number.isFinite) || vw <= 0 || vh <= 0) throw new Error("a skin artwork needs a viewBox, which is what the hit areas are placed by");
+      const vb = { x: vx, y: vy, width: vw, height: vh };
+      const b = measure(target2);
+      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, height: b.height });
+      box.style.left = `${(b.x + b.width / 2 - vb.x) / vb.width * 100}%`;
+      box.style.top = `${(b.y + b.height / 2 - vb.y) / vb.height * 100}%`;
+      box.style.width = `${b.width / vb.width * 100}%`;
+      box.style.height = `${b.height / vb.height * 100}%`;
+    });
+    return box;
+  }
+  const rangeInput = (port, steps) => {
+    const input = document2.createElement("input");
+    input.type = "range";
+    input.min = String(port.minimum);
+    input.max = String(port.maximum);
+    input.step = String(steps ?? (port.maximum - port.minimum) / 200);
+    input.value = String(port.defaultValue);
+    input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
+    return input;
+  };
+  for (const control of skin.controls) {
+    const port = ports.get(control.boundSymbol);
+    const element = skin.elements.get(control.element);
+    if (control.kind === "readout") {
+      element.setAttribute("aria-hidden", "true");
+      render(port.symbol, (v) => {
+        element.textContent = formatValue(port, v);
+      });
+      continue;
+    }
+    bound.add(port.symbol);
+    if (control.kind === "rotary") {
+      const input = rangeInput(port);
+      const box = hitArea(control, port, input);
+      attachDrag(box, input, port);
+      const base = element.getAttribute("transform") ?? "";
+      const pivot = skin.elements.get(control.pivotElement ?? control.element);
+      let centre = { x: 0, y: 0 };
+      fitters.push(() => {
+        const b = measure(pivot);
+        centre = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+      });
+      render(port.symbol, (v) => {
+        input.value = String(v);
+        input.setAttribute("aria-valuetext", spokenValue(port, v));
+        const angle = control.angleMin + (control.angleMax - control.angleMin) * fractionOf(port, v);
+        element.setAttribute("transform", withTurn(base, `rotate(${angle} ${centre.x} ${centre.y})`));
+      });
+      fitters.push(() => {
+        const v = Number(input.value);
+        renderers.get(port.symbol).forEach((f) => f(v));
+      });
+    } else if (control.kind === "linear") {
+      const input = rangeInput(port);
+      const box = hitArea(control, port, input);
+      const track = skin.elements.get(control.trackElement);
+      const base = element.getAttribute("transform") ?? "";
+      let travel = { dx: 0, dy: 0, horizontal: true };
+      fitters.push(() => {
+        const b = measure(track);
+        const horizontal = b.width >= b.height;
+        travel = { dx: horizontal ? b.width : 0, dy: horizontal ? 0 : -b.height, horizontal };
+      });
+      attachTrackDrag(box, input, port, track, () => travel.horizontal);
+      render(port.symbol, (v) => {
+        input.value = String(v);
+        input.setAttribute("aria-valuetext", spokenValue(port, v));
+        if (!travel.horizontal) input.setAttribute("aria-orientation", "vertical");
+        const f = fractionOf(port, v);
+        element.setAttribute("transform", withSlide(base, `translate(${travel.dx * f} ${travel.dy * f})`));
+      });
+      fitters.push(() => {
+        const v = Number(input.value);
+        renderers.get(port.symbol).forEach((f) => f(v));
+      });
+    } else if (control.kind === "toggle") {
+      const input = document2.createElement("input");
+      input.type = "checkbox";
+      input.setAttribute("role", "switch");
+      const box = hitArea(control, port, input);
+      input.addEventListener("change", () => onChange(port.symbol, input.checked ? port.maximum : port.minimum));
+      box.addEventListener("click", (event) => {
+        if (event.target === input) return;
+        input.focus?.();
+        input.checked = !input.checked;
+        input.dispatchEvent(new document2.defaultView.Event("change", { bubbles: true }));
+      });
+      const [off, on] = [...element.children];
+      render(port.symbol, (v) => {
+        const isOn = v >= 0.5;
+        input.checked = isOn;
+        input.setAttribute("aria-checked", String(isOn));
+        off.setAttribute("display", isOn ? "none" : "inline");
+        on.setAttribute("display", isOn ? "inline" : "none");
+      });
+    } else if (control.kind === "selector") {
+      const steps = port.scalePoints.length > 0 ? port.scalePoints.map((p) => p.value) : null;
+      const count = steps ? steps.length : port.maximum - port.minimum + 1;
+      const input = document2.createElement("input");
+      input.type = "range";
+      input.min = "0";
+      input.max = String(count - 1);
+      input.step = "1";
+      input.value = "0";
+      const valueOf = (index) => steps ? steps[index] : port.minimum + index;
+      input.addEventListener("input", () => onChange(port.symbol, valueOf(Number(input.value))));
+      const box = hitArea(control, port, input);
+      box.addEventListener("click", (event) => {
+        if (event.target === input) return;
+        input.focus?.();
+        input.value = String((Number(input.value) + 1) % count);
+        input.dispatchEvent(new document2.defaultView.Event("input", { bubbles: true }));
+      });
+      const groups = [...element.children];
+      render(port.symbol, (v) => {
+        const index = Math.max(0, steps ? steps.indexOf(v) : Math.round(v - port.minimum));
+        input.value = String(index);
+        groups.forEach((g, i2) => g.setAttribute("display", i2 === index ? "inline" : "none"));
+        input.setAttribute("aria-valuetext", port.scalePoints?.[index]?.label ?? String(valueOf(index)));
+      });
+    }
+  }
+  return {
+    element: wrap,
+    bound,
+    update(symbol, value2) {
+      for (const fn of renderers.get(symbol) ?? []) fn(value2);
+    },
+    fit() {
+      for (const fn of fitters) fn();
+      followThePicture(wrap, hits);
+    }
+  };
+}
+function followThePicture(wrap, hits) {
+  const byY = [...hits].sort((a2, b) => a2.y - b.y);
+  const rows = [];
+  for (const hit of byY) {
+    const row = rows.find((r) => Math.abs(r.y - hit.y) < Math.max(r.height, hit.height) / 2);
+    if (row) row.hits.push(hit);
+    else rows.push({ y: hit.y, height: hit.height, hits: [hit] });
+  }
+  const wanted = rows.flatMap((r) => r.hits.sort((a2, b) => a2.x - b.x)).map((h2) => h2.box);
+  const current2 = [...wrap.children].filter((child) => wanted.includes(child));
+  if (wanted.every((box, i2) => box === current2[i2])) return;
+  for (const box of wanted) wrap.append(box);
+}
+function attachTrackDrag(box, input, port, track, isHorizontal) {
+  const owner = box.ownerDocument;
+  const Event = owner.defaultView?.Event;
+  if (!Event) return;
+  let dragging = false;
+  const at = (event) => {
+    const r = track.getBoundingClientRect();
+    const t = isHorizontal() ? (event.clientX - r.left) / r.width : (r.bottom - event.clientY) / r.height;
+    const next = port.minimum + clamp(t, 0, 1) * (port.maximum - port.minimum);
+    if (Number(input.value) === next) return;
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const move = (event) => {
+    if (dragging) at(event);
+  };
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    owner.removeEventListener("pointermove", move);
+    owner.removeEventListener("pointerup", end);
+    owner.removeEventListener("pointercancel", end);
+  };
+  box.addEventListener("pointerdown", (event) => {
+    if (event.button !== void 0 && event.button !== 0) return;
+    dragging = true;
+    input.focus?.();
+    event.preventDefault?.();
+    at(event);
+    owner.addEventListener("pointermove", move);
+    owner.addEventListener("pointerup", end);
+    owner.addEventListener("pointercancel", end);
+  });
+}
+
+// src/ui/Panel.js
+function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null } = {}) {
   const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
@@ -31778,9 +32409,18 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     root.classList.add("is-foreign");
   }
   const setters = /* @__PURE__ */ new Map();
-  const ungrouped = profile.ports.filter((p) => p.group == null);
+  const skinPanel = skin ? createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope }) : null;
+  if (skinPanel) {
+    root.append(skinPanel.element);
+    root.classList.add("has-skin");
+    for (const port of profile.ports) skinPanel.update(port.symbol, port.defaultValue);
+    const Observer = document2.defaultView?.ResizeObserver;
+    if (Observer) new Observer(() => skinPanel.fit()).observe(skinPanel.element);
+  }
+  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : profile.ports;
+  const ungrouped = unskinned.filter((p) => p.group == null);
   const groups = [];
-  for (const port of profile.ports) {
+  for (const port of unskinned) {
     if (port.group == null) continue;
     const group = groups.find((g) => g.label === port.group);
     if (group) group.ports.push(port);
@@ -31856,7 +32496,17 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     parent.append(controls);
     for (const port of ports) addControl(controls, port);
   }
-  if (ungrouped.length > 0) addGrid(root, ungrouped);
+  if (ungrouped.length > 0) {
+    if (skinPanel) {
+      const field = document2.createElement("fieldset");
+      field.className = "control-group";
+      const legend = document2.createElement("legend");
+      legend.textContent = "Other controls";
+      field.append(legend);
+      root.append(field);
+      addGrid(field, ungrouped);
+    } else addGrid(root, ungrouped);
+  }
   for (const group of groups) {
     const field = document2.createElement("fieldset");
     field.className = "control-group";
@@ -31897,7 +32547,10 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     /** Called by the host when a value actually changed. */
     update(symbol, value2) {
       setters.get(symbol)?.(value2);
-    }
+      skinPanel?.update(symbol, value2);
+    },
+    /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
+    skinned: skinPanel !== null
   };
 }
 
@@ -32190,6 +32843,8 @@ var ctx = {
   }
 };
 ctx.media = createMedia(document);
+ctx.skins = createSkins(ctx);
+ctx.skins.onReady(() => redraw());
 ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.sessions = createSessions(ctx);
@@ -32213,14 +32868,20 @@ function panelFor(nodeId) {
     panels.delete(nodeId);
     panel = null;
   }
+  const skinReady = ctx.skins.ready(profile);
+  if (panel && panel.skinned !== skinReady) {
+    panels.delete(nodeId);
+    panel = null;
+  }
   if (!panel) {
+    const skin = skinReady ? ctx.skins.prepare(profile, `panel-${nodeId}`) : null;
     panel = createPanel(document, profile, (symbol, value2) => {
       const applied = d.setParameter(nodeId, symbol, value2);
       if (applied.ok) panel.update(symbol, applied.value);
     }, async (key, file) => {
       const result = d.loadAsset(nodeId, key, await file.arrayBuffer());
       if (!result.ok) log(`${key}: ${result.message}`, "error");
-    }, { scope: `panel-${nodeId}` });
+    }, { scope: `panel-${nodeId}`, skin });
     panel.element.querySelector("h3")?.remove();
     panel.entry = entry;
     panels.set(nodeId, panel);

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  plugins/cascade/skin/panel.svg
+
+  Cascade's artwork. Plain SVG with no script: bindings are in skin.ttl, which names
+  elements by id. Knobs are drawn pointing straight up and the host turns them. The
+  freeze switch is two groups, off then on, and the mode selector is three, Plate, Hall
+  and Bloom; the host shows one. Each state is written as well as drawn, so none depends
+  on colour.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 230">
+  <rect x="0" y="0" width="420" height="230" rx="8" fill="#1a1e24" stroke="#2c333c"/>
+
+  <text x="70" y="24" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Mix</text>
+  <g id="mix-knob">
+    <circle id="mix-hub" cx="70" cy="78" r="32" fill="#0e1116" stroke="#3d8bfd" stroke-width="3"/>
+    <line x1="70" y1="78" x2="70" y2="52" stroke="#e6e8eb" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text id="mix-value" x="70" y="132" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">30%</text>
+
+  <text x="210" y="24" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Size</text>
+  <g id="size-knob">
+    <circle id="size-hub" cx="210" cy="78" r="32" fill="#0e1116" stroke="#3d8bfd" stroke-width="3"/>
+    <line x1="210" y1="78" x2="210" y2="52" stroke="#e6e8eb" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text id="size-value" x="210" y="132" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">24 ms</text>
+
+  <text x="350" y="24" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Damping</text>
+  <g id="damping-knob">
+    <circle id="damping-hub" cx="350" cy="78" r="32" fill="#0e1116" stroke="#3d8bfd" stroke-width="3"/>
+    <line x1="350" y1="78" x2="350" y2="52" stroke="#e6e8eb" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text id="damping-value" x="350" y="132" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">4200 Hz</text>
+
+  <text x="105" y="168" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Freeze</text>
+  <g id="freeze-switch">
+    <g id="freeze-off">
+      <rect x="65" y="178" width="80" height="34" rx="17" fill="#0e1116" stroke="#2c333c" stroke-width="2"/>
+      <circle cx="82" cy="195" r="11" fill="#9aa3ad"/>
+      <text x="116" y="200" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#e6e8eb">Off</text>
+    </g>
+    <g id="freeze-on">
+      <rect x="65" y="178" width="80" height="34" rx="17" fill="#3d8bfd" stroke="#e6e8eb" stroke-width="2"/>
+      <circle cx="128" cy="195" r="11" fill="#e6e8eb"/>
+      <text x="92" y="200" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#0e1116">On</text>
+    </g>
+  </g>
+
+  <text x="315" y="168" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#9aa3ad">Mode</text>
+  <g id="mode-steps">
+    <g id="mode-plate">
+      <rect x="250" y="178" width="130" height="34" rx="8" fill="#0e1116" stroke="#3d8bfd" stroke-width="2"/>
+      <text x="315" y="200" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">Plate (1 of 3)</text>
+    </g>
+    <g id="mode-hall">
+      <rect x="250" y="178" width="130" height="34" rx="8" fill="#0e1116" stroke="#3d8bfd" stroke-width="2"/>
+      <text x="315" y="200" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">Hall (2 of 3)</text>
+    </g>
+    <g id="mode-bloom">
+      <rect x="250" y="178" width="130" height="34" rx="8" fill="#0e1116" stroke="#3d8bfd" stroke-width="2"/>
+      <text x="315" y="200" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#e6e8eb">Bloom (3 of 3)</text>
+    </g>
+  </g>
+</svg>

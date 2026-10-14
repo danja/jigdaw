@@ -16,6 +16,7 @@ import { createVoice } from './app/Voice.js'
 import { createBounce } from './app/Bounce.js'
 import { createCarry } from './app/Carry.js'
 import { createScript } from './app/Script.js'
+import { createSkins } from './app/Skins.js'
 import { microphoneAvailable } from '../src/host/Microphone.js'
 import { createPanel } from '../src/ui/Panel.js'
 import { createTrackCards } from '../src/ui/TrackCards.js'
@@ -60,6 +61,8 @@ const ctx = {
   expose () { window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce } }
 }
 ctx.media = createMedia(document)
+ctx.skins = createSkins(ctx)
+ctx.skins.onReady(() => redraw())
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.sessions = createSessions(ctx)
@@ -91,14 +94,18 @@ function panelFor (nodeId) {
   if (!profile) return null
   let panel = panels.get(nodeId)
   if (panel && panel.entry !== entry) { panels.delete(nodeId); panel = null }
+  // A panel drawn before its skin arrived is drawn again with it. Asking also starts the fetch.
+  const skinReady = ctx.skins.ready(profile)
+  if (panel && panel.skinned !== skinReady) { panels.delete(nodeId); panel = null }
   if (!panel) {
+    const skin = skinReady ? ctx.skins.prepare(profile, `panel-${nodeId}`) : null
     panel = createPanel(document, profile, (symbol, value) => {
       const applied = d.setParameter(nodeId, symbol, value)
       if (applied.ok) panel.update(symbol, applied.value)
     }, async (key, file) => {
       const result = d.loadAsset(nodeId, key, await file.arrayBuffer())
       if (!result.ok) log(`${key}: ${result.message}`, 'error')
-    }, { scope: `panel-${nodeId}` })
+    }, { scope: `panel-${nodeId}`, skin })
     panel.element.querySelector('h3')?.remove()
     panel.entry = entry
     panels.set(nodeId, panel)

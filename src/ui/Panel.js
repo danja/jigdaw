@@ -2,9 +2,10 @@
 //
 // A control panel generated from a plugin's lv2:port declarations.
 //
-// Contract section 9.1: a plugin with no jig:ui gets this, and that is the
-// expected case rather than a degraded one. It is consistent with every other
-// plugin, it is accessible, and it costs the author nothing.
+// Contract section 9.1: a plugin with no jig:skin gets this, whether or not it
+// has a jig:ui, and that is the expected case rather than a degraded one. It is
+// consistent with every other plugin, it is accessible, and it costs the author
+// nothing. A jig:ui is an editor offered beside the panel, never instead of it.
 //
 // The widget is chosen by ProfileReader.widgetFor, from the shape of the
 // declaration. Nothing here inspects lv2:toggled itself.
@@ -20,52 +21,10 @@
 // `<input type="range">`, so nothing about the keyboard or the screen reader
 // changed when the look did.
 import { createDial } from './Dial.js'
+import { createSkinPanel } from './SkinPanel.js'
+import { formatValue, spokenValue } from './PortText.js'
 
-// Every unit any committed plugin declares must appear here and in
-// SPOKEN_UNITS below. A unit this does not know is not an error anywhere: the
-// control renders a bare number and nothing reports the loss, which is the
-// difference between 4200 and 4200 Hz going missing in silence.
-// tests/ui/Panel.test.js walks plugins/ and fails on a unit neither table
-// knows.
-export const UNIT_LABELS = Object.freeze({
-  'http://lv2plug.in/ns/extensions/units#hz': 'Hz',
-  'http://lv2plug.in/ns/extensions/units#ms': 'ms',
-  'http://lv2plug.in/ns/extensions/units#db': 'dB',
-  'http://lv2plug.in/ns/extensions/units#s': 's',
-  'http://lv2plug.in/ns/extensions/units#pc': '%',
-  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'st',
-  'http://lv2plug.in/ns/extensions/units#cent': 'ct'
-})
-
-export const formatValue = (port, value) => {
-  const unit = UNIT_LABELS[port.unit]
-  const decimals = port.maximum - port.minimum > 20 ? 0 : 2
-  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
-}
-
-/**
- * What a screen reader should say for a value.
- *
- * WCAG 4.1.2 wants a name, a role and a value. A range reports its value as a
- * bare number unless told otherwise, and "4200" and "4200 hertz" are different
- * information. Units are spelled out because an abbreviation is read as
- * letters.
- */
-export const SPOKEN_UNITS = Object.freeze({
-  'http://lv2plug.in/ns/extensions/units#hz': 'hertz',
-  'http://lv2plug.in/ns/extensions/units#ms': 'milliseconds',
-  'http://lv2plug.in/ns/extensions/units#db': 'decibels',
-  'http://lv2plug.in/ns/extensions/units#s': 'seconds',
-  'http://lv2plug.in/ns/extensions/units#pc': 'percent',
-  'http://lv2plug.in/ns/extensions/units#semitone12TET': 'semitones',
-  'http://lv2plug.in/ns/extensions/units#cent': 'cents'
-})
-
-export const spokenValue = (port, value) => {
-  const unit = SPOKEN_UNITS[port.unit]
-  const decimals = port.maximum - port.minimum > 20 ? 0 : 2
-  return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
-}
+export { UNIT_LABELS, formatValue, SPOKEN_UNITS, spokenValue } from './PortText.js'
 
 /**
  * Build a panel. `onChange(symbol, value)` is called on input; the panel does
@@ -81,8 +40,13 @@ export const spokenValue = (port, value) => {
  * when a profile declares none: most plugins have nothing a person loads at
  * runtime, and this must cost them nothing, the same rule every other
  * generated control here already follows.
+ *
+ * `skin`, from src/host/SkinLoader.js, is the plugin's own artwork already built
+ * from the allowlist (docs/svg-skins.md). It is drawn first, and the generated
+ * controls follow for every port it does not bind, so a skin can show a subset
+ * of the ports and cannot make one unreachable (contract section 9.4).
  */
-export function createPanel (document, profile, onChange, onLoadAsset, { scope = profile.iri } = {}) {
+export function createPanel (document, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null } = {}) {
   // What the control ids are made from. The plugin IRI by default, and a host
   // showing two instances of one plugin passes something per instance: two
   // panels built from one IRI gave every control an id the other also had, so
@@ -125,13 +89,25 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
 
   const setters = new Map()
 
+  const skinPanel = skin ? createSkinPanel(document, { ...skin, ports: profile.ports }, onChange, { scope }) : null
+  if (skinPanel) {
+    root.append(skinPanel.element)
+    root.classList.add('has-skin')
+    for (const port of profile.ports) skinPanel.update(port.symbol, port.defaultValue)
+    // The hit areas are placed from measurements, which exist only once the element is in a page
+    // and change with its width, so the observer does both.
+    const Observer = document.defaultView?.ResizeObserver
+    if (Observer) new Observer(() => skinPanel.fit()).observe(skinPanel.element)
+  }
+  const unskinned = skinPanel ? profile.ports.filter(p => !skinPanel.bound.has(p.symbol)) : profile.ports
+
   // Ports render in sections: ungrouped ports first, exactly as a plugin with
   // no groups renders today, then one named section per group in order of
   // first appearance. A fieldset names its controls to assistive technology;
   // a visible heading alone would name them only to sight.
-  const ungrouped = profile.ports.filter(p => p.group == null)
+  const ungrouped = unskinned.filter(p => p.group == null)
   const groups = []
-  for (const port of profile.ports) {
+  for (const port of unskinned) {
     if (port.group == null) continue
     const group = groups.find(g => g.label === port.group)
     if (group) group.ports.push(port)
@@ -243,7 +219,18 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     for (const port of ports) addControl(controls, port)
   }
 
-  if (ungrouped.length > 0) addGrid(root, ungrouped)
+  if (ungrouped.length > 0) {
+    if (skinPanel) {
+      // Under a drawing, controls the drawing does not have need saying so.
+      const field = document.createElement('fieldset')
+      field.className = 'control-group'
+      const legend = document.createElement('legend')
+      legend.textContent = 'Other controls'
+      field.append(legend)
+      root.append(field)
+      addGrid(field, ungrouped)
+    } else addGrid(root, ungrouped)
+  }
   for (const group of groups) {
     const field = document.createElement('fieldset')
     field.className = 'control-group'
@@ -293,6 +280,11 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
   return {
     element: root,
     /** Called by the host when a value actually changed. */
-    update (symbol, value) { setters.get(symbol)?.(value) }
+    update (symbol, value) {
+      setters.get(symbol)?.(value)
+      skinPanel?.update(symbol, value)
+    },
+    /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
+    skinned: skinPanel !== null
   }
 }

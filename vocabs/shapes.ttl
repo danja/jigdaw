@@ -149,10 +149,10 @@ jig:ArtworkShape a sh:NodeShape ;
     ] .
 
 jig:ControlShape a sh:NodeShape ;
-    sh:targetClass jig:Rotary , jig:Linear , jig:Toggle , jig:Selector , jig:Readout ;
+    sh:targetClass jig:RotaryControl , jig:LinearControl , jig:ToggleControl , jig:SelectorControl , jig:ReadoutControl ;
     rdfs:label "Control shape" ;
     sh:property [
-        sh:path jig:portSymbol ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:path jig:boundSymbol ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
         sh:message "A control names the port it sets by its lv2:symbol, once."
     ] ;
     sh:property [
@@ -162,14 +162,14 @@ jig:ControlShape a sh:NodeShape ;
     sh:property [ sh:path jig:hitElement ; sh:maxCount 1 ; sh:datatype xsd:string ] .
 
 jig:RotaryShape a sh:NodeShape ;
-    sh:targetClass jig:Rotary ;
+    sh:targetClass jig:RotaryControl ;
     rdfs:label "Rotary shape" ;
     sh:property [ sh:path jig:angleMin ; sh:minCount 1 ; sh:maxCount 1 ; sh:or ( [ sh:datatype xsd:integer ] [ sh:datatype xsd:decimal ] [ sh:datatype xsd:double ] ) ; sh:message "A rotary control needs jig:angleMin, in degrees clockwise." ] ;
     sh:property [ sh:path jig:angleMax ; sh:minCount 1 ; sh:maxCount 1 ; sh:or ( [ sh:datatype xsd:integer ] [ sh:datatype xsd:decimal ] [ sh:datatype xsd:double ] ) ; sh:message "A rotary control needs jig:angleMax, in degrees clockwise." ] ;
     sh:property [ sh:path jig:pivotElement ; sh:maxCount 1 ; sh:datatype xsd:string ] .
 
 jig:LinearShape a sh:NodeShape ;
-    sh:targetClass jig:Linear ;
+    sh:targetClass jig:LinearControl ;
     rdfs:label "Linear shape" ;
     sh:property [ sh:path jig:trackElement ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:message "A linear control needs jig:trackElement, the element whose length is the travel." ] .
 

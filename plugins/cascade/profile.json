@@ -98,5 +98,68 @@
       "paramIndex": 4
     }
   ],
-  "abi": "jig:Abi1"
+  "abi": "jig:Abi1",
+  "skin": {
+    "file": "skin/skin.ttl",
+    "artwork": "skin/panel.svg",
+    "controls": [
+      {
+        "id": "mix",
+        "kind": "rotary",
+        "port": "mix",
+        "element": "mix-knob",
+        "pivot": "mix-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "mix-value",
+        "kind": "readout",
+        "port": "mix",
+        "element": "mix-value"
+      },
+      {
+        "id": "size",
+        "kind": "rotary",
+        "port": "size",
+        "element": "size-knob",
+        "pivot": "size-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "size-value",
+        "kind": "readout",
+        "port": "size",
+        "element": "size-value"
+      },
+      {
+        "id": "damping",
+        "kind": "rotary",
+        "port": "damping",
+        "element": "damping-knob",
+        "pivot": "damping-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "damping-value",
+        "kind": "readout",
+        "port": "damping",
+        "element": "damping-value"
+      },
+      {
+        "id": "freeze",
+        "kind": "toggle",
+        "port": "freeze",
+        "element": "freeze-switch"
+      },
+      {
+        "id": "mode",
+        "kind": "selector",
+        "port": "mode",
+        "element": "mode-steps"
+      }
+    ]
+  }
 }

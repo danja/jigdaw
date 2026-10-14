@@ -101,34 +101,34 @@ jig:Artwork a owl:Class ;
 
 jig:Control a owl:Class ;
     rdfs:label "Control" ;
-    rdfs:comment """A binding of one port, named by jig:portSymbol, to one element of the
+    rdfs:comment """A binding of one port, named by jig:boundSymbol, to one element of the
         artwork, named by jig:element. The subclasses say how the host moves the element
         and what role it gives it. The host does the pointer, the keyboard and the
         accessibility semantics; the artwork supplies only the picture.""" .
 
-jig:Rotary a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Rotary" ;
+jig:RotaryControl a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Rotary" ;
     rdfs:comment """The element turns about the centre of jig:pivotElement (default: its own
         centre) from jig:angleMin at the port minimum to jig:angleMax at the maximum,
         in degrees clockwise. Role slider.""" .
 
-jig:Linear a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Linear" ;
+jig:LinearControl a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Linear" ;
     rdfs:comment """The element slides along the longer side of the bounding box of
         jig:trackElement, from the low end at the port minimum to the high end at the
         maximum. Role slider.""" .
 
-jig:Toggle a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Toggle" ;
+jig:ToggleControl a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Toggle" ;
     rdfs:comment """The element has two child groups, the first drawn when the port is off
         and the second when it is on. Role switch.""" .
 
-jig:Selector a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Selector" ;
+jig:SelectorControl a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Selector" ;
     rdfs:comment """The element has one child group per step of an enumerated or integer
         port, in order, and only the child for the current value is drawn. Role
-        radiogroup.""" .
+        slider, with the step's label as its value text.""" .
 
-jig:Readout a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Readout" ;
+jig:ReadoutControl a owl:Class ; rdfs:subClassOf jig:Control ; rdfs:label "Readout" ;
     rdfs:comment """The element is an SVG text element whose content is set to the port's
-        value formatted with its unit. Not focusable, and its text is also the accessible
-        value of the control it sits beside.""" .
+        value formatted with its unit. Not focusable and hidden from assistive technology,
+        because the control beside it already reports its value.""" .
 
 jig:Capability a owl:Class ;
     rdfs:label "Capability" ;
@@ -172,8 +172,8 @@ jig:skin a owl:ObjectProperty ;
     rdfs:domain jig:WebPlugin ; rdfs:range jig:Skin ;
     rdfs:label "skin" ;
     rdfs:comment """The plugin's declarative interface. Optional, and independent of
-        jig:ui: where both are present the host uses jig:ui, and where neither is present
-        it generates a panel.""" .
+        jig:ui: the panel is the skin where there is one and a generated panel where there
+        is not, and a jig:ui is an editor offered beside whichever it is.""" .
 
 jig:artwork a owl:ObjectProperty ;
     rdfs:range jig:Artwork ;
@@ -187,7 +187,7 @@ jig:control a owl:ObjectProperty ;
     rdfs:range jig:Control ;
     rdfs:label "control" .
 
-jig:portSymbol a owl:DatatypeProperty ;
+jig:boundSymbol a owl:DatatypeProperty ;
     rdfs:domain jig:Control ; rdfs:range xsd:string ;
     rdfs:label "port symbol" ;
     rdfs:comment """The lv2:symbol of the port this control sets. The symbol is the name
@@ -206,19 +206,19 @@ jig:hitElement a owl:DatatypeProperty ;
         The host pads whatever it is to 44 CSS pixels (contract section 9.4).""" .
 
 jig:pivotElement a owl:DatatypeProperty ;
-    rdfs:domain jig:Rotary ; rdfs:range xsd:string ;
+    rdfs:domain jig:RotaryControl ; rdfs:range xsd:string ;
     rdfs:label "pivot element" .
 
 jig:trackElement a owl:DatatypeProperty ;
-    rdfs:domain jig:Linear ; rdfs:range xsd:string ;
+    rdfs:domain jig:LinearControl ; rdfs:range xsd:string ;
     rdfs:label "track element" .
 
 jig:angleMin a owl:DatatypeProperty ;
-    rdfs:domain jig:Rotary ; rdfs:range xsd:decimal ;
+    rdfs:domain jig:RotaryControl ; rdfs:range xsd:decimal ;
     rdfs:label "angle at minimum" .
 
 jig:angleMax a owl:DatatypeProperty ;
-    rdfs:domain jig:Rotary ; rdfs:range xsd:decimal ;
+    rdfs:domain jig:RotaryControl ; rdfs:range xsd:decimal ;
     rdfs:label "angle at maximum" .
 
 jig:asset a owl:ObjectProperty ;

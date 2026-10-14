@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  183 terms.
+  184 terms.
 </p>
 
 <h2>Classes</h2>
@@ -80,7 +80,7 @@
         connections with named endpoints, never as a list, so the graph is a faithful
         picture of the dataflow rather than an encoding of one.</dd>
   <dt id="Control"><code>jig:Control</code></dt>
-  <dd>A binding of one port, named by jig:portSymbol, to one element of the
+  <dd>A binding of one port, named by jig:boundSymbol, to one element of the
         artwork, named by jig:element. The subclasses say how the host moves the element
         and what role it gives it. The host does the pointer, the keyboard and the
         accessibility semantics; the artwork supplies only the picture.</dd>
@@ -108,7 +108,7 @@
         Inspection is authoritative for technical facts and the curated profile is
         authoritative for what the signals mean, because the two answer different
         questions and the second cannot be derived from the first.</dd>
-  <dt id="Linear"><code>jig:Linear</code></dt>
+  <dt id="LinearControl"><code>jig:LinearControl</code> <span class="label">Linear</span></dt>
   <dd>The element slides along the longer side of the bounding box of
         jig:trackElement, from the low end at the port minimum to the high end at the
         maximum. Role slider.</dd>
@@ -149,17 +149,17 @@
         registerProcessor and is the only plugin code that runs on the audio thread.</dd>
   <dt id="Project"><code>jig:Project</code></dt>
   <dd>A session: tracks, nodes, connections, parameter settings, clips and transport.</dd>
-  <dt id="Readout"><code>jig:Readout</code></dt>
+  <dt id="ReadoutControl"><code>jig:ReadoutControl</code> <span class="label">Readout</span></dt>
   <dd>The element is an SVG text element whose content is set to the port's
-        value formatted with its unit. Not focusable, and its text is also the accessible
-        value of the control it sits beside.</dd>
+        value formatted with its unit. Not focusable and hidden from assistive technology,
+        because the control beside it already reports its value.</dd>
   <dt id="Region"><code>jig:Region</code></dt>
   <dd>A named range of the arrangement, from trn:startBeat for trn:lengthBeats.</dd>
   <dt id="Resource"><code>jig:Resource</code></dt>
   <dd>A fetchable file belonging to a plugin. Its jig:location is resolved
         against the profile's own IRI, so a profile that moves keeps working and a plugin
         can be served from a directory copied anywhere.</dd>
-  <dt id="Rotary"><code>jig:Rotary</code></dt>
+  <dt id="RotaryControl"><code>jig:RotaryControl</code> <span class="label">Rotary</span></dt>
   <dd>The element turns about the centre of jig:pivotElement (default: its own
         centre) from jig:angleMin at the port minimum to jig:angleMax at the maximum,
         in degrees clockwise. Role slider.</dd>
@@ -171,10 +171,10 @@
         checks it in full first.</dd>
   <dt id="ScriptLanguage"><code>jig:ScriptLanguage</code> <span class="label">Script language</span></dt>
   <dd>A language a script can be in, so a host can tell a script it can run from one it cannot.</dd>
-  <dt id="Selector"><code>jig:Selector</code></dt>
+  <dt id="SelectorControl"><code>jig:SelectorControl</code> <span class="label">Selector</span></dt>
   <dd>The element has one child group per step of an enumerated or integer
         port, in order, and only the child for the current value is drawn. Role
-        radiogroup.</dd>
+        slider, with the step's label as its value text.</dd>
   <dt id="Send"><code>jig:Send</code></dt>
   <dd>A copy of one track's signal, at a level and a tap point, into another
         track. A return is an ordinary track that is the target of a send; nothing marks
@@ -198,7 +198,7 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="TempoPoint"><code>jig:TempoPoint</code> <span class="label">Tempo Point</span></dt>
   <dd>A tempo, from a given beat onward. Ordered by jig:atBeat, not by position in a list.</dd>
-  <dt id="Toggle"><code>jig:Toggle</code></dt>
+  <dt id="ToggleControl"><code>jig:ToggleControl</code> <span class="label">Toggle</span></dt>
   <dd>The element has two child groups, the first drawn when the port is off
         and the second when it is on. Role switch.</dd>
   <dt id="Track"><code>jig:Track</code></dt>
@@ -344,8 +344,8 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="skin"><code>jig:skin</code></dt>
   <dd>The plugin's declarative interface. Optional, and independent of
-        jig:ui: where both are present the host uses jig:ui, and where neither is present
-        it generates a panel.</dd>
+        jig:ui: the panel is the skin where there is one and a generated panel where there
+        is not, and a jig:ui is an editor offered beside whichever it is.</dd>
   <dt id="source"><code>jig:source</code></dt>
   <dd>The audio file this clip plays, by IRI. A relative IRI resolves
         against the session document, which is how a session saved beside its media
@@ -388,6 +388,10 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="beatUnit"><code>jig:beatUnit</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="boundSymbol"><code>jig:boundSymbol</code> <span class="label">port symbol</span></dt>
+  <dd>The lv2:symbol of the port this control sets. The symbol is the name
+        the wire format already uses (messaging.md), so a skin depends on nothing in the
+        profile except that name.</dd>
   <dt id="bpm"><code>jig:bpm</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="bypassed"><code>jig:bypassed</code></dt>
@@ -514,9 +518,9 @@
   <dt id="portIndex"><code>jig:portIndex</code> <span class="label">port index</span></dt>
   <dd>Which audio input or output, zero-based, as Web Audio numbers them.</dd>
   <dt id="portSymbol"><code>jig:portSymbol</code> <span class="label">port symbol</span></dt>
-  <dd>The lv2:symbol of the port this control sets. The symbol is the name
-        the wire format already uses (messaging.md), so a skin depends on nothing in the
-        profile except that name.</dd>
+  <dd>The lv2:symbol of a parameter, when a connection targets one rather than
+        an audio port. Modulating a parameter is an edge to a named thing, not to a numbered
+        one.</dd>
   <dt id="registeredName"><code>jig:registeredName</code> <span class="label">registered name</span></dt>
   <dd>The name the processor module passes to registerProcessor. The host
         needs it to construct the AudioWorkletNode, and there is no way to ask a worklet
@@ -596,10 +600,8 @@ emit through and no transport to be in time with.</dd>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="KRate"><code>jig:KRate</code> <span class="label">k-rate</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
-  <dt id="Linear"><code>jig:Linear</code></dt>
-  <dd>The element slides along the longer side of the bounding box of
-        jig:trackElement, from the low end at the port minimum to the high end at the
-        maximum. Role slider.</dd>
+  <dt id="Linear"><code>jig:Linear</code> <span class="label">linear</span></dt>
+  <dd>Straight line to the next point.</dd>
   <dt id="MasterGain"><code>jig:MasterGain</code> <span class="label">master gain</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="MasterPan"><code>jig:MasterPan</code> <span class="label">master pan</span></dt>

@@ -21,6 +21,7 @@ import { createTransport } from './app/Transport.js'
 import { createRecord } from './app/Record.js'
 import { createRack } from './app/Rack.js'
 import { createEditors } from './app/Editors.js'
+import { createSkins } from './app/Skins.js'
 import { createArrangement } from './app/Arrangement.js'
 import { createDockPanel } from './app/Dock.js'
 import { createMatrix } from './app/Matrix.js'
@@ -73,6 +74,7 @@ ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.record = createRecord(ctx)
 ctx.editors = createEditors(ctx)
+ctx.skins = createSkins(ctx)
 ctx.selection = new Selection()
 ctx.dock = createDockPanel(ctx)
 ctx.arrangement = createArrangement(ctx)
@@ -83,6 +85,7 @@ ctx.master = createMaster(ctx)
 ctx.meters = createMeters(ctx)
 ctx.pwa = createPwa(ctx)
 ctx.rack = createRack(ctx)
+ctx.skins.onReady(() => ctx.rack.draw())
 ctx.loading = createLoading(ctx)
 ctx.browser = createBrowser(ctx)
 ctx.sessions = createSessions(ctx)

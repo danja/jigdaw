@@ -615,14 +615,18 @@ export function createRack (ctx) {
 
     if (!profile) return
     let panel = panels.get(node.id)
+    // A panel drawn before its skin arrived is drawn again with it. Asking also starts the fetch.
+    const skinReady = ctx.skins.ready(profile)
+    if (panel && panel.skinned !== skinReady) panel = null
     if (!panel) {
+      const skin = skinReady ? ctx.skins.prepare(profile, `panel-${node.id}`) : null
       panel = createPanel(document, profile, (symbol, value) => {
         const applied = dispatcher.setParameter(node.id, symbol, value)
         if (applied.ok) panel.update(symbol, applied.value)
       }, async (key, file) => {
         const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer())
         if (!result.ok) log(`${node.id}.${key}: ${result.message}`, 'error')
-      }, { scope: `panel-${node.id}` })
+      }, { scope: `panel-${node.id}`, skin })
       panels.set(node.id, panel)
     }
     // node.settings is the model's record of what was actually set, post

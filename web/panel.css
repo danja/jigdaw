@@ -55,7 +55,16 @@
    inside a 52px knob. Invisible today, since it is out of flow and takes no
    pointer events, and exactly the kind of thing that is not invisible the
    day one of those changes. */
-input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
-input[type=checkbox] { width:22px; height:22px; }
+input[type=range]:not(.dial-input):not(.skin-input) { width:100%; min-width:0; height:40px; }
+input[type=checkbox]:not(.skin-input) { width:22px; height:22px; }
 /* A touch target is 44px (CLAUDE.md): on a phone the generated switches and triggers are that size. */
-@media (max-width: 720px) { input[type=checkbox] { width:44px; height:44px; } }
+@media (max-width: 720px) { input[type=checkbox]:not(.skin-input) { width:44px; height:44px; } }
+
+/* A skin: the author's artwork, drawn and operated by the host (docs/svg-skins.md). As with the knob, a
+   native input is laid over each control's hit area, invisible and still focusable, and the focus ring goes
+   on the box around it. The box is at least 44px each way however small the drawing of the control is. */
+.skin { position:relative; width:100%; max-width:560px; margin:0 auto 12px; }
+.skin svg { display:block; width:100%; height:auto; }
+.skin-hit { position:absolute; transform:translate(-50%,-50%); min-width:44px; min-height:44px; touch-action:none; cursor:pointer; }
+.skin-hit:focus-within { outline:2px solid #7fb3ff; outline-offset:2px; }
+.skin-input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; pointer-events:none; }
