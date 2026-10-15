@@ -16,6 +16,29 @@
 import { attachDrag } from './Dial.js'
 import { formatValue, spokenValue } from './PortText.js'
 
+// How much of the smaller of two hit areas another may cover before the pair counts as too close. A little overlap is
+// the padding of two neighbours meeting, which a tap resolves to the nearer; a quarter is where it stops being clear.
+const CRAMPED_OVERLAP = 0.25
+
+// A touch target, in CSS pixels (AGENTS.md): the stylesheet pads every hit area to this.
+const MIN_TARGET = 44
+
+/** The part of the smaller rectangle that the other covers, from 0 to 1. Rectangles as { left, right, top, bottom, width, height }. */
+export function overlapFraction (a, b) {
+  const w = Math.min(a.right, b.right) - Math.max(a.left, b.left)
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)
+  if (w <= 0 || h <= 0) return 0
+  return (w * h) / Math.min(a.width * a.height, b.width * b.height)
+}
+
+/** The width inside an element's padding, or 0 where there is no layout. Browser only. */
+function contentWidth (element) {
+  const view = element?.ownerDocument?.defaultView
+  if (!element || !view?.getComputedStyle) return 0
+  const style = view.getComputedStyle(element)
+  return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+}
+
 const clamp = (n, low, high) => Math.min(high, Math.max(low, n))
 const fractionOf = (port, value) => {
   const span = port.maximum - port.minimum
@@ -35,13 +58,17 @@ const withSlide = (base, slide) => [slide, base].filter(Boolean).join(' ')
  * @param {(symbol: string, value: number) => void} onChange
  * @param {{ scope: string, measure?: (element: Element) => { x, y, width, height } }} options
  *   measure defaults to getBBox, which needs a layout; a test supplies its own
- * @returns {{ element: Element, update: (symbol: string, value: number) => void, fit: () => void, bound: Set<string> }}
- *   fit() places the hit areas and the pivots, and is called once the element is in the document and again on resize
+ * @returns {{ element: Element, update: (symbol: string, value: number) => void, fit: () => void, bound: Set<string>, onCramped: (fn: (cramped: boolean) => void) => void, cramped: boolean }}
+ *   fit() places the hit areas and the pivots, and is called once the element is in the document and again on resize.
+ *   It then says whether the padded hit areas would overlap so much, at the width the drawing is given, that a tap would
+ *   often land on the wrong one (see overlapFraction). `availableWidth` is that width, and a test supplies it
  */
-export function createSkinPanel (document, skin, onChange, { scope, measure = el => el.getBBox() }) {
+export function createSkinPanel (document, skin, onChange, { scope, measure = el => el.getBBox(), availableWidth = null }) {
   const wrap = document.createElement('div')
   wrap.className = 'skin'
   wrap.append(skin.svg)
+  // The room the panel has is the room its parent has, which is known even while the drawing is put away.
+  const roomFor = availableWidth ?? (() => contentWidth(wrap.parentNode))
   // The viewBox width is the artwork's natural size in CSS pixels: it shrinks to fit a narrow panel and does not grow
   // past what the author drew, so a 320 unit panel is not blown up to the width of a desktop and a 720 unit one is not
   // squeezed to a size where its text is small. Without a viewBox, fit() refuses the artwork.
@@ -51,7 +78,7 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
   const ports = new Map(skin.ports.map(p => [p.symbol, p]))
   const renderers = new Map()   // symbol -> [function (value)]
   const fitters = []
-  const hits = []     // { box, centre: { x, y }, height }, as last measured
+  const hits = []     // { box, x, y, width, height } in viewBox units, as last measured with the drawing showing
   const bound = new Set()
 
   const render = (symbol, fn) => {
@@ -63,7 +90,8 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
   function hitArea (control, port, input) {
     const box = document.createElement('div')
     box.className = 'skin-hit'
-    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, '_')
+    // `skin-` keeps it apart from the generated control for the same port, which exists when this is too cramped to use.
+    const id = `${scope}#skin-${port.symbol}`.replace(/[^\w-]/g, '_')
     input.id = id
     input.className = 'skin-input'
     // The drawing holds a visible label, but nothing ties it to the control, so the name is stated here.
@@ -71,14 +99,17 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
     box.append(input)
     wrap.append(box)
     const target = skin.elements.get(control.hitElement ?? control.element)
-    const hit = { box, x: 0, y: 0, height: 0 }
+    const hit = { box, x: 0, y: 0, width: 0, height: 0 }
     hits.push(hit)
     fitters.push(() => {
       const [vx, vy, vw, vh] = (skin.svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number)
       if (![vx, vy, vw, vh].every(Number.isFinite) || vw <= 0 || vh <= 0) throw new Error('a skin artwork needs a viewBox, which is what the hit areas are placed by')
       const vb = { x: vx, y: vy, width: vw, height: vh }
       const b = measure(target)
-      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, height: b.height })
+      // An element that is not being drawn measures as nothing. The last measurement stands, since the drawing may be put
+      // away because it is cramped, and cramped has to be worked out again from sizes while it is away.
+      if (!b.width && !b.height) return
+      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, width: b.width, height: b.height })
       box.style.left = `${((b.x + b.width / 2 - vb.x) / vb.width) * 100}%`
       box.style.top = `${((b.y + b.height / 2 - vb.y) / vb.height) * 100}%`
       box.style.width = `${(b.width / vb.width) * 100}%`
@@ -119,6 +150,7 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
       let centre = { x: 0, y: 0 }
       fitters.push(() => {
         const b = measure(pivot)
+        if (!b.width && !b.height) return
         centre = { x: b.x + b.width / 2, y: b.y + b.height / 2 }
       })
       render(port.symbol, v => {
@@ -137,6 +169,7 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
       let travel = { dx: 0, dy: 0, horizontal: true }
       fitters.push(() => {
         const b = measure(track)
+        if (!b.width && !b.height) return
         const horizontal = b.width >= b.height
         travel = { dx: horizontal ? b.width : 0, dy: horizontal ? 0 : -b.height, horizontal }
       })
@@ -201,13 +234,36 @@ export function createSkinPanel (document, skin, onChange, { scope, measure = el
     }
   }
 
+  let cramped = false
+  const listeners = []
+
   return {
     element: wrap,
     bound,
+    get cramped () { return cramped },
+    /** Called with the answer after each fit, so the owner can put the drawing away when it cannot be used. */
+    onCramped (fn) { listeners.push(fn) },
     update (symbol, value) { for (const fn of renderers.get(symbol) ?? []) fn(value) },
     fit () {
       for (const fn of fitters) fn()
       followThePicture(wrap, hits)
+      // Cramped is worked out from sizes in the drawing's own units and the width it is given, not from what is on
+      // screen, so it can be worked out while the drawing is put away and the answer can change back.
+      const [, , vw] = (skin.svg.getAttribute('viewBox') ?? '').trim().split(/[\s,]+/).map(Number)
+      const width = Math.min(vw, roomFor())
+      const known = hits.filter(h => h.width > 0 || h.height > 0)
+      // No layout (a DOM with no renderer, or a panel that has not been shown yet) gives no width, and says nothing either way.
+      if (!(width > 0) || known.length === 0) return
+      const scale = width / vw
+      const padded = known.map(h => {
+        const w = Math.max(MIN_TARGET, h.width * scale)
+        const t = Math.max(MIN_TARGET, h.height * scale)
+        const x = h.x * scale
+        const y = h.y * scale
+        return { left: x - w / 2, right: x + w / 2, top: y - t / 2, bottom: y + t / 2, width: w, height: t }
+      })
+      cramped = padded.some((a, i) => padded.slice(i + 1).some(c => overlapFraction(a, c) > CRAMPED_OVERLAP))
+      for (const fn of listeners) fn(cramped)
     }
   }
 }

@@ -69,9 +69,13 @@ whatever it left undone as an item of its own. Review periodically. What is buil
       (mix, size, damping, freeze, mode). **Not done:** (1) a Toggle's two-state text and a Selector's wrap on press are seen, but a skin with a
       vertical Linear control has not been drawn; (2) the
       simple page shows Cascade's skin since 2026-10-14, with the piece's own settings, after a fix: the sound rack kept the panels it had
-      when a skin finished loading, so `SoundRack.invalidate()` now makes them again; (3) a screen reader and a phone-width touch drag
-      have not been tried; (4) `check:skins` is not part of `npm test` (Chrome); (5) done 2026-10-14: Parameq has a skin (`plugins/parameq/skin/`, six bands of On, type, Freq and Gain; the six Q ports are left unbound on purpose and
-      appear under "Other controls") beside its `jig:ui`, and contract 9.4 now says the editor is offered beside the panel. Seen in Chrome: dragging the
+      when a skin finished loading, so `SoundRack.invalidate()` now makes them again; (3) done 2026-10-14: a vertical linear control (Boost's fader, `plugins/boost/skin/`) was driven in Chrome: a press a quarter of the way up read 0.50,
+      a drag off to the side clamped at 2.00, ten arrow presses moved it 0.10 with the focus kept, touch-type pointer events moved it and stopped at release,
+      and the control reaches the accessibility tree as a slider named Gain with value text; **a real screen reader and a real finger are still not tried**.
+      Found on the way: at phone widths a dense skin's padded targets overlapped (Parameq's switch, type plate and knob), so `createSkinPanel` now works
+      out whether they would at the width given, from the drawing's units, and `createPanel` puts the drawing away and draws generated controls for every port
+      when they would (and brings it back); the Chrome window used here renders at about 1.5 frames a second, so those checks needed 2 s waits; (4) `check:skins` is not part of `npm test` (Chrome); (5) done 2026-10-14: Parameq has a skin (`plugins/parameq/skin/`, six bands of On, type, Freq, Gain and Q, a vintage look; Q was first left unbound to see
+      "Other controls" work, and was bound on request) beside its `jig:ui`, and contract 9.4 now says the editor is offered beside the panel. Seen in Chrome: dragging the
       skin's Band 3 gain knob to +12 dB moved the sandboxed editor's curve and slider, and a `setParameter` from outside moved the skin's knob. To see an
       editor locally the plugin must be on another origin than the page, so load `http://localhost:8748/plugins/parameq/` into the page at
       `127.0.0.1:8748`; on the same origin the Open editor button is correctly left out;
@@ -79,7 +83,7 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 
 - [ ] **Conductor, what is left.** 2026-10-13. Built: an editable form of up to 12 steps (`form_1` to `form_12`, ending at the first
       0), a minimum and maximum bars per section (0 uses the general limits), and a scene, density, energy, mutation and restart value per section; the
-      defaults reproduce the VST3, tested in `tests/host/conductor.test.js`. **`jig:ui` built 2026-10-13** (`plugins/conductor/ui/index.html`, `tests/ui/conductor-ui.test.js`): the form as a row of selectors, then a block per section; not yet looked at in a browser. **Left:** (1) the editor is not seen in a browser; (2) a section count that is
+      defaults reproduce the VST3, tested in `tests/host/conductor.test.js`. **`jig:ui` built 2026-10-13** (`plugins/conductor/ui/index.html`, `tests/ui/conductor-ui.test.js`): the form as a row of selectors, then a block per section; seen in Chrome 2026-10-14: it opens in the sandboxed frame, typing 55 into Development density reached the host (`develop_density` 55), and at 390px wide it is two columns with no sideways scroll. **Left:** (1) the other controls in it (selects, the reset checkboxes) were not driven, only the number field; (2) a section count that is
       not fixed at five, a transition CC ramping across the bar before a boundary, a lead-in before the boundary, and a time signature
       override are not built; (3) not heard or seen in a browser; **downstream, 2026-10-13:** Sprout, Markov and MelGen now ignore notes on the Conductor channel (the
       section note had been taken as a held key, a line to learn and a line to follow), tested in each plugin's host test; not changed, and

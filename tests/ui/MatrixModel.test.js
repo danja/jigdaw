@@ -47,6 +47,26 @@ describe('buildMatrix', () => {
     expect(alone.rows).toEqual([])
   })
 
+  it('lists the plugins whose audio ends at their track\'s fader: an output with nothing after it', () => {
+    // fx has an audio output and nothing leaves it; synth feeds fx; gen has no audio output.
+    expect(buildMatrix(project, helpers()).ends.map(e => e.text)).toEqual(['Reverb on Lead'])
+  })
+
+  it('lists a plugin that is the only audio plugin in the project, though no row is left for it', () => {
+    // The case that was reported: an effect added to a project with no other audio input.
+    project.apply([{ op: 'removeNode', id: 'synth' }])
+    const m = buildMatrix(project, helpers())
+    expect(m.rows).toEqual([])
+    expect(m.ends.map(e => e.text)).toEqual(['Reverb on Lead'])
+  })
+
+  it('does not list a plugin that something follows, a bypassed one, or one with no audio output', () => {
+    expect(buildMatrix(project, helpers()).ends.map(e => e.text)).not.toContain('Synth on Lead')
+    expect(buildMatrix(project, helpers()).ends.map(e => e.text)).not.toContain('Gen on Drums')
+    project.apply([{ op: 'setNode', id: 'fx', bypassed: true }])
+    expect(buildMatrix(project, helpers()).ends).toEqual([])
+  })
+
   it('follows a moved track', () => {
     project.moveTrack('t2', -1)
     expect(buildMatrix(project, helpers()).rows[0].text).toBe('Gen MIDI out')

@@ -4,7 +4,7 @@
 
   Parameq's skin, in a light vintage style: a cream enamel panel, black bakelite knobs
   with chrome rims, brass switches and amber readout windows. Six bands side by side,
-  each with its On switch, its filter type and its Frequency and Gain knobs, and the
+  each with its On switch, its filter type and its Frequency, Gain and Q knobs, and the
   master Enabled switch. Plain SVG with no script; skin.ttl names elements by id.
 
   Knobs are drawn pointing straight up and the host turns them; the tick marks are
@@ -12,13 +12,10 @@
   one per state, and the host shows one. Each state is also written, so none depends on
   colour. Text is dark ink on cream, or cream on dark, at a contrast above 7:1.
 
-  Q is left out on purpose: the host draws the six Q controls under the picture, as
-  generated controls, which is what an unbound port gets.
-
   The plugin's own editor (ui/index.html) is the graphic equaliser with the response
   curve. This is the strip of knobs, for a phone or a keyboard.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 430">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 515">
   <defs>
     <linearGradient id="enamel" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#f1e8cd"/>
@@ -38,16 +35,16 @@
       <stop offset="1" stop-color="#b08a34"/>
     </linearGradient>
   </defs>
-  <rect x="0" y="0" width="720" height="430" rx="10" fill="url(#enamel)" stroke="#8a7a55" stroke-width="3"/>
-  <rect x="8" y="8" width="704" height="414" rx="6" fill="none" stroke="#8a7a55" stroke-width="1"/>
+  <rect x="0" y="0" width="720" height="515" rx="10" fill="url(#enamel)" stroke="#8a7a55" stroke-width="3"/>
+  <rect x="8" y="8" width="704" height="499" rx="6" fill="none" stroke="#8a7a55" stroke-width="1"/>
   <circle cx="20" cy="20" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
   <line x1="16" y1="18" x2="24" y2="22" stroke="#4a4842" stroke-width="1.5"/>
   <circle cx="700" cy="20" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
   <line x1="696" y1="18" x2="704" y2="22" stroke="#4a4842" stroke-width="1.5"/>
-  <circle cx="20" cy="410" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
-  <line x1="16" y1="408" x2="24" y2="412" stroke="#4a4842" stroke-width="1.5"/>
-  <circle cx="700" cy="410" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
-  <line x1="696" y1="408" x2="704" y2="412" stroke="#4a4842" stroke-width="1.5"/>
+  <circle cx="20" cy="495" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
+  <line x1="16" y1="493" x2="24" y2="497" stroke="#4a4842" stroke-width="1.5"/>
+  <circle cx="700" cy="495" r="6" fill="url(#chrome)" stroke="#5c5a52" stroke-width="1"/>
+  <line x1="696" y1="493" x2="704" y2="497" stroke="#4a4842" stroke-width="1.5"/>
   <text x="46" y="34" font-family="Georgia, 'Times New Roman', serif" font-size="18" letter-spacing="4" fill="#2b2118">EQUALISER</text>
   <text x="46" y="48" font-family="Georgia, 'Times New Roman', serif" font-size="11" letter-spacing="2" font-style="italic" fill="#5a4a35">six band parametric</text>
   <g id="enabled-switch">
@@ -112,7 +109,7 @@
       <text x="60" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="60" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="60" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="39.5" y1="234.5" x2="35.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="31.0" y1="214.0" x2="25.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="39.5" y1="193.5" x2="35.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -125,24 +122,39 @@
     <circle id="b1-freq-hub" cx="60" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="60" y1="211" x2="60" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="23" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b1-freq-value" x="60" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="60" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="39.5" y1="350.5" x2="35.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="31.0" y1="330.0" x2="25.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="39.5" y1="309.5" x2="35.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="60.0" y1="301.0" x2="60.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="80.5" y1="309.5" x2="84.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="89.0" y1="330.0" x2="95.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="80.5" y1="350.5" x2="84.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="23" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b1-freq-value" x="60" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="60" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="39.5" y1="342.5" x2="35.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="31.0" y1="322.0" x2="25.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="39.5" y1="301.5" x2="35.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="60.0" y1="293.0" x2="60.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="80.5" y1="301.5" x2="84.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="89.0" y1="322.0" x2="95.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="80.5" y1="342.5" x2="84.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b1-gain-knob">
-    <circle cx="60" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b1-gain-hub" cx="60" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="60" y1="327" x2="60" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="60" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b1-gain-hub" cx="60" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="60" y1="319" x2="60" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="23" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b1-gain-value" x="60" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
-  <line x1="120" y1="62" x2="120" y2="410" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
+  <rect x="23" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b1-gain-value" x="60" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="60" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="39.5" y1="450.5" x2="35.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="31.0" y1="430.0" x2="25.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="39.5" y1="409.5" x2="35.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="60.0" y1="401.0" x2="60.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="80.5" y1="409.5" x2="84.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="89.0" y1="430.0" x2="95.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="80.5" y1="450.5" x2="84.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b1-q-knob">
+    <circle cx="60" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b1-q-hub" cx="60" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="60" y1="427" x2="60" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="23" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b1-q-value" x="60" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
+  <line x1="120" y1="62" x2="120" y2="490" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
   <text x="180" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="3" fill="#2b2118">BAND 2</text>
   <g id="b2-on-switch">
     <g id="b2-on-off">
@@ -193,7 +205,7 @@
       <text x="180" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="180" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="180" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="159.5" y1="234.5" x2="155.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="151.0" y1="214.0" x2="145.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="159.5" y1="193.5" x2="155.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -206,24 +218,39 @@
     <circle id="b2-freq-hub" cx="180" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="180" y1="211" x2="180" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="143" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b2-freq-value" x="180" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="180" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="159.5" y1="350.5" x2="155.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="151.0" y1="330.0" x2="145.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="159.5" y1="309.5" x2="155.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="180.0" y1="301.0" x2="180.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="200.5" y1="309.5" x2="204.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="209.0" y1="330.0" x2="215.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="200.5" y1="350.5" x2="204.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="143" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b2-freq-value" x="180" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="180" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="159.5" y1="342.5" x2="155.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="151.0" y1="322.0" x2="145.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="159.5" y1="301.5" x2="155.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="180.0" y1="293.0" x2="180.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="200.5" y1="301.5" x2="204.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="209.0" y1="322.0" x2="215.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="200.5" y1="342.5" x2="204.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b2-gain-knob">
-    <circle cx="180" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b2-gain-hub" cx="180" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="180" y1="327" x2="180" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="180" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b2-gain-hub" cx="180" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="180" y1="319" x2="180" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="143" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b2-gain-value" x="180" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
-  <line x1="240" y1="62" x2="240" y2="410" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
+  <rect x="143" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b2-gain-value" x="180" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="180" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="159.5" y1="450.5" x2="155.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="151.0" y1="430.0" x2="145.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="159.5" y1="409.5" x2="155.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="180.0" y1="401.0" x2="180.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="200.5" y1="409.5" x2="204.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="209.0" y1="430.0" x2="215.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="200.5" y1="450.5" x2="204.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b2-q-knob">
+    <circle cx="180" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b2-q-hub" cx="180" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="180" y1="427" x2="180" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="143" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b2-q-value" x="180" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
+  <line x1="240" y1="62" x2="240" y2="490" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
   <text x="300" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="3" fill="#2b2118">BAND 3</text>
   <g id="b3-on-switch">
     <g id="b3-on-off">
@@ -274,7 +301,7 @@
       <text x="300" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="300" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="300" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="279.5" y1="234.5" x2="275.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="271.0" y1="214.0" x2="265.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="279.5" y1="193.5" x2="275.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -287,24 +314,39 @@
     <circle id="b3-freq-hub" cx="300" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="300" y1="211" x2="300" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="263" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b3-freq-value" x="300" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="300" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="279.5" y1="350.5" x2="275.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="271.0" y1="330.0" x2="265.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="279.5" y1="309.5" x2="275.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="300.0" y1="301.0" x2="300.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="320.5" y1="309.5" x2="324.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="329.0" y1="330.0" x2="335.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="320.5" y1="350.5" x2="324.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="263" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b3-freq-value" x="300" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="300" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="279.5" y1="342.5" x2="275.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="271.0" y1="322.0" x2="265.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="279.5" y1="301.5" x2="275.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="300.0" y1="293.0" x2="300.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="320.5" y1="301.5" x2="324.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="329.0" y1="322.0" x2="335.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="320.5" y1="342.5" x2="324.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b3-gain-knob">
-    <circle cx="300" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b3-gain-hub" cx="300" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="300" y1="327" x2="300" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="300" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b3-gain-hub" cx="300" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="300" y1="319" x2="300" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="263" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b3-gain-value" x="300" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
-  <line x1="360" y1="62" x2="360" y2="410" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
+  <rect x="263" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b3-gain-value" x="300" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="300" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="279.5" y1="450.5" x2="275.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="271.0" y1="430.0" x2="265.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="279.5" y1="409.5" x2="275.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="300.0" y1="401.0" x2="300.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="320.5" y1="409.5" x2="324.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="329.0" y1="430.0" x2="335.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="320.5" y1="450.5" x2="324.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b3-q-knob">
+    <circle cx="300" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b3-q-hub" cx="300" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="300" y1="427" x2="300" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="263" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b3-q-value" x="300" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
+  <line x1="360" y1="62" x2="360" y2="490" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
   <text x="420" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="3" fill="#2b2118">BAND 4</text>
   <g id="b4-on-switch">
     <g id="b4-on-off">
@@ -355,7 +397,7 @@
       <text x="420" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="420" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="420" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="399.5" y1="234.5" x2="395.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="391.0" y1="214.0" x2="385.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="399.5" y1="193.5" x2="395.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -368,24 +410,39 @@
     <circle id="b4-freq-hub" cx="420" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="420" y1="211" x2="420" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="383" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b4-freq-value" x="420" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="420" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="399.5" y1="350.5" x2="395.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="391.0" y1="330.0" x2="385.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="399.5" y1="309.5" x2="395.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="420.0" y1="301.0" x2="420.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="440.5" y1="309.5" x2="444.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="449.0" y1="330.0" x2="455.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="440.5" y1="350.5" x2="444.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="383" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b4-freq-value" x="420" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="420" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="399.5" y1="342.5" x2="395.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="391.0" y1="322.0" x2="385.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="399.5" y1="301.5" x2="395.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="420.0" y1="293.0" x2="420.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="440.5" y1="301.5" x2="444.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="449.0" y1="322.0" x2="455.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="440.5" y1="342.5" x2="444.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b4-gain-knob">
-    <circle cx="420" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b4-gain-hub" cx="420" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="420" y1="327" x2="420" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="420" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b4-gain-hub" cx="420" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="420" y1="319" x2="420" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="383" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b4-gain-value" x="420" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
-  <line x1="480" y1="62" x2="480" y2="410" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
+  <rect x="383" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b4-gain-value" x="420" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="420" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="399.5" y1="450.5" x2="395.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="391.0" y1="430.0" x2="385.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="399.5" y1="409.5" x2="395.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="420.0" y1="401.0" x2="420.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="440.5" y1="409.5" x2="444.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="449.0" y1="430.0" x2="455.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="440.5" y1="450.5" x2="444.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b4-q-knob">
+    <circle cx="420" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b4-q-hub" cx="420" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="420" y1="427" x2="420" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="383" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b4-q-value" x="420" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
+  <line x1="480" y1="62" x2="480" y2="490" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
   <text x="540" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="3" fill="#2b2118">BAND 5</text>
   <g id="b5-on-switch">
     <g id="b5-on-off">
@@ -436,7 +493,7 @@
       <text x="540" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="540" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="540" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="519.5" y1="234.5" x2="515.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="511.0" y1="214.0" x2="505.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="519.5" y1="193.5" x2="515.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -449,24 +506,39 @@
     <circle id="b5-freq-hub" cx="540" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="540" y1="211" x2="540" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="503" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b5-freq-value" x="540" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="540" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="519.5" y1="350.5" x2="515.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="511.0" y1="330.0" x2="505.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="519.5" y1="309.5" x2="515.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="540.0" y1="301.0" x2="540.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="560.5" y1="309.5" x2="564.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="569.0" y1="330.0" x2="575.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="560.5" y1="350.5" x2="564.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="503" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b5-freq-value" x="540" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="540" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="519.5" y1="342.5" x2="515.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="511.0" y1="322.0" x2="505.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="519.5" y1="301.5" x2="515.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="540.0" y1="293.0" x2="540.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="560.5" y1="301.5" x2="564.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="569.0" y1="322.0" x2="575.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="560.5" y1="342.5" x2="564.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b5-gain-knob">
-    <circle cx="540" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b5-gain-hub" cx="540" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="540" y1="327" x2="540" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="540" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b5-gain-hub" cx="540" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="540" y1="319" x2="540" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="503" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b5-gain-value" x="540" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
-  <line x1="600" y1="62" x2="600" y2="410" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
+  <rect x="503" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b5-gain-value" x="540" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="540" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="519.5" y1="450.5" x2="515.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="511.0" y1="430.0" x2="505.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="519.5" y1="409.5" x2="515.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="540.0" y1="401.0" x2="540.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="560.5" y1="409.5" x2="564.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="569.0" y1="430.0" x2="575.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="560.5" y1="450.5" x2="564.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b5-q-knob">
+    <circle cx="540" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b5-q-hub" cx="540" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="540" y1="427" x2="540" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="503" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b5-q-value" x="540" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
+  <line x1="600" y1="62" x2="600" y2="490" stroke="#8a7a55" stroke-width="1" stroke-dasharray="2 4"/>
   <text x="660" y="80" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="3" fill="#2b2118">BAND 6</text>
   <g id="b6-on-switch">
     <g id="b6-on-off">
@@ -517,7 +589,7 @@
       <text x="660" y="150" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" font-style="italic" fill="#2b2118">Notch</text>
     </g>
   </g>
-  <text x="660" y="174" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
+  <text x="660" y="175" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">FREQ</text>
   <line x1="639.5" y1="234.5" x2="635.3" y2="238.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="631.0" y1="214.0" x2="625.0" y2="214.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <line x1="639.5" y1="193.5" x2="635.3" y2="189.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
@@ -530,21 +602,36 @@
     <circle id="b6-freq-hub" cx="660" cy="214" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
     <line x1="660" y1="211" x2="660" y2="196" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="623" y="252" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b6-freq-value" x="660" y="268" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
-  <text x="660" y="290" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
-  <line x1="639.5" y1="350.5" x2="635.3" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="631.0" y1="330.0" x2="625.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="639.5" y1="309.5" x2="635.3" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="660.0" y1="301.0" x2="660.0" y2="295.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="680.5" y1="309.5" x2="684.7" y2="305.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="689.0" y1="330.0" x2="695.0" y2="330.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
-  <line x1="680.5" y1="350.5" x2="684.7" y2="354.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <rect x="623" y="250" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b6-freq-value" x="660" y="265" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1000 Hz</text>
+  <text x="660" y="283" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">GAIN</text>
+  <line x1="639.5" y1="342.5" x2="635.3" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="631.0" y1="322.0" x2="625.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="639.5" y1="301.5" x2="635.3" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="660.0" y1="293.0" x2="660.0" y2="287.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="680.5" y1="301.5" x2="684.7" y2="297.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="689.0" y1="322.0" x2="695.0" y2="322.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="680.5" y1="342.5" x2="684.7" y2="346.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
   <g id="b6-gain-knob">
-    <circle cx="660" cy="330" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
-    <circle id="b6-gain-hub" cx="660" cy="330" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
-    <line x1="660" y1="327" x2="660" y2="312" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="660" cy="322" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b6-gain-hub" cx="660" cy="322" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="660" y1="319" x2="660" y2="304" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
   </g>
-  <rect x="623" y="368" width="74" height="22" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
-  <text id="b6-gain-value" x="660" y="384" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <rect x="623" y="358" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b6-gain-value" x="660" y="373" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">0 dB</text>
+  <text x="660" y="391" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="14" letter-spacing="1" fill="#2b2118">Q</text>
+  <line x1="639.5" y1="450.5" x2="635.3" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="631.0" y1="430.0" x2="625.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="639.5" y1="409.5" x2="635.3" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="660.0" y1="401.0" x2="660.0" y2="395.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="680.5" y1="409.5" x2="684.7" y2="405.3" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="689.0" y1="430.0" x2="695.0" y2="430.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <line x1="680.5" y1="450.5" x2="684.7" y2="454.7" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <g id="b6-q-knob">
+    <circle cx="660" cy="430" r="25" fill="url(#chrome)" stroke="#4a4842" stroke-width="1.5"/>
+    <circle id="b6-q-hub" cx="660" cy="430" r="20" fill="url(#bakelite)" stroke="#2b2118" stroke-width="1"/>
+    <line x1="660" y1="427" x2="660" y2="412" stroke="#f7f0da" stroke-width="3.5" stroke-linecap="round"/>
+  </g>
+  <rect x="623" y="466" width="74" height="21" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="b6-q-value" x="660" y="481" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="14" font-weight="bold" fill="#f6c453">1.00</text>
 </svg>

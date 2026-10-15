@@ -43,7 +43,7 @@
 
 <#boost> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/boost/> ;
-    jig:pinnedDigest "sha384-mHh84PoU3fUsInw8O8gmsVoppGyZDZIAXNbhGw5Yh+fsF0BxnDobEqXZHjd3/c2U" .
+    jig:pinnedDigest "sha384-n7D7sAZrPoSKQ7p7F2veUM4h8zDSn41dqb4wDVcghL+bzdmU0M479/qfhJGKMnKi" .
 
 <#trem> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/tremolo/> ;

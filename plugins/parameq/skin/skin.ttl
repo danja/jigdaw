@@ -8,13 +8,13 @@
 
 <>
     jig:artwork <#artwork> ;
-    jig:control <#enabled> , <#b1-on> , <#b1-type> , <#b1-freq> , <#b1-freq-value> , <#b1-gain> , <#b1-gain-value> , <#b2-on> , <#b2-type> , <#b2-freq> , <#b2-freq-value> , <#b2-gain> , <#b2-gain-value> , <#b3-on> , <#b3-type> , <#b3-freq> , <#b3-freq-value> , <#b3-gain> , <#b3-gain-value> , <#b4-on> , <#b4-type> , <#b4-freq> , <#b4-freq-value> , <#b4-gain> , <#b4-gain-value> , <#b5-on> , <#b5-type> , <#b5-freq> , <#b5-freq-value> , <#b5-gain> , <#b5-gain-value> , <#b6-on> , <#b6-type> , <#b6-freq> , <#b6-freq-value> , <#b6-gain> , <#b6-gain-value> .
+    jig:control <#enabled> , <#b1-on> , <#b1-type> , <#b1-freq> , <#b1-freq-value> , <#b1-gain> , <#b1-gain-value> , <#b2-on> , <#b2-type> , <#b2-freq> , <#b2-freq-value> , <#b2-gain> , <#b2-gain-value> , <#b3-on> , <#b3-type> , <#b3-freq> , <#b3-freq-value> , <#b3-gain> , <#b3-gain-value> , <#b4-on> , <#b4-type> , <#b4-freq> , <#b4-freq-value> , <#b4-gain> , <#b4-gain-value> , <#b5-on> , <#b5-type> , <#b5-freq> , <#b5-freq-value> , <#b5-gain> , <#b5-gain-value> , <#b6-on> , <#b6-type> , <#b6-freq> , <#b6-freq-value> , <#b6-gain> , <#b6-gain-value> , <#b1-q> , <#b1-q-value> , <#b2-q> , <#b2-q-value> , <#b3-q> , <#b3-q-value> , <#b4-q> , <#b4-q-value> , <#b5-q> , <#b5-q-value> , <#b6-q> , <#b6-q-value> .
 
 <#artwork>
     a jig:Artwork ;
     jig:location <panel.svg> ;
     jig:mediaType "image/svg+xml" ;
-    jig:integrity "sha384-DBvS9gj+8Dv2yAsqYB4kPN+HLLE2nPgvy55jZ4wz5zS3NmT/ibgPoQHBYcASu3zQ" .
+    jig:integrity "sha384-+jeQMN9BW4znxMWXzfvhs4zB2plEtFKqy0ycYh4bmpY0BQX0GiyEqGkUyYlQujsI" .
 
 <#enabled>
     a jig:ToggleControl ;
@@ -224,3 +224,75 @@
     a jig:ReadoutControl ;
     jig:boundSymbol "b6_gain" ;
     jig:element "b6-gain-value" .
+
+<#b1-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b1_q" ;
+    jig:element "b1-q-knob" ;
+    jig:pivotElement "b1-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b1-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b1_q" ;
+    jig:element "b1-q-value" .
+
+<#b2-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b2_q" ;
+    jig:element "b2-q-knob" ;
+    jig:pivotElement "b2-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b2-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b2_q" ;
+    jig:element "b2-q-value" .
+
+<#b3-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b3_q" ;
+    jig:element "b3-q-knob" ;
+    jig:pivotElement "b3-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b3-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b3_q" ;
+    jig:element "b3-q-value" .
+
+<#b4-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b4_q" ;
+    jig:element "b4-q-knob" ;
+    jig:pivotElement "b4-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b4-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b4_q" ;
+    jig:element "b4-q-value" .
+
+<#b5-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b5_q" ;
+    jig:element "b5-q-knob" ;
+    jig:pivotElement "b5-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b5-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b5_q" ;
+    jig:element "b5-q-value" .
+
+<#b6-q>
+    a jig:RotaryControl ;
+    jig:boundSymbol "b6_q" ;
+    jig:element "b6-q-knob" ;
+    jig:pivotElement "b6-q-hub" ;
+    jig:angleMin -135 ; jig:angleMax 135 .
+
+<#b6-q-value>
+    a jig:ReadoutControl ;
+    jig:boundSymbol "b6_q" ;
+    jig:element "b6-q-value" .

@@ -450,3 +450,80 @@ describe('a foreign plugin is marked', () => {
     expect(element.querySelector('.foreign')).toBeNull()
   })
 })
+
+// A skin (docs/svg-skins.md) is drawn above the generated controls for the ports it leaves out, and at a width where its
+// padded hit areas overlap it is put away and every port is drawn as a generated control.
+describe('createPanel with a skin', () => {
+  const SVG_NS = 'http://www.w3.org/2000/svg'
+  const el = (name, attrs = {}) => { const e = document.createElementNS(SVG_NS, name); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e }
+  const ports = [port({ symbol: 'mix', name: 'Mix' }), port({ symbol: 'size', name: 'Size', defaultValue: 0.5 })]
+
+  async function withSkin () {
+    const { buildArtwork } = await import('../../src/ui/SkinArtwork.js')
+    const svg = el('svg', { viewBox: '0 0 100 100' })
+    svg.append(el('g', { id: 'knob' }), el('circle', { id: 'hub', r: '5' }))
+    const built = buildArtwork({ documentElement: svg }, { document, prefix: 's-' })
+    const controls = [{ id: 'c1', kind: 'rotary', boundSymbol: 'mix', element: 'knob', pivotElement: 'hub', hitElement: null, trackElement: null, angleMin: -135, angleMax: 135 }]
+    const sent = []
+    const panel = createPanel(document, profile(ports), (s, v) => sent.push([s, v]), null, {
+      scope: 'p', skin: { svg: built.svg, elements: built.elements, controls },
+      skinLayout: { measure: () => ({ x: 0, y: 0, width: 10, height: 10 }), availableWidth: () => 100 }
+    })
+    document.body.append(panel.element)
+    return { panel, sent }
+  }
+
+  it('draws the skin, then generated controls for the ports it leaves out, under their own heading', async () => {
+    const { panel } = await withSkin()
+    expect(panel.skinned).toBe(true)
+    expect(panel.element.querySelector('.skin')).not.toBeNull()
+    const others = panel.element.querySelector('.skin-others')
+    expect(others.querySelector('legend').textContent).toBe('Other controls')
+    expect([...others.querySelectorAll('input')].map(i => i.id)).toEqual(['p_size'])
+  })
+
+  it('keeps every id in the document unique, though a port may be drawn by both the skin and a generated control', async () => {
+    const { panel } = await withSkin()
+    const ids = [...panel.element.querySelectorAll('[id]')].map(e => e.id)
+    expect(ids.length).toBeGreaterThan(5)
+    expect(ids.filter((id, i) => ids.indexOf(id) !== i)).toEqual([])
+  })
+
+  it('has the fallback hidden until the skin is too cramped, then swaps them', async () => {
+    const { panel } = await withSkin()
+    const [skin, others, everything] = ['.skin', '.skin-others', '.skin-fallback'].map(s => panel.element.querySelector(s))
+    panel.skinView.fit()
+    expect([skin.hidden, others.hidden, everything.hidden]).toEqual([false, false, true])
+    expect(panel.element.classList.contains('skin-cramped')).toBe(false)
+  })
+
+  it('draws every port as a generated control, and not the skin, when the skin is cramped', async () => {
+    // two controls measured at the same place, so their padded areas lie on top of each other
+    const { buildArtwork } = await import('../../src/ui/SkinArtwork.js')
+    const svg = el('svg', { viewBox: '0 0 100 100' })
+    svg.append(el('g', { id: 'a' }), el('g', { id: 'b' }), el('circle', { id: 'ah', r: '1' }), el('circle', { id: 'bh', r: '1' }))
+    const built = buildArtwork({ documentElement: svg }, { document, prefix: 's-' })
+    const rot = (id, symbol, element, pivot) => ({ id, kind: 'rotary', boundSymbol: symbol, element, pivotElement: pivot, hitElement: null, trackElement: null, angleMin: 0, angleMax: 90 })
+    const panel = createPanel(document, profile(ports), () => {}, null, {
+      scope: 'p', skin: { svg: built.svg, elements: built.elements, controls: [rot('c1', 'mix', 'a', 'ah'), rot('c2', 'size', 'b', 'bh')] },
+      skinLayout: { measure: () => ({ x: 0, y: 0, width: 10, height: 10 }), availableWidth: () => 100 }
+    })
+    document.body.append(panel.element)
+    panel.skinView.fit()
+    expect(panel.element.classList.contains('skin-cramped')).toBe(true)
+    expect(panel.element.querySelector('.skin').hidden).toBe(true)
+    expect(panel.element.querySelector('.skin-others').hidden).toBe(true)
+    const everything = panel.element.querySelector('.skin-fallback')
+    expect(everything.hidden).toBe(false)
+    expect([...everything.querySelectorAll('input')].map(i => i.id)).toEqual(['p_all-mix', 'p_all-size'])
+  })
+
+  it('moves every drawing of a port when the host updates it', async () => {
+    const { panel } = await withSkin()
+    panel.update('size', 0.8)
+    const generated = panel.element.querySelector('input[id="p_size"]')
+    expect(Number(generated.value)).toBeCloseTo(0.8)
+    const all = panel.element.querySelector('input[id="p_all-size"]')
+    expect(Number(all.value)).toBeCloseTo(0.8)
+  })
+})

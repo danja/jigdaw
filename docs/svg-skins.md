@@ -143,8 +143,13 @@ The artwork supplies pixels. The host supplies everything a person or a tool rel
 - **Size.** The `viewBox` width is the artwork's natural size in CSS pixels. It shrinks to fit a narrow
   panel and is never drawn larger than that.
 - **A phone.** The artwork scales with its `viewBox` to the width available. A target smaller
-  than 44 CSS pixels at that scale is padded to 44, and a skin whose controls overlap once
-  padded fails validation.
+  than 44 CSS pixels at that scale is padded to 44. Where two padded targets would cover more
+  than a quarter of the smaller one, a tap would often land on the wrong control, so the host
+  puts the drawing away and draws every port as a generated control instead, and draws the
+  skin again when the width allows. It works this out from the sizes in the drawing's own units
+  and the width it is given, so it holds while the drawing is put away. A skin is not invalid
+  for being dense: Parameq's six bands are comfortable from about 520 pixels up and fall back
+  below that, where Tremolo, Cascade and Boost keep their skins down to 240.
 
 ## Ports the skin does not bind
 

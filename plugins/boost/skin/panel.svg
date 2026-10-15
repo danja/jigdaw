@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  plugins/boost/skin/panel.svg
+
+  Boost's skin: one vertical fader, in the light vintage style of Parameq's. The fader cap is
+  drawn at the bottom of its slot, which is the minimum, and the host slides it the length
+  of the slot; the scale beside it is outside the moving group so it stays put. Plain SVG with
+  no script; skin.ttl names elements by id.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 380">
+  <defs>
+    <linearGradient id="enamel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1e8cd"/>
+      <stop offset="1" stop-color="#e2d5b2"/>
+    </linearGradient>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a3c33"/>
+      <stop offset="1" stop-color="#17110d"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="170" height="380" rx="10" fill="url(#enamel)" stroke="#8a7a55" stroke-width="3"/>
+  <rect x="8" y="8" width="154" height="364" rx="6" fill="none" stroke="#8a7a55" stroke-width="1"/>
+  <text x="85" y="40" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="18" letter-spacing="4" fill="#2b2118">BOOST</text>
+  <rect id="gain-slot" x="74" y="60" width="12" height="240" rx="6" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <rect id="gain-hit" x="54" y="44" width="52" height="272" fill="none"/>
+  <line x1="96" y1="300.0" x2="110" y2="300.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="305.0" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#2b2118">0</text>
+  <line x1="96" y1="240.0" x2="110" y2="240.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="245.0" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#2b2118">0.5</text>
+  <line x1="96" y1="180.0" x2="110" y2="180.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="185.0" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#2b2118">1</text>
+  <line x1="96" y1="120.0" x2="110" y2="120.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="125.0" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#2b2118">1.5</text>
+  <line x1="96" y1="60.0" x2="110" y2="60.0" stroke="#2b2118" stroke-width="2" stroke-linecap="round"/>
+  <text x="116" y="65.0" font-family="Georgia, 'Times New Roman', serif" font-size="14" fill="#2b2118">2</text>
+  <g id="gain-thumb">
+    <rect x="56" y="287" width="48" height="26" rx="4" fill="url(#cap)" stroke="#2b2118" stroke-width="1.5"/>
+    <line x1="62" y1="300" x2="98" y2="300" stroke="#f7f0da" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <rect x="45" y="330" width="80" height="26" rx="3" fill="#14100c" stroke="#2b2118" stroke-width="1.5"/>
+  <text id="gain-value" x="85" y="348" text-anchor="middle" font-family="'Courier New', Courier, monospace" font-size="15" font-weight="bold" fill="#f6c453">1.00</text>
+</svg>

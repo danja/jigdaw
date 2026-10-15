@@ -25,3 +25,13 @@ describe('the studio page', () => {
     expect(js).toMatch(/level\.className = 'send-level'/)
   })
 })
+
+describe('the shared panel stylesheet', () => {
+  const css = readFileSync(resolve(root, 'web/panel.css'), 'utf8')
+
+  it('keeps a hidden skin, fallback and fieldset out whatever display their classes give them', () => {
+    // The skin panel puts its drawing, or its fallback, away with the hidden attribute, and .controls and .control-group set displays.
+    expect(css).toMatch(/\[hidden\]\s*\{\s*display:\s*none\s*!important;?\s*\}/)
+    expect(readFileSync(resolve(root, 'src/ui/Panel.js'), 'utf8')).toMatch(/everything\.hidden = !cramped/)
+  })
+})

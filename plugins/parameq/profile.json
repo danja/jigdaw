@@ -750,6 +750,96 @@
         "kind": "readout",
         "port": "b6_gain",
         "element": "b6-gain-value"
+      },
+      {
+        "id": "b1-q",
+        "kind": "rotary",
+        "port": "b1_q",
+        "element": "b1-q-knob",
+        "pivot": "b1-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b1-q-value",
+        "kind": "readout",
+        "port": "b1_q",
+        "element": "b1-q-value"
+      },
+      {
+        "id": "b2-q",
+        "kind": "rotary",
+        "port": "b2_q",
+        "element": "b2-q-knob",
+        "pivot": "b2-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b2-q-value",
+        "kind": "readout",
+        "port": "b2_q",
+        "element": "b2-q-value"
+      },
+      {
+        "id": "b3-q",
+        "kind": "rotary",
+        "port": "b3_q",
+        "element": "b3-q-knob",
+        "pivot": "b3-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b3-q-value",
+        "kind": "readout",
+        "port": "b3_q",
+        "element": "b3-q-value"
+      },
+      {
+        "id": "b4-q",
+        "kind": "rotary",
+        "port": "b4_q",
+        "element": "b4-q-knob",
+        "pivot": "b4-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b4-q-value",
+        "kind": "readout",
+        "port": "b4_q",
+        "element": "b4-q-value"
+      },
+      {
+        "id": "b5-q",
+        "kind": "rotary",
+        "port": "b5_q",
+        "element": "b5-q-knob",
+        "pivot": "b5-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b5-q-value",
+        "kind": "readout",
+        "port": "b5_q",
+        "element": "b5-q-value"
+      },
+      {
+        "id": "b6-q",
+        "kind": "rotary",
+        "port": "b6_q",
+        "element": "b6-q-knob",
+        "pivot": "b6-q-hub",
+        "angleMin": -135,
+        "angleMax": 135
+      },
+      {
+        "id": "b6-q-value",
+        "kind": "readout",
+        "port": "b6_q",
+        "element": "b6-q-value"
       }
     ]
   }

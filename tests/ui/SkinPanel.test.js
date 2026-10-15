@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { buildArtwork, SVG_NS } from '../../src/ui/SkinArtwork.js'
-import { createSkinPanel } from '../../src/ui/SkinPanel.js'
+import { createSkinPanel, overlapFraction } from '../../src/ui/SkinPanel.js'
 
 const { document, Event } = parseHTML('<!doctype html><html><body></body></html>')
 document.defaultView.Event = Event
@@ -56,7 +56,7 @@ function make ({ controls = CONTROLS, boxes = BOXES, onChange = () => {} } = {})
   return { panel, built }
 }
 
-const input = (panel, symbol) => panel.element.querySelector(`input[id="panel-n1_${symbol}"]`)
+const input = (panel, symbol) => panel.element.querySelector(`input[id="panel-n1_skin-${symbol}"]`)
 const transformOf = (built, id) => built.elements.get(id).getAttribute('transform')
 
 describe('createSkinPanel, the semantics', () => {
@@ -64,10 +64,10 @@ describe('createSkinPanel, the semantics', () => {
     const { panel } = make()
     const inputs = [...panel.element.querySelectorAll('input')].sort((a, b) => a.id.localeCompare(b.id))
     expect(inputs.map(i => [i.id, i.type, i.getAttribute('aria-label')])).toEqual([
-      ['panel-n1_bypass', 'checkbox', 'Bypass'],
-      ['panel-n1_depth', 'range', 'Depth'],
-      ['panel-n1_mode', 'range', 'Mode'],
-      ['panel-n1_rate', 'range', 'Rate']
+      ['panel-n1_skin-bypass', 'checkbox', 'Bypass'],
+      ['panel-n1_skin-depth', 'range', 'Depth'],
+      ['panel-n1_skin-mode', 'range', 'Mode'],
+      ['panel-n1_skin-rate', 'range', 'Rate']
     ])
     expect(input(panel, 'bypass').getAttribute('role')).toBe('switch')
   })
@@ -203,6 +203,93 @@ describe('createSkinPanel, pressing', () => {
   })
 })
 
+const rect = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height })
+
+describe('overlapFraction', () => {
+  it('is the part of the smaller rectangle that the other covers', () => {
+    expect(overlapFraction(rect(0, 0, 44, 44), rect(0, 22, 44, 44))).toBe(0.5)
+    expect(overlapFraction(rect(0, 0, 100, 100), rect(10, 10, 20, 20))).toBe(1)
+  })
+
+  it('is 0 for rectangles that only touch or do not meet', () => {
+    expect(overlapFraction(rect(0, 0, 44, 44), rect(44, 0, 44, 44))).toBe(0)
+    expect(overlapFraction(rect(0, 0, 44, 44), rect(100, 100, 44, 44))).toBe(0)
+  })
+})
+
+describe('createSkinPanel, too cramped to use', () => {
+  // Sizes are in the drawing's units (200 by 100 here) and the width it is given. rate is a 40 unit knob, depth a 12 unit
+  // thumb, and bypass and mode are 10 unit groups; each is padded to 44 CSS pixels.
+  const apart = { ...BOXES, toggle: { x: 150, y: 90, width: 10, height: 10 }, steps: { x: 10, y: 90, width: 10, height: 10 } }
+  const make2 = (boxes, width = 200) => {
+    const built = buildArtwork({ documentElement: artwork() }, { document, prefix: 's-' })
+    const measure = element => boxes[element.getAttribute('id').slice(2)]
+    const panel = createSkinPanel(document, { svg: built.svg, elements: built.elements, controls: CONTROLS, ports }, () => {}, { scope: 'panel-n1', measure, availableWidth: () => width })
+    document.body.append(panel.element)
+    const answers = []
+    panel.onCramped(c => answers.push(c))
+    panel.fit()
+    return { panel, answers }
+  }
+
+  it('says no when the padded areas keep apart', () => {
+    const { panel, answers } = make2(apart)
+    expect(panel.cramped).toBe(false)
+    expect(answers).toEqual([false])
+  })
+
+  it('says yes when two overlap by more than a quarter of the smaller', () => {
+    // depth's thumb moved onto the knob
+    const { panel, answers } = make2({ ...apart, thumb: { x: 40, y: 60, width: 12, height: 12 } })
+    expect(panel.cramped).toBe(true)
+    expect(answers).toEqual([true])
+  })
+
+  it('lets two neighbours meet at their padding, a small overlap, without calling it cramped', () => {
+    // centres 40 units apart, each padded to 44: they share 4
+    const { panel } = make2({ ...apart, thumb: { x: 74, y: 44, width: 12, height: 12 } })
+    expect(panel.cramped).toBe(false)
+  })
+
+  it('depends on the width: the same drawing is fine at its natural size and cramped when it shrinks', () => {
+    // knob centre 40, thumb centre 100: 60 apart at scale 1, and 30 apart at half
+    expect(make2(apart, 200).panel.cramped).toBe(false)
+    expect(make2(apart, 100).panel.cramped).toBe(true)
+  })
+
+  it('never draws larger than the natural size when judging, so a wide panel is not read as roomier than it is', () => {
+    // two small groups 20 units apart: both padded to 44 they overlap at natural size, and would not if scaled up twenty times
+    const close = { ...apart, toggle: { x: 150, y: 90, width: 10, height: 10 }, steps: { x: 170, y: 90, width: 10, height: 10 } }
+    expect(make2(close, 200).panel.cramped).toBe(true)
+    expect(make2(close, 4000).panel.cramped).toBe(true)
+  })
+
+  it('says nothing when there is no width, as for a DOM with no layout', () => {
+    const { panel, answers } = make2(apart, 0)
+    expect(panel.cramped).toBe(false)
+    expect(answers).toEqual([])
+  })
+
+  it('keeps the last sizes it had when the drawing is put away and measures as nothing, so it can answer again', () => {
+    const boxes = { ...apart }
+    const built = buildArtwork({ documentElement: artwork() }, { document, prefix: 's-' })
+    let width = 200
+    const panel = createSkinPanel(document, { svg: built.svg, elements: built.elements, controls: CONTROLS, ports }, () => {},
+      { scope: 'panel-n1', measure: element => boxes[element.getAttribute('id').slice(2)], availableWidth: () => width })
+    document.body.append(panel.element)
+    const answers = []
+    panel.onCramped(c => answers.push(c))
+    panel.fit()
+    // put away: every element now measures as nothing
+    for (const k of Object.keys(boxes)) boxes[k] = { x: 0, y: 0, width: 0, height: 0 }
+    width = 100
+    panel.fit()
+    width = 200
+    panel.fit()
+    expect(answers).toEqual([false, true, false])
+  })
+})
+
 describe('createSkinPanel, size', () => {
   it('is no wider than the viewBox says, so the artwork has a natural size and still shrinks to fit', () => {
     const { panel } = make()
@@ -217,7 +304,7 @@ describe('createSkinPanel, size', () => {
 })
 
 describe('createSkinPanel, tab order', () => {
-  const order = panel => [...panel.element.querySelectorAll('input')].map(i => i.id.replace('panel-n1_', ''))
+  const order = panel => [...panel.element.querySelectorAll('input')].map(i => i.id.replace('panel-n1_skin-', ''))
 
   it('follows the picture, rows from the top and left to right along a row, not the order of the skin', () => {
     // rate and depth share a row at y 50 (rate left of depth); bypass and mode are a row below, mode left of bypass

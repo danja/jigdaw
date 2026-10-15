@@ -32172,6 +32172,20 @@ var spokenValue = (port, value2) => {
 };
 
 // src/ui/SkinPanel.js
+var CRAMPED_OVERLAP = 0.25;
+var MIN_TARGET = 44;
+function overlapFraction(a2, b) {
+  const w = Math.min(a2.right, b.right) - Math.max(a2.left, b.left);
+  const h2 = Math.min(a2.bottom, b.bottom) - Math.max(a2.top, b.top);
+  if (w <= 0 || h2 <= 0) return 0;
+  return w * h2 / Math.min(a2.width * a2.height, b.width * b.height);
+}
+function contentWidth(element) {
+  const view = element?.ownerDocument?.defaultView;
+  if (!element || !view?.getComputedStyle) return 0;
+  const style = view.getComputedStyle(element);
+  return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+}
 var clamp = (n2, low, high) => Math.min(high, Math.max(low, n2));
 var fractionOf = (port, value2) => {
   const span = port.maximum - port.minimum;
@@ -32179,10 +32193,11 @@ var fractionOf = (port, value2) => {
 };
 var withTurn = (base, turn) => [base, turn].filter(Boolean).join(" ");
 var withSlide = (base, slide) => [slide, base].filter(Boolean).join(" ");
-function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => el.getBBox() }) {
+function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => el.getBBox(), availableWidth = null }) {
   const wrap = document2.createElement("div");
   wrap.className = "skin";
   wrap.append(skin.svg);
+  const roomFor = availableWidth ?? (() => contentWidth(wrap.parentNode));
   const natural = Number((skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/)[2]);
   if (Number.isFinite(natural) && natural > 0) wrap.style.maxWidth = `${natural}px`;
   const ports = new Map(skin.ports.map((p) => [p.symbol, p]));
@@ -32197,21 +32212,22 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
   function hitArea(control, port, input) {
     const box = document2.createElement("div");
     box.className = "skin-hit";
-    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
+    const id = `${scope}#skin-${port.symbol}`.replace(/[^\w-]/g, "_");
     input.id = id;
     input.className = "skin-input";
     input.setAttribute("aria-label", port.name ?? port.symbol);
     box.append(input);
     wrap.append(box);
     const target2 = skin.elements.get(control.hitElement ?? control.element);
-    const hit = { box, x: 0, y: 0, height: 0 };
+    const hit = { box, x: 0, y: 0, width: 0, height: 0 };
     hits.push(hit);
     fitters.push(() => {
       const [vx, vy, vw, vh] = (skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
       if (![vx, vy, vw, vh].every(Number.isFinite) || vw <= 0 || vh <= 0) throw new Error("a skin artwork needs a viewBox, which is what the hit areas are placed by");
       const vb = { x: vx, y: vy, width: vw, height: vh };
       const b = measure(target2);
-      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, height: b.height });
+      if (!b.width && !b.height) return;
+      Object.assign(hit, { x: b.x + b.width / 2, y: b.y + b.height / 2, width: b.width, height: b.height });
       box.style.left = `${(b.x + b.width / 2 - vb.x) / vb.width * 100}%`;
       box.style.top = `${(b.y + b.height / 2 - vb.y) / vb.height * 100}%`;
       box.style.width = `${b.width / vb.width * 100}%`;
@@ -32249,6 +32265,7 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
       let centre = { x: 0, y: 0 };
       fitters.push(() => {
         const b = measure(pivot);
+        if (!b.width && !b.height) return;
         centre = { x: b.x + b.width / 2, y: b.y + b.height / 2 };
       });
       render(port.symbol, (v) => {
@@ -32269,6 +32286,7 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
       let travel = { dx: 0, dy: 0, horizontal: true };
       fitters.push(() => {
         const b = measure(track);
+        if (!b.width && !b.height) return;
         const horizontal = b.width >= b.height;
         travel = { dx: horizontal ? b.width : 0, dy: horizontal ? 0 : -b.height, horizontal };
       });
@@ -32331,15 +32349,38 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
       });
     }
   }
+  let cramped = false;
+  const listeners = [];
   return {
     element: wrap,
     bound,
+    get cramped() {
+      return cramped;
+    },
+    /** Called with the answer after each fit, so the owner can put the drawing away when it cannot be used. */
+    onCramped(fn) {
+      listeners.push(fn);
+    },
     update(symbol, value2) {
       for (const fn of renderers.get(symbol) ?? []) fn(value2);
     },
     fit() {
       for (const fn of fitters) fn();
       followThePicture(wrap, hits);
+      const [, , vw] = (skin.svg.getAttribute("viewBox") ?? "").trim().split(/[\s,]+/).map(Number);
+      const width = Math.min(vw, roomFor());
+      const known = hits.filter((h2) => h2.width > 0 || h2.height > 0);
+      if (!(width > 0) || known.length === 0) return;
+      const scale = width / vw;
+      const padded = known.map((h2) => {
+        const w = Math.max(MIN_TARGET, h2.width * scale);
+        const t = Math.max(MIN_TARGET, h2.height * scale);
+        const x = h2.x * scale;
+        const y = h2.y * scale;
+        return { left: x - w / 2, right: x + w / 2, top: y - t / 2, bottom: y + t / 2, width: w, height: t };
+      });
+      cramped = padded.some((a2, i2) => padded.slice(i2 + 1).some((c3) => overlapFraction(a2, c3) > CRAMPED_OVERLAP));
+      for (const fn of listeners) fn(cramped);
     }
   };
 }
@@ -32392,7 +32433,7 @@ function attachTrackDrag(box, input, port, track, isHorizontal) {
 }
 
 // src/ui/Panel.js
-function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null } = {}) {
+function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null, skinLayout = {} } = {}) {
   const root = document2.createElement("section");
   root.className = "panel";
   const heading = document2.createElement("h3");
@@ -32411,28 +32452,24 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     root.classList.add("is-foreign");
   }
   const setters = /* @__PURE__ */ new Map();
-  const skinPanel = skin ? createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope }) : null;
+  const onValue = (symbol, fn) => {
+    if (!setters.has(symbol)) setters.set(symbol, []);
+    setters.get(symbol).push(fn);
+  };
+  const skinPanel = skin ? createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout }) : null;
   if (skinPanel) {
     root.append(skinPanel.element);
     root.classList.add("has-skin");
     for (const port of profile.ports) skinPanel.update(port.symbol, port.defaultValue);
     const Observer = document2.defaultView?.ResizeObserver;
-    if (Observer) new Observer(() => skinPanel.fit()).observe(skinPanel.element);
+    if (Observer) new Observer(() => skinPanel.fit()).observe(root);
   }
   const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : profile.ports;
-  const ungrouped = unskinned.filter((p) => p.group == null);
-  const groups = [];
-  for (const port of unskinned) {
-    if (port.group == null) continue;
-    const group = groups.find((g) => g.label === port.group);
-    if (group) group.ports.push(port);
-    else groups.push({ label: port.group, ports: [port] });
-  }
-  function addControl(grid, port) {
+  function addControl(grid, port, tag) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
     const label = document2.createElement("label");
-    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, "_");
+    const id = `${scope}#${tag}${port.symbol}`.replace(/[^\w-]/g, "_");
     label.setAttribute("for", id);
     label.textContent = port.controller == null ? port.name ?? port.symbol : `${port.name ?? port.symbol} (CC ${port.controller})`;
     row.append(label);
@@ -32445,7 +32482,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       input.type = "checkbox";
       input.checked = port.defaultValue >= 0.5;
       input.addEventListener("change", () => onChange(port.symbol, input.checked ? port.maximum : port.minimum));
-      setters.set(port.symbol, (v) => {
+      onValue(port.symbol, (v) => {
         const on = v >= 0.5;
         input.checked = on;
         const named2 = port.scalePoints?.find((p) => p.value === (on ? port.maximum : port.minimum))?.label;
@@ -32466,7 +32503,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       };
       select(port.defaultValue);
       input.addEventListener("change", () => onChange(port.symbol, Number(input.value)));
-      setters.set(port.symbol, (v) => {
+      onValue(port.symbol, (v) => {
         select(v);
         readout.textContent = port.scalePoints.find((p) => p.value === v)?.label ?? String(v);
       });
@@ -32474,7 +32511,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       const dial = createDial(document2, port, id);
       input = dial.input;
       input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
-      setters.set(port.symbol, (v) => {
+      onValue(port.symbol, (v) => {
         input.value = String(v);
         readout.textContent = formatValue(port, v);
         input.setAttribute("aria-valuetext", spokenValue(port, v));
@@ -32490,33 +32527,51 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     else if (port.name) input.title = port.name;
     row.append(knob ?? input, readout);
     grid.append(row);
-    setters.get(port.symbol)(port.defaultValue);
+    setters.get(port.symbol).at(-1)(port.defaultValue);
   }
-  function addGrid(parent, ports) {
+  function addGrid(parent, ports, tag) {
     const controls = document2.createElement("div");
     controls.className = "controls";
     parent.append(controls);
-    for (const port of ports) addControl(controls, port);
+    for (const port of ports) addControl(controls, port, tag);
   }
-  if (ungrouped.length > 0) {
-    if (skinPanel) {
+  function addSections(parent, ports, tag, ungroupedLegend) {
+    const ungrouped = ports.filter((p) => p.group == null);
+    const groups = [];
+    for (const port of ports) {
+      if (port.group == null) continue;
+      const group = groups.find((g) => g.label === port.group);
+      if (group) group.ports.push(port);
+      else groups.push({ label: port.group, ports: [port] });
+    }
+    const fieldset = (label) => {
       const field = document2.createElement("fieldset");
       field.className = "control-group";
       const legend = document2.createElement("legend");
-      legend.textContent = "Other controls";
+      legend.textContent = label;
       field.append(legend);
-      root.append(field);
-      addGrid(field, ungrouped);
-    } else addGrid(root, ungrouped);
+      parent.append(field);
+      return field;
+    };
+    if (ungrouped.length > 0) addGrid(ungroupedLegend ? fieldset(ungroupedLegend) : parent, ungrouped, tag);
+    for (const group of groups) addGrid(fieldset(group.label), group.ports, tag);
   }
-  for (const group of groups) {
-    const field = document2.createElement("fieldset");
-    field.className = "control-group";
-    const legend = document2.createElement("legend");
-    legend.textContent = group.label;
-    field.append(legend);
-    root.append(field);
-    addGrid(field, group.ports);
+  if (!skinPanel) addSections(root, profile.ports, "", null);
+  else {
+    const others = document2.createElement("div");
+    others.className = "skin-others";
+    addSections(others, unskinned, "", "Other controls");
+    const everything = document2.createElement("div");
+    everything.className = "skin-fallback";
+    everything.hidden = true;
+    addSections(everything, profile.ports, "all-", null);
+    root.append(others, everything);
+    skinPanel.onCramped((cramped) => {
+      skinPanel.element.hidden = cramped;
+      others.hidden = cramped;
+      everything.hidden = !cramped;
+      root.classList.toggle("skin-cramped", cramped);
+    });
   }
   let assetGrid = null;
   for (const asset of profile.assets ?? []) {
@@ -32548,11 +32603,13 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     element: root,
     /** Called by the host when a value actually changed. */
     update(symbol, value2) {
-      setters.get(symbol)?.(value2);
+      for (const fn of setters.get(symbol) ?? []) fn(value2);
       skinPanel?.update(symbol, value2);
     },
     /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
-    skinned: skinPanel !== null
+    skinned: skinPanel !== null,
+    /** The skin's own view, for a caller that places it itself: a test with its own measurements. */
+    skinView: skinPanel
   };
 }
 

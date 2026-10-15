@@ -41,12 +41,14 @@ export { UNIT_LABELS, formatValue, SPOKEN_UNITS, spokenValue } from './PortText.
  * runtime, and this must cost them nothing, the same rule every other
  * generated control here already follows.
  *
+ * `skinLayout` passes `measure` and `availableWidth` through to the skin, which a test supplies because a DOM has no layout.
+ *
  * `skin`, from src/host/SkinLoader.js, is the plugin's own artwork already built
  * from the allowlist (docs/svg-skins.md). It is drawn first, and the generated
  * controls follow for every port it does not bind, so a skin can show a subset
  * of the ports and cannot make one unreachable (contract section 9.4).
  */
-export function createPanel (document, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null } = {}) {
+export function createPanel (document, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null, skinLayout = {} } = {}) {
   // What the control ids are made from. The plugin IRI by default, and a host
   // showing two instances of one plugin passes something per instance: two
   // panels built from one IRI gave every control an id the other also had, so
@@ -87,9 +89,12 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
   // a plugin rather than playing one. Screen area is the scarce thing in a
   // rack.
 
+  // symbol -> the functions that draw that port's value: the generated control, and a second one when the panel has two
+  // (a skin that is too cramped to use at this width is replaced by generated controls for every port).
   const setters = new Map()
+  const onValue = (symbol, fn) => { if (!setters.has(symbol)) setters.set(symbol, []); setters.get(symbol).push(fn) }
 
-  const skinPanel = skin ? createSkinPanel(document, { ...skin, ports: profile.ports }, onChange, { scope }) : null
+  const skinPanel = skin ? createSkinPanel(document, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout }) : null
   if (skinPanel) {
     root.append(skinPanel.element)
     root.classList.add('has-skin')
@@ -97,29 +102,17 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     // The hit areas are placed from measurements, which exist only once the element is in a page
     // and change with its width, so the observer does both.
     const Observer = document.defaultView?.ResizeObserver
-    if (Observer) new Observer(() => skinPanel.fit()).observe(skinPanel.element)
+    // The panel, not the skin: the skin is put away when it is cramped and then has no size to observe.
+    if (Observer) new Observer(() => skinPanel.fit()).observe(root)
   }
   const unskinned = skinPanel ? profile.ports.filter(p => !skinPanel.bound.has(p.symbol)) : profile.ports
 
-  // Ports render in sections: ungrouped ports first, exactly as a plugin with
-  // no groups renders today, then one named section per group in order of
-  // first appearance. A fieldset names its controls to assistive technology;
-  // a visible heading alone would name them only to sight.
-  const ungrouped = unskinned.filter(p => p.group == null)
-  const groups = []
-  for (const port of unskinned) {
-    if (port.group == null) continue
-    const group = groups.find(g => g.label === port.group)
-    if (group) group.ports.push(port)
-    else groups.push({ label: port.group, ports: [port] })
-  }
-
-  function addControl (grid, port) {
+  function addControl (grid, port, tag) {
     const row = document.createElement('div')
     row.className = `control control-${port.widget}`
 
     const label = document.createElement('label')
-    const id = `${scope}#${port.symbol}`.replace(/[^\w-]/g, '_')
+    const id = `${scope}#${tag}${port.symbol}`.replace(/[^\w-]/g, '_')
     // setAttribute rather than the htmlFor property: the property is an alias
     // that not every DOM implementation provides, and the association is the
     // whole point of the label.
@@ -144,7 +137,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       input.type = 'checkbox'
       input.checked = port.defaultValue >= 0.5
       input.addEventListener('change', () => onChange(port.symbol, input.checked ? port.maximum : port.minimum))
-      setters.set(port.symbol, v => {
+      onValue(port.symbol, v => {
         const on = v >= 0.5
         input.checked = on
         // WCAG 1.4.1: the readout is the non-colour signal for the state. A
@@ -170,7 +163,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       }
       select(port.defaultValue)
       input.addEventListener('change', () => onChange(port.symbol, Number(input.value)))
-      setters.set(port.symbol, v => {
+      onValue(port.symbol, v => {
         select(v)
         readout.textContent = port.scalePoints.find(p => p.value === v)?.label ?? String(v)
       })
@@ -180,7 +173,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       // One listener for both, because a drag dispatches the same event an
       // arrow key does. Nothing here knows which happened.
       input.addEventListener('input', () => onChange(port.symbol, Number(input.value)))
-      setters.set(port.symbol, v => {
+      onValue(port.symbol, v => {
         input.value = String(v)
         readout.textContent = formatValue(port, v)
         // aria-valuetext, because a range otherwise announces the raw number
@@ -206,39 +199,66 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     grid.append(row)
 
     // Render the declared default through the same path a host update takes.
-    setters.get(port.symbol)(port.defaultValue)
+    setters.get(port.symbol).at(-1)(port.defaultValue)
   }
 
   // The controls share one grid per section, so knobs pack across the width
   // they are given instead of taking a row each. A panel of 42 controls was
   // 2000 pixels tall as sliders and is one screen as knobs.
-  function addGrid (parent, ports) {
+  function addGrid (parent, ports, tag) {
     const controls = document.createElement('div')
     controls.className = 'controls'
     parent.append(controls)
-    for (const port of ports) addControl(controls, port)
+    for (const port of ports) addControl(controls, port, tag)
   }
 
-  if (ungrouped.length > 0) {
-    if (skinPanel) {
-      // Under a drawing, controls the drawing does not have need saying so.
+  // Ports render in sections: ungrouped ports first, exactly as a plugin with
+  // no groups renders today, then one named section per group in order of
+  // first appearance. A fieldset names its controls to assistive technology;
+  // a visible heading alone would name them only to sight. `tag` keeps the ids
+  // apart when the same port is drawn twice.
+  function addSections (parent, ports, tag, ungroupedLegend) {
+    const ungrouped = ports.filter(p => p.group == null)
+    const groups = []
+    for (const port of ports) {
+      if (port.group == null) continue
+      const group = groups.find(g => g.label === port.group)
+      if (group) group.ports.push(port)
+      else groups.push({ label: port.group, ports: [port] })
+    }
+    const fieldset = label => {
       const field = document.createElement('fieldset')
       field.className = 'control-group'
       const legend = document.createElement('legend')
-      legend.textContent = 'Other controls'
+      legend.textContent = label
       field.append(legend)
-      root.append(field)
-      addGrid(field, ungrouped)
-    } else addGrid(root, ungrouped)
+      parent.append(field)
+      return field
+    }
+    if (ungrouped.length > 0) addGrid(ungroupedLegend ? fieldset(ungroupedLegend) : parent, ungrouped, tag)
+    for (const group of groups) addGrid(fieldset(group.label), group.ports, tag)
   }
-  for (const group of groups) {
-    const field = document.createElement('fieldset')
-    field.className = 'control-group'
-    const legend = document.createElement('legend')
-    legend.textContent = group.label
-    field.append(legend)
-    root.append(field)
-    addGrid(field, group.ports)
+
+  if (!skinPanel) addSections(root, profile.ports, '', null)
+  else {
+    // Under a drawing, controls the drawing does not have need saying so.
+    const others = document.createElement('div')
+    others.className = 'skin-others'
+    addSections(others, unskinned, '', 'Other controls')
+    // The skin's controls are padded to 44px, and at a narrow width a dense drawing cannot give each one that
+    // without them overlapping. Then the drawing is put away and every port is drawn as a generated control, which
+    // a person can use at any width. Both exist, and one is hidden, so a resize either way needs no rebuild.
+    const everything = document.createElement('div')
+    everything.className = 'skin-fallback'
+    everything.hidden = true
+    addSections(everything, profile.ports, 'all-', null)
+    root.append(others, everything)
+    skinPanel.onCramped(cramped => {
+      skinPanel.element.hidden = cramped
+      others.hidden = cramped
+      everything.hidden = !cramped
+      root.classList.toggle('skin-cramped', cramped)
+    })
   }
 
   // One file picker per jig:userReplaceable asset, after the parameters:
@@ -281,10 +301,12 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     element: root,
     /** Called by the host when a value actually changed. */
     update (symbol, value) {
-      setters.get(symbol)?.(value)
+      for (const fn of setters.get(symbol) ?? []) fn(value)
       skinPanel?.update(symbol, value)
     },
     /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
-    skinned: skinPanel !== null
+    skinned: skinPanel !== null,
+    /** The skin's own view, for a caller that places it itself: a test with its own measurements. */
+    skinView: skinPanel
   }
 }

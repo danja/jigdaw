@@ -18,17 +18,27 @@ const name = kind => (isMidiSignal(kind) ? 'MIDI' : 'audio')
 /**
  * `profileOf(nodeId)` gives a profile or undefined while it has not loaded.
  * `labelOf(nodeId)` and `trackLabelOf(trackId)` give display names.
- * Returns `{ rows, cols, connectionAt(row, col), possible(row, col) }`, rows
+ * Returns `{ rows, cols, ends, connectionAt(row, col), possible(row, col) }`, rows
  * being outputs and columns inputs, each with `key`, `node`, `track`, `port`,
  * `label` and `trackLabel`, in the order the arrangement shows the tracks.
+ *
+ * `ends` lists the plugins whose audio goes straight to their track's fader because nothing is connected after
+ * them. That is not a connection, so it has no cell; it is listed so a plugin whose output has nowhere to be
+ * joined is not simply missing from the table. The rule is the dispatcher's (OpDispatcher's #linkSinksToTracks):
+ * a node with an audio output, not bypassed, with no audio connection leaving it.
  */
 export function buildMatrix (project, { profileOf, labelOf, trackLabelOf }) {
   const rows = []
   const cols = []
+  const ends = []
+  const feedsSomething = new Set(project.connections.filter(c => !isMidiSignal(c.signalKind)).map(c => c.from.node))
   for (const track of project.orderedTracks) {
     for (const node of project.nodes.filter(n => n.track === track.id)) {
       const profile = profileOf(node.id)
       const common = { node: node.id, track: track.id, label: labelOf(node.id), trackLabel: trackLabelOf(track.id) }
+      if ((profile?.audioOutputs ?? 0) > 0 && !node.bypassed && !feedsSomething.has(node.id)) {
+        ends.push({ ...common, text: `${common.label} on ${common.trackLabel}` })
+      }
       for (const port of outputsOf(profile)) {
         rows.push({ ...common, port, key: `${node.id}-out-${name(port.kind)}-${port.portIndex}`, text: `${common.label} ${port.name}` })
       }
@@ -48,5 +58,5 @@ export function buildMatrix (project, { profileOf, labelOf, trackLabelOf }) {
   // table, and there is nothing to press in it, so it is left out.
   const usefulRows = rows.filter(r => cols.some(c => possible(r, c)))
   const usefulCols = cols.filter(c => rows.some(r => possible(r, c)))
-  return { rows: usefulRows, cols: usefulCols, possible, connectionAt }
+  return { rows: usefulRows, cols: usefulCols, ends, possible, connectionAt }
 }

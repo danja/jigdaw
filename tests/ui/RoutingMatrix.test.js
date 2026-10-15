@@ -125,6 +125,22 @@ describe('the routing matrix', () => {
     expect(document.querySelector('.empty').textContent).toBe('No plugin here has an input to connect to.')
   })
 
+  it('says which plugins end at their track\'s fader, under the table and where there is no table', () => {
+    const ends = [{ text: 'Parameq on Drums' }, { text: 'Reverb on Lead' }]
+    const { view } = build({ ...matrix(), ends })
+    expect(document.querySelector('.matrix-ends p').textContent).toContain('straight to their track\'s fader')
+    expect([...document.querySelectorAll('.matrix-ends li')].map(li => li.textContent)).toEqual(['Parameq on Drums', 'Reverb on Lead'])
+    expect(document.querySelector('table')).not.toBeNull()
+    view.draw({ rows: [], cols: [], ends, possible: () => false, connectionAt: () => null })
+    expect(document.querySelector('.empty').textContent).toBe('No plugins to route yet.')
+    expect(document.querySelectorAll('.matrix-ends li')).toHaveLength(2)
+  })
+
+  it('says nothing about the fader when every plugin has something after it', () => {
+    build({ ...matrix(), ends: [] })
+    expect(document.querySelector('.matrix-ends')).toBeNull()
+  })
+
   it('will not be built without its handlers', () => {
     expect(() => createRoutingMatrix(document, { onConnect () {} })).toThrow(/onDisconnect/)
   })

@@ -45,5 +45,25 @@
       "paramIndex": 0
     }
   ],
-  "abi": "jig:Abi1"
+  "abi": "jig:Abi1",
+  "skin": {
+    "file": "skin/skin.ttl",
+    "artwork": "skin/panel.svg",
+    "controls": [
+      {
+        "id": "gain",
+        "kind": "linear",
+        "port": "gain",
+        "element": "gain-thumb",
+        "track": "gain-slot",
+        "hit": "gain-hit"
+      },
+      {
+        "id": "gain-value",
+        "kind": "readout",
+        "port": "gain",
+        "element": "gain-value"
+      }
+    ]
+  }
 }

@@ -73,13 +73,13 @@
     a jig:Skin ;
     jig:location <skin/skin.ttl> ;
     jig:mediaType "text/turtle" ;
-    jig:integrity "sha384-UbkDqzJ06rFNS8oEaoOSrHuPSWmmFJEc/apMZJP0eEs3W6H2FoLo2GpwNcWtzDp0" .
+    jig:integrity "sha384-SNSVvKUJN7eQ2cYkay5iRgWYs4RqDRHEchMa91TXL7WCXyXIO2tGQsfBRS3+RePK" .
 
 <#skin-artwork>
     a jig:Resource ;
     jig:location <skin/panel.svg> ;
     jig:mediaType "image/svg+xml" ;
-    jig:integrity "sha384-DBvS9gj+8Dv2yAsqYB4kPN+HLLE2nPgvy55jZ4wz5zS3NmT/ibgPoQHBYcASu3zQ" .
+    jig:integrity "sha384-+jeQMN9BW4znxMWXzfvhs4zB2plEtFKqy0ycYh4bmpY0BQX0GiyEqGkUyYlQujsI" .
 
 <#enabled>
     a lv2:InputPort , lv2:ControlPort ;

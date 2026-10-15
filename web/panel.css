@@ -2,6 +2,9 @@
    The generated control panel and the knob (src/ui/Panel.js, src/ui/Dial.js), shared by the
    studio page and the simple page so the two draw a plugin's controls the same way.
    Expects the colour tokens --line, --accent, --fg and --dim on :root. */
+
+/* An element left out with the hidden attribute stays out whatever display its class gives it (tests/web/HiddenAttribute.test.js). */
+[hidden] { display:none !important; }
 /* Controls.
 
    A grid of knobs rather than a stack of sliders. A slider needs the width

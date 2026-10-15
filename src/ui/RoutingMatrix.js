@@ -74,14 +74,31 @@ export function createRoutingMatrix (document, { onConnect, onDisconnect }) {
     element,
     /** Draw from `buildMatrix`'s answer. The button the keyboard was on is kept. */
     draw (matrix) {
-      const { rows, cols, possible, connectionAt } = matrix
+      const { rows, cols, ends, possible, connectionAt } = matrix
+      // Plugins whose audio ends at their track's fader have no connection to show, so they are said in words under the
+      // table: otherwise a plugin with nothing after it is simply not in the table, and looks lost.
+      const endsNote = () => {
+        if (!ends?.length) return null
+        const note = document.createElement('div')
+        note.className = 'matrix-ends'
+        const lead = document.createElement('p')
+        lead.textContent = 'Audio from these goes straight to their track\'s fader, because nothing is connected after them:'
+        const list = document.createElement('ul')
+        for (const end of ends) {
+          const item = document.createElement('li')
+          item.textContent = end.text
+          list.append(item)
+        }
+        note.append(lead, list)
+        return note
+      }
       if (rows.length === 0 || cols.length === 0) {
         const none = document.createElement('p')
         none.className = 'empty'
         none.textContent = rows.length === 0 && cols.length === 0
           ? 'No plugins to route yet.'
           : rows.length === 0 ? 'No plugin here has an output to connect from.' : 'No plugin here has an input to connect to.'
-        element.replaceChildren(none)
+        element.replaceChildren(none, ...[endsNote()].filter(Boolean))
         return
       }
 
@@ -153,7 +170,7 @@ export function createRoutingMatrix (document, { onConnect, onDisconnect }) {
         body.append(tr)
       }
       table.append(head, body)
-      element.replaceChildren(table)
+      element.replaceChildren(table, ...[endsNote()].filter(Boolean))
 
       // One tab stop: the button the keyboard was on if it is still here, else the first.
       const keep = cursor && document.getElementById(cursor)
