@@ -14,6 +14,10 @@ on:
       - 'docs/**'
       - 'bin/build-docs-site.js'
       - 'bin/docs-site.css'
+      - 'bin/docs-catalogue.js'
+      - 'bin/build-gallery.js'
+      - 'plugins/index.json'
+      - 'web/gallery/shots/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 

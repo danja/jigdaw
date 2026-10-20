@@ -24,6 +24,7 @@ import { marked } from 'marked'
 import hljs from 'highlight.js'
 import { turtle } from './highlight-turtle.js'
 import { HIDDEN_DOCS } from './docs-hidden.js'
+import { renderCatalogue } from './docs-catalogue.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const docsDir = join(root, 'docs')
@@ -79,10 +80,11 @@ const GROUP_ORDER = ['Specification', 'Guides', 'Background']
 
 // Linked above every group, with no heading of its own: the first thing a
 // newcomer should read, before the specification proper.
-const TOP = ['overview']
+// 'catalogue' has no markdown behind it: bin/docs-catalogue.js generates its page.
+const TOP = ['overview', 'catalogue']
 // The sidebar label for a top link, where the document's own title is too
 // long for a sidebar.
-const TOP_LABEL = { overview: 'Overview' }
+const TOP_LABEL = { overview: 'Overview', catalogue: 'Example plugins' }
 
 marked.use({
   gfm: true,
@@ -190,7 +192,7 @@ function sidebar (current) {
         `<a href="${name}.html"${name === current ? ' aria-current="page"' : ''}>${escapeHtml(titles.get(name))}</a>`
       ).join('\n      ')}
     </div>`
-  const top = TOP.filter(name => names.includes(name))
+  const top = TOP.filter(name => names.includes(name) || name === 'catalogue')
   const topLink = name =>
     `<a href="${name}.html"${name === current ? ' aria-current="page"' : ''}>${escapeHtml(TOP_LABEL[name] ?? titles.get(name))}</a>`
   const head = top.length === 0 ? '' : `
@@ -259,8 +261,18 @@ for (const name of names) {
   await writeFile(join(outDir, `${name}.html`), html)
 }
 
+const catalogue = await renderCatalogue(root)
+await writeFile(join(outDir, 'catalogue.html'), page({
+  name: 'catalogue',
+  title: 'Example plugins',
+  description: 'The worked example plugins in the JigDAW repository, with their generated panels.',
+  bodyHtml: catalogue.body
+}))
+await mkdir(join(outDir, 'shots'), { recursive: true })
+for (const name of catalogue.shots) await copyFile(join(root, 'web/gallery/shots', `${name}.png`), join(outDir, 'shots', `${name}.png`))
+
 for (const file of BRAND_FILES) await copyFile(join(brandDir, file), join(outDir, file))
 await copyFile(join(root, 'bin/docs-site.css'), join(outDir, 'docs.css'))
 await writeFile(join(outDir, '.nojekyll'), '')
 
-console.log(`docs-site/: ${names.length} page(s) (${names.join(', ')})`)
+console.log(`docs-site/: ${names.length + 1} page(s) (${names.join(', ')})`)

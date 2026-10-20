@@ -29,7 +29,8 @@ describe('the documentation site', () => {
   it('publishes every document that is not hidden, so a new one is in or out on purpose', () => {
     const docs = readdirSync(join(root, 'docs')).filter(f => f.endsWith('.md')).map(f => f.slice(0, -3))
     const published = readdirSync(out).filter(f => f.endsWith('.html')).map(f => f.slice(0, -5))
-    expect(published.sort()).toEqual(docs.filter(n => !HIDDEN.includes(n)).sort())
+    // catalogue.html is generated from plugins/index.json, not from a document.
+    expect(published.sort()).toEqual([...docs.filter(n => !HIDDEN.includes(n)), 'catalogue'].sort())
     // Design notes under docs/plugins/ are working notes and have no page.
     expect(published.filter(n => n.endsWith('-design'))).toEqual([])
   })
@@ -47,9 +48,26 @@ describe('the documentation site', () => {
   })
 
   it('sends a link to a hidden document to the repository, and keeps it out of the sidebar', () => {
+    const architecture = readFileSync(join(out, 'architecture.html'), 'utf8')
+    expect(architecture).toMatch(/href="https:\/\/github.com\/danja\/jigdaw\/blob\/main\/docs\/(plan|first-thoughts|local-references)\.md"/)
+    expect(architecture).not.toContain('href="plan.html"')
+    expect(architecture).not.toMatch(/<a href="first-thoughts\.html"/)
+  })
+
+  it('lists every plugin in plugins/index.json on the catalogue page, with its screenshot', () => {
+    const { plugins } = JSON.parse(readFileSync(join(root, 'plugins/index.json'), 'utf8'))
+    const html = readFileSync(join(out, 'catalogue.html'), 'utf8')
+    for (const { iri, label } of plugins) {
+      const name = iri.replace(/\/$/, '').split('/').pop()
+      expect(html, label).toContain(`plugins/${name}/profile.ttl`)
+      expect(existsSync(join(out, 'shots', `${name}.png`)), `shots/${name}.png`).toBe(true)
+    }
+  })
+
+  it('gives the home page its five links', () => {
     const index = readFileSync(join(out, 'index.html'), 'utf8')
-    expect(index).toContain('href="https://github.com/danja/jigdaw/blob/main/docs/plan.md"')
-    expect(index).not.toContain('href="plan.html"')
-    expect(index).not.toMatch(/<a href="first-thoughts\.html"/)
+    for (const href of ['host-plugin-contract.html', 'for-hosts.html', 'for-plugin-authors.html', 'catalogue.html', 'https://strandz.it/jigdaw/simple.html']) {
+      expect(index, href).toContain(`href="${href}"`)
+    }
   })
 })

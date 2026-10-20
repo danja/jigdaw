@@ -44,7 +44,7 @@ export function categoryFor (entry) {
 
 export const CATEGORIES = ['Generative', 'MIDI', 'Instruments', 'Processors', 'Other']
 
-const BLURBS = {
+export const BLURBS = {
   Generative: 'Sources of musical material: melody, bass, drum and harmony generators playing in time with the session.',
   MIDI: 'Processors shaping MIDI before it reaches an instrument.',
   Instruments: 'Playable sound sources: synths and drum instruments.',
