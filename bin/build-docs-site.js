@@ -226,7 +226,7 @@ function page ({ name, title, description, bodyHtml }) {
 <link rel="stylesheet" href="docs.css">
 </head>
 <body>
-<div class="shell">
+<div class="shell${name === 'index' ? ' landing' : ''}">
   <aside class="sidebar">
     <a class="brand" href="index.html"${name === 'index' ? ' aria-current="page"' : ''}><img src="jigdaw-logo-dark.svg" alt="JigDAW" width="574" height="200"></a>
     <p class="tagline">A plugin format native to the web</p>

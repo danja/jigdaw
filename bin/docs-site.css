@@ -152,3 +152,14 @@ footer p { max-width:46rem; margin:0 auto; padding:20px 40px 44px; color:var(--f
 .card .links a { margin-right:12px; }
 .card .shot { display:block; }
 .card .shot img { display:block; width:100%; height:200px; object-fit:cover; object-position:top left; border-radius:4px; background:var(--panel-2); }
+
+/* The home page: no sidebar, because its own list is the navigation. */
+.landing { display:block; }
+.landing .sidebar { display:none; }
+.landing main { max-width:640px; margin:0 auto; padding:64px 20px 48px; }
+.landing article { padding:0; }
+.landing article > h1:first-child { font-size:2.4rem; margin:0 0 12px; }
+.landing article ul { list-style:none; padding:0; margin:28px 0; display:grid; gap:10px; }
+.landing article li { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; }
+.landing article li strong a { font-size:1.1rem; }
+.landing footer { display:none; }
