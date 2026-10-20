@@ -155,8 +155,11 @@ footer p { max-width:46rem; margin:0 auto; padding:20px 40px 44px; color:var(--f
 
 /* The home page: no sidebar, because its own list is the navigation. */
 .landing { display:block; }
-.landing .sidebar { display:none; }
-.landing main { max-width:640px; margin:0 auto; padding:64px 20px 48px; }
+.landing .sidebar { height:auto; position:static; width:auto; flex:none; background:none; border:none; padding:48px 20px 0; align-items:center; }
+.landing .sidebar .brand { margin:0; }
+.landing .sidebar .brand img { width:260px; }
+.landing .sidebar .tagline, .landing .sidebar nav, .landing .sidebar .github { display:none; }
+.landing main { max-width:640px; margin:0 auto; padding:24px 20px 48px; }
 .landing article { padding:0; }
 .landing article > h1:first-child { font-size:2.4rem; margin:0 0 12px; }
 .landing article ul { list-style:none; padding:0; margin:28px 0; display:grid; gap:10px; }

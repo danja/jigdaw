@@ -1,7 +1,7 @@
-# JigDAW
+# Jig
 
-A plugin is a URL. Dereference it and it runs in a browser, with nothing to install. JigDAW is the plugin format
-native to the web.
+A plugin is a URL. Dereference it and it runs in a browser, with nothing to install. Jig is the plugin format native
+to the web.
 
 - **[Demo](https://strandz.it/jigdaw/simple.html)**: pick a tune, press Play, change the sound.
 - **[Example plugins](catalogue.html)**: the worked plugins, with their panels.
