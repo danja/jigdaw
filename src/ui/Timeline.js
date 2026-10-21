@@ -39,6 +39,7 @@ import { createTrackHeader } from './TrackHeader.js'
 import { createChainStrip } from './ChainStrip.js'
 import { createEnvelopeLanes } from './EnvelopeLanes.js'
 import { createMasterRow } from './MasterRow.js'
+import { createFolderBar } from './FolderBar.js'
 import { createLoopRow } from './LoopRow.js'
 import { createRuler } from './Ruler.js'
 import { createTimelineTools } from './TimelineTools.js'
@@ -179,6 +180,37 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
 
   const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim })
 
+  // A folder is a run of neighbouring tracks that give the same name; two separate runs are two bars.
+  const collapsedFolders = new Set()
+  const folderBars = new Map()
+  function withFolders (tracks, rowsInOrder, layoutFor) {
+    const out = []
+    const seen = new Map()
+    const live = new Set()
+    for (let i = 0; i < tracks.length;) {
+      const name = layoutFor(tracks[i]).folder ?? null
+      let end = i + 1
+      while (name !== null && end < tracks.length && layoutFor(tracks[end]).folder === name) end++
+      if (name !== null) {
+        const nth = seen.get(name) ?? 0
+        seen.set(name, nth + 1)
+        const key = `${name}\u0000${nth}`
+        live.add(key)
+        let bar = folderBars.get(key)
+        if (!bar) {
+          bar = createFolderBar(document, { onToggle: folder => { collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder); if (lastArgs) draw(lastArgs); folderBars.get(key)?.element.querySelector('button').focus() } })
+          folderBars.set(key, bar)
+        }
+        bar.update({ name, count: end - i, collapsed: collapsedFolders.has(name) })
+        out.push(bar.element)
+      }
+      if (name === null || !collapsedFolders.has(name)) out.push(...rowsInOrder.slice(i, end))
+      i = end
+    }
+    for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key)
+    return out
+  }
+
   function draw (args) {
     lastArgs = args
     // How much of the lanes is on screen, for anything that must wrap inside it.
@@ -190,7 +222,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       colorFor = () => null,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
-      canArm = () => false, armed = () => false, routingFor = () => null,
+      kindFor = () => null, canArm = () => false, armed = () => false, routingFor = () => null,
       empty: emptyState = { text: 'No tracks yet. Load a plugin and its track appears here.', actions: [] }
     } = args
     const lastBeat = Math.max(0, ...clips.map(c => c.startBeat + c.lengthBeats))
@@ -257,7 +289,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       if (layout.color) entry.row.style.setProperty('--track-color', layout.color); else entry.row.style.removeProperty('--track-color')
       entry.header.update({
         label, channel: track.channel ?? {}, mixable: mixable(track), silent: silent(track), at, where: barBeat(at, beatsPerBar), selected: selection.has('track', track.id),
-        color: layout.color, size: layout.laneSize, latency: latencyFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
+        color: layout.color, size: layout.laneSize, latency: latencyFor(track), kind: kindFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
       })
       entry.strip.update(chainFor(track), { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
       entry.automation.update(lanesFor(track), { beatsPerBar, width })
@@ -277,7 +309,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const current = [...scroller.children]
     loopRow.draw(loop, width)
     masterRow.update(masterFor(), { beatsPerBar, width })
-    const expected = [head, ruler.element, loopRow.element, ...wanted, masterRow.element]
+    const expected = [head, ruler.element, loopRow.element, ...withFolders(tracks, wanted, layoutFor), masterRow.element]
     const same = current.length === expected.length && current.every((child, k) => child === expected[k])
     if (!same) scroller.replaceChildren(...expected)
     // The playhead is as tall as everything that scrolls, not as the box it is seen through: the box is shorter than the

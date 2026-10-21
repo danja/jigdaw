@@ -12,6 +12,7 @@
 // Level, pan, mute and solo are left out for a track that has nothing to hear:
 // four controls that move and change nothing are worse than none (CLAUDE.md).
 import { decibels, panPosition } from './Strip.js'
+import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
 export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
@@ -119,6 +120,11 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   routing.className = 'head-routing'
   routing.hidden = true
 
+  // The kind of track, from its ports. Said in words; left out when the ports say nothing.
+  const kindLabel = document.createElement('span')
+  kindLabel.className = 'head-kind'
+  kindLabel.hidden = true
+
   const silent = document.createElement('span')
   silent.className = 'head-silent'
   silent.hidden = true
@@ -131,7 +137,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   latency.hidden = true
 
   mix.append(mute, solo, level.label, pan.label, silent)
-  element.append(name, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
+  element.append(name, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
 
   return {
     element,
@@ -140,7 +146,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null }) {
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
       name.setAttribute('aria-pressed', String(selected))
@@ -150,7 +156,9 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       element.dataset.size = size
       name.title = onDuplicateTrack ? 'Alt with Up or Down moves this track, D duplicates it' : 'Alt with Up or Down moves this track'
       element.setAttribute('role', 'group')
-      element.setAttribute('aria-label', `${label} controls${isSilent ? ', silent' : ''}`)
+      kindLabel.hidden = kind === null
+      kindLabel.textContent = kind === null ? '' : TRACK_KIND_LABELS[kind]
+      element.setAttribute('aria-label', `${label} controls${kind === null ? '' : `, ${TRACK_KIND_LABELS[kind]} track`}${isSilent ? ', silent' : ''}`)
       at = place
       add.setAttribute('aria-label', `Add a MIDI clip to ${label} at ${where}`)
       addAudio.setAttribute('aria-label', `Add an audio file to ${label} at ${where}`)

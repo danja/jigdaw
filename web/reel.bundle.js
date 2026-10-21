@@ -13405,6 +13405,7 @@ var init_Vocabulary = __esm({
         order: `${JIG}order`,
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
+        folder: `${JIG}folder`,
         // Scripts saved with a session. docs/project-format.md.
         Script: `${JIG}Script`,
         ScriptLanguage: `${JIG}ScriptLanguage`,
@@ -23062,6 +23063,7 @@ var Engine = class {
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
 var DEFAULT_LANE_SIZE = "small";
+var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
 var EditorState = class _EditorState {
   #positions = /* @__PURE__ */ new Map();
@@ -23086,7 +23088,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -23097,6 +23099,12 @@ var EditorState = class _EditorState {
     if (patch.color !== void 0) {
       if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
       next.color = patch.color;
+    }
+    if (patch.folder !== void 0) {
+      if (patch.folder !== null && (typeof patch.folder !== "string" || patch.folder.trim() === "" || patch.folder.length > MAX_FOLDER_NAME)) {
+        throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`);
+      }
+      next.folder = patch.folder === null ? null : patch.folder.trim();
     }
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
@@ -26977,25 +26985,27 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_layout",
-      description: 'How the page draws a track: its place in the arrangement, colour and lane size. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large.',
+      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: "object",
         properties: {
           trackId: { type: "string" },
           move: { type: "integer" },
           color: { type: ["string", "null"] },
-          laneSize: { type: "string", enum: ["small", "medium", "large"] }
+          laneSize: { type: "string", enum: ["small", "medium", "large"] },
+          folder: { type: ["string", "null"] }
         },
         required: ["trackId"]
       },
-      async handler({ trackId, move, color, laneSize } = {}) {
+      async handler({ trackId, move, color, laneSize, folder } = {}) {
         try {
           const { project } = dispatcher;
           if (move !== void 0) project.moveTrack(trackId, move);
-          if (color !== void 0 || laneSize !== void 0) {
+          if (color !== void 0 || laneSize !== void 0 || folder !== void 0) {
             project.setTrackLayout(trackId, {
               ...color !== void 0 ? { color } : {},
-              ...laneSize !== void 0 ? { laneSize } : {}
+              ...laneSize !== void 0 ? { laneSize } : {},
+              ...folder !== void 0 ? { folder } : {}
             });
           }
           const order = project.orderedTracks.map((t) => t.id);
@@ -28839,11 +28849,12 @@ function writeEditor(project, { iri: iri3 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig4.x)} ${decimal(x)} ; ${term3(jig4.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize } = editor.track(track.id);
+    const { order, color, laneSize, folder } = editor.track(track.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig4.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig4.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
+    if (folder !== null) parts.push(`${term3(jig4.folder)} ${string(folder)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
@@ -29234,6 +29245,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
     } else if (p === jig5.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
+    } else if (p === jig5.folder) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
     }
   }
   return { positions, tracks };

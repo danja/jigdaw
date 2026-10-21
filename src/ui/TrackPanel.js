@@ -10,6 +10,8 @@
 // A control that cannot act is left out, not disabled: the first track has no
 // Move up and the last no Move down.
 
+import { MAX_FOLDER_NAME } from '../model/EditorState.js'
+
 export const COLORS = Object.freeze([
   { name: 'Red', value: '#e5484d' },
   { name: 'Orange', value: '#f5a524' },
@@ -27,8 +29,8 @@ export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')
 }
 
-export function createTrackPanel (document, { onRename, onColor, onSize, onMove, onDelete, onFreeze }) {
-  for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete, onFreeze })) {
+export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze }) {
+  for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== 'function') throw new Error(`createTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -48,6 +50,24 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onMove,
   name.addEventListener('change', commit)
   name.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commit() } })
   nameLabel.append(name)
+
+  // Folder: a name, shared by the tracks that belong together. Empty takes the track out of its folder.
+  const folderLabel = document.createElement('label')
+  folderLabel.className = 'track-field'
+  folderLabel.append(document.createTextNode('Folder '))
+  const folder = document.createElement('input')
+  folder.type = 'text'
+  folder.id = 'track-folder-input'
+  folder.autocomplete = 'off'
+  folder.spellcheck = false
+  folder.maxLength = MAX_FOLDER_NAME
+  folder.setAttribute('list', 'track-folder-names')
+  const folderNames = document.createElement('datalist')
+  folderNames.id = 'track-folder-names'
+  const commitFolder = () => onFolder(trackId, folder.value.trim() === '' ? null : folder.value.trim())
+  folder.addEventListener('change', commitFolder)
+  folder.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commitFolder() } })
+  folderLabel.append(folder, folderNames)
 
   // Colour
   const colorGroup = document.createElement('div')
@@ -116,7 +136,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onMove,
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(position, up, down, freeze, remove)
-  element.append(nameLabel, colorGroup, sizeLabel, actions)
+  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, actions)
 
   return {
     element,
@@ -126,11 +146,13 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onMove,
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show ({ id, name: current, defaultName, layout, index, count, plugins }) {
+    show ({ id, name: current, defaultName, layout, index, count, plugins, folders = [] }) {
       trackId = id
       // A name being typed is not overwritten by a redraw.
       if (document.activeElement !== name) name.value = current ?? ''
       name.placeholder = defaultName
+      if (document.activeElement !== folder) folder.value = layout.folder ?? ''
+      folderNames.replaceChildren(...folders.map(text => { const option = document.createElement('option'); option.value = text; return option }))
       colorSaid.textContent = ` ${colorName(layout.color)}`
       for (const button of swatches) button.setAttribute('aria-pressed', String((button.dataset.color || null) === layout.color))
       for (const option of size.options) option.selected = option.value === layout.laneSize

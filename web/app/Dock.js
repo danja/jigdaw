@@ -110,6 +110,7 @@ export function createDockPanel (ctx) {
     },
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
+    onFolder: (id, folder) => layoutOf(id, { folder }),
     onMove: (id, delta) => ctx.dispatcher.project.moveTrack(id, delta),
     onFreeze: id => {
       ctx.bounce.freezeTrack(id).catch(error => log(error.message, 'error'))
@@ -209,6 +210,7 @@ export function createDockPanel (ctx) {
         name: track.label,
         defaultName: trackLabel({ ...track, label: null }),
         layout: project.trackLayout(track.id),
+        folders: [...new Set(ordered.map(t => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex(t => t.id === track.id),
         count: ordered.length,
         plugins: project.nodes.filter(n => n.track === track.id).length

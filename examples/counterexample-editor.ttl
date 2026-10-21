@@ -21,3 +21,6 @@
 <#t6> jig:color "blue" .
 <#t7> jig:color 7 .
 <#t8> jig:color "#112233" , "#445566" .
+# A folder name that is empty, and two folder names.
+<#t9> jig:folder "" .
+<#t10> jig:folder "Drums" , "Bass" .

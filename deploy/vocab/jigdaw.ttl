@@ -886,6 +886,13 @@ jig:laneSize a owl:DatatypeProperty ;
         metadata. Small when absent: it was medium until 2026-10-10, and a session written before then that
         said nothing is drawn small now.""" .
 
+jig:folder a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:string ;
+    rdfs:label "folder" ;
+    rdfs:comment """The name of the folder a track is shown in, one to sixty characters. Editor
+        metadata: stated only in the editor graph, and it changes no routing. Tracks that
+        give the same name are one folder; a track with none is in no folder.""" .
+
 ## -- Bundles and provenance --------------------------------------------------
 ##
 ## docs/plugin-bundles.md. A bundle is the same plugin as a file. These terms

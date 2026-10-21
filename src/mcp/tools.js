@@ -340,26 +340,27 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     {
       name: 'track_layout',
       description:
-        'How the page draws a track: its place in the arrangement, colour and lane size. Editor ' +
+        'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor ' +
         'metadata, so it changes no revision and has no undo. "move" is places up (negative) or ' +
-        'down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large.',
+        'down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: 'object',
         properties: {
           trackId: { type: 'string' },
           move: { type: 'integer' },
           color: { type: ['string', 'null'] },
-          laneSize: { type: 'string', enum: ['small', 'medium', 'large'] }
+          laneSize: { type: 'string', enum: ['small', 'medium', 'large'] },
+          folder: { type: ['string', 'null'] }
         },
         required: ['trackId']
       },
-      async handler ({ trackId, move, color, laneSize } = {}) {
+      async handler ({ trackId, move, color, laneSize, folder } = {}) {
         try {
           const { project } = dispatcher
           if (move !== undefined) project.moveTrack(trackId, move)
-          if (color !== undefined || laneSize !== undefined) {
+          if (color !== undefined || laneSize !== undefined || folder !== undefined) {
             project.setTrackLayout(trackId, {
-              ...(color !== undefined ? { color } : {}), ...(laneSize !== undefined ? { laneSize } : {})
+              ...(color !== undefined ? { color } : {}), ...(laneSize !== undefined ? { laneSize } : {}), ...(folder !== undefined ? { folder } : {})
             })
           }
           const order = project.orderedTracks.map(t => t.id)

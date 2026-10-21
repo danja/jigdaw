@@ -13405,6 +13405,7 @@ var init_Vocabulary = __esm({
         order: `${JIG}order`,
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
+        folder: `${JIG}folder`,
         // Scripts saved with a session. docs/project-format.md.
         Script: `${JIG}Script`,
         ScriptLanguage: `${JIG}ScriptLanguage`,
@@ -20439,6 +20440,7 @@ function createAutomationHost(ctx2) {
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
 var DEFAULT_LANE_SIZE = "small";
+var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
 var EditorState = class _EditorState {
   #positions = /* @__PURE__ */ new Map();
@@ -20463,7 +20465,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -20474,6 +20476,12 @@ var EditorState = class _EditorState {
     if (patch.color !== void 0) {
       if (patch.color !== null && !COLOR.test(patch.color)) throw new Error("color must be #rrggbb in lower case, or null");
       next.color = patch.color;
+    }
+    if (patch.folder !== void 0) {
+      if (patch.folder !== null && (typeof patch.folder !== "string" || patch.folder.trim() === "" || patch.folder.length > MAX_FOLDER_NAME)) {
+        throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`);
+      }
+      next.folder = patch.folder === null ? null : patch.folder.trim();
     }
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
@@ -28193,25 +28201,27 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_layout",
-      description: 'How the page draws a track: its place in the arrangement, colour and lane size. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large.',
+      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: "object",
         properties: {
           trackId: { type: "string" },
           move: { type: "integer" },
           color: { type: ["string", "null"] },
-          laneSize: { type: "string", enum: ["small", "medium", "large"] }
+          laneSize: { type: "string", enum: ["small", "medium", "large"] },
+          folder: { type: ["string", "null"] }
         },
         required: ["trackId"]
       },
-      async handler({ trackId, move, color, laneSize } = {}) {
+      async handler({ trackId, move, color, laneSize, folder } = {}) {
         try {
           const { project } = dispatcher;
           if (move !== void 0) project.moveTrack(trackId, move);
-          if (color !== void 0 || laneSize !== void 0) {
+          if (color !== void 0 || laneSize !== void 0 || folder !== void 0) {
             project.setTrackLayout(trackId, {
               ...color !== void 0 ? { color } : {},
-              ...laneSize !== void 0 ? { laneSize } : {}
+              ...laneSize !== void 0 ? { laneSize } : {},
+              ...folder !== void 0 ? { folder } : {}
             });
           }
           const order = project.orderedTracks.map((t) => t.id);
@@ -32019,6 +32029,17 @@ function createSkins(ctx2) {
   };
 }
 
+// src/model/TrackKind.js
+function trackKind(project, track, profileOf) {
+  if (project.tracks.some((other) => other.id !== track.id && other.output === track.id)) return "bus";
+  const profiles = project.nodes.filter((n2) => n2.track === track.id).map((n2) => profileOf(n2.id)).filter(Boolean);
+  const takesMidi = profiles.filter((p) => (p.accepts ?? []).some(isMidiSignal));
+  if (takesMidi.length > 0) return takesMidi.some((p) => (p.audioOutputs ?? 0) > 0) ? "instrument" : "midi";
+  if (profiles.some((p) => (p.audioOutputs ?? 0) > 0 || (p.audioInputs ?? 0) > 0)) return "audio";
+  return null;
+}
+var TRACK_KIND_LABELS = Object.freeze({ bus: "Bus", instrument: "Instrument", midi: "MIDI", audio: "Audio" });
+
 // src/ui/TrackHeader.js
 function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
@@ -32112,6 +32133,9 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const routing = document2.createElement("p");
   routing.className = "head-routing";
   routing.hidden = true;
+  const kindLabel = document2.createElement("span");
+  kindLabel.className = "head-kind";
+  kindLabel.hidden = true;
   const silent = document2.createElement("span");
   silent.className = "head-silent";
   silent.hidden = true;
@@ -32120,7 +32144,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   latency.className = "head-latency";
   latency.hidden = true;
   mix.append(mute, solo, level.label, pan.label, silent);
-  element.append(name2, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
+  element.append(name2, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
   return {
     element,
     /**
@@ -32128,7 +32152,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null }) {
+    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null }) {
       name2.textContent = label;
       name2.setAttribute("aria-label", `Select ${label}`);
       name2.setAttribute("aria-pressed", String(selected));
@@ -32138,7 +32162,9 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       element.dataset.size = size;
       name2.title = onDuplicateTrack ? "Alt with Up or Down moves this track, D duplicates it" : "Alt with Up or Down moves this track";
       element.setAttribute("role", "group");
-      element.setAttribute("aria-label", `${label} controls${isSilent ? ", silent" : ""}`);
+      kindLabel.hidden = kind === null;
+      kindLabel.textContent = kind === null ? "" : TRACK_KIND_LABELS[kind];
+      element.setAttribute("aria-label", `${label} controls${kind === null ? "" : `, ${TRACK_KIND_LABELS[kind]} track`}${isSilent ? ", silent" : ""}`);
       at = place;
       add.setAttribute("aria-label", `Add a MIDI clip to ${label} at ${where}`);
       addAudio.setAttribute("aria-label", `Add an audio file to ${label} at ${where}`);
@@ -32599,6 +32625,30 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
   };
 }
 
+// src/ui/FolderBar.js
+function createFolderBar(document2, { onToggle }) {
+  const element = document2.createElement("div");
+  element.className = "timeline-folder";
+  element.setAttribute("role", "group");
+  const button = document2.createElement("button");
+  button.type = "button";
+  button.className = "folder-toggle";
+  let name2 = "";
+  button.addEventListener("click", () => onToggle(name2));
+  element.append(button);
+  return {
+    element,
+    update({ name: folder, count, collapsed }) {
+      name2 = folder;
+      const tracks = count === 1 ? "1 track" : `${count} tracks`;
+      button.textContent = `${collapsed ? "\u25B8" : "\u25BE"} ${folder}, ${tracks}${collapsed ? ", hidden" : ""}`;
+      button.setAttribute("aria-expanded", String(!collapsed));
+      button.setAttribute("aria-label", `${collapsed ? "Show" : "Hide"} the ${tracks} in folder ${folder}`);
+      element.setAttribute("aria-label", `Folder ${folder}`);
+    }
+  };
+}
+
 // src/ui/TrackPanel.js
 var COLORS = Object.freeze([
   { name: "Red", value: "#e5484d" },
@@ -32614,8 +32664,8 @@ var SIZES = Object.freeze([["small", "Small"], ["medium", "Medium"], ["large", "
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
-function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDelete, onFreeze }) {
-  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onMove, onDelete, onFreeze })) {
+function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze }) {
+  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
   const element = document2.createElement("div");
@@ -32638,6 +32688,27 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
     }
   });
   nameLabel.append(name2);
+  const folderLabel = document2.createElement("label");
+  folderLabel.className = "track-field";
+  folderLabel.append(document2.createTextNode("Folder "));
+  const folder = document2.createElement("input");
+  folder.type = "text";
+  folder.id = "track-folder-input";
+  folder.autocomplete = "off";
+  folder.spellcheck = false;
+  folder.maxLength = MAX_FOLDER_NAME;
+  folder.setAttribute("list", "track-folder-names");
+  const folderNames = document2.createElement("datalist");
+  folderNames.id = "track-folder-names";
+  const commitFolder = () => onFolder(trackId, folder.value.trim() === "" ? null : folder.value.trim());
+  folder.addEventListener("change", commitFolder);
+  folder.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitFolder();
+    }
+  });
+  folderLabel.append(folder, folderNames);
   const colorGroup = document2.createElement("div");
   colorGroup.className = "track-colors";
   colorGroup.setAttribute("role", "group");
@@ -32697,7 +32768,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(position2, up, down, freeze, remove);
-  element.append(nameLabel, colorGroup, sizeLabel, actions);
+  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, actions);
   return {
     element,
     get trackId() {
@@ -32708,10 +32779,16 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onMove, onDele
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show({ id, name: current, defaultName, layout, index, count, plugins }) {
+    show({ id, name: current, defaultName, layout, index, count, plugins, folders = [] }) {
       trackId = id;
       if (document2.activeElement !== name2) name2.value = current ?? "";
       name2.placeholder = defaultName;
+      if (document2.activeElement !== folder) folder.value = layout.folder ?? "";
+      folderNames.replaceChildren(...folders.map((text) => {
+        const option = document2.createElement("option");
+        option.value = text;
+        return option;
+      }));
       colorSaid.textContent = ` ${colorName(layout.color)}`;
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
       for (const option of size.options) option.selected = option.value === layout.laneSize;
@@ -33366,6 +33443,39 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx());
   }, { passive: false });
   const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim });
+  const collapsedFolders = /* @__PURE__ */ new Set();
+  const folderBars = /* @__PURE__ */ new Map();
+  function withFolders(tracks, rowsInOrder, layoutFor) {
+    const out = [];
+    const seen = /* @__PURE__ */ new Map();
+    const live = /* @__PURE__ */ new Set();
+    for (let i2 = 0; i2 < tracks.length; ) {
+      const name2 = layoutFor(tracks[i2]).folder ?? null;
+      let end = i2 + 1;
+      while (name2 !== null && end < tracks.length && layoutFor(tracks[end]).folder === name2) end++;
+      if (name2 !== null) {
+        const nth = seen.get(name2) ?? 0;
+        seen.set(name2, nth + 1);
+        const key = `${name2}\0${nth}`;
+        live.add(key);
+        let bar = folderBars.get(key);
+        if (!bar) {
+          bar = createFolderBar(document2, { onToggle: (folder) => {
+            collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder);
+            if (lastArgs) draw(lastArgs);
+            folderBars.get(key)?.element.querySelector("button").focus();
+          } });
+          folderBars.set(key, bar);
+        }
+        bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2) });
+        out.push(bar.element);
+      }
+      if (name2 === null || !collapsedFolders.has(name2)) out.push(...rowsInOrder.slice(i2, end));
+      i2 = end;
+    }
+    for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key);
+    return out;
+  }
   function draw(args) {
     lastArgs = args;
     scroller.style.setProperty("--view", `${scroller.clientWidth}px`);
@@ -33386,6 +33496,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       colorFor = () => null,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
+      kindFor = () => null,
       canArm = () => false,
       armed = () => false,
       routingFor = () => null,
@@ -33461,6 +33572,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         color: layout.color,
         size: layout.laneSize,
         latency: latencyFor(track),
+        kind: kindFor(track),
         canArm: canArm(track),
         armed: armed(track),
         routing: routingFor(track)
@@ -33481,7 +33593,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const current = [...scroller.children];
     loopRow.draw(loop, width);
     masterRow.update(masterFor(), { beatsPerBar, width });
-    const expected = [head, ruler.element, loopRow.element, ...wanted, masterRow.element];
+    const expected = [head, ruler.element, loopRow.element, ...withFolders(tracks, wanted, layoutFor), masterRow.element];
     const same = current.length === expected.length && current.every((child, k) => child === expected[k]);
     if (!same) scroller.replaceChildren(...expected);
     head.style.height = `${scroller.scrollHeight}px`;
@@ -34223,6 +34335,7 @@ function createArrangement(ctx2) {
         trackLabelOf: (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
       }),
       routingFor: (track) => describeRouting(project, track.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
+      kindFor: (track) => trackKind(project, track, (id) => ctx2.dispatcher.engineNode(id)?.profile),
       canArm: (track) => Boolean(track.midiInput),
       armed: (track) => ctx2.midiIn.armed(track.id),
       latencyFor: (track) => {
@@ -35030,6 +35143,7 @@ function createDockPanel(ctx2) {
     },
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
+    onFolder: (id, folder) => layoutOf(id, { folder }),
     onMove: (id, delta) => ctx2.dispatcher.project.moveTrack(id, delta),
     onFreeze: (id) => {
       ctx2.bounce.freezeTrack(id).catch((error2) => log2(error2.message, "error"));
@@ -35124,6 +35238,7 @@ function createDockPanel(ctx2) {
         name: track.label,
         defaultName: trackLabel({ ...track, label: null }),
         layout: project.trackLayout(track.id),
+        folders: [...new Set(ordered.map((t) => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex((t) => t.id === track.id),
         count: ordered.length,
         plugins: project.nodes.filter((n2) => n2.track === track.id).length
@@ -36051,11 +36166,12 @@ function writeEditor(project, { iri: iri5 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig6.x)} ${decimal(x)} ; ${term3(jig6.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize } = editor.track(track.id);
+    const { order, color, laneSize, folder } = editor.track(track.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig6.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig6.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig6.laneSize)} ${string(laneSize)}`);
+    if (folder !== null) parts.push(`${term3(jig6.folder)} ${string(folder)}`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
@@ -36446,6 +36562,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
     } else if (p === jig7.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
+    } else if (p === jig7.folder) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
     }
   }
   return { positions, tracks };

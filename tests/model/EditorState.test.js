@@ -6,8 +6,19 @@ describe('EditorState', () => {
   it('starts as the default and says so', () => {
     const editor = new EditorState()
     expect(editor.isDefault).toBe(true)
-    expect(editor.track('t')).toEqual({ order: null, color: null, laneSize: 'small' })
+    expect(editor.track('t')).toEqual({ order: null, color: null, folder: null, laneSize: 'small' })
     expect(editor.position('n')).toEqual({ x: 0, y: 0 })
+  })
+
+  it('keeps a folder name trimmed, refuses an empty or long one, and clears with null', () => {
+    const editor = new EditorState()
+    editor.setTrack('t', { folder: '  Drums ' })
+    expect(editor.track('t').folder).toBe('Drums')
+    expect(() => editor.setTrack('t', { folder: '   ' })).toThrow(/folder/)
+    expect(() => editor.setTrack('t', { folder: 'x'.repeat(61) })).toThrow(/folder/)
+    expect(editor.track('t').folder).toBe('Drums')
+    editor.setTrack('t', { folder: null })
+    expect(editor.track('t').folder).toBeNull()
   })
 
   it('is no longer the default once a track or a node is laid out', () => {

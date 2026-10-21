@@ -7,6 +7,7 @@
 import { createTimeline, barBeat } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
+import { trackKind } from '../../src/model/TrackKind.js'
 import { mixable } from '../../src/ui/Mixer.js'
 import { describeChain } from '../../src/ui/ChainModel.js'
 import { describeRouting } from '../../src/ui/SendsModel.js'
@@ -315,6 +316,7 @@ export function createArrangement (ctx) {
         trackLabelOf: id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
       }),
       routingFor: track => describeRouting(project, track.id, id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
+      kindFor: track => trackKind(project, track, id => ctx.dispatcher.engineNode(id)?.profile),
       canArm: track => Boolean(track.midiInput),
       armed: track => ctx.midiIn.armed(track.id),
       latencyFor: track => {

@@ -15,7 +15,7 @@ const event = (type, props = {}) => {
 function build (over = {}) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onSize: rec('size'), onMove: rec('move'), onDelete: rec('delete'), onFreeze: rec('freeze') })
+  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onSize: rec('size'), onFolder: rec('folder'), onMove: rec('move'), onDelete: rec('delete'), onFreeze: rec('freeze') })
   document.body.append(panel.element)
   const state = { id: 't2', name: 'Bass', defaultName: 'Bass', layout: { order: null, color: null, laneSize: 'medium' }, index: 1, count: 3, plugins: 2, ...over }
   panel.show(state)
@@ -23,6 +23,17 @@ function build (over = {}) {
 }
 
 describe('the track panel', () => {
+  it('commits a folder name trimmed, and an empty one as null, and offers the names in use', () => {
+    const { $, calls, panel, state } = build()
+    $('track-folder-input').value = '  Drums '
+    $('track-folder-input').dispatchEvent(event('change'))
+    $('track-folder-input').value = ''
+    $('track-folder-input').dispatchEvent(event('change'))
+    expect(calls).toEqual([['folder', 't2', 'Drums'], ['folder', 't2', null]])
+    panel.show({ ...state, folders: ['Bass', 'Drums'] })
+    expect([...document.querySelectorAll('#track-folder-names option')].map(o => o.value)).toEqual(['Bass', 'Drums'])
+  })
+
   it('offers Freeze track and asks for it by the track it shows', () => {
     const { $, calls } = build()
     expect($('track-freeze').textContent).toBe('Freeze track')

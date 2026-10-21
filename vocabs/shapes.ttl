@@ -669,6 +669,10 @@ jig:EditorLaneSizeShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:laneSize ;
     sh:property [ sh:path jig:laneSize ; sh:maxCount 1 ; sh:in ( "small" "medium" "large" ) ; sh:message "A lane is small, medium or large." ] .
 
+jig:EditorFolderShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:folder ;
+    sh:property [ sh:path jig:folder ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ; sh:maxLength 60 ; sh:message "A folder name is one string of 1 to 60 characters." ] .
+
 jig:EditorColorShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:color ;
     sh:property [ sh:path jig:color ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^#[0-9a-f]{6}$" ; sh:message "A colour is one string of the form #rrggbb in lower case." ] .

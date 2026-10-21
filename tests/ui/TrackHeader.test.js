@@ -23,6 +23,20 @@ function build () {
 }
 
 describe('a track header', () => {
+  it('says the kind of track in words, and leaves it out when the ports say nothing', () => {
+    const { header, state, $ } = build()
+    const shown = () => $('show-track-t1').parentNode.querySelector('.head-kind')
+    expect(shown().hidden).toBe(true)
+    header.update({ ...state, kind: 'instrument' })
+    expect(shown().hidden).toBe(false)
+    expect(shown().textContent).toBe('Instrument')
+    expect(header.element.getAttribute('aria-label')).toBe('Bass controls, Instrument track')
+    header.update({ ...state, kind: null })
+    expect(shown().hidden).toBe(true)
+    expect(header.element.getAttribute('aria-label')).toBe('Bass controls')
+  })
+
+
   it('names each control for the track it belongs to, and says its value as text', () => {
     const { $ } = build()
     expect($('head-t1-muted').getAttribute('aria-label')).toBe('Mute Bass')

@@ -10,6 +10,7 @@ export const LANE_SIZES = Object.freeze(['small', 'medium', 'large'])
 // Small, so that a piece of seven tracks fits a screen: a row is the track's name and its mute and solo, and the rest of its
 // controls are a size up or in the Mixer tab. Absent in a file means this, and it is not written.
 export const DEFAULT_LANE_SIZE = 'small'
+export const MAX_FOLDER_NAME = 60
 const COLOR = /^#[0-9a-f]{6}$/
 
 export class EditorState {
@@ -33,7 +34,7 @@ export class EditorState {
   }
 
   /** Layout of one track. `order` is null until a person has placed it. */
-  track (id) { return { order: null, color: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
+  track (id) { return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
 
   setTrack (id, patch) {
     const next = { ...this.#tracks.get(id) }
@@ -44,6 +45,12 @@ export class EditorState {
     if (patch.color !== undefined) {
       if (patch.color !== null && !COLOR.test(patch.color)) throw new Error('color must be #rrggbb in lower case, or null')
       next.color = patch.color
+    }
+    if (patch.folder !== undefined) {
+      if (patch.folder !== null && (typeof patch.folder !== 'string' || patch.folder.trim() === '' || patch.folder.length > MAX_FOLDER_NAME)) {
+        throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`)
+      }
+      next.folder = patch.folder === null ? null : patch.folder.trim()
     }
     if (patch.laneSize !== undefined) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(', ')}`)

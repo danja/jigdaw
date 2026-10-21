@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  184 terms.
+  185 terms.
 </p>
 
 <h2>Classes</h2>
@@ -428,6 +428,10 @@
   <dt id="fadeOutBeats"><code>jig:fadeOutBeats</code> <span class="label">fade out, in beats</span></dt>
   <dd>How long the clip takes to fall from full level to silence at its end, in
         beats of the transport. Absent means no fade.</dd>
+  <dt id="folder"><code>jig:folder</code></dt>
+  <dd>The name of the folder a track is shown in, one to sixty characters. Editor
+        metadata: stated only in the editor graph, and it changes no routing. Tracks that
+        give the same name are one folder; a track with none is in no folder.</dd>
   <dt id="gain"><code>jig:gain</code></dt>
   <dd>Linear fader gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean

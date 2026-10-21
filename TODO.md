@@ -18,7 +18,7 @@ Where to start, in order. Everything else is below and is not ordered.
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
 2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
 3. The browser checks that need only a window in front (Checks in a real browser).
-4. The rest of the Tracks section: track types in the header, then folders and groups.
+4. The rest of the Tracks section: making a bus from a selection, then linked faders.
 5. Decide the docked mixer against the tab, which unblocks the Mixer section.
 
 ## Decisions for the maintainer
@@ -195,10 +195,17 @@ Workflow alongside from Routing, and the launcher last.
       (the same gap as the parity item); a foreign (WAM) plugin was not tried; focus stays on the original's name while the
       selection moves to the copy, which a screen reader pass should judge; the Duplicate button shows only on a medium or
       large lane, because a small one hides every button but the name; Add track's place at phone width is unmeasured.
-- [ ] **Track types visible in the header.** Instrument (MIDI in, audio out), audio, MIDI only, bus; drawn from the node
-      ports, not a flag.
-- [ ] **Folders and groups.** Editor-only folder first (no compiler change), then bus tracks that sum other tracks, and linked
-      faders as a group parameter.
+- [ ] **Track types: what Chrome did not cover.** Built: `src/model/TrackKind.js` reads instrument, MIDI, audio or bus from
+      node ports and from which tracks send to it; the header says it in words and in its group label. Seen in Chrome: a
+      Pulse track reads "Instrument" on a medium lane. Not seen: MIDI, audio and bus in a real page; a small lane hides the
+      word (the group label still says it); a track with only MIDI or audio clips and no plugin says nothing.
+- [ ] **Folders: what is left.** Built: `jig:folder` in the editor graph (vocab, shape, reader, writer, round trip, counter
+      example), the Folder field in the track panel, `track_layout` `folder`, and a bar above each run of neighbouring tracks
+      with a hide and show button (view only, not saved; focus stays on it). Seen in Chrome: two tracks in a folder collapse
+      to the bar and come back. Not built: moving a whole folder, collapse saved with the session, Folder in the bulk panel,
+      and a screen reader pass.
+- [ ] **Bus tracks that sum other tracks, and linked faders as a group parameter.** `track.output` already routes a track to a
+      bus; what is missing is making a bus from a selection in one step and a fader that moves its members.
 - [ ] **Reorder by drag; collapse a lane to a thin bar;** show and hide by folder; resize from the header by keyboard. Order is
       layout and is not part of undo.
 - [ ] **Bulk edit of level and pan for several tracks** (needs a rule for relative changes), and a range select by Shift with

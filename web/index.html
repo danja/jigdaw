@@ -367,6 +367,8 @@
   .matrix-cell { width:44px; height:44px; padding:0; background:transparent; color:var(--dim); border:0; cursor:pointer; font-size:16px; }
   .matrix-cell[aria-pressed="true"] { background:var(--accent); color:#fff; }
   .matrix-cell:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .head-kind { font-size:12px; color:var(--dim); border:1px solid var(--dim); border-radius:4px; padding:0 6px; }
+  .timeline-head[data-size="small"] .head-kind { display:none; }
   .head-routing { flex:1 1 100%; margin:0; font-size:12px; color:var(--fg); }
   .timeline-head[data-size="small"] .head-routing { display:none; }
   .sends-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
@@ -396,6 +398,8 @@
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
   .timeline { --head:13rem; }
   .timeline-row { border-top:1px solid var(--line); width:max-content; }
+  .timeline-folder { position:sticky; left:0; width:var(--view, 100%); border-top:1px solid var(--line); background:var(--panel, transparent); }
+  .folder-toggle { min-height:44px; padding:0 0.75rem; text-align:left; background:none; border:0; color:var(--fg); font-weight:600; }
   .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
     flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }

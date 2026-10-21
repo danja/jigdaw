@@ -383,11 +383,11 @@ describe('editor metadata stays in its own graph', () => {
 describe('the editor graph, track layout', () => {
   it('round trips order, colour and lane size, and writes nothing for the default', async () => {
     const project = builtProject()
-    project.setTrackLayout('track-10', { order: 0, color: '#3366cc', laneSize: 'large' })
+    project.setTrackLayout('track-10', { order: 0, color: '#3366cc', laneSize: 'large', folder: 'Drums' })
     const text = writeEditor(project, { iri: IRI })
     expect(text).not.toContain('<#track-1> ')
     const { tracks } = readEditor(await parseText(text, IRI), IRI)
-    expect(tracks.get('track-10')).toEqual({ order: 0, color: '#3366cc', laneSize: 'large' })
+    expect(tracks.get('track-10')).toEqual({ order: 0, color: '#3366cc', laneSize: 'large', folder: 'Drums' })
     expect(tracks.has('track-1')).toBe(false)
 
     const reopened = builtProject()

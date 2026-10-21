@@ -283,6 +283,7 @@ export const vocabulary = Object.freeze({
     order: `${JIG}order`,
     color: `${JIG}color`,
     laneSize: `${JIG}laneSize`,
+    folder: `${JIG}folder`,
 
     // Scripts saved with a session. docs/project-format.md.
     Script: `${JIG}Script`,

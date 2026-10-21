@@ -529,10 +529,19 @@ describe('tracks', () => {
     expect(dispatcher.project.revision).toBe(revision)
   })
 
+  it('puts a track in a folder and takes it out again, with no revision', async () => {
+    const { trackId } = await call('track_add', {})
+    const revision = dispatcher.project.revision
+    expect(await call('track_layout', { trackId, folder: 'Drums' })).toMatchObject({ layout: { folder: 'Drums' } })
+    expect(await call('track_layout', { trackId, folder: null })).toMatchObject({ layout: { folder: null } })
+    expect(dispatcher.project.revision).toBe(revision)
+  })
+
   it('refuses a layout the editor graph refuses, and a track that is not there', async () => {
     const { trackId } = await call('track_add', {})
     expect((await call('track_layout', { trackId, color: 'red' })).ok).toBe(false)
     expect((await call('track_layout', { trackId, laneSize: 'huge' })).ok).toBe(false)
+    expect((await call('track_layout', { trackId, folder: '' })).ok).toBe(false)
     expect((await call('track_layout', { trackId: 'ghost', move: 1 })).ok).toBe(false)
   })
 

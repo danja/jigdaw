@@ -7,5 +7,5 @@
 
 <#synth> jig:x 120.0 ; jig:y 40.5 .
 <#track-1> jig:order 0 ; jig:color "#3e8ef7" ; jig:laneSize "large" .
-<#track-2> jig:order 1 ; jig:laneSize "small" .
+<#track-2> jig:order 1 ; jig:laneSize "small" ; jig:folder "Drums" .
 <#clip-1> jig:color "#ff8a8a" .
