@@ -12,6 +12,7 @@ import { describeChain } from '../../src/ui/ChainModel.js'
 import { describeRouting } from '../../src/ui/SendsModel.js'
 import { spokenValue } from '../../src/ui/Panel.js'
 import { createClipActions } from '../../src/ui/ClipActions.js'
+import { duplicateTrack } from '../../src/ops/DuplicateTrack.js'
 import { chainSwapChanges } from '../../src/ops/ChainReorder.js'
 import { splitClip, duplicateClip, trimClip, copyClips, pasteClips } from '../../src/model/ClipEdit.js'
 
@@ -48,6 +49,18 @@ export function createArrangement (ctx) {
     onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
+    // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
+    onAddTrack: async () => {
+      await ctx.runtime.ensureRunning()
+      const result = edit([{ op: 'addTrack' }])
+      if (result.ok) ctx.selection.set('track', [result.results[0]])
+    },
+    onDuplicateTrack: async trackId => {
+      const result = await duplicateTrack(ctx.dispatcher, trackId)
+      if (!result.ok) { log(result.message, 'error'); return }
+      ctx.selection.set('track', [result.trackId])
+      log(`duplicated ${trackId}${result.skipped.length ? `, ${result.skipped.join('; ')}` : ''}`, 'ok')
+    },
     onChannel: (trackId, change) => {
       const result = ctx.dispatcher.setTrackChannel(trackId, change)
       if (!result.ok) log(result.message, 'error')

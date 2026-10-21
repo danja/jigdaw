@@ -25228,6 +25228,7 @@ var rangeOf = ({ lowNote, highNote }) => ({
   ...lowNote === void 0 ? {} : { lowNote },
   ...highNote === void 0 ? {} : { highNote }
 });
+var sameContent = (a2, b) => JSON.stringify({ ...a2, revision: 0 }) === JSON.stringify({ ...b, revision: 0 });
 var OpDispatcher = class {
   #project;
   #engine;
@@ -25590,7 +25591,7 @@ var OpDispatcher = class {
       return await fn();
     } finally {
       this.#unrecorded--;
-      if (this.#project.revision !== revision) this.#history.record(before);
+      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before);
     }
   }
   /**
@@ -26549,6 +26550,110 @@ function duplicateClip(project, id, { track, startBeat } = {}) {
   return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 
+// src/model/TrackDuplicate.js
+function copyLabel(track) {
+  return `${track.label ?? track.id} copy`;
+}
+function describeTrackCopy(project, trackId, { newTrackId = project.nextId("track") } = {}) {
+  const track = project.track(trackId);
+  if (!track) throw new Error(`no such track: ${trackId}`);
+  const nodes = project.nodes.filter((n2) => n2.track === trackId);
+  const on = new Set(nodes.map((n2) => n2.id));
+  const skipped = [];
+  for (const c3 of project.connections) {
+    const inside = [c3.from.node, c3.to.node].filter((id) => on.has(id)).length;
+    if (inside === 1) skipped.push(`connection ${c3.id} joins this track to another, and is not copied`);
+  }
+  return {
+    track: { op: "addTrack", id: newTrackId, label: copyLabel(track), channel: { ...track.channel } },
+    nodes: nodes.map((n2) => ({
+      from: n2.id,
+      pluginIri: n2.pluginIri,
+      label: n2.label,
+      settings: Object.fromEntries(n2.settings),
+      state: n2.state,
+      bypassed: n2.bypassed === true
+    })),
+    skipped
+  };
+}
+function finishTrackCopy(project, trackId, newTrackId, idMap) {
+  const track = project.track(trackId);
+  if (!track) throw new Error(`no such track: ${trackId}`);
+  const mapped = (id) => id === null || id === void 0 ? null : idMap.get(id) ?? null;
+  const changes = [];
+  const setTrack = { op: "setTrack", id: newTrackId };
+  if (track.midiInput !== null) setTrack.midiInput = mapped(track.midiInput);
+  if (track.audioInput !== null) setTrack.audioInput = mapped(track.audioInput);
+  if (track.output) setTrack.output = track.output;
+  if (Object.keys(setTrack).length > 2) changes.push(setTrack);
+  for (const c3 of project.connections) {
+    const from = mapped(c3.from.node);
+    const to = mapped(c3.to.node);
+    if (from === null || to === null) continue;
+    const { id, ...rest } = c3;
+    changes.push({ op: "addConnection", ...rest, from: { ...c3.from, node: from }, to: { ...c3.to, node: to } });
+  }
+  for (const envelope of project.envelopes) {
+    const node = envelope.target.node;
+    if (node === void 0 || mapped(node) === null) continue;
+    changes.push({ op: "addEnvelope", target: { ...envelope.target, node: mapped(node) }, points: envelope.points.map((p) => ({ ...p })) });
+  }
+  for (const clip of project.clips) {
+    if (clip.track !== trackId) continue;
+    const { id, track: _track, ...rest } = clip;
+    changes.push({ op: "addClip", ...rest, track: newTrackId, notes: clip.notes.map((n2) => ({ ...n2 })) });
+  }
+  for (const send of project.sends) {
+    if (send.from !== trackId) continue;
+    const { id, from, ...rest } = send;
+    changes.push({ op: "addSend", ...rest, from: newTrackId });
+  }
+  return changes;
+}
+
+// src/ops/DuplicateTrack.js
+async function duplicateTrack(dispatcher, trackId) {
+  let plan2;
+  try {
+    plan2 = describeTrackCopy(dispatcher.project, trackId);
+  } catch (error2) {
+    return { ok: false, kind: "change", message: error2.message };
+  }
+  const newTrack = plan2.track.id;
+  return dispatcher.grouped(async () => {
+    const takeBack = (ids) => dispatcher.apply([...ids.map((id) => ({ op: "removeNode", id })), { op: "removeTrack", id: newTrack }]);
+    const created = dispatcher.apply([plan2.track]);
+    if (!created.ok) return created;
+    const idMap = /* @__PURE__ */ new Map();
+    for (const node of plan2.nodes) {
+      const { from, pluginIri, ...rest2 } = node;
+      const result = await dispatcher.addPlugin(pluginIri, { ...rest2, track: newTrack }).catch((error2) => ({ ok: false, kind: "load", message: error2.message }));
+      if (!result.ok) {
+        takeBack([...idMap.values()]);
+        return { ...result, message: `${node.label ?? pluginIri}: ${result.message}` };
+      }
+      idMap.set(from, result.nodeId);
+      for (const [symbol, value2] of Object.entries(node.settings)) {
+        const set = dispatcher.setParameter(result.nodeId, symbol, value2);
+        if (!set.ok) {
+          takeBack([...idMap.values()]);
+          return { ok: false, kind: set.kind ?? "change", message: `${node.label ?? pluginIri}.${symbol}: ${set.message}` };
+        }
+      }
+    }
+    const rest = finishTrackCopy(dispatcher.project, trackId, newTrack, idMap);
+    if (rest.length > 0) {
+      const applied = dispatcher.apply(rest);
+      if (!applied.ok) {
+        takeBack([...idMap.values()]);
+        return applied;
+      }
+    }
+    return { ok: true, trackId: newTrack, nodeIds: Object.fromEntries(idMap), skipped: plan2.skipped };
+  });
+}
+
 // src/ops/ChainReorder.js
 var audioOnly = (connection) => !isMidi(connection.signalKind);
 var mainInput = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
@@ -26855,6 +26960,19 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         const change = { op: "removeTrack", id: trackId, ...moveNodesTo ? { moveNodesTo } : {} };
         const result = dispatcher.apply([change], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, removed: trackId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_duplicate",
+      description: "Copy a track with its plugins as one edit: each plugin is loaded again onto a new track with the same settings, saved state and bypass, and the wiring between them, the track inputs, automation, clips, channel strip and sends from the track are copied. A connection to another track is not. Undone as one step. If any plugin fails to load nothing is kept. Returns the new track id, a map from each original node id to its copy, and what was left out.",
+      inputSchema: {
+        type: "object",
+        properties: { trackId: { type: "string" } },
+        required: ["trackId"]
+      },
+      async handler({ trackId } = {}) {
+        const result = await duplicateTrack(dispatcher, trackId);
+        return result.ok ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -30303,6 +30421,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   graph_apply_changes: "the general changeset; Reel has a statement for each change it permits",
   track_add: "arrangement editing, not yet a statement",
   track_remove: "arrangement editing, not yet a statement",
+  track_duplicate: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",

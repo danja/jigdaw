@@ -22610,6 +22610,7 @@ var rangeOf = ({ lowNote, highNote }) => ({
   ...lowNote === void 0 ? {} : { lowNote },
   ...highNote === void 0 ? {} : { highNote }
 });
+var sameContent = (a2, b) => JSON.stringify({ ...a2, revision: 0 }) === JSON.stringify({ ...b, revision: 0 });
 var OpDispatcher = class {
   #project;
   #engine;
@@ -22972,7 +22973,7 @@ var OpDispatcher = class {
       return await fn();
     } finally {
       this.#unrecorded--;
-      if (this.#project.revision !== revision) this.#history.record(before);
+      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before);
     }
   }
   /**
@@ -27765,6 +27766,110 @@ function pasteClips(project, copied, { startBeat, track = null } = {}) {
   });
 }
 
+// src/model/TrackDuplicate.js
+function copyLabel(track) {
+  return `${track.label ?? track.id} copy`;
+}
+function describeTrackCopy(project, trackId, { newTrackId = project.nextId("track") } = {}) {
+  const track = project.track(trackId);
+  if (!track) throw new Error(`no such track: ${trackId}`);
+  const nodes = project.nodes.filter((n2) => n2.track === trackId);
+  const on = new Set(nodes.map((n2) => n2.id));
+  const skipped = [];
+  for (const c3 of project.connections) {
+    const inside = [c3.from.node, c3.to.node].filter((id) => on.has(id)).length;
+    if (inside === 1) skipped.push(`connection ${c3.id} joins this track to another, and is not copied`);
+  }
+  return {
+    track: { op: "addTrack", id: newTrackId, label: copyLabel(track), channel: { ...track.channel } },
+    nodes: nodes.map((n2) => ({
+      from: n2.id,
+      pluginIri: n2.pluginIri,
+      label: n2.label,
+      settings: Object.fromEntries(n2.settings),
+      state: n2.state,
+      bypassed: n2.bypassed === true
+    })),
+    skipped
+  };
+}
+function finishTrackCopy(project, trackId, newTrackId, idMap) {
+  const track = project.track(trackId);
+  if (!track) throw new Error(`no such track: ${trackId}`);
+  const mapped = (id) => id === null || id === void 0 ? null : idMap.get(id) ?? null;
+  const changes = [];
+  const setTrack = { op: "setTrack", id: newTrackId };
+  if (track.midiInput !== null) setTrack.midiInput = mapped(track.midiInput);
+  if (track.audioInput !== null) setTrack.audioInput = mapped(track.audioInput);
+  if (track.output) setTrack.output = track.output;
+  if (Object.keys(setTrack).length > 2) changes.push(setTrack);
+  for (const c3 of project.connections) {
+    const from = mapped(c3.from.node);
+    const to = mapped(c3.to.node);
+    if (from === null || to === null) continue;
+    const { id, ...rest } = c3;
+    changes.push({ op: "addConnection", ...rest, from: { ...c3.from, node: from }, to: { ...c3.to, node: to } });
+  }
+  for (const envelope of project.envelopes) {
+    const node = envelope.target.node;
+    if (node === void 0 || mapped(node) === null) continue;
+    changes.push({ op: "addEnvelope", target: { ...envelope.target, node: mapped(node) }, points: envelope.points.map((p) => ({ ...p })) });
+  }
+  for (const clip of project.clips) {
+    if (clip.track !== trackId) continue;
+    const { id, track: _track, ...rest } = clip;
+    changes.push({ op: "addClip", ...rest, track: newTrackId, notes: clip.notes.map((n2) => ({ ...n2 })) });
+  }
+  for (const send of project.sends) {
+    if (send.from !== trackId) continue;
+    const { id, from, ...rest } = send;
+    changes.push({ op: "addSend", ...rest, from: newTrackId });
+  }
+  return changes;
+}
+
+// src/ops/DuplicateTrack.js
+async function duplicateTrack(dispatcher, trackId) {
+  let plan2;
+  try {
+    plan2 = describeTrackCopy(dispatcher.project, trackId);
+  } catch (error2) {
+    return { ok: false, kind: "change", message: error2.message };
+  }
+  const newTrack = plan2.track.id;
+  return dispatcher.grouped(async () => {
+    const takeBack = (ids) => dispatcher.apply([...ids.map((id) => ({ op: "removeNode", id })), { op: "removeTrack", id: newTrack }]);
+    const created = dispatcher.apply([plan2.track]);
+    if (!created.ok) return created;
+    const idMap = /* @__PURE__ */ new Map();
+    for (const node of plan2.nodes) {
+      const { from, pluginIri, ...rest2 } = node;
+      const result = await dispatcher.addPlugin(pluginIri, { ...rest2, track: newTrack }).catch((error2) => ({ ok: false, kind: "load", message: error2.message }));
+      if (!result.ok) {
+        takeBack([...idMap.values()]);
+        return { ...result, message: `${node.label ?? pluginIri}: ${result.message}` };
+      }
+      idMap.set(from, result.nodeId);
+      for (const [symbol, value2] of Object.entries(node.settings)) {
+        const set = dispatcher.setParameter(result.nodeId, symbol, value2);
+        if (!set.ok) {
+          takeBack([...idMap.values()]);
+          return { ok: false, kind: set.kind ?? "change", message: `${node.label ?? pluginIri}.${symbol}: ${set.message}` };
+        }
+      }
+    }
+    const rest = finishTrackCopy(dispatcher.project, trackId, newTrack, idMap);
+    if (rest.length > 0) {
+      const applied = dispatcher.apply(rest);
+      if (!applied.ok) {
+        takeBack([...idMap.values()]);
+        return applied;
+      }
+    }
+    return { ok: true, trackId: newTrack, nodeIds: Object.fromEntries(idMap), skipped: plan2.skipped };
+  });
+}
+
 // src/ops/ChainReorder.js
 var audioOnly = (connection) => !isMidi(connection.signalKind);
 var mainInput = (connection) => connection.to.portSymbol === void 0 && (connection.to.portIndex ?? 0) === 0;
@@ -28071,6 +28176,19 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         const change = { op: "removeTrack", id: trackId, ...moveNodesTo ? { moveNodesTo } : {} };
         const result = dispatcher.apply([change], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, removed: trackId }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_duplicate",
+      description: "Copy a track with its plugins as one edit: each plugin is loaded again onto a new track with the same settings, saved state and bypass, and the wiring between them, the track inputs, automation, clips, channel strip and sends from the track are copied. A connection to another track is not. Undone as one step. If any plugin fails to load nothing is kept. Returns the new track id, a map from each original node id to its copy, and what was left out.",
+      inputSchema: {
+        type: "object",
+        properties: { trackId: { type: "string" } },
+        required: ["trackId"]
+      },
+      async handler({ trackId } = {}) {
+        const result = await duplicateTrack(dispatcher, trackId);
+        return result.ok ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -31902,7 +32020,7 @@ function createSkins(ctx2) {
 }
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm }) {
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
@@ -31917,6 +32035,11 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
     if (!event.altKey || event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     onMove(id, event.key === "ArrowUp" ? -1 : 1);
+  });
+  name2.addEventListener("keydown", (event) => {
+    if (!onDuplicateTrack || event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== "d") return;
+    event.preventDefault();
+    onDuplicateTrack(id);
   });
   const add = document2.createElement("button");
   add.type = "button";
@@ -31936,6 +32059,12 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   arm.textContent = "Arm";
   arm.setAttribute("aria-pressed", "false");
   arm.addEventListener("click", () => onArm(id, arm.getAttribute("aria-pressed") !== "true"));
+  const duplicate = document2.createElement("button");
+  duplicate.type = "button";
+  duplicate.className = "head-duplicate";
+  duplicate.id = `head-${id}-duplicate`;
+  duplicate.textContent = "Duplicate";
+  duplicate.addEventListener("click", () => onDuplicateTrack(id));
   const mix = document2.createElement("div");
   mix.className = "head-mix";
   const toggle = (text, key) => {
@@ -31991,7 +32120,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   latency.className = "head-latency";
   latency.hidden = true;
   mix.append(mute, solo, level.label, pan.label, silent);
-  element.append(name2, arm, mix, routing, latency, add, addAudio);
+  element.append(name2, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
   return {
     element,
     /**
@@ -32007,12 +32136,13 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       if (color) element.style.setProperty("--track-color", color);
       else element.style.removeProperty("--track-color");
       element.dataset.size = size;
-      name2.title = "Alt with Up or Down moves this track";
+      name2.title = onDuplicateTrack ? "Alt with Up or Down moves this track, D duplicates it" : "Alt with Up or Down moves this track";
       element.setAttribute("role", "group");
       element.setAttribute("aria-label", `${label} controls${isSilent ? ", silent" : ""}`);
       at = place;
       add.setAttribute("aria-label", `Add a MIDI clip to ${label} at ${where}`);
       addAudio.setAttribute("aria-label", `Add an audio file to ${label} at ${where}`);
+      duplicate.setAttribute("aria-label", `Duplicate ${label} with its plugins`);
       mix.hidden = !mixable2;
       mute.setAttribute("aria-pressed", String(Boolean(channel.muted)));
       solo.setAttribute("aria-pressed", String(Boolean(channel.soloed)));
@@ -32469,70 +32599,6 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
   };
 }
 
-// src/model/Selection.js
-var KINDS2 = Object.freeze(["track", "clip", "note", "node", "lane"]);
-var Selection = class {
-  #kind = null;
-  #ids = /* @__PURE__ */ new Set();
-  #listeners = /* @__PURE__ */ new Set();
-  get kind() {
-    return this.#kind;
-  }
-  get ids() {
-    return [...this.#ids];
-  }
-  get size() {
-    return this.#ids.size;
-  }
-  has(kind, id) {
-    return this.#kind === kind && this.#ids.has(id);
-  }
-  /** Notified with the selection after every change. Returns an unsubscribe. */
-  subscribe(fn) {
-    this.#listeners.add(fn);
-    return () => this.#listeners.delete(fn);
-  }
-  /** Replace the selection. An empty list clears it. */
-  set(kind, ids) {
-    this.#check(kind);
-    this.#replace(ids.length === 0 ? null : kind, ids);
-  }
-  /** Add to the selection; a different kind replaces it. */
-  add(kind, ids) {
-    this.#check(kind);
-    if (kind !== this.#kind) return this.set(kind, ids);
-    this.#replace(kind, [...this.#ids, ...ids]);
-  }
-  /** Add the id if absent, remove it if present; a different kind replaces. */
-  toggle(kind, id) {
-    this.#check(kind);
-    if (kind !== this.#kind) return this.set(kind, [id]);
-    const next = new Set(this.#ids);
-    if (!next.delete(id)) next.add(id);
-    this.#replace(next.size === 0 ? null : kind, [...next]);
-  }
-  clear() {
-    this.#replace(null, []);
-  }
-  /** Drop ids that no longer exist. `exists(kind, id)` answers for the project. */
-  prune(exists) {
-    if (this.#kind === null) return;
-    const kept = [...this.#ids].filter((id) => exists(this.#kind, id));
-    if (kept.length !== this.#ids.size) this.#replace(kept.length === 0 ? null : this.#kind, kept);
-  }
-  #check(kind) {
-    if (!KINDS2.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS2.join(", ")}`);
-  }
-  #replace(kind, ids) {
-    const next = new Set(ids);
-    const same = kind === this.#kind && next.size === this.#ids.size && [...next].every((id) => this.#ids.has(id));
-    if (same) return;
-    this.#kind = next.size === 0 ? null : kind;
-    this.#ids = next;
-    for (const fn of [...this.#listeners]) fn(this);
-  }
-};
-
 // src/ui/TrackPanel.js
 var COLORS = Object.freeze([
   { name: "Red", value: "#e5484d" },
@@ -32670,6 +32736,396 @@ function describeClip(clip, { beatsPerBar, playsIntoNothing = false, color = nul
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
   return `${what}${clip.muted ? ", muted" : ""}${clip.locked ? ", locked" : ""}${color ? `, coloured ${colorName(color)}` : ""}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
 }
+
+// src/ui/LoopRow.js
+function createLoopRow(document2, { view, bpb, onSetLoop, snapBeat }) {
+  const ppb = () => view.pixelsPerBeat;
+  const loopRow = document2.createElement("div");
+  loopRow.className = "timeline-loop";
+  loopRow.setAttribute("role", "group");
+  const brace = document2.createElement("div");
+  brace.className = "loop-brace";
+  brace.setAttribute("aria-hidden", "true");
+  const braceText = document2.createElement("span");
+  brace.append(braceText);
+  const handle = (edge) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.className = `loop-handle loop-${edge}`;
+    button.id = `loop-${edge}`;
+    return button;
+  };
+  const startHandle = handle("start");
+  const endHandle = handle("end");
+  loopRow.append(brace, startHandle, endHandle);
+  let loopNow = { start: 0, end: 0, enabled: false };
+  const minLoop = () => view.step(bpb()) ?? 0.25;
+  const x = (e) => e.clientX - loopRow.getBoundingClientRect().left;
+  function drawLoop(loop, width) {
+    loopNow = loop ?? { start: 0, end: 0, enabled: false };
+    const set = loopNow.end > loopNow.start;
+    loopRow.style.width = `${width}px`;
+    loopRow.setAttribute("aria-label", set ? `Loop, ${loopNow.enabled ? "on" : "off"}` : "Loop, not set");
+    brace.hidden = !set;
+    startHandle.hidden = !set;
+    endHandle.hidden = !set;
+    if (!set) {
+      braceText.textContent = "";
+      return;
+    }
+    brace.style.left = `${loopNow.start * ppb()}px`;
+    brace.style.width = `${(loopNow.end - loopNow.start) * ppb()}px`;
+    brace.classList.toggle("on", loopNow.enabled);
+    braceText.textContent = loopNow.enabled ? "Loop on" : "Loop off";
+    startHandle.style.left = `${loopNow.start * ppb() - 22}px`;
+    endHandle.style.left = `${loopNow.end * ppb() - 22}px`;
+    startHandle.setAttribute("aria-label", `Loop start, ${barBeat(loopNow.start, bpb())}. Left and Right move it.`);
+    endHandle.setAttribute("aria-label", `Loop end, ${barBeat(loopNow.end, bpb())}. Left and Right move it.`);
+  }
+  function sendLoop(start, end) {
+    const lo = Math.max(0, Math.min(start, end));
+    const hi = Math.max(start, end);
+    if (hi - lo < minLoop() - 1e-9) return;
+    if (lo === loopNow.start && hi === loopNow.end) return;
+    onSetLoop({ start: lo, end: hi });
+  }
+  for (const [edge, button] of [["start", startHandle], ["end", endHandle]]) {
+    const other = () => edge === "start" ? loopNow.end : loopNow.start;
+    const put = (beat) => edge === "start" ? sendLoop(beat, other()) : sendLoop(other(), beat);
+    button.addEventListener("keydown", (event) => {
+      const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+      if (direction === 0) return;
+      event.preventDefault();
+      const step = event.shiftKey ? bpb() : view.step(bpb()) ?? 1;
+      put(Math.max(0, (edge === "start" ? loopNow.start : loopNow.end) + direction * step));
+    });
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const from = edge === "start" ? loopNow.start : loopNow.end;
+      const originX = event.clientX;
+      const beatAt = (e) => snapBeat(from + (e.clientX - originX) / ppb(), e);
+      const move = (e) => {
+        const beat = beatAt(e);
+        const lo = edge === "start" ? beat : loopNow.start;
+        const hi = edge === "start" ? loopNow.end : beat;
+        if (hi > lo) {
+          brace.style.left = `${lo * ppb()}px`;
+          brace.style.width = `${(hi - lo) * ppb()}px`;
+          button.style.left = `${beat * ppb() - 22}px`;
+        }
+      };
+      const up = (e) => {
+        document2.removeEventListener("pointermove", move);
+        document2.removeEventListener("pointerup", up);
+        put(beatAt(e));
+        drawLoop(loopNow, parseFloat(loopRow.style.width));
+      };
+      document2.addEventListener("pointermove", move);
+      document2.addEventListener("pointerup", up);
+    });
+  }
+  loopRow.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || event.target !== loopRow) return;
+    event.preventDefault();
+    const from = snapBeat(x(event) / ppb(), event);
+    const move = (e) => {
+      const to = snapBeat(x(e) / ppb(), e);
+      brace.hidden = false;
+      brace.classList.remove("on");
+      brace.style.left = `${Math.min(from, to) * ppb()}px`;
+      brace.style.width = `${Math.abs(to - from) * ppb()}px`;
+    };
+    const up = (e) => {
+      document2.removeEventListener("pointermove", move);
+      document2.removeEventListener("pointerup", up);
+      sendLoop(from, snapBeat(x(e) / ppb(), e));
+      drawLoop(loopNow, parseFloat(loopRow.style.width));
+    };
+    document2.addEventListener("pointermove", move);
+    document2.addEventListener("pointerup", up);
+  });
+  return { element: loopRow, draw: drawLoop };
+}
+
+// src/ui/Ruler.js
+function createRuler(document2, { ppb, onSeek = null, snapBeat }) {
+  const element = document2.createElement("div");
+  element.className = "timeline-ruler";
+  element.setAttribute("aria-hidden", "true");
+  element.addEventListener("click", (e) => {
+    if (!onSeek) return;
+    onSeek(Math.max(0, snapBeat((e.clientX - element.getBoundingClientRect().left) / ppb(), e)));
+  });
+  return {
+    element,
+    draw({ bars, beatsPerBar, width }) {
+      element.replaceChildren();
+      element.style.width = `${width}px`;
+      const every = Math.max(1, Math.ceil(40 / (beatsPerBar * ppb())));
+      for (let bar = 0; bar < bars; bar += every) {
+        const mark = document2.createElement("span");
+        mark.style.left = `${bar * beatsPerBar * ppb()}px`;
+        mark.textContent = String(bar + 1);
+        element.append(mark);
+      }
+      if (ppb() >= 12) {
+        for (let beat = 0; beat < bars * beatsPerBar; beat++) {
+          if (beat % beatsPerBar === 0) continue;
+          const tick = document2.createElement("i");
+          tick.style.left = `${beat * ppb()}px`;
+          element.append(tick);
+        }
+      }
+    }
+  };
+}
+
+// src/ui/TimeView.js
+var MIN_PIXELS_PER_BEAT = 2;
+var MAX_PIXELS_PER_BEAT = 240;
+var DEFAULT_PIXELS_PER_BEAT = 24;
+var GRIDS = Object.freeze(["bar", "beat", "1/2", "1/4", "1/8", "off"]);
+var TimeView = class {
+  #pixelsPerBeat = DEFAULT_PIXELS_PER_BEAT;
+  #scrollBeat = 0;
+  #grid = "beat";
+  #listeners = /* @__PURE__ */ new Set();
+  get pixelsPerBeat() {
+    return this.#pixelsPerBeat;
+  }
+  get scrollBeat() {
+    return this.#scrollBeat;
+  }
+  get grid() {
+    return this.#grid;
+  }
+  subscribe(fn) {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+  /** Pixel offset from the left edge of the view. */
+  beatToX(beat) {
+    return (beat - this.#scrollBeat) * this.#pixelsPerBeat;
+  }
+  xToBeat(x) {
+    return x / this.#pixelsPerBeat + this.#scrollBeat;
+  }
+  scrollTo(beat) {
+    this.#update({ scrollBeat: Math.max(0, finite(beat, "scroll position")) });
+  }
+  /** Zoom by a factor, keeping the beat under `anchorX` where it is. */
+  zoomBy(factor2, anchorX = 0) {
+    if (!(factor2 > 0) || !Number.isFinite(factor2)) throw new Error("a zoom factor must be above zero");
+    const anchorBeat = this.xToBeat(anchorX);
+    const pixelsPerBeat = clamp2(this.#pixelsPerBeat * factor2, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
+    this.#update({ pixelsPerBeat, scrollBeat: Math.max(0, anchorBeat - anchorX / pixelsPerBeat) });
+  }
+  /** Show `lengthBeats` across `widthPx`, from the start. */
+  fit(lengthBeats, widthPx) {
+    if (!(lengthBeats > 0) || !(widthPx > 0)) throw new Error("fit needs a length and a width above zero");
+    this.#update({ pixelsPerBeat: clamp2(widthPx / lengthBeats, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT), scrollBeat: 0 });
+  }
+  setGrid(grid) {
+    if (!GRIDS.includes(grid)) throw new Error(`no such grid: ${grid}; one of ${GRIDS.join(", ")}`);
+    this.#update({ grid });
+  }
+  /** The grid step in beats, or null when snapping is off. */
+  step(beatsPerBar) {
+    switch (this.#grid) {
+      case "bar":
+        return beatsPerBar;
+      case "beat":
+        return 1;
+      case "1/2":
+        return 1 / 2;
+      case "1/4":
+        return 1 / 4;
+      case "1/8":
+        return 1 / 8;
+      default:
+        return null;
+    }
+  }
+  /** Nearest grid line, never before zero. `bypass` is the modifier key held. */
+  snap(beat, beatsPerBar, { bypass = false } = {}) {
+    const step = bypass ? null : this.step(beatsPerBar);
+    const snapped = step === null ? beat : Math.round(beat / step) * step;
+    return Math.max(0, snapped);
+  }
+  #update(next) {
+    const before = [this.#pixelsPerBeat, this.#scrollBeat, this.#grid];
+    if ("pixelsPerBeat" in next) this.#pixelsPerBeat = next.pixelsPerBeat;
+    if ("scrollBeat" in next) this.#scrollBeat = next.scrollBeat;
+    if ("grid" in next) this.#grid = next.grid;
+    if (before[0] === this.#pixelsPerBeat && before[1] === this.#scrollBeat && before[2] === this.#grid) return;
+    for (const fn of [...this.#listeners]) fn(this);
+  }
+};
+function clamp2(n2, lo, hi) {
+  return Math.min(hi, Math.max(lo, n2));
+}
+function finite(n2, what) {
+  if (!Number.isFinite(n2)) throw new Error(`${what} must be a finite number`);
+  return n2;
+}
+
+// src/ui/TimelineTools.js
+var GRID_LABELS = { off: "Off", bar: "Bar", beat: "Beat" };
+function createTimelineTools(document2, { view, bpb, zoom, fit, onSeek = null, onAddTrack = null, onRouting }) {
+  const element = document2.createElement("div");
+  element.className = "timeline-tools";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Timeline zoom and snap");
+  const tool = (label, onClick) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", onClick);
+    return button;
+  };
+  const iconTool = (icon, label, onClick) => {
+    const button = tool(label, onClick);
+    setIcon(document2, button, icon, label);
+    return button;
+  };
+  const zoomStatus = document2.createElement("span");
+  zoomStatus.className = "timeline-zoom";
+  zoomStatus.setAttribute("role", "status");
+  zoomStatus.textContent = "Zoom 100%";
+  const snapLabel = document2.createElement("label");
+  snapLabel.textContent = "Snap ";
+  const snapSelect = document2.createElement("select");
+  for (const grid of GRIDS) {
+    const option = document2.createElement("option");
+    option.value = grid;
+    option.textContent = GRID_LABELS[grid] ?? `${grid} beat`;
+    snapSelect.append(option);
+  }
+  const showGrid = () => {
+    for (const option of snapSelect.options) option.selected = option.value === view.grid;
+  };
+  showGrid();
+  snapSelect.addEventListener("change", () => view.setGrid(snapSelect.value));
+  snapLabel.append(snapSelect);
+  let follow = true;
+  const followButton = tool("Follow", () => setFollow(!follow));
+  const setFollow = (on) => {
+    follow = on;
+    followButton.setAttribute("aria-pressed", String(on));
+  };
+  setFollow(true);
+  let routing = true;
+  const routingButton = tool("Routing", () => setRouting(!routing));
+  const setRouting = (on) => {
+    routing = on;
+    routingButton.setAttribute("aria-pressed", String(on));
+    onRouting(on);
+  };
+  const seekLabel = document2.createElement("label");
+  seekLabel.textContent = "Go to bar ";
+  const seekInput = document2.createElement("input");
+  seekInput.type = "number";
+  seekInput.min = "1";
+  seekInput.step = "1";
+  seekInput.value = "1";
+  seekInput.addEventListener("change", () => {
+    const bar = Math.floor(Number(seekInput.value));
+    if (!Number.isFinite(bar) || bar < 1) {
+      seekInput.value = "1";
+      return;
+    }
+    onSeek((bar - 1) * bpb());
+  });
+  seekLabel.append(seekInput);
+  element.append(
+    iconTool("zoomOut", "Zoom out", () => zoom(1 / 1.5)),
+    iconTool("zoomIn", "Zoom in", () => zoom(1.5)),
+    tool("Fit", () => fit()),
+    ...onAddTrack ? [tool("Add track", () => onAddTrack())] : [],
+    followButton,
+    routingButton,
+    zoomStatus,
+    snapLabel,
+    ...onSeek ? [seekLabel] : []
+  );
+  setRouting(true);
+  return {
+    element,
+    following: () => follow,
+    setFollow,
+    /** Show the view's grid and zoom in the controls, after either has changed. */
+    sync() {
+      showGrid();
+      zoomStatus.textContent = `Zoom ${Math.round(view.pixelsPerBeat / DEFAULT_PIXELS_PER_BEAT * 100)}%`;
+    }
+  };
+}
+
+// src/model/Selection.js
+var KINDS2 = Object.freeze(["track", "clip", "note", "node", "lane"]);
+var Selection = class {
+  #kind = null;
+  #ids = /* @__PURE__ */ new Set();
+  #listeners = /* @__PURE__ */ new Set();
+  get kind() {
+    return this.#kind;
+  }
+  get ids() {
+    return [...this.#ids];
+  }
+  get size() {
+    return this.#ids.size;
+  }
+  has(kind, id) {
+    return this.#kind === kind && this.#ids.has(id);
+  }
+  /** Notified with the selection after every change. Returns an unsubscribe. */
+  subscribe(fn) {
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+  /** Replace the selection. An empty list clears it. */
+  set(kind, ids) {
+    this.#check(kind);
+    this.#replace(ids.length === 0 ? null : kind, ids);
+  }
+  /** Add to the selection; a different kind replaces it. */
+  add(kind, ids) {
+    this.#check(kind);
+    if (kind !== this.#kind) return this.set(kind, ids);
+    this.#replace(kind, [...this.#ids, ...ids]);
+  }
+  /** Add the id if absent, remove it if present; a different kind replaces. */
+  toggle(kind, id) {
+    this.#check(kind);
+    if (kind !== this.#kind) return this.set(kind, [id]);
+    const next = new Set(this.#ids);
+    if (!next.delete(id)) next.add(id);
+    this.#replace(next.size === 0 ? null : kind, [...next]);
+  }
+  clear() {
+    this.#replace(null, []);
+  }
+  /** Drop ids that no longer exist. `exists(kind, id)` answers for the project. */
+  prune(exists) {
+    if (this.#kind === null) return;
+    const kept = [...this.#ids].filter((id) => exists(this.#kind, id));
+    if (kept.length !== this.#ids.size) this.#replace(kept.length === 0 ? null : this.#kind, kept);
+  }
+  #check(kind) {
+    if (!KINDS2.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS2.join(", ")}`);
+  }
+  #replace(kind, ids) {
+    const next = new Set(ids);
+    const same = kind === this.#kind && next.size === this.#ids.size && [...next].every((id) => this.#ids.has(id));
+    if (same) return;
+    this.#kind = next.size === 0 ? null : kind;
+    this.#ids = next;
+    for (const fn of [...this.#listeners]) fn(this);
+  }
+};
 
 // src/ui/ClipButton.js
 function createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim }) {
@@ -32821,97 +33277,8 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
   return clipButton;
 }
 
-// src/ui/TimeView.js
-var MIN_PIXELS_PER_BEAT = 2;
-var MAX_PIXELS_PER_BEAT = 240;
-var DEFAULT_PIXELS_PER_BEAT = 24;
-var GRIDS = Object.freeze(["bar", "beat", "1/2", "1/4", "1/8", "off"]);
-var TimeView = class {
-  #pixelsPerBeat = DEFAULT_PIXELS_PER_BEAT;
-  #scrollBeat = 0;
-  #grid = "beat";
-  #listeners = /* @__PURE__ */ new Set();
-  get pixelsPerBeat() {
-    return this.#pixelsPerBeat;
-  }
-  get scrollBeat() {
-    return this.#scrollBeat;
-  }
-  get grid() {
-    return this.#grid;
-  }
-  subscribe(fn) {
-    this.#listeners.add(fn);
-    return () => this.#listeners.delete(fn);
-  }
-  /** Pixel offset from the left edge of the view. */
-  beatToX(beat) {
-    return (beat - this.#scrollBeat) * this.#pixelsPerBeat;
-  }
-  xToBeat(x) {
-    return x / this.#pixelsPerBeat + this.#scrollBeat;
-  }
-  scrollTo(beat) {
-    this.#update({ scrollBeat: Math.max(0, finite(beat, "scroll position")) });
-  }
-  /** Zoom by a factor, keeping the beat under `anchorX` where it is. */
-  zoomBy(factor2, anchorX = 0) {
-    if (!(factor2 > 0) || !Number.isFinite(factor2)) throw new Error("a zoom factor must be above zero");
-    const anchorBeat = this.xToBeat(anchorX);
-    const pixelsPerBeat = clamp2(this.#pixelsPerBeat * factor2, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT);
-    this.#update({ pixelsPerBeat, scrollBeat: Math.max(0, anchorBeat - anchorX / pixelsPerBeat) });
-  }
-  /** Show `lengthBeats` across `widthPx`, from the start. */
-  fit(lengthBeats, widthPx) {
-    if (!(lengthBeats > 0) || !(widthPx > 0)) throw new Error("fit needs a length and a width above zero");
-    this.#update({ pixelsPerBeat: clamp2(widthPx / lengthBeats, MIN_PIXELS_PER_BEAT, MAX_PIXELS_PER_BEAT), scrollBeat: 0 });
-  }
-  setGrid(grid) {
-    if (!GRIDS.includes(grid)) throw new Error(`no such grid: ${grid}; one of ${GRIDS.join(", ")}`);
-    this.#update({ grid });
-  }
-  /** The grid step in beats, or null when snapping is off. */
-  step(beatsPerBar) {
-    switch (this.#grid) {
-      case "bar":
-        return beatsPerBar;
-      case "beat":
-        return 1;
-      case "1/2":
-        return 1 / 2;
-      case "1/4":
-        return 1 / 4;
-      case "1/8":
-        return 1 / 8;
-      default:
-        return null;
-    }
-  }
-  /** Nearest grid line, never before zero. `bypass` is the modifier key held. */
-  snap(beat, beatsPerBar, { bypass = false } = {}) {
-    const step = bypass ? null : this.step(beatsPerBar);
-    const snapped = step === null ? beat : Math.round(beat / step) * step;
-    return Math.max(0, snapped);
-  }
-  #update(next) {
-    const before = [this.#pixelsPerBeat, this.#scrollBeat, this.#grid];
-    if ("pixelsPerBeat" in next) this.#pixelsPerBeat = next.pixelsPerBeat;
-    if ("scrollBeat" in next) this.#scrollBeat = next.scrollBeat;
-    if ("grid" in next) this.#grid = next.grid;
-    if (before[0] === this.#pixelsPerBeat && before[1] === this.#scrollBeat && before[2] === this.#grid) return;
-    for (const fn of [...this.#listeners]) fn(this);
-  }
-};
-function clamp2(n2, lo, hi) {
-  return Math.min(hi, Math.max(lo, n2));
-}
-function finite(n2, what) {
-  if (!Number.isFinite(n2)) throw new Error(`${what} must be a finite number`);
-  return n2;
-}
-
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -32922,119 +33289,31 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   scroller.tabIndex = 0;
   scroller.setAttribute("role", "region");
   scroller.setAttribute("aria-label", "Arrangement, scrolls sideways");
-  const tools = document2.createElement("div");
-  tools.className = "timeline-tools";
-  tools.setAttribute("role", "group");
-  tools.setAttribute("aria-label", "Timeline zoom and snap");
-  const tool = (label, onClick) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.textContent = label;
-    button.addEventListener("click", onClick);
-    return button;
-  };
-  const iconTool = (icon, label, onClick) => {
-    const button = tool(label, onClick);
-    setIcon(document2, button, icon, label);
-    return button;
-  };
-  const zoomStatus = document2.createElement("span");
-  zoomStatus.className = "timeline-zoom";
-  zoomStatus.setAttribute("role", "status");
-  zoomStatus.textContent = "Zoom 100%";
-  const snapLabel = document2.createElement("label");
-  snapLabel.textContent = "Snap ";
-  const snapSelect = document2.createElement("select");
-  for (const grid of GRIDS) {
-    const option = document2.createElement("option");
-    option.value = grid;
-    option.textContent = grid === "off" ? "Off" : grid === "bar" ? "Bar" : grid === "beat" ? "Beat" : `${grid} beat`;
-    snapSelect.append(option);
-  }
-  const showGrid = () => {
-    for (const option of snapSelect.options) option.selected = option.value === view.grid;
-  };
-  showGrid();
-  snapSelect.addEventListener("change", () => view.setGrid(snapSelect.value));
-  snapLabel.append(snapSelect);
-  let follow = true;
-  const followButton = tool("Follow", () => setFollow(!follow));
-  const setFollow = (on) => {
-    follow = on;
-    followButton.setAttribute("aria-pressed", String(on));
-  };
-  setFollow(true);
-  let routing = true;
-  const routingButton = tool("Routing", () => setRouting(!routing));
-  const setRouting = (on) => {
-    routing = on;
-    routingButton.setAttribute("aria-pressed", String(on));
-    element.dataset.routing = on ? "on" : "off";
-  };
-  const seekLabel = document2.createElement("label");
-  seekLabel.textContent = "Go to bar ";
-  const seekInput = document2.createElement("input");
-  seekInput.type = "number";
-  seekInput.min = "1";
-  seekInput.step = "1";
-  seekInput.value = "1";
-  seekInput.addEventListener("change", () => {
-    const bar = Math.floor(Number(seekInput.value));
-    if (!Number.isFinite(bar) || bar < 1) {
-      seekInput.value = "1";
-      return;
+  const tools = createTimelineTools(document2, {
+    view,
+    onSeek,
+    onAddTrack,
+    bpb: () => bpb(),
+    zoom: (factor2) => zoom(factor2),
+    fit: () => fit(),
+    onRouting: (on) => {
+      element.dataset.routing = on ? "on" : "off";
     }
-    onSeek((bar - 1) * bpb());
   });
-  seekLabel.append(seekInput);
-  tools.append(
-    iconTool("zoomOut", "Zoom out", () => zoom(1 / 1.5)),
-    iconTool("zoomIn", "Zoom in", () => zoom(1.5)),
-    tool("Fit", () => fit()),
-    followButton,
-    routingButton,
-    zoomStatus,
-    snapLabel,
-    ...onSeek ? [seekLabel] : []
-  );
-  element.append(tools, scroller);
-  setRouting(true);
+  element.append(tools.element, scroller);
   const head = document2.createElement("div");
   head.className = "playhead";
   head.setAttribute("aria-hidden", "true");
   head.hidden = true;
   let lastArgs = null;
   let programmatic = null;
-  const ruler = document2.createElement("div");
-  ruler.className = "timeline-ruler";
-  ruler.setAttribute("aria-hidden", "true");
-  ruler.addEventListener("click", (e) => {
-    if (!onSeek) return;
-    onSeek(Math.max(0, snapBeat((e.clientX - ruler.getBoundingClientRect().left) / ppb(), e)));
-  });
+  const ruler = createRuler(document2, { ppb: () => ppb(), onSeek: onSeek && ((beat) => onSeek(beat)), snapBeat: (beat, e) => snapBeat(beat, e) });
   const rows = /* @__PURE__ */ new Map();
   const masterRow = createMasterRow(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view });
-  const loopRow = document2.createElement("div");
-  loopRow.className = "timeline-loop";
-  loopRow.setAttribute("role", "group");
-  const brace = document2.createElement("div");
-  brace.className = "loop-brace";
-  brace.setAttribute("aria-hidden", "true");
-  const braceText = document2.createElement("span");
-  brace.append(braceText);
-  const handle = (edge) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.className = `loop-handle loop-${edge}`;
-    button.id = `loop-${edge}`;
-    return button;
-  };
-  const startHandle = handle("start");
-  const endHandle = handle("end");
-  loopRow.append(brace, startHandle, endHandle);
-  let loopNow = { start: 0, end: 0, enabled: false };
   const ppb = () => view.pixelsPerBeat;
   const bpb = () => lastArgs?.beatsPerBar ?? 4;
+  const snapBeat = (beat, e) => view.snap(beat, bpb(), { bypass: e?.altKey });
+  const loopRow = createLoopRow(document2, { view, bpb, onSetLoop, snapBeat });
   const headPx = () => scroller.querySelector(".timeline-head")?.offsetWidth ?? 0;
   function zoom(factor2, anchorX = 0) {
     const beat = (scroller.scrollLeft + anchorX) / ppb();
@@ -33051,94 +33330,6 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     scroller.scrollLeft = 0;
     programmatic = 0;
   }
-  const minLoop = () => view.step(bpb()) ?? 0.25;
-  const x = (e) => e.clientX - loopRow.getBoundingClientRect().left;
-  const snapBeat = (beat, e) => view.snap(beat, bpb(), { bypass: e?.altKey });
-  function drawLoop(loop, width) {
-    loopNow = loop ?? { start: 0, end: 0, enabled: false };
-    const set = loopNow.end > loopNow.start;
-    loopRow.style.width = `${width}px`;
-    loopRow.setAttribute("aria-label", set ? `Loop, ${loopNow.enabled ? "on" : "off"}` : "Loop, not set");
-    brace.hidden = !set;
-    startHandle.hidden = !set;
-    endHandle.hidden = !set;
-    if (!set) {
-      braceText.textContent = "";
-      return;
-    }
-    brace.style.left = `${loopNow.start * ppb()}px`;
-    brace.style.width = `${(loopNow.end - loopNow.start) * ppb()}px`;
-    brace.classList.toggle("on", loopNow.enabled);
-    braceText.textContent = loopNow.enabled ? "Loop on" : "Loop off";
-    startHandle.style.left = `${loopNow.start * ppb() - 22}px`;
-    endHandle.style.left = `${loopNow.end * ppb() - 22}px`;
-    startHandle.setAttribute("aria-label", `Loop start, ${barBeat(loopNow.start, bpb())}. Left and Right move it.`);
-    endHandle.setAttribute("aria-label", `Loop end, ${barBeat(loopNow.end, bpb())}. Left and Right move it.`);
-  }
-  function sendLoop(start, end) {
-    const lo = Math.max(0, Math.min(start, end));
-    const hi = Math.max(start, end);
-    if (hi - lo < minLoop() - 1e-9) return;
-    if (lo === loopNow.start && hi === loopNow.end) return;
-    onSetLoop({ start: lo, end: hi });
-  }
-  for (const [edge, button] of [["start", startHandle], ["end", endHandle]]) {
-    const other = () => edge === "start" ? loopNow.end : loopNow.start;
-    const put = (beat) => edge === "start" ? sendLoop(beat, other()) : sendLoop(other(), beat);
-    button.addEventListener("keydown", (event) => {
-      const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-      if (direction === 0) return;
-      event.preventDefault();
-      const step = event.shiftKey ? bpb() : view.step(bpb()) ?? 1;
-      put(Math.max(0, (edge === "start" ? loopNow.start : loopNow.end) + direction * step));
-    });
-    button.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const from = edge === "start" ? loopNow.start : loopNow.end;
-      const originX = event.clientX;
-      const beatAt = (e) => snapBeat(from + (e.clientX - originX) / ppb(), e);
-      const move = (e) => {
-        const beat = beatAt(e);
-        const lo = edge === "start" ? beat : loopNow.start;
-        const hi = edge === "start" ? loopNow.end : beat;
-        if (hi > lo) {
-          brace.style.left = `${lo * ppb()}px`;
-          brace.style.width = `${(hi - lo) * ppb()}px`;
-          button.style.left = `${beat * ppb() - 22}px`;
-        }
-      };
-      const up = (e) => {
-        document2.removeEventListener("pointermove", move);
-        document2.removeEventListener("pointerup", up);
-        put(beatAt(e));
-        drawLoop(loopNow, parseFloat(loopRow.style.width));
-      };
-      document2.addEventListener("pointermove", move);
-      document2.addEventListener("pointerup", up);
-    });
-  }
-  loopRow.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0 || event.target !== loopRow) return;
-    event.preventDefault();
-    const from = snapBeat(x(event) / ppb(), event);
-    const move = (e) => {
-      const to = snapBeat(x(e) / ppb(), e);
-      brace.hidden = false;
-      brace.classList.remove("on");
-      brace.style.left = `${Math.min(from, to) * ppb()}px`;
-      brace.style.width = `${Math.abs(to - from) * ppb()}px`;
-    };
-    const up = (e) => {
-      document2.removeEventListener("pointermove", move);
-      document2.removeEventListener("pointerup", up);
-      sendLoop(from, snapBeat(x(e) / ppb(), e));
-      drawLoop(loopNow, parseFloat(loopRow.style.width));
-    };
-    document2.addEventListener("pointermove", move);
-    document2.addEventListener("pointerup", up);
-  });
   selection.subscribe(() => {
     for (const button of scroller.querySelectorAll(".clip")) {
       const on = selection.has("clip", button.id.replace(/^clip-/, ""));
@@ -33155,8 +33346,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     }
   });
   view.subscribe(() => {
-    showGrid();
-    zoomStatus.textContent = `Zoom ${Math.round(ppb() / DEFAULT_PIXELS_PER_BEAT * 100)}%`;
+    tools.sync();
     if (lastArgs) draw(lastArgs);
   });
   scroller.addEventListener("keydown", (event) => {
@@ -33204,23 +33394,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const lastBeat = Math.max(0, ...clips.map((c3) => c3.startBeat + c3.lengthBeats));
     const bars = Math.ceil(lastBeat / beatsPerBar) + 4;
     const width = bars * beatsPerBar * ppb();
-    ruler.replaceChildren();
-    ruler.style.width = `${width}px`;
-    const every = Math.max(1, Math.ceil(40 / (beatsPerBar * ppb())));
-    for (let bar = 0; bar < bars; bar += every) {
-      const mark = document2.createElement("span");
-      mark.style.left = `${bar * beatsPerBar * ppb()}px`;
-      mark.textContent = String(bar + 1);
-      ruler.append(mark);
-    }
-    if (ppb() >= 12) {
-      for (let beat = 0; beat < bars * beatsPerBar; beat++) {
-        if (beat % beatsPerBar === 0) continue;
-        const tick = document2.createElement("i");
-        tick.style.left = `${beat * ppb()}px`;
-        ruler.append(tick);
-      }
-    }
+    ruler.draw({ bars, beatsPerBar, width });
     if (tracks.length === 0) {
       rows.clear();
       const empty = document2.createElement("div");
@@ -33235,8 +33409,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         button.addEventListener("click", () => action2.run());
         empty.append(button);
       }
-      drawLoop(loop, width);
-      scroller.replaceChildren(head, ruler, loopRow, empty);
+      loopRow.draw(loop, width);
+      scroller.replaceChildren(head, ruler.element, loopRow.element, empty);
       return;
     }
     for (const id of [...rows.keys()]) if (!tracks.some((t) => t.id === id)) rows.delete(id);
@@ -33254,6 +33428,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onChannel,
           onMove: onMoveTrack,
           onArm,
+          onDuplicateTrack,
           onSelect: (id, { toggle }) => toggle ? selection.toggle("track", id) : selection.set("track", [id])
         });
         const lane = document2.createElement("div");
@@ -33304,9 +33479,9 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       return entry.row;
     });
     const current = [...scroller.children];
-    drawLoop(loop, width);
+    loopRow.draw(loop, width);
     masterRow.update(masterFor(), { beatsPerBar, width });
-    const expected = [head, ruler, loopRow, ...wanted, masterRow.element];
+    const expected = [head, ruler.element, loopRow.element, ...wanted, masterRow.element];
     const same = current.length === expected.length && current.every((child, k) => child === expected[k]);
     if (!same) scroller.replaceChildren(...expected);
     head.style.height = `${scroller.scrollHeight}px`;
@@ -33315,16 +33490,16 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     head.hidden = beat === null;
     if (beat === null) return;
     head.style.left = `calc(var(--head) + ${beat * ppb()}px)`;
-    if (!follow) return;
+    if (!tools.following()) return;
     const visible = scroller.clientWidth - headPx();
-    const x2 = beat * ppb();
-    if (visible > 0 && (x2 < scroller.scrollLeft || x2 > scroller.scrollLeft + visible)) {
-      scroller.scrollLeft = Math.max(0, x2 - visible * 0.15);
+    const x = beat * ppb();
+    if (visible > 0 && (x < scroller.scrollLeft || x > scroller.scrollLeft + visible)) {
+      scroller.scrollLeft = Math.max(0, x - visible * 0.15);
       programmatic = scroller.scrollLeft;
     }
   }
   scroller.addEventListener("scroll", () => {
-    if (follow && !head.hidden && (programmatic === null || Math.abs(scroller.scrollLeft - programmatic) > 1)) setFollow(false);
+    if (tools.following() && !head.hidden && (programmatic === null || Math.abs(scroller.scrollLeft - programmatic) > 1)) tools.setFollow(false);
     programmatic = null;
   });
   return { element, draw, playhead, view };
@@ -33778,6 +33953,21 @@ function createArrangement(ctx2) {
     },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx2.dispatcher.project.moveTrack(trackId, delta),
+    // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
+    onAddTrack: async () => {
+      await ctx2.runtime.ensureRunning();
+      const result = edit([{ op: "addTrack" }]);
+      if (result.ok) ctx2.selection.set("track", [result.results[0]]);
+    },
+    onDuplicateTrack: async (trackId) => {
+      const result = await duplicateTrack(ctx2.dispatcher, trackId);
+      if (!result.ok) {
+        log2(result.message, "error");
+        return;
+      }
+      ctx2.selection.set("track", [result.trackId]);
+      log2(`duplicated ${trackId}${result.skipped.length ? `, ${result.skipped.join("; ")}` : ""}`, "ok");
+    },
     onChannel: (trackId, change) => {
       const result = ctx2.dispatcher.setTrackChannel(trackId, change);
       if (!result.ok) log2(result.message, "error");
@@ -37699,6 +37889,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   graph_apply_changes: "the general changeset; Reel has a statement for each change it permits",
   track_add: "arrangement editing, not yet a statement",
   track_remove: "arrangement editing, not yet a statement",
+  track_duplicate: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",

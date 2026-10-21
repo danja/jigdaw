@@ -39,11 +39,13 @@ import { createTrackHeader } from './TrackHeader.js'
 import { createChainStrip } from './ChainStrip.js'
 import { createEnvelopeLanes } from './EnvelopeLanes.js'
 import { createMasterRow } from './MasterRow.js'
+import { createLoopRow } from './LoopRow.js'
+import { createRuler } from './Ruler.js'
+import { createTimelineTools } from './TimelineTools.js'
 import { Selection } from '../model/Selection.js'
-import { setIcon } from './Icons.js'
 import { barBeat, describeClip } from './ClipText.js'
 import { createClipButton } from './ClipButton.js'
-import { TimeView, DEFAULT_PIXELS_PER_BEAT, GRIDS } from './TimeView.js'
+import { TimeView, DEFAULT_PIXELS_PER_BEAT } from './TimeView.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
 // The text a clip says about itself is ClipText.js and the clip itself is ClipButton.js; both are re-exported here so
@@ -74,9 +76,11 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
  * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
+ * - `onAddTrack()`: add an empty track. Optional: without it the toolbar has no Add track.
+ * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -88,75 +92,11 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   scroller.tabIndex = 0
   scroller.setAttribute('role', 'region')
   scroller.setAttribute('aria-label', 'Arrangement, scrolls sideways')
-  const tools = document.createElement('div')
-  tools.className = 'timeline-tools'
-  tools.setAttribute('role', 'group')
-  tools.setAttribute('aria-label', 'Timeline zoom and snap')
-  const tool = (label, onClick) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = label
-    button.addEventListener('click', onClick)
-    return button
-  }
-  const iconTool = (icon, label, onClick) => {
-    const button = tool(label, onClick)
-    setIcon(document, button, icon, label)
-    return button
-  }
-  const zoomStatus = document.createElement('span')
-  zoomStatus.className = 'timeline-zoom'
-  zoomStatus.setAttribute('role', 'status')
-  zoomStatus.textContent = 'Zoom 100%'
-  const snapLabel = document.createElement('label')
-  snapLabel.textContent = 'Snap '
-  const snapSelect = document.createElement('select')
-  for (const grid of GRIDS) {
-    const option = document.createElement('option')
-    option.value = grid
-    option.textContent = grid === 'off' ? 'Off' : grid === 'bar' ? 'Bar' : grid === 'beat' ? 'Beat' : `${grid} beat`
-    snapSelect.append(option)
-  }
-  const showGrid = () => { for (const option of snapSelect.options) option.selected = option.value === view.grid }
-  showGrid()
-  snapSelect.addEventListener('change', () => view.setGrid(snapSelect.value))
-  snapLabel.append(snapSelect)
-  let follow = true
-  const followButton = tool('Follow', () => setFollow(!follow))
-  const setFollow = on => {
-    follow = on
-    followButton.setAttribute('aria-pressed', String(on))
-  }
-  setFollow(true)
-  // Whether each track's chain of plugins is drawn under its lane.
-  let routing = true
-  const routingButton = tool('Routing', () => setRouting(!routing))
-  const setRouting = on => {
-    routing = on
-    routingButton.setAttribute('aria-pressed', String(on))
-    element.dataset.routing = on ? 'on' : 'off'
-  }
-  // The keyboard and screen reader route to the same seek the ruler click makes; bars count from one.
-  const seekLabel = document.createElement('label')
-  seekLabel.textContent = 'Go to bar '
-  const seekInput = document.createElement('input')
-  seekInput.type = 'number'
-  seekInput.min = '1'
-  seekInput.step = '1'
-  seekInput.value = '1'
-  seekInput.addEventListener('change', () => {
-    const bar = Math.floor(Number(seekInput.value))
-    if (!Number.isFinite(bar) || bar < 1) { seekInput.value = '1'; return }
-    onSeek((bar - 1) * bpb())
+  const tools = createTimelineTools(document, {
+    view, onSeek, onAddTrack, bpb: () => bpb(), zoom: factor => zoom(factor), fit: () => fit(),
+    onRouting: on => { element.dataset.routing = on ? 'on' : 'off' }
   })
-  seekLabel.append(seekInput)
-  tools.append(
-    iconTool('zoomOut', 'Zoom out', () => zoom(1 / 1.5)),
-    iconTool('zoomIn', 'Zoom in', () => zoom(1.5)),
-    tool('Fit', () => fit()),
-    followButton, routingButton, zoomStatus, snapLabel, ...(onSeek ? [seekLabel] : []))
-  element.append(tools, scroller)
-  setRouting(true)
+  element.append(tools.element, scroller)
   // Where the transport is. Drawn over the lanes, never read: the position
   // readout in the transport bar says the same in words.
   const head = document.createElement('div')
@@ -174,38 +114,14 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   let programmatic = null
   // Kept for as long as the timeline is: the ruler is rewritten in place and a
   // track's row is reused, so a redraw moves nothing that has not changed.
-  const ruler = document.createElement('div')
-  ruler.className = 'timeline-ruler'
-  ruler.setAttribute('aria-hidden', 'true')
-  // A click on the ruler cues or moves the playhead there. Not a drag: the loop brace beneath has its own.
-  ruler.addEventListener('click', e => {
-    if (!onSeek) return
-    onSeek(Math.max(0, snapBeat((e.clientX - ruler.getBoundingClientRect().left) / ppb(), e)))
-  })
+  const ruler = createRuler(document, { ppb: () => ppb(), onSeek: onSeek && (beat => onSeek(beat)), snapBeat: (beat, e) => snapBeat(beat, e) })
   const rows = new Map()
   // The master's own row after the tracks: its automation lanes and the way to add one.
   const masterRow = createMasterRow(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view })
-  const loopRow = document.createElement('div')
-  loopRow.className = 'timeline-loop'
-  loopRow.setAttribute('role', 'group')
-  const brace = document.createElement('div')
-  brace.className = 'loop-brace'
-  brace.setAttribute('aria-hidden', 'true')
-  const braceText = document.createElement('span')
-  brace.append(braceText)
-  const handle = edge => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = `loop-handle loop-${edge}`
-    button.id = `loop-${edge}`
-    return button
-  }
-  const startHandle = handle('start')
-  const endHandle = handle('end')
-  loopRow.append(brace, startHandle, endHandle)
-  let loopNow = { start: 0, end: 0, enabled: false }
   const ppb = () => view.pixelsPerBeat
   const bpb = () => lastArgs?.beatsPerBar ?? 4
+  const snapBeat = (beat, e) => view.snap(beat, bpb(), { bypass: e?.altKey })
+  const loopRow = createLoopRow(document, { view, bpb, onSetLoop, snapBeat })
   const headPx = () => scroller.querySelector('.timeline-head')?.offsetWidth ?? 0
 
   /** Zoom by `factor`, keeping the beat under `anchorX` (from the lanes' left edge) where it is. */
@@ -226,102 +142,6 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     programmatic = 0
   }
 
-  // ── The loop ─────────────────────────────────────────────────────────────
-  const minLoop = () => view.step(bpb()) ?? 0.25
-  const x = e => e.clientX - loopRow.getBoundingClientRect().left
-  const snapBeat = (beat, e) => view.snap(beat, bpb(), { bypass: e?.altKey })
-
-  function drawLoop (loop, width) {
-    loopNow = loop ?? { start: 0, end: 0, enabled: false }
-    const set = loopNow.end > loopNow.start
-    loopRow.style.width = `${width}px`
-    loopRow.setAttribute('aria-label', set ? `Loop, ${loopNow.enabled ? 'on' : 'off'}` : 'Loop, not set')
-    brace.hidden = !set
-    startHandle.hidden = !set
-    endHandle.hidden = !set
-    if (!set) {
-      braceText.textContent = ''
-      return
-    }
-    brace.style.left = `${loopNow.start * ppb()}px`
-    brace.style.width = `${(loopNow.end - loopNow.start) * ppb()}px`
-    brace.classList.toggle('on', loopNow.enabled)
-    braceText.textContent = loopNow.enabled ? 'Loop on' : 'Loop off'
-    startHandle.style.left = `${loopNow.start * ppb() - 22}px`
-    endHandle.style.left = `${loopNow.end * ppb() - 22}px`
-    startHandle.setAttribute('aria-label', `Loop start, ${barBeat(loopNow.start, bpb())}. Left and Right move it.`)
-    endHandle.setAttribute('aria-label', `Loop end, ${barBeat(loopNow.end, bpb())}. Left and Right move it.`)
-  }
-
-  /** Send one range, refusing one that would end at or before its start. */
-  function sendLoop (start, end) {
-    const lo = Math.max(0, Math.min(start, end))
-    const hi = Math.max(start, end)
-    if (hi - lo < minLoop() - 1e-9) return
-    if (lo === loopNow.start && hi === loopNow.end) return
-    onSetLoop({ start: lo, end: hi })
-  }
-
-  for (const [edge, button] of [['start', startHandle], ['end', endHandle]]) {
-    const other = () => (edge === 'start' ? loopNow.end : loopNow.start)
-    const put = beat => (edge === 'start' ? sendLoop(beat, other()) : sendLoop(other(), beat))
-    button.addEventListener('keydown', event => {
-      const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
-      if (direction === 0) return
-      event.preventDefault()
-      const step = event.shiftKey ? bpb() : (view.step(bpb()) ?? 1)
-      put(Math.max(0, (edge === 'start' ? loopNow.start : loopNow.end) + direction * step))
-    })
-    button.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return
-      event.preventDefault()
-      event.stopPropagation()
-      const from = edge === 'start' ? loopNow.start : loopNow.end
-      const originX = event.clientX
-      const beatAt = e => snapBeat(from + (e.clientX - originX) / ppb(), e)
-      const move = e => {
-        // Shown while dragging; sent once, on release.
-        const beat = beatAt(e)
-        const lo = edge === 'start' ? beat : loopNow.start
-        const hi = edge === 'start' ? loopNow.end : beat
-        if (hi > lo) {
-          brace.style.left = `${lo * ppb()}px`
-          brace.style.width = `${(hi - lo) * ppb()}px`
-          button.style.left = `${beat * ppb() - 22}px`
-        }
-      }
-      const up = e => {
-        document.removeEventListener('pointermove', move)
-        document.removeEventListener('pointerup', up)
-        put(beatAt(e))
-        drawLoop(loopNow, parseFloat(loopRow.style.width))
-      }
-      document.addEventListener('pointermove', move)
-      document.addEventListener('pointerup', up)
-    })
-  }
-
-  // A drag on the empty row draws a loop.
-  loopRow.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || event.target !== loopRow) return
-    event.preventDefault()
-    const from = snapBeat(x(event) / ppb(), event)
-    const move = e => {
-      const to = snapBeat(x(e) / ppb(), e)
-      brace.hidden = false
-      brace.classList.remove('on')
-      brace.style.left = `${Math.min(from, to) * ppb()}px`
-      brace.style.width = `${Math.abs(to - from) * ppb()}px`
-    }
-    const up = e => {
-      document.removeEventListener('pointermove', move)
-      document.removeEventListener('pointerup', up)
-      sendLoop(from, snapBeat(x(e) / ppb(), e))
-      drawLoop(loopNow, parseFloat(loopRow.style.width))
-    }
-    document.addEventListener('pointermove', move)
-    document.addEventListener('pointerup', up)
-  })
 
   // A selection changes what is marked, never what is drawn, so the lanes are
   // not rebuilt and the focus stays where it is.
@@ -342,8 +162,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   })
 
   view.subscribe(() => {
-    showGrid()
-    zoomStatus.textContent = `Zoom ${Math.round(ppb() / DEFAULT_PIXELS_PER_BEAT * 100)}%`
+    tools.sync()
     if (lastArgs) draw(lastArgs)
   })
   scroller.addEventListener('keydown', event => {
@@ -379,25 +198,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const bars = Math.ceil(lastBeat / beatsPerBar) + 4
     const width = bars * beatsPerBar * ppb()
 
-    ruler.replaceChildren()
-    ruler.style.width = `${width}px`
-    // A label every few bars once a bar is too narrow to hold one, so zoomed out
-    // the numbers stay readable rather than running together.
-    const every = Math.max(1, Math.ceil(40 / (beatsPerBar * ppb())))
-    for (let bar = 0; bar < bars; bar += every) {
-      const mark = document.createElement('span')
-      mark.style.left = `${bar * beatsPerBar * ppb()}px`
-      mark.textContent = String(bar + 1)
-      ruler.append(mark)
-    }
-    if (ppb() >= 12) {
-      for (let beat = 0; beat < bars * beatsPerBar; beat++) {
-        if (beat % beatsPerBar === 0) continue
-        const tick = document.createElement('i')
-        tick.style.left = `${beat * ppb()}px`
-        ruler.append(tick)
-      }
-    }
+    ruler.draw({ bars, beatsPerBar, width })
 
     if (tracks.length === 0) {
       rows.clear()
@@ -414,8 +215,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         button.addEventListener('click', () => action.run())
         empty.append(button)
       }
-      drawLoop(loop, width)
-      scroller.replaceChildren(head, ruler, loopRow, empty)
+      loopRow.draw(loop, width)
+      scroller.replaceChildren(head, ruler.element, loopRow.element, empty)
       return
     }
 
@@ -431,7 +232,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.className = 'timeline-row'
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack,
           onSelect: (id, { toggle }) => (toggle ? selection.toggle('track', id) : selection.set('track', [id]))
         })
         const lane = document.createElement('div')
@@ -474,9 +275,9 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     // Only when the list differs, so a redraw that changes no track's place
     // moves nothing (and so drops no focus).
     const current = [...scroller.children]
-    drawLoop(loop, width)
+    loopRow.draw(loop, width)
     masterRow.update(masterFor(), { beatsPerBar, width })
-    const expected = [head, ruler, loopRow, ...wanted, masterRow.element]
+    const expected = [head, ruler.element, loopRow.element, ...wanted, masterRow.element]
     const same = current.length === expected.length && current.every((child, k) => child === expected[k])
     if (!same) scroller.replaceChildren(...expected)
     // The playhead is as tall as everything that scrolls, not as the box it is seen through: the box is shorter than the
@@ -489,7 +290,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     head.hidden = beat === null
     if (beat === null) return
     head.style.left = `calc(var(--head) + ${beat * ppb()}px)`
-    if (!follow) return
+    if (!tools.following()) return
     // Page-flip: when the head leaves the visible lanes, bring it back a
     // little in from the left, rather than nudging every frame.
     const visible = scroller.clientWidth - headPx()
@@ -501,7 +302,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   }
   // Scrolling that this file did not do is the person looking elsewhere.
   scroller.addEventListener('scroll', () => {
-    if (follow && !head.hidden && (programmatic === null || Math.abs(scroller.scrollLeft - programmatic) > 1)) setFollow(false)
+    if (tools.following() && !head.hidden && (programmatic === null || Math.abs(scroller.scrollLeft - programmatic) > 1)) tools.setFollow(false)
     programmatic = null
   })
 

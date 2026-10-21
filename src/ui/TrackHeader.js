@@ -14,7 +14,7 @@
 import { decibels, panPosition } from './Strip.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -32,6 +32,12 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return
     event.preventDefault()
     onMove(id, event.key === 'ArrowUp' ? -1 : 1)
+  })
+  // D copies the track, as it copies a clip. Reachable here because a small lane hides every button but the name.
+  name.addEventListener('keydown', event => {
+    if (!onDuplicateTrack || event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== 'd') return
+    event.preventDefault()
+    onDuplicateTrack(id)
   })
 
   const add = document.createElement('button')
@@ -56,6 +62,14 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   arm.textContent = 'Arm'
   arm.setAttribute('aria-pressed', 'false')
   arm.addEventListener('click', () => onArm(id, arm.getAttribute('aria-pressed') !== 'true'))
+
+  // Only where the page can copy a track; a button that did nothing would be left out.
+  const duplicate = document.createElement('button')
+  duplicate.type = 'button'
+  duplicate.className = 'head-duplicate'
+  duplicate.id = `head-${id}-duplicate`
+  duplicate.textContent = 'Duplicate'
+  duplicate.addEventListener('click', () => onDuplicateTrack(id))
 
   const mix = document.createElement('div')
   mix.className = 'head-mix'
@@ -117,7 +131,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   latency.hidden = true
 
   mix.append(mute, solo, level.label, pan.label, silent)
-  element.append(name, arm, mix, routing, latency, add, addAudio)
+  element.append(name, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
 
   return {
     element,
@@ -134,12 +148,13 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       // A colour is a second cue beside the name, which is always shown.
       if (color) element.style.setProperty('--track-color', color); else element.style.removeProperty('--track-color')
       element.dataset.size = size
-      name.title = 'Alt with Up or Down moves this track'
+      name.title = onDuplicateTrack ? 'Alt with Up or Down moves this track, D duplicates it' : 'Alt with Up or Down moves this track'
       element.setAttribute('role', 'group')
       element.setAttribute('aria-label', `${label} controls${isSilent ? ', silent' : ''}`)
       at = place
       add.setAttribute('aria-label', `Add a MIDI clip to ${label} at ${where}`)
       addAudio.setAttribute('aria-label', `Add an audio file to ${label} at ${where}`)
+      duplicate.setAttribute('aria-label', `Duplicate ${label} with its plugins`)
 
       mix.hidden = !mixable
       mute.setAttribute('aria-pressed', String(Boolean(channel.muted)))

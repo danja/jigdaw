@@ -150,3 +150,35 @@ describe('a track header', () => {
     expect(() => createTrackHeader(document, { id: 't', onSelect () {}, onAdd () {}, onAddAudio () {}, onMove () {}, onArm () {} })).toThrow(/onChannel/)
   })
 })
+
+describe('a track header, Duplicate', () => {
+  const withHandler = onDuplicateTrack => {
+    const header = createTrackHeader(document, { id: 't1', onSelect () {}, onAdd () {}, onAddAudio () {}, onChannel () {}, onMove () {}, onArm () {}, onDuplicateTrack })
+    document.body.append(header.element)
+    header.update({ label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, mixable: true, silent: false, at: 0, where: 'bar 1 beat 1' })
+    return document.getElementById('head-t1-duplicate')
+  }
+
+  it('is left out where the page cannot copy a track, rather than drawn and doing nothing', () => {
+    expect(withHandler(undefined)).toBeNull()
+  })
+
+  it('is also on the D key of the track name, since a small lane shows only the name', () => {
+    const seen = []
+    withHandler(id => seen.push(id))
+    const name = document.getElementById('show-track-t1')
+    name.dispatchEvent(event('keydown', { key: 'd', altKey: false, ctrlKey: false, metaKey: false }))
+    name.dispatchEvent(event('keydown', { key: 'D', altKey: false, ctrlKey: false, metaKey: false }))
+    name.dispatchEvent(event('keydown', { key: 'd', ctrlKey: true, altKey: false, metaKey: false }))
+    expect(seen).toEqual(['t1', 't1'])
+  })
+
+  it('is named for its track, and asks to copy that track', () => {
+    const seen = []
+    const button = withHandler(id => seen.push(id))
+    expect(button.getAttribute('aria-label')).toBe('Duplicate Bass with its plugins')
+    button.dispatchEvent(event('click'))
+    expect(seen).toEqual(['t1'])
+  })
+})
+

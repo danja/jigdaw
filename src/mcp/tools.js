@@ -11,6 +11,7 @@
 // is not settled and lives in adapter.js, so when the API moves one file
 // changes and this one does not.
 import { splitClip, duplicateClip } from '../model/ClipEdit.js'
+import { duplicateTrack } from '../ops/DuplicateTrack.js'
 import { chainSwapChanges } from '../ops/ChainReorder.js'
 import { FACET_NAMES, expandTerm as expand, compactTerm as compact } from '../catalogue/facets.js'
 
@@ -312,6 +313,26 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         const result = dispatcher.apply([change], { expectedRevision })
         return result.ok
           ? ok({ revision: result.revision, removed: trackId })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'track_duplicate',
+      description:
+        'Copy a track with its plugins as one edit: each plugin is loaded again onto a new track with the same settings, ' +
+        'saved state and bypass, and the wiring between them, the track inputs, automation, clips, channel strip and sends ' +
+        'from the track are copied. A connection to another track is not. Undone as one step. If any plugin fails to load ' +
+        'nothing is kept. Returns the new track id, a map from each original node id to its copy, and what was left out.',
+      inputSchema: {
+        type: 'object',
+        properties: { trackId: { type: 'string' } },
+        required: ['trackId']
+      },
+      async handler ({ trackId } = {}) {
+        const result = await duplicateTrack(dispatcher, trackId)
+        return result.ok
+          ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped })
           : failed(result.message, { kind: result.kind })
       }
     },

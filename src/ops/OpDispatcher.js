@@ -34,6 +34,9 @@ const rangeOf = ({ lowNote, highNote }) => ({
   ...(highNote === undefined ? {} : { highNote })
 })
 
+/** Whether two snapshots say the same, ignoring the revision, which counts edits and not content. */
+const sameContent = (a, b) => JSON.stringify({ ...a, revision: 0 }) === JSON.stringify({ ...b, revision: 0 })
+
 export class OpDispatcher {
   #project
   #engine
@@ -452,7 +455,8 @@ export class OpDispatcher {
       return await fn()
     } finally {
       this.#unrecorded--
-      if (this.#project.revision !== revision) this.#history.record(before)
+      // A run that ends where it began (a copy taken back after a failed load) leaves nothing to undo.
+      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before)
     }
   }
 

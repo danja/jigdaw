@@ -27,6 +27,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   graph_apply_changes: 'the general changeset; Reel has a statement for each change it permits',
   track_add: 'arrangement editing, not yet a statement',
   track_remove: 'arrangement editing, not yet a statement',
+  track_duplicate: 'arrangement editing, not yet a statement',
   track_layout: 'editor layout',
   track_set: 'arrangement editing, not yet a statement',
   track_set_channel: 'a mixer gesture; wanted, and not in version one',

@@ -556,6 +556,25 @@ describe('tracks', () => {
     expect(dispatcher.project.tracks.map(t => t.id)).toEqual([other])
   })
 
+  it('duplicates a track through track_duplicate, in one step, and reports one that is not there or a dispatcher that cannot load', async () => {
+    dispatcher.apply([{ op: 'addTrack', id: 'e', label: 'Empty' }])
+    dispatcher.clearHistory()
+    const copy = await call('track_duplicate', { trackId: 'e' })
+    expect(copy).toMatchObject({ ok: true, nodeIds: {}, skipped: [] })
+    expect(dispatcher.project.track(copy.trackId).label).toBe('Empty copy')
+    await dispatcher.undo()
+    expect(dispatcher.project.track(copy.trackId)).toBeNull()
+    expect(dispatcher.canUndo()).toBe(false)
+
+    expect((await call('track_duplicate', { trackId: 'ghost' })).error).toMatch(/no such track: ghost/)
+    // A dispatcher with no engine cannot load the plugin, and says so rather than keeping half a copy.
+    addNodes()
+    const before = dispatcher.project.tracks.length
+    const refused = await call('track_duplicate', { trackId: 't' })
+    expect(refused.ok).toBe(false)
+    expect(dispatcher.project.tracks).toHaveLength(before)
+  })
+
   it('passes a track through plugin_load', async () => {
     const seen = []
     const tools = createTools({

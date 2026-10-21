@@ -5,11 +5,21 @@ whatever it left undone as an item of its own. Review periodically. What is buil
 [docs/jiggy-features.md](docs/jiggy-features.md); what a finished item did and how it was checked is in
 `git log`, and mistakes are in [MISTAKES.md](MISTAKES.md). Actions only a person can take are in [HUMANS.md](HUMANS.md).
 
-Sections: [Decisions](#decisions-for-the-maintainer), [Checks in a real browser](#checks-in-a-real-browser-or-by-a-person),
+Sections: [Next](#next), [Decisions](#decisions-for-the-maintainer), [Checks in a real browser](#checks-in-a-real-browser-or-by-a-person),
 [Plugins](#plugins), [Livecoding](#livecoding-reel), [The main view](#the-main-view-track-oriented-arrange),
 [DAW features by phase](#daw-features-by-phase), [Web-native and PWA](#web-native-jiggy-and-a-mobile-pwa),
 [Docs and cross-links](#docs-and-cross-links), [Larger directions](#larger-directions-not-started),
 [Before there is code](#before-there-is-code), [Loose ends](#loose-ends), [Recurring](#recurring-check-periodically).
+
+## Next
+
+Where to start, in order. Everything else is below and is not ordered.
+
+1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
+2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
+3. The browser checks that need only a window in front (Checks in a real browser).
+4. The rest of the Tracks section: track types in the header, then folders and groups.
+5. Decide the docked mixer against the tab, which unblocks the Mixer section.
 
 ## Decisions for the maintainer
 
@@ -24,8 +34,9 @@ Each of these is blocked on a choice, not on work.
       in HUMANS.md.
 - [ ] **Generated profiles still declare the deprecated `trn:WebAudio`.** Found 2026-10-02. plugin-universe has deprecated it
       for `trn:Jig` (its harvester maps the old term on ingest) and its raw shape rejects it, so every profile
-      `bin/write-profile.js` emits fails that shape with one violation. Fixing the generator changes every plugin's canonical
-      digest, and so every pin on it and every signed bundle. A composite declares only `trn:Jig` and conforms.
+      `bin/write-profile.js` emits fails that shape with one violation. `bin/jsfx-import.js` (line 83) is a second generator
+      with the same term. Fixing the generators changes every plugin's canonical digest, and so every pin on it and every
+      signed bundle. A composite declares only `trn:Jig` and conforms.
 - [ ] **MIDI loops are refused** (error kind `midi-cycle`, `docs/latency.md`). This was an agent decision, not the
       maintainer's; say if they should be allowed with some limit instead.
 - [ ] **Keyframe: should `quality` default to Balanced?** Measured 2026-10-01 under WAMR: Economy is about 15 percent cheaper
@@ -37,10 +48,11 @@ Each of these is blocked on a choice, not on work.
 - [ ] **Conductor and MelGen density mapping.** Left as it is by decision on 2026-10-13: MelGen takes CC 21 (Conductor's
       density) as its scale and CC 22 (energy) as its density, so editing a section's density changes the key. Revisit only if
       it bites.
-- [ ] **Reel known limits.** A new plugin named by a script is validated before the swap but instantiated at it, so a swap that
-      adds one can stall the bar (preloading is the fix); a failure after the swap begins has already stopped the old script;
-      a timed parameter set is accurate to the tick, and sample accuracy means giving `parameter_set` an `atFrame`; parse
-      errors are reported before planning, so a typo shows before a bad range. Decide which to fix.
+- [ ] **Reel: a swap that adds a plugin can stall the bar.** A new plugin named by a script is validated before the swap but
+      instantiated at it. Preloading is the fix.
+- [ ] **Reel: a failure after the swap begins has already stopped the old script.** Decide whether that is acceptable.
+- [ ] **Reel: timed parameter sets are accurate to the tick.** Sample accuracy means giving `parameter_set` an `atFrame`.
+- [ ] **Reel: parse errors are reported before planning,** so a typo shows before a bad range. Decide whether the order matters.
 - [ ] **Layout of the main view: docked mixer or tab.** [docs/main-view.md](docs/main-view.md) names the open question, a
       docked mixer in the Reaper manner against the tab. Decide, and revise the document with the answer.
 
@@ -48,6 +60,10 @@ Each of these is blocked on a choice, not on work.
 
 Built and tested offline, not yet seen. Use Chrome with the window in front (a hidden tab grants no activation).
 
+- [ ] **Timeline after the split, what Chrome did not cover.** Seen working on 2026-10-21 in real Chrome with real pointer and
+      keys: drawing a loop, dragging an edge past the row, arrow keys on a handle, Zoom in, Go to bar, Tab through the
+      tools, Follow and Routing. Left: Ctrl with the wheel (a dispatched event only, since the tool cannot hold Ctrl while
+      scrolling), Fit, the zoom read-out at phone width, and a screen reader pass over the tools.
 - [ ] **Downspout ports (Moka, Sprout, Markov, Retune):** load each; play Moka from the keyboard; run Sprout and Markov against
       the transport; chain Retune into Moka with a `.scl` loaded from the panel.
 - [ ] **Transport click and count-in:** that it clicks in time, accents the bar, keeps time through a loop, and that a count-in
@@ -83,8 +99,8 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       plugins.
 - [ ] Sprout and Markov draw with the VST3's 64-bit mix (`tests/host/mix64.test.js` checks it against BigInt); whether a seed
       now gives the VST3's exact line is unchecked, since the rest of the port may differ. Conductor uses the same draw.
-- [ ] The browser search bar asks for 25 results and the catalogue defaults to 30, so an empty search already hides 6 of 31
-      plugins.
+- [ ] The catalogue's `search` defaults to `limit = 30` (`src/catalogue/Catalogue.js`) and there are 32 plugins, so an empty
+      search hides 2 unless the caller passes a limit. Check what the browser search bar passes.
 
 ### Conductor
 
@@ -157,9 +173,6 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Shell
 
-- [ ] **A view module of its own.** `src/ui/Arrange.js` with a header column and a lane area sharing one vertical scroll, built
-      from `Timeline.js`, `Strip.js` and `Panel.js` rather than a rewrite. `Timeline.js` is 487 lines; the next seam is the
-      loop brace and the lane drawing.
 - [ ] **Transport.** Tap tempo, a seconds or SMPTE readout, a compact phone transport bar. The click accent assumes one
       signature, like `barBeat`.
 - [ ] **Playhead and loop.** Drag the whole loop, a loop range from a selection or region, and follow for the piano roll.
@@ -174,8 +187,14 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Tracks
 
-- [ ] **Duplicate a track, and add an empty one from the header.** Duplicate needs one composite Op that loads each plugin,
-      copies settings and state, and remaps connections and track inputs, or undo takes one step per plugin.
+- [ ] **Duplicate a track: what Chrome did not cover.** Duplicate (`src/ops/DuplicateTrack.js`, the `track_duplicate` tool, the
+      header's Duplicate button and the D key on a track name) and the toolbar's Add track are built. Seen in Chrome on
+      2026-10-21: Add track from an empty page (twice, then undo), and a one-plugin copy that loads, undoes whole and redoes.
+      Left undone: a copy of a track with several plugins, wiring and automation in a real page; hearing the copy; the node
+      positions in the editor graph are not copied; a plugin's live state beyond what a saved session carries is not copied
+      (the same gap as the parity item); a foreign (WAM) plugin was not tried; focus stays on the original's name while the
+      selection moves to the copy, which a screen reader pass should judge; the Duplicate button shows only on a medium or
+      large lane, because a small one hides every button but the name; Add track's place at phone width is unmeasured.
 - [ ] **Track types visible in the header.** Instrument (MIDI in, audio out), audio, MIDI only, bus; drawn from the node
       ports, not a flag.
 - [ ] **Folders and groups.** Editor-only folder first (no compiler change), then bus tracks that sum other tracks, and linked
@@ -186,7 +205,7 @@ Workflow alongside from Routing, and the launcher last.
       the keyboard.
 - [ ] **Track input and monitoring.** Choosing among several MIDI and audio inputs, MIDI panic, input monitoring, the
       microphone as a choice on any studio track (the studio page has no record-voice button), a visible state when Web MIDI
-      is denied, and MIDI learn.
+      is denied. MIDI learn is under Phase D.
 - [ ] **Track alignment.** Clips and live MIDI are not offset; the setting is not in the saved session, so two people can hear
       differently; a limit warning is in the console, not on the page; no render comparison has measured that audio really
       arrives aligned.
@@ -221,7 +240,6 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Piano roll in the dock** with zoom and scroll bound to the shared time model.
 - [ ] **Drum grid.** Step editor for a track whose target is a kit, using DrumKit.
 - [ ] **Audio editor.** Waveform view with start, end, gain and fade handles for one clip.
-- [ ] **Markers and a signature lane** on the ruler. The terms and the file format exist; the view does not.
 - [ ] **Pattern clips** (GridSound's model): a reusable MIDI pattern placed on several tracks or times, edit once and all
       instances follow. Needs a design note first; build only if it earns its cost over copy and paste.
 
@@ -234,7 +252,6 @@ Workflow alongside from Routing, and the launcher last.
       that, because a gate on one control type left every other control unrecordable.
 - [ ] **A manual change while automated.** A "restore" that resumes the lane without stopping, and showing on the control that
       it is paused.
-- [ ] **MIDI learn** writes into the same lanes.
 - [ ] **Modulation sources** (LFO, step, random, macro) as a Jig with a control output port, so it stays a plugin and not a
       host feature (openDAW sums depth times source onto a parameter).
 
@@ -244,8 +261,7 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Master strip.** A mono switch, and controls beyond level, pan and mute (the term-first rule applies to whatever
       controls it carries).
 - [ ] **Insert slots on the strip** mirroring the chain strip, so both views edit one list.
-- [ ] **Snapshots, render in place, consolidate** (they share the bounce path, which Freeze already uses).
-- [ ] **Metering and correlation as displays**, with no loudness-compliance claims.
+- [ ] **Strip snapshots, metering, render in place and consolidate** are under Phase C and Phase E, not repeated here.
 
 ### Session, clip launcher and interchange
 
@@ -257,10 +273,7 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Workflow and access
 
-- [ ] **Shortcuts scoped by context** from one binding store, with a searchable list and conflict checks. The clip keys are
-      hardcoded in `Timeline.js` today.
 - [ ] **Screen reader pass over the whole view.** Test with a real screen reader and record what was and was not tested.
-- [ ] **High-contrast theme and reduced motion** checked against the new view.
 - [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, measured at a real phone width.
 - [ ] **Agent-driven arrangement.** An agent builds a track from profiles: chooses plugins by role, connects them, writes a
       clip. Regress with a scripted session against the real dispatcher.
@@ -280,8 +293,9 @@ the page, it is research, not committed.
 - [ ] **Razor areas, ripple modes, time selection ops.** Razor selection that cuts across tracks, ripple that closes or
       preserves the gap, time selection cut, copy, delete and insert-silence. One Op each, over the same changeset path as clip
       ops.
-- [ ] **Markers, regions, region manager.** Named positions and ranges with a list view, jump by keys, loop a region.
-- [ ] **Tap tempo,** and the scheduler and piano roll reading signature changes.
+- [ ] **Markers, regions, region manager.** Named positions and ranges with a list view, jump by keys, loop a region, drawn
+      on the ruler beside a signature lane. The terms and the file format exist; the view does not.
+- [ ] **The scheduler and piano roll reading signature changes** (tap tempo is under Shell, Transport).
 - [ ] **Reverse and normalize** as offline render ops on take bytes. Time stretch and pitch shift stay out until a DSP design
       exists (see Keyframe).
 
@@ -305,7 +319,7 @@ the page, it is research, not committed.
 - [ ] **Metering and gain staging.** Phase invert, stereo width, pan law, RMS. LUFS, phase correlation and spectrum stay
       meter-only displays if built, never claims about loudness compliance.
 - [ ] **Freeze.** Freeing the original's CPU (it is muted, not unloaded), unfreeze as one action, render in place onto the same
-      track, and consolidate a range.
+      track, and consolidate a range. Render in place and consolidate share the bounce path that Freeze already uses.
 
 ### Phase D. Plugin and effect workflows
 
@@ -315,7 +329,7 @@ the page, it is research, not committed.
 - [ ] **FX-chain presets.** Save and load a whole track chain including order and settings: a collection of IRIs plus
       settings, not a new format.
 - [ ] **MIDI learn and parameter mapping.** Bind a controller to a parameter explicitly, on top of the declared CC bindings
-      Quefrency and 8-Bit 8asterd have.
+      Quefrency and 8-Bit 8asterd have. A learned binding can also write into the automation lanes.
 - [ ] **Input and monitoring FX chains.** Where a chain may sit besides a track and the master: an input monitoring chain, a
       monitoring-only chain that never renders. The render path must exclude the monitoring chain by construction.
 - [ ] **Channel strip EQ modal.** A small built-in EQ view per strip using existing plugins, if strips need one at all.
@@ -355,11 +369,12 @@ the page, it is research, not committed.
 - [ ] **Command palette.** Every Op reachable by name search over the one dispatcher, as WebMCP tools are. No palette-only
       commands.
 - [ ] **Keyboard shortcuts and profiles.** A searchable shortcut list, scoped rebinding with conflict checks, import and export
-      of named profiles. One good default plus the machinery.
+      of named profiles, all from one binding store. The clip keys are hardcoded in `Timeline.js` today. One good default plus
+      the machinery.
 - [ ] **Screensets, toolbar editor, big clock.** Saved panel layouts, an editable transport toolbar, a large timecode display.
       Layout is editor metadata, stored apart like node positions.
 - [ ] **Themes and high contrast.** A theme editor over CSS variables plus one tested high-contrast theme; the generated panel
-      must pass in every theme.
+      must pass in every theme, and reduced motion is checked against the new view.
 - [ ] **Help overlay and getting started.** A first-run guide over the real page and a help overlay naming the current keys,
       generated from the binding store, never hardcoded.
 - [ ] **Detached mixer and piano roll.** Pop a panel into a second window that follows the same model; only if window sync
