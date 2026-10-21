@@ -28,6 +28,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   track_add: 'arrangement editing, not yet a statement',
   track_remove: 'arrangement editing, not yet a statement',
   track_duplicate: 'arrangement editing, not yet a statement',
+  track_bus: 'arrangement editing, not yet a statement',
   track_layout: 'editor layout',
   track_set: 'arrangement editing, not yet a statement',
   track_set_channel: 'a mixer gesture; wanted, and not in version one',

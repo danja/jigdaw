@@ -27774,6 +27774,17 @@ function pasteClips(project, copied, { startBeat, track = null } = {}) {
   });
 }
 
+// src/model/TrackBus.js
+function describeBus(project, trackIds, { label = "Bus", newTrackId = project.nextId("track") } = {}) {
+  const ids = [...new Set(trackIds)];
+  if (ids.length < 2) throw new Error("a bus takes two or more different tracks");
+  for (const id of ids) if (!project.track(id)) throw new Error(`no such track: ${id}`);
+  return [
+    { op: "addTrack", id: newTrackId, label },
+    ...ids.map((id) => ({ op: "setTrack", id, output: newTrackId }))
+  ];
+}
+
 // src/model/TrackDuplicate.js
 function copyLabel(track) {
   return `${track.label ?? track.id} copy`;
@@ -28197,6 +28208,25 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       async handler({ trackId } = {}) {
         const result = await duplicateTrack(dispatcher, trackId);
         return result.ok ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_bus",
+      description: "Make a bus from two or more tracks: one new track, and each chosen track's output set to it instead of the master. One edit, undone as one step. A track already sent to another bus is moved. Returns the bus track id.",
+      inputSchema: {
+        type: "object",
+        properties: { trackIds: { type: "array", items: { type: "string" }, minItems: 2 }, label: { type: "string" } },
+        required: ["trackIds"]
+      },
+      async handler({ trackIds, label } = {}) {
+        let changes;
+        try {
+          changes = describeBus(dispatcher.project, trackIds ?? [], label === void 0 ? {} : { label });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+        const result = dispatcher.apply(changes);
+        return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -34651,8 +34681,8 @@ function tally(tracks, key) {
   const on = tracks.filter((t) => t.channel[key]).length;
   return on === 0 ? "none" : on === tracks.length ? "all" : "some";
 }
-function createBulkTrackPanel(document2, { onChannel, onColor, onSize }) {
-  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize })) {
+function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus }) {
+  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onBus })) {
     if (typeof fn !== "function") throw new Error(`createBulkTrackPanel needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -34702,9 +34732,14 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize }) {
     if (size.value) onSize(size.value);
   });
   sizeLabel.append(size);
+  const bus = document2.createElement("button");
+  bus.type = "button";
+  bus.id = "bulk-bus";
+  bus.textContent = "Send to a new bus";
+  bus.addEventListener("click", () => onBus());
   const actions = document2.createElement("div");
   actions.className = "track-actions";
-  actions.append(mute, solo);
+  actions.append(mute, solo, bus);
   element.append(summary, actions, colors, sizeLabel);
   return {
     element,
@@ -35076,6 +35111,18 @@ function createDockPanel(ctx2) {
     },
     onSize: (laneSize) => {
       for (const id of ctx2.selection.ids) layoutOf(id, { laneSize });
+    },
+    onBus: () => {
+      let changes;
+      try {
+        changes = describeBus(ctx2.dispatcher.project, ctx2.selection.ids);
+      } catch (error2) {
+        log2(error2.message, "error");
+        return;
+      }
+      const result = ctx2.dispatcher.apply(changes);
+      if (!result.ok) log2(result.message, "error");
+      else ctx2.selection.set("track", [changes[0].id]);
     }
   });
   dock.slot("tracks").append(bulk.element);
@@ -38008,6 +38055,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_add: "arrangement editing, not yet a statement",
   track_remove: "arrangement editing, not yet a statement",
   track_duplicate: "arrangement editing, not yet a statement",
+  track_bus: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",

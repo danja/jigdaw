@@ -147,6 +147,7 @@ a whole. `node_unpack` turns it back into its members as ordinary nodes, and `co
 |---|---|---|
 | `track_add` | `label?` | Track id |
 | `track_remove` | `trackId`, `moveNodesTo?` | |
+| `track_bus` | `trackIds`, `label?` | Makes a new track and sets each listed track's output to it. One undo step. Returns the bus track id |
 | `track_duplicate` | `trackId` | The new track id, each original node id mapped to its copy, and what was not copied. One undo step; all or nothing |
 | `track_layout` | `trackId`, `move?`, `color?`, `laneSize?`, `folder?` | The track's layout and place. Editor metadata: no revision, no undo |
 | `track_set` | `trackId`, `label?`, `midiInput?`, `audioInput?`, `output?` | |

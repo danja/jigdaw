@@ -12,11 +12,19 @@ const track = (muted = false, soloed = false) => ({ channel: { muted, soloed } }
 function build (tracks = [track(), track()]) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size') })
+  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size'), onBus: rec('bus') })
   document.body.append(panel.element)
   panel.show({ tracks, labels: ['Lead', 'Bass'] })
   return { panel, calls, $: id => document.getElementById(id) }
 }
+
+describe('the bus button', () => {
+  it('asks for a bus with no argument', () => {
+    const { $, calls } = build()
+    $('bulk-bus').dispatchEvent(new window.Event('click', { bubbles: true }))
+    expect(calls).toEqual([['bus']])
+  })
+})
 
 describe('tally', () => {
   it('says all, none or some', () => {

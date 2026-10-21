@@ -584,6 +584,23 @@ describe('tracks', () => {
     expect(dispatcher.project.tracks).toHaveLength(before)
   })
 
+  it('makes a bus of two tracks in one undo step, and refuses one track or a track that is not there', async () => {
+    const a = (await call('track_add', {})).trackId
+    const b = (await call('track_add', {})).trackId
+    dispatcher.clearHistory()
+    const made = await call('track_bus', { trackIds: [a, b], label: 'Drums bus' })
+    expect(made.ok).toBe(true)
+    expect(dispatcher.project.track(made.trackId).label).toBe('Drums bus')
+    expect(dispatcher.project.track(a).output).toBe(made.trackId)
+    expect(dispatcher.project.track(b).output).toBe(made.trackId)
+    await dispatcher.undo()
+    expect(dispatcher.project.track(made.trackId)).toBeNull()
+    expect(dispatcher.project.track(a).output).toBeNull()
+    expect(dispatcher.canUndo()).toBe(false)
+    expect((await call('track_bus', { trackIds: [a] })).error).toMatch(/two or more/)
+    expect((await call('track_bus', { trackIds: [a, 'ghost'] })).error).toMatch(/no such track: ghost/)
+  })
+
   it('passes a track through plugin_load', async () => {
     const seen = []
     const tools = createTools({

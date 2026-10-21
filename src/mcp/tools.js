@@ -11,6 +11,7 @@
 // is not settled and lives in adapter.js, so when the API moves one file
 // changes and this one does not.
 import { splitClip, duplicateClip } from '../model/ClipEdit.js'
+import { describeBus } from '../model/TrackBus.js'
 import { duplicateTrack } from '../ops/DuplicateTrack.js'
 import { chainSwapChanges } from '../ops/ChainReorder.js'
 import { FACET_NAMES, expandTerm as expand, compactTerm as compact } from '../catalogue/facets.js'
@@ -334,6 +335,28 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         return result.ok
           ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped })
           : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'track_bus',
+      description:
+        'Make a bus from two or more tracks: one new track, and each chosen track\'s output set to it instead of the master. ' +
+        'One edit, undone as one step. A track already sent to another bus is moved. Returns the bus track id.',
+      inputSchema: {
+        type: 'object',
+        properties: { trackIds: { type: 'array', items: { type: 'string' }, minItems: 2 }, label: { type: 'string' } },
+        required: ['trackIds']
+      },
+      async handler ({ trackIds, label } = {}) {
+        let changes
+        try {
+          changes = describeBus(dispatcher.project, trackIds ?? [], label === undefined ? {} : { label })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+        const result = dispatcher.apply(changes)
+        return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind })
       }
     },
 

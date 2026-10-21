@@ -18,7 +18,7 @@ Where to start, in order. Everything else is below and is not ordered.
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
 2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
 3. The browser checks that need only a window in front (Checks in a real browser).
-4. The rest of the Tracks section: making a bus from a selection, then linked faders.
+4. The rest of the Tracks section: linked faders, then the reorder and collapse item.
 5. Decide the docked mixer against the tab, which unblocks the Mixer section.
 
 ## Decisions for the maintainer
@@ -204,8 +204,11 @@ Workflow alongside from Routing, and the launcher last.
       with a hide and show button (view only, not saved; focus stays on it). Seen in Chrome: two tracks in a folder collapse
       to the bar and come back. Not built: moving a whole folder, collapse saved with the session, Folder in the bulk panel,
       and a screen reader pass.
-- [ ] **Bus tracks that sum other tracks, and linked faders as a group parameter.** `track.output` already routes a track to a
-      bus; what is missing is making a bus from a selection in one step and a fader that moves its members.
+- [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
+      one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
+      not placed after its members in the order; no way to name it on creation from the page.
+- [ ] **Linked faders as a group parameter.** One fader that moves the members of a bus or folder together, with a rule for
+      relative changes (shared with the bulk level and pan item below).
 - [ ] **Reorder by drag; collapse a lane to a thin bar;** show and hide by folder; resize from the header by keyboard. Order is
       layout and is not part of undo.
 - [ ] **Bulk edit of level and pan for several tracks** (needs a rule for relative changes), and a range select by Shift with

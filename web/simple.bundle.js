@@ -26602,6 +26602,17 @@ function duplicateClip(project, id, { track, startBeat } = {}) {
   return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 
+// src/model/TrackBus.js
+function describeBus(project, trackIds, { label = "Bus", newTrackId = project.nextId("track") } = {}) {
+  const ids = [...new Set(trackIds)];
+  if (ids.length < 2) throw new Error("a bus takes two or more different tracks");
+  for (const id of ids) if (!project.track(id)) throw new Error(`no such track: ${id}`);
+  return [
+    { op: "addTrack", id: newTrackId, label },
+    ...ids.map((id) => ({ op: "setTrack", id, output: newTrackId }))
+  ];
+}
+
 // src/model/TrackDuplicate.js
 function copyLabel(track) {
   return `${track.label ?? track.id} copy`;
@@ -27025,6 +27036,25 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       async handler({ trackId } = {}) {
         const result = await duplicateTrack(dispatcher, trackId);
         return result.ok ? ok({ revision: dispatcher.project.revision, trackId: result.trackId, nodeIds: result.nodeIds, skipped: result.skipped }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "track_bus",
+      description: "Make a bus from two or more tracks: one new track, and each chosen track's output set to it instead of the master. One edit, undone as one step. A track already sent to another bus is moved. Returns the bus track id.",
+      inputSchema: {
+        type: "object",
+        properties: { trackIds: { type: "array", items: { type: "string" }, minItems: 2 }, label: { type: "string" } },
+        required: ["trackIds"]
+      },
+      async handler({ trackIds, label } = {}) {
+        let changes;
+        try {
+          changes = describeBus(dispatcher.project, trackIds ?? [], label === void 0 ? {} : { label });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+        const result = dispatcher.apply(changes);
+        return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -31134,6 +31164,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_add: "arrangement editing, not yet a statement",
   track_remove: "arrangement editing, not yet a statement",
   track_duplicate: "arrangement editing, not yet a statement",
+  track_bus: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",

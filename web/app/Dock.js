@@ -9,6 +9,7 @@ import { createAudioClipPanel } from '../../src/ui/AudioClipPanel.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createTrackPanel } from '../../src/ui/TrackPanel.js'
 import { createBulkTrackPanel } from '../../src/ui/BulkTrackPanel.js'
+import { describeBus } from '../../src/model/TrackBus.js'
 import { createNodeView } from '../../src/ui/NodeView.js'
 import { createSendsPanel } from '../../src/ui/SendsPanel.js'
 import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
@@ -47,7 +48,14 @@ export function createDockPanel (ctx) {
       if (!result.ok) log(result.message, 'error')
     },
     onColor: color => { for (const id of ctx.selection.ids) layoutOf(id, { color }) },
-    onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) }
+    onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
+    onBus: () => {
+      let changes
+      try { changes = describeBus(ctx.dispatcher.project, ctx.selection.ids) } catch (error) { log(error.message, 'error'); return }
+      const result = ctx.dispatcher.apply(changes)
+      if (!result.ok) log(result.message, 'error')
+      else ctx.selection.set('track', [changes[0].id])
+    }
   })
   dock.slot('tracks').append(bulk.element)
 

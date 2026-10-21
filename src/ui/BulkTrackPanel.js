@@ -12,8 +12,8 @@ export function tally (tracks, key) {
   return on === 0 ? 'none' : on === tracks.length ? 'all' : 'some'
 }
 
-export function createBulkTrackPanel (document, { onChannel, onColor, onSize }) {
-  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize })) {
+export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onBus }) {
+  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onBus })) {
     if (typeof fn !== 'function') throw new Error(`createBulkTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -66,9 +66,16 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize }) 
   size.addEventListener('change', () => { if (size.value) onSize(size.value) })
   sizeLabel.append(size)
 
+  // A bus takes the selected tracks' output instead of the master.
+  const bus = document.createElement('button')
+  bus.type = 'button'
+  bus.id = 'bulk-bus'
+  bus.textContent = 'Send to a new bus'
+  bus.addEventListener('click', () => onBus())
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
-  actions.append(mute, solo)
+  actions.append(mute, solo, bus)
   element.append(summary, actions, colors, sizeLabel)
 
   return {
