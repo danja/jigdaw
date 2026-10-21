@@ -87,6 +87,12 @@ Without this, only the origin named in a profile can ever serve that plugin.
 Each `lv2:port` yields both an `AudioParamDescriptor` and the control you draw. One
 declaration, so they cannot disagree.
 
+A plugin may also declare a `jig:skin`: SVG artwork with RDF bindings to its ports, which you MAY
+draw in place of the generated panel. It is data, so it is the one plugin interface you can draw in
+your own document, but only by building nodes from an allowlist and never by inserting the file
+([svg-skins.md](svg-skins.md), contract section 9.4). A host that skips skins loses nothing: it
+generates the panel.
+
 ```js
 { name: port.symbol,          // lv2:symbol, what automation keys on
   defaultValue: port.default, // lv2:default

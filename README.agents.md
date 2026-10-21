@@ -6,11 +6,34 @@ plugin simple enough that its AudioWorklet processor is plain JavaScript. A digi
 workstation in the browser is the reference host: it exists to hold the format up rather than
 the other way round.
 
-This file is the entry point for documentation and linked data discovery. The specification is complete and
+This file is the entry point for an agent writing a plugin or a host, and for linked data discovery. The specification is complete and
 normative, and two independent hosts implement it, one in the browser and one as a native
 VST3, CLAP and LV2. 32 worked plugins are in `plugins/`. The rendered specification is at
 [danja.github.io/jigdaw](https://danja.github.io/jigdaw/); the markdown in `docs/` is
 authoritative.
+
+## Which task are you doing
+
+| You are | Read, in this order | Check your work with |
+|---|---|---|
+| Writing a plugin | `docs/for-plugin-authors.md`, then `docs/plugin-profiles.md` and `docs/host-plugin-contract.md` section 3. Copy a plugin from `plugins/` that is close to yours; `plugins/boost/` is the smallest in C++ and `plugins/tremolo/` has no WebAssembly. For your own look without code, add a skin (`docs/svg-skins.md`) | `npm run validate -- <profile.ttl>`, then `npm run check-plugin -- <IRI>` |
+| Writing a host, or adding DAW support | `docs/for-hosts.md`, then `docs/host-plugin-contract.md`, `docs/messaging.md` and `docs/latency.md`. `src/` is the reference host | `examples/reference-profile.ttl` must load and `examples/counterexample-*.ttl` must each be refused |
+| Making a native host | the above, then `docs/module-abi.md` and `native/jigdaw-adapter/README.md` | the plugins in `plugins/` that declare a portable ABI |
+
+Where a guide and the contract disagree, the contract governs. Where the contract and
+`vocabs/jigdaw.ttl` disagree, the vocabulary is the defect.
+
+Three rules cause most of the failures:
+
+- **Never write a `jig:integrity` digest by hand.** Generate the profile from the built files
+  (`bin/write-profile.js`), or every rebuild silently breaks the plugin.
+- **Nothing in `process()` allocates, touches the network or storage, or grows WebAssembly
+  memory.** A processor that is not ready outputs silence rather than throwing.
+- **Plugin code is untrusted.** A host loads a plugin's interface in a sandboxed frame on another
+  origin, never into its own document, and a failed load leaves the previous graph playing.
+
+Working in this repository itself, `AGENTS.md` holds the conventions and `/new-plugin`
+(`.claude/commands/new-plugin.md`) scaffolds a plugin. `npm test` runs everything.
 
 ## Resources
 
@@ -25,6 +48,12 @@ authoritative.
 | Agent surface | `docs/webmcp.md` | The WebMCP tool surface |
 | Namespace | `docs/namespace.md` | What `http://purl.org/stuff/jigdaw/` serves, and how terms resolve |
 | Profile format | `docs/plugin-profiles.md` | How to write a profile, and how it extends the published one |
+| Plugin author guide | `docs/for-plugin-authors.md` | Profile, processor, WebAssembly, digests, publishing, and a checklist |
+| Host guide | `docs/for-hosts.md` | The load sequence, capability negotiation, and what will bite you |
+| Skins | `docs/svg-skins.md` | A plugin interface as SVG artwork and RDF bindings, with no code. The host builds it from an allowlist of nodes and never inserts the file |
+| Collections | `docs/plugin-collections.md` | Publishing a list of plugins at one URL |
+| Nested plugins | `docs/nested-plugins.md` | A plugin made of other plugins. Optional for a host |
+| Worked plugins | `plugins/<name>/profile.ttl`, `plugins/index.json` | The real profiles, generated from their builds, and a generated index of them |
 | Architecture | `docs/architecture.md` | Layers, boundaries, and the decisions behind them |
 | Bundles | `docs/plugin-bundles.md` | A plugin as a file, its provenance record, and the signature over it |
 | Module ABI | `docs/module-abi.md` | The optional WebAssembly ABI, for a host with no JavaScript |
@@ -36,7 +65,7 @@ authoritative.
 
 ## Vocabularies
 
-JigDAW writes in three, and which statement belongs to which matters.
+JigDAW writes mainly in `trn:`, `jig:` and `lv2:`, and which statement belongs to which matters. The rest are supporting.
 
 | Prefix | IRI | Used for |
 |---|---|---|
@@ -47,7 +76,7 @@ JigDAW writes in three, and which statement belongs to which matters.
 | `prov:` / `dcterms:` / `foaf:` | standard | provenance, metadata, homepages |
 | `sec:` | `https://w3id.org/security#` | Data Integrity proofs and Multikey, for a signed bundle |
 
-`trn:` is defined in `~/github/transmission/vocabs/profile.ttl` and published at
+`trn:` is defined in the transmission repository's `vocabs/profile.ttl` and published at
 [plugin-universe.com/ns](https://plugin-universe.com/ns). A term general enough to belong to
 it is proposed upstream rather than forked into `jig:`.
 
@@ -76,7 +105,7 @@ header is unreadable rather than merely untrusted.
 
 <>  a jig:WebPlugin , trn:PluginProfile ;
     rdfs:label "Cascade" ;
-    rdfs:comment "Multiband plate reverb." ;
+    rdfs:comment "A Schroeder plate reverb." ;
     foaf:homepage <> ;
     trn:role trn:AudioEffect ;
     trn:accepts trn:Audio ;
@@ -89,8 +118,14 @@ header is unreadable rather than merely untrusted.
     a jig:Processor ;
     jig:location <cascade-processor.js> ;
     jig:registeredName "cascade" ;
-    jig:integrity "sha384-…" .
+    jig:integrity "sha384-REPLACE" .
 ```
+
+`sha384-REPLACE` is a placeholder and fails validation. A real digest is
+`printf 'sha384-%s\n' "$(openssl dgst -sha384 -binary cascade-processor.js | openssl base64 -A)"`,
+and it is generated by the build, never typed. A profile with no `jig:module` validates with a
+warning, which is correct for a plugin whose processing is plain JavaScript. A plugin with
+parameters declares each as an `lv2:port`; see `examples/reference-profile.ttl`.
 
 `jig:WebPlugin` is a subclass of `trn:PluginProfile`, so an existing catalogue profile
 becomes loadable by adding statements rather than by being rewritten, and a profile that
@@ -99,8 +134,9 @@ describes a native-only plugin stays valid.
 ## Validating
 
 ```sh
-rapper -i turtle -c examples/reference-profile.ttl   # syntax
+rapper -i turtle -c examples/reference-profile.ttl   # syntax, needs raptor
 npm run validate -- examples/reference-profile.ttl   # shapes, exits non-zero on violation
+npm run check-plugin -- <IRI>                        # renders it headless: does it make sound
 ```
 
 `vocabs/shapes.ttl` is SHACL Core and deliberately contains no `sh:sparql`, because

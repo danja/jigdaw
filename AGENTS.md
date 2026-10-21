@@ -5,7 +5,7 @@ identified by a dereferenceable IRI, and the signal processing is usually WebAss
 `jig:module` is optional, for a plugin simple enough that its AudioWorklet processor is
 plain JavaScript.
 
-The specification is complete and normative, and **Jiggy**, a browser host, implements it: 9
+The specification is complete and normative, and **Jiggy**, a browser host, implements it: 32
 worked plugins, undo and redo, a catalogue search, a WebMCP surface, sessions that save and
 reopen as RDF. A second host, a native VST3/CLAP/LV2 adapter, implements it independently. Read
 [docs/architecture.md](docs/architecture.md) for the shape of the thing, then
@@ -16,8 +16,11 @@ The normative documents are the contract,
 [docs/messaging.md](docs/messaging.md) for the wire format between host, processor and user
 interface, [docs/latency.md](docs/latency.md) for compensation and feedback, and
 [docs/project-format.md](docs/project-format.md) for the session graph.
-[docs/plugin-profiles.md](docs/plugin-profiles.md) and [docs/webmcp.md](docs/webmcp.md)
-describe the profile format and the agent tool surface.
+[docs/plugin-profiles.md](docs/plugin-profiles.md), [docs/svg-skins.md](docs/svg-skins.md) and
+[docs/webmcp.md](docs/webmcp.md) describe the profile format, a plugin interface as data (a skin)
+and the agent tool surface.
+[README.agents.md](README.agents.md) is the entry point written for an agent outside this
+repository, so keep it true when the contract or the commands change.
 
 This file is the guidance for agents and holds the conventions, which apply to everyone.
 [HUMANS.md](HUMANS.md) is not a counterpart to it: it is a short list of the actions only a
@@ -132,6 +135,11 @@ and real-time processing.
   and the same page passes when the window is foreground. Read
   `navigator.userActivation.hasBeenActive` before concluding anything from a browser hang:
   false means the environment, not the code.
+- The documentation site (GitHub Pages) is `docs/*.md` rendered by `bin/build-docs-site.js`, plus
+  a generated example plugin catalogue (`bin/docs-catalogue.js`, from `plugins/index.json` and
+  `web/gallery/shots/`). The home page is deliberately five links; add a document to `docs/`
+  and it is published unless listed in `bin/docs-hidden.js`. `tests/bin/docs-site.test.js`
+  runs the build.
 - A source file past about 400 lines is worth a look and past about 600 usually wants
   splitting, along a seam that already exists rather than by line count. Keep the old module
   as the front door and re-export, so callers do not change. A split that edits its callers
