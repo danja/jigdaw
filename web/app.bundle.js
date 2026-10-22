@@ -13406,6 +13406,7 @@ var init_Vocabulary = __esm({
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
         folder: `${JIG}folder`,
+        folderCollapsed: `${JIG}folderCollapsed`,
         // Scripts saved with a session. docs/project-format.md.
         Script: `${JIG}Script`,
         ScriptLanguage: `${JIG}ScriptLanguage`,
@@ -20465,7 +20466,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -20482,6 +20483,10 @@ var EditorState = class _EditorState {
         throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`);
       }
       next.folder = patch.folder === null ? null : patch.folder.trim();
+    }
+    if (patch.folderCollapsed !== void 0) {
+      if (typeof patch.folderCollapsed !== "boolean") throw new Error("folderCollapsed must be true or false");
+      next.folderCollapsed = patch.folderCollapsed;
     }
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
@@ -27785,6 +27790,36 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
   ];
 }
 
+// src/model/Scale.js
+var SCALES = Object.freeze({
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  majorPentatonic: [0, 2, 4, 7, 9],
+  minorPentatonic: [0, 3, 5, 7, 10],
+  blues: [0, 3, 5, 6, 7, 10]
+});
+var SCALE_NAMES = Object.freeze(Object.keys(SCALES));
+function degrees(root, scale) {
+  if (!Number.isInteger(root) || root < 0 || root > 11) throw new Error(`root must be a whole number from 0 to 11: ${root}`);
+  const steps = SCALES[scale];
+  if (!steps) throw new Error(`no such scale: ${scale}; use one of ${SCALE_NAMES.join(", ")}`);
+  return steps.map((step) => (step + root) % 12);
+}
+function inScale(pitch, root, scale) {
+  return degrees(root, scale).includes((pitch % 12 + 12) % 12);
+}
+function snapPitch(pitch, root, scale) {
+  const set = new Set(degrees(root, scale));
+  for (let distance = 0; distance <= 12; distance++) {
+    for (const candidate of [pitch - distance, pitch + distance]) {
+      if (candidate >= 0 && candidate <= 127 && set.has(candidate % 12)) return candidate;
+    }
+  }
+  throw new Error(`no pitch of the scale near ${pitch}`);
+}
+
 // src/model/NoteTransform.js
 function quantize(notes, { grid, strength = 1, ends = false } = {}) {
   if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
@@ -27854,13 +27889,17 @@ function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
     };
   });
 }
+function fitScale(notes, { root, scale } = {}) {
+  return notes.map((note) => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }));
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
-  humanize: (notes, options) => humanize(notes, options)
+  humanize: (notes, options) => humanize(notes, options),
+  fitScale: (notes, options) => fitScale(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name2, options = {}, { indices = null } = {}) {
@@ -28476,7 +28515,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -28491,6 +28530,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           timing: { type: "number" },
           velocity: { type: "number" },
           seed: { type: "integer" },
+          root: { type: "integer" },
+          scale: { type: "string", enum: SCALE_NAMES },
           indices: { type: "array", items: { type: "integer" } },
           expectedRevision: { type: "integer" }
         },
@@ -32887,6 +32928,54 @@ function createFolderBar(document2, { onToggle, onMove = null }) {
   };
 }
 
+// src/ui/AmountField.js
+function createAmountField(document2, { id, label, unit, min, max, step, onApply }) {
+  const element = document2.createElement("div");
+  element.className = "track-field amount-field";
+  const field = document2.createElement("label");
+  field.append(document2.createTextNode(`${label} `));
+  const input = document2.createElement("input");
+  input.type = "number";
+  input.id = id;
+  input.inputMode = "decimal";
+  input.min = String(min);
+  input.max = String(max);
+  input.step = String(step);
+  input.setAttribute("aria-describedby", `${id}-unit`);
+  field.append(input);
+  const unitText = document2.createElement("span");
+  unitText.id = `${id}-unit`;
+  unitText.textContent = unit;
+  const apply = document2.createElement("button");
+  apply.type = "button";
+  apply.id = `${id}-apply`;
+  apply.textContent = "Apply";
+  const said = document2.createElement("span");
+  said.className = "visually-hidden";
+  said.setAttribute("role", "status");
+  const run = () => {
+    const text = input.value.trim();
+    const amount = Number(text);
+    if (text === "" || !Number.isFinite(amount) || amount < min || amount > max) {
+      input.setAttribute("aria-invalid", "true");
+      said.textContent = `${label} needs a number from ${min} to ${max}`;
+      return;
+    }
+    input.removeAttribute("aria-invalid");
+    said.textContent = "";
+    onApply(amount);
+  };
+  apply.addEventListener("click", run);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      run();
+    }
+  });
+  element.append(field, unitText, apply, said);
+  return { element, input };
+}
+
 // src/ui/TrackPanel.js
 var COLORS = Object.freeze([
   { name: "Red", value: "#e5484d" },
@@ -33015,7 +33104,10 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
     button.addEventListener("click", () => onGroupLevel(trackId, decibels2));
     return button;
   };
-  if (onGroupLevel) group.append(groupStep("track-group-down", "Members down 1 dB", -1), groupStep("track-group-up", "Members up 1 dB", 1));
+  if (onGroupLevel) {
+    group.append(groupStep("track-group-down", "Members down 1 dB", -1), groupStep("track-group-up", "Members up 1 dB", 1));
+    group.append(createAmountField(document2, { id: "track-group-by", label: "Members by", unit: "dB", min: -60, max: 24, step: 0.5, onApply: (decibels2) => onGroupLevel(trackId, decibels2) }).element);
+  }
   group.hidden = true;
   const actions = document2.createElement("div");
   actions.className = "track-actions";
@@ -33609,8 +33701,8 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -33697,9 +33789,10 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx());
   }, { passive: false });
   const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim });
-  const collapsedFolders = /* @__PURE__ */ new Set();
+  let collapsedFolders = /* @__PURE__ */ new Set();
   const folderBars = /* @__PURE__ */ new Map();
   function withFolders(tracks, rowsInOrder, layoutFor) {
+    collapsedFolders = new Set(tracks.filter((t) => layoutFor(t).folder && layoutFor(t).folderCollapsed).map((t) => layoutFor(t).folder));
     const out = [];
     const seen = /* @__PURE__ */ new Map();
     const live = /* @__PURE__ */ new Set();
@@ -33715,8 +33808,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         let bar = folderBars.get(key);
         if (!bar) {
           bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onToggle: (folder) => {
-            collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder);
-            if (lastArgs) draw2(lastArgs);
+            onFolderCollapse(folder, !collapsedFolders.has(folder));
             folderBars.get(key)?.element.querySelector("button").focus();
           } });
           folderBars.set(key, bar);
@@ -33923,9 +34015,51 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   return { element, draw: draw2, playhead, view };
 }
 
+// src/ui/RollScale.js
+var KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var words = (name2) => name2.replace(/([A-Z])/g, " $1").replace(/^./, (c3) => c3.toUpperCase());
+function createRollScale(document2, { onChange }) {
+  const element = document2.createElement("div");
+  element.className = "piano-roll-scale";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Scale for the notes");
+  const make = (id, label, entries) => {
+    const wrap = document2.createElement("label");
+    wrap.append(document2.createTextNode(`${label} `));
+    const select = document2.createElement("select");
+    select.id = id;
+    entries.forEach(([value2, text], i2) => {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = text;
+      option.selected = i2 === 0;
+      select.append(option);
+    });
+    select.addEventListener("change", () => onChange());
+    wrap.append(select);
+    element.append(wrap);
+    return select;
+  };
+  const scale = make("roll-scale", "Scale", [["", "None"], ...SCALE_NAMES.map((name2) => [name2, words(name2)])]);
+  const key = make("roll-scale-key", "Key", KEYS.map((text, i2) => [String(i2), text]));
+  const sync = () => {
+    key.parentNode.hidden = scale.value === "";
+  };
+  scale.addEventListener("change", sync);
+  sync();
+  return {
+    element,
+    /** The chosen scale as `{ root, scale }`, or null for none. */
+    get current() {
+      return scale.value === "" ? null : { root: Number(key.value), scale: scale.value };
+    }
+  };
+}
+
 // src/ui/PianoRoll.js
 var STEPS_PER_BEAT = 4;
 var VISIBLE_PITCHES = 24;
+var PITCHES = 128;
 var NAMES3 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 function noteName4(pitch) {
   return `${NAMES3[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
@@ -33983,6 +34117,16 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   tools.className = "piano-roll-tools";
   tools.setAttribute("role", "group");
   tools.setAttribute("aria-label", "Change the notes");
+  const rollScale = createRollScale(document2, { onChange: () => {
+    fitButton.hidden = rollScale.current === null;
+    draw2();
+  } });
+  const snap = (pitch) => rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch;
+  const fitButton = document2.createElement("button");
+  fitButton.type = "button";
+  fitButton.id = "roll-fit-scale";
+  fitButton.textContent = "Fit notes to the scale";
+  fitButton.hidden = true;
   if (onTransform) {
     const gridLabel = document2.createElement("label");
     gridLabel.append(document2.createTextNode("Grid "));
@@ -34076,6 +34220,8 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       tools.append(button);
       return button;
     };
+    fitButton.addEventListener("click", () => ask("fitScale", { ...rollScale.current }, "Every note moved into the scale")());
+    tools.append(fitButton);
     selectAll = pick("roll-select-all", "Choose all notes", () => {
       chooseAll();
     });
@@ -34085,11 +34231,12 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       say2("No notes chosen");
     });
   }
-  element.append(header, empty, help, tools, scroller, status);
+  element.append(header, empty, help, rollScale.element, tools, scroller, status);
   function showOpen(open) {
     empty.hidden = open;
     help.hidden = !open;
     scroller.hidden = !open;
+    rollScale.element.hidden = !open;
     tools.hidden = !open || clip === null || clip.notes.length === 0;
     close.hidden = !open;
     if (!open) heading.textContent = "Piano roll";
@@ -34153,20 +34300,28 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     const notes = shown();
     const selected = noteAt(notes, cursor.pitch, beatOf(cursor.step));
     grid.textContent = "";
-    grid.setAttribute("aria-rowcount", String(VISIBLE_PITCHES));
-    grid.setAttribute("aria-colcount", String(steps()));
+    grid.setAttribute("aria-rowcount", String(PITCHES));
+    grid.setAttribute("aria-colcount", String(steps() + 1));
     for (let pitch = low + VISIBLE_PITCHES - 1; pitch >= low; pitch--) {
       const row = document2.createElement("div");
       row.className = `piano-roll-row${NAMES3[pitch % 12].includes("#") ? " black" : ""}`;
       row.setAttribute("role", "row");
+      row.setAttribute("aria-rowindex", String(PITCHES - pitch));
       const label = document2.createElement("span");
       label.className = "piano-roll-key";
       label.setAttribute("role", "rowheader");
+      label.setAttribute("aria-colindex", "1");
       label.textContent = noteName4(pitch);
+      if (rollScale.current && !inScale(pitch, rollScale.current.root, rollScale.current.scale)) {
+        row.classList.add("off-scale");
+        label.textContent += " \xB7";
+        label.setAttribute("aria-label", `${spokenName(pitch)}, outside the scale`);
+      }
       row.append(label);
       for (let step = 0; step < steps(); step++) {
         const cell = document2.createElement("div");
         cell.setAttribute("role", "gridcell");
+        cell.setAttribute("aria-colindex", String(step + 2));
         cell.id = `roll-${pitch}-${step}`;
         cell.dataset.pitch = String(pitch);
         cell.dataset.step = String(step);
@@ -34212,7 +34367,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     if (here) {
       remove(here);
     } else {
-      const note = { startBeat: beat, lengthBeats: 1, pitch: cursor.pitch, velocity: 100 };
+      const note = { startBeat: beat, lengthBeats: 1, pitch: snap(cursor.pitch), velocity: 100 };
       onAudition(note.pitch, note.velocity);
       send([...clip.notes, note], `Added ${spokenName(note.pitch)} at ${where(cursor.step)}, 1 beat`);
     }
@@ -34291,10 +34446,10 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       const first4 = Math.min(from.step, to.step);
       const last = Math.max(from.step, to.step);
       const lengthBeats2 = first4 === last ? 1 : beatOf(last - first4 + 1);
-      return [...clip.notes, { startBeat: beatOf(first4), lengthBeats: lengthBeats2, pitch: from.pitch, velocity: 100 }];
+      return [...clip.notes, { startBeat: beatOf(first4), lengthBeats: lengthBeats2, pitch: snap(from.pitch), velocity: 100 }];
     }
     if (kind === "move") {
-      const pitch = Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch));
+      const pitch = snap(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)));
       const startBeat = Math.max(0, note.startBeat + beatOf(to.step - from.step));
       if (pitch === note.pitch && startBeat === note.startBeat) return null;
       return clip.notes.map((n2) => same(n2, note) ? { ...n2, pitch, startBeat } : n2);
@@ -34586,6 +34741,11 @@ function createArrangement(ctx2) {
     },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx2.dispatcher.project.moveTrack(trackId, delta),
+    // Saved with the session: stated on every track of the folder, which is how the editor graph knows a folder.
+    onFolderCollapse: (folder, collapsed) => {
+      const { project } = ctx2.dispatcher;
+      for (const track of project.tracks) if (project.trackLayout(track.id).folder === folder) project.setTrackLayout(track.id, { folderCollapsed: collapsed });
+    },
     // Plus and minus on a track's name: one size taller or shorter, stopping at either end.
     onSizeStep: (trackId, by) => {
       const { laneSize } = ctx2.dispatcher.project.trackLayout(trackId);
@@ -35293,10 +35453,12 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
     button.addEventListener("click", call);
     shifts.append(button);
   }
+  const levelBy = createAmountField(document2, { id: "bulk-level-by", label: "Level by", unit: "dB", min: -60, max: 24, step: 0.5, onApply: onLevelShift });
+  const panBy = createAmountField(document2, { id: "bulk-pan-by", label: "Pan by", unit: "(-1 left to 1 right)", min: -1, max: 1, step: 0.05, onApply: onPanShift });
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(mute, solo, bus);
-  element.append(summary, actions, shifts, colors, sizeLabel, folderLabel, unfolder);
+  element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder);
   return {
     element,
     /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
@@ -36828,12 +36990,13 @@ function writeEditor(project, { iri: iri5 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig6.x)} ${decimal(x)} ; ${term3(jig6.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder } = editor.track(track.id);
+    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig6.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig6.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig6.laneSize)} ${string(laneSize)}`);
     if (folder !== null) parts.push(`${term3(jig6.folder)} ${string(folder)}`);
+    if (folderCollapsed) parts.push(`${term3(jig6.folderCollapsed)} true`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
@@ -37226,6 +37389,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
     } else if (p === jig7.folder) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
+    } else if (p === jig7.folderCollapsed) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).folderCollapsed = quad3.object.value === "true";
     }
   }
   return { positions, tracks };

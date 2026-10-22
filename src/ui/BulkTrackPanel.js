@@ -6,6 +6,7 @@
 // each request into one changeset, so one undo takes back the whole edit.
 import { COLORS, colorName } from './TrackPanel.js'
 import { MAX_FOLDER_NAME } from '../model/EditorState.js'
+import { createAmountField } from './AmountField.js'
 
 /** 'all', 'none' or 'some': how many of the selected tracks have a flag set. */
 export function tally (tracks, key) {
@@ -121,10 +122,14 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
     shifts.append(button)
   }
 
+  // An exact figure for the same two shifts.
+  const levelBy = createAmountField(document, { id: 'bulk-level-by', label: 'Level by', unit: 'dB', min: -60, max: 24, step: 0.5, onApply: onLevelShift })
+  const panBy = createAmountField(document, { id: 'bulk-pan-by', label: 'Pan by', unit: '(-1 left to 1 right)', min: -1, max: 1, step: 0.05, onApply: onPanShift })
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(mute, solo, bus)
-  element.append(summary, actions, shifts, colors, sizeLabel, folderLabel, unfolder)
+  element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder)
 
   return {
     element,

@@ -35,6 +35,11 @@ is wrong in INBOX.md.
 - **Use the Script tab with a screen reader and a real phone** (new 2026-10-01): run a script with an error and listen to whether
   "Problems" and the status are announced and the "Go to line" buttons make sense, run one that plays, and use Control+Enter. The
   studio page sends a phone to the simple page, so add `?studio` to the address to reach the tab on one.
+- **Use the piano roll with a screen reader** (new 2026-10-22): open a MIDI clip and move through the grid. Listen to whether
+  "row 68 of 128" and the column numbers make sense as the window scrolls with Page Up and Page Down, whether the long help
+  text read on entering the grid is too much, whether the dot and "outside the scale" on rows are clear with a scale chosen, and
+  what is said after Quantize, Fit to the scale and choosing notes. I audited the markup against the ARIA grid pattern and cannot
+  run a screen reader.
 - **Use the new routing controls with a screen reader** (new 2026-10-10): the Master bus section and its audio input menu on the
   Tracks tab, the Add send form with its Audio and MIDI choice, the Lowest note and Highest note fields on a MIDI send and on a
   MIDI connection, the Clip button beside the meter (it hides when pressed, so listen to where the focus goes), and the level

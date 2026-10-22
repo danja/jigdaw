@@ -11,6 +11,7 @@
 // Move up and the last no Move down.
 
 import { MAX_FOLDER_NAME } from '../model/EditorState.js'
+import { createAmountField } from './AmountField.js'
 
 export const COLORS = Object.freeze([
   { name: 'Red', value: '#e5484d' },
@@ -147,7 +148,10 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
     button.addEventListener('click', () => onGroupLevel(trackId, decibels))
     return button
   }
-  if (onGroupLevel) group.append(groupStep('track-group-down', 'Members down 1 dB', -1), groupStep('track-group-up', 'Members up 1 dB', 1))
+  if (onGroupLevel) {
+    group.append(groupStep('track-group-down', 'Members down 1 dB', -1), groupStep('track-group-up', 'Members up 1 dB', 1))
+    group.append(createAmountField(document, { id: 'track-group-by', label: 'Members by', unit: 'dB', min: -60, max: 24, step: 0.5, onApply: decibels => onGroupLevel(trackId, decibels) }).element)
+  }
   group.hidden = true
 
   const actions = document.createElement('div')

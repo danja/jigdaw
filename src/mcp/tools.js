@@ -13,6 +13,7 @@
 import { splitClip, duplicateClip } from '../model/ClipEdit.js'
 import { describeBus } from '../model/TrackBus.js'
 import { describeNoteTransform, NOTE_TRANSFORMS } from '../model/NoteTransform.js'
+import { SCALE_NAMES } from '../model/Scale.js'
 import { duplicateTrack } from '../ops/DuplicateTrack.js'
 import { chainSwapChanges } from '../ops/ChainReorder.js'
 import { FACET_NAMES, expandTerm as expand, compactTerm as compact } from '../catalogue/facets.js'
@@ -536,7 +537,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         'Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip\'s note order). ' +
         '`transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), ' +
         'scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or ' +
-        'humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.',
+        'humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or ' +
+        'fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -545,6 +547,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           grid: { type: 'number' }, strength: { type: 'number' }, ends: { type: 'boolean' },
           semitones: { type: 'integer' }, factor: { type: 'number' },
           axis: { type: 'integer' }, timing: { type: 'number' }, velocity: { type: 'number' }, seed: { type: 'integer' },
+          root: { type: 'integer' }, scale: { type: 'string', enum: SCALE_NAMES },
           indices: { type: 'array', items: { type: 'integer' } },
           expectedRevision: { type: 'integer' }
         },

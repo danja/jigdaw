@@ -1,7 +1,7 @@
 // tests/model/NoteTransform.test.js
 import { describe, it, expect } from 'vitest'
 import { Project } from '../../src/model/Project.js'
-import { quantize, transpose, scaleVelocity, reverse, invert, humanize, describeNoteTransform } from '../../src/model/NoteTransform.js'
+import { quantize, transpose, scaleVelocity, reverse, invert, humanize, fitScale, describeNoteTransform } from '../../src/model/NoteTransform.js'
 
 const note = (startBeat, pitch = 60, lengthBeats = 0.5, velocity = 100) => ({ startBeat, lengthBeats, pitch, velocity })
 
@@ -100,6 +100,24 @@ describe('invert', () => {
   it('refuses a result outside MIDI range, and a non-whole axis', () => {
     expect(() => invert([note(0, 10), note(1, 100)])).toThrow('outside 0 to 127')
     expect(() => invert([note(0, 60)], 60.5)).toThrow('axis')
+  })
+})
+
+describe('fitScale', () => {
+  const n = (pitch, startBeat = 0) => ({ startBeat, lengthBeats: 1, pitch, velocity: 100 })
+  it('moves out-of-scale notes to the nearest scale pitch and keeps everything else', () => {
+    const out = fitScale([n(60), n(61, 1), n(66, 2)], { root: 0, scale: 'major' })
+    expect(out.map(x => x.pitch)).toEqual([60, 60, 65])
+    expect(out.map(x => [x.startBeat, x.lengthBeats, x.velocity])).toEqual([[0, 1, 100], [1, 1, 100], [2, 1, 100]])
+  })
+  it('refuses a missing scale and a bad root', () => {
+    expect(() => fitScale([n(60)], {})).toThrow(/root/)
+    expect(() => fitScale([n(60)], { root: 0 })).toThrow(/no such scale/)
+  })
+  it('is one transform on a clip, for the chosen notes only', () => {
+    const project = { clip: () => ({ id: 'c', kind: 'midi', lengthBeats: 4, notes: [n(61), n(61, 1)] }) }
+    const [change] = describeNoteTransform(project, 'c', 'fitScale', { root: 0, scale: 'major' }, { indices: [1] })
+    expect(change.notes.map(x => x.pitch)).toEqual([61, 60])
   })
 })
 

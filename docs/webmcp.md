@@ -203,7 +203,7 @@ names the one the mix of every track arrives at. A node with no audio input is r
 
 A note is `{ startBeat, lengthBeats, pitch, velocity }`, its start counted from the clip's.
 `clip_set_notes` replaces every note at once, so a phrase is one edit and one undo. `clip_transform_notes` is the same
-one edit made from a rule: `quantize`, `transpose`, `scaleVelocity`, `reverse`, `invert` or `humanize` (which needs a whole `seed`, so the same call gives the same notes), over all the notes or those at `indices`.
+one edit made from a rule: `quantize`, `transpose`, `scaleVelocity`, `reverse`, `invert`, `humanize` (which needs a whole `seed`, so the same call gives the same notes) or `fitScale` (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B), over all the notes or those at `indices`.
 It is refused whole if any note would leave its range. A MIDI clip
 plays into its track's MIDI input and into nothing on a track with none. An audio clip names its
 file by absolute IRI and plays into the track's audio input, or straight to its fader.

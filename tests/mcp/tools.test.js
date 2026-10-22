@@ -663,6 +663,16 @@ describe('clips', () => {
     expect(first).not.toEqual(notes)
   })
 
+  it('fits notes to a scale, and says which scales there are when asked for one that is not', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [note, { ...note, startBeat: 1, pitch: 61 }] })
+    expect((await call('clip_transform_notes', { clipId: added.clipId, transform: 'fitScale', root: 0, scale: 'major' })).ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).notes.map(n => n.pitch)).toEqual([60, 60])
+    const bad = await call('clip_transform_notes', { clipId: added.clipId, transform: 'fitScale', root: 0, scale: 'lydian' })
+    expect(bad.ok).toBe(false)
+    expect(bad.error).toContain('major')
+  })
+
   it('transforms notes as one edit, and refuses the whole edit when one note cannot move', async () => {
     const { trackId } = await call('track_add', {})
     const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [note, { ...note, startBeat: 1.1, pitch: 125 }] })

@@ -455,6 +455,8 @@ export function readEditor (dataset, projectIri) {
       layout(idOf(quad.subject.value, projectIri, 'track layout')).laneSize = quad.object.value
     } else if (p === jig.folder) {
       layout(idOf(quad.subject.value, projectIri, 'track layout')).folder = quad.object.value
+    } else if (p === jig.folderCollapsed) {
+      layout(idOf(quad.subject.value, projectIri, 'track layout')).folderCollapsed = quad.object.value === 'true'
     }
   }
   return { positions, tracks }

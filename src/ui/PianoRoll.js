@@ -45,11 +45,15 @@
 // and the grid draws again from what comes back.
 
 import { barBeat } from './Timeline.js'
+import { createRollScale } from './RollScale.js'
+import { inScale, snapPitch } from '../model/Scale.js'
 
 /** Steps per beat: a sixteenth note in 4/4. */
 export const STEPS_PER_BEAT = 4
 /** How many pitches are shown at once. The cursor scrolls the window. */
 export const VISIBLE_PITCHES = 24
+/** How many pitches MIDI has, drawn or not. */
+const PITCHES = 128
 
 const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -135,6 +139,14 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   tools.className = 'piano-roll-tools'
   tools.setAttribute('role', 'group')
   tools.setAttribute('aria-label', 'Change the notes')
+  // With a scale chosen, rows outside it are marked and drawn or dragged notes land inside it.
+  const rollScale = createRollScale(document, { onChange: () => { fitButton.hidden = rollScale.current === null; draw() } })
+  const snap = pitch => (rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch)
+  const fitButton = document.createElement('button')
+  fitButton.type = 'button'
+  fitButton.id = 'roll-fit-scale'
+  fitButton.textContent = 'Fit notes to the scale'
+  fitButton.hidden = true
   if (onTransform) {
     const gridLabel = document.createElement('label')
     gridLabel.append(document.createTextNode('Grid '))
@@ -226,16 +238,20 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       tools.append(button)
       return button
     }
+    // Left out until a scale is chosen, as there is nothing to fit to.
+    fitButton.addEventListener('click', () => ask('fitScale', { ...rollScale.current }, 'Every note moved into the scale')())
+    tools.append(fitButton)
     selectAll = pick('roll-select-all', 'Choose all notes', () => { chooseAll() })
     selectNone = pick('roll-select-none', 'Let go of the choice', () => { chosen = new Set(); draw(); say('No notes chosen') })
   }
-  element.append(header, empty, help, tools, scroller, status)
+  element.append(header, empty, help, rollScale.element, tools, scroller, status)
 
   /** Open or closed: the grid and its controls, or the note saying how to open one. */
   function showOpen (open) {
     empty.hidden = open
     help.hidden = !open
     scroller.hidden = !open
+    rollScale.element.hidden = !open
     tools.hidden = !open || clip === null || clip.notes.length === 0
     // Close is left out with nothing to close, not shown disabled.
     close.hidden = !open
@@ -312,20 +328,31 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     const notes = shown()
     const selected = noteAt(notes, cursor.pitch, beatOf(cursor.step))
     grid.textContent = ''
-    grid.setAttribute('aria-rowcount', String(VISIBLE_PITCHES))
-    grid.setAttribute('aria-colcount', String(steps()))
+    // Only part of the 128 pitches is drawn, so say how many there are and where each row sits among them (the highest
+    // pitch is row 1). The row header is the first column, so the squares start at column 2.
+    grid.setAttribute('aria-rowcount', String(PITCHES))
+    grid.setAttribute('aria-colcount', String(steps() + 1))
     for (let pitch = low + VISIBLE_PITCHES - 1; pitch >= low; pitch--) {
       const row = document.createElement('div')
       row.className = `piano-roll-row${NAMES[pitch % 12].includes('#') ? ' black' : ''}`
       row.setAttribute('role', 'row')
+      row.setAttribute('aria-rowindex', String(PITCHES - pitch))
       const label = document.createElement('span')
       label.className = 'piano-roll-key'
       label.setAttribute('role', 'rowheader')
+      label.setAttribute('aria-colindex', '1')
       label.textContent = noteName(pitch)
+      // Marked in words and in a dot, so a row outside the scale is not shown by shade alone.
+      if (rollScale.current && !inScale(pitch, rollScale.current.root, rollScale.current.scale)) {
+        row.classList.add('off-scale')
+        label.textContent += ' ·'
+        label.setAttribute('aria-label', `${spokenName(pitch)}, outside the scale`)
+      }
       row.append(label)
       for (let step = 0; step < steps(); step++) {
         const cell = document.createElement('div')
         cell.setAttribute('role', 'gridcell')
+        cell.setAttribute('aria-colindex', String(step + 2))
         cell.id = `roll-${pitch}-${step}`
         cell.dataset.pitch = String(pitch)
         cell.dataset.step = String(step)
@@ -380,7 +407,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     if (here) {
       remove(here)
     } else {
-      const note = { startBeat: beat, lengthBeats: 1, pitch: cursor.pitch, velocity: 100 }
+      const note = { startBeat: beat, lengthBeats: 1, pitch: snap(cursor.pitch), velocity: 100 }
       onAudition(note.pitch, note.velocity)
       send([...clip.notes, note], `Added ${spokenName(note.pitch)} at ${where(cursor.step)}, 1 beat`)
     }
@@ -457,10 +484,10 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       const last = Math.max(from.step, to.step)
       // A click alone is a beat; a drag is exactly as long as the drag.
       const lengthBeats = first === last ? 1 : beatOf(last - first + 1)
-      return [...clip.notes, { startBeat: beatOf(first), lengthBeats, pitch: from.pitch, velocity: 100 }]
+      return [...clip.notes, { startBeat: beatOf(first), lengthBeats, pitch: snap(from.pitch), velocity: 100 }]
     }
     if (kind === 'move') {
-      const pitch = Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch))
+      const pitch = snap(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)))
       const startBeat = Math.max(0, note.startBeat + beatOf(to.step - from.step))
       if (pitch === note.pitch && startBeat === note.startBeat) return null
       return clip.notes.map(n => (same(n, note) ? { ...n, pitch, startBeat } : n))

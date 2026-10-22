@@ -341,12 +341,13 @@ export function writeEditor (project, { iri } = {}) {
     lines.push(`<#${node.id}> ${term(jig.x)} ${decimal(x)} ; ${term(jig.y)} ${decimal(y)} .`)
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder } = editor.track(track.id)
+    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track.id)
     const parts = []
     if (order !== null) parts.push(`${term(jig.order)} ${integer(order)}`)
     if (color !== null) parts.push(`${term(jig.color)} ${string(color)}`)
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term(jig.laneSize)} ${string(laneSize)}`)
     if (folder !== null) parts.push(`${term(jig.folder)} ${string(folder)}`)
+    if (folderCollapsed) parts.push(`${term(jig.folderCollapsed)} true`)
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(' ; ')} .`)
   }
   for (const clip of [...project.clips].sort(byId)) {

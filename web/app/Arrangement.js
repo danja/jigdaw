@@ -52,6 +52,11 @@ export function createArrangement (ctx) {
     onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
+    // Saved with the session: stated on every track of the folder, which is how the editor graph knows a folder.
+    onFolderCollapse: (folder, collapsed) => {
+      const { project } = ctx.dispatcher
+      for (const track of project.tracks) if (project.trackLayout(track.id).folder === folder) project.setTrackLayout(track.id, { folderCollapsed: collapsed })
+    },
     // Plus and minus on a track's name: one size taller or shorter, stopping at either end.
     onSizeStep: (trackId, by) => {
       const { laneSize } = ctx.dispatcher.project.trackLayout(trackId)

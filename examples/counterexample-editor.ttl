@@ -24,3 +24,6 @@
 # A folder name that is empty, and two folder names.
 <#t9> jig:folder "" .
 <#t10> jig:folder "Drums" , "Bass" .
+# A folder collapsed with something that is not a boolean, and with both.
+<#t11> jig:folderCollapsed "yes" .
+<#t12> jig:folderCollapsed true , false .

@@ -1,8 +1,10 @@
 // src/model/NoteTransform.js
 //
-// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale, reverse, invert and humanize. Each transform is a pure function
+// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale, reverse, invert, humanize and fit to a scale. Each transform is a pure function
 // over a list of notes. `describeNoteTransform` applies one to a clip (or to the notes at some indices of it) and
 // returns a single setClipNotes change, so the edit is one undo step and the dispatcher stays the only path.
+
+import { snapPitch } from './Scale.js'
 
 /**
  * Move each note's start toward the nearest grid line by `strength` (0 leaves it, 1 lands on it). With `ends`, the
@@ -96,13 +98,19 @@ export function humanize (notes, { timing = 0, velocity = 0, seed } = {}) {
   })
 }
 
+/** Move each note to the nearest pitch of the scale in `root`; a note already in it stays. */
+export function fitScale (notes, { root, scale } = {}) {
+  return notes.map(note => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }))
+}
+
 const TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor }) => scaleVelocity(notes, factor),
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
-  humanize: (notes, options) => humanize(notes, options)
+  humanize: (notes, options) => humanize(notes, options),
+  fitScale: (notes, options) => fitScale(notes, options)
 }
 
 export const NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS))

@@ -18,6 +18,26 @@ function build (tracks = [track(), track()]) {
   return { panel, calls, $: id => document.getElementById(id) }
 }
 
+describe('the typed amounts', () => {
+  const apply = id => document.getElementById(id).dispatchEvent(event('click'))
+  it('send the level and the pan typed as exact shifts', () => {
+    const { $, calls } = build()
+    $('bulk-level-by').value = '-2.5'
+    apply('bulk-level-by-apply')
+    $('bulk-pan-by').value = '0.25'
+    apply('bulk-pan-by-apply')
+    expect(calls).toEqual([['level', -2.5], ['pan', 0.25]])
+  })
+
+  it('refuse a pan shift beyond one, so the panel never asks for what cannot be done', () => {
+    const { $, calls } = build()
+    $('bulk-pan-by').value = '1.5'
+    apply('bulk-pan-by-apply')
+    expect(calls).toEqual([])
+    expect($('bulk-pan-by').getAttribute('aria-invalid')).toBe('true')
+  })
+})
+
 describe('the folder controls', () => {
   it('commit a trimmed name for all, ignore an empty one, and offer the names in use', () => {
     const { $, calls, panel } = build()

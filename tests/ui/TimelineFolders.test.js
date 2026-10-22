@@ -14,12 +14,21 @@ const handlers = Object.fromEntries(['onAdd', 'onAddAudio', 'onMove', 'onResize'
 const folders = { a: 'Drums', b: 'Drums', c: null, d: 'Drums' }
 
 function build (extra = {}) {
-  const timeline = createTimeline(document, { ...handlers, ...extra })
-  document.body.append(timeline.element)
-  timeline.draw({
+  // Stands in for the layout: the hidden folders are kept here, as the editor state keeps them, and a toggle redraws.
+  const hidden = new Set()
+  const asked = []
+  const args = {
     tracks: Object.keys(folders).map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
-    layoutFor: t => ({ color: null, laneSize: 'small', folder: folders[t.id] })
+    layoutFor: t => ({ color: null, laneSize: 'small', folder: folders[t.id], folderCollapsed: hidden.has(folders[t.id]) })
+  }
+  const timeline = createTimeline(document, {
+    ...handlers,
+    onFolderCollapse: (name, collapsed) => { asked.push([name, collapsed]); collapsed ? hidden.add(name) : hidden.delete(name); timeline.draw(args) },
+    ...extra
   })
+  document.body.append(timeline.element)
+  timeline.draw(args)
+  timeline.asked = asked
   return timeline
 }
 const order = () => [...document.querySelector('.timeline-scroll').children].filter(c => c.classList.contains('timeline-folder') || c.classList.contains('timeline-row'))
@@ -80,5 +89,26 @@ describe('moving a folder', () => {
     expect(document.querySelector('.folder-move-down').getAttribute('aria-label')).toBe('Move folder Drums down')
     const bar = createFolderBar(document, { onToggle () {} })
     expect(bar.element.querySelectorAll('.folder-move')).toHaveLength(0)
+  })
+})
+
+describe('a folder that is hidden', () => {
+  it('asks the caller to hide and show it, by name, and does not hold the state itself', () => {
+    const timeline = build()
+    click(document.querySelector('.folder-toggle'))
+    click(document.querySelector('.folder-toggle'))
+    expect(timeline.asked).toEqual([['Drums', true], ['Drums', false]])
+  })
+
+  it('is drawn hidden when the layout says so, as after a session is opened', () => {
+    const timeline = createTimeline(document, { ...handlers, onFolderCollapse: noop })
+    document.body.append(timeline.element)
+    timeline.draw({
+      tracks: Object.keys(folders).map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+      layoutFor: t => ({ color: null, laneSize: 'small', folder: folders[t.id], folderCollapsed: t.id === 'b' })
+    })
+    // One track of the folder says so, so every run of Drums is hidden down to its bar.
+    expect(order()).toEqual(['folder:Folder Drums', 'Track c', 'folder:Folder Drums'])
+    expect(document.querySelector('.folder-toggle').getAttribute('aria-expanded')).toBe('false')
   })
 })

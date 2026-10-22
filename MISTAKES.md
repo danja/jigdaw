@@ -5,6 +5,18 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## 2026-10-22: A scale test passed only because the machine was slow
+
+**What happened.** The test for snapping a dragged note pressed the same note twice and passed. Rerun on a
+faster moment it failed: two presses on one note within 400 ms are a double click, which removes the note, so
+nothing was sent.
+
+**Root cause.** The roll reads the real clock for its double click window and the test did not inject one, so the
+result depended on how long the first press took to render.
+
+**Prevention.** A test of the roll that presses one note twice passes a `now` that moves on each read. It was run
+three times to see it stay green.
+
 ## 2026-10-22: A roll gesture with no release committed beside the next one
 
 **What happened.** Found in real Chrome while checking the rubber band. A press on the note roll listens for

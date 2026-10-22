@@ -201,10 +201,11 @@ Workflow alongside from Routing, and the launcher last.
       word (the group label still says it); a track with only MIDI or audio clips and no plugin says nothing.
 - [ ] **Folders: what is left.** Built: `jig:folder` in the editor graph (vocab, shape, reader, writer, round trip, counter
       example), the Folder field in the track panel, `track_layout` `folder`, and a bar above each run of neighbouring tracks
-      with a hide and show button (view only, not saved; focus stays on it). Seen in Chrome: two tracks in a folder collapse
+      with a hide and show button (focus stays on it; whether it is hidden is saved, below). Seen in Chrome: two tracks in a folder collapse
       to the bar and come back. The bulk panel has a Folder field for all selected tracks and a Take out of their folder button (left out while none is in one); seen in real
       Chrome on 2026-10-22, both ways. Each folder bar has Move up and Move down (the whole run hops past its neighbour, layout only so no undo, a move that goes nowhere is left out; seen in real
-      Chrome on 2026-10-22, focus falls to the bar's toggle when the pressed button disappears). Not built: moving a folder by drag, collapse saved with the session,
+      Chrome on 2026-10-22, focus falls to the bar's toggle when the pressed button disappears). Whether a folder is hidden is saved with the session (`jig:folderCollapsed` on each track of the folder, in the editor graph; vocabulary, shape, docs,
+      reference and counterexample files and a round trip test; the toggle and the written graph were seen in real Chrome on 2026-10-22, a save and reopen was not). Not built: moving a folder by drag,
       and a screen reader pass.
 - [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
       one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
@@ -212,8 +213,9 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Linked faders as a group parameter: what is left.** Built over `src/model/GroupChannel.js` (a decibel step keeps the
       tracks' balance, a pan shift stops when the track nearest the edge arrives): "Members down and up 1 dB" in the panel of
       a bus or of a track in a folder, moving the tracks that send to it and those sharing its folder, one undo step. Seen in
-      Chrome on 2026-10-22 with a bus of two tracks: both moved to -1.0 dB, the bus stayed at 0. Not built: a fader in the
-      track's header rather than the panel, a pan step for members, typing an amount, and the folder case was not seen.
+      Chrome on 2026-10-22 with a bus of two tracks: both moved to -1.0 dB, the bus stayed at 0. Typed amounts: Level by (dB, -60 to 24) and Pan by (-1 to 1) for several selected tracks, and Members by (dB) for a bus or folder, each with Apply or Enter and a spoken refusal
+      for an empty or out-of-range entry (`src/ui/AmountField.js`); the bulk Level by was typed, applied by button and Enter, refused out of range, and undone in one step in real Chrome on
+      2026-10-22 (44px, 16px). Not built: a fader in the track's header rather than the panel, a pan step or typed pan for members, and the folder case was not seen.
 - [ ] **Collapsed lane: what is left;** nothing for folders, which already hide and show from their bar. Plus and minus on a track's name step the lane size (seen in real Chrome on 2026-10-22 with real key presses, focus kept). A collapsed lane is a fourth
       lane size (Lane size in the dock or the bulk panel, `track_layout`, saved with the session and in the shapes): the name
       and the grip on a 27px bar, against 45px for small. Seen in real Chrome on 2026-10-22, collapsed and restored from the
@@ -332,7 +334,7 @@ the page, it is research, not committed.
       Softer and Louder, touch, a screen reader pass. Note selection is built
       (S or Shift-click toggles a note, Ctrl+A chooses all, Escape lets go before it closes; the buttons then change only the
       chosen notes, and the choice follows them), seen in real Chrome on 2026-10-22 (Shift-click chose one note, Up an octave moved only it, Escape let go and a second Escape closed the roll with focus back on the clip). A Shift-drag over empty squares chooses the notes it
-      touches (seen in real Chrome on 2026-10-22 with pointer events sent from the page, since the browser tool's drag drops Shift: the band grew, chose the one note it touched, and Up an octave moved only it; a drag that is cancelled or replaced now commits nothing). Invert (about the first note) and Humanize (a seeded nudge of start and velocity, a fresh seed per press) are built as functions, tool options and buttons, and were pressed in real Chrome on 2026-10-22. A chosen note stays chosen when dragged. Quantize was pressed at 100% in real Chrome on 2026-10-22; the Strength choice below 100% is not seen. Quantize can move note ends too (Move: Starts and ends; unit-tested, not seen in Chrome). Not built: scale snap, and a screen reader pass over the row.
+      touches (seen in real Chrome on 2026-10-22 with pointer events sent from the page, since the browser tool's drag drops Shift: the band grew, chose the one note it touched, and Up an octave moved only it; a drag that is cancelled or replaced now commits nothing). Invert (about the first note) and Humanize (a seeded nudge of start and velocity, a fresh seed per press) are built as functions, tool options and buttons, and were pressed in real Chrome on 2026-10-22. A chosen note stays chosen when dragged. Quantize was pressed at 100% in real Chrome on 2026-10-22; the Strength choice below 100% is not seen. Quantize can move note ends too (Move: Starts and ends; unit-tested, not seen in Chrome). Scale (`src/model/Scale.js`, seven scales, any key): the roll marks rows outside it in words and a dot, a drawn or dragged note lands on the nearest pitch inside it (ties go lower), Fit notes to the scale and the `fitScale` tool option move existing notes; seen in real Chrome on 2026-10-22. The choice is view state and is not saved. The grid now declares its real extent to a screen reader (128 rows, each with its place from the top, and the row header as column 1; unit-tested). That was an audit against the ARIA grid pattern: no screen reader was run on it, so a listen with NVDA, VoiceOver or Orca is still wanted, and the long help text read on entering the grid may want shortening. Not built: snapping the keyboard cursor itself, and more scales.
 - [ ] **Step input and virtual keyboard.** Enter notes from keys one step at a time; keep the on-screen keyboard playable from
       touch.
 - [ ] **MIDI import and export.** Read and write a Standard MIDI File for one track, plus project-wide export, reusing the

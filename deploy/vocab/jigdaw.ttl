@@ -893,6 +893,13 @@ jig:folder a owl:DatatypeProperty ;
         metadata: stated only in the editor graph, and it changes no routing. Tracks that
         give the same name are one folder; a track with none is in no folder.""" .
 
+jig:folderCollapsed a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:boolean ;
+    rdfs:label "folder collapsed" ;
+    rdfs:comment """True when the folder this track is shown in is hidden down to its bar. Editor metadata.
+        A folder is its tracks' shared name, so the state is stated on each of them and the folder is hidden when
+        any of them says so. Absent means shown.""" .
+
 ## -- Bundles and provenance --------------------------------------------------
 ##
 ## docs/plugin-bundles.md. A bundle is the same plugin as a file. These terms

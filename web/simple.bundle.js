@@ -13406,6 +13406,7 @@ var init_Vocabulary = __esm({
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
         folder: `${JIG}folder`,
+        folderCollapsed: `${JIG}folderCollapsed`,
         // Scripts saved with a session. docs/project-format.md.
         Script: `${JIG}Script`,
         ScriptLanguage: `${JIG}ScriptLanguage`,
@@ -23132,7 +23133,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -23149,6 +23150,10 @@ var EditorState = class _EditorState {
         throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`);
       }
       next.folder = patch.folder === null ? null : patch.folder.trim();
+    }
+    if (patch.folderCollapsed !== void 0) {
+      if (typeof patch.folderCollapsed !== "boolean") throw new Error("folderCollapsed must be true or false");
+      next.folderCollapsed = patch.folderCollapsed;
     }
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
@@ -26613,6 +26618,33 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
   ];
 }
 
+// src/model/Scale.js
+var SCALES = Object.freeze({
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  majorPentatonic: [0, 2, 4, 7, 9],
+  minorPentatonic: [0, 3, 5, 7, 10],
+  blues: [0, 3, 5, 6, 7, 10]
+});
+var SCALE_NAMES = Object.freeze(Object.keys(SCALES));
+function degrees(root, scale) {
+  if (!Number.isInteger(root) || root < 0 || root > 11) throw new Error(`root must be a whole number from 0 to 11: ${root}`);
+  const steps = SCALES[scale];
+  if (!steps) throw new Error(`no such scale: ${scale}; use one of ${SCALE_NAMES.join(", ")}`);
+  return steps.map((step) => (step + root) % 12);
+}
+function snapPitch(pitch, root, scale) {
+  const set = new Set(degrees(root, scale));
+  for (let distance = 0; distance <= 12; distance++) {
+    for (const candidate of [pitch - distance, pitch + distance]) {
+      if (candidate >= 0 && candidate <= 127 && set.has(candidate % 12)) return candidate;
+    }
+  }
+  throw new Error(`no pitch of the scale near ${pitch}`);
+}
+
 // src/model/NoteTransform.js
 function quantize(notes, { grid, strength = 1, ends = false } = {}) {
   if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
@@ -26682,13 +26714,17 @@ function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
     };
   });
 }
+function fitScale(notes, { root, scale } = {}) {
+  return notes.map((note) => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }));
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
-  humanize: (notes, options) => humanize(notes, options)
+  humanize: (notes, options) => humanize(notes, options),
+  fitScale: (notes, options) => fitScale(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name, options = {}, { indices = null } = {}) {
@@ -27304,7 +27340,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27319,6 +27355,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           timing: { type: "number" },
           velocity: { type: "number" },
           seed: { type: "integer" },
+          root: { type: "integer" },
+          scale: { type: "string", enum: SCALE_NAMES },
           indices: { type: "array", items: { type: "integer" } },
           expectedRevision: { type: "integer" }
         },
@@ -29079,12 +29117,13 @@ function writeEditor(project, { iri: iri4 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig4.x)} ${decimal(x)} ; ${term3(jig4.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder } = editor.track(track.id);
+    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig4.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig4.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
     if (folder !== null) parts.push(`${term3(jig4.folder)} ${string(folder)}`);
+    if (folderCollapsed) parts.push(`${term3(jig4.folderCollapsed)} true`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
@@ -29477,6 +29516,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
     } else if (p === jig5.folder) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
+    } else if (p === jig5.folderCollapsed) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).folderCollapsed = quad3.object.value === "true";
     }
   }
   return { positions, tracks };

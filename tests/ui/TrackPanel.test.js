@@ -142,6 +142,13 @@ describe('the group level buttons', () => {
     expect(calls).toEqual([['bus', -1], ['bus', 1]])
   })
 
+  it('also take an exact figure, sent for the track shown', () => {
+    const { calls, $ } = withGroup(2)
+    $('track-group-by').value = '-4'
+    $('track-group-by-apply').dispatchEvent(event('click'))
+    expect(calls).toEqual([['bus', -4]])
+  })
+
   it('are left out for a track with no members, or when the host gives no way to act', () => {
     expect(withGroup(0).group.hidden).toBe(true)
     document.body.textContent = ''

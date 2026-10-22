@@ -287,6 +287,121 @@ describe('the frame around it', () => {
   })
 })
 
+describe('the grid as a screen reader sees it', () => {
+  it('says there are 128 rows and where each drawn one sits, highest pitch first', () => {
+    build([{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }])
+    const grid = document.querySelector('[role=grid]')
+    expect(grid.getAttribute('aria-rowcount')).toBe('128')
+    const rows = [...grid.querySelectorAll('[role=row]')]
+    expect(rows).toHaveLength(24)
+    // The top row drawn is the highest pitch shown, and the rows count up as the pitches go down.
+    const indices = rows.map(r => Number(r.getAttribute('aria-rowindex')))
+    expect(indices).toEqual([...indices].sort((a, b) => a - b))
+    expect(new Set(indices).size).toBe(24)
+    const middleC = rows.find(r => r.querySelector('[data-pitch="60"]'))
+    expect(middleC.getAttribute('aria-rowindex')).toBe('68')
+  })
+
+  it('counts the row header as the first column, so the squares start at column 2', () => {
+    build()
+    const grid = document.querySelector('[role=grid]')
+    const steps = Number(grid.getAttribute('aria-colcount')) - 1
+    const row = grid.querySelector('[role=row]')
+    expect(row.querySelector('[role=rowheader]').getAttribute('aria-colindex')).toBe('1')
+    const cells = [...row.querySelectorAll('[role=gridcell]')]
+    expect(cells).toHaveLength(steps)
+    expect(cells[0].getAttribute('aria-colindex')).toBe('2')
+    expect(cells.at(-1).getAttribute('aria-colindex')).toBe(String(steps + 1))
+  })
+
+  it('keeps every row index equal to 128 minus its pitch after the window scrolls an octave', () => {
+    build()
+    const grid = document.querySelector('[role=grid]')
+    grid.querySelector('[tabindex="0"]').dispatchEvent(Object.assign(new window.Event('keydown', { bubbles: true, cancelable: true }), { key: 'PageUp' }))
+    const rows = [...grid.querySelectorAll('[role=row]')]
+    expect(rows).toHaveLength(24)
+    for (const row of rows) {
+      expect(Number(row.getAttribute('aria-rowindex'))).toBe(128 - Number(row.querySelector('[data-pitch]').dataset.pitch))
+    }
+    // The window really did move: it no longer starts where a fresh one does.
+    expect(rows[0].querySelector('[data-pitch]').dataset.pitch).not.toBe('71')
+  })
+})
+
+describe('the scale', () => {
+  const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
+  const choose = (id, index) => { document.getElementById(id).options[index].selected = true; document.getElementById(id).dispatchEvent(new window.Event('change', { bubbles: true })) }
+  function open (notes = [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }]) {
+    const asked = []
+    const sent = []
+    // A clock that moves a second each time it is read, so two presses are never taken for a double click.
+    let clock = 0
+    const roll = createPianoRoll(document, { onChange: (id, next) => sent.push(next), onClose: () => {}, onTransform: (name, options) => asked.push([name, options]), now: () => (clock += 1000) })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes }, { beatsPerBar: 4, label: 'Keys' })
+    return { roll, asked, sent }
+  }
+  const rowLabel = pitch => [...document.querySelectorAll('.piano-roll-key')].find(k => k.textContent.startsWith(`${noteName(pitch)} `) || k.textContent === noteName(pitch))
+
+  it('starts with none: no key, no fit button, no row marked', () => {
+    open()
+    expect(document.getElementById('roll-scale').options[0].textContent).toBe('None')
+    expect(document.getElementById('roll-scale-key').parentNode.hidden).toBe(true)
+    expect(document.getElementById('roll-fit-scale').hidden).toBe(true)
+    expect(document.querySelectorAll('.off-scale')).toHaveLength(0)
+  })
+
+  it('marks the rows outside the chosen scale in words and a dot, and offers the key and Fit', () => {
+    open()
+    choose('roll-scale', 1) // major
+    expect(document.getElementById('roll-scale-key').parentNode.hidden).toBe(false)
+    expect(document.getElementById('roll-fit-scale').hidden).toBe(false)
+    const black = rowLabel(61)
+    expect(black.textContent).toBe('C#4 ·')
+    expect(black.getAttribute('aria-label')).toBe('C sharp 4, outside the scale')
+    expect(black.parentNode.classList.contains('off-scale')).toBe(true)
+    expect(rowLabel(62).parentNode.classList.contains('off-scale')).toBe(false)
+  })
+
+  it('draws a pressed out-of-scale square as the nearest pitch in the scale', () => {
+    const { sent } = open()
+    choose('roll-scale', 1)
+    cell(61, 8).dispatchEvent(pointer('pointerdown'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(sent.at(-1).at(-1).pitch).toBe(60)
+  })
+
+  it('snaps a dragged note into the scale', () => {
+    const { sent } = open()
+    choose('roll-scale', 1)
+    cell(60, 0).dispatchEvent(pointer('pointerdown'))
+    cell(61, 0).dispatchEvent(pointer('pointerover'))
+    document.dispatchEvent(pointer('pointerup'))
+    // 61 snaps to 60, which is where the note was: no change to send.
+    expect(sent).toEqual([])
+    cell(60, 0).dispatchEvent(pointer('pointerdown'))
+    cell(62, 0).dispatchEvent(pointer('pointerover'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(sent.at(-1)[0].pitch).toBe(62)
+  })
+
+  it('asks to fit the notes to the chosen key and scale', () => {
+    const { asked } = open()
+    choose('roll-scale', 2) // minor
+    choose('roll-scale-key', 9) // A
+    click('roll-fit-scale')
+    expect(asked).toEqual([['fitScale', { root: 9, scale: 'minor' }]])
+  })
+
+  it('goes back to none, and the marks and the button go with it', () => {
+    open()
+    choose('roll-scale', 1)
+    choose('roll-scale', 0)
+    expect(document.querySelectorAll('.off-scale')).toHaveLength(0)
+    expect(document.getElementById('roll-fit-scale').hidden).toBe(true)
+  })
+})
+
 describe('the transform buttons', () => {
   const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
   function withTransform (notes) {

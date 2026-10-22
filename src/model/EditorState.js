@@ -34,7 +34,7 @@ export class EditorState {
   }
 
   /** Layout of one track. `order` is null until a person has placed it. */
-  track (id) { return { order: null, color: null, folder: null, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
+  track (id) { return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
 
   setTrack (id, patch) {
     const next = { ...this.#tracks.get(id) }
@@ -51,6 +51,10 @@ export class EditorState {
         throw new Error(`folder must be a name of 1 to ${MAX_FOLDER_NAME} characters, or null`)
       }
       next.folder = patch.folder === null ? null : patch.folder.trim()
+    }
+    if (patch.folderCollapsed !== undefined) {
+      if (typeof patch.folderCollapsed !== 'boolean') throw new Error('folderCollapsed must be true or false')
+      next.folderCollapsed = patch.folderCollapsed
     }
     if (patch.laneSize !== undefined) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(', ')}`)

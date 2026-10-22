@@ -396,6 +396,12 @@ describe('the editor graph, track layout', () => {
     const { tracks } = readEditor(await parseText(text, IRI), IRI)
     expect(tracks.get('track-10')).toEqual({ order: 0, color: '#3366cc', laneSize: 'large', folder: 'Drums' })
     expect(tracks.has('track-1')).toBe(false)
+    // Collapsed is written only when true, and read back as a boolean.
+    expect(text).not.toContain('folderCollapsed')
+    project.setTrackLayout('track-10', { folderCollapsed: true })
+    const again = writeEditor(project, { iri: IRI })
+    expect(again).toContain('jig:folderCollapsed true')
+    expect(readEditor(await parseText(again, IRI), IRI).tracks.get('track-10').folderCollapsed).toBe(true)
 
     const reopened = builtProject()
     reopened.loadEditor({ positions: new Map(), tracks })

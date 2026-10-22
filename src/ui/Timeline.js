@@ -77,12 +77,14 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onChannel(trackId, change)`: level, pan, mute or solo, the part that changed.
  * - `onArm(trackId, on)`: take MIDI input, or stop.
  * - `onMoveTrack(trackId, delta)`: move a track up (-1) or down (1).
+ * - `onFolderCollapse(folderName, collapsed)`: hide or show every track of a folder. Whether a folder is hidden is read
+ *   back from each track's layout (`folderCollapsed`), so it is the caller's to keep and save.
  * - `onAddTrack()`: add an empty track. Optional: without it the toolbar has no Add track.
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
-  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+  for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
   const element = document.createElement('div')
@@ -181,9 +183,11 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim })
 
   // A folder is a run of neighbouring tracks that give the same name; two separate runs are two bars.
-  const collapsedFolders = new Set()
+  // The folders hidden right now, read from the layout on each draw: a folder is hidden when any of its tracks says so.
+  let collapsedFolders = new Set()
   const folderBars = new Map()
   function withFolders (tracks, rowsInOrder, layoutFor) {
+    collapsedFolders = new Set(tracks.filter(t => layoutFor(t).folder && layoutFor(t).folderCollapsed).map(t => layoutFor(t).folder))
     const out = []
     const seen = new Map()
     const live = new Set()
@@ -198,7 +202,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         live.add(key)
         let bar = folderBars.get(key)
         if (!bar) {
-          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onToggle: folder => { collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder); if (lastArgs) draw(lastArgs); folderBars.get(key)?.element.querySelector('button').focus() } })
+          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onToggle: folder => { onFolderCollapse(folder, !collapsedFolders.has(folder)); folderBars.get(key)?.element.querySelector('button').focus() } })
           folderBars.set(key, bar)
         }
         bar.runStart = i

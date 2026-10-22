@@ -468,6 +468,7 @@
   .track-field input, .track-field select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
   .track-field input { width:min(16rem, 100%); }
+  .track-field.amount-field input { width:8rem; }
   .track-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .swatch { width:44px; height:44px; padding:0; border:2px solid var(--line); border-radius:6px; cursor:pointer;
     color:var(--fg); background:#2a2f38; font-size:18px; }
@@ -516,6 +517,9 @@
   .piano-roll-grid { position:relative; width:max-content; --key:3rem; --cell:28px; }
   .piano-roll-row { display:flex; }
   .piano-roll-row.black .piano-roll-cell { background:#15181d; }
+  .piano-roll-scale { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-scale select { min-height:44px; padding:6px 12px; }
+  .piano-roll-row.off-scale .piano-roll-cell:not(.on) { opacity:0.55; }
   .piano-roll-key { position:sticky; left:0; z-index:2; width:var(--key); flex:none; font-size:11px; color:var(--dim);
     background:#13161b; border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
   .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;

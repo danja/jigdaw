@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  185 terms.
+  186 terms.
 </p>
 
 <h2>Classes</h2>
@@ -432,6 +432,10 @@
   <dd>The name of the folder a track is shown in, one to sixty characters. Editor
         metadata: stated only in the editor graph, and it changes no routing. Tracks that
         give the same name are one folder; a track with none is in no folder.</dd>
+  <dt id="folderCollapsed"><code>jig:folderCollapsed</code> <span class="label">folder collapsed</span></dt>
+  <dd>True when the folder this track is shown in is hidden down to its bar. Editor metadata.
+        A folder is its tracks' shared name, so the state is stated on each of them and the folder is hidden when
+        any of them says so. Absent means shown.</dd>
   <dt id="gain"><code>jig:gain</code></dt>
   <dd>Linear fader gain, where 1.0 is unity. Linear rather than decibels
         because that is what a GainNode takes and converting in the format would mean

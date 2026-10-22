@@ -6,8 +6,18 @@ describe('EditorState', () => {
   it('starts as the default and says so', () => {
     const editor = new EditorState()
     expect(editor.isDefault).toBe(true)
-    expect(editor.track('t')).toEqual({ order: null, color: null, folder: null, laneSize: 'small' })
+    expect(editor.track('t')).toEqual({ order: null, color: null, folder: null, folderCollapsed: false, laneSize: 'small' })
     expect(editor.position('n')).toEqual({ x: 0, y: 0 })
+  })
+
+  it('keeps whether the folder is collapsed, and refuses anything but true or false', () => {
+    const editor = new EditorState()
+    editor.setTrack('t', { folderCollapsed: true })
+    expect(editor.track('t').folderCollapsed).toBe(true)
+    expect(() => editor.setTrack('t', { folderCollapsed: 'yes' })).toThrow(/folderCollapsed/)
+    expect(editor.track('t').folderCollapsed).toBe(true)
+    editor.setTrack('t', { folderCollapsed: false })
+    expect(editor.track('t').folderCollapsed).toBe(false)
   })
 
   it('keeps a folder name trimmed, refuses an empty or long one, and clears with null', () => {

@@ -37,7 +37,7 @@ const EXPECTED = {
   'examples/counterexample-foreign.ttl': 11,
   'examples/counterexample-collection.ttl': 6,
   'examples/counterexample-composite.ttl': 19,
-  'examples/counterexample-editor.ttl': 16
+  'examples/counterexample-editor.ttl': 18
 }
 
 describe('ShapeValidator', () => {
