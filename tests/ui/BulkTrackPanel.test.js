@@ -12,7 +12,7 @@ const track = (muted = false, soloed = false) => ({ channel: { muted, soloed } }
 function build (tracks = [track(), track()]) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size'), onBus: rec('bus') })
+  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size'), onBus: rec('bus'), onLevelShift: rec('level'), onPanShift: rec('pan') })
   document.body.append(panel.element)
   panel.show({ tracks, labels: ['Lead', 'Bass'] })
   return { panel, calls, $: id => document.getElementById(id) }
@@ -79,5 +79,15 @@ describe('the bulk track panel', () => {
 
   it('will not be built without its handlers', () => {
     expect(() => createBulkTrackPanel(document, { onChannel () {}, onColor () {} })).toThrow(/onSize/)
+  })
+})
+
+describe('the relative buttons', () => {
+  it('ask for a decibel step and a pan step', () => {
+    const { $, calls } = build()
+    for (const id of ['bulk-quieter', 'bulk-louder', 'bulk-pan-left', 'bulk-pan-right']) {
+      $(id).dispatchEvent(new window.Event('click', { bubbles: true }))
+    }
+    expect(calls).toEqual([['level', -1], ['level', 1], ['pan', -0.1], ['pan', 0.1]])
   })
 })

@@ -286,3 +286,136 @@ describe('the frame around it', () => {
     expect(closed()).toBe(1)
   })
 })
+
+describe('the transform buttons', () => {
+  const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
+  function withTransform (notes) {
+    const asked = []
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {}, onTransform: (name, options) => asked.push([name, options]) })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes }, { beatsPerBar: 4, label: 'Keys' })
+    return { roll, asked }
+  }
+  const note = { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }
+
+  it('ask for each transform with its amount', () => {
+    const { asked } = withTransform([note])
+    document.getElementById('roll-quantize-grid').options[1].selected = true
+    for (const id of ['roll-quantize', 'roll-down', 'roll-octave-up', 'roll-softer', 'roll-louder', 'roll-reverse']) click(id)
+    expect(asked).toEqual([
+      ['quantize', { grid: 0.5 }], ['transpose', { semitones: -1 }], ['transpose', { semitones: 12 }],
+      ['scaleVelocity', { factor: 0.8 }], ['scaleVelocity', { factor: 1.25 }], ['reverse', {}]
+    ])
+  })
+
+  it('are not drawn for a clip with no notes', () => {
+    withTransform([])
+    expect(document.querySelector('.piano-roll-tools').hidden).toBe(true)
+  })
+
+  it('are left out when the host gives no way to act on them', () => {
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {} })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes: [note] }, { beatsPerBar: 4, label: 'Keys' })
+    expect(document.querySelector('.piano-roll-tools').hidden).toBe(true)
+    expect(document.getElementById('roll-quantize')).toBeNull()
+  })
+})
+
+describe('what the transform buttons say', () => {
+  it('speaks what was done, and why an edit was refused', () => {
+    let reply
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {}, onTransform: () => reply })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }] }, { beatsPerBar: 4, label: 'Keys' })
+    const status = document.querySelector('.piano-roll [role=status]')
+    document.getElementById('roll-up').dispatchEvent(new window.Event('click', { bubbles: true }))
+    expect(status.textContent).toBe('Every note up a semitone')
+    reply = 'would put pitch 120 outside 0 to 127'
+    document.getElementById('roll-octave-up').dispatchEvent(new window.Event('click', { bubbles: true }))
+    expect(status.textContent).toBe('Not changed: would put pitch 120 outside 0 to 127')
+  })
+})
+
+describe('Escape', () => {
+  it('closes the roll from the grid', () => {
+    const { roll, closed } = build([{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }])
+    const target = document.getElementById('roll-60-0')
+    const e = new window.Event('keydown', { bubbles: true, cancelable: true })
+    Object.defineProperty(e, 'key', { value: 'Escape' })
+    target.dispatchEvent(e)
+    expect(closed()).toBe(1)
+    expect(e.defaultPrevented).toBe(true)
+    expect(roll.clipId).toBe('c')
+  })
+})
+
+describe('choosing notes', () => {
+  const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
+  const three = [
+    { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 },
+    { startBeat: 1, lengthBeats: 1, pitch: 62, velocity: 100 },
+    { startBeat: 2, lengthBeats: 1, pitch: 64, velocity: 100 }
+  ]
+  // Stands in for the host: applies the semitone shift to the indices it is given, sorted as the model sorts.
+  function build3 () {
+    let roll
+    let clip = { id: 'c', startBeat: 0, lengthBeats: 4, notes: three }
+    const asked = []
+    roll = createPianoRoll(document, {
+      onChange: () => {},
+      onClose: () => {},
+      onTransform: (name, options, { indices }) => {
+        asked.push(indices)
+        const notes = clip.notes.map((n, i) => (indices === null || indices.includes(i) ? { ...n, pitch: n.pitch + options.semitones } : n))
+        clip = { ...clip, notes: notes.sort((a, b) => a.startBeat - b.startBeat || a.pitch - b.pitch) }
+        roll.draw(clip)
+      }
+    })
+    document.body.append(roll.element)
+    roll.show(clip, { beatsPerBar: 4, label: 'Keys' })
+    return { asked, clip: () => clip }
+  }
+
+  it('changes every note until some are chosen, then only those', () => {
+    const { asked, clip } = build3()
+    click('roll-up')
+    expect(asked).toEqual([null])
+    cell(63, 4).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    expect(cell(63, 4).getAttribute('aria-label')).toContain('chosen')
+    click('roll-down')
+    expect(asked[1]).toEqual([1])
+    expect(clip().notes.map(n => n.pitch)).toEqual([61, 62, 65])
+  })
+
+  it('keeps the choice on the notes it became', () => {
+    const { asked } = build3()
+    key(document.activeElement, 's')
+    click('roll-up')
+    click('roll-up')
+    expect(asked).toEqual([[0], [0]])
+    expect(document.querySelectorAll('.piano-roll-cell.chosen.start').length).toBe(1)
+  })
+
+  it('chooses all with Ctrl+A, and Escape lets go before it closes', () => {
+    let closed = 0
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => { closed += 1 } })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes: three }, { beatsPerBar: 4, label: 'Keys' })
+    key(document.activeElement, 'a', { ctrlKey: true })
+    expect(document.querySelectorAll('.piano-roll-cell.chosen.start').length).toBe(3)
+    key(document.activeElement, 'Escape')
+    expect(closed).toBe(0)
+    expect(document.querySelectorAll('.piano-roll-cell.chosen').length).toBe(0)
+    key(document.activeElement, 'Escape')
+    expect(closed).toBe(1)
+  })
+
+  it('toggles a note with a shift press', () => {
+    build3()
+    cell(62, 4).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    expect(cell(62, 4).getAttribute('aria-label')).toContain('chosen')
+    cell(62, 4).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    expect(cell(62, 4).getAttribute('aria-label')).not.toContain('chosen')
+  })
+})

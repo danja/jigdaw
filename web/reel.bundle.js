@@ -26569,6 +26569,59 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
   ];
 }
 
+// src/model/NoteTransform.js
+function quantize(notes, { grid, strength = 1 } = {}) {
+  if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
+  if (!(Number.isFinite(strength) && strength >= 0 && strength <= 1)) throw new Error(`strength must be from 0 to 1: ${strength}`);
+  return notes.map((note) => {
+    const target2 = Math.round(note.startBeat / grid) * grid;
+    return { ...note, startBeat: Math.max(0, note.startBeat + (target2 - note.startBeat) * strength) };
+  });
+}
+function transpose(notes, semitones) {
+  if (!Number.isInteger(semitones)) throw new Error(`semitones must be a whole number: ${semitones}`);
+  return notes.map((note) => {
+    const pitch = note.pitch + semitones;
+    if (pitch < 0 || pitch > 127) throw new Error(`transposing by ${semitones} would put pitch ${note.pitch} outside 0 to 127`);
+    return { ...note, pitch };
+  });
+}
+function scaleVelocity(notes, factor2) {
+  if (!(Number.isFinite(factor2) && factor2 > 0)) throw new Error(`factor must be a number above zero: ${factor2}`);
+  return notes.map((note) => ({ ...note, velocity: Math.min(127, Math.max(1, Math.round(note.velocity * factor2))) }));
+}
+function reverse(notes, clipLength) {
+  if (!(Number.isFinite(clipLength) && clipLength > 0)) throw new Error(`clipLength must be a number above zero: ${clipLength}`);
+  return notes.map((note) => {
+    const startBeat = clipLength - (note.startBeat + note.lengthBeats);
+    if (startBeat < 0) throw new Error(`a note ends after the clip does, so it cannot be reversed inside it`);
+    return { ...note, startBeat };
+  });
+}
+var TRANSFORMS = {
+  quantize: (notes, options) => quantize(notes, options),
+  transpose: (notes, { semitones }) => transpose(notes, semitones),
+  scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
+  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats)
+};
+var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
+function describeNoteTransform(project, clipId, name, options = {}, { indices = null } = {}) {
+  const clip = project.clip(clipId);
+  if (!clip) throw new Error(`no such clip: ${clipId}`);
+  if (clip.kind !== "midi") throw new Error(`clip ${clipId} is not a MIDI clip`);
+  const transform = TRANSFORMS[name];
+  if (!transform) throw new Error(`no such transform: ${name}; use one of ${NOTE_TRANSFORMS.join(", ")}`);
+  const chosen = indices === null ? null : new Set(indices);
+  if (chosen) {
+    for (const i2 of chosen) if (!Number.isInteger(i2) || i2 < 0 || i2 >= clip.notes.length) throw new Error(`no note at index ${i2}`);
+  }
+  const picked = clip.notes.filter((_, i2) => !chosen || chosen.has(i2));
+  const changed = transform(picked, options, clip);
+  let next = 0;
+  const notes = clip.notes.map((note, i2) => !chosen || chosen.has(i2) ? changed[next++] : { ...note });
+  return [{ op: "setClipNotes", id: clipId, notes }];
+}
+
 // src/model/TrackDuplicate.js
 function copyLabel(track) {
   return `${track.label ?? track.id} copy`;
@@ -27160,6 +27213,34 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       },
       async handler({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: "setClipNotes", id: clipId, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_transform_notes",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          transform: { type: "string", enum: NOTE_TRANSFORMS },
+          grid: { type: "number" },
+          strength: { type: "number" },
+          semitones: { type: "integer" },
+          factor: { type: "number" },
+          indices: { type: "array", items: { type: "integer" } },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId", "transform"]
+      },
+      async handler({ clipId, transform, indices, expectedRevision, ...options } = {}) {
+        let changes;
+        try {
+          changes = describeNoteTransform(dispatcher.project, clipId, transform, options, { indices: indices ?? null });
+        } catch (error2) {
+          return failed(error2.message);
+        }
+        const result = dispatcher.apply(changes, { expectedRevision });
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -28552,6 +28633,16 @@ function createTransport(ctx2) {
     sendTransport();
     log2("stopped");
   }
+  function panic() {
+    const { engine } = ctx2;
+    for (const entry of engine?.nodes() ?? []) {
+      engine.post(entry.id, { type: "events", events: [
+        { frame: 0, bytes: Uint8Array.from([176, 123, 0]) },
+        { frame: 0, bytes: Uint8Array.from([176, 120, 0]) }
+      ] });
+    }
+    log2("panic: all notes off");
+  }
   function elapsedFrames() {
     const { engine } = ctx2;
     if (!engine || !playing) return 0;
@@ -28659,7 +28750,7 @@ function createTransport(ctx2) {
     const { engine } = ctx2;
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  return { play, stop, panic, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // web/app/Sessions.js
@@ -30483,6 +30574,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",
   clip_set_notes: "arrangement editing, not yet a statement",
+  clip_transform_notes: "arrangement editing, not yet a statement",
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",
   clip_split: "arrangement editing, not yet a statement",

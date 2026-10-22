@@ -6,6 +6,7 @@
 // the next 'changed'.
 import { createTimeline, barBeat } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
+import { describeNoteTransform } from '../../src/model/NoteTransform.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { trackKind } from '../../src/model/TrackKind.js'
 import { mixable } from '../../src/ui/Mixer.js'
@@ -251,6 +252,12 @@ export function createArrangement (ctx) {
       { op: 'setClipNotes', id, notes }
     ]),
     onAudition: audition,
+    onTransform: (name, options, { indices = null } = {}) => {
+      let changes
+      try { changes = describeNoteTransform(ctx.dispatcher.project, pianoRoll.clipId, name, options, { indices }) } catch (error) { log(error.message, 'error'); return error.message }
+      const result = edit(changes)
+      return result.ok ? undefined : result.message
+    },
     onClose: () => {
       const id = pianoRoll.clipId
       pianoRoll.hide()

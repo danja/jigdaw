@@ -12,6 +12,7 @@
 // changes and this one does not.
 import { splitClip, duplicateClip } from '../model/ClipEdit.js'
 import { describeBus } from '../model/TrackBus.js'
+import { describeNoteTransform, NOTE_TRANSFORMS } from '../model/NoteTransform.js'
 import { duplicateTrack } from '../ops/DuplicateTrack.js'
 import { chainSwapChanges } from '../ops/ChainReorder.js'
 import { FACET_NAMES, expandTerm as expand, compactTerm as compact } from '../catalogue/facets.js'
@@ -525,6 +526,32 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       },
       async handler ({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: 'setClipNotes', id: clipId, notes }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_transform_notes',
+      description:
+        'Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip\'s note order). ' +
+        '`transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), ' +
+        'scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' },
+          transform: { type: 'string', enum: NOTE_TRANSFORMS },
+          grid: { type: 'number' }, strength: { type: 'number' },
+          semitones: { type: 'integer' }, factor: { type: 'number' },
+          indices: { type: 'array', items: { type: 'integer' } },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId', 'transform']
+      },
+      async handler ({ clipId, transform, indices, expectedRevision, ...options } = {}) {
+        let changes
+        try { changes = describeNoteTransform(dispatcher.project, clipId, transform, options, { indices: indices ?? null }) } catch (error) { return failed(error.message) }
+        const result = dispatcher.apply(changes, { expectedRevision })
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
       }
     },

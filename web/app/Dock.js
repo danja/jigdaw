@@ -10,6 +10,7 @@ import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createTrackPanel } from '../../src/ui/TrackPanel.js'
 import { createBulkTrackPanel } from '../../src/ui/BulkTrackPanel.js'
 import { describeBus } from '../../src/model/TrackBus.js'
+import { describeLevelShift, describePanShift, groupMembers } from '../../src/model/GroupChannel.js'
 import { createNodeView } from '../../src/ui/NodeView.js'
 import { createSendsPanel } from '../../src/ui/SendsPanel.js'
 import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
@@ -41,12 +42,20 @@ export function createDockPanel (ctx) {
   dock.slot('audio').append(audio.element)
 
   // Several tracks at once: one changeset for the channel, so one undo.
+  const shift = (describe, amount, ids = ctx.selection.ids) => {
+    let changes
+    try { changes = describe(ctx.dispatcher.project, ids, amount) } catch (error) { log(error.message, 'error'); return }
+    const result = ctx.dispatcher.apply(changes)
+    if (!result.ok) log(result.message, 'error')
+  }
   const bulk = createBulkTrackPanel(document, {
     onChannel: change => {
       const ids = ctx.selection.ids
       const result = ctx.dispatcher.apply(ids.map(id => ({ op: 'setTrackChannel', track: id, ...change })))
       if (!result.ok) log(result.message, 'error')
     },
+    onLevelShift: decibels => shift(describeLevelShift, decibels),
+    onPanShift: amount => shift(describePanShift, amount),
     onColor: color => { for (const id of ctx.selection.ids) layoutOf(id, { color }) },
     onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
     onBus: () => {
@@ -119,6 +128,7 @@ export function createDockPanel (ctx) {
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
+    onGroupLevel: (id, decibels) => shift(describeLevelShift, decibels, groupMembers(ctx.dispatcher.project, id)),
     onMove: (id, delta) => ctx.dispatcher.project.moveTrack(id, delta),
     onFreeze: id => {
       ctx.bounce.freezeTrack(id).catch(error => log(error.message, 'error'))
@@ -221,7 +231,8 @@ export function createDockPanel (ctx) {
         folders: [...new Set(ordered.map(t => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex(t => t.id === track.id),
         count: ordered.length,
-        plugins: project.nodes.filter(n => n.track === track.id).length
+        plugins: project.nodes.filter(n => n.track === track.id).length,
+        members: groupMembers(project, track.id).length
       })
       const nodes = inSignalOrder(project.nodes.filter(n => n.track === track.id), project.connections)
       const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id

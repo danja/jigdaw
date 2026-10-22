@@ -12,8 +12,8 @@ export function tally (tracks, key) {
   return on === 0 ? 'none' : on === tracks.length ? 'all' : 'some'
 }
 
-export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onBus }) {
-  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onBus })) {
+export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onBus, onLevelShift, onPanShift }) {
+  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== 'function') throw new Error(`createBulkTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -73,10 +73,29 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   bus.textContent = 'Send to a new bus'
   bus.addEventListener('click', () => onBus())
 
+  // Relative moves keep the tracks' balance (src/model/GroupChannel.js).
+  const shifts = document.createElement('div')
+  shifts.className = 'track-actions'
+  shifts.setAttribute('role', 'group')
+  shifts.setAttribute('aria-label', 'Move all selected tracks together')
+  for (const [id, text, call] of [
+    ['bulk-quieter', 'Level down 1 dB', () => onLevelShift(-1)],
+    ['bulk-louder', 'Level up 1 dB', () => onLevelShift(1)],
+    ['bulk-pan-left', 'Pan left 0.1', () => onPanShift(-0.1)],
+    ['bulk-pan-right', 'Pan right 0.1', () => onPanShift(0.1)]
+  ]) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.id = id
+    button.textContent = text
+    button.addEventListener('click', call)
+    shifts.append(button)
+  }
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(mute, solo, bus)
-  element.append(summary, actions, colors, sizeLabel)
+  element.append(summary, actions, shifts, colors, sizeLabel)
 
   return {
     element,

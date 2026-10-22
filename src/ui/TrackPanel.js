@@ -29,7 +29,7 @@ export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')
 }
 
-export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze }) {
+export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null }) {
   for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== 'function') throw new Error(`createTrackPanel needs ${name}`)
   }
@@ -133,10 +133,27 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   freeze.title = 'Render this track as heard to an audio clip on a new track, and mute this one'
   freeze.addEventListener('click', () => onFreeze(trackId))
 
+  // A bus or folder's own level for its members: each moves by the same decibels (src/model/GroupChannel.js).
+  // Left out unless the track has members, and unless the host can act on it.
+  const group = document.createElement('div')
+  group.className = 'track-actions'
+  group.setAttribute('role', 'group')
+  group.id = 'track-group-level'
+  const groupStep = (id, text, decibels) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.id = id
+    button.textContent = text
+    button.addEventListener('click', () => onGroupLevel(trackId, decibels))
+    return button
+  }
+  if (onGroupLevel) group.append(groupStep('track-group-down', 'Members down 1 dB', -1), groupStep('track-group-up', 'Members up 1 dB', 1))
+  group.hidden = true
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(position, up, down, freeze, remove)
-  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, actions)
+  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, group, actions)
 
   return {
     element,
@@ -146,7 +163,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show ({ id, name: current, defaultName, layout, index, count, plugins, folders = [] }) {
+    show ({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0 }) {
       trackId = id
       // A name being typed is not overwritten by a redraw.
       if (document.activeElement !== name) name.value = current ?? ''
@@ -156,6 +173,8 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
       colorSaid.textContent = ` ${colorName(layout.color)}`
       for (const button of swatches) button.setAttribute('aria-pressed', String((button.dataset.color || null) === layout.color))
       for (const option of size.options) option.selected = option.value === layout.laneSize
+      group.hidden = !onGroupLevel || members === 0
+      group.setAttribute('aria-label', `Move the ${members} tracks in this bus or folder together`)
       position.textContent = `Track ${index + 1} of ${count}.`
       up.hidden = index === 0
       down.hidden = index === count - 1

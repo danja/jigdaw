@@ -634,6 +634,20 @@ describe('clips', () => {
     expect(dispatcher.project.clips).toEqual([])
   })
 
+  it('transforms notes as one edit, and refuses the whole edit when one note cannot move', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [note, { ...note, startBeat: 1.1, pitch: 125 }] })
+    const quantized = await call('clip_transform_notes', { clipId: added.clipId, transform: 'quantize', grid: 1 })
+    expect(quantized.ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).notes.map(n => n.startBeat)).toEqual([0, 1])
+    const refused = await call('clip_transform_notes', { clipId: added.clipId, transform: 'transpose', semitones: 12 })
+    expect(refused.ok).toBe(false)
+    expect(dispatcher.project.clip(added.clipId).notes.map(n => n.pitch)).toEqual([60, 125])
+    const some = await call('clip_transform_notes', { clipId: added.clipId, transform: 'transpose', semitones: 1, indices: [0] })
+    expect(some.ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).notes.map(n => n.pitch)).toEqual([61, 125])
+  })
+
   it('refuses a note MIDI cannot carry, and says which', async () => {
     const { trackId } = await call('track_add', {})
     const refused = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [{ ...note, velocity: 0 }] })

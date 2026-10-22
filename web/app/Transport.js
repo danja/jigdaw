@@ -201,6 +201,19 @@ export function createTransport (ctx) {
     log('stopped')
   }
 
+  // All notes off (CC 123) and all sound off (CC 120) to every node, with the transport left running: for a note
+  // stuck by a plugin or a controller, where Stop would also end the take or the loop being worked on.
+  function panic () {
+    const { engine } = ctx
+    for (const entry of engine?.nodes() ?? []) {
+      engine.post(entry.id, { type: 'events', events: [
+        { frame: 0, bytes: Uint8Array.from([0xb0, 123, 0]) },
+        { frame: 0, bytes: Uint8Array.from([0xb0, 120, 0]) }
+      ] })
+    }
+    log('panic: all notes off')
+  }
+
   function elapsedFrames () {
     const { engine } = ctx
     if (!engine || !playing) return 0
@@ -329,5 +342,5 @@ export function createTransport (ctx) {
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise(resolve => setTimeout(resolve, 20))
   }
 
-  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
+  return { play, stop, panic, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx.dispatcher.transport().positionAtElapsed(elapsedFrames()) }
 }

@@ -113,6 +113,7 @@ $('stop').addEventListener('click', () => {
     .catch(error => log(error.message, 'error'))
     .finally(() => transport.stop())
 })
+$('panic').addEventListener('click', () => transport.panic())
 $('record').addEventListener('click', () => ctx.record.toggle().catch(error => log(error.message, 'error')))
 $('tempo').addEventListener('change', async () => {
   const d = await ctx.runtime.ensureRunning()

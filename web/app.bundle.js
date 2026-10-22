@@ -20339,7 +20339,7 @@ function createAutomationHost(ctx2) {
   const { log: log2 } = ctx2;
   const touched = /* @__PURE__ */ new Map();
   const warned = /* @__PURE__ */ new Set();
-  const keyOf3 = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
+  const keyOf4 = ({ node, symbol, kind }) => kind !== void 0 ? `master:${kind}` : `${node}:${symbol}`;
   const MASTER = { masterGain: "gain", masterPan: "pan" };
   const paramsOf = (target2) => target2.kind !== void 0 ? [MASTER[target2.kind] ? ctx2.engine.masterParam(MASTER[target2.kind]) : null].filter(Boolean) : ctx2.dispatcher.audioParams(target2.node, target2.symbol);
   const hold = (target2, on) => {
@@ -20396,7 +20396,7 @@ function createAutomationHost(ctx2) {
     edited(nodeId, symbol, value2) {
       const target2 = { node: nodeId, symbol };
       for (const [param, state] of touched) {
-        if (keyOf3(state.target) !== keyOf3(target2) || state.suspended) continue;
+        if (keyOf4(state.target) !== keyOf4(target2) || state.suspended) continue;
         const now = ctx2.engine.context.currentTime;
         param.cancelScheduledValues(now);
         param.setValueAtTime(value2, now);
@@ -27785,6 +27785,59 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
   ];
 }
 
+// src/model/NoteTransform.js
+function quantize(notes, { grid, strength = 1 } = {}) {
+  if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
+  if (!(Number.isFinite(strength) && strength >= 0 && strength <= 1)) throw new Error(`strength must be from 0 to 1: ${strength}`);
+  return notes.map((note) => {
+    const target2 = Math.round(note.startBeat / grid) * grid;
+    return { ...note, startBeat: Math.max(0, note.startBeat + (target2 - note.startBeat) * strength) };
+  });
+}
+function transpose(notes, semitones) {
+  if (!Number.isInteger(semitones)) throw new Error(`semitones must be a whole number: ${semitones}`);
+  return notes.map((note) => {
+    const pitch = note.pitch + semitones;
+    if (pitch < 0 || pitch > 127) throw new Error(`transposing by ${semitones} would put pitch ${note.pitch} outside 0 to 127`);
+    return { ...note, pitch };
+  });
+}
+function scaleVelocity(notes, factor2) {
+  if (!(Number.isFinite(factor2) && factor2 > 0)) throw new Error(`factor must be a number above zero: ${factor2}`);
+  return notes.map((note) => ({ ...note, velocity: Math.min(127, Math.max(1, Math.round(note.velocity * factor2))) }));
+}
+function reverse(notes, clipLength) {
+  if (!(Number.isFinite(clipLength) && clipLength > 0)) throw new Error(`clipLength must be a number above zero: ${clipLength}`);
+  return notes.map((note) => {
+    const startBeat = clipLength - (note.startBeat + note.lengthBeats);
+    if (startBeat < 0) throw new Error(`a note ends after the clip does, so it cannot be reversed inside it`);
+    return { ...note, startBeat };
+  });
+}
+var TRANSFORMS = {
+  quantize: (notes, options) => quantize(notes, options),
+  transpose: (notes, { semitones }) => transpose(notes, semitones),
+  scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
+  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats)
+};
+var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
+function describeNoteTransform(project, clipId, name2, options = {}, { indices = null } = {}) {
+  const clip = project.clip(clipId);
+  if (!clip) throw new Error(`no such clip: ${clipId}`);
+  if (clip.kind !== "midi") throw new Error(`clip ${clipId} is not a MIDI clip`);
+  const transform = TRANSFORMS[name2];
+  if (!transform) throw new Error(`no such transform: ${name2}; use one of ${NOTE_TRANSFORMS.join(", ")}`);
+  const chosen = indices === null ? null : new Set(indices);
+  if (chosen) {
+    for (const i2 of chosen) if (!Number.isInteger(i2) || i2 < 0 || i2 >= clip.notes.length) throw new Error(`no note at index ${i2}`);
+  }
+  const picked = clip.notes.filter((_, i2) => !chosen || chosen.has(i2));
+  const changed = transform(picked, options, clip);
+  let next = 0;
+  const notes = clip.notes.map((note, i2) => !chosen || chosen.has(i2) ? changed[next++] : { ...note });
+  return [{ op: "setClipNotes", id: clipId, notes }];
+}
+
 // src/model/TrackDuplicate.js
 function copyLabel(track) {
   return `${track.label ?? track.id} copy`;
@@ -28376,6 +28429,34 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       },
       async handler({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: "setClipNotes", id: clipId, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_transform_notes",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          transform: { type: "string", enum: NOTE_TRANSFORMS },
+          grid: { type: "number" },
+          strength: { type: "number" },
+          semitones: { type: "integer" },
+          factor: { type: "number" },
+          indices: { type: "array", items: { type: "integer" } },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId", "transform"]
+      },
+      async handler({ clipId, transform, indices, expectedRevision, ...options } = {}) {
+        let changes;
+        try {
+          changes = describeNoteTransform(dispatcher.project, clipId, transform, options, { indices: indices ?? null });
+        } catch (error2) {
+          return failed(error2.message);
+        }
+        const result = dispatcher.apply(changes, { expectedRevision });
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -29424,6 +29505,16 @@ function createTransport(ctx2) {
     sendTransport();
     log2("stopped");
   }
+  function panic() {
+    const { engine } = ctx2;
+    for (const entry of engine?.nodes() ?? []) {
+      engine.post(entry.id, { type: "events", events: [
+        { frame: 0, bytes: Uint8Array.from([176, 123, 0]) },
+        { frame: 0, bytes: Uint8Array.from([176, 120, 0]) }
+      ] });
+    }
+    log2("panic: all notes off");
+  }
   function elapsedFrames() {
     const { engine } = ctx2;
     if (!engine || !playing) return 0;
@@ -29531,7 +29622,7 @@ function createTransport(ctx2) {
     const { engine } = ctx2;
     while (playing && engine && engine.context.currentTime < startedAt) await new Promise((resolve) => setTimeout(resolve, 20));
   }
-  return { play, stop, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
+  return { play, stop, panic, seek, setClick, setCountIn, untilStart, positionLoop, meterLoop, showTransport, toggleLoop, setSignature, setLoopRange, playing: () => playing, position: () => ctx2.dispatcher.transport().positionAtElapsed(elapsedFrames()) };
 }
 
 // src/engine/TrackRecorder.js
@@ -32014,10 +32105,10 @@ function createSkins(ctx2) {
   const loads = /* @__PURE__ */ new Map();
   let redraw = () => {
   };
-  const keyOf3 = (profile) => `${profile.skin.location}|${profile.skin.integrity}`;
+  const keyOf4 = (profile) => `${profile.skin.location}|${profile.skin.integrity}`;
   function start(profile) {
     const entry = { state: "loading", loaded: null };
-    loads.set(keyOf3(profile), entry);
+    loads.set(keyOf4(profile), entry);
     loadSkin(profile, {
       fetchVerified: (resource, options) => ctx2.loader.fetchVerified(resource, options),
       parseTurtle: parseText,
@@ -32040,12 +32131,12 @@ function createSkins(ctx2) {
     /** Whether this profile's skin can be drawn now. Starts the fetch the first time it is asked. */
     ready(profile) {
       if (!profile?.skin || !ctx2.loader) return false;
-      const entry = loads.get(keyOf3(profile)) ?? start(profile);
+      const entry = loads.get(keyOf4(profile)) ?? start(profile);
       return entry.state === "ready";
     },
     /** Artwork nodes of this panel's own, or null (reported) when the artwork breaks the allowlist. */
     prepare(profile, scope) {
-      const entry = loads.get(keyOf3(profile));
+      const entry = loads.get(keyOf4(profile));
       try {
         const prepared = prepareSkin(entry.loaded, profile, { document: document2, prefix: `skin-${scope.replace(/[^\w-]/g, "_")}-` });
         for (const o2 of prepared.omitted) log2(`${profile.label ?? profile.iri} skin: left out ${o2.control}, because ${o2.reason}`, "error");
@@ -32694,7 +32785,7 @@ var SIZES = Object.freeze([["small", "Small"], ["medium", "Medium"], ["large", "
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
-function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze }) {
+function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null }) {
   for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
@@ -32795,10 +32886,24 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
   freeze.textContent = "Freeze track";
   freeze.title = "Render this track as heard to an audio clip on a new track, and mute this one";
   freeze.addEventListener("click", () => onFreeze(trackId));
+  const group = document2.createElement("div");
+  group.className = "track-actions";
+  group.setAttribute("role", "group");
+  group.id = "track-group-level";
+  const groupStep = (id, text, decibels2) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = id;
+    button.textContent = text;
+    button.addEventListener("click", () => onGroupLevel(trackId, decibels2));
+    return button;
+  };
+  if (onGroupLevel) group.append(groupStep("track-group-down", "Members down 1 dB", -1), groupStep("track-group-up", "Members up 1 dB", 1));
+  group.hidden = true;
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(position2, up, down, freeze, remove);
-  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, actions);
+  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, group, actions);
   return {
     element,
     get trackId() {
@@ -32809,7 +32914,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show({ id, name: current, defaultName, layout, index, count, plugins, folders = [] }) {
+    show({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0 }) {
       trackId = id;
       if (document2.activeElement !== name2) name2.value = current ?? "";
       name2.placeholder = defaultName;
@@ -32822,6 +32927,8 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
       colorSaid.textContent = ` ${colorName(layout.color)}`;
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
       for (const option of size.options) option.selected = option.value === layout.laneSize;
+      group.hidden = !onGroupLevel || members === 0;
+      group.setAttribute("aria-label", `Move the ${members} tracks in this bus or folder together`);
       position2.textContent = `Track ${index + 1} of ${count}.`;
       up.hidden = index === 0;
       down.hidden = index === count - 1;
@@ -33657,15 +33764,19 @@ function noteName4(pitch) {
 function spokenName(pitch) {
   return noteName4(pitch).replace("#", " sharp ");
 }
+var keyOf3 = (note) => `${note.startBeat}:${note.pitch}`;
 var beats = (n2) => `${n2} beat${n2 === 1 ? "" : "s"}`;
 function noteAt(notes, pitch, beat) {
   return notes.find((n2) => n2.pitch === pitch && n2.startBeat <= beat && beat < n2.startBeat + n2.lengthBeats) ?? null;
 }
 function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
-}, now = () => Date.now() }) {
+}, onTransform = null, now = () => Date.now() }) {
   if (typeof onChange !== "function" || typeof onClose !== "function") {
     throw new Error("createPianoRoll needs onChange and onClose");
   }
+  let selectAll = null;
+  let selectNone = null;
+  let chosen = /* @__PURE__ */ new Set();
   const element = document2.createElement("section");
   element.className = "piano-roll";
   const header = document2.createElement("header");
@@ -33679,7 +33790,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   const help = document2.createElement("p");
   help.className = "note";
   help.id = "piano-roll-help";
-  help.textContent = "Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, or its last square to change its length. Double-click a note, or press Delete, to remove it. Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave.";
+  help.textContent = "Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, or its last square to change its length. Double-click a note, or press Delete, to remove it. Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave, S chooses a note to change with others (or Shift-click it), Ctrl+A chooses all, Escape lets go of the choice, then closes.";
   const status = document2.createElement("p");
   status.className = "visually-hidden";
   status.setAttribute("role", "status");
@@ -33699,11 +33810,88 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   const empty = document2.createElement("p");
   empty.className = "note piano-roll-empty";
   empty.textContent = "No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.";
-  element.append(header, empty, help, scroller, status);
+  const tools = document2.createElement("div");
+  tools.className = "piano-roll-tools";
+  tools.setAttribute("role", "group");
+  tools.setAttribute("aria-label", "Change the notes");
+  if (onTransform) {
+    const gridLabel = document2.createElement("label");
+    gridLabel.append(document2.createTextNode("Grid "));
+    const gridSelect = document2.createElement("select");
+    gridSelect.id = "roll-quantize-grid";
+    for (const [value2, text] of [["1", "Beat"], ["0.5", "Half beat"], ["0.25", "Quarter beat"]]) {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = text;
+      option.selected = value2 === "0.25";
+      gridSelect.append(option);
+    }
+    gridLabel.append(gridSelect);
+    tools.append(gridLabel);
+    const ask = (name2, options2, done) => () => {
+      const indices = chosen.size === 0 ? null : clip.notes.flatMap((n2, i2) => chosen.has(keyOf3(n2)) ? [i2] : []);
+      const before = clip.notes;
+      const refused = onTransform(name2, options2, { indices });
+      if (typeof refused === "string") {
+        say2(`Not changed: ${refused}`);
+        return;
+      }
+      if (indices !== null) {
+        const rest = before.filter((n2) => !chosen.has(keyOf3(n2)));
+        const keep = /* @__PURE__ */ new Set();
+        const unmatched = [...clip.notes];
+        for (const n2 of rest) {
+          const at = unmatched.findIndex((m) => keyOf3(m) === keyOf3(n2) && m.lengthBeats === n2.lengthBeats && m.velocity === n2.velocity);
+          if (at >= 0) unmatched.splice(at, 1);
+        }
+        for (const n2 of unmatched) keep.add(keyOf3(n2));
+        chosen = keep;
+        draw();
+      }
+      say2(`${done}${indices === null ? "" : ` (${indices.length} chosen)`}`);
+    };
+    const buttons = [
+      ["roll-quantize", "Quantize", () => ask("quantize", { grid: Number(gridSelect.value) }, "Quantized every note to the grid")()],
+      ["roll-down", "Down a semitone", ask("transpose", { semitones: -1 }, "Every note down a semitone")],
+      ["roll-up", "Up a semitone", ask("transpose", { semitones: 1 }, "Every note up a semitone")],
+      ["roll-octave-down", "Down an octave", ask("transpose", { semitones: -12 }, "Every note down an octave")],
+      ["roll-octave-up", "Up an octave", ask("transpose", { semitones: 12 }, "Every note up an octave")],
+      ["roll-softer", "Softer", ask("scaleVelocity", { factor: 0.8 }, "Every note softer")],
+      ["roll-louder", "Louder", ask("scaleVelocity", { factor: 1.25 }, "Every note louder")],
+      ["roll-reverse", "Reverse", ask("reverse", {}, "Notes reversed in time")]
+    ];
+    for (const [id, text, run] of buttons) {
+      const button = document2.createElement("button");
+      button.type = "button";
+      button.id = id;
+      button.textContent = text;
+      button.addEventListener("click", run);
+      tools.append(button);
+    }
+    const pick = (id, text, run) => {
+      const button = document2.createElement("button");
+      button.type = "button";
+      button.id = id;
+      button.textContent = text;
+      button.addEventListener("click", run);
+      tools.append(button);
+      return button;
+    };
+    selectAll = pick("roll-select-all", "Choose all notes", () => {
+      chooseAll();
+    });
+    selectNone = pick("roll-select-none", "Let go of the choice", () => {
+      chosen = /* @__PURE__ */ new Set();
+      draw();
+      say2("No notes chosen");
+    });
+  }
+  element.append(header, empty, help, tools, scroller, status);
   function showOpen(open) {
     empty.hidden = open;
     help.hidden = !open;
     scroller.hidden = !open;
+    tools.hidden = !open || clip === null || clip.notes.length === 0;
     close.hidden = !open;
     if (!open) heading.textContent = "Piano roll";
   }
@@ -33722,6 +33910,17 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   const beatOf = (step) => step / STEPS_PER_BEAT;
   const where = (step) => barBeat(beatOf(step), options.beatsPerBar);
   const shown = () => preview ?? clip.notes;
+  const chooseAll = () => {
+    chosen = new Set(clip.notes.map(keyOf3));
+    draw();
+    say2(`${chosen.size} note${chosen.size === 1 ? "" : "s"} chosen`);
+  };
+  const toggleChosen = (note) => {
+    const key = keyOf3(note);
+    if (!chosen.delete(key)) chosen.add(key);
+    draw();
+    say2(`${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)} ${chosen.has(key) ? "chosen" : "not chosen"}, ${chosen.size} in all`);
+  };
   const same = (a2, b) => a2.startBeat === b.startBeat && a2.pitch === b.pitch;
   function clampCursor() {
     cursor.pitch = Math.max(0, Math.min(127, cursor.pitch));
@@ -33736,11 +33935,18 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     const base = `${spokenName(pitch)}, ${where(step)}${past}`;
     if (!note) return base;
     const start = note.startBeat === beatOf(step) ? "note" : "inside a note";
-    return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}`;
+    return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}${chosen.has(keyOf3(note)) ? ", chosen" : ""}`;
   }
   function draw(next = clip) {
     clip = next;
     if (!clip) return;
+    tools.hidden = clip.notes.length === 0 || !onTransform;
+    const present = new Set(clip.notes.map(keyOf3));
+    chosen = new Set([...chosen].filter((k) => present.has(k)));
+    if (selectAll) {
+      selectAll.hidden = chosen.size === clip.notes.length;
+      selectNone.hidden = chosen.size === 0;
+    }
     const hadFocus = grid.contains(document2.activeElement);
     clampCursor();
     const notes = shown();
@@ -33771,10 +33977,12 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
         if (starts) classes.push("start");
         if (ends) classes.push("end");
         if (note && note === selected) classes.push("selected");
+        const isChosen = note && chosen.has(keyOf3(note));
+        if (isChosen) classes.push("chosen");
         if (step % STEPS_PER_BEAT === 0) classes.push("beat");
         if (step >= clipSteps()) classes.push("beyond");
         cell.className = classes.join(" ");
-        cell.textContent = starts ? "\u25A0" : note ? "\u2013" : "";
+        cell.textContent = starts ? isChosen ? "\u25A3" : "\u25A0" : note ? "\u2013" : "";
         cell.setAttribute("aria-label", describe(pitch, step));
         const here = pitch === cursor.pitch && step === cursor.step;
         cell.tabIndex = here ? 0 : -1;
@@ -33850,6 +34058,21 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     else if (key === "Enter" || key === " ") {
       event.preventDefault();
       toggle();
+    } else if (key === "Escape" && preview === null) {
+      event.preventDefault();
+      if (chosen.size > 0) {
+        chosen = /* @__PURE__ */ new Set();
+        draw();
+        say2("No notes chosen");
+      } else onClose();
+    } else if (key === "s" || key === "S") {
+      event.preventDefault();
+      const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
+      if (here) toggleChosen(here);
+      else say2(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`);
+    } else if ((key === "a" || key === "A") && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      chooseAll();
     } else if (key === "Delete" || key === "Backspace") {
       event.preventDefault();
       const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
@@ -33884,6 +34107,12 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     if (!from) return;
     event.preventDefault();
     const note = noteAt(clip.notes, from.pitch, beatOf(from.step));
+    if (note && event.shiftKey) {
+      cursor = { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) };
+      toggleChosen(note);
+      document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
+      return;
+    }
     const at = now();
     if (note && lastPress && same(lastPress.note, note) && at - lastPress.at < 400) {
       lastPress = null;
@@ -33938,6 +34167,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       options = { beatsPerBar };
       heading.textContent = `Notes of the clip at ${barBeat(next.startBeat, beatsPerBar)} on ${label}`;
       close.setAttribute("aria-label", `Close the notes of the clip on ${label}`);
+      chosen = /* @__PURE__ */ new Set();
       const first4 = next.notes[0];
       cursor = first4 ? { pitch: first4.pitch, step: Math.round(first4.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2);
@@ -33962,6 +34192,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     /** Close the clip, leaving the note that says how to open one. */
     hide() {
       clip = null;
+      chosen = /* @__PURE__ */ new Set();
       preview = null;
       grid.textContent = "";
       head.hidden = true;
@@ -34306,6 +34537,17 @@ function createArrangement(ctx2) {
       { op: "setClipNotes", id, notes }
     ]),
     onAudition: audition,
+    onTransform: (name2, options, { indices = null } = {}) => {
+      let changes;
+      try {
+        changes = describeNoteTransform(ctx2.dispatcher.project, pianoRoll.clipId, name2, options, { indices });
+      } catch (error2) {
+        log2(error2.message, "error");
+        return error2.message;
+      }
+      const result = edit(changes);
+      return result.ok ? void 0 : result.message;
+    },
     onClose: () => {
       const id = pianoRoll.clipId;
       pianoRoll.hide();
@@ -34681,8 +34923,8 @@ function tally(tracks, key) {
   const on = tracks.filter((t) => t.channel[key]).length;
   return on === 0 ? "none" : on === tracks.length ? "all" : "some";
 }
-function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus }) {
-  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onBus })) {
+function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, onLevelShift, onPanShift }) {
+  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== "function") throw new Error(`createBulkTrackPanel needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -34737,10 +34979,27 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus }) 
   bus.id = "bulk-bus";
   bus.textContent = "Send to a new bus";
   bus.addEventListener("click", () => onBus());
+  const shifts = document2.createElement("div");
+  shifts.className = "track-actions";
+  shifts.setAttribute("role", "group");
+  shifts.setAttribute("aria-label", "Move all selected tracks together");
+  for (const [id, text, call] of [
+    ["bulk-quieter", "Level down 1 dB", () => onLevelShift(-1)],
+    ["bulk-louder", "Level up 1 dB", () => onLevelShift(1)],
+    ["bulk-pan-left", "Pan left 0.1", () => onPanShift(-0.1)],
+    ["bulk-pan-right", "Pan right 0.1", () => onPanShift(0.1)]
+  ]) {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = id;
+    button.textContent = text;
+    button.addEventListener("click", call);
+    shifts.append(button);
+  }
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(mute, solo, bus);
-  element.append(summary, actions, colors, sizeLabel);
+  element.append(summary, actions, shifts, colors, sizeLabel);
   return {
     element,
     /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary. */
@@ -34756,6 +35015,34 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus }) 
       size.options[0].selected = true;
     }
   };
+}
+
+// src/model/GroupChannel.js
+function describeLevelShift(project, trackIds, decibels2) {
+  if (!Number.isFinite(decibels2)) throw new Error(`decibels must be a number: ${decibels2}`);
+  const ratio = 10 ** (decibels2 / 20);
+  return tracksOf(project, trackIds).map((track) => ({ op: "setTrackChannel", track: track.id, gain: track.channel.gain * ratio }));
+}
+function describePanShift(project, trackIds, amount) {
+  if (!Number.isFinite(amount)) throw new Error(`pan shift must be a number: ${amount}`);
+  const tracks = tracksOf(project, trackIds);
+  const pans = tracks.map((track) => track.channel.pan);
+  const room = amount >= 0 ? 1 - Math.max(...pans) : -1 - Math.min(...pans);
+  const shift = amount >= 0 ? Math.min(amount, room) : Math.max(amount, room);
+  return tracks.map((track) => ({ op: "setTrackChannel", track: track.id, pan: Math.min(1, Math.max(-1, track.channel.pan + shift)) }));
+}
+function groupMembers(project, trackId) {
+  const folder = project.trackLayout(trackId).folder;
+  return project.orderedTracks.filter((t) => t.id !== trackId && (t.output === trackId || folder !== null && project.trackLayout(t.id).folder === folder)).map((t) => t.id);
+}
+function tracksOf(project, trackIds) {
+  const ids = [...new Set(trackIds)];
+  if (ids.length === 0) throw new Error("no tracks to change");
+  return ids.map((id) => {
+    const track = project.track(id);
+    if (!track) throw new Error(`no such track: ${id}`);
+    return track;
+  });
 }
 
 // src/ui/NodeView.js
@@ -35100,12 +35387,25 @@ function createDockPanel(ctx2) {
     }
   });
   dock.slot("audio").append(audio.element);
+  const shift = (describe, amount, ids = ctx2.selection.ids) => {
+    let changes;
+    try {
+      changes = describe(ctx2.dispatcher.project, ids, amount);
+    } catch (error2) {
+      log2(error2.message, "error");
+      return;
+    }
+    const result = ctx2.dispatcher.apply(changes);
+    if (!result.ok) log2(result.message, "error");
+  };
   const bulk = createBulkTrackPanel(document2, {
     onChannel: (change) => {
       const ids = ctx2.selection.ids;
       const result = ctx2.dispatcher.apply(ids.map((id) => ({ op: "setTrackChannel", track: id, ...change })));
       if (!result.ok) log2(result.message, "error");
     },
+    onLevelShift: (decibels2) => shift(describeLevelShift, decibels2),
+    onPanShift: (amount) => shift(describePanShift, amount),
     onColor: (color) => {
       for (const id of ctx2.selection.ids) layoutOf(id, { color });
     },
@@ -35191,6 +35491,7 @@ function createDockPanel(ctx2) {
     onColor: (id, color) => layoutOf(id, { color }),
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
+    onGroupLevel: (id, decibels2) => shift(describeLevelShift, decibels2, groupMembers(ctx2.dispatcher.project, id)),
     onMove: (id, delta) => ctx2.dispatcher.project.moveTrack(id, delta),
     onFreeze: (id) => {
       ctx2.bounce.freezeTrack(id).catch((error2) => log2(error2.message, "error"));
@@ -35288,7 +35589,8 @@ function createDockPanel(ctx2) {
         folders: [...new Set(ordered.map((t) => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex((t) => t.id === track.id),
         count: ordered.length,
-        plugins: project.nodes.filter((n2) => n2.track === track.id).length
+        plugins: project.nodes.filter((n2) => n2.track === track.id).length,
+        members: groupMembers(project, track.id).length
       });
       const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === track.id), project.connections);
       const labelOf = (node2) => node2.label ?? ctx2.dispatcher.engineNode(node2.id)?.profile?.label ?? node2.id;
@@ -38073,6 +38375,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",
   clip_set_notes: "arrangement editing, not yet a statement",
+  clip_transform_notes: "arrangement editing, not yet a statement",
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",
   clip_split: "arrangement editing, not yet a statement",
@@ -38784,6 +39087,7 @@ $("play").addEventListener("click", () => transport.play().catch((error2) => log
 $("stop").addEventListener("click", () => {
   ctx.record.finishTake().catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
 });
+$("panic").addEventListener("click", () => transport.panic());
 $("record").addEventListener("click", () => ctx.record.toggle().catch((error2) => log(error2.message, "error")));
 $("tempo").addEventListener("change", async () => {
   const d = await ctx.runtime.ensureRunning();

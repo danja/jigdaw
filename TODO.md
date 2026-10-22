@@ -18,7 +18,7 @@ Where to start, in order. Everything else is below and is not ordered.
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
 2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
 3. The browser checks that need only a window in front (Checks in a real browser).
-4. The rest of the Tracks section: linked faders, then the reorder and collapse item.
+4. The rest of the Tracks section: a fader on a bus or folder, then the reorder and collapse item, and a look in Chrome at the bulk level and pan buttons.
 5. Decide the docked mixer against the tab, which unblocks the Mixer section.
 
 ## Decisions for the maintainer
@@ -178,7 +178,7 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Playhead and loop.** Drag the whole loop, a loop range from a selection or region, and follow for the piano roll.
 - [ ] **Zoom and snap.** Pinch on touch, zoom to selection, seconds as an alternative ruler, the piano roll reading the shared
       `TimeView` (it has its own scale), snapping to other clips' edges, and the grid following signature changes.
-- [ ] **Dock.** Escape does not close the piano roll (Close does); a dock view for an envelope; keyboard selection of a track
+- [ ] **Dock.** Escape in the piano roll's grid now closes it (not seen in Chrome); a dock view for an envelope; keyboard selection of a track
       other than by its name; move a selected group of clips as one.
 - [ ] **First run and narrow layout.** A guided tour and a hint for the second step; collapse the header to icons at phone
       width; "Load onto" following the selected track.
@@ -207,12 +207,16 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
       one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
       not placed after its members in the order; no way to name it on creation from the page.
-- [ ] **Linked faders as a group parameter.** One fader that moves the members of a bus or folder together, with a rule for
-      relative changes (shared with the bulk level and pan item below).
+- [ ] **Linked faders as a group parameter: what is left.** Built over `src/model/GroupChannel.js` (a decibel step keeps the
+      tracks' balance, a pan shift stops when the track nearest the edge arrives): "Members down and up 1 dB" in the panel of
+      a bus or of a track in a folder, moving the tracks that send to it and those sharing its folder, one undo step. Seen in
+      Chrome on 2026-10-22 with a bus of two tracks: both moved to -1.0 dB, the bus stayed at 0. Not built: a fader in the
+      track's header rather than the panel, a pan step for members, typing an amount, and the folder case was not seen.
 - [ ] **Reorder by drag; collapse a lane to a thin bar;** show and hide by folder; resize from the header by keyboard. Order is
       layout and is not part of undo.
-- [ ] **Bulk edit of level and pan for several tracks** (needs a rule for relative changes), and a range select by Shift with
-      the keyboard.
+- [ ] **Bulk level and pan: what is left.** Built: four buttons in the bulk panel (level down and up 1 dB, pan left and
+      right 0.1) over `src/model/GroupChannel.js`, one undo step. Not seen in Chrome; no way to type an amount; a range select
+      by Shift with the keyboard.
 - [ ] **Track input and monitoring.** Choosing among several MIDI and audio inputs, MIDI panic, input monitoring, the
       microphone as a choice on any studio track (the studio page has no record-voice button), a visible state when Web MIDI
       is denied. MIDI learn is under Phase D.
@@ -313,14 +317,24 @@ the page, it is research, not committed.
 
 - [ ] **Velocity, CC and pitch-bend lanes.** Per-note velocity plus one lane per controller, drawn under the roll, keyboard
       editable (`src/ui/PianoRoll.js`).
-- [ ] **Quantize and transforms.** Quantize selection, transpose and octave, velocity scale, reverse, invert, humanize, scale
-      snap. Each a pure function over notes with a test, then one Op.
+- [ ] **Quantize and transforms: what is left.** Built: quantize (grid and strength), transpose, velocity scale and reverse as
+      pure functions (`src/model/NoteTransform.js`), one `setClipNotes` change, the `clip_transform_notes` tool, and a row of
+      buttons in the piano roll (Quantize with a grid choice, semitone and octave, Softer, Louder, Reverse) that act on every
+      note of the clip. Seen in real Chrome on 2026-10-22: the row hidden for an empty clip and shown once there are notes,
+      Quantize to the Beat grid, Reverse, one Undo, and a refused octave step said in the roll's status line. Not seen: Down,
+      Softer and Louder, touch, a screen reader pass. Note selection is built
+      (S or Shift-click toggles a note, Ctrl+A chooses all, Escape lets go before it closes; the buttons then change only the
+      chosen notes, and the choice follows them), unit-tested and not yet seen in Chrome. Not built: a rubber band over notes,
+      keeping the choice on a note moved by hand, invert, humanize (needs a seeded draw), scale snap, quantize strength in the roll, quantize that moves note
+      ends, and a screen reader pass over the row.
 - [ ] **Step input and virtual keyboard.** Enter notes from keys one step at a time; keep the on-screen keyboard playable from
       touch.
 - [ ] **MIDI import and export.** Read and write a Standard MIDI File for one track, plus project-wide export, reusing the
       transport map.
 - [ ] **Multi-clip editing and drum view.** Two clips side by side for reference; a drum lane view where the track holds a kit.
-- [ ] **MIDI panic.** One action that sends note-offs on every track.
+- [ ] **MIDI panic: what is left.** Built: a Panic button in the transport bar (CC 123 and CC 120 to every node, transport
+      left running; `web/app/Transport.js`). The button was pressed in Chrome and logged; not tried with a stuck note; no key for it, no agent tool, and the
+      on-screen keyboards' own held notes are not released.
 
 ### Phase C. Mixing, routing and automation
 

@@ -194,6 +194,7 @@ names the one the mix of every track arrives at. A node with no audio input is r
 | `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?` | Clip id |
 | `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
 | `clip_set_notes` | `clipId`, `notes[]` | |
+| `clip_transform_notes` | `clipId`, `transform`, `grid?`, `strength?`, `semitones?`, `factor?`, `indices?` | |
 | `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
 | `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `color?` | Revision and the clip |
 | `clip_split` | `clipId`, `atBeat` | Both clip ids |
@@ -201,7 +202,9 @@ names the one the mix of every track arrives at. A node with no audio input is r
 | `clip_remove` | `clipId` | |
 
 A note is `{ startBeat, lengthBeats, pitch, velocity }`, its start counted from the clip's.
-`clip_set_notes` replaces every note at once, so a phrase is one edit and one undo. A MIDI clip
+`clip_set_notes` replaces every note at once, so a phrase is one edit and one undo. `clip_transform_notes` is the same
+one edit made from a rule: `quantize`, `transpose`, `scaleVelocity` or `reverse`, over all the notes or those at `indices`.
+It is refused whole if any note would leave its range. A MIDI clip
 plays into its track's MIDI input and into nothing on a track with none. An audio clip names its
 file by absolute IRI and plays into the track's audio input, or straight to its fader.
 

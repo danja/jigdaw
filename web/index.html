@@ -470,7 +470,7 @@
   .track-color-said { font-size:13px; color:var(--dim); }
   .track-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .track-position { font-size:13px; color:var(--dim); margin-right:auto; }
-  .track-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .track-panel button:not(.swatch), .bulk-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel .danger { border-color:var(--err); }
   .timeline-row { border-left:4px solid var(--track-color, transparent); }
@@ -490,6 +490,8 @@
   .piano-roll h3 { margin:0; font-size:14px; flex:1; }
   .piano-roll header button { min-height:44px; padding:6px 12px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .piano-roll-tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-tools button, .piano-roll-tools select { min-height:44px; padding:6px 12px; }
   .piano-roll-scroll { overflow:auto; max-height:60vh; border:1px solid var(--line); }
   .piano-roll-grid { position:relative; width:max-content; --key:3rem; --cell:28px; }
   .piano-roll-row { display:flex; }
@@ -507,6 +509,7 @@
   /* The last square of a longer note is its handle. */
   .piano-roll-cell.on.end:not(.start) { cursor:ew-resize; }
   .piano-roll-cell.on.selected { background:#6aa6ff; }
+  .piano-roll-cell.on.chosen { background:#f5a524; outline:2px solid #fff; outline-offset:-2px; }
   /* The bar past the end of the clip: drawing into it makes the clip longer. */
   .piano-roll-cell.beyond { opacity:.5; }
   .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
@@ -602,6 +605,7 @@
   <button id="toggle-browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
   <button id="play" data-icon="play" aria-pressed="false">Play</button>
   <button id="stop" data-icon="stop">Stop</button>
+  <button id="panic" type="button" title="Silence every note that is stuck on, and keep playing">Panic</button>
   <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
   <span class="tempo" id="tempo-group">
     <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>

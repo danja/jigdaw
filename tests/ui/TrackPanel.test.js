@@ -110,3 +110,32 @@ describe('the track panel', () => {
     expect(() => createTrackPanel(document, { onRename () {} })).toThrow(/onColor/)
   })
 })
+
+describe('the group level buttons', () => {
+  function withGroup (members, give = true) {
+    const calls = []
+    const noop = () => {}
+    const panel = createTrackPanel(document, {
+      onRename: noop, onColor: noop, onSize: noop, onFolder: noop, onMove: noop, onDelete: noop, onFreeze: noop,
+      ...(give ? { onGroupLevel: (id, db) => calls.push([id, db]) } : {})
+    })
+    document.body.append(panel.element)
+    panel.show({ id: 'bus', name: 'Bus', defaultName: 'Bus', layout: { order: null, color: null, laneSize: 'medium', folder: null }, index: 0, count: 1, plugins: 0, members })
+    return { calls, group: panel.element.querySelector('#track-group-level'), $: id => document.getElementById(id) }
+  }
+
+  it('step the members by a decibel, and name how many', () => {
+    const { calls, $, group } = withGroup(3)
+    expect(group.hidden).toBe(false)
+    expect(group.getAttribute('aria-label')).toContain('3 tracks')
+    $('track-group-down').dispatchEvent(event('click'))
+    $('track-group-up').dispatchEvent(event('click'))
+    expect(calls).toEqual([['bus', -1], ['bus', 1]])
+  })
+
+  it('are left out for a track with no members, or when the host gives no way to act', () => {
+    expect(withGroup(0).group.hidden).toBe(true)
+    document.body.textContent = ''
+    expect(withGroup(2, false).group.hidden).toBe(true)
+  })
+})
