@@ -42,6 +42,8 @@ export function createRack (ctx) {
   // Each node's generated panel, kept across redraws so a control keeps its
   // element, and so its focus can be put back.
   const panels = new Map()
+  // Every on-screen keyboard drawn, so Panic can release what they hold.
+  const keyboards = new Set()
   // The track last chosen or last loaded onto; null until then, which means
   // the newest track.
   let loadTarget = null
@@ -672,12 +674,15 @@ export function createRack (ctx) {
           }])
         }
       })
+      keyboards.add(keyboard)
       element.append(keyboard.element)
     }
   }
 
   return {
     draw: drawRack,
+    /** Let go of every note held on an on-screen keyboard, each as a note off to its own plugin. */
+    releaseKeys () { for (const keyboard of keyboards) keyboard.allNotesOff() },
     drawTargets,
     trackLabel,
     forgetNode,

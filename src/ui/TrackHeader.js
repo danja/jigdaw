@@ -15,7 +15,7 @@ import { decibels, panPosition } from './Strip.js'
 import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -34,6 +34,29 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     event.preventDefault()
     onMove(id, event.key === 'ArrowUp' ? -1 : 1)
   })
+  // Plus and minus make the lane one size taller or shorter, so resizing does not need the pointer or the dock.
+  name.addEventListener('keydown', event => {
+    if (!onSizeStep || event.altKey || event.ctrlKey || event.metaKey) return
+    const by = event.key === '+' || event.key === '=' ? 1 : event.key === '-' || event.key === '_' ? -1 : 0
+    if (by === 0) return
+    event.preventDefault()
+    onSizeStep(id, by)
+  })
+  // A grip to drag the track to another place in the order. Only where the page can follow a drag; the keys above
+  // do the same without it, and a grip that did nothing would be left out.
+  const grip = document.createElement('button')
+  grip.type = 'button'
+  grip.className = 'head-grip'
+  grip.id = `head-${id}-grip`
+  grip.textContent = '⠿'
+  grip.addEventListener('pointerdown', event => { if (event.button === 0) onGrip(id, event) })
+  // On a collapsed lane only: brings it back to small. Left out where the page cannot, and where the lane is not collapsed.
+  const expand = document.createElement('button')
+  expand.type = 'button'
+  expand.className = 'head-expand'
+  expand.id = `head-${id}-expand`
+  expand.textContent = 'Expand'
+  expand.addEventListener('click', () => onExpand(id))
   // D copies the track, as it copies a clip. Reachable here because a small lane hides every button but the name.
   name.addEventListener('keydown', event => {
     if (!onDuplicateTrack || event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== 'd') return
@@ -137,7 +160,10 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   latency.hidden = true
 
   mix.append(mute, solo, level.label, pan.label, silent)
-  element.append(name, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
+  const title = document.createElement('div')
+  title.className = 'head-title'
+  title.append(name, ...(onGrip ? [grip] : []), ...(onExpand ? [expand] : []))
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
 
   return {
     element,
@@ -154,7 +180,11 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       // A colour is a second cue beside the name, which is always shown.
       if (color) element.style.setProperty('--track-color', color); else element.style.removeProperty('--track-color')
       element.dataset.size = size
-      name.title = onDuplicateTrack ? 'Alt with Up or Down moves this track, D duplicates it' : 'Alt with Up or Down moves this track'
+      expand.hidden = size !== 'collapsed'
+      expand.setAttribute('aria-label', `Expand ${label}`)
+      grip.setAttribute('aria-label', `Drag to move ${label}, or press Alt with Up or Down on its name`)
+      grip.title = 'Drag to move this track'
+      name.title = `Alt with Up or Down moves this track${onDuplicateTrack ? ', D duplicates it' : ''}${onSizeStep ? ', plus and minus change the lane size' : ''}`
       element.setAttribute('role', 'group')
       kindLabel.hidden = kind === null
       kindLabel.textContent = kind === null ? '' : TRACK_KIND_LABELS[kind]

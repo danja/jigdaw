@@ -30,6 +30,11 @@ function makeSource (context) {
 /** Seconds between asking for the count-in and its first click. */
 const CLICK_LEAD = 0.1
 
+/** Ctrl or Cmd with the full stop: Panic from anywhere, including while a field has focus. */
+export function isPanicShortcut (event) {
+  return Boolean((event.ctrlKey || event.metaKey) && !event.altKey && event.key === '.')
+}
+
 export function createTransport (ctx) {
   const { document, $, log } = ctx
   // Envelopes on plugin parameters, played by the scheduler; a hand edit while one plays suspends it (AutomationHost.js).
@@ -205,6 +210,8 @@ export function createTransport (ctx) {
   // stuck by a plugin or a controller, where Stop would also end the take or the loop being worked on.
   function panic () {
     const { engine } = ctx
+    // A note held by the pointer on an on-screen keyboard is let go first, so its own note off is not a stray.
+    ctx.rack?.releaseKeys()
     for (const entry of engine?.nodes() ?? []) {
       engine.post(entry.id, { type: 'events', events: [
         { frame: 0, bytes: Uint8Array.from([0xb0, 123, 0]) },

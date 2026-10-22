@@ -12,11 +12,39 @@ const track = (muted = false, soloed = false) => ({ channel: { muted, soloed } }
 function build (tracks = [track(), track()]) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size'), onBus: rec('bus'), onLevelShift: rec('level'), onPanShift: rec('pan') })
+  const panel = createBulkTrackPanel(document, { onChannel: rec('channel'), onColor: rec('color'), onSize: rec('size'), onFolder: rec('folder'), onBus: rec('bus'), onLevelShift: rec('level'), onPanShift: rec('pan') })
   document.body.append(panel.element)
   panel.show({ tracks, labels: ['Lead', 'Bass'] })
   return { panel, calls, $: id => document.getElementById(id) }
 }
+
+describe('the folder controls', () => {
+  it('commit a trimmed name for all, ignore an empty one, and offer the names in use', () => {
+    const { $, calls, panel } = build()
+    panel.show({ tracks: [track(), track()], labels: ['Lead', 'Bass'], folders: ['Drums', 'Keys'] })
+    expect([...document.querySelectorAll('#bulk-folder-names option')].map(o => o.value)).toEqual(['Drums', 'Keys'])
+    $('bulk-folder').value = '  Drums '
+    $('bulk-folder').dispatchEvent(event('change'))
+    $('bulk-folder').value = '   '
+    $('bulk-folder').dispatchEvent(event('change'))
+    expect(calls).toEqual([['folder', 'Drums']])
+    expect($('bulk-folder').value).toBe('')
+  })
+
+  it('leave out Take out of their folder until one of them is in a folder, then send null', () => {
+    const { $, calls, panel } = build()
+    expect($('bulk-unfolder').hidden).toBe(true)
+    panel.show({ tracks: [track(), track()], labels: ['Lead', 'Bass'], inFolder: 1 })
+    expect($('bulk-unfolder').hidden).toBe(false)
+    $('bulk-unfolder').dispatchEvent(event('click'))
+    expect(calls).toEqual([['folder', null]])
+  })
+
+  it('will not be built without onFolder', () => {
+    const noop = () => {}
+    expect(() => createBulkTrackPanel(document, { onChannel: noop, onColor: noop, onSize: noop, onBus: noop, onLevelShift: noop, onPanShift: noop })).toThrow(/onFolder/)
+  })
+})
 
 describe('the bus button', () => {
   it('asks for a bus with no argument', () => {

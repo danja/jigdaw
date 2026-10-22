@@ -312,7 +312,7 @@ session because its editor graph is missing or unreadable.
 
 The editor graph is checked against the editor shapes in `vocabs/shapes.ttl` before it is applied: a
 position has one decimal `jig:x` and one `jig:y`, `jig:order` is a whole number from zero,
-`jig:laneSize` is `small`, `medium` or `large`, `jig:folder` is a name of 1 to 60 characters, and `jig:color` is lower case `#rrggbb`. Its subjects
+`jig:laneSize` is `collapsed`, `small`, `medium` or `large`, `jig:folder` is a name of 1 to 60 characters, and `jig:color` is lower case `#rrggbb`. Its subjects
 carry no type, so the shapes target by property. A graph that breaks one is left out whole, with a
 message, and the session opens with default layout. `examples/reference-editor.ttl` conforms and
 `examples/counterexample-editor.ttl` breaks each shape once.
@@ -326,7 +326,7 @@ The subjects are fragments of the project IRI, as everywhere else. What it may s
 | a track | `jig:color` | lower case `#rrggbb` |
 | a clip | `jig:color` | lower case `#rrggbb`, a person's mark on one clip; absent means the clip is drawn in its track's own way |
 | a track | `jig:folder` | the name of the folder it is shown in, 1 to 60 characters; tracks with the same name are one folder |
-| a track | `jig:laneSize` | `small` (the default, so not written; it was `medium` until 2026-10-10), `medium` or `large` |
+| a track | `jig:laneSize` | `small` (the default, so not written; it was `medium` until 2026-10-10), `medium`, `large`, or `collapsed`, a thin bar showing only the name |
 
 A track with no `jig:order` follows the placed tracks in the order it was made. Anything
 naming a node or track the session does not hold is dropped. None of these changes the

@@ -882,7 +882,7 @@ jig:color a owl:DatatypeProperty ;
 jig:laneSize a owl:DatatypeProperty ;
     rdfs:domain jig:Track ; rdfs:range xsd:string ;
     rdfs:label "lane size" ;
-    rdfs:comment """How tall the track's lane is drawn: small, medium or large. Editor
+    rdfs:comment """How tall the track's lane is drawn: collapsed (a thin bar), small, medium or large. Editor
         metadata. Small when absent: it was medium until 2026-10-10, and a session written before then that
         said nothing is drawn small now.""" .
 

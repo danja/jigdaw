@@ -23,6 +23,15 @@ function build (over = {}) {
 }
 
 describe('the track panel', () => {
+  it('offers Collapsed among the lane sizes, and commits it', () => {
+    const { $, calls } = build()
+    const options = [...$('track-size-input').options].map(o => o.value)
+    expect(options).toEqual(['collapsed', 'small', 'medium', 'large'])
+    $('track-size-input').options[0].selected = true
+    $('track-size-input').dispatchEvent(event('change'))
+    expect(calls).toContainEqual(['size', 't2', 'collapsed'])
+  })
+
   it('commits a folder name trimmed, and an empty one as null, and offers the names in use', () => {
     const { $, calls, panel, state } = build()
     $('track-folder-input').value = '  Drums '

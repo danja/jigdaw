@@ -20438,7 +20438,7 @@ function createAutomationHost(ctx2) {
 }
 
 // src/model/EditorState.js
-var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
+var LANE_SIZES = Object.freeze(["collapsed", "small", "medium", "large"]);
 var DEFAULT_LANE_SIZE = "small";
 var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
@@ -27786,12 +27786,18 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
 }
 
 // src/model/NoteTransform.js
-function quantize(notes, { grid, strength = 1 } = {}) {
+function quantize(notes, { grid, strength = 1, ends = false } = {}) {
   if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
   if (!(Number.isFinite(strength) && strength >= 0 && strength <= 1)) throw new Error(`strength must be from 0 to 1: ${strength}`);
   return notes.map((note) => {
     const target2 = Math.round(note.startBeat / grid) * grid;
-    return { ...note, startBeat: Math.max(0, note.startBeat + (target2 - note.startBeat) * strength) };
+    const startBeat = Math.max(0, note.startBeat + (target2 - note.startBeat) * strength);
+    if (!ends) return { ...note, startBeat };
+    const end = note.startBeat + note.lengthBeats;
+    const endTarget = Math.round(end / grid) * grid;
+    const raw = end + (endTarget - end) * strength - startBeat;
+    const lengthBeats = raw > 0 ? raw : grid;
+    return { ...note, startBeat, lengthBeats };
   });
 }
 function transpose(notes, semitones) {
@@ -27814,11 +27820,47 @@ function reverse(notes, clipLength) {
     return { ...note, startBeat };
   });
 }
+function invert(notes, axis = notes[0]?.pitch) {
+  if (notes.length === 0) return [];
+  if (!Number.isInteger(axis)) throw new Error(`axis must be a whole pitch: ${axis}`);
+  return notes.map((note) => {
+    const pitch = 2 * axis - note.pitch;
+    if (pitch < 0 || pitch > 127) throw new Error(`inverting about ${axis} would put pitch ${note.pitch} outside 0 to 127`);
+    return { ...note, pitch };
+  });
+}
+function draw(seed) {
+  let a2 = seed >>> 0;
+  return () => {
+    a2 = a2 + 1831565813 >>> 0;
+    let t = a2;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
+  if (!Number.isInteger(seed)) throw new Error(`seed must be a whole number: ${seed}`);
+  if (!(Number.isFinite(timing) && timing >= 0)) throw new Error(`timing must be beats from zero up: ${timing}`);
+  if (!(Number.isFinite(velocity) && velocity >= 0)) throw new Error(`velocity must be from zero up: ${velocity}`);
+  const next = draw(seed);
+  return notes.map((note) => {
+    const shift = (next() * 2 - 1) * timing;
+    const change = (next() * 2 - 1) * velocity;
+    return {
+      ...note,
+      startBeat: Math.max(0, note.startBeat + shift),
+      velocity: Math.min(127, Math.max(1, Math.round(note.velocity + change)))
+    };
+  });
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
-  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats)
+  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
+  invert: (notes, { axis }) => invert(notes, axis),
+  humanize: (notes, options) => humanize(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name2, options = {}, { indices = null } = {}) {
@@ -28011,7 +28053,7 @@ var NOTE_SCHEMA = Object.freeze({
   },
   required: ["startBeat", "lengthBeats", "pitch", "velocity"]
 });
-function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, onPanic = null, reel = null }) {
   if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -28284,14 +28326,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_layout",
-      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
+      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is collapsed (a thin bar), small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: "object",
         properties: {
           trackId: { type: "string" },
           move: { type: "integer" },
           color: { type: ["string", "null"] },
-          laneSize: { type: "string", enum: ["small", "medium", "large"] },
+          laneSize: { type: "string", enum: ["collapsed", "small", "medium", "large"] },
           folder: { type: ["string", "null"] }
         },
         required: ["trackId"]
@@ -28434,7 +28476,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -28442,8 +28484,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           transform: { type: "string", enum: NOTE_TRANSFORMS },
           grid: { type: "number" },
           strength: { type: "number" },
+          ends: { type: "boolean" },
           semitones: { type: "integer" },
           factor: { type: "number" },
+          axis: { type: "integer" },
+          timing: { type: "number" },
+          velocity: { type: "number" },
+          seed: { type: "integer" },
           indices: { type: "array", items: { type: "integer" } },
           expectedRevision: { type: "integer" }
         },
@@ -28906,6 +28953,20 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "transport_panic",
+      description: "Silence every note that is stuck: all notes off and all sound off go to every plugin, and the transport keeps running. Use it instead of transport_stop when a note hangs and the loop being worked on should go on.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        if (!onPanic) return failed("this host cannot panic: no transport is connected");
+        try {
+          await onPanic();
+          return ok({});
+        } catch (error2) {
+          return failed(`panic failed: ${error2?.message ?? error2}`);
+        }
+      }
+    },
+    {
       name: "transport_configure",
       description: "Set the tempo, time signature or loop.",
       inputSchema: {
@@ -29081,8 +29142,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel = null, target: target2 = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel });
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, onPanic, reel = null, target: target2 = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, onPanic, reel });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -29187,6 +29248,9 @@ function createRuntime(ctx2) {
         onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
+        },
+        onPanic: async () => {
+          ctx2.transport.panic();
         },
         // script_run, built before the reel exists and calling it once it does.
         reel: ctx2.script.agentReel()
@@ -29367,6 +29431,9 @@ function makeSource(context) {
   return node;
 }
 var CLICK_LEAD = 0.1;
+function isPanicShortcut(event) {
+  return Boolean((event.ctrlKey || event.metaKey) && !event.altKey && event.key === ".");
+}
 function createTransport(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   const automation = createAutomationHost(ctx2);
@@ -29507,6 +29574,7 @@ function createTransport(ctx2) {
   }
   function panic() {
     const { engine } = ctx2;
+    ctx2.rack?.releaseKeys();
     for (const entry of engine?.nodes() ?? []) {
       engine.post(entry.id, { type: "events", events: [
         { frame: 0, bytes: Uint8Array.from([176, 123, 0]) },
@@ -30642,7 +30710,7 @@ function createMixer(document2, { onChange }) {
   const element = document2.createElement("div");
   element.className = "mixer";
   const channels = /* @__PURE__ */ new Map();
-  function draw({ tracks, nodes, audibility, audioOutputsOf, labelFor }) {
+  function draw2({ tracks, nodes, audibility, audioOutputsOf, labelFor }) {
     const silent = new Map(audibility.map((a2) => [a2.trackId, a2.silent]));
     const shown = tracks.filter((t) => mixable(t, nodes, audioOutputsOf));
     for (const id of [...channels.keys()]) {
@@ -30683,7 +30751,7 @@ function createMixer(document2, { onChange }) {
     if (!same) element.replaceChildren(...wanted);
   }
   const meters = () => new Map([...channels].map(([id, channel]) => [id, channel.meter]));
-  return { element, draw, meters };
+  return { element, draw: draw2, meters };
 }
 
 // src/ui/PluginFrame.js
@@ -31150,6 +31218,7 @@ function slotTitle(node, profile, name2) {
 function createRack(ctx2) {
   const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
   const panels = /* @__PURE__ */ new Map();
+  const keyboards = /* @__PURE__ */ new Set();
   let loadTarget = null;
   let watching = null;
   let pending = null;
@@ -31618,11 +31687,16 @@ function createRack(ctx2) {
           }]);
         }
       });
+      keyboards.add(keyboard);
       element.append(keyboard.element);
     }
   }
   return {
     draw: drawRack,
+    /** Let go of every note held on an on-screen keyboard, each as a note off to its own plugin. */
+    releaseKeys() {
+      for (const keyboard of keyboards) keyboard.allNotesOff();
+    },
     drawTargets,
     trackLabel,
     forgetNode,
@@ -32162,7 +32236,7 @@ function trackKind(project, track, profileOf) {
 var TRACK_KIND_LABELS = Object.freeze({ bus: "Bus", instrument: "Instrument", midi: "MIDI", audio: "Audio" });
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null }) {
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
@@ -32178,6 +32252,27 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
     event.preventDefault();
     onMove(id, event.key === "ArrowUp" ? -1 : 1);
   });
+  name2.addEventListener("keydown", (event) => {
+    if (!onSizeStep || event.altKey || event.ctrlKey || event.metaKey) return;
+    const by = event.key === "+" || event.key === "=" ? 1 : event.key === "-" || event.key === "_" ? -1 : 0;
+    if (by === 0) return;
+    event.preventDefault();
+    onSizeStep(id, by);
+  });
+  const grip = document2.createElement("button");
+  grip.type = "button";
+  grip.className = "head-grip";
+  grip.id = `head-${id}-grip`;
+  grip.textContent = "\u283F";
+  grip.addEventListener("pointerdown", (event) => {
+    if (event.button === 0) onGrip(id, event);
+  });
+  const expand2 = document2.createElement("button");
+  expand2.type = "button";
+  expand2.className = "head-expand";
+  expand2.id = `head-${id}-expand`;
+  expand2.textContent = "Expand";
+  expand2.addEventListener("click", () => onExpand(id));
   name2.addEventListener("keydown", (event) => {
     if (!onDuplicateTrack || event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== "d") return;
     event.preventDefault();
@@ -32265,7 +32360,10 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   latency.className = "head-latency";
   latency.hidden = true;
   mix.append(mute, solo, level.label, pan.label, silent);
-  element.append(name2, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
+  const title = document2.createElement("div");
+  title.className = "head-title";
+  title.append(name2, ...onGrip ? [grip] : [], ...onExpand ? [expand2] : []);
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
   return {
     element,
     /**
@@ -32281,7 +32379,11 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       if (color) element.style.setProperty("--track-color", color);
       else element.style.removeProperty("--track-color");
       element.dataset.size = size;
-      name2.title = onDuplicateTrack ? "Alt with Up or Down moves this track, D duplicates it" : "Alt with Up or Down moves this track";
+      expand2.hidden = size !== "collapsed";
+      expand2.setAttribute("aria-label", `Expand ${label}`);
+      grip.setAttribute("aria-label", `Drag to move ${label}, or press Alt with Up or Down on its name`);
+      grip.title = "Drag to move this track";
+      name2.title = `Alt with Up or Down moves this track${onDuplicateTrack ? ", D duplicates it" : ""}${onSizeStep ? ", plus and minus change the lane size" : ""}`;
       element.setAttribute("role", "group");
       kindLabel.hidden = kind === null;
       kindLabel.textContent = kind === null ? "" : TRACK_KIND_LABELS[kind];
@@ -32747,7 +32849,7 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
 }
 
 // src/ui/FolderBar.js
-function createFolderBar(document2, { onToggle }) {
+function createFolderBar(document2, { onToggle, onMove = null }) {
   const element = document2.createElement("div");
   element.className = "timeline-folder";
   element.setAttribute("role", "group");
@@ -32757,10 +32859,25 @@ function createFolderBar(document2, { onToggle }) {
   let name2 = "";
   button.addEventListener("click", () => onToggle(name2));
   element.append(button);
+  const move = (delta, text) => {
+    const step = document2.createElement("button");
+    step.type = "button";
+    step.className = `folder-move folder-move-${delta < 0 ? "up" : "down"}`;
+    step.textContent = text;
+    step.addEventListener("click", () => onMove(delta));
+    return step;
+  };
+  const up = move(-1, "Move up");
+  const down = move(1, "Move down");
+  if (onMove) element.append(up, down);
   return {
     element,
-    update({ name: folder, count, collapsed }) {
+    update({ name: folder, count, collapsed, canUp = false, canDown = false }) {
       name2 = folder;
+      up.hidden = !canUp;
+      down.hidden = !canDown;
+      up.setAttribute("aria-label", `Move folder ${folder} up`);
+      down.setAttribute("aria-label", `Move folder ${folder} down`);
       const tracks = count === 1 ? "1 track" : `${count} tracks`;
       button.textContent = `${collapsed ? "\u25B8" : "\u25BE"} ${folder}, ${tracks}${collapsed ? ", hidden" : ""}`;
       button.setAttribute("aria-expanded", String(!collapsed));
@@ -32781,7 +32898,7 @@ var COLORS = Object.freeze([
   { name: "Purple", value: "#8e4ec6" },
   { name: "Pink", value: "#e93d82" }
 ]);
-var SIZES = Object.freeze([["small", "Small"], ["medium", "Medium"], ["large", "Large"]]);
+var SIZES = Object.freeze([["collapsed", "Collapsed"], ["small", "Small"], ["medium", "Medium"], ["large", "Large"]]);
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
@@ -33492,7 +33609,7 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -33561,7 +33678,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   });
   view.subscribe(() => {
     tools.sync();
-    if (lastArgs) draw(lastArgs);
+    if (lastArgs) draw2(lastArgs);
   });
   scroller.addEventListener("keydown", (event) => {
     if (event.target !== scroller || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -33597,14 +33714,18 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         live.add(key);
         let bar = folderBars.get(key);
         if (!bar) {
-          bar = createFolderBar(document2, { onToggle: (folder) => {
+          bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onToggle: (folder) => {
             collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder);
-            if (lastArgs) draw(lastArgs);
+            if (lastArgs) draw2(lastArgs);
             folderBars.get(key)?.element.querySelector("button").focus();
           } });
           folderBars.set(key, bar);
         }
-        bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2) });
+        bar.runStart = i2;
+        bar.runLength = end - i2;
+        bar.firstTrack = tracks[i2].id;
+        bar.neighbours = { up: tracks[i2 - 1]?.id ?? null, down: tracks[end]?.id ?? null };
+        bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2), canUp: i2 > 0, canDown: end < tracks.length });
         out.push(bar.element);
       }
       if (name2 === null || !collapsedFolders.has(name2)) out.push(...rowsInOrder.slice(i2, end));
@@ -33613,7 +33734,51 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key);
     return out;
   }
-  function draw(args) {
+  function moveFolder(key, delta) {
+    const bar = folderBars.get(key);
+    if (!bar) return;
+    const first4 = bar.firstTrack;
+    if (delta < 0) onMoveTrack(bar.neighbours.up, bar.runLength);
+    else onMoveTrack(bar.neighbours.down, -bar.runLength);
+    const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
+    const wanted = moved?.element.querySelector(delta < 0 ? ".folder-move-up" : ".folder-move-down");
+    const target2 = wanted && !wanted.hidden ? wanted : moved?.element.querySelector(".folder-toggle");
+    target2?.focus();
+  }
+  function dragTrack(id, event) {
+    event.preventDefault();
+    event.target?.releasePointerCapture?.(event.pointerId);
+    const rowOf = (trackId) => rows.get(trackId)?.row;
+    let target2 = id;
+    rowOf(id)?.classList.add("dragging");
+    const clear = () => {
+      document2.removeEventListener("pointermove", over);
+      document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", cancel);
+      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
+    };
+    function over(e) {
+      const hit = e.target?.closest?.(".timeline-row")?.dataset.track;
+      if (!hit || hit === target2 || !rows.has(hit)) return;
+      rowOf(target2)?.classList.remove("drop-target");
+      target2 = hit;
+      if (target2 !== id) rowOf(target2).classList.add("drop-target");
+    }
+    function up() {
+      clear();
+      const order = lastArgs.tracks.map((t) => t.id);
+      const delta = order.indexOf(target2) - order.indexOf(id);
+      if (delta !== 0) onMoveTrack(id, delta);
+      document2.getElementById(`show-track-${id}`)?.focus();
+    }
+    function cancel() {
+      clear();
+    }
+    document2.addEventListener("pointermove", over);
+    document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", cancel);
+  }
+  function draw2(args) {
     lastArgs = args;
     scroller.style.setProperty("--view", `${scroller.clientWidth}px`);
     const {
@@ -33668,6 +33833,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       if (!entry) {
         const row = document2.createElement("div");
         row.className = "timeline-row";
+        row.dataset.track = track.id;
         row.setAttribute("role", "group");
         const header = createTrackHeader(document2, {
           id: track.id,
@@ -33677,6 +33843,9 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onMove: onMoveTrack,
           onArm,
           onDuplicateTrack,
+          onGrip: dragTrack,
+          onExpand: onExpandTrack,
+          onSizeStep,
           onSelect: (id, { toggle }) => toggle ? selection.toggle("track", id) : selection.set("track", [id])
         });
         const lane = document2.createElement("div");
@@ -33751,7 +33920,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     if (tools.following() && !head.hidden && (programmatic === null || Math.abs(scroller.scrollLeft - programmatic) > 1)) tools.setFollow(false);
     programmatic = null;
   });
-  return { element, draw, playhead, view };
+  return { element, draw: draw2, playhead, view };
 }
 
 // src/ui/PianoRoll.js
@@ -33790,7 +33959,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   const help = document2.createElement("p");
   help.className = "note";
   help.id = "piano-roll-help";
-  help.textContent = "Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, or its last square to change its length. Double-click a note, or press Delete, to remove it. Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave, S chooses a note to change with others (or Shift-click it), Ctrl+A chooses all, Escape lets go of the choice, then closes.";
+  help.textContent = "Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, or its last square to change its length. Double-click a note, or press Delete, to remove it. Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave, S chooses a note to change with others (or Shift-click it), Shift-drag across empty squares chooses the notes it touches, Ctrl+A chooses all, Escape lets go of the choice, then closes.";
   const status = document2.createElement("p");
   status.className = "visually-hidden";
   status.setAttribute("role", "status");
@@ -33828,6 +33997,32 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     }
     gridLabel.append(gridSelect);
     tools.append(gridLabel);
+    const strengthLabel = document2.createElement("label");
+    strengthLabel.append(document2.createTextNode("Strength "));
+    const strengthSelect = document2.createElement("select");
+    strengthSelect.id = "roll-quantize-strength";
+    for (const [value2, text] of [["1", "100%"], ["0.75", "75%"], ["0.5", "50%"], ["0.25", "25%"]]) {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = text;
+      option.selected = value2 === "1";
+      strengthSelect.append(option);
+    }
+    strengthLabel.append(strengthSelect);
+    tools.append(strengthLabel);
+    const endsLabel = document2.createElement("label");
+    endsLabel.append(document2.createTextNode("Move "));
+    const endsSelect = document2.createElement("select");
+    endsSelect.id = "roll-quantize-ends";
+    for (const [value2, text] of [["starts", "Starts"], ["both", "Starts and ends"]]) {
+      const option = document2.createElement("option");
+      option.value = value2;
+      option.textContent = text;
+      option.selected = value2 === "starts";
+      endsSelect.append(option);
+    }
+    endsLabel.append(endsSelect);
+    tools.append(endsLabel);
     const ask = (name2, options2, done) => () => {
       const indices = chosen.size === 0 ? null : clip.notes.flatMap((n2, i2) => chosen.has(keyOf3(n2)) ? [i2] : []);
       const before = clip.notes;
@@ -33846,19 +34041,23 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
         }
         for (const n2 of unmatched) keep.add(keyOf3(n2));
         chosen = keep;
-        draw();
+        draw2();
       }
-      say2(`${done}${indices === null ? "" : ` (${indices.length} chosen)`}`);
+      say2(indices === null ? done : done.replace(/^Every note/, "Chosen notes").replace("every note", "the chosen notes").replace(/^Notes/, "Chosen notes"));
     };
     const buttons = [
-      ["roll-quantize", "Quantize", () => ask("quantize", { grid: Number(gridSelect.value) }, "Quantized every note to the grid")()],
+      ["roll-quantize", "Quantize", () => ask("quantize", { grid: Number(gridSelect.value), strength: Number(strengthSelect.value), ends: endsSelect.value === "both" }, strengthSelect.value === "1" ? "Quantized every note to the grid" : `Quantized every note ${Math.round(Number(strengthSelect.value) * 100)}% of the way to the grid`)()],
       ["roll-down", "Down a semitone", ask("transpose", { semitones: -1 }, "Every note down a semitone")],
       ["roll-up", "Up a semitone", ask("transpose", { semitones: 1 }, "Every note up a semitone")],
       ["roll-octave-down", "Down an octave", ask("transpose", { semitones: -12 }, "Every note down an octave")],
       ["roll-octave-up", "Up an octave", ask("transpose", { semitones: 12 }, "Every note up an octave")],
       ["roll-softer", "Softer", ask("scaleVelocity", { factor: 0.8 }, "Every note softer")],
       ["roll-louder", "Louder", ask("scaleVelocity", { factor: 1.25 }, "Every note louder")],
-      ["roll-reverse", "Reverse", ask("reverse", {}, "Notes reversed in time")]
+      ["roll-reverse", "Reverse", ask("reverse", {}, "Notes reversed in time")],
+      // About the first note's pitch, so a rising line falls.
+      ["roll-invert", "Invert pitches", ask("invert", {}, "Notes inverted about the first note")],
+      // A fresh seed for each press, so pressing again gives a different feel; the edit itself is reproducible from it.
+      ["roll-humanize", "Humanize", () => ask("humanize", { timing: 0.05, velocity: 10, seed: now() }, "Notes humanized a little in time and velocity")()]
     ];
     for (const [id, text, run] of buttons) {
       const button = document2.createElement("button");
@@ -33882,7 +34081,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     });
     selectNone = pick("roll-select-none", "Let go of the choice", () => {
       chosen = /* @__PURE__ */ new Set();
-      draw();
+      draw2();
       say2("No notes chosen");
     });
   }
@@ -33902,6 +34101,8 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   let low = 48;
   let preview = null;
   let lastPress = null;
+  let band = null;
+  let abandon = null;
   const say2 = (message) => {
     status.textContent = message;
   };
@@ -33912,13 +34113,13 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   const shown = () => preview ?? clip.notes;
   const chooseAll = () => {
     chosen = new Set(clip.notes.map(keyOf3));
-    draw();
+    draw2();
     say2(`${chosen.size} note${chosen.size === 1 ? "" : "s"} chosen`);
   };
   const toggleChosen = (note) => {
     const key = keyOf3(note);
     if (!chosen.delete(key)) chosen.add(key);
-    draw();
+    draw2();
     say2(`${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)} ${chosen.has(key) ? "chosen" : "not chosen"}, ${chosen.size} in all`);
   };
   const same = (a2, b) => a2.startBeat === b.startBeat && a2.pitch === b.pitch;
@@ -33937,7 +34138,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     const start = note.startBeat === beatOf(step) ? "note" : "inside a note";
     return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}${chosen.has(keyOf3(note)) ? ", chosen" : ""}`;
   }
-  function draw(next = clip) {
+  function draw2(next = clip) {
     clip = next;
     if (!clip) return;
     tools.hidden = clip.notes.length === 0 || !onTransform;
@@ -33981,6 +34182,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
         if (isChosen) classes.push("chosen");
         if (step % STEPS_PER_BEAT === 0) classes.push("beat");
         if (step >= clipSteps()) classes.push("beyond");
+        if (band && pitch >= Math.min(band.from.pitch, band.to.pitch) && pitch <= Math.max(band.from.pitch, band.to.pitch) && step >= Math.min(band.from.step, band.to.step) && step <= Math.max(band.from.step, band.to.step)) classes.push("band");
         cell.className = classes.join(" ");
         cell.textContent = starts ? isChosen ? "\u25A3" : "\u25A0" : note ? "\u2013" : "";
         cell.setAttribute("aria-label", describe(pitch, step));
@@ -34030,7 +34232,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     const move = (pitch, step) => {
       event.preventDefault();
       cursor = { pitch: cursor.pitch + pitch, step: cursor.step + step };
-      draw();
+      draw2();
     };
     const { key, shiftKey, altKey } = event;
     if (altKey && (key === "ArrowUp" || key === "ArrowDown")) {
@@ -34062,7 +34264,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       event.preventDefault();
       if (chosen.size > 0) {
         chosen = /* @__PURE__ */ new Set();
-        draw();
+        draw2();
         say2("No notes chosen");
       } else onClose();
     } else if (key === "s" || key === "S") {
@@ -34101,16 +34303,58 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     if (lengthBeats === note.lengthBeats) return null;
     return clip.notes.map((n2) => same(n2, note) ? { ...n2, lengthBeats } : n2);
   }
+  function startBand(from) {
+    band = { from, to: from };
+    draw2();
+    const over = (e) => {
+      const at = cellOf(e.target);
+      if (!at || at.pitch === band.to.pitch && at.step === band.to.step) return;
+      band = { from, to: at };
+      draw2();
+    };
+    const release = () => {
+      grid.removeEventListener("pointerover", over);
+      document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", cancel);
+      abandon = null;
+    };
+    const cancel = () => {
+      release();
+      band = null;
+      draw2();
+    };
+    abandon = cancel;
+    const up = () => {
+      release();
+      const { from: a2, to: b } = band;
+      band = null;
+      const low2 = Math.min(a2.pitch, b.pitch);
+      const high = Math.max(a2.pitch, b.pitch);
+      const first4 = beatOf(Math.min(a2.step, b.step));
+      const last = beatOf(Math.max(a2.step, b.step) + 1);
+      chosen = new Set(clip.notes.filter((n2) => n2.pitch >= low2 && n2.pitch <= high && n2.startBeat < last && n2.startBeat + n2.lengthBeats > first4).map(keyOf3));
+      draw2();
+      say2(`${chosen.size} note${chosen.size === 1 ? "" : "s"} chosen`);
+    };
+    grid.addEventListener("pointerover", over);
+    document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", cancel);
+  }
   grid.addEventListener("pointerdown", (event) => {
     if (!clip || event.button !== 0) return;
     const from = cellOf(event.target);
     if (!from) return;
     event.preventDefault();
+    abandon?.();
     const note = noteAt(clip.notes, from.pitch, beatOf(from.step));
     if (note && event.shiftKey) {
       cursor = { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) };
       toggleChosen(note);
       document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
+      return;
+    }
+    if (!note && event.shiftKey) {
+      startBand(from);
       return;
     }
     const at = now();
@@ -34125,7 +34369,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     cursor = note ? { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) } : { ...from };
     if (note) onAudition(note.pitch, note.velocity);
     preview = kind === "draw" ? dragged("draw", from, from) : null;
-    draw();
+    draw2();
     document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
     let to = from;
     const over = (e) => {
@@ -34135,11 +34379,22 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       const next = dragged(kind, from, to, note);
       if (kind === "move" && next && to.pitch !== from.pitch) onAudition(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)), note.velocity);
       preview = next;
-      draw();
+      draw2();
     };
-    const up = () => {
+    const release = () => {
       grid.removeEventListener("pointerover", over);
       document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", cancel);
+      abandon = null;
+    };
+    const cancel = () => {
+      release();
+      preview = null;
+      draw2();
+    };
+    abandon = cancel;
+    const up = () => {
+      release();
       const next = dragged(kind, from, to, note);
       preview = null;
       if (kind === "draw") {
@@ -34148,14 +34403,16 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
         send(next, `Added ${spokenName(made.pitch)} at ${where(Math.min(from.step, to.step))}, ${beats(made.lengthBeats)}`);
       } else if (next) {
         const changed = next.find((n2) => !clip.notes.some((o2) => same(o2, n2) && o2.lengthBeats === n2.lengthBeats));
+        if (kind === "move" && chosen.delete(keyOf3(note))) chosen.add(keyOf3(changed));
         send(next, kind === "move" ? `Moved to ${spokenName(changed.pitch)} at ${barBeat(changed.startBeat, options.beatsPerBar)}` : `Length ${beats(changed.lengthBeats)}`);
       } else {
-        draw();
+        draw2();
         say2(`Selected ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}, ${beats(note.lengthBeats)}`);
       }
     };
     grid.addEventListener("pointerover", over);
     document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", cancel);
   });
   return {
     element,
@@ -34167,15 +34424,17 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       options = { beatsPerBar };
       heading.textContent = `Notes of the clip at ${barBeat(next.startBeat, beatsPerBar)} on ${label}`;
       close.setAttribute("aria-label", `Close the notes of the clip on ${label}`);
+      abandon?.();
       chosen = /* @__PURE__ */ new Set();
+      band = null;
       const first4 = next.notes[0];
       cursor = first4 ? { pitch: first4.pitch, step: Math.round(first4.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 };
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2);
       showOpen(true);
-      draw(next);
+      draw2(next);
       document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus();
     },
-    draw,
+    draw: draw2,
     /**
      * Show where the transport is, as a beat of the arrangement, or null to
      * show nothing. Drawn only while it is inside this clip and its extra bar.
@@ -34191,6 +34450,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     },
     /** Close the clip, leaving the note that says how to open one. */
     hide() {
+      abandon?.();
       clip = null;
       chosen = /* @__PURE__ */ new Set();
       preview = null;
@@ -34284,7 +34544,7 @@ function createClipActions(document2, { onAction, onColor }) {
     button.addEventListener("click", () => onColor(color.value));
     colors.append(button);
   }
-  function draw({ count, allMuted = false, allLocked = false, canPaste = false }) {
+  function draw2({ count, allMuted = false, allLocked = false, canPaste = false }) {
     element.hidden = count === 0;
     setIcon(document2, buttons.get("mute").button, allMuted ? "unmute" : "mute", allMuted ? "Unmute" : "Mute");
     setIcon(document2, buttons.get("lock").button, allLocked ? "unlock" : "lock", allLocked ? "Unlock" : "Lock");
@@ -34292,7 +34552,7 @@ function createClipActions(document2, { onAction, onColor }) {
     const same = wanted.length + (count > 0 ? 1 : 0) === element.children.length && wanted.every((b, i2) => element.children[i2] === b);
     if (!same) element.replaceChildren(...wanted, ...count > 0 ? [colors] : []);
   }
-  return { element, draw };
+  return { element, draw: draw2 };
 }
 
 // web/app/Arrangement.js
@@ -34326,6 +34586,13 @@ function createArrangement(ctx2) {
     },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx2.dispatcher.project.moveTrack(trackId, delta),
+    // Plus and minus on a track's name: one size taller or shorter, stopping at either end.
+    onSizeStep: (trackId, by) => {
+      const { laneSize } = ctx2.dispatcher.project.trackLayout(trackId);
+      const next = LANE_SIZES[LANE_SIZES.indexOf(laneSize) + by];
+      if (next) ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: next });
+    },
+    onExpandTrack: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: "small" }),
     // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
     onAddTrack: async () => {
       await ctx2.runtime.ensureRunning();
@@ -34567,7 +34834,7 @@ function createArrangement(ctx2) {
     const track = project.tracks.find((t) => t.id === clip.track);
     pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx2.rack.trackLabel(track, project.tracks.indexOf(track)) });
   }
-  function draw(tracks, labelOfTrack) {
+  function draw2(tracks, labelOfTrack) {
     const project = ctx2.dispatcher?.project;
     const { clipPlayer } = ctx2;
     const restore = preserveFocus(timeline.element);
@@ -34684,7 +34951,7 @@ function createArrangement(ctx2) {
     $2("dock-mount").append(ctx2.dock.element);
   }
   return {
-    draw,
+    draw: draw2,
     mount,
     /** Show where the transport is, as a beat, or null when it is stopped. */
     playhead(beat) {
@@ -34923,8 +35190,8 @@ function tally(tracks, key) {
   const on = tracks.filter((t) => t.channel[key]).length;
   return on === 0 ? "none" : on === tracks.length ? "all" : "some";
 }
-function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, onLevelShift, onPanShift }) {
-  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onBus, onLevelShift, onPanShift })) {
+function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift }) {
+  for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== "function") throw new Error(`createBulkTrackPanel needs ${name2}`);
   }
   const element = document2.createElement("div");
@@ -34964,7 +35231,7 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, on
   keep.value = "";
   keep.textContent = "Leave as they are";
   size.append(keep);
-  for (const [value2, text] of [["small", "Small"], ["medium", "Medium"], ["large", "Large"]]) {
+  for (const [value2, text] of [["collapsed", "Collapsed"], ["small", "Small"], ["medium", "Medium"], ["large", "Large"]]) {
     const option = document2.createElement("option");
     option.value = value2;
     option.textContent = text;
@@ -34974,6 +35241,36 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, on
     if (size.value) onSize(size.value);
   });
   sizeLabel.append(size);
+  const folderLabel = document2.createElement("label");
+  folderLabel.className = "track-field";
+  folderLabel.append(document2.createTextNode("Folder for all "));
+  const folder = document2.createElement("input");
+  folder.type = "text";
+  folder.id = "bulk-folder";
+  folder.autocomplete = "off";
+  folder.spellcheck = false;
+  folder.maxLength = MAX_FOLDER_NAME;
+  folder.setAttribute("list", "bulk-folder-names");
+  const folderNames = document2.createElement("datalist");
+  folderNames.id = "bulk-folder-names";
+  const commitFolder = () => {
+    const name2 = folder.value.trim();
+    folder.value = "";
+    if (name2 !== "") onFolder(name2);
+  };
+  folder.addEventListener("change", commitFolder);
+  folder.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitFolder();
+    }
+  });
+  folderLabel.append(folder, folderNames);
+  const unfolder = document2.createElement("button");
+  unfolder.type = "button";
+  unfolder.id = "bulk-unfolder";
+  unfolder.textContent = "Take out of their folder";
+  unfolder.addEventListener("click", () => onFolder(null));
   const bus = document2.createElement("button");
   bus.type = "button";
   bus.id = "bulk-bus";
@@ -34999,11 +35296,12 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, on
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(mute, solo, bus);
-  element.append(summary, actions, shifts, colors, sizeLabel);
+  element.append(summary, actions, shifts, colors, sizeLabel, folderLabel, unfolder);
   return {
     element,
-    /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary. */
-    show({ tracks, labels }) {
+    /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
+     * `folders` are the names in use and `inFolder` how many of the selected are in one. */
+    show({ tracks, labels, folders = [], inFolder = 0 }) {
       summary.textContent = `${tracks.length} tracks selected: ${labels.join(", ")}.`;
       for (const [button, key, word] of [[mute, "muted", "Mute"], [solo, "soloed", "Solo"]]) {
         const state = tally(tracks, key);
@@ -35013,6 +35311,12 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onBus, on
         button.setAttribute("aria-pressed", String(state === "all"));
       }
       size.options[0].selected = true;
+      folderNames.replaceChildren(...folders.map((text) => {
+        const option = document2.createElement("option");
+        option.value = text;
+        return option;
+      }));
+      unfolder.hidden = inFolder === 0;
     }
   };
 }
@@ -35412,6 +35716,9 @@ function createDockPanel(ctx2) {
     onSize: (laneSize) => {
       for (const id of ctx2.selection.ids) layoutOf(id, { laneSize });
     },
+    onFolder: (folder) => {
+      for (const id of ctx2.selection.ids) layoutOf(id, { folder });
+    },
     onBus: () => {
       let changes;
       try {
@@ -35566,7 +35873,13 @@ function createDockPanel(ctx2) {
     }
     if (selection.kind === "track" && selection.size > 1 && project) {
       const tracks = selection.ids.map((id) => project.track(id)).filter(Boolean);
-      bulk.show({ tracks, labels: tracks.map(trackLabel) });
+      const folderOf = (t) => project.trackLayout(t.id).folder;
+      bulk.show({
+        tracks,
+        labels: tracks.map(trackLabel),
+        folders: [...new Set(project.orderedTracks.map(folderOf).filter(Boolean))],
+        inFolder: tracks.filter(folderOf).length
+      });
       dock.show("tracks", `Editor: ${tracks.length} tracks`);
       return;
     }
@@ -35853,7 +36166,7 @@ function createMatrix(ctx2) {
       } else status("Disconnected.");
     }
   });
-  function draw() {
+  function draw2() {
     const { dispatcher } = ctx2;
     const restore = preserveFocus(matrix.element);
     if (!dispatcher) {
@@ -35871,7 +36184,7 @@ function createMatrix(ctx2) {
   function mount() {
     $2("matrix-mount").append(matrix.element);
   }
-  return { mount, draw };
+  return { mount, draw: draw2 };
 }
 
 // web/app/Loading.js
@@ -38396,6 +38709,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   history_redo: "a script must not redo a person's edits",
   transport_play: "needs user activation, and the person starts the music",
   transport_stop: "the person stops the music",
+  transport_panic: "the person silences a stuck note",
   transport_configure: "tempo and loop changes are wanted for performance, and not in version one",
   diagnostics: "a query; a script cannot branch on a result",
   script_run: "a script cannot run a script, which would let one never end"
@@ -39088,6 +39402,12 @@ $("stop").addEventListener("click", () => {
   ctx.record.finishTake().catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
 });
 $("panic").addEventListener("click", () => transport.panic());
+document.addEventListener("keydown", (event) => {
+  if (isPanicShortcut(event)) {
+    event.preventDefault();
+    transport.panic();
+  }
+});
 $("record").addEventListener("click", () => ctx.record.toggle().catch((error2) => log(error2.message, "error")));
 $("tempo").addEventListener("change", async () => {
   const d = await ctx.runtime.ensureRunning();

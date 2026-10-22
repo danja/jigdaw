@@ -18,7 +18,7 @@ Where to start, in order. Everything else is below and is not ordered.
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
 2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
 3. The browser checks that need only a window in front (Checks in a real browser).
-4. The rest of the Tracks section: a fader on a bus or folder, then the reorder and collapse item, and a look in Chrome at the bulk level and pan buttons.
+4. The rest of the Tracks section: a fader on a bus or folder, then the collapse item, and a look in Chrome at the bulk level and pan buttons.
 5. Decide the docked mixer against the tab, which unblocks the Mixer section.
 
 ## Decisions for the maintainer
@@ -178,7 +178,7 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Playhead and loop.** Drag the whole loop, a loop range from a selection or region, and follow for the piano roll.
 - [ ] **Zoom and snap.** Pinch on touch, zoom to selection, seconds as an alternative ruler, the piano roll reading the shared
       `TimeView` (it has its own scale), snapping to other clips' edges, and the grid following signature changes.
-- [ ] **Dock.** Escape in the piano roll's grid now closes it (not seen in Chrome); a dock view for an envelope; keyboard selection of a track
+- [ ] **Dock.** Escape in the piano roll's grid closes it (seen in Chrome 2026-10-22); a dock view for an envelope; keyboard selection of a track
       other than by its name; move a selected group of clips as one.
 - [ ] **First run and narrow layout.** A guided tour and a hint for the second step; collapse the header to icons at phone
       width; "Load onto" following the selected track.
@@ -202,7 +202,9 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Folders: what is left.** Built: `jig:folder` in the editor graph (vocab, shape, reader, writer, round trip, counter
       example), the Folder field in the track panel, `track_layout` `folder`, and a bar above each run of neighbouring tracks
       with a hide and show button (view only, not saved; focus stays on it). Seen in Chrome: two tracks in a folder collapse
-      to the bar and come back. Not built: moving a whole folder, collapse saved with the session, Folder in the bulk panel,
+      to the bar and come back. The bulk panel has a Folder field for all selected tracks and a Take out of their folder button (left out while none is in one); seen in real
+      Chrome on 2026-10-22, both ways. Each folder bar has Move up and Move down (the whole run hops past its neighbour, layout only so no undo, a move that goes nowhere is left out; seen in real
+      Chrome on 2026-10-22, focus falls to the bar's toggle when the pressed button disappears). Not built: moving a folder by drag, collapse saved with the session,
       and a screen reader pass.
 - [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
       one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
@@ -212,8 +214,13 @@ Workflow alongside from Routing, and the launcher last.
       a bus or of a track in a folder, moving the tracks that send to it and those sharing its folder, one undo step. Seen in
       Chrome on 2026-10-22 with a bus of two tracks: both moved to -1.0 dB, the bus stayed at 0. Not built: a fader in the
       track's header rather than the panel, a pan step for members, typing an amount, and the folder case was not seen.
-- [ ] **Reorder by drag; collapse a lane to a thin bar;** show and hide by folder; resize from the header by keyboard. Order is
-      layout and is not part of undo.
+- [ ] **Collapsed lane: what is left;** nothing for folders, which already hide and show from their bar. Plus and minus on a track's name step the lane size (seen in real Chrome on 2026-10-22 with real key presses, focus kept). A collapsed lane is a fourth
+      lane size (Lane size in the dock or the bulk panel, `track_layout`, saved with the session and in the shapes): the name
+      and the grip on a 27px bar, against 45px for small. Seen in real Chrome on 2026-10-22, collapsed and restored from the
+      dock. An Expand button on the bar brings it back to small (seen in real Chrome on 2026-10-22). Order is layout and is not
+      part of undo. Reorder by drag is built (a grip beside the track name, one move on release, the row under the pointer
+      outlined; `src/ui/Timeline.js` `dragTrack`) and was seen in real Chrome on 2026-10-22 on a small lane with a mouse. Not seen:
+      touch, a medium or large lane, a folder's collapsed rows as the target, and no spoken announcement of the new place.
 - [ ] **Bulk level and pan: what is left.** Built: four buttons in the bulk panel (level down and up 1 dB, pan left and
       right 0.1) over `src/model/GroupChannel.js`, one undo step. Not seen in Chrome; no way to type an amount; a range select
       by Shift with the keyboard.
@@ -324,17 +331,16 @@ the page, it is research, not committed.
       Quantize to the Beat grid, Reverse, one Undo, and a refused octave step said in the roll's status line. Not seen: Down,
       Softer and Louder, touch, a screen reader pass. Note selection is built
       (S or Shift-click toggles a note, Ctrl+A chooses all, Escape lets go before it closes; the buttons then change only the
-      chosen notes, and the choice follows them), unit-tested and not yet seen in Chrome. Not built: a rubber band over notes,
-      keeping the choice on a note moved by hand, invert, humanize (needs a seeded draw), scale snap, quantize strength in the roll, quantize that moves note
-      ends, and a screen reader pass over the row.
+      chosen notes, and the choice follows them), seen in real Chrome on 2026-10-22 (Shift-click chose one note, Up an octave moved only it, Escape let go and a second Escape closed the roll with focus back on the clip). A Shift-drag over empty squares chooses the notes it
+      touches (seen in real Chrome on 2026-10-22 with pointer events sent from the page, since the browser tool's drag drops Shift: the band grew, chose the one note it touched, and Up an octave moved only it; a drag that is cancelled or replaced now commits nothing). Invert (about the first note) and Humanize (a seeded nudge of start and velocity, a fresh seed per press) are built as functions, tool options and buttons, and were pressed in real Chrome on 2026-10-22. A chosen note stays chosen when dragged. Quantize was pressed at 100% in real Chrome on 2026-10-22; the Strength choice below 100% is not seen. Quantize can move note ends too (Move: Starts and ends; unit-tested, not seen in Chrome). Not built: scale snap, and a screen reader pass over the row.
 - [ ] **Step input and virtual keyboard.** Enter notes from keys one step at a time; keep the on-screen keyboard playable from
       touch.
 - [ ] **MIDI import and export.** Read and write a Standard MIDI File for one track, plus project-wide export, reusing the
       transport map.
 - [ ] **Multi-clip editing and drum view.** Two clips side by side for reference; a drum lane view where the track holds a kit.
 - [ ] **MIDI panic: what is left.** Built: a Panic button in the transport bar (CC 123 and CC 120 to every node, transport
-      left running; `web/app/Transport.js`). The button was pressed in Chrome and logged; not tried with a stuck note; no key for it, no agent tool, and the
-      on-screen keyboards' own held notes are not released.
+      left running; `web/app/Transport.js`). The button was pressed in Chrome and logged; not tried with a stuck note. Ctrl or Cmd with a full stop does the same (Ctrl with a full stop seen in real Chrome on 2026-10-22, logged "panic: all notes off"), and the `transport_panic` tool
+      (unit-tested, not seen in Chrome). Panic also releases notes held on the on-screen keyboards (unit-tested, not seen in Chrome).
 
 ### Phase C. Mixing, routing and automation
 

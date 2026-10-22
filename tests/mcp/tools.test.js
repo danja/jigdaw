@@ -318,6 +318,16 @@ describe('transport_play and transport_stop', () => {
     expect(played).toEqual(['play', 'stop'])
   })
 
+  it('panics through the transport passed in, and explains itself when there is none', async () => {
+    const calls = []
+    const tools = createTools({ dispatcher, onPanic: async () => { calls.push('panic') } })
+    expect((await tools.find(t => t.name === 'transport_panic').handler()).ok).toBe(true)
+    expect(calls).toEqual(['panic'])
+    expect((await createTools({ dispatcher }).find(t => t.name === 'transport_panic').handler()).error).toContain('cannot panic')
+    const failing = createTools({ dispatcher, onPanic: async () => { throw new Error('no audio') } })
+    expect((await failing.find(t => t.name === 'transport_panic').handler()).error).toContain('panic failed: no audio')
+  })
+
   it('starts at the beat it is asked for, and says nothing extra when it is not asked', async () => {
     const asked = []
     const tools = createTools({ dispatcher, onPlay: async options => { asked.push(options) } })
@@ -632,6 +642,25 @@ describe('clips', () => {
     expect(dispatcher.project.clip(added.clipId)).toMatchObject({ startBeat: 12, lengthBeats: 2 })
     expect((await call('clip_remove', { clipId: added.clipId })).ok).toBe(true)
     expect(dispatcher.project.clips).toEqual([])
+  })
+
+  it('inverts, and humanizes the same way for the same seed and refuses without one', async () => {
+    const { trackId } = await call('track_add', {})
+    const notes = [note, { ...note, startBeat: 1, pitch: 64 }]
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes })
+    expect((await call('clip_transform_notes', { clipId: added.clipId, transform: 'invert' })).ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).notes.map(n => n.pitch)).toEqual([60, 56])
+    const bad = await call('clip_transform_notes', { clipId: added.clipId, transform: 'humanize', timing: 0.1 })
+    expect(bad.ok).toBe(false)
+    expect(bad.error).toContain('seed')
+    const run = async () => {
+      await call('clip_set_notes', { clipId: added.clipId, notes })
+      await call('clip_transform_notes', { clipId: added.clipId, transform: 'humanize', timing: 0.1, velocity: 5, seed: 7 })
+      return dispatcher.project.clip(added.clipId).notes
+    }
+    const first = await run()
+    expect(await run()).toEqual(first)
+    expect(first).not.toEqual(notes)
   })
 
   it('transforms notes as one edit, and refuses the whole edit when one note cannot move', async () => {

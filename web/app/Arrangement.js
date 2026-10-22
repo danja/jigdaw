@@ -7,6 +7,7 @@
 import { createTimeline, barBeat } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { describeNoteTransform } from '../../src/model/NoteTransform.js'
+import { LANE_SIZES } from '../../src/model/EditorState.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { trackKind } from '../../src/model/TrackKind.js'
 import { mixable } from '../../src/ui/Mixer.js'
@@ -51,6 +52,13 @@ export function createArrangement (ctx) {
     onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
+    // Plus and minus on a track's name: one size taller or shorter, stopping at either end.
+    onSizeStep: (trackId, by) => {
+      const { laneSize } = ctx.dispatcher.project.trackLayout(trackId)
+      const next = LANE_SIZES[LANE_SIZES.indexOf(laneSize) + by]
+      if (next) ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: next })
+    },
+    onExpandTrack: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: 'small' }),
     // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
     onAddTrack: async () => {
       await ctx.runtime.ensureRunning()

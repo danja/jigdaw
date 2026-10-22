@@ -17,7 +17,7 @@ import { applyIcons } from '../src/ui/Icons.js'
 import { createTabs } from '../src/ui/Tabs.js'
 import { createMedia } from './app/Media.js'
 import { createRuntime } from './app/Runtime.js'
-import { createTransport } from './app/Transport.js'
+import { createTransport, isPanicShortcut } from './app/Transport.js'
 import { createRecord } from './app/Record.js'
 import { createRack } from './app/Rack.js'
 import { createEditors } from './app/Editors.js'
@@ -114,6 +114,10 @@ $('stop').addEventListener('click', () => {
     .finally(() => transport.stop())
 })
 $('panic').addEventListener('click', () => transport.panic())
+// Ctrl or Cmd with the full stop: Panic from anywhere, since a stuck note is not waited on while a field has focus.
+document.addEventListener('keydown', event => {
+  if (isPanicShortcut(event)) { event.preventDefault(); transport.panic() }
+})
 $('record').addEventListener('click', () => ctx.record.toggle().catch(error => log(error.message, 'error')))
 $('tempo').addEventListener('change', async () => {
   const d = await ctx.runtime.ensureRunning()

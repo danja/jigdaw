@@ -1,7 +1,7 @@
 // tests/model/NoteTransform.test.js
 import { describe, it, expect } from 'vitest'
 import { Project } from '../../src/model/Project.js'
-import { quantize, transpose, scaleVelocity, reverse, describeNoteTransform } from '../../src/model/NoteTransform.js'
+import { quantize, transpose, scaleVelocity, reverse, invert, humanize, describeNoteTransform } from '../../src/model/NoteTransform.js'
 
 const note = (startBeat, pitch = 60, lengthBeats = 0.5, velocity = 100) => ({ startBeat, lengthBeats, pitch, velocity })
 
@@ -23,6 +23,22 @@ describe('quantize', () => {
   it('refuses a bad grid or strength', () => {
     expect(() => quantize([note(0)], { grid: 0 })).toThrow('grid')
     expect(() => quantize([note(0)], { grid: 1, strength: 2 })).toThrow('strength')
+  })
+})
+
+describe('quantize with ends', () => {
+  it('moves the end to the grid too, so the length follows', () => {
+    const [n] = quantize([note(0.9, 60, 0.7)], { grid: 1, ends: true })
+    expect(n.startBeat).toBe(1)
+    expect(n.lengthBeats).toBe(1)
+  })
+  it('leaves the length alone when ends is off, and gives a note that would shrink to nothing one grid step', () => {
+    expect(quantize([note(0.9, 60, 0.7)], { grid: 1 })[0].lengthBeats).toBe(0.7)
+    expect(quantize([note(0.9, 60, 0.1)], { grid: 1, ends: true })[0].lengthBeats).toBe(1)
+  })
+  it('moves the end part of the way at partial strength', () => {
+    const [n] = quantize([note(0, 60, 0.8)], { grid: 1, strength: 0.5, ends: true })
+    expect(n.startBeat + n.lengthBeats).toBeCloseTo(0.9)
   })
 })
 
@@ -73,5 +89,37 @@ describe('describeNoteTransform', () => {
     const project = build([note(0)])
     project.clip = id => ({ id, kind: 'audio', notes: [] })
     expect(() => describeNoteTransform(project, 'clip-1', 'reverse')).toThrow('not a MIDI clip')
+  })
+})
+
+describe('invert', () => {
+  it('mirrors pitches about the first note by default, or about an axis', () => {
+    expect(invert([note(0, 60), note(1, 64), note(2, 58)]).map(n => n.pitch)).toEqual([60, 56, 62])
+    expect(invert([note(0, 60)], 62)[0].pitch).toBe(64)
+  })
+  it('refuses a result outside MIDI range, and a non-whole axis', () => {
+    expect(() => invert([note(0, 10), note(1, 100)])).toThrow('outside 0 to 127')
+    expect(() => invert([note(0, 60)], 60.5)).toThrow('axis')
+  })
+})
+
+describe('humanize', () => {
+  const notes = [note(1, 60, 1, 100), note(2, 62, 1, 100)]
+  it('is the same for the same seed and different for another', () => {
+    expect(humanize(notes, { timing: 0.1, velocity: 10, seed: 3 })).toEqual(humanize(notes, { timing: 0.1, velocity: 10, seed: 3 }))
+    expect(humanize(notes, { timing: 0.1, velocity: 10, seed: 3 })).not.toEqual(humanize(notes, { timing: 0.1, velocity: 10, seed: 4 }))
+  })
+  it('stays within the amounts, keeps start at zero or more and velocity from 1 to 127', () => {
+    const out = humanize([note(0, 60, 1, 127), note(0, 61, 1, 1)], { timing: 0.5, velocity: 50, seed: 9 })
+    for (const n of out) { expect(n.startBeat).toBeGreaterThanOrEqual(0); expect(n.velocity).toBeGreaterThanOrEqual(1); expect(n.velocity).toBeLessThanOrEqual(127) }
+    for (const n of humanize(notes, { timing: 0.1, velocity: 10, seed: 5 })) {
+      expect(Math.abs(n.startBeat - Math.round(n.startBeat))).toBeLessThanOrEqual(0.1)
+      expect(Math.abs(n.velocity - 100)).toBeLessThanOrEqual(10)
+    }
+  })
+  it('changes nothing at zero amounts, and refuses a missing seed or a negative amount', () => {
+    expect(humanize(notes, { seed: 1 })).toEqual(notes)
+    expect(() => humanize(notes, { timing: 0.1 })).toThrow('seed')
+    expect(() => humanize(notes, { timing: -1, seed: 1 })).toThrow('timing')
   })
 })

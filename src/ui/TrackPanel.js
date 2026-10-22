@@ -23,7 +23,7 @@ export const COLORS = Object.freeze([
   { name: 'Pink', value: '#e93d82' }
 ])
 
-const SIZES = Object.freeze([['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']])
+const SIZES = Object.freeze([['collapsed', 'Collapsed'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']])
 
 export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')

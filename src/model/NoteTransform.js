@@ -1,16 +1,25 @@
 // src/model/NoteTransform.js
 //
-// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale and reverse. Each transform is a pure function
+// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale, reverse, invert and humanize. Each transform is a pure function
 // over a list of notes. `describeNoteTransform` applies one to a clip (or to the notes at some indices of it) and
 // returns a single setClipNotes change, so the edit is one undo step and the dispatcher stays the only path.
 
-/** Move each note's start toward the nearest grid line by `strength` (0 leaves it, 1 lands on it). */
-export function quantize (notes, { grid, strength = 1 } = {}) {
+/**
+ * Move each note's start toward the nearest grid line by `strength` (0 leaves it, 1 lands on it). With `ends`, the
+ * note's end moves the same way, so the length follows; a note whose length would come to nothing gets one grid step.
+ */
+export function quantize (notes, { grid, strength = 1, ends = false } = {}) {
   if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`)
   if (!(Number.isFinite(strength) && strength >= 0 && strength <= 1)) throw new Error(`strength must be from 0 to 1: ${strength}`)
   return notes.map(note => {
     const target = Math.round(note.startBeat / grid) * grid
-    return { ...note, startBeat: Math.max(0, note.startBeat + (target - note.startBeat) * strength) }
+    const startBeat = Math.max(0, note.startBeat + (target - note.startBeat) * strength)
+    if (!ends) return { ...note, startBeat }
+    const end = note.startBeat + note.lengthBeats
+    const endTarget = Math.round(end / grid) * grid
+    const raw = end + (endTarget - end) * strength - startBeat
+    const lengthBeats = raw > 0 ? raw : grid
+    return { ...note, startBeat, lengthBeats }
   })
 }
 
@@ -40,11 +49,60 @@ export function reverse (notes, clipLength) {
   })
 }
 
+/**
+ * Mirror every pitch about `axis` (a pitch, defaulting to the first note's), so a rising line falls by the same steps.
+ * A note that would leave 0 to 127 refuses the edit.
+ */
+export function invert (notes, axis = notes[0]?.pitch) {
+  if (notes.length === 0) return []
+  if (!Number.isInteger(axis)) throw new Error(`axis must be a whole pitch: ${axis}`)
+  return notes.map(note => {
+    const pitch = 2 * axis - note.pitch
+    if (pitch < 0 || pitch > 127) throw new Error(`inverting about ${axis} would put pitch ${note.pitch} outside 0 to 127`)
+    return { ...note, pitch }
+  })
+}
+
+// A small seeded generator (mulberry32), so the same seed makes the same edit: the Op stays reproducible and a
+// replay of a session or an agent's call gives the same notes.
+function draw (seed) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * Nudge each note's start by up to plus or minus `timing` beats (not before zero) and its velocity by up to plus or
+ * minus `velocity` (kept from 1 to 127). `seed` is required and whole: the same seed gives the same result.
+ */
+export function humanize (notes, { timing = 0, velocity = 0, seed } = {}) {
+  if (!Number.isInteger(seed)) throw new Error(`seed must be a whole number: ${seed}`)
+  if (!(Number.isFinite(timing) && timing >= 0)) throw new Error(`timing must be beats from zero up: ${timing}`)
+  if (!(Number.isFinite(velocity) && velocity >= 0)) throw new Error(`velocity must be from zero up: ${velocity}`)
+  const next = draw(seed)
+  return notes.map(note => {
+    const shift = (next() * 2 - 1) * timing
+    const change = (next() * 2 - 1) * velocity
+    return {
+      ...note,
+      startBeat: Math.max(0, note.startBeat + shift),
+      velocity: Math.min(127, Math.max(1, Math.round(note.velocity + change)))
+    }
+  })
+}
+
 const TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor }) => scaleVelocity(notes, factor),
-  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats)
+  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
+  invert: (notes, { axis }) => invert(notes, axis),
+  humanize: (notes, options) => humanize(notes, options)
 }
 
 export const NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS))

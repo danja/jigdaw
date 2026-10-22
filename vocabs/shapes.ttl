@@ -667,7 +667,7 @@ jig:EditorOrderShape a sh:NodeShape ;
 
 jig:EditorLaneSizeShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:laneSize ;
-    sh:property [ sh:path jig:laneSize ; sh:maxCount 1 ; sh:in ( "small" "medium" "large" ) ; sh:message "A lane is small, medium or large." ] .
+    sh:property [ sh:path jig:laneSize ; sh:maxCount 1 ; sh:in ( "collapsed" "small" "medium" "large" ) ; sh:message "A lane is collapsed, small, medium or large." ] .
 
 jig:EditorFolderShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:folder ;

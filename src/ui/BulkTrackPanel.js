@@ -1,10 +1,11 @@
 // src/ui/BulkTrackPanel.js
 //
 // What can be done to several selected tracks at once: mute, solo, colour and
-// lane size. Naming, moving and deleting are one track at a time, so they are
+// lane size and folder. Naming, moving and deleting are one track at a time, so they are
 // not offered here (a control that cannot act is left out). The caller turns
 // each request into one changeset, so one undo takes back the whole edit.
 import { COLORS, colorName } from './TrackPanel.js'
+import { MAX_FOLDER_NAME } from '../model/EditorState.js'
 
 /** 'all', 'none' or 'some': how many of the selected tracks have a flag set. */
 export function tally (tracks, key) {
@@ -12,8 +13,8 @@ export function tally (tracks, key) {
   return on === 0 ? 'none' : on === tracks.length ? 'all' : 'some'
 }
 
-export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onBus, onLevelShift, onPanShift }) {
-  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onBus, onLevelShift, onPanShift })) {
+export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift }) {
+  for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== 'function') throw new Error(`createBulkTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -57,7 +58,7 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   keep.value = ''
   keep.textContent = 'Leave as they are'
   size.append(keep)
-  for (const [value, text] of [['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']]) {
+  for (const [value, text] of [['collapsed', 'Collapsed'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']]) {
     const option = document.createElement('option')
     option.value = value
     option.textContent = text
@@ -65,6 +66,34 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   }
   size.addEventListener('change', () => { if (size.value) onSize(size.value) })
   sizeLabel.append(size)
+
+  // Folder: one name for all of them. Empty does nothing here; taking them out is its own button,
+  // left out while none of them is in a folder.
+  const folderLabel = document.createElement('label')
+  folderLabel.className = 'track-field'
+  folderLabel.append(document.createTextNode('Folder for all '))
+  const folder = document.createElement('input')
+  folder.type = 'text'
+  folder.id = 'bulk-folder'
+  folder.autocomplete = 'off'
+  folder.spellcheck = false
+  folder.maxLength = MAX_FOLDER_NAME
+  folder.setAttribute('list', 'bulk-folder-names')
+  const folderNames = document.createElement('datalist')
+  folderNames.id = 'bulk-folder-names'
+  const commitFolder = () => {
+    const name = folder.value.trim()
+    folder.value = ''
+    if (name !== '') onFolder(name)
+  }
+  folder.addEventListener('change', commitFolder)
+  folder.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); commitFolder() } })
+  folderLabel.append(folder, folderNames)
+  const unfolder = document.createElement('button')
+  unfolder.type = 'button'
+  unfolder.id = 'bulk-unfolder'
+  unfolder.textContent = 'Take out of their folder'
+  unfolder.addEventListener('click', () => onFolder(null))
 
   // A bus takes the selected tracks' output instead of the master.
   const bus = document.createElement('button')
@@ -95,12 +124,13 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(mute, solo, bus)
-  element.append(summary, actions, shifts, colors, sizeLabel)
+  element.append(summary, actions, shifts, colors, sizeLabel, folderLabel, unfolder)
 
   return {
     element,
-    /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary. */
-    show ({ tracks, labels }) {
+    /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
+     * `folders` are the names in use and `inFolder` how many of the selected are in one. */
+    show ({ tracks, labels, folders = [], inFolder = 0 }) {
       summary.textContent = `${tracks.length} tracks selected: ${labels.join(', ')}.`
       for (const [button, key, word] of [[mute, 'muted', 'Mute'], [solo, 'soloed', 'Solo']]) {
         const state = tally(tracks, key)
@@ -111,6 +141,8 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
         button.setAttribute('aria-pressed', String(state === 'all'))
       }
       size.options[0].selected = true
+      folderNames.replaceChildren(...folders.map(text => { const option = document.createElement('option'); option.value = text; return option }))
+      unfolder.hidden = inFolder === 0
     }
   }
 }

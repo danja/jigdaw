@@ -58,6 +58,7 @@ export function createDockPanel (ctx) {
     onPanShift: amount => shift(describePanShift, amount),
     onColor: color => { for (const id of ctx.selection.ids) layoutOf(id, { color }) },
     onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
+    onFolder: folder => { for (const id of ctx.selection.ids) layoutOf(id, { folder }) },
     onBus: () => {
       let changes
       try { changes = describeBus(ctx.dispatcher.project, ctx.selection.ids) } catch (error) { log(error.message, 'error'); return }
@@ -207,7 +208,13 @@ export function createDockPanel (ctx) {
 
     if (selection.kind === 'track' && selection.size > 1 && project) {
       const tracks = selection.ids.map(id => project.track(id)).filter(Boolean)
-      bulk.show({ tracks, labels: tracks.map(trackLabel) })
+      const folderOf = t => project.trackLayout(t.id).folder
+      bulk.show({
+        tracks,
+        labels: tracks.map(trackLabel),
+        folders: [...new Set(project.orderedTracks.map(folderOf).filter(Boolean))],
+        inFolder: tracks.filter(folderOf).length
+      })
       dock.show('tracks', `Editor: ${tracks.length} tracks`)
       return
     }

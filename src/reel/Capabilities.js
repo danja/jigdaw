@@ -67,6 +67,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   history_redo: 'a script must not redo a person\'s edits',
   transport_play: 'needs user activation, and the person starts the music',
   transport_stop: 'the person stops the music',
+  transport_panic: 'the person silences a stuck note',
   transport_configure: 'tempo and loop changes are wanted for performance, and not in version one',
   diagnostics: 'a query; a script cannot branch on a result',
   script_run: 'a script cannot run a script, which would let one never end'

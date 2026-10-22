@@ -2,5 +2,4 @@ This file will contain things that are later thoughts, they will need accommodat
 
 ## Items
 
-* ~~the simple page should get a Script tab. Loading and saving of scripts should be supported~~ built, see TODO (Reel); saving is shared with Sessions
-* ~~arrangement and mixer UIs should follow the pattern of Reaper~~ now an item under The main view in TODO.md
+* wherever appropriate replace the large buttons with smaller ones with icons - eg. replace Mute with an M in a red square, Solo with an S in a yellow square, transport controls etc use standard icons

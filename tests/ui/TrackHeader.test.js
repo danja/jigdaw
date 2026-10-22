@@ -25,7 +25,7 @@ function build () {
 describe('a track header', () => {
   it('says the kind of track in words, and leaves it out when the ports say nothing', () => {
     const { header, state, $ } = build()
-    const shown = () => $('show-track-t1').parentNode.querySelector('.head-kind')
+    const shown = () => $('show-track-t1').closest('.timeline-head').querySelector('.head-kind')
     expect(shown().hidden).toBe(true)
     header.update({ ...state, kind: 'instrument' })
     expect(shown().hidden).toBe(false)
@@ -196,3 +196,80 @@ describe('a track header, Duplicate', () => {
   })
 })
 
+
+describe('a track header, the grip', () => {
+  const make = onGrip => {
+    const header = createTrackHeader(document, { id: 't1', onSelect () {}, onAdd () {}, onAddAudio () {}, onChannel () {}, onMove () {}, onArm () {}, onGrip })
+    document.body.append(header.element)
+    header.update({ label: 'Bass', channel: { gain: 1, pan: 0 }, mixable: true, silent: false, at: 0, where: 'bar 1 beat 1' })
+    return header
+  }
+  it('is left out where the page cannot follow a drag', () => {
+    make(null)
+    expect(document.getElementById('head-t1-grip')).toBe(null)
+  })
+  it('starts a drag with the track id on a primary press only, and names itself for the track', () => {
+    const seen = []
+    make((id, e) => seen.push([id, e.button]))
+    const grip = document.getElementById('head-t1-grip')
+    expect(grip.getAttribute('aria-label')).toContain('Drag to move Bass')
+    grip.dispatchEvent(event('pointerdown', { button: 2 }))
+    grip.dispatchEvent(event('pointerdown', { button: 0 }))
+    expect(seen).toEqual([['t1', 0]])
+  })
+})
+
+describe('a track header, Expand', () => {
+  const make = onExpand => {
+    const header = createTrackHeader(document, { id: 't1', onSelect () {}, onAdd () {}, onAddAudio () {}, onChannel () {}, onMove () {}, onArm () {}, onExpand })
+    document.body.append(header.element)
+    const state = { label: 'Bass', channel: { gain: 1, pan: 0 }, mixable: true, silent: false, at: 0, where: 'bar 1 beat 1' }
+    header.update({ ...state, size: 'collapsed' })
+    return { header, state }
+  }
+  it('is shown on a collapsed lane only, named for the track, and asks to expand it', () => {
+    const seen = []
+    const { header, state } = make(id => seen.push(id))
+    const button = document.getElementById('head-t1-expand')
+    expect(button.hidden).toBe(false)
+    expect(button.getAttribute('aria-label')).toBe('Expand Bass')
+    button.dispatchEvent(event('click'))
+    expect(seen).toEqual(['t1'])
+    header.update({ ...state, size: 'small' })
+    expect(button.hidden).toBe(true)
+  })
+  it('is left out where the page cannot expand a lane', () => {
+    make(null)
+    expect(document.getElementById('head-t1-expand')).toBe(null)
+  })
+})
+
+describe('a track header, plus and minus', () => {
+  const make = onSizeStep => {
+    const header = createTrackHeader(document, { id: 't1', onSelect () {}, onAdd () {}, onAddAudio () {}, onChannel () {}, onMove () {}, onArm () {}, onSizeStep })
+    document.body.append(header.element)
+    header.update({ label: 'Bass', channel: { gain: 1, pan: 0 }, mixable: true, silent: false, at: 0, where: 'bar 1 beat 1' })
+    return document.getElementById('show-track-t1')
+  }
+  const press = (target, key, props = {}) => {
+    const e = event('keydown', { key, ...props })
+    target.dispatchEvent(e)
+    return e
+  }
+  it('step the lane size taller and shorter, and say so in the title', () => {
+    const seen = []
+    const name = make((id, by) => seen.push([id, by]))
+    press(name, '+'); press(name, '='); press(name, '-'); press(name, '_')
+    expect(seen).toEqual([['t1', 1], ['t1', 1], ['t1', -1], ['t1', -1]])
+    expect(name.title).toContain('plus and minus')
+  })
+  it('leave alone a chord with Ctrl, Alt or Cmd, other keys, and a header the page cannot resize', () => {
+    const seen = []
+    const name = make((id, by) => seen.push(by))
+    press(name, '-', { ctrlKey: true }); press(name, '+', { altKey: true }); press(name, 'x')
+    expect(seen).toEqual([])
+    document.body.replaceChildren()
+    const bare = make(null)
+    expect(press(bare, '+').defaultPrevented).toBe(false)
+  })
+})

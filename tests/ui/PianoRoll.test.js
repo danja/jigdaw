@@ -298,12 +298,36 @@ describe('the transform buttons', () => {
   }
   const note = { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }
 
+  it('quantizes part of the way when a strength is chosen, and says so', () => {
+    const { asked } = withTransform([note])
+    document.getElementById('roll-quantize-strength').options[2].selected = true
+    click('roll-quantize')
+    expect(asked).toEqual([['quantize', { grid: 0.25, strength: 0.5, ends: false }]])
+    expect(document.querySelector('.piano-roll [role=status]').textContent).toBe('Quantized every note 50% of the way to the grid')
+  })
+
+  it('asks to move ends too when told to', () => {
+    const { asked } = withTransform([note])
+    document.getElementById('roll-quantize-ends').options[1].selected = true
+    click('roll-quantize')
+    expect(asked[0][1].ends).toBe(true)
+  })
+
+  it('asks for invert, and for humanize with a seed', () => {
+    const { asked } = withTransform([note])
+    click('roll-invert'); click('roll-humanize')
+    expect(asked[0]).toEqual(['invert', {}])
+    expect(asked[1][0]).toBe('humanize')
+    expect(asked[1][1]).toMatchObject({ timing: 0.05, velocity: 10 })
+    expect(Number.isInteger(asked[1][1].seed)).toBe(true)
+  })
+
   it('ask for each transform with its amount', () => {
     const { asked } = withTransform([note])
     document.getElementById('roll-quantize-grid').options[1].selected = true
     for (const id of ['roll-quantize', 'roll-down', 'roll-octave-up', 'roll-softer', 'roll-louder', 'roll-reverse']) click(id)
     expect(asked).toEqual([
-      ['quantize', { grid: 0.5 }], ['transpose', { semitones: -1 }], ['transpose', { semitones: 12 }],
+      ['quantize', { grid: 0.5, strength: 1, ends: false }], ['transpose', { semitones: -1 }], ['transpose', { semitones: 12 }],
       ['scaleVelocity', { factor: 0.8 }], ['scaleVelocity', { factor: 1.25 }], ['reverse', {}]
     ])
   })
@@ -385,6 +409,7 @@ describe('choosing notes', () => {
     expect(cell(63, 4).getAttribute('aria-label')).toContain('chosen')
     click('roll-down')
     expect(asked[1]).toEqual([1])
+    expect(document.querySelector('.piano-roll [role=status]').textContent).toBe('Chosen notes down a semitone')
     expect(clip().notes.map(n => n.pitch)).toEqual([61, 62, 65])
   })
 
@@ -409,6 +434,48 @@ describe('choosing notes', () => {
     expect(document.querySelectorAll('.piano-roll-cell.chosen').length).toBe(0)
     key(document.activeElement, 'Escape')
     expect(closed).toBe(1)
+  })
+
+  it('chooses the notes a shift-drag over empty squares touches, and edits nothing', () => {
+    const sent = []
+    const roll = createPianoRoll(document, { onChange: (...a) => sent.push(a), onClose: () => {} })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes: three }, { beatsPerBar: 4, label: 'Keys' })
+    // From an empty square above the first two notes down to the first note's row.
+    cell(65, 0).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    cell(60, 5).dispatchEvent(pointer('pointerover'))
+    expect(document.querySelectorAll('.piano-roll-cell.band').length).toBeGreaterThan(0)
+    document.dispatchEvent(pointer('pointerup'))
+    expect(document.querySelectorAll('.piano-roll-cell.band').length).toBe(0)
+    expect(document.querySelectorAll('.piano-roll-cell.chosen.start').length).toBe(2)
+    expect(cell(64, 8).getAttribute('aria-label')).not.toContain('chosen')
+    expect(sent).toEqual([])
+  })
+
+  it('drops a cancelled drag without adding a note, and the next release commits only its own gesture', () => {
+    const { sent } = build()
+    cell(60, 0).dispatchEvent(pointer('pointerdown'))
+    cell(60, 3).dispatchEvent(pointer('pointerover'))
+    document.dispatchEvent(pointer('pointercancel'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(sent).toEqual([])
+    // A press whose release never came is replaced by the next press, not committed beside it.
+    cell(60, 0).dispatchEvent(pointer('pointerdown'))
+    cell(62, 8).dispatchEvent(pointer('pointerdown'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toEqual([{ startBeat: 2, lengthBeats: 1, pitch: 62, velocity: 100 }])
+  })
+
+  it('keeps a chosen note chosen when it is dragged to a new place', () => {
+    const { roll } = build([{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }])
+    cell(60, 0).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    expect(cell(60, 0).getAttribute('aria-label')).toContain('chosen')
+    cell(60, 0).dispatchEvent(pointer('pointerdown'))
+    cell(62, 4).dispatchEvent(pointer('pointerover'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(cell(62, 4).getAttribute('aria-label')).toContain('chosen')
+    expect(roll.clipId).toBe('c')
   })
 
   it('toggles a note with a shift press', () => {

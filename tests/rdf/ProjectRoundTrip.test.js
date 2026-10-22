@@ -381,6 +381,13 @@ describe('editor metadata stays in its own graph', () => {
 })
 
 describe('the editor graph, track layout', () => {
+  it('round trips a collapsed lane through the shapes', async () => {
+    const project = builtProject()
+    project.setTrackLayout('track-10', { laneSize: 'collapsed' })
+    const { tracks } = readEditor(await parseText(writeEditor(project, { iri: IRI }), IRI), IRI)
+    expect(tracks.get('track-10').laneSize).toBe('collapsed')
+  })
+
   it('round trips order, colour and lane size, and writes nothing for the default', async () => {
     const project = builtProject()
     project.setTrackLayout('track-10', { order: 0, color: '#3366cc', laneSize: 'large', folder: 'Drums' })

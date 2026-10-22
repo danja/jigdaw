@@ -6,7 +6,7 @@
 // compiled. It is written to its own document (`editor.ttl`), see
 // docs/project-format.md, "Two graphs".
 
-export const LANE_SIZES = Object.freeze(['small', 'medium', 'large'])
+export const LANE_SIZES = Object.freeze(['collapsed', 'small', 'medium', 'large'])
 // Small, so that a piece of seven tracks fits a screen: a row is the track's name and its mute and solo, and the rest of its
 // controls are a size up or in the Mixer tab. Absent in a file means this, and it is not written.
 export const DEFAULT_LANE_SIZE = 'small'

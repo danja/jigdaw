@@ -36,6 +36,12 @@ describe('EditorState', () => {
     expect(editor.isDefault).toBe(true)
   })
 
+  it('accepts a collapsed lane, which is a size like the others', () => {
+    const editor = new EditorState()
+    editor.setTrack('t', { laneSize: 'collapsed' })
+    expect(editor.track('t').laneSize).toBe('collapsed')
+  })
+
   it('refuses an unknown lane size and a fractional order', () => {
     const editor = new EditorState()
     expect(() => editor.setTrack('t', { laneSize: 'huge' })).toThrow(/laneSize/)

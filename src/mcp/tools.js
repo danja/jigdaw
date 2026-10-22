@@ -41,7 +41,7 @@ const NOTE_SCHEMA = Object.freeze({
   required: ['startBeat', 'lengthBeats', 'pitch', 'velocity']
 })
 
-export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
+export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, onPanic = null, reel = null }) {
   if (!dispatcher) throw new Error('the tool surface needs a dispatcher')
 
   const requireCatalogue = () =>
@@ -366,14 +366,14 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       description:
         'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor ' +
         'metadata, so it changes no revision and has no undo. "move" is places up (negative) or ' +
-        'down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
+        'down (positive). Colour is lower case #rrggbb, or null for none. laneSize is collapsed (a thin bar), small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: 'object',
         properties: {
           trackId: { type: 'string' },
           move: { type: 'integer' },
           color: { type: ['string', 'null'] },
-          laneSize: { type: 'string', enum: ['small', 'medium', 'large'] },
+          laneSize: { type: 'string', enum: ['collapsed', 'small', 'medium', 'large'] },
           folder: { type: ['string', 'null'] }
         },
         required: ['trackId']
@@ -534,15 +534,17 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       name: 'clip_transform_notes',
       description:
         'Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip\'s note order). ' +
-        '`transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), ' +
-        'scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.',
+        '`transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), ' +
+        'scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or ' +
+        'humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.',
       inputSchema: {
         type: 'object',
         properties: {
           clipId: { type: 'string' },
           transform: { type: 'string', enum: NOTE_TRANSFORMS },
-          grid: { type: 'number' }, strength: { type: 'number' },
+          grid: { type: 'number' }, strength: { type: 'number' }, ends: { type: 'boolean' },
           semitones: { type: 'integer' }, factor: { type: 'number' },
+          axis: { type: 'integer' }, timing: { type: 'number' }, velocity: { type: 'number' }, seed: { type: 'integer' },
           indices: { type: 'array', items: { type: 'integer' } },
           expectedRevision: { type: 'integer' }
         },
@@ -1078,6 +1080,23 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           return ok({})
         } catch (error) {
           return failed(`stop failed: ${error?.message ?? error}`)
+        }
+      }
+    },
+
+    {
+      name: 'transport_panic',
+      description:
+        'Silence every note that is stuck: all notes off and all sound off go to every plugin, and the transport keeps ' +
+        'running. Use it instead of transport_stop when a note hangs and the loop being worked on should go on.',
+      inputSchema: { type: 'object', properties: {} },
+      async handler () {
+        if (!onPanic) return failed('this host cannot panic: no transport is connected')
+        try {
+          await onPanic()
+          return ok({})
+        } catch (error) {
+          return failed(`panic failed: ${error?.message ?? error}`)
         }
       }
     },

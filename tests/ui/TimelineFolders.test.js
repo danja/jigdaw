@@ -13,8 +13,8 @@ const noop = () => {}
 const handlers = Object.fromEntries(['onAdd', 'onAddAudio', 'onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onBypass', 'onMoveInChain', 'onEnvelope', 'onRemoveEnvelope', 'onAutomateMaster', 'onMute', 'onTrim', 'onCopy', 'onCut', 'onPaste', 'onChannel', 'onSetLoop', 'onMoveTrack', 'onArm'].map(n => [n, noop]))
 const folders = { a: 'Drums', b: 'Drums', c: null, d: 'Drums' }
 
-function build () {
-  const timeline = createTimeline(document, handlers)
+function build (extra = {}) {
+  const timeline = createTimeline(document, { ...handlers, ...extra })
   document.body.append(timeline.element)
   timeline.draw({
     tracks: Object.keys(folders).map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
@@ -57,5 +57,28 @@ describe('a folder bar', () => {
     click(bar.element.querySelector('button'))
     expect(seen).toEqual(['Bass'])
     expect(bar.element.querySelector('button').getAttribute('aria-label')).toBe('Hide the 1 track in folder Bass')
+  })
+})
+
+describe('moving a folder', () => {
+  it('hops the neighbour over the whole run, and leaves out the move that goes nowhere', () => {
+    const moves = []
+    build({ onMoveTrack: (id, delta) => moves.push([id, delta]) })
+    const bars = [...document.querySelectorAll('.timeline-folder')]
+    const visible = bar => [...bar.querySelectorAll('.folder-move')].filter(b => !b.hidden).map(b => b.textContent)
+    // a, b (Drums) are first, so they can only go down; d (Drums) is last, so it can only go up.
+    expect(visible(bars[0])).toEqual(['Move down'])
+    expect(visible(bars[1])).toEqual(['Move up'])
+    click(bars[0].querySelector('.folder-move-down'))
+    click(bars[1].querySelector('.folder-move-up'))
+    // The track past the run moves up over both of a and b; c moves down over the one-track run.
+    expect(moves).toEqual([['c', -2], ['c', 1]])
+  })
+
+  it('names the folder on each button, and offers none when the caller cannot move', () => {
+    build()
+    expect(document.querySelector('.folder-move-down').getAttribute('aria-label')).toBe('Move folder Drums down')
+    const bar = createFolderBar(document, { onToggle () {} })
+    expect(bar.element.querySelectorAll('.folder-move')).toHaveLength(0)
   })
 })

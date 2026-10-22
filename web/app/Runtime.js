@@ -111,6 +111,7 @@ export function createRuntime (ctx) {
         openCollection: iri => ctx.browser.loadCollection(iri),
         onPlay: options => ctx.transport.play(options),
         onStop: async () => { ctx.transport.stop() },
+        onPanic: async () => { ctx.transport.panic() },
         // script_run, built before the reel exists and calling it once it does.
         reel: ctx.script.agentReel()
       })

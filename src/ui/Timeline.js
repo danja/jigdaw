@@ -81,7 +81,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -198,10 +198,14 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         live.add(key)
         let bar = folderBars.get(key)
         if (!bar) {
-          bar = createFolderBar(document, { onToggle: folder => { collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder); if (lastArgs) draw(lastArgs); folderBars.get(key)?.element.querySelector('button').focus() } })
+          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onToggle: folder => { collapsedFolders.has(folder) ? collapsedFolders.delete(folder) : collapsedFolders.add(folder); if (lastArgs) draw(lastArgs); folderBars.get(key)?.element.querySelector('button').focus() } })
           folderBars.set(key, bar)
         }
-        bar.update({ name, count: end - i, collapsed: collapsedFolders.has(name) })
+        bar.runStart = i
+        bar.runLength = end - i
+        bar.firstTrack = tracks[i].id
+        bar.neighbours = { up: tracks[i - 1]?.id ?? null, down: tracks[end]?.id ?? null }
+        bar.update({ name, count: end - i, collapsed: collapsedFolders.has(name), canUp: i > 0, canDown: end < tracks.length })
         out.push(bar.element)
       }
       if (name === null || !collapsedFolders.has(name)) out.push(...rowsInOrder.slice(i, end))
@@ -209,6 +213,60 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     }
     for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key)
     return out
+  }
+
+  /**
+   * Move a whole run of folder tracks one place: the track past the run hops over it, so the run keeps its order. One
+   * layout change, so no undo, like moving a single track.
+   */
+  function moveFolder (key, delta) {
+    const bar = folderBars.get(key)
+    if (!bar) return
+    const first = bar.firstTrack
+    if (delta < 0) onMoveTrack(bar.neighbours.up, bar.runLength)
+    else onMoveTrack(bar.neighbours.down, -bar.runLength)
+    // The run sits somewhere else now; keep focus on the folder, on the button that was pressed if it still is one.
+    const moved = [...folderBars.values()].find(b => b.firstTrack === first)
+    const wanted = moved?.element.querySelector(delta < 0 ? '.folder-move-up' : '.folder-move-down')
+    const target = wanted && !wanted.hidden ? wanted : moved?.element.querySelector('.folder-toggle')
+    target?.focus()
+  }
+
+  /**
+   * Drag a track by its grip to the row of another. The row under the pointer is marked while the pointer is down, and
+   * one move of that many places is made on release, so one drag is one reorder (the same call as Alt with Up or Down).
+   */
+  function dragTrack (id, event) {
+    event.preventDefault()
+    // A touch pointer is held by the element it began on, which would hide every row but the first from the move.
+    event.target?.releasePointerCapture?.(event.pointerId)
+    const rowOf = trackId => rows.get(trackId)?.row
+    let target = id
+    rowOf(id)?.classList.add('dragging')
+    const clear = () => {
+      document.removeEventListener('pointermove', over)
+      document.removeEventListener('pointerup', up)
+      document.removeEventListener('pointercancel', cancel)
+      for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+    }
+    function over (e) {
+      const hit = e.target?.closest?.('.timeline-row')?.dataset.track
+      if (!hit || hit === target || !rows.has(hit)) return
+      rowOf(target)?.classList.remove('drop-target')
+      target = hit
+      if (target !== id) rowOf(target).classList.add('drop-target')
+    }
+    function up () {
+      clear()
+      const order = lastArgs.tracks.map(t => t.id)
+      const delta = order.indexOf(target) - order.indexOf(id)
+      if (delta !== 0) onMoveTrack(id, delta)
+      document.getElementById(`show-track-${id}`)?.focus()
+    }
+    function cancel () { clear() }
+    document.addEventListener('pointermove', over)
+    document.addEventListener('pointerup', up)
+    document.addEventListener('pointercancel', cancel)
   }
 
   function draw (args) {
@@ -262,9 +320,10 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       if (!entry) {
         const row = document.createElement('div')
         row.className = 'timeline-row'
+        row.dataset.track = track.id
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep,
           onSelect: (id, { toggle }) => (toggle ? selection.toggle('track', id) : selection.set('track', [id]))
         })
         const lane = document.createElement('div')

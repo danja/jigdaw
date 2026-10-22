@@ -667,3 +667,30 @@ describe('the notes drawn in a MIDI clip', () => {
     expect(notesOf('n3').getAttribute('d')).toBe('M3 0.5h1')
   })
 })
+
+describe('dragging a track by its grip', () => {
+  const rowOf = id => document.querySelector(`.timeline-row[data-track="${id}"]`)
+
+  it('marks the row under the pointer, and makes one move of that many places on release', () => {
+    const { calls } = build()
+    document.getElementById('head-t1-grip').dispatchEvent(event('pointerdown', { button: 0 }))
+    expect(rowOf('t1').classList.contains('dragging')).toBe(true)
+    rowOf('t2').dispatchEvent(event('pointermove'))
+    expect(rowOf('t2').classList.contains('drop-target')).toBe(true)
+    document.dispatchEvent(event('pointerup'))
+    expect(calls.filter(c => c[0] === 'moveTrack')).toEqual([['moveTrack', 't1', 1]])
+    expect(document.querySelectorAll('.dragging, .drop-target').length).toBe(0)
+  })
+
+  it('moves nothing when released where it began, or after a cancel', () => {
+    const { calls } = build()
+    document.getElementById('head-t1-grip').dispatchEvent(event('pointerdown', { button: 0 }))
+    document.dispatchEvent(event('pointerup'))
+    document.getElementById('head-t2-grip').dispatchEvent(event('pointerdown', { button: 0 }))
+    rowOf('t1').dispatchEvent(event('pointermove'))
+    document.dispatchEvent(event('pointercancel'))
+    document.dispatchEvent(event('pointerup'))
+    expect(calls.filter(c => c[0] === 'moveTrack')).toEqual([])
+    expect(document.querySelectorAll('.dragging, .drop-target').length).toBe(0)
+  })
+})

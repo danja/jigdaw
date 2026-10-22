@@ -400,6 +400,7 @@
   .timeline-row { border-top:1px solid var(--line); width:max-content; }
   .timeline-folder { position:sticky; left:0; width:var(--view, 100%); border-top:1px solid var(--line); background:var(--panel, transparent); }
   .folder-toggle { min-height:44px; padding:0 0.75rem; text-align:left; background:none; border:0; color:var(--fg); font-weight:600; }
+  .folder-move { min-height:44px; min-width:44px; padding:0 0.75rem; background:none; border:0; color:var(--fg); }
   .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
     flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
@@ -409,6 +410,11 @@
   .timeline-head button { min-height:28px; font-size:12px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .timeline-head .show-track, .head-mix { flex:1 1 100%; }
+  .head-title { flex:1 1 100%; display:flex; align-items:center; gap:4px; }
+  .head-title .show-track { flex:1 1 auto; }
+  .timeline-head > .head-title > .head-grip { flex:none; min-width:44px; min-height:44px; cursor:grab; touch-action:none; }
+  .timeline-row.dragging { opacity:.6; }
+  .timeline-row.drop-target { outline:3px dashed var(--accent); outline-offset:-3px; }
   .timeline-head > button:not(.show-track) { flex:1 1 45%; }
   .head-mix { display:flex; flex-wrap:wrap; gap:4px; }
   .head-mix[hidden] { display:none; }
@@ -476,11 +482,25 @@
   .timeline-row { border-left:4px solid var(--track-color, transparent); }
   .timeline-row[data-size="small"] .timeline-lane { min-height:44px; }
   .timeline-row[data-size="large"] .timeline-lane { min-height:320px; }
+  /* A collapsed lane is a thin bar: the name and the grip, and nothing else. The Lane size choice in the dock brings it back. */
+  .timeline-row[data-size="collapsed"] > :not(.timeline-body) { display:none; }
+  .timeline-row[data-size="collapsed"] .timeline-lane { min-height:0; height:8px; overflow:hidden; }
+  .timeline-row[data-size="collapsed"] .timeline-lane > * { visibility:hidden; }
+  .timeline-head[data-size="collapsed"] > :not(.head-title) { display:none; }
+  .timeline-head[data-size="collapsed"] { align-items:center; flex-wrap:nowrap; }
+  .timeline-head[data-size="collapsed"] .head-title { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="collapsed"] .show-track { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="collapsed"] { padding-block:1px; min-height:0; }
+  .timeline-head[data-size="collapsed"] .show-track, .timeline-head[data-size="collapsed"] .head-expand { min-height:24px; }
+  .timeline-head[data-size="collapsed"] > .head-title > .head-expand { flex:none; }
+  .timeline-head[data-size="collapsed"] > .head-title > .head-grip { min-width:28px; min-height:24px; padding:0 4px; }
   .timeline-head[data-size="small"] .head-slider, .timeline-head[data-size="small"] > button:not(.show-track) { display:none; }
   .timeline-head[data-size="small"] .head-mix { flex-wrap:nowrap; }
   /* A small track is one row: the name takes what the Mute and Solo buttons leave. */
   .timeline-head[data-size="small"] { align-items:center; align-content:center; flex-wrap:nowrap; }
   .timeline-head[data-size="small"] .show-track { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="small"] .head-title { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="small"] > .head-title > .head-grip { min-width:28px; min-height:28px; padding:0 4px; }
   .timeline-head[data-size="small"] .head-mix { flex:0 0 auto; }
   .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; min-width:3.2rem; }
   .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
@@ -509,6 +529,7 @@
   /* The last square of a longer note is its handle. */
   .piano-roll-cell.on.end:not(.start) { cursor:ew-resize; }
   .piano-roll-cell.on.selected { background:#6aa6ff; }
+  .piano-roll-cell.band { outline:2px dashed #fff; outline-offset:-2px; background-image:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.18)); }
   .piano-roll-cell.on.chosen { background:#f5a524; outline:2px solid #fff; outline-offset:-2px; }
   /* The bar past the end of the clip: drawing into it makes the clip longer. */
   .piano-roll-cell.beyond { opacity:.5; }
@@ -605,7 +626,7 @@
   <button id="toggle-browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
   <button id="play" data-icon="play" aria-pressed="false">Play</button>
   <button id="stop" data-icon="stop">Stop</button>
-  <button id="panic" type="button" title="Silence every note that is stuck on, and keep playing">Panic</button>
+  <button id="panic" type="button" title="Silence every note that is stuck on, and keep playing (Ctrl or Cmd and full stop)">Panic</button>
   <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
   <span class="tempo" id="tempo-group">
     <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>

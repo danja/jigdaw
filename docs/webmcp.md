@@ -194,7 +194,7 @@ names the one the mix of every track arrives at. A node with no audio input is r
 | `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?` | Clip id |
 | `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
 | `clip_set_notes` | `clipId`, `notes[]` | |
-| `clip_transform_notes` | `clipId`, `transform`, `grid?`, `strength?`, `semitones?`, `factor?`, `indices?` | |
+| `clip_transform_notes` | `clipId`, `transform`, `grid?`, `strength?`, `ends?`, `semitones?`, `factor?`, `axis?`, `timing?`, `velocity?`, `seed?`, `indices?` | |
 | `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
 | `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `color?` | Revision and the clip |
 | `clip_split` | `clipId`, `atBeat` | Both clip ids |
@@ -203,7 +203,7 @@ names the one the mix of every track arrives at. A node with no audio input is r
 
 A note is `{ startBeat, lengthBeats, pitch, velocity }`, its start counted from the clip's.
 `clip_set_notes` replaces every note at once, so a phrase is one edit and one undo. `clip_transform_notes` is the same
-one edit made from a rule: `quantize`, `transpose`, `scaleVelocity` or `reverse`, over all the notes or those at `indices`.
+one edit made from a rule: `quantize`, `transpose`, `scaleVelocity`, `reverse`, `invert` or `humanize` (which needs a whole `seed`, so the same call gives the same notes), over all the notes or those at `indices`.
 It is refused whole if any note would leave its range. A MIDI clip
 plays into its track's MIDI input and into nothing on a track with none. An audio clip names its
 file by absolute IRI and plays into the track's audio input, or straight to its fader.
@@ -227,6 +227,7 @@ outputs arrive at, and refuses one that is not on that track.
 | `script_run` | `source`, `dryRun?`, `now?` | `swapped`, or the `plan` for a dry run, or the `errors` with their lines |
 | `transport_play` | `fromBeat?` | Starts there; without it, at the loop's start when a loop is on, else at the beginning |
 | `transport_stop` | | |
+| `transport_panic` | | All notes off and all sound off to every plugin; the transport keeps running |
 | `transport_configure` | `tempo?`, `timeSignature?`, `loop?`, `position?` | |
 
 `script_run` runs a Reel script, [livecoding.md](livecoding.md). It is the same operations the other tools

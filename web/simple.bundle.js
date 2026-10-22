@@ -23105,7 +23105,7 @@ var Engine = class {
 };
 
 // src/model/EditorState.js
-var LANE_SIZES = Object.freeze(["small", "medium", "large"]);
+var LANE_SIZES = Object.freeze(["collapsed", "small", "medium", "large"]);
 var DEFAULT_LANE_SIZE = "small";
 var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
@@ -26614,12 +26614,18 @@ function describeBus(project, trackIds, { label = "Bus", newTrackId = project.ne
 }
 
 // src/model/NoteTransform.js
-function quantize(notes, { grid, strength = 1 } = {}) {
+function quantize(notes, { grid, strength = 1, ends = false } = {}) {
   if (!(Number.isFinite(grid) && grid > 0)) throw new Error(`grid must be a number of beats above zero: ${grid}`);
   if (!(Number.isFinite(strength) && strength >= 0 && strength <= 1)) throw new Error(`strength must be from 0 to 1: ${strength}`);
   return notes.map((note) => {
     const target2 = Math.round(note.startBeat / grid) * grid;
-    return { ...note, startBeat: Math.max(0, note.startBeat + (target2 - note.startBeat) * strength) };
+    const startBeat = Math.max(0, note.startBeat + (target2 - note.startBeat) * strength);
+    if (!ends) return { ...note, startBeat };
+    const end = note.startBeat + note.lengthBeats;
+    const endTarget = Math.round(end / grid) * grid;
+    const raw = end + (endTarget - end) * strength - startBeat;
+    const lengthBeats = raw > 0 ? raw : grid;
+    return { ...note, startBeat, lengthBeats };
   });
 }
 function transpose(notes, semitones) {
@@ -26642,11 +26648,47 @@ function reverse(notes, clipLength) {
     return { ...note, startBeat };
   });
 }
+function invert(notes, axis = notes[0]?.pitch) {
+  if (notes.length === 0) return [];
+  if (!Number.isInteger(axis)) throw new Error(`axis must be a whole pitch: ${axis}`);
+  return notes.map((note) => {
+    const pitch = 2 * axis - note.pitch;
+    if (pitch < 0 || pitch > 127) throw new Error(`inverting about ${axis} would put pitch ${note.pitch} outside 0 to 127`);
+    return { ...note, pitch };
+  });
+}
+function draw(seed) {
+  let a2 = seed >>> 0;
+  return () => {
+    a2 = a2 + 1831565813 >>> 0;
+    let t = a2;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
+  if (!Number.isInteger(seed)) throw new Error(`seed must be a whole number: ${seed}`);
+  if (!(Number.isFinite(timing) && timing >= 0)) throw new Error(`timing must be beats from zero up: ${timing}`);
+  if (!(Number.isFinite(velocity) && velocity >= 0)) throw new Error(`velocity must be from zero up: ${velocity}`);
+  const next = draw(seed);
+  return notes.map((note) => {
+    const shift = (next() * 2 - 1) * timing;
+    const change = (next() * 2 - 1) * velocity;
+    return {
+      ...note,
+      startBeat: Math.max(0, note.startBeat + shift),
+      velocity: Math.min(127, Math.max(1, Math.round(note.velocity + change)))
+    };
+  });
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
   scaleVelocity: (notes, { factor: factor2 }) => scaleVelocity(notes, factor2),
-  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats)
+  reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
+  invert: (notes, { axis }) => invert(notes, axis),
+  humanize: (notes, options) => humanize(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name, options = {}, { indices = null } = {}) {
@@ -26839,7 +26881,7 @@ var NOTE_SCHEMA = Object.freeze({
   },
   required: ["startBeat", "lengthBeats", "pitch", "velocity"]
 });
-function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, reel = null }) {
+function createTools({ dispatcher, catalogue = null, loadPlugin = null, openCollection = null, onPlay = null, onStop = null, onPanic = null, reel = null }) {
   if (!dispatcher) throw new Error("the tool surface needs a dispatcher");
   const requireCatalogue = () => catalogue ? null : failed("this host has no catalogue configured, so it cannot search");
   const tools = [
@@ -27112,14 +27154,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "track_layout",
-      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
+      description: 'How the page draws a track: its place in the arrangement, colour, lane size and folder. Editor metadata, so it changes no revision and has no undo. "move" is places up (negative) or down (positive). Colour is lower case #rrggbb, or null for none. laneSize is collapsed (a thin bar), small, medium or large. folder is a name of 1 to 60 characters that tracks share, or null for none.',
       inputSchema: {
         type: "object",
         properties: {
           trackId: { type: "string" },
           move: { type: "integer" },
           color: { type: ["string", "null"] },
-          laneSize: { type: "string", enum: ["small", "medium", "large"] },
+          laneSize: { type: "string", enum: ["collapsed", "small", "medium", "large"] },
           folder: { type: ["string", "null"] }
         },
         required: ["trackId"]
@@ -27262,7 +27304,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1), transpose (`semitones`, whole), scaleVelocity (`factor` above zero) or reverse (mirrors the notes inside the clip). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27270,8 +27312,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           transform: { type: "string", enum: NOTE_TRANSFORMS },
           grid: { type: "number" },
           strength: { type: "number" },
+          ends: { type: "boolean" },
           semitones: { type: "integer" },
           factor: { type: "number" },
+          axis: { type: "integer" },
+          timing: { type: "number" },
+          velocity: { type: "number" },
+          seed: { type: "integer" },
           indices: { type: "array", items: { type: "integer" } },
           expectedRevision: { type: "integer" }
         },
@@ -27734,6 +27781,20 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "transport_panic",
+      description: "Silence every note that is stuck: all notes off and all sound off go to every plugin, and the transport keeps running. Use it instead of transport_stop when a note hangs and the loop being worked on should go on.",
+      inputSchema: { type: "object", properties: {} },
+      async handler() {
+        if (!onPanic) return failed("this host cannot panic: no transport is connected");
+        try {
+          await onPanic();
+          return ok({});
+        } catch (error2) {
+          return failed(`panic failed: ${error2?.message ?? error2}`);
+        }
+      }
+    },
+    {
       name: "transport_configure",
       description: "Set the tempo, time signature or loop.",
       inputSchema: {
@@ -27909,8 +27970,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
 }
 
 // src/mcp/adapter.js
-function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel = null, target: target2 = globalThis } = {}) {
-  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, reel });
+function registerTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, onPanic, reel = null, target: target2 = globalThis } = {}) {
+  const tools = createTools({ dispatcher, catalogue, loadPlugin, openCollection, onPlay, onStop, onPanic, reel });
   const surface = {
     tools,
     names: tools.map((t) => t.name),
@@ -28015,6 +28076,9 @@ function createRuntime(ctx2) {
         onPlay: (options) => ctx2.transport.play(options),
         onStop: async () => {
           ctx2.transport.stop();
+        },
+        onPanic: async () => {
+          ctx2.transport.panic();
         },
         // script_run, built before the reel exists and calling it once it does.
         reel: ctx2.script.agentReel()
@@ -28679,6 +28743,7 @@ function createTransport(ctx2) {
   }
   function panic() {
     const { engine } = ctx2;
+    ctx2.rack?.releaseKeys();
     for (const entry of engine?.nodes() ?? []) {
       engine.post(entry.id, { type: "events", events: [
         { frame: 0, bytes: Uint8Array.from([176, 123, 0]) },
@@ -31294,6 +31359,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   history_redo: "a script must not redo a person's edits",
   transport_play: "needs user activation, and the person starts the music",
   transport_stop: "the person stops the music",
+  transport_panic: "the person silences a stuck note",
   transport_configure: "tempo and loop changes are wanted for performance, and not in version one",
   diagnostics: "a query; a script cannot branch on a result",
   script_run: "a script cannot run a script, which would let one never end"

@@ -22,8 +22,11 @@
 // Notes can be chosen: S toggles the note under the cursor, Ctrl+A chooses every note, and a press on a
 // note with Shift held toggles it. While any are chosen the buttons that change every note change only
 // those, and Escape first lets go of the choice and only then closes. A chosen note is marked with a
-// different glyph and in its label, as well as by colour. The choice is kept by start and pitch, so a
-// note that is moved by hand drops out of it.
+// different glyph and in its label, as well as by colour. The choice is kept by start and pitch, and
+// follows a note moved by drag.
+//
+// Shift held while pressing an empty square and dragging draws a rubber band; the notes it touches become
+// the choice when the pointer is released. Nothing is edited, so there is nothing to undo.
 //
 // Past the end of the clip there is one more bar, dimmed. A note drawn, moved
 // or stretched into it makes the clip longer, to the end of the bar it
@@ -104,7 +107,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   help.textContent = 'Click a square for a one-beat note, or drag across to draw it longer. Drag a note to move it, ' +
     'or its last square to change its length. Double-click a note, or press Delete, to remove it. ' +
     'Drawing into the dimmed bar makes the clip longer. Keys: arrows move, Enter adds or removes, ' +
-    'Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave, S chooses a note to change with others (or Shift-click it), Ctrl+A chooses all, ' +
+    'Shift with Left or Right changes length, Alt with Up or Down velocity, Page Up and Page Down an octave, S chooses a note to change with others (or Shift-click it), Shift-drag across empty squares chooses the notes it touches, Ctrl+A chooses all, ' +
     'Escape lets go of the choice, then closes.'
 
   const status = document.createElement('p')
@@ -146,6 +149,33 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     }
     gridLabel.append(gridSelect)
     tools.append(gridLabel)
+    // How far Quantize moves a note toward the grid: all the way, or part of it to keep some of the feel.
+    const strengthLabel = document.createElement('label')
+    strengthLabel.append(document.createTextNode('Strength '))
+    const strengthSelect = document.createElement('select')
+    strengthSelect.id = 'roll-quantize-strength'
+    for (const [value, text] of [['1', '100%'], ['0.75', '75%'], ['0.5', '50%'], ['0.25', '25%']]) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = text
+      option.selected = value === '1'
+      strengthSelect.append(option)
+    }
+    strengthLabel.append(strengthSelect)
+    tools.append(strengthLabel)
+    const endsLabel = document.createElement('label')
+    endsLabel.append(document.createTextNode('Move '))
+    const endsSelect = document.createElement('select')
+    endsSelect.id = 'roll-quantize-ends'
+    for (const [value, text] of [['starts', 'Starts'], ['both', 'Starts and ends']]) {
+      const option = document.createElement('option')
+      option.value = value
+      option.textContent = text
+      option.selected = value === 'starts'
+      endsSelect.append(option)
+    }
+    endsLabel.append(endsSelect)
+    tools.append(endsLabel)
     // `onTransform` returns an error message when the edit is refused; what was done or why not is spoken here,
     // since the host's log is not where a person is looking.
     const ask = (name, options, done) => () => {
@@ -163,17 +193,21 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
         chosen = keep
         draw()
       }
-      say(`${done}${indices === null ? '' : ` (${indices.length} chosen)`}`)
+      say(indices === null ? done : done.replace(/^Every note/, 'Chosen notes').replace('every note', 'the chosen notes').replace(/^Notes/, 'Chosen notes'))
     }
     const buttons = [
-      ['roll-quantize', 'Quantize', () => ask('quantize', { grid: Number(gridSelect.value) }, 'Quantized every note to the grid')()],
+      ['roll-quantize', 'Quantize', () => ask('quantize', { grid: Number(gridSelect.value), strength: Number(strengthSelect.value), ends: endsSelect.value === 'both' }, strengthSelect.value === '1' ? 'Quantized every note to the grid' : `Quantized every note ${Math.round(Number(strengthSelect.value) * 100)}% of the way to the grid`)()],
       ['roll-down', 'Down a semitone', ask('transpose', { semitones: -1 }, 'Every note down a semitone')],
       ['roll-up', 'Up a semitone', ask('transpose', { semitones: 1 }, 'Every note up a semitone')],
       ['roll-octave-down', 'Down an octave', ask('transpose', { semitones: -12 }, 'Every note down an octave')],
       ['roll-octave-up', 'Up an octave', ask('transpose', { semitones: 12 }, 'Every note up an octave')],
       ['roll-softer', 'Softer', ask('scaleVelocity', { factor: 0.8 }, 'Every note softer')],
       ['roll-louder', 'Louder', ask('scaleVelocity', { factor: 1.25 }, 'Every note louder')],
-      ['roll-reverse', 'Reverse', ask('reverse', {}, 'Notes reversed in time')]
+      ['roll-reverse', 'Reverse', ask('reverse', {}, 'Notes reversed in time')],
+      // About the first note's pitch, so a rising line falls.
+      ['roll-invert', 'Invert pitches', ask('invert', {}, 'Notes inverted about the first note')],
+      // A fresh seed for each press, so pressing again gives a different feel; the edit itself is reproducible from it.
+      ['roll-humanize', 'Humanize', () => ask('humanize', { timing: 0.05, velocity: 10, seed: now() }, 'Notes humanized a little in time and velocity')()]
     ]
     for (const [id, text, run] of buttons) {
       const button = document.createElement('button')
@@ -217,6 +251,11 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   let preview = null
   // The last press on a note, for telling a double click.
   let lastPress = null
+  // A rubber band in progress, as two cells, drawn but not yet chosen.
+  let band = null
+  // Drops the gesture in progress without committing it. A cancelled touch never sends a release,
+  // and a stale gesture would otherwise commit on the next one's release.
+  let abandon = null
 
   const say = message => { status.textContent = message }
   // The clip's own steps, and the bar past its end that drawing into extends it.
@@ -302,6 +341,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
         if (isChosen) classes.push('chosen')
         if (step % STEPS_PER_BEAT === 0) classes.push('beat')
         if (step >= clipSteps()) classes.push('beyond')
+        if (band && pitch >= Math.min(band.from.pitch, band.to.pitch) && pitch <= Math.max(band.from.pitch, band.to.pitch) &&
+          step >= Math.min(band.from.step, band.to.step) && step <= Math.max(band.from.step, band.to.step)) classes.push('band')
         cell.className = classes.join(' ')
         // Marked in text too, so a note is not shown by colour alone.
         cell.textContent = starts ? (isChosen ? '▣' : '■') : note ? '–' : ''
@@ -430,11 +471,48 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     return clip.notes.map(n => (same(n, note) ? { ...n, lengthBeats } : n))
   }
 
+  /** Follow a rubber band from `from`, and choose the notes it touches on release. */
+  function startBand (from) {
+    band = { from, to: from }
+    draw()
+    const over = e => {
+      const at = cellOf(e.target)
+      if (!at || (at.pitch === band.to.pitch && at.step === band.to.step)) return
+      band = { from, to: at }
+      draw()
+    }
+    const release = () => {
+      grid.removeEventListener('pointerover', over)
+      document.removeEventListener('pointerup', up)
+      document.removeEventListener('pointercancel', cancel)
+      abandon = null
+    }
+    const cancel = () => { release(); band = null; draw() }
+    abandon = cancel
+    const up = () => {
+      release()
+      const { from: a, to: b } = band
+      band = null
+      const low = Math.min(a.pitch, b.pitch)
+      const high = Math.max(a.pitch, b.pitch)
+      const first = beatOf(Math.min(a.step, b.step))
+      const last = beatOf(Math.max(a.step, b.step) + 1)
+      // A note is touched when any part of it is inside the band.
+      chosen = new Set(clip.notes.filter(n => n.pitch >= low && n.pitch <= high && n.startBeat < last && n.startBeat + n.lengthBeats > first).map(keyOf))
+      draw()
+      say(`${chosen.size} note${chosen.size === 1 ? '' : 's'} chosen`)
+    }
+    grid.addEventListener('pointerover', over)
+    document.addEventListener('pointerup', up)
+    document.addEventListener('pointercancel', cancel)
+  }
+
   grid.addEventListener('pointerdown', event => {
     if (!clip || event.button !== 0) return
     const from = cellOf(event.target)
     if (!from) return
     event.preventDefault()
+    abandon?.()
     const note = noteAt(clip.notes, from.pitch, beatOf(from.step))
     if (note && event.shiftKey) {
       cursor = { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) }
@@ -442,6 +520,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       document.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true })
       return
     }
+    if (!note && event.shiftKey) { startBand(from); return }
     const at = now()
 
     // A second press on the same note, soon after the first, removes it.
@@ -472,9 +551,16 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       preview = next
       draw()
     }
-    const up = () => {
+    const release = () => {
       grid.removeEventListener('pointerover', over)
       document.removeEventListener('pointerup', up)
+      document.removeEventListener('pointercancel', cancel)
+      abandon = null
+    }
+    const cancel = () => { release(); preview = null; draw() }
+    abandon = cancel
+    const up = () => {
+      release()
       const next = dragged(kind, from, to, note)
       preview = null
       if (kind === 'draw') {
@@ -483,6 +569,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
         send(next, `Added ${spokenName(made.pitch)} at ${where(Math.min(from.step, to.step))}, ${beats(made.lengthBeats)}`)
       } else if (next) {
         const changed = next.find(n => !clip.notes.some(o => same(o, n) && o.lengthBeats === n.lengthBeats))
+        // A chosen note that is moved is still the chosen note.
+        if (kind === 'move' && chosen.delete(keyOf(note))) chosen.add(keyOf(changed))
         send(next, kind === 'move'
           ? `Moved to ${spokenName(changed.pitch)} at ${barBeat(changed.startBeat, options.beatsPerBar)}`
           : `Length ${beats(changed.lengthBeats)}`)
@@ -493,6 +581,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     }
     grid.addEventListener('pointerover', over)
     document.addEventListener('pointerup', up)
+    document.addEventListener('pointercancel', cancel)
   })
 
   return {
@@ -503,7 +592,9 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       options = { beatsPerBar }
       heading.textContent = `Notes of the clip at ${barBeat(next.startBeat, beatsPerBar)} on ${label}`
       close.setAttribute('aria-label', `Close the notes of the clip on ${label}`)
+      abandon?.()
       chosen = new Set()
+      band = null
       const first = next.notes[0]
       cursor = first ? { pitch: first.pitch, step: Math.round(first.startBeat * STEPS_PER_BEAT) } : { pitch: 60, step: 0 }
       low = cursor.pitch - Math.floor(VISIBLE_PITCHES / 2)
@@ -524,6 +615,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     },
     /** Close the clip, leaving the note that says how to open one. */
     hide () {
+      abandon?.()
       clip = null
       chosen = new Set()
       preview = null
