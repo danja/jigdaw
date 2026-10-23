@@ -663,6 +663,15 @@ describe('clips', () => {
     expect(first).not.toEqual(notes)
   })
 
+  it('says what was done and undone in words, from both history tools', async () => {
+    await call('track_add', {})
+    await call('clip_add', { trackId: 'track-1', startBeat: 0, lengthBeats: 4 })
+    const undone = await call('history_undo', {})
+    expect(undone.history).toEqual({ done: ['Add a track'], undone: ['Add a clip'] })
+    const redone = await call('history_redo', {})
+    expect(redone.history).toEqual({ done: ['Add a track', 'Add a clip'], undone: [] })
+  })
+
   it('adds a clip with controller events and replaces them as one edit, refusing a value out of range', async () => {
     const { trackId } = await call('track_add', {})
     const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, controllers: [{ atBeat: 1, controller: 'pitchBend', value: -2000 }, { atBeat: 0, controller: 7, value: 100 }] })

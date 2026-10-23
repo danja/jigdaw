@@ -52,7 +52,7 @@ export function createReel ({ dispatcher, tools, clock, resolvePlugin, beatsPerB
   async function swap (plan, { since = null } = {}) {
     current?.stop()
     current = null
-    const run = await dispatcher.grouped(() => runner().run(plan, { onError, since }))
+    const run = await dispatcher.grouped(() => runner().run(plan, { onError, since }), { label: 'Run a script' })
     current = run
     return run
   }

@@ -1034,11 +1034,11 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       description:
         'Step the project back over the last edit, whoever made it, a person or an agent. Undoing a ' +
         'removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is ' +
-        'nothing to undo.',
+        'nothing to undo. Returns the history in words: `done`, oldest first, and `undone`, next redo first.',
       inputSchema: { type: 'object', properties: {} },
       async handler () {
         const result = await dispatcher.undo()
-        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message)
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo(), history: dispatcher.history() }) : failed(result.message)
       }
     },
 
@@ -1050,7 +1050,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       inputSchema: { type: 'object', properties: {} },
       async handler () {
         const result = await dispatcher.redo()
-        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message)
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo(), history: dispatcher.history() }) : failed(result.message)
       }
     },
 

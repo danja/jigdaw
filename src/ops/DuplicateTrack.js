@@ -56,5 +56,5 @@ export async function duplicateTrack (dispatcher, trackId) {
       }
     }
     return { ok: true, trackId: newTrack, nodeIds: Object.fromEntries(idMap), skipped: plan.skipped }
-  })
+  }, { label: 'Duplicate a track' })
 }

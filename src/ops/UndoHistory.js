@@ -29,6 +29,14 @@ export class UndoHistory {
   /** Whether there is an edit undo last stepped back from to step forward to. */
   canRedo () { return this.#redoStack.length > 0 }
 
+  /**
+   * What the history holds, as the words for each edit: `done` from the oldest to the latest (so the last is what undo would take
+   * back), and `undone` from the next that redo would bring back to the furthest.
+   */
+  labels () {
+    return { done: this.#undoStack.map(e => e.label), undone: [...this.#redoStack].reverse().map(e => e.label) }
+  }
+
   /** Drop all undo and redo history. */
   clear () {
     this.#undoStack.length = 0
@@ -36,12 +44,12 @@ export class UndoHistory {
   }
 
   /**
-   * Record a snapshot taken just before a committed edit. Called by
+   * Record a snapshot taken just before a committed edit, with a few words saying what the edit was. Called by
    * OpDispatcher.apply() itself, never from here, because only apply() knows
    * whether the edit it just committed should be undoable.
    */
-  record (snapshot) {
-    this.#undoStack.push(snapshot)
+  record (snapshot, label = 'Edit') {
+    this.#undoStack.push({ snapshot, label })
     if (this.#undoStack.length > this.#limit) this.#undoStack.shift()
     this.#redoStack.length = 0
   }
@@ -58,8 +66,8 @@ export class UndoHistory {
    */
   async undo (dispatcher) {
     if (this.#undoStack.length === 0) return { ok: false, message: 'nothing to undo' }
-    const target = this.#undoStack.pop()
-    this.#redoStack.push(dispatcher.project.snapshot())
+    const { snapshot: target, label } = this.#undoStack.pop()
+    this.#redoStack.push({ snapshot: dispatcher.project.snapshot(), label })
     await this.#restoreTo(dispatcher, target)
     return { ok: true, revision: dispatcher.project.revision }
   }
@@ -67,8 +75,8 @@ export class UndoHistory {
   /** The inverse of undo: step forward to whatever undo last stepped back from. */
   async redo (dispatcher) {
     if (this.#redoStack.length === 0) return { ok: false, message: 'nothing to redo' }
-    const target = this.#redoStack.pop()
-    this.#undoStack.push(dispatcher.project.snapshot())
+    const { snapshot: target, label } = this.#redoStack.pop()
+    this.#undoStack.push({ snapshot: dispatcher.project.snapshot(), label })
     await this.#restoreTo(dispatcher, target)
     return { ok: true, revision: dispatcher.project.revision }
   }

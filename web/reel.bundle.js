@@ -25097,18 +25097,25 @@ var UndoHistory = class {
   canRedo() {
     return this.#redoStack.length > 0;
   }
+  /**
+   * What the history holds, as the words for each edit: `done` from the oldest to the latest (so the last is what undo would take
+   * back), and `undone` from the next that redo would bring back to the furthest.
+   */
+  labels() {
+    return { done: this.#undoStack.map((e) => e.label), undone: [...this.#redoStack].reverse().map((e) => e.label) };
+  }
   /** Drop all undo and redo history. */
   clear() {
     this.#undoStack.length = 0;
     this.#redoStack.length = 0;
   }
   /**
-   * Record a snapshot taken just before a committed edit. Called by
+   * Record a snapshot taken just before a committed edit, with a few words saying what the edit was. Called by
    * OpDispatcher.apply() itself, never from here, because only apply() knows
    * whether the edit it just committed should be undoable.
    */
-  record(snapshot) {
-    this.#undoStack.push(snapshot);
+  record(snapshot, label = "Edit") {
+    this.#undoStack.push({ snapshot, label });
     if (this.#undoStack.length > this.#limit) this.#undoStack.shift();
     this.#redoStack.length = 0;
   }
@@ -25124,16 +25131,16 @@ var UndoHistory = class {
    */
   async undo(dispatcher) {
     if (this.#undoStack.length === 0) return { ok: false, message: "nothing to undo" };
-    const target2 = this.#undoStack.pop();
-    this.#redoStack.push(dispatcher.project.snapshot());
+    const { snapshot: target2, label } = this.#undoStack.pop();
+    this.#redoStack.push({ snapshot: dispatcher.project.snapshot(), label });
     await this.#restoreTo(dispatcher, target2);
     return { ok: true, revision: dispatcher.project.revision };
   }
   /** The inverse of undo: step forward to whatever undo last stepped back from. */
   async redo(dispatcher) {
     if (this.#redoStack.length === 0) return { ok: false, message: "nothing to redo" };
-    const target2 = this.#redoStack.pop();
-    this.#undoStack.push(dispatcher.project.snapshot());
+    const { snapshot: target2, label } = this.#redoStack.pop();
+    this.#undoStack.push({ snapshot: dispatcher.project.snapshot(), label });
     await this.#restoreTo(dispatcher, target2);
     return { ok: true, revision: dispatcher.project.revision };
   }
@@ -25272,6 +25279,53 @@ var UndoHistory = class {
     });
   }
 };
+
+// src/ops/StepLabel.js
+var WORDS = Object.freeze({
+  addTrack: "Add a track",
+  setTrack: "Change a track",
+  removeTrack: "Remove a track",
+  moveNodeToTrack: "Move a plugin to another track",
+  setTrackChannel: "Change level, pan, mute or solo",
+  addNode: "Add a plugin",
+  setNode: "Change a plugin",
+  reorderNode: "Reorder plugins",
+  removeNode: "Remove a plugin",
+  setSetting: "Change a setting",
+  clearSetting: "Reset a setting",
+  setNodeState: "Change a plugin's state",
+  addConnection: "Connect",
+  setConnection: "Change a connection",
+  removeConnection: "Disconnect",
+  addClip: "Add a clip",
+  setClip: "Change a clip",
+  removeClip: "Remove a clip",
+  setClipNotes: "Edit notes",
+  setClipControllers: "Edit controller events",
+  addEnvelope: "Add automation",
+  setEnvelope: "Change automation",
+  removeEnvelope: "Remove automation",
+  addMarker: "Add a marker",
+  setMarker: "Change a marker",
+  removeMarker: "Remove a marker",
+  addRegion: "Add a region",
+  setRegion: "Change a region",
+  removeRegion: "Remove a region",
+  addSend: "Add a send",
+  setSend: "Change a send",
+  removeSend: "Remove a send",
+  setMaster: "Change the master",
+  setTransport: "Change tempo, loop or time signature"
+});
+var spoken = (op) => {
+  const words = String(op).replace(/([A-Z])/g, " $1").trim().toLowerCase();
+  return words === "" ? "Edit" : words[0].toUpperCase() + words.slice(1);
+};
+function stepLabel(changes) {
+  const labels = [...new Set((changes ?? []).map((c3) => WORDS[c3.op] ?? spoken(c3.op)))];
+  if (labels.length === 0) return "Edit";
+  return labels.length === 1 ? labels[0] : `${labels[0]} and ${labels.length - 1} other change${labels.length === 2 ? "" : "s"}`;
+}
 
 // src/ops/OpDispatcher.js
 var rangeOf = ({ lowNote, highNote }) => ({
@@ -25581,9 +25635,13 @@ var OpDispatcher = class {
     const result = this.#project.apply(changes, { expectedRevision });
     this.#releaseRemoved();
     this.#rebuildLinks(compiled);
-    if (before) this.#history.record(before);
+    if (before) this.#history.record(before, stepLabel(changes));
     this.#emit({ type: "changed", revision: result.revision, results: result.results, compiled });
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled };
+  }
+  /** What the history holds in words, for a list of steps: see UndoHistory.labels(). */
+  history() {
+    return this.#history.labels();
   }
   /** Whether there is an edit to step back from. */
   canUndo() {
@@ -25632,7 +25690,7 @@ var OpDispatcher = class {
    * For a script (docs/livecoding.md): the run is one group. What it schedules for later is done through
    * withoutRecording, because a performance is not a series of edits to step back over.
    */
-  async grouped(fn) {
+  async grouped(fn, { label = "Several changes" } = {}) {
     if (this.#unrecorded > 0) return fn();
     const before = this.#project.snapshot();
     const revision = this.#project.revision;
@@ -25641,7 +25699,7 @@ var OpDispatcher = class {
       return await fn();
     } finally {
       this.#unrecorded--;
-      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before);
+      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before, label);
     }
   }
   /**
@@ -25843,7 +25901,7 @@ var OpDispatcher = class {
       const result = this.apply(changes);
       if (!result.ok) return abandon(result);
       return { ...result, nodeIds: [...made.values()] };
-    });
+    }, { label: "Unpack a composite plugin" });
   }
   /**
    * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
@@ -26855,7 +26913,7 @@ async function duplicateTrack(dispatcher, trackId) {
       }
     }
     return { ok: true, trackId: newTrack, nodeIds: Object.fromEntries(idMap), skipped: plan2.skipped };
-  });
+  }, { label: "Duplicate a track" });
 }
 
 // src/ops/ChainReorder.js
@@ -27786,11 +27844,11 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "history_undo",
-      description: "Step the project back over the last edit, whoever made it, a person or an agent. Undoing a removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is nothing to undo.",
+      description: "Step the project back over the last edit, whoever made it, a person or an agent. Undoing a removed plugin reloads it, so this can take a moment. Fails, changing nothing, when there is nothing to undo. Returns the history in words: `done`, oldest first, and `undone`, next redo first.",
       inputSchema: { type: "object", properties: {} },
       async handler() {
         const result = await dispatcher.undo();
-        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo(), history: dispatcher.history() }) : failed(result.message);
       }
     },
     {
@@ -27799,7 +27857,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       inputSchema: { type: "object", properties: {} },
       async handler() {
         const result = await dispatcher.redo();
-        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo() }) : failed(result.message);
+        return result.ok ? ok({ revision: result.revision, canUndo: dispatcher.canUndo(), canRedo: dispatcher.canRedo(), history: dispatcher.history() }) : failed(result.message);
       }
     },
     {
@@ -31059,7 +31117,7 @@ function createReel({ dispatcher, tools, clock, resolvePlugin, beatsPerBar, curr
   async function swap(plan2, { since = null } = {}) {
     current2?.stop();
     current2 = null;
-    const run2 = await dispatcher.grouped(() => runner().run(plan2, { onError, since }));
+    const run2 = await dispatcher.grouped(() => runner().run(plan2, { onError, since }), { label: "Run a script" });
     current2 = run2;
     return run2;
   }

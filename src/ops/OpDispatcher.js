@@ -27,6 +27,7 @@ import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
 import { decodeState, encodeState } from '../host/StateCodec.js'
 import { UndoHistory } from './UndoHistory.js'
+import { stepLabel } from './StepLabel.js'
 
 /** The note range of a MIDI connection or send, as the router takes it: only the ends that are set. */
 const rangeOf = ({ lowNote, highNote }) => ({
@@ -392,11 +393,14 @@ export class OpDispatcher {
     this.#releaseRemoved()
     this.#rebuildLinks(compiled)
 
-    if (before) this.#history.record(before)
+    if (before) this.#history.record(before, stepLabel(changes))
 
     this.#emit({ type: 'changed', revision: result.revision, results: result.results, compiled })
     return { ok: true, applied: true, revision: result.revision, results: result.results, compiled }
   }
+
+  /** What the history holds in words, for a list of steps: see UndoHistory.labels(). */
+  history () { return this.#history.labels() }
 
   /** Whether there is an edit to step back from. */
   canUndo () { return this.#history.canUndo() }
@@ -446,7 +450,7 @@ export class OpDispatcher {
    * For a script (docs/livecoding.md): the run is one group. What it schedules for later is done through
    * withoutRecording, because a performance is not a series of edits to step back over.
    */
-  async grouped (fn) {
+  async grouped (fn, { label = 'Several changes' } = {}) {
     if (this.#unrecorded > 0) return fn()
     const before = this.#project.snapshot()
     const revision = this.#project.revision
@@ -456,7 +460,7 @@ export class OpDispatcher {
     } finally {
       this.#unrecorded--
       // A run that ends where it began (a copy taken back after a failed load) leaves nothing to undo.
-      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before)
+      if (this.#project.revision !== revision && !sameContent(before, this.#project.snapshot())) this.#history.record(before, label)
     }
   }
 
@@ -699,7 +703,7 @@ export class OpDispatcher {
       const result = this.apply(changes)
       if (!result.ok) return abandon(result)
       return { ...result, nodeIds: [...made.values()] }
-    })
+    }, { label: 'Unpack a composite plugin' })
   }
 
   /**

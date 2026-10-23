@@ -33,6 +33,7 @@ const CLASSIFIED = {
   undo: { kind: 'op', tool: 'history_undo' },
   redo: { kind: 'op', tool: 'history_redo' },
   canUndo: { kind: 'read' },
+  history: { kind: 'read' },
   canRedo: { kind: 'read' },
   project: { kind: 'read' },
   revision: { kind: 'read' },

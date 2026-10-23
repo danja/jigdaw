@@ -1218,6 +1218,39 @@ describe('loading a plugin carries everything a node holds', () => {
   })
 })
 
+describe('the history in words', () => {
+  it('lists what was done, oldest first, and what was undone, next to redo first', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    expect(d.history()).toEqual({ done: [], undone: [] })
+    d.apply([{ op: 'addTrack' }])
+    d.apply([{ op: 'setTransport', beatsPerBar: 3 }])
+    d.apply([{ op: 'addClip', track: 'track-1', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [] }])
+    expect(d.history()).toEqual({ done: ['Add a track', 'Change tempo, loop or time signature', 'Add a clip'], undone: [] })
+    await d.undo()
+    await d.undo()
+    expect(d.history()).toEqual({ done: ['Add a track'], undone: ['Change tempo, loop or time signature', 'Add a clip'] })
+    await d.redo()
+    expect(d.history()).toEqual({ done: ['Add a track', 'Change tempo, loop or time signature'], undone: ['Add a clip'] })
+  })
+
+  it('forgets what was undone when something new is done, and clears with the history', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    d.apply([{ op: 'addTrack' }])
+    await d.undo()
+    d.apply([{ op: 'addTrack' }, { op: 'addTrack' }])
+    expect(d.history()).toEqual({ done: ['Add a track'], undone: [] })
+    d.clearHistory()
+    expect(d.history()).toEqual({ done: [], undone: [] })
+  })
+
+  it('gives a grouped edit one step with the label it was given, and a default one without', async () => {
+    const d = new OpDispatcher({ engine: fakeEngine() })
+    await d.grouped(() => { d.apply([{ op: 'addTrack' }]); d.apply([{ op: 'addTrack' }]) }, { label: 'Run a script' })
+    await d.grouped(() => { d.apply([{ op: 'addTrack' }]) })
+    expect(d.history().done).toEqual(['Run a script', 'Several changes'])
+  })
+})
+
 describe('undo and redo', () => {
   it('starts with nothing to step through', () => {
     const d = new OpDispatcher({ engine: fakeEngine() })

@@ -416,8 +416,11 @@ the page, it is research, not committed.
       independent documents with no shared audio state.
 - [ ] **Media explorer and missing media.** Browse and import audio by drag and drop (import exists), resolve missing files on
       open with a replace dialog. Missing media must block render loudly.
-- [ ] **Undo history panel.** A visible list of undo steps from `OpDispatcher.undo()` and `redo()`, click to jump. No second
-      undo implementation.
+- [ ] **Undo history panel: what is left.** Built: an Undo history section under the arrangement lists every state from the start to the latest edit and the edits undone after it, each in words
+      (`src/ops/StepLabel.js`, from the op names; `OpDispatcher.history()`, also returned by `history_undo` and `history_redo`), the current one marked with aria-current; choosing another runs that many
+      undos or redos through the dispatcher, so there is no second implementation. Seen in real Chrome on 2026-10-23: four edits listed, a click back to step 2 removed the clip and put the tempo back
+      (the field followed), a click forward restored both, focus kept on the step. Not built: a few of the labels are generic (a changeset of several kinds says its first and counts the rest), the list
+      is not kept across a reload (history is not saved), and it holds the 100 edits the history keeps.
 
 ### Phase G. Workflow and customization
 
@@ -501,6 +504,10 @@ covering one unused clause.
 2. **A plugin editor's `jig:integrity` is not checked.** A browser cannot verify a frame's document against a digest the way it
    can a script, and fetching it first to check and then framing it is two fetches that can differ. The frame is sandboxed on
    the plugin's own origin either way; the digest is a claim nothing tests.
+
+3. **Two audio-render tests time out in a full parallel run.** `tests/host/presetRender.test.js` (glass-hours, and the Conductor driving Generative Gamelan) take 27 to 52 s alone and have the
+   120 s and 30 s caps, so they fail now and then when the other suites compete for the machine (seen 2026-10-22 and 2026-10-23, with the Conductor test too once, green on rerun and alone; the load average on the machine was 17 to 32 from other programs at the time). Not a regression in any case; the
+   fix is a longer cap or running that file apart from the rest, which is the maintainer's call on how long the suite should be allowed to take.
 
 ## Recurring, check periodically
 

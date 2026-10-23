@@ -4,14 +4,28 @@
 // own undo() and redo() (tests/ops/OpDispatcher.test.js), and this only wires
 // it, so there is no second implementation of either to drift.
 
+import { createHistoryList } from '../../src/ui/HistoryList.js'
+
 export function createHistory (ctx) {
   const { document, $, log } = ctx
+
+  // The list of steps, drawn again whenever the buttons are: the same moments are when the history has changed.
+  const list = createHistoryList(document, { jump: steps => jump(steps) })
+
+  /** Go back or forward that many edits, one undo or redo at a time, stopping at the first that fails. */
+  async function jump (steps) {
+    for (let i = 0; i < Math.abs(steps); i++) {
+      const result = await (steps < 0 ? ctx.dispatcher.undo() : ctx.dispatcher.redo())
+      if (!result.ok) { log(result.message, 'error'); break }
+    }
+  }
 
   /** Undo and Redo are disabled rather than hidden, so a screen reader always
    * finds the same two controls in the same place and reads which are live. */
   function updateHistoryButtons () {
     $('undo').disabled = !(ctx.dispatcher?.canUndo() ?? false)
     $('redo').disabled = !(ctx.dispatcher?.canRedo() ?? false)
+    if (ctx.dispatcher) list.draw(ctx.dispatcher.history())
   }
 
   async function undo () {
@@ -29,6 +43,8 @@ export function createHistory (ctx) {
   }
 
   function mount () {
+    $('history-body').append(list.element)
+    list.draw({ done: [], undone: [] })
     $('undo').addEventListener('click', () => undo())
     $('redo').addEventListener('click', () => redo())
 
