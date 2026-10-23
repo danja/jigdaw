@@ -19,6 +19,7 @@
 import { EditorState } from './EditorState.js'
 import { ScriptState } from './ScriptState.js'
 import { EMPTY_INFO, patchInfo } from './ProjectInfo.js'
+import { checkLoopBeats } from './ClipLoop.js'
 import { isMidiSignal } from './Endpoints.js'
 import {
   ARRANGEMENT_OPERATIONS, MASTER_TRACK, checkNoteRange, emptyArrangement, cloneArrangement, checkTrackOutput,
@@ -365,7 +366,9 @@ const OPERATIONS = {
     if (change.kind === 'midi') {
       clip.notes = checkNotes(change.notes ?? [])
       clip.controllers = checkControllers(change.controllers ?? [])
+      if (change.loopBeats !== undefined && change.loopBeats !== null) clip.loopBeats = checkLoopBeats(change.loopBeats)
     } else {
+      if (change.loopBeats !== undefined && change.loopBeats !== null) throw new Error('only a MIDI clip can loop')
       // Absolute: a reader resolves a relative jig:source against the session
       // document before it gets here, so anything relative is a mistake.
       if (typeof change.source !== 'string' || !URL.canParse(change.source)) {
@@ -403,6 +406,13 @@ const OPERATIONS = {
       if (change[key] === undefined) continue
       if (clip.kind !== 'audio') throw new Error('only an audio clip has fades')
       clip[key] = checkFade(key, change[key])
+    }
+    if (change.loopBeats !== undefined) {
+      if (clip.kind !== 'midi') throw new Error('only a MIDI clip can loop')
+      refuseIfLocked(clip, change, 'looped')
+      // Kept only while set, so a clip that never looped is the same object it always was.
+      if (change.loopBeats === null) delete clip.loopBeats
+      else clip.loopBeats = checkLoopBeats(change.loopBeats)
     }
     if (change.locked !== undefined) clip.locked = checkFlag('locked', change.locked)
     clip.startBeat = startBeat
@@ -746,7 +756,7 @@ const OPERATIONS = {
 /** The addClip that recreates a clip from a snapshot. */
 export function clipChange (c) {
   return c.kind === 'midi'
-    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes, controllers: c.controllers ?? [] }
+    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes, controllers: c.controllers ?? [], ...(c.loopBeats ? { loopBeats: c.loopBeats } : {}) }
     : { op: 'addClip', id: c.id, track: c.track, kind: 'audio', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats }
 }
 

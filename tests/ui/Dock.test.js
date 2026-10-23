@@ -4,7 +4,7 @@
 // the move and the release on the document.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
-import { createDock, DOCK_MIN, DOCK_MAX, DOCK_DEFAULT, DOCK_STEP } from '../../src/ui/Dock.js'
+import { createDock, DOCK_MIN, DOCK_MAX, DOCK_DEFAULT, DOCK_STEP, DOCK_SHARE } from '../../src/ui/Dock.js'
 
 let document
 let window
@@ -89,5 +89,39 @@ describe('the dock', () => {
     const dock = createDock(document, { slots: ['a'], storage: throwing })
     dock.element.querySelector('[role="separator"]').dispatchEvent(event('keydown', { key: 'ArrowUp' }))
     expect(dock.height).toBe(DOCK_DEFAULT + DOCK_STEP)
+  })
+
+  it('takes no more than its share of a short window, and the limit follows the window', () => {
+    let vh = 600
+    const dock = createDock(document, { slots: ['a'], viewportHeight: () => vh })
+    const splitter = dock.element.querySelector('[role="separator"]')
+    splitter.dispatchEvent(event('keydown', { key: 'End' }))
+    expect(dock.height).toBe(Math.floor(600 * DOCK_SHARE))
+    expect(splitter.getAttribute('aria-valuemax')).toBe(String(dock.height))
+    vh = 500
+    dock.refit()
+    expect(dock.height).toBe(Math.floor(500 * DOCK_SHARE))
+    vh = 2000
+    dock.refit()
+    splitter.dispatchEvent(event('keydown', { key: 'End' }))
+    expect(dock.height).toBe(DOCK_MAX)
+  })
+
+  it('never goes under the minimum, even in a window too short for its share', () => {
+    const dock = createDock(document, { slots: ['a'], viewportHeight: () => 200 })
+    dock.element.querySelector('[role="separator"]').dispatchEvent(event('keydown', { key: 'End' }))
+    expect(dock.height).toBe(DOCK_MIN)
+  })
+
+  it('keeps the remembered height when it is cut short by the window, and restores it when the window grows', () => {
+    const storage = memory()
+    storage.setItem('jigdaw.dockHeight', '600')
+    let vh = 800
+    const dock = createDock(document, { slots: ['a'], storage, viewportHeight: () => vh })
+    expect(dock.height).toBe(360)
+    vh = 1600
+    dock.refit()
+    expect(dock.height).toBe(600)
+    expect(storage.getItem('jigdaw.dockHeight')).toBe('600')
   })
 })

@@ -87,6 +87,18 @@ export function createLoading (ctx) {
     // The Load onto menu. Read before anything is awaited, so a second Load
     // pressed while this one fetches does not change where this one lands.
     const track = ctx.rack.targetTrack()
+    // A Replace asked for first: this load swaps the plugin in, and is the end of that mode whether it works or not.
+    const replacing = ctx.swap.target()
+    if (replacing) {
+      ctx.swap.end()
+      const swapped = await d.swapPlugin(replacing, iri)
+      if (!swapped.ok) { log(`${swapped.step ? `[${swapped.step}] ` : ''}${swapped.message}`, 'error'); return }
+      log(`replaced with ${d.engineNode(swapped.nodeId)?.profile?.label ?? iri}`, 'ok')
+      for (const note of swapped.dropped) log(note, 'info')
+      ctx.rack.draw()
+      ctx.expose()
+      return
+    }
     const where = { ...(foreign ? { foreign: true } : {}), ...(track ? { track } : {}) }
     let result = await d.addPlugin(iri, where)
 

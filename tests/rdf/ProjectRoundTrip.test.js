@@ -160,6 +160,18 @@ async function reopen (turtle, baseIRI = IRI) {
 }
 
 describe('a project survives being written and read back', () => {
+  it('keeps a clip\'s loop length, and writes nothing for a clip that does not loop', async () => {
+    const original = builtProject()
+    const clip = original.clips.find(c => c.kind === 'midi')
+    original.apply([{ op: 'setClip', id: clip.id, loopBeats: 1.5 }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('jig:loopBeats 1.5')
+    const { project } = await reopen(turtle)
+    expect(project.clip(clip.id).loopBeats).toBe(1.5)
+    original.apply([{ op: 'setClip', id: clip.id, loopBeats: null }])
+    expect(writeProject(original, { iri: IRI })).not.toContain('loopBeats')
+  })
+
   it('keeps the title, author and notes, with quotes and line breaks, and writes nothing for an empty field', async () => {
     const original = builtProject()
     original.setInfo({ title: 'Tide "one"', author: 'Dee', notes: 'Line one\nLine two \\ done' })

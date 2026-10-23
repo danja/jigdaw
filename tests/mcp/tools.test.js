@@ -539,6 +539,15 @@ describe('tracks', () => {
     expect(dispatcher.project.revision).toBe(revision)
   })
 
+  it('loops a MIDI clip through clip_add and clip_set, and clears it with null', async () => {
+    const { trackId } = await call('track_add', {})
+    const { clipId } = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 8, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }], loopBeats: 2 })
+    expect(dispatcher.project.clip(clipId).loopBeats).toBe(2)
+    expect((await call('clip_set', { clipId, loopBeats: 4 })).clip.loopBeats).toBe(4)
+    expect('loopBeats' in (await call('clip_set', { clipId, loopBeats: null })).clip).toBe(false)
+    expect((await call('clip_set', { clipId, loopBeats: 0 })).ok).toBe(false)
+  })
+
   it('keeps a title, author and notes with the session, reads them back, and refuses what is too long', async () => {
     const revision = dispatcher.project.revision
     expect(await call('project_info', {})).toMatchObject({ ok: true, info: { title: null, author: null, notes: null } })
@@ -857,6 +866,67 @@ describe('clip behaviour, split and duplicate', () => {
     const placed = await call('clip_duplicate', { clipId, startBeat: 2, trackId: other.trackId })
     expect(dispatcher.project.clip(placed.clipId)).toMatchObject({ startBeat: 2, track: other.trackId })
     expect((await call('clip_duplicate', { clipId: 'ghost' })).ok).toBe(false)
+  })
+})
+
+describe('trimming and copying clips', () => {
+  const note = { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }
+  const make = async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 8, notes: [note, { ...note, startBeat: 5 }] })
+    return { trackId, clipId: added.clipId }
+  }
+
+  it('trims a MIDI clip from the front and keeps the notes where they sounded, in one undo', async () => {
+    const { clipId } = await make()
+    const trimmed = await call('clip_trim', { clipId, from: 3 })
+    expect(trimmed.ok, trimmed.error).toBe(true)
+    expect(dispatcher.project.clip(clipId)).toMatchObject({ startBeat: 3, lengthBeats: 5 })
+    expect(dispatcher.project.clip(clipId).notes.map(n => n.startBeat)).toEqual([2])
+    await dispatcher.undo()
+    expect(dispatcher.project.clip(clipId)).toMatchObject({ startBeat: 0, lengthBeats: 8 })
+    expect(dispatcher.project.clip(clipId).notes).toHaveLength(2)
+  })
+
+  it('trims the end, and refuses an empty trim, a trim outside the clip and a missing clip, saying so', async () => {
+    const { clipId } = await make()
+    expect((await call('clip_trim', { clipId, to: 5 })).ok).toBe(true)
+    expect(dispatcher.project.clip(clipId).lengthBeats).toBe(5)
+    expect((await call('clip_trim', { clipId })).error).toMatch(/from, to or both/)
+    expect((await call('clip_trim', { clipId, to: 99 })).error).toMatch(/leave some of the clip/)
+    expect((await call('clip_trim', { clipId: 'ghost', from: 1 })).ok).toBe(false)
+  })
+
+  it('copies a group to a new place as one edit, keeping its spacing, and moves it with cut', async () => {
+    const { trackId, clipId } = await make()
+    const second = await call('clip_add', { trackId, startBeat: 10, lengthBeats: 2 })
+    const copy = await call('clip_copy_to', { clipIds: [clipId, second.clipId], startBeat: 20 })
+    expect(copy.ok, copy.error).toBe(true)
+    expect(copy.clipIds.map(id => dispatcher.project.clip(id).startBeat)).toEqual([20, 30])
+    expect(dispatcher.project.clips).toHaveLength(4)
+    await dispatcher.undo()
+    expect(dispatcher.project.clips).toHaveLength(2)
+
+    const moved = await call('clip_copy_to', { clipIds: [clipId], startBeat: 40, cut: true })
+    expect(moved.ok).toBe(true)
+    expect(dispatcher.project.clip(clipId)).toBeNull()
+    expect(dispatcher.project.clip(moved.clipIds[0]).startBeat).toBe(40)
+    await dispatcher.undo()
+    expect(dispatcher.project.clip(clipId)).not.toBeNull()
+    expect(dispatcher.project.clips).toHaveLength(2)
+  })
+
+  it('puts a group on one track when asked, and refuses bad arguments without changing anything', async () => {
+    const { clipId } = await make()
+    const other = await call('track_add', {})
+    const copy = await call('clip_copy_to', { clipIds: [clipId], startBeat: 0, trackId: other.trackId })
+    expect(dispatcher.project.clip(copy.clipIds[0]).track).toBe(other.trackId)
+    const before = dispatcher.project.revision
+    expect((await call('clip_copy_to', { clipIds: [], startBeat: 0 })).ok).toBe(false)
+    expect((await call('clip_copy_to', { clipIds: ['ghost'], startBeat: 0 })).ok).toBe(false)
+    expect((await call('clip_copy_to', { clipIds: [clipId], startBeat: -1 })).error).toMatch(/from zero up/)
+    expect((await call('clip_copy_to', { clipIds: [clipId] })).ok).toBe(false)
+    expect(dispatcher.project.revision).toBe(before)
   })
 })
 

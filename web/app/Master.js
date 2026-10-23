@@ -18,7 +18,7 @@ export function createMaster (ctx) {
   const strip = createStrip(ctx.document, { gain: 1, pan: 0, muted: false }, change => {
     const result = ctx.dispatcher?.apply([{ op: 'setMaster', ...change }])
     if (result && !result.ok) log(result.message, 'error')
-  }, { label: 'Master', id: 'strip-master', solo: false })
+  }, { label: 'Master', id: 'strip-master', solo: false, fader: true })
 
   const summary = createChainSummary(ctx.document, {
     onShowPlugins: () => {

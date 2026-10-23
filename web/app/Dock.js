@@ -23,7 +23,8 @@ export function createDockPanel (ctx) {
   const { document, window, log } = ctx
   let storage = null
   try { storage = window.localStorage } catch { /* storage unavailable */ }
-  const dock = createDock(document, { slots: ['idle', 'midi', 'audio', 'track', 'tracks', 'node'], storage })
+  const dock = createDock(document, { slots: ['idle', 'midi', 'audio', 'track', 'tracks', 'node'], storage, viewportHeight: () => window.innerHeight })
+  window.addEventListener('resize', () => dock.refit())
 
   const idle = document.createElement('p')
   idle.className = 'dock-hint'

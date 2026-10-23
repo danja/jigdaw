@@ -19,6 +19,7 @@
 // plays the loop again. A note that runs past the loop end is cut there.
 
 import { automationBetween } from './Automation.js'
+import { playedContent } from '../model/ClipLoop.js'
 
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
@@ -43,7 +44,7 @@ export function clipNotes (project) {
     for (const clip of project.clips) {
       if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
       const end = clip.startBeat + clip.lengthBeats
-      for (const note of clip.notes) {
+      for (const note of playedContent(clip).notes) {
         const on = clip.startBeat + note.startBeat
         if (on >= end) continue
         const off = Math.min(on + note.lengthBeats, end)
@@ -70,7 +71,7 @@ export function clipControllers (project) {
     for (const clip of project.clips) {
       if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
       const end = clip.startBeat + clip.lengthBeats
-      for (const event of clip.controllers ?? []) {
+      for (const event of playedContent(clip).controllers) {
         const on = clip.startBeat + event.atBeat
         if (on >= end) continue
         const bend = event.controller === 'pitchBend'

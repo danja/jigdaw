@@ -1,6 +1,6 @@
 // tests/ui/Icons.test.js
 import { describe, it, expect, beforeEach } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { parseHTML } from 'linkedom'
 import { ICONS, iconElement, setIcon, applyIcons } from '../../src/ui/Icons.js'
@@ -56,5 +56,24 @@ describe('icons', () => {
       expect(ICONS[name], name).toBeDefined()
       expect(words.trim().length, `${name} has words`).toBeGreaterThan(0)
     }
+  })
+
+  it('gives every icon button in the studio its own drawing, so two buttons are never told apart by their tooltip alone', () => {
+    const html = readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+    const found = [...html.matchAll(/<button[^>]*id="([^"]+)"[^>]*data-icon="([^"]+)"[^>]*>/g)]
+    const owner = new Map()
+    const shared = []
+    for (const [, id, name] of found) {
+      if (owner.has(name)) shared.push(`${id} and ${owner.get(name)} both use ${name}`)
+      else owner.set(name, id)
+    }
+    expect(shared).toEqual([])
+  })
+
+  it('every drawing is used or is one the pages build in code, so none is left over', () => {
+    const html = readFileSync(resolve(import.meta.dirname, '../../web/index.html'), 'utf8')
+    const code = ['src/ui', 'web/app'].flatMap(dir => readdirSync(resolve(import.meta.dirname, '../..', dir)).map(f => resolve(import.meta.dirname, '../..', dir, f))).filter(f => f.endsWith('.js')).map(f => readFileSync(f, 'utf8')).join('\n')
+    const unused = Object.keys(ICONS).filter(name => !html.includes(`data-icon="${name}"`) && !new RegExp(`['"]${name}['"]`).test(code.replace(/export const ICONS[\s\S]*?\n\}\)/, '')))
+    expect(unused).toEqual([])
   })
 })

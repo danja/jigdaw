@@ -83,7 +83,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -381,7 +381,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         const body = document.createElement('div')
         body.className = 'timeline-body'
         body.append(header.element, lane)
-        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]), onBypass, onMove: onMoveInChain })
+        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]), onBypass, onMove: onMoveInChain, onReplace })
         const automation = createEnvelopeLanes(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view })
         row.append(body, automation.element, strip.element)
         entry = { row, header, lane, strip, automation }

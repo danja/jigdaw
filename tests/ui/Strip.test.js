@@ -12,6 +12,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { createStrip, decibels, panPosition } from '../../src/ui/Strip.js'
 import { appSource, appFile } from './appSource.js'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 let document
 beforeEach(() => { document = parseHTML('<!doctype html><html><body></body></html>').document })
@@ -184,5 +186,60 @@ describe('where the application draws strips', () => {
 
   it('sends a strip change to the track it belongs to', () => {
     expect(app).toMatch(/dispatcher\.setTrackChannel\(trackId, change\)/)
+  })
+})
+
+describe('a mixer channel with a fader', () => {
+  const desk = (channel = {}, onChange = () => {}) => createStrip(document, channel, onChange, { label: 'Pulse', id: 'strip-t1', fader: true })
+  const input = (type, props = {}) => Object.assign(new document.defaultView.Event(type, { bubbles: true }), props)
+
+  it('has a vertical slider for level and a knob for pan, with Mute and Solo as buttons under them, in that order', () => {
+    const { element } = desk()
+    const level = element.querySelector('#strip-t1-level')
+    expect(level.type).toBe('range')
+    expect(level.className).toBe('strip-fader')
+    expect(level.getAttribute('aria-orientation')).toBe('vertical')
+    // Pan is still the dial; level is not one.
+    expect(element.querySelectorAll('.dial')).toHaveLength(1)
+    expect(element.querySelector('.dial #strip-t1-pan')).not.toBeNull()
+    expect([...element.children].map(c => c.className)).toEqual(['strip-control', 'strip-control', 'strip-buttons'])
+    expect(element.children[0].contains(element.querySelector('#strip-t1-pan'))).toBe(true)
+    expect(element.children[1].contains(level)).toBe(true)
+    expect([...element.querySelectorAll('.strip-buttons button')].map(b => b.getAttribute('aria-label'))).toEqual(['Mute', 'Solo'])
+    expect(element.classList.contains('strip-desk')).toBe(true)
+  })
+
+  it('names the slider by its label, says its value in decibels as text, and reports a move as gain', () => {
+    const changes = []
+    const { element } = desk({ gain: 1 }, change => changes.push(change))
+    const level = element.querySelector('#strip-t1-level')
+    expect(element.querySelector(`label[for="${level.id}"]`).textContent).toBe('Level')
+    expect(level.getAttribute('aria-valuetext')).toBe('0.0 decibels')
+    level.value = '0.5'
+    level.dispatchEvent(input('input'))
+    expect(changes).toEqual([{ gain: 0.5 }])
+    expect(level.getAttribute('aria-valuetext')).toBe('-6.0 decibels')
+    expect(element.children[1].querySelector('.value').textContent).toBe('-6.0 dB')
+  })
+
+  it('follows a change from elsewhere, so an undo moves the fader', () => {
+    const strip = desk({ gain: 1 })
+    strip.update({ gain: 0.25 })
+    expect(strip.element.querySelector('#strip-t1-level').value).toBe('0.25')
+    expect(strip.element.children[1].querySelector('.value').textContent).toBe('-12.0 dB')
+  })
+
+  it('leaves the row strip alone: without the option level is a dial and the order is level, pan, buttons', () => {
+    const { element } = createStrip(document, {}, () => {}, { label: 'Pulse', id: 'x' })
+    expect(element.querySelector('.strip-fader')).toBeNull()
+    expect(element.classList.contains('strip-desk')).toBe(false)
+    expect(element.children[0].querySelector('.dial')).not.toBeNull()
+  })
+
+  it('is what the mixer draws, for the tracks and for the master', () => {
+    const mixer = readFileSync(resolve(import.meta.dirname, '../../src/ui/Mixer.js'), 'utf8')
+    const master = readFileSync(resolve(import.meta.dirname, '../../web/app/Master.js'), 'utf8')
+    expect(mixer).toMatch(/createStrip\([\s\S]*fader: true/)
+    expect(master).toMatch(/createStrip\([\s\S]*fader: true/)
   })
 })

@@ -49,6 +49,7 @@ import { createRollScale } from './RollScale.js'
 import { createRollStep, STEP_KEYS, pitchFor } from './RollStep.js'
 import { createRollLane } from './RollLane.js'
 import { createRollControllers } from './RollControllers.js'
+import { createRollLoop } from './RollLoop.js'
 import { inScale, snapPitch } from '../model/Scale.js'
 
 /** Steps per beat: a sixteenth note in 4/4. */
@@ -86,7 +87,7 @@ function noteAt (notes, pitch, beat) {
  * without it the transform buttons are left out, not shown doing nothing. It returns a message when it refuses.
  * Returns `{ element, show, draw, hide, playhead, clipId }`.
  */
-export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, onControllers = null, now = () => Date.now() }) {
+export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, onControllers = null, onLoop = null, now = () => Date.now() }) {
   if (typeof onChange !== 'function' || typeof onClose !== 'function') {
     throw new Error('createPianoRoll needs onChange and onClose')
   }
@@ -156,6 +157,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   tools.className = 'piano-roll-tools'
   tools.setAttribute('role', 'group')
   tools.setAttribute('aria-label', 'Change the notes')
+  // Left out for a host that cannot store a loop: a control nobody can use is not drawn.
+  const loop = onLoop ? createRollLoop(document, { onLoop: beats => onLoop(clip.id, beats) }) : null
   // With a scale chosen, rows outside it are marked and drawn or dragged notes land inside it.
   const rollScale = createRollScale(document, { onChange: () => { fitButton.hidden = rollScale.current === null; draw() } })
   const snap = pitch => (rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch)
@@ -243,6 +246,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       // About the first note's pitch, so a rising line falls.
       ['roll-invert', 'Invert pitches', ask('invert', {}, 'Notes inverted about the first note')],
       // A fresh seed for each press, so pressing again gives a different feel; the edit itself is reproducible from it.
+      ['roll-legato', 'Legato', ask('legato', {}, 'Every note held until the next one starts')],
+      ['roll-strum', 'Strum', ask('strum', { spread: 0.0625, direction: 'up' }, 'Chords strummed upward')],
       ['roll-humanize', 'Humanize', () => ask('humanize', { timing: 0.05, velocity: 10, seed: now() }, 'Notes humanized a little in time and velocity')()]
     ]
     for (const [id, text, run] of buttons) {
@@ -268,7 +273,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     selectAll = pick('roll-select-all', 'Choose all notes', () => { chooseAll() })
     selectNone = pick('roll-select-none', 'Let go of the choice', () => { chosen = new Set(); draw(); say('No notes chosen') })
   }
-  element.append(header, empty, help, rollScale.element, stepInput.element, ...(lanes ? [lanes.element] : []), tools, scroller, status)
+  element.append(header, empty, help, rollScale.element, stepInput.element, ...(loop ? [loop.element] : []), ...(lanes ? [lanes.element] : []), tools, scroller, status)
   if (lanes) lanes.onChoice = () => { if (clip) draw() }
 
   /** Open or closed: the grid and its controls, or the note saying how to open one. */
@@ -278,6 +283,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     scroller.hidden = !open
     rollScale.element.hidden = !open
     stepInput.element.hidden = !open
+    if (loop) loop.element.hidden = !open
     if (lanes) lanes.element.hidden = !open
     tools.hidden = !open || clip === null || clip.notes.length === 0
     // Close is left out with nothing to close, not shown disabled.
@@ -341,6 +347,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   function draw (next = clip) {
     clip = next
     if (!clip) return
+    loop?.show(clip)
     // Nothing to change in an empty clip, so the buttons are not drawn.
     tools.hidden = clip.notes.length === 0 || !onTransform
     // A choice only holds notes that still exist.

@@ -15,7 +15,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 /** What a clip says about itself to a screen reader, and on hover. */
 export function describeClip (clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
-  const what = clip.kind === 'midi' ? `MIDI clip, ${plural(clip.notes.length, 'note')}` : 'Audio clip'
+  const what = clip.kind === 'midi' ? `MIDI clip, ${plural(clip.notes.length, 'note')}${clip.loopBeats ? `, looping every ${plural(clip.loopBeats, 'beat')}` : ''}` : 'Audio clip'
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, 'beat')}`
   return `${what}${clip.muted ? ', muted' : ''}${clip.locked ? ', locked' : ''}${color ? `, coloured ${colorName(color)}` : ''}, ${where}${playsIntoNothing ? ', plays into nothing: this track has no MIDI input' : ''}`
 }

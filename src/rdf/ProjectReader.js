@@ -297,6 +297,8 @@ export function readProject (dataset) {
       const locked = one(dataset, clipIri, jig.locked)
       if (locked !== null) clip.locked = locked.value === 'true'
       if (kind === 'midi') {
+        const loopBeats = number(one(dataset, clipIri, jig.loopBeats), `loopBeats of clip ${id}`)
+        if (loopBeats !== null) clip.loopBeats = loopBeats
         clip.notes = objects(dataset, clipIri, jig.note).map(t => t.value).map(noteIri => ({
           startBeat: number(one(dataset, noteIri, trn.startBeat), `startBeat of a note in ${id}`),
           lengthBeats: number(one(dataset, noteIri, trn.lengthBeats), `lengthBeats of a note in ${id}`),

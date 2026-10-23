@@ -114,4 +114,22 @@ describe('the chain strip', () => {
     expect(() => createChainStrip(document, { onSelect () {} })).toThrow(/onBypass/)
     expect(() => createChainStrip(document, { onSelect () {}, onBypass () {} })).toThrow(/onMove/)
   })
+
+  it('offers Replace only where the page can choose a replacement, named for its plugin, and asks for that plugin', () => {
+    const asked = []
+    const make = onReplace => {
+      document.body.innerHTML = ''
+      const strip = createChainStrip(document, { onSelect () {}, onBypass () {}, onMove () {}, ...(onReplace ? { onReplace } : {}) })
+      document.body.append(strip.element)
+      strip.update({ nodes: [node({ id: 'a', label: 'Synth' }), node({ id: 'b', label: 'Reverb', takes: ['audio'] })] }, { label: 'Lead', selected: null })
+    }
+    make(null)
+    expect(document.querySelectorAll('.chain-replace')).toHaveLength(0)
+    make(id => asked.push(id))
+    const buttons = [...document.querySelectorAll('.chain-replace')]
+    expect(buttons.map(b => b.getAttribute('aria-label'))).toEqual(['Replace Synth', 'Replace Reverb'])
+    expect(buttons.map(b => b.id)).toEqual(['chain-replace-a', 'chain-replace-b'])
+    buttons[1].dispatchEvent(new document.defaultView.Event('click'))
+    expect(asked).toEqual(['b'])
+  })
 })

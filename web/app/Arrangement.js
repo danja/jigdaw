@@ -141,6 +141,7 @@ export function createArrangement (ctx) {
       const value = kind === 'masterGain' ? master.gain : kind === 'masterPan' ? master.pan : ctx.dispatcher.project.transport.tempoPoints[0]?.bpm ?? 120
       edit([{ op: 'addEnvelope', target: { kind }, points: [{ atBeat: 0, value, curve: 'linear' }] }])
     },
+    onReplace: nodeId => ctx.swap.begin(nodeId),
     onBypass: (nodeId, bypassed) => edit([{ op: 'setNode', id: nodeId, bypassed }]),
     onMute: (id, muted) => edit([{ op: 'setClip', id, muted }]),
     onRemove: id => {
@@ -267,6 +268,7 @@ export function createArrangement (ctx) {
     onAudition: audition,
     // The events of a clip replace as one edit, like its notes.
     onControllers: (id, controllers) => edit([{ op: 'setClipControllers', id, controllers }]),
+    onLoop: (id, loopBeats) => edit([{ op: 'setClip', id, loopBeats }]),
     onTransform: (name, options, { indices = null } = {}) => {
       let changes
       try { changes = describeNoteTransform(ctx.dispatcher.project, pianoRoll.clipId, name, options, { indices }) } catch (error) { log(error.message, 'error'); return error.message }

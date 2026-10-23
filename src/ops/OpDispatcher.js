@@ -21,6 +21,7 @@ import { expandComposites, flatIdOf } from './CompositeExpansion.js'
 import { parameterTargets } from '../host/CompositeParameters.js'
 import { collectState } from '../host/CompositeState.js'
 import { planUnpack } from './CompositeUnpack.js'
+import { planSwap, NEW_NODE } from './SwapPlugin.js'
 import { planPack } from './CompositePack.js'
 import { writeComposite } from '../rdf/CompositeWriter.js'
 import { Transport } from '../engine/Transport.js'
@@ -704,6 +705,58 @@ export class OpDispatcher {
       if (!result.ok) return abandon(result)
       return { ...result, nodeIds: [...made.values()] }
     }, { label: 'Unpack a composite plugin' })
+  }
+
+  /**
+   * Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port
+   * for it, with the settings it has parameters for, its label if a person gave one, and its bypass. One undoable edit. What could not
+   * be carried is returned in `dropped`, in words. The new one is loaded first and the old one removed in the same change as the wiring,
+   * so a plugin that will not load leaves the old one exactly as it was. Not for a composite (unpack it first), and refused when the
+   * old one has automation on it.
+   */
+  async swapPlugin (nodeId, iri) {
+    const old = this.#project.node(nodeId)
+    if (!old) return { ok: false, kind: 'change', message: `no such node: ${nodeId}` }
+    if (this.#composites.has(nodeId)) return { ok: false, kind: 'change', message: 'a composite plugin cannot be swapped; unpack it first' }
+    if (old.pluginIri === iri) return { ok: false, kind: 'change', message: 'that is the plugin already there' }
+    // Before anything is loaded, so a refusal changes nothing, not even the revision.
+    if (this.#project.envelopes.some(e => e.target.node === nodeId)) {
+      return { ok: false, kind: 'change', message: `${old.label ?? nodeId} has automation on it, which swapping would lose. Remove its envelopes first.` }
+    }
+    const oldProfile = this.engineNode(nodeId)?.profile ?? null
+
+    return this.grouped(async () => {
+      // A label a person gave is kept; the old plugin's own name is not, since it would be wrong for the new one.
+      const mine = old.label !== null && old.label !== undefined && old.label !== oldProfile?.label
+      const added = await this.addPlugin(iri, { track: old.track, ...(mine ? { label: old.label } : {}) })
+      if (!added.ok) return added
+      const newId = added.nodeId
+      const abandon = failure => { this.apply([{ op: 'removeNode', id: newId }]); return failure }
+
+      let plan
+      try {
+        plan = planSwap({ project: this.#project, nodeId, oldProfile, newProfile: added.entry.profile })
+      } catch (error) {
+        return abandon({ ok: false, kind: 'change', message: error.message })
+      }
+      const dropped = [...plan.dropped]
+      for (const [symbol, value] of Object.entries(plan.settings)) {
+        const set = this.setParameter(newId, symbol, value)
+        if (!set.ok) dropped.push(`the setting ${symbol} was not carried: ${set.message}`)
+      }
+      const idOf = e => (e.node === NEW_NODE ? { ...e, node: newId } : e)
+      const changes = [
+        { op: 'removeNode', id: nodeId },
+        ...plan.connections.map(c => ({ op: 'addConnection', from: idOf(c.from), to: idOf(c.to), signalKind: c.signalKind })),
+        ...(plan.bypassed ? [{ op: 'setNode', id: newId, bypassed: true }] : []),
+        ...(plan.midiInput ? [{ op: 'setTrack', id: plan.track, midiInput: newId }] : []),
+        ...(plan.audioInput ? [{ op: 'setTrack', id: plan.track, audioInput: newId }] : []),
+        ...(plan.masterInput ? [{ op: 'setMaster', audioInput: newId }] : [])
+      ]
+      const result = this.apply(changes)
+      if (!result.ok) return abandon(result)
+      return { ...result, nodeId: newId, replaced: nodeId, dropped }
+    }, { label: 'Swap a plugin' })
   }
 
   /**

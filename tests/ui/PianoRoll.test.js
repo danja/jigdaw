@@ -733,6 +733,12 @@ describe('the transform buttons', () => {
     expect(Number.isInteger(asked[1][1].seed)).toBe(true)
   })
 
+  it('asks for legato and for an upward strum', () => {
+    const { asked } = withTransform([note])
+    click('roll-legato'); click('roll-strum')
+    expect(asked).toEqual([['legato', {}], ['strum', { spread: 0.0625, direction: 'up' }]])
+  })
+
   it('ask for each transform with its amount', () => {
     const { asked } = withTransform([note])
     document.getElementById('roll-quantize-grid').options[1].selected = true

@@ -1,7 +1,7 @@
 // tests/model/NoteTransform.test.js
 import { describe, it, expect } from 'vitest'
 import { Project } from '../../src/model/Project.js'
-import { quantize, transpose, scaleVelocity, reverse, invert, humanize, fitScale, describeNoteTransform } from '../../src/model/NoteTransform.js'
+import { quantize, transpose, scaleVelocity, reverse, invert, humanize, fitScale, legato, strum, describeNoteTransform } from '../../src/model/NoteTransform.js'
 
 const note = (startBeat, pitch = 60, lengthBeats = 0.5, velocity = 100) => ({ startBeat, lengthBeats, pitch, velocity })
 
@@ -139,5 +139,41 @@ describe('humanize', () => {
     expect(humanize(notes, { seed: 1 })).toEqual(notes)
     expect(() => humanize(notes, { timing: 0.1 })).toThrow('seed')
     expect(() => humanize(notes, { timing: -1, seed: 1 })).toThrow('timing')
+  })
+})
+
+describe('legato', () => {
+  it('holds each note until the next start, a chord stretching together, and leaves the last alone', () => {
+    const out = legato([note(0, 60, 0.25), note(1, 62, 0.25), note(1, 65, 0.25), note(3, 67, 0.5)])
+    expect(out.map(n => n.lengthBeats)).toEqual([1, 2, 2, 0.5])
+  })
+  it('does not change anything but lengths, and does not mutate its input', () => {
+    const input = [note(0, 60, 0.25), note(2, 62, 0.25)]
+    const out = legato(input)
+    expect(out.map(n => [n.startBeat, n.pitch, n.velocity])).toEqual(input.map(n => [n.startBeat, n.pitch, n.velocity]))
+    expect(input[0].lengthBeats).toBe(0.25)
+  })
+  it('takes the empty list', () => { expect(legato([])).toEqual([]) })
+})
+
+describe('strum', () => {
+  const chord = [note(1, 67), note(1, 60), note(1, 64), note(3, 62)]
+  it('rolls a chord upward from its lowest note, by the spread, and leaves a lone note where it is', () => {
+    expect(strum(chord, { spread: 0.1 }).map(n => n.startBeat)).toEqual([1.2, 1, 1.1, 3])
+  })
+  it('rolls it downward from the highest with direction down', () => {
+    expect(strum(chord, { spread: 0.1, direction: 'down' }).map(n => n.startBeat)).toEqual([1, 1.2, 1.1, 3])
+  })
+  it('refuses a missing or non-positive spread and a bad direction, saying which', () => {
+    expect(() => strum(chord, {})).toThrow('spread')
+    expect(() => strum(chord, { spread: 0 })).toThrow('spread')
+    expect(() => strum(chord, { spread: 0.1, direction: 'sideways' })).toThrow('direction')
+  })
+  it('works through describeNoteTransform as one change', () => {
+    const project = build([note(0, 60), note(0, 64)])
+    const changes = describeNoteTransform(project, 'clip-1', 'strum', { spread: 0.25 })
+    expect(changes).toHaveLength(1)
+    project.apply(changes)
+    expect(project.clip('clip-1').notes.map(n => n.startBeat)).toEqual([0, 0.25])
   })
 })

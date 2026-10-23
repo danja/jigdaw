@@ -37,6 +37,13 @@ starts on the simple page.
   and one undo, with a button for each above the lanes for a phone. Cuts and trims snap to the grid.
   Audio clips have fades in and out, straight lines in level.
 - **Piano roll.** Draw, move, resize and delete notes with the pointer or the keyboard, with an audition.
+  Whole-note edits sit above the grid, each one edit and one undo: quantize, transpose, softer and louder, reverse, invert, humanize,
+  legato (each note held until the next starts) and strum (each chord rolled upward by a sixteenth).
+
+- **Keys list.** A Keys button and F1 open a dialog listing the keyboard shortcuts by what has to be focused (a clip, a track
+  name, a chain plugin, an envelope point, the script box, the Browser, or anywhere). The list is data (`src/ui/KeyTable.js`) and
+  `tests/ui/KeyTable.test.js` fires each row's keys at the real control, so a listed key that does nothing fails. Keys in the piano
+  roll and the timeline are not listed yet, and the dialog says so.
 
 ## Plugins and routing
 
@@ -61,10 +68,19 @@ starts on the simple page.
   to, as one undo step (checked in Chrome: Drive 0.6 became Boost's Gain 0.6, and the author's tremolo rate became a knob). The agent tools
   `node_unpack` and `composite_pack` do the same, and the second describes a selection as a composite profile to publish and changes nothing.
   See [nested-plugins.md](nested-plugins.md).
+- **Replace a plugin.** A Replace button on each plugin in the chain strip opens the Browser, says which plugin the next Load takes
+  the place of, and the Load swaps it in as one undoable edit (the agent tool is `node_swap`). The new plugin keeps the track, the
+  joins whose ports it also has, the settings whose parameters it also has, the label a person gave, bypass, and the track's or master's
+  input role; what it could not take is listed in the log in words. Refused for a composite and for a plugin with automation on it.
+  Seen in Chrome on 2026-10-23: Tremolo in a Pulse, Tremolo, Cascade chain replaced by Boost, joined as before, undone by Ctrl+Z.
 - **Routing matrix.** Every output against every input, joined or not, by pointer or arrow keys.
 - **Connections.** Audio and MIDI, within a track or across tracks. A connection that would make a loop
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
   connection can be watched: the last 24 events over it, in words.
+- **Mixer channels.** The Mixer tab draws each track, and the master, as a channel: a Pan knob on top, a Level fader standing up
+  below it (the native range laid on its side, so the arrow keys, Home and End and the value in decibels are the platform's), then
+  Mute and Solo buttons and the level meter. Channels sit side by side and wrap. Seen in Chrome on 2026-10-24: a click above the
+  middle of the master fader raised it to +2.2 dB and Down lowered it a step each press.
 - **Output meter with a clip hold.** The meter beside the transport shows the level of the mix, and a Clip button appears when it
   reached full scale and stays until pressed. Every strip on the Mixer tab has a level meter of its own with the held peak in decibels
   beside it, and the Master channel lists the plugins on the master.
@@ -99,9 +115,12 @@ starts on the simple page.
 - **Export MIDI** saves the notes of every unmuted MIDI clip as a Standard MIDI File (format 1, 480 ticks to the quarter): a conductor track with the tempo and time signature changes, then one track per project track that has notes, each on its own channel from 1 (10 is skipped, as General MIDI keeps it for drums). Audio clips, muted clips and mixing are not in it.
 - **Controller and pitch bend lanes** sit under the note roll: velocity bars for each note, or a lane for pitch bend, modulation, volume, pan, expression, sustain or any controller number. A clip holds the events as a step curve, plays them with its notes, and carries them through split, copy and MIDI import and export. Where a loop comes round, or playing starts part way in, each controller is set to what it held at that point, and a pitch bend wheel with nothing earlier to say goes back to rest.
 - **Undo history** under the arrangement lists every edit in words, with the current state marked; choosing one goes there by undoing or redoing. It holds the last 100 edits and is not saved with the session.
+- **Mute and Solo** are small lettered squares, an M that turns red and an S that turns yellow. The word is still the control's name for a screen reader, and on is a filled square with an underlined letter, so it does not rely on colour.
 - **Project** section under the arrangement keeps a title, an author and notes with the session. They are saved in the file, are not an undo step, and an agent reads and sets them with `project_info`.
+- **Templates** keep the open session in this browser under a name, and start a new session from one. They stay until deleted, and they are not saved with a session or shared between browsers.
 - **Tap** beside the tempo sets it from your taps: the average gap of the last five, started again after a two second pause.
 - **Folders** have a bar with a hide and show button, Move up and Move down, and a grip to drag the whole folder to another row. Whether a folder is hidden is saved with the session.
+- **Loop a clip** repeats a MIDI clip's first beats to fill its length. Type a loop length in the note roll (Loop, Clear loop), and the clip plays, exports to a MIDI file and is announced to a screen reader as looping. A note that starts after the loop end is kept and not played while the loop is set. Splitting a looped clip, or trimming its start, writes the repeats into the notes and clears the loop.
 - **Rec MIDI** plays the transport and keeps what you play on a MIDI keyboard (the armed tracks, or the selected one) or the on-screen keys as one MIDI clip per track, from where the take began and a whole number of bars long, with the pitch bend wheel and controllers kept as events. Stop ends it too, and one undo takes the take back. It is separate from Record, which keeps audio.
 - **Import MIDI** adds each part of a format 0 or 1 Standard MIDI File as a new track with one clip from beat zero, in one edit
   (one undo). A project with no MIDI clips yet also takes the file's tempo and time signature changes; one that already has
@@ -142,7 +161,7 @@ starts on the simple page.
 
 ## For agents
 
-- **59 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **62 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).

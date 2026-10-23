@@ -18,6 +18,7 @@
 // it reads as two interfaces. The control underneath is still the same native
 // range it always was.
 import { createDial } from './Dial.js'
+import { createChannelToggle } from './ChannelToggle.js'
 
 /** A gain as decibels, for a person. Linear is what the engine wants. */
 export function decibels (gain) {
@@ -39,8 +40,12 @@ export function panPosition (pan) {
  * `onChange` receives the part that changed, never the whole strip, so the
  * caller sends one operation for one movement rather than re-sending values
  * nobody touched.
+ *
+ * With `fader` the strip is a mixer channel: Level is a vertical slider, Pan a knob above it and the two buttons below. The
+ * slider is the native range laid on its side (CSS `writing-mode`), so the keys, the role and the value text are the
+ * platform's, and the strip's order reads top to bottom as it does on a desk.
  */
-export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null, solo: withSolo = true } = {}) {
+export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null, solo: withSolo = true, fader = false } = {}) {
   let label = initialLabel
   // The ids of the controls. From `id` when given, because a label is a name
   // for people and two tracks can share one; from the label otherwise.
@@ -61,16 +66,26 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
   // range is linear in gain and the readout is in decibels, which is the pair
   // every mixer presents. Unity is not the middle of nought to two in
   // decibels, so the arc grows from silence rather than from the centre.
-  const gainDial = createDial(document, { minimum: 0, maximum: 2, defaultValue: state.gain },
-    `${base}-level`)
-  const gain = gainDial.input
+  const gainDial = fader ? null : createDial(document, { minimum: 0, maximum: 2, defaultValue: state.gain }, `${base}-level`)
+  let gain
+  if (fader) {
+    gain = document.createElement('input')
+    gain.type = 'range'
+    gain.id = `${base}-level`
+    gain.className = 'strip-fader'
+    gain.min = '0'
+    gain.max = '2'
+    gain.step = '0.01'
+    gain.value = String(state.gain)
+    gain.setAttribute('aria-orientation', 'vertical')
+  } else gain = gainDial.input
   const gainValue = document.createElement('span')
   gainValue.className = 'value'
 
   const showGain = () => {
     gainValue.textContent = `${decibels(state.gain)} dB`
     gain.setAttribute('aria-valuetext', `${decibels(state.gain)} decibels`)
-    gainDial.render(state.gain)
+    gainDial?.render(state.gain)
   }
   // setAttribute rather than the htmlFor property: the property reflects in a
   // browser and does not in every DOM implementation, and a label that does not
@@ -82,7 +97,7 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
     onChange({ gain: state.gain })
   })
   showGain()
-  gainRow.append(gainLabel, gainDial.element, gainValue)
+  gainRow.append(gainLabel, fader ? gain : gainDial.element, gainValue)
 
   // ── Position ─────────────────────────────────────────────────────────────
   const panRow = document.createElement('div')
@@ -116,15 +131,10 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
   const buttons = document.createElement('div')
   buttons.className = 'strip-buttons'
 
-  const toggle = (name, key) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = `strip-toggle ${key}`
-    // An id, so a redraw that does take the strip out of the document can put
-    // the focus back (src/ui/Focus.js restores by id).
-    button.id = `${base}-${key}`
-    button.textContent = name
-    button.setAttribute('aria-pressed', String(Boolean(state[key])))
+  // An id, so a redraw that does take the strip out of the document can put
+  // the focus back (src/ui/Focus.js restores by id).
+  const toggle = key => {
+    const button = createChannelToggle(document, { key, id: `${base}-${key}`, pressed: Boolean(state[key]) })
     button.addEventListener('click', () => {
       state[key] = !state[key]
       button.setAttribute('aria-pressed', String(state[key]))
@@ -133,13 +143,17 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
     return button
   }
 
-  const mute = toggle('Mute', 'muted')
-  const solo = toggle('Solo', 'soloed')
+  const mute = toggle('muted')
+  const solo = toggle('soloed')
   // The master has nothing to solo against, so it has no Solo: left out, not disabled.
   buttons.append(mute)
   if (withSolo) buttons.append(solo)
 
-  element.append(gainRow, panRow, buttons)
+  // On a desk the knob is above the fader and the buttons under it; in a row the level comes first.
+  if (fader) {
+    element.classList.add('strip-desk')
+    element.append(panRow, gainRow, buttons)
+  } else element.append(gainRow, panRow, buttons)
 
   return {
     element,

@@ -27,6 +27,7 @@ const CLASSIFIED = {
   setParameter: { kind: 'op', tool: 'parameter_set' },
   setParameters: { kind: 'op', tool: 'parameters_set_batch' },
   unpackComposite: { kind: 'op', tool: 'node_unpack' },
+  swapPlugin: { kind: 'op', tool: 'node_swap' },
   packSelection: { kind: 'read' },
   resetParameter: { kind: 'op', tool: 'parameter_reset' },
   setTrackChannel: { kind: 'op', tool: 'track_set_channel' },

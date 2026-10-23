@@ -12,6 +12,8 @@
 // never plays them), and anything about plugins or mixing. Channels are given in
 // turn from 1, skipping 10, which General MIDI keeps for drums; past 15 tracks they wrap.
 
+import { playedContent } from './ClipLoop.js'
+
 const TICKS_PER_QUARTER = 480
 const ENCODER = new TextEncoder()
 
@@ -96,7 +98,8 @@ export function writeMidiFile (project, { trackIds = null } = {}) {
     const clips = project.clips.filter(c => c.track === t.id && c.kind === 'midi' && !c.muted)
     const events = []
     for (const clip of clips) {
-      for (const n of clip.notes) {
+      const played = playedContent(clip)
+      for (const n of played.notes) {
         if (!(n.startBeat < clip.lengthBeats)) continue
         const on = map.tick(clip.startBeat + n.startBeat)
         const off = Math.max(on + 1, map.tick(clip.startBeat + Math.min(n.startBeat + n.lengthBeats, clip.lengthBeats)))
@@ -104,7 +107,7 @@ export function writeMidiFile (project, { trackIds = null } = {}) {
         events.push([on, 1, [0x90 | channel, n.pitch, velocity]], [off, 0, [0x80 | channel, n.pitch, 0]])
         notes++
       }
-      for (const e of clip.controllers ?? []) {
+      for (const e of played.controllers) {
         if (!(e.atBeat < clip.lengthBeats)) continue
         const at = map.tick(clip.startBeat + e.atBeat)
         // At one tick a controller comes after a note ends and before the next begins, as it is played.

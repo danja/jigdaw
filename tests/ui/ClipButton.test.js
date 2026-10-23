@@ -21,6 +21,13 @@ describe('the split of Timeline.js', () => {
     expect(timeline.describeClip).toBe(describeClip)
   })
 
+  it('says in words that a MIDI clip loops, and how often, and says nothing of it otherwise', () => {
+    const clip = { kind: 'midi', startBeat: 0, lengthBeats: 8, notes: [] }
+    expect(describeClip({ ...clip, loopBeats: 2 }, { beatsPerBar: 4 })).toContain('0 notes, looping every 2 beats,')
+    expect(describeClip({ ...clip, loopBeats: 1 }, { beatsPerBar: 4 })).toContain('looping every 1 beat,')
+    expect(describeClip(clip, { beatsPerBar: 4 })).not.toContain('looping')
+  })
+
   it('builds a clip button on its own, to scale, named and selectable', () => {
     const calls = []
     const record = name => (...args) => calls.push([name, ...args])

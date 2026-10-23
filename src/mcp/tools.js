@@ -10,7 +10,7 @@
 // Nothing here knows how a tool is registered with a user agent. That binding
 // is not settled and lives in adapter.js, so when the API moves one file
 // changes and this one does not.
-import { splitClip, duplicateClip } from '../model/ClipEdit.js'
+import { splitClip, duplicateClip, trimClip, copyClips, pasteClips } from '../model/ClipEdit.js'
 import { describeBus } from '../model/TrackBus.js'
 import { describeNoteTransform, NOTE_TRANSFORMS } from '../model/NoteTransform.js'
 import { SCALE_NAMES } from '../model/Scale.js'
@@ -509,12 +509,13 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           lengthBeats: { type: 'number' },
           notes: { type: 'array', items: NOTE_SCHEMA },
           controllers: { type: 'array', items: CONTROLLER_SCHEMA },
+          loopBeats: { type: 'number', exclusiveMinimum: 0, description: 'Repeat the first this many beats of notes and events to fill the clip' },
           expectedRevision: { type: 'integer' }
         },
         required: ['trackId', 'startBeat', 'lengthBeats']
       },
-      async handler ({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes, controllers }], { expectedRevision })
+      async handler ({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes, controllers, ...(loopBeats !== undefined ? { loopBeats } : {}) }], { expectedRevision })
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
       }
     },
@@ -591,7 +592,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         '`transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), ' +
         'scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or ' +
         'humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or ' +
-        'fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.',
+        'fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B), legato (each note held until the next start) or ' +
+        'strum (each chord rolled: `spread` beats between its notes, `direction` up from the lowest or down from the highest). Refused as a whole if any note would leave its range.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -600,6 +602,7 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           grid: { type: 'number' }, strength: { type: 'number' }, ends: { type: 'boolean' },
           semitones: { type: 'integer' }, factor: { type: 'number' },
           axis: { type: 'integer' }, timing: { type: 'number' }, velocity: { type: 'number' }, seed: { type: 'integer' },
+          spread: { type: 'number' }, direction: { type: 'string', enum: ['up', 'down'] },
           root: { type: 'integer' }, scale: { type: 'string', enum: SCALE_NAMES },
           indices: { type: 'array', items: { type: 'integer' } },
           expectedRevision: { type: 'integer' }
@@ -643,7 +646,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       description:
         'Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked ' +
         'refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); ' +
-        'fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case ' +
+        'fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first ' +
+        'that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). color is a lower case ' +
         '#rrggbb or null, editor metadata that changes no revision and has no undo.',
       inputSchema: {
         type: 'object',
@@ -653,18 +657,19 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           locked: { type: 'boolean' },
           fadeInBeats: { type: 'number', minimum: 0 },
           fadeOutBeats: { type: 'number', minimum: 0 },
+          loopBeats: { type: ['number', 'null'], exclusiveMinimum: 0 },
           color: { type: ['string', 'null'] },
           expectedRevision: { type: 'integer' }
         },
         required: ['clipId']
       },
-      async handler ({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+      async handler ({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, color, expectedRevision } = {}) {
         const change = { op: 'setClip', id: clipId }
-        for (const [key, value] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+        for (const [key, value] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats })) {
           if (value !== undefined) change[key] = value
         }
         const edited = Object.keys(change).length > 2
-        if (!edited && color === undefined) return failed('nothing to change: give muted, locked, a fade or a color', { kind: 'change' })
+        if (!edited && color === undefined) return failed('nothing to change: give muted, locked, a fade, loopBeats or a color', { kind: 'change' })
         try {
           let revision = dispatcher.project.revision
           if (edited) {
@@ -704,6 +709,57 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       }
     },
 
+    {
+      name: 'clip_trim',
+      description:
+        'Shorten a clip from the front and/or the back, to absolute beats inside it, without moving what is left: notes keep the time ' +
+        'they sounded, an audio clip begins further into its file, and a fade belongs to the edge it was made for. Give `from`, `to` or ' +
+        'both; an edge left out stays. One edit, one undo. A trim must leave some of the clip.',
+      inputSchema: {
+        type: 'object',
+        properties: { clipId: { type: 'string' }, from: { type: 'number' }, to: { type: 'number' }, expectedRevision: { type: 'integer' } },
+        required: ['clipId']
+      },
+      async handler ({ clipId, from, to, expectedRevision } = {}) {
+        if (from === undefined && to === undefined) return failed('clip_trim needs from, to or both', { kind: 'change' })
+        try {
+          const changes = trimClip(dispatcher.project, clipId, { from, to }, { transport: dispatcher.transport() })
+          const result = dispatcher.apply(changes, { expectedRevision })
+          return result.ok ? ok({ revision: result.revision, clipId }) : failed(result.message, { kind: result.kind })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+    {
+      name: 'clip_copy_to',
+      description:
+        'Copy several clips and put the group down with its earliest clip at `startBeat`, as one edit: the way a person copies a ' +
+        'selection and pastes. Each copy goes back to the track it came from, or all onto `trackId` when given. With `cut` true the ' +
+        'originals are removed in the same edit, so it is a move that keeps nothing behind. Copies are not locked. Returns the new ' +
+        'clip ids in the order of `clipIds`.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipIds: { type: 'array', items: { type: 'string' } }, startBeat: { type: 'number' }, trackId: { type: 'string' },
+          cut: { type: 'boolean' }, expectedRevision: { type: 'integer' }
+        },
+        required: ['clipIds', 'startBeat']
+      },
+      async handler ({ clipIds, startBeat, trackId, cut = false, expectedRevision } = {}) {
+        if (!Array.isArray(clipIds)) return failed('clip_copy_to needs clipIds', { kind: 'change' })
+        if (!Number.isFinite(startBeat) || startBeat < 0) return failed('startBeat must be a beat from zero up', { kind: 'change' })
+        try {
+          const copied = copyClips(dispatcher.project, clipIds)
+          const additions = pasteClips(dispatcher.project, copied, { startBeat, track: trackId ?? null })
+          const removals = cut ? clipIds.map(id => ({ op: 'removeClip', id })) : []
+          const result = dispatcher.apply([...additions, ...removals], { expectedRevision })
+          return result.ok ? ok({ revision: result.revision, clipIds: result.results.slice(0, additions.length) }) : failed(result.message, { kind: result.kind })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
     {
       name: 'clip_duplicate',
       description:
@@ -864,6 +920,27 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         const result = await dispatcher.unpackComposite(nodeId)
         return result.ok
           ? ok({ revision: result.revision, unpacked: nodeId, nodeIds: result.nodeIds })
+          : failed(result.message, { kind: result.kind })
+      }
+    },
+    {
+      name: 'node_swap',
+      description:
+        'Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a ' +
+        'port for the join, with the settings the new one has parameters for, its label if you gave it one, and its bypass. One ' +
+        'edit, one undo. The result lists in `dropped` what could not be carried over, in words. Refused for a composite (use ' +
+        'node_unpack), for a plugin with automation on it, and when the new one will not load, in which case nothing changes.',
+      inputSchema: {
+        type: 'object',
+        properties: { nodeId: { type: 'string' }, iri: { type: 'string', description: 'The IRI of the plugin to put in its place.' } },
+        required: ['nodeId', 'iri']
+      },
+      async handler ({ nodeId, iri } = {}) {
+        if (typeof nodeId !== 'string' || nodeId === '') return failed('node_swap needs a nodeId')
+        if (typeof iri !== 'string' || iri === '') return failed('node_swap needs the iri of the replacement')
+        const result = await dispatcher.swapPlugin(nodeId, iri)
+        return result.ok
+          ? ok({ revision: result.revision, replaced: nodeId, nodeId: result.nodeId, dropped: result.dropped })
           : failed(result.message, { kind: result.kind })
       }
     },

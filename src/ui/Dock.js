@@ -14,20 +14,28 @@ export const DOCK_MIN = 160
 export const DOCK_MAX = 720
 export const DOCK_DEFAULT = 320
 export const DOCK_STEP = 24
+// The most of the window the dock may take, so the lanes above it keep the rest. A fixed pixel maximum let it fill a
+// short window and leave the arrangement no room.
+export const DOCK_SHARE = 0.45
 const KEY = 'jigdaw.dockHeight'
-
-const clamp = n => Math.min(DOCK_MAX, Math.max(DOCK_MIN, Math.round(n)))
 
 /**
  * `slots` is the list of slot names. `storage` is anything with getItem and
  * setItem, or null: a remembered height is a convenience of this browser and
- * nothing depends on it.
+ * nothing depends on it. `viewportHeight` is a function giving the window's height, or null where
+ * there is no window to limit by; `refit()` applies the limit again when the window changes size.
  */
-export function createDock (document, { slots, storage = null }) {
+export function createDock (document, { slots, storage = null, viewportHeight = null }) {
   if (!Array.isArray(slots) || slots.length === 0) throw new Error('a dock needs at least one slot')
   const element = document.createElement('section')
   element.className = 'dock'
   element.id = 'dock'
+  /** The tallest the dock may be now: the pixel limit, or its share of the window where that is smaller, but never under the minimum. */
+  const limit = () => {
+    if (viewportHeight === null) return DOCK_MAX
+    return Math.max(DOCK_MIN, Math.min(DOCK_MAX, Math.floor(viewportHeight() * DOCK_SHARE)))
+  }
+  const clamp = n => Math.min(limit(), Math.max(DOCK_MIN, Math.round(n)))
   const heading = document.createElement('h2')
   heading.id = 'dock-title'
   element.setAttribute('aria-labelledby', heading.id)
@@ -40,7 +48,6 @@ export function createDock (document, { slots, storage = null }) {
   splitter.setAttribute('aria-orientation', 'horizontal')
   splitter.setAttribute('aria-label', 'Resize the editor')
   splitter.setAttribute('aria-valuemin', String(DOCK_MIN))
-  splitter.setAttribute('aria-valuemax', String(DOCK_MAX))
 
   const body = document.createElement('div')
   body.className = 'dock-body'
@@ -54,23 +61,27 @@ export function createDock (document, { slots, storage = null }) {
   }
   element.append(splitter, heading, body)
 
+  // `wanted` is what the person chose; `height` is that cut to the window as it is now.
+  let wanted = DOCK_DEFAULT
   let height = DOCK_DEFAULT
   try {
     const saved = Number(storage?.getItem(KEY))
-    if (Number.isFinite(saved) && saved > 0) height = clamp(saved)
+    if (Number.isFinite(saved) && saved > 0) wanted = saved
   } catch { /* storage unavailable */ }
 
-  function setHeight (next, { remember = true } = {}) {
-    height = clamp(next)
+  function setHeight (next, { remember = true, refit = false } = {}) {
+    if (!refit) wanted = next
+    height = clamp(wanted)
     body.style.height = `${height}px`
+    splitter.setAttribute('aria-valuemax', String(limit()))
     splitter.setAttribute('aria-valuenow', String(height))
     splitter.setAttribute('aria-valuetext', `${height} pixels tall`)
     if (remember) { try { storage?.setItem(KEY, String(height)) } catch { /* storage unavailable */ } }
   }
-  setHeight(height, { remember: false })
+  setHeight(wanted, { remember: false })
 
   splitter.addEventListener('keydown', event => {
-    const next = { ArrowUp: height + DOCK_STEP, ArrowDown: height - DOCK_STEP, Home: DOCK_MIN, End: DOCK_MAX }[event.key]
+    const next = { ArrowUp: height + DOCK_STEP, ArrowDown: height - DOCK_STEP, Home: DOCK_MIN, End: limit() }[event.key]
     if (next === undefined) return
     event.preventDefault()
     setHeight(next)
@@ -93,6 +104,8 @@ export function createDock (document, { slots, storage = null }) {
   return {
     element,
     get height () { return height },
+    /** The window changed size: bring the height inside the new limit, without overwriting the remembered one. */
+    refit: () => setHeight(wanted, { remember: false, refit: true }),
     slot: name => {
       if (!slot.has(name)) throw new Error(`the dock has no slot ${name}`)
       return slot.get(name)

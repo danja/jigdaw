@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  191 terms.
+  192 terms.
 </p>
 
 <h2>Classes</h2>
@@ -487,6 +487,10 @@
   <dd>True when the clip is protected from being moved, resized, edited or
         deleted by mistake. It is still played, and can still be muted or unlocked. Absent
         means false.</dd>
+  <dt id="loopBeats"><code>jig:loopBeats</code> <span class="label">loop length, in beats</span></dt>
+  <dd>The first this many beats of the clip's notes and events repeat to fill the clip's length. A note that
+        starts inside the pattern is cut at its end; one that starts after it is not played while the loop is set.
+        Absent means no loop.</dd>
   <dt id="loopEnabled"><code>jig:loopEnabled</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="loopEnd"><code>jig:loopEnd</code></dt>

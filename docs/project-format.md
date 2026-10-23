@@ -178,6 +178,10 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   the events are a step curve, and one controller has at most one event at a beat. Events are named by their place
   in the clip's events, sorted by start and then controller with pitch bend last, so the same events write the
   same names. A clip with none writes none, and a session saved before this existed reads as having none.
+- A MIDI clip may loop. `jig:loopBeats`, a decimal above zero, makes the first that many beats of its notes and
+  events repeat to fill the clip's length. A note that starts inside the pattern is cut at its end, and one that
+  starts after it is kept in the file and not played while the loop is set. Absent means no loop, and a session
+  saved before this existed reads as having none.
 - A clip belongs to its track. Removing the track removes its clips, unless the removal moves
   the track's nodes to another track, in which case the clips move with them.
 - An audio clip refers to its audio by `jig:source` and never embeds it. A session is a

@@ -11,6 +11,7 @@
 //
 // Level, pan, mute and solo are left out for a track that has nothing to hear:
 // four controls that move and change nothing are worse than none (CLAUDE.md).
+import { createChannelToggle } from './ChannelToggle.js'
 import { decibels, panPosition } from './Strip.js'
 import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
@@ -97,13 +98,8 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
 
   const mix = document.createElement('div')
   mix.className = 'head-mix'
-  const toggle = (text, key) => {
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.className = `strip-toggle ${key}`
-    button.id = `head-${id}-${key}`
-    button.textContent = text
-    button.setAttribute('aria-pressed', 'false')
+  const toggle = key => {
+    const button = createChannelToggle(document, { key, id: `head-${id}-${key}` })
     button.addEventListener('click', () => {
       const next = button.getAttribute('aria-pressed') !== 'true'
       button.setAttribute('aria-pressed', String(next))
@@ -111,8 +107,8 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     })
     return button
   }
-  const mute = toggle('Mute', 'muted')
-  const solo = toggle('Solo', 'soloed')
+  const mute = toggle('muted')
+  const solo = toggle('soloed')
 
   const slider = (text, key, min, max, format, speak) => {
     const label = document.createElement('label')
@@ -198,7 +194,9 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       mute.setAttribute('aria-pressed', String(Boolean(channel.muted)))
       solo.setAttribute('aria-pressed', String(Boolean(channel.soloed)))
       mute.setAttribute('aria-label', `Mute ${label}`)
+      mute.title = `Mute ${label}`
       solo.setAttribute('aria-label', `Solo ${label}`)
+      solo.title = `Solo ${label}`
       // A slider being dragged already says what the model will say; setting
       // its value under the person's hand would only jitter it.
       for (const [control, key] of [[level, 'gain'], [pan, 'pan']]) {

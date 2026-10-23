@@ -13,7 +13,7 @@
 import { say } from './ChainModel.js'
 import { setIcon } from './Icons.js'
 
-export function createChainStrip (document, { onSelect, onBypass, onMove }) {
+export function createChainStrip (document, { onSelect, onBypass, onMove, onReplace = null }) {
   if (typeof onSelect !== 'function') throw new Error('createChainStrip needs onSelect')
   if (typeof onBypass !== 'function') throw new Error('createChainStrip needs onBypass')
   if (typeof onMove !== 'function') throw new Error('createChainStrip needs onMove')
@@ -104,6 +104,16 @@ export function createChainStrip (document, { onSelect, onBypass, onMove }) {
             setIcon(document, move, icon, `${text}: ${node.label}`)
             move.addEventListener('click', () => onMove(node.id, delta))
             head.append(move)
+          }
+          // Replace swaps in another plugin at this place. Left out where the page has no way to choose one.
+          if (onReplace) {
+            const replace = document.createElement('button')
+            replace.type = 'button'
+            replace.className = 'chain-replace'
+            replace.id = `chain-replace-${node.id}`
+            setIcon(document, replace, 'replace', `Replace ${node.label}`)
+            replace.addEventListener('click', () => onReplace(node.id))
+            head.append(replace)
           }
           item.append(head, io, links)
         } else {

@@ -1,6 +1,6 @@
 // src/model/NoteTransform.js
 //
-// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale, reverse, invert, humanize and fit to a scale. Each transform is a pure function
+// Whole-note edits on a MIDI clip: quantize, transpose, velocity scale, reverse, invert, humanize, legato, strum and fit to a scale. Each transform is a pure function
 // over a list of notes. `describeNoteTransform` applies one to a clip (or to the notes at some indices of it) and
 // returns a single setClipNotes change, so the edit is one undo step and the dispatcher stays the only path.
 
@@ -103,6 +103,40 @@ export function fitScale (notes, { root, scale } = {}) {
   return notes.map(note => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }))
 }
 
+/**
+ * Hold each note until the next one starts: its length becomes the gap to the next later start, so the line has no rests. Notes that
+ * start together (a chord) all stretch to the same next start. The last start has nothing after it, so those notes keep their length.
+ */
+export function legato (notes) {
+  const starts = [...new Set(notes.map(n => n.startBeat))].sort((a, b) => a - b)
+  return notes.map(note => {
+    const next = starts.find(s => s > note.startBeat)
+    return next === undefined ? { ...note } : { ...note, lengthBeats: next - note.startBeat }
+  })
+}
+
+/**
+ * Spread each chord (notes that start together) into a roll: the lowest note stays where it is and each next one starts `spread` beats
+ * after the one before, going up, or down from the highest with `direction` 'down'. Lengths are kept, so each note also ends later by its offset.
+ * (Chord members are sorted by pitch; equal pitches keep their order.)
+ */
+export function strum (notes, { spread, direction = 'up' } = {}) {
+  if (!(Number.isFinite(spread) && spread > 0)) throw new Error(`spread must be beats above zero: ${spread}`)
+  if (direction !== 'up' && direction !== 'down') throw new Error(`direction must be up or down: ${direction}`)
+  const order = new Map()
+  const chords = new Map()
+  notes.forEach((note, i) => {
+    const key = note.startBeat
+    chords.set(key, [...(chords.get(key) ?? []), i])
+  })
+  for (const members of chords.values()) {
+    const sorted = [...members].sort((a, b) => (notes[a].pitch - notes[b].pitch) || (a - b))
+    if (direction === 'down') sorted.reverse()
+    sorted.forEach((index, place) => order.set(index, place))
+  }
+  return notes.map((note, i) => ({ ...note, startBeat: note.startBeat + order.get(i) * spread }))
+}
+
 const TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
@@ -110,7 +144,9 @@ const TRANSFORMS = {
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
   humanize: (notes, options) => humanize(notes, options),
-  fitScale: (notes, options) => fitScale(notes, options)
+  fitScale: (notes, options) => fitScale(notes, options),
+  legato: notes => legato(notes),
+  strum: (notes, options) => strum(notes, options)
 }
 
 export const NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS))

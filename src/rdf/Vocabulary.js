@@ -223,6 +223,7 @@ export const vocabulary = Object.freeze({
     ControllerEvent: `${JIG}ControllerEvent`,
     PitchBendEvent: `${JIG}PitchBendEvent`,
     controllerEvent: `${JIG}controllerEvent`,
+    loopBeats: `${JIG}loopBeats`,
     controller: `${JIG}controller`,
     bend: `${JIG}bend`,
     clip: `${JIG}clip`,

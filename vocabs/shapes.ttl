@@ -454,6 +454,10 @@ jig:ClipShape a sh:NodeShape ;
 jig:MidiClipShape a sh:NodeShape ;
     sh:targetClass jig:MidiClip ;
     sh:property [
+        sh:path jig:loopBeats ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minExclusive 0 ;
+        sh:message "A clip's loop length is one decimal above zero, in beats."
+    ] ;
+    sh:property [
         sh:path jig:note ;
         sh:nodeKind sh:IRI ; sh:class jig:Note ;
         sh:message "A MIDI clip's notes are named jig:Note resources, never blank nodes or a list."

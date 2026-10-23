@@ -13345,6 +13345,7 @@ var init_Vocabulary = __esm({
         ControllerEvent: `${JIG}ControllerEvent`,
         PitchBendEvent: `${JIG}PitchBendEvent`,
         controllerEvent: `${JIG}controllerEvent`,
+        loopBeats: `${JIG}loopBeats`,
         controller: `${JIG}controller`,
         bend: `${JIG}bend`,
         clip: `${JIG}clip`,
@@ -23335,6 +23336,31 @@ function patchInfo(current2, patch) {
   return next;
 }
 
+// src/model/ClipLoop.js
+function checkLoopBeats(value2) {
+  if (value2 === null) return null;
+  if (!(typeof value2 === "number" && Number.isFinite(value2) && value2 > 0)) throw new Error("loopBeats must be above zero, or null for no loop");
+  return value2;
+}
+function playedContent(clip) {
+  const notes = clip.notes ?? [];
+  const controllers = clip.controllers ?? [];
+  const loop = clip.loopBeats ?? null;
+  if (loop === null || loop >= clip.lengthBeats) return { notes, controllers };
+  const out = { notes: [], controllers: [] };
+  for (let offset = 0; offset < clip.lengthBeats; offset += loop) {
+    for (const note of notes) {
+      if (note.startBeat >= loop || offset + note.startBeat >= clip.lengthBeats) continue;
+      out.notes.push({ ...note, startBeat: offset + note.startBeat, lengthBeats: Math.min(note.lengthBeats, loop - note.startBeat) });
+    }
+    for (const event of controllers) {
+      if (event.atBeat >= loop || offset + event.atBeat >= clip.lengthBeats) continue;
+      out.controllers.push({ ...event, atBeat: offset + event.atBeat });
+    }
+  }
+  return out;
+}
+
 // src/model/Endpoints.js
 var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
 var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
@@ -23630,7 +23656,9 @@ var OPERATIONS = {
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
       clip.controllers = checkControllers(change.controllers ?? []);
+      if (change.loopBeats !== void 0 && change.loopBeats !== null) clip.loopBeats = checkLoopBeats(change.loopBeats);
     } else {
+      if (change.loopBeats !== void 0 && change.loopBeats !== null) throw new Error("only a MIDI clip can loop");
       if (typeof change.source !== "string" || !URL.canParse(change.source)) {
         throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
       }
@@ -23665,6 +23693,12 @@ var OPERATIONS = {
       if (change[key] === void 0) continue;
       if (clip.kind !== "audio") throw new Error("only an audio clip has fades");
       clip[key] = checkFade(key, change[key]);
+    }
+    if (change.loopBeats !== void 0) {
+      if (clip.kind !== "midi") throw new Error("only a MIDI clip can loop");
+      refuseIfLocked(clip, change, "looped");
+      if (change.loopBeats === null) delete clip.loopBeats;
+      else clip.loopBeats = checkLoopBeats(change.loopBeats);
     }
     if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
     clip.startBeat = startBeat;
@@ -23962,7 +23996,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [] } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [], ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -24669,6 +24703,67 @@ function planUnpack({ project, nodeId, tree, state = null }) {
 }
 function clean(e) {
   return Object.fromEntries(Object.entries(e).filter(([, v]) => v !== void 0));
+}
+
+// src/ops/SwapPlugin.js
+var NEW_NODE = "\0new";
+function planSwap({ project, nodeId, oldProfile, newProfile }) {
+  const node = project.node(nodeId);
+  if (!node) throw new Error(`no such node: ${nodeId}`);
+  const name = node.label ?? oldProfile?.label ?? nodeId;
+  const replacement = newProfile.label ?? "the new plugin";
+  if (project.envelopes.some((e) => e.target.node === nodeId)) {
+    throw new Error(`${name} has automation on it, which swapping would lose. Remove its envelopes first.`);
+  }
+  const dropped = [];
+  const connections = [];
+  for (const c3 of project.connections) {
+    const outgoing = c3.from.node === nodeId;
+    const incoming = c3.to.node === nodeId;
+    if (!outgoing && !incoming) continue;
+    const swapped = {
+      from: outgoing ? { ...c3.from, node: NEW_NODE } : { ...c3.from },
+      to: incoming ? { ...c3.to, node: NEW_NODE } : { ...c3.to },
+      signalKind: c3.signalKind
+    };
+    const checks = [];
+    if (outgoing) checks.push(findPort(newProfile, swapped.from, "from", c3.signalKind));
+    if (incoming) checks.push(findPort(newProfile, swapped.to, "to", c3.signalKind));
+    const refused = checks.find((check) => !check.ok);
+    if (refused) {
+      const other = project.node(outgoing ? c3.to.node : c3.from.node);
+      dropped.push(`the ${isMidi(c3.signalKind) ? "MIDI" : "audio"} join ${outgoing ? "to" : "from"} ${other?.label ?? (outgoing ? c3.to.node : c3.from.node)} was not carried: ${refused.message}`);
+    } else {
+      connections.push(swapped);
+    }
+  }
+  const settings = {};
+  const known = new Set((newProfile.ports ?? []).map((p) => p.symbol));
+  for (const [symbol, value2] of node.settings) {
+    if (known.has(symbol)) settings[symbol] = value2;
+    else dropped.push(`the setting ${symbol} was not carried: ${replacement} has no such parameter`);
+  }
+  const takes = inputsOf(newProfile).filter((p) => p.portSymbol === void 0);
+  const track = project.track(node.track);
+  const heldMidi = track?.midiInput === nodeId;
+  const heldAudio = track?.audioInput === nodeId;
+  const midiInput = heldMidi && takes.some((p) => isMidi(p.kind));
+  const audioInput = heldAudio && takes.some((p) => !isMidi(p.kind));
+  if (heldMidi && !midiInput) dropped.push(`${replacement} takes no MIDI, so the track's clips no longer play into it`);
+  if (heldAudio && !audioInput) dropped.push(`${replacement} takes no audio, so the track's audio clips no longer play into it`);
+  const heldMix = project.master.audioInput === nodeId;
+  const masterInput = heldMix && takes.some((p) => !isMidi(p.kind));
+  if (heldMix && !masterInput) dropped.push(`${replacement} takes no audio, so the mix no longer arrives at it`);
+  return {
+    track: node.track,
+    bypassed: node.bypassed === true,
+    connections,
+    settings,
+    midiInput,
+    audioInput,
+    masterInput,
+    dropped
+  };
 }
 
 // src/ops/CompositePack.js
@@ -25977,6 +26072,56 @@ var OpDispatcher = class {
     }, { label: "Unpack a composite plugin" });
   }
   /**
+   * Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port
+   * for it, with the settings it has parameters for, its label if a person gave one, and its bypass. One undoable edit. What could not
+   * be carried is returned in `dropped`, in words. The new one is loaded first and the old one removed in the same change as the wiring,
+   * so a plugin that will not load leaves the old one exactly as it was. Not for a composite (unpack it first), and refused when the
+   * old one has automation on it.
+   */
+  async swapPlugin(nodeId, iri4) {
+    const old = this.#project.node(nodeId);
+    if (!old) return { ok: false, kind: "change", message: `no such node: ${nodeId}` };
+    if (this.#composites.has(nodeId)) return { ok: false, kind: "change", message: "a composite plugin cannot be swapped; unpack it first" };
+    if (old.pluginIri === iri4) return { ok: false, kind: "change", message: "that is the plugin already there" };
+    if (this.#project.envelopes.some((e) => e.target.node === nodeId)) {
+      return { ok: false, kind: "change", message: `${old.label ?? nodeId} has automation on it, which swapping would lose. Remove its envelopes first.` };
+    }
+    const oldProfile = this.engineNode(nodeId)?.profile ?? null;
+    return this.grouped(async () => {
+      const mine = old.label !== null && old.label !== void 0 && old.label !== oldProfile?.label;
+      const added = await this.addPlugin(iri4, { track: old.track, ...mine ? { label: old.label } : {} });
+      if (!added.ok) return added;
+      const newId = added.nodeId;
+      const abandon = (failure) => {
+        this.apply([{ op: "removeNode", id: newId }]);
+        return failure;
+      };
+      let plan2;
+      try {
+        plan2 = planSwap({ project: this.#project, nodeId, oldProfile, newProfile: added.entry.profile });
+      } catch (error2) {
+        return abandon({ ok: false, kind: "change", message: error2.message });
+      }
+      const dropped = [...plan2.dropped];
+      for (const [symbol, value2] of Object.entries(plan2.settings)) {
+        const set = this.setParameter(newId, symbol, value2);
+        if (!set.ok) dropped.push(`the setting ${symbol} was not carried: ${set.message}`);
+      }
+      const idOf2 = (e) => e.node === NEW_NODE ? { ...e, node: newId } : e;
+      const changes = [
+        { op: "removeNode", id: nodeId },
+        ...plan2.connections.map((c3) => ({ op: "addConnection", from: idOf2(c3.from), to: idOf2(c3.to), signalKind: c3.signalKind })),
+        ...plan2.bypassed ? [{ op: "setNode", id: newId, bypassed: true }] : [],
+        ...plan2.midiInput ? [{ op: "setTrack", id: plan2.track, midiInput: newId }] : [],
+        ...plan2.audioInput ? [{ op: "setTrack", id: plan2.track, audioInput: newId }] : [],
+        ...plan2.masterInput ? [{ op: "setMaster", audioInput: newId }] : []
+      ];
+      const result = this.apply(changes);
+      if (!result.ok) return abandon(result);
+      return { ...result, nodeId: newId, replaced: nodeId, dropped };
+    }, { label: "Swap a plugin" });
+  }
+  /**
    * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
    * a composite is a plugin at an IRI, and an IRI is where only its author can put it, so what comes back is a document and not a node.
    * Each member is pinned to the digest of the profile fetched for it now. docs/nested-plugins.md section 12.
@@ -26724,12 +26869,13 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   const first3 = atBeat - clip.startBeat;
   const second = clip.lengthBeats - first3;
   if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first3);
-    const events = partitionControllers(clip.controllers ?? [], first3);
+    const played = playedContent(clip);
+    const { left, right } = partition(played.notes, first3);
+    const events = partitionControllers(played.controllers, first3);
     return [
-      { op: "setClip", id, lengthBeats: first3 },
+      { op: "setClip", id, lengthBeats: first3, ...clip.loopBeats ? { loopBeats: null } : {} },
       { op: "setClipNotes", id, notes: left },
-      ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
+      ...played.controllers.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
       { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right, controllers: events.right }
     ];
   }
@@ -26745,7 +26891,59 @@ function duplicateClip(project, id, { track, startBeat } = {}) {
   if (!clip) throw new Error(`no such clip: ${id}`);
   const at = startBeat ?? clip.startBeat + clip.lengthBeats;
   const where = track ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })), ...clip.loopBeats ? { loopBeats: clip.loopBeats } : {} } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+}
+function trimClip(project, id, { from, to } = {}, { transport = null } = {}) {
+  const clip = project.clip(id);
+  if (!clip) throw new Error(`no such clip: ${id}`);
+  const end = clip.startBeat + clip.lengthBeats;
+  const start = from ?? clip.startBeat;
+  const stop = to ?? end;
+  if (!(start >= clip.startBeat && stop <= end && stop > start)) {
+    throw new Error("a trim must leave some of the clip, between its start and its end");
+  }
+  const cut = start - clip.startBeat;
+  const change = { op: "setClip", id, startBeat: start, lengthBeats: stop - start };
+  if (clip.kind === "audio") {
+    if (from !== void 0 && from > clip.startBeat) change.fadeInBeats = 0;
+    if (to !== void 0 && to < end) change.fadeOutBeats = 0;
+    if (cut > 0) {
+      if (!transport) throw new Error("trimming the start of an audio clip needs the transport, to turn beats into seconds");
+      change.offsetSeconds = clip.offsetSeconds + (transport.secondsAtBeat(start) - transport.secondsAtBeat(clip.startBeat));
+    }
+    return [change];
+  }
+  if (cut === 0) return [change];
+  const played = playedContent(clip);
+  const { right } = partition(played.notes, cut);
+  if (clip.loopBeats) change.loopBeats = null;
+  return [change, { op: "setClipNotes", id, notes: right }, ...played.controllers.length ? [{ op: "setClipControllers", id, controllers: partitionControllers(played.controllers, cut).right }] : []];
+}
+function copyClips(project, ids) {
+  const clips = ids.map((id) => {
+    const clip = project.clip(id);
+    if (!clip) throw new Error(`no such clip: ${id}`);
+    return clip;
+  });
+  if (clips.length === 0) throw new Error("there is nothing selected to copy");
+  const first3 = Math.min(...clips.map((c3) => c3.startBeat));
+  return clips.map((c3) => ({
+    track: c3.track,
+    kind: c3.kind,
+    offset: c3.startBeat - first3,
+    lengthBeats: c3.lengthBeats,
+    muted: c3.muted,
+    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })), ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
+  }));
+}
+function pasteClips(project, copied, { startBeat, track = null } = {}) {
+  if (!Array.isArray(copied) || copied.length === 0) throw new Error("there is nothing copied to paste");
+  return copied.map((c3) => {
+    const where = track ?? c3.track;
+    if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
+    const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
+    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })), ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  });
 }
 
 // src/model/TrackBus.js
@@ -26858,6 +27056,29 @@ function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
 function fitScale(notes, { root, scale } = {}) {
   return notes.map((note) => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }));
 }
+function legato(notes) {
+  const starts = [...new Set(notes.map((n2) => n2.startBeat))].sort((a2, b) => a2 - b);
+  return notes.map((note) => {
+    const next = starts.find((s) => s > note.startBeat);
+    return next === void 0 ? { ...note } : { ...note, lengthBeats: next - note.startBeat };
+  });
+}
+function strum(notes, { spread, direction = "up" } = {}) {
+  if (!(Number.isFinite(spread) && spread > 0)) throw new Error(`spread must be beats above zero: ${spread}`);
+  if (direction !== "up" && direction !== "down") throw new Error(`direction must be up or down: ${direction}`);
+  const order = /* @__PURE__ */ new Map();
+  const chords = /* @__PURE__ */ new Map();
+  notes.forEach((note, i2) => {
+    const key = note.startBeat;
+    chords.set(key, [...chords.get(key) ?? [], i2]);
+  });
+  for (const members of chords.values()) {
+    const sorted = [...members].sort((a2, b) => notes[a2].pitch - notes[b].pitch || a2 - b);
+    if (direction === "down") sorted.reverse();
+    sorted.forEach((index, place) => order.set(index, place));
+  }
+  return notes.map((note, i2) => ({ ...note, startBeat: note.startBeat + order.get(i2) * spread }));
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
@@ -26865,7 +27086,9 @@ var TRANSFORMS = {
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
   humanize: (notes, options) => humanize(notes, options),
-  fitScale: (notes, options) => fitScale(notes, options)
+  fitScale: (notes, options) => fitScale(notes, options),
+  legato: (notes) => legato(notes),
+  strum: (notes, options) => strum(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name, options = {}, { indices = null } = {}) {
@@ -27459,12 +27682,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           lengthBeats: { type: "number" },
           notes: { type: "array", items: NOTE_SCHEMA },
           controllers: { type: "array", items: CONTROLLER_SCHEMA },
+          loopBeats: { type: "number", exclusiveMinimum: 0, description: "Repeat the first this many beats of notes and events to fill the clip" },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId", "startBeat", "lengthBeats"]
       },
-      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers }], { expectedRevision });
+      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers, ...loopBeats !== void 0 ? { loopBeats } : {} }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -27524,7 +27748,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B), legato (each note held until the next start) or strum (each chord rolled: `spread` beats between its notes, `direction` up from the lowest or down from the highest). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27539,6 +27763,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           timing: { type: "number" },
           velocity: { type: "number" },
           seed: { type: "integer" },
+          spread: { type: "number" },
+          direction: { type: "string", enum: ["up", "down"] },
           root: { type: "integer" },
           scale: { type: "string", enum: SCALE_NAMES },
           indices: { type: "array", items: { type: "integer" } },
@@ -27582,7 +27808,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_set",
-      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
+      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27591,18 +27817,19 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           locked: { type: "boolean" },
           fadeInBeats: { type: "number", minimum: 0 },
           fadeOutBeats: { type: "number", minimum: 0 },
+          loopBeats: { type: ["number", "null"], exclusiveMinimum: 0 },
           color: { type: ["string", "null"] },
           expectedRevision: { type: "integer" }
         },
         required: ["clipId"]
       },
-      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, color, expectedRevision } = {}) {
         const change = { op: "setClip", id: clipId };
-        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats })) {
           if (value2 !== void 0) change[key] = value2;
         }
         const edited = Object.keys(change).length > 2;
-        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade or a color", { kind: "change" });
+        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade, loopBeats or a color", { kind: "change" });
         try {
           let revision = dispatcher.project.revision;
           if (edited) {
@@ -27632,6 +27859,53 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           if (!result.ok) return failed(result.message, { kind: result.kind });
           const created = changes.find((c3) => c3.op === "addClip").id;
           return ok({ revision: result.revision, firstClipId: clipId, secondClipId: created });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_trim",
+      description: "Shorten a clip from the front and/or the back, to absolute beats inside it, without moving what is left: notes keep the time they sounded, an audio clip begins further into its file, and a fade belongs to the edge it was made for. Give `from`, `to` or both; an edge left out stays. One edit, one undo. A trim must leave some of the clip.",
+      inputSchema: {
+        type: "object",
+        properties: { clipId: { type: "string" }, from: { type: "number" }, to: { type: "number" }, expectedRevision: { type: "integer" } },
+        required: ["clipId"]
+      },
+      async handler({ clipId, from, to, expectedRevision } = {}) {
+        if (from === void 0 && to === void 0) return failed("clip_trim needs from, to or both", { kind: "change" });
+        try {
+          const changes = trimClip(dispatcher.project, clipId, { from, to }, { transport: dispatcher.transport() });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipId }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_copy_to",
+      description: "Copy several clips and put the group down with its earliest clip at `startBeat`, as one edit: the way a person copies a selection and pastes. Each copy goes back to the track it came from, or all onto `trackId` when given. With `cut` true the originals are removed in the same edit, so it is a move that keeps nothing behind. Copies are not locked. Returns the new clip ids in the order of `clipIds`.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipIds: { type: "array", items: { type: "string" } },
+          startBeat: { type: "number" },
+          trackId: { type: "string" },
+          cut: { type: "boolean" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipIds", "startBeat"]
+      },
+      async handler({ clipIds, startBeat, trackId, cut = false, expectedRevision } = {}) {
+        if (!Array.isArray(clipIds)) return failed("clip_copy_to needs clipIds", { kind: "change" });
+        if (!Number.isFinite(startBeat) || startBeat < 0) return failed("startBeat must be a beat from zero up", { kind: "change" });
+        try {
+          const copied = copyClips(dispatcher.project, clipIds);
+          const additions = pasteClips(dispatcher.project, copied, { startBeat, track: trackId ?? null });
+          const removals = cut ? clipIds.map((id) => ({ op: "removeClip", id })) : [];
+          const result = dispatcher.apply([...additions, ...removals], { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipIds: result.results.slice(0, additions.length) }) : failed(result.message, { kind: result.kind });
         } catch (error2) {
           return failed(error2.message, { kind: "change" });
         }
@@ -27781,6 +28055,21 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         if (typeof nodeId !== "string" || nodeId === "") return failed("node_unpack needs a nodeId");
         const result = await dispatcher.unpackComposite(nodeId);
         return result.ok ? ok({ revision: result.revision, unpacked: nodeId, nodeIds: result.nodeIds }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_swap",
+      description: "Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port for the join, with the settings the new one has parameters for, its label if you gave it one, and its bypass. One edit, one undo. The result lists in `dropped` what could not be carried over, in words. Refused for a composite (use node_unpack), for a plugin with automation on it, and when the new one will not load, in which case nothing changes.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, iri: { type: "string", description: "The IRI of the plugin to put in its place." } },
+        required: ["nodeId", "iri"]
+      },
+      async handler({ nodeId, iri: iri4 } = {}) {
+        if (typeof nodeId !== "string" || nodeId === "") return failed("node_swap needs a nodeId");
+        if (typeof iri4 !== "string" || iri4 === "") return failed("node_swap needs the iri of the replacement");
+        const result = await dispatcher.swapPlugin(nodeId, iri4);
+        return result.ok ? ok({ revision: result.revision, replaced: nodeId, nodeId: result.nodeId, dropped: result.dropped }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -28494,7 +28783,7 @@ function clipNotes(project) {
     for (const clip of project.clips) {
       if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
-      for (const note of clip.notes) {
+      for (const note of playedContent(clip).notes) {
         const on = clip.startBeat + note.startBeat;
         if (on >= end) continue;
         const off = Math.min(on + note.lengthBeats, end);
@@ -28512,7 +28801,7 @@ function clipControllers(project) {
     for (const clip of project.clips) {
       if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
-      for (const event of clip.controllers ?? []) {
+      for (const event of playedContent(clip).controllers) {
         const on = clip.startBeat + event.atBeat;
         if (on >= end) continue;
         const bend = event.controller === "pitchBend";
@@ -29252,6 +29541,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
       if (clip.fadeInBeats > 0) statements.push(`${term3(jig4.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig4.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else {
+      if (clip.loopBeats) statements.push(`${term3(jig4.loopBeats)} ${decimal(clip.loopBeats)}`);
       if (clip.notes.length > 0) statements.push(`${term3(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
       const events = clip.controllers ?? [];
       if (events.length > 0) statements.push(`${term3(jig4.controllerEvent)} ${events.map((_, i2) => `<#${clip.id}-e${i2 + 1}>`).join(" , ")}`);
@@ -29625,6 +29915,8 @@ function readProject(dataset2) {
       const locked = one2(dataset2, clipIri, jig5.locked);
       if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
+        const loopBeats = number3(one2(dataset2, clipIri, jig5.loopBeats), `loopBeats of clip ${id}`);
+        if (loopBeats !== null) clip.loopBeats = loopBeats;
         clip.notes = objects3(dataset2, clipIri, jig5.note).map((t) => t.value).map((noteIri) => ({
           startBeat: number3(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
           lengthBeats: number3(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
@@ -31623,6 +31915,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_duplicate: "arrangement editing, not yet a statement",
   track_bus: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
+  project_info: "session notes (title, author, notes), not a performance gesture",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",
   master_set: "a mixer gesture; wanted, and not in version one",
@@ -31644,6 +31937,8 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",
   clip_split: "arrangement editing, not yet a statement",
+  clip_trim: "arrangement editing, not yet a statement",
+  clip_copy_to: "arrangement editing, not yet a statement",
   clip_duplicate: "arrangement editing, not yet a statement",
   clip_remove: "arrangement editing, not yet a statement",
   envelope_set: "a ramp replaces an envelope through envelope_add; editing points is not a gesture",
@@ -31652,6 +31947,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   node_bypass: "wanted for performance, and not in version one",
   node_remove: "destructive, and not a gesture in a set",
   node_unpack: "it replaces one node with several, so a name a script already holds for it would change meaning under it",
+  node_swap: "it replaces one node with another, so a name a script already holds for it would change meaning under it",
   composite_pack: "it writes a profile for a person to publish and changes nothing a script plays",
   connection_remove: "not yet a statement",
   connection_set: "a routing edit (a note range on a MIDI connection), not yet a statement",
@@ -33235,6 +33531,12 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     skinView: skinPanel
   };
 }
+
+// src/ui/ChannelToggle.js
+var KINDS2 = Object.freeze({
+  muted: { letter: "M", word: "Mute" },
+  soloed: { letter: "S", word: "Solo" }
+});
 
 // src/ui/Strip.js
 function decibels(gain) {

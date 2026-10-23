@@ -3804,7 +3804,7 @@ var require_end_of_stream = __commonJS({
       PromisePrototypeThen(stream[kIsClosedPromise].promise, resolverFn, resolverFn);
       return nop;
     }
-    function finished2(stream, opts) {
+    function finished3(stream, opts) {
       var _opts;
       let autoCleanup = false;
       if (opts === null) {
@@ -3828,7 +3828,7 @@ var require_end_of_stream = __commonJS({
       });
     }
     module.exports = eos;
-    module.exports.finished = finished2;
+    module.exports.finished = finished3;
   }
 });
 
@@ -7022,9 +7022,9 @@ var require_pipeline = __commonJS({
     var Readable;
     var addAbortListener;
     function destroyer(stream, reading, writing) {
-      let finished2 = false;
+      let finished3 = false;
       stream.on("close", () => {
-        finished2 = true;
+        finished3 = true;
       });
       const cleanup = eos(
         stream,
@@ -7033,13 +7033,13 @@ var require_pipeline = __commonJS({
           writable: writing
         },
         (err) => {
-          finished2 = !err;
+          finished3 = !err;
         }
       );
       return {
         destroy: (err) => {
-          if (finished2) return;
-          finished2 = true;
+          if (finished3) return;
+          finished3 = true;
           destroyImpl.destroyer(stream, err || new ERR_STREAM_DESTROYED("pipe"));
         },
         cleanup
@@ -7619,7 +7619,7 @@ var require_operators = __commonJS({
     var { validateAbortSignal, validateInteger, validateObject } = require_validators();
     var kWeakHandler = require_primordials().Symbol("kWeak");
     var kResistStopPropagation = require_primordials().Symbol("kResistStopPropagation");
-    var { finished: finished2 } = require_end_of_stream();
+    var { finished: finished3 } = require_end_of_stream();
     var staticCompose = require_compose();
     var { addAbortSignalNoValidate } = require_add_abort_signal();
     var { isWritable, isNodeStream } = require_utils();
@@ -7866,7 +7866,7 @@ var require_operators = __commonJS({
         });
         this.once("error", () => {
         });
-        await finished2(this.destroy(err));
+        await finished3(this.destroy(err));
         throw err;
       }
       const ac = new AbortController2();
@@ -8019,7 +8019,7 @@ var require_promises = __commonJS({
     var { ArrayPrototypePop, Promise: Promise2 } = require_primordials();
     var { isIterable, isNodeStream, isWebStream } = require_utils();
     var { pipelineImpl: pl } = require_pipeline();
-    var { finished: finished2 } = require_end_of_stream();
+    var { finished: finished3 } = require_end_of_stream();
     require_stream();
     function pipeline(...streams) {
       return new Promise2((resolve, reject) => {
@@ -8048,7 +8048,7 @@ var require_promises = __commonJS({
       });
     }
     module.exports = {
-      finished: finished2,
+      finished: finished3,
       pipeline
     };
   }
@@ -8259,10 +8259,10 @@ var init_util = __esm({
 var require_fromStream = __commonJS({
   "node_modules/rdf-dataset-ext/fromStream.js"(exports, module) {
     var { promisify: promisify2 } = (init_util(), __toCommonJS(util_exports));
-    var { finished: finished2 } = require_browser3();
+    var { finished: finished3 } = require_browser3();
     async function fromStream3(dataset2, stream) {
       stream.on("data", (quad3) => dataset2.add(quad3));
-      await promisify2(finished2)(stream);
+      await promisify2(finished3)(stream);
       return dataset2;
     }
     module.exports = fromStream3;
@@ -8616,10 +8616,10 @@ var require_NQuads = __commonJS({
       const PN_CHARS = PN_CHARS_U + "0-9-\xB7\u0300-\u036F\u203F-\u2040";
       const BLANK_NODE_LABEL = "(_:(?:[" + PN_CHARS_U + "0-9])(?:(?:[" + PN_CHARS + ".])*(?:[" + PN_CHARS + "]))?)";
       const bnode = BLANK_NODE_LABEL;
-      const plain = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
+      const plain2 = '"([^"\\\\]*(?:\\\\.[^"\\\\]*)*)"';
       const datatype = "(?:\\^\\^" + iri5 + ")";
       const language = "(?:@([a-zA-Z]+(?:-[a-zA-Z0-9]+)*))";
-      const literal6 = "(?:" + plain + "(?:" + datatype + "|" + language + ")?)";
+      const literal6 = "(?:" + plain2 + "(?:" + datatype + "|" + language + ")?)";
       const ws = "[ \\t]+";
       const wso = "[ \\t]*";
       const subject = "(?:" + iri5 + "|" + bnode + ")" + ws;
@@ -13345,6 +13345,7 @@ var init_Vocabulary = __esm({
         ControllerEvent: `${JIG}ControllerEvent`,
         PitchBendEvent: `${JIG}PitchBendEvent`,
         controllerEvent: `${JIG}controllerEvent`,
+        loopBeats: `${JIG}loopBeats`,
         controller: `${JIG}controller`,
         bend: `${JIG}bend`,
         clip: `${JIG}clip`,
@@ -20008,6 +20009,31 @@ function automationBetween(transport2, points, segments2, start, end) {
   return out.sort((x, y) => x.at - y.at);
 }
 
+// src/model/ClipLoop.js
+function checkLoopBeats(value2) {
+  if (value2 === null) return null;
+  if (!(typeof value2 === "number" && Number.isFinite(value2) && value2 > 0)) throw new Error("loopBeats must be above zero, or null for no loop");
+  return value2;
+}
+function playedContent(clip) {
+  const notes = clip.notes ?? [];
+  const controllers = clip.controllers ?? [];
+  const loop = clip.loopBeats ?? null;
+  if (loop === null || loop >= clip.lengthBeats) return { notes, controllers };
+  const out = { notes: [], controllers: [] };
+  for (let offset = 0; offset < clip.lengthBeats; offset += loop) {
+    for (const note of notes) {
+      if (note.startBeat >= loop || offset + note.startBeat >= clip.lengthBeats) continue;
+      out.notes.push({ ...note, startBeat: offset + note.startBeat, lengthBeats: Math.min(note.lengthBeats, loop - note.startBeat) });
+    }
+    for (const event of controllers) {
+      if (event.atBeat >= loop || offset + event.atBeat >= clip.lengthBeats) continue;
+      out.controllers.push({ ...event, atBeat: offset + event.atBeat });
+    }
+  }
+  return out;
+}
+
 // src/engine/Scheduler.js
 var NOTE_ON = 144;
 var NOTE_OFF = 128;
@@ -20021,7 +20047,7 @@ function clipNotes(project) {
     for (const clip of project.clips) {
       if (clip.track !== track2.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
-      for (const note of clip.notes) {
+      for (const note of playedContent(clip).notes) {
         const on = clip.startBeat + note.startBeat;
         if (on >= end) continue;
         const off = Math.min(on + note.lengthBeats, end);
@@ -20039,7 +20065,7 @@ function clipControllers(project) {
     for (const clip of project.clips) {
       if (clip.track !== track2.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
-      for (const event of clip.controllers ?? []) {
+      for (const event of playedContent(clip).controllers) {
         const on = clip.startBeat + event.atBeat;
         if (on >= end) continue;
         const bend = event.controller === "pitchBend";
@@ -21018,7 +21044,9 @@ var OPERATIONS = {
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
       clip.controllers = checkControllers(change.controllers ?? []);
+      if (change.loopBeats !== void 0 && change.loopBeats !== null) clip.loopBeats = checkLoopBeats(change.loopBeats);
     } else {
+      if (change.loopBeats !== void 0 && change.loopBeats !== null) throw new Error("only a MIDI clip can loop");
       if (typeof change.source !== "string" || !URL.canParse(change.source)) {
         throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
       }
@@ -21053,6 +21081,12 @@ var OPERATIONS = {
       if (change[key] === void 0) continue;
       if (clip.kind !== "audio") throw new Error("only an audio clip has fades");
       clip[key] = checkFade(key, change[key]);
+    }
+    if (change.loopBeats !== void 0) {
+      if (clip.kind !== "midi") throw new Error("only a MIDI clip can loop");
+      refuseIfLocked(clip, change, "looped");
+      if (change.loopBeats === null) delete clip.loopBeats;
+      else clip.loopBeats = checkLoopBeats(change.loopBeats);
     }
     if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
     clip.startBeat = startBeat;
@@ -21350,7 +21384,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [] } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [], ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -22057,6 +22091,67 @@ function planUnpack({ project, nodeId, tree, state = null }) {
 }
 function clean(e) {
   return Object.fromEntries(Object.entries(e).filter(([, v]) => v !== void 0));
+}
+
+// src/ops/SwapPlugin.js
+var NEW_NODE = "\0new";
+function planSwap({ project, nodeId, oldProfile, newProfile }) {
+  const node = project.node(nodeId);
+  if (!node) throw new Error(`no such node: ${nodeId}`);
+  const name2 = node.label ?? oldProfile?.label ?? nodeId;
+  const replacement = newProfile.label ?? "the new plugin";
+  if (project.envelopes.some((e) => e.target.node === nodeId)) {
+    throw new Error(`${name2} has automation on it, which swapping would lose. Remove its envelopes first.`);
+  }
+  const dropped = [];
+  const connections = [];
+  for (const c3 of project.connections) {
+    const outgoing = c3.from.node === nodeId;
+    const incoming = c3.to.node === nodeId;
+    if (!outgoing && !incoming) continue;
+    const swapped = {
+      from: outgoing ? { ...c3.from, node: NEW_NODE } : { ...c3.from },
+      to: incoming ? { ...c3.to, node: NEW_NODE } : { ...c3.to },
+      signalKind: c3.signalKind
+    };
+    const checks = [];
+    if (outgoing) checks.push(findPort(newProfile, swapped.from, "from", c3.signalKind));
+    if (incoming) checks.push(findPort(newProfile, swapped.to, "to", c3.signalKind));
+    const refused = checks.find((check) => !check.ok);
+    if (refused) {
+      const other = project.node(outgoing ? c3.to.node : c3.from.node);
+      dropped.push(`the ${isMidi(c3.signalKind) ? "MIDI" : "audio"} join ${outgoing ? "to" : "from"} ${other?.label ?? (outgoing ? c3.to.node : c3.from.node)} was not carried: ${refused.message}`);
+    } else {
+      connections.push(swapped);
+    }
+  }
+  const settings = {};
+  const known = new Set((newProfile.ports ?? []).map((p) => p.symbol));
+  for (const [symbol, value2] of node.settings) {
+    if (known.has(symbol)) settings[symbol] = value2;
+    else dropped.push(`the setting ${symbol} was not carried: ${replacement} has no such parameter`);
+  }
+  const takes = inputsOf(newProfile).filter((p) => p.portSymbol === void 0);
+  const track2 = project.track(node.track);
+  const heldMidi = track2?.midiInput === nodeId;
+  const heldAudio = track2?.audioInput === nodeId;
+  const midiInput = heldMidi && takes.some((p) => isMidi(p.kind));
+  const audioInput = heldAudio && takes.some((p) => !isMidi(p.kind));
+  if (heldMidi && !midiInput) dropped.push(`${replacement} takes no MIDI, so the track's clips no longer play into it`);
+  if (heldAudio && !audioInput) dropped.push(`${replacement} takes no audio, so the track's audio clips no longer play into it`);
+  const heldMix = project.master.audioInput === nodeId;
+  const masterInput = heldMix && takes.some((p) => !isMidi(p.kind));
+  if (heldMix && !masterInput) dropped.push(`${replacement} takes no audio, so the mix no longer arrives at it`);
+  return {
+    track: node.track,
+    bypassed: node.bypassed === true,
+    connections,
+    settings,
+    midiInput,
+    audioInput,
+    masterInput,
+    dropped
+  };
 }
 
 // src/ops/CompositePack.js
@@ -23365,6 +23460,56 @@ var OpDispatcher = class {
     }, { label: "Unpack a composite plugin" });
   }
   /**
+   * Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port
+   * for it, with the settings it has parameters for, its label if a person gave one, and its bypass. One undoable edit. What could not
+   * be carried is returned in `dropped`, in words. The new one is loaded first and the old one removed in the same change as the wiring,
+   * so a plugin that will not load leaves the old one exactly as it was. Not for a composite (unpack it first), and refused when the
+   * old one has automation on it.
+   */
+  async swapPlugin(nodeId, iri5) {
+    const old = this.#project.node(nodeId);
+    if (!old) return { ok: false, kind: "change", message: `no such node: ${nodeId}` };
+    if (this.#composites.has(nodeId)) return { ok: false, kind: "change", message: "a composite plugin cannot be swapped; unpack it first" };
+    if (old.pluginIri === iri5) return { ok: false, kind: "change", message: "that is the plugin already there" };
+    if (this.#project.envelopes.some((e) => e.target.node === nodeId)) {
+      return { ok: false, kind: "change", message: `${old.label ?? nodeId} has automation on it, which swapping would lose. Remove its envelopes first.` };
+    }
+    const oldProfile = this.engineNode(nodeId)?.profile ?? null;
+    return this.grouped(async () => {
+      const mine = old.label !== null && old.label !== void 0 && old.label !== oldProfile?.label;
+      const added = await this.addPlugin(iri5, { track: old.track, ...mine ? { label: old.label } : {} });
+      if (!added.ok) return added;
+      const newId = added.nodeId;
+      const abandon = (failure) => {
+        this.apply([{ op: "removeNode", id: newId }]);
+        return failure;
+      };
+      let plan2;
+      try {
+        plan2 = planSwap({ project: this.#project, nodeId, oldProfile, newProfile: added.entry.profile });
+      } catch (error2) {
+        return abandon({ ok: false, kind: "change", message: error2.message });
+      }
+      const dropped = [...plan2.dropped];
+      for (const [symbol, value2] of Object.entries(plan2.settings)) {
+        const set = this.setParameter(newId, symbol, value2);
+        if (!set.ok) dropped.push(`the setting ${symbol} was not carried: ${set.message}`);
+      }
+      const idOf2 = (e) => e.node === NEW_NODE ? { ...e, node: newId } : e;
+      const changes = [
+        { op: "removeNode", id: nodeId },
+        ...plan2.connections.map((c3) => ({ op: "addConnection", from: idOf2(c3.from), to: idOf2(c3.to), signalKind: c3.signalKind })),
+        ...plan2.bypassed ? [{ op: "setNode", id: newId, bypassed: true }] : [],
+        ...plan2.midiInput ? [{ op: "setTrack", id: plan2.track, midiInput: newId }] : [],
+        ...plan2.audioInput ? [{ op: "setTrack", id: plan2.track, audioInput: newId }] : [],
+        ...plan2.masterInput ? [{ op: "setMaster", audioInput: newId }] : []
+      ];
+      const result = this.apply(changes);
+      if (!result.ok) return abandon(result);
+      return { ...result, nodeId: newId, replaced: nodeId, dropped };
+    }, { label: "Swap a plugin" });
+  }
+  /**
    * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
    * a composite is a plugin at an IRI, and an IRI is where only its author can put it, so what comes back is a document and not a node.
    * Each member is pinned to the digest of the profile fetched for it now. docs/nested-plugins.md section 12.
@@ -24447,7 +24592,8 @@ function writeMidiFile(project, { trackIds = null } = {}) {
     const clips = project.clips.filter((c3) => c3.track === t.id && c3.kind === "midi" && !c3.muted);
     const events = [];
     for (const clip of clips) {
-      for (const n2 of clip.notes) {
+      const played = playedContent(clip);
+      for (const n2 of played.notes) {
         if (!(n2.startBeat < clip.lengthBeats)) continue;
         const on = map.tick(clip.startBeat + n2.startBeat);
         const off = Math.max(on + 1, map.tick(clip.startBeat + Math.min(n2.startBeat + n2.lengthBeats, clip.lengthBeats)));
@@ -24455,7 +24601,7 @@ function writeMidiFile(project, { trackIds = null } = {}) {
         events.push([on, 1, [144 | channel, n2.pitch, velocity]], [off, 0, [128 | channel, n2.pitch, 0]]);
         notes++;
       }
-      for (const e of clip.controllers ?? []) {
+      for (const e of played.controllers) {
         if (!(e.atBeat < clip.lengthBeats)) continue;
         const at = map.tick(clip.startBeat + e.atBeat);
         events.push([at, 0.5, e.controller === "pitchBend" ? [224 | channel, e.value + 8192 & 127, e.value + 8192 >> 7] : [176 | channel, e.controller, e.value]]);
@@ -24803,10 +24949,19 @@ var ICONS = Object.freeze({
   paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
   bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
   earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
+  replace: "M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z",
   later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
   stems: "M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z",
   download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
-  freeze: "M20.79 13.95l-3.17-.5-3.14-1.45L17.62 10l3.17-.5-.58-1.76-3.14 1.5L14 5.4V2h-2v3.4l-2.98 3.65-3.17-1.5-.58 1.76 3.17.5 3.14 1.45-3.14 1.45-3.17.5.58 1.76 3.14-1.5L12 17.4V21h2v-3.6l2.98-3.65 3.17 1.5z",
+  browser: "M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z",
+  keys: "M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z",
+  panic: "M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z",
+  tap: "M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.38z",
+  click: "M9.5 2h5l4.5 20H5L9.5 2zm2.4 2L8.2 20h7.6L12.1 4zM11 8h2v8h-2z",
+  midiIn: "M4 5h16v14H4V5zm2 2v10h2.2v-4H9V7H6zm4.2 0v6H11v4h2v-4h.8V7h-3.6zm5 0v6h.8v4h2V7h-2.8z",
+  midiExport: "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z",
+  midiImport: "M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z",
+  recordMidi: "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z",
   delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
 });
 function iconElement(document2, name2) {
@@ -28385,12 +28540,13 @@ function splitClip(project, id, atBeat, { transport: transport2 = null, newId = 
   const first4 = atBeat - clip.startBeat;
   const second = clip.lengthBeats - first4;
   if (clip.kind === "midi") {
-    const { left, right } = partition(clip.notes, first4);
-    const events = partitionControllers(clip.controllers ?? [], first4);
+    const played = playedContent(clip);
+    const { left, right } = partition(played.notes, first4);
+    const events = partitionControllers(played.controllers, first4);
     return [
-      { op: "setClip", id, lengthBeats: first4 },
+      { op: "setClip", id, lengthBeats: first4, ...clip.loopBeats ? { loopBeats: null } : {} },
       { op: "setClipNotes", id, notes: left },
-      ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
+      ...played.controllers.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
       { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right, controllers: events.right }
     ];
   }
@@ -28406,7 +28562,7 @@ function duplicateClip(project, id, { track: track2, startBeat } = {}) {
   if (!clip) throw new Error(`no such clip: ${id}`);
   const at = startBeat ?? clip.startBeat + clip.lengthBeats;
   const where = track2 ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })), ...clip.loopBeats ? { loopBeats: clip.loopBeats } : {} } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 function trimClip(project, id, { from, to } = {}, { transport: transport2 = null } = {}) {
   const clip = project.clip(id);
@@ -28429,8 +28585,10 @@ function trimClip(project, id, { from, to } = {}, { transport: transport2 = null
     return [change];
   }
   if (cut === 0) return [change];
-  const { right } = partition(clip.notes, cut);
-  return [change, { op: "setClipNotes", id, notes: right }, ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: partitionControllers(clip.controllers, cut).right }] : []];
+  const played = playedContent(clip);
+  const { right } = partition(played.notes, cut);
+  if (clip.loopBeats) change.loopBeats = null;
+  return [change, { op: "setClipNotes", id, notes: right }, ...played.controllers.length ? [{ op: "setClipControllers", id, controllers: partitionControllers(played.controllers, cut).right }] : []];
 }
 function copyClips(project, ids) {
   const clips = ids.map((id) => {
@@ -28446,7 +28604,7 @@ function copyClips(project, ids) {
     offset: c3.startBeat - first4,
     lengthBeats: c3.lengthBeats,
     muted: c3.muted,
-    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
+    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })), ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
   }));
 }
 function pasteClips(project, copied, { startBeat, track: track2 = null } = {}) {
@@ -28455,7 +28613,7 @@ function pasteClips(project, copied, { startBeat, track: track2 = null } = {}) {
     const where = track2 ?? c3.track;
     if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
     const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
-    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })), ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
   });
 }
 
@@ -28572,6 +28730,29 @@ function humanize(notes, { timing = 0, velocity = 0, seed } = {}) {
 function fitScale(notes, { root, scale } = {}) {
   return notes.map((note) => ({ ...note, pitch: snapPitch(note.pitch, root, scale) }));
 }
+function legato(notes) {
+  const starts = [...new Set(notes.map((n2) => n2.startBeat))].sort((a2, b) => a2 - b);
+  return notes.map((note) => {
+    const next = starts.find((s) => s > note.startBeat);
+    return next === void 0 ? { ...note } : { ...note, lengthBeats: next - note.startBeat };
+  });
+}
+function strum(notes, { spread, direction = "up" } = {}) {
+  if (!(Number.isFinite(spread) && spread > 0)) throw new Error(`spread must be beats above zero: ${spread}`);
+  if (direction !== "up" && direction !== "down") throw new Error(`direction must be up or down: ${direction}`);
+  const order = /* @__PURE__ */ new Map();
+  const chords = /* @__PURE__ */ new Map();
+  notes.forEach((note, i2) => {
+    const key = note.startBeat;
+    chords.set(key, [...chords.get(key) ?? [], i2]);
+  });
+  for (const members of chords.values()) {
+    const sorted = [...members].sort((a2, b) => notes[a2].pitch - notes[b].pitch || a2 - b);
+    if (direction === "down") sorted.reverse();
+    sorted.forEach((index, place) => order.set(index, place));
+  }
+  return notes.map((note, i2) => ({ ...note, startBeat: note.startBeat + order.get(i2) * spread }));
+}
 var TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
@@ -28579,7 +28760,9 @@ var TRANSFORMS = {
   reverse: (notes, options, clip) => reverse(notes, clip.lengthBeats),
   invert: (notes, { axis }) => invert(notes, axis),
   humanize: (notes, options) => humanize(notes, options),
-  fitScale: (notes, options) => fitScale(notes, options)
+  fitScale: (notes, options) => fitScale(notes, options),
+  legato: (notes) => legato(notes),
+  strum: (notes, options) => strum(notes, options)
 };
 var NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS));
 function describeNoteTransform(project, clipId, name2, options = {}, { indices = null } = {}) {
@@ -29173,12 +29356,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           lengthBeats: { type: "number" },
           notes: { type: "array", items: NOTE_SCHEMA },
           controllers: { type: "array", items: CONTROLLER_SCHEMA },
+          loopBeats: { type: "number", exclusiveMinimum: 0, description: "Repeat the first this many beats of notes and events to fill the clip" },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId", "startBeat", "lengthBeats"]
       },
-      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers }], { expectedRevision });
+      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers, ...loopBeats !== void 0 ? { loopBeats } : {} }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -29238,7 +29422,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_transform_notes",
-      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B). Refused as a whole if any note would leave its range.",
+      description: "Edit the notes of a MIDI clip in one step, all of them or only those at `indices` (positions in the clip's note order). `transform` is quantize (`grid` in beats, `strength` 0 to 1, `ends` true to move note ends too), transpose (`semitones`, whole), scaleVelocity (`factor` above zero), reverse (mirrors the notes inside the clip), invert (mirrors pitches about `axis`, default the first note) or humanize (random nudges of start by up to `timing` beats and velocity by up to `velocity`, from a whole `seed` so the same seed gives the same result) or fitScale (moves each note to the nearest pitch of `scale` in `root`, 0 for C to 11 for B), legato (each note held until the next start) or strum (each chord rolled: `spread` beats between its notes, `direction` up from the lowest or down from the highest). Refused as a whole if any note would leave its range.",
       inputSchema: {
         type: "object",
         properties: {
@@ -29253,6 +29437,8 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           timing: { type: "number" },
           velocity: { type: "number" },
           seed: { type: "integer" },
+          spread: { type: "number" },
+          direction: { type: "string", enum: ["up", "down"] },
           root: { type: "integer" },
           scale: { type: "string", enum: SCALE_NAMES },
           indices: { type: "array", items: { type: "integer" } },
@@ -29296,7 +29482,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_set",
-      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
+      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
       inputSchema: {
         type: "object",
         properties: {
@@ -29305,18 +29491,19 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           locked: { type: "boolean" },
           fadeInBeats: { type: "number", minimum: 0 },
           fadeOutBeats: { type: "number", minimum: 0 },
+          loopBeats: { type: ["number", "null"], exclusiveMinimum: 0 },
           color: { type: ["string", "null"] },
           expectedRevision: { type: "integer" }
         },
         required: ["clipId"]
       },
-      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, color, expectedRevision } = {}) {
+      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, color, expectedRevision } = {}) {
         const change = { op: "setClip", id: clipId };
-        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats })) {
+        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats })) {
           if (value2 !== void 0) change[key] = value2;
         }
         const edited = Object.keys(change).length > 2;
-        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade or a color", { kind: "change" });
+        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade, loopBeats or a color", { kind: "change" });
         try {
           let revision = dispatcher.project.revision;
           if (edited) {
@@ -29346,6 +29533,53 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           if (!result.ok) return failed(result.message, { kind: result.kind });
           const created = changes.find((c3) => c3.op === "addClip").id;
           return ok({ revision: result.revision, firstClipId: clipId, secondClipId: created });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_trim",
+      description: "Shorten a clip from the front and/or the back, to absolute beats inside it, without moving what is left: notes keep the time they sounded, an audio clip begins further into its file, and a fade belongs to the edge it was made for. Give `from`, `to` or both; an edge left out stays. One edit, one undo. A trim must leave some of the clip.",
+      inputSchema: {
+        type: "object",
+        properties: { clipId: { type: "string" }, from: { type: "number" }, to: { type: "number" }, expectedRevision: { type: "integer" } },
+        required: ["clipId"]
+      },
+      async handler({ clipId, from, to, expectedRevision } = {}) {
+        if (from === void 0 && to === void 0) return failed("clip_trim needs from, to or both", { kind: "change" });
+        try {
+          const changes = trimClip(dispatcher.project, clipId, { from, to }, { transport: dispatcher.transport() });
+          const result = dispatcher.apply(changes, { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipId }) : failed(result.message, { kind: result.kind });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
+      name: "clip_copy_to",
+      description: "Copy several clips and put the group down with its earliest clip at `startBeat`, as one edit: the way a person copies a selection and pastes. Each copy goes back to the track it came from, or all onto `trackId` when given. With `cut` true the originals are removed in the same edit, so it is a move that keeps nothing behind. Copies are not locked. Returns the new clip ids in the order of `clipIds`.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipIds: { type: "array", items: { type: "string" } },
+          startBeat: { type: "number" },
+          trackId: { type: "string" },
+          cut: { type: "boolean" },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipIds", "startBeat"]
+      },
+      async handler({ clipIds, startBeat, trackId, cut = false, expectedRevision } = {}) {
+        if (!Array.isArray(clipIds)) return failed("clip_copy_to needs clipIds", { kind: "change" });
+        if (!Number.isFinite(startBeat) || startBeat < 0) return failed("startBeat must be a beat from zero up", { kind: "change" });
+        try {
+          const copied = copyClips(dispatcher.project, clipIds);
+          const additions = pasteClips(dispatcher.project, copied, { startBeat, track: trackId ?? null });
+          const removals = cut ? clipIds.map((id) => ({ op: "removeClip", id })) : [];
+          const result = dispatcher.apply([...additions, ...removals], { expectedRevision });
+          return result.ok ? ok({ revision: result.revision, clipIds: result.results.slice(0, additions.length) }) : failed(result.message, { kind: result.kind });
         } catch (error2) {
           return failed(error2.message, { kind: "change" });
         }
@@ -29495,6 +29729,21 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         if (typeof nodeId !== "string" || nodeId === "") return failed("node_unpack needs a nodeId");
         const result = await dispatcher.unpackComposite(nodeId);
         return result.ok ? ok({ revision: result.revision, unpacked: nodeId, nodeIds: result.nodeIds }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "node_swap",
+      description: "Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port for the join, with the settings the new one has parameters for, its label if you gave it one, and its bypass. One edit, one undo. The result lists in `dropped` what could not be carried over, in words. Refused for a composite (use node_unpack), for a plugin with automation on it, and when the new one will not load, in which case nothing changes.",
+      inputSchema: {
+        type: "object",
+        properties: { nodeId: { type: "string" }, iri: { type: "string", description: "The IRI of the plugin to put in its place." } },
+        required: ["nodeId", "iri"]
+      },
+      async handler({ nodeId, iri: iri5 } = {}) {
+        if (typeof nodeId !== "string" || nodeId === "") return failed("node_swap needs a nodeId");
+        if (typeof iri5 !== "string" || iri5 === "") return failed("node_swap needs the iri of the replacement");
+        const result = await dispatcher.swapPlugin(nodeId, iri5);
+        return result.ok ? ok({ revision: result.revision, replaced: nodeId, nodeId: result.nodeId, dropped: result.dropped }) : failed(result.message, { kind: result.kind });
       }
     },
     {
@@ -31283,6 +31532,26 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
   };
 }
 
+// src/ui/ChannelToggle.js
+var KINDS = Object.freeze({
+  muted: { letter: "M", word: "Mute" },
+  soloed: { letter: "S", word: "Solo" }
+});
+function createChannelToggle(document2, { key, id, pressed = false, name: name2 = null }) {
+  const kind = KINDS[key];
+  if (!kind) throw new Error(`a channel toggle is for muted or soloed, not ${key}`);
+  const button = document2.createElement("button");
+  button.type = "button";
+  button.className = `strip-toggle ${key}`;
+  button.id = id;
+  button.textContent = kind.letter;
+  const label = name2 ? `${kind.word} ${name2}` : kind.word;
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  button.setAttribute("aria-pressed", String(pressed));
+  return button;
+}
+
 // src/ui/Strip.js
 function decibels(gain) {
   if (!(gain > 0)) return "-inf";
@@ -31294,7 +31563,7 @@ function panPosition(pan) {
   const side = pan < 0 ? "left" : "right";
   return `${Math.round(Math.abs(pan) * 100)}% ${side}`;
 }
-function createStrip(document2, channel, onChange, { label: initialLabel = "", id = null, solo: withSolo = true } = {}) {
+function createStrip(document2, channel, onChange, { label: initialLabel = "", id = null, solo: withSolo = true, fader = false } = {}) {
   let label = initialLabel;
   const base = (id ?? `${initialLabel || "node"}`).replace(/\s+/g, "-").toLowerCase();
   const element = document2.createElement("div");
@@ -31306,18 +31575,25 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
   gainRow.className = "strip-control";
   const gainLabel = document2.createElement("label");
   gainLabel.textContent = "Level";
-  const gainDial = createDial(
-    document2,
-    { minimum: 0, maximum: 2, defaultValue: state.gain },
-    `${base}-level`
-  );
-  const gain = gainDial.input;
+  const gainDial = fader ? null : createDial(document2, { minimum: 0, maximum: 2, defaultValue: state.gain }, `${base}-level`);
+  let gain;
+  if (fader) {
+    gain = document2.createElement("input");
+    gain.type = "range";
+    gain.id = `${base}-level`;
+    gain.className = "strip-fader";
+    gain.min = "0";
+    gain.max = "2";
+    gain.step = "0.01";
+    gain.value = String(state.gain);
+    gain.setAttribute("aria-orientation", "vertical");
+  } else gain = gainDial.input;
   const gainValue = document2.createElement("span");
   gainValue.className = "value";
   const showGain = () => {
     gainValue.textContent = `${decibels(state.gain)} dB`;
     gain.setAttribute("aria-valuetext", `${decibels(state.gain)} decibels`);
-    gainDial.render(state.gain);
+    gainDial?.render(state.gain);
   };
   gainLabel.setAttribute("for", gain.id);
   gain.addEventListener("input", () => {
@@ -31326,7 +31602,7 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
     onChange({ gain: state.gain });
   });
   showGain();
-  gainRow.append(gainLabel, gainDial.element, gainValue);
+  gainRow.append(gainLabel, fader ? gain : gainDial.element, gainValue);
   const panRow = document2.createElement("div");
   panRow.className = "strip-control";
   const panLabel = document2.createElement("label");
@@ -31354,13 +31630,8 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
   panRow.append(panLabel, panDial.element, panValue);
   const buttons = document2.createElement("div");
   buttons.className = "strip-buttons";
-  const toggle = (name2, key) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.className = `strip-toggle ${key}`;
-    button.id = `${base}-${key}`;
-    button.textContent = name2;
-    button.setAttribute("aria-pressed", String(Boolean(state[key])));
+  const toggle = (key) => {
+    const button = createChannelToggle(document2, { key, id: `${base}-${key}`, pressed: Boolean(state[key]) });
     button.addEventListener("click", () => {
       state[key] = !state[key];
       button.setAttribute("aria-pressed", String(state[key]));
@@ -31368,11 +31639,14 @@ function createStrip(document2, channel, onChange, { label: initialLabel = "", i
     });
     return button;
   };
-  const mute = toggle("Mute", "muted");
-  const solo = toggle("Solo", "soloed");
+  const mute = toggle("muted");
+  const solo = toggle("soloed");
   buttons.append(mute);
   if (withSolo) buttons.append(solo);
-  element.append(gainRow, panRow, buttons);
+  if (fader) {
+    element.classList.add("strip-desk");
+    element.append(panRow, gainRow, buttons);
+  } else element.append(gainRow, panRow, buttons);
   return {
     element,
     /**
@@ -31496,7 +31770,7 @@ function createMixer(document2, { onChange }) {
           document2,
           track2.channel,
           (change) => onChange(track2.id, change),
-          { label, id: `strip-${track2.id}` }
+          { label, id: `strip-${track2.id}`, fader: true }
         );
         const wrapper = document2.createElement("div");
         wrapper.className = "mixer-channel";
@@ -32796,7 +33070,7 @@ function buildArtwork(doc, { document: document2, prefix, limits = SKIN_LIMITS, 
 init_env();
 init_Vocabulary();
 var { jig: jig4, rdf: rdfTerms3 } = vocabulary;
-var KINDS = /* @__PURE__ */ new Map([
+var KINDS2 = /* @__PURE__ */ new Map([
   [jig4.RotaryControl, "rotary"],
   [jig4.LinearControl, "linear"],
   [jig4.ToggleControl, "toggle"],
@@ -32815,7 +33089,7 @@ function readSkin(dataset2) {
   const doc = iri3(documentIri);
   const art = objects3(dataset2, doc, jig4.artwork)[0] ?? null;
   const controls = objects3(dataset2, doc, jig4.control).map((node) => {
-    const kinds = objects3(dataset2, node, rdfTerms3.type).map((t) => KINDS.get(t.value)).filter(Boolean);
+    const kinds = objects3(dataset2, node, rdfTerms3.type).map((t) => KINDS2.get(t.value)).filter(Boolean);
     return {
       id: node.value,
       kind: kinds[0] ?? null,
@@ -33073,13 +33347,8 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   duplicate.addEventListener("click", () => onDuplicateTrack(id));
   const mix = document2.createElement("div");
   mix.className = "head-mix";
-  const toggle = (text, key) => {
-    const button = document2.createElement("button");
-    button.type = "button";
-    button.className = `strip-toggle ${key}`;
-    button.id = `head-${id}-${key}`;
-    button.textContent = text;
-    button.setAttribute("aria-pressed", "false");
+  const toggle = (key) => {
+    const button = createChannelToggle(document2, { key, id: `head-${id}-${key}` });
     button.addEventListener("click", () => {
       const next = button.getAttribute("aria-pressed") !== "true";
       button.setAttribute("aria-pressed", String(next));
@@ -33087,8 +33356,8 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
     });
     return button;
   };
-  const mute = toggle("Mute", "muted");
-  const solo = toggle("Solo", "soloed");
+  const mute = toggle("muted");
+  const solo = toggle("soloed");
   const slider = (text, key, min, max, format, speak) => {
     const label = document2.createElement("label");
     label.className = "head-slider";
@@ -33165,7 +33434,9 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       mute.setAttribute("aria-pressed", String(Boolean(channel.muted)));
       solo.setAttribute("aria-pressed", String(Boolean(channel.soloed)));
       mute.setAttribute("aria-label", `Mute ${label}`);
+      mute.title = `Mute ${label}`;
       solo.setAttribute("aria-label", `Solo ${label}`);
+      solo.title = `Solo ${label}`;
       for (const [control, key] of [[level, "gain"], [pan, "pan"]]) {
         if (document2.activeElement !== control.input) control.input.value = String(channel[key]);
         control.show(channel[key]);
@@ -33267,7 +33538,7 @@ function say(node) {
 }
 
 // src/ui/ChainStrip.js
-function createChainStrip(document2, { onSelect, onBypass, onMove }) {
+function createChainStrip(document2, { onSelect, onBypass, onMove, onReplace = null }) {
   if (typeof onSelect !== "function") throw new Error("createChainStrip needs onSelect");
   if (typeof onBypass !== "function") throw new Error("createChainStrip needs onBypass");
   if (typeof onMove !== "function") throw new Error("createChainStrip needs onMove");
@@ -33344,6 +33615,15 @@ function createChainStrip(document2, { onSelect, onBypass, onMove }) {
             setIcon(document2, move, icon, `${text}: ${node.label}`);
             move.addEventListener("click", () => onMove(node.id, delta));
             head.append(move);
+          }
+          if (onReplace) {
+            const replace = document2.createElement("button");
+            replace.type = "button";
+            replace.className = "chain-replace";
+            replace.id = `chain-replace-${node.id}`;
+            setIcon(document2, replace, "replace", `Replace ${node.label}`);
+            replace.addEventListener("click", () => onReplace(node.id));
+            head.append(replace);
           }
           item.append(head, io, links);
         } else {
@@ -33911,7 +34191,7 @@ function barBeat(beat, beatsPerBar) {
 }
 var plural = (n2, word) => `${n2} ${word}${n2 === 1 ? "" : "s"}`;
 function describeClip(clip, { beatsPerBar, playsIntoNothing = false, color = null }) {
-  const what = clip.kind === "midi" ? `MIDI clip, ${plural(clip.notes.length, "note")}` : "Audio clip";
+  const what = clip.kind === "midi" ? `MIDI clip, ${plural(clip.notes.length, "note")}${clip.loopBeats ? `, looping every ${plural(clip.loopBeats, "beat")}` : ""}` : "Audio clip";
   const where = `${barBeat(clip.startBeat, beatsPerBar)}, ${plural(clip.lengthBeats, "beat")}`;
   return `${what}${clip.muted ? ", muted" : ""}${clip.locked ? ", locked" : ""}${color ? `, coloured ${colorName(color)}` : ""}, ${where}${playsIntoNothing ? ", plays into nothing: this track has no MIDI input" : ""}`;
 }
@@ -34243,7 +34523,7 @@ function createTimelineTools(document2, { view, bpb, zoom, fit, onSeek = null, o
 }
 
 // src/model/Selection.js
-var KINDS2 = Object.freeze(["track", "clip", "note", "node", "lane"]);
+var KINDS3 = Object.freeze(["track", "clip", "note", "node", "lane"]);
 var Selection = class {
   #kind = null;
   #ids = /* @__PURE__ */ new Set();
@@ -34294,7 +34574,7 @@ var Selection = class {
     if (kept.length !== this.#ids.size) this.#replace(kept.length === 0 ? null : this.#kind, kept);
   }
   #check(kind) {
-    if (!KINDS2.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS2.join(", ")}`);
+    if (!KINDS3.includes(kind)) throw new Error(`cannot select a ${kind}; one of ${KINDS3.join(", ")}`);
   }
   #replace(kind, ids) {
     const next = new Set(ids);
@@ -34457,7 +34737,7 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -34740,7 +35020,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         const body = document2.createElement("div");
         body.className = "timeline-body";
         body.append(header.element, lane);
-        const strip = createChainStrip(document2, { onSelect: (id) => selection.set("node", [id]), onBypass, onMove: onMoveInChain });
+        const strip = createChainStrip(document2, { onSelect: (id) => selection.set("node", [id]), onBypass, onMove: onMoveInChain, onReplace });
         const automation = createEnvelopeLanes(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view });
         row.append(body, automation.element, strip.element);
         entry = { row, header, lane, strip, automation };
@@ -34997,11 +35277,11 @@ function createRollLane(document2, { id, label, min, max, onSet, onFocus = null,
   let items = [];
   let focusKey = null;
   let activeDrag = null;
-  const clamp4 = (value2) => Math.min(max, Math.max(min, Math.round(value2)));
+  const clamp3 = (value2) => Math.min(max, Math.max(min, Math.round(value2)));
   const heightOf = (value2) => `${Math.max(2, (value2 - min) / (max - min) * LANE_HEIGHT2)}px`;
   const valueAt = (clientY) => {
     const rect = bars.getBoundingClientRect();
-    return clamp4(min + (1 - (clientY - rect.top) / (rect.height || LANE_HEIGHT2)) * (max - min));
+    return clamp3(min + (1 - (clientY - rect.top) / (rect.height || LANE_HEIGHT2)) * (max - min));
   };
   function bar(item, index, group) {
     const b = document2.createElement("div");
@@ -35023,7 +35303,7 @@ function createRollLane(document2, { id, label, min, max, onSet, onFocus = null,
     fill.setAttribute("aria-hidden", "true");
     b.append(fill);
     const set = (value2) => {
-      if (clamp4(value2) !== item.value) onSet(item, clamp4(value2));
+      if (clamp3(value2) !== item.value) onSet(item, clamp3(value2));
     };
     b.addEventListener("focus", () => {
       focusKey = item.key;
@@ -35271,6 +35551,41 @@ function createRollControllers(document2, { onEvents, place }) {
   };
 }
 
+// src/ui/RollLoop.js
+function createRollLoop(document2, { onLoop }) {
+  const element = document2.createElement("div");
+  element.className = "piano-roll-loop";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Loop the clip");
+  const field = createAmountField(document2, { id: "roll-loop", label: "Loop length", unit: "beats", min: 0.25, max: 256, step: 0.25, onApply: (beats2) => onLoop(beats2) });
+  field.element.querySelector("button").textContent = "Loop";
+  const clear = document2.createElement("button");
+  clear.type = "button";
+  clear.id = "roll-loop-clear";
+  clear.textContent = "Clear loop";
+  clear.addEventListener("click", () => onLoop(null));
+  const said = document2.createElement("p");
+  said.className = "note";
+  said.id = "roll-loop-said";
+  said.setAttribute("role", "status");
+  element.append(field.element, clear, said);
+  return {
+    element,
+    /** Show a clip's loop: the field holds its length, Clear is there only while it loops. */
+    show(clip) {
+      const loop = clip.loopBeats ?? null;
+      clear.hidden = loop === null;
+      if (loop === null) {
+        said.textContent = "";
+        return;
+      }
+      field.input.value = String(loop);
+      const hidden = clip.notes.filter((n2) => n2.startBeat >= loop).length;
+      said.textContent = loop >= clip.lengthBeats ? `The loop is as long as the clip, so nothing repeats.` : `The first ${loop} beats repeat to fill the clip.${hidden > 0 ? ` ${hidden} note${hidden === 1 ? " lies" : "s lie"} after the loop end and ${hidden === 1 ? "is" : "are"} not played.` : ""}`;
+    }
+  };
+}
+
 // src/ui/PianoRoll.js
 var STEPS_PER_BEAT = 4;
 var VISIBLE_PITCHES = 24;
@@ -35288,7 +35603,7 @@ function noteAt(notes, pitch, beat) {
   return notes.find((n2) => n2.pitch === pitch && n2.startBeat <= beat && beat < n2.startBeat + n2.lengthBeats) ?? null;
 }
 function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
-}, onTransform = null, onControllers = null, now = () => Date.now() }) {
+}, onTransform = null, onControllers = null, onLoop = null, now = () => Date.now() }) {
   if (typeof onChange !== "function" || typeof onClose !== "function") {
     throw new Error("createPianoRoll needs onChange and onClose");
   }
@@ -35341,6 +35656,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   tools.className = "piano-roll-tools";
   tools.setAttribute("role", "group");
   tools.setAttribute("aria-label", "Change the notes");
+  const loop = onLoop ? createRollLoop(document2, { onLoop: (beats2) => onLoop(clip.id, beats2) }) : null;
   const rollScale = createRollScale(document2, { onChange: () => {
     fitButton.hidden = rollScale.current === null;
     draw2();
@@ -35433,6 +35749,8 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       // About the first note's pitch, so a rising line falls.
       ["roll-invert", "Invert pitches", ask("invert", {}, "Notes inverted about the first note")],
       // A fresh seed for each press, so pressing again gives a different feel; the edit itself is reproducible from it.
+      ["roll-legato", "Legato", ask("legato", {}, "Every note held until the next one starts")],
+      ["roll-strum", "Strum", ask("strum", { spread: 0.0625, direction: "up" }, "Chords strummed upward")],
       ["roll-humanize", "Humanize", () => ask("humanize", { timing: 0.05, velocity: 10, seed: now() }, "Notes humanized a little in time and velocity")()]
     ];
     for (const [id, text, run] of buttons) {
@@ -35463,7 +35781,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       say2("No notes chosen");
     });
   }
-  element.append(header, empty, help, rollScale.element, stepInput.element, ...lanes ? [lanes.element] : [], tools, scroller, status);
+  element.append(header, empty, help, rollScale.element, stepInput.element, ...loop ? [loop.element] : [], ...lanes ? [lanes.element] : [], tools, scroller, status);
   if (lanes) lanes.onChoice = () => {
     if (clip) draw2();
   };
@@ -35473,6 +35791,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     scroller.hidden = !open;
     rollScale.element.hidden = !open;
     stepInput.element.hidden = !open;
+    if (loop) loop.element.hidden = !open;
     if (lanes) lanes.element.hidden = !open;
     tools.hidden = !open || clip === null || clip.notes.length === 0;
     close.hidden = !open;
@@ -35525,6 +35844,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   function draw2(next = clip) {
     clip = next;
     if (!clip) return;
+    loop?.show(clip);
     tools.hidden = clip.notes.length === 0 || !onTransform;
     const present = new Set(clip.notes.map(keyOf3));
     chosen = new Set([...chosen].filter((k) => present.has(k)));
@@ -36152,6 +36472,7 @@ function createArrangement(ctx2) {
       const value2 = kind === "masterGain" ? master.gain : kind === "masterPan" ? master.pan : ctx2.dispatcher.project.transport.tempoPoints[0]?.bpm ?? 120;
       edit([{ op: "addEnvelope", target: { kind }, points: [{ atBeat: 0, value: value2, curve: "linear" }] }]);
     },
+    onReplace: (nodeId) => ctx2.swap.begin(nodeId),
     onBypass: (nodeId, bypassed) => edit([{ op: "setNode", id: nodeId, bypassed }]),
     onMute: (id, muted) => edit([{ op: "setClip", id, muted }]),
     onRemove: (id) => {
@@ -36271,6 +36592,7 @@ function createArrangement(ctx2) {
     onAudition: audition,
     // The events of a clip replace as one edit, like its notes.
     onControllers: (id, controllers) => edit([{ op: "setClipControllers", id, controllers }]),
+    onLoop: (id, loopBeats) => edit([{ op: "setClip", id, loopBeats }]),
     onTransform: (name2, options, { indices = null } = {}) => {
       let changes;
       try {
@@ -36444,13 +36766,18 @@ var DOCK_MIN = 160;
 var DOCK_MAX = 720;
 var DOCK_DEFAULT = 320;
 var DOCK_STEP = 24;
+var DOCK_SHARE = 0.45;
 var KEY2 = "jigdaw.dockHeight";
-var clamp3 = (n2) => Math.min(DOCK_MAX, Math.max(DOCK_MIN, Math.round(n2)));
-function createDock(document2, { slots, storage = null }) {
+function createDock(document2, { slots, storage = null, viewportHeight = null }) {
   if (!Array.isArray(slots) || slots.length === 0) throw new Error("a dock needs at least one slot");
   const element = document2.createElement("section");
   element.className = "dock";
   element.id = "dock";
+  const limit = () => {
+    if (viewportHeight === null) return DOCK_MAX;
+    return Math.max(DOCK_MIN, Math.min(DOCK_MAX, Math.floor(viewportHeight() * DOCK_SHARE)));
+  };
+  const clamp3 = (n2) => Math.min(limit(), Math.max(DOCK_MIN, Math.round(n2)));
   const heading = document2.createElement("h2");
   heading.id = "dock-title";
   element.setAttribute("aria-labelledby", heading.id);
@@ -36462,7 +36789,6 @@ function createDock(document2, { slots, storage = null }) {
   splitter.setAttribute("aria-orientation", "horizontal");
   splitter.setAttribute("aria-label", "Resize the editor");
   splitter.setAttribute("aria-valuemin", String(DOCK_MIN));
-  splitter.setAttribute("aria-valuemax", String(DOCK_MAX));
   const body = document2.createElement("div");
   body.className = "dock-body";
   const slot = /* @__PURE__ */ new Map();
@@ -36474,15 +36800,18 @@ function createDock(document2, { slots, storage = null }) {
     body.append(s);
   }
   element.append(splitter, heading, body);
+  let wanted = DOCK_DEFAULT;
   let height = DOCK_DEFAULT;
   try {
     const saved = Number(storage?.getItem(KEY2));
-    if (Number.isFinite(saved) && saved > 0) height = clamp3(saved);
+    if (Number.isFinite(saved) && saved > 0) wanted = saved;
   } catch {
   }
-  function setHeight(next, { remember = true } = {}) {
-    height = clamp3(next);
+  function setHeight(next, { remember = true, refit = false } = {}) {
+    if (!refit) wanted = next;
+    height = clamp3(wanted);
     body.style.height = `${height}px`;
+    splitter.setAttribute("aria-valuemax", String(limit()));
     splitter.setAttribute("aria-valuenow", String(height));
     splitter.setAttribute("aria-valuetext", `${height} pixels tall`);
     if (remember) {
@@ -36492,9 +36821,9 @@ function createDock(document2, { slots, storage = null }) {
       }
     }
   }
-  setHeight(height, { remember: false });
+  setHeight(wanted, { remember: false });
   splitter.addEventListener("keydown", (event) => {
-    const next = { ArrowUp: height + DOCK_STEP, ArrowDown: height - DOCK_STEP, Home: DOCK_MIN, End: DOCK_MAX }[event.key];
+    const next = { ArrowUp: height + DOCK_STEP, ArrowDown: height - DOCK_STEP, Home: DOCK_MIN, End: limit() }[event.key];
     if (next === void 0) return;
     event.preventDefault();
     setHeight(next);
@@ -36518,6 +36847,8 @@ function createDock(document2, { slots, storage = null }) {
     get height() {
       return height;
     },
+    /** The window changed size: bring the height inside the new limit, without overwriting the remembered one. */
+    refit: () => setHeight(wanted, { remember: false, refit: true }),
     slot: (name2) => {
       if (!slot.has(name2)) throw new Error(`the dock has no slot ${name2}`);
       return slot.get(name2);
@@ -37151,7 +37482,8 @@ function createDockPanel(ctx2) {
     storage = window2.localStorage;
   } catch {
   }
-  const dock = createDock(document2, { slots: ["idle", "midi", "audio", "track", "tracks", "node"], storage });
+  const dock = createDock(document2, { slots: ["idle", "midi", "audio", "track", "tracks", "node"], storage, viewportHeight: () => window2.innerHeight });
+  window2.addEventListener("resize", () => dock.refit());
   const idle = document2.createElement("p");
   idle.className = "dock-hint";
   dock.slot("idle").append(idle);
@@ -37731,6 +38063,20 @@ function createLoading(ctx2) {
       foreign = seen?.kind === "foreign";
     }
     const track2 = ctx2.rack.targetTrack();
+    const replacing = ctx2.swap.target();
+    if (replacing) {
+      ctx2.swap.end();
+      const swapped = await d.swapPlugin(replacing, iri5);
+      if (!swapped.ok) {
+        log2(`${swapped.step ? `[${swapped.step}] ` : ""}${swapped.message}`, "error");
+        return;
+      }
+      log2(`replaced with ${d.engineNode(swapped.nodeId)?.profile?.label ?? iri5}`, "ok");
+      for (const note of swapped.dropped) log2(note, "info");
+      ctx2.rack.draw();
+      ctx2.expose();
+      return;
+    }
     const where = { ...foreign ? { foreign: true } : {}, ...track2 ? { track: track2 } : {} };
     let result = await d.addPlugin(iri5, where);
     if (!result.ok && result.kind === "consent") {
@@ -38216,6 +38562,7 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
       if (clip.fadeInBeats > 0) statements.push(`${term3(jig6.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig6.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else {
+      if (clip.loopBeats) statements.push(`${term3(jig6.loopBeats)} ${decimal(clip.loopBeats)}`);
       if (clip.notes.length > 0) statements.push(`${term3(jig6.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
       const events = clip.controllers ?? [];
       if (events.length > 0) statements.push(`${term3(jig6.controllerEvent)} ${events.map((_, i2) => `<#${clip.id}-e${i2 + 1}>`).join(" , ")}`);
@@ -38589,6 +38936,8 @@ function readProject(dataset2) {
       const locked = one2(dataset2, clipIri, jig7.locked);
       if (locked !== null) clip.locked = locked.value === "true";
       if (kind === "midi") {
+        const loopBeats = number4(one2(dataset2, clipIri, jig7.loopBeats), `loopBeats of clip ${id}`);
+        if (loopBeats !== null) clip.loopBeats = loopBeats;
         clip.notes = objects4(dataset2, clipIri, jig7.note).map((t) => t.value).map((noteIri) => ({
           startBeat: number4(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
           lengthBeats: number4(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
@@ -39113,6 +39462,195 @@ function createProjectInfo(ctx2) {
   };
 }
 
+// src/host/Templates.js
+var DATABASE2 = "jigdaw-templates";
+var STORE2 = "templates";
+var INDEX = "index";
+var NAME_LIMIT = 60;
+var asPromise2 = (request) => new Promise((resolve, reject) => {
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error ?? new Error("IndexedDB refused the request"));
+});
+var finished2 = (transaction) => new Promise((resolve, reject) => {
+  transaction.oncomplete = () => resolve();
+  transaction.onerror = () => reject(transaction.error ?? new Error("IndexedDB refused the transaction"));
+  transaction.onabort = () => reject(transaction.error ?? new Error("the transaction was aborted"));
+});
+function templateName(name2) {
+  if (typeof name2 !== "string") throw new Error("a template needs a name");
+  const text = name2.trim().replace(/\s+/g, " ");
+  if (text === "") throw new Error("a template needs a name");
+  if (text.length > NAME_LIMIT) throw new Error(`a template name is at most ${NAME_LIMIT} characters`);
+  return text;
+}
+function createTemplates({ indexedDB = globalThis.indexedDB, now = () => Date.now() } = {}) {
+  if (!indexedDB) throw new Error("this browser has no IndexedDB to keep templates in");
+  const open = () => new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE2, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE2);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error("IndexedDB could not be opened"));
+    request.onblocked = () => reject(new Error("IndexedDB is blocked by another tab"));
+  });
+  async function within(mode, work) {
+    const db = await open();
+    try {
+      const transaction = db.transaction(STORE2, mode);
+      const result = await work(transaction.objectStore(STORE2));
+      await finished2(transaction);
+      return result;
+    } finally {
+      db.close();
+    }
+  }
+  const readIndex = async (store) => await asPromise2(store.get(INDEX)) ?? [];
+  return {
+    /** Every template, by name: `[{ name, savedAt }]`. */
+    list() {
+      return within("readonly", async (store) => [...await readIndex(store)].sort((a2, b) => a2.name < b.name ? -1 : a2.name > b.name ? 1 : 0));
+    },
+    /** Keep a session under a name, replacing any template of that name. `{ kind: 'turtle' | 'zip', bytes }`. */
+    async save(name2, { kind, bytes }) {
+      const key = templateName(name2);
+      if (!(bytes instanceof Uint8Array) || kind !== "turtle" && kind !== "zip") throw new Error("a template needs kind and bytes");
+      const savedAt = now();
+      await within("readwrite", async (store) => {
+        const index = (await readIndex(store)).filter((entry) => entry.name !== key);
+        index.push({ name: key, savedAt });
+        await asPromise2(store.put({ kind, bytes, savedAt }, `t:${key}`));
+        await asPromise2(store.put(index, INDEX));
+      });
+      return key;
+    },
+    /** `{ kind, bytes }`, or null when there is no such template. */
+    get(name2) {
+      const key = templateName(name2);
+      return within("readonly", async (store) => {
+        const record = await asPromise2(store.get(`t:${key}`));
+        return record ? { kind: record.kind, bytes: record.bytes } : null;
+      });
+    },
+    /** Forget a template. Removing one that is not there is not an error. */
+    remove(name2) {
+      const key = templateName(name2);
+      return within("readwrite", async (store) => {
+        const index = (await readIndex(store)).filter((entry) => entry.name !== key);
+        await asPromise2(store.delete(`t:${key}`));
+        await asPromise2(store.put(index, INDEX));
+      });
+    }
+  };
+}
+
+// web/app/Templates.js
+function createTemplatesPanel(ctx2, { store = createTemplates() } = {}) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  const status = document2.createElement("p");
+  status.className = "note";
+  status.setAttribute("role", "status");
+  const saveForm = document2.createElement("form");
+  saveForm.className = "searchbar";
+  const nameLabel = document2.createElement("label");
+  nameLabel.className = "visually-hidden";
+  nameLabel.htmlFor = "template-name";
+  nameLabel.textContent = "Template name";
+  const nameInput = document2.createElement("input");
+  nameInput.id = "template-name";
+  nameInput.type = "text";
+  nameInput.maxLength = 60;
+  nameInput.placeholder = "Template name";
+  const saveButton = document2.createElement("button");
+  saveButton.type = "submit";
+  saveButton.id = "template-save";
+  saveButton.textContent = "Save as template";
+  saveButton.title = "Keep the open session in this browser, to start new ones from";
+  saveForm.append(nameLabel, nameInput, saveButton);
+  const openForm = document2.createElement("form");
+  openForm.className = "searchbar";
+  openForm.hidden = true;
+  const pickLabel = document2.createElement("label");
+  pickLabel.className = "visually-hidden";
+  pickLabel.htmlFor = "template-pick";
+  pickLabel.textContent = "Template";
+  const pick = document2.createElement("select");
+  pick.id = "template-pick";
+  const openButton = document2.createElement("button");
+  openButton.type = "submit";
+  openButton.id = "template-open";
+  openButton.textContent = "New from template";
+  openButton.title = "Replaces the current session";
+  const removeButton = document2.createElement("button");
+  removeButton.type = "button";
+  removeButton.id = "template-remove";
+  removeButton.textContent = "Delete template";
+  removeButton.title = "Forget the chosen template; sessions already made from it are not touched";
+  openForm.append(pickLabel, pick, openButton, removeButton);
+  const element = document2.createElement("div");
+  element.id = "templates";
+  const heading = document2.createElement("h2");
+  heading.style.marginTop = "18px";
+  heading.textContent = "Templates";
+  element.append(heading, saveForm, openForm, status);
+  const say2 = (text, kind = "ok") => {
+    status.textContent = text;
+    log2(text, kind);
+  };
+  async function refresh(choose = null) {
+    const names = (await store.list()).map((t) => t.name);
+    pick.replaceChildren(...names.map((name2) => {
+      const option = document2.createElement("option");
+      option.value = name2;
+      option.textContent = name2;
+      return option;
+    }));
+    for (const option of pick.options) option.selected = option.value === choose;
+    openForm.hidden = names.length === 0;
+    return names;
+  }
+  async function save(name2) {
+    if (!ctx2.dispatcher) throw new Error("there is nothing to keep yet");
+    const packed = await ctx2.sessions.pack();
+    const kept = await store.save(name2, { kind: packed.kind, bytes: packed.bytes });
+    await refresh(kept);
+    say2(`kept as template ${kept}`);
+    return kept;
+  }
+  async function open(name2) {
+    const found = await store.get(name2);
+    if (!found) throw new Error(`no template called ${name2}`);
+    await ctx2.sessions.openBytes(found.bytes);
+    say2(`started from template ${name2}`);
+  }
+  async function remove(name2) {
+    await store.remove(name2);
+    await refresh();
+    say2(`deleted template ${name2}`);
+  }
+  const chosen = () => [...pick.options].find((option) => option.selected)?.value;
+  const guarded = (work) => (event) => {
+    event?.preventDefault();
+    work().catch((error2) => say2(error2.message, "error"));
+  };
+  saveForm.addEventListener("submit", guarded(async () => {
+    const typed = nameInput.value.trim();
+    await save(typed !== "" ? typed : ctx2.dispatcher?.project.label ?? "");
+    nameInput.value = "";
+  }));
+  openForm.addEventListener("submit", guarded(() => open(chosen())));
+  removeButton.addEventListener("click", guarded(() => remove(chosen())));
+  return {
+    element,
+    save,
+    open,
+    remove,
+    refresh,
+    mount() {
+      $2("presets").after(element);
+      return refresh().catch((error2) => log2(`templates: ${error2.message}`, "error"));
+    }
+  };
+}
+
 // src/mcp/LocalAgent.js
 var MAX_TURNS = 8;
 function toolSchema(tools) {
@@ -39334,6 +39872,165 @@ function createLayout(ctx2) {
   return { mount, showBrowser };
 }
 
+// src/ui/KeyTable.js
+var KEY_SCOPES = Object.freeze({
+  everywhere: "Anywhere on the page",
+  clip: "With a clip focused",
+  track: "With a track name focused",
+  chain: "With a plugin focused in the chain strip",
+  point: "With an envelope point focused",
+  script: "In the script box",
+  browser: "In the Browser"
+});
+var plain = (key) => ({ key });
+var KEY_ROWS = Object.freeze([
+  { scope: "everywhere", keys: "Ctrl or Cmd + Z", does: "Undo, except while typing in a field", press: [{ key: "z", ctrlKey: true }] },
+  { scope: "everywhere", keys: "Ctrl or Cmd + Shift + Z, or Ctrl or Cmd + Y", does: "Redo, except while typing in a field", press: [{ key: "z", ctrlKey: true, shiftKey: true }, { key: "y", ctrlKey: true }] },
+  { scope: "everywhere", keys: "Ctrl or Cmd + full stop", does: "Panic: silence every stuck note", press: [{ key: ".", ctrlKey: true }] },
+  { scope: "everywhere", keys: "F1", does: "Show or hide this list", press: [plain("F1")] },
+  { scope: "clip", keys: "Left or Right", does: "Move the clip one grid step", press: [plain("ArrowLeft"), plain("ArrowRight")] },
+  { scope: "clip", keys: "Shift + Left or Right", does: "Make the clip one grid step shorter or longer", press: [{ key: "ArrowLeft", shiftKey: true }, { key: "ArrowRight", shiftKey: true }] },
+  { scope: "clip", keys: "S", does: "Split at the playhead", press: [plain("s")] },
+  { scope: "clip", keys: "D", does: "Duplicate", press: [plain("d")] },
+  { scope: "clip", keys: "M", does: "Mute or unmute", press: [plain("m")] },
+  { scope: "clip", keys: "L", does: "Lock or unlock", press: [plain("l")] },
+  { scope: "clip", keys: "[ and ]", does: "Trim the start or the end to the playhead", press: [plain("["), plain("]")] },
+  { scope: "clip", keys: "Ctrl or Cmd + C, X, V", does: "Copy, cut, paste", press: [{ key: "c", ctrlKey: true }, { key: "x", ctrlKey: true }, { key: "v", ctrlKey: true }] },
+  { scope: "clip", keys: "Delete or Backspace", does: "Delete", press: [plain("Delete"), plain("Backspace")] },
+  { scope: "track", keys: "Alt + Up or Down", does: "Move the track earlier or later in the order", press: [{ key: "ArrowUp", altKey: true }, { key: "ArrowDown", altKey: true }] },
+  { scope: "track", keys: "+ and -", does: "Make the lane one size taller or shorter", press: [plain("+"), plain("-")] },
+  { scope: "track", keys: "D", does: "Duplicate the track", press: [plain("d")] },
+  { scope: "chain", keys: "Alt + Left or Right", does: "Move the plugin earlier or later in the chain, where it can", press: [{ key: "ArrowLeft", altKey: true }, { key: "ArrowRight", altKey: true }] },
+  { scope: "point", keys: "Left or Right", does: "Move the point in time by one grid step", press: [plain("ArrowLeft"), plain("ArrowRight")] },
+  { scope: "point", keys: "Up or Down, with Shift for a finer step", does: "Change the point's value", press: [plain("ArrowUp"), plain("ArrowDown"), { key: "ArrowUp", shiftKey: true }] },
+  { scope: "point", keys: "C", does: "Change the curve after the point", press: [plain("c")] },
+  { scope: "point", keys: "Delete or Backspace", does: "Delete the point", press: [plain("Delete"), plain("Backspace")] },
+  { scope: "script", keys: "Ctrl or Cmd + Enter", does: "Run the script at the next bar; add Shift to run it now", press: [{ key: "Enter", ctrlKey: true }, { key: "Enter", ctrlKey: true, shiftKey: true }] },
+  { scope: "browser", keys: "Escape", does: "Close the Browser and return to its button", press: [plain("Escape")] }
+]);
+var UNLISTED_KEY_FILES = Object.freeze({
+  "src/ui/Tabs.js": "the tabs pattern: arrows, Home and End, as in the WAI-ARIA authoring practices",
+  "src/ui/RoutingMatrix.js": "the grid pattern: arrows, Home and End",
+  "src/ui/Dock.js": "the splitter pattern: arrows, Home and End",
+  "src/ui/Keyboard.js": "the on-screen piano plays notes; its keys are its own help text",
+  "src/ui/LoopRow.js": "arrows on a loop edge, said by its label",
+  "src/ui/AmountField.js": "Enter commits a field",
+  "src/ui/TrackPanel.js": "Enter commits a field",
+  "src/ui/AudioClipPanel.js": "Enter commits a field",
+  "src/ui/BulkTrackPanel.js": "Enter commits a field",
+  "src/ui/PianoRoll.js": "not listed yet: the roll has many keys and wants its own section",
+  "src/ui/RollLane.js": "not listed yet: goes with the piano roll section",
+  "src/ui/Timeline.js": "not listed yet: plus and minus zoom the timeline when it has focus"
+});
+
+// src/ui/KeysOverlay.js
+function createKeysOverlay(document2, { rows = KEY_ROWS, scopes = KEY_SCOPES } = {}) {
+  const element = document2.createElement("div");
+  element.id = "keys";
+  element.className = "keys-overlay";
+  element.hidden = true;
+  element.setAttribute("role", "dialog");
+  element.setAttribute("aria-modal", "true");
+  element.setAttribute("aria-labelledby", "keys-heading");
+  const heading = document2.createElement("h2");
+  heading.id = "keys-heading";
+  heading.textContent = "Keyboard shortcuts";
+  const note = document2.createElement("p");
+  note.className = "note";
+  note.textContent = "Keys that act on one thing work only while that thing has the focus. Keys inside the piano roll and the timeline are not listed here yet.";
+  const close = document2.createElement("button");
+  close.type = "button";
+  close.id = "close-keys";
+  close.textContent = "Close";
+  element.append(heading, note);
+  for (const [scope, title] of Object.entries(scopes)) {
+    const mine = rows.filter((row) => row.scope === scope);
+    if (mine.length === 0) continue;
+    const section = document2.createElement("section");
+    const h3 = document2.createElement("h3");
+    h3.textContent = title;
+    const list = document2.createElement("dl");
+    for (const row of mine) {
+      const term5 = document2.createElement("dt");
+      const kbd = document2.createElement("kbd");
+      kbd.textContent = row.keys;
+      term5.append(kbd);
+      const detail = document2.createElement("dd");
+      detail.textContent = row.does;
+      list.append(term5, detail);
+    }
+    section.append(h3, list);
+    element.append(section);
+  }
+  element.append(close);
+  let returnTo = null;
+  function show(open) {
+    if (open) returnTo = document2.activeElement;
+    element.hidden = !open;
+    if (open) close.focus({ preventScroll: true });
+    else if (returnTo && typeof returnTo.focus === "function") returnTo.focus();
+  }
+  close.addEventListener("click", () => show(false));
+  element.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      show(false);
+    } else if (event.key === "Tab") event.preventDefault();
+  });
+  return { element, show, toggle: () => show(element.hidden), close };
+}
+
+// web/app/Keys.js
+function createKeys(ctx2) {
+  const { document: document2, $: $2 } = ctx2;
+  const overlay = createKeysOverlay(document2);
+  function mount() {
+    document2.body.append(overlay.element);
+    const button = $2("toggle-keys");
+    button.addEventListener("click", () => overlay.toggle());
+    document2.addEventListener("keydown", (event) => {
+      if (event.key !== "F1" || event.ctrlKey || event.metaKey || event.altKey) return;
+      event.preventDefault();
+      overlay.toggle();
+    });
+  }
+  return { mount, overlay };
+}
+
+// web/app/Swap.js
+function createSwap(ctx2) {
+  const { $: $2 } = ctx2;
+  let nodeId = null;
+  function show() {
+    const banner = $2("replacing");
+    banner.hidden = nodeId === null;
+    if (nodeId === null) return;
+    const node = ctx2.dispatcher.project.node(nodeId);
+    $2("replacing-text").textContent = `Replacing ${node?.label ?? nodeId}: Load a plugin to put it in its place.`;
+  }
+  function begin(id) {
+    nodeId = id;
+    show();
+    ctx2.layout.showBrowser(true);
+  }
+  function end() {
+    nodeId = null;
+    show();
+  }
+  return {
+    begin,
+    end,
+    /** The node the next Load will replace, or null. */
+    target: () => nodeId,
+    mount() {
+      $2("cancel-replace").addEventListener("click", () => {
+        end();
+        $2("q").focus();
+      });
+    }
+  };
+}
+
 // src/host/MidiInput.js
 var MIDI_STATUS = Object.freeze({ off: "off", on: "on", denied: "denied", unsupported: "unsupported" });
 function channelMessage(data) {
@@ -39502,7 +40199,7 @@ function createMaster(ctx2) {
   const strip = createStrip(ctx2.document, { gain: 1, pan: 0, muted: false }, (change) => {
     const result = ctx2.dispatcher?.apply([{ op: "setMaster", ...change }]);
     if (result && !result.ok) log2(result.message, "error");
-  }, { label: "Master", id: "strip-master", solo: false });
+  }, { label: "Master", id: "strip-master", solo: false, fader: true });
   const summary = createChainSummary(ctx2.document, {
     onShowPlugins: () => {
       ctx2.tabs.select("tracks");
@@ -40306,6 +41003,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   track_duplicate: "arrangement editing, not yet a statement",
   track_bus: "arrangement editing, not yet a statement",
   track_layout: "editor layout",
+  project_info: "session notes (title, author, notes), not a performance gesture",
   track_set: "arrangement editing, not yet a statement",
   track_set_channel: "a mixer gesture; wanted, and not in version one",
   master_set: "a mixer gesture; wanted, and not in version one",
@@ -40327,6 +41025,8 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",
   clip_split: "arrangement editing, not yet a statement",
+  clip_trim: "arrangement editing, not yet a statement",
+  clip_copy_to: "arrangement editing, not yet a statement",
   clip_duplicate: "arrangement editing, not yet a statement",
   clip_remove: "arrangement editing, not yet a statement",
   envelope_set: "a ramp replaces an envelope through envelope_add; editing points is not a gesture",
@@ -40335,6 +41035,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   node_bypass: "wanted for performance, and not in version one",
   node_remove: "destructive, and not a gesture in a set",
   node_unpack: "it replaces one node with several, so a name a script already holds for it would change meaning under it",
+  node_swap: "it replaces one node with another, so a name a script already holds for it would change meaning under it",
   composite_pack: "it writes a profile for a person to publish and changes nothing a script plays",
   connection_remove: "not yet a statement",
   connection_set: "a routing edit (a note range on a MIDI connection), not yet a statement",
@@ -41011,9 +41712,12 @@ ctx.browser = createBrowser(ctx);
 ctx.sessions = createSessions(ctx);
 ctx.history = createHistory(ctx);
 ctx.projectInfo = createProjectInfo(ctx);
+ctx.templates = createTemplatesPanel(ctx);
 ctx.agent = createAgent(ctx);
 ctx.bridge = createBridgeLink(ctx);
 ctx.layout = createLayout(ctx);
+ctx.keys = createKeys(ctx);
+ctx.swap = createSwap(ctx);
 ctx.midiIn = createMidiIn(ctx);
 ctx.script = createScript(ctx);
 var { loading, browser, transport } = ctx;
@@ -41092,6 +41796,7 @@ $("midifile").addEventListener("change", async (event) => {
 ctx.sessions.mount();
 ctx.history.mount();
 ctx.projectInfo.mount();
+ctx.templates.mount();
 ctx.arrangement.mount();
 ctx.matrix.mount();
 ctx.master.mount();
@@ -41102,6 +41807,8 @@ ctx.rack.mount();
 ctx.meters.start();
 ctx.bridge.mount();
 ctx.layout.mount();
+ctx.keys.mount();
+ctx.swap.mount();
 ctx.midiIn.mount();
 ctx.align.mount();
 $("iri").value = new URL($("iri").value, document.baseURI).href;

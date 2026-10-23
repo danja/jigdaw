@@ -35,9 +35,12 @@ import { createBrowser } from './app/Browser.js'
 import { createSessions } from './app/Sessions.js'
 import { createHistory } from './app/History.js'
 import { createProjectInfo } from './app/ProjectInfo.js'
+import { createTemplatesPanel } from './app/Templates.js'
 import { createAgent } from './app/Agent.js'
 import { createBridgeLink } from './app/Bridge.js'
 import { createLayout } from './app/Layout.js'
+import { createKeys } from './app/Keys.js'
+import { createSwap } from './app/Swap.js'
 import { createMidiIn } from './app/MidiIn.js'
 import { createAlign } from './app/Align.js'
 import { createMaster } from './app/Master.js'
@@ -97,9 +100,12 @@ ctx.browser = createBrowser(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.history = createHistory(ctx)
 ctx.projectInfo = createProjectInfo(ctx)
+ctx.templates = createTemplatesPanel(ctx)
 ctx.agent = createAgent(ctx)
 ctx.bridge = createBridgeLink(ctx)
 ctx.layout = createLayout(ctx)
+ctx.keys = createKeys(ctx)
+ctx.swap = createSwap(ctx)
 ctx.midiIn = createMidiIn(ctx)
 ctx.script = createScript(ctx)
 
@@ -165,6 +171,7 @@ $('midifile').addEventListener('change', async event => {
 ctx.sessions.mount()
 ctx.history.mount()
 ctx.projectInfo.mount()
+ctx.templates.mount()
 ctx.arrangement.mount()
 ctx.matrix.mount()
 ctx.master.mount()
@@ -176,6 +183,8 @@ ctx.rack.mount()
 ctx.meters.start()
 ctx.bridge.mount()
 ctx.layout.mount()
+ctx.keys.mount()
+ctx.swap.mount()
 ctx.midiIn.mount()
 ctx.align.mount()
 

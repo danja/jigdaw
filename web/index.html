@@ -13,11 +13,19 @@
   :root {
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
-    --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --wire:#4a5464;
+    --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --solo:#f2c94c; --wire:#4a5464;
     }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
   :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .keys-overlay { position:fixed; inset:5vh 0 auto 0; margin:0 auto; width:min(40rem, calc(100% - 32px)); max-height:90vh;
+                  overflow:auto; z-index:50; padding:1rem 1.25rem; background:var(--panel); color:var(--fg);
+                  border:2px solid var(--accent); border-radius:6px; }
+  .keys-overlay dl { display:grid; grid-template-columns:minmax(0,14rem) 1fr; gap:6px 12px; margin:0; }
+  .keys-overlay dt, .keys-overlay dd { margin:0; }
+  .keys-overlay kbd { font:inherit; border:1px solid var(--line); border-radius:3px; padding:0 4px; }
+  .keys-overlay button { min-height:44px; min-width:44px; margin-top:1rem; }
+  @media (max-width:720px) { .keys-overlay dl { grid-template-columns:1fr; } .keys-overlay dd { margin-bottom:6px; } }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
 /* Channel strip. Not a plugin panel: these are host services. */
@@ -46,6 +54,11 @@
            gap:6px 18px; padding:10px 14px;
            border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
   .strip.silent { opacity:.55; }
+  /* A mixer channel: the knob above, the fader standing up, the buttons under. The range is the native one on its side,
+     so the arrow keys, Home and End and the value text all stay the platform's. */
+  .strip-desk { flex-direction:column; flex-wrap:nowrap; gap:10px; padding:10px 8px 14px; }
+  .strip-desk input.strip-fader[type=range] { writing-mode:vertical-lr; direction:rtl; width:44px; min-width:44px; height:170px; margin:0; padding:0; cursor:pointer; }
+  .strip-desk .strip-control .value { min-width:0; }
   .strip-control { display:flex; flex-direction:column; align-items:center; gap:3px; }
   .strip-control label { color:var(--dim); font-size:11px; }
   .strip-control .value { min-width:78px; text-align:center;
@@ -53,14 +66,18 @@
   .strip-buttons { display:flex; gap:8px; }
   /* State is said by aria-pressed as well as shown, because it must not be
      signalled by colour alone. */
-  .strip-toggle { min-height:32px; min-width:64px; padding:6px 12px; font-size:12px;
-                  border:1px solid var(--line); border-radius:4px;
-                  background:var(--panel); color:var(--fg); cursor:pointer; }
-  .strip-toggle[aria-pressed="true"] { border-color:var(--accent); }
+  /* Mute and Solo are small lettered squares (src/ui/ChannelToggle.js). Off is an outline and a plain letter; on is a
+     filled square with an underlined letter, so the state is not carried by colour alone. */
+  .strip-toggle { box-sizing:border-box; min-height:32px; min-width:32px; padding:0; font-size:14px; font-weight:700;
+                  border:2px solid var(--line); border-radius:4px;
+                  background:var(--panel); color:var(--fg); cursor:pointer; line-height:1; }
+  .strip-toggle.muted  { border-color:var(--err); }
+  .strip-toggle.soloed { border-color:var(--solo); }
+  .strip-toggle[aria-pressed="true"] { text-decoration:underline; text-underline-offset:3px; }
   .strip-toggle.muted[aria-pressed="true"]  { background:var(--err); color:#111; }
-  .strip-toggle.soloed[aria-pressed="true"] { background:var(--ok);  color:#111; }
-  @media (max-width: 760px) {
-    .strip-toggle { min-height:44px; }
+  .strip-toggle.soloed[aria-pressed="true"] { background:var(--solo); color:#111; }
+  @media (max-width: 760px), (pointer: coarse) {
+    .strip-toggle { min-height:44px; min-width:44px; }
   }
 
 
@@ -124,8 +141,9 @@
   .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
     background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .position { font-family:ui-monospace,monospace; font-size:15px; min-width:7ch; color:var(--dim); }
-  .links { display:flex; gap:14px; font-size:13px; margin-left:auto; }
-  .links a { color:var(--dim); text-decoration:none; padding:6px 2px; }
+  .site-footer { padding:12px 16px 24px; border-top:1px solid var(--line); margin-top:16px; }
+  .links { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:14px; }
+  .links a { color:var(--dim); text-decoration:none; padding:0 2px; min-height:44px; display:inline-flex; align-items:center; }
   .links a:hover { color:var(--fg); text-decoration:underline; }
   /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
      nothing to act on because .send-level sets a display and that beat the attribute. */
@@ -344,6 +362,9 @@
   .chain-head { display:flex; gap:4px; }
   .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
   .chain-head .chain-node { flex:1 1 auto; min-width:0; }
+  .chain-replace { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .replacing { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; border:2px solid var(--solo); border-radius:4px; margin:0 0 8px; }
+  .replacing button { min-height:44px; }
   .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
   .chain-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
   .chain-item.bypassed { border-style:dotted; opacity:.75; }
@@ -419,7 +440,7 @@
   .timeline-head > button:not(.show-track) { flex:1 1 45%; }
   .head-mix { display:flex; flex-wrap:wrap; gap:4px; }
   .head-mix[hidden] { display:none; }
-  .head-mix .strip-toggle { flex:1 1 4rem; }
+  .head-mix .strip-toggle { flex:0 0 auto; }
   .head-slider { flex:1 1 100%; display:grid; grid-template-columns:2.4rem 1fr 3.8rem; align-items:center; gap:4px; font-size:12px; }
   .head-slider input { min-height:28px; margin:0; width:100%; }
   .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
@@ -504,7 +525,7 @@
   .timeline-head[data-size="small"] .head-title { flex:1 1 0; min-width:0; }
   .timeline-head[data-size="small"] > .head-title > .head-grip { min-width:28px; min-height:28px; padding:0 4px; }
   .timeline-head[data-size="small"] .head-mix { flex:0 0 auto; }
-  .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; min-width:3.2rem; }
+  .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; }
   .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
   .clip.selected, .timeline-head.selected { outline:2px solid #ffd166; outline-offset:-2px; }
   .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
@@ -533,6 +554,8 @@
   .piano-roll-row.black .piano-roll-cell { background:#15181d; }
   .piano-roll-scale { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
   .piano-roll-scale select { min-height:44px; padding:6px 12px; }
+  .piano-roll-loop { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-loop button, .piano-roll-loop input { min-height:44px; padding:6px 12px; box-sizing:border-box; }
   .piano-roll-step { margin:8px 0; }
   .piano-roll-step button, .piano-roll-step select { min-height:44px; padding:6px 12px; }
   .piano-roll-step-body { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
@@ -574,9 +597,10 @@
      that would need its own narrow-screen redesign, which this does not take
      on. Each channel gets a heading the strip itself does not draw, because
      nothing else on this tab says which track it belongs to. */
-  .mixer { display:flex; flex-direction:column; gap:10px; }
-  .mixer-channel { background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
-  .mixer-channel h3 { margin:0; padding:10px 14px 0; font-size:14px; }
+  .mixer { display:flex; flex-direction:row; flex-wrap:wrap; align-items:flex-start; gap:10px; }
+  .mixer-channel { width:132px; flex:none; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
+  .mixer-channel .meter-group { justify-content:center; flex-wrap:wrap; padding:0 6px 10px; }
   .mixer-channel .strip { border-bottom:0; }
 
   /* The generated panel and the knob are in panel.css, shared with the simple page. */
@@ -609,6 +633,7 @@
   .history-step { min-height:44px; width:100%; text-align:left; padding:6px 12px; background:#1a1e24; color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .history-step[aria-current="step"] { border-color:var(--accent); font-weight:600; }
   .history-step.undone { opacity:.6; }
+  #templates input, #templates select { min-height:44px; box-sizing:border-box; }
   .project-info { display:grid; gap:10px; max-width:640px; margin-top:8px; }
   .project-info-field { display:grid; gap:4px; color:var(--dim); font-size:12px; }
   .project-info-field input, .project-info-field textarea { font-size:16px; min-height:44px; box-sizing:border-box; width:100%; }
@@ -636,7 +661,6 @@
        need the room, and they take the full width rather than two cells. */
     .control-selector { grid-column:1 / -1; }
     .control-asset { grid-column:1 / -1; }
-    .links { margin-left:0; }
     /* Wrapped onto several rows the bar is a third of a phone's height, so it scrolls away
        with the page rather than staying put. */
     .transport { position:static; }
@@ -655,17 +679,18 @@
 
 <div class="transport">
   <span class="brand">Jiggy</span>
-  <button id="toggle-browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
+  <button id="toggle-browser" data-icon="browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
+  <button id="toggle-keys" data-icon="keys" type="button" title="List the keyboard shortcuts (F1)">Keys</button>
   <button id="play" data-icon="play" aria-pressed="false">Play</button>
   <button id="stop" data-icon="stop">Stop</button>
-  <button id="panic" type="button" title="Silence every note that is stuck on, and keep playing (Ctrl or Cmd and full stop)">Panic</button>
+  <button id="panic" data-icon="panic" type="button" title="Silence every note that is stuck on, and keep playing (Ctrl or Cmd and full stop)">Panic</button>
   <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
-  <button id="record-midi" data-icon="record" aria-pressed="false" title="Play and keep what you play on a MIDI keyboard or the on-screen keys as MIDI clips, on the armed tracks or the selected one">Rec MIDI</button>
+  <button id="record-midi" data-icon="recordMidi" aria-pressed="false" title="Play and keep what you play on a MIDI keyboard or the on-screen keys as MIDI clips, on the armed tracks or the selected one">Rec MIDI</button>
   <span class="tempo" id="tempo-group">
     <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
     <input type="number" id="tempo" value="120" min="20" max="300" step="0.1">
     <span style="color:var(--dim);font-size:12px">BPM</span>
-    <button id="tap-tempo" title="Tap this to the beat, four or five times, to set the tempo">Tap</button>
+    <button id="tap-tempo" data-icon="tap" title="Tap this to the beat, four or five times, to set the tempo">Tap</button>
     <span id="tap-said" class="visually-hidden" role="status"></span>
   </span>
   <span id="tempo-note" role="status" hidden style="color:var(--dim);font-size:13px">Tempo follows its lane</span>
@@ -674,7 +699,7 @@
     <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
   </span>
   <button id="loop" data-icon="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
-  <button id="metronome" type="button" aria-pressed="false" title="Click on every beat, louder on the first of a bar. Heard by you only: never in an export">Click</button>
+  <button id="metronome" data-icon="click" type="button" aria-pressed="false" title="Click on every beat, louder on the first of a bar. Heard by you only: never in an export">Click</button>
   <span class="tempo">
     <label for="count-in" class="visually-hidden">Count-in before play, in bars</label>
     <select id="count-in" title="Bars of click before the music starts">
@@ -684,7 +709,7 @@
     </select>
   </span>
   <span class="position" id="position" aria-live="off">1 . 1</span>
-  <button id="midi-in" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
+  <button id="midi-in" data-icon="midiIn" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
   <span id="midi-state" class="midi-state" role="status"></span>
   <span class="history">
       <button id="undo" data-icon="undo" title="Undo the last edit" disabled>Undo</button>
@@ -693,21 +718,14 @@
   <span class="session">
       <button id="save" data-icon="save" title="Save this session as RDF">Save</button>
       <button id="export" data-icon="download" title="Render the mix to a WAV file (the loop, when the loop is on)">Export</button>
-      <button id="export-midi" data-icon="download" title="Save the notes of every MIDI clip to a Standard MIDI file, one track each">Export MIDI</button>
-      <button id="import-midi" data-icon="open" title="Add the parts of a Standard MIDI file as new tracks">Import MIDI</button>
+      <button id="export-midi" data-icon="midiExport" title="Save the notes of every MIDI clip to a Standard MIDI file, one track each">Export MIDI</button>
+      <button id="import-midi" data-icon="midiImport" title="Add the parts of a Standard MIDI file as new tracks">Import MIDI</button>
       <button id="export-stems" data-icon="stems" title="Render every track that makes sound to its own WAV, in one zip">Stems</button>
       <button id="open" data-icon="open" title="Open a saved session">Open</button>
       <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
       <input type="file" id="midifile" accept=".mid,.midi,audio/midi,audio/x-midi" class="visually-hidden" aria-label="MIDI file to import">
       <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
     </span>
-    <nav class="links" aria-label="Project">
-    <a href="simple.html">Simple version</a>
-    <a href="gallery.html">Plugins</a>
-    <a href="https://danja.github.io/jigdaw/">Docs</a>
-    <a href="https://plugin-universe.com/">Plugin Universe</a>
-    <a href="https://github.com/danja/jigdaw">GitHub</a>
-  </nav>
   <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
   <span id="net-state" class="midi-state" role="status"></span>
   <span class="level"><span class="meter" id="meter" role="img" aria-label="Output level"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
@@ -728,6 +746,10 @@
     <!-- Every Load button below loads onto this track. Visible rather than a
          setting somewhere else, because where a plugin lands is the first thing
          a person needs to know about pressing Load. -->
+    <div class="replacing" id="replacing" role="status" hidden>
+      <span id="replacing-text"></span>
+      <button id="cancel-replace" type="button">Cancel</button>
+    </div>
     <div class="searchbar target">
       <label for="target">Load onto</label>
       <select id="target"></select>
@@ -864,6 +886,16 @@
   <summary>Log <span id="state" style="color:var(--dim)"></span></summary>
   <div id="log"></div>
 </details>
+
+<footer class="site-footer">
+  <nav class="links" aria-label="Project">
+    <a href="simple.html">Simple version</a>
+    <a href="gallery.html">Plugins</a>
+    <a href="https://danja.github.io/jigdaw/">Docs</a>
+    <a href="https://plugin-universe.com/">Plugin Universe</a>
+    <a href="https://github.com/danja/jigdaw">GitHub</a>
+  </nav>
+</footer>
 
 <script type="module" src="./app.bundle.js"></script>
 </body>

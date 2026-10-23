@@ -73,7 +73,7 @@ export function createMixer (document, { onChange }) {
       let channel = channels.get(track.id)
       if (!channel) {
         const strip = createStrip(document, track.channel, change => onChange(track.id, change),
-          { label, id: `strip-${track.id}` })
+          { label, id: `strip-${track.id}`, fader: true })
         // The strip draws no visible heading of its own, so the channel has
         // one: nothing else on this tab says which track a strip belongs to.
         const wrapper = document.createElement('div')
