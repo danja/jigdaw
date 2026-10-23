@@ -160,6 +160,20 @@ async function reopen (turtle, baseIRI = IRI) {
 }
 
 describe('a project survives being written and read back', () => {
+  it('keeps the title, author and notes, with quotes and line breaks, and writes nothing for an empty field', async () => {
+    const original = builtProject()
+    original.setInfo({ title: 'Tide "one"', author: 'Dee', notes: 'Line one\nLine two \\ done' })
+    const turtle = writeProject(original, { iri: IRI })
+    const { read, project } = await reopen(turtle)
+    expect(read.info).toEqual({ title: 'Tide "one"', author: 'Dee', notes: 'Line one\nLine two \\ done' })
+    project.setInfo(read.info)
+    expect(writeProject(project, { iri: IRI })).toBe(turtle)
+    original.setInfo({ title: null, author: null, notes: null })
+    const bare = writeProject(original, { iri: IRI })
+    expect(bare).not.toMatch(/dcterms:creator|rdfs:comment|Tide/)
+    expect((await reopen(bare)).read.info).toEqual({ title: null, author: null, notes: null })
+  })
+
   it('keeps a muted clip muted, writing the flag only where it is true', async () => {
     const original = builtProject()
     const clip = original.clips[0]

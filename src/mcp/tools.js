@@ -96,6 +96,26 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
     },
 
     {
+      name: 'project_info',
+      description:
+        'The title, author and notes kept with the session, saved in the file and shown in the Project section. Pass any of ' +
+        'title, author, notes to change them (text, or null for none; title and author up to 120 characters, notes up to 4000). ' +
+        'Like a track layout this is not an edit to the audio, so it changes no revision and has no undo.',
+      inputSchema: {
+        type: 'object',
+        properties: { title: { type: ['string', 'null'] }, author: { type: ['string', 'null'] }, notes: { type: ['string', 'null'] } }
+      },
+      async handler (patch = {}) {
+        try {
+          if (Object.keys(patch).length > 0) dispatcher.project.setInfo(patch)
+          return ok({ info: dispatcher.project.info })
+        } catch (error) {
+          return failed(error.message, { kind: 'change' })
+        }
+      }
+    },
+
+    {
       name: 'plugins_search',
       description:
         'Find candidate plugins by text and by what they do. Returns enough to choose between them; ' +

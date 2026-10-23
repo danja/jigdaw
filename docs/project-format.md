@@ -52,6 +52,11 @@ is being queried.
     jig:transport <#transport> .
 ```
 
+The project node may also carry a title (`rdfs:label`), an author (`dcterms:creator`) and notes
+(`rdfs:comment`), each one plain string and each left out when empty. They are words about the
+session. They are not part of what a revision covers, nothing compiles them, and changing them is
+not an undo step.
+
 **Nodes are instances, not plugins.** A node names the plugin it instantiates with
 `jig:plugin`, as a dereferenceable `https:` IRI. Two instances of one plugin are two nodes
 with the same `jig:plugin` and different settings.

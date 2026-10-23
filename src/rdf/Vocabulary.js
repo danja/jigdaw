@@ -44,6 +44,7 @@ export const vocabulary = Object.freeze({
   dcterms: Object.freeze({
     created: `${DCTERMS}created`,
     modified: `${DCTERMS}modified`,
+    creator: `${DCTERMS}creator`,
     // A collection's members. docs/plugin-collections.md.
     hasPart: `${DCTERMS}hasPart`
   }),

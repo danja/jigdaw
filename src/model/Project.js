@@ -18,6 +18,7 @@
 
 import { EditorState } from './EditorState.js'
 import { ScriptState } from './ScriptState.js'
+import { EMPTY_INFO, patchInfo } from './ProjectInfo.js'
 import { isMidiSignal } from './Endpoints.js'
 import {
   ARRANGEMENT_OPERATIONS, MASTER_TRACK, checkNoteRange, emptyArrangement, cloneArrangement, checkTrackOutput,
@@ -785,11 +786,15 @@ export class Project {
   #editor = new EditorState()
   // Scripts saved with the session: text, outside the revision for the same reason.
   #scripts = new ScriptState()
-  #label = null
+  // Title, author and notes: words about the session, outside the revision.
+  #info = { ...EMPTY_INFO }
 
   get revision () { return this.#revision }
-  get label () { return this.#label }
-  set label (value) { this.#label = value }
+  /** The title, or null. */
+  get label () { return this.#info.title }
+  set label (value) { this.setInfo({ title: value }) }
+  get info () { return { ...this.#info } }
+  setInfo (patch) { this.#info = patchInfo(this.#info, patch) }
 
   get tracks () { return [...this.#state.tracks.values()] }
   get nodes () { return [...this.#state.nodes.values()] }
@@ -921,7 +926,7 @@ export class Project {
   /** A plain snapshot, for serialisation or for handing to an agent. */
   snapshot () {
     return {
-      label: this.#label,
+      label: this.#info.title,
       revision: this.#revision,
       tracks: this.tracks.map(t => ({ ...t, channel: { ...t.channel } })),
       nodes: this.nodes.map(n => ({

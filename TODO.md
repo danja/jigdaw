@@ -410,8 +410,7 @@ the page, it is research, not committed.
       after a crash; periodic local snapshots including untitled sessions, clearly marked as not the saved project; never
       overwrite the saved file with a recovery copy. Shared with the PWA: offline use and the origin private file system as a
       store are decided here once, for both front pages.
-- [ ] **Project settings, notes, metadata.** Title, author, revision note per session in the Turtle file, shown in one dialog.
-      Editor-only fields stay out of the compiled graph.
+- [ ] **Project settings, notes, metadata: what is left.** Built: title, author and notes (`src/model/ProjectInfo.js`), held on the project outside the revision, saved on the project node as `rdfs:label`, `dcterms:creator` and `rdfs:comment`, shown in a Project section under the arrangement (`src/ui/ProjectInfoForm.js`) and set by the `project_info` tool. Seen in real Chrome on 2026-10-23: typed a title and author with real keys, the project held them, and opening a preset replaced them with the preset's own title. A save and reopen of a typed title was unit-tested (`tests/rdf/ProjectRoundTrip.test.js`) and not clicked through. Not built: a revision note per save, the title in the page's heading and the exported file names beyond the WAV and MIDI names that already use it, and a dialog (it is a section, which needs no focus handling).
 - [ ] **Templates and project tabs.** Save a session as a template; open from a template. Tabs only if sessions stay
       independent documents with no shared audio state.
 - [ ] **Media explorer and missing media.** Browse and import audio by drag and drop (import exists), resolve missing files on

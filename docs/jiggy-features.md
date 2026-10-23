@@ -99,6 +99,7 @@ starts on the simple page.
 - **Export MIDI** saves the notes of every unmuted MIDI clip as a Standard MIDI File (format 1, 480 ticks to the quarter): a conductor track with the tempo and time signature changes, then one track per project track that has notes, each on its own channel from 1 (10 is skipped, as General MIDI keeps it for drums). Audio clips, muted clips and mixing are not in it.
 - **Controller and pitch bend lanes** sit under the note roll: velocity bars for each note, or a lane for pitch bend, modulation, volume, pan, expression, sustain or any controller number. A clip holds the events as a step curve, plays them with its notes, and carries them through split, copy and MIDI import and export. Where a loop comes round, or playing starts part way in, each controller is set to what it held at that point, and a pitch bend wheel with nothing earlier to say goes back to rest.
 - **Undo history** under the arrangement lists every edit in words, with the current state marked; choosing one goes there by undoing or redoing. It holds the last 100 edits and is not saved with the session.
+- **Project** section under the arrangement keeps a title, an author and notes with the session. They are saved in the file, are not an undo step, and an agent reads and sets them with `project_info`.
 - **Tap** beside the tempo sets it from your taps: the average gap of the last five, started again after a two second pause.
 - **Folders** have a bar with a hide and show button, Move up and Move down, and a grip to drag the whole folder to another row. Whether a folder is hidden is saved with the session.
 - **Rec MIDI** plays the transport and keeps what you play on a MIDI keyboard (the armed tracks, or the selected one) or the on-screen keys as one MIDI clip per track, from where the take began and a whole number of bars long, with the pitch bend wheel and controllers kept as events. Stop ends it too, and one undo takes the take back. It is separate from Record, which keeps audio.
@@ -141,7 +142,7 @@ starts on the simple page.
 
 ## For agents
 
-- **58 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **59 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).

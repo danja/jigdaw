@@ -34,6 +34,7 @@ import { createLoading } from './app/Loading.js'
 import { createBrowser } from './app/Browser.js'
 import { createSessions } from './app/Sessions.js'
 import { createHistory } from './app/History.js'
+import { createProjectInfo } from './app/ProjectInfo.js'
 import { createAgent } from './app/Agent.js'
 import { createBridgeLink } from './app/Bridge.js'
 import { createLayout } from './app/Layout.js'
@@ -95,6 +96,7 @@ ctx.loading = createLoading(ctx)
 ctx.browser = createBrowser(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.history = createHistory(ctx)
+ctx.projectInfo = createProjectInfo(ctx)
 ctx.agent = createAgent(ctx)
 ctx.bridge = createBridgeLink(ctx)
 ctx.layout = createLayout(ctx)
@@ -162,6 +164,7 @@ $('midifile').addEventListener('change', async event => {
 })
 ctx.sessions.mount()
 ctx.history.mount()
+ctx.projectInfo.mount()
 ctx.arrangement.mount()
 ctx.matrix.mount()
 ctx.master.mount()

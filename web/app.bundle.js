@@ -13177,6 +13177,7 @@ var init_Vocabulary = __esm({
       dcterms: Object.freeze({
         created: `${DCTERMS}created`,
         modified: `${DCTERMS}modified`,
+        creator: `${DCTERMS}creator`,
         // A collection's members. docs/plugin-collections.md.
         hasPart: `${DCTERMS}hasPart`
       }),
@@ -20697,6 +20698,26 @@ var ScriptState = class _ScriptState {
   }
 };
 
+// src/model/ProjectInfo.js
+var INFO_LIMITS = Object.freeze({ title: 120, author: 120, notes: 4e3 });
+var EMPTY_INFO = Object.freeze({ title: null, author: null, notes: null });
+function patchInfo(current, patch) {
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new Error("project info is an object with title, author and notes");
+  const next = { ...current };
+  for (const [key, value2] of Object.entries(patch)) {
+    if (!(key in INFO_LIMITS)) throw new Error(`unknown project info field: ${key}`);
+    if (value2 === null || value2 === void 0) {
+      next[key] = null;
+      continue;
+    }
+    if (typeof value2 !== "string") throw new Error(`${key} is text, or null for none`);
+    const text = key === "notes" ? value2.trim() : value2.trim().replace(/\s+/g, " ");
+    if (text.length > INFO_LIMITS[key]) throw new Error(`${key} is at most ${INFO_LIMITS[key]} characters`);
+    next[key] = text === "" ? null : text;
+  }
+  return next;
+}
+
 // src/model/Endpoints.js
 var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
 var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
@@ -21368,15 +21389,23 @@ var Project = class {
   #editor = new EditorState();
   // Scripts saved with the session: text, outside the revision for the same reason.
   #scripts = new ScriptState();
-  #label = null;
+  // Title, author and notes: words about the session, outside the revision.
+  #info = { ...EMPTY_INFO };
   get revision() {
     return this.#revision;
   }
+  /** The title, or null. */
   get label() {
-    return this.#label;
+    return this.#info.title;
   }
   set label(value2) {
-    this.#label = value2;
+    this.setInfo({ title: value2 });
+  }
+  get info() {
+    return { ...this.#info };
+  }
+  setInfo(patch) {
+    this.#info = patchInfo(this.#info, patch);
   }
   get tracks() {
     return [...this.#state.tracks.values()];
@@ -21519,7 +21548,7 @@ var Project = class {
   /** A plain snapshot, for serialisation or for handing to an agent. */
   snapshot() {
     return {
-      label: this.#label,
+      label: this.#info.title,
       revision: this.#revision,
       tracks: this.tracks.map((t) => ({ ...t, channel: { ...t.channel } })),
       nodes: this.nodes.map((n2) => ({
@@ -28786,6 +28815,22 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       inputSchema: { type: "object", properties: {} },
       async handler() {
         return ok({ project: dispatcher.project.snapshot() });
+      }
+    },
+    {
+      name: "project_info",
+      description: "The title, author and notes kept with the session, saved in the file and shown in the Project section. Pass any of title, author, notes to change them (text, or null for none; title and author up to 120 characters, notes up to 4000). Like a track layout this is not an edit to the audio, so it changes no revision and has no undo.",
+      inputSchema: {
+        type: "object",
+        properties: { title: { type: ["string", "null"] }, author: { type: ["string", "null"] }, notes: { type: ["string", "null"] } }
+      },
+      async handler(patch = {}) {
+        try {
+          if (Object.keys(patch).length > 0) dispatcher.project.setInfo(patch);
+          return ok({ info: dispatcher.project.info });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
       }
     },
     {
@@ -38114,7 +38159,10 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
   lines.push("");
   lines.push("<>");
   lines.push(`    a ${term3(jig6.Project)} ;`);
-  if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
+  const { title, author, notes } = project.info;
+  if (title) lines.push(`    rdfs:label ${string(title)} ;`);
+  if (author) lines.push(`    dcterms:creator ${string(author)} ;`);
+  if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
   lines.push(`    ${term3(jig6.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
@@ -38656,6 +38704,11 @@ function readProject(dataset2) {
   return {
     iri: iri5,
     label: value(one2(dataset2, iri5, RDFS_LABEL)),
+    info: {
+      title: value(one2(dataset2, iri5, RDFS_LABEL)),
+      author: value(one2(dataset2, iri5, vocabulary.dcterms.creator)),
+      notes: value(one2(dataset2, iri5, vocabulary.rdfs.comment))
+    },
     revision: number4(one2(dataset2, iri5, jig7.revision), "revision") ?? 0,
     changes
   };
@@ -38844,6 +38897,13 @@ function createSessions(ctx2) {
       d.project.scripts.clear();
       log2(`script ignored: ${error2.message}`, "error");
     }
+    try {
+      d.project.setInfo(read.info);
+    } catch (error2) {
+      d.project.setInfo({ title: null, author: null, notes: null });
+      log2(`project info ignored: ${error2.message}`, "error");
+    }
+    ctx2.projectInfo?.refresh();
     ctx2.transport.showTransport();
     ctx2.rack.draw();
     ctx2.history.updateButtons();
@@ -38987,6 +39047,70 @@ function createHistory(ctx2) {
     });
   }
   return { updateButtons: updateHistoryButtons, undo, redo, mount };
+}
+
+// src/ui/ProjectInfoForm.js
+var FIELDS = [
+  { key: "title", label: "Title", tag: "input" },
+  { key: "author", label: "Author", tag: "input" },
+  { key: "notes", label: "Notes", tag: "textarea" }
+];
+function createProjectInfoForm(document2, { onChange, onError = () => {
+} }) {
+  const element = document2.createElement("form");
+  element.className = "project-info";
+  element.addEventListener("submit", (event) => event.preventDefault());
+  let shown = { title: null, author: null, notes: null };
+  const inputs = {};
+  for (const { key, label, tag } of FIELDS) {
+    const wrap = document2.createElement("label");
+    wrap.className = "project-info-field";
+    const name2 = document2.createElement("span");
+    name2.textContent = label;
+    const input = document2.createElement(tag);
+    input.id = `project-${key}`;
+    input.maxLength = INFO_LIMITS[key];
+    if (tag === "textarea") input.rows = 4;
+    input.addEventListener("change", async () => {
+      try {
+        await onChange({ [key]: input.value });
+        shown = { ...shown, [key]: input.value.trim() === "" ? null : input.value.trim() };
+      } catch (error2) {
+        input.value = shown[key] ?? "";
+        onError(error2);
+      }
+    });
+    inputs[key] = input;
+    wrap.append(name2, input);
+    element.append(wrap);
+  }
+  function show(info) {
+    shown = { title: info.title ?? null, author: info.author ?? null, notes: info.notes ?? null };
+    for (const { key } of FIELDS) inputs[key].value = shown[key] ?? "";
+  }
+  show(shown);
+  return { element, show, inputs };
+}
+
+// web/app/ProjectInfo.js
+function createProjectInfo(ctx2) {
+  const { document: document2, $: $2, log: log2 } = ctx2;
+  const form = createProjectInfoForm(document2, {
+    // The runtime first, since the project lives in the dispatcher and that waits for the first thing needing sound.
+    onChange: async (patch) => {
+      (await ctx2.runtime.ensureRunning()).project.setInfo(patch);
+    },
+    onError: (error2) => log2(error2.message, "error")
+  });
+  return {
+    mount() {
+      $2("project-body").append(form.element);
+    },
+    /** Fill the form from the open project, after a session opens. */
+    refresh() {
+      form.show(ctx2.dispatcher.project.info);
+    }
+  };
 }
 
 // src/mcp/LocalAgent.js
@@ -40886,6 +41010,7 @@ ctx.loading = createLoading(ctx);
 ctx.browser = createBrowser(ctx);
 ctx.sessions = createSessions(ctx);
 ctx.history = createHistory(ctx);
+ctx.projectInfo = createProjectInfo(ctx);
 ctx.agent = createAgent(ctx);
 ctx.bridge = createBridgeLink(ctx);
 ctx.layout = createLayout(ctx);
@@ -40966,6 +41091,7 @@ $("midifile").addEventListener("change", async (event) => {
 });
 ctx.sessions.mount();
 ctx.history.mount();
+ctx.projectInfo.mount();
 ctx.arrangement.mount();
 ctx.matrix.mount();
 ctx.master.mount();

@@ -119,7 +119,10 @@ export function writeProject (project, { iri, created = null } = {}) {
 
   lines.push('<>')
   lines.push(`    a ${term(jig.Project)} ;`)
-  if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`)
+  const { title, author, notes } = project.info
+  if (title) lines.push(`    rdfs:label ${string(title)} ;`)
+  if (author) lines.push(`    dcterms:creator ${string(author)} ;`)
+  if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`)
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`)
   lines.push(`    ${term(jig.revision)} ${integer(project.revision)} ;`)
   if (tracks.length > 0) {

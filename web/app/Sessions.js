@@ -140,6 +140,11 @@ export function createSessions (ctx) {
       log(`script ignored: ${error.message}`, 'error')
     }
 
+    // Replaced even when the file has none, as the layout and scripts are: the last session's title is not this one's.
+    try { d.project.setInfo(read.info) } catch (error) { d.project.setInfo({ title: null, author: null, notes: null }); log(`project info ignored: ${error.message}`, 'error') }
+    // Not on the simple page or the reel page, which have no Project section.
+    ctx.projectInfo?.refresh()
+
     ctx.transport.showTransport()
     ctx.rack.draw()
     ctx.history.updateButtons()

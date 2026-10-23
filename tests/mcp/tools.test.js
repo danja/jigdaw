@@ -539,6 +539,18 @@ describe('tracks', () => {
     expect(dispatcher.project.revision).toBe(revision)
   })
 
+  it('keeps a title, author and notes with the session, reads them back, and refuses what is too long', async () => {
+    const revision = dispatcher.project.revision
+    expect(await call('project_info', {})).toMatchObject({ ok: true, info: { title: null, author: null, notes: null } })
+    expect(await call('project_info', { title: '  Late   bus ', notes: 'Verse\nneeds a pad' })).toMatchObject({ info: { title: 'Late bus', notes: 'Verse\nneeds a pad' } })
+    expect(await call('project_info', { title: null })).toMatchObject({ info: { title: null, notes: 'Verse\nneeds a pad' } })
+    const long = await call('project_info', { author: 'x'.repeat(121) })
+    expect(long.ok).toBe(false)
+    expect((await call('project_info', {})).info.author).toBeNull()
+    expect((await call('project_info', { mood: 'sad' })).ok).toBe(false)
+    expect(dispatcher.project.revision).toBe(revision)
+  })
+
   it('puts a track in a folder and takes it out again, with no revision', async () => {
     const { trackId } = await call('track_add', {})
     const revision = dispatcher.project.revision

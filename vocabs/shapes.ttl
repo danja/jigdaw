@@ -344,6 +344,8 @@ jig:ProjectShape a sh:NodeShape ;
         sh:message "A project must carry a revision. Every changeset is checked against it, so a project without one cannot be edited safely by more than one surface."
     ] ;
     sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path dcterms:creator ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path rdfs:comment ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path jig:transport ; sh:maxCount 1 ] ;
     sh:property [ sh:path jig:node ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path jig:track ; sh:nodeKind sh:IRI ] ;

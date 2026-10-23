@@ -13177,6 +13177,7 @@ var init_Vocabulary = __esm({
       dcterms: Object.freeze({
         created: `${DCTERMS}created`,
         modified: `${DCTERMS}modified`,
+        creator: `${DCTERMS}creator`,
         // A collection's members. docs/plugin-collections.md.
         hasPart: `${DCTERMS}hasPart`
       }),
@@ -23314,6 +23315,26 @@ var ScriptState = class _ScriptState {
   }
 };
 
+// src/model/ProjectInfo.js
+var INFO_LIMITS = Object.freeze({ title: 120, author: 120, notes: 4e3 });
+var EMPTY_INFO = Object.freeze({ title: null, author: null, notes: null });
+function patchInfo(current2, patch) {
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new Error("project info is an object with title, author and notes");
+  const next = { ...current2 };
+  for (const [key, value2] of Object.entries(patch)) {
+    if (!(key in INFO_LIMITS)) throw new Error(`unknown project info field: ${key}`);
+    if (value2 === null || value2 === void 0) {
+      next[key] = null;
+      continue;
+    }
+    if (typeof value2 !== "string") throw new Error(`${key} is text, or null for none`);
+    const text = key === "notes" ? value2.trim() : value2.trim().replace(/\s+/g, " ");
+    if (text.length > INFO_LIMITS[key]) throw new Error(`${key} is at most ${INFO_LIMITS[key]} characters`);
+    next[key] = text === "" ? null : text;
+  }
+  return next;
+}
+
 // src/model/Endpoints.js
 var MIDI_SIGNAL = "http://purl.org/stuff/transmissions/Midi";
 var AUDIO_SIGNAL = "http://purl.org/stuff/transmissions/Audio";
@@ -23980,15 +24001,23 @@ var Project = class {
   #editor = new EditorState();
   // Scripts saved with the session: text, outside the revision for the same reason.
   #scripts = new ScriptState();
-  #label = null;
+  // Title, author and notes: words about the session, outside the revision.
+  #info = { ...EMPTY_INFO };
   get revision() {
     return this.#revision;
   }
+  /** The title, or null. */
   get label() {
-    return this.#label;
+    return this.#info.title;
   }
   set label(value2) {
-    this.#label = value2;
+    this.setInfo({ title: value2 });
+  }
+  get info() {
+    return { ...this.#info };
+  }
+  setInfo(patch) {
+    this.#info = patchInfo(this.#info, patch);
   }
   get tracks() {
     return [...this.#state.tracks.values()];
@@ -24131,7 +24160,7 @@ var Project = class {
   /** A plain snapshot, for serialisation or for handing to an agent. */
   snapshot() {
     return {
-      label: this.#label,
+      label: this.#info.title,
       revision: this.#revision,
       tracks: this.tracks.map((t) => ({ ...t, channel: { ...t.channel } })),
       nodes: this.nodes.map((n2) => ({
@@ -27075,6 +27104,22 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       }
     },
     {
+      name: "project_info",
+      description: "The title, author and notes kept with the session, saved in the file and shown in the Project section. Pass any of title, author, notes to change them (text, or null for none; title and author up to 120 characters, notes up to 4000). Like a track layout this is not an edit to the audio, so it changes no revision and has no undo.",
+      inputSchema: {
+        type: "object",
+        properties: { title: { type: ["string", "null"] }, author: { type: ["string", "null"] }, notes: { type: ["string", "null"] } }
+      },
+      async handler(patch = {}) {
+        try {
+          if (Object.keys(patch).length > 0) dispatcher.project.setInfo(patch);
+          return ok({ info: dispatcher.project.info });
+        } catch (error2) {
+          return failed(error2.message, { kind: "change" });
+        }
+      }
+    },
+    {
       name: "plugins_search",
       description: "Find candidate plugins by text and by what they do. Returns enough to choose between them; call plugin_describe for the few that matter. Results marked web:true can run in this host; the rest are native plugins the catalogue knows about but this host cannot load.",
       inputSchema: {
@@ -29150,7 +29195,10 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
   lines.push("");
   lines.push("<>");
   lines.push(`    a ${term3(jig4.Project)} ;`);
-  if (project.label) lines.push(`    rdfs:label ${string(project.label)} ;`);
+  const { title, author, notes } = project.info;
+  if (title) lines.push(`    rdfs:label ${string(title)} ;`);
+  if (author) lines.push(`    dcterms:creator ${string(author)} ;`);
+  if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
   lines.push(`    ${term3(jig4.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
@@ -29692,6 +29740,11 @@ function readProject(dataset2) {
   return {
     iri: iri4,
     label: value(one2(dataset2, iri4, RDFS_LABEL)),
+    info: {
+      title: value(one2(dataset2, iri4, RDFS_LABEL)),
+      author: value(one2(dataset2, iri4, vocabulary.dcterms.creator)),
+      notes: value(one2(dataset2, iri4, vocabulary.rdfs.comment))
+    },
     revision: number3(one2(dataset2, iri4, jig5.revision), "revision") ?? 0,
     changes
   };
@@ -30080,6 +30133,13 @@ function createSessions(ctx2) {
       d.project.scripts.clear();
       log2(`script ignored: ${error2.message}`, "error");
     }
+    try {
+      d.project.setInfo(read.info);
+    } catch (error2) {
+      d.project.setInfo({ title: null, author: null, notes: null });
+      log2(`project info ignored: ${error2.message}`, "error");
+    }
+    ctx2.projectInfo?.refresh();
     ctx2.transport.showTransport();
     ctx2.rack.draw();
     ctx2.history.updateButtons();

@@ -609,6 +609,9 @@
   .history-step { min-height:44px; width:100%; text-align:left; padding:6px 12px; background:#1a1e24; color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .history-step[aria-current="step"] { border-color:var(--accent); font-weight:600; }
   .history-step.undone { opacity:.6; }
+  .project-info { display:grid; gap:10px; max-width:640px; margin-top:8px; }
+  .project-info-field { display:grid; gap:4px; color:var(--dim); font-size:12px; }
+  .project-info-field input, .project-info-field textarea { font-size:16px; min-height:44px; box-sizing:border-box; width:100%; }
   details.log summary { cursor:pointer; color:var(--dim); font-size:12px; }
   #log { font-family:ui-monospace,monospace; font-size:11px; max-height:28vh; overflow:auto; margin-top:8px; }
   .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
@@ -845,6 +848,11 @@
     <button type="submit" id="bridge-connect">Connect</button>
   </form>
   <p class="note" id="bridge-status" role="status">Not connected.</p>
+</details>
+
+<details class="log" id="project">
+  <summary>Project</summary>
+  <div id="project-body"></div>
 </details>
 
 <details class="log" id="history">

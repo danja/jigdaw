@@ -432,6 +432,11 @@ export function readProject (dataset) {
   return {
     iri,
     label: value(one(dataset, iri, RDFS_LABEL)),
+    info: {
+      title: value(one(dataset, iri, RDFS_LABEL)),
+      author: value(one(dataset, iri, v.dcterms.creator)),
+      notes: value(one(dataset, iri, v.rdfs.comment))
+    },
     revision: number(one(dataset, iri, jig.revision), 'revision') ?? 0,
     changes
   }
