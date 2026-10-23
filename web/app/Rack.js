@@ -672,6 +672,7 @@ export function createRack (ctx) {
             frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
             bytes
           }])
+          ctx.midiRecord.capture(node.id, bytes)
         }
       })
       keyboards.add(keyboard)

@@ -19,7 +19,7 @@
 // the peak of what reaches its input, and faders and the master are not
 // applied (a send's own level is). It answers "does anything reach this track", not "how loud is it".
 
-import { Scheduler, clipNotes } from '../engine/Scheduler.js'
+import { Scheduler, clipNotes, clipControllers } from '../engine/Scheduler.js'
 import { MASTER_TRACK } from '../model/ArrangementOps.js'
 
 const settle = () => new Promise(resolve => setImmediate(resolve))
@@ -86,6 +86,7 @@ export async function renderChain (dispatcher, engine, { quanta = 1500, quantum 
       sampleRate: engine.context.sampleRate,
       lookahead: lookaheadSeconds,
       notes: () => clipNotes(project),
+      controllers: () => clipControllers(project),
       transport: () => dispatcher.transport(),
       send: (nodeId, events) => dispatcher.sendEvents(nodeId, events)
     })

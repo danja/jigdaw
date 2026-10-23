@@ -97,12 +97,17 @@ export function createKeyboard (document, { first = 48, octaves = 2, onNote } = 
     element.title = noteName(note)
 
     // Pointer events rather than mouse or touch, so one path covers a mouse, a
-    // finger and a pen, and a drag across the keys plays them.
+    // finger and a pen, and a drag across the keys plays them. A touch pointer is
+    // captured by the key it lands on, which would send every later event there and
+    // keep the next key from ever being entered, so the capture is let go: the drag
+    // then leaves one key (released) and enters the next (pressed, as the button is
+    // still down).
     element.addEventListener('pointerdown', event => {
       event.preventDefault()
-      element.setPointerCapture?.(event.pointerId)
+      if (element.hasPointerCapture?.(event.pointerId)) element.releasePointerCapture(event.pointerId)
       press(note)
     })
+    element.addEventListener('pointerenter', event => { if (event.buttons & 1) press(note) })
     element.addEventListener('pointerup', () => release(note))
     element.addEventListener('pointercancel', () => release(note))
     element.addEventListener('pointerleave', () => release(note))

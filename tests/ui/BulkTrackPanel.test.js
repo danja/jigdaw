@@ -18,6 +18,25 @@ function build (tracks = [track(), track()]) {
   return { panel, calls, $: id => document.getElementById(id) }
 }
 
+describe('the MIDI export', () => {
+  it('is drawn only when a selected track has MIDI, and asks to export the selection', () => {
+    const calls = []
+    const panel = createBulkTrackPanel(document, { onChannel () {}, onColor () {}, onSize () {}, onFolder () {}, onBus () {}, onLevelShift () {}, onPanShift () {}, onExportMidi: () => calls.push('export') })
+    document.body.append(panel.element)
+    panel.show({ tracks: [track(), track()], labels: ['A', 'B'] })
+    expect(document.getElementById('bulk-export-midi').hidden).toBe(true)
+    panel.show({ tracks: [track(), track()], labels: ['A', 'B'], hasMidi: true })
+    expect(document.getElementById('bulk-export-midi').hidden).toBe(false)
+    document.getElementById('bulk-export-midi').dispatchEvent(event('click'))
+    expect(calls).toEqual(['export'])
+  })
+
+  it('is left out when the host gives no way to export', () => {
+    build()
+    expect(document.getElementById('bulk-export-midi')).toBeNull()
+  })
+})
+
 describe('the typed amounts', () => {
   const apply = id => document.getElementById(id).dispatchEvent(event('click'))
   it('send the level and the pan typed as exact shifts', () => {

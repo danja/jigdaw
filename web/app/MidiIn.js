@@ -40,7 +40,10 @@ export function createMidiIn (ctx) {
       const { engine, dispatcher } = ctx
       if (!engine || !dispatcher) return
       const frame = Math.round(engine.context.currentTime * engine.context.sampleRate)
-      for (const nodeId of targets()) dispatcher.sendEvents(nodeId, [{ frame, bytes }])
+      for (const nodeId of targets()) {
+        dispatcher.sendEvents(nodeId, [{ frame, bytes }])
+        ctx.midiRecord.capture(nodeId, bytes)
+      }
     },
     onChange: say
   })

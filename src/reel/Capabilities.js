@@ -46,6 +46,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   clip_add: 'arrangement editing, not yet a statement',
   clip_add_audio: 'arrangement editing, not yet a statement',
   clip_set_notes: 'arrangement editing, not yet a statement',
+  clip_set_controllers: 'arrangement editing, not yet a statement',
   clip_transform_notes: 'arrangement editing, not yet a statement',
   clip_move: 'arrangement editing, not yet a statement',
   clip_set: 'arrangement editing, not yet a statement',

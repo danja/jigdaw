@@ -46,6 +46,13 @@ function builtProject () {
       notes: [
         { startBeat: 4, lengthBeats: 0.5, pitch: 64, velocity: 80 },
         { startBeat: 0, lengthBeats: 2, pitch: 57, velocity: 96 }
+      ],
+      // Written out of order, and the same controller at two beats, and a pitch bend: the model sorts them.
+      controllers: [
+        { atBeat: 2.5, controller: 'pitchBend', value: -2048 },
+        { atBeat: 1, controller: 7, value: 90 },
+        { atBeat: 0, controller: 7, value: 100 },
+        { atBeat: 0, controller: 'pitchBend', value: 8191 }
       ]
     },
     // An empty MIDI clip, and an audio clip with no offset: both write less.
@@ -164,6 +171,32 @@ describe('a project survives being written and read back', () => {
     const { project } = await reopen(turtle)
     expect(project.clip(clip.id).muted).toBe(true)
     expect(project.clips.filter(c => c.muted)).toHaveLength(1)
+  })
+
+  it('keeps a clip\'s controller and pitch bend events, named by their place, and writes none for a clip without', async () => {
+    const original = builtProject()
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('<#clip-2-e1> a jig:ControllerEvent')
+    expect(turtle).toContain('<#clip-2-e4> a jig:PitchBendEvent ; trn:startBeat 2.5 ; jig:bend -2048')
+    expect(turtle).toContain('jig:controllerEvent <#clip-2-e1> , <#clip-2-e2> , <#clip-2-e3> , <#clip-2-e4>')
+    expect(turtle).not.toContain('<#clip-10-e1>')
+    const { project } = await reopen(turtle)
+    expect(project.clip('clip-2').controllers).toEqual(original.clip('clip-2').controllers)
+    expect(project.clip('clip-2').controllers.map(e => [e.atBeat, e.controller, e.value])).toEqual([[0, 7, 100], [0, 'pitchBend', 8191], [1, 7, 90], [2.5, 'pitchBend', -2048]])
+    expect(project.clip('clip-10').controllers).toEqual([])
+    // Writing it again gives the same bytes: the names do not drift.
+    expect(writeProject(project, { iri: IRI })).toBe(turtle)
+  })
+
+  it('reads a session saved before controller events as a clip with none', async () => {
+    // What an older writer made: a clip with notes and nothing else.
+    const old = builtProject()
+    old.apply([{ op: 'setClipControllers', id: 'clip-2', controllers: [] }])
+    const turtle = writeProject(old, { iri: IRI })
+    expect(turtle).not.toContain('controllerEvent')
+    const { project } = await reopen(turtle)
+    expect(project.clip('clip-2').controllers).toEqual([])
+    expect(project.clip('clip-2').notes).toHaveLength(2)
   })
 
   it('comes back the same, ids and all', async () => {

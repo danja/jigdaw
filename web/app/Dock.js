@@ -11,6 +11,7 @@ import { createTrackPanel } from '../../src/ui/TrackPanel.js'
 import { createBulkTrackPanel } from '../../src/ui/BulkTrackPanel.js'
 import { describeBus } from '../../src/model/TrackBus.js'
 import { describeLevelShift, describePanShift, groupMembers } from '../../src/model/GroupChannel.js'
+import { trackHasMidi as hasMidi } from '../../src/model/MidiFile.js'
 import { createNodeView } from '../../src/ui/NodeView.js'
 import { createSendsPanel } from '../../src/ui/SendsPanel.js'
 import { sendTargets, outputTargets } from '../../src/ui/SendsModel.js'
@@ -48,6 +49,10 @@ export function createDockPanel (ctx) {
     const result = ctx.dispatcher.apply(changes)
     if (!result.ok) log(result.message, 'error')
   }
+  // A track's MIDI to a file; the page's exporter is built after the dock, so it is looked up when pressed.
+  const exportMidi = trackIds => {
+    try { ctx.midiExport.exportMidi({ trackIds }) } catch (error) { log(error.message, 'error') }
+  }
   const bulk = createBulkTrackPanel(document, {
     onChannel: change => {
       const ids = ctx.selection.ids
@@ -59,6 +64,7 @@ export function createDockPanel (ctx) {
     onColor: color => { for (const id of ctx.selection.ids) layoutOf(id, { color }) },
     onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
     onFolder: folder => { for (const id of ctx.selection.ids) layoutOf(id, { folder }) },
+    onExportMidi: () => exportMidi(ctx.selection.ids),
     onBus: () => {
       let changes
       try { changes = describeBus(ctx.dispatcher.project, ctx.selection.ids) } catch (error) { log(error.message, 'error'); return }
@@ -130,6 +136,8 @@ export function createDockPanel (ctx) {
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels) => shift(describeLevelShift, decibels, groupMembers(ctx.dispatcher.project, id)),
+    onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx.dispatcher.project, id)),
+    onExportMidi: id => exportMidi([id]),
     onMove: (id, delta) => ctx.dispatcher.project.moveTrack(id, delta),
     onFreeze: id => {
       ctx.bounce.freezeTrack(id).catch(error => log(error.message, 'error'))
@@ -213,7 +221,8 @@ export function createDockPanel (ctx) {
         tracks,
         labels: tracks.map(trackLabel),
         folders: [...new Set(project.orderedTracks.map(folderOf).filter(Boolean))],
-        inFolder: tracks.filter(folderOf).length
+        inFolder: tracks.filter(folderOf).length,
+        hasMidi: tracks.some(t => hasMidi(project, t.id))
       })
       dock.show('tracks', `Editor: ${tracks.length} tracks`)
       return
@@ -239,7 +248,8 @@ export function createDockPanel (ctx) {
         index: ordered.findIndex(t => t.id === track.id),
         count: ordered.length,
         plugins: project.nodes.filter(n => n.track === track.id).length,
-        members: groupMembers(project, track.id).length
+        members: groupMembers(project, track.id).length,
+        hasMidi: hasMidi(project, track.id)
       })
       const nodes = inSignalOrder(project.nodes.filter(n => n.track === track.id), project.connections)
       const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id

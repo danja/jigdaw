@@ -328,6 +328,302 @@ describe('the grid as a screen reader sees it', () => {
   })
 })
 
+describe('the velocity lane', () => {
+  const lane = () => document.getElementById('roll-lane-velocity')
+  const bars = () => [...lane().querySelectorAll('[role=slider]')]
+  const two = [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }, { startBeat: 1, lengthBeats: 1, pitch: 64, velocity: 50 }]
+
+  it('has a bar for each note, named by its pitch and place, with the velocity as the value', () => {
+    build(two)
+    expect(bars().map(b => b.getAttribute('aria-valuenow'))).toEqual(['100', '50'])
+    expect(bars()[1].getAttribute('aria-label')).toBe('Velocity of E4 at bar 1 beat 2')
+    expect(bars()[1].getAttribute('aria-valuetext')).toBe('50, E4 at bar 1 beat 2')
+  })
+
+  it('is left out of a clip with no notes, and comes back with the first', () => {
+    const ctx = build()
+    expect(lane().hidden).toBe(true)
+    key(document.querySelector('[role=grid] [tabindex="0"]'), 'Enter')
+    expect(ctx.clip().notes).toHaveLength(1)
+    expect(lane().hidden).toBe(false)
+  })
+
+  it('sends the whole list with one note changed, as one edit, from a key on a bar', () => {
+    const ctx = build(two)
+    key(bars()[1], 'ArrowUp', { shiftKey: true })
+    expect(ctx.sent).toHaveLength(1)
+    expect(ctx.sent[0].map(n => [n.pitch, n.velocity])).toEqual([[60, 100], [64, 60]])
+    expect(document.querySelector('.piano-roll [role=status]').textContent).toBe('Velocity 60, E4 at bar 1 beat 2')
+    expect(bars()[1].getAttribute('aria-valuenow')).toBe('60')
+  })
+
+  it('marks the chosen notes, and follows a note edited in the grid', () => {
+    build(two)
+    cell(64, 4).dispatchEvent(pointer('pointerdown', { shiftKey: true }))
+    expect(bars().map(b => b.classList.contains('chosen'))).toEqual([false, true])
+    key(document.querySelector('[role=grid] [tabindex="0"]'), 'ArrowUp', { altKey: true })
+    expect(bars()[1].getAttribute('aria-valuenow')).toBe('60')
+  })
+
+  it('lines each bar up with its column, in the same units as the grid', () => {
+    build(two)
+    expect(bars()[1].style.left).toBe('calc(1 * var(--steps-per-beat, 4) * var(--cell) + 0 * var(--cell) / 1)')
+    expect(lane().style.getPropertyValue('--steps')).toBe(String(document.querySelector('[role=grid]').getAttribute('aria-colcount') - 1))
+  })
+})
+
+describe('the controller and pitch bend lanes', () => {
+  const sent = []
+  const open = (controllers = [], { give = true } = {}) => {
+    sent.length = 0
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {}, ...(give ? { onControllers: (id, list) => sent.push([id, list]) } : {}) })
+    document.body.append(roll.element)
+    const clip = { id: 'c', startBeat: 0, lengthBeats: 4, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }], controllers }
+    roll.show(clip, { beatsPerBar: 4, label: 'Keys' })
+    return { roll, clip }
+  }
+  const choose = value => {
+    const select = document.getElementById('roll-lane')
+    ;[...select.options].find(o => o.value === value).selected = true
+    select.dispatchEvent(new window.Event('change', { bubbles: true }))
+  }
+  const lane = () => document.getElementById('roll-lane-controller')
+  const bars = () => [...lane().querySelectorAll('[role=slider]')]
+  const ev = (atBeat, controller, value) => ({ atBeat, controller, value })
+
+  it('offers no chooser to a host that cannot store events', () => {
+    open([], { give: false })
+    expect(document.getElementById('roll-lane')).toBeNull()
+    expect(document.getElementById('roll-lane-velocity').hidden).toBe(false)
+  })
+
+  it('starts on velocity, and swaps it for the controller chosen, one lane at a time', () => {
+    open([ev(0, 7, 100)])
+    expect(document.getElementById('roll-lane').value).toBe('velocity')
+    expect(lane()).toBeNull()
+    choose('7')
+    expect(document.getElementById('roll-lane-velocity').hidden).toBe(true)
+    expect(bars().map(b => b.getAttribute('aria-valuenow'))).toEqual(['100'])
+    choose('velocity')
+    expect(document.getElementById('roll-lane-velocity').hidden).toBe(false)
+    expect(lane()).toBeNull()
+  })
+
+  it('shows only the events of the controller chosen, named and spoken, with pitch bend in words', () => {
+    open([ev(0, 7, 100), ev(1, 1, 5), ev(2, 'pitchBend', -2000), ev(3, 'pitchBend', 0), ev(3, 7, 50)])
+    choose('7')
+    expect(bars().map(b => b.getAttribute('aria-label'))).toEqual(['Volume at bar 1 beat 1', 'Volume at bar 1 beat 4'])
+    choose('pitchBend')
+    expect(bars().map(b => b.getAttribute('aria-valuetext'))).toEqual(['-2000, bent down, at bar 1 beat 3', '0, centre, at bar 1 beat 4'])
+    expect([bars()[0].getAttribute('aria-valuemin'), bars()[0].getAttribute('aria-valuemax')]).toEqual(['-8192', '8191'])
+  })
+
+  it('sends the whole list with one value changed, keeping the other controllers, from a key', () => {
+    open([ev(0, 7, 100), ev(1, 1, 5), ev(2, 7, 50)])
+    choose('7')
+    key(bars()[1], 'ArrowUp', { shiftKey: true })
+    expect(sent).toEqual([['c', [ev(0, 7, 100), ev(1, 1, 5), ev(2, 7, 60)]]])
+  })
+
+  it('steps a pitch bend in large amounts, as one by one would take forever across 16000 values', () => {
+    open([ev(0, 'pitchBend', 0)])
+    choose('pitchBend')
+    key(bars()[0], 'ArrowUp')
+    key(bars()[0], 'PageUp')
+    expect(sent.map(([, list]) => list[0].value)).toEqual([64, 1024])
+  })
+
+  it('adds an event where the empty lane is pressed, at the step, replacing one already there', () => {
+    open([ev(0, 7, 100)])
+    choose('7')
+    lane().querySelector('.piano-roll-lane-bars').getBoundingClientRect = () => ({ top: 0, left: 0, width: 400, height: 96 })
+    const press = (x, y) => lane().querySelector('.piano-roll-lane-bars').dispatchEvent(Object.assign(new window.Event('pointerdown', { bubbles: true, cancelable: true }), { button: 0, clientX: x, clientY: y }))
+    const columns = Number(document.getElementById('roll-lane-controller').style.getPropertyValue('--steps'))
+    // A quarter of the way along is a quarter of the columns in, which is the step at beat (columns / 4) / 4.
+    press(100, 48)
+    expect(sent.at(-1)[1].find(e => e.atBeat !== 0)).toEqual(ev(Math.floor(columns / 4) / 4, 7, 64))
+    // At the very start it replaces the event there rather than doubling it.
+    press(0, 0)
+    expect(sent.at(-1)[1]).toEqual([ev(0, 7, 127)])
+  })
+
+  it('removes the focused event with Delete', () => {
+    open([ev(0, 7, 100), ev(1, 7, 90)])
+    choose('7')
+    key(bars()[0], 'Delete')
+    expect(sent).toEqual([['c', [ev(1, 7, 90)]]])
+  })
+
+  it('takes any controller number, and says when the number is not one instead of drawing a lane', () => {
+    open([ev(0, 74, 33)])
+    choose('other')
+    const number = document.getElementById('roll-lane-number')
+    expect(number.parentNode.hidden).toBe(false)
+    number.value = '74'
+    number.dispatchEvent(new window.Event('change', { bubbles: true }))
+    expect(bars().map(b => b.getAttribute('aria-valuenow'))).toEqual(['33'])
+    expect(bars()[0].getAttribute('aria-label')).toBe('Controller 74 at bar 1 beat 1')
+    number.value = '200'
+    number.dispatchEvent(new window.Event('change', { bubbles: true }))
+    expect(lane()).toBeNull()
+    expect(number.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('shows a lane for a clip with no events yet, so one can be added', () => {
+    open([])
+    choose('1')
+    expect(lane()).not.toBeNull()
+    expect(bars()).toHaveLength(0)
+  })
+})
+
+describe('step input', () => {
+  const grid = () => document.querySelector('[role=grid]')
+  const press = (k, mods = {}) => key(grid().querySelector('[tabindex="0"]'), k, mods)
+  const on = () => document.getElementById('roll-step').dispatchEvent(new window.Event('click', { bubbles: true }))
+  const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
+  const choose = (id, index) => { document.getElementById(id).options[index].selected = true; document.getElementById(id).dispatchEvent(new window.Event('change', { bubbles: true })) }
+  const cursorAt = () => { const c = grid().querySelector('[tabindex="0"]'); return [Number(c.dataset.pitch), Number(c.dataset.step)] }
+  const pairs = ctx => ctx.clip().notes.map(n => [n.startBeat, n.pitch, n.lengthBeats])
+
+  it('is off to start, with only its switch drawn, and available in an empty clip', () => {
+    build()
+    const toggle = document.getElementById('roll-step')
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    expect(document.querySelector('.piano-roll-step-body').hidden).toBe(true)
+    on()
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    expect(document.querySelector('.piano-roll-step-body').hidden).toBe(false)
+  })
+
+  it('enters a note of the step length at the cursor from a key, and moves on by that length', () => {
+    const ctx = build()
+    on()
+    press('a')
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    expect(cursorAt()).toEqual([60, 4])
+    press('d')
+    press('g')
+    expect(pairs(ctx)).toEqual([[0, 60, 1], [1, 64, 1], [2, 67, 1]])
+    expect(cursorAt()).toEqual([67, 12])
+  })
+
+  it('follows the step length and the octave', () => {
+    const ctx = build()
+    on()
+    choose('roll-step-length', 0)
+    press('x')
+    press('a')
+    press('s')
+    expect(pairs(ctx)).toEqual([[0, 72, 0.25], [0.25, 74, 0.25]])
+    expect(document.getElementById('roll-step-octave').textContent).toBe('Octave 5')
+    press('z'); press('z')
+    press('a')
+    expect(ctx.clip().notes.at(-1).pitch).toBe(48)
+  })
+
+  it('holds the step for a chord with Shift, or with the Chord switch', () => {
+    const ctx = build()
+    on()
+    press('A', { shiftKey: true })
+    press('d', { shiftKey: true })
+    press('g')
+    expect(pairs(ctx)).toEqual([[0, 60, 1], [0, 64, 1], [0, 67, 1]])
+    expect(cursorAt()[1]).toBe(4)
+    click('roll-step-chord')
+    press('a')
+    press('d')
+    expect(pairs(ctx).filter(n => n[0] === 1)).toEqual([[1, 60, 1], [1, 64, 1]])
+    expect(cursorAt()[1]).toBe(4)
+  })
+
+  it('rests with Space, and steps back with Backspace, clearing what starts there', () => {
+    const ctx = build()
+    on()
+    press('a')
+    press(' ')
+    expect(cursorAt()[1]).toBe(8)
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    press('Backspace')
+    expect(cursorAt()[1]).toBe(4)
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    press('Backspace')
+    expect(cursorAt()[1]).toBe(0)
+    expect(pairs(ctx)).toEqual([])
+  })
+
+  it('replaces the same note entered again in the same place, and does not run past either end', () => {
+    const ctx = build()
+    on()
+    press('a', { shiftKey: true })
+    press('a', { shiftKey: true })
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    press('Backspace')
+    press('Backspace')
+    expect(cursorAt()[1]).toBe(0)
+    for (let i = 0; i < 9; i++) press('x')
+    expect(document.getElementById('roll-step-octave').textContent).toBe('Octave 8')
+    expect(document.getElementById('roll-step-octave-up').hidden).toBe(true)
+  })
+
+  it('does the same from the buttons, for a touch screen with no keyboard', () => {
+    const ctx = build()
+    on()
+    click('roll-step-note-0')
+    click('roll-step-note-4')
+    click('roll-step-rest')
+    click('roll-step-octave-up')
+    click('roll-step-note-0')
+    expect(pairs(ctx)).toEqual([[0, 60, 1], [1, 64, 1], [3, 72, 1]])
+    click('roll-step-back')
+    expect(pairs(ctx)).toEqual([[0, 60, 1], [1, 64, 1]])
+    expect(document.getElementById('roll-step-note-0').getAttribute('aria-label')).toBe('Enter C5')
+  })
+
+  it('gives each note button a name that says the octave, and the buttons a face for touch', () => {
+    build()
+    on()
+    expect([...document.querySelectorAll('.piano-roll-step-notes button')].map(b => b.getAttribute('aria-label')).slice(0, 3)).toEqual(['Enter C4', 'Enter C#4', 'Enter D4'])
+  })
+
+  it('takes the keys only while on, so S still chooses a note and A does nothing', () => {
+    const ctx = build([{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }])
+    press('a')
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    press('s')
+    expect(document.querySelectorAll('.piano-roll-cell.chosen').length).toBeGreaterThan(0)
+    key(grid().querySelector('[tabindex="0"]'), 's')
+    on()
+    // Chosen cells stay as they were, and S now enters D rather than toggling.
+    press('s')
+    expect(pairs(ctx).some(n => n[1] === 62)).toBe(true)
+  })
+
+  it('leaves Ctrl and Alt chords to the roll', () => {
+    const ctx = build([{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }])
+    on()
+    press('a', { ctrlKey: true })
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+    expect(document.querySelectorAll('.piano-roll-cell.chosen.start').length).toBe(1)
+  })
+
+  it('lands each entered note in the scale when one is chosen', () => {
+    const ctx = build()
+    document.getElementById('roll-scale').options[1].selected = true
+    document.getElementById('roll-scale').dispatchEvent(new window.Event('change', { bubbles: true }))
+    on()
+    press('w')
+    expect(pairs(ctx)).toEqual([[0, 60, 1]])
+  })
+
+  it('is switched off again when the roll closes', () => {
+    const ctx = build()
+    on()
+    ctx.roll.hide()
+    expect(document.getElementById('roll-step').getAttribute('aria-pressed')).toBe('false')
+  })
+})
+
 describe('the scale', () => {
   const click = id => document.getElementById(id).dispatchEvent(new window.Event('click', { bubbles: true }))
   const choose = (id, index) => { document.getElementById(id).options[index].selected = true; document.getElementById(id).dispatchEvent(new window.Event('change', { bubbles: true })) }

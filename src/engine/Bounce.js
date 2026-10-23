@@ -15,7 +15,7 @@
 // that starts with an effect is not fed the impulse the live page feeds it. Recorded from the live mix
 // instead, those would differ.
 import { Engine } from './Engine.js'
-import { Scheduler, clipNotes, clipAudio } from './Scheduler.js'
+import { Scheduler, clipNotes, clipControllers, clipAudio } from './Scheduler.js'
 import { ClipPlayer } from './ClipPlayer.js'
 import { createAutomationHost } from './AutomationHost.js'
 import { OpDispatcher } from '../ops/OpDispatcher.js'
@@ -102,6 +102,7 @@ export async function bounce ({
     sampleRate,
     lookahead: hostConfig.schedulerLookaheadMs / 1000,
     notes: () => clipNotes(dispatcher.project),
+    controllers: () => clipControllers(dispatcher.project),
     transport: () => dispatcher.transport(),
     send: (nodeId, events) => dispatcher.sendEvents(nodeId, events),
     audio: () => clipAudio(dispatcher.project),

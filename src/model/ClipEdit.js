@@ -5,6 +5,24 @@
 // gesture and the dispatcher stays the only path. Pure: they read the project
 // and return the changes, or throw an Error saying why not.
 
+/**
+ * Controller and pitch bend events cut at `at` (a beat inside the clip). A controller holds its value until it changes, so the
+ * second half starts with the value each controller had at the cut, at its beat zero, unless it has an event of its own there:
+ * a bend held up at the cut must still be up in the second half.
+ */
+function partitionControllers (events, at) {
+  const left = []
+  const right = []
+  const held = new Map()
+  for (const e of events) {
+    if (e.atBeat < at) { left.push({ ...e }); held.set(e.controller, e.value) } else right.push({ ...e, atBeat: e.atBeat - at })
+  }
+  for (const [controller, value] of held) {
+    if (!right.some(e => e.controller === controller && e.atBeat === 0)) right.push({ atBeat: 0, controller, value })
+  }
+  return { left, right }
+}
+
 /** Notes inside a clip are placed from the clip's own start. */
 function partition (notes, at) {
   const left = []
@@ -37,10 +55,12 @@ export function splitClip (project, id, atBeat, { transport = null, newId = proj
   const second = clip.lengthBeats - first
   if (clip.kind === 'midi') {
     const { left, right } = partition(clip.notes, first)
+    const events = partitionControllers(clip.controllers ?? [], first)
     return [
       { op: 'setClip', id, lengthBeats: first },
       { op: 'setClipNotes', id, notes: left },
-      { op: 'addClip', id: newId, track: clip.track, kind: 'midi', startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
+      ...(clip.controllers?.length ? [{ op: 'setClipControllers', id, controllers: events.left }] : []),
+      { op: 'addClip', id: newId, track: clip.track, kind: 'midi', startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right, controllers: events.right }
     ]
   }
   if (!transport) throw new Error('splitting an audio clip needs the transport, to turn beats into seconds')
@@ -60,7 +80,7 @@ export function duplicateClip (project, id, { track, startBeat } = {}) {
   const at = startBeat ?? clip.startBeat + clip.lengthBeats
   const where = track ?? clip.track
   return [clip.kind === 'midi'
-    ? { op: 'addClip', track: where, kind: 'midi', startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map(n => ({ ...n })) }
+    ? { op: 'addClip', track: where, kind: 'midi', startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map(n => ({ ...n })), controllers: (clip.controllers ?? []).map(e => ({ ...e })) }
     : { op: 'addClip', track: where, kind: 'audio', startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }]
 }
 
@@ -93,7 +113,7 @@ export function trimClip (project, id, { from, to } = {}, { transport = null } =
   }
   if (cut === 0) return [change]
   const { right } = partition(clip.notes, cut)
-  return [change, { op: 'setClipNotes', id, notes: right }]
+  return [change, { op: 'setClipNotes', id, notes: right }, ...(clip.controllers?.length ? [{ op: 'setClipControllers', id, controllers: partitionControllers(clip.controllers, cut).right }] : [])]
 }
 
 /**
@@ -111,7 +131,7 @@ export function copyClips (project, ids) {
   const first = Math.min(...clips.map(c => c.startBeat))
   return clips.map(c => ({
     track: c.track, kind: c.kind, offset: c.startBeat - first, lengthBeats: c.lengthBeats, muted: c.muted,
-    ...(c.kind === 'midi' ? { notes: c.notes.map(n => ({ ...n })) } : { source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats })
+    ...(c.kind === 'midi' ? { notes: c.notes.map(n => ({ ...n })), controllers: (c.controllers ?? []).map(e => ({ ...e })) } : { source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats })
   }))
 }
 
@@ -127,7 +147,7 @@ export function pasteClips (project, copied, { startBeat, track = null } = {}) {
     if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`)
     const common = { op: 'addClip', track: where, kind: c.kind, startBeat: startBeat + c.offset, lengthBeats: c.lengthBeats, muted: c.muted }
     return c.kind === 'midi'
-      ? { ...common, notes: c.notes.map(n => ({ ...n })) }
+      ? { ...common, notes: c.notes.map(n => ({ ...n })), controllers: (c.controllers ?? []).map(e => ({ ...e })) }
       : { ...common, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats }
   })
 }

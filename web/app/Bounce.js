@@ -161,7 +161,7 @@ export function createBounce (ctx, { download = defaultDownload, bounceFn = boun
 }
 
 /** Hand bytes to the person as a file, the way a link with a download name does. */
-function defaultDownload (bytes, name, type) {
+export function defaultDownload (bytes, name, type) {
   const url = URL.createObjectURL(new Blob([bytes], { type }))
   const link = document.createElement('a')
   link.href = url

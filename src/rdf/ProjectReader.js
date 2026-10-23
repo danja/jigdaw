@@ -303,6 +303,12 @@ export function readProject (dataset) {
           pitch: number(one(dataset, noteIri, trn.pitch), `pitch of a note in ${id}`),
           velocity: number(one(dataset, noteIri, trn.velocity), `velocity of a note in ${id}`)
         }))
+        clip.controllers = objects(dataset, clipIri, jig.controllerEvent).map(t => t.value).map(eventIri => {
+          const atBeat = number(one(dataset, eventIri, trn.startBeat), `startBeat of an event in ${id}`)
+          return objects(dataset, eventIri, RDF_TYPE).some(t => t.value === jig.PitchBendEvent)
+            ? { atBeat, controller: 'pitchBend', value: number(one(dataset, eventIri, jig.bend), `bend of an event in ${id}`) }
+            : { atBeat, controller: number(one(dataset, eventIri, jig.controller), `controller of an event in ${id}`), value: number(one(dataset, eventIri, jig.value), `value of an event in ${id}`) }
+        })
       } else {
         const source = value(one(dataset, clipIri, jig.source))
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`)

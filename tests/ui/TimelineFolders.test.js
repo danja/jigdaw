@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { createTimeline } from '../../src/ui/Timeline.js'
 import { createFolderBar } from '../../src/ui/FolderBar.js'
+import { Project } from '../../src/model/Project.js'
 
 let document
 let window
@@ -110,5 +111,94 @@ describe('a folder that is hidden', () => {
     // One track of the folder says so, so every run of Drums is hidden down to its bar.
     expect(order()).toEqual(['folder:Folder Drums', 'Track c', 'folder:Folder Drums'])
     expect(document.querySelector('.folder-toggle').getAttribute('aria-expanded')).toBe('false')
+  })
+})
+
+describe('dragging a folder by its grip', () => {
+  const pointer = (type, props = {}) => {
+    const e = new window.Event(type, { bubbles: true, cancelable: true })
+    for (const [k, v] of Object.entries({ button: 0, ...props })) Object.defineProperty(e, k, { value: v })
+    return e
+  }
+  function layout (map) {
+    const moves = []
+    const timeline = createTimeline(document, { ...handlers, onMoveTrack: (id, delta) => moves.push([id, delta]), onFolderCollapse: noop })
+    document.body.append(timeline.element)
+    timeline.draw({
+      tracks: Object.keys(map).map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+      layoutFor: t => ({ color: null, laneSize: 'small', folder: map[t.id], folderCollapsed: false })
+    })
+    const row = id => document.querySelector(`.timeline-row[data-track="${id}"]`)
+    const grip = document.querySelector('.folder-grip')
+    return { moves, row, grip }
+  }
+
+  it('moves the tracks it is dragged past over the run, one by one, when dragged down', () => {
+    const { moves, row, grip } = layout({ a: 'F', b: 'F', c: null, d: null, e: null })
+    grip.dispatchEvent(pointer('pointerdown'))
+    expect(row('a').classList.contains('dragging') && row('b').classList.contains('dragging')).toBe(true)
+    row('d').dispatchEvent(pointer('pointermove'))
+    expect(row('d').classList.contains('drop-target')).toBe(true)
+    document.dispatchEvent(pointer('pointerup'))
+    // c, then d hop up over the two tracks of the run, which then sits after d.
+    expect(moves).toEqual([['c', -2], ['d', -2]])
+    expect(document.querySelectorAll('.dragging, .drop-target')).toHaveLength(0)
+  })
+
+  it('moves them below the run, last first, when dragged up', () => {
+    const { moves, row, grip } = layout({ a: null, b: null, c: 'F', d: 'F' })
+    grip.dispatchEvent(pointer('pointerdown'))
+    row('a').dispatchEvent(pointer('pointermove'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(moves).toEqual([['b', 2], ['a', 2]])
+  })
+
+  it('does nothing when released on its own tracks or nowhere, or cancelled', () => {
+    const { moves, row, grip } = layout({ a: 'F', b: 'F', c: null })
+    grip.dispatchEvent(pointer('pointerdown'))
+    row('b').dispatchEvent(pointer('pointermove'))
+    document.dispatchEvent(pointer('pointerup'))
+    grip.dispatchEvent(pointer('pointerdown'))
+    row('c').dispatchEvent(pointer('pointermove'))
+    document.dispatchEvent(pointer('pointercancel'))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(moves).toEqual([])
+    expect(document.querySelectorAll('.dragging, .drop-target')).toHaveLength(0)
+  })
+
+  it('leaves the real tracks in the order the drop describes, the run whole and the others as they were', () => {
+    // The calls the timeline makes are replayed on a real project, each against what the one before left.
+    const replay = (names, run, to) => {
+      const project = new Project()
+      project.apply(names.map(id => ({ op: 'addTrack', id })))
+      const timeline = createTimeline(document, { ...handlers, onMoveTrack: (id, delta) => project.moveTrack(id, delta), onFolderCollapse: noop })
+      document.body.append(timeline.element)
+      timeline.draw({
+        tracks: names.map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+        layoutFor: t => ({ color: null, laneSize: 'small', folder: run.includes(t.id) ? 'F' : null, folderCollapsed: false })
+      })
+      document.querySelector('.folder-grip').dispatchEvent(pointer('pointerdown'))
+      document.querySelector(`.timeline-row[data-track="${to}"]`).dispatchEvent(pointer('pointermove'))
+      document.dispatchEvent(pointer('pointerup'))
+      return project.orderedTracks.map(t => t.id)
+    }
+    expect(replay(['a', 'b', 'c', 'd', 'e'], ['a', 'b'], 'd')).toEqual(['c', 'd', 'a', 'b', 'e'])
+    document.body.replaceChildren()
+    expect(replay(['a', 'b', 'c', 'd', 'e'], ['c', 'd'], 'a')).toEqual(['c', 'd', 'a', 'b', 'e'])
+    document.body.replaceChildren()
+    expect(replay(['a', 'b', 'c', 'd', 'e'], ['b', 'c'], 'e')).toEqual(['a', 'd', 'e', 'b', 'c'])
+  })
+
+  it('answers only the main button, and names its keyboard equivalent', () => {
+    const { moves, grip } = layout({ a: 'F', b: null })
+    grip.dispatchEvent(pointer('pointerdown', { button: 2 }))
+    document.dispatchEvent(pointer('pointerup'))
+    expect(moves).toEqual([])
+    expect(grip.getAttribute('aria-label')).toBe('Drag to move folder F, or use its Move up and Move down buttons')
+  })
+
+  it('has no grip in a bar built for a page that cannot follow a drag', () => {
+    const bar = createFolderBar(document, { onToggle: noop })
+    expect(bar.element.querySelector('.folder-grip')).toBeNull()
   })
 })

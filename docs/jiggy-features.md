@@ -96,6 +96,15 @@ starts on the simple page.
 - **Export** renders the mix to a WAV in the page, faster than it plays, without disturbing playback. The loop,
   when it is on, is what is rendered.
 - **Stems** render every track that makes sound to its own WAV in one zip.
+- **Export MIDI** saves the notes of every unmuted MIDI clip as a Standard MIDI File (format 1, 480 ticks to the quarter): a conductor track with the tempo and time signature changes, then one track per project track that has notes, each on its own channel from 1 (10 is skipped, as General MIDI keeps it for drums). Audio clips, muted clips and mixing are not in it.
+- **Controller and pitch bend lanes** sit under the note roll: velocity bars for each note, or a lane for pitch bend, modulation, volume, pan, expression, sustain or any controller number. A clip holds the events as a step curve, plays them with its notes, and carries them through split, copy and MIDI import and export. Where a loop comes round, or playing starts part way in, each controller is set to what it held at that point, and a pitch bend wheel with nothing earlier to say goes back to rest.
+- **Tap** beside the tempo sets it from your taps: the average gap of the last five, started again after a two second pause.
+- **Folders** have a bar with a hide and show button, Move up and Move down, and a grip to drag the whole folder to another row. Whether a folder is hidden is saved with the session.
+- **Rec MIDI** plays the transport and keeps what you play on a MIDI keyboard (the armed tracks, or the selected one) or the on-screen keys as one MIDI clip per track, from where the take began and a whole number of bars long, with the pitch bend wheel and controllers kept as events. Stop ends it too, and one undo takes the take back. It is separate from Record, which keeps audio.
+- **Import MIDI** adds each part of a format 0 or 1 Standard MIDI File as a new track with one clip from beat zero, in one edit
+  (one undo). A project with no MIDI clips yet also takes the file's tempo and time signature changes; one that already has
+  music keeps its own and only gains the notes, and the log says which. A file that counts time in frames, is cut short, or
+  is not MIDI is refused with the reason and changes nothing. Files over 8 MB are not imported.
 - **Freeze** renders one track as heard to an audio clip on a new track and mutes the original, in one edit.
 - Rendering uses a second engine built from a snapshot of the session: the same plugins, scheduler, clips,
   envelopes and transport messages, with the audio context suspended each tick.
@@ -131,7 +140,7 @@ starts on the simple page.
 
 ## For agents
 
-- **57 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **58 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).

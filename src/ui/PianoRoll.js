@@ -46,6 +46,9 @@
 
 import { barBeat } from './Timeline.js'
 import { createRollScale } from './RollScale.js'
+import { createRollStep, STEP_KEYS, pitchFor } from './RollStep.js'
+import { createRollLane } from './RollLane.js'
+import { createRollControllers } from './RollControllers.js'
 import { inScale, snapPitch } from '../model/Scale.js'
 
 /** Steps per beat: a sixteenth note in 4/4. */
@@ -83,7 +86,7 @@ function noteAt (notes, pitch, beat) {
  * without it the transform buttons are left out, not shown doing nothing. It returns a message when it refuses.
  * Returns `{ element, show, draw, hide, playhead, clipId }`.
  */
-export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, now = () => Date.now() }) {
+export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, onControllers = null, now = () => Date.now() }) {
   if (typeof onChange !== 'function' || typeof onClose !== 'function') {
     throw new Error('createPianoRoll needs onChange and onClose')
   }
@@ -130,7 +133,21 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   head.className = 'playhead'
   head.setAttribute('aria-hidden', 'true')
   head.hidden = true
-  scroller.append(grid)
+  // Each note's velocity as a bar under its column, to see them together and set them by drag or by key (RollLane.js).
+  const velocityLane = createRollLane(document, {
+    id: 'roll-lane-velocity',
+    label: 'Velocity',
+    min: 1,
+    max: 127,
+    onSet: (item, velocity) => setVelocity(item.key, velocity)
+  })
+  // Controller and pitch bend lanes, in place of the velocity one, when the page can store them: a control nobody can use is
+  // left out, so no chooser is drawn for a host that gives no `onControllers`.
+  const lanes = onControllers
+    ? createRollControllers(document, { onEvents: list => onControllers(clip.id, list), place: beat => barBeat(beat, options.beatsPerBar) })
+    : null
+  scroller.append(grid, velocityLane.element)
+  if (lanes) scroller.append(lanes.host)
   const empty = document.createElement('p')
   empty.className = 'note piano-roll-empty'
   empty.textContent = 'No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.'
@@ -142,6 +159,13 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   // With a scale chosen, rows outside it are marked and drawn or dragged notes land inside it.
   const rollScale = createRollScale(document, { onChange: () => { fitButton.hidden = rollScale.current === null; draw() } })
   const snap = pitch => (rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch)
+  // Step input: notes entered one at a time at the cursor, which moves on by the chosen length (see RollStep.js).
+  const stepInput = createRollStep(document, {
+    onNote: (pitch, { advance }) => enterStep(pitch, { advance }),
+    onRest: () => stepRest(),
+    onBack: () => stepBack(),
+    onChange: () => { if (clip) draw() }
+  })
   const fitButton = document.createElement('button')
   fitButton.type = 'button'
   fitButton.id = 'roll-fit-scale'
@@ -244,7 +268,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     selectAll = pick('roll-select-all', 'Choose all notes', () => { chooseAll() })
     selectNone = pick('roll-select-none', 'Let go of the choice', () => { chosen = new Set(); draw(); say('No notes chosen') })
   }
-  element.append(header, empty, help, rollScale.element, tools, scroller, status)
+  element.append(header, empty, help, rollScale.element, stepInput.element, ...(lanes ? [lanes.element] : []), tools, scroller, status)
+  if (lanes) lanes.onChoice = () => { if (clip) draw() }
 
   /** Open or closed: the grid and its controls, or the note saying how to open one. */
   function showOpen (open) {
@@ -252,6 +277,8 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     help.hidden = !open
     scroller.hidden = !open
     rollScale.element.hidden = !open
+    stepInput.element.hidden = !open
+    if (lanes) lanes.element.hidden = !open
     tools.hidden = !open || clip === null || clip.notes.length === 0
     // Close is left out with nothing to close, not shown disabled.
     close.hidden = !open
@@ -382,6 +409,18 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
       grid.append(row)
     }
     grid.append(head)
+    // Nothing to show for a clip with no notes, so the lane is left out rather than drawn empty.
+    velocityLane.element.hidden = notes.length === 0 || (lanes !== null && !lanes.velocity)
+    lanes?.draw({ list: clip.controllers ?? [], columns: steps(), perBeat: STEPS_PER_BEAT })
+    velocityLane.element.style.setProperty('--steps', String(steps()))
+    velocityLane.draw(notes.map(n => ({
+      key: keyOf(n),
+      beat: n.startBeat,
+      value: n.velocity,
+      chosen: chosen.has(keyOf(n)),
+      name: `Velocity of ${spokenName(n.pitch)} at ${barBeat(n.startBeat, options.beatsPerBar)}`,
+      text: `${n.velocity}, ${spokenName(n.pitch)} at ${barBeat(n.startBeat, options.beatsPerBar)}`
+    })))
     if (hadFocus) document.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true })
   }
 
@@ -413,6 +452,60 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     }
   }
 
+  const stepSteps = () => Math.max(1, Math.round(stepInput.lengthBeats * STEPS_PER_BEAT))
+
+  /** A note of the step length at the cursor, then on to the next step unless `advance` is false (a chord). */
+  function enterStep (pitch, { advance = true } = {}) {
+    if (!(pitch >= 0 && pitch <= 127)) { say(`${pitch} is outside the range of notes`); return }
+    const startBeat = beatOf(cursor.step)
+    const note = { startBeat, lengthBeats: stepInput.lengthBeats, pitch: snap(pitch), velocity: 100 }
+    // Entering the same note again at the same place replaces it rather than doubling it.
+    const rest = clip.notes.filter(n => !(n.startBeat === startBeat && n.pitch === note.pitch))
+    onAudition(note.pitch, note.velocity)
+    const at = cursor.step
+    cursor = { pitch: note.pitch, step: cursor.step + (advance ? stepSteps() : 0) }
+    send([...rest, note], `Entered ${spokenName(note.pitch)} at ${where(at)}, ${beats(note.lengthBeats)}${advance ? '' : ', staying for a chord'}`)
+  }
+
+  function stepRest () {
+    cursor = { ...cursor, step: cursor.step + stepSteps() }
+    draw()
+    say(`Rest, now at ${where(cursor.step)}`)
+  }
+
+  /** Back one step, and clear the notes that start where it lands. */
+  function stepBack () {
+    const to = Math.max(0, cursor.step - stepSteps())
+    const startBeat = beatOf(to)
+    cursor = { ...cursor, step: to }
+    const kept = clip.notes.filter(n => n.startBeat !== startBeat)
+    if (kept.length === clip.notes.length) { draw(); say(`Back at ${where(to)}`); return }
+    send(kept, `Back at ${where(to)}, cleared ${clip.notes.length - kept.length} note${clip.notes.length - kept.length === 1 ? '' : 's'}`)
+  }
+
+  /** The keys of step input; true when the key was one of them. */
+  function stepKey (event) {
+    const { key } = event
+    const semitone = STEP_KEYS[key.toLowerCase()]
+    if (semitone !== undefined && key.length === 1) {
+      event.preventDefault()
+      enterStep(pitchFor(stepInput.octave, semitone), { advance: !(event.shiftKey || stepInput.chord) })
+    } else if (key === 'z' || key === 'Z' || key === 'x' || key === 'X') {
+      event.preventDefault()
+      stepInput.setOctave(stepInput.octave + (key.toLowerCase() === 'x' ? 1 : -1))
+      say(`Octave ${stepInput.octave}`)
+    } else if (key === ' ') { event.preventDefault(); stepRest() }
+    else if (key === 'Backspace') { event.preventDefault(); stepBack() }
+    else return false
+    return true
+  }
+
+  function setVelocity (key, velocity) {
+    const note = clip.notes.find(n => keyOf(n) === key)
+    if (!note) return
+    send(clip.notes.map(n => (n === note ? { ...n, velocity } : n)), `Velocity ${velocity}, ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}`)
+  }
+
   function adjust (change, message) {
     const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step))
     if (!here) { say(`No note at ${spokenName(cursor.pitch)}, ${where(cursor.step)}`); return }
@@ -425,6 +518,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     if (!clip) return
     const move = (pitch, step) => { event.preventDefault(); cursor = { pitch: cursor.pitch + pitch, step: cursor.step + step }; draw() }
     const { key, shiftKey, altKey } = event
+    if (stepInput.active && !event.ctrlKey && !event.metaKey && !altKey && stepKey(event)) return
     if (altKey && (key === 'ArrowUp' || key === 'ArrowDown')) {
       event.preventDefault()
       const by = key === 'ArrowUp' ? 10 : -10
@@ -643,6 +737,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     /** Close the clip, leaving the note that says how to open one. */
     hide () {
       abandon?.()
+      stepInput.reset()
       clip = null
       chosen = new Set()
       preview = null

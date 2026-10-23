@@ -5,8 +5,9 @@
 // (jig:folder) and changes nothing that is heard.
 //
 // Move up and Move down shift the whole run past its neighbour. One that goes nowhere (the first run has no Move up)
-// is left out, not disabled.
-export function createFolderBar (document, { onToggle, onMove = null }) {
+// is left out, not disabled. A grip drags the whole run to another row, where the page can follow a drag; the two buttons do
+// the same by keyboard, so the grip says so.
+export function createFolderBar (document, { onToggle, onMove = null, onGrip = null }) {
   const element = document.createElement('div')
   element.className = 'timeline-folder'
   element.setAttribute('role', 'group')
@@ -15,7 +16,13 @@ export function createFolderBar (document, { onToggle, onMove = null }) {
   button.className = 'folder-toggle'
   let name = ''
   button.addEventListener('click', () => onToggle(name))
-  element.append(button)
+  // The grip sits first, as a track's does, and is named for what the keys do instead.
+  const grip = document.createElement('button')
+  grip.type = 'button'
+  grip.className = 'folder-grip'
+  grip.textContent = '⠿'
+  grip.addEventListener('pointerdown', event => { if (event.button === 0) onGrip(event) })
+  element.append(...(onGrip ? [grip] : []), button)
   const move = (delta, text) => {
     const step = document.createElement('button')
     step.type = 'button'
@@ -35,6 +42,7 @@ export function createFolderBar (document, { onToggle, onMove = null }) {
       down.hidden = !canDown
       up.setAttribute('aria-label', `Move folder ${folder} up`)
       down.setAttribute('aria-label', `Move folder ${folder} down`)
+      grip.setAttribute('aria-label', `Drag to move folder ${folder}, or use its Move up and Move down buttons`)
       const tracks = count === 1 ? '1 track' : `${count} tracks`
       // The state is in the words and in aria-expanded, never in the arrow alone.
       button.textContent = `${collapsed ? '▸' : '▾'} ${folder}, ${tracks}${collapsed ? ', hidden' : ''}`

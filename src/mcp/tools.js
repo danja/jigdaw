@@ -33,6 +33,16 @@ const failed = (message, extra = {}) => ({ ok: false, error: message, ...extra }
  * itself.
  */
 /** One note of a MIDI clip, as the clip tools take it. project-format.md "Clips". */
+const CONTROLLER_SCHEMA = Object.freeze({
+  type: 'object',
+  properties: {
+    atBeat: { type: 'number' },
+    controller: { description: 'a MIDI controller number 0 to 127, or the string "pitchBend"', oneOf: [{ type: 'integer' }, { type: 'string', enum: ['pitchBend'] }] },
+    value: { type: 'integer', description: '0 to 127 for a controller, -8192 to 8191 for pitchBend (0 is the wheel at rest)' }
+  },
+  required: ['atBeat', 'controller', 'value']
+})
+
 const NOTE_SCHEMA = Object.freeze({
   type: 'object',
   properties: {
@@ -478,12 +488,13 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           startBeat: { type: 'number' },
           lengthBeats: { type: 'number' },
           notes: { type: 'array', items: NOTE_SCHEMA },
+          controllers: { type: 'array', items: CONTROLLER_SCHEMA },
           expectedRevision: { type: 'integer' }
         },
         required: ['trackId', 'startBeat', 'lengthBeats']
       },
-      async handler ({ trackId, startBeat, lengthBeats, notes = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes }], { expectedRevision })
+      async handler ({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes, controllers }], { expectedRevision })
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
       }
     },
@@ -527,6 +538,28 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       },
       async handler ({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: 'setClipNotes', id: clipId, notes }], { expectedRevision })
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
+      }
+    },
+
+    {
+      name: 'clip_set_controllers',
+      description:
+        'Replace every controller and pitch bend event of a MIDI clip, as one edit. Each event has atBeat (from the clip start), ' +
+        'controller (a MIDI controller number 0 to 127, such as 1 modulation, 7 volume, 10 pan, 64 sustain; or "pitchBend") and ' +
+        'value (0 to 127 for a controller; -8192 to 8191 for pitchBend, where 0 is the wheel at rest). An event holds its value until ' +
+        'the next one for the same controller. One controller has at most one event at a beat.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          clipId: { type: 'string' },
+          controllers: { type: 'array', items: CONTROLLER_SCHEMA },
+          expectedRevision: { type: 'integer' }
+        },
+        required: ['clipId', 'controllers']
+      },
+      async handler ({ clipId, controllers, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: 'setClipControllers', id: clipId, controllers }], { expectedRevision })
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind })
       }
     },

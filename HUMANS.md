@@ -35,6 +35,14 @@ is wrong in INBOX.md.
 - **Use the Script tab with a screen reader and a real phone** (new 2026-10-01): run a script with an error and listen to whether
   "Problems" and the status are announced and the "Go to line" buttons make sense, run one that plays, and use Control+Enter. The
   studio page sends a phone to the simple page, so add `?studio` to the address to reach the tab on one.
+- **Open an exported MIDI file in a DAW or notation tool, and import one made elsewhere** (new 2026-10-23): press Export MIDI in the studio page's top bar with a few notes, tempo
+  changes and a 6/8 section in the project, and open the .mid in Reaper, MuseScore or another program. Check the notes, tempo
+  changes and bar lines land where they do here. I checked the bytes with two separate readers of my own but have no other MIDI
+  program here. Then use Import MIDI on a file from a real DAW or a downloaded one and check the tracks, tempo and signature that arrive, and that Undo takes it all back. A tool that would help me: `pip install mido`, so a file can be checked against a library I did not write.
+- **Record from a real MIDI keyboard** (new 2026-10-23): press MIDI in and allow it, select or arm a track with a synth, press Rec MIDI, play with the pitch bend wheel and modulation, and press Stop. Check the notes land on the beats you played, the wheel and modulation come out as events in the lanes under the roll, and one Undo removes the take. I only tried the on-screen keys.
+- **Listen to a pitch bend and a controller lane** (new 2026-10-23): in the note roll choose Pitch bend or Modulation under the notes, draw a few events on a clip that
+  plays an instrument that answers them (the Pulse synth, or any plugin that reads the wheel or modulation), and press play. I checked that the right MIDI messages are sent at the right
+  frames and that the file export carries them, but cannot hear a plugin. Also try stopping with the wheel up: it should return to rest.
 - **Use the piano roll with a screen reader** (new 2026-10-22): open a MIDI clip and move through the grid. Listen to whether
   "row 68 of 128" and the column numbers make sense as the window scrolls with Page Up and Page Down, whether the long help
   text read on entering the grid is too much, whether the dot and "outside the scale" on rows are clear with a scale chosen, and

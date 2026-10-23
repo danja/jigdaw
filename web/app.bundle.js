@@ -13341,6 +13341,11 @@ var init_Vocabulary = __esm({
         MidiClip: `${JIG}MidiClip`,
         AudioClip: `${JIG}AudioClip`,
         Note: `${JIG}Note`,
+        ControllerEvent: `${JIG}ControllerEvent`,
+        PitchBendEvent: `${JIG}PitchBendEvent`,
+        controllerEvent: `${JIG}controllerEvent`,
+        controller: `${JIG}controller`,
+        bend: `${JIG}bend`,
         clip: `${JIG}clip`,
         note: `${JIG}note`,
         source: `${JIG}source`,
@@ -17361,30 +17366,30 @@ var init_ForeignTrust = __esm({
 // src/host/ForeignLoader.js
 async function unpackContainer(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const u16 = (at2) => view.getUint16(at2, true);
-  const u32 = (at2) => view.getUint32(at2, true);
+  const u162 = (at2) => view.getUint16(at2, true);
+  const u322 = (at2) => view.getUint32(at2, true);
   let end = -1;
   for (let at2 = bytes.length - 22; at2 >= 0; at2--) {
-    if (u32(at2) === 101010256) {
+    if (u322(at2) === 101010256) {
       end = at2;
       break;
     }
   }
   if (end < 0) throw new LoadError(STEPS.fetchResource, "the container is not a zip: no end of central directory record");
-  const count = u16(end + 10);
-  let at = u32(end + 16);
+  const count = u162(end + 10);
+  let at = u322(end + 16);
   const files = /* @__PURE__ */ new Map();
   for (let i2 = 0; i2 < count; i2++) {
-    if (u32(at) !== 33639248) throw new LoadError(STEPS.fetchResource, "the container's central directory is malformed");
-    const method = u16(at + 10);
-    const compressed = u32(at + 20);
-    const nameLength = u16(at + 28);
-    const extraLength = u16(at + 30);
-    const commentLength = u16(at + 32);
-    const offset = u32(at + 42);
+    if (u322(at) !== 33639248) throw new LoadError(STEPS.fetchResource, "the container's central directory is malformed");
+    const method = u162(at + 10);
+    const compressed = u322(at + 20);
+    const nameLength = u162(at + 28);
+    const extraLength = u162(at + 30);
+    const commentLength = u162(at + 32);
+    const offset = u322(at + 42);
     const name2 = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLength));
-    const localNameLength = u16(offset + 26);
-    const localExtraLength = u16(offset + 28);
+    const localNameLength = u162(offset + 26);
+    const localExtraLength = u162(offset + 28);
     const start = offset + 30 + localNameLength + localExtraLength;
     const body = bytes.subarray(start, start + compressed);
     if (!isContained(name2)) {
@@ -18982,8 +18987,8 @@ function reaches(state, from, to, kind = "audio") {
     if (id === to) return true;
     if (seen.has(id)) continue;
     seen.add(id);
-    const track = state.tracks.get(id);
-    if (kind === "audio" && track?.output) stack.push(track.output);
+    const track2 = state.tracks.get(id);
+    if (kind === "audio" && track2?.output) stack.push(track2.output);
     for (const send of state.sends.values()) if (send.from === id && (send.kind ?? "audio") === kind) stack.push(send.to);
   }
   return false;
@@ -19786,7 +19791,7 @@ var Engine = class {
       held.source.disconnect();
     } catch {
     }
-    for (const track of held.stream.getTracks?.() ?? []) track.stop();
+    for (const track2 of held.stream.getTracks?.() ?? []) track2.stop();
     this.#inputs.delete(trackId);
   }
   /**
@@ -20005,19 +20010,41 @@ function automationBetween(transport2, points, segments2, start, end) {
 // src/engine/Scheduler.js
 var NOTE_ON = 144;
 var NOTE_OFF = 128;
+var CONTROL_CHANGE = 176;
+var PITCH_BEND = 224;
+var BEND_CENTRE = Uint8Array.from([PITCH_BEND, 0, 64]);
 function clipNotes(project) {
   const byNode = /* @__PURE__ */ new Map();
-  for (const track of project.tracks) {
-    if (!track.midiInput) continue;
+  for (const track2 of project.tracks) {
+    if (!track2.midiInput) continue;
     for (const clip of project.clips) {
-      if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
+      if (clip.track !== track2.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
       for (const note of clip.notes) {
         const on = clip.startBeat + note.startBeat;
         if (on >= end) continue;
         const off = Math.min(on + note.lengthBeats, end);
-        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
-        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
+        if (!byNode.has(track2.midiInput)) byNode.set(track2.midiInput, []);
+        byNode.get(track2.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
+      }
+    }
+  }
+  return byNode;
+}
+function clipControllers(project) {
+  const byNode = /* @__PURE__ */ new Map();
+  for (const track2 of project.tracks) {
+    if (!track2.midiInput) continue;
+    for (const clip of project.clips) {
+      if (clip.track !== track2.id || clip.kind !== "midi" || clip.muted) continue;
+      const end = clip.startBeat + clip.lengthBeats;
+      for (const event of clip.controllers ?? []) {
+        const on = clip.startBeat + event.atBeat;
+        if (on >= end) continue;
+        const bend = event.controller === "pitchBend";
+        const bytes = bend ? Uint8Array.from([PITCH_BEND, event.value + 8192 & 127, event.value + 8192 >> 7]) : Uint8Array.from([CONTROL_CHANGE, event.controller, event.value]);
+        if (!byNode.has(track2.midiInput)) byNode.set(track2.midiInput, []);
+        byNode.get(track2.midiInput).push({ on, off: on, bytes, bend, key: bend ? "bend" : event.controller });
       }
     }
   }
@@ -20067,6 +20094,9 @@ var Scheduler = class {
   #sampleRate;
   #lookahead;
   #notes;
+  #controllers;
+  // The nodes that were sent a pitch bend, so stopping can bring the wheel back to rest.
+  #bent = /* @__PURE__ */ new Set();
   #transport;
   #send;
   #audio;
@@ -20094,7 +20124,7 @@ var Scheduler = class {
    *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
    *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor({ now, sampleRate, lookahead, notes, transport: transport2, send, audio, playAudio, stopAudio, automation }) {
+  constructor({ now, sampleRate, lookahead, notes, controllers, transport: transport2, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== "function" || typeof notes !== "function" || typeof transport2 !== "function" || typeof send !== "function") {
       throw new Error("Scheduler needs now, notes, transport and send");
     }
@@ -20104,6 +20134,8 @@ var Scheduler = class {
     this.#sampleRate = sampleRate;
     this.#lookahead = lookahead;
     this.#notes = notes;
+    if (controllers !== void 0 && typeof controllers !== "function") throw new Error("Scheduler needs controllers as a function, or none");
+    this.#controllers = controllers ?? null;
     this.#transport = transport2;
     this.#send = send;
     const given = [audio, playAudio, stopAudio].filter((f) => f !== void 0);
@@ -20151,11 +20183,31 @@ var Scheduler = class {
       if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
       outgoing.get(nodeId).push({ frame, bytes, order });
     };
+    const normal = [...segments(transport2, start, end)];
+    const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
     for (const [nodeId, notes] of this.#notes()) {
       for (const note of notesBetween(transport2, notes, start, end)) {
         const onFrame = this.#frame(note.on);
         add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1);
         this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame });
+      }
+    }
+    if (this.#controllers) {
+      for (const [nodeId, events] of this.#controllers()) {
+        for (const event of notesBetween(transport2, events, start, end)) {
+          add(nodeId, this.#frame(event.on), event.bytes, 0.5);
+          if (event.bend) this.#bent.add(nodeId);
+        }
+        for (const pass of passes) {
+          if (!(pass.from >= start && pass.from < end) || !(pass.lo > 0)) continue;
+          const held = /* @__PURE__ */ new Map();
+          for (const e of [...events].sort((a2, b) => a2.on - b.on)) if (transport2.secondsAtBeat(e.on) < pass.lo) held.set(e.key, e);
+          for (const e of events) if (e.bend && !held.has("bend")) held.set("bend", { ...e, bytes: BEND_CENTRE });
+          for (const e of held.values()) {
+            add(nodeId, this.#frame(pass.from), e.bytes, 0.25);
+            if (e.bend) this.#bent.add(nodeId);
+          }
+        }
       }
     }
     if (this.#audio) {
@@ -20164,15 +20216,13 @@ var Scheduler = class {
       }
     }
     if (this.#automation) {
-      const normal = [...segments(transport2, start, end)];
-      const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
-      this.#seed = null;
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport2, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin));
         }
       }
     }
+    this.#seed = null;
     this.#sounding = this.#sounding.filter((s) => {
       if (s.off >= end) return true;
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
@@ -20190,6 +20240,11 @@ var Scheduler = class {
       if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, []);
       outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 });
     }
+    for (const nodeId of this.#bent) {
+      if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
+      outgoing.get(nodeId).push({ frame: nowFrame, bytes: BEND_CENTRE, order: 2 });
+    }
+    this.#bent.clear();
     this.#sounding = [];
     this.#origin = null;
     this.#stopAudio?.();
@@ -20747,8 +20802,9 @@ function isLoadableIRI(value2) {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
 }
 var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+var cloneClip = (c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) });
 var cloneState = (state) => ({
-  clips: new Map([...state.clips].map(([id, c3]) => [id, { ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) }])),
+  clips: new Map([...state.clips].map(([id, c3]) => [id, cloneClip(c3)])),
   tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
   nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
   connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
@@ -20796,6 +20852,26 @@ function checkNotes(notes) {
     return { startBeat, lengthBeats, pitch, velocity };
   }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
 }
+var PITCH_BEND2 = "pitchBend";
+var BEND_RANGE = Object.freeze({ min: -8192, max: 8191 });
+function checkControllers(events) {
+  if (!Array.isArray(events)) throw new Error("controllers must be an array");
+  const seen = /* @__PURE__ */ new Set();
+  const checked = events.map((event, i2) => {
+    const { atBeat, controller, value: value2 } = event ?? {};
+    if (!(Number.isFinite(atBeat) && atBeat >= 0)) throw new Error(`controller event ${i2} needs an atBeat at or after zero`);
+    const bend = controller === PITCH_BEND2;
+    if (!bend && !(Number.isInteger(controller) && controller >= 0 && controller <= 127)) throw new Error(`controller event ${i2} needs a controller from 0 to 127, or pitchBend`);
+    const [low, high] = bend ? [BEND_RANGE.min, BEND_RANGE.max] : [0, 127];
+    if (!(Number.isInteger(value2) && value2 >= low && value2 <= high)) throw new Error(`controller event ${i2} needs a whole value from ${low} to ${high}`);
+    const key = `${controller}@${atBeat}`;
+    if (seen.has(key)) throw new Error(`controller event ${i2} repeats ${bend ? "pitch bend" : `controller ${controller}`} at beat ${atBeat}`);
+    seen.add(key);
+    return { atBeat, controller, value: value2 };
+  });
+  const order = (e) => e.controller === PITCH_BEND2 ? 128 : e.controller;
+  return checked.sort((a2, b) => a2.atBeat - b.atBeat || order(a2) - order(b));
+}
 function checkFade(name2, value2) {
   if (!(Number.isFinite(value2) && value2 >= 0)) throw new Error(`${name2} must be zero or more beats`);
   return value2;
@@ -20815,14 +20891,14 @@ function checkPlacement(startBeat, lengthBeats) {
   if (!(Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip needs a lengthBeats above zero");
 }
 function releaseInputs(state, nodeId) {
-  for (const track of state.tracks.values()) {
-    if (track.midiInput === nodeId) track.midiInput = null;
-    if (track.audioInput === nodeId) track.audioInput = null;
+  for (const track2 of state.tracks.values()) {
+    if (track2.midiInput === nodeId) track2.midiInput = null;
+    if (track2.audioInput === nodeId) track2.audioInput = null;
   }
   if (state.master.audioInput === nodeId) state.master = { ...state.master, audioInput: null };
 }
-function checkPlace(state, track) {
-  if (track !== MASTER_TRACK && !state.tracks.has(track)) throw new Error(`no such track: ${track}`);
+function checkPlace(state, track2) {
+  if (track2 !== MASTER_TRACK && !state.tracks.has(track2)) throw new Error(`no such track: ${track2}`);
 }
 var OPERATIONS = {
   ...ARRANGEMENT_OPERATIONS,
@@ -20847,17 +20923,17 @@ var OPERATIONS = {
   },
   /** Rename a track, or name the nodes its clips play into. */
   setTrack(state, change) {
-    const track = state.tracks.get(change.id);
-    if (!track) throw new Error(`no such track: ${change.id}`);
-    if (change.label !== void 0) track.label = change.label;
+    const track2 = state.tracks.get(change.id);
+    if (!track2) throw new Error(`no such track: ${change.id}`);
+    if (change.label !== void 0) track2.label = change.label;
     for (const key of ["midiInput", "audioInput"]) {
       if (change[key] === void 0) continue;
       checkTrackInput(state, change.id, change[key], key);
-      track[key] = change[key];
+      track2[key] = change[key];
     }
     if (change.output !== void 0) {
       checkTrackOutput(state, change.id, change.output);
-      track.output = change.output;
+      track2.output = change.output;
     }
     return change.id;
   },
@@ -20920,6 +20996,7 @@ var OPERATIONS = {
     const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
+      clip.controllers = checkControllers(change.controllers ?? []);
     } else {
       if (typeof change.source !== "string" || !URL.canParse(change.source)) {
         throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
@@ -20931,6 +21008,7 @@ var OPERATIONS = {
       clip.fadeInBeats = checkFade("fadeInBeats", change.fadeInBeats ?? 0);
       clip.fadeOutBeats = checkFade("fadeOutBeats", change.fadeOutBeats ?? 0);
       clip.notes = [];
+      clip.controllers = [];
     }
     state.clips.set(id, clip);
     return id;
@@ -20971,6 +21049,15 @@ var OPERATIONS = {
     if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
     refuseIfLocked(clip, change, "edited");
     clip.notes = checkNotes(change.notes);
+    return change.id;
+  },
+  /** Replace a MIDI clip's controller and pitch bend events, all at once, like its notes. */
+  setClipControllers(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no controller events`);
+    refuseIfLocked(clip, change, "edited");
+    clip.controllers = checkControllers(change.controllers);
     return change.id;
   },
   removeClip(state, change) {
@@ -21206,9 +21293,9 @@ var OPERATIONS = {
    * setting all four is one edit rather than four.
    */
   setTrackChannel(state, change) {
-    const track = state.tracks.get(change.track);
-    if (!track) throw new Error(`no such track: ${change.track}`);
-    track.channel = nextChannel(track.channel, change);
+    const track2 = state.tracks.get(change.track);
+    if (!track2) throw new Error(`no such track: ${change.track}`);
+    track2.channel = nextChannel(track2.channel, change);
     return change.track;
   },
   setNodeState(state, change) {
@@ -21242,7 +21329,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [] } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -21446,7 +21533,7 @@ var Project = class {
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
-      clips: this.clips.map((c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) })),
+      clips: this.clips.map(cloneClip),
       transport: {
         ...this.#state.transport,
         tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })),
@@ -21927,7 +22014,7 @@ function planUnpack({ project, nodeId, tree, state = null }) {
     const hit = probe.connections.find((c3) => memberOfFlat.has(c3.to.node));
     return hit ? memberOfFlat.get(hit.to.node) : null;
   };
-  const track = project.track(node.track);
+  const track2 = project.track(node.track);
   const midiKind = composite.connections.find((c3) => c3.from.node === composite.iri && isMidi(c3.signalKind))?.signalKind;
   const audioKind = composite.connections.find((c3) => c3.from.node === composite.iri && !isMidi(c3.signalKind))?.signalKind;
   return {
@@ -21935,8 +22022,8 @@ function planUnpack({ project, nodeId, tree, state = null }) {
     bypassed: node.bypassed === true,
     members,
     connections,
-    midiInput: track?.midiInput === nodeId && midiKind ? takeover(midiKind) : null,
-    audioInput: track?.audioInput === nodeId && audioKind ? takeover(audioKind) : null
+    midiInput: track2?.midiInput === nodeId && midiKind ? takeover(midiKind) : null,
+    audioInput: track2?.audioInput === nodeId && audioKind ? takeover(audioKind) : null
   };
 }
 function clean(e) {
@@ -22032,9 +22119,9 @@ function planPack({ project, nodeIds, profileOf, expose = "set" }) {
       }
     }
   }
-  const track = project.track(nodes[0].track);
-  if (track?.midiInput && selected.has(track.midiInput) && !has("in", false)) {
-    connections.push({ from: { node: null, portIndex: 0 }, to: { node: idOf2.get(track.midiInput), portIndex: 0 }, signalKind: MIDI3 });
+  const track2 = project.track(nodes[0].track);
+  if (track2?.midiInput && selected.has(track2.midiInput) && !has("in", false)) {
+    connections.push({ from: { node: null, portIndex: 0 }, to: { node: idOf2.get(track2.midiInput), portIndex: 0 }, signalKind: MIDI3 });
     counters.set(`in|${MIDI3}`, 1);
   }
   const audioInputs = Math.max(0, ...connections.filter((c3) => c3.from.node === null && !isMidi(c3.signalKind)).map((c3) => c3.from.portIndex + 1));
@@ -22551,21 +22638,21 @@ var UndoHistory = class {
         if (live.bypassed === true !== (node.bypassed === true)) reconcile.push({ op: "setNode", id: node.id, bypassed: node.bypassed === true });
       }
       const liveIdsAfterReload = new Set(dispatcher.project.nodes.map((n2) => n2.id));
-      for (const track of target2.tracks) {
-        const live = dispatcher.project.track(track.id);
-        const c3 = track.channel;
+      for (const track2 of target2.tracks) {
+        const live = dispatcher.project.track(track2.id);
+        const c3 = track2.channel;
         const l = live.channel;
         if (c3.gain !== l.gain || c3.pan !== l.pan || c3.muted !== l.muted || c3.soloed !== l.soloed) {
-          reconcile.push({ op: "setTrackChannel", track: track.id, ...c3 });
+          reconcile.push({ op: "setTrackChannel", track: track2.id, ...c3 });
         }
         const input = (id) => id !== null && liveIdsAfterReload.has(id) ? id : null;
-        if (live.label !== track.label || live.midiInput !== input(track.midiInput) || live.audioInput !== input(track.audioInput)) {
+        if (live.label !== track2.label || live.midiInput !== input(track2.midiInput) || live.audioInput !== input(track2.audioInput)) {
           reconcile.push({
             op: "setTrack",
-            id: track.id,
-            label: track.label,
-            midiInput: input(track.midiInput),
-            audioInput: input(track.audioInput)
+            id: track2.id,
+            label: track2.label,
+            midiInput: input(track2.midiInput),
+            audioInput: input(track2.audioInput)
           });
         }
       }
@@ -22804,10 +22891,10 @@ var OpDispatcher = class {
     const compiled = this.compile();
     const own = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map((t) => [t.id, 0]));
     const delays = this.#alignment(own);
-    return this.#project.tracks.map((track) => ({
-      trackId: track.id,
-      frames: own.get(track.id) ?? 0,
-      alignFrames: delays.get(track.id) ?? 0
+    return this.#project.tracks.map((track2) => ({
+      trackId: track2.id,
+      frames: own.get(track2.id) ?? 0,
+      alignFrames: delays.get(track2.id) ?? 0
     }));
   }
   /**
@@ -22837,9 +22924,9 @@ var OpDispatcher = class {
     return new Map(tracks.map((t) => [t.id, this.#alignTracks ? slowest.get(t.output ?? null) - arrivalOf(t.id) : 0]));
   }
   #trackFrames(compiled) {
-    return new Map(this.#project.tracks.map((track) => [
-      track.id,
-      this.#project.nodes.filter((n2) => n2.track === track.id).flatMap((n2) => this.#flatIdsOf(n2.id)).reduce((most, id) => Math.max(most, (compiled.arrival.get(id) ?? 0) + this.#latencyOf(id)), 0)
+    return new Map(this.#project.tracks.map((track2) => [
+      track2.id,
+      this.#project.nodes.filter((n2) => n2.track === track2.id).flatMap((n2) => this.#flatIdsOf(n2.id)).reduce((most, id) => Math.max(most, (compiled.arrival.get(id) ?? 0) + this.#latencyOf(id)), 0)
     ]));
   }
   /** The ids a model node has in the flat graph: its own, or its members'. */
@@ -22850,14 +22937,14 @@ var OpDispatcher = class {
   #applyTrackDelays(compiled) {
     if (!this.#engine) return;
     const delays = this.#alignment(this.#trackFrames(compiled));
-    for (const track of this.#project.tracks) {
-      const wanted = delays.get(track.id) ?? 0;
-      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue;
+    for (const track2 of this.#project.tracks) {
+      const wanted = delays.get(track2.id) ?? 0;
+      if ((this.#trackDelays.get(track2.id) ?? 0) === wanted) continue;
       try {
-        this.#engine.setTrackDelay(track.id, wanted);
-        this.#trackDelays.set(track.id, wanted);
+        this.#engine.setTrackDelay(track2.id, wanted);
+        this.#trackDelays.set(track2.id, wanted);
       } catch (error2) {
-        console.error(`could not align track ${track.id}: ${error2.message}`);
+        console.error(`could not align track ${track2.id}: ${error2.message}`);
       }
     }
     for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id);
@@ -23124,7 +23211,7 @@ var OpDispatcher = class {
    * and everything the model says about the node (settings, bypass, track) is read through the composite's
    * exposed ports and boundary, never by reaching a member directly.
    */
-  #adoptComposite(nodeId, entry, { result, track, position: position2 }) {
+  #adoptComposite(nodeId, entry, { result, track: track2, position: position2 }) {
     const flatIds = [];
     for (const { path, entry: member } of entry.members) {
       const flat = flatIdOf(nodeId, path);
@@ -23140,8 +23227,8 @@ var OpDispatcher = class {
       });
     }
     if (position2) this.#project.moveNode(nodeId, position2.x, position2.y);
-    this.#emit({ type: "plugin-added", nodeId, trackId: track, entry });
-    return { ...result, nodeId, trackId: track, entry };
+    this.#emit({ type: "plugin-added", nodeId, trackId: track2, entry });
+    return { ...result, nodeId, trackId: track2, entry };
   }
   /**
    * Turn a composite plugin's node back into its members, as ordinary nodes on the same track, joined to what was around it, with
@@ -23510,11 +23597,11 @@ var OpDispatcher = class {
   audibility() {
     const tracks = this.#project.tracks;
     const anySoloed = tracks.some((t) => t.channel.soloed);
-    return tracks.map((track) => ({
-      trackId: track.id,
-      gain: track.channel.gain,
-      pan: track.channel.pan,
-      silent: track.channel.muted || anySoloed && !track.channel.soloed
+    return tracks.map((track2) => ({
+      trackId: track2.id,
+      gain: track2.channel.gain,
+      pan: track2.channel.pan,
+      silent: track2.channel.muted || anySoloed && !track2.channel.soloed
     }));
   }
   /** Push every track's channel strip to the engine. */
@@ -23531,9 +23618,9 @@ var OpDispatcher = class {
       if (send.kind === "midi") continue;
       this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap });
     }
-    for (const track of this.#project.tracks) {
-      this.#engine.setTrackOutput(track.id, track.output ?? null);
-      this.#engine.setTrackArrival(track.id, this.#arrivalEngineId(track.audioInput));
+    for (const track2 of this.#project.tracks) {
+      this.#engine.setTrackOutput(track2.id, track2.output ?? null);
+      this.#engine.setTrackArrival(track2.id, this.#arrivalEngineId(track2.audioInput));
     }
     this.#engine.setMasterArrival(this.#arrivalEngineId(this.#project.master.audioInput));
     this.#engine.setMaster(this.#project.master);
@@ -23840,9 +23927,9 @@ async function bounce({
   await Promise.all(sources.map((iri5) => clipPlayer.load(iri5)));
   const errors = [...opened.errors, ...sources.filter((iri5) => clipPlayer.failure(iri5)).map((iri5) => `audio ${iri5}: ${clipPlayer.failure(iri5).message}`)];
   const playAudioClip = (clip, { when, offset, duration: duration2 }) => {
-    const track = dispatcher.project.track(clip.track);
-    if (!track) return;
-    const destination = track.audioInput ? dispatcher.engineNode(track.audioInput)?.node : engine.trackInput(track.id);
+    const track2 = dispatcher.project.track(clip.track);
+    if (!track2) return;
+    const destination = track2.audioInput ? dispatcher.engineNode(track2.audioInput)?.node : engine.trackInput(track2.id);
     if (!destination) return;
     const timing = dispatcher.transport();
     const fadeIn = clip.fadeInBeats > 0 ? timing.secondsAtBeat(clip.on + clip.fadeInBeats) - timing.secondsAtBeat(clip.on) : 0;
@@ -23855,6 +23942,7 @@ async function bounce({
     sampleRate,
     lookahead: hostConfig.schedulerLookaheadMs / 1e3,
     notes: () => clipNotes(dispatcher.project),
+    controllers: () => clipControllers(dispatcher.project),
     transport: () => dispatcher.transport(),
     send: (nodeId, events) => dispatcher.sendEvents(nodeId, events),
     audio: () => clipAudio(dispatcher.project),
@@ -24137,13 +24225,13 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
     try {
       const d = await ctx2.runtime.ensureRunning();
       const range = loopRange(d.project);
-      const makers = d.project.tracks.filter((track) => d.project.nodes.some((n2) => n2.track === track.id && (d.engineNode(n2.id)?.profile?.audioOutputs ?? 0) > 0) || d.project.clips.some((c3) => c3.track === track.id && c3.kind === "audio"));
+      const makers = d.project.tracks.filter((track2) => d.project.nodes.some((n2) => n2.track === track2.id && (d.engineNode(n2.id)?.profile?.audioOutputs ?? 0) > 0) || d.project.clips.some((c3) => c3.track === track2.id && c3.kind === "audio"));
       if (makers.length === 0) throw new Error("no track makes sound, so there are no stems");
       const entries = [];
-      for (const [index, track] of makers.entries()) {
-        const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+      for (const [index, track2] of makers.entries()) {
+        const label = ctx2.rack.trackLabel(track2, d.project.tracks.indexOf(track2));
         log2(`stem ${index + 1} of ${makers.length}: ${label}`);
-        const { buffer } = await render({ onlyTrack: track.id, announce: false, range });
+        const { buffer } = await render({ onlyTrack: track2.id, announce: false, range });
         const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
         if (peak < 1e-5) {
           log2(`${label} made no sound, so it is left out`);
@@ -24163,9 +24251,9 @@ function createBounce(ctx2, { download = defaultDownload, bounceFn = bounce } = 
   }
   async function freezeTrack(trackId) {
     const d = await ctx2.runtime.ensureRunning();
-    const track = d.project.track(trackId);
-    if (!track) throw new Error(`no such track: ${trackId}`);
-    const label = ctx2.rack.trackLabel(track, d.project.tracks.indexOf(track));
+    const track2 = d.project.track(trackId);
+    if (!track2) throw new Error(`no such track: ${trackId}`);
+    const label = ctx2.rack.trackLabel(track2, d.project.tracks.indexOf(track2));
     const { buffer, seconds } = await render({ onlyTrack: trackId });
     const peak = Math.max(...[0, 1].map((c3) => buffer.getChannelData(c3).reduce((m, v) => Math.max(m, Math.abs(v)), 0)));
     if (peak < 1e-5) {
@@ -24199,6 +24287,557 @@ function defaultDownload(bytes, name2, type) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1e4);
+}
+
+// src/model/MidiFile.js
+var TICKS_PER_QUARTER = 480;
+var ENCODER = new TextEncoder();
+function vlq(value2) {
+  if (!Number.isInteger(value2) || value2 < 0 || value2 > 268435455) throw new Error(`a MIDI delta time is a whole number up to 268435455: ${value2}`);
+  const bytes = [value2 & 127];
+  for (let rest = value2 >>> 7; rest > 0; rest >>>= 7) bytes.unshift(rest & 127 | 128);
+  return bytes;
+}
+var u32 = (n2) => [n2 >>> 24 & 255, n2 >>> 16 & 255, n2 >>> 8 & 255, n2 & 255];
+var u16 = (n2) => [n2 >>> 8 & 255, n2 & 255];
+function tickMap(transport2) {
+  const regions = [{ atBeat: 0, beatsPerBar: transport2.beatsPerBar, beatUnit: transport2.beatUnit }, ...transport2.signaturePoints ?? []].sort((a2, b) => a2.atBeat - b.atBeat);
+  let base = 0;
+  for (let i2 = 0; i2 < regions.length; i2++) {
+    regions[i2].baseTicks = base;
+    if (i2 + 1 < regions.length) base += (regions[i2 + 1].atBeat - regions[i2].atBeat) * TICKS_PER_QUARTER * 4 / regions[i2].beatUnit;
+  }
+  const regionAt = (beat) => regions.findLast((r) => r.atBeat <= beat) ?? regions[0];
+  return {
+    regions,
+    regionAt,
+    tick: (beat) => {
+      const r = regionAt(beat);
+      return Math.round(r.baseTicks + (beat - r.atBeat) * TICKS_PER_QUARTER * 4 / r.beatUnit);
+    }
+  };
+}
+function track(events) {
+  const sorted = [...events].sort((a2, b) => a2[0] - b[0] || a2[1] - b[1]);
+  const body = [];
+  let last = 0;
+  for (const [tick, , bytes] of sorted) {
+    body.push(...vlq(tick - last), ...bytes);
+    last = tick;
+  }
+  body.push(0, 255, 47, 0);
+  return [...ENCODER.encode("MTrk"), ...u32(body.length), ...body];
+}
+var meta = (type, data) => [255, type, ...vlq(data.length), ...data];
+var nameEvent = (text) => [0, 0, meta(3, [...ENCODER.encode(text)])];
+function trackHasMidi(project, trackId) {
+  return project.clips.some((c3) => c3.track === trackId && c3.kind === "midi" && !c3.muted && (c3.notes.length > 0 || (c3.controllers ?? []).length > 0));
+}
+function writeMidiFile(project, { trackIds = null } = {}) {
+  if (trackIds !== null) {
+    for (const id of trackIds) if (!project.track(id)) throw new Error(`no such track: ${id}`);
+  }
+  const { transport: transport2 } = project;
+  const map = tickMap(transport2);
+  const conductor = [nameEvent(project.label ?? "Jiggy")];
+  for (const region of map.regions) {
+    const dd = Math.log2(region.beatUnit);
+    if (!Number.isInteger(dd)) throw new Error(`a beat unit of ${region.beatUnit} cannot be written to a MIDI file; use a power of two`);
+    conductor.push([map.tick(region.atBeat), 1, meta(88, [region.beatsPerBar, dd, 24, 8])]);
+  }
+  for (const point of [...transport2.tempoPoints].sort((a2, b) => a2.atBeat - b.atBeat)) {
+    const quartersPerMinute = point.bpm * 4 / map.regionAt(point.atBeat).beatUnit;
+    const micros = Math.round(6e7 / quartersPerMinute);
+    if (micros > 16777215) throw new Error(`a tempo of ${point.bpm} is too slow for a MIDI file`);
+    conductor.push([map.tick(point.atBeat), 2, meta(81, [micros >> 16 & 255, micros >> 8 & 255, micros & 255])]);
+  }
+  const tracks = [];
+  let notes = 0;
+  let controllers = 0;
+  let channel = 0;
+  for (const t of project.orderedTracks) {
+    if (trackIds !== null && !trackIds.includes(t.id)) continue;
+    const clips = project.clips.filter((c3) => c3.track === t.id && c3.kind === "midi" && !c3.muted);
+    const events = [];
+    for (const clip of clips) {
+      for (const n2 of clip.notes) {
+        if (!(n2.startBeat < clip.lengthBeats)) continue;
+        const on = map.tick(clip.startBeat + n2.startBeat);
+        const off = Math.max(on + 1, map.tick(clip.startBeat + Math.min(n2.startBeat + n2.lengthBeats, clip.lengthBeats)));
+        const velocity = Math.min(127, Math.max(1, Math.round(n2.velocity)));
+        events.push([on, 1, [144 | channel, n2.pitch, velocity]], [off, 0, [128 | channel, n2.pitch, 0]]);
+        notes++;
+      }
+      for (const e of clip.controllers ?? []) {
+        if (!(e.atBeat < clip.lengthBeats)) continue;
+        const at = map.tick(clip.startBeat + e.atBeat);
+        events.push([at, 0.5, e.controller === "pitchBend" ? [224 | channel, e.value + 8192 & 127, e.value + 8192 >> 7] : [176 | channel, e.controller, e.value]]);
+        controllers++;
+      }
+    }
+    if (events.length === 0) continue;
+    tracks.push(track([nameEvent(t.label ?? t.id), ...events]));
+    channel = (channel + 1) % 16;
+    if (channel === 9) channel = 10;
+  }
+  if (tracks.length === 0) throw new Error("there are no MIDI notes to export");
+  const header = [...ENCODER.encode("MThd"), ...u32(6), ...u16(1), ...u16(tracks.length + 1), ...u16(TICKS_PER_QUARTER)];
+  const bytes = new Uint8Array([...header, ...track(conductor), ...tracks.flat()]);
+  return { bytes, tracks: tracks.length, notes, controllers };
+}
+
+// web/app/MidiExport.js
+function createMidiExport(ctx2, { download = defaultDownload } = {}) {
+  const log2 = (...args) => ctx2.log(...args);
+  function exportMidi({ trackIds = null } = {}) {
+    const project = ctx2.dispatcher?.project;
+    if (!project) throw new Error("there is nothing to export yet");
+    const { bytes, tracks, notes } = writeMidiFile(project, { trackIds });
+    const safe = (text) => text.replace(/[^\w.-]+/g, "-");
+    const only = trackIds?.length === 1 ? `-${safe(project.track(trackIds[0]).label ?? trackIds[0])}` : trackIds ? "-selected" : "";
+    const name2 = `${safe(project.label ?? "jiggy")}${only}.mid`;
+    download(bytes, name2, "audio/midi");
+    log2(`exported ${name2}: ${notes} note${notes === 1 ? "" : "s"} on ${tracks} track${tracks === 1 ? "" : "s"}`, "ok");
+    return { bytes, name: name2 };
+  }
+  return { exportMidi };
+}
+
+// src/model/MidiRead.js
+var DECODER = new TextDecoder("utf-8");
+var Reader = class {
+  constructor(bytes) {
+    this.bytes = bytes;
+    this.at = 0;
+  }
+  need(n2, what) {
+    if (this.at + n2 > this.bytes.length) throw new Error(`the file ends inside ${what}`);
+  }
+  u8(what) {
+    this.need(1, what);
+    return this.bytes[this.at++];
+  }
+  u16(what) {
+    this.need(2, what);
+    const v = this.bytes[this.at] << 8 | this.bytes[this.at + 1];
+    this.at += 2;
+    return v;
+  }
+  u32(what) {
+    this.need(4, what);
+    const b = this.bytes;
+    const v = (b[this.at] << 24 | b[this.at + 1] << 16 | b[this.at + 2] << 8 | b[this.at + 3]) >>> 0;
+    this.at += 4;
+    return v;
+  }
+  text(n2, what) {
+    this.need(n2, what);
+    const s = String.fromCharCode(...this.bytes.slice(this.at, this.at + n2));
+    this.at += n2;
+    return s;
+  }
+  slice(n2, what) {
+    this.need(n2, what);
+    const s = this.bytes.slice(this.at, this.at + n2);
+    this.at += n2;
+    return s;
+  }
+  vlq(what) {
+    let value2 = 0;
+    for (let i2 = 0; i2 < 4; i2++) {
+      const b = this.u8(what);
+      value2 = value2 * 128 + (b & 127);
+      if (!(b & 128)) return value2;
+    }
+    throw new Error(`a delta time in ${what} is longer than four bytes`);
+  }
+};
+function readTrack(bytes, what) {
+  const r = new Reader(bytes);
+  const notes = [];
+  const controllers = [];
+  const tempos = [];
+  const signatures = [];
+  let name2 = null;
+  let tick = 0;
+  let status = 0;
+  const open = /* @__PURE__ */ new Map();
+  const close = (channel, pitch) => {
+    const list = open.get(`${channel}:${pitch}`);
+    const started = list?.shift();
+    if (started) notes.push({ tick: started.tick, ticks: Math.max(1, tick - started.tick), pitch, velocity: started.velocity, channel });
+  };
+  while (r.at < bytes.length) {
+    tick += r.vlq(what);
+    let first4 = r.u8(what);
+    if (first4 & 128) {
+      status = first4;
+      first4 = null;
+    } else if (!status) throw new Error(`${what} starts without a status byte`);
+    if (status === 255) {
+      const type = r.u8(what);
+      const data = r.slice(r.vlq(what), what);
+      if (type === 3 && name2 === null) name2 = DECODER.decode(data);
+      else if (type === 81 && data.length === 3) tempos.push({ tick, microsPerQuarter: data[0] << 16 | data[1] << 8 | data[2] });
+      else if (type === 88 && data.length >= 2) signatures.push({ tick, numerator: data[0], denominator: 2 ** data[1] });
+      else if (type === 47) break;
+      status = 0;
+    } else if (status === 240 || status === 247) {
+      r.slice(r.vlq(what), what);
+      status = 0;
+    } else {
+      const kind = status & 240;
+      const channel = status & 15;
+      const one3 = kind === 192 || kind === 208;
+      const a2 = first4 ?? r.u8(what);
+      const b = one3 ? 0 : r.u8(what);
+      if (kind === 144 && b > 0) {
+        const key = `${channel}:${a2}`;
+        if (!open.has(key)) open.set(key, []);
+        open.get(key).push({ tick, velocity: b });
+      } else if (kind === 128 || kind === 144 && b === 0) close(channel, a2);
+      else if (kind === 176) controllers.push({ tick, channel, controller: a2, value: b });
+      else if (kind === 224) controllers.push({ tick, channel, controller: "pitchBend", value: (b << 7 | a2) - 8192 });
+    }
+  }
+  for (const [key, list] of open) {
+    const [channel, pitch] = key.split(":").map(Number);
+    for (const started of list) notes.push({ tick: started.tick, ticks: Math.max(1, tick - started.tick), pitch, velocity: started.velocity, channel });
+  }
+  notes.sort((x, y) => x.tick - y.tick || x.pitch - y.pitch);
+  return { name: name2, notes, controllers, tempos, signatures, endTick: tick };
+}
+function readMidiFile(bytes) {
+  const r = new Reader(bytes);
+  if (bytes.length < 14 || r.text(4, "the header") !== "MThd") throw new Error("this is not a MIDI file: it does not start with MThd");
+  const length = r.u32("the header");
+  const format = r.u16("the header");
+  const count = r.u16("the header");
+  const division = r.u16("the header");
+  r.at = 8 + length;
+  if (format > 1) throw new Error(`a format ${format} MIDI file is not supported; only format 0 and 1 are`);
+  if (division & 32768) throw new Error("this file counts time in frames, not beats; only ticks per quarter note are supported");
+  if (division === 0) throw new Error("this file has no ticks per quarter note");
+  const parsed = [];
+  for (let i2 = 0; i2 < count; i2++) {
+    if (r.at >= bytes.length) break;
+    const tag = r.text(4, `track ${i2 + 1}`);
+    const size = r.u32(`track ${i2 + 1}`);
+    const body = r.slice(size, `track ${i2 + 1}`);
+    if (tag === "MTrk") parsed.push(readTrack(body, `track ${i2 + 1}`));
+  }
+  if (parsed.length === 0) throw new Error("this MIDI file has no tracks");
+  const tempos = parsed.flatMap((t) => t.tempos).sort((a2, b) => a2.tick - b.tick);
+  const signatures = parsed.flatMap((t) => t.signatures).sort((a2, b) => a2.tick - b.tick);
+  let tracks = parsed;
+  if (format === 0) {
+    const used = [...new Set(parsed.flatMap((t) => [...t.notes, ...t.controllers].map((n2) => n2.channel)))].sort((a2, b) => a2 - b);
+    tracks = used.map((channel) => ({ name: `Channel ${channel + 1}`, notes: parsed.flatMap((t) => t.notes).filter((n2) => n2.channel === channel), controllers: parsed.flatMap((t) => t.controllers).filter((n2) => n2.channel === channel) }));
+  }
+  return {
+    format,
+    division,
+    tracks: tracks.filter((t) => t.notes.length > 0 || t.controllers.length > 0).map((t) => ({ name: t.name, notes: t.notes, controllers: t.controllers })),
+    tempos,
+    signatures
+  };
+}
+
+// src/model/MidiImport.js
+var round = (value2, places = 6) => Math.round(value2 * 10 ** places) / 10 ** places;
+function beatMap(division, regions) {
+  let base = 0;
+  for (let i2 = 0; i2 < regions.length; i2++) {
+    regions[i2].baseBeats = base;
+    if (i2 + 1 < regions.length) base += (regions[i2 + 1].tick - regions[i2].tick) / (division * 4 / regions[i2].beatUnit);
+  }
+  const regionAt = (tick) => regions.findLast((r) => r.tick <= tick) ?? regions[0];
+  return { regionAt, beat: (tick) => {
+    const r = regionAt(tick);
+    return round(r.baseBeats + (tick - r.tick) / (division * 4 / r.beatUnit));
+  } };
+}
+function describeMidiImport(project, midi2, { applyTiming = null } = {}) {
+  if (midi2.tracks.length === 0) throw new Error("this MIDI file has no notes or controller events to import");
+  const warnings = [];
+  const takeTiming = applyTiming ?? !project.clips.some((c3) => c3.kind === "midi");
+  const changes = [];
+  let beatsPerBar = project.transport.beatsPerBar;
+  let map;
+  if (takeTiming) {
+    const first4 = midi2.signatures.find((s) => s.tick === 0) ?? { tick: 0, numerator: 4, denominator: 4 };
+    const regions = [{ tick: 0, beatsPerBar: first4.numerator, beatUnit: first4.denominator }];
+    for (const s of midi2.signatures) if (s.tick > 0) regions.push({ tick: s.tick, beatsPerBar: s.numerator, beatUnit: s.denominator });
+    map = beatMap(midi2.division, regions);
+    beatsPerBar = regions[0].beatsPerBar;
+    const transport2 = { op: "setTransport", beatsPerBar: regions[0].beatsPerBar, beatUnit: regions[0].beatUnit };
+    const points = regions.slice(1).map((r) => ({ atBeat: map.beat(r.tick), beatsPerBar: r.beatsPerBar, beatUnit: r.beatUnit }));
+    try {
+      transport2.signaturePoints = checkSignaturePoints(beatsPerBar, points);
+    } catch (error2) {
+      transport2.signaturePoints = [];
+      warnings.push(`the file's later time signature changes were left out: ${error2.message}`);
+    }
+    const tempos = midi2.tempos.length === 0 || midi2.tempos[0].tick > 0 ? [{ tick: 0, microsPerQuarter: 5e5 }, ...midi2.tempos] : midi2.tempos;
+    const byBeat = /* @__PURE__ */ new Map();
+    for (const t of tempos) {
+      const unit = map.regionAt(t.tick).beatUnit;
+      byBeat.set(map.beat(t.tick), { atBeat: map.beat(t.tick), bpm: round(6e7 / t.microsPerQuarter * unit / 4, 3) });
+    }
+    transport2.tempoPoints = [...byBeat.values()].sort((a2, b) => a2.atBeat - b.atBeat);
+    changes.push(transport2);
+  } else {
+    const unit = project.transport.beatUnit;
+    map = { beat: (tick) => round(tick / midi2.division * unit / 4) };
+    warnings.push("the project already has MIDI clips, so the file's tempo and time signature were not applied");
+  }
+  const nextTrack = Number(project.nextId("track").split("-")[1]);
+  let notes = 0;
+  let controllerEvents = 0;
+  midi2.tracks.forEach((part, i2) => {
+    const track2 = `track-${nextTrack + i2}`;
+    const label = part.name?.trim() ? part.name.trim() : `MIDI track ${i2 + 1}`;
+    const placed = (part.notes ?? []).map((n2) => {
+      const startBeat = map.beat(n2.tick);
+      return { startBeat, lengthBeats: Math.max(round(map.beat(n2.tick + n2.ticks) - startBeat), 1e-6), pitch: n2.pitch, velocity: Math.min(127, Math.max(1, n2.velocity)) };
+    });
+    const last = /* @__PURE__ */ new Map();
+    for (const e of part.controllers ?? []) last.set(`${e.controller}@${e.tick}`, e);
+    const events = [...last.values()].map((e) => ({ atBeat: map.beat(e.tick), controller: e.controller, value: e.value }));
+    const end = Math.max(0, ...placed.map((n2) => n2.startBeat + n2.lengthBeats), ...events.map((e) => e.atBeat));
+    changes.push(
+      { op: "addTrack", id: track2, label },
+      { op: "addClip", track: track2, kind: "midi", startBeat: 0, lengthBeats: Math.max(1, Math.ceil(end / beatsPerBar)) * beatsPerBar, notes: placed, controllers: events }
+    );
+    notes += placed.length;
+    controllerEvents += events.length;
+  });
+  return { changes, tracks: midi2.tracks.length, notes, controllers: controllerEvents, appliedTiming: takeTiming, warnings };
+}
+
+// web/app/MidiImport.js
+var MAX_MIDI_BYTES = 8 * 1024 * 1024;
+function createMidiImport(ctx2) {
+  const log2 = (...args) => ctx2.log(...args);
+  async function importFile(file) {
+    if (file.size > MAX_MIDI_BYTES) throw new Error(`${file.name} is ${(file.size / 1048576).toFixed(1)} MB; a MIDI file over ${MAX_MIDI_BYTES / 1048576} MB is not imported`);
+    const midi2 = readMidiFile(new Uint8Array(await file.arrayBuffer()));
+    await ctx2.runtime.ensureRunning();
+    const result = describeMidiImport(ctx2.dispatcher.project, midi2);
+    const applied = ctx2.dispatcher.apply(result.changes);
+    if (!applied.ok) throw new Error(applied.message);
+    for (const warning of result.warnings) log2(warning);
+    log2(`imported ${file.name}: ${result.notes} note${result.notes === 1 ? "" : "s"} on ${result.tracks} new track${result.tracks === 1 ? "" : "s"}${result.appliedTiming ? ", with its tempo and time signature" : ""}`, "ok");
+    return result;
+  }
+  return { importFile };
+}
+
+// src/model/MidiTake.js
+var MIN_NOTE_BEATS = 0.05;
+var GRID = 96;
+function readTake(messages, { endBeat }) {
+  const notes = [];
+  const open = /* @__PURE__ */ new Map();
+  const events = /* @__PURE__ */ new Map();
+  const stop = (pitch, beat) => {
+    const started = open.get(pitch)?.shift();
+    if (started) notes.push({ startBeat: started.beat, lengthBeats: Math.max(MIN_NOTE_BEATS, beat - started.beat), pitch, velocity: started.velocity });
+  };
+  for (const { beat, bytes } of messages) {
+    const [status, a2, b] = bytes;
+    const kind = status & 240;
+    if (kind === 144 && b > 0) {
+      if (!open.has(a2)) open.set(a2, []);
+      open.get(a2).push({ beat, velocity: Math.min(127, b) });
+    } else if (kind === 128 || kind === 144 && b === 0) stop(a2, beat);
+    else if (kind === 176 && a2 < 120) events.set(`${a2}@${Math.round(beat * GRID)}`, { atBeat: Math.round(beat * GRID) / GRID, controller: a2, value: b });
+    else if (kind === 224) events.set(`bend@${Math.round(beat * GRID)}`, { atBeat: Math.round(beat * GRID) / GRID, controller: "pitchBend", value: (b << 7 | a2) - 8192 });
+  }
+  for (const pitch of open.keys()) while (open.get(pitch).length > 0) stop(pitch, endBeat);
+  const last = /* @__PURE__ */ new Map();
+  const controllers = [...events.values()].sort((x, y) => x.atBeat - y.atBeat).filter((e) => {
+    if (last.get(e.controller) === e.value) return false;
+    last.set(e.controller, e.value);
+    return true;
+  });
+  notes.sort((x, y) => x.startBeat - y.startBeat || x.pitch - y.pitch);
+  return { notes, controllers };
+}
+function describeMidiTake(project, captured, { startBeat, endBeat }) {
+  const bar = project.transport.beatsPerBar;
+  const changes = [];
+  let notes = 0;
+  let controllers = 0;
+  for (const [track2, messages] of captured) {
+    if (!project.track(track2)) continue;
+    const heard = readTake(messages, { endBeat });
+    if (heard.notes.length === 0 && heard.controllers.length === 0) continue;
+    const end = Math.max(endBeat, ...heard.notes.map((n2) => n2.startBeat + n2.lengthBeats)) - startBeat;
+    changes.push({
+      op: "addClip",
+      track: track2,
+      kind: "midi",
+      startBeat,
+      lengthBeats: Math.max(1, Math.ceil(end / bar)) * bar,
+      notes: heard.notes.map((n2) => ({ ...n2, startBeat: Math.max(0, n2.startBeat - startBeat) })),
+      controllers: heard.controllers.map((e) => ({ ...e, atBeat: Math.max(0, e.atBeat - startBeat) }))
+    });
+    notes += heard.notes.length;
+    controllers += heard.controllers.length;
+  }
+  if (changes.length === 0) throw new Error("nothing was played");
+  return { changes, tracks: changes.length, notes, controllers };
+}
+
+// src/ui/Icons.js
+var SVG_NS = "http://www.w3.org/2000/svg";
+var ICONS = Object.freeze({
+  play: "M8 5v14l11-7z",
+  stop: "M6 6h12v12H6z",
+  record: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z",
+  loop: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
+  undo: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",
+  redo: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z",
+  save: "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
+  open: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z",
+  zoomIn: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z",
+  zoomOut: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z",
+  split: "M11 3h2v18h-2zM3 8l5 4-5 4zM21 8l-5 4 5 4z",
+  trimStart: "M4 4h2v16H4zM8 9h12v6H8z",
+  trimEnd: "M18 4h2v16h-2zM4 9h12v6H4z",
+  duplicate: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z",
+  mute: "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z",
+  unmute: "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z",
+  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
+  unlock: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
+  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
+  cut: "M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z",
+  paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
+  bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
+  earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
+  later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+  stems: "M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z",
+  download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+  freeze: "M20.79 13.95l-3.17-.5-3.14-1.45L17.62 10l3.17-.5-.58-1.76-3.14 1.5L14 5.4V2h-2v3.4l-2.98 3.65-3.17-1.5-.58 1.76 3.17.5 3.14 1.45-3.14 1.45-3.17.5.58 1.76 3.14-1.5L12 17.4V21h2v-3.6l2.98-3.65 3.17 1.5z",
+  delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+});
+function iconElement(document2, name2) {
+  const d = ICONS[name2];
+  if (!d) throw new Error(`no such icon: ${name2}`);
+  const svg = document2.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("width", "22");
+  svg.setAttribute("height", "22");
+  svg.setAttribute("fill", "currentColor");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  svg.setAttribute("class", "icon");
+  const path = document2.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", d);
+  svg.append(path);
+  return svg;
+}
+function setIcon(document2, button, name2, label, { keepTitle = false } = {}) {
+  button.replaceChildren(iconElement(document2, name2));
+  button.setAttribute("aria-label", label);
+  if (!keepTitle || !button.getAttribute("title")) button.setAttribute("title", label);
+  button.dataset.icon = name2;
+}
+function applyIcons(root) {
+  const document2 = root.ownerDocument ?? root;
+  for (const button of root.querySelectorAll("button[data-icon]")) {
+    if (button.querySelector("svg")) continue;
+    const label = (button.getAttribute("aria-label") ?? button.textContent).trim();
+    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true });
+  }
+}
+
+// web/app/MidiRecord.js
+function createMidiRecord(ctx2) {
+  const { $: $2, log: log2 } = ctx2;
+  let take2 = null;
+  const show = (active) => {
+    const button = $2("record-midi");
+    button.setAttribute("aria-pressed", String(active));
+    setIcon(ctx2.document, button, active ? "stop" : "record", active ? "Stop MIDI take" : "Rec MIDI", { keepTitle: true });
+  };
+  function capture(nodeId, bytes) {
+    if (!take2) return;
+    const project = ctx2.dispatcher?.project;
+    if (!project) return;
+    const beat = ctx2.transport.position().beat;
+    for (const track2 of project.tracks) {
+      if (track2.midiInput !== nodeId) continue;
+      if (!take2.messages.has(track2.id)) take2.messages.set(track2.id, []);
+      take2.messages.get(track2.id).push({ beat, bytes: [...bytes] });
+    }
+  }
+  async function toggle() {
+    if (take2) {
+      await finishTake();
+      return;
+    }
+    await ctx2.runtime.ensureRunning();
+    const project = ctx2.dispatcher.project;
+    if (!project.tracks.some((t) => t.midiInput)) {
+      log2("nothing to record into: no track has an instrument to play. Add one, then try again", "error");
+      return;
+    }
+    const started = ctx2.transport.playing();
+    if (!started) await ctx2.transport.play();
+    if (!started) await ctx2.transport.untilStart();
+    take2 = { startBeat: ctx2.transport.position().beat, messages: /* @__PURE__ */ new Map() };
+    show(true);
+    log2(`recording MIDI from beat ${take2.startBeat.toFixed(2)}: play the keys of an armed track, or of the selected one`);
+  }
+  async function finishTake() {
+    if (!take2) return;
+    const { startBeat, messages } = take2;
+    take2 = null;
+    show(false);
+    const endBeat = ctx2.transport.position().beat;
+    let described;
+    try {
+      described = describeMidiTake(ctx2.dispatcher.project, messages, { startBeat, endBeat });
+    } catch (error2) {
+      log2(error2.message === "nothing was played" ? "no MIDI was played, so no clip was kept" : error2.message, error2.message === "nothing was played" ? "info" : "error");
+      return;
+    }
+    const result = ctx2.dispatcher.apply(described.changes);
+    if (!result.ok) {
+      log2(`the take could not be placed: ${result.message}`, "error");
+      return;
+    }
+    log2(`kept ${described.notes} note${described.notes === 1 ? "" : "s"} and ${described.controllers} controller event${described.controllers === 1 ? "" : "s"} on ${described.tracks} track${described.tracks === 1 ? "" : "s"} from beat ${startBeat.toFixed(2)}`, "ok");
+  }
+  return { toggle, finishTake, capture, isRecording: () => take2 !== null };
+}
+
+// src/model/TapTempo.js
+function createTapper({ now, maxGapMs = 2e3, taps = 5, min = 20, max = 300 } = {}) {
+  if (typeof now !== "function") throw new Error("a tapper needs a clock, `now`");
+  let times = [];
+  return {
+    /** Tap now. Returns the tempo in beats a minute to one decimal place, or null until there are two taps close enough. */
+    tap() {
+      const at = now();
+      if (times.length > 0 && at - times.at(-1) > maxGapMs) times = [];
+      times.push(at);
+      times = times.slice(-taps);
+      if (times.length < 2) return null;
+      const gap = (times.at(-1) - times[0]) / (times.length - 1);
+      if (!(gap > 0)) return null;
+      const bpm = 6e4 / gap;
+      return Math.round(Math.min(max, Math.max(min, bpm)) * 10) / 10;
+    },
+    reset() {
+      times = [];
+    },
+    get count() {
+      return times.length;
+    }
+  };
 }
 
 // src/host/Handoff.js
@@ -24341,69 +24980,6 @@ function createCarry(ctx2, { self: self2, offerText }) {
     };
   }
   return { leave, carryOnClick, offer };
-}
-
-// src/ui/Icons.js
-var SVG_NS = "http://www.w3.org/2000/svg";
-var ICONS = Object.freeze({
-  play: "M8 5v14l11-7z",
-  stop: "M6 6h12v12H6z",
-  record: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z",
-  loop: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
-  undo: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",
-  redo: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z",
-  save: "M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z",
-  open: "M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z",
-  zoomIn: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z",
-  zoomOut: "M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z",
-  split: "M11 3h2v18h-2zM3 8l5 4-5 4zM21 8l-5 4 5 4z",
-  trimStart: "M4 4h2v16H4zM8 9h12v6H8z",
-  trimEnd: "M18 4h2v16h-2zM4 9h12v6H4z",
-  duplicate: "M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z",
-  mute: "M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z",
-  unmute: "M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z",
-  lock: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z",
-  unlock: "M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z",
-  copy: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z",
-  cut: "M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z",
-  paste: "M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z",
-  bypass: "M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z",
-  earlier: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z",
-  later: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
-  stems: "M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z",
-  download: "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
-  freeze: "M20.79 13.95l-3.17-.5-3.14-1.45L17.62 10l3.17-.5-.58-1.76-3.14 1.5L14 5.4V2h-2v3.4l-2.98 3.65-3.17-1.5-.58 1.76 3.17.5 3.14 1.45-3.14 1.45-3.17.5.58 1.76 3.14-1.5L12 17.4V21h2v-3.6l2.98-3.65 3.17 1.5z",
-  delete: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-});
-function iconElement(document2, name2) {
-  const d = ICONS[name2];
-  if (!d) throw new Error(`no such icon: ${name2}`);
-  const svg = document2.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("width", "22");
-  svg.setAttribute("height", "22");
-  svg.setAttribute("fill", "currentColor");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("focusable", "false");
-  svg.setAttribute("class", "icon");
-  const path = document2.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", d);
-  svg.append(path);
-  return svg;
-}
-function setIcon(document2, button, name2, label, { keepTitle = false } = {}) {
-  button.replaceChildren(iconElement(document2, name2));
-  button.setAttribute("aria-label", label);
-  if (!keepTitle || !button.getAttribute("title")) button.setAttribute("title", label);
-  button.dataset.icon = name2;
-}
-function applyIcons(root) {
-  const document2 = root.ownerDocument ?? root;
-  for (const button of root.querySelectorAll("button[data-icon]")) {
-    if (button.querySelector("svg")) continue;
-    const label = (button.getAttribute("aria-label") ?? button.textContent).trim();
-    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true });
-  }
 }
 
 // src/ui/Tabs.js
@@ -27684,6 +28260,21 @@ function readHostConfig(json) {
 }
 
 // src/model/ClipEdit.js
+function partitionControllers(events, at) {
+  const left = [];
+  const right = [];
+  const held = /* @__PURE__ */ new Map();
+  for (const e of events) {
+    if (e.atBeat < at) {
+      left.push({ ...e });
+      held.set(e.controller, e.value);
+    } else right.push({ ...e, atBeat: e.atBeat - at });
+  }
+  for (const [controller, value2] of held) {
+    if (!right.some((e) => e.controller === controller && e.atBeat === 0)) right.push({ atBeat: 0, controller, value: value2 });
+  }
+  return { left, right };
+}
 function partition(notes, at) {
   const left = [];
   const right = [];
@@ -27708,10 +28299,12 @@ function splitClip(project, id, atBeat, { transport: transport2 = null, newId = 
   const second = clip.lengthBeats - first4;
   if (clip.kind === "midi") {
     const { left, right } = partition(clip.notes, first4);
+    const events = partitionControllers(clip.controllers ?? [], first4);
     return [
       { op: "setClip", id, lengthBeats: first4 },
       { op: "setClipNotes", id, notes: left },
-      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
+      ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
+      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right, controllers: events.right }
     ];
   }
   if (!transport2) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
@@ -27721,12 +28314,12 @@ function splitClip(project, id, atBeat, { transport: transport2 = null, newId = 
     { op: "addClip", id: newId, track: clip.track, kind: "audio", startBeat: atBeat, lengthBeats: second, muted: clip.muted, source: clip.source, offsetSeconds, fadeOutBeats: clip.fadeOutBeats }
   ];
 }
-function duplicateClip(project, id, { track, startBeat } = {}) {
+function duplicateClip(project, id, { track: track2, startBeat } = {}) {
   const clip = project.clip(id);
   if (!clip) throw new Error(`no such clip: ${id}`);
   const at = startBeat ?? clip.startBeat + clip.lengthBeats;
-  const where = track ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+  const where = track2 ?? clip.track;
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 function trimClip(project, id, { from, to } = {}, { transport: transport2 = null } = {}) {
   const clip = project.clip(id);
@@ -27750,7 +28343,7 @@ function trimClip(project, id, { from, to } = {}, { transport: transport2 = null
   }
   if (cut === 0) return [change];
   const { right } = partition(clip.notes, cut);
-  return [change, { op: "setClipNotes", id, notes: right }];
+  return [change, { op: "setClipNotes", id, notes: right }, ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: partitionControllers(clip.controllers, cut).right }] : []];
 }
 function copyClips(project, ids) {
   const clips = ids.map((id) => {
@@ -27766,16 +28359,16 @@ function copyClips(project, ids) {
     offset: c3.startBeat - first4,
     lengthBeats: c3.lengthBeats,
     muted: c3.muted,
-    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
+    ...c3.kind === "midi" ? { notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) } : { source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats }
   }));
 }
-function pasteClips(project, copied, { startBeat, track = null } = {}) {
+function pasteClips(project, copied, { startBeat, track: track2 = null } = {}) {
   if (!Array.isArray(copied) || copied.length === 0) throw new Error("there is nothing copied to paste");
   return copied.map((c3) => {
-    const where = track ?? c3.track;
+    const where = track2 ?? c3.track;
     if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
     const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
-    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })) } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+    return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
   });
 }
 
@@ -27920,12 +28513,12 @@ function describeNoteTransform(project, clipId, name2, options = {}, { indices =
 }
 
 // src/model/TrackDuplicate.js
-function copyLabel(track) {
-  return `${track.label ?? track.id} copy`;
+function copyLabel(track2) {
+  return `${track2.label ?? track2.id} copy`;
 }
 function describeTrackCopy(project, trackId, { newTrackId = project.nextId("track") } = {}) {
-  const track = project.track(trackId);
-  if (!track) throw new Error(`no such track: ${trackId}`);
+  const track2 = project.track(trackId);
+  if (!track2) throw new Error(`no such track: ${trackId}`);
   const nodes = project.nodes.filter((n2) => n2.track === trackId);
   const on = new Set(nodes.map((n2) => n2.id));
   const skipped = [];
@@ -27934,7 +28527,7 @@ function describeTrackCopy(project, trackId, { newTrackId = project.nextId("trac
     if (inside === 1) skipped.push(`connection ${c3.id} joins this track to another, and is not copied`);
   }
   return {
-    track: { op: "addTrack", id: newTrackId, label: copyLabel(track), channel: { ...track.channel } },
+    track: { op: "addTrack", id: newTrackId, label: copyLabel(track2), channel: { ...track2.channel } },
     nodes: nodes.map((n2) => ({
       from: n2.id,
       pluginIri: n2.pluginIri,
@@ -27947,14 +28540,14 @@ function describeTrackCopy(project, trackId, { newTrackId = project.nextId("trac
   };
 }
 function finishTrackCopy(project, trackId, newTrackId, idMap) {
-  const track = project.track(trackId);
-  if (!track) throw new Error(`no such track: ${trackId}`);
+  const track2 = project.track(trackId);
+  if (!track2) throw new Error(`no such track: ${trackId}`);
   const mapped = (id) => id === null || id === void 0 ? null : idMap.get(id) ?? null;
   const changes = [];
   const setTrack = { op: "setTrack", id: newTrackId };
-  if (track.midiInput !== null) setTrack.midiInput = mapped(track.midiInput);
-  if (track.audioInput !== null) setTrack.audioInput = mapped(track.audioInput);
-  if (track.output) setTrack.output = track.output;
+  if (track2.midiInput !== null) setTrack.midiInput = mapped(track2.midiInput);
+  if (track2.audioInput !== null) setTrack.audioInput = mapped(track2.audioInput);
+  if (track2.output) setTrack.output = track2.output;
   if (Object.keys(setTrack).length > 2) changes.push(setTrack);
   for (const c3 of project.connections) {
     const from = mapped(c3.from.node);
@@ -28082,6 +28675,15 @@ var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) 
 var POINT_SCHEMA = { type: "object", properties: { atBeat: { type: "number", minimum: 0 }, value: { type: "number" }, curve: { type: "string", enum: ["step", "linear", "smooth"] } }, required: ["atBeat", "value"] };
 var ok = (data) => ({ ok: true, ...data });
 var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
+var CONTROLLER_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    atBeat: { type: "number" },
+    controller: { description: 'a MIDI controller number 0 to 127, or the string "pitchBend"', oneOf: [{ type: "integer" }, { type: "string", enum: ["pitchBend"] }] },
+    value: { type: "integer", description: "0 to 127 for a controller, -8192 to 8191 for pitchBend (0 is the wheel at rest)" }
+  },
+  required: ["atBeat", "controller", "value"]
+});
 var NOTE_SCHEMA = Object.freeze({
   type: "object",
   properties: {
@@ -28251,10 +28853,10 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
         },
         required: ["iri"]
       },
-      async handler({ iri: iri5, track } = {}) {
+      async handler({ iri: iri5, track: track2 } = {}) {
         if (!iri5) return failed("plugin_load needs an iri");
         if (!loadPlugin) return failed("this host cannot load plugins");
-        const result = await loadPlugin(iri5, track ? { track } : {});
+        const result = await loadPlugin(iri5, track2 ? { track: track2 } : {});
         if (!result.ok) return failed(result.message, { step: result.step ?? null });
         return ok({
           nodeId: result.nodeId,
@@ -28467,12 +29069,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           startBeat: { type: "number" },
           lengthBeats: { type: "number" },
           notes: { type: "array", items: NOTE_SCHEMA },
+          controllers: { type: "array", items: CONTROLLER_SCHEMA },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId", "startBeat", "lengthBeats"]
       },
-      async handler({ trackId, startBeat, lengthBeats, notes = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes }], { expectedRevision });
+      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -28510,6 +29113,23 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       },
       async handler({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: "setClipNotes", id: clipId, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_set_controllers",
+      description: 'Replace every controller and pitch bend event of a MIDI clip, as one edit. Each event has atBeat (from the clip start), controller (a MIDI controller number 0 to 127, such as 1 modulation, 7 volume, 10 pan, 64 sustain; or "pitchBend") and value (0 to 127 for a controller; -8192 to 8191 for pitchBend, where 0 is the wheel at rest). An event holds its value until the next one for the same controller. One controller has at most one event at a beat.',
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          controllers: { type: "array", items: CONTROLLER_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId", "controllers"]
+      },
+      async handler({ clipId, controllers, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setClipControllers", id: clipId, controllers }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -29495,9 +30115,9 @@ function createTransport(ctx2) {
     playheadFrame = requestAnimationFrame(followPlayhead);
   }
   function playAudioClip(clip, { when, offset, duration: duration2 }) {
-    const track = ctx2.dispatcher.project.track(clip.track);
-    if (!track) return;
-    const destination = track.audioInput ? ctx2.dispatcher.engineNode(track.audioInput)?.node : ctx2.engine.trackInput(track.id);
+    const track2 = ctx2.dispatcher.project.track(clip.track);
+    if (!track2) return;
+    const destination = track2.audioInput ? ctx2.dispatcher.engineNode(track2.audioInput)?.node : ctx2.engine.trackInput(track2.id);
     if (!destination) return;
     const transport2 = ctx2.dispatcher.transport();
     const fadeIn = clip.fadeInBeats > 0 ? transport2.secondsAtBeat(clip.on + clip.fadeInBeats) - transport2.secondsAtBeat(clip.on) : 0;
@@ -29535,6 +30155,7 @@ function createTransport(ctx2) {
       sampleRate: engine.context.sampleRate,
       lookahead: hostConfig.schedulerLookaheadMs / 1e3,
       notes: () => clipNotes(d.project),
+      controllers: () => clipControllers(d.project),
       transport: () => d.transport(),
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),
@@ -29754,15 +30375,15 @@ var TakeBuilder = class {
   #tracks = /* @__PURE__ */ new Map();
   /** Keep one chunk for a track. A chunk short of a full quantum is padded. */
   addChunk(trackId, chunk) {
-    let track = this.#tracks.get(trackId);
-    if (!track) {
-      track = { chunks: [], frames: 0 };
-      this.#tracks.set(trackId, track);
+    let track2 = this.#tracks.get(trackId);
+    if (!track2) {
+      track2 = { chunks: [], frames: 0 };
+      this.#tracks.set(trackId, track2);
     }
     const stereo = new Float32Array(CAPTURE_FRAMES * 2);
     stereo.set(chunk.subarray(0, stereo.length));
-    track.chunks.push(floatToInt16(stereo));
-    track.frames += CAPTURE_FRAMES;
+    track2.chunks.push(floatToInt16(stereo));
+    track2.frames += CAPTURE_FRAMES;
   }
   trackIds() {
     return [...this.#tracks.keys()];
@@ -29773,18 +30394,18 @@ var TakeBuilder = class {
   /** True when every captured sample is digital zero: a muted track, or one
    * with nothing on it, makes no clip rather than a silent one. */
   isSilent(trackId) {
-    const track = this.#tracks.get(trackId);
-    if (!track) return true;
-    return track.chunks.every((chunk) => chunk.every((v) => v === 0));
+    const track2 = this.#tracks.get(trackId);
+    if (!track2) return true;
+    return track2.chunks.every((chunk) => chunk.every((v) => v === 0));
   }
   /** The take as float channel pairs, deinterleaved. */
   take(trackId) {
-    const track = this.#tracks.get(trackId);
-    if (!track) throw new Error(`no take for track: ${trackId}`);
-    const left = new Float32Array(track.frames);
-    const right = new Float32Array(track.frames);
+    const track2 = this.#tracks.get(trackId);
+    if (!track2) throw new Error(`no take for track: ${trackId}`);
+    const left = new Float32Array(track2.frames);
+    const right = new Float32Array(track2.frames);
     let at = 0;
-    for (const chunk of track.chunks) {
+    for (const chunk of track2.chunks) {
       const floats = int16ToFloat(chunk);
       for (let i2 = 0; i2 < CAPTURE_FRAMES; i2++) {
         left[at + i2] = floats[i2 * 2];
@@ -29995,10 +30616,10 @@ var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 var TRAVEL = 160;
 var FINE = 6;
 var SVG_NS2 = "http://www.w3.org/2000/svg";
-var round = (n2) => Math.round(n2 * 100) / 100;
+var round2 = (n2) => Math.round(n2 * 100) / 100;
 function facePoint(fraction, radius) {
   const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180;
-  return [round(CENTRE + radius * Math.cos(radians)), round(CENTRE + radius * Math.sin(radians))];
+  return [round2(CENTRE + radius * Math.cos(radians)), round2(CENTRE + radius * Math.sin(radians))];
 }
 function createDial(document2, port, id) {
   const element = document2.createElement("div");
@@ -30026,15 +30647,15 @@ function createDial(document2, port, id) {
     circle.setAttribute("transform", `rotate(${START_DEGREES} ${CENTRE} ${CENTRE})`);
     return circle;
   };
-  const track = arc("dial-track");
-  setSweep(track, 0, 1);
+  const track2 = arc("dial-track");
+  setSweep(track2, 0, 1);
   const value2 = arc("dial-value");
   const origin = port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
   const pointer = document2.createElementNS(SVG_NS2, "line");
   pointer.setAttribute("class", "dial-pointer");
   pointer.setAttribute("x1", String(CENTRE));
   pointer.setAttribute("y1", String(CENTRE));
-  svg.append(track, value2, pointer);
+  svg.append(track2, value2, pointer);
   element.append(svg, input);
   function render(current) {
     const span = port.maximum - port.minimum;
@@ -30051,8 +30672,8 @@ function setSweep(circle, from, to) {
   const sweep = CIRCUMFERENCE * (SWEEP_DEGREES / 360);
   const low = Math.min(from, to);
   const high = Math.max(from, to);
-  circle.setAttribute("stroke-dasharray", `${round((high - low) * sweep)} ${round(CIRCUMFERENCE)}`);
-  circle.setAttribute("stroke-dashoffset", String(round(-low * sweep)));
+  circle.setAttribute("stroke-dasharray", `${round2((high - low) * sweep)} ${round2(CIRCUMFERENCE)}`);
+  circle.setAttribute("stroke-dashoffset", String(round2(-low * sweep)));
 }
 function attachDrag(element, input, port) {
   const span = port.maximum - port.minimum;
@@ -30227,16 +30848,16 @@ function createSkinPanel(document2, skin, onChange, { scope, measure = (el) => e
     } else if (control.kind === "linear") {
       const input = rangeInput(port);
       const box = hitArea(control, port, input);
-      const track = skin.elements.get(control.trackElement);
+      const track2 = skin.elements.get(control.trackElement);
       const base = element.getAttribute("transform") ?? "";
       let travel = { dx: 0, dy: 0, horizontal: true };
       fitters.push(() => {
-        const b = measure(track);
+        const b = measure(track2);
         if (!b.width && !b.height) return;
         const horizontal = b.width >= b.height;
         travel = { dx: horizontal ? b.width : 0, dy: horizontal ? 0 : -b.height, horizontal };
       });
-      attachTrackDrag(box, input, port, track, () => travel.horizontal);
+      attachTrackDrag(box, input, port, track2, () => travel.horizontal);
       render(port.symbol, (v) => {
         input.value = String(v);
         input.setAttribute("aria-valuetext", spokenValue(port, v));
@@ -30343,13 +30964,13 @@ function followThePicture(wrap, hits) {
   if (wanted.every((box, i2) => box === current[i2])) return;
   for (const box of wanted) wrap.append(box);
 }
-function attachTrackDrag(box, input, port, track, isHorizontal) {
+function attachTrackDrag(box, input, port, track2, isHorizontal) {
   const owner = box.ownerDocument;
   const Event = owner.defaultView?.Event;
   if (!Event) return;
   let dragging = false;
   const at = (event) => {
-    const r = track.getBoundingClientRect();
+    const r = track2.getBoundingClientRect();
     const t = isHorizontal() ? (event.clientX - r.left) / r.width : (r.bottom - event.clientY) / r.height;
     const next = port.minimum + clamp(t, 0, 1) * (port.maximum - port.minimum);
     if (Number(input.value) === next) return;
@@ -30741,8 +31362,8 @@ function createMeter(document2, { label, bars = 12 } = {}) {
 }
 
 // src/ui/Mixer.js
-function mixable(track, nodes, audioOutputsOf) {
-  const onTrack = nodes.filter((n2) => n2.track === track.id);
+function mixable(track2, nodes, audioOutputsOf) {
+  const onTrack = nodes.filter((n2) => n2.track === track2.id);
   if (onTrack.length === 0) return true;
   return onTrack.some((n2) => (audioOutputsOf(n2.id) ?? 1) > 0);
 }
@@ -30764,15 +31385,15 @@ function createMixer(document2, { onChange }) {
       element.replaceChildren(empty);
       return;
     }
-    const wanted = shown.map((track) => {
-      const label = labelFor(track);
-      let channel = channels.get(track.id);
+    const wanted = shown.map((track2) => {
+      const label = labelFor(track2);
+      let channel = channels.get(track2.id);
       if (!channel) {
         const strip = createStrip(
           document2,
-          track.channel,
-          (change) => onChange(track.id, change),
-          { label, id: `strip-${track.id}` }
+          track2.channel,
+          (change) => onChange(track2.id, change),
+          { label, id: `strip-${track2.id}` }
         );
         const wrapper = document2.createElement("div");
         wrapper.className = "mixer-channel";
@@ -30780,11 +31401,11 @@ function createMixer(document2, { onChange }) {
         const meter = createMeter(document2, { label });
         wrapper.append(heading, strip.element, meter.element);
         channel = { wrapper, heading, strip, meter };
-        channels.set(track.id, channel);
+        channels.set(track2.id, channel);
       }
       channel.heading.textContent = label;
       channel.meter.element.setAttribute("aria-label", `Level of ${label}`);
-      channel.strip.update(track.channel, { silent: silent.get(track.id) === true, label });
+      channel.strip.update(track2.channel, { silent: silent.get(track2.id) === true, label });
       return channel.wrapper;
     });
     const current = [...element.children];
@@ -31157,8 +31778,11 @@ function createKeyboard(document2, { first: first4 = 48, octaves = 2, onNote } =
     element.title = noteName2(note);
     element.addEventListener("pointerdown", (event) => {
       event.preventDefault();
-      element.setPointerCapture?.(event.pointerId);
+      if (element.hasPointerCapture?.(event.pointerId)) element.releasePointerCapture(event.pointerId);
       press(note);
+    });
+    element.addEventListener("pointerenter", (event) => {
+      if (event.buttons & 1) press(note);
     });
     element.addEventListener("pointerup", () => release(note));
     element.addEventListener("pointercancel", () => release(note));
@@ -31301,15 +31925,15 @@ function createRack(ctx2) {
     }
     return element;
   }
-  function trackLabel(track, index) {
-    return track.label ?? `Track ${index + 1}`;
+  function trackLabel(track2, index) {
+    return track2.label ?? `Track ${index + 1}`;
   }
   function drawTargets() {
     const select = $2("target");
     const made = ctx2.dispatcher?.project.tracks ?? [];
     const tracks = ctx2.dispatcher?.project.orderedTracks ?? [];
     const options = [
-      ...tracks.map((track) => ({ value: track.id, label: trackLabel(track, made.indexOf(track)) })),
+      ...tracks.map((track2) => ({ value: track2.id, label: trackLabel(track2, made.indexOf(track2)) })),
       { value: MASTER_TARGET, label: "The master bus" },
       { value: NEW_TRACK, label: "A new track" }
     ];
@@ -31345,8 +31969,8 @@ function createRack(ctx2) {
       return seen.get(found.base) > 1 ? `${found.base} ${found.count}` : found.base;
     };
     const trackNames = tracks.map((t) => trackLabel(t, made.indexOf(t)));
-    const labelOfTrack = (track) => {
-      const i2 = tracks.indexOf(track);
+    const labelOfTrack = (track2) => {
+      const i2 = tracks.indexOf(track2);
       const name2 = trackNames[i2];
       const sharing = trackNames.filter((n2) => n2 === name2).length;
       return sharing > 1 ? `${name2} ${trackNames.slice(0, i2 + 1).filter((n2) => n2 === name2).length}` : name2;
@@ -31372,13 +31996,13 @@ function createRack(ctx2) {
       rack.append(empty);
       return;
     }
-    for (const track of tracks) {
-      rack.append(drawTrack(track, {
+    for (const track2 of tracks) {
+      rack.append(drawTrack(track2, {
         tracks,
         labelOfTrack,
         labelFor,
         connections,
-        nodes: nodes.filter((n2) => n2.track === track.id),
+        nodes: nodes.filter((n2) => n2.track === track2.id),
         allNodes: nodes
       }));
     }
@@ -31407,12 +32031,12 @@ function createRack(ctx2) {
     watching = connectionList;
     restoreFocus();
   }
-  function drawTrack(track, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
+  function drawTrack(track2, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
     const { dispatcher } = ctx2;
     const group = document2.createElement("section");
     group.className = "track";
-    group.id = `track-group-${track.id}`;
-    const title = labelOfTrack(track);
+    group.id = `track-group-${track2.id}`;
+    const title = labelOfTrack(track2);
     group.setAttribute("aria-label", `Track ${title}`);
     const header = document2.createElement("div");
     header.className = "track-header";
@@ -31421,20 +32045,20 @@ function createRack(ctx2) {
     header.append(heading);
     const rename = document2.createElement("input");
     rename.type = "text";
-    rename.id = `track-name-${track.id}`;
-    rename.value = track.label ?? "";
+    rename.id = `track-name-${track2.id}`;
+    rename.value = track2.label ?? "";
     rename.placeholder = title;
     rename.setAttribute("aria-label", `Name of track ${title}`);
     rename.addEventListener("change", () => {
       const label = rename.value.trim() || null;
-      const result = dispatcher.apply([{ op: "setTrack", id: track.id, label }]);
+      const result = dispatcher.apply([{ op: "setTrack", id: track2.id, label }]);
       if (!result.ok) log2(result.message, "error");
     });
     header.append(rename);
     const takesMidi = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.accepts ?? []).some(carriesNotes));
     if (takesMidi.length > 0) {
       const midi2 = document2.createElement("select");
-      midi2.id = `midi-input-${track.id}`;
+      midi2.id = `midi-input-${track2.id}`;
       midi2.setAttribute("aria-label", `Which plugin ${title}'s MIDI clips play into`);
       for (const [value2, text] of [["", "Clips play into nothing"], ...takesMidi.map((n2) => [n2.id, `Clips play into ${labelFor(n2.id)}`])]) {
         const option = document2.createElement("option");
@@ -31442,23 +32066,23 @@ function createRack(ctx2) {
         option.textContent = text;
         midi2.append(option);
       }
-      midi2.value = track.midiInput ?? "";
+      midi2.value = track2.midiInput ?? "";
       midi2.addEventListener("change", () => {
-        const result = dispatcher.apply([{ op: "setTrack", id: track.id, midiInput: midi2.value || null }]);
+        const result = dispatcher.apply([{ op: "setTrack", id: track2.id, midiInput: midi2.value || null }]);
         if (!result.ok) log2(result.message, "error");
       });
       header.append(midi2);
     }
     const takesAudio = nodes.filter((n2) => (dispatcher.engineNode(n2.id)?.profile?.audioInputs ?? 0) > 0);
-    if (takesAudio.length > 0) header.append(audioInputSelect({ id: track.id, title, nodes: takesAudio, current: track.audioInput, labelFor }));
+    if (takesAudio.length > 0) header.append(audioInputSelect({ id: track2.id, title, nodes: takesAudio, current: track2.audioInput, labelFor }));
     if (nodes.length === 0) {
       const remove = document2.createElement("button");
       remove.type = "button";
-      remove.id = `track-remove-${track.id}`;
+      remove.id = `track-remove-${track2.id}`;
       remove.textContent = "Remove track";
       remove.setAttribute("aria-label", `Remove track ${title}`);
       remove.addEventListener("click", () => {
-        const result = dispatcher.apply([{ op: "removeTrack", id: track.id }]);
+        const result = dispatcher.apply([{ op: "removeTrack", id: track2.id }]);
         if (!result.ok) log2(result.message, "error");
         else log2(`removed track ${title}`);
       });
@@ -31472,17 +32096,17 @@ function createRack(ctx2) {
       group.append(empty);
       return group;
     }
-    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track });
+    drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track: track2 });
     return group;
   }
-  function drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track }) {
+  function drawChain(group, { tracks, labelOfTrack, labelFor, connections, nodes, allNodes, track: track2 }) {
     for (const node of nodes) {
       const previous = nodes[nodes.indexOf(node) - 1];
       const joining = previous && connections.find((c3) => c3.from.node === previous.id && c3.to.node === node.id);
       if (previous) {
         group.append(joining ? wire(isMidi(joining.signalKind) ? "MIDI" : "audio") : gap());
       }
-      drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track });
+      drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track: track2 });
     }
   }
   function drawMaster({ tracks, labelOfTrack, labelFor, connections, nodes, allNodes }) {
@@ -31525,7 +32149,7 @@ function createRack(ctx2) {
     });
     return select;
   }
-  function drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track }) {
+  function drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track: track2 }) {
     const { dispatcher, engine } = ctx2;
     const entry = dispatcher.engineNode(node.id);
     const profile = entry?.profile;
@@ -31589,8 +32213,8 @@ function createRack(ctx2) {
       if (!draggedId || draggedId === node.id) return;
       const dragged = dispatcher.project.node(draggedId);
       if (!dragged) return;
-      const changes = dragged.track === track.id ? [{ op: "reorderNode", id: draggedId, index: allNodes.indexOf(node) }] : [
-        { op: "moveNodeToTrack", id: draggedId, track: track.id },
+      const changes = dragged.track === track2.id ? [{ op: "reorderNode", id: draggedId, index: allNodes.indexOf(node) }] : [
+        { op: "moveNodeToTrack", id: draggedId, track: track2.id },
         { op: "reorderNode", id: draggedId, index: allNodes.indexOf(node) }
       ];
       const result = dispatcher.apply(changes);
@@ -31726,6 +32350,7 @@ function createRack(ctx2) {
             frame: Math.round(engine.context.currentTime * engine.context.sampleRate),
             bytes
           }]);
+          ctx2.midiRecord.capture(node.id, bytes);
         }
       });
       keyboards.add(keyboard);
@@ -32266,9 +32891,9 @@ function createSkins(ctx2) {
 }
 
 // src/model/TrackKind.js
-function trackKind(project, track, profileOf) {
-  if (project.tracks.some((other) => other.id !== track.id && other.output === track.id)) return "bus";
-  const profiles = project.nodes.filter((n2) => n2.track === track.id).map((n2) => profileOf(n2.id)).filter(Boolean);
+function trackKind(project, track2, profileOf) {
+  if (project.tracks.some((other) => other.id !== track2.id && other.output === track2.id)) return "bus";
+  const profiles = project.nodes.filter((n2) => n2.track === track2.id).map((n2) => profileOf(n2.id)).filter(Boolean);
   const takesMidi = profiles.filter((p) => (p.accepts ?? []).some(isMidiSignal));
   if (takesMidi.length > 0) return takesMidi.some((p) => (p.audioOutputs ?? 0) > 0) ? "instrument" : "midi";
   if (profiles.some((p) => (p.audioOutputs ?? 0) > 0 || (p.audioInputs ?? 0) > 0)) return "audio";
@@ -32470,7 +33095,7 @@ function kindOf3(connection) {
 var kindsOf = (ports) => [...new Set(ports.filter((p) => p.portSymbol === void 0).map((p) => isMidiSignal(p.kind) ? "MIDI" : "audio"))];
 var join = (list) => list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
 function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLabelOf }) {
-  const track = project.track(trackId);
+  const track2 = project.track(trackId);
   const onTrack = project.nodes.filter((n2) => n2.track === trackId);
   const ids = new Set(onTrack.map((n2) => n2.id));
   const ordered = inSignalOrder(onTrack, project.connections);
@@ -32509,8 +33134,8 @@ function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLa
       passesAudio: kindsOf(inputsOf(profile)).includes("audio") && kindsOf(outputsOf(profile)).includes("audio"),
       takes: kindsOf(inputsOf(profile)),
       gives: kindsOf(outputsOf(profile)),
-      takesMidiFromTrack: track?.midiInput === node.id,
-      takesAudioFromTrack: track?.audioInput === node.id,
+      takesMidiFromTrack: track2?.midiInput === node.id,
+      takesAudioFromTrack: track2?.audioInput === node.id,
       // On the master, the node the mix of every track arrives at.
       takesMix: trackId === MASTER_TRACK && project.master.audioInput === node.id,
       sends,
@@ -32890,7 +33515,7 @@ function createMasterRow(document2, { onChange, onRemove, onAutomate, view }) {
 }
 
 // src/ui/FolderBar.js
-function createFolderBar(document2, { onToggle, onMove = null }) {
+function createFolderBar(document2, { onToggle, onMove = null, onGrip = null }) {
   const element = document2.createElement("div");
   element.className = "timeline-folder";
   element.setAttribute("role", "group");
@@ -32899,7 +33524,14 @@ function createFolderBar(document2, { onToggle, onMove = null }) {
   button.className = "folder-toggle";
   let name2 = "";
   button.addEventListener("click", () => onToggle(name2));
-  element.append(button);
+  const grip = document2.createElement("button");
+  grip.type = "button";
+  grip.className = "folder-grip";
+  grip.textContent = "\u283F";
+  grip.addEventListener("pointerdown", (event) => {
+    if (event.button === 0) onGrip(event);
+  });
+  element.append(...onGrip ? [grip] : [], button);
   const move = (delta, text) => {
     const step = document2.createElement("button");
     step.type = "button";
@@ -32919,6 +33551,7 @@ function createFolderBar(document2, { onToggle, onMove = null }) {
       down.hidden = !canDown;
       up.setAttribute("aria-label", `Move folder ${folder} up`);
       down.setAttribute("aria-label", `Move folder ${folder} down`);
+      grip.setAttribute("aria-label", `Drag to move folder ${folder}, or use its Move up and Move down buttons`);
       const tracks = count === 1 ? "1 track" : `${count} tracks`;
       button.textContent = `${collapsed ? "\u25B8" : "\u25BE"} ${folder}, ${tracks}${collapsed ? ", hidden" : ""}`;
       button.setAttribute("aria-expanded", String(!collapsed));
@@ -32991,7 +33624,7 @@ var SIZES = Object.freeze([["collapsed", "Collapsed"], ["small", "Small"], ["med
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
-function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null }) {
+function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
   for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
@@ -33104,14 +33737,33 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
     button.addEventListener("click", () => onGroupLevel(trackId, decibels2));
     return button;
   };
+  const panStep = (id, text, amount) => {
+    const button = document2.createElement("button");
+    button.type = "button";
+    button.id = id;
+    button.textContent = text;
+    button.addEventListener("click", () => onGroupPan(trackId, amount));
+    return button;
+  };
+  if (onGroupPan) {
+    group.append(panStep("track-group-pan-left", "Members pan left 0.1", -0.1), panStep("track-group-pan-right", "Members pan right 0.1", 0.1));
+    group.append(createAmountField(document2, { id: "track-group-pan-by", label: "Members pan by", unit: "(-1 left to 1 right)", min: -1, max: 1, step: 0.05, onApply: (amount) => onGroupPan(trackId, amount) }).element);
+  }
   if (onGroupLevel) {
     group.append(groupStep("track-group-down", "Members down 1 dB", -1), groupStep("track-group-up", "Members up 1 dB", 1));
     group.append(createAmountField(document2, { id: "track-group-by", label: "Members by", unit: "dB", min: -60, max: 24, step: 0.5, onApply: (decibels2) => onGroupLevel(trackId, decibels2) }).element);
   }
   group.hidden = true;
+  const exportMidi = document2.createElement("button");
+  exportMidi.type = "button";
+  exportMidi.id = "track-export-midi";
+  exportMidi.textContent = "Export track as MIDI";
+  exportMidi.title = "Save the notes of this track's MIDI clips to a Standard MIDI file";
+  exportMidi.addEventListener("click", () => onExportMidi(trackId));
+  exportMidi.hidden = true;
   const actions = document2.createElement("div");
   actions.className = "track-actions";
-  actions.append(position2, up, down, freeze, remove);
+  actions.append(position2, up, down, freeze, ...onExportMidi ? [exportMidi] : [], remove);
   element.append(nameLabel, folderLabel, colorGroup, sizeLabel, group, actions);
   return {
     element,
@@ -33123,7 +33775,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0 }) {
+    show({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0, hasMidi = false }) {
       trackId = id;
       if (document2.activeElement !== name2) name2.value = current ?? "";
       name2.placeholder = defaultName;
@@ -33137,6 +33789,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
       for (const option of size.options) option.selected = option.value === layout.laneSize;
       group.hidden = !onGroupLevel || members === 0;
+      exportMidi.hidden = !hasMidi;
       group.setAttribute("aria-label", `Move the ${members} tracks in this bus or folder together`);
       position2.textContent = `Track ${index + 1} of ${count}.`;
       up.hidden = index === 0;
@@ -33807,15 +34460,16 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         live.add(key);
         let bar = folderBars.get(key);
         if (!bar) {
-          bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onToggle: (folder) => {
+          bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onGrip: (event) => dragFolder(key, event), onToggle: (folder) => {
             onFolderCollapse(folder, !collapsedFolders.has(folder));
-            folderBars.get(key)?.element.querySelector("button").focus();
+            folderBars.get(key)?.element.querySelector(".folder-toggle").focus();
           } });
           folderBars.set(key, bar);
         }
         bar.runStart = i2;
         bar.runLength = end - i2;
         bar.firstTrack = tracks[i2].id;
+        bar.runIds = tracks.slice(i2, end).map((t) => t.id);
         bar.neighbours = { up: tracks[i2 - 1]?.id ?? null, down: tracks[end]?.id ?? null };
         bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2), canUp: i2 > 0, canDown: end < tracks.length });
         out.push(bar.element);
@@ -33836,6 +34490,44 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const wanted = moved?.element.querySelector(delta < 0 ? ".folder-move-up" : ".folder-move-down");
     const target2 = wanted && !wanted.hidden ? wanted : moved?.element.querySelector(".folder-toggle");
     target2?.focus();
+  }
+  function dragFolder(key, event) {
+    event.preventDefault();
+    event.target?.releasePointerCapture?.(event.pointerId);
+    const bar = folderBars.get(key);
+    if (!bar) return;
+    const run = bar.runIds;
+    const first4 = bar.firstTrack;
+    let target2 = null;
+    for (const id of run) rows.get(id)?.row.classList.add("dragging");
+    const clear = () => {
+      document2.removeEventListener("pointermove", over);
+      document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", clear);
+      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
+    };
+    function over(e) {
+      const hit = e.target?.closest?.(".timeline-row")?.dataset.track;
+      if (!hit || hit === target2 || run.includes(hit) || !rows.has(hit)) return;
+      if (target2) rows.get(target2)?.row.classList.remove("drop-target");
+      target2 = hit;
+      rows.get(target2).row.classList.add("drop-target");
+    }
+    function up() {
+      clear();
+      if (target2) {
+        const order = lastArgs.tracks.map((t) => t.id);
+        const at = order.indexOf(run[0]);
+        const to = order.indexOf(target2);
+        if (to < at) for (let k = at - 1; k >= to; k--) onMoveTrack(order[k], run.length);
+        else for (let k = at + run.length; k <= to; k++) onMoveTrack(order[k], -run.length);
+      }
+      const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
+      moved?.element.querySelector(".folder-toggle")?.focus();
+    }
+    document2.addEventListener("pointermove", over);
+    document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", clear);
   }
   function dragTrack(id, event) {
     event.preventDefault();
@@ -33919,16 +34611,16 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       return;
     }
     for (const id of [...rows.keys()]) if (!tracks.some((t) => t.id === id)) rows.delete(id);
-    const wanted = tracks.map((track) => {
-      const label = labelFor(track);
-      let entry = rows.get(track.id);
+    const wanted = tracks.map((track2) => {
+      const label = labelFor(track2);
+      let entry = rows.get(track2.id);
       if (!entry) {
         const row = document2.createElement("div");
         row.className = "timeline-row";
-        row.dataset.track = track.id;
+        row.dataset.track = track2.id;
         row.setAttribute("role", "group");
         const header = createTrackHeader(document2, {
-          id: track.id,
+          id: track2.id,
           onAdd,
           onAddAudio,
           onChannel,
@@ -33949,39 +34641,39 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         const automation = createEnvelopeLanes(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view });
         row.append(body, automation.element, strip.element);
         entry = { row, header, lane, strip, automation };
-        rows.set(track.id, entry);
+        rows.set(track2.id, entry);
       }
-      const own = clips.filter((c3) => c3.track === track.id);
+      const own = clips.filter((c3) => c3.track === track2.id);
       const end = Math.max(0, ...own.map((c3) => c3.startBeat + c3.lengthBeats));
       const at = Math.ceil(end / beatsPerBar) * beatsPerBar;
       entry.row.setAttribute("aria-label", `Track ${label}`);
-      const layout = layoutFor(track);
+      const layout = layoutFor(track2);
       entry.row.dataset.size = layout.laneSize;
       if (layout.color) entry.row.style.setProperty("--track-color", layout.color);
       else entry.row.style.removeProperty("--track-color");
       entry.header.update({
         label,
-        channel: track.channel ?? {},
-        mixable: mixable2(track),
-        silent: silent(track),
+        channel: track2.channel ?? {},
+        mixable: mixable2(track2),
+        silent: silent(track2),
         at,
         where: barBeat(at, beatsPerBar),
-        selected: selection.has("track", track.id),
+        selected: selection.has("track", track2.id),
         color: layout.color,
         size: layout.laneSize,
-        latency: latencyFor(track),
-        kind: kindFor(track),
-        canArm: canArm(track),
-        armed: armed(track),
-        routing: routingFor(track)
+        latency: latencyFor(track2),
+        kind: kindFor(track2),
+        canArm: canArm(track2),
+        armed: armed(track2),
+        routing: routingFor(track2)
       });
-      entry.strip.update(chainFor(track), { label, selected: selection.kind === "node" ? selection.ids[0] : null });
-      entry.automation.update(lanesFor(track), { beatsPerBar, width });
+      entry.strip.update(chainFor(track2), { label, selected: selection.kind === "node" ? selection.ids[0] : null });
+      entry.automation.update(lanesFor(track2), { beatsPerBar, width });
       entry.lane.style.width = `${width}px`;
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`;
       entry.lane.replaceChildren(...own.map((clip) => clipButton(clip, {
         beatsPerBar,
-        playsIntoNothing: clip.kind === "midi" && playsIntoNothing(track),
+        playsIntoNothing: clip.kind === "midi" && playsIntoNothing(track2),
         color: colorFor(clip),
         peaks: clip.kind === "audio" ? peaksFor(clip, Math.max(1, Math.round(clip.lengthBeats * ppb() / 3))) : null,
         problem: clip.kind === "audio" ? unplayable(clip) : null
@@ -34056,13 +34748,433 @@ function createRollScale(document2, { onChange }) {
   };
 }
 
+// src/ui/RollStep.js
+var STEP_KEYS = Object.freeze({
+  a: 0,
+  w: 1,
+  s: 2,
+  e: 3,
+  d: 4,
+  f: 5,
+  t: 6,
+  g: 7,
+  y: 8,
+  h: 9,
+  u: 10,
+  j: 11,
+  k: 12,
+  o: 13,
+  l: 14
+});
+var NAMES3 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var LENGTHS = [["0.25", "Quarter beat"], ["0.5", "Half beat"], ["1", "Beat"], ["2", "2 beats"], ["4", "4 beats"]];
+var MIN_OCTAVE = 0;
+var MAX_OCTAVE = 8;
+var pitchFor = (octave, semitone) => (octave + 1) * 12 + semitone;
+function createRollStep(document2, { onNote, onRest, onBack, onChange }) {
+  const element = document2.createElement("div");
+  element.className = "piano-roll-step";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "Step input");
+  const state = { active: false, octave: 4, lengthBeats: 1, chord: false };
+  const button = (id, text, run, label = null) => {
+    const b = document2.createElement("button");
+    b.type = "button";
+    b.id = id;
+    b.textContent = text;
+    if (label) b.setAttribute("aria-label", label);
+    b.addEventListener("click", run);
+    return b;
+  };
+  const toggle = button("roll-step", "Step input", () => set(!state.active));
+  const body = document2.createElement("div");
+  body.className = "piano-roll-step-body";
+  const lengthLabel = document2.createElement("label");
+  lengthLabel.append(document2.createTextNode("Step length "));
+  const length = document2.createElement("select");
+  length.id = "roll-step-length";
+  LENGTHS.forEach(([value2, text], i2) => {
+    const option = document2.createElement("option");
+    option.value = value2;
+    option.textContent = text;
+    option.selected = value2 === "1";
+    length.append(option);
+  });
+  length.addEventListener("change", () => {
+    state.lengthBeats = Number(length.value);
+    onChange();
+  });
+  lengthLabel.append(length);
+  const octaveSaid = document2.createElement("span");
+  octaveSaid.id = "roll-step-octave";
+  const setOctave = (octave) => {
+    state.octave = Math.min(MAX_OCTAVE, Math.max(MIN_OCTAVE, octave));
+    sync();
+    onChange();
+  };
+  const octaveDown = button("roll-step-octave-down", "Octave down", () => setOctave(state.octave - 1));
+  const octaveUp = button("roll-step-octave-up", "Octave up", () => setOctave(state.octave + 1));
+  const chord = button("roll-step-chord", "Chord", () => {
+    state.chord = !state.chord;
+    sync();
+  });
+  chord.title = "While on, a note is entered without moving on, so the next one joins it";
+  const notes = document2.createElement("div");
+  notes.className = "piano-roll-step-notes";
+  const noteButtons = NAMES3.map((name2, semitone) => {
+    const b = button(`roll-step-note-${semitone}`, name2, () => onNote(pitchFor(state.octave, semitone), { advance: !state.chord }));
+    notes.append(b);
+    return b;
+  });
+  const rest = button("roll-step-rest", "Rest", () => onRest());
+  const back = button("roll-step-back", "Back", () => onBack(), "Back one step, clearing the notes that start there");
+  const help = document2.createElement("p");
+  help.className = "note";
+  help.textContent = "Keys: A W S E D F T G Y H U J K O L enter notes from C, Shift holds the step for a chord, Space rests, Backspace steps back and clears, Z and X change octave. S no longer chooses a note while this is on.";
+  body.append(lengthLabel, octaveDown, octaveSaid, octaveUp, chord, notes, rest, back, help);
+  element.append(toggle, body);
+  function sync() {
+    toggle.setAttribute("aria-pressed", String(state.active));
+    body.hidden = !state.active;
+    octaveSaid.textContent = `Octave ${state.octave}`;
+    octaveDown.hidden = state.octave <= MIN_OCTAVE;
+    octaveUp.hidden = state.octave >= MAX_OCTAVE;
+    chord.setAttribute("aria-pressed", String(state.chord));
+    noteButtons.forEach((b, semitone) => {
+      const pitch = pitchFor(state.octave, semitone);
+      b.setAttribute("aria-label", `Enter ${NAMES3[semitone]}${state.octave}${pitch > 127 ? " (out of range)" : ""}`);
+      b.hidden = pitch > 127;
+    });
+  }
+  function set(active) {
+    state.active = active;
+    sync();
+    onChange();
+  }
+  sync();
+  return {
+    element,
+    get active() {
+      return state.active;
+    },
+    get octave() {
+      return state.octave;
+    },
+    get lengthBeats() {
+      return state.lengthBeats;
+    },
+    get chord() {
+      return state.chord;
+    },
+    set,
+    setOctave,
+    /** Hidden with the roll when no clip is open, and off again so the next clip starts as usual. */
+    reset() {
+      state.active = false;
+      sync();
+    }
+  };
+}
+
+// src/ui/RollLane.js
+var LANE_HEIGHT2 = 96;
+function createRollLane(document2, { id, label, min, max, onSet, onFocus = null, onAdd = null, onRemove = null, fine = 1, coarse = 10 }) {
+  const element = document2.createElement("div");
+  element.className = "piano-roll-lane";
+  element.id = id;
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", label);
+  const title = document2.createElement("span");
+  title.className = "piano-roll-lane-title";
+  title.textContent = label;
+  title.setAttribute("aria-hidden", "true");
+  const bars = document2.createElement("div");
+  bars.className = "piano-roll-lane-bars";
+  element.append(title, bars);
+  let items = [];
+  let focusKey = null;
+  let activeDrag = null;
+  const clamp4 = (value2) => Math.min(max, Math.max(min, Math.round(value2)));
+  const heightOf = (value2) => `${Math.max(2, (value2 - min) / (max - min) * LANE_HEIGHT2)}px`;
+  const valueAt = (clientY) => {
+    const rect = bars.getBoundingClientRect();
+    return clamp4(min + (1 - (clientY - rect.top) / (rect.height || LANE_HEIGHT2)) * (max - min));
+  };
+  function bar(item, index, group) {
+    const b = document2.createElement("div");
+    b.className = `piano-roll-lane-bar${item.chosen ? " chosen" : ""}`;
+    b.dataset.key = item.key;
+    b.setAttribute("role", "slider");
+    b.setAttribute("aria-label", item.name);
+    b.setAttribute("aria-orientation", "vertical");
+    b.setAttribute("aria-valuemin", String(min));
+    b.setAttribute("aria-valuemax", String(max));
+    b.setAttribute("aria-valuenow", String(item.value));
+    b.setAttribute("aria-valuetext", item.text);
+    b.tabIndex = item.key === (focusKey ?? items[0]?.key) ? 0 : -1;
+    b.style.left = `calc(${item.beat} * var(--steps-per-beat, 4) * var(--cell) + ${group.slot} * var(--cell) / ${group.count})`;
+    b.style.width = `calc(var(--cell) / ${group.count})`;
+    const fill = document2.createElement("span");
+    fill.className = "piano-roll-lane-fill";
+    fill.style.height = heightOf(item.value);
+    fill.setAttribute("aria-hidden", "true");
+    b.append(fill);
+    const set = (value2) => {
+      if (clamp4(value2) !== item.value) onSet(item, clamp4(value2));
+    };
+    b.addEventListener("focus", () => {
+      focusKey = item.key;
+      onFocus?.(item);
+    });
+    b.addEventListener("keydown", (event) => {
+      const { key, shiftKey } = event;
+      const step = shiftKey ? coarse : fine;
+      if (key === "ArrowUp") {
+        event.preventDefault();
+        set(item.value + step);
+      } else if (key === "ArrowDown") {
+        event.preventDefault();
+        set(item.value - step);
+      } else if (key === "PageUp") {
+        event.preventDefault();
+        set(item.value + coarse);
+      } else if (key === "PageDown") {
+        event.preventDefault();
+        set(item.value - coarse);
+      } else if (key === "Home") {
+        event.preventDefault();
+        set(min);
+      } else if (key === "End") {
+        event.preventDefault();
+        set(max);
+      } else if (key === "ArrowLeft" || key === "ArrowRight") {
+        event.preventDefault();
+        const next = items[items.indexOf(item) + (key === "ArrowRight" ? 1 : -1)];
+        if (next) {
+          focusKey = next.key;
+          draw2(items, { keepFocus: true });
+        }
+      } else if ((key === "Delete" || key === "Backspace") && onRemove) {
+        event.preventDefault();
+        onRemove(item);
+      }
+    });
+    b.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      b.focus?.();
+      let value2 = item.value;
+      const move = (e) => {
+        value2 = valueAt(e.clientY);
+        fill.style.height = heightOf(value2);
+        b.setAttribute("aria-valuenow", String(value2));
+      };
+      const finish = (commit) => {
+        document2.removeEventListener("pointermove", move);
+        document2.removeEventListener("pointerup", up);
+        document2.removeEventListener("pointercancel", cancel);
+        activeDrag = null;
+        if (commit) set(value2);
+        else {
+          fill.style.height = heightOf(item.value);
+          b.setAttribute("aria-valuenow", String(item.value));
+        }
+      };
+      const up = () => finish(true);
+      const cancel = () => finish(false);
+      activeDrag = cancel;
+      document2.addEventListener("pointermove", move);
+      document2.addEventListener("pointerup", up);
+      document2.addEventListener("pointercancel", cancel);
+      move(event);
+    });
+    return b;
+  }
+  if (onAdd) {
+    bars.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0 || event.target !== bars) return;
+      event.preventDefault();
+      const rect = bars.getBoundingClientRect();
+      onAdd(Math.min(1, Math.max(0, (event.clientX - rect.left) / (rect.width || 1))), valueAt(event.clientY));
+    });
+  }
+  function draw2(next, { keepFocus = bars.contains(document2.activeElement) } = {}) {
+    activeDrag?.();
+    items = next;
+    const columns = /* @__PURE__ */ new Map();
+    for (const item of items) columns.set(item.beat, (columns.get(item.beat) ?? 0) + 1);
+    const used = /* @__PURE__ */ new Map();
+    bars.replaceChildren(...items.map((item, i2) => {
+      const slot = used.get(item.beat) ?? 0;
+      used.set(item.beat, slot + 1);
+      return bar(item, i2, { slot, count: columns.get(item.beat) });
+    }));
+    if (focusKey !== null && !items.some((i2) => i2.key === focusKey)) focusKey = null;
+    if (keepFocus) [...bars.children].find((b) => b.dataset.key === (focusKey ?? items[0]?.key))?.focus?.();
+  }
+  return {
+    element,
+    draw: draw2,
+    /** Which bar the keys are on, so the roll can keep the lane and the grid together. */
+    focusItem(key) {
+      focusKey = key;
+    },
+    get items() {
+      return items;
+    }
+  };
+}
+
+// src/ui/RollControllers.js
+var CHOICES = [
+  ["velocity", "Velocity"],
+  ["pitchBend", "Pitch bend"],
+  ["1", "Modulation (controller 1)"],
+  ["7", "Volume (controller 7)"],
+  ["10", "Pan (controller 10)"],
+  ["11", "Expression (controller 11)"],
+  ["64", "Sustain pedal (controller 64)"],
+  ["other", "Another controller"]
+];
+var BEND = { min: -8192, max: 8191 };
+var CC = { min: 0, max: 127 };
+function createRollControllers(document2, { onEvents, place }) {
+  const element = document2.createElement("div");
+  element.className = "piano-roll-lanes";
+  element.setAttribute("role", "group");
+  element.setAttribute("aria-label", "What is drawn under the notes");
+  const label = document2.createElement("label");
+  label.append(document2.createTextNode("Under the notes "));
+  const select = document2.createElement("select");
+  select.id = "roll-lane";
+  CHOICES.forEach(([value2, text], i2) => {
+    const option = document2.createElement("option");
+    option.value = value2;
+    option.textContent = text;
+    option.selected = i2 === 0;
+    select.append(option);
+  });
+  label.append(select);
+  const numberLabel = document2.createElement("label");
+  numberLabel.append(document2.createTextNode("Controller number "));
+  const number6 = document2.createElement("input");
+  number6.type = "number";
+  number6.id = "roll-lane-number";
+  number6.min = "0";
+  number6.max = "127";
+  number6.step = "1";
+  number6.value = "74";
+  numberLabel.append(number6);
+  const host = document2.createElement("div");
+  host.className = "piano-roll-lane-host";
+  let events = [];
+  let steps = 0;
+  let stepsPerBeat = 4;
+  let lane = null;
+  let laneKey = null;
+  const chosen = () => {
+    if (select.value === "velocity") return null;
+    if (select.value === "pitchBend") return { controller: "pitchBend", name: "Pitch bend", range: BEND, fine: 64, coarse: 1024 };
+    const controller = select.value === "other" ? Number(number6.value) : Number(select.value);
+    if (!(Number.isInteger(controller) && controller >= 0 && controller <= 127)) return void 0;
+    const name2 = select.value === "other" ? `Controller ${controller}` : CHOICES.find(([v]) => v === select.value)[1].replace(/ \(.*\)/, "");
+    return { controller, name: name2, range: CC, fine: 1, coarse: 10 };
+  };
+  const bendWords = (value2) => value2 === 0 ? "centre" : value2 > 0 ? "bent up" : "bent down";
+  const send = (list) => onEvents(list);
+  const same = (a2, b) => a2.controller === b.controller && a2.atBeat === b.atBeat;
+  function build(choice) {
+    const { controller, name: name2, range, fine, coarse } = choice;
+    const key = `${controller}`;
+    lane = createRollLane(document2, {
+      id: "roll-lane-controller",
+      label: name2,
+      min: range.min,
+      max: range.max,
+      fine,
+      coarse,
+      onSet: (item, value2) => send(events.map((e) => same(e, item.event) ? { ...e, value: value2 } : e)),
+      onRemove: (item) => send(events.filter((e) => !same(e, item.event))),
+      onAdd: (fraction, value2) => {
+        const atBeat = Math.min(steps - 1, Math.floor(fraction * steps)) / stepsPerBeat;
+        send([...events.filter((e) => !(e.controller === controller && e.atBeat === atBeat)), { atBeat, controller, value: value2 }]);
+      }
+    });
+    laneKey = key;
+    host.append(lane.element);
+  }
+  const rebuild = () => {
+    lane?.element.remove();
+    lane = null;
+    laneKey = null;
+  };
+  select.addEventListener("change", () => {
+    numberLabel.hidden = select.value !== "other";
+    rebuild();
+    onChoice?.();
+  });
+  number6.addEventListener("change", () => {
+    rebuild();
+    onChoice?.();
+  });
+  let onChoice = null;
+  numberLabel.hidden = true;
+  element.append(label, numberLabel);
+  return {
+    element,
+    host,
+    /** Called when the choice of lane changes, so the roll can show or hide the velocity lane and draw again. */
+    set onChoice(fn) {
+      onChoice = fn;
+    },
+    /** True while velocity is what is drawn under the notes. */
+    get velocity() {
+      return select.value === "velocity";
+    },
+    /** The roll's size in columns, and its events, as it is now. */
+    draw({ list, columns, perBeat }) {
+      events = list;
+      steps = columns;
+      stepsPerBeat = perBeat;
+      const choice = chosen();
+      if (select.value === "other") {
+        if (choice === void 0) number6.setAttribute("aria-invalid", "true");
+        else number6.removeAttribute("aria-invalid");
+      }
+      if (!choice) {
+        lane?.element.remove();
+        lane = null;
+        laneKey = null;
+        return;
+      }
+      if (!lane || laneKey !== `${choice.controller}`) {
+        rebuild();
+        build(choice);
+      }
+      lane.element.style.setProperty("--steps", String(steps));
+      lane.draw(events.filter((e) => e.controller === choice.controller).map((e) => {
+        const where = place(e.atBeat);
+        return {
+          key: `${e.controller}@${e.atBeat}`,
+          event: e,
+          beat: e.atBeat,
+          value: e.value,
+          name: `${choice.name} at ${where}`,
+          text: choice.controller === "pitchBend" ? `${e.value}, ${bendWords(e.value)}, at ${where}` : `${e.value}, at ${where}`
+        };
+      }));
+    }
+  };
+}
+
 // src/ui/PianoRoll.js
 var STEPS_PER_BEAT = 4;
 var VISIBLE_PITCHES = 24;
 var PITCHES = 128;
-var NAMES3 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+var NAMES4 = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 function noteName4(pitch) {
-  return `${NAMES3[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
+  return `${NAMES4[pitch % 12]}${Math.floor(pitch / 12) - 1}`;
 }
 function spokenName(pitch) {
   return noteName4(pitch).replace("#", " sharp ");
@@ -34073,7 +35185,7 @@ function noteAt(notes, pitch, beat) {
   return notes.find((n2) => n2.pitch === pitch && n2.startBeat <= beat && beat < n2.startBeat + n2.lengthBeats) ?? null;
 }
 function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
-}, onTransform = null, now = () => Date.now() }) {
+}, onTransform = null, onControllers = null, now = () => Date.now() }) {
   if (typeof onChange !== "function" || typeof onClose !== "function") {
     throw new Error("createPianoRoll needs onChange and onClose");
   }
@@ -34109,7 +35221,16 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
   head.className = "playhead";
   head.setAttribute("aria-hidden", "true");
   head.hidden = true;
-  scroller.append(grid);
+  const velocityLane = createRollLane(document2, {
+    id: "roll-lane-velocity",
+    label: "Velocity",
+    min: 1,
+    max: 127,
+    onSet: (item, velocity) => setVelocity(item.key, velocity)
+  });
+  const lanes = onControllers ? createRollControllers(document2, { onEvents: (list) => onControllers(clip.id, list), place: (beat) => barBeat(beat, options.beatsPerBar) }) : null;
+  scroller.append(grid, velocityLane.element);
+  if (lanes) scroller.append(lanes.host);
   const empty = document2.createElement("p");
   empty.className = "note piano-roll-empty";
   empty.textContent = "No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.";
@@ -34122,6 +35243,14 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     draw2();
   } });
   const snap = (pitch) => rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch;
+  const stepInput = createRollStep(document2, {
+    onNote: (pitch, { advance }) => enterStep(pitch, { advance }),
+    onRest: () => stepRest(),
+    onBack: () => stepBack(),
+    onChange: () => {
+      if (clip) draw2();
+    }
+  });
   const fitButton = document2.createElement("button");
   fitButton.type = "button";
   fitButton.id = "roll-fit-scale";
@@ -34231,12 +35360,17 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       say2("No notes chosen");
     });
   }
-  element.append(header, empty, help, rollScale.element, tools, scroller, status);
+  element.append(header, empty, help, rollScale.element, stepInput.element, ...lanes ? [lanes.element] : [], tools, scroller, status);
+  if (lanes) lanes.onChoice = () => {
+    if (clip) draw2();
+  };
   function showOpen(open) {
     empty.hidden = open;
     help.hidden = !open;
     scroller.hidden = !open;
     rollScale.element.hidden = !open;
+    stepInput.element.hidden = !open;
+    if (lanes) lanes.element.hidden = !open;
     tools.hidden = !open || clip === null || clip.notes.length === 0;
     close.hidden = !open;
     if (!open) heading.textContent = "Piano roll";
@@ -34304,7 +35438,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     grid.setAttribute("aria-colcount", String(steps() + 1));
     for (let pitch = low + VISIBLE_PITCHES - 1; pitch >= low; pitch--) {
       const row = document2.createElement("div");
-      row.className = `piano-roll-row${NAMES3[pitch % 12].includes("#") ? " black" : ""}`;
+      row.className = `piano-roll-row${NAMES4[pitch % 12].includes("#") ? " black" : ""}`;
       row.setAttribute("role", "row");
       row.setAttribute("aria-rowindex", String(PITCHES - pitch));
       const label = document2.createElement("span");
@@ -34349,6 +35483,17 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       grid.append(row);
     }
     grid.append(head);
+    velocityLane.element.hidden = notes.length === 0 || lanes !== null && !lanes.velocity;
+    lanes?.draw({ list: clip.controllers ?? [], columns: steps(), perBeat: STEPS_PER_BEAT });
+    velocityLane.element.style.setProperty("--steps", String(steps()));
+    velocityLane.draw(notes.map((n2) => ({
+      key: keyOf3(n2),
+      beat: n2.startBeat,
+      value: n2.velocity,
+      chosen: chosen.has(keyOf3(n2)),
+      name: `Velocity of ${spokenName(n2.pitch)} at ${barBeat(n2.startBeat, options.beatsPerBar)}`,
+      text: `${n2.velocity}, ${spokenName(n2.pitch)} at ${barBeat(n2.startBeat, options.beatsPerBar)}`
+    })));
     if (hadFocus) document2.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true });
   }
   function send(notes, message) {
@@ -34372,6 +35517,61 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       send([...clip.notes, note], `Added ${spokenName(note.pitch)} at ${where(cursor.step)}, 1 beat`);
     }
   }
+  const stepSteps = () => Math.max(1, Math.round(stepInput.lengthBeats * STEPS_PER_BEAT));
+  function enterStep(pitch, { advance = true } = {}) {
+    if (!(pitch >= 0 && pitch <= 127)) {
+      say2(`${pitch} is outside the range of notes`);
+      return;
+    }
+    const startBeat = beatOf(cursor.step);
+    const note = { startBeat, lengthBeats: stepInput.lengthBeats, pitch: snap(pitch), velocity: 100 };
+    const rest = clip.notes.filter((n2) => !(n2.startBeat === startBeat && n2.pitch === note.pitch));
+    onAudition(note.pitch, note.velocity);
+    const at = cursor.step;
+    cursor = { pitch: note.pitch, step: cursor.step + (advance ? stepSteps() : 0) };
+    send([...rest, note], `Entered ${spokenName(note.pitch)} at ${where(at)}, ${beats(note.lengthBeats)}${advance ? "" : ", staying for a chord"}`);
+  }
+  function stepRest() {
+    cursor = { ...cursor, step: cursor.step + stepSteps() };
+    draw2();
+    say2(`Rest, now at ${where(cursor.step)}`);
+  }
+  function stepBack() {
+    const to = Math.max(0, cursor.step - stepSteps());
+    const startBeat = beatOf(to);
+    cursor = { ...cursor, step: to };
+    const kept = clip.notes.filter((n2) => n2.startBeat !== startBeat);
+    if (kept.length === clip.notes.length) {
+      draw2();
+      say2(`Back at ${where(to)}`);
+      return;
+    }
+    send(kept, `Back at ${where(to)}, cleared ${clip.notes.length - kept.length} note${clip.notes.length - kept.length === 1 ? "" : "s"}`);
+  }
+  function stepKey(event) {
+    const { key } = event;
+    const semitone = STEP_KEYS[key.toLowerCase()];
+    if (semitone !== void 0 && key.length === 1) {
+      event.preventDefault();
+      enterStep(pitchFor(stepInput.octave, semitone), { advance: !(event.shiftKey || stepInput.chord) });
+    } else if (key === "z" || key === "Z" || key === "x" || key === "X") {
+      event.preventDefault();
+      stepInput.setOctave(stepInput.octave + (key.toLowerCase() === "x" ? 1 : -1));
+      say2(`Octave ${stepInput.octave}`);
+    } else if (key === " ") {
+      event.preventDefault();
+      stepRest();
+    } else if (key === "Backspace") {
+      event.preventDefault();
+      stepBack();
+    } else return false;
+    return true;
+  }
+  function setVelocity(key, velocity) {
+    const note = clip.notes.find((n2) => keyOf3(n2) === key);
+    if (!note) return;
+    send(clip.notes.map((n2) => n2 === note ? { ...n2, velocity } : n2), `Velocity ${velocity}, ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}`);
+  }
   function adjust(change, message) {
     const here = noteAt(clip.notes, cursor.pitch, beatOf(cursor.step));
     if (!here) {
@@ -34390,6 +35590,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
       draw2();
     };
     const { key, shiftKey, altKey } = event;
+    if (stepInput.active && !event.ctrlKey && !event.metaKey && !altKey && stepKey(event)) return;
     if (altKey && (key === "ArrowUp" || key === "ArrowDown")) {
       event.preventDefault();
       const by = key === "ArrowUp" ? 10 : -10;
@@ -34606,6 +35807,7 @@ function createPianoRoll(document2, { onChange, onClose, onAudition = () => {
     /** Close the clip, leaving the note that says how to open one. */
     hide() {
       abandon?.();
+      stepInput.reset();
       clip = null;
       chosen = /* @__PURE__ */ new Set();
       preview = null;
@@ -34642,8 +35844,8 @@ function outputTargets(project, trackId) {
 }
 function describeRouting(project, trackId, labelOf) {
   const parts = [];
-  const track = project.track(trackId);
-  if (track?.output) parts.push(`Output to ${labelOf(track.output)}`);
+  const track2 = project.track(trackId);
+  if (track2?.output) parts.push(`Output to ${labelOf(track2.output)}`);
   const sends = project.sends.filter((s) => s.from === trackId);
   if (sends.length > 0) {
     parts.push(`Sends to ${sends.map((s) => s.kind === "midi" ? `${labelOf(s.to)} (MIDI)` : `${labelOf(s.to)} (${s.tap === "pre" ? "pre" : "post"})`).join(", ")}`);
@@ -34744,7 +35946,7 @@ function createArrangement(ctx2) {
     // Saved with the session: stated on every track of the folder, which is how the editor graph knows a folder.
     onFolderCollapse: (folder, collapsed) => {
       const { project } = ctx2.dispatcher;
-      for (const track of project.tracks) if (project.trackLayout(track.id).folder === folder) project.setTrackLayout(track.id, { folderCollapsed: collapsed });
+      for (const track2 of project.tracks) if (project.trackLayout(track2.id).folder === folder) project.setTrackLayout(track2.id, { folderCollapsed: collapsed });
     },
     // Plus and minus on a track's name: one size taller or shorter, stopping at either end.
     onSizeStep: (trackId, by) => {
@@ -34820,8 +36022,8 @@ function createArrangement(ctx2) {
     onPaste: (id) => {
       try {
         const { project } = ctx2.dispatcher;
-        const track = clipboard?.length === 1 ? project.clip(id)?.track : null;
-        edit(pasteClips(project, clipboard, { startBeat: playheadBeat(), track }));
+        const track2 = clipboard?.length === 1 ? project.clip(id)?.track : null;
+        edit(pasteClips(project, clipboard, { startBeat: playheadBeat(), track: track2 }));
       } catch (error2) {
         log2(error2.message, "error");
       }
@@ -34904,8 +36106,8 @@ function createArrangement(ctx2) {
   }
   ctx2.selection.subscribe(drawClipActions);
   let clipboard = null;
-  function automationLanes(project, track) {
-    const nodeIds = new Set(project.nodes.filter((n2) => n2.track === track.id).map((n2) => n2.id));
+  function automationLanes(project, track2) {
+    const nodeIds = new Set(project.nodes.filter((n2) => n2.track === track2.id).map((n2) => n2.id));
     const { beatsPerBar } = project.transport;
     return project.envelopes.filter((e) => e.target.node !== void 0 && nodeIds.has(e.target.node)).flatMap((envelope) => {
       const node = project.node(envelope.target.node);
@@ -34964,6 +36166,8 @@ function createArrangement(ctx2) {
       { op: "setClipNotes", id, notes }
     ]),
     onAudition: audition,
+    // The events of a clip replace as one edit, like its notes.
+    onControllers: (id, controllers) => edit([{ op: "setClipControllers", id, controllers }]),
     onTransform: (name2, options, { indices = null } = {}) => {
       let changes;
       try {
@@ -34991,8 +36195,8 @@ function createArrangement(ctx2) {
     const { project } = ctx2.dispatcher;
     const clip = project.clip(id);
     if (!clip || clip.kind !== "midi") return;
-    const track = project.tracks.find((t) => t.id === clip.track);
-    pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx2.rack.trackLabel(track, project.tracks.indexOf(track)) });
+    const track2 = project.tracks.find((t) => t.id === clip.track);
+    pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx2.rack.trackLabel(track2, project.tracks.indexOf(track2)) });
   }
   function draw2(tracks, labelOfTrack) {
     const project = ctx2.dispatcher?.project;
@@ -35006,8 +36210,8 @@ function createArrangement(ctx2) {
       tracks,
       // The same two questions the Mixer tab asks, so a strip there and a
       // header here agree on which tracks have anything to hear.
-      mixable: (track) => mixable(track, nodes, (id) => ctx2.dispatcher.engineNode(id)?.profile?.audioOutputs),
-      silent: (track) => silent.get(track.id) === true,
+      mixable: (track2) => mixable(track2, nodes, (id) => ctx2.dispatcher.engineNode(id)?.profile?.audioOutputs),
+      silent: (track2) => silent.get(track2.id) === true,
       clips: project?.clips ?? [],
       beatsPerBar: project?.transport.beatsPerBar ?? 4,
       // What to do first, as buttons over the requests the page already makes.
@@ -35020,11 +36224,11 @@ function createArrangement(ctx2) {
           }) }
         ]
       },
-      layoutFor: (track) => project.trackLayout(track.id),
-      lanesFor: (track) => automationLanes(project, track),
+      layoutFor: (track2) => project.trackLayout(track2.id),
+      lanesFor: (track2) => automationLanes(project, track2),
       masterFor: () => masterLanes(project),
       colorFor: (clip) => project.clipColor(clip.id),
-      chainFor: (track) => describeChain(project, track.id, {
+      chainFor: (track2) => describeChain(project, track2.id, {
         profileOf: (id) => ctx2.dispatcher.engineNode(id)?.profile,
         labelOf: (id) => {
           const n2 = project.node(id);
@@ -35033,17 +36237,17 @@ function createArrangement(ctx2) {
         failedOf: (id) => ctx2.dispatcher.engineNode(id)?.failed ?? null,
         trackLabelOf: (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
       }),
-      routingFor: (track) => describeRouting(project, track.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
-      kindFor: (track) => trackKind(project, track, (id) => ctx2.dispatcher.engineNode(id)?.profile),
-      canArm: (track) => Boolean(track.midiInput),
-      armed: (track) => ctx2.midiIn.armed(track.id),
-      latencyFor: (track) => {
-        const found = latencies.get(track.id);
+      routingFor: (track2) => describeRouting(project, track2.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
+      kindFor: (track2) => trackKind(project, track2, (id) => ctx2.dispatcher.engineNode(id)?.profile),
+      canArm: (track2) => Boolean(track2.midiInput),
+      armed: (track2) => ctx2.midiIn.armed(track2.id),
+      latencyFor: (track2) => {
+        const found = latencies.get(track2.id);
         return found === void 0 ? null : { frames: found.frames, alignFrames: found.alignFrames, rate: sampleRate };
       },
       loop: project ? { start: project.transport.loopStart, end: project.transport.loopEnd, enabled: project.transport.loopEnabled } : null,
       labelFor: labelOfTrack,
-      playsIntoNothing: (track) => !track.midiInput,
+      playsIntoNothing: (track2) => !track2.midiInput,
       peaksFor: (clip, count) => {
         if (!clipPlayer) return null;
         const peaks = clipPlayer.peaks(clip.source, count);
@@ -35350,7 +36554,7 @@ function tally(tracks, key) {
   const on = tracks.filter((t) => t.channel[key]).length;
   return on === 0 ? "none" : on === tracks.length ? "all" : "some";
 }
-function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift }) {
+function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift, onExportMidi = null }) {
   for (const [name2, fn] of Object.entries({ onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== "function") throw new Error(`createBulkTrackPanel needs ${name2}`);
   }
@@ -35455,15 +36659,21 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
   }
   const levelBy = createAmountField(document2, { id: "bulk-level-by", label: "Level by", unit: "dB", min: -60, max: 24, step: 0.5, onApply: onLevelShift });
   const panBy = createAmountField(document2, { id: "bulk-pan-by", label: "Pan by", unit: "(-1 left to 1 right)", min: -1, max: 1, step: 0.05, onApply: onPanShift });
+  const exportMidi = document2.createElement("button");
+  exportMidi.type = "button";
+  exportMidi.id = "bulk-export-midi";
+  exportMidi.textContent = "Export these as MIDI";
+  exportMidi.addEventListener("click", () => onExportMidi());
+  exportMidi.hidden = true;
   const actions = document2.createElement("div");
   actions.className = "track-actions";
-  actions.append(mute, solo, bus);
+  actions.append(mute, solo, bus, ...onExportMidi ? [exportMidi] : []);
   element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder);
   return {
     element,
     /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
      * `folders` are the names in use and `inFolder` how many of the selected are in one. */
-    show({ tracks, labels, folders = [], inFolder = 0 }) {
+    show({ tracks, labels, folders = [], inFolder = 0, hasMidi = false }) {
       summary.textContent = `${tracks.length} tracks selected: ${labels.join(", ")}.`;
       for (const [button, key, word] of [[mute, "muted", "Mute"], [solo, "soloed", "Solo"]]) {
         const state = tally(tracks, key);
@@ -35479,6 +36689,7 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
         return option;
       }));
       unfolder.hidden = inFolder === 0;
+      exportMidi.hidden = !hasMidi;
     }
   };
 }
@@ -35487,15 +36698,15 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
 function describeLevelShift(project, trackIds, decibels2) {
   if (!Number.isFinite(decibels2)) throw new Error(`decibels must be a number: ${decibels2}`);
   const ratio = 10 ** (decibels2 / 20);
-  return tracksOf(project, trackIds).map((track) => ({ op: "setTrackChannel", track: track.id, gain: track.channel.gain * ratio }));
+  return tracksOf(project, trackIds).map((track2) => ({ op: "setTrackChannel", track: track2.id, gain: track2.channel.gain * ratio }));
 }
 function describePanShift(project, trackIds, amount) {
   if (!Number.isFinite(amount)) throw new Error(`pan shift must be a number: ${amount}`);
   const tracks = tracksOf(project, trackIds);
-  const pans = tracks.map((track) => track.channel.pan);
+  const pans = tracks.map((track2) => track2.channel.pan);
   const room = amount >= 0 ? 1 - Math.max(...pans) : -1 - Math.min(...pans);
   const shift = amount >= 0 ? Math.min(amount, room) : Math.max(amount, room);
-  return tracks.map((track) => ({ op: "setTrackChannel", track: track.id, pan: Math.min(1, Math.max(-1, track.channel.pan + shift)) }));
+  return tracks.map((track2) => ({ op: "setTrackChannel", track: track2.id, pan: Math.min(1, Math.max(-1, track2.channel.pan + shift)) }));
 }
 function groupMembers(project, trackId) {
   const folder = project.trackLayout(trackId).folder;
@@ -35505,9 +36716,9 @@ function tracksOf(project, trackIds) {
   const ids = [...new Set(trackIds)];
   if (ids.length === 0) throw new Error("no tracks to change");
   return ids.map((id) => {
-    const track = project.track(id);
-    if (!track) throw new Error(`no such track: ${id}`);
-    return track;
+    const track2 = project.track(id);
+    if (!track2) throw new Error(`no such track: ${id}`);
+    return track2;
   });
 }
 
@@ -35864,6 +37075,13 @@ function createDockPanel(ctx2) {
     const result = ctx2.dispatcher.apply(changes);
     if (!result.ok) log2(result.message, "error");
   };
+  const exportMidi = (trackIds) => {
+    try {
+      ctx2.midiExport.exportMidi({ trackIds });
+    } catch (error2) {
+      log2(error2.message, "error");
+    }
+  };
   const bulk = createBulkTrackPanel(document2, {
     onChannel: (change) => {
       const ids = ctx2.selection.ids;
@@ -35881,6 +37099,7 @@ function createDockPanel(ctx2) {
     onFolder: (folder) => {
       for (const id of ctx2.selection.ids) layoutOf(id, { folder });
     },
+    onExportMidi: () => exportMidi(ctx2.selection.ids),
     onBus: () => {
       let changes;
       try {
@@ -35961,6 +37180,8 @@ function createDockPanel(ctx2) {
     onSize: (id, laneSize) => layoutOf(id, { laneSize }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels2) => shift(describeLevelShift, decibels2, groupMembers(ctx2.dispatcher.project, id)),
+    onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx2.dispatcher.project, id)),
+    onExportMidi: (id) => exportMidi([id]),
     onMove: (id, delta) => ctx2.dispatcher.project.moveTrack(id, delta),
     onFreeze: (id) => {
       ctx2.bounce.freezeTrack(id).catch((error2) => log2(error2.message, "error"));
@@ -35990,16 +37211,16 @@ function createDockPanel(ctx2) {
     onRange: (id, change) => apply([{ op: "setSend", id, ...change }])
   });
   dock.slot("track").append(trackPanel.element, sendsPanel.element, chain.element);
-  const trackLabel = (track) => {
+  const trackLabel = (track2) => {
     const { project } = ctx2.dispatcher;
-    return ctx2.rack.trackLabel(track, project.tracks.indexOf(track));
+    return ctx2.rack.trackLabel(track2, project.tracks.indexOf(track2));
   };
   function update() {
     const project = ctx2.dispatcher?.project;
     const { selection, arrangement } = ctx2;
     const only = selection.size === 1 ? selection.ids[0] : null;
     const clip = selection.kind === "clip" && only ? project?.clip(only) : null;
-    const track = selection.kind === "track" && only ? project?.track(only) : null;
+    const track2 = selection.kind === "track" && only ? project?.track(only) : null;
     if (clip?.kind === "midi") {
       if (arrangement.rollClipId !== clip.id) arrangement.showInRoll(clip.id);
       dock.show("midi", `Editor: MIDI clip on ${trackLabel(project.track(clip.track))}`);
@@ -36040,7 +37261,8 @@ function createDockPanel(ctx2) {
         tracks,
         labels: tracks.map(trackLabel),
         folders: [...new Set(project.orderedTracks.map(folderOf).filter(Boolean))],
-        inFolder: tracks.filter(folderOf).length
+        inFolder: tracks.filter(folderOf).length,
+        hasMidi: tracks.some((t) => trackHasMidi(project, t.id))
       });
       dock.show("tracks", `Editor: ${tracks.length} tracks`);
       return;
@@ -36053,44 +37275,45 @@ function createDockPanel(ctx2) {
         unplayable: ctx2.clipPlayer?.failure(clip.source)?.message ?? null
       });
       dock.show("audio", `Editor: audio clip on ${trackLabel(owner)}`);
-    } else if (track) {
-      chainTrack = track.id;
+    } else if (track2) {
+      chainTrack = track2.id;
       const ordered = project.orderedTracks;
       trackPanel.show({
-        id: track.id,
-        name: track.label,
-        defaultName: trackLabel({ ...track, label: null }),
-        layout: project.trackLayout(track.id),
+        id: track2.id,
+        name: track2.label,
+        defaultName: trackLabel({ ...track2, label: null }),
+        layout: project.trackLayout(track2.id),
         folders: [...new Set(ordered.map((t) => project.trackLayout(t.id).folder).filter(Boolean))],
-        index: ordered.findIndex((t) => t.id === track.id),
+        index: ordered.findIndex((t) => t.id === track2.id),
         count: ordered.length,
-        plugins: project.nodes.filter((n2) => n2.track === track.id).length,
-        members: groupMembers(project, track.id).length
+        plugins: project.nodes.filter((n2) => n2.track === track2.id).length,
+        members: groupMembers(project, track2.id).length,
+        hasMidi: trackHasMidi(project, track2.id)
       });
-      const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === track.id), project.connections);
+      const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === track2.id), project.connections);
       const labelOf = (node2) => node2.label ?? ctx2.dispatcher.engineNode(node2.id)?.profile?.label ?? node2.id;
       const named2 = (id) => {
         const n2 = project.node(id);
         return n2 ? labelOf(n2) : null;
       };
       chain.show({
-        label: trackLabel(track),
+        label: trackLabel(track2),
         nodes,
         labelOf,
-        midiInputLabel: track.midiInput ? named2(track.midiInput) : null,
-        audioInputLabel: track.audioInput ? named2(track.audioInput) : null
+        midiInputLabel: track2.midiInput ? named2(track2.midiInput) : null,
+        audioInputLabel: track2.audioInput ? named2(track2.audioInput) : null
       });
       const asOption = (t) => ({ id: t.id, label: trackLabel(t) });
       sendsPanel.show({
-        label: trackLabel(track),
-        output: track.output,
-        outputOptions: outputTargets(project, track.id).map(asOption),
-        sends: project.sends.filter((s) => s.from === track.id).map((s) => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? "audio", level: s.level, tap: s.tap, lowNote: s.lowNote, highNote: s.highNote })),
-        addOptions: sendTargets(project, track.id).map(asOption),
+        label: trackLabel(track2),
+        output: track2.output,
+        outputOptions: outputTargets(project, track2.id).map(asOption),
+        sends: project.sends.filter((s) => s.from === track2.id).map((s) => ({ id: s.id, toLabel: trackLabel(project.track(s.to)), kind: s.kind ?? "audio", level: s.level, tap: s.tap, lowNote: s.lowNote, highNote: s.highNote })),
+        addOptions: sendTargets(project, track2.id).map(asOption),
         // Only where the target has somewhere for MIDI to play, which is its MIDI input.
-        midiAddOptions: sendTargets(project, track.id, "midi").filter((t) => t.midiInput).map(asOption)
+        midiAddOptions: sendTargets(project, track2.id, "midi").filter((t) => t.midiInput).map(asOption)
       });
-      dock.show("track", `Editor: ${trackLabel(track)}`);
+      dock.show("track", `Editor: ${trackLabel(track2)}`);
     } else {
       idle.textContent = selection.size > 1 ? `${selection.size} ${selection.kind}s selected.` : "Select a clip to edit it, or a track to see its plugins.";
       dock.show("idle", "Editor");
@@ -36272,10 +37495,10 @@ function buildMatrix(project, { profileOf, labelOf, trackLabelOf }) {
   const cols = [];
   const ends = [];
   const feedsSomething = new Set(project.connections.filter((c3) => !isMidiSignal(c3.signalKind)).map((c3) => c3.from.node));
-  for (const track of project.orderedTracks) {
-    for (const node of project.nodes.filter((n2) => n2.track === track.id)) {
+  for (const track2 of project.orderedTracks) {
+    for (const node of project.nodes.filter((n2) => n2.track === track2.id)) {
       const profile = profileOf(node.id);
-      const common = { node: node.id, track: track.id, label: labelOf(node.id), trackLabel: trackLabelOf(track.id) };
+      const common = { node: node.id, track: track2.id, label: labelOf(node.id), trackLabel: trackLabelOf(track2.id) };
       if ((profile?.audioOutputs ?? 0) > 0 && !node.bypassed && !feedsSomething.has(node.id)) {
         ends.push({ ...common, text: `${common.label} on ${common.trackLabel}` });
       }
@@ -36404,8 +37627,8 @@ function createLoading(ctx2) {
       const seen = await support.classify(iri5).catch(() => null);
       foreign = seen?.kind === "foreign";
     }
-    const track = ctx2.rack.targetTrack();
-    const where = { ...foreign ? { foreign: true } : {}, ...track ? { track } : {} };
+    const track2 = ctx2.rack.targetTrack();
+    const where = { ...foreign ? { foreign: true } : {}, ...track2 ? { track: track2 } : {} };
     let result = await d.addPlugin(iri5, where);
     if (!result.ok && result.kind === "consent") {
       if (!await askConsent(document2, result.request)) {
@@ -36657,10 +37880,10 @@ function createBrowser(ctx2) {
         }));
         head.append(button);
       }
-      const meta = document2.createElement("div");
-      meta.className = "meta";
-      meta.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
-      row.append(meta);
+      const meta2 = document2.createElement("div");
+      meta2.className = "meta";
+      meta2.textContent = [result.vendor, result.roles.join(", ")].filter(Boolean).join(" \xB7 ");
+      row.append(meta2);
       if (!result.web) {
         const why = document2.createElement("div");
         why.className = "native";
@@ -36728,10 +37951,10 @@ function createBrowser(ctx2) {
         }));
         head.append(button);
       }
-      const meta = document2.createElement("div");
-      meta.className = "meta";
-      meta.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
-      row.append(meta);
+      const meta2 = document2.createElement("div");
+      meta2.className = "meta";
+      meta2.textContent = member.ok ? [member.profile.vendor, member.profile.roles.map(compact).join(", ")].filter(Boolean).join(" \xB7 ") : member.iri;
+      row.append(meta2);
       if (!member.ok) {
         const why = document2.createElement("div");
         why.className = "native";
@@ -36855,20 +38078,20 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
     if (items.length > 0) lines.push(`    ${term3(property)} ${[...items].sort(byId).map((x) => `<#${x.id}>`).join(" , ")} ;`);
   }
   lines.push(`    ${term3(jig6.transport)} <#transport> .`);
-  for (const track of tracks) {
+  for (const track2 of tracks) {
     lines.push("");
-    lines.push(`<#${track.id}>`);
+    lines.push(`<#${track2.id}>`);
     const statements = [`a ${term3(jig6.Track)}`];
-    if (track.label) statements.push(`rdfs:label ${string(track.label)}`);
-    const channel = track.channel;
+    if (track2.label) statements.push(`rdfs:label ${string(track2.label)}`);
+    const channel = track2.channel;
     if (channel.gain !== 1) statements.push(`${term3(jig6.gain)} ${decimal(channel.gain)}`);
     if (channel.pan !== 0) statements.push(`${term3(jig6.pan)} ${decimal(channel.pan)}`);
     if (channel.muted) statements.push(`${term3(jig6.muted)} true`);
     if (channel.soloed) statements.push(`${term3(jig6.soloed)} true`);
-    if (track.midiInput) statements.push(`${term3(jig6.midiInput)} <#${track.midiInput}>`);
-    if (track.audioInput) statements.push(`${term3(jig6.audioInput)} <#${track.audioInput}>`);
-    if (track.output) statements.push(`${term3(jig6.output)} <#${track.output}>`);
-    const clips = (project.clips ?? []).filter((c3) => c3.track === track.id).sort(byId);
+    if (track2.midiInput) statements.push(`${term3(jig6.midiInput)} <#${track2.midiInput}>`);
+    if (track2.audioInput) statements.push(`${term3(jig6.audioInput)} <#${track2.audioInput}>`);
+    if (track2.output) statements.push(`${term3(jig6.output)} <#${track2.output}>`);
+    const clips = (project.clips ?? []).filter((c3) => c3.track === track2.id).sort(byId);
     if (clips.length > 0) statements.push(`${term3(jig6.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
   }
@@ -36886,12 +38109,17 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
       if (clip.offsetSeconds !== 0) statements.push(`${term3(jig6.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
       if (clip.fadeInBeats > 0) statements.push(`${term3(jig6.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig6.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
-    } else if (clip.notes.length > 0) {
-      statements.push(`${term3(jig6.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+    } else {
+      if (clip.notes.length > 0) statements.push(`${term3(jig6.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+      const events = clip.controllers ?? [];
+      if (events.length > 0) statements.push(`${term3(jig6.controllerEvent)} ${events.map((_, i2) => `<#${clip.id}-e${i2 + 1}>`).join(" , ")}`);
     }
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
     clip.notes.forEach((note, i2) => {
       lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig6.Note)} ; ${term3(trn5.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn5.pitch)} ${integer(note.pitch)} ; ${term3(trn5.velocity)} ${integer(note.velocity)} .`);
+    });
+    (clip.controllers ?? []).forEach((event, i2) => {
+      lines.push(event.controller === "pitchBend" ? `<#${clip.id}-e${i2 + 1}> a ${term3(jig6.PitchBendEvent)} ; ${term3(trn5.startBeat)} ${decimal(event.atBeat)} ; ${term3(jig6.bend)} ${integer(event.value)} .` : `<#${clip.id}-e${i2 + 1}> a ${term3(jig6.ControllerEvent)} ; ${term3(trn5.startBeat)} ${decimal(event.atBeat)} ; ${term3(jig6.controller)} ${integer(event.controller)} ; ${term3(jig6.value)} ${integer(event.value)} .`);
     });
   }
   for (const node of nodes) {
@@ -36989,15 +38217,15 @@ function writeEditor(project, { iri: iri5 } = {}) {
     if (x === 0 && y === 0) continue;
     lines.push(`<#${node.id}> ${term3(jig6.x)} ${decimal(x)} ; ${term3(jig6.y)} ${decimal(y)} .`);
   }
-  for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track.id);
+  for (const track2 of [...project.tracks].sort(byId)) {
+    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track2.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig6.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig6.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig6.laneSize)} ${string(laneSize)}`);
     if (folder !== null) parts.push(`${term3(jig6.folder)} ${string(folder)}`);
     if (folderCollapsed) parts.push(`${term3(jig6.folderCollapsed)} true`);
-    if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
+    if (parts.length > 0) lines.push(`<#${track2.id}> ${parts.join(" ; ")} .`);
   }
   for (const clip of [...project.clips].sort(byId)) {
     const { color } = editor.clip(clip.id);
@@ -37236,16 +38464,16 @@ function readProject(dataset2) {
   }));
   const clips = [];
   for (const trackIri of trackIris) {
-    const track = idOf(trackIri, iri5, "track");
+    const track2 = idOf(trackIri, iri5, "track");
     for (const clipIri of objects4(dataset2, trackIri, jig7.clip).map((t) => t.value)) {
-      const id = idOf(clipIri, iri5, `clip of track ${track}`);
+      const id = idOf(clipIri, iri5, `clip of track ${track2}`);
       const types = objects4(dataset2, clipIri, RDF_TYPE).map((t) => t.value);
       const kind = types.includes(jig7.MidiClip) ? "midi" : types.includes(jig7.AudioClip) ? "audio" : null;
       if (!kind) throw new Error(`clip ${id} is neither a jig:MidiClip nor a jig:AudioClip`);
       const clip = {
         op: "addClip",
         id,
-        track,
+        track: track2,
         kind,
         startBeat: number4(one2(dataset2, clipIri, trn6.startBeat), `startBeat of clip ${id}`),
         lengthBeats: number4(one2(dataset2, clipIri, trn6.lengthBeats), `lengthBeats of clip ${id}`)
@@ -37261,6 +38489,10 @@ function readProject(dataset2) {
           pitch: number4(one2(dataset2, noteIri, trn6.pitch), `pitch of a note in ${id}`),
           velocity: number4(one2(dataset2, noteIri, trn6.velocity), `velocity of a note in ${id}`)
         }));
+        clip.controllers = objects4(dataset2, clipIri, jig7.controllerEvent).map((t) => t.value).map((eventIri) => {
+          const atBeat = number4(one2(dataset2, eventIri, trn6.startBeat), `startBeat of an event in ${id}`);
+          return objects4(dataset2, eventIri, RDF_TYPE).some((t) => t.value === jig7.PitchBendEvent) ? { atBeat, controller: "pitchBend", value: number4(one2(dataset2, eventIri, jig7.bend), `bend of an event in ${id}`) } : { atBeat, controller: number4(one2(dataset2, eventIri, jig7.controller), `controller of an event in ${id}`), value: number4(one2(dataset2, eventIri, jig7.value), `value of an event in ${id}`) };
+        });
       } else {
         const source = value(one2(dataset2, clipIri, jig7.source));
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
@@ -37964,7 +39196,10 @@ function createMidiIn(ctx2) {
       const { engine, dispatcher } = ctx2;
       if (!engine || !dispatcher) return;
       const frame = Math.round(engine.context.currentTime * engine.context.sampleRate);
-      for (const nodeId of targets()) dispatcher.sendEvents(nodeId, [{ frame, bytes }]);
+      for (const nodeId of targets()) {
+        dispatcher.sendEvents(nodeId, [{ frame, bytes }]);
+        ctx2.midiRecord.capture(nodeId, bytes);
+      }
     },
     onChange: say2
   });
@@ -38760,8 +39995,8 @@ async function plan(statements, context) {
     const port = portOf(name2, symbol, line, column);
     if (!port) return;
     if (a2.type === "set") {
-      const meta = check(a2.expr, port, name2, line);
-      if (meta) out.steps.push({ line, when, action: { type: "set", node: name2, symbol, expr: a2.expr, port: meta } });
+      const meta2 = check(a2.expr, port, name2, line);
+      if (meta2) out.steps.push({ line, when, action: { type: "set", node: name2, symbol, expr: a2.expr, port: meta2 } });
     } else {
       if (when.kind === "every") {
         fail(line, "a ramp cannot be repeated by every; use at to place it", a2.column);
@@ -38853,6 +40088,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",
   clip_set_notes: "arrangement editing, not yet a statement",
+  clip_set_controllers: "arrangement editing, not yet a statement",
   clip_transform_notes: "arrangement editing, not yet a statement",
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",
@@ -39522,6 +40758,7 @@ ctx.align = createAlign(ctx);
 ctx.runtime = createRuntime(ctx);
 ctx.transport = createTransport(ctx);
 ctx.record = createRecord(ctx);
+ctx.midiRecord = createMidiRecord(ctx);
 ctx.editors = createEditors(ctx);
 ctx.skins = createSkins(ctx);
 ctx.selection = new Selection();
@@ -39564,7 +40801,7 @@ $("collectionbar").addEventListener("submit", (e) => {
 });
 $("play").addEventListener("click", () => transport.play().catch((error2) => log(error2.message, "error")));
 $("stop").addEventListener("click", () => {
-  ctx.record.finishTake().catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
+  Promise.all([ctx.record.finishTake(), ctx.midiRecord.finishTake()]).catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
 });
 $("panic").addEventListener("click", () => transport.panic());
 document.addEventListener("keydown", (event) => {
@@ -39574,10 +40811,23 @@ document.addEventListener("keydown", (event) => {
   }
 });
 $("record").addEventListener("click", () => ctx.record.toggle().catch((error2) => log(error2.message, "error")));
-$("tempo").addEventListener("change", async () => {
+$("record-midi").addEventListener("click", () => ctx.midiRecord.toggle().catch((error2) => log(error2.message, "error")));
+var setTempo = async (bpm) => {
   const d = await ctx.runtime.ensureRunning();
-  const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: Number($("tempo").value) }] }]);
+  const result = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm }] }]);
   if (!result.ok) log(result.message, "error");
+};
+$("tempo").addEventListener("change", () => setTempo(Number($("tempo").value)));
+var tapper = createTapper({ now: () => performance.now() });
+$("tap-tempo").addEventListener("click", () => {
+  const bpm = tapper.tap();
+  if (bpm === null) {
+    $("tap-said").textContent = "Tap again to set the tempo";
+    return;
+  }
+  $("tempo").value = String(bpm);
+  $("tap-said").textContent = `Tempo ${bpm}`;
+  setTempo(bpm);
 });
 $("loop").addEventListener("click", () => transport.toggleLoop());
 $("metronome").addEventListener("click", () => transport.setClick($("metronome").getAttribute("aria-pressed") !== "true"));
@@ -39589,6 +40839,21 @@ $("signature").addEventListener("change", async () => {
 applyIcons(document);
 $("export").addEventListener("click", () => ctx.bounce.exportWav().catch((error2) => log(error2.message, "error")));
 $("export-stems").addEventListener("click", () => ctx.bounce.exportStems().catch((error2) => log(error2.message, "error")));
+ctx.midiExport = createMidiExport(ctx);
+$("export-midi").addEventListener("click", () => {
+  try {
+    ctx.midiExport.exportMidi();
+  } catch (error2) {
+    log(error2.message, "error");
+  }
+});
+var midiImport = createMidiImport(ctx);
+$("import-midi").addEventListener("click", () => $("midifile").click());
+$("midifile").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (file) await midiImport.importFile(file).catch((error2) => log(error2.message, "error"));
+});
 ctx.sessions.mount();
 ctx.history.mount();
 ctx.arrangement.mount();

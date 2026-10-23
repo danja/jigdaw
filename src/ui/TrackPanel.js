@@ -30,7 +30,7 @@ export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')
 }
 
-export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null }) {
+export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
   for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== 'function') throw new Error(`createTrackPanel needs ${name}`)
   }
@@ -148,15 +148,37 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
     button.addEventListener('click', () => onGroupLevel(trackId, decibels))
     return button
   }
+  // The same for pan: a shift for every member, stopping where the one nearest the edge arrives.
+  const panStep = (id, text, amount) => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.id = id
+    button.textContent = text
+    button.addEventListener('click', () => onGroupPan(trackId, amount))
+    return button
+  }
+  if (onGroupPan) {
+    group.append(panStep('track-group-pan-left', 'Members pan left 0.1', -0.1), panStep('track-group-pan-right', 'Members pan right 0.1', 0.1))
+    group.append(createAmountField(document, { id: 'track-group-pan-by', label: 'Members pan by', unit: '(-1 left to 1 right)', min: -1, max: 1, step: 0.05, onApply: amount => onGroupPan(trackId, amount) }).element)
+  }
   if (onGroupLevel) {
     group.append(groupStep('track-group-down', 'Members down 1 dB', -1), groupStep('track-group-up', 'Members up 1 dB', 1))
     group.append(createAmountField(document, { id: 'track-group-by', label: 'Members by', unit: 'dB', min: -60, max: 24, step: 0.5, onApply: decibels => onGroupLevel(trackId, decibels) }).element)
   }
   group.hidden = true
 
+  // Save this track's MIDI notes and controller events to a file. Left out for a track with none, or a host that cannot.
+  const exportMidi = document.createElement('button')
+  exportMidi.type = 'button'
+  exportMidi.id = 'track-export-midi'
+  exportMidi.textContent = 'Export track as MIDI'
+  exportMidi.title = 'Save the notes of this track\'s MIDI clips to a Standard MIDI file'
+  exportMidi.addEventListener('click', () => onExportMidi(trackId))
+  exportMidi.hidden = true
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
-  actions.append(position, up, down, freeze, remove)
+  actions.append(position, up, down, freeze, ...(onExportMidi ? [exportMidi] : []), remove)
   element.append(nameLabel, folderLabel, colorGroup, sizeLabel, group, actions)
 
   return {
@@ -167,7 +189,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
      * `plugins` how many a delete would take with it, `index` and `count` where
      * it stands in the arrangement.
      */
-    show ({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0 }) {
+    show ({ id, name: current, defaultName, layout, index, count, plugins, folders = [], members = 0, hasMidi = false }) {
       trackId = id
       // A name being typed is not overwritten by a redraw.
       if (document.activeElement !== name) name.value = current ?? ''
@@ -178,6 +200,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
       for (const button of swatches) button.setAttribute('aria-pressed', String((button.dataset.color || null) === layout.color))
       for (const option of size.options) option.selected = option.value === layout.laneSize
       group.hidden = !onGroupLevel || members === 0
+      exportMidi.hidden = !hasMidi
       group.setAttribute('aria-label', `Move the ${members} tracks in this bus or folder together`)
       position.textContent = `Track ${index + 1} of ${count}.`
       up.hidden = index === 0

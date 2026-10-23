@@ -60,7 +60,9 @@
 <#midi-clip>
     a jig:MidiClip ;
     trn:startBeat -4.0 ;
-    jig:note <#note> , <#a> .
+    jig:note <#note> , <#a> ;
+    # An event that is a controller event, one that is a pitch bend, and a node.
+    jig:controllerEvent <#event-1> , <#event-2> , <#a> .
 
 # Plays no file, from before the start of the file it does not play.
 <#audio-clip>
@@ -82,6 +84,18 @@
     trn:lengthBeats 0.0 ;
     trn:pitch 128 ;
     trn:velocity 0 .
+
+# Before its clip, a controller MIDI does not have, and no value.
+<#event-1>
+    a jig:ControllerEvent ;
+    trn:startBeat -1.0 ;
+    jig:controller 128 .
+
+# A pitch bend beyond what 14 bits hold.
+<#event-2>
+    a jig:PitchBendEvent ;
+    trn:startBeat 0.0 ;
+    jig:bend 9000 .
 
 <#c>
     a jig:Connection ;

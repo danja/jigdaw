@@ -265,6 +265,8 @@ export function createArrangement (ctx) {
       { op: 'setClipNotes', id, notes }
     ]),
     onAudition: audition,
+    // The events of a clip replace as one edit, like its notes.
+    onControllers: (id, controllers) => edit([{ op: 'setClipControllers', id, controllers }]),
     onTransform: (name, options, { indices = null } = {}) => {
       let changes
       try { changes = describeNoteTransform(ctx.dispatcher.project, pianoRoll.clipId, name, options, { indices }) } catch (error) { log(error.message, 'error'); return error.message }

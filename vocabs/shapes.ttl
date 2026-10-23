@@ -455,6 +455,45 @@ jig:MidiClipShape a sh:NodeShape ;
         sh:path jig:note ;
         sh:nodeKind sh:IRI ; sh:class jig:Note ;
         sh:message "A MIDI clip's notes are named jig:Note resources, never blank nodes or a list."
+    ] ;
+    sh:property [
+        sh:path jig:controllerEvent ;
+        sh:nodeKind sh:IRI ;
+        sh:or ( [ sh:class jig:ControllerEvent ] [ sh:class jig:PitchBendEvent ] ) ;
+        sh:message "A MIDI clip's controller and pitch bend events are named resources, never blank nodes or a list."
+    ] .
+
+jig:ControllerEventShape a sh:NodeShape ;
+    sh:targetClass jig:ControllerEvent ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path trn:startBeat ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A controller event is at one beat, relative to the start of its clip and not before it."
+    ] ;
+    sh:property [
+        sh:path jig:controller ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ;
+        sh:message "A controller event names one MIDI controller, 0 to 127."
+    ] ;
+    sh:property [
+        sh:path jig:value ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 127 ;
+        sh:message "A controller event has one whole value, 0 to 127."
+    ] .
+
+jig:PitchBendEventShape a sh:NodeShape ;
+    sh:targetClass jig:PitchBendEvent ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path trn:startBeat ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:minInclusive 0 ;
+        sh:message "A pitch bend event is at one beat, relative to the start of its clip and not before it."
+    ] ;
+    sh:property [
+        sh:path jig:bend ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive -8192 ; sh:maxInclusive 8191 ;
+        sh:message "A pitch bend event has one whole position, -8192 to 8191."
     ] .
 
 jig:AudioClipShape a sh:NodeShape ;

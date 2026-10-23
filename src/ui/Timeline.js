@@ -202,12 +202,13 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         live.add(key)
         let bar = folderBars.get(key)
         if (!bar) {
-          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onToggle: folder => { onFolderCollapse(folder, !collapsedFolders.has(folder)); folderBars.get(key)?.element.querySelector('button').focus() } })
+          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onGrip: event => dragFolder(key, event), onToggle: folder => { onFolderCollapse(folder, !collapsedFolders.has(folder)); folderBars.get(key)?.element.querySelector('.folder-toggle').focus() } })
           folderBars.set(key, bar)
         }
         bar.runStart = i
         bar.runLength = end - i
         bar.firstTrack = tracks[i].id
+        bar.runIds = tracks.slice(i, end).map(t => t.id)
         bar.neighbours = { up: tracks[i - 1]?.id ?? null, down: tracks[end]?.id ?? null }
         bar.update({ name, count: end - i, collapsed: collapsedFolders.has(name), canUp: i > 0, canDown: end < tracks.length })
         out.push(bar.element)
@@ -234,6 +235,50 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const wanted = moved?.element.querySelector(delta < 0 ? '.folder-move-up' : '.folder-move-down')
     const target = wanted && !wanted.hidden ? wanted : moved?.element.querySelector('.folder-toggle')
     target?.focus()
+  }
+
+  /**
+   * Drag a whole folder by its grip to the row of a track outside it. The tracks between hop over the run one by one, in order, so
+   * the run lands where the row was (above it dragged up, below it dragged down) and nothing else is reordered. The same calls
+   * as the Move buttons, a layout change with no undo.
+   */
+  function dragFolder (key, event) {
+    event.preventDefault()
+    event.target?.releasePointerCapture?.(event.pointerId)
+    const bar = folderBars.get(key)
+    if (!bar) return
+    const run = bar.runIds
+    const first = bar.firstTrack
+    let target = null
+    for (const id of run) rows.get(id)?.row.classList.add('dragging')
+    const clear = () => {
+      document.removeEventListener('pointermove', over)
+      document.removeEventListener('pointerup', up)
+      document.removeEventListener('pointercancel', clear)
+      for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+    }
+    function over (e) {
+      const hit = e.target?.closest?.('.timeline-row')?.dataset.track
+      if (!hit || hit === target || run.includes(hit) || !rows.has(hit)) return
+      if (target) rows.get(target)?.row.classList.remove('drop-target')
+      target = hit
+      rows.get(target).row.classList.add('drop-target')
+    }
+    function up () {
+      clear()
+      if (target) {
+        const order = lastArgs.tracks.map(t => t.id)
+        const at = order.indexOf(run[0])
+        const to = order.indexOf(target)
+        if (to < at) for (let k = at - 1; k >= to; k--) onMoveTrack(order[k], run.length)
+        else for (let k = at + run.length; k <= to; k++) onMoveTrack(order[k], -run.length)
+      }
+      const moved = [...folderBars.values()].find(b => b.firstTrack === first)
+      moved?.element.querySelector('.folder-toggle')?.focus()
+    }
+    document.addEventListener('pointermove', over)
+    document.addEventListener('pointerup', up)
+    document.addEventListener('pointercancel', clear)
   }
 
   /**

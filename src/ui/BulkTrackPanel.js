@@ -14,7 +14,7 @@ export function tally (tracks, key) {
   return on === 0 ? 'none' : on === tracks.length ? 'all' : 'some'
 }
 
-export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift }) {
+export function createBulkTrackPanel (document, { onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift, onExportMidi = null }) {
   for (const [name, fn] of Object.entries({ onChannel, onColor, onSize, onFolder, onBus, onLevelShift, onPanShift })) {
     if (typeof fn !== 'function') throw new Error(`createBulkTrackPanel needs ${name}`)
   }
@@ -126,16 +126,24 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   const levelBy = createAmountField(document, { id: 'bulk-level-by', label: 'Level by', unit: 'dB', min: -60, max: 24, step: 0.5, onApply: onLevelShift })
   const panBy = createAmountField(document, { id: 'bulk-pan-by', label: 'Pan by', unit: '(-1 left to 1 right)', min: -1, max: 1, step: 0.05, onApply: onPanShift })
 
+  // Save the selected tracks' MIDI to one file, a track each. Left out when none of them has any, or the host cannot.
+  const exportMidi = document.createElement('button')
+  exportMidi.type = 'button'
+  exportMidi.id = 'bulk-export-midi'
+  exportMidi.textContent = 'Export these as MIDI'
+  exportMidi.addEventListener('click', () => onExportMidi())
+  exportMidi.hidden = true
+
   const actions = document.createElement('div')
   actions.className = 'track-actions'
-  actions.append(mute, solo, bus)
+  actions.append(mute, solo, bus, ...(onExportMidi ? [exportMidi] : []))
   element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder)
 
   return {
     element,
     /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
      * `folders` are the names in use and `inFolder` how many of the selected are in one. */
-    show ({ tracks, labels, folders = [], inFolder = 0 }) {
+    show ({ tracks, labels, folders = [], inFolder = 0, hasMidi = false }) {
       summary.textContent = `${tracks.length} tracks selected: ${labels.join(', ')}.`
       for (const [button, key, word] of [[mute, 'muted', 'Mute'], [solo, 'soloed', 'Solo']]) {
         const state = tally(tracks, key)
@@ -148,6 +156,7 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
       size.options[0].selected = true
       folderNames.replaceChildren(...folders.map(text => { const option = document.createElement('option'); option.value = text; return option }))
       unfolder.hidden = inFolder === 0
+      exportMidi.hidden = !hasMidi
     }
   }
 }

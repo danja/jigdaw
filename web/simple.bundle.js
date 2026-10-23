@@ -13341,6 +13341,11 @@ var init_Vocabulary = __esm({
         MidiClip: `${JIG}MidiClip`,
         AudioClip: `${JIG}AudioClip`,
         Note: `${JIG}Note`,
+        ControllerEvent: `${JIG}ControllerEvent`,
+        PitchBendEvent: `${JIG}PitchBendEvent`,
+        controllerEvent: `${JIG}controllerEvent`,
+        controller: `${JIG}controller`,
+        bend: `${JIG}bend`,
         clip: `${JIG}clip`,
         note: `${JIG}note`,
         source: `${JIG}source`,
@@ -23409,8 +23414,9 @@ function isLoadableIRI(value2) {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
 }
 var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+var cloneClip = (c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) });
 var cloneState = (state) => ({
-  clips: new Map([...state.clips].map(([id, c3]) => [id, { ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) }])),
+  clips: new Map([...state.clips].map(([id, c3]) => [id, cloneClip(c3)])),
   tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
   nodes: new Map([...state.nodes].map(([id, n2]) => [id, { ...n2, settings: new Map(n2.settings) }])),
   connections: new Map([...state.connections].map(([id, c3]) => [id, { ...c3, from: { ...c3.from }, to: { ...c3.to } }])),
@@ -23457,6 +23463,26 @@ function checkNotes(notes) {
     }
     return { startBeat, lengthBeats, pitch, velocity };
   }).sort((a2, b) => a2.startBeat - b.startBeat || a2.pitch - b.pitch);
+}
+var PITCH_BEND = "pitchBend";
+var BEND_RANGE = Object.freeze({ min: -8192, max: 8191 });
+function checkControllers(events) {
+  if (!Array.isArray(events)) throw new Error("controllers must be an array");
+  const seen = /* @__PURE__ */ new Set();
+  const checked = events.map((event, i2) => {
+    const { atBeat, controller, value: value2 } = event ?? {};
+    if (!(Number.isFinite(atBeat) && atBeat >= 0)) throw new Error(`controller event ${i2} needs an atBeat at or after zero`);
+    const bend = controller === PITCH_BEND;
+    if (!bend && !(Number.isInteger(controller) && controller >= 0 && controller <= 127)) throw new Error(`controller event ${i2} needs a controller from 0 to 127, or pitchBend`);
+    const [low, high] = bend ? [BEND_RANGE.min, BEND_RANGE.max] : [0, 127];
+    if (!(Number.isInteger(value2) && value2 >= low && value2 <= high)) throw new Error(`controller event ${i2} needs a whole value from ${low} to ${high}`);
+    const key = `${controller}@${atBeat}`;
+    if (seen.has(key)) throw new Error(`controller event ${i2} repeats ${bend ? "pitch bend" : `controller ${controller}`} at beat ${atBeat}`);
+    seen.add(key);
+    return { atBeat, controller, value: value2 };
+  });
+  const order = (e) => e.controller === PITCH_BEND ? 128 : e.controller;
+  return checked.sort((a2, b) => a2.atBeat - b.atBeat || order(a2) - order(b));
 }
 function checkFade(name, value2) {
   if (!(Number.isFinite(value2) && value2 >= 0)) throw new Error(`${name} must be zero or more beats`);
@@ -23582,6 +23608,7 @@ var OPERATIONS = {
     const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
+      clip.controllers = checkControllers(change.controllers ?? []);
     } else {
       if (typeof change.source !== "string" || !URL.canParse(change.source)) {
         throw new Error("an audio clip needs a source, the absolute IRI of the file it plays");
@@ -23593,6 +23620,7 @@ var OPERATIONS = {
       clip.fadeInBeats = checkFade("fadeInBeats", change.fadeInBeats ?? 0);
       clip.fadeOutBeats = checkFade("fadeOutBeats", change.fadeOutBeats ?? 0);
       clip.notes = [];
+      clip.controllers = [];
     }
     state.clips.set(id, clip);
     return id;
@@ -23633,6 +23661,15 @@ var OPERATIONS = {
     if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no notes`);
     refuseIfLocked(clip, change, "edited");
     clip.notes = checkNotes(change.notes);
+    return change.id;
+  },
+  /** Replace a MIDI clip's controller and pitch bend events, all at once, like its notes. */
+  setClipControllers(state, change) {
+    const clip = state.clips.get(change.id);
+    if (!clip) throw new Error(`no such clip: ${change.id}`);
+    if (clip.kind !== "midi") throw new Error(`clip ${change.id} is audio and holds no controller events`);
+    refuseIfLocked(clip, change, "edited");
+    clip.controllers = checkControllers(change.controllers);
     return change.id;
   },
   removeClip(state, change) {
@@ -23904,7 +23941,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [] } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -24108,7 +24145,7 @@ var Project = class {
         position: this.position(n2.id)
       })),
       connections: this.connections.map((c3) => ({ ...c3, from: { ...c3.from }, to: { ...c3.to } })),
-      clips: this.clips.map((c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })) })),
+      clips: this.clips.map(cloneClip),
       transport: {
         ...this.#state.transport,
         tempoPoints: this.#state.transport.tempoPoints.map((p) => ({ ...p })),
@@ -26562,6 +26599,21 @@ function readHostConfig(json) {
 }
 
 // src/model/ClipEdit.js
+function partitionControllers(events, at) {
+  const left = [];
+  const right = [];
+  const held = /* @__PURE__ */ new Map();
+  for (const e of events) {
+    if (e.atBeat < at) {
+      left.push({ ...e });
+      held.set(e.controller, e.value);
+    } else right.push({ ...e, atBeat: e.atBeat - at });
+  }
+  for (const [controller, value2] of held) {
+    if (!right.some((e) => e.controller === controller && e.atBeat === 0)) right.push({ atBeat: 0, controller, value: value2 });
+  }
+  return { left, right };
+}
 function partition(notes, at) {
   const left = [];
   const right = [];
@@ -26586,10 +26638,12 @@ function splitClip(project, id, atBeat, { transport = null, newId = project.next
   const second = clip.lengthBeats - first3;
   if (clip.kind === "midi") {
     const { left, right } = partition(clip.notes, first3);
+    const events = partitionControllers(clip.controllers ?? [], first3);
     return [
       { op: "setClip", id, lengthBeats: first3 },
       { op: "setClipNotes", id, notes: left },
-      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right }
+      ...clip.controllers?.length ? [{ op: "setClipControllers", id, controllers: events.left }] : [],
+      { op: "addClip", id: newId, track: clip.track, kind: "midi", startBeat: atBeat, lengthBeats: second, muted: clip.muted, notes: right, controllers: events.right }
     ];
   }
   if (!transport) throw new Error("splitting an audio clip needs the transport, to turn beats into seconds");
@@ -26604,7 +26658,7 @@ function duplicateClip(project, id, { track, startBeat } = {}) {
   if (!clip) throw new Error(`no such clip: ${id}`);
   const at = startBeat ?? clip.startBeat + clip.lengthBeats;
   const where = track ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })) } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 
 // src/model/TrackBus.js
@@ -26907,6 +26961,15 @@ var expandTerm = (value2) => String(value2).startsWith("http") ? String(value2) 
 var POINT_SCHEMA = { type: "object", properties: { atBeat: { type: "number", minimum: 0 }, value: { type: "number" }, curve: { type: "string", enum: ["step", "linear", "smooth"] } }, required: ["atBeat", "value"] };
 var ok = (data) => ({ ok: true, ...data });
 var failed = (message, extra = {}) => ({ ok: false, error: message, ...extra });
+var CONTROLLER_SCHEMA = Object.freeze({
+  type: "object",
+  properties: {
+    atBeat: { type: "number" },
+    controller: { description: 'a MIDI controller number 0 to 127, or the string "pitchBend"', oneOf: [{ type: "integer" }, { type: "string", enum: ["pitchBend"] }] },
+    value: { type: "integer", description: "0 to 127 for a controller, -8192 to 8191 for pitchBend (0 is the wheel at rest)" }
+  },
+  required: ["atBeat", "controller", "value"]
+});
 var NOTE_SCHEMA = Object.freeze({
   type: "object",
   properties: {
@@ -27292,12 +27355,13 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           startBeat: { type: "number" },
           lengthBeats: { type: "number" },
           notes: { type: "array", items: NOTE_SCHEMA },
+          controllers: { type: "array", items: CONTROLLER_SCHEMA },
           expectedRevision: { type: "integer" }
         },
         required: ["trackId", "startBeat", "lengthBeats"]
       },
-      async handler({ trackId, startBeat, lengthBeats, notes = [], expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes }], { expectedRevision });
+      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -27335,6 +27399,23 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
       },
       async handler({ clipId, notes, expectedRevision } = {}) {
         const result = dispatcher.apply([{ op: "setClipNotes", id: clipId, notes }], { expectedRevision });
+        return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
+      }
+    },
+    {
+      name: "clip_set_controllers",
+      description: 'Replace every controller and pitch bend event of a MIDI clip, as one edit. Each event has atBeat (from the clip start), controller (a MIDI controller number 0 to 127, such as 1 modulation, 7 volume, 10 pan, 64 sustain; or "pitchBend") and value (0 to 127 for a controller; -8192 to 8191 for pitchBend, where 0 is the wheel at rest). An event holds its value until the next one for the same controller. One controller has at most one event at a beat.',
+      inputSchema: {
+        type: "object",
+        properties: {
+          clipId: { type: "string" },
+          controllers: { type: "array", items: CONTROLLER_SCHEMA },
+          expectedRevision: { type: "integer" }
+        },
+        required: ["clipId", "controllers"]
+      },
+      async handler({ clipId, controllers, expectedRevision } = {}) {
+        const result = dispatcher.apply([{ op: "setClipControllers", id: clipId, controllers }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -28300,6 +28381,9 @@ function automationBetween(transport, points, segments2, start, end) {
 // src/engine/Scheduler.js
 var NOTE_ON = 144;
 var NOTE_OFF = 128;
+var CONTROL_CHANGE = 176;
+var PITCH_BEND2 = 224;
+var BEND_CENTRE = Uint8Array.from([PITCH_BEND2, 0, 64]);
 function clipNotes(project) {
   const byNode = /* @__PURE__ */ new Map();
   for (const track of project.tracks) {
@@ -28313,6 +28397,25 @@ function clipNotes(project) {
         const off = Math.min(on + note.lengthBeats, end);
         if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
         byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity });
+      }
+    }
+  }
+  return byNode;
+}
+function clipControllers(project) {
+  const byNode = /* @__PURE__ */ new Map();
+  for (const track of project.tracks) {
+    if (!track.midiInput) continue;
+    for (const clip of project.clips) {
+      if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
+      const end = clip.startBeat + clip.lengthBeats;
+      for (const event of clip.controllers ?? []) {
+        const on = clip.startBeat + event.atBeat;
+        if (on >= end) continue;
+        const bend = event.controller === "pitchBend";
+        const bytes = bend ? Uint8Array.from([PITCH_BEND2, event.value + 8192 & 127, event.value + 8192 >> 7]) : Uint8Array.from([CONTROL_CHANGE, event.controller, event.value]);
+        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, []);
+        byNode.get(track.midiInput).push({ on, off: on, bytes, bend, key: bend ? "bend" : event.controller });
       }
     }
   }
@@ -28362,6 +28465,9 @@ var Scheduler = class {
   #sampleRate;
   #lookahead;
   #notes;
+  #controllers;
+  // The nodes that were sent a pitch bend, so stopping can bring the wheel back to rest.
+  #bent = /* @__PURE__ */ new Set();
   #transport;
   #send;
   #audio;
@@ -28389,7 +28495,7 @@ var Scheduler = class {
    *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
    *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio, automation }) {
+  constructor({ now, sampleRate, lookahead, notes, controllers, transport, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== "function" || typeof notes !== "function" || typeof transport !== "function" || typeof send !== "function") {
       throw new Error("Scheduler needs now, notes, transport and send");
     }
@@ -28399,6 +28505,8 @@ var Scheduler = class {
     this.#sampleRate = sampleRate;
     this.#lookahead = lookahead;
     this.#notes = notes;
+    if (controllers !== void 0 && typeof controllers !== "function") throw new Error("Scheduler needs controllers as a function, or none");
+    this.#controllers = controllers ?? null;
     this.#transport = transport;
     this.#send = send;
     const given = [audio, playAudio, stopAudio].filter((f) => f !== void 0);
@@ -28446,11 +28554,31 @@ var Scheduler = class {
       if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
       outgoing.get(nodeId).push({ frame, bytes, order });
     };
+    const normal = [...segments(transport, start, end)];
+    const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
     for (const [nodeId, notes] of this.#notes()) {
       for (const note of notesBetween(transport, notes, start, end)) {
         const onFrame = this.#frame(note.on);
         add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1);
         this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame });
+      }
+    }
+    if (this.#controllers) {
+      for (const [nodeId, events] of this.#controllers()) {
+        for (const event of notesBetween(transport, events, start, end)) {
+          add(nodeId, this.#frame(event.on), event.bytes, 0.5);
+          if (event.bend) this.#bent.add(nodeId);
+        }
+        for (const pass of passes) {
+          if (!(pass.from >= start && pass.from < end) || !(pass.lo > 0)) continue;
+          const held = /* @__PURE__ */ new Map();
+          for (const e of [...events].sort((a2, b) => a2.on - b.on)) if (transport.secondsAtBeat(e.on) < pass.lo) held.set(e.key, e);
+          for (const e of events) if (e.bend && !held.has("bend")) held.set("bend", { ...e, bytes: BEND_CENTRE });
+          for (const e of held.values()) {
+            add(nodeId, this.#frame(pass.from), e.bytes, 0.25);
+            if (e.bend) this.#bent.add(nodeId);
+          }
+        }
       }
     }
     if (this.#audio) {
@@ -28459,15 +28587,13 @@ var Scheduler = class {
       }
     }
     if (this.#automation) {
-      const normal = [...segments(transport, start, end)];
-      const passes = this.#seed === null ? normal : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter((p) => p.from > 0)];
-      this.#seed = null;
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin));
         }
       }
     }
+    this.#seed = null;
     this.#sounding = this.#sounding.filter((s) => {
       if (s.off >= end) return true;
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0);
@@ -28485,6 +28611,11 @@ var Scheduler = class {
       if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, []);
       outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 });
     }
+    for (const nodeId of this.#bent) {
+      if (!outgoing.has(nodeId)) outgoing.set(nodeId, []);
+      outgoing.get(nodeId).push({ frame: nowFrame, bytes: BEND_CENTRE, order: 2 });
+    }
+    this.#bent.clear();
     this.#sounding = [];
     this.#origin = null;
     this.#stopAudio?.();
@@ -28701,6 +28832,7 @@ function createTransport(ctx2) {
       sampleRate: engine.context.sampleRate,
       lookahead: hostConfig.schedulerLookaheadMs / 1e3,
       notes: () => clipNotes(d.project),
+      controllers: () => clipControllers(d.project),
       transport: () => d.transport(),
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),
@@ -29013,12 +29145,17 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
       if (clip.offsetSeconds !== 0) statements.push(`${term3(jig4.offsetSeconds)} ${decimal(clip.offsetSeconds)}`);
       if (clip.fadeInBeats > 0) statements.push(`${term3(jig4.fadeInBeats)} ${decimal(clip.fadeInBeats)}`);
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig4.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
-    } else if (clip.notes.length > 0) {
-      statements.push(`${term3(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+    } else {
+      if (clip.notes.length > 0) statements.push(`${term3(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
+      const events = clip.controllers ?? [];
+      if (events.length > 0) statements.push(`${term3(jig4.controllerEvent)} ${events.map((_, i2) => `<#${clip.id}-e${i2 + 1}>`).join(" , ")}`);
     }
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
     clip.notes.forEach((note, i2) => {
       lines.push(`<#${clip.id}-n${i2 + 1}> a ${term3(jig4.Note)} ; ${term3(trn5.startBeat)} ${decimal(note.startBeat)} ; ${term3(trn5.lengthBeats)} ${decimal(note.lengthBeats)} ; ${term3(trn5.pitch)} ${integer(note.pitch)} ; ${term3(trn5.velocity)} ${integer(note.velocity)} .`);
+    });
+    (clip.controllers ?? []).forEach((event, i2) => {
+      lines.push(event.controller === "pitchBend" ? `<#${clip.id}-e${i2 + 1}> a ${term3(jig4.PitchBendEvent)} ; ${term3(trn5.startBeat)} ${decimal(event.atBeat)} ; ${term3(jig4.bend)} ${integer(event.value)} .` : `<#${clip.id}-e${i2 + 1}> a ${term3(jig4.ControllerEvent)} ; ${term3(trn5.startBeat)} ${decimal(event.atBeat)} ; ${term3(jig4.controller)} ${integer(event.controller)} ; ${term3(jig4.value)} ${integer(event.value)} .`);
     });
   }
   for (const node of nodes) {
@@ -29388,6 +29525,10 @@ function readProject(dataset2) {
           pitch: number3(one2(dataset2, noteIri, trn6.pitch), `pitch of a note in ${id}`),
           velocity: number3(one2(dataset2, noteIri, trn6.velocity), `velocity of a note in ${id}`)
         }));
+        clip.controllers = objects3(dataset2, clipIri, jig5.controllerEvent).map((t) => t.value).map((eventIri) => {
+          const atBeat = number3(one2(dataset2, eventIri, trn6.startBeat), `startBeat of an event in ${id}`);
+          return objects3(dataset2, eventIri, RDF_TYPE).some((t) => t.value === jig5.PitchBendEvent) ? { atBeat, controller: "pitchBend", value: number3(one2(dataset2, eventIri, jig5.bend), `bend of an event in ${id}`) } : { atBeat, controller: number3(one2(dataset2, eventIri, jig5.controller), `controller of an event in ${id}`), value: number3(one2(dataset2, eventIri, jig5.value), `value of an event in ${id}`) };
+        });
       } else {
         const source = value(one2(dataset2, clipIri, jig5.source));
         if (!source) throw new Error(`audio clip ${id} names no jig:source, so there is nothing to play`);
@@ -30373,6 +30514,7 @@ async function bounce({
     sampleRate,
     lookahead: hostConfig.schedulerLookaheadMs / 1e3,
     notes: () => clipNotes(dispatcher.project),
+    controllers: () => clipControllers(dispatcher.project),
     transport: () => dispatcher.transport(),
     send: (nodeId, events) => dispatcher.sendEvents(nodeId, events),
     audio: () => clipAudio(dispatcher.project),
@@ -31379,6 +31521,7 @@ var NOT_SCRIPTABLE = Object.freeze({
   clip_add: "arrangement editing, not yet a statement",
   clip_add_audio: "arrangement editing, not yet a statement",
   clip_set_notes: "arrangement editing, not yet a statement",
+  clip_set_controllers: "arrangement editing, not yet a statement",
   clip_transform_notes: "arrangement editing, not yet a statement",
   clip_move: "arrangement editing, not yet a statement",
   clip_set: "arrangement editing, not yet a statement",

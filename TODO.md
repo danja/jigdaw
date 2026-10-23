@@ -173,7 +173,8 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Shell
 
-- [ ] **Transport.** Tap tempo, a seconds or SMPTE readout, a compact phone transport bar. The click accent assumes one
+- [ ] **Transport.** Tap tempo is built (a Tap button beside BPM, `src/model/TapTempo.js`: the mean gap of the last five taps, a pause over two seconds starts again, 20 to 300 to a tenth;
+      it sets the one tempo the field sets, so it replaces a tempo map as typing in the field does; seen in real Chrome on 2026-10-23, three real clicks gave 219.5 against 219.4 timed independently). A seconds or SMPTE readout, a compact phone transport bar. The click accent assumes one
       signature, like `barBeat`.
 - [ ] **Playhead and loop.** Drag the whole loop, a loop range from a selection or region, and follow for the piano roll.
 - [ ] **Zoom and snap.** Pinch on touch, zoom to selection, seconds as an alternative ruler, the piano roll reading the shared
@@ -205,8 +206,9 @@ Workflow alongside from Routing, and the launcher last.
       to the bar and come back. The bulk panel has a Folder field for all selected tracks and a Take out of their folder button (left out while none is in one); seen in real
       Chrome on 2026-10-22, both ways. Each folder bar has Move up and Move down (the whole run hops past its neighbour, layout only so no undo, a move that goes nowhere is left out; seen in real
       Chrome on 2026-10-22, focus falls to the bar's toggle when the pressed button disappears). Whether a folder is hidden is saved with the session (`jig:folderCollapsed` on each track of the folder, in the editor graph; vocabulary, shape, docs,
-      reference and counterexample files and a round trip test; the toggle and the written graph were seen in real Chrome on 2026-10-22, a save and reopen was not). Not built: moving a folder by drag,
-      and a screen reader pass.
+      reference and counterexample files and a round trip test; the toggle and the written graph were seen in real Chrome on 2026-10-22, a save and reopen was not). A folder bar also has a grip (44px) that drags the whole run onto the row of a track outside it, the tracks it passes hopping over the run (the same
+      layout calls as the Move buttons, which name themselves as the keyboard equivalent); seen in real Chrome on 2026-10-23. A collapsed folder's rows cannot be a drop target. Not built: a drop
+      target on another folder's bar, and a screen reader pass.
 - [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
       one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
       not placed after its members in the order; no way to name it on creation from the page.
@@ -215,7 +217,7 @@ Workflow alongside from Routing, and the launcher last.
       a bus or of a track in a folder, moving the tracks that send to it and those sharing its folder, one undo step. Seen in
       Chrome on 2026-10-22 with a bus of two tracks: both moved to -1.0 dB, the bus stayed at 0. Typed amounts: Level by (dB, -60 to 24) and Pan by (-1 to 1) for several selected tracks, and Members by (dB) for a bus or folder, each with Apply or Enter and a spoken refusal
       for an empty or out-of-range entry (`src/ui/AmountField.js`); the bulk Level by was typed, applied by button and Enter, refused out of range, and undone in one step in real Chrome on
-      2026-10-22 (44px, 16px). Not built: a fader in the track's header rather than the panel, a pan step or typed pan for members, and the folder case was not seen.
+      2026-10-22 (44px, 16px). A bus or folder panel also has Members pan left and right 0.1 and a typed Members pan by (seen in real Chrome on 2026-10-23 with a bus of two tracks: pan left moved both to -0.1, a typed -0.95 stopped them at -1, a typed -3 dB moved both, the bus stayed at 0, all controls 44px). Not built: a fader in the track's header rather than the panel, and the folder case was not seen.
 - [ ] **Collapsed lane: what is left;** nothing for folders, which already hide and show from their bar. Plus and minus on a track's name step the lane size (seen in real Chrome on 2026-10-22 with real key presses, focus kept). A collapsed lane is a fourth
       lane size (Lane size in the dock or the bulk panel, `track_layout`, saved with the session and in the shapes): the name
       and the grip on a 27px bar, against 45px for small. Seen in real Chrome on 2026-10-22, collapsed and restored from the
@@ -318,14 +320,27 @@ the page, it is research, not committed.
       ops.
 - [ ] **Markers, regions, region manager.** Named positions and ranges with a list view, jump by keys, loop a region, drawn
       on the ruler beside a signature lane. The terms and the file format exist; the view does not.
-- [ ] **The scheduler and piano roll reading signature changes** (tap tempo is under Shell, Transport).
+- [ ] **The scheduler and piano roll reading signature changes.**
 - [ ] **Reverse and normalize** as offline render ops on take bytes. Time stretch and pitch shift stay out until a DSP design
       exists (see Keyframe).
 
 ### Phase B. MIDI editing
 
-- [ ] **Velocity, CC and pitch-bend lanes.** Per-note velocity plus one lane per controller, drawn under the roll, keyboard
-      editable (`src/ui/PianoRoll.js`).
+- [ ] **Velocity, CC and pitch-bend lanes: what is left.** Built, in real Chrome on 2026-10-23. Velocity: a bar for each note under its column
+      (`src/ui/RollLane.js`; sliders, so named, ranged and spoken; Up and Down, Shift or Page keys, Home and End, Left and Right between bars; a drag is one edit; a chord's bars share a column).
+      Controllers and pitch bend: a clip holds `controllers` (`{ atBeat, controller: 0 to 127 or 'pitchBend', value }`, a step curve, one per controller per beat;
+      `setClipControllers`, `clip_set_controllers`, `controllers` on `clip_add`), written as `jig:ControllerEvent` and `jig:PitchBendEvent` (vocabulary, shapes, docs,
+      counterexample), played by the scheduler (`clipControllers`, after a note off and before a note on at one frame; the wheel is centred on stop), carried through
+      split, trim, duplicate, copy and paste (a split keeps what each controller held at the cut), and read and written by MIDI import and export. A chooser under the roll swaps the velocity
+      lane for Pitch bend, Modulation, Volume, Pan, Expression, Sustain or any controller number; a press on empty lane adds an event at the nearest step, a drag or keys change it, Delete removes it.
+      Seen in Chrome: the pitch bend lane drawn at the right columns, an event added by a click, one undo and redo. Not heard: no plugin was listened to under a bend or controller (HUMANS.md).
+      Where a loop comes round or playing starts part way in, each controller is set to what it held at that moment and a wheel with nothing earlier goes back to rest (unit-tested; not heard).
+      Not built: recording a MIDI keyboard's wheel and
+      controllers into a clip, curves and ramps (events step), the lane under a clip in the arrangement, a lane for channel pressure, and `clip_transform_notes` leaving events alone.
+- [ ] **Record MIDI into a clip: what is left.** Built: the Rec MIDI button (`web/app/MidiRecord.js`, `src/model/MidiTake.js`) plays the transport and keeps what is played on a MIDI keyboard (the armed tracks, or the selected one) or
+      on the on-screen keys as one MIDI clip a track, from where the take began, in whole bars, with the wheel and controllers thinned to a 96th of a beat; Stop also ends it; one undo. It is separate from Record, which keeps audio, so a track is not
+      recorded twice over. Seen in real Chrome on 2026-10-23 with the on-screen keys (three notes, one clip, logged). Not tried with a real MIDI keyboard (HUMANS.md). Not built: overdub into an existing clip,
+      quantize on record, a visible "armed" state beside the selected-track fallback, and recording while looping into takes.
 - [ ] **Quantize and transforms: what is left.** Built: quantize (grid and strength), transpose, velocity scale and reverse as
       pure functions (`src/model/NoteTransform.js`), one `setClipNotes` change, the `clip_transform_notes` tool, and a row of
       buttons in the piano roll (Quantize with a grid choice, semitone and octave, Softer, Louder, Reverse) that act on every
@@ -335,10 +350,18 @@ the page, it is research, not committed.
       (S or Shift-click toggles a note, Ctrl+A chooses all, Escape lets go before it closes; the buttons then change only the
       chosen notes, and the choice follows them), seen in real Chrome on 2026-10-22 (Shift-click chose one note, Up an octave moved only it, Escape let go and a second Escape closed the roll with focus back on the clip). A Shift-drag over empty squares chooses the notes it
       touches (seen in real Chrome on 2026-10-22 with pointer events sent from the page, since the browser tool's drag drops Shift: the band grew, chose the one note it touched, and Up an octave moved only it; a drag that is cancelled or replaced now commits nothing). Invert (about the first note) and Humanize (a seeded nudge of start and velocity, a fresh seed per press) are built as functions, tool options and buttons, and were pressed in real Chrome on 2026-10-22. A chosen note stays chosen when dragged. Quantize was pressed at 100% in real Chrome on 2026-10-22; the Strength choice below 100% is not seen. Quantize can move note ends too (Move: Starts and ends; unit-tested, not seen in Chrome). Scale (`src/model/Scale.js`, seven scales, any key): the roll marks rows outside it in words and a dot, a drawn or dragged note lands on the nearest pitch inside it (ties go lower), Fit notes to the scale and the `fitScale` tool option move existing notes; seen in real Chrome on 2026-10-22. The choice is view state and is not saved. The grid now declares its real extent to a screen reader (128 rows, each with its place from the top, and the row header as column 1; unit-tested). That was an audit against the ARIA grid pattern: no screen reader was run on it, so a listen with NVDA, VoiceOver or Orca is still wanted, and the long help text read on entering the grid may want shortening. Not built: snapping the keyboard cursor itself, and more scales.
-- [ ] **Step input and virtual keyboard.** Enter notes from keys one step at a time; keep the on-screen keyboard playable from
-      touch.
-- [ ] **MIDI import and export.** Read and write a Standard MIDI File for one track, plus project-wide export, reusing the
-      transport map.
+- [ ] **Step input and virtual keyboard: the keyboard is left.** Step input is built (`src/ui/RollStep.js`, in the note roll): a Step input switch, then A W S E D F T G Y H U J K O L enter notes from C at the cursor and move on by the Step length,
+      Shift or the Chord switch holds the step, Space rests, Backspace steps back and clears, Z and X change octave, and a row of 44px buttons (twelve notes, Rest, Back, octave) does the same by touch; scale snap applies. Seen in real Chrome on 2026-10-23
+      with real key presses and a real button click. The on-screen keyboard (`src/ui/Keyboard.js`) used to capture the pointer on the key it landed on, so a drag could never reach a second key whatever its comment said; it now lets go of the capture and presses each key entered while the button is down. A mouse drag across C, D and E played each in turn and left none held, in real Chrome on 2026-10-23. Not seen: real touch (the browser tool has no touch input), where a touch pointer is captured implicitly, which the release is there for and a unit test covers.
+- [ ] **MIDI import and export: what is left.** Both are built. Export: the MIDI button writes a format 1 file (`src/model/MidiFile.js`: a conductor track with
+      tempo and time signature changes, one track per track with notes, beats counted in the signature's note value so bar lines match). Seen in real Chrome on 2026-10-23: a click
+      made a 148-byte `audio/midi` download which a second reader (Python, written separately from the tests' reader) parsed to the right ticks, tempos and channels. Not yet opened in a
+      real DAW (HUMANS.md). Import (Import MIDI, `src/model/MidiRead.js` and `MidiImport.js`): format 0 and 1, each part a new track with a clip from beat zero, one undo; a project with no MIDI clips also takes the file's tempo and
+      signature changes, one with music keeps its own (said in the log). Seen in real Chrome on 2026-10-23: the file exported earlier was brought in as 2 tracks with its 100 and 140 bpm tempo, and one undo removed it all and
+      redo restored it; the file was handed to the hidden input from the page, as a native picker cannot be driven. Export of one track or of the selected tracks is built (Export track as MIDI in a track's panel, Export these as MIDI in the bulk panel, left out where none has MIDI; seen in real Chrome on
+      2026-10-23: the Bass track alone gave a conductor and one track, with its pitch bend as `E0 74 43`). Controller and pitch bend events go in both directions. Not built: import into an existing track at the playhead,
+      a choice of which parts to take, export of the loop only, and a tool for agents for either (WAV export has none either, and a file in a tool call is a poor fit). Note: the first `ensureRunning()` call made before the page has had any user activation never settles (and holds up later calls); the Import button's own click is the activation, so
+      this only shows when a script delivers a file first.
 - [ ] **Multi-clip editing and drum view.** Two clips side by side for reference; a drum lane view where the track holds a kit.
 - [ ] **MIDI panic: what is left.** Built: a Panic button in the transport bar (CC 123 and CC 120 to every node, transport
       left running; `web/app/Transport.js`). The button was pressed in Chrome and logged; not tried with a stuck note. Ctrl or Cmd with a full stop does the same (Ctrl with a full stop seen in real Chrome on 2026-10-22, logged "panic: all notes off"), and the `transport_panic` tool

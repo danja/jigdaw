@@ -4,7 +4,7 @@
 // transport runs, the scheduler plays the tracks' clips (src/engine/Scheduler.js)
 // and every plugin is told where the transport is (contract section 7).
 import { createAutomationHost } from '../../src/engine/AutomationHost.js'
-import { Scheduler, clipNotes, clipAudio } from '../../src/engine/Scheduler.js'
+import { Scheduler, clipNotes, clipControllers, clipAudio } from '../../src/engine/Scheduler.js'
 import { Metronome, countIn } from '../../src/engine/Metronome.js'
 import { createClickVoice } from './Click.js'
 import { createClipHold } from '../../src/ui/ClipHold.js'
@@ -126,6 +126,7 @@ export function createTransport (ctx) {
       sampleRate: engine.context.sampleRate,
       lookahead: hostConfig.schedulerLookaheadMs / 1000,
       notes: () => clipNotes(d.project),
+      controllers: () => clipControllers(d.project),
       transport: () => d.transport(),
       send: (nodeId, events) => d.sendEvents(nodeId, events),
       audio: () => clipAudio(d.project),

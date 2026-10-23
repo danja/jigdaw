@@ -120,8 +120,11 @@ const connectionKey = c =>
   `${c.signalKind}|${c.from.node}:${c.from.portIndex ?? c.from.portSymbol}` +
   `->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
 
+/** A clip with its own copy of every list it holds, so an edit to one never reaches a snapshot of it. */
+const cloneClip = c => ({ ...c, notes: c.notes.map(n => ({ ...n })), controllers: (c.controllers ?? []).map(e => ({ ...e })) })
+
 const cloneState = state => ({
-  clips: new Map([...state.clips].map(([id, c]) => [id, { ...c, notes: c.notes.map(n => ({ ...n })) }])),
+  clips: new Map([...state.clips].map(([id, c]) => [id, cloneClip(c)])),
   tracks: new Map([...state.tracks].map(([id, t]) => [id, { ...t, channel: { ...t.channel } }])),
   nodes: new Map([...state.nodes].map(([id, n]) => [id, { ...n, settings: new Map(n.settings) }])),
   connections: new Map([...state.connections].map(([id, c]) => [id, { ...c, from: { ...c.from }, to: { ...c.to } }])),
@@ -184,6 +187,35 @@ function checkNotes (notes) {
     }
     return { startBeat, lengthBeats, pitch, velocity }
   }).sort((a, b) => a.startBeat - b.startBeat || a.pitch - b.pitch)
+}
+
+/** What a controller event may carry, by controller: a CC is 0 to 127 and pitch bend is 14 bits around its centre, zero. */
+export const PITCH_BEND = 'pitchBend'
+export const BEND_RANGE = Object.freeze({ min: -8192, max: 8191 })
+
+/**
+ * Check a list of controller events: a start at or after zero (relative to the clip, like a note), a controller that is
+ * a CC number 0 to 127 or `pitchBend`, and a whole value in that controller's range. Sorted by start, then controller, so
+ * two lists of the same events compare equal whatever order they came in. Two events for one controller at one beat are
+ * refused: the later one would only hide the earlier.
+ */
+function checkControllers (events) {
+  if (!Array.isArray(events)) throw new Error('controllers must be an array')
+  const seen = new Set()
+  const checked = events.map((event, i) => {
+    const { atBeat, controller, value } = event ?? {}
+    if (!(Number.isFinite(atBeat) && atBeat >= 0)) throw new Error(`controller event ${i} needs an atBeat at or after zero`)
+    const bend = controller === PITCH_BEND
+    if (!bend && !(Number.isInteger(controller) && controller >= 0 && controller <= 127)) throw new Error(`controller event ${i} needs a controller from 0 to 127, or pitchBend`)
+    const [low, high] = bend ? [BEND_RANGE.min, BEND_RANGE.max] : [0, 127]
+    if (!(Number.isInteger(value) && value >= low && value <= high)) throw new Error(`controller event ${i} needs a whole value from ${low} to ${high}`)
+    const key = `${controller}@${atBeat}`
+    if (seen.has(key)) throw new Error(`controller event ${i} repeats ${bend ? 'pitch bend' : `controller ${controller}`} at beat ${atBeat}`)
+    seen.add(key)
+    return { atBeat, controller, value }
+  })
+  const order = e => (e.controller === PITCH_BEND ? 128 : e.controller)
+  return checked.sort((a, b) => a.atBeat - b.atBeat || order(a) - order(b))
 }
 
 /** A fade lasts no time or some. */
@@ -331,6 +363,7 @@ const OPERATIONS = {
     const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag('locked', change.locked ?? false) }
     if (change.kind === 'midi') {
       clip.notes = checkNotes(change.notes ?? [])
+      clip.controllers = checkControllers(change.controllers ?? [])
     } else {
       // Absolute: a reader resolves a relative jig:source against the session
       // document before it gets here, so anything relative is a mistake.
@@ -344,6 +377,7 @@ const OPERATIONS = {
       clip.fadeInBeats = checkFade('fadeInBeats', change.fadeInBeats ?? 0)
       clip.fadeOutBeats = checkFade('fadeOutBeats', change.fadeOutBeats ?? 0)
       clip.notes = []
+      clip.controllers = []
     }
     state.clips.set(id, clip)
     return id
@@ -386,6 +420,16 @@ const OPERATIONS = {
     if (clip.kind !== 'midi') throw new Error(`clip ${change.id} is audio and holds no notes`)
     refuseIfLocked(clip, change, 'edited')
     clip.notes = checkNotes(change.notes)
+    return change.id
+  },
+
+  /** Replace a MIDI clip's controller and pitch bend events, all at once, like its notes. */
+  setClipControllers (state, change) {
+    const clip = state.clips.get(change.id)
+    if (!clip) throw new Error(`no such clip: ${change.id}`)
+    if (clip.kind !== 'midi') throw new Error(`clip ${change.id} is audio and holds no controller events`)
+    refuseIfLocked(clip, change, 'edited')
+    clip.controllers = checkControllers(change.controllers)
     return change.id
   },
 
@@ -701,7 +745,7 @@ const OPERATIONS = {
 /** The addClip that recreates a clip from a snapshot. */
 export function clipChange (c) {
   return c.kind === 'midi'
-    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes }
+    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes, controllers: c.controllers ?? [] }
     : { op: 'addClip', id: c.id, track: c.track, kind: 'audio', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats }
 }
 
@@ -891,7 +935,7 @@ export class Project {
         position: this.position(n.id)
       })),
       connections: this.connections.map(c => ({ ...c, from: { ...c.from }, to: { ...c.to } })),
-      clips: this.clips.map(c => ({ ...c, notes: c.notes.map(n => ({ ...n })) })),
+      clips: this.clips.map(cloneClip),
       transport: {
         ...this.#state.transport,
         tempoPoints: this.#state.transport.tempoPoints.map(p => ({ ...p })),

@@ -22,6 +22,10 @@ import { automationBetween } from './Automation.js'
 
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
+const CONTROL_CHANGE = 0xb0
+const PITCH_BEND = 0xe0
+/** The wheel at rest, as the two data bytes of a pitch bend message (14 bits, 8192 in the middle). */
+const BEND_CENTRE = Uint8Array.from([PITCH_BEND, 0x00, 0x40])
 
 /**
  * Every note the project would play, per node it plays into: each track's
@@ -45,6 +49,37 @@ export function clipNotes (project) {
         const off = Math.min(on + note.lengthBeats, end)
         if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, [])
         byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity })
+      }
+    }
+  }
+  return byNode
+}
+
+/**
+ * Every controller and pitch bend event the project would play, per node, like clipNotes: each track's unmuted MIDI clips
+ * into that track's jig:midiInput, at the clip's start plus the event's own beat, and none from at or after the clip's end.
+ * Each carries the MIDI message to send; `off` equals `on` so the same windowing as a note's applies.
+ *
+ * Returns Map nodeId -> [{ on, off, bytes, bend, key }], in beats. `key` names what an event sets (the controller, or 'bend'),
+ * so a player can find what each held at a moment.
+ */
+export function clipControllers (project) {
+  const byNode = new Map()
+  for (const track of project.tracks) {
+    if (!track.midiInput) continue
+    for (const clip of project.clips) {
+      if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
+      const end = clip.startBeat + clip.lengthBeats
+      for (const event of clip.controllers ?? []) {
+        const on = clip.startBeat + event.atBeat
+        if (on >= end) continue
+        const bend = event.controller === 'pitchBend'
+        // A 14 bit value is sent least significant seven bits first, after being moved up so the middle is 8192.
+        const bytes = bend
+          ? Uint8Array.from([PITCH_BEND, (event.value + 8192) & 0x7f, (event.value + 8192) >> 7])
+          : Uint8Array.from([CONTROL_CHANGE, event.controller, event.value])
+        if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, [])
+        byNode.get(track.midiInput).push({ on, off: on, bytes, bend, key: bend ? 'bend' : event.controller })
       }
     }
   }
@@ -121,6 +156,9 @@ export class Scheduler {
   #sampleRate
   #lookahead
   #notes
+  #controllers
+  // The nodes that were sent a pitch bend, so stopping can bring the wheel back to rest.
+  #bent = new Set()
   #transport
   #send
   #audio
@@ -149,7 +187,7 @@ export class Scheduler {
    *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
    *   gets each instruction of Automation.js with its times on the audio clock.
    */
-  constructor ({ now, sampleRate, lookahead, notes, transport, send, audio, playAudio, stopAudio, automation }) {
+  constructor ({ now, sampleRate, lookahead, notes, controllers, transport, send, audio, playAudio, stopAudio, automation }) {
     if (typeof now !== 'function' || typeof notes !== 'function' || typeof transport !== 'function' || typeof send !== 'function') {
       throw new Error('Scheduler needs now, notes, transport and send')
     }
@@ -159,6 +197,8 @@ export class Scheduler {
     this.#sampleRate = sampleRate
     this.#lookahead = lookahead
     this.#notes = notes
+    if (controllers !== undefined && typeof controllers !== 'function') throw new Error('Scheduler needs controllers as a function, or none')
+    this.#controllers = controllers ?? null
     this.#transport = transport
     this.#send = send
     const given = [audio, playAudio, stopAudio].filter(f => f !== undefined)
@@ -209,11 +249,41 @@ export class Scheduler {
       outgoing.get(nodeId).push({ frame, bytes, order })
     }
 
+    // The stretches of song heard in this window. Where playing began part way in, the first is a pass that reads the song from
+    // there, in place of the stretch of the first pass that has already gone by.
+    const normal = [...segments(transport, start, end)]
+    const passes = this.#seed === null
+      ? normal
+      : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter(p => p.from > 0)]
+
     for (const [nodeId, notes] of this.#notes()) {
       for (const note of notesBetween(transport, notes, start, end)) {
         const onFrame = this.#frame(note.on)
         add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1)
         this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame })
+      }
+    }
+    // Controllers and the pitch bend wheel, in the same windows. At one frame they come after the offs and before the ons,
+    // so a note struck on the beat is struck with the new value.
+    if (this.#controllers) {
+      for (const [nodeId, events] of this.#controllers()) {
+        for (const event of notesBetween(transport, events, start, end)) {
+          add(nodeId, this.#frame(event.on), event.bytes, 0.5)
+          if (event.bend) this.#bent.add(nodeId)
+        }
+        // A controller holds its value, so where a pass begins part way through the song (a loop coming round, or playing started
+        // there) each is set to what it held at that moment, before the first note of the pass. A wheel with nothing earlier to
+        // say goes back to rest, since the end of the last pass may have left it up.
+        for (const pass of passes) {
+          if (!(pass.from >= start && pass.from < end) || !(pass.lo > 0)) continue
+          const held = new Map()
+          for (const e of [...events].sort((a, b) => a.on - b.on)) if (transport.secondsAtBeat(e.on) < pass.lo) held.set(e.key, e)
+          for (const e of events) if (e.bend && !held.has('bend')) held.set('bend', { ...e, bytes: BEND_CENTRE })
+          for (const e of held.values()) {
+            add(nodeId, this.#frame(pass.from), e.bytes, 0.25)
+            if (e.bend) this.#bent.add(nodeId)
+          }
+        }
       }
     }
     // Audio clips start at the same stream positions, through the platform's
@@ -225,19 +295,13 @@ export class Scheduler {
     }
     // Envelopes move a parameter on the audio clock: the same windows, looped the same way as the notes.
     if (this.#automation) {
-      const normal = [...segments(transport, start, end)]
-      // The first window of a start part way in: a pass that begins at `from` and reads the song from there, in place of
-      // the stretch of the first pass that has already gone by.
-      const passes = this.#seed === null
-        ? normal
-        : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter(p => p.from > 0)]
-      this.#seed = null
       for (const envelope of this.#automation.envelopes()) {
         for (const instruction of automationBetween(transport, envelope.points, passes, start, end)) {
           this.#automation.apply(envelope, onClock(instruction, this.#origin))
         }
       }
     }
+    this.#seed = null
     this.#sounding = this.#sounding.filter(s => {
       if (s.off >= end) return true
       add(s.nodeId, Math.max(this.#frame(s.off), s.onFrame), Uint8Array.from([NOTE_OFF, s.pitch, 0]), 0)
@@ -256,6 +320,11 @@ export class Scheduler {
       if (!outgoing.has(s.nodeId)) outgoing.set(s.nodeId, [])
       outgoing.get(s.nodeId).push({ frame: Math.max(nowFrame, s.onFrame), bytes: Uint8Array.from([NOTE_OFF, s.pitch, 0]), order: 0 })
     }
+    for (const nodeId of this.#bent) {
+      if (!outgoing.has(nodeId)) outgoing.set(nodeId, [])
+      outgoing.get(nodeId).push({ frame: nowFrame, bytes: BEND_CENTRE, order: 2 })
+    }
+    this.#bent.clear()
     this.#sounding = []
     this.#origin = null
     this.#stopAudio?.()

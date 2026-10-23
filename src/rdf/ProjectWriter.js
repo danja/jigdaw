@@ -179,14 +179,22 @@ export function writeProject (project, { iri, created = null } = {}) {
       if (clip.offsetSeconds !== 0) statements.push(`${term(jig.offsetSeconds)} ${decimal(clip.offsetSeconds)}`)
       if (clip.fadeInBeats > 0) statements.push(`${term(jig.fadeInBeats)} ${decimal(clip.fadeInBeats)}`)
       if (clip.fadeOutBeats > 0) statements.push(`${term(jig.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`)
-    } else if (clip.notes.length > 0) {
-      statements.push(`${term(jig.note)} ${clip.notes.map((_, i) => `<#${clip.id}-n${i + 1}>`).join(' , ')}`)
+    } else {
+      if (clip.notes.length > 0) statements.push(`${term(jig.note)} ${clip.notes.map((_, i) => `<#${clip.id}-n${i + 1}>`).join(' , ')}`)
+      const events = clip.controllers ?? []
+      if (events.length > 0) statements.push(`${term(jig.controllerEvent)} ${events.map((_, i) => `<#${clip.id}-e${i + 1}>`).join(' , ')}`)
     }
     lines.push(statements.map(st => `    ${st}`).join(' ;\n') + ' .')
     clip.notes.forEach((note, i) => {
       lines.push(`<#${clip.id}-n${i + 1}> a ${term(jig.Note)} ; ` +
         `${term(trn.startBeat)} ${decimal(note.startBeat)} ; ${term(trn.lengthBeats)} ${decimal(note.lengthBeats)} ; ` +
         `${term(trn.pitch)} ${integer(note.pitch)} ; ${term(trn.velocity)} ${integer(note.velocity)} .`)
+    })
+    // Named by place among the clip's events, which the model keeps sorted, so the same events write the same names.
+    ;(clip.controllers ?? []).forEach((event, i) => {
+      lines.push(event.controller === 'pitchBend'
+        ? `<#${clip.id}-e${i + 1}> a ${term(jig.PitchBendEvent)} ; ${term(trn.startBeat)} ${decimal(event.atBeat)} ; ${term(jig.bend)} ${integer(event.value)} .`
+        : `<#${clip.id}-e${i + 1}> a ${term(jig.ControllerEvent)} ; ${term(trn.startBeat)} ${decimal(event.atBeat)} ; ${term(jig.controller)} ${integer(event.controller)} ; ${term(jig.value)} ${integer(event.value)} .`)
     })
   }
 

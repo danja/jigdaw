@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  186 terms.
+  191 terms.
 </p>
 
 <h2>Classes</h2>
@@ -84,6 +84,10 @@
         artwork, named by jig:element. The subclasses say how the host moves the element
         and what role it gives it. The host does the pointer, the keyboard and the
         accessibility semantics; the artwork supplies only the picture.</dd>
+  <dt id="ControllerEvent"><code>jig:ControllerEvent</code> <span class="label">Controller Event</span></dt>
+  <dd>A MIDI continuous controller set to a value at a beat of a MIDI clip: modulation, volume,
+        pan, sustain and the rest. Its trn:startBeat is relative to the start of its clip, like a note's. The
+        controller holds its value until another event for it changes it, so a clip's events are a step curve.</dd>
   <dt id="Curve"><code>jig:Curve</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="Endpoint"><code>jig:Endpoint</code></dt>
@@ -138,6 +142,9 @@
   <dd>A parameter's value on one node. Addressed by lv2:symbol rather than by
         index, because an index is a property of a build and a symbol is a property of the
         plugin.</dd>
+  <dt id="PitchBendEvent"><code>jig:PitchBendEvent</code> <span class="label">Pitch Bend Event</span></dt>
+  <dd>The pitch bend wheel set to a position at a beat of a MIDI clip. jig:bend is the 14 bit
+        MIDI value centred on zero, from -8192 to 8191. It holds until the next event.</dd>
   <dt id="PluginCollection"><code>jig:PluginCollection</code> <span class="label">Plugin Collection</span></dt>
   <dd>A named set of plugins, each included by its IRI with dcterms:hasPart
         and named with rdfs:label in the collection document. A collection is one
@@ -265,6 +272,8 @@
         resolves inside these bytes or is refused. Contract section 12.3.</dd>
   <dt id="control"><code>jig:control</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="controllerEvent"><code>jig:controllerEvent</code></dt>
+  <dd>A controller or pitch bend event of a MIDI clip: a jig:ControllerEvent or a jig:PitchBendEvent.</dd>
   <dt id="curve"><code>jig:curve</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="drives"><code>jig:drives</code></dt>
@@ -388,6 +397,8 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="beatUnit"><code>jig:beatUnit</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="bend"><code>jig:bend</code></dt>
+  <dd>The pitch bend position, -8192 to 8191, zero being the wheel at rest.</dd>
   <dt id="boundSymbol"><code>jig:boundSymbol</code> <span class="label">port symbol</span></dt>
   <dd>The lv2:symbol of the port this control sets. The symbol is the name
         the wire format already uses (messaging.md), so a skin depends on nothing in the
@@ -417,6 +428,8 @@
         never addressed across documents. LV2's port-groups extension was read
         first and not reused: pg:Group combines ports carrying one stream, such
         as stereo channels, and says nothing about control layout.</dd>
+  <dt id="controller"><code>jig:controller</code></dt>
+  <dd>The MIDI controller number, 0 to 127. Its value is jig:value, 0 to 127.</dd>
   <dt id="element"><code>jig:element</code></dt>
   <dd>The id of the artwork element the control moves.</dd>
   <dt id="entryPoint"><code>jig:entryPoint</code> <span class="label">entry point</span></dt>

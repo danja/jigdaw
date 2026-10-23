@@ -663,6 +663,23 @@ describe('clips', () => {
     expect(first).not.toEqual(notes)
   })
 
+  it('adds a clip with controller events and replaces them as one edit, refusing a value out of range', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, controllers: [{ atBeat: 1, controller: 'pitchBend', value: -2000 }, { atBeat: 0, controller: 7, value: 100 }] })
+    expect(added.ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).controllers).toEqual([{ atBeat: 0, controller: 7, value: 100 }, { atBeat: 1, controller: 'pitchBend', value: -2000 }])
+    const set = await call('clip_set_controllers', { clipId: added.clipId, controllers: [{ atBeat: 2, controller: 1, value: 64 }] })
+    expect(set.ok).toBe(true)
+    expect(dispatcher.project.clip(added.clipId).controllers).toEqual([{ atBeat: 2, controller: 1, value: 64 }])
+    const revision = dispatcher.project.revision
+    const bad = await call('clip_set_controllers', { clipId: added.clipId, controllers: [{ atBeat: 0, controller: 'pitchBend', value: 9000 }] })
+    expect(bad.ok).toBe(false)
+    expect(bad.error).toContain('-8192 to 8191')
+    expect(dispatcher.project.revision).toBe(revision)
+    dispatcher.undo()
+    expect(dispatcher.project.clip(added.clipId).controllers).toHaveLength(2)
+  })
+
   it('fits notes to a scale, and says which scales there are when asked for one that is not', async () => {
     const { trackId } = await call('track_add', {})
     const added = await call('clip_add', { trackId, startBeat: 0, lengthBeats: 4, notes: [note, { ...note, startBeat: 1, pitch: 61 }] })

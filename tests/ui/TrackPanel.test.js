@@ -43,6 +43,25 @@ describe('the track panel', () => {
     expect([...document.querySelectorAll('#track-folder-names option')].map(o => o.value)).toEqual(['Bass', 'Drums'])
   })
 
+  it('offers Export track as MIDI only for a track with MIDI, and asks for it by the track shown', () => {
+    const calls = []
+    const noop = () => {}
+    const panel = createTrackPanel(document, { onRename: noop, onColor: noop, onSize: noop, onFolder: noop, onMove: noop, onDelete: noop, onFreeze: noop, onExportMidi: id => calls.push(id) })
+    document.body.append(panel.element)
+    const state = { id: 't2', name: 'Bass', defaultName: 'Bass', layout: { order: null, color: null, laneSize: 'medium', folder: null }, index: 1, count: 3, plugins: 0 }
+    panel.show(state)
+    expect(document.getElementById('track-export-midi').hidden).toBe(true)
+    panel.show({ ...state, hasMidi: true })
+    expect(document.getElementById('track-export-midi').hidden).toBe(false)
+    document.getElementById('track-export-midi').dispatchEvent(event('click'))
+    expect(calls).toEqual(['t2'])
+  })
+
+  it('leaves the export out when the host gives no way to export', () => {
+    build({ hasMidi: true })
+    expect(document.getElementById('track-export-midi')).toBeNull()
+  })
+
   it('offers Freeze track and asks for it by the track it shows', () => {
     const { $, calls } = build()
     expect($('track-freeze').textContent).toBe('Freeze track')
@@ -121,12 +140,13 @@ describe('the track panel', () => {
 })
 
 describe('the group level buttons', () => {
-  function withGroup (members, give = true) {
+  function withGroup (members, give = true, pan = true) {
     const calls = []
     const noop = () => {}
     const panel = createTrackPanel(document, {
       onRename: noop, onColor: noop, onSize: noop, onFolder: noop, onMove: noop, onDelete: noop, onFreeze: noop,
-      ...(give ? { onGroupLevel: (id, db) => calls.push([id, db]) } : {})
+      ...(give ? { onGroupLevel: (id, db) => calls.push([id, db]) } : {}),
+      ...(give && pan ? { onGroupPan: (id, amount) => calls.push([id, 'pan', amount]) } : {})
     })
     document.body.append(panel.element)
     panel.show({ id: 'bus', name: 'Bus', defaultName: 'Bus', layout: { order: null, color: null, laneSize: 'medium', folder: null }, index: 0, count: 1, plugins: 0, members })
@@ -140,6 +160,24 @@ describe('the group level buttons', () => {
     $('track-group-down').dispatchEvent(event('click'))
     $('track-group-up').dispatchEvent(event('click'))
     expect(calls).toEqual([['bus', -1], ['bus', 1]])
+  })
+
+  it('shift the members left and right, and take a typed pan, for the track shown', () => {
+    const { calls, $ } = withGroup(2)
+    $('track-group-pan-left').dispatchEvent(event('click'))
+    $('track-group-pan-right').dispatchEvent(event('click'))
+    $('track-group-pan-by').value = '0.4'
+    $('track-group-pan-by-apply').dispatchEvent(event('click'))
+    $('track-group-pan-by').value = '2'
+    $('track-group-pan-by-apply').dispatchEvent(event('click'))
+    expect(calls).toEqual([['bus', 'pan', -0.1], ['bus', 'pan', 0.1], ['bus', 'pan', 0.4]])
+  })
+
+  it('leave the pan controls out when the host gives no way to pan', () => {
+    withGroup(2, true, false)
+    expect(document.getElementById('track-group-pan-left')).toBeNull()
+    expect(document.getElementById('track-group-pan-by')).toBeNull()
+    expect(document.getElementById('track-group-up')).not.toBeNull()
   })
 
   it('also take an exact figure, sent for the track shown', () => {

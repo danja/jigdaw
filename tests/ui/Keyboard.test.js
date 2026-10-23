@@ -17,6 +17,58 @@ const pointer = (element, type) => {
   element.dispatchEvent(new Event(type))
 }
 
+describe('a finger or a mouse dragged across the keys', () => {
+  // A pointer event with the fields a real one has and linkedom's lacks, and a key that is captured the way a touch
+  // pointer is: a fake that let the capture stand would pass a keyboard on which no drag could ever reach a second key.
+  const real = (element, type, props = {}) => {
+    const e = new element.ownerDocument.defaultView.Event(type, { bubbles: true, cancelable: true })
+    for (const [k, v] of Object.entries({ pointerId: 7, buttons: type === 'pointerup' ? 0 : 1, ...props })) Object.defineProperty(e, k, { value: v })
+    element.dispatchEvent(e)
+  }
+  const capturing = (keyboard, note) => {
+    const el = keyboard.element.querySelector(`[data-note="${note}"]`)
+    const state = { captured: true, released: 0 }
+    el.hasPointerCapture = () => state.captured
+    el.releasePointerCapture = () => { state.captured = false; state.released++ }
+    return { el, state }
+  }
+
+  it('lets go of the capture a touch pointer has on the key it landed on', () => {
+    const { keyboard } = build()
+    const { el, state } = capturing(keyboard, 60)
+    real(el, 'pointerdown')
+    expect(state).toEqual({ captured: false, released: 1 })
+  })
+
+  it('plays each key the pointer enters while the button is down, and ends the one it leaves', () => {
+    const { keyboard, sent } = build()
+    const a = keyboard.element.querySelector('[data-note="60"]')
+    const b = keyboard.element.querySelector('[data-note="62"]')
+    real(a, 'pointerdown')
+    real(a, 'pointerleave')
+    real(b, 'pointerenter')
+    expect(sent.map(m => [m[0] & 0xf0, m[1]])).toEqual([[0x90, 60], [0x80, 60], [0x90, 62]])
+    expect(keyboard.held).toEqual([62])
+    real(b, 'pointerup')
+    expect(keyboard.held).toEqual([])
+  })
+
+  it('plays nothing for a pointer that moves over the keys with no button down', () => {
+    const { keyboard, sent } = build()
+    real(keyboard.element.querySelector('[data-note="64"]'), 'pointerenter', { buttons: 0 })
+    expect(sent).toEqual([])
+    expect(keyboard.held).toEqual([])
+  })
+
+  it('does not play a key twice for a pointer that enters the one it pressed', () => {
+    const { keyboard, sent } = build()
+    const a = keyboard.element.querySelector('[data-note="60"]')
+    real(a, 'pointerdown')
+    real(a, 'pointerenter')
+    expect(sent.filter(m => m[0] === 0x90)).toHaveLength(1)
+  })
+})
+
 describe('which plugins get a keyboard', () => {
   // Walked from plugins/ rather than listed here, so a plugin comes into
   // scope by existing. A list in a test that names the plugins goes stale the

@@ -146,6 +146,10 @@ and nothing else.
 <#clip-1-n1> a jig:Note ;
     trn:startBeat 0.0 ; trn:lengthBeats 2.0 ; trn:pitch 57 ; trn:velocity 96 .
 
+# Controller and pitch bend events, when a clip has any (see below).
+<#clip-1-e1> a jig:ControllerEvent ; trn:startBeat 0.0 ; jig:controller 7 ; jig:value 100 .
+<#clip-1-e2> a jig:PitchBendEvent ; trn:startBeat 1.5 ; jig:bend -2048 .
+
 <#clip-2> a jig:AudioClip ;
     trn:startBeat 16.0 ; trn:lengthBeats 8.0 ;
     jig:source <media/loop.wav> ; jig:offsetSeconds 0.5 .
@@ -162,6 +166,13 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   clip is cut off at the end of the clip.
 - A note's pitch is a MIDI note number from 0 to 127 and its velocity is 1 to 127, because MIDI
   reads a note on of velocity 0 as a note off.
+- A MIDI clip may also hold controller and pitch bend events, each a named resource of the clip by
+  `jig:controllerEvent`, at a `trn:startBeat` relative to the clip like a note. A `jig:ControllerEvent` has a
+  `jig:controller` (0 to 127) and a `jig:value` (0 to 127); a `jig:PitchBendEvent` has a `jig:bend` from -8192 to
+  8191, zero being the wheel at rest. An event holds its value until the next event for the same controller, so
+  the events are a step curve, and one controller has at most one event at a beat. Events are named by their place
+  in the clip's events, sorted by start and then controller with pitch bend last, so the same events write the
+  same names. A clip with none writes none, and a session saved before this existed reads as having none.
 - A clip belongs to its track. Removing the track removes its clips, unless the removal moves
   the track's nodes to another track, in which case the clips move with them.
 - An audio clip refers to its audio by `jig:source` and never embeds it. A session is a

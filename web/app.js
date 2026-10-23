@@ -12,6 +12,10 @@
 // dispatcher and the engine do not exist until the first thing that needs
 // sound (web/app/Runtime.js), so nothing can hold them any earlier.
 import { createBounce } from './app/Bounce.js'
+import { createMidiExport } from './app/MidiExport.js'
+import { createMidiImport } from './app/MidiImport.js'
+import { createMidiRecord } from './app/MidiRecord.js'
+import { createTapper } from '../src/model/TapTempo.js'
 import { createCarry } from './app/Carry.js'
 import { applyIcons } from '../src/ui/Icons.js'
 import { createTabs } from '../src/ui/Tabs.js'
@@ -73,6 +77,7 @@ ctx.align = createAlign(ctx)
 ctx.runtime = createRuntime(ctx)
 ctx.transport = createTransport(ctx)
 ctx.record = createRecord(ctx)
+ctx.midiRecord = createMidiRecord(ctx)
 ctx.editors = createEditors(ctx)
 ctx.skins = createSkins(ctx)
 ctx.selection = new Selection()
@@ -109,7 +114,7 @@ $('play').addEventListener('click', () => transport.play().catch(error => log(er
 $('stop').addEventListener('click', () => {
   // The take first, so nothing after the last captured quantum trails in,
   // then the transport. Idle when nothing records: still just stopping.
-  ctx.record.finishTake()
+  Promise.all([ctx.record.finishTake(), ctx.midiRecord.finishTake()])
     .catch(error => log(error.message, 'error'))
     .finally(() => transport.stop())
 })
@@ -119,10 +124,21 @@ document.addEventListener('keydown', event => {
   if (isPanicShortcut(event)) { event.preventDefault(); transport.panic() }
 })
 $('record').addEventListener('click', () => ctx.record.toggle().catch(error => log(error.message, 'error')))
-$('tempo').addEventListener('change', async () => {
+$('record-midi').addEventListener('click', () => ctx.midiRecord.toggle().catch(error => log(error.message, 'error')))
+const setTempo = async bpm => {
   const d = await ctx.runtime.ensureRunning()
-  const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: Number($('tempo').value) }] }])
+  const result = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm }] }])
   if (!result.ok) log(result.message, 'error')
+}
+$('tempo').addEventListener('change', () => setTempo(Number($('tempo').value)))
+// Taps set the tempo as the field does, one edit a tap once there are two, so the click and the clips follow as the person taps.
+const tapper = createTapper({ now: () => performance.now() })
+$('tap-tempo').addEventListener('click', () => {
+  const bpm = tapper.tap()
+  if (bpm === null) { $('tap-said').textContent = 'Tap again to set the tempo'; return }
+  $('tempo').value = String(bpm)
+  $('tap-said').textContent = `Tempo ${bpm}`
+  setTempo(bpm)
 })
 $('loop').addEventListener('click', () => transport.toggleLoop())
 $('metronome').addEventListener('click', () => transport.setClick($('metronome').getAttribute('aria-pressed') !== 'true'))
@@ -134,6 +150,16 @@ $('signature').addEventListener('change', async () => {
 applyIcons(document)
 $('export').addEventListener('click', () => ctx.bounce.exportWav().catch(error => log(error.message, 'error')))
 $('export-stems').addEventListener('click', () => ctx.bounce.exportStems().catch(error => log(error.message, 'error')))
+ctx.midiExport = createMidiExport(ctx)
+$('export-midi').addEventListener('click', () => { try { ctx.midiExport.exportMidi() } catch (error) { log(error.message, 'error') } })
+const midiImport = createMidiImport(ctx)
+$('import-midi').addEventListener('click', () => $('midifile').click())
+$('midifile').addEventListener('change', async event => {
+  const file = event.target.files?.[0]
+  // Cleared so that choosing the same file twice in a row still fires a change.
+  event.target.value = ''
+  if (file) await midiImport.importFile(file).catch(error => log(error.message, 'error'))
+})
 ctx.sessions.mount()
 ctx.history.mount()
 ctx.arrangement.mount()
