@@ -14,6 +14,7 @@
 import { QueryService } from './QueryService.js'
 import { iri, literal, integer } from './terms.js'
 import { FACETS, FACET_NAMES, expandTerm, compactTerm as compact, TRN } from './facets.js'
+import { MAX_RESULTS } from './limits.js'
 
 const DEFAULT_ENDPOINT = 'https://sparql.plugin-universe.com/public/query'
 
@@ -80,7 +81,7 @@ export class Catalogue {
 
     const sparql = await this.#queries.build('catalogue/search', {
       filters: clauses.join('\n    '),
-      limit: integer(Math.min(limit, 200))
+      limit: integer(Math.min(limit, MAX_RESULTS))
     })
 
     return (await this.#select(sparql)).map(row => ({

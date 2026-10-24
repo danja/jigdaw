@@ -14,7 +14,7 @@ is wrong in INBOX.md.
 - **Listen to the presets.** All seven, and say which sound bad. "Through Keyframe" (new 2026-10-01) is the one to start with:
   its melody carries a fifth above it from Keyframe's pitch shift, and its drums are pitched down and slurred, so say whether either
   sounds musical or only broken. In particular "Generative, through effects" (its lead line was
-  silent until 2026-09-30 and has not been heard), "Fender into the Ropery" (levels set by a meter), "Sam in a room" (new 2026-10-24: whether the sung words are intelligible, and the level), and
+  silent until 2026-09-30 and has not been heard), "Fender into the Ropery" (levels set by a meter; its Guitar became Monochord on 2026-10-24, so whether it sounds like a guitar through the amp is unheard), "Sam in a room" (new 2026-10-24: whether the sung words are intelligible, and the level), and
   Chiptune's Lead track, which measures much quieter than the rest.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
   position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track

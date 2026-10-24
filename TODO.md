@@ -102,8 +102,17 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       plugins.
 - [ ] Sprout and Markov draw with the VST3's 64-bit mix (`tests/host/mix64.test.js` checks it against BigInt); whether a seed
       now gives the VST3's exact line is unchecked, since the rest of the port may differ. Conductor uses the same draw.
-- [ ] The catalogue's `search` defaults to `limit = 30` (`src/catalogue/Catalogue.js`) and there are 33 plugins, so an empty
-      search hides 2 unless the caller passes a limit. Check what the browser search bar passes.
+- [ ] The catalogue's `search` still defaults to `limit = 30` (`src/catalogue/Catalogue.js`, `LocalCatalogue.js`) and the WebMCP
+      `plugins_search` tool to 25, so a caller that does not pass a limit sees a page of 34 plugins and nothing says there is more.
+      The page's search bar was fixed 2026-10-24 (it asked for 25 and hid eight, Sam among them; it now asks for `MAX_RESULTS`,
+      `tests/catalogue/BrowseAll.test.js`). Decide whether a result set should say when it was cut short.
+- [x] **Ported Downspout's Monochord to a Jig and made it the voice in "Fender into the Ropery"** (asked 2026-10-24, done the
+      same day). `plugins/monochord/`: freestanding C++ (`jig:Abi2`, 14 parameters, no state), checked against the original
+      core compiled natively (largest difference 3e-11 of full scale for each exciter). The Guitar node in
+      `web/presets/fender-into-the-ropery.ttl` is now Monochord (plucked, Master 0.06 so the amp sees about what it saw from
+      Mop: the master peak is 0.577 either way, which is the amp's ceiling). Open: the VST3's string plot and its log
+      sliders (Decay, Release, Body size) are not reproduced, since a profile has no scale hint; and the sound has not been
+      listened to by a person.
 
 ### Conductor
 

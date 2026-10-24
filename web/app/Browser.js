@@ -9,6 +9,7 @@
 // section 3.1 again.
 import { PluginLoader } from '../../src/host/PluginLoader.js'
 import { CollectionLoader } from '../../src/catalogue/CollectionLoader.js'
+import { MAX_RESULTS } from '../../src/catalogue/limits.js'
 import { parseText } from '../../src/rdf/parse.js'
 import { detectCapabilities, compact } from '../../src/host/Capabilities.js'
 
@@ -214,7 +215,7 @@ export function createBrowser (ctx) {
     // which answers "what have I got" without being asked twice.
     try {
       const body = await browserCatalogue(document).search({
-        text, limit: 25,
+        text, limit: MAX_RESULTS,
         ...(facet ? { [facet.split('=')[0]]: facet.split('=')[1] } : {})
       })
       renderResults(body.results, text || facet)

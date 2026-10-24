@@ -1,0 +1,161 @@
+<!doctype html>
+<!--
+  plugins/sam/ui/index.html
+
+  Sam's own editor: a box to type the words in (contract section 9, docs/messaging.md
+  section 2). A host loads it into a sandboxed frame on another origin and talks to it
+  only by postMessage. One file with its script inline, so the profile's jig:integrity
+  digest covers everything that runs here.
+
+  Sam's words are not a parameter, so they travel in the opaque `plugin` relay (2.4):
+  `{ type: 'setText', text }` to the processor and `{ type: 'text', text, words }` back.
+  The box is not repainted over what a person is in the middle of typing; a text that
+  arrives while it holds unsent edits is reported and left alone. Everything from the
+  processor is drawn as text, never as markup.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sam</title>
+<style>
+  :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --panel:#1a1e24; --edge:#2c333c; --field:#0e1116; }
+  html { height:auto; }
+  body { margin:0; padding:12px; background:var(--panel); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
+  label { display:block; color:var(--dim); font-size:14px; margin-bottom:4px; }
+  textarea { box-sizing:border-box; width:100%; min-height:7.5rem; padding:8px; font:16px/1.4 ui-monospace, monospace;
+    background:var(--field); color:var(--fg); border:1px solid var(--edge); border-radius:4px; resize:vertical; }
+  textarea:focus-visible, button:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  button { min-height:44px; padding:4px 16px; font:inherit; color:var(--fg); background:var(--accent); border:0; border-radius:4px; cursor:pointer; }
+  .bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-top:8px; }
+  .hint, .count { color:var(--dim); font-size:14px; margin:6px 0 0; }
+  .count { margin:0; }
+  #status { margin:0; min-height:1.4em; }
+  .waiting { color:var(--dim); }
+</style>
+</head>
+<body>
+<main id="root">
+<h1>Sam</h1>
+<div id="editor"><p class="waiting">Waiting for the host.</p></div>
+</main>
+<script>
+  'use strict'
+  // The host's origin, learnt from its init. Until then nothing is sent but
+  // ready, which carries nothing, and nothing received is trusted.
+  let host = null
+
+  // The module's own limit (sam.cpp MAX_TEXT_BYTES), which the box keeps to.
+  const MAX_CHARS = 2000
+
+  let box = null
+  let status = null
+  let counter = null
+  // What was last sent, so the processor's echo of it is told from a text that arrived from elsewhere.
+  let sent = null
+  let dirty = false
+
+  function send (message) {
+    if (host) parent.postMessage(message, host)
+  }
+
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+  function count () {
+    counter.textContent = `${box.value.length} of ${MAX_CHARS} characters`
+  }
+
+  function apply () {
+    sent = box.value
+    send({ type: 'plugin', payload: { type: 'setText', text: sent } })
+    status.textContent = 'Sending...'
+  }
+
+  function build () {
+    const editor = document.getElementById('editor')
+    editor.replaceChildren()
+
+    const label = document.createElement('label')
+    label.setAttribute('for', 'text')
+    label.textContent = 'Text to speak'
+    box = document.createElement('textarea')
+    box.id = 'text'
+    box.setAttribute('maxlength', String(MAX_CHARS))
+    box.setAttribute('spellcheck', 'false')
+    box.setAttribute('aria-describedby', 'hint count')
+
+    const hint = document.createElement('p')
+    hint.id = 'hint'
+    hint.className = 'hint'
+    hint.textContent = 'Words are separated by spaces. A lone _ is a rest. Only printable ASCII is read. ' +
+      'Press Apply, or Ctrl+Enter, to use the new text.'
+
+    const bar = document.createElement('div')
+    bar.className = 'bar'
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = 'Apply'
+    counter = document.createElement('p')
+    counter.id = 'count'
+    counter.className = 'count'
+    status = document.createElement('p')
+    status.id = 'status'
+    status.setAttribute('role', 'status')
+    bar.append(button, counter, status)
+
+    editor.append(label, box, hint, bar)
+
+    box.addEventListener('input', () => { dirty = true; count() })
+    box.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); apply() }
+    })
+    button.addEventListener('click', apply)
+    count()
+  }
+
+  // What the processor says is the text now. Drawn as text, in a value, never as markup.
+  function showText (payload) {
+    if (typeof payload.text !== 'string') return
+    const words = Number.isFinite(payload.words) ? payload.words : null
+    const summary = words === null ? 'Applied.' : `Applied: ${plural(words, 'word')}.`
+    if (dirty && payload.text !== sent) {
+      // Not over unsent typing: say so, and leave the box as it is.
+      status.textContent = 'The text changed elsewhere. Your edits are kept; Apply replaces it.'
+      return
+    }
+    if (payload.text === sent || !dirty) {
+      box.value = payload.text
+      dirty = false
+      sent = null
+      count()
+    }
+    status.textContent = summary
+  }
+
+  // Ask for the height the content takes, whenever that changes.
+  const root = document.getElementById('root')
+  const wanted = () => Math.ceil(document.documentElement.getBoundingClientRect().height)
+  new ResizeObserver(() => {
+    send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+  }).observe(root)
+
+  window.addEventListener('message', event => {
+    if (event.source !== parent) return
+    if (host === null) {
+      if (event.data?.type !== 'init') return
+      host = event.origin
+      build()
+      send({ type: 'plugin', payload: { type: 'getText' } })
+      send({ type: 'resize', width: document.body.scrollWidth, height: wanted() })
+      return
+    }
+    if (event.origin !== host) return
+    const message = event.data
+    if (message?.type === 'plugin' && message.payload?.type === 'text') showText(message.payload)
+  })
+
+  parent.postMessage({ type: 'ready' }, '*')
+</script>
+</body>
+</html>

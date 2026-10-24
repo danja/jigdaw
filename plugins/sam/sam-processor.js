@@ -99,6 +99,7 @@ class SamProcessor extends AudioWorkletProcessor {
       case 'init': return this.init(message)
       case 'events': return this.enqueue(message.events)
       case 'transport': this.transport = message; return
+      case 'plugin': if (this.ready) this.onPlugin(message.payload); return
       case 'loadAsset': if (this.ready && message.key === 'text') this.applyText(message.bytes); return
       case 'stateRequest':
         if (this.ready) this.port.postMessage({ type: 'state', token: message.token, state: { text: this.textBytes } })
@@ -123,7 +124,7 @@ class SamProcessor extends AudioWorkletProcessor {
 
       for (const name of ['jig_init', 'jig_process', 'jig_output_ptr', 'jig_set_param',
         'jig_max_frames', 'jig_midi_in_ptr', 'jig_midi_in_capacity', 'jig_midi_in',
-        'jig_transport_ptr', 'jig_text_ptr', 'jig_text_capacity', 'jig_set_text',
+        'jig_transport_ptr', 'jig_text_ptr', 'jig_text_capacity', 'jig_set_text', 'jig_word_count',
         'memory']) {
         if (!(name in exports)) throw new Error(`the module does not export ${name}`)
       }
@@ -182,7 +183,33 @@ class SamProcessor extends AudioWorkletProcessor {
     this.textView.set(source.subarray(0, length))
     this.exports.jig_set_text(length)
     this.textBytes = bytes
+    // An open editor follows the text, whichever way it changed (a replaced file, or its own Apply).
+    if (this.ready) this.sendText()
     return true
+  }
+
+  /**
+   * A message from the plugin's own editor (messaging.md section 2.4). The payload is data from code
+   * the host does not control, so it is checked rather than trusted: only the two shapes below do
+   * anything, a text is clipped to what the module holds, and anything else is ignored.
+   */
+  onPlugin (payload) {
+    if (payload?.type === 'getText') this.sendText()
+    else if (payload?.type === 'setText' && typeof payload.text === 'string') {
+      this.applyText(new TextEncoder().encode(payload.text.slice(0, this.textCapacity)).buffer)
+    }
+  }
+
+  /** Tell an open editor the text now loaded, and how many words the module made of it. */
+  sendText () {
+    this.port.postMessage({
+      type: 'plugin',
+      payload: {
+        type: 'text',
+        text: new TextDecoder().decode(this.textBytes),
+        words: this.exports.jig_word_count()
+      }
+    })
   }
 
   enqueue (events) {

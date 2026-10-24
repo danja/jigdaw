@@ -44,7 +44,8 @@
   },
   "resources": {
     "module": "sam.wasm",
-    "processor": "sam-processor.js"
+    "processor": "sam-processor.js",
+    "ui": "ui/index.html"
   },
   "assets": [
     {

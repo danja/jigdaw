@@ -15,6 +15,8 @@
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#a3abb8;
     --line:#2a2f38; --accent:#3e8ef7; --ok:#7ddc8e; --err:#ff8a8a;
+    --controls:#222c3a; --controls-line:#34445a;
+    --play:#1b7f35; --play-hover:#166a2c; --rec:#b3261e; --rec-hover:#951d17;
   }
   * { box-sizing:border-box; }
   body { margin:0; font:18px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
@@ -40,9 +42,22 @@
   .tunes { list-style:none; margin:0; padding:0; display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(13rem, 1fr)); }
   .tune { width:100%; min-height:48px; font-size:19px; text-align:left; }
   /* Playing: one big button. */
-  .player { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:16px; background:var(--panel);
+  .player { display:flex; flex-direction:column; gap:12px; padding:16px; background:var(--panel);
     border:2px solid var(--line); border-radius:16px; }
+  .player-status { display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+  /* The controls sit on a band of their own colour, so they read as one group apart from the readouts above. */
+  .player-controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; padding:12px; background:var(--controls);
+    border:2px solid var(--controls-line); border-radius:12px; }
   .player button { min-width:8rem; min-height:48px; font-size:22px; font-weight:600; }
+  /* Play is green and Record red, each with white text at better than 4.5:1 (tests/web/SimplePage.test.js measures it).
+     Hover and pressed are darker, and a pressed one gains a white inner ring, so the state is not carried by colour alone. */
+  #play { background:var(--play); border-color:var(--play); color:#fff; }
+  #play:hover { background:var(--play-hover); }
+  #voice { background:var(--rec); border-color:var(--rec); color:#fff; }
+  #voice:hover { background:var(--rec-hover); }
+  #play[aria-pressed="true"], #voice[aria-pressed="true"] { box-shadow:inset 0 0 0 3px #fff; }
+  #play[aria-pressed="true"] { background:var(--play-hover); border-color:var(--play-hover); }
+  #voice[aria-pressed="true"] { background:var(--rec-hover); border-color:var(--rec-hover); }
   .speed { display:flex; align-items:center; gap:12px; flex:1 1 16rem; }
   .speed input { flex:1; min-height:44px; }
   .level { display:inline-flex; align-items:center; gap:8px; }
@@ -107,16 +122,20 @@
   <section id="now" aria-labelledby="playing" hidden>
     <h2 id="playing">Now playing</h2>
     <div class="player">
-      <button id="play" type="button" aria-pressed="false">Play</button>
-      <button id="stop" type="button">Stop</button>
-      <button id="voice" type="button" aria-pressed="false" hidden>Record my voice</button>
-      <div class="speed">
-        <label for="tempo">Speed</label>
-        <input type="range" id="tempo" min="50" max="200" step="1" value="120">
-        <span id="tempo-value" class="value"></span>
+      <div class="player-status">
+        <div class="speed">
+          <label for="tempo">Speed</label>
+          <input type="range" id="tempo" min="50" max="200" step="1" value="120">
+          <span id="tempo-value" class="value"></span>
+        </div>
+        <span class="level"><span class="meter" id="meter" role="img" aria-label="How loud it is"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
+        <span id="position" class="visually-hidden"></span>
       </div>
-      <span class="level"><span class="meter" id="meter" role="img" aria-label="How loud it is"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
-      <span id="position" class="visually-hidden"></span>
+      <div class="player-controls">
+        <button id="play" type="button" aria-pressed="false">Play</button>
+        <button id="stop" type="button">Stop</button>
+        <button id="voice" type="button" aria-pressed="false" hidden>Record my voice</button>
+      </div>
     </div>
 
     <div id="tabs-mount"></div>

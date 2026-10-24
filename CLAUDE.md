@@ -5,7 +5,7 @@ identified by a dereferenceable IRI, and the signal processing is usually WebAss
 `jig:module` is optional, for a plugin simple enough that its AudioWorklet processor is
 plain JavaScript.
 
-The specification is complete and normative, and **Jiggy**, a browser host, implements it: 33
+The specification is complete and normative, and **Jiggy**, a browser host, implements it: 34
 worked plugins, undo and redo, a catalogue search, a WebMCP surface, sessions that save and
 reopen as RDF. A second host, a native VST3/CLAP/LV2 adapter, implements it independently. Read
 [docs/architecture.md](docs/architecture.md) for the shape of the thing, then

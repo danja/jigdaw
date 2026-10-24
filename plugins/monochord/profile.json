@@ -1,0 +1,194 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/monochord/",
+  "label": "Monochord",
+  "comment": "Eight-voice waveguide string, plucked, bowed or hammered: a delay line closed into a tuned loop with damping, stiffness, a pickup comb and a small body.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "monochord",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Physical modelling",
+    "Acoustic",
+    "Experimental"
+  ],
+  "cautions": [
+    "A ninth note steals the quietest voice rather than being refused.",
+    "Exciter changes apply to the next note. A note already sounding keeps the exciter it started with.",
+    "The bow keeps sounding while the key is held and its level follows the note velocity; Hardness does not affect it.",
+    "Stiffness above about 0.7 detunes the upper partials audibly on a low note (partial 6 is +3 cents at 0.5, +20 at 0.7, +62 at 0.9)."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "tailFrames": 96000
+  },
+  "resources": {
+    "module": "monochord.wasm",
+    "processor": "monochord-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "exciter",
+      "name": "Exciter",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Exciter",
+      "scalePoints": [
+        {
+          "label": "Pluck",
+          "value": 0
+        },
+        {
+          "label": "Bow",
+          "value": 1
+        },
+        {
+          "label": "Hammer",
+          "value": 2
+        }
+      ],
+      "paramIndex": 0
+    },
+    {
+      "symbol": "position",
+      "name": "Position",
+      "default": 0.2,
+      "minimum": 0.05,
+      "maximum": 0.5,
+      "group": "Exciter",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "hardness",
+      "name": "Hardness",
+      "default": 0.6,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Exciter",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "bow_pressure",
+      "name": "Bow pressure",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Exciter",
+      "paramIndex": 3
+    },
+    {
+      "symbol": "decay",
+      "name": "Decay",
+      "default": 3,
+      "minimum": 0.1,
+      "maximum": 20,
+      "group": "String",
+      "unit": "s",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "damping",
+      "name": "Damping",
+      "default": 0.3,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "String",
+      "paramIndex": 5
+    },
+    {
+      "symbol": "stiffness",
+      "name": "Stiffness",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "String",
+      "paramIndex": 6
+    },
+    {
+      "symbol": "body_size",
+      "name": "Body size",
+      "default": 1,
+      "minimum": 0.5,
+      "maximum": 2,
+      "group": "Body",
+      "paramIndex": 7
+    },
+    {
+      "symbol": "body_level",
+      "name": "Body level",
+      "default": 0.3,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Body",
+      "paramIndex": 8
+    },
+    {
+      "symbol": "pickup",
+      "name": "Pickup",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 0.5,
+      "group": "Body",
+      "paramIndex": 9
+    },
+    {
+      "symbol": "release",
+      "name": "Release",
+      "default": 250,
+      "minimum": 5,
+      "maximum": 2000,
+      "group": "Output",
+      "unit": "ms",
+      "paramIndex": 10
+    },
+    {
+      "symbol": "master",
+      "name": "Master",
+      "default": 0.6,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 11
+    },
+    {
+      "symbol": "velocity",
+      "name": "Velocity",
+      "default": 0.7,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 12
+    },
+    {
+      "symbol": "bend_range",
+      "name": "Bend range",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 24,
+      "group": "Output",
+      "unit": "semitone12TET",
+      "paramIndex": 13
+    }
+  ],
+  "licenceId": "MIT"
+}

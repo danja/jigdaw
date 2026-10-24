@@ -46,6 +46,7 @@
 
     jig:module <#module> ;
     jig:processor <#processor> ;
+    jig:ui <#ui> ;
     jig:asset <#text> ;
 
     lv2:port <#mode> , <#speed> , <#pitch> , <#mouth> , <#throat> , <#monotone> , <#phonetic> , <#midi_ch> , <#advance> , <#transpose> , <#release> , <#step> , <#start_bar> , <#loop> , <#speak> , <#tone> , <#level> .
@@ -62,7 +63,13 @@
     jig:location <sam-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "sam" ;
-    jig:integrity "sha384-4WMudQYak1/2ByYe948/rBicToEyKEWlYsxMND0FMTmgYWp6vskPkSQe35/MTj7z" .
+    jig:integrity "sha384-imrsax7+osauMTgIe3q6/HK6l9gBvv/UF9Psfmfa3WaLecXwjB1hEnWUkMCvRbqU" .
+
+<#ui>
+    a jig:UserInterface ;
+    jig:location <ui/index.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-xCzC09KeLpvXyZ7x81ykD6CjoxY90S6SvTd5CCgQuUSVm+yMYejm+ngX4WIoqlcC" .
 
 <#text>
     a jig:Resource ;

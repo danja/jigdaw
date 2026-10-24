@@ -180,4 +180,83 @@ describe('sam, a speech synthesiser', () => {
     expect(first).toBeGreaterThanOrEqual(96000)
     expect(first).toBeLessThan(96000 + 0.05 * 48000)
   })
+
+  describe('its own editor, through the plugin relay', () => {
+    const fromProcessor = (node, from = 0) => node.processor.port.posted.slice(from).filter(m => m.type === 'plugin').map(m => m.payload)
+    const relay = async (node, payload) => { node.port.postMessage({ type: 'plugin', payload }); await settle() }
+
+    it('declares an interface the host can find, as a resource of the plugin', async () => {
+      const engine = makeEngine(validator)
+      const { profile } = await engine.testLoader.loadProfile(CANONICAL)
+      expect(profile.ui.location).toBe(`${CANONICAL}ui/index.html`)
+    })
+
+    it('answers getText with the loaded text and its word count', async () => {
+      const engine = makeEngine(validator)
+      const entry = await engine.addPlugin(CANONICAL)
+      await relay(entry.node, { type: 'getText' })
+      const [reply] = fromProcessor(entry.node)
+      expect(reply.type).toBe('text')
+      expect(reply.text).toBe(readFileSync(resolve(root, 'plugins/sam/text.txt'), 'utf8'))
+      expect(reply.words).toBe(8)
+    })
+
+    it('speaks the text an Apply sent, keeps it for a saved session, and echoes it', async () => {
+      const engine = makeEngine(validator)
+      const entry = await engine.addPlugin(CANONICAL)
+      const before = entry.node.processor.port.posted.length
+      await relay(entry.node, { type: 'setText', text: 'one two three' })
+      expect(fromProcessor(entry.node, before)).toEqual([{ type: 'text', text: 'one two three', words: 3 }])
+      entry.node.port.postMessage({ type: 'stateRequest', token: 9 })
+      await settle()
+      const state = entry.node.processor.port.posted.find(m => m.type === 'state' && m.token === 9).state
+      expect(new TextDecoder().decode(state.text)).toBe('one two three')
+      const out = await play(entry.node, [[0x90, 60, 100]], 120)
+      expect(peak(out)).toBeGreaterThan(0.02)
+    })
+
+    it('what it speaks after an Apply is what that text alone speaks', async () => {
+      const engine = makeEngine(validator)
+      const a = await engine.addPlugin(CANONICAL)
+      await relay(a.node, { type: 'setText', text: 'zero' })
+      const viaEditor = await play(a.node, [[0x90, 60, 100]], 120)
+      const b = await engine.addPlugin(CANONICAL)
+      b.node.port.postMessage({ type: 'loadAsset', key: 'text', bytes: text('zero') })
+      await settle()
+      expect(Array.from(viaEditor)).toEqual(Array.from(await play(b.node, [[0x90, 60, 100]], 120)))
+    })
+
+    it('tells an open editor when the text is replaced some other way', async () => {
+      const engine = makeEngine(validator)
+      const entry = await engine.addPlugin(CANONICAL)
+      const before = entry.node.processor.port.posted.length
+      entry.node.port.postMessage({ type: 'loadAsset', key: 'text', bytes: text('a b') })
+      await settle()
+      expect(fromProcessor(entry.node, before)).toEqual([{ type: 'text', text: 'a b', words: 2 }])
+    })
+
+    it('clips an overlong text to what the module holds, so it cannot write past its buffer', async () => {
+      const engine = makeEngine(validator)
+      const entry = await engine.addPlugin(CANONICAL)
+      await relay(entry.node, { type: 'setText', text: 'ab '.repeat(2000) })
+      const reply = fromProcessor(entry.node).at(-1)
+      expect(reply.text.length).toBeLessThanOrEqual(2000)
+      expect(errorsFrom(entry.node)).toEqual([])
+      expect(peak(await play(entry.node, [[0x90, 60, 100]], 60))).toBeGreaterThan(0.02)
+    })
+
+    it('ignores anything it does not understand, and the text stays as it was', async () => {
+      const engine = makeEngine(validator)
+      const entry = await engine.addPlugin(CANONICAL)
+      const before = entry.node.processor.port.posted.length
+      for (const payload of [undefined, null, 7, 'setText', {}, { type: 'setText' }, { type: 'setText', text: 5 },
+        { type: 'setText', text: { toString: () => 'x' } }, { type: 'other', text: 'x' }]) {
+        await relay(entry.node, payload)
+      }
+      expect(fromProcessor(entry.node, before)).toEqual([])
+      expect(errorsFrom(entry.node)).toEqual([])
+      await relay(entry.node, { type: 'getText' })
+      expect(fromProcessor(entry.node, before)[0].text).toBe(readFileSync(resolve(root, 'plugins/sam/text.txt'), 'utf8'))
+    })
+  })
 })

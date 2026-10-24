@@ -51,13 +51,13 @@ describe('the plugins this host serves', () => {
     // role and format are singular as facets and plural as fields. Reading the
     // entry by the facet name meant those two silently matched nothing.
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
-      .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Moka', 'Mop', 'Pulse', 'Sam'])
+      .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Moka', 'Monochord', 'Mop', 'Pulse', 'Sam'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
       .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
     // BassGen accepts MIDI too: it can be steered from a keyboard. DrumKit
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
-      .toEqual(['8-Bit 8asterd', 'BassGen', 'Cadence', 'Canticle', 'Counterpointer', 'Dice', 'DrumKit', 'MIDI Filter', 'Markov', 'MelGen', 'Moka', 'Mop', 'Pulse', 'Retune', 'Sam', 'Sprout'])
+      .toEqual(['8-Bit 8asterd', 'BassGen', 'Cadence', 'Canticle', 'Counterpointer', 'Dice', 'DrumKit', 'MIDI Filter', 'Markov', 'MelGen', 'Moka', 'Monochord', 'Mop', 'Pulse', 'Retune', 'Sam', 'Sprout'])
     expect((await catalogue.search({ produces: 'Midi' })).map(e => e.label)).toEqual(['BassGen', 'Cadence', 'Conductor', 'Counterpointer', 'Dice', 'DrumGen', 'Ground', 'Markov', 'MelGen', 'MIDI Filter', 'Retune', 'Sprout'])
   })
 

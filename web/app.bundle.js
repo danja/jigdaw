@@ -39985,6 +39985,9 @@ var CollectionLoader = class {
   }
 };
 
+// src/catalogue/limits.js
+var MAX_RESULTS = 200;
+
 // web/app/Browser.js
 init_parse();
 function browserCatalogue(document2) {
@@ -40145,7 +40148,7 @@ function createBrowser(ctx2) {
     try {
       const body = await browserCatalogue(document2).search({
         text,
-        limit: 25,
+        limit: MAX_RESULTS,
         ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
       });
       renderResults(body.results, text || facet);

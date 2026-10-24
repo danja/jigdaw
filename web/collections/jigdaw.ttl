@@ -47,6 +47,7 @@
         <../plugins/melgen/> ,
         <../plugins/midifilter/> ,
         <../plugins/moka/> ,
+        <../plugins/monochord/> ,
         <../plugins/mop/> ,
         <../plugins/parameq/> ,
         <../plugins/pulse/> ,
@@ -81,6 +82,7 @@
 <../plugins/melgen/> rdfs:label "MelGen" .
 <../plugins/midifilter/> rdfs:label "MIDI Filter" .
 <../plugins/moka/> rdfs:label "Moka" .
+<../plugins/monochord/> rdfs:label "Monochord" .
 <../plugins/mop/> rdfs:label "Mop" .
 <../plugins/parameq/> rdfs:label "Parameq" .
 <../plugins/pulse/> rdfs:label "Pulse" .

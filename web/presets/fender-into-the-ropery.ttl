@@ -40,8 +40,8 @@
     a jig:Node ;
     jig:onTrack <#track-1> ;
     rdfs:label "Guitar" ;
-    jig:plugin <../plugins/mop/> ;
-    jig:setting <#guitar-program> .
+    jig:plugin <../plugins/monochord/> ;
+    jig:setting <#guitar-exciter> , <#guitar-position> , <#guitar-hardness> , <#guitar-decay> , <#guitar-damping> , <#guitar-stiffness> , <#guitar-body> , <#guitar-release> , <#guitar-master> .
 
 <#lead-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 52.0 .
 <#lead-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
@@ -51,7 +51,15 @@
 <#lead-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.5 .
 <#lead-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 1.0 .
 <#lead-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 5.0 .
-<#guitar-program> a jig:ParameterSetting ; jig:symbol "program" ; jig:value 29.0 .
+<#guitar-exciter>   a jig:ParameterSetting ; jig:symbol "exciter"    ; jig:value 0.0 .
+<#guitar-position>  a jig:ParameterSetting ; jig:symbol "position"   ; jig:value 0.18 .
+<#guitar-hardness>  a jig:ParameterSetting ; jig:symbol "hardness"   ; jig:value 0.8 .
+<#guitar-decay>     a jig:ParameterSetting ; jig:symbol "decay"      ; jig:value 2.0 .
+<#guitar-damping>   a jig:ParameterSetting ; jig:symbol "damping"    ; jig:value 0.25 .
+<#guitar-stiffness> a jig:ParameterSetting ; jig:symbol "stiffness"  ; jig:value 0.25 .
+<#guitar-body>      a jig:ParameterSetting ; jig:symbol "body_level" ; jig:value 0.4 .
+<#guitar-master>    a jig:ParameterSetting ; jig:symbol "master"     ; jig:value 0.06 .
+<#guitar-release>   a jig:ParameterSetting ; jig:symbol "release"    ; jig:value 150.0 .
 
 <#amp>
     a jig:Node ;
