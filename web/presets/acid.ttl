@@ -7,7 +7,7 @@
 # pattern as MIDI, DrumKit plays it, and Quefrency pulls the kit's formants
 # down while leaving its pitch alone. DrumGen's kit map is left at Flues
 # Drumkit, the note map DrumKit listens on.
-# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# Relative IRIs and no @base, for the reason web/presets/sam.ttl
 # gives.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .

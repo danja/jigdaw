@@ -52,6 +52,7 @@
         <../plugins/pulse/> ,
         <../plugins/quefrency/> ,
         <../plugins/retune/> ,
+        <../plugins/sam/> ,
         <../plugins/sprout/> ,
         <../plugins/squelch/> ,
         <../plugins/stomp-rack/> ,
@@ -85,6 +86,7 @@
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/retune/> rdfs:label "Retune" .
+<../plugins/sam/> rdfs:label "Sam" .
 <../plugins/sprout/> rdfs:label "Sprout" .
 <../plugins/squelch/> rdfs:label "Squelch" .
 <../plugins/stomp-rack/> rdfs:label "Stomp rack" .

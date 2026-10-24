@@ -8,7 +8,7 @@
 # its own Pulse instrument and its own room, and nothing here is a clip: every
 # generator plays off the transport, so the piece is as long as the form
 # Ground plans.
-# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# Relative IRIs and no @base, for the reason web/presets/sam.ttl
 # gives.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .

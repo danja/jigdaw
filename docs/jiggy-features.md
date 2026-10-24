@@ -201,7 +201,7 @@ starts on the simple page.
 
 ## The plugins
 
-**32 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**33 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).
@@ -212,7 +212,7 @@ profile and loadable by its IRI:
   clipper, with a sidechain key), Squelch (acid filter), Tremolo, Quefrency (formant and pitch), Lookahead,
   Boost, and three JSFX effects (gain trim, one-pole filter, soft clipper).
 
-**9 presets** are bundled: Glass Hours (a 40 bar piece of clips), Chiptune, Acid, Generative through effects, Amp into a room, Fender into the
+**9 presets** are bundled: Glass Hours (a 40 bar piece of clips), Chiptune, Acid, Generative through effects, Sam in a room, Fender into the
 Ropery, Fugue, Generative Gamelan, and Through Keyframe. Each is played offline in a test and must put sound on every track that has a sound maker.
 
 ## Built to be used by everyone

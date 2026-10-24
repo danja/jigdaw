@@ -1392,6 +1392,58 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/sam/",
+      "label": "Sam",
+      "comment": "Software Automatic Mouth, the 1982 Commodore 64 formant speech synthesiser, as an instrument: typed text is spoken either one word per MIDI note, sung at the pitch of the key, or one word per step from a start bar, locked to the host transport.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/sam/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "Jig",
+        "WebAudio"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents",
+        "HostTransport"
+      ],
+      "cautions": [
+        "Transport mode is silent while the host is stopped (use Speak to audition) and when the host gives no beat position. Keys mode ignores the transport.",
+        "The words are a jig:asset the person replaces with a plain text file of their own, up to 2000 printable ASCII characters and 512 words, and are saved with the session. A lone _ is a rest. Phonetic reads SAM phoneme codes, e.g. /HEH3LOW2 WER4LD.",
+        "SAM's code is vendored in third_party/ and has no licence (abandonware; see third_party/SAM-LICENSE.md). Whether it may be redistributed with this plugin is the repository owner's decision, recorded in HUMANS.md.",
+        "Ported from the Downspout VST3 of the same name. Not carried over: the six voice presets (set Speed, Pitch, Throat and Mouth by hand) and the Current Word read-out."
+      ],
+      "parameters": [
+        "mode",
+        "speed",
+        "pitch",
+        "mouth",
+        "throat",
+        "monotone",
+        "phonetic",
+        "midi_ch",
+        "advance",
+        "transpose",
+        "release",
+        "step",
+        "start_bar",
+        "loop",
+        "speak",
+        "tone",
+        "level"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/sprout/",
       "label": "Sprout",
       "comment": "L-system MIDI generator: a grammar is rewritten for up to 16 generations, read as a turtle, and played as a monophonic, scale-quantised line locked to the host transport, optionally growing by one generation every few bars.",

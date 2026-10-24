@@ -10,7 +10,7 @@
 # is 100 percent. Keyframe adds 512 frames of latency to each chain, and the
 # dry half of its mix is delayed to match, so nothing is out of step inside a
 # chain. Nothing here is a clip: both generators play off the transport.
-# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl gives.
+# Relative IRIs and no @base, for the reason web/presets/sam.ttl gives.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .
 @prefix trn:  <http://purl.org/stuff/transmissions/> .

@@ -102,7 +102,7 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       plugins.
 - [ ] Sprout and Markov draw with the VST3's 64-bit mix (`tests/host/mix64.test.js` checks it against BigInt); whether a seed
       now gives the VST3's exact line is unchecked, since the rest of the port may differ. Conductor uses the same draw.
-- [ ] The catalogue's `search` defaults to `limit = 30` (`src/catalogue/Catalogue.js`) and there are 32 plugins, so an empty
+- [ ] The catalogue's `search` defaults to `limit = 30` (`src/catalogue/Catalogue.js`) and there are 33 plugins, so an empty
       search hides 2 unless the caller passes a limit. Check what the browser search bar passes.
 
 ### Conductor

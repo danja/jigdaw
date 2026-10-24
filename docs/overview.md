@@ -76,7 +76,7 @@ converts a REAPER JSFX effect, another packages a Jig for a WAM 2.0 host.
 
 ## What is implemented
 
-The specification is complete and normative. A browser host implements it and runs 32 worked
+The specification is complete and normative. A browser host implements it and runs 33 worked
 plugins, among them: a subtractive synthesiser, a reverb, a compressor/expander/limiter/clipper with a
 sidechain input, a transport-synced bass line generator, the firmware of a three-chip
 synthesiser compiled unmodified from C++, three REAPER JSFX effects, and a plugin whose entire

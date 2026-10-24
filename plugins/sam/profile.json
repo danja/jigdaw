@@ -1,0 +1,347 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/sam/",
+  "label": "Sam",
+  "comment": "Software Automatic Mouth, the 1982 Commodore 64 formant speech synthesiser, as an instrument: typed text is spoken either one word per MIDI note, sung at the pitch of the key, or one word per step from a start bar, locked to the host transport.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "sam",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "Chiptune",
+    "Experimental",
+    "Vocal"
+  ],
+  "cautions": [
+    "Transport mode is silent while the host is stopped (use Speak to audition) and when the host gives no beat position. Keys mode ignores the transport.",
+    "The words are a jig:asset the person replaces with a plain text file of their own, up to 2000 printable ASCII characters and 512 words, and are saved with the session. A lone _ is a rest. Phonetic reads SAM phoneme codes, e.g. /HEH3LOW2 WER4LD.",
+    "SAM's code is vendored in third_party/ and has no licence (abandonware; see third_party/SAM-LICENSE.md). Whether it may be redistributed with this plugin is the repository owner's decision, recorded in HUMANS.md.",
+    "Ported from the Downspout VST3 of the same name. Not carried over: the six voice presets (set Speed, Pitch, Throat and Mouth by hand) and the Current Word read-out."
+  ],
+  "format": "trn:Jig , trn:WebAudio",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents",
+    "trn:HostTransport"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "tailFrames": 48000
+  },
+  "resources": {
+    "module": "sam.wasm",
+    "processor": "sam-processor.js"
+  },
+  "assets": [
+    {
+      "key": "text",
+      "file": "text.txt",
+      "mediaType": "text/plain",
+      "userReplaceable": true
+    }
+  ],
+  "ports": [
+    {
+      "symbol": "mode",
+      "name": "Mode",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Source",
+      "scalePoints": [
+        {
+          "label": "Keys",
+          "value": 0
+        },
+        {
+          "label": "Transport",
+          "value": 1
+        }
+      ],
+      "paramIndex": 0
+    },
+    {
+      "symbol": "speed",
+      "name": "Speed",
+      "default": 72,
+      "minimum": 20,
+      "maximum": 200,
+      "group": "Voice",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "pitch",
+      "name": "Pitch",
+      "default": 64,
+      "minimum": 16,
+      "maximum": 255,
+      "group": "Voice",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "mouth",
+      "name": "Mouth",
+      "default": 128,
+      "minimum": 0,
+      "maximum": 255,
+      "group": "Voice",
+      "paramIndex": 3
+    },
+    {
+      "symbol": "throat",
+      "name": "Throat",
+      "default": 128,
+      "minimum": 0,
+      "maximum": 255,
+      "group": "Voice",
+      "paramIndex": 4
+    },
+    {
+      "symbol": "monotone",
+      "name": "Monotone",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Voice",
+      "toggled": true,
+      "paramIndex": 5
+    },
+    {
+      "symbol": "phonetic",
+      "name": "Phonetic",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Voice",
+      "toggled": true,
+      "paramIndex": 6
+    },
+    {
+      "symbol": "midi_ch",
+      "name": "MIDI In",
+      "default": 17,
+      "minimum": 0,
+      "maximum": 17,
+      "group": "Keys mode",
+      "scalePoints": [
+        {
+          "label": "Off",
+          "value": 0
+        },
+        {
+          "label": "Ch 1",
+          "value": 1
+        },
+        {
+          "label": "Ch 2",
+          "value": 2
+        },
+        {
+          "label": "Ch 3",
+          "value": 3
+        },
+        {
+          "label": "Ch 4",
+          "value": 4
+        },
+        {
+          "label": "Ch 5",
+          "value": 5
+        },
+        {
+          "label": "Ch 6",
+          "value": 6
+        },
+        {
+          "label": "Ch 7",
+          "value": 7
+        },
+        {
+          "label": "Ch 8",
+          "value": 8
+        },
+        {
+          "label": "Ch 9",
+          "value": 9
+        },
+        {
+          "label": "Ch 10",
+          "value": 10
+        },
+        {
+          "label": "Ch 11",
+          "value": 11
+        },
+        {
+          "label": "Ch 12",
+          "value": 12
+        },
+        {
+          "label": "Ch 13",
+          "value": 13
+        },
+        {
+          "label": "Ch 14",
+          "value": 14
+        },
+        {
+          "label": "Ch 15",
+          "value": 15
+        },
+        {
+          "label": "Ch 16",
+          "value": 16
+        },
+        {
+          "label": "All",
+          "value": 17
+        }
+      ],
+      "paramIndex": 7
+    },
+    {
+      "symbol": "advance",
+      "name": "Advance",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Keys mode",
+      "scalePoints": [
+        {
+          "label": "Next word",
+          "value": 0
+        },
+        {
+          "label": "Key = word",
+          "value": 1
+        }
+      ],
+      "paramIndex": 8
+    },
+    {
+      "symbol": "transpose",
+      "name": "Transpose",
+      "default": 0,
+      "minimum": -24,
+      "maximum": 24,
+      "group": "Keys mode",
+      "unit": "semitone12TET",
+      "paramIndex": 9
+    },
+    {
+      "symbol": "release",
+      "name": "Release",
+      "default": 60,
+      "minimum": 5,
+      "maximum": 1000,
+      "group": "Keys mode",
+      "unit": "ms",
+      "paramIndex": 10
+    },
+    {
+      "symbol": "step",
+      "name": "Step",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Transport mode",
+      "scalePoints": [
+        {
+          "label": "1/16",
+          "value": 0
+        },
+        {
+          "label": "1/8",
+          "value": 1
+        },
+        {
+          "label": "1/4",
+          "value": 2
+        },
+        {
+          "label": "1/2",
+          "value": 3
+        },
+        {
+          "label": "1/1",
+          "value": 4
+        },
+        {
+          "label": "1 bar",
+          "value": 5
+        },
+        {
+          "label": "2 bars",
+          "value": 6
+        },
+        {
+          "label": "4 bars",
+          "value": 7
+        }
+      ],
+      "paramIndex": 11
+    },
+    {
+      "symbol": "start_bar",
+      "name": "Start Bar",
+      "default": 1,
+      "minimum": 1,
+      "maximum": 256,
+      "group": "Transport mode",
+      "paramIndex": 12
+    },
+    {
+      "symbol": "loop",
+      "name": "Loop",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Transport mode",
+      "toggled": true,
+      "paramIndex": 13
+    },
+    {
+      "symbol": "speak",
+      "name": "Speak",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Transport mode",
+      "toggled": true,
+      "paramIndex": 14
+    },
+    {
+      "symbol": "tone",
+      "name": "Tone",
+      "default": 8000,
+      "minimum": 1000,
+      "maximum": 12000,
+      "group": "Output",
+      "unit": "hz",
+      "paramIndex": 15
+    },
+    {
+      "symbol": "level",
+      "name": "Level",
+      "default": 0.7,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 16
+    }
+  ]
+}

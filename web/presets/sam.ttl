@@ -1,0 +1,96 @@
+# web/presets/sam.ttl
+#
+# A bundled preset: an ordinary project, docs/project-format.md, with no @base.
+# Every IRI in it is relative, so it resolves against wherever it was fetched
+# from and loads the plugins served beside it, on a local dev server and on the
+# deployment alike. tests/ui/Presets.test.js opens it for real.
+#
+# GENERATED in part: the Sam jig:nodeState literal is the lyric below, a text
+# file encoded as src/host/StateCodec.js encodes a saved session. To change the
+# words, change the lyric and encode it the same way; the plugin reads it as the
+# `text` asset (plugins/sam/text.txt is what it says when nothing was saved).
+#
+# Sam in Keys mode: each note from the Riff speaks the next word of the lyric,
+# sung at the pitch of the note, and the Room puts it somewhere.
+#
+# Lyric: Hello world. This is Sam, singing in a room. Never heard of me? Well now you have. Sing along, la la la.
+
+@prefix jig:  <http://purl.org/stuff/jigdaw/> .
+@prefix trn:  <http://purl.org/stuff/transmissions/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<>
+    a jig:Project ;
+    rdfs:label "Sam in a room" ;
+    jig:revision 1 ;
+    jig:track <#track-1> ;
+    jig:node <#lead> , <#sam> , <#room> ;
+    jig:connection <#c1> , <#c2> ;
+    jig:transport <#transport> .
+
+<#track-1>
+    a jig:Track ;
+    rdfs:label "Sam in a room" .
+
+<#lead>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Melody" ;
+    jig:plugin <../plugins/melgen/> ;
+    jig:setting <#lead-root> , <#lead-scale> , <#lead-length> , <#lead-phrase> , <#lead-grid> , <#lead-density> , <#lead-register> , <#lead-seed> .
+
+<#lead-root>     a jig:ParameterSetting ; jig:symbol "root_note"    ; jig:value 55.0 .
+<#lead-scale>    a jig:ParameterSetting ; jig:symbol "scale"        ; jig:value 2.0 .
+<#lead-length>   a jig:ParameterSetting ; jig:symbol "length_beats" ; jig:value 16.0 .
+<#lead-phrase>   a jig:ParameterSetting ; jig:symbol "phrase_bars"  ; jig:value 2.0 .
+<#lead-grid>     a jig:ParameterSetting ; jig:symbol "subdivision"  ; jig:value 3.0 .
+<#lead-density>  a jig:ParameterSetting ; jig:symbol "density"      ; jig:value 0.6 .
+<#lead-register> a jig:ParameterSetting ; jig:symbol "register"     ; jig:value 1.0 .
+<#lead-seed>     a jig:ParameterSetting ; jig:symbol "seed"         ; jig:value 5.0 .
+
+<#sam>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Sam" ;
+    jig:plugin <../plugins/sam/> ;
+    jig:setting <#sam-mode> , <#sam-speed> , <#sam-release> , <#sam-level> ;
+    jig:nodeState "{\"text\":{\"__jigdawArrayBuffer\":\"SGVsbG8gd29ybGQuIFRoaXMgaXMgU2FtLCBzaW5naW5nIGluIGEgcm9vbS4gTmV2ZXIgaGVhcmQgb2YgbWU/IFdlbGwgbm93IHlvdSBoYXZlLiBTaW5nIGFsb25nLCBsYSBsYSBsYS4=\"}}" .
+
+<#sam-mode>    a jig:ParameterSetting ; jig:symbol "mode"    ; jig:value 0.0 .
+<#sam-speed>   a jig:ParameterSetting ; jig:symbol "speed"   ; jig:value 82.0 .
+<#sam-release> a jig:ParameterSetting ; jig:symbol "release" ; jig:value 90.0 .
+<#sam-level>   a jig:ParameterSetting ; jig:symbol "level"   ; jig:value 0.7 .
+
+<#room>
+    a jig:Node ;
+    jig:onTrack <#track-1> ;
+    rdfs:label "Room" ;
+    jig:plugin <../plugins/cascade/> ;
+    jig:setting <#room-mode> , <#room-mix> , <#room-size> .
+
+<#room-mode>  a jig:ParameterSetting ; jig:symbol "mode" ; jig:value 1.0 .
+<#room-mix>   a jig:ParameterSetting ; jig:symbol "mix"  ; jig:value 0.25 .
+<#room-size>  a jig:ParameterSetting ; jig:symbol "size" ; jig:value 30.0 .
+
+<#c1>
+    a jig:Connection ;
+    jig:from <#c1-from> ; jig:to <#c1-to> ;
+    jig:signalKind trn:Midi .
+
+<#c1-from> a jig:Endpoint ; jig:endpointNode <#lead> ; jig:portIndex 0 .
+<#c1-to>   a jig:Endpoint ; jig:endpointNode <#sam>  ; jig:portIndex 0 .
+
+<#c2>
+    a jig:Connection ;
+    jig:from <#c2-from> ; jig:to <#c2-to> ;
+    jig:signalKind trn:Audio .
+
+<#c2-from> a jig:Endpoint ; jig:endpointNode <#sam>  ; jig:portIndex 0 .
+<#c2-to>   a jig:Endpoint ; jig:endpointNode <#room> ; jig:portIndex 0 .
+
+<#transport>
+    a jig:Transport ;
+    jig:beatsPerBar 4 ; jig:beatUnit 4 ;
+    jig:tempoPoint <#t0> .
+
+<#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 96.0 .

@@ -14,7 +14,7 @@ is wrong in INBOX.md.
 - **Listen to the presets.** All seven, and say which sound bad. "Through Keyframe" (new 2026-10-01) is the one to start with:
   its melody carries a fifth above it from Keyframe's pitch shift, and its drums are pitched down and slurred, so say whether either
   sounds musical or only broken. In particular "Generative, through effects" (its lead line was
-  silent until 2026-09-30 and has not been heard), "Amp into a room" and "Fender into the Ropery" (levels set by a meter), and
+  silent until 2026-09-30 and has not been heard), "Fender into the Ropery" (levels set by a meter), "Sam in a room" (new 2026-10-24: whether the sung words are intelligible, and the level), and
   Chiptune's Lead track, which measures much quieter than the rest.
 - **Listen to what the editing and rendering do:** a muted clip (silent?), a fade in and out on an audio clip, a split at a playing
   position, a bypassed plugin against the same chain with it on, an envelope on a filter cutoff, a tempo ramp, a frozen track
@@ -78,6 +78,18 @@ changes anything (headlessly the voice cap changes nothing: the emulator
 steps the whole chip regardless). The fixes (WAMR AOT/JIT with its LLVM
 build dependency, or mop-side surgery) are a maintainer decision; see the
 Mop item in TODO.md.
+
+## 2b. Decide whether Sam's speech code may be redistributed
+
+`plugins/sam/third_party/` is SAM (Software Automatic Mouth), a reverse-engineered conversion of a 1982
+commercial program whose copyright holder is SoftVoice, Inc. and which has **no licence**: the upstream
+README calls it abandonware and says it cannot be put under one
+([plugins/sam/third_party/SAM-LICENSE.md](plugins/sam/third_party/SAM-LICENSE.md)). Downspout already vendors the
+same files and left this decision open there. Here the files are served by the documentation site and the
+deployed host, so shipping them is publishing them. Decide whether `plugins/sam/` stays in the public tree and
+the deployment. If not, delete the directory, `web/presets/sam.ttl` and its line in `web/presets/index.json`,
+then `npm run build:index`, and `npm run build:precache`. The plugin's profile carries no `pu:licenceId` for this
+reason.
 
 ## 3. Tools that would help
 

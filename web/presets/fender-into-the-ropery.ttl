@@ -2,7 +2,7 @@
 #
 # GENERATED: the two jig:nodeState literals are the files each Ferrite has
 # loaded, encoded as src/host/StateCodec.js encodes a saved session. Relative
-# IRIs and no @base, for the reason web/presets/amp-into-room.ttl gives.
+# IRIs and no @base, for the reason web/presets/sam.ttl gives.
 #
 # The amp is a Neural Amp Modeler capture of a 1965 Fender Super Reverb at the
 # edge of breakup, "FNDR BFSR VB Edge WRM2 CAB FREE", modelled by amalgamaudio

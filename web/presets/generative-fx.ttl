@@ -7,7 +7,7 @@
 # (Quefrency) and a frozen hall. DrumGen plays a kit through a crushing
 # compressor and a small room. Nothing here is a clip: every generator plays
 # off the transport. Relative IRIs and no @base, for the reason
-# web/presets/amp-into-room.ttl gives.
+# web/presets/sam.ttl gives.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .
 @prefix trn:  <http://purl.org/stuff/transmissions/> .

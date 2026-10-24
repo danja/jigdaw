@@ -10,7 +10,7 @@
 // and open examples/songs/glass-hours.ttl in Jiggy with Open. That file names the plugins by their canonical addresses, so
 // they must be served there (they are, since 2026-10-10). The same script writes web/presets/glass-hours.ttl, the piece as a
 // bundled preset: the plugins are the ones served beside the page, by relative address, and there is no @base, for the reason
-// web/presets/amp-into-room.ttl gives.
+// web/presets/sam.ttl gives.
 //
 // What is in it: Drums (DrumKit), Bass (Pulse, its filter automated), Pad (Canticle), Pluck (Canticle),
 // Bells and lead (Moka), Chip (8-Bit 8asterd, only in the last section), and a Reverb return (Cascade) that the pad,

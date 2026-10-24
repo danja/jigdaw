@@ -2,7 +2,7 @@
 #
 # GENERATED: the two Retune jig:nodeState literals are plugins/retune/scales/pelog-approx.scl,
 # encoded as src/host/StateCodec.js encodes a saved session. Relative IRIs and no @base, for the
-# reason web/presets/amp-into-room.ttl gives.
+# reason web/presets/sam.ttl gives.
 #
 # A Conductor on its own track sends its section notes and CCs (channel 16) by two MIDI sends to the
 # Sprout and Markov tracks, which deliver them to the generator each track plays its MIDI into, and

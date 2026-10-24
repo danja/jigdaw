@@ -9,7 +9,7 @@
 # square bass, Ground plans a sixteen-bar techno sub form, and DrumGen plays
 # an electro kit. Nothing here is a clip: every generator plays off the
 # transport. Dry throughout, the way chip music is: no room anywhere.
-# Relative IRIs and no @base, for the reason web/presets/amp-into-room.ttl
+# Relative IRIs and no @base, for the reason web/presets/sam.ttl
 # gives.
 
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .
