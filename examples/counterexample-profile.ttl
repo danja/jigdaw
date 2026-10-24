@@ -52,6 +52,8 @@
     jig:integrity "md5-abcdef" ;
     # Not a boolean, so a host reading it cannot tell what was meant.
     jig:userReplaceable "yes" ;
+    # Not a whole number of at least one byte, so there is no buffer size to state beside a text area.
+    jig:maxBytes 0 ;
     # Not a WebAssembly feature the vocabulary defines.
     jig:wasmFeature jig:Simd256 .
 

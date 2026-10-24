@@ -5072,13 +5072,13 @@ var require_readable = __commonJS({
       return state[kPaused] === true || state.flowing === false;
     };
     Readable.prototype.setEncoding = function(enc) {
-      const decoder = new StringDecoder(enc);
-      this._readableState.decoder = decoder;
+      const decoder2 = new StringDecoder(enc);
+      this._readableState.decoder = decoder2;
       this._readableState.encoding = this._readableState.decoder.encoding;
       const buffer = this._readableState.buffer;
       let content = "";
       for (const data of buffer) {
-        content += decoder.write(data);
+        content += decoder2.write(data);
       }
       buffer.clear();
       if (content !== "") buffer.push(content);
@@ -13281,6 +13281,7 @@ var init_Vocabulary = __esm({
         registeredName: `${JIG}registeredName`,
         wasmFeature: `${JIG}wasmFeature`,
         userReplaceable: `${JIG}userReplaceable`,
+        maxBytes: `${JIG}maxBytes`,
         ModuleAbi: `${JIG}ModuleAbi`,
         Abi1: `${JIG}Abi1`,
         Abi2: `${JIG}Abi2`,
@@ -13524,7 +13525,8 @@ function readResource(dataset2, term5, baseIRI, canonical) {
     mediaType: asString(one(dataset2, term5, jig.mediaType)),
     registeredName: asString(one(dataset2, term5, jig.registeredName)),
     wasmFeatures: values(dataset2, term5, jig.wasmFeature),
-    userReplaceable: asBoolean(one(dataset2, term5, jig.userReplaceable))
+    userReplaceable: asBoolean(one(dataset2, term5, jig.userReplaceable)),
+    maxBytes: asNumber(one(dataset2, term5, jig.maxBytes))
   };
 }
 function readScalePoints(dataset2, port) {
@@ -18007,6 +18009,17 @@ var init_ForeignSupport = __esm({
     };
   }
 });
+
+// src/ui/AssetText.js
+var decoder = new TextDecoder();
+async function showAssetText(panel, profile, dispatcher, nodeId) {
+  const keys = (profile.assets ?? []).filter((a2) => a2.userReplaceable && a2.mediaType === "text/plain").map((a2) => a2.iri.split("#").pop());
+  if (keys.length === 0) return;
+  const state = await dispatcher.getNodeState(nodeId);
+  for (const key of keys) {
+    if (state?.[key] instanceof ArrayBuffer) panel.setAssetText(key, decoder.decode(state[key]));
+  }
+}
 
 // web/app/Media.js
 function createMedia(document2) {
@@ -30928,7 +30941,7 @@ function checkName(name) {
   if (name.split("/").some((part) => part === ".." || part === ".")) throw new Error(`a zip entry name must not step out of the archive: ${name}`);
 }
 function writeZip(entries) {
-  const encoder2 = new TextEncoder();
+  const encoder3 = new TextEncoder();
   const parts = [];
   const central = [];
   let offset = 0;
@@ -30936,7 +30949,7 @@ function writeZip(entries) {
     checkName(name);
     const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     if (data.length > 4294967294) throw new Error(`${name} is too large for a zip without zip64`);
-    const nameBytes = encoder2.encode(name);
+    const nameBytes = encoder3.encode(name);
     const crc = crc32(data);
     const local = new DataView(new ArrayBuffer(30));
     local.setUint32(0, LOCAL, true);
@@ -31000,7 +31013,7 @@ async function readZip(input) {
   if (end < 0) throw new Error("not a zip: no end of central directory");
   const count = view.getUint16(end + 10, true);
   let at = view.getUint32(end + 16, true);
-  const decoder = new TextDecoder();
+  const decoder2 = new TextDecoder();
   const files = /* @__PURE__ */ new Map();
   for (let n2 = 0; n2 < count; n2++) {
     if (view.getUint32(at, true) !== CENTRAL) throw new Error("not a zip: a central directory entry is damaged");
@@ -31012,7 +31025,7 @@ async function readZip(input) {
     const extraLength = view.getUint16(at + 30, true);
     const commentLength = view.getUint16(at + 32, true);
     const localOffset = view.getUint32(at + 42, true);
-    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    const name = decoder2.decode(bytes.subarray(at + 46, at + 46 + nameLength));
     at += 46 + nameLength + extraLength + commentLength;
     if (name.endsWith("/")) continue;
     checkName(name);
@@ -31046,11 +31059,11 @@ function packSession({ turtle, editor = null, scripts = null, media = [] }) {
 function unpackSession(files) {
   const session = files.get(SESSION_FILE);
   if (!session) throw new Error(`the archive holds no ${SESSION_FILE}`);
-  const decoder = new TextDecoder();
+  const decoder2 = new TextDecoder();
   const editor = files.get(EDITOR_FILE);
   const scripts = files.get(SCRIPTS_FILE);
   const media = new Map([...files].filter(([name]) => name !== SESSION_FILE && name !== EDITOR_FILE && name !== SCRIPTS_FILE));
-  return { turtle: decoder.decode(session), editor: editor ? decoder.decode(editor) : null, scripts: scripts ? decoder.decode(scripts) : null, media };
+  return { turtle: decoder2.decode(session), editor: editor ? decoder2.decode(editor) : null, scripts: scripts ? decoder2.decode(scripts) : null, media };
 }
 
 // web/app/Sessions.js
@@ -33662,12 +33675,12 @@ var SkinLoadError = class extends Error {
 };
 async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSvg2 }) {
   if (!profile.skin) throw new SkinLoadError("the profile declares no skin");
-  const decoder = new TextDecoder();
+  const decoder2 = new TextDecoder();
   const skinBytes = await fetchVerified(profile.skin, { kind: "skin" });
   const skinIri = profile.skin.location;
   let skin;
   try {
-    skin = readSkin(await parseTurtle(decoder.decode(skinBytes), skinIri));
+    skin = readSkin(await parseTurtle(decoder2.decode(skinBytes), skinIri));
   } catch (cause) {
     throw new SkinLoadError(`the skin at ${skinIri} could not be read: ${cause.message}`, { cause });
   }
@@ -33679,7 +33692,7 @@ async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSv
   const artBytes = await fetchVerified(artwork, { kind: "skin artwork" });
   let doc;
   try {
-    doc = parseSvg2(decoder.decode(artBytes));
+    doc = parseSvg2(decoder2.decode(artBytes));
   } catch (cause) {
     throw new SkinLoadError(`the artwork at ${artwork.location}: ${cause.message}`, { cause });
   }
@@ -34276,6 +34289,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     });
   }
   let assetGrid = null;
+  const textAreas = /* @__PURE__ */ new Map();
   for (const asset of profile.assets ?? []) {
     if (!asset.userReplaceable) continue;
     if (!assetGrid) {
@@ -34284,6 +34298,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       root.append(assetGrid);
     }
     const key = asset.iri.split("#").pop();
+    if (asset.mediaType === "text/plain") assetGrid.append(textControl(document2, key, asset, `${scope}#${key}-text`.replace(/[^\w-]/g, "_"), onLoadAsset, textAreas));
     const row = document2.createElement("div");
     row.className = "control control-asset";
     const label = document2.createElement("label");
@@ -34308,11 +34323,87 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       for (const fn of setters.get(symbol) ?? []) fn(value2);
       skinPanel?.update(symbol, value2);
     },
+    /**
+     * Show the text a plugin has loaded in its text asset's area. Edits the person has not applied are kept, and the
+     * status says the plugin's text changed underneath them, so typing is never thrown away.
+     */
+    setAssetText(key, text) {
+      textAreas.get(key)?.show(text);
+    },
     /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
     skinned: skinPanel !== null,
     /** The skin's own view, for a caller that places it itself: a test with its own measurements. */
     skinView: skinPanel
   };
+}
+var encoder2 = new TextEncoder();
+function textControl(document2, key, asset, id, onLoadAsset, registry) {
+  const row = document2.createElement("div");
+  row.className = "control control-text";
+  const label = document2.createElement("label");
+  label.setAttribute("for", id);
+  label.textContent = key;
+  const area = document2.createElement("textarea");
+  area.id = id;
+  area.rows = 6;
+  area.spellcheck = false;
+  area.style.cssText = "width:100%;box-sizing:border-box;font:inherit;font-size:16px";
+  const hint2 = document2.createElement("div");
+  hint2.id = `${id}-hint`;
+  hint2.className = "control-hint";
+  area.setAttribute("aria-describedby", hint2.id);
+  const apply = document2.createElement("button");
+  apply.type = "button";
+  apply.textContent = "Apply";
+  apply.style.cssText = "min-height:44px;min-width:44px";
+  const status = document2.createElement("span");
+  status.setAttribute("role", "status");
+  status.className = "control-status";
+  let loaded = "";
+  const bytes = () => encoder2.encode(area.value).length;
+  const limit = asset.maxBytes ?? null;
+  const count = () => {
+    hint2.textContent = limit === null ? `${bytes()} bytes` : `${bytes()} of ${limit} bytes`;
+    hint2.classList.toggle("over", limit !== null && bytes() > limit);
+  };
+  area.addEventListener("input", count);
+  const send = async () => {
+    if (limit !== null && bytes() > limit) {
+      status.textContent = `Not applied: ${bytes()} bytes is over the limit of ${limit}.`;
+      return;
+    }
+    const text = area.value;
+    const result = await onLoadAsset?.(key, new Blob([encoder2.encode(text)], { type: "text/plain" }));
+    if (result && result.ok === false) {
+      status.textContent = `Not applied: ${result.message}`;
+      return;
+    }
+    loaded = text;
+    status.textContent = "Applied.";
+  };
+  apply.addEventListener("click", () => {
+    send();
+  });
+  area.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      send();
+    }
+  });
+  registry.set(key, {
+    show(text) {
+      if (area.value !== loaded && area.value !== text) {
+        status.textContent = "The plugin's text changed. Your edits are kept; Apply replaces it.";
+        return;
+      }
+      loaded = text;
+      area.value = text;
+      count();
+    }
+  });
+  count();
+  row.append(label, area, hint2, apply, status);
+  return row;
 }
 
 // src/ui/ChannelToggle.js
@@ -34655,10 +34746,13 @@ function panelFor(nodeId) {
     }, async (key, file) => {
       const result = d.loadAsset(nodeId, key, await file.arrayBuffer());
       if (!result.ok) log(`${key}: ${result.message}`, "error");
+      else showAssetText(panel, profile, d, nodeId);
+      return result;
     }, { scope: `panel-${nodeId}`, skin });
     panel.element.querySelector("h3")?.remove();
     panel.entry = entry;
     panels.set(nodeId, panel);
+    showAssetText(panel, profile, d, nodeId);
   }
   return panel.element;
 }

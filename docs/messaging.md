@@ -94,6 +94,11 @@ reload to take effect. Contract section 8.2's rule about state applies here too:
 bytes belong in what a later `stateRequest` returns, not duplicated anywhere else, or a
 restore disagrees with what is actually loaded.
 
+A replaceable asset whose media type is `text/plain` is also what a person may type: the host draws
+a text area for it (contract section 5.5) and sends the text, encoded as UTF-8, as the same
+`loadAsset`. For the text area to show what is loaded, the plugin returns the asset's bytes in its
+`state` reply under the asset's key, which the plugins that load a replaceable asset do already.
+
 A file that fails to parse is an `error` with `phase: "asset"` and `fatal: false`: the plugin
 keeps running on whatever it had loaded before, unlike a failure during `init`, because
 rejecting a bad file the person just chose is a smaller event than the plugin itself being

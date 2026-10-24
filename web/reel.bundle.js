@@ -13281,6 +13281,7 @@ var init_Vocabulary = __esm({
         registeredName: `${JIG}registeredName`,
         wasmFeature: `${JIG}wasmFeature`,
         userReplaceable: `${JIG}userReplaceable`,
+        maxBytes: `${JIG}maxBytes`,
         ModuleAbi: `${JIG}ModuleAbi`,
         Abi1: `${JIG}Abi1`,
         Abi2: `${JIG}Abi2`,
@@ -13524,7 +13525,8 @@ function readResource(dataset2, term5, baseIRI, canonical) {
     mediaType: asString(one(dataset2, term5, jig.mediaType)),
     registeredName: asString(one(dataset2, term5, jig.registeredName)),
     wasmFeatures: values(dataset2, term5, jig.wasmFeature),
-    userReplaceable: asBoolean(one(dataset2, term5, jig.userReplaceable))
+    userReplaceable: asBoolean(one(dataset2, term5, jig.userReplaceable)),
+    maxBytes: asNumber(one(dataset2, term5, jig.maxBytes))
   };
 }
 function readScalePoints(dataset2, port) {

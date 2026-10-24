@@ -22,6 +22,7 @@
     jig:track <#track-1> , <#track-2> , <#track-3> , <#track-4> ;
     jig:node <#subject> , <#violins> , <#nave> , <#answer> , <#violas> , <#chamber> , <#bassline> , <#cellos> , <#hall> , <#chords> , <#organ> , <#chapel> ;
     jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> , <#c6> , <#c7> , <#c8> , <#c9> ;
+    jig:master <#master> ;
     jig:transport <#transport> .
 
 <#track-1>
@@ -259,3 +260,6 @@
     jig:tempoPoint <#t0> .
 
 <#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 66.0 .
+
+# Held below full scale: the mix measured over 1.0 (Chiptune 1.12, Acid 1.31, Fugue 1.41) at the master with no gain.
+<#master> a jig:Master ; jig:gain 0.6 .

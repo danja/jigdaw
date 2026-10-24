@@ -41,6 +41,11 @@ export { UNIT_LABELS, formatValue, SPOKEN_UNITS, spokenValue } from './PortText.
  * runtime, and this must cost them nothing, the same rule every other
  * generated control here already follows.
  *
+ * An asset whose media type is `text/plain` is also drawn as a text area with an Apply button (contract section 5.5), so a
+ * person can type into it rather than find a file. Apply calls `onLoadAsset(key, blob)` with the encoded text, the same path
+ * a file takes. `onLoadAsset` may return `{ ok, message }`, and a refusal is said beside the text. The host puts the text
+ * the plugin has loaded into the area with `setAssetText(key, text)`.
+ *
  * `skinLayout` passes `measure` and `availableWidth` through to the skin, which a test supplies because a DOM has no layout.
  *
  * `skin`, from src/host/SkinLoader.js, is the plugin's own artwork already built
@@ -266,6 +271,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
   // turning a knob, and the panel reads top to bottom in the order a person
   // is most likely to want it.
   let assetGrid = null
+  const textAreas = new Map()
   for (const asset of profile.assets ?? []) {
     if (!asset.userReplaceable) continue
     // Its own grid, trailing the sections: the per-section grids above are
@@ -276,6 +282,8 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       root.append(assetGrid)
     }
     const key = asset.iri.split('#').pop()
+
+    if (asset.mediaType === 'text/plain') assetGrid.append(textControl(document, key, asset, `${scope}#${key}-text`.replace(/[^\w-]/g, '_'), onLoadAsset, textAreas))
 
     const row = document.createElement('div')
     row.className = 'control control-asset'
@@ -304,9 +312,87 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       for (const fn of setters.get(symbol) ?? []) fn(value)
       skinPanel?.update(symbol, value)
     },
+    /**
+     * Show the text a plugin has loaded in its text asset's area. Edits the person has not applied are kept, and the
+     * status says the plugin's text changed underneath them, so typing is never thrown away.
+     */
+    setAssetText (key, text) { textAreas.get(key)?.show(text) },
     /** Whether a skin is drawn, so a caller can tell a panel built before its skin arrived. */
     skinned: skinPanel !== null,
     /** The skin's own view, for a caller that places it itself: a test with its own measurements. */
     skinView: skinPanel
   }
+}
+
+const encoder = new TextEncoder()
+
+/**
+ * The text area for a plain text asset: a label, the area, how much of the limit it uses, an Apply button and a status line.
+ * Its size is counted in bytes, which is what the plugin's buffer holds, and Apply refuses what will not fit rather than
+ * letting the plugin clip it without saying.
+ */
+function textControl (document, key, asset, id, onLoadAsset, registry) {
+  const row = document.createElement('div')
+  row.className = 'control control-text'
+
+  const label = document.createElement('label')
+  label.setAttribute('for', id)
+  label.textContent = key
+  const area = document.createElement('textarea')
+  area.id = id
+  area.rows = 6
+  area.spellcheck = false
+  area.style.cssText = 'width:100%;box-sizing:border-box;font:inherit;font-size:16px'
+  const hint = document.createElement('div')
+  hint.id = `${id}-hint`
+  hint.className = 'control-hint'
+  area.setAttribute('aria-describedby', hint.id)
+  const apply = document.createElement('button')
+  apply.type = 'button'
+  apply.textContent = 'Apply'
+  apply.style.cssText = 'min-height:44px;min-width:44px'
+  const status = document.createElement('span')
+  status.setAttribute('role', 'status')
+  status.className = 'control-status'
+
+  let loaded = ''
+  const bytes = () => encoder.encode(area.value).length
+  const limit = asset.maxBytes ?? null
+  const count = () => {
+    hint.textContent = limit === null ? `${bytes()} bytes` : `${bytes()} of ${limit} bytes`
+    hint.classList.toggle('over', limit !== null && bytes() > limit)
+  }
+  area.addEventListener('input', count)
+
+  const send = async () => {
+    if (limit !== null && bytes() > limit) {
+      status.textContent = `Not applied: ${bytes()} bytes is over the limit of ${limit}.`
+      return
+    }
+    const text = area.value
+    const result = await onLoadAsset?.(key, new Blob([encoder.encode(text)], { type: 'text/plain' }))
+    if (result && result.ok === false) { status.textContent = `Not applied: ${result.message}`; return }
+    loaded = text
+    status.textContent = 'Applied.'
+  }
+  apply.addEventListener('click', () => { send() })
+  area.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); send() }
+  })
+
+  registry.set(key, {
+    show (text) {
+      // Unsent typing wins over what arrives: the person is partway through writing it.
+      if (area.value !== loaded && area.value !== text) {
+        status.textContent = 'The plugin\'s text changed. Your edits are kept; Apply replaces it.'
+        return
+      }
+      loaded = text
+      area.value = text
+      count()
+    }
+  })
+  count()
+  row.append(label, area, hint, apply, status)
+  return row
 }

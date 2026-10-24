@@ -189,6 +189,96 @@ describe('dragging a folder by its grip', () => {
     expect(replay(['a', 'b', 'c', 'd', 'e'], ['b', 'c'], 'e')).toEqual(['a', 'd', 'e', 'b', 'c'])
   })
 
+  describe('onto another folder\'s bar', () => {
+    const bars = () => [...document.querySelectorAll('.timeline-folder')]
+    // The grip is the first bar's: each case drags that folder, or builds a lone track's drag below.
+    it('drops a folder above another folder when dragged up, marking the bar', () => {
+      const { moves, grip } = layout({ a: null, b: 'G', c: 'G', d: 'F', e: 'F' })
+      const grips = [...document.querySelectorAll('.folder-grip')]
+      expect(grips).toHaveLength(2)
+      grips[1].dispatchEvent(pointer('pointerdown'))
+      bars()[0].dispatchEvent(pointer('pointermove'))
+      expect(bars()[0].classList.contains('drop-target')).toBe(true)
+      document.dispatchEvent(pointer('pointerup'))
+      // The run d, e lands above b: a stays, then d, e, b, c. d and e each hop below ... b and c hop below the run.
+      expect(moves).toEqual([['c', 2], ['b', 2]])
+      expect(document.querySelectorAll('.dragging, .drop-target')).toHaveLength(0)
+      expect(grip).toBeTruthy()
+    })
+
+    it('drops a folder just above another folder\'s bar when dragged down, and not inside it', () => {
+      layout({ a: 'F', b: 'F', c: null, d: 'G', e: 'G' })
+      const [, second] = [...document.querySelectorAll('.timeline-folder')]
+      document.querySelector('.folder-grip').dispatchEvent(pointer('pointerdown'))
+      second.dispatchEvent(pointer('pointermove'))
+      expect(second.classList.contains('drop-target')).toBe(true)
+    })
+
+    it('leaves real tracks in the order the drop describes, whichever way it goes', () => {
+      const replay = (names, folderOf, from, onto) => {
+        const project = new Project()
+        project.apply(names.map(id => ({ op: 'addTrack', id })))
+        const timeline = createTimeline(document, { ...handlers, onMoveTrack: (id, delta) => project.moveTrack(id, delta), onFolderCollapse: noop })
+        document.body.append(timeline.element)
+        timeline.draw({
+          tracks: names.map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+          layoutFor: t => ({ color: null, laneSize: 'small', folder: folderOf[t.id] ?? null, folderCollapsed: false })
+        })
+        document.querySelectorAll('.folder-grip')[from].dispatchEvent(pointer('pointerdown'))
+        document.querySelectorAll('.timeline-folder')[onto].dispatchEvent(pointer('pointermove'))
+        document.dispatchEvent(pointer('pointerup'))
+        return project.orderedTracks.map(t => t.id)
+      }
+      const names = ['a', 'b', 'c', 'd', 'e']
+      // Down: F (a, b) onto G's bar goes to just above G's first track, past c, and stays out of G.
+      expect(replay(names, { a: 'F', b: 'F', d: 'G', e: 'G' }, 0, 1)).toEqual(['c', 'a', 'b', 'd', 'e'])
+      document.body.replaceChildren()
+      // Up: G (d, e) onto F's bar goes above F's first track.
+      expect(replay(names, { a: 'F', b: 'F', d: 'G', e: 'G' }, 1, 0)).toEqual(['d', 'e', 'a', 'b', 'c'])
+    })
+
+    it('does nothing on the folder\'s own bar, or when released elsewhere', () => {
+      const { moves } = layout({ a: 'F', b: 'F', c: 'G', d: 'G' })
+      const [own] = document.querySelectorAll('.timeline-folder')
+      document.querySelector('.folder-grip').dispatchEvent(pointer('pointerdown'))
+      own.dispatchEvent(pointer('pointermove'))
+      expect(own.classList.contains('drop-target')).toBe(false)
+      document.dispatchEvent(pointer('pointerup'))
+      expect(moves).toEqual([])
+    })
+
+    it('can drop onto a collapsed folder, whose rows are not drawn', () => {
+      const moves = []
+      const timeline = createTimeline(document, { ...handlers, onMoveTrack: (id, delta) => moves.push([id, delta]), onFolderCollapse: noop })
+      document.body.append(timeline.element)
+      timeline.draw({
+        tracks: ['a', 'b', 'c', 'd'].map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+        layoutFor: t => ({ color: null, laneSize: 'small', folder: t.id === 'c' || t.id === 'd' ? 'G' : null, folderCollapsed: t.id === 'c' || t.id === 'd' })
+      })
+      expect(document.querySelector('.timeline-row[data-track="c"]')).toBeNull()
+      // A lone track dragged down from the top onto the collapsed folder lands just above it, outside it.
+      document.getElementById('head-a-grip').dispatchEvent(pointer('pointerdown'))
+      document.querySelector('.timeline-folder').dispatchEvent(pointer('pointermove'))
+      expect(document.querySelector('.timeline-folder').classList.contains('drop-target')).toBe(true)
+      document.dispatchEvent(pointer('pointerup'))
+      expect(moves).toEqual([['a', 1]])
+    })
+
+    it('drops a lone track onto a folder\'s bar, above when dragged up', () => {
+      const moves = []
+      const timeline = createTimeline(document, { ...handlers, onMoveTrack: (id, delta) => moves.push([id, delta]), onFolderCollapse: noop })
+      document.body.append(timeline.element)
+      timeline.draw({
+        tracks: ['a', 'b', 'c', 'd'].map(id => ({ id, label: id, midiInput: null })), clips: [], beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+        layoutFor: t => ({ color: null, laneSize: 'small', folder: t.id === 'b' || t.id === 'c' ? 'G' : null, folderCollapsed: false })
+      })
+      document.getElementById('head-d-grip').dispatchEvent(pointer('pointerdown'))
+      document.querySelector('.timeline-folder').dispatchEvent(pointer('pointermove'))
+      document.dispatchEvent(pointer('pointerup'))
+      expect(moves).toEqual([['d', -2]])
+    })
+  })
+
   it('answers only the main button, and names its keyboard equivalent', () => {
     const { moves, grip } = layout({ a: 'F', b: null })
     grip.dispatchEvent(pointer('pointerdown', { button: 2 }))

@@ -155,6 +155,7 @@ export const vocabulary = Object.freeze({
     registeredName: `${JIG}registeredName`,
     wasmFeature: `${JIG}wasmFeature`,
     userReplaceable: `${JIG}userReplaceable`,
+    maxBytes: `${JIG}maxBytes`,
     ModuleAbi: `${JIG}ModuleAbi`,
     Abi1: `${JIG}Abi1`,
     Abi2: `${JIG}Abi2`,

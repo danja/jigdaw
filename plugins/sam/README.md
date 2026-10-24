@@ -30,8 +30,8 @@ the plugin's `jig:nodeState`. Anything that is not printable ASCII is dropped; n
 
 ## Differences from the VST3
 
-- The text is a file you load, not an editor box, so there is no highlight of the word being spoken. The module
-  still tracks it (`jig_out_word`, for the tests).
+- The text is typed into the panel's text area (or loaded as a file), with no highlight of the word being spoken. The
+  module still tracks it (`jig_out_word`, for the tests).
 - The six voice presets (SAM, Elf, Robot, Stuffy, Old Lady, Alien) are not in the panel. Set Speed, Pitch, Throat
   and Mouth by hand: Elf is 72/64/110/160, Robot 92/60/190/190, Stuffy 82/72/110/105, Old Lady 82/32/145/145,
   Alien 100/64/150/200 (speed/pitch/throat/mouth).

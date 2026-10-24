@@ -25,13 +25,11 @@ Where to start, in order. Everything else is below and is not ordered.
 
 Each of these is blocked on a choice, not on work.
 
-- [ ] **"Fender into the Ropery" does not load on a phone** (user report 2026-10-24, strandz.it/jigdaw on mobile: "room: ferrite did
-      not report ready", no sound, and the next example stalls). Not Monochord: the Ropery Ferrite times out. Measured on
-      the desktop, one Ferrite running the 294 KB Fender capture is 2.8x realtime, so a phone is likely below realtime; a
-      saturated audio thread would also leave the next plugin's init unanswered. Unconfirmed on the device. Done so far: the
-      ready limit is 30 s (`READY_TIMEOUT_MS`, was 10), a failed plugin is now shown in words with a progress bar. Open:
-      load every node before connecting any, so a running amp cannot starve the next init; a lighter capture or a
-      "needs a fast device" note on this preset; ask the phone's owner for the model and what the bar last said.
+- [x] **"Fender into the Ropery" did not load on a phone** (reported 2026-10-24, "room: ferrite did not report ready"; fixed
+      the same day, confirmed working on the phone). Three changes, which one mattered is not known: the ready limit is 30 s
+      (`READY_TIMEOUT_MS`), Ferrite has a Light switch (the small network of a slimmable `.nam`, 3.6x cheaper in
+      measurement) that the preset turns on for the amp, and opening a session loads every plugin before connecting any
+      (`OpDispatcher.withWiringHeld`). A progress bar and a visible failure message were added with it.
 - [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report, no buffer size or version yet. Mop costs
       1.70x realtime through the adapter's pure-interpreter WAMR, so every realtime block overruns. Output is otherwise correct,
       so it is throughput. 8b8 costs 0.20x through the same path and Mop under node's JIT 0.06x, which is why no browser or
@@ -88,8 +86,9 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       with it. The meter dropped from 8 to 4 segments under shift (partials past Nyquist are dropped); not fully explained.
 - [ ] **Skins:** a real screen reader and a real finger are still not tried.
 - [ ] **A composite on a phone.** Every other part of the composite page was checked in Chrome.
-- [ ] **Failed load stays isolated:** drive a plugin that really fails to load in a live page (the chain strip is tested at
-      model and strip only).
+- [x] **Failed load stays isolated** (seen 2026-10-24 in real Chrome: Monochord's profile answered 404 while opening "Fender into
+      the Ropery"; the other three plugins opened, the simple page said "opened with 3 of 4 instruments" in red, and the
+      bar at the foot said which one and why until dismissed). The chain strip in the studio is still only tested at model and strip.
 - [ ] **Mute, lock and fades** by ear.
 - [ ] **A real MIDI controller** against hardware, and **real key presses** into the piano roll, the clip keys and the lane
       points (dispatched events were driven, and a few real keys).
@@ -98,7 +97,13 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
 - [ ] **Built 2026-10-24 and seen only by eye and by recorded events:** the clip launcher (hear a launched slot, and the arrangement going quiet
       under it), `clip_euclidean`, context menus and double clicks (a real screen reader and a real long press), the mixer FX list, the compact
       button sizes on every tab, and a recovery copy of a session that holds audio (quota). Chrome showed each working; none was heard or touched.
-- [ ] **Play every preset** after any change to a plugin processor or the engine (see Recurring).
+- [ ] **Play every preset** after any change to a plugin processor or the engine (see Recurring). Last done 2026-10-24, all nine on
+      the simple page in real Chrome, each lit the meter after a real Play press (Keyframe also at bar 170 at 600 bpm).
+      The Clip lamp is a latch, so it carried over from Acid to the tunes after it. Measured offline (pre-fader), Chiptune
+      reached 1.12, Acid 1.31 and Fugue 1.41 at the master; each now has a master gain (0.8, 0.65, 0.6) and none clipped in
+      15 s of Chrome at 200 bpm. No test binds a preset's peak to full scale yet, since the offline tap reads before the
+      faders (src/testing/ChainRender.js). Note for the next run: pressing Play on a transport that is already playing pauses it, so press it once per
+      page load, not once per tune (a run that did the latter read two tunes as silent).
 
 ## Plugins
 
@@ -120,6 +125,14 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       Mop: the master peak is 0.577 either way, which is the amp's ceiling). Open: the VST3's string plot and its log
       sliders (Decay, Release, Body size) are not reproduced, since a profile has no scale hint; and the sound has not been
       listened to by a person.
+
+- [x] **A text asset is edited as text** (asked 2026-10-24: Sam's own editor box never shows on the deployed site because a plugin
+      UI may not share the host's origin). Spec: contract section 5.5, `jig:maxBytes` (vocab, shape, reader, writer,
+      counterexample), messaging.md 1.2, for-plugin-authors. The generated panel draws a text area, Apply and Ctrl+Enter for a
+      `text/plain` replaceable asset (`src/ui/Panel.js`, `src/ui/AssetText.js`), on the full and the simple page; seen in real
+      Chrome: the lyric shows, typing then Ctrl+Enter reaches the plugin's own state. Retune's `.scl` gets one too. Open: a screen
+      reader pass and a phone. Sam's own `jig:ui` editor (a sandboxed frame, only offered cross-origin, so never on the live site) was
+      removed once the panel did its job everywhere: its findings on what a `jig:ui` costs stay in this log's history.
 
 ### Conductor
 
@@ -235,7 +248,11 @@ Workflow alongside from Routing, and the launcher last.
       node ports and from which tracks send to it; the header says it in words and in its group label. Seen in Chrome: a
       Pulse track reads "Instrument" on a medium lane. Not seen: MIDI, audio and bus in a real page; a small lane hides the
       word (the group label still says it); a track with only MIDI or audio clips and no plugin says nothing.
-- [ ] **Folders: what is left.** A drop target on another folder's bar (a collapsed folder's rows cannot be a drop target either), a screen reader pass, and a save and reopen of a hidden folder in a real page (the written graph was seen, the reopen was not).
+- [ ] **Folders: what is left.** A screen reader pass, touch (a drag onto a bar was driven with a real mouse pointer only), and a
+      save and reopen of a hidden folder in a real page (the written graph was seen, the reopen was not). Done 2026-10-24: a drop
+      target on another folder's bar, for a folder's grip and a track's grip, including a collapsed folder (`dropAt` in
+      `src/ui/Timeline.js`); seen in real Chrome with a real drag up, onto a collapsed bar, and down. A drop lands above the
+      folder, never inside it: putting a track into a folder is still done by its Folder field.
 - [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
       one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
       not placed after its members in the order; no way to name it on creation from the page.

@@ -268,6 +268,14 @@ jig:userReplaceable a owl:DatatypeProperty ;
         setting, so a session that saves and reopens carries whatever was loaded rather
         than always falling back to the shipped default.""" .
 
+jig:maxBytes a owl:DatatypeProperty ;
+    rdfs:domain jig:Resource ; rdfs:range xsd:integer ;
+    rdfs:label "maximum bytes" ;
+    rdfs:comment """The most bytes a person may load into a jig:userReplaceable asset: the
+        size of the buffer the plugin holds it in. Optional. A host that offers the asset as
+        text (contract section 5.5) states the limit beside the text and stops a person
+        typing past it, instead of letting the plugin clip what was entered without saying.""" .
+
 ## -- Portable module ABI -----------------------------------------------------
 ##
 ## A plugin's processor is JavaScript, so a browser can always run it. Nothing

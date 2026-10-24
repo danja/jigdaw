@@ -320,6 +320,30 @@ A parameter position that collapses onto another for some settings of the plugin
 than no position at all. A plugin SHOULD NOT declare a mode whose behaviour is identical to
 another mode under any reachable configuration.
 
+### 5.5 A text asset is edited as text
+
+A `jig:asset` marked `jig:userReplaceable` whose `jig:mediaType` is `text/plain` is drawn by the
+host as a text area, beside the file chooser every replaceable asset has. Like section 5.3, the
+shape of the declaration decides this and the plugin names no widget. It is how a plugin whose
+input is words (a lyric, a scale file) lets a person type them, with no code of its own: the
+generated panel is on every page and a `jig:ui` is not (section 9.1).
+
+- The text is the asset's bytes, read and written as UTF-8. The host MUST show the text the
+  plugin has loaded, which is what a `stateRequest` returns under the asset's key
+  ([messaging.md](messaging.md) section 1.3), not what it last sent. A plugin with a text asset
+  MUST therefore return the asset's bytes under its key, as the plugin that loads any other
+  asset does.
+- Applying sends the text exactly as a chosen file is sent, as `loadAsset`. There is no second
+  path to the processor.
+- `jig:maxBytes`, where the profile declares it, is the size of the plugin's buffer. The host
+  MUST state the limit beside the text in words, count it in bytes and not characters, and
+  refuse to apply text over it, saying so. It MUST NOT send text the plugin will clip without
+  telling the person. Where the profile declares none, the host states the size and sends what
+  it was given.
+- Text a person has typed and not applied MUST NOT be replaced by text arriving from the
+  plugin (a restored session, a replaced file): the host keeps the typing and says the plugin's
+  text changed.
+
 ---
 
 ## 6. Events

@@ -44,15 +44,15 @@
   },
   "resources": {
     "module": "sam.wasm",
-    "processor": "sam-processor.js",
-    "ui": "ui/index.html"
+    "processor": "sam-processor.js"
   },
   "assets": [
     {
       "key": "text",
       "file": "text.txt",
       "mediaType": "text/plain",
-      "userReplaceable": true
+      "userReplaceable": true,
+      "maxBytes": 2000
     }
   ],
   "ports": [

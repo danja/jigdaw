@@ -33,6 +33,13 @@
    two-cell span. */
 .control-asset { grid-column:span 2; align-items:flex-start; }
 .control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
+/* A text asset is a place to type: the whole width, with how much of its limit is used and what Apply did under it. */
+.control-text { grid-column:1 / -1; align-items:stretch; }
+.control-text label { text-align:left; }
+.control-text textarea { width:100%; min-height:7em; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px; }
+.control-hint { color:var(--dim); font-size:14px; }
+.control-hint.over { color:var(--err); }
+.control-status { color:var(--dim); font-size:14px; }
 
 /* The knob. The input is still the control: it is laid over the face,
    invisible, and keeps the role, the value and every key. pointer-events

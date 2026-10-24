@@ -3,6 +3,7 @@
 // One plugin's slot on the Plugins tab: its header (reorder, move to another track, open the editor, unpack, remove), its ports, its generated
 // panel, and an on-screen keyboard for an instrument. Rebuilt by the rack on every change; the panels and the keyboards are kept by the rack and
 // handed in, so a control keeps its element and its focus across a redraw. Also the heading a slot is given, and the wire or gap drawn between two.
+import { showAssetText } from '../../src/ui/AssetText.js'
 import { createPanel } from '../../src/ui/Panel.js'
 import { frameableOrigin } from '../../src/ui/PluginFrame.js'
 import { createPortBar } from '../../src/ui/Routing.js'
@@ -291,8 +292,11 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
       }, async (key, file) => {
         const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer())
         if (!result.ok) log(`${node.id}.${key}: ${result.message}`, 'error')
+        else showAssetText(panel, profile, dispatcher, node.id)
+        return result
       }, { scope: `panel-${node.id}`, skin })
       panels.set(node.id, panel)
+      showAssetText(panel, profile, dispatcher, node.id)
     }
     // node.settings is the model's record of what was actually set, post
     // clamp, and it is the only thing that changes when a parameter is set

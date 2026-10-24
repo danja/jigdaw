@@ -14,6 +14,7 @@ export const KEY_SCOPES = Object.freeze({
   chain: 'With a plugin focused in the chain strip',
   point: 'With an envelope point focused',
   script: 'In the script box',
+  text: 'In a plugin\'s text box',
   browser: 'In the Browser',
   menu: 'In a context menu',
   grid: 'With a clip launcher cell focused'
@@ -50,6 +51,8 @@ export const KEY_ROWS = Object.freeze([
   { scope: 'point', keys: 'Delete or Backspace', does: 'Delete the point', press: [plain('Delete'), plain('Backspace')] },
 
   { scope: 'script', keys: 'Ctrl or Cmd + Enter', does: 'Run the script at the next bar; add Shift to run it now', press: [{ key: 'Enter', ctrlKey: true }, { key: 'Enter', ctrlKey: true, shiftKey: true }] },
+
+  { scope: 'text', keys: 'Ctrl or Cmd + Enter', does: 'Apply the text to the plugin', press: [{ key: 'Enter', ctrlKey: true }] },
 
   { scope: 'browser', keys: 'Escape', does: 'Close the Browser and return to its button', press: [plain('Escape')] },
 

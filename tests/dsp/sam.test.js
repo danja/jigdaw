@@ -85,7 +85,7 @@ describe('the module agrees with the profile about every range', () => {
 describe('the shipped text is a plain file the module can read', () => {
   it('is declared as a user replaceable text asset', () => {
     expect(profile.assets).toEqual([
-      { key: 'text', file: 'text.txt', mediaType: 'text/plain', userReplaceable: true }
+      { key: 'text', file: 'text.txt', mediaType: 'text/plain', userReplaceable: true, maxBytes: 2000 }
     ])
   })
 

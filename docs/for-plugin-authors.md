@@ -89,6 +89,14 @@ what it is. Work without it when nothing is connected there. Dynamix declares
 `jig:audioInputs 2` and `jig:sidechainInput 1`. A value that names an input you do not have
 is refused.
 
+### Let people type your text
+
+If your input is words, a lyric or a scale file, ship it as a `jig:asset` with `jig:mediaType "text/plain"`,
+`jig:userReplaceable true` and, if your buffer is finite, `jig:maxBytes`. The generated panel then draws a text
+area with an Apply button, on every page, with no code from you ([contract](host-plugin-contract.md) section 5.5).
+Apply arrives as the `loadAsset` you already handle, and you return the asset's bytes under its key in your
+`state` reply so the area shows what is loaded. Sam and Retune do this, and neither needs a `jig:ui`.
+
 ### Say that you keep no state
 
 A plugin that holds nothing beyond its parameters and its assets (most of them) declares `jig:stateless true`.

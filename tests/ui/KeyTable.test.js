@@ -15,6 +15,7 @@ import { createClipButton } from '../../src/ui/ClipButton.js'
 import { createTrackHeader } from '../../src/ui/TrackHeader.js'
 import { createChainStrip } from '../../src/ui/ChainStrip.js'
 import { createEnvelopeLane, LANE_HEIGHT } from '../../src/ui/EnvelopeLane.js'
+import { createPanel } from '../../src/ui/Panel.js'
 import { createScriptPanel } from '../../src/ui/ScriptPanel.js'
 import { createLayout } from '../../web/app/Layout.js'
 import { createHistory } from '../../web/app/History.js'
@@ -97,6 +98,17 @@ const BINDERS = {
       const panel = createScriptPanel(document, { mount: document.getElementById('mount'), onRun: () => runs.push(1), onCheck () {}, onStop () {} })
       panel.elements.source.dispatchEvent(keydown(window, init))
       return runs.length
+    }
+  },
+  text () {
+    return init => {
+      const { document, window } = page()
+      const applied = []
+      const profile = { iri: 'https://x.test/p/', label: 'P', ports: [], assets: [{ iri: 'https://x.test/p/#text', userReplaceable: true, mediaType: 'text/plain' }] }
+      const panel = createPanel(document, profile, () => {}, key => { applied.push(key); return { ok: true } })
+      document.body.append(panel.element)
+      panel.element.querySelector('textarea').dispatchEvent(keydown(window, init))
+      return applied.length
     }
   },
   browser () {
@@ -192,7 +204,7 @@ describe('the list of shortcuts', () => {
 })
 
 describe('every handler of keydown', () => {
-  const listed = ['src/ui/ClipButton.js', 'src/ui/TrackHeader.js', 'src/ui/ChainStrip.js', 'src/ui/EnvelopeLane.js', 'src/ui/ScriptPanel.js',
+  const listed = ['src/ui/ClipButton.js', 'src/ui/TrackHeader.js', 'src/ui/ChainStrip.js', 'src/ui/EnvelopeLane.js', 'src/ui/ScriptPanel.js', 'src/ui/Panel.js',
     'web/app/Layout.js', 'web/app/History.js', 'web/app/Keys.js', 'web/app.js', 'src/ui/KeysOverlay.js', 'src/ui/ContextMenu.js', 'src/ui/LauncherGrid.js']
   const walk = dir => readdirSync(dir).flatMap(name => {
     const path = join(dir, name)

@@ -21,6 +21,7 @@
     jig:track <#track-1> , <#track-2> ;
     jig:node <#lines> , <#bass> , <#filter> , <#room> , <#beats> , <#kit> , <#formants> ;
     jig:connection <#c1> , <#c2> , <#c3> , <#c4> , <#c5> ;
+    jig:master <#master> ;
     jig:transport <#transport> .
 
 <#track-1>
@@ -145,3 +146,6 @@
     jig:tempoPoint <#t0> .
 
 <#t0> a jig:TempoPoint ; jig:atBeat 0.0 ; jig:bpm 124.0 .
+
+# Held below full scale: the mix measured over 1.0 (Chiptune 1.12, Acid 1.31, Fugue 1.41) at the master with no gain.
+<#master> a jig:Master ; jig:gain 0.65 .

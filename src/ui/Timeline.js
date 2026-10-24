@@ -222,6 +222,25 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   }
 
   /**
+   * What a drag can land on under `element`: a track's row, or the bar of a folder the drag is not part of. A bar stands for
+   * the row beside it, so the rest of the drop is the same as for a row: dragged up, the drop lands above the folder's first
+   * track; dragged down, just above the bar, past the end of what the folder held, and never inside it. That is the only way
+   * onto a collapsed folder, whose rows are not drawn. Returns the row's id and the element to mark, or null.
+   */
+  function dropAt (element, own) {
+    const bar = [...folderBars.values()].find(b => b.element.contains(element))
+    if (bar) {
+      if (bar.runIds.some(id => own.includes(id))) return null
+      const order = lastArgs.tracks.map(t => t.id)
+      const up = order.indexOf(own[0]) > bar.runStart
+      return { row: up ? bar.firstTrack : order[bar.runStart - 1], mark: bar.element }
+    }
+    const row = element?.closest?.('.timeline-row')
+    const id = row?.dataset.track
+    return id && rows.has(id) ? { row: id, mark: row } : null
+  }
+
+  /**
    * Move a whole run of folder tracks one place: the track past the run hops over it, so the run keeps its order. One
    * layout change, so no undo, like moving a single track.
    */
@@ -251,6 +270,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     const run = bar.runIds
     const first = bar.firstTrack
     let target = null
+    let marked = null
     for (const id of run) rows.get(id)?.row.classList.add('dragging')
     const clear = () => {
       document.removeEventListener('pointermove', over)
@@ -258,6 +278,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       document.removeEventListener('pointercancel', clear)
       document.removeEventListener('keydown', escape)
       for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+      for (const { element } of folderBars.values()) element.classList.remove('drop-target')
     }
     // Escape drops the folder where it started: nothing is moved.
     function escape (e) {
@@ -267,11 +288,13 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       folderBars.get(key)?.element.querySelector('.folder-toggle')?.focus()
     }
     function over (e) {
-      const hit = e.target?.closest?.('.timeline-row')?.dataset.track
-      if (!hit || hit === target || run.includes(hit) || !rows.has(hit)) return
-      if (target) rows.get(target)?.row.classList.remove('drop-target')
-      target = hit
-      rows.get(target).row.classList.add('drop-target')
+      const hit = dropAt(e.target, run)
+      // A bar beside the run's own edge stands for one of its own tracks: nowhere to go, and nothing marked.
+      if (!hit || hit.row === target || run.includes(hit.row)) return
+      marked?.classList.remove('drop-target')
+      target = hit.row
+      marked = hit.mark
+      marked.classList.add('drop-target')
     }
     function up () {
       clear()
@@ -301,6 +324,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     event.target?.releasePointerCapture?.(event.pointerId)
     const rowOf = trackId => rows.get(trackId)?.row
     let target = id
+    let marked = null
     rowOf(id)?.classList.add('dragging')
     const clear = () => {
       document.removeEventListener('pointermove', over)
@@ -308,6 +332,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       document.removeEventListener('pointercancel', cancel)
       document.removeEventListener('keydown', escape)
       for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+      for (const { element } of folderBars.values()) element.classList.remove('drop-target')
     }
     // Escape drops the track where it started: the release that follows moves nothing.
     function escape (e) {
@@ -317,11 +342,12 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       document.getElementById(`show-track-${id}`)?.focus()
     }
     function over (e) {
-      const hit = e.target?.closest?.('.timeline-row')?.dataset.track
-      if (!hit || hit === target || !rows.has(hit)) return
-      rowOf(target)?.classList.remove('drop-target')
-      target = hit
-      if (target !== id) rowOf(target).classList.add('drop-target')
+      const hit = dropAt(e.target, [id])
+      if (!hit || hit.row === target) return
+      marked?.classList.remove('drop-target')
+      target = hit.row
+      marked = hit.mark
+      if (target !== id) marked.classList.add('drop-target')
     }
     function up () {
       clear()

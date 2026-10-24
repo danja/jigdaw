@@ -7,6 +7,7 @@
 // modules in web/app/ that it shares are given the same context they get there,
 // with the parts that belong to the studio (the rack, the arrangement, the
 // editors, undo) reduced to what the shared modules call and nothing more.
+import { showAssetText } from '../src/ui/AssetText.js'
 import { createMedia } from './app/Media.js'
 import { createRuntime } from './app/Runtime.js'
 import { createTransport } from './app/Transport.js'
@@ -107,10 +108,13 @@ function panelFor (nodeId) {
     }, async (key, file) => {
       const result = d.loadAsset(nodeId, key, await file.arrayBuffer())
       if (!result.ok) log(`${key}: ${result.message}`, 'error')
+      else showAssetText(panel, profile, d, nodeId)
+      return result
     }, { scope: `panel-${nodeId}`, skin })
     panel.element.querySelector('h3')?.remove()
     panel.entry = entry
     panels.set(nodeId, panel)
+    showAssetText(panel, profile, d, nodeId)
   }
   return panel.element
 }

@@ -97,7 +97,8 @@ function readResource (dataset, term, baseIRI, canonical) {
     mediaType: asString(one(dataset, term, jig.mediaType)),
     registeredName: asString(one(dataset, term, jig.registeredName)),
     wasmFeatures: values(dataset, term, jig.wasmFeature),
-    userReplaceable: asBoolean(one(dataset, term, jig.userReplaceable))
+    userReplaceable: asBoolean(one(dataset, term, jig.userReplaceable)),
+    maxBytes: asNumber(one(dataset, term, jig.maxBytes))
   }
 }
 

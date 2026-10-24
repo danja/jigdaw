@@ -199,6 +199,7 @@ for (const asset of assets) {
   w(`    jig:location <${asset.file}> ;`)
   if (asset.mediaType) w(`    jig:mediaType ${JSON.stringify(asset.mediaType)} ;`)
   if (asset.userReplaceable) w(`    jig:userReplaceable true ;`)
+  if (asset.maxBytes) w(`    jig:maxBytes ${asset.maxBytes} ;`)
   w(`    jig:integrity "${asset.integrity}" .`)
 }
 

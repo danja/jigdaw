@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  195 terms.
+  196 terms.
 </p>
 
 <h2>Classes</h2>
@@ -505,6 +505,11 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="lowNote"><code>jig:lowNote</code> <span class="label">lowest note</span></dt>
   <dd>The lowest MIDI note, 0 to 127, a MIDI route lets through. Absent means 0.</dd>
+  <dt id="maxBytes"><code>jig:maxBytes</code> <span class="label">maximum bytes</span></dt>
+  <dd>The most bytes a person may load into a jig:userReplaceable asset: the
+        size of the buffer the plugin holds it in. Optional. A host that offers the asset as
+        text (contract section 5.5) states the limit beside the text and stops a person
+        typing past it, instead of letting the plugin clip what was entered without saying.</dd>
   <dt id="mediaType"><code>jig:mediaType</code> <span class="label">media type</span></dt>
   <dd>The media type the resource is expected to be served as. A statement
         of intent that lets a host report a misconfigured server precisely, rather than a
