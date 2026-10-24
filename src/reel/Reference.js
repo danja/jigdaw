@@ -58,6 +58,18 @@ export const STATEMENTS = Object.freeze([
     form: 'connect A -> B',
     what: 'Connect the audio output of one plugin to the audio input of another. MIDI connections are not available to a script yet.',
     example: 'connect filter -> hall'
+  },
+  {
+    type: 'launch',
+    form: 'launch SCENE   or   launch NAME SCENE',
+    what: 'Launch clip launcher slots at the next launch boundary (the Launcher tab\'s Launch on setting): every slot in a scene, or the one on the track of plugin NAME. Scenes count from 1, as bars do. It can be placed with at or repeated with every, and the arrangement on a track is quiet while its slot plays. It starts the transport if it is stopped.',
+    example: 'launch drums 2'
+  },
+  {
+    type: 'stop',
+    form: 'stop   or   stop NAME',
+    what: 'Stop the clip launcher at the next launch boundary: the slot on the track of plugin NAME, or every slot. Place it with at or repeat it with every, as launch.',
+    example: 'stop bass'
   }
 ])
 

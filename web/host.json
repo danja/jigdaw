@@ -7,5 +7,6 @@
   "bridgeCallTimeoutMs": 30000,
   "alignTracks": true,
   "maxTrackDelayMs": 2000,
-  "handoffMinutes": 30
+  "handoffMinutes": 30,
+  "recoverySeconds": 30
 }

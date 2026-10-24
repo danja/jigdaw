@@ -41,7 +41,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   // Name
   const nameLabel = document.createElement('label')
   nameLabel.className = 'track-field'
-  nameLabel.append(document.createTextNode('Name '))
+  nameLabel.append(Object.assign(document.createElement('span'), { textContent: 'Name' }))
   const name = document.createElement('input')
   name.type = 'text'
   name.id = 'track-name-input'
@@ -55,7 +55,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   // Folder: a name, shared by the tracks that belong together. Empty takes the track out of its folder.
   const folderLabel = document.createElement('label')
   folderLabel.className = 'track-field'
-  folderLabel.append(document.createTextNode('Folder '))
+  folderLabel.append(Object.assign(document.createElement('span'), { textContent: 'Folder' }))
   const folder = document.createElement('input')
   folder.type = 'text'
   folder.id = 'track-folder-input'
@@ -75,6 +75,11 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   colorGroup.className = 'track-colors'
   colorGroup.setAttribute('role', 'group')
   colorGroup.setAttribute('aria-label', 'Colour')
+  const colorCaption = document.createElement('span')
+  colorCaption.className = 'track-caption'
+  colorCaption.setAttribute('aria-hidden', 'true')
+  colorCaption.textContent = 'Colour'
+  colorGroup.append(colorCaption)
   const colorSaid = document.createElement('span')
   colorSaid.className = 'track-color-said'
   const swatches = [{ name: 'None', value: null }, ...COLORS].map(color => {
@@ -95,7 +100,7 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   // Lane size
   const sizeLabel = document.createElement('label')
   sizeLabel.className = 'track-field'
-  sizeLabel.append(document.createTextNode('Lane size '))
+  sizeLabel.append(Object.assign(document.createElement('span'), { textContent: 'Lane size' }))
   const size = document.createElement('select')
   size.id = 'track-size-input'
   for (const [value, text] of SIZES) {
@@ -177,9 +182,13 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   exportMidi.hidden = true
 
   const actions = document.createElement('div')
-  actions.className = 'track-actions'
+  actions.className = 'track-actions track-main-actions'
   actions.append(position, up, down, freeze, ...(onExportMidi ? [exportMidi] : []), remove)
-  element.append(nameLabel, folderLabel, colorGroup, sizeLabel, group, actions)
+  // Name, folder and lane size share one row, wrapping on a narrow dock; the actions follow, with Delete at the far end.
+  const fields = document.createElement('div')
+  fields.className = 'track-fields'
+  fields.append(nameLabel, folderLabel, sizeLabel)
+  element.append(fields, colorGroup, group, actions)
 
   return {
     element,

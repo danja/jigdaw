@@ -5,6 +5,8 @@
 // and every plugin is told where the transport is (contract section 7).
 import { createAutomationHost } from '../../src/engine/AutomationHost.js'
 import { Scheduler, clipNotes, clipControllers, clipAudio } from '../../src/engine/Scheduler.js'
+import { formatClock } from '../../src/ui/TimeText.js'
+import { launcherPlays } from '../../src/engine/LauncherPlays.js'
 import { Metronome, countIn } from '../../src/engine/Metronome.js'
 import { createClickVoice } from './Click.js'
 import { createClipHold } from '../../src/ui/ClipHold.js'
@@ -132,7 +134,8 @@ export function createTransport (ctx) {
       audio: () => clipAudio(d.project),
       playAudio: (clip, at) => playAudioClip(clip, at),
       stopAudio: () => clipPlayer.stopAll(),
-      automation: automation
+      automation: automation,
+      launcher: () => launcherPlays(d.project, ctx.launcher.state)
     })
     // Every audio clip's file decoded before the clock starts, so the first
     // pass plays them; one that cannot be had is said once and left silent.
@@ -188,6 +191,7 @@ export function createTransport (ctx) {
   function stop () {
     cue = null
     playing = false
+    ctx.launcher?.reset()
     // Before all-notes-off, so the notes it started get their own ends too.
     clearInterval(schedulerTimer)
     schedulerTimer = null
@@ -243,6 +247,9 @@ export function createTransport (ctx) {
         const bar = Math.floor(position.bar) + 1
         const beat = Math.floor(position.beatInBar) + 1
         $('position').textContent = `${bar} . ${beat}`
+        // The studio page shows the time as well; the simple page has no clock to show it in.
+        const clock = $('clock')
+        if (clock) clock.textContent = formatClock(position.seconds)
         if (playing) sendTransport()
       }
       setTimeout(tick, 100)

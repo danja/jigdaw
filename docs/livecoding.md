@@ -60,7 +60,11 @@ at 4:1 reverb.mix = 0.6                               # at bar 4, beat 1
 ramp filter.cutoff 200Hz -> 8000Hz over 2 bars        # envelope_add
 every 1 bar: bass.cutoff = pick(400Hz, 800Hz, 1600Hz)
 connect lead -> reverb                                # connection_add
+at 5:1 launch drums 2                                 # launcher_launch: the slot in scene 2 on the drums' track
+every 8 bars: stop                                    # launcher_stop: every slot
 ```
+
+A scene is counted from 1 here, as a bar is, and is `scene` 0 in the model. `launch 2` launches the whole scene.
 
 Values carry units where the profile declares them, so `8000Hz` is checked against the port's `units:` and range,
 and `0.35` against a port with none. A control that does not exist is an error naming the nearest symbols. It is

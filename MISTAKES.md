@@ -5,6 +5,22 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## 2026-10-24: Splitting a module left guards reading text that had moved
+
+**What happened.** Seven large source files were split along their seams (the agent tools, the dispatcher, the project model, the engine, the
+piano roll, the rack and the project reader), keeping each old module as the front door. The unit tests of behaviour stayed green. Five guards that
+read source text failed: the tool count and the parity check read only `src/mcp/tools.js`, three checks on the page read `web/app/Rack.js` for
+`drawSlot`, a Rec MIDI check wanted `ctx.midiRecord.capture(` in the file that now only calls the slot drawer, and the foreign-plugin mark was
+looked for in a file that no longer drew it. One more slip was found only by the piano roll tests: a moved line still named `band`, not `g.band`.
+
+**Root cause.** Each guard named the files it read, so it was exactly as wide as the list when it was written (CLAUDE.md, "a guard is only as
+wide as the list it walks"). A move by search and replace of a closure's variables also leaves a bare name where an accessor belongs, and a
+syntax check does not see it.
+
+**Prevention.** The tools guards read `tests/mcp/toolsSource.js`, which walks `src/mcp/tools/`, and the tool count now also checks that the
+declared names are the names `createTools` builds, so a group file left out of the front door fails. After a split, run the whole suite and then
+the real page: a real drag in the roll and a launch were done in Chrome, and `/tmp`-style undefined-name scans of the moved files were run.
+
 ## 2026-10-22: A scale test passed only because the machine was slow
 
 **What happened.** The test for snapping a dragged note pressed the same note twice and passed. Rerun on a

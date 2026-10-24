@@ -137,6 +137,15 @@ export function strum (notes, { spread, direction = 'up' } = {}) {
   return notes.map((note, i) => ({ ...note, startBeat: note.startBeat + order.get(i) * spread }))
 }
 
+/** Give each note a chance of playing, from above 0 to 1. 1 takes the chance away, so the note is the note it was. */
+export function setChance (notes, chance) {
+  if (!(Number.isFinite(chance) && chance > 0 && chance <= 1)) throw new Error(`chance must be above 0 and at most 1: ${chance}`)
+  return notes.map(note => {
+    const { chance: _before, ...rest } = note
+    return chance === 1 ? rest : { ...rest, chance }
+  })
+}
+
 const TRANSFORMS = {
   quantize: (notes, options) => quantize(notes, options),
   transpose: (notes, { semitones }) => transpose(notes, semitones),
@@ -146,7 +155,8 @@ const TRANSFORMS = {
   humanize: (notes, options) => humanize(notes, options),
   fitScale: (notes, options) => fitScale(notes, options),
   legato: notes => legato(notes),
-  strum: (notes, options) => strum(notes, options)
+  strum: (notes, options) => strum(notes, options),
+  setChance: (notes, { chance }) => setChance(notes, chance)
 }
 
 export const NOTE_TRANSFORMS = Object.freeze(Object.keys(TRANSFORMS))

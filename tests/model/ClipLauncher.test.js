@@ -93,3 +93,17 @@ describe('copies of a project', () => {
     expect(rebuilt.launcherClips).toHaveLength(1)
   })
 })
+
+describe('a note\'s chance in the model', () => {
+  it('is kept when it is below 1, left off when it is 1, and refused outside 0 to 1', () => {
+    const p = new Project()
+    p.apply([{ op: 'addTrack', id: 't' }])
+    p.apply([{ op: 'addClip', id: 'c', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [
+      { startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100, chance: 0.3 }, { startBeat: 1, lengthBeats: 1, pitch: 60, velocity: 100, chance: 1 }
+    ] }])
+    expect(p.clip('c').notes.map(n => n.chance)).toEqual([0.3, undefined])
+    for (const bad of [0, -1, 1.01, NaN]) {
+      expect(() => p.apply([{ op: 'setClipNotes', id: 'c', notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100, chance: bad }] }]), String(bad)).toThrow(/chance/)
+    }
+  })
+})

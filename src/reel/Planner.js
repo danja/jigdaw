@@ -115,6 +115,11 @@ export async function plan (statements, context) {
   const lengthBeats = length => (length.unit === 'bars' ? length.n * beatsPerBar : length.n)
 
   const action = (a, when, line) => {
+    if (a.type === 'launch' || a.type === 'stop') {
+      if (a.name !== null && !scope.has(a.name)) { fail(line, `no plugin called "${a.name}"${hint(a.name, scope.keys())}`, a.column); return }
+      out.steps.push({ line, when, action: { type: a.type, node: a.name, scene: a.scene ?? null } })
+      return
+    }
     const { name, symbol, column } = a.target
     const port = portOf(name, symbol, line, column)
     if (!port) return
@@ -148,7 +153,7 @@ export async function plan (statements, context) {
         if (scope.has(s.from) && scope.has(s.to)) out.steps.push({ line: s.line, when: { kind: 'now' }, action: { type: 'connect', from: s.from, to: s.to } })
         break
       }
-      case 'set': case 'ramp': action(s, { kind: 'now' }, s.line); break
+      case 'set': case 'ramp': case 'launch': case 'stop': action(s, { kind: 'now' }, s.line); break
       case 'at': action(s.body, { kind: 'at', beat: beatOf(s.pos) }, s.line); break
       case 'every': action(s.body, { kind: 'every', beats: lengthBeats(s.length) }, s.line); break
       default: fail(s.line, `unknown statement ${s.type}`)

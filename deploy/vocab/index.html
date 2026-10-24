@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  193 terms.
+  195 terms.
 </p>
 
 <h2>Classes</h2>
@@ -418,6 +418,10 @@
         digest holds for the same plugin whether it arrived flattened, archived, or from its
         origin, which is the same rule that makes a bundle a retrieval origin and not an
         identity. See docs/plugin-bundles.md section 5.</dd>
+  <dt id="chance"><code>jig:chance</code> <span class="label">chance of playing</span></dt>
+  <dd>How likely a note is to sound each time its place in the music comes round, above 0 and at most 1. Absent means 1: the
+        note always sounds. The draw is made from the note's own time and pitch and where it plays, never from a clock, so the same piece
+        rendered twice sounds the same, and a note's draw changes on each pass of a loop.</dd>
   <dt id="color"><code>jig:color</code> <span class="label">colour</span></dt>
   <dd>A track's colour as lower case #rrggbb. Editor metadata. Never the
         only way a track is told apart: its name is always shown.</dd>
@@ -477,6 +481,8 @@
         said nothing is drawn small now.</dd>
   <dt id="latencyFrames"><code>jig:latencyFrames</code> <span class="label">latency frames</span></dt>
   <dd>Frames of delay the plugin introduces, for the host to compensate.</dd>
+  <dt id="launchQuantise"><code>jig:launchQuantise</code></dt>
+  <dd>How long a clip launcher launch or stop waits: none, beat, bar, 2bars or 4bars. Absent means bar.</dd>
   <dt id="level"><code>jig:level</code></dt>
   <dd>Linear, as jig:gain: zero or more. Of an audio send; a MIDI send has none.</dd>
   <dt id="loadOutcome"><code>jig:loadOutcome</code> <span class="label">load outcome</span></dt>

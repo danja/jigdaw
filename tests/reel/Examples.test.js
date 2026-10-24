@@ -54,7 +54,8 @@ describe('the example scripts', () => {
     for (const e of EXAMPLES) for (const s of parse(e.source).statements) used.add(s.type)
     // `connect` has no example yet: wiring a loaded plugin into a piece has not been heard in a browser, and an
     // example is a promise about what a person will hear. Remove the exemption when one has.
-    const exempt = new Set(['connect'])
+    // `launch` and `stop` have none either: no bundled piece holds a clip in a scene, so an example would launch nothing.
+    const exempt = new Set(['connect', 'launch', 'stop'])
     const missing = STATEMENTS.map(s => s.type).filter(type => !used.has(type) && !exempt.has(type))
     expect(missing).toEqual([])
   })

@@ -12,11 +12,12 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { toolsSource } from './toolsSource.js'
 import { createTools } from '../../src/mcp/tools.js'
 import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
 
 const root = resolve(import.meta.dirname, '../..')
-const source = readFileSync(resolve(root, 'src/mcp/tools.js'), 'utf8')
+const source = toolsSource(root)
 const toolNames = createTools({ dispatcher: new OpDispatcher() }).map(t => t.name)
 
 // op: an edit an agent can make, through the named tool. read: used by tools to answer a question.

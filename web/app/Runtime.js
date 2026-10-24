@@ -112,6 +112,7 @@ export function createRuntime (ctx) {
         onPlay: options => ctx.transport.play(options),
         onStop: async () => { ctx.transport.stop() },
         onPanic: async () => { ctx.transport.panic() },
+        launcher: ctx.launcher,
         // script_run, built before the reel exists and calling it once it does.
         reel: ctx.script.agentReel()
       })

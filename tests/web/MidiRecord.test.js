@@ -117,7 +117,7 @@ describe('the places a person plays from', () => {
     const { readFileSync } = await import('node:fs')
     const { resolve } = await import('node:path')
     const root = resolve(import.meta.dirname, '../..')
-    for (const file of ['web/app/MidiIn.js', 'web/app/Rack.js']) {
+    for (const file of ['web/app/MidiIn.js', 'web/app/RackSlot.js']) {
       expect(readFileSync(resolve(root, file), 'utf8'), file).toContain('ctx.midiRecord.capture(')
     }
   })

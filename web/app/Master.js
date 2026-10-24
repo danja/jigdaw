@@ -10,6 +10,8 @@
 import { createStrip } from '../../src/ui/Strip.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createMeter } from '../../src/ui/Meter.js'
+import { createFxList } from '../../src/ui/FxList.js'
+import { attachMenu } from '../../src/ui/ContextMenu.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
 import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
@@ -30,6 +32,11 @@ export function createMaster (ctx) {
     }
   })
   summary.element.hidden = true
+  const fx = createFxList(ctx.document, {
+    id: 'strip-master',
+    onAdd: () => ctx.rack.addPluginTo(MASTER_TRACK),
+    onRemove: nodeId => ctx.rack.removePlugin(nodeId)
+  })
   return {
     meter,
     mount () {
@@ -37,7 +44,18 @@ export function createMaster (ctx) {
       heading.textContent = 'Master'
       const wrapper = ctx.document.createElement('div')
       wrapper.className = 'mixer-channel master-channel'
-      wrapper.append(heading, strip.element, summary.element)
+      wrapper.append(heading, strip.element, fx.element, summary.element)
+      // The same kind of menu as a track's channel (src/ui/Mixer.js).
+      attachMenu(wrapper, ctx.menu, event => {
+        if (event.target.closest?.('input')) return null
+        const { master } = ctx.dispatcher.project
+        return [
+          { label: 'Mute', checked: Boolean(master.muted), run: () => ctx.dispatcher.apply([{ op: 'setMaster', muted: !master.muted }]) },
+          { label: 'Reset level and pan', run: () => ctx.dispatcher.apply([{ op: 'setMaster', gain: 1, pan: 0 }]) },
+          '-',
+          { label: 'Add a plugin', run: () => ctx.rack.addPluginTo(MASTER_TRACK) }
+        ]
+      })
       $('master-mount').append(wrapper)
     },
     /** Show the project's master, whoever changed it. */
@@ -46,9 +64,10 @@ export function createMaster (ctx) {
       if (!project) return
       strip.update(project.master, { label: 'Master' })
       const nodes = inSignalOrder(project.nodes.filter(n => n.track === MASTER_TRACK), project.connections)
+      const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id
+      fx.update({ label: 'Master', plugins: nodes.map(node => ({ id: node.id, label: labelOf(node) })) })
       summary.element.hidden = nodes.length === 0
       if (nodes.length === 0) return
-      const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id
       const input = project.master.audioInput ? project.node(project.master.audioInput) : null
       summary.show({ label: 'Master', nodes, labelOf, mixInputLabel: input ? labelOf(input) : null })
     }

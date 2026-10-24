@@ -157,7 +157,7 @@ describe('where the application draws strips', () => {
   // Engine against, so the wiring is checked in the source, the way
   // tests/ui/Focus.test.js already checks that drawRack calls preserveFocus.
   const app = appSource()
-  const rack = appFile('web/app/Rack.js')
+  const rack = appFile('web/app/Rack.js') + appFile('web/app/RackSlot.js')
   const drawStart = rack.indexOf('function drawRack')
   const draw = rack.slice(drawStart, rack.indexOf('\n  }\n', drawStart))
 
@@ -258,6 +258,6 @@ describe('a mixer channel with a fader', () => {
   it('is the strip the mixer builds with its meter inside, not under', () => {
     const mixer = readFileSync(resolve(import.meta.dirname, '../../src/ui/Mixer.js'), 'utf8')
     expect(mixer).toMatch(/beside: meter\.element/)
-    expect(mixer).toMatch(/wrapper\.append\(heading, strip\.element\)/)
+    expect(mixer).toMatch(/wrapper\.append\(heading, strip\.element, fx\.element\)/)
   })
 })

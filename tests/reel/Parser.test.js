@@ -95,3 +95,29 @@ describe('the parser, on what it refuses', () => {
     expect(r.errors[0].message).toMatch(/nested too deeply/)
   })
 })
+
+describe('launch and stop', () => {
+  const one = source => parse(source).statements[0]
+  const message = source => parse(source).errors[0]?.message
+
+  it('reads a scene, a plugin and a scene, a stop for a plugin and a stop for all', () => {
+    expect(one('launch 2')).toMatchObject({ type: 'launch', name: null, scene: 2 })
+    expect(one('launch bass 4')).toMatchObject({ type: 'launch', name: 'bass', scene: 4 })
+    expect(one('stop bass')).toMatchObject({ type: 'stop', name: 'bass' })
+    expect(one('stop')).toMatchObject({ type: 'stop', name: null })
+  })
+
+  it('can be placed with at and every', () => {
+    expect(one('at 3:1 launch bass 1').body).toMatchObject({ type: 'launch', scene: 1 })
+    expect(one('every 4 bars: stop').body).toMatchObject({ type: 'stop' })
+  })
+
+  it('refuses a scene that is not a whole number from 1, or missing', () => {
+    expect(message('launch 0')).toMatch(/whole number from 1/)
+    expect(message('launch 1.5')).toMatch(/whole number from 1/)
+    expect(message('launch bass')).toMatch(/scene number after "bass"/)
+    expect(message('launch')).toMatch(/expected a scene number/)
+    expect(message('launch bass 2kHz')).toMatch(/scene number/)
+    expect(message('stop bass 2')).toMatch(/unexpected/)
+  })
+})

@@ -9,6 +9,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { KEY_ROWS, KEY_SCOPES, UNLISTED_KEY_FILES } from '../../src/ui/KeyTable.js'
 import { createKeysOverlay } from '../../src/ui/KeysOverlay.js'
+import { createContextMenu } from '../../src/ui/ContextMenu.js'
+import { createLauncherGrid } from '../../src/ui/LauncherGrid.js'
 import { createClipButton } from '../../src/ui/ClipButton.js'
 import { createTrackHeader } from '../../src/ui/TrackHeader.js'
 import { createChainStrip } from '../../src/ui/ChainStrip.js'
@@ -35,7 +37,9 @@ const BINDERS = {
       const rec = name => (...a) => calls.push([name, ...a])
       const names = ['onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onMute', 'onCopy', 'onCut', 'onPaste', 'onLock', 'onTrim']
       const view = new TimeView()
-      const make = createClipButton(document, { ppb: () => view.pixelsPerBeat, view, selection: new Selection(), ...Object.fromEntries(names.map(n => [n, rec(n)])) })
+      const selection = new Selection()
+      selection.subscribe(() => calls.push(['selection']))
+      const make = createClipButton(document, { ppb: () => view.pixelsPerBeat, view, selection, ...Object.fromEntries(names.map(n => [n, rec(n)])) })
       const button = make({ id: 'c1', kind: 'midi', startBeat: 4, lengthBeats: 8, notes: [] }, { beatsPerBar: 4, playsIntoNothing: false, peaks: null })
       document.body.append(button)
       button.dispatchEvent(keydown(window, init))
@@ -108,6 +112,36 @@ const BINDERS = {
       return wasOpen && document.getElementById('browser').hidden ? 1 : 0
     }
   },
+  grid () {
+    // Three tracks and three scenes, the middle cell pressed: each arrow has a neighbour to go to.
+    return init => {
+      const { document, window } = page()
+      const none = () => {}
+      const grid = createLauncherGrid(document, { onLaunch: none, onAdd: none, onScene: none, onStopTrack: none, onStopAll: none, onQuantise: none, quantiseNames: ['bar'] })
+      document.body.append(grid.element)
+      grid.draw({ tracks: ['a', 'b', 'c'].map(id => ({ id, label: id })), scenes: 3, cells: new Map(), quantise: 'bar' })
+      const focused = []
+      document.querySelectorAll('.launcher-cell').forEach(cell => { cell.focus = () => focused.push(cell.id) })
+      const middle = document.getElementById('cell-b-1')
+      const moved = keydown(window, init)
+      middle.dispatchEvent(moved)
+      return focused.length
+    }
+  },
+  menu () {
+    // Three actions, the focus on the first: a key either moves the focus to another action or closes the menu.
+    return init => {
+      const { document, window } = page()
+      const menu = createContextMenu(document)
+      menu.open([{ label: 'A', run () {} }, { label: 'B', run () {} }, { label: 'C', run () {} }], { x: 0, y: 0 })
+      const buttons = [...menu.element.querySelectorAll('button')]
+      const focused = []
+      buttons.forEach((button, i) => { button.focus = () => focused.push(i) })
+      // linkedom has no focus tracking: the menu reads the focused item from the event's target.
+      buttons[1].dispatchEvent(keydown(window, init))
+      return focused.length + (menu.isOpen ? 0 : 1)
+    }
+  },
   everywhere () {
     // Undo and redo are the page's own handler; F1 is Keys.js; panic is the predicate web/app.js calls (the wiring in app.js is
     // asserted below by its text, since the page itself cannot be built here).
@@ -159,7 +193,7 @@ describe('the list of shortcuts', () => {
 
 describe('every handler of keydown', () => {
   const listed = ['src/ui/ClipButton.js', 'src/ui/TrackHeader.js', 'src/ui/ChainStrip.js', 'src/ui/EnvelopeLane.js', 'src/ui/ScriptPanel.js',
-    'web/app/Layout.js', 'web/app/History.js', 'web/app/Keys.js', 'web/app.js', 'src/ui/KeysOverlay.js']
+    'web/app/Layout.js', 'web/app/History.js', 'web/app/Keys.js', 'web/app.js', 'src/ui/KeysOverlay.js', 'src/ui/ContextMenu.js', 'src/ui/LauncherGrid.js']
   const walk = dir => readdirSync(dir).flatMap(name => {
     const path = join(dir, name)
     if (statSync(path).isDirectory()) return walk(path)

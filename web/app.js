@@ -12,11 +12,14 @@
 // dispatcher and the engine do not exist until the first thing that needs
 // sound (web/app/Runtime.js), so nothing can hold them any earlier.
 import { createBounce } from './app/Bounce.js'
+import { createLauncher } from './app/Launcher.js'
+import { createContextMenu } from '../src/ui/ContextMenu.js'
 import { createMidiExport } from './app/MidiExport.js'
 import { createMidiImport } from './app/MidiImport.js'
 import { createMidiRecord } from './app/MidiRecord.js'
 import { createTapper } from '../src/model/TapTempo.js'
 import { createCarry } from './app/Carry.js'
+import { createRecoveryCopy } from './app/Recovery.js'
 import { applyIcons } from '../src/ui/Icons.js'
 import { createTabs } from '../src/ui/Tabs.js'
 import { createMedia } from './app/Media.js'
@@ -85,6 +88,8 @@ ctx.midiRecord = createMidiRecord(ctx)
 ctx.editors = createEditors(ctx)
 ctx.skins = createSkins(ctx)
 ctx.selection = new Selection()
+// One context menu for the page (src/ui/ContextMenu.js); every surface that offers one is handed it.
+ctx.menu = createContextMenu(document)
 ctx.dock = createDockPanel(ctx)
 ctx.arrangement = createArrangement(ctx)
 ctx.matrix = createMatrix(ctx)
@@ -107,6 +112,7 @@ ctx.layout = createLayout(ctx)
 ctx.keys = createKeys(ctx)
 ctx.swap = createSwap(ctx)
 ctx.midiIn = createMidiIn(ctx)
+ctx.launcher = createLauncher(ctx)
 ctx.script = createScript(ctx)
 
 const { loading, browser, transport } = ctx
@@ -178,8 +184,12 @@ ctx.master.mount()
 // The link to the simple page carries the piece with it, and the simple page offers it.
 for (const link of document.querySelectorAll('a[href="simple.html"]')) ctx.carry.carryOnClick(link)
 ctx.carry.offer()
+ctx.recovery = createRecoveryCopy(ctx)
+ctx.recovery.offer()
+ctx.recovery.start()
 ctx.pwa.mount()
 ctx.rack.mount()
+ctx.launcher.mount()
 ctx.meters.start()
 ctx.bridge.mount()
 ctx.layout.mount()
@@ -215,6 +225,7 @@ ctx.tabs = createTabs(document, [
   { id: 'tracks', label: 'Plugins', panel: $('tracks-panel') },
   { id: 'routing', label: 'Routing', panel: $('routing-panel') },
   { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') },
+  { id: 'launcher', label: 'Launcher', panel: $('launcher-panel') },
   { id: 'script', label: 'Script', panel: $('script-panel') },
   { id: 'settings', label: 'Settings', panel: $('settings-panel') }
 ])

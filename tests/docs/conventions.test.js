@@ -408,7 +408,7 @@ describe('a foreign plugin is marked wherever it appears', () => {
   // rack entry, and the stylesheet that has to know the class names. A mark
   // added to one and forgotten in another is the exact shape of failure
   // AGENTS.md names, and no test of any single file would see it.
-  const SURFACES = ['src/ui/Panel.js', 'web/app/Rack.js']
+  const SURFACES = ['src/ui/Panel.js', 'web/app/RackSlot.js']
 
   it('is marked by every surface that renders a plugin', () => {
     const missing = SURFACES.filter(file => !read(file).includes("=== 'foreign'"))

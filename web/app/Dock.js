@@ -128,6 +128,18 @@ export function createDockPanel (ctx) {
   const layoutOf = (id, patch) => {
     try { ctx.dispatcher.project.setTrackLayout(id, patch) } catch (error) { log(error.message, 'error') }
   }
+  /** A track and the plugins on it, in one changeset, so one undo brings all of it back. */
+  function deleteTrack (id) {
+    const { project } = ctx.dispatcher
+    const label = trackLabel(project.track(id))
+    const changes = [
+      ...project.nodes.filter(n => n.track === id).map(n => ({ op: 'removeNode', id: n.id })),
+      { op: 'removeTrack', id }
+    ]
+    const result = ctx.dispatcher.apply(changes)
+    if (result.ok) log(`removed ${label}; Undo brings it back`, 'ok')
+    else log(result.message, 'error')
+  }
   const trackPanel = createTrackPanel(document, {
     onRename: (id, label) => {
       const result = ctx.dispatcher.apply([{ op: 'setTrack', id, label }])
@@ -143,18 +155,7 @@ export function createDockPanel (ctx) {
     onFreeze: id => {
       ctx.bounce.freezeTrack(id).catch(error => log(error.message, 'error'))
     },
-    onDelete: id => {
-      const { project } = ctx.dispatcher
-      const label = trackLabel(project.track(id))
-      // The plugins first, in the same changeset, so one undo brings all of it back.
-      const changes = [
-        ...project.nodes.filter(n => n.track === id).map(n => ({ op: 'removeNode', id: n.id })),
-        { op: 'removeTrack', id }
-      ]
-      const result = ctx.dispatcher.apply(changes)
-      if (result.ok) log(`removed ${label}; Undo brings it back`, 'ok')
-      else log(result.message, 'error')
-    }
+    onDelete: id => deleteTrack(id)
   })
   // Output and sends of the selected track, as ordinary Ops: the model refuses a loop
   // of tracks, and the reason is logged as it came.
@@ -289,5 +290,5 @@ export function createDockPanel (ctx) {
   // message thread, nothing from process().
   setInterval(() => { if (dock.shown === 'node') nodeView.refreshMonitors() }, 500)
 
-  return { dock, update, slot: name => dock.slot(name), get element () { return dock.element } }
+  return { dock, update, deleteTrack, slot: name => dock.slot(name), get element () { return dock.element } }
 }

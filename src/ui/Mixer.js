@@ -21,6 +21,8 @@
 // to remember to clear the cache.
 import { createStrip } from './Strip.js'
 import { createMeter } from './Meter.js'
+import { createFxList } from './FxList.js'
+import { attachMenu } from './ContextMenu.js'
 
 /**
  * Whether a track has anything for a fader to act on.
@@ -40,17 +42,21 @@ export function mixable (track, nodes, audioOutputsOf) {
  * Build a mixer.
  *
  * `onChange(trackId, change)` receives the part of one strip that changed.
+ * `onAddPlugin(trackId)` and `onRemovePlugin(nodeId)` serve each channel's FX list (FxList.js).
  * Returns `{ element, draw, meters }`; `draw` is called with the project's tracks and
- * nodes, what the dispatcher says each track sounds like after solo, and how
- * to read a node's audio outputs.
+ * nodes, what the dispatcher says each track sounds like after solo, how
+ * to read a node's audio outputs, and `pluginsOf(trackId)`, the track's plugins
+ * as `[{ id, label }]` in signal order.
  */
-export function createMixer (document, { onChange }) {
+export function createMixer (document, { onChange, onAddPlugin, onRemovePlugin, menu = null }) {
   if (typeof onChange !== 'function') throw new Error('createMixer needs an onChange')
+  if (typeof onAddPlugin !== 'function') throw new Error('createMixer needs an onAddPlugin')
+  if (typeof onRemovePlugin !== 'function') throw new Error('createMixer needs an onRemovePlugin')
   const element = document.createElement('div')
   element.className = 'mixer'
   const channels = new Map()
 
-  function draw ({ tracks, nodes, audibility, audioOutputsOf, labelFor }) {
+  function draw ({ tracks, nodes, audibility, audioOutputsOf, labelFor, pluginsOf }) {
     const silent = new Map(audibility.map(a => [a.trackId, a.silent]))
     const shown = tracks.filter(t => mixable(t, nodes, audioOutputsOf))
 
@@ -82,13 +88,35 @@ export function createMixer (document, { onChange }) {
         const wrapper = document.createElement('div')
         wrapper.className = 'mixer-channel'
         const heading = document.createElement('h3')
-        wrapper.append(heading, strip.element)
-        channel = { wrapper, heading, strip, meter }
+        const fx = createFxList(document, {
+          id: `strip-${track.id}`,
+          onAdd: () => onAddPlugin(track.id),
+          onRemove: onRemovePlugin
+        })
+        wrapper.append(heading, strip.element, fx.element)
+        channel = { wrapper, heading, strip, meter, fx, track }
+        // Right click on a channel, or the Menu key on one of its buttons: what its buttons do, and a way back to unity. A
+        // fader keeps the browser's own menu.
+        if (menu) {
+          attachMenu(wrapper, menu, event => {
+            if (event.target.closest?.('input')) return null
+            const now = channel.track.channel
+            return [
+              { label: 'Mute', checked: Boolean(now.muted), run: () => onChange(track.id, { muted: !now.muted }) },
+              { label: 'Solo', checked: Boolean(now.soloed), run: () => onChange(track.id, { soloed: !now.soloed }) },
+              { label: 'Reset level and pan', run: () => onChange(track.id, { gain: 1, pan: 0 }) },
+              '-',
+              { label: 'Add a plugin', run: () => onAddPlugin(track.id) }
+            ]
+          })
+        }
         channels.set(track.id, channel)
       }
+      channel.track = track
       channel.heading.textContent = label
       channel.meter.element.setAttribute('aria-label', `Level of ${label}`)
       channel.strip.update(track.channel, { silent: silent.get(track.id) === true, label })
+      channel.fx.update({ label, plugins: pluginsOf(track.id) })
       return channel.wrapper
     })
 

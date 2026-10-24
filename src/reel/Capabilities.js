@@ -11,7 +11,9 @@ export const SCRIPTABLE = Object.freeze({
   load: 'plugin_load',
   set: 'parameter_set',
   ramp: 'envelope_add',
-  connect: 'connection_add'
+  connect: 'connection_add',
+  launch: 'launcher_launch',
+  stop: 'launcher_stop'
 })
 
 // Every other tool, with why a script does not have it yet. Most are the arrangement and editing tools,
@@ -52,6 +54,7 @@ export const NOT_SCRIPTABLE = Object.freeze({
   clip_move: 'arrangement editing, not yet a statement',
   clip_set: 'arrangement editing, not yet a statement',
   clip_split: 'arrangement editing, not yet a statement',
+  clip_euclidean: 'arrangement editing, not yet a statement',
   clip_trim: 'arrangement editing, not yet a statement',
   clip_copy_to: 'arrangement editing, not yet a statement',
   clip_duplicate: 'arrangement editing, not yet a statement',
@@ -73,6 +76,8 @@ export const NOT_SCRIPTABLE = Object.freeze({
   transport_play: 'needs user activation, and the person starts the music',
   transport_stop: 'the person stops the music',
   transport_panic: 'the person silences a stuck note',
+  launcher_quantise: 'a setting saved with the session, not a gesture in a set',
+  launcher_state: 'a query; a script cannot branch on a result',
   transport_configure: 'tempo and loop changes are wanted for performance, and not in version one',
   diagnostics: 'a query; a script cannot branch on a result',
   script_run: 'a script cannot run a script, which would let one never end'

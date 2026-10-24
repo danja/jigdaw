@@ -1,6 +1,6 @@
 # The clip launcher: what it is before it is drawn
 
-**Status:** a design, written 2026-10-24. Built so far: the clip model below. Not built: playback, the tools that launch and stop, and the grid. It exists because the launcher touches the model, the scheduler, the
+**Status:** a design, written 2026-10-24. Built so far: the clip model, playback from the launch boundary (`src/model/LauncherState.js`, `src/engine/LauncherPlays.js`, the `launcher` option of the scheduler), the tools `launcher_launch`, `launcher_stop`, `launcher_quantise` and `launcher_state`, and the grid on its own Launcher tab. The launch quantisation is saved with the session (`jig:launchQuantise` on the transport, seen changing in Chrome and read back by the tool). Reel has `launch` and `stop` statements (`launch 2`, `launch bass 2`, `stop bass`, `stop`, placed with `at` or `every`). Not built: scene names and recording a performance. It exists because the launcher touches the model, the scheduler, the
 tools and Reel at once, and a grid drawn first would fix decisions that belong to the model. It follows the slot states and the
 launch quantisation that [Oxide Studio](oxide-studio-review.md) uses, with the Jiggy rules applied: the term first, one Op per
 edit, and nothing a person cannot reach by keyboard.
@@ -76,4 +76,16 @@ is drawn for a track that cannot play a clip, since that would be a control nobo
 1. Should recording a launcher performance write it to the arrangement as clips? It is the useful half of Live's design and a
    second feature.
 2. Should a slot be able to hold a different tempo or signature? Not in the first version.
-3. Is the launcher a tab or a dock? That follows [main-view.md](main-view.md) and the maintainer's decision on the docked mixer.
+3. Is the launcher a tab or a dock? (Built as a tab, the seventh, on 2026-10-24; the measured tab row has no overflow. It can move if the main-view decision says so.)
+   Original question: That follows [main-view.md](main-view.md) and the maintainer's decision on the docked mixer.
+
+## What was built and seen, 2026-10-24
+
+- **Playback.** A launched slot plays its clip, looping every clip length, from the boundary until a stop; a note is cut where its pass ends. The
+  arrangement on that track is silent between the slot's start and stop beats, and plays again after. The transport's loop is not applied to a
+  launched slot, which runs on the clock. A stop of the transport forgets every run.
+- **Quantisation** is none, beat, bar, 2 bars or 4 bars, kept on the transport as `jig:launchQuantise` and saved with the session (`LauncherState` works from it each time). A launch with the transport stopped starts
+  the transport and the slot together.
+- **In Chrome**, with a real click: an empty cell added a clip and opened the piano roll; a click on a cell with two notes started the transport and
+  the events reached the plugin four beats apart (every 2.0 seconds at 120 bpm), the cell read "playing", the master meter lit, and `launcher_stop`
+  ended it with no further events. Not heard: no audio was listened to, and the arrangement-silencing was tested in the scheduler only.

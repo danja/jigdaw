@@ -37,6 +37,8 @@ function fakeTools (over = {}) {
     parameter_set: record('parameter_set'),
     envelope_add: record('envelope_add'),
     connection_add: record('connection_add'),
+    launcher_launch: record('launcher_launch'),
+    launcher_stop: record('launcher_stop'),
     ...over
   }
   return { tools, calls }
@@ -325,5 +327,44 @@ describe('through the real dispatcher and the real tools', () => {
     expect(dispatcher.project.nodes.find(n => n.id === 'n1').settings.get('mix')).toBe(0.7)
     await dispatcher.undo()
     expect(dispatcher.project.nodes.find(n => n.id === 'n1').settings.has('mix')).toBe(false)
+  })
+})
+
+describe('launching from a script', () => {
+  const session = () => ({ names: new Map([['bass', 'node-7']]) })
+  const existing = new Map([['bass', { ports: PORTS }]])
+
+  it('launches the slot on a plugin\'s track, counting scenes from 1 as the model counts from 0', async () => {
+    const { runner, plan, calls } = await setup('launch bass 2', { session: session(), existing })
+    await runner.run(plan)
+    expect(calls).toEqual([{ tool: 'launcher_launch', args: { scene: 1, nodeId: 'node-7' } }])
+  })
+
+  it('launches a whole scene, and stops a track or everything', async () => {
+    const { runner, plan, calls } = await setup('launch 3\nstop bass\nstop', { session: session(), existing })
+    await runner.run(plan)
+    expect(calls.map(c => [c.tool, c.args])).toEqual([
+      ['launcher_launch', { scene: 2 }], ['launcher_stop', { nodeId: 'node-7' }], ['launcher_stop', {}]
+    ])
+  })
+
+  it('waits for its bar when placed with at, and repeats with every', async () => {
+    const { runner, plan, calls, scheduler } = await setup('at 5:1 launch bass 1\nevery 2 bars: launch 2', { session: session(), existing })
+    await runner.run(plan)
+    expect(calls).toEqual([])
+    await scheduler.fire('at')
+    await scheduler.fire('every', 2)
+    expect(calls.map(c => c.tool)).toEqual(['launcher_launch', 'launcher_launch', 'launcher_launch'])
+  })
+
+  it('reports a launch the host refused, and stops repeating it', async () => {
+    const { runner, plan, scheduler, calls } = await setup('every 1 bar: launch bass 9', {
+      session: session(), existing, tools: { launcher_launch: async () => ({ ok: false, error: 'no MIDI clip in scene 8 on that track' }) }
+    })
+    const errors = []
+    await runner.run(plan, { onError: e => errors.push(e.message) })
+    await scheduler.fire('every', 3)
+    expect(errors).toEqual(['no MIDI clip in scene 8 on that track'])
+    expect(calls).toEqual([])
   })
 })

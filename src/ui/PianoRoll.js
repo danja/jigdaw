@@ -50,32 +50,18 @@ import { createRollStep, STEP_KEYS, pitchFor } from './RollStep.js'
 import { createRollLane } from './RollLane.js'
 import { createRollControllers } from './RollControllers.js'
 import { createRollLoop } from './RollLoop.js'
+import { createRollEuclid } from './RollEuclid.js'
+import { createRollTools } from './RollTools.js'
+import { attachRollPointer } from './RollPointer.js'
+import { STEPS_PER_BEAT, NAMES, noteName, spokenName, keyOf, beats, noteAt } from './RollNotes.js'
 import { inScale, snapPitch } from '../model/Scale.js'
 
-/** Steps per beat: a sixteenth note in 4/4. */
-export const STEPS_PER_BEAT = 4
 /** How many pitches are shown at once. The cursor scrolls the window. */
 export const VISIBLE_PITCHES = 24
 /** How many pitches MIDI has, drawn or not. */
 const PITCHES = 128
 
-const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-
-/** C4 is 60. Shown with #, said with "sharp", because a reader says "#" as "number". */
-export function noteName (pitch) {
-  return `${NAMES[pitch % 12]}${Math.floor(pitch / 12) - 1}`
-}
-export function spokenName (pitch) {
-  return noteName(pitch).replace('#', ' sharp ')
-}
-
-const keyOf = note => `${note.startBeat}:${note.pitch}`
-const beats = n => `${n} beat${n === 1 ? '' : 's'}`
-
-/** The note sounding at a pitch and a time, if any. */
-function noteAt (notes, pitch, beat) {
-  return notes.find(n => n.pitch === pitch && n.startBeat <= beat && beat < n.startBeat + n.lengthBeats) ?? null
-}
+export { STEPS_PER_BEAT, noteName, spokenName } from './RollNotes.js'
 
 /**
  * Build a piano roll.
@@ -83,18 +69,16 @@ function noteAt (notes, pitch, beat) {
  * `onChange(clipId, notes, { lengthBeats })` sends a whole new list of notes,
  * and a new length when the notes have run past the clip's end. `onClose()`
  * is called by its Close button. `onAudition(pitch, velocity)`, if given,
- * sounds a note. `onTransform(name, options)`, if given, asks for a whole-clip edit (src/model/NoteTransform.js);
+ * sounds a note. `onEuclid(clipId, options)` lays a Euclidean rhythm in and returns a refusal's message (src/model/Euclidean.js). `onTransform(name, options)`, if given, asks for a whole-clip edit (src/model/NoteTransform.js);
  * without it the transform buttons are left out, not shown doing nothing. It returns a message when it refuses.
  * Returns `{ element, show, draw, hide, playhead, clipId }`.
  */
-export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, onControllers = null, onLoop = null, now = () => Date.now() }) {
+export function createPianoRoll (document, { onChange, onClose, onAudition = () => {}, onTransform = null, onEuclid = null, onControllers = null, onLoop = null, now = () => Date.now() }) {
   if (typeof onChange !== 'function' || typeof onClose !== 'function') {
     throw new Error('createPianoRoll needs onChange and onClose')
   }
   // Always on the page, so it can be found: with no clip open it says how to
   // open one, rather than being absent until somebody already knows it exists.
-  let selectAll = null
-  let selectNone = null
   // Keys (start:pitch) of the notes chosen to be changed together.
   let chosen = new Set()
   const element = document.createElement('section')
@@ -152,13 +136,22 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   const empty = document.createElement('p')
   empty.className = 'note piano-roll-empty'
   empty.textContent = 'No clip is open. Choose Add clip on a track above, or choose a MIDI clip, and its notes appear here to edit.'
-  // Edits made from a rule over every note of the clip. Left out when nothing can be done with them.
-  const tools = document.createElement('div')
-  tools.className = 'piano-roll-tools'
-  tools.setAttribute('role', 'group')
-  tools.setAttribute('aria-label', 'Change the notes')
+  // Edits made from a rule over every note of the clip. Left out when nothing can be done with them (RollTools.js).
+  const rollTools = onTransform
+    ? createRollTools(document, {
+      onTransform, now, keyOf, getClip: () => clip, getChosen: () => chosen, setChosen: set => { chosen = set }, getScale: () => rollScale.current,
+      say: message => say(message), draw: () => draw(), chooseAll: () => chooseAll()
+    })
+    : null
+  const tools = rollTools ? rollTools.element : document.createElement('div')
+  if (!rollTools) { tools.className = 'piano-roll-tools'; tools.hidden = true }
+  const fitButton = rollTools ? rollTools.fitButton : document.createElement('button')
+  const selectAll = rollTools?.selectAll ?? null
+  const selectNone = rollTools?.selectNone ?? null
   // Left out for a host that cannot store a loop: a control nobody can use is not drawn.
   const loop = onLoop ? createRollLoop(document, { onLoop: beats => onLoop(clip.id, beats) }) : null
+  // A rhythm to lay into the clip, left out for a host that cannot edit notes.
+  const euclid = onEuclid ? createRollEuclid(document, { onEuclid: options => onEuclid(clip.id, options), nameOf: noteName }) : null
   // With a scale chosen, rows outside it are marked and drawn or dragged notes land inside it.
   const rollScale = createRollScale(document, { onChange: () => { fitButton.hidden = rollScale.current === null; draw() } })
   const snap = pitch => (rollScale.current ? snapPitch(pitch, rollScale.current.root, rollScale.current.scale) : pitch)
@@ -169,111 +162,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     onBack: () => stepBack(),
     onChange: () => { if (clip) draw() }
   })
-  const fitButton = document.createElement('button')
-  fitButton.type = 'button'
-  fitButton.id = 'roll-fit-scale'
-  fitButton.textContent = 'Fit notes to the scale'
-  fitButton.hidden = true
-  if (onTransform) {
-    const gridLabel = document.createElement('label')
-    gridLabel.append(document.createTextNode('Grid '))
-    const gridSelect = document.createElement('select')
-    gridSelect.id = 'roll-quantize-grid'
-    for (const [value, text] of [['1', 'Beat'], ['0.5', 'Half beat'], ['0.25', 'Quarter beat']]) {
-      const option = document.createElement('option')
-      option.value = value
-      option.textContent = text
-      option.selected = value === '0.25'
-      gridSelect.append(option)
-    }
-    gridLabel.append(gridSelect)
-    tools.append(gridLabel)
-    // How far Quantize moves a note toward the grid: all the way, or part of it to keep some of the feel.
-    const strengthLabel = document.createElement('label')
-    strengthLabel.append(document.createTextNode('Strength '))
-    const strengthSelect = document.createElement('select')
-    strengthSelect.id = 'roll-quantize-strength'
-    for (const [value, text] of [['1', '100%'], ['0.75', '75%'], ['0.5', '50%'], ['0.25', '25%']]) {
-      const option = document.createElement('option')
-      option.value = value
-      option.textContent = text
-      option.selected = value === '1'
-      strengthSelect.append(option)
-    }
-    strengthLabel.append(strengthSelect)
-    tools.append(strengthLabel)
-    const endsLabel = document.createElement('label')
-    endsLabel.append(document.createTextNode('Move '))
-    const endsSelect = document.createElement('select')
-    endsSelect.id = 'roll-quantize-ends'
-    for (const [value, text] of [['starts', 'Starts'], ['both', 'Starts and ends']]) {
-      const option = document.createElement('option')
-      option.value = value
-      option.textContent = text
-      option.selected = value === 'starts'
-      endsSelect.append(option)
-    }
-    endsLabel.append(endsSelect)
-    tools.append(endsLabel)
-    // `onTransform` returns an error message when the edit is refused; what was done or why not is spoken here,
-    // since the host's log is not where a person is looking.
-    const ask = (name, options, done) => () => {
-      const indices = chosen.size === 0 ? null : clip.notes.flatMap((n, i) => (chosen.has(keyOf(n)) ? [i] : []))
-      const before = clip.notes
-      const refused = onTransform(name, options, { indices })
-      if (typeof refused === 'string') { say(`Not changed: ${refused}`); return }
-      // The chosen notes were rewritten, so choose what they became: the notes now present that no unchosen note accounts for.
-      if (indices !== null) {
-        const rest = before.filter(n => !chosen.has(keyOf(n)))
-        const keep = new Set()
-        const unmatched = [...clip.notes]
-        for (const n of rest) { const at = unmatched.findIndex(m => keyOf(m) === keyOf(n) && m.lengthBeats === n.lengthBeats && m.velocity === n.velocity); if (at >= 0) unmatched.splice(at, 1) }
-        for (const n of unmatched) keep.add(keyOf(n))
-        chosen = keep
-        draw()
-      }
-      say(indices === null ? done : done.replace(/^Every note/, 'Chosen notes').replace('every note', 'the chosen notes').replace(/^Notes/, 'Chosen notes'))
-    }
-    const buttons = [
-      ['roll-quantize', 'Quantize', () => ask('quantize', { grid: Number(gridSelect.value), strength: Number(strengthSelect.value), ends: endsSelect.value === 'both' }, strengthSelect.value === '1' ? 'Quantized every note to the grid' : `Quantized every note ${Math.round(Number(strengthSelect.value) * 100)}% of the way to the grid`)()],
-      ['roll-down', 'Down a semitone', ask('transpose', { semitones: -1 }, 'Every note down a semitone')],
-      ['roll-up', 'Up a semitone', ask('transpose', { semitones: 1 }, 'Every note up a semitone')],
-      ['roll-octave-down', 'Down an octave', ask('transpose', { semitones: -12 }, 'Every note down an octave')],
-      ['roll-octave-up', 'Up an octave', ask('transpose', { semitones: 12 }, 'Every note up an octave')],
-      ['roll-softer', 'Softer', ask('scaleVelocity', { factor: 0.8 }, 'Every note softer')],
-      ['roll-louder', 'Louder', ask('scaleVelocity', { factor: 1.25 }, 'Every note louder')],
-      ['roll-reverse', 'Reverse', ask('reverse', {}, 'Notes reversed in time')],
-      // About the first note's pitch, so a rising line falls.
-      ['roll-invert', 'Invert pitches', ask('invert', {}, 'Notes inverted about the first note')],
-      // A fresh seed for each press, so pressing again gives a different feel; the edit itself is reproducible from it.
-      ['roll-legato', 'Legato', ask('legato', {}, 'Every note held until the next one starts')],
-      ['roll-strum', 'Strum', ask('strum', { spread: 0.0625, direction: 'up' }, 'Chords strummed upward')],
-      ['roll-humanize', 'Humanize', () => ask('humanize', { timing: 0.05, velocity: 10, seed: now() }, 'Notes humanized a little in time and velocity')()]
-    ]
-    for (const [id, text, run] of buttons) {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.id = id
-      button.textContent = text
-      button.addEventListener('click', run)
-      tools.append(button)
-    }
-    const pick = (id, text, run) => {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.id = id
-      button.textContent = text
-      button.addEventListener('click', run)
-      tools.append(button)
-      return button
-    }
-    // Left out until a scale is chosen, as there is nothing to fit to.
-    fitButton.addEventListener('click', () => ask('fitScale', { ...rollScale.current }, 'Every note moved into the scale')())
-    tools.append(fitButton)
-    selectAll = pick('roll-select-all', 'Choose all notes', () => { chooseAll() })
-    selectNone = pick('roll-select-none', 'Let go of the choice', () => { chosen = new Set(); draw(); say('No notes chosen') })
-  }
-  element.append(header, empty, help, rollScale.element, stepInput.element, ...(loop ? [loop.element] : []), ...(lanes ? [lanes.element] : []), tools, scroller, status)
+  element.append(header, empty, help, rollScale.element, stepInput.element, ...(loop ? [loop.element] : []), ...(euclid ? [euclid.element] : []), ...(lanes ? [lanes.element] : []), tools, scroller, status)
   if (lanes) lanes.onChoice = () => { if (clip) draw() }
 
   /** Open or closed: the grid and its controls, or the note saying how to open one. */
@@ -284,6 +173,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     rollScale.element.hidden = !open
     stepInput.element.hidden = !open
     if (loop) loop.element.hidden = !open
+    if (euclid) euclid.element.hidden = !open
     if (lanes) lanes.element.hidden = !open
     tools.hidden = !open || clip === null || clip.notes.length === 0
     // Close is left out with nothing to close, not shown disabled.
@@ -298,8 +188,6 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
   let low = 48
   // What a drag in progress would make, drawn but not yet sent.
   let preview = null
-  // The last press on a note, for telling a double click.
-  let lastPress = null
   // A rubber band in progress, as two cells, drawn but not yet chosen.
   let band = null
   // Drops the gesture in progress without committing it. A cancelled touch never sends a release,
@@ -341,7 +229,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     const base = `${spokenName(pitch)}, ${where(step)}${past}`
     if (!note) return base
     const start = note.startBeat === beatOf(step) ? 'note' : 'inside a note'
-    return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}${chosen.has(keyOf(note)) ? ', chosen' : ''}`
+    return `${base}, ${start}, ${beats(note.lengthBeats)}, velocity ${note.velocity}${note.chance === undefined ? '' : `, ${Math.round(note.chance * 100)} percent chance of sounding`}${chosen.has(keyOf(note)) ? ', chosen' : ''}`
   }
 
   function draw (next = clip) {
@@ -406,7 +294,7 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
           step >= Math.min(band.from.step, band.to.step) && step <= Math.max(band.from.step, band.to.step)) classes.push('band')
         cell.className = classes.join(' ')
         // Marked in text too, so a note is not shown by colour alone.
-        cell.textContent = starts ? (isChosen ? '▣' : '■') : note ? '–' : ''
+        cell.textContent = starts ? (isChosen ? '▣' : note.chance !== undefined ? '◩' : '■') : note ? '–' : ''
         cell.setAttribute('aria-label', describe(pitch, step))
         const here = pitch === cursor.pitch && step === cursor.step
         cell.tabIndex = here ? 0 : -1
@@ -571,146 +459,22 @@ export function createPianoRoll (document, { onChange, onClose, onAudition = () 
     }
   })
 
-  // ── The pointer ────────────────────────────────────────────────────────────
-
-  const cellOf = target => {
-    const cell = target?.closest?.('[data-step]')
-    return cell ? { pitch: Number(cell.dataset.pitch), step: Number(cell.dataset.step) } : null
+  // The pointer: draw, move, resize and remove a note, and a rubber band to choose several (RollPointer.js). The roll's state is lent to it.
+  const gesture = {
+    clip: () => clip,
+    options: () => options,
+    get cursor () { return cursor },
+    set cursor (value) { cursor = value },
+    get preview () { return preview },
+    set preview (value) { preview = value },
+    get band () { return band },
+    set band (value) { band = value },
+    get abandon () { return abandon },
+    set abandon (value) { abandon = value },
+    get chosen () { return chosen },
+    set chosen (value) { chosen = value }
   }
-
-  /** What a drag of `kind` from `from` to `to` makes of the notes, or null for no change. */
-  function dragged (kind, from, to, note) {
-    if (kind === 'draw') {
-      const first = Math.min(from.step, to.step)
-      const last = Math.max(from.step, to.step)
-      // A click alone is a beat; a drag is exactly as long as the drag.
-      const lengthBeats = first === last ? 1 : beatOf(last - first + 1)
-      return [...clip.notes, { startBeat: beatOf(first), lengthBeats, pitch: snap(from.pitch), velocity: 100 }]
-    }
-    if (kind === 'move') {
-      const pitch = snap(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)))
-      const startBeat = Math.max(0, note.startBeat + beatOf(to.step - from.step))
-      if (pitch === note.pitch && startBeat === note.startBeat) return null
-      return clip.notes.map(n => (same(n, note) ? { ...n, pitch, startBeat } : n))
-    }
-    // resize
-    const lengthBeats = Math.max(beatOf(1), beatOf(to.step + 1) - note.startBeat)
-    if (lengthBeats === note.lengthBeats) return null
-    return clip.notes.map(n => (same(n, note) ? { ...n, lengthBeats } : n))
-  }
-
-  /** Follow a rubber band from `from`, and choose the notes it touches on release. */
-  function startBand (from) {
-    band = { from, to: from }
-    draw()
-    const over = e => {
-      const at = cellOf(e.target)
-      if (!at || (at.pitch === band.to.pitch && at.step === band.to.step)) return
-      band = { from, to: at }
-      draw()
-    }
-    const release = () => {
-      grid.removeEventListener('pointerover', over)
-      document.removeEventListener('pointerup', up)
-      document.removeEventListener('pointercancel', cancel)
-      abandon = null
-    }
-    const cancel = () => { release(); band = null; draw() }
-    abandon = cancel
-    const up = () => {
-      release()
-      const { from: a, to: b } = band
-      band = null
-      const low = Math.min(a.pitch, b.pitch)
-      const high = Math.max(a.pitch, b.pitch)
-      const first = beatOf(Math.min(a.step, b.step))
-      const last = beatOf(Math.max(a.step, b.step) + 1)
-      // A note is touched when any part of it is inside the band.
-      chosen = new Set(clip.notes.filter(n => n.pitch >= low && n.pitch <= high && n.startBeat < last && n.startBeat + n.lengthBeats > first).map(keyOf))
-      draw()
-      say(`${chosen.size} note${chosen.size === 1 ? '' : 's'} chosen`)
-    }
-    grid.addEventListener('pointerover', over)
-    document.addEventListener('pointerup', up)
-    document.addEventListener('pointercancel', cancel)
-  }
-
-  grid.addEventListener('pointerdown', event => {
-    if (!clip || event.button !== 0) return
-    const from = cellOf(event.target)
-    if (!from) return
-    event.preventDefault()
-    abandon?.()
-    const note = noteAt(clip.notes, from.pitch, beatOf(from.step))
-    if (note && event.shiftKey) {
-      cursor = { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) }
-      toggleChosen(note)
-      document.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true })
-      return
-    }
-    if (!note && event.shiftKey) { startBand(from); return }
-    const at = now()
-
-    // A second press on the same note, soon after the first, removes it.
-    if (note && lastPress && same(lastPress.note, note) && at - lastPress.at < 400) {
-      lastPress = null
-      remove(note)
-      return
-    }
-    lastPress = note ? { note, at } : null
-
-    // The last square of a note longer than one step is its handle.
-    const lastStep = note ? Math.round((note.startBeat + note.lengthBeats) * STEPS_PER_BEAT) - 1 : null
-    const kind = !note ? 'draw' : from.step === lastStep && note.lengthBeats > beatOf(1) ? 'resize' : 'move'
-    cursor = note ? { pitch: note.pitch, step: Math.round(note.startBeat * STEPS_PER_BEAT) } : { ...from }
-    if (note) onAudition(note.pitch, note.velocity)
-    preview = kind === 'draw' ? dragged('draw', from, from) : null
-    draw()
-    document.getElementById(`roll-${cursor.pitch}-${cursor.step}`)?.focus({ preventScroll: true })
-
-    let to = from
-    const over = e => {
-      const at = cellOf(e.target)
-      if (!at || (at.pitch === to.pitch && at.step === to.step)) return
-      // A drawn note stays on the row it started on; only its length follows.
-      to = kind === 'draw' ? { pitch: from.pitch, step: at.step } : at
-      const next = dragged(kind, from, to, note)
-      if (kind === 'move' && next && to.pitch !== from.pitch) onAudition(Math.max(0, Math.min(127, note.pitch + to.pitch - from.pitch)), note.velocity)
-      preview = next
-      draw()
-    }
-    const release = () => {
-      grid.removeEventListener('pointerover', over)
-      document.removeEventListener('pointerup', up)
-      document.removeEventListener('pointercancel', cancel)
-      abandon = null
-    }
-    const cancel = () => { release(); preview = null; draw() }
-    abandon = cancel
-    const up = () => {
-      release()
-      const next = dragged(kind, from, to, note)
-      preview = null
-      if (kind === 'draw') {
-        const made = next.at(-1)
-        onAudition(made.pitch, made.velocity)
-        send(next, `Added ${spokenName(made.pitch)} at ${where(Math.min(from.step, to.step))}, ${beats(made.lengthBeats)}`)
-      } else if (next) {
-        const changed = next.find(n => !clip.notes.some(o => same(o, n) && o.lengthBeats === n.lengthBeats))
-        // A chosen note that is moved is still the chosen note.
-        if (kind === 'move' && chosen.delete(keyOf(note))) chosen.add(keyOf(changed))
-        send(next, kind === 'move'
-          ? `Moved to ${spokenName(changed.pitch)} at ${barBeat(changed.startBeat, options.beatsPerBar)}`
-          : `Length ${beats(changed.lengthBeats)}`)
-      } else {
-        draw()
-        say(`Selected ${spokenName(note.pitch)} at ${barBeat(note.startBeat, options.beatsPerBar)}, ${beats(note.lengthBeats)}`)
-      }
-    }
-    grid.addEventListener('pointerover', over)
-    document.addEventListener('pointerup', up)
-    document.addEventListener('pointercancel', cancel)
-  })
+  attachRollPointer(grid, { document, g: gesture, now, onAudition, snap, draw, say, send, remove, toggleChosen, where })
 
   return {
     element,

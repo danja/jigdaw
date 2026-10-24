@@ -12,7 +12,7 @@ const idsInMarkup = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map(m => m[1])
 const sources = ['web/reel.js', 'web/app/Script.js', 'web/app/Transport.js', 'web/app/Pwa.js']
 // Looked up by the shared modules and absent here on purpose: each is guarded in the module, or belongs to a part
 // of the studio this page does not have.
-const optional = new Set(['tempo-group', 'tempo-note', 'signature', 'loop', 'metronome', 'state', 'save', 'open', 'openfile', 'presetbar', 'preset', 'presets'])
+const optional = new Set(['tempo-group', 'tempo-note', 'signature', 'loop', 'metronome', 'state', 'save', 'open', 'openfile', 'presetbar', 'preset', 'presets', 'clock'])
 
 describe('the Reel page markup', () => {
   for (const file of sources) {

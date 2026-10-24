@@ -88,6 +88,9 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       points (dispatched events were driven, and a few real keys).
 - [ ] **A real pointer through a cross-origin plugin frame** was seen once; repeat it.
 - [ ] **Microphone** with a real one (verified only with a stand-in stream, `window.__jigdawMicrophone`).
+- [ ] **Built 2026-10-24 and seen only by eye and by recorded events:** the clip launcher (hear a launched slot, and the arrangement going quiet
+      under it), `clip_euclidean`, context menus and double clicks (a real screen reader and a real long press), the mixer FX list, the compact
+      button sizes on every tab, and a recovery copy of a session that holds audio (quota). Chrome showed each working; none was heard or touched.
 - [ ] **Play every preset** after any change to a plugin processor or the engine (see Recurring).
 
 ## Plugins
@@ -163,19 +166,21 @@ Workflow alongside from Routing, and the launcher last.
 
 - [ ] **Arrangement and mixer UIs follow Reaper where possible** (inbox, 2026-10-01). Write a note of what Reaper's track
       control panel, mixer strip and arrange conventions are, and what to keep from Jiggy's routing-first model, before
-      changes. The shell and mixer items below are where it lands. The tab row with five tabs was measured on 2026-10-23 (`npm run check:layout`): no horizontal overflow from 320px up; its wrapped height is not measured.
+      changes. The shell and mixer items below are where it lands. The tab row (seven tabs now) has no horizontal overflow from 320px up (`npm run check:layout`); its wrapped height is not measured.
 - [ ] **Editor-graph shape.** Marker and region colour, and folders (`jig:parent`), have no model or writer yet, so their
       shapes come with them.
-- [ ] **From the Oxide Studio review** ([docs/oxide-studio-review.md](docs/oxide-studio-review.md), 2026-10-23; read, not run).
-      In the suggested order: the keys overlay is built (`src/ui/KeyTable.js`; the handlers do not read the table, a test fires each
-      listed key at the real control instead). Left there: the piano roll's and the timeline's keys, and a screen reader pass on the
-      dialog. Then `npm run check:layout` is built (`bin/check-layout.js`: every tab, the Browser and the Keys list at 320, 360, 390, 720
-      and 1280px, studio and simple page, with a positive control; 2026-10-23: all 56 views fit; touch-target sizes are not
-      measured by it yet, and it is not part of `npm test`); the dock's height is now limited to 45 percent of the window (`DOCK_SHARE` in `src/ui/Dock.js`; the chosen height is kept and comes back when the window grows; seen in Chrome only as the splitter's maximum at one window height, not dragged on a short window);
-      "Replace" a plugin is built (`src/ops/SwapPlugin.js`, `swapPlugin`, `node_swap`, the chain strip button; left: automation moves with it instead of refusing, a composite as the old plugin, keyboard reach to the button on a small lane where the chain strip is hidden, a screen reader pass, touch);
-      the note transforms Legato and Strum are built (`legato`, `strum` in `src/model/NoteTransform.js`, the roll's buttons and `clip_transform_notes`; Strum seen in Chrome moving the upper note of a two-note chord a sixteenth later; Legato not pressed in Chrome, strum amount and direction are fixed at an upward sixteenth in the roll; left: Euclidean, which makes notes and not a change to notes, so it wants its own generator tool); the mixer-sections idea was checked and dropped (a strip has nothing to hide, see the review note). Later: audio to
-      MIDI as an offline Op, `jig:chance` on a note with a seeded draw, find-similar over catalogue facets, and a load
-      readout, which needs a design note first because `process()` has no clock.
+- [ ] **From the Oxide Studio review: what is left** ([docs/oxide-studio-review.md](docs/oxide-studio-review.md), 2026-10-23; read, not run). Built from it: the
+      keys overlay, `npm run check:layout`, the dock height limit, Replace a plugin, the Legato and Strum transforms. Left, by item:
+      - **Keys overlay** (`src/ui/KeyTable.js`): the piano roll's and the timeline's keys are not listed, and a screen reader pass on the dialog.
+      - **Layout check** (`bin/check-layout.js`, 66 views at 320 to 1280px on 2026-10-24, not part of `npm test`): touch-target sizes are not measured by it.
+      - **Dock limit** (`DOCK_SHARE` in `src/ui/Dock.js`): seen only as the splitter's maximum at one window height, not dragged on a short window.
+      - **Replace** (`src/ops/SwapPlugin.js`, `node_swap`): automation moves with the plugin instead of refusing, a composite as the old plugin, keyboard
+        reach on a small lane where the chain strip is hidden, a screen reader pass, touch.
+      - **Transforms:** Legato not pressed in Chrome; the roll's Strum amount and direction are fixed at an upward sixteenth; `clip_euclidean`
+        (`src/model/Euclidean.js`) and its control in the roll (`src/ui/RollEuclid.js`) are seen in Chrome laying 5 in 8 over a clip; not heard, and the control
+        is not checked at phone width or by screen reader.
+      - **Later:** audio to MIDI as an offline Op, find-similar over catalogue facets, and a load readout,
+        which needs a design note first because `process()` has no clock. Mixer sections were checked and dropped (a strip has nothing to hide).
 - [ ] **WebMCP tools for what has none:** freeze. Trim, and copy, cut and paste, are `clip_trim` and `clip_copy_to` (built 2026-10-24;
       one call places a group, with `cut` for a move, since the clipboard is the page's and an agent has none).
 - [ ] **WebMCP parity gaps, each a decision:** the track-alignment preference and per-track latencies, `audibility`, a
@@ -184,8 +189,13 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Shell
 
-- [ ] **Transport.** A seconds or SMPTE readout and a compact phone transport bar. The click accent assumes one signature, like `barBeat`.
-- [ ] **Compact icon controls: what is left.** Mute and Solo are now an M in a red square and an S in a yellow square on the track header, the mixer strip and the master strip (`src/ui/ChannelToggle.js`; the word is the accessible name and tooltip, on is a filled square with an underlined letter as well as the colour; seen in real Chrome on 2026-10-23, clicked, solo filled yellow). Left: the bulk panel's "Mute all" and "Solo all" (words that say what the press does, so they stay unless a better mark is found), the toolbar is icons now (Browser, Keys, Panic, Tap, Click, MIDI in, and a distinct drawing for each of Rec MIDI, Export MIDI and Import MIDI, seen in Chrome 2026-10-23; whether the ring for Rec MIDI and the list for Import MIDI read clearly is for a person to say) and the links line moved to a footer, the 28px header height of the squares on a small lane (the rule is 44px at phone width, which the stylesheet does), a measured check at phone width, and a screen reader pass on the pressed state.
+- [ ] **Transport.** The studio bar shows the time in minutes, seconds and tenths beside the bar and beat (`src/ui/TimeText.js`, seen in Chrome: 0:04.1 at bar 3 beat 1 after four seconds at 120 bpm). Left: SMPTE or samples as a choice, a click-to-set position, the readout on the simple page, a compact phone transport bar, and a screen reader pass. The click accent assumes one signature, like `barBeat`.
+- [ ] **Gestures: what is left.** Context menus (`src/ui/ContextMenu.js`) and double clicks are on clips, track headers, empty lanes, chain plugins and mixer channels (see docs/jiggy-features.md). Left: hover previews or revealed controls, menus on piano roll notes and automation points, a menu on the Plugins tab slots, and a screen reader and touch (long press) pass on the menu.
+- [ ] **Compact icon controls: what is left.** Mute and Solo (`src/ui/ChannelToggle.js`) and the toolbar are icons, seen in Chrome 2026-10-23, and the links
+      are in a footer. Buttons are 30px for a mouse on a wide window and 44px on touch or a narrow one (`web/index.html`, 2026-10-24). Left: whether
+      the ring for Rec MIDI and the list for Import MIDI read clearly (a person's call); the bulk panel's "Mute all" and "Solo all" stay words unless
+      a better mark is found; the compact sizes were seen on the Plugins tab, the Browser, the Mixer and the lane editor only, not on every tab; a
+      measured check at phone width; a screen reader pass on the pressed state.
 - [ ] **Playhead and loop.** Drag the whole loop, a loop range from a selection or region, and follow for the piano roll.
 - [ ] **Zoom and snap.** Pinch on touch, zoom to selection, seconds as an alternative ruler, the piano roll reading the shared
       `TimeView` (it has its own scale), snapping to other clips' edges, and the grid following signature changes.
@@ -247,8 +257,7 @@ Workflow alongside from Routing, and the launcher last.
       slip edit, a fade curve choice and auto-crossfade where two audio clips overlap, grouping so moves apply together, split
       at a click, trim by drag, and a fine nudge.
 - [ ] **Loop a clip: what is left.** Not heard (the scheduler's frames are unit-tested, no audio was played to hear the repeats). Not built: the loop end draggable on the clip in the arrangement, the repeats drawn on the clip, and audio clips looping.
-- [ ] **Overlap behaviour.** State the rule for clips that overlap on a lane (clip the older, push to a new lane, or refuse)
-      and test it before shipping move. openDAW made this a preference after getting it wrong twice.
+- [ ] **Overlap behaviour: what is left.** The rule is written down and pinned (docs/project-format.md, `tests/engine/ClipOverlap.test.js`): clips overlap freely and all play. Left: whether a person wants a way to clip the older clip or move one to a new lane when they overlap, which is a preference to add with the edit that needs it, and drawing an overlap so it can be seen on a lane.
 - [ ] **Piano roll in the dock** with zoom and scroll bound to the shared time model.
 - [ ] **Drum grid.** Step editor for a track whose target is a kit, using DrumKit.
 - [ ] **Audio editor.** Waveform view with start, end, gain and fade handles for one clip.
@@ -272,17 +281,16 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Mixer as a dock or a page** built from the same track list and selection.
 - [ ] **Master strip.** A mono switch, and controls beyond level, pan and mute (the term-first rule applies to whatever
       controls it carries).
-- [ ] **Insert slots on the strip** mirroring the chain strip, so both views edit one list.
+- [ ] **Insert slots on the strip: what is left.** Each channel's FX button lists the track's plugins with Add and Remove (`src/ui/FxList.js`, seen in Chrome 2026-10-24). Left: bypass, replace and reorder there, as the chain strip has them; a plugin's own controls from the list; touch.
 - [ ] **Strip snapshots, metering, render in place and consolidate** are under Phase C and Phase E, not repeated here.
 
 ### Session, clip launcher and interchange
 
-- [ ] **Clip launcher (session grid).** Designed in [docs/clip-launcher.md](docs/clip-launcher.md). Built 2026-10-24: a slot is a MIDI clip with
-      `jig:scene` kept off the timeline (model, session files, shapes, `clip_add` and `clip_set`). Not built: `LauncherState` and playback by
-      the scheduler, `launcher_*` tools, the grid and scene names. Design: slots and scenes
-      as session data, the five slot states and the playing state outside the revision, launch quantisation kept with the
-      transport, playback by the scheduler from the launch boundary, `launcher_*` tools. Open questions are at the end of that note.
-      Follow actions later. Last on purpose: webdaw leaves it to milestone 9 and it needs the arrangement solid first.
+- [ ] **Clip launcher (session grid): what is left.** Designed in [docs/clip-launcher.md](docs/clip-launcher.md) and built 2026-10-24 apart from the
+      list here: the model, `LauncherState`, playback in the scheduler, the `launcher_*` tools and the Launcher tab (seen in Chrome with real clicks; the
+      audio was not listened to). Reel has `launch` and `stop` statements (tested, and seen in Chrome 2026-10-24: `launch pulse 1` run through `script_run` started the transport and the slot's note came every two seconds; not typed into the Script tab by hand). Left: scene names; the transport loop applied to a launched slot, which it ignores; follow actions;
+      recording a performance as arrangement clips; a touch and screen reader pass on the grid; sharing one clip between slots, which waits for pattern
+      clips. Last on purpose: webdaw leaves it to milestone 9.
 - [ ] **DAWproject import and export.** Bitwig's open format gives sessions an escape route to and from other DAWs. Track,
       clip, note, level, pan and tempo map first; plugin state only for a Jig with an equivalent on the other side.
 - [ ] **Sample and preset libraries.** A browser tab for audio files with preview, folder tree and drag onto a lane.
@@ -319,6 +327,7 @@ the page, it is research, not committed.
 
 - [ ] **Velocity, CC and pitch-bend lanes: what is left.** Not heard: no plugin was listened to under a bend or a controller, including a controller set where a loop comes round or playing starts part way in (HUMANS.md). Not built: curves and ramps (events step), the lane under a clip in the arrangement, a lane for channel pressure, and `clip_transform_notes` leaving events alone.
 - [ ] **Record MIDI into a clip: what is left.** Not tried with a real MIDI keyboard (HUMANS.md). Not built: overdub into an existing clip, quantize on record, a visible "armed" state beside the selected-track fallback, and recording while looping into takes.
+- [ ] **Chance on a note: what is left.** Built 2026-10-24 (`jig:chance`, `src/engine/Chance.js`, `setChance`, the roll's Chance and Set chance, `chance` on a note for the tools; seen in Chrome: all 8 notes of a looped clip set to 50% sounded 27 times in 56 over seven passes, a different count each pass). Left: hearing it; a lane under the notes to see and draw chances, as velocity has; chance on a controller event; a note's chance carried by Reel; MIDI export writes every note whatever its chance (said in the format document, not asked of a person); a screen reader pass on the half-filled mark.
 - [ ] **Quantize and transforms: what is left.** Not seen in Chrome: Down, Softer and Louder, touch, Quantize Strength below 100%, and Move: Starts and ends (unit-tested). A screen reader pass over the roll's grid, which now declares its extent (128 rows, row header as column 1): the long help text read on entering it may want shortening. Not built: snapping the keyboard cursor itself, more scales, and keeping the scale choice with the session.
 - [ ] **Step input and virtual keyboard: what is left.** Real touch on the on-screen keyboard (the browser tool has no touch input; a touch pointer is captured implicitly, which the release is there for, and a unit test covers it).
 - [ ] **MIDI import and export: what is left.** The exported file has not been opened in a real DAW (HUMANS.md). Not built: import into an existing track at the playhead, a choice of which parts to take, export of the loop only, and a tool for agents for either (WAV export has none either, and a file in a tool call is a poor fit). The first `ensureRunning()` before the page has had any user activation never settles; the Import button's own click is the activation, so this only shows when a script delivers a file first.
@@ -364,10 +373,14 @@ the page, it is research, not committed.
 
 ### Phase F. Project and media management
 
-- [ ] **Recent projects, startup recovery, autosave.** List recent sessions, reopen the last on choice, recover unsaved changes
-      after a crash; periodic local snapshots including untitled sessions, clearly marked as not the saved project; never
-      overwrite the saved file with a recovery copy. Shared with the PWA: offline use and the origin private file system as a
-      store are decided here once, for both front pages.
+- [ ] **Recent projects, recovery and autosave: what is left.** Recovery copies are built (`src/host/Recovery.js`, `web/app/Recovery.js`, `recoverySeconds` in
+      `web/host.json`): the studio page keeps one copy of a changed session in IndexedDB without an undo step, a save removes it, and the next visit
+      offers Recover it or Discard it (seen in Chrome 2026-10-24: a copy was kept after 30 seconds, the undo history stayed at the two real edits, and
+      Recover it brought back the plugin and the tempo). Left: the same on the simple page; one copy only, so no list of recent sessions and no
+      "reopen the last" choice; a recovery copy of a session with audio files holds them in the browser's quota, which was not tried at size; a
+      copy is not taken while a plugin is being loaded, which was not looked at; the origin private file system as a store, and offline use, shared
+      with the PWA. Whatever local file storage is chosen must be the layout in [docs/project-folder.md](docs/project-folder.md): the same files a web
+      server would serve, relative links, and a Turtle manifest `media.ttl` for the audio files (maintainer's decision 2026-10-24).
 - [ ] **Project settings, notes, metadata: what is left.** A save and reopen of a typed title was unit-tested and not clicked through. Not built: a revision note per save, and the title in the page's heading.
 - [ ] **Templates: what is left; project tabs.** Not built: templates shipped with the host (presets cover that for now), rename, export and import of a template as a file, and an agent tool for them. Project tabs stay out until sessions are independent documents with no shared audio state.
 - [ ] **Media explorer and missing media.** Browse and import audio by drag and drop (import exists), resolve missing files on
@@ -379,7 +392,7 @@ the page, it is research, not committed.
 - [ ] **Command palette.** Every Op reachable by name search over the one dispatcher, as WebMCP tools are. No palette-only
       commands.
 - [ ] **Keyboard shortcuts and profiles.** A searchable shortcut list, scoped rebinding with conflict checks, import and export
-      of named profiles, all from one binding store. The clip keys are hardcoded in `Timeline.js` today. One good default plus
+      of named profiles, all from one binding store. The keys are hardcoded in the files that handle them today and only listed, not read, by `src/ui/KeyTable.js`. One good default plus
       the machinery.
 - [ ] **Screensets, toolbar editor, big clock.** Saved panel layouts, an editable transport toolbar, a large timecode display.
       Layout is editor metadata, stored apart like node positions.
@@ -449,6 +462,14 @@ covering one unused clause.
       processor-to-interface direction is done; the reverse direction has no real user beyond the fakes.
 
 ## Loose ends
+
+0. **Files past 500 lines that are not split.** Split on 2026-10-24, each keeping its front door: `src/mcp/tools.js` (now `src/mcp/tools/`),
+   `src/ops/OpDispatcher.js`, `src/model/Project.js`, `src/engine/Engine.js`, `src/ui/PianoRoll.js`, `web/app/Rack.js`, `src/rdf/ProjectReader.js`; all
+   are about 520 lines or fewer now. Left, and each is a decision: the Rust plugin sources (about 20 files, 500 to 1300 lines; a rebuild changes a module's
+   digest, which every pin and signature on it names, so a source-only move is a change the maintainer should choose), `plugins/mop/opal/opal.c`
+   (third-party, left unmodified by rule), the native adapter's C++ (`JigdawUI.cpp`, `Module.cpp`), `plugins/*/*-processor.js` ports of VST3 code, and
+   the test files past 500 lines (`tests/ops/OpDispatcher.test.js` 1636, `tests/mcp/tools.test.js` 1239, `tests/ui/PianoRoll.test.js` 905, and others),
+   which mirror `src/` and would follow the splits.
 
 1. **A note or audio clip that starts before the loop start is not heard on a later pass**, even when it is still sounding
    across the loop start. The scheduler plays what starts inside each pass (`src/engine/Scheduler.js`). A DAW usually

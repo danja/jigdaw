@@ -19,7 +19,7 @@ describe('the Settings tab', () => {
     expect(panel.hasAttribute('hidden')).toBe(true)
     const app = readFileSync(resolve(root, 'web/app.js'), 'utf8')
     const ids = [...app.matchAll(/\{ id: '([a-z]+)', label: '([A-Za-z]+)', panel: \$\('([a-z-]+)'\) \}/g)].map(m => m[1])
-    expect(ids).toEqual(['arrangement', 'tracks', 'routing', 'mixer', 'script', 'settings'])
+    expect(ids).toEqual(['arrangement', 'tracks', 'routing', 'mixer', 'launcher', 'script', 'settings'])
     expect(app).toContain("panel: $('settings-panel')")
   })
 

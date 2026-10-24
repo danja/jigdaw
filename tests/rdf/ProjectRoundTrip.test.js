@@ -184,6 +184,30 @@ describe('a project survives being written and read back', () => {
     expect(project.launcherClips.map(c => c.id)).toEqual([clip.id])
   })
 
+  it('keeps a note\'s chance, writing none for a note that always plays', async () => {
+    const original = builtProject()
+    const clip = original.clips.find(c => c.kind === 'midi')
+    original.apply([{ op: 'setClipNotes', id: clip.id, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 90, chance: 0.5 }, { startBeat: 1, lengthBeats: 1, pitch: 62, velocity: 90, chance: 1 }] }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('jig:chance 0.5')
+    expect(turtle.match(/jig:chance/g)).toHaveLength(1)
+    const { project } = await reopen(turtle)
+    expect(project.clip(clip.id).notes.map(n => n.chance)).toEqual([0.5, undefined])
+  })
+
+  it('keeps the launch quantisation, writing nothing while it is the default, and reads an old session as bar', async () => {
+    const original = builtProject()
+    expect(original.transport.launchQuantise).toBe('bar')
+    expect(writeProject(original, { iri: IRI })).not.toContain('launchQuantise')
+    original.apply([{ op: 'setTransport', launchQuantise: '2bars' }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('jig:launchQuantise "2bars"')
+    expect((await reopen(turtle)).project.transport.launchQuantise).toBe('2bars')
+    expect(() => original.apply([{ op: 'setTransport', launchQuantise: 'eight' }])).toThrow(/launchQuantise is one of/)
+    const old = writeProject(builtProject(), { iri: IRI })
+    expect((await reopen(old)).project.transport.launchQuantise).toBe('bar')
+  })
+
   it('keeps the title, author and notes, with quotes and line breaks, and writes nothing for an empty field', async () => {
     const original = builtProject()
     original.setInfo({ title: 'Tide "one"', author: 'Dee', notes: 'Line one\nLine two \\ done' })

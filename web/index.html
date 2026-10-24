@@ -324,6 +324,10 @@
   .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
   button[data-icon] { min-width:32px; min-height:32px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
   button[data-icon] .icon { display:block; }
+  #recover { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#2d2a1d; border:2px solid var(--solo); border-radius:12px; }
+  #recover[hidden] { display:none; }
+  #recover-text { flex:1 1 14rem; }
+  #recover button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
   #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
   #carry[hidden] { display:none; }
   #carry-text { flex:1 1 14rem; }
@@ -494,16 +498,21 @@
   .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
-  .track-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
+  .track-fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(11rem, 1fr)); gap:10px 14px; }
+  .track-field { display:flex; flex-direction:column; align-items:stretch; gap:4px; font-size:12px; color:var(--dim); }
+  .track-fields .track-field input, .track-fields .track-field select { width:100%; box-sizing:border-box; }
+  .track-caption { font-size:12px; color:var(--dim); margin-right:4px; }
+  .track-main-actions { padding-top:10px; border-top:1px solid var(--line); }
+  .track-main-actions .danger { margin-left:auto; }
   .track-field input, .track-field select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
-  .track-field input { width:min(16rem, 100%); }
   .track-field.amount-field input { width:8rem; }
   .track-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .swatch { width:44px; height:44px; padding:0; border:2px solid var(--line); border-radius:6px; cursor:pointer;
     color:var(--fg); background:#2a2f38; font-size:18px; }
   .swatch[aria-pressed="true"] { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
   .swatch[aria-pressed="true"]::after { content:'✓'; color:#0b1220; font-weight:700; mix-blend-mode:normal; }
+  .swatch[data-color=""][aria-pressed="true"]::after { content:''; }
   .track-color-said { font-size:13px; color:var(--dim); }
   .track-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .track-position { font-size:13px; color:var(--dim); margin-right:auto; }
@@ -564,6 +573,9 @@
   .piano-roll-scale select { min-height:44px; padding:6px 12px; }
   .piano-roll-loop { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
   .piano-roll-loop button, .piano-roll-loop input { min-height:44px; padding:6px 12px; box-sizing:border-box; }
+  .piano-roll-euclid { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin:8px 0; }
+  .piano-roll-euclid input, .piano-roll-euclid select, .piano-roll-euclid button { min-height:44px; padding:6px 12px; box-sizing:border-box; font-size:16px; }
+  .piano-roll-euclid input { width:5rem; }
   .piano-roll-step { margin:8px 0; }
   .piano-roll-step button, .piano-roll-step select { min-height:44px; padding:6px 12px; }
   .piano-roll-step-body { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
@@ -613,6 +625,12 @@
   .mixer-channel { width:96px; flex:none; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
   .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
   .mixer-channel .strip { border-bottom:0; }
+  .fx { padding:0 8px 10px; }
+  .fx-toggle, .fx-add, .fx-remove { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-list ul { list-style:none; margin:8px 0 0; padding:0; }
+  .fx-list li { margin:0 0 8px; padding:6px; border:1px solid var(--line); border-radius:4px; }
+  .fx-name { display:block; margin-bottom:4px; font-size:13px; overflow-wrap:anywhere; }
+  .fx-add { margin-top:4px; }
 
   /* The generated panel and the knob are in panel.css, shared with the simple page. */
   select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
@@ -684,6 +702,36 @@
     .head-slider { grid-template-columns:2.2rem 1fr 3.2rem; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
+  .context-menu { position:fixed; z-index:50; min-width:12rem; max-width:min(20rem, 92vw); margin:0; padding:4px; list-style:none; background:var(--panel); color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  .context-menu li { margin:0; }
+  .context-menu li[role=separator] { height:1px; margin:4px 2px; background:var(--line); }
+  .context-menu button { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:44px; padding:0 10px; text-align:left;
+    background:transparent; color:var(--fg); border:0; border-radius:4px; font:inherit; font-size:14px; cursor:pointer; }
+  .context-menu button:hover, .context-menu button:focus-visible { background:#2a2f38; }
+  .context-menu button[aria-checked=true]::before { content:'\2713'; margin-right:-8px; }
+  .context-menu button.danger { color:var(--err); }
+  .context-menu kbd { font-size:12px; color:var(--dim); }
+  .launcher-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 10px; }
+  .launcher-grid { display:grid; gap:6px; overflow-x:auto; padding-bottom:6px; }
+  .launcher-row { display:grid; grid-template-columns:56px repeat(var(--tracks), minmax(96px, 160px)); gap:6px; align-items:stretch; }
+  .launcher-track { align-self:end; padding:0 4px; font-size:13px; font-weight:600; overflow-wrap:anywhere; text-align:center; }
+  .launcher-cell, .launcher-scene, .launcher-stop { min-height:44px; padding:0 8px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; cursor:pointer; }
+  .launcher-cell[data-state=empty] { background:transparent; border-style:dashed; color:var(--dim); }
+  .launcher-cell[data-state=playing] { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  .launcher-cell[data-state=queued], .launcher-cell[data-state=stopping] { border:2px dashed var(--solo); }
+  /* Compact controls where a mouse is the pointer and the window is wide. The 44px targets above are for a finger and for a
+     narrow window (WCAG 2.5.8 asks 24px; the coarse and narrow cases keep 44). `:not(#compact)` is only there to outweigh
+     the class selectors above without editing each one. */
+  @media (pointer: fine) and (min-width: 761px) {
+    button:not(#compact):not(.swatch):not(.tab), select:not(#compact), input:not(#compact):not([type=range]):not([type=checkbox]):not([type=radio]) {
+      min-height:30px; padding-top:3px; padding-bottom:3px; }
+    button:not(#compact):not([data-icon]):not(.chain-move):not(.chain-replace):not(.chain-bypass):not(.strip-toggle) { min-width:0; }
+    .strip-toggle:not(#compact) { min-width:30px; min-height:30px; }
+    button[data-icon]:not(#compact), .chain-move:not(#compact), .chain-replace:not(#compact), .chain-bypass:not(#compact) { min-width:30px; min-height:30px; }
+    .fx-toggle:not(#compact), .fx-add:not(#compact), .fx-remove:not(#compact) { min-height:28px; }
+    .swatch:not(#compact) { width:30px; height:30px; }
+  }
 </style>
 </head>
 <body>
@@ -719,7 +767,8 @@
       <option value="2">Count in 2 bars</option>
     </select>
   </span>
-  <span class="position" id="position" aria-live="off">1 . 1</span>
+  <span class="position" id="position" aria-live="off" title="Bar and beat">1 . 1</span>
+  <span class="position" id="clock" aria-live="off" title="Minutes, seconds and tenths, from the tempo map">0:00.0</span>
   <button id="midi-in" data-icon="midiIn" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
   <span id="midi-state" class="midi-state" role="status"></span>
   <span class="history">
@@ -740,6 +789,12 @@
   <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
   <span id="net-state" class="midi-state" role="status"></span>
   <span class="level"><span class="meter" id="meter" role="img" aria-label="Output level"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
+</div>
+
+<div id="recover" class="carry" role="status" hidden>
+  <span id="recover-text"></span>
+  <button id="recover-open" type="button">Recover it</button>
+  <button id="recover-dismiss" type="button">Discard it</button>
 </div>
 
 <div id="carry" role="status" hidden>
@@ -836,6 +891,13 @@
       </div>
     </div>
 
+    <div class="tabpanel" id="launcher-panel" hidden>
+      <h2>Launcher</h2>
+      <p class="note">Each cell is a MIDI clip kept off the timeline. Press a cell to launch it: it plays, looping, from the next boundary,
+        and the arrangement on that track is quiet while it does. Press an empty cell to add a clip. Arrow keys move over the grid.</p>
+      <div id="launcher-mount"></div>
+    </div>
+
     <div class="tabpanel" id="script-panel" hidden>
       <h2>Script</h2>
       <div id="script-mount" class="script"></div>
@@ -854,6 +916,7 @@
 <div id="project-settings">
   <div id="project-body"></div>
 </div>
+      <p id="recovery-status" class="note" role="status"></p>
 
       <h3>Agents</h3>
 <details class="agent">

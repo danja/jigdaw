@@ -22,7 +22,8 @@ function setup ({ dispatcher = { project: { label: 'Tide' } } } = {}) {
   const store = createTemplates({ indexedDB: fakeIndexedDB() })
   const panel = createTemplatesPanel(ctx, { store })
   const submit = form => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }))
-  const settle = () => new Promise(resolve => setTimeout(resolve, 20))
+  // A fixed wait for the fake IndexedDB's callbacks; 20 ms was too short when the whole suite runs at once (failed three times under load).
+  const settle = () => new Promise(resolve => setTimeout(resolve, 200))
   return { panel, ctx, store, logs, opened, document, submit, settle, window }
 }
 

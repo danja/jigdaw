@@ -1161,3 +1161,79 @@ describe('the master, sends, markers and regions', () => {
     expect(dispatcher.revision).toBeGreaterThanOrEqual(before)
   })
 })
+
+describe('the clip launcher tools', () => {
+  const tool = (tools, name) => tools.find(t => t.name === name)
+
+  it('offer nothing on a host without a launcher, and say so', async () => {
+    const tools = createTools({ dispatcher: new OpDispatcher() })
+    for (const [name, args] of [['launcher_launch', { scene: 0 }], ['launcher_stop', {}], ['launcher_quantise', {}], ['launcher_state', {}]]) {
+      expect((await tool(tools, name).handler(args)).error, name).toContain('no clip launcher')
+    }
+  })
+
+  it('launch one slot or one scene, never both and never neither', async () => {
+    const calls = []
+    const launcher = {
+      launch: async id => { calls.push(['launch', id]); return [{ clipId: id, at: 4 }] },
+      launchScene: async n => { calls.push(['scene', n]); return [] },
+      stop: async id => { calls.push(['stop', id]); return 8 },
+      setQuantise: name => { calls.push(['quantise', name]) }, quantise: () => 'bar', slots: () => []
+    }
+    const tools = createTools({ dispatcher: new OpDispatcher(), launcher })
+    expect((await tool(tools, 'launcher_launch').handler({ clipId: 'c1' })).launched).toEqual([{ clipId: 'c1', at: 4 }])
+    await tool(tools, 'launcher_launch').handler({ scene: 2 })
+    expect((await tool(tools, 'launcher_launch').handler({})).error).toContain('either clipId or scene')
+    expect((await tool(tools, 'launcher_launch').handler({ clipId: 'c1', scene: 2 })).error).toContain('either clipId or scene')
+    expect((await tool(tools, 'launcher_stop').handler({ trackId: 't' })).at).toBe(8)
+    await tool(tools, 'launcher_stop').handler({})
+    expect(calls).toEqual([['launch', 'c1'], ['scene', 2], ['stop', 't'], ['stop', null]])
+  })
+
+  it('say why a launch failed, and read or set the quantisation', async () => {
+    const launcher = {
+      launch: async () => { throw new Error('c9 is not a clip launcher slot') }, launchScene: async () => [], stop: async () => null,
+      setQuantise: name => { if (name === 'bogus') throw new Error('launch quantisation is one of none') }, quantise: () => 'beat', slots: () => [{ clipId: 'c1', state: 'playing' }]
+    }
+    const tools = createTools({ dispatcher: new OpDispatcher(), launcher })
+    expect((await tool(tools, 'launcher_launch').handler({ clipId: 'c9' })).error).toBe('launch failed: c9 is not a clip launcher slot')
+    expect((await tool(tools, 'launcher_quantise').handler({})).quantise).toBe('beat')
+    expect((await tool(tools, 'launcher_quantise').handler({ quantise: 'bogus' })).error).toContain('launch quantisation')
+    expect((await tool(tools, 'launcher_state').handler({})).slots).toEqual([{ clipId: 'c1', state: 'playing' }])
+  })
+})
+
+describe('registering the launcher', () => {
+  it('hands the host\'s launcher to the tools it registers, so the page\'s tools reach it', async () => {
+    const target = {}
+    const launcher = { launch: async () => [], launchScene: async () => [], stop: async () => null, setQuantise () {}, quantise: () => 'bar', slots: () => [] }
+    const { surface } = registerTools({ dispatcher: new OpDispatcher(), launcher, target })
+    const state = surface.tools.find(t => t.name === 'launcher_state')
+    expect((await state.handler({})).quantise).toBe('bar')
+  })
+})
+
+describe('clip_euclidean', () => {
+  async function made () {
+    const dispatcher = new OpDispatcher()
+    dispatcher.apply([{ op: 'addTrack', id: 't' }, { op: 'addClip', id: 'c', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [] }])
+    const tool = createTools({ dispatcher }).find(t => t.name === 'clip_euclidean')
+    return { dispatcher, tool }
+  }
+
+  it('lays the rhythm in as one edit that one undo takes back', async () => {
+    const { dispatcher, tool } = await made()
+    const result = await tool.handler({ clipId: 'c', pitch: 36, pulses: 4, steps: 16 })
+    expect(result.ok).toBe(true)
+    expect(dispatcher.project.clip('c').notes.map(n => n.startBeat)).toEqual([0, 1, 2, 3])
+    await dispatcher.undo()
+    expect(dispatcher.project.clip('c').notes).toEqual([])
+  })
+
+  it('says why it refused, and changes nothing', async () => {
+    const { dispatcher, tool } = await made()
+    expect((await tool.handler({ clipId: 'c', pitch: 36, pulses: 20, steps: 16 })).error).toMatch(/pulses/)
+    expect((await tool.handler({ clipId: 'gone', pitch: 36, pulses: 1, steps: 4 })).error).toMatch(/no such clip/)
+    expect(dispatcher.project.clip('c').notes).toEqual([])
+  })
+})

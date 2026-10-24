@@ -172,6 +172,24 @@ function duration (t) {
 
 function action (t) {
   const column = t.pos + 1
+  // `launch 2` is every slot in scene 2; `launch bass 2` the slot in scene 2 on bass's track. `stop bass`, or `stop` for all.
+  if (t.keyword('launch')) {
+    const scene = number(t)
+    if (scene) {
+      if (scene.unit || !Number.isInteger(scene.value) || scene.value < 1) throw new LineError('a scene is a whole number from 1', column)
+      return { type: 'launch', name: null, scene: scene.value, column }
+    }
+    const name = t.ident()
+    if (!name) throw new LineError('expected a scene number, or a plugin name and a scene number', t.pos + 1)
+    const sceneAt = number(t)
+    if (!sceneAt || sceneAt.unit || !Number.isInteger(sceneAt.value) || sceneAt.value < 1) throw new LineError(`expected a scene number after "${name}", counting from 1`, t.pos + 1)
+    return { type: 'launch', name, scene: sceneAt.value, column }
+  }
+  if (t.keyword('stop')) {
+    const name = t.atEnd() ? null : t.ident()
+    if (name === null && !t.atEnd()) throw new LineError('expected a plugin name, or nothing to stop everything', t.pos + 1)
+    return { type: 'stop', name, column }
+  }
   if (t.keyword('ramp')) {
     const tgt = target(t)
     const from = expression(t)

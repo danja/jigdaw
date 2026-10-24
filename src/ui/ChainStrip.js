@@ -12,8 +12,9 @@
 // the rest of the chain is drawn as usual.
 import { say } from './ChainModel.js'
 import { setIcon } from './Icons.js'
+import { attachMenu } from './ContextMenu.js'
 
-export function createChainStrip (document, { onSelect, onBypass, onMove, onReplace = null }) {
+export function createChainStrip (document, { onSelect, onBypass, onMove, onReplace = null, onRemove = null, onShow = null, menu = null }) {
   if (typeof onSelect !== 'function') throw new Error('createChainStrip needs onSelect')
   if (typeof onBypass !== 'function') throw new Error('createChainStrip needs onBypass')
   if (typeof onMove !== 'function') throw new Error('createChainStrip needs onMove')
@@ -56,6 +57,23 @@ export function createChainStrip (document, { onSelect, onBypass, onMove, onRepl
           const delta = event.key === 'ArrowLeft' ? -1 : 1
           if (delta === -1 ? canEarlier : canLater) onMove(node.id, delta)
         })
+
+        // Double click shows the plugin's own controls, on the Plugins tab.
+        if (onShow) button.addEventListener('dblclick', () => onShow(node.id))
+        // Right click, or the Menu key on the plugin's button: the actions the buttons beside it make. A plugin that has not
+        // loaded has nothing to bypass or replace, so those are left out.
+        if (menu) {
+          attachMenu(item, menu, () => [
+            { label: 'Select', run: () => onSelect(node.id) },
+            ...(onShow ? [{ label: 'Show controls', run: () => onShow(node.id) }] : []),
+            '-',
+            ...(node.loaded && !node.failed ? [{ label: 'Bypass', checked: node.bypassed === true, run: () => onBypass(node.id, !node.bypassed) }] : []),
+            ...(node.loaded && !node.failed && onReplace ? [{ label: 'Replace with another plugin', run: () => onReplace(node.id) }] : []),
+            ...(canEarlier ? [{ label: 'Move earlier', hint: 'Alt+Left', run: () => onMove(node.id, -1) }] : []),
+            ...(canLater ? [{ label: 'Move later', hint: 'Alt+Right', run: () => onMove(node.id, 1) }] : []),
+            ...(onRemove ? ['-', { label: 'Remove', danger: true, run: () => onRemove(node.id) }] : [])
+          ])
+        }
 
         const io = document.createElement('span')
         io.className = 'chain-io'

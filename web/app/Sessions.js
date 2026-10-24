@@ -28,7 +28,7 @@ export function createSessions (ctx) {
    * The open session as a file's worth of bytes: Turtle, or a zip when it holds audio or a layout. What Save
    * downloads and what carrying a piece to the other page keeps, so the two cannot differ.
    */
-  async function pack () {
+  async function pack ({ recorded = true } = {}) {
     const { dispatcher, media } = ctx
     // The model's own node.state is whatever was last restored or never set;
     // a stateful plugin's actual current state only lives in its own running
@@ -38,9 +38,13 @@ export function createSessions (ctx) {
     // All at once: a plugin with no state never answers, and each such plugin cost its two second timeout
     // in turn, so a piece of seven plugins took fourteen seconds to save instead of two.
     const states = await Promise.all(dispatcher.project.nodes.map(async node => [node.id, await dispatcher.getNodeState(node.id)]))
-    for (const [id, state] of states) {
-      if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: id, state: encodeState(state) }])
+    const keepStates = () => {
+      for (const [id, state] of states) {
+        if (state !== null) dispatcher.apply([{ op: 'setNodeState', node: id, state: encodeState(state) }])
+      }
     }
+    // A recovery copy (web/app/Recovery.js) asks without adding an undo step: it is not an edit.
+    if (recorded) keepStates(); else await dispatcher.withoutRecording(keepStates)
     const savedAt = new Date().toISOString().replace(/\.\d+Z$/, 'Z')
     // What is in the Script tab goes into the session, as text. Not on the simple page, which has no tab and
     // so leaves whatever the session already holds, carried through unchanged.
@@ -74,6 +78,7 @@ export function createSessions (ctx) {
     // Revoked on the next turn: revoking immediately races the download in some
     // browsers and the file arrives empty.
     setTimeout(() => URL.revokeObjectURL(url), 10000)
+    ctx.recovery?.saved()
     log(packed.kind === 'turtle'
       ? `saved ${packed.nodes} nodes as Turtle`
       : `saved ${packed.nodes} nodes, ${packed.audioFiles} audio file(s) and the editor layout as a zip`, 'ok')

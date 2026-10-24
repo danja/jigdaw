@@ -193,7 +193,8 @@ export function writeProject (project, { iri, created = null } = {}) {
     clip.notes.forEach((note, i) => {
       lines.push(`<#${clip.id}-n${i + 1}> a ${term(jig.Note)} ; ` +
         `${term(trn.startBeat)} ${decimal(note.startBeat)} ; ${term(trn.lengthBeats)} ${decimal(note.lengthBeats)} ; ` +
-        `${term(trn.pitch)} ${integer(note.pitch)} ; ${term(trn.velocity)} ${integer(note.velocity)} .`)
+        `${term(trn.pitch)} ${integer(note.pitch)} ; ${term(trn.velocity)} ${integer(note.velocity)}` +
+        `${note.chance === undefined ? '' : ` ; ${term(jig.chance)} ${decimal(note.chance)}`} .`)
     })
     // Named by place among the clip's events, which the model keeps sorted, so the same events write the same names.
     ;(clip.controllers ?? []).forEach((event, i) => {
@@ -258,6 +259,8 @@ export function writeProject (project, { iri, created = null } = {}) {
       `${term(jig.loopEnd)} ${decimal(transport.loopEnd)} ; `
     : ''
   lines.push(`    ${loop}${term(jig.loopEnabled)} ${transport.loopEnabled ? 'true' : 'false'} ;`)
+  // Only when it is not the default, so a session that never touched it is written as it always was.
+  if (transport.launchQuantise && transport.launchQuantise !== 'bar') lines.push(`    ${term(jig.launchQuantise)} "${transport.launchQuantise}" ;`)
   const signatures = [...(transport.signaturePoints ?? [])].sort((a, b) => a.atBeat - b.atBeat)
   if (signatures.length > 0) {
     lines.push(`    ${term(jig.signaturePoint)} ${signatures.map((_, i) => `<#s${i}>`).join(' , ')} ;`)

@@ -14,9 +14,10 @@
 import { createChannelToggle } from './ChannelToggle.js'
 import { decibels, panPosition } from './Strip.js'
 import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
-import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
+import { DEFAULT_LANE_SIZE, LANE_SIZES } from '../model/EditorState.js'
+import { attachMenu } from './ContextMenu.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -64,6 +65,39 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     event.preventDefault()
     onDuplicateTrack(id)
   })
+
+  // Double click on the name edits the track: the page moves the focus to its name field. The click that begins it has already
+  // selected the track, so the editor is showing it.
+  if (onEdit) name.addEventListener('dblclick', () => onEdit(id))
+  // What the menu below needs to know, kept from the last update so it is current when the menu opens.
+  const now = { label: '', mixable: true, channel: {}, canArm: false, armed: false, size: DEFAULT_LANE_SIZE, first: false, last: false, at: 0 }
+  // Right click on the header, or the Menu key on its name. A slider keeps the browser's own menu.
+  if (menu) {
+    attachMenu(element, menu, event => {
+      if (event.target.closest?.('input')) return null
+      const sizeAt = LANE_SIZES.indexOf(now.size)
+      return [
+        ...(onEdit ? [{ label: 'Rename', run: () => onEdit(id) }, '-'] : []),
+        { label: 'Add a MIDI clip here', run: () => onAdd(id, now.at) },
+        { label: 'Add an audio file here', run: () => onAddAudio(id, now.at) },
+        '-',
+        ...(now.mixable
+          ? [
+              { label: 'Mute', checked: Boolean(now.channel.muted), run: () => onChannel(id, { muted: !now.channel.muted }) },
+              { label: 'Solo', checked: Boolean(now.channel.soloed), run: () => onChannel(id, { soloed: !now.channel.soloed }) }
+            ]
+          : []),
+        ...(now.canArm ? [{ label: 'Arm for MIDI input', checked: now.armed, run: () => onArm(id, !now.armed) }] : []),
+        '-',
+        ...(now.first ? [] : [{ label: 'Move up', hint: 'Alt+Up', run: () => onMove(id, -1) }]),
+        ...(now.last ? [] : [{ label: 'Move down', hint: 'Alt+Down', run: () => onMove(id, 1) }]),
+        ...(onSizeStep && sizeAt < LANE_SIZES.length - 1 ? [{ label: 'Taller lane', hint: '+', run: () => onSizeStep(id, 1) }] : []),
+        ...(onSizeStep && sizeAt > 0 ? [{ label: 'Shorter lane', hint: '-', run: () => onSizeStep(id, -1) }] : []),
+        ...(onDuplicateTrack ? ['-', { label: 'Duplicate track', hint: 'D', run: () => onDuplicateTrack(id) }] : []),
+        ...(onDeleteTrack ? [{ label: 'Delete track', danger: true, run: () => onDeleteTrack(id) }] : [])
+      ]
+    })
+  }
 
   const add = document.createElement('button')
   add.type = 'button'
@@ -168,7 +202,8 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null, first = false, last = false }) {
+      Object.assign(now, { label, mixable, channel, canArm, armed, size, first, last, at: place })
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
       name.setAttribute('aria-pressed', String(selected))

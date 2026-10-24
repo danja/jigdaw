@@ -7,6 +7,7 @@
 import { createTimeline, barBeat } from '../../src/ui/Timeline.js'
 import { createPianoRoll } from '../../src/ui/PianoRoll.js'
 import { describeNoteTransform } from '../../src/model/NoteTransform.js'
+import { describeEuclidean } from '../../src/model/Euclidean.js'
 import { LANE_SIZES } from '../../src/model/EditorState.js'
 import { preserveFocus } from '../../src/ui/Focus.js'
 import { trackKind } from '../../src/model/TrackKind.js'
@@ -142,6 +143,27 @@ export function createArrangement (ctx) {
       edit([{ op: 'addEnvelope', target: { kind }, points: [{ atBeat: 0, value, curve: 'linear' }] }])
     },
     onReplace: nodeId => ctx.swap.begin(nodeId),
+    // Double click on a track's name: the editor already shows the track, so the focus goes to its name field.
+    onEditTrack: trackId => {
+      ctx.selection.set('track', [trackId])
+      ctx.dock.update()
+      const field = document.getElementById('track-name-input')
+      field?.focus()
+      field?.select()
+    },
+    onDeleteTrack: trackId => ctx.dock.deleteTrack(trackId),
+    // The same Op as Remove on the Plugins tab, healing the chain where the plugin stood.
+    onRemoveNode: nodeId => {
+      const label = ctx.dispatcher.project.node(nodeId)?.label ?? nodeId
+      const result = edit([{ op: 'removeNode', id: nodeId, heal: true }])
+      if (result.ok) { ctx.rack.forgetNode(nodeId); log(`removed ${label}`) }
+    },
+    // Show a plugin's own controls: the Plugins tab, at its track.
+    onShowNode: nodeId => {
+      ctx.tabs.select('tracks')
+      const track = ctx.dispatcher.project.node(nodeId)?.track
+      document.getElementById(`track-group-${track}`)?.scrollIntoView({ block: 'start' })
+    },
     onBypass: (nodeId, bypassed) => edit([{ op: 'setNode', id: nodeId, bypassed }]),
     onMute: (id, muted) => edit([{ op: 'setClip', id, muted }]),
     onRemove: id => {
@@ -149,7 +171,7 @@ export function createArrangement (ctx) {
       edit([{ op: 'removeClip', id }])
     }
   }
-  const timeline = createTimeline(document, handlers, { selection: ctx.selection })
+  const timeline = createTimeline(document, handlers, { selection: ctx.selection, menu: ctx.menu })
 
   const clipActions = createClipActions(document, {
     // Editor metadata: no revision, no undo, like a track's colour.
@@ -272,6 +294,13 @@ export function createArrangement (ctx) {
     onTransform: (name, options, { indices = null } = {}) => {
       let changes
       try { changes = describeNoteTransform(ctx.dispatcher.project, pianoRoll.clipId, name, options, { indices }) } catch (error) { log(error.message, 'error'); return error.message }
+      const result = edit(changes)
+      return result.ok ? undefined : result.message
+    },
+    // A rhythm laid into the open clip: one edit, so one undo. Returns the reason if it was refused.
+    onEuclid: (id, options) => {
+      let changes
+      try { changes = describeEuclidean(ctx.dispatcher.project, id, options) } catch (error) { return error.message }
       const result = edit(changes)
       return result.ok ? undefined : result.message
     },
@@ -436,7 +465,7 @@ export function createArrangement (ctx) {
     /** Show where the transport is, as a beat, or null when it is stopped. */
     playhead (beat) { timeline.playhead(beat); pianoRoll.playhead(beat) },
     /** Forget what was drawn for the session being replaced. */
-    reset () { pianoRoll.hide(); ctx.selection.clear(); waveformsRequested.clear() },
+    reset () { pianoRoll.hide(); ctx.selection.clear(); waveformsRequested.clear(); ctx.launcher?.reset() },
     showInRoll,
     hideRoll: () => pianoRoll.hide(),
     get rollClipId () { return pianoRoll.clipId }

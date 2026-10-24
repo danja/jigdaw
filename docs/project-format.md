@@ -186,6 +186,18 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   ([clip-launcher.md](clip-launcher.md)). Such a clip has no place on the timeline: its `trn:startBeat` is 0 and the
   arrangement does not play, draw or export it. A track has at most one clip in each scene. Absent means an ordinary clip
   on the timeline, and a session saved before this existed reads as having none.
+- The transport may carry `jig:launchQuantise`, one of `none`, `beat`, `bar`, `2bars` and `4bars`: how long a clip launcher launch or
+  stop waits, counted from the start of the transport. Absent means `bar`, and a session saved before this existed reads as `bar`. It is
+  written only when it is not `bar`.
+- A note may carry `jig:chance`, above 0 and at most 1: how likely it is to sound each time its place comes round. Absent means 1, and a chance of 1
+  is never written. The draw is made from the node it plays into, its pitch and the time it falls at (`src/engine/Chance.js`), never from a clock, so
+  the same piece rendered twice sounds the same, a live play from the same start makes the same choices as the render, and each pass of a loop draws
+  again. A MIDI file exported from a clip holds every note, chance or not.
+- Clips on one track may overlap, and the rule is that nothing is done about it. The model keeps each clip whole where it was put, and an edit
+  that moves, lengthens, duplicates or pastes a clip over another never cuts, pushes or refuses either. Every clip plays: the notes of overlapping MIDI
+  clips are all sent, and overlapping audio clips are all started and sum. (Decided 2026-10-24 by writing down what the host does; the other
+  choices, clipping the older clip or moving one to a new lane, would be a preference to add with the edit that needs it. Pinned by
+  `tests/engine/ClipOverlap.test.js`.)
 - A clip belongs to its track. Removing the track removes its clips, unless the removal moves
   the track's nodes to another track, in which case the clips move with them.
 - An audio clip refers to its audio by `jig:source` and never embeds it. A session is a

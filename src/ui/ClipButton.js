@@ -8,13 +8,14 @@
 // A drag listens for the move and the release on the document once the pointer is down, not on the button: a
 // drag that stops at the button's own edge is the failure CLAUDE.md names.
 import { describeClip } from './ClipText.js'
+import { attachMenu } from './ContextMenu.js'
 
 /**
  * `ppb()` is the current pixels per beat, a function because zoom changes it. The handlers are Timeline's own
  * (see createTimeline): onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste,
- * onLock and onTrim.
+ * onLock and onTrim. `menu` is the page's context menu (ContextMenu.js), or null for none.
  */
-export function createClipButton (document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim }) {
+export function createClipButton (document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu = null }) {
   function clipButton (clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
     const button = document.createElement('button')
     button.type = 'button'
@@ -51,6 +52,11 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
           const start = clip.startBeat + step
           if (start >= 0) onMove(clip.id, start)
         }
+      } else if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // Space adds the clip to the selection or takes it out, as Ctrl with a click does; Enter still opens it. Prevented, so the browser's own
+        // press of the button, which would select and open it, does not follow.
+        event.preventDefault()
+        selection.toggle('clip', clip.id)
       } else if (event.key === 'Delete' || event.key === 'Backspace') {
         event.preventDefault()
         onRemove(clip.id)
@@ -84,6 +90,34 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
       selection.set('clip', [clip.id])
       onOpen(clip.id)
     })
+    // Right click, or the Menu key: the same actions the keys above make. A clip not yet selected is selected first, as the
+    // menu acts on what is selected. A locked clip is protected from being cut, split, trimmed or deleted, so those are left out.
+    if (menu) {
+      attachMenu(button, menu, () => {
+        if (!selection.has('clip', clip.id)) selection.set('clip', [clip.id])
+        const editable = !clip.locked
+        return [
+          { label: clip.kind === 'midi' ? 'Open in the piano roll' : 'Select', run: () => onOpen(clip.id) },
+          '-',
+          ...(editable ? [{ label: 'Split at the playhead', hint: 'S', run: () => onSplit(clip.id) }] : []),
+          { label: 'Duplicate', hint: 'D', run: () => onDuplicate(clip.id) },
+          '-',
+          { label: 'Copy', hint: 'Ctrl+C', run: () => onCopy(clip.id) },
+          ...(editable ? [{ label: 'Cut', hint: 'Ctrl+X', run: () => onCut(clip.id) }] : []),
+          { label: 'Paste at the playhead', hint: 'Ctrl+V', run: () => onPaste(clip.id) },
+          '-',
+          { label: 'Mute', hint: 'M', checked: Boolean(clip.muted), run: () => onMute(clip.id, !clip.muted) },
+          { label: 'Lock', hint: 'L', checked: Boolean(clip.locked), run: () => onLock(clip.id, !clip.locked) },
+          ...(editable
+            ? ['-',
+                { label: 'Trim the start to the playhead', hint: '[', run: () => onTrim(clip.id, 'start') },
+                { label: 'Trim the end to the playhead', hint: ']', run: () => onTrim(clip.id, 'end') },
+                '-',
+                { label: 'Delete', hint: 'Delete', danger: true, run: () => onRemove(clip.id) }]
+            : [])
+        ]
+      })
+    }
     const selected = selection.has('clip', clip.id)
     button.classList.toggle('selected', selected)
     button.setAttribute('aria-current', String(selected))
@@ -119,13 +153,27 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
         else button.style.left = `${to.start * ppb()}px`
       }
       const up = e => {
-        document.removeEventListener('pointermove', move)
-        document.removeEventListener('pointerup', up)
         const to = place(e)
         if (resizing) { if (to.length !== clip.lengthBeats) onResize(clip.id, to.length) } else if (to.start !== clip.startBeat) onMove(clip.id, to.start)
       }
+      // Escape during a drag puts the clip back and sends nothing.
+      const stop = () => {
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', release)
+        document.removeEventListener('keydown', cancel)
+      }
+      function release (e) { stop(); up(e) }
+      function cancel (e) {
+        if (e.key !== 'Escape') return
+        e.preventDefault()
+        stop()
+        dragged = true
+        button.style.left = `${clip.startBeat * ppb()}px`
+        button.style.width = `${clip.lengthBeats * ppb()}px`
+      }
       document.addEventListener('pointermove', move)
-      document.addEventListener('pointerup', up)
+      document.addEventListener('pointerup', release)
+      document.addEventListener('keydown', cancel)
     })
     return button
   }

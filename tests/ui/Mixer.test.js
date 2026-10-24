@@ -16,11 +16,12 @@ const track = (id, label, over = {}) => ({ id, label, channel: channel(over), mi
 const outputs = { synth: 1, verb: 2, gen: 0 }
 const audioOutputsOf = id => outputs[id]
 
-function drawn ({ tracks, nodes, audibility = [], onChange = () => {} }) {
-  const mixer = createMixer(document, { onChange })
+function drawn ({ tracks, nodes, audibility = [], onChange = () => {}, onAddPlugin = () => {}, onRemovePlugin = () => {} }) {
+  const mixer = createMixer(document, { onChange, onAddPlugin, onRemovePlugin })
   document.body.append(mixer.element)
   const draw = (t = tracks, a = audibility) => mixer.draw({
-    tracks: t, nodes, audibility: a, audioOutputsOf, labelFor: x => x.label
+    tracks: t, nodes, audibility: a, audioOutputsOf, labelFor: x => x.label,
+    pluginsOf: id => nodes.filter(n => n.track === id).map(n => ({ id: n.id, label: n.id.toUpperCase() }))
   })
   draw()
   return { mixer, draw }
@@ -126,6 +127,8 @@ describe('what a strip does', () => {
 
   it('needs somewhere to send a change', () => {
     expect(() => createMixer(document, {})).toThrow(/onChange/)
+    expect(() => createMixer(document, { onChange: () => {} })).toThrow(/onAddPlugin/)
+    expect(() => createMixer(document, { onChange: () => {}, onAddPlugin: () => {} })).toThrow(/onRemovePlugin/)
   })
 })
 
@@ -170,5 +173,75 @@ describe('a level meter on each strip', () => {
   it('has no meter for a track with no strip, which has nothing to measure', () => {
     const { mixer } = drawn({ tracks: [track('lines', 'Lines')], nodes: [{ id: 'gen', track: 'lines' }] })
     expect(mixer.meters().size).toBe(0)
+  })
+})
+
+describe('the FX list under each channel', () => {
+  const nodes = [{ id: 'synth', track: 'a' }, { id: 'verb', track: 'a' }, { id: 'fuzz', track: 'b' }]
+  const click = element => element.dispatchEvent(new document.defaultView.Event('click'))
+
+  it('starts closed and opens on the FX button, which says so', () => {
+    const { mixer } = drawn({ tracks: [track('a', 'A')], nodes })
+    const toggle = mixer.element.querySelector('#strip-a-fx')
+    const list = mixer.element.querySelector('#strip-a-fx-list')
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(toggle.getAttribute('aria-controls')).toBe('strip-a-fx-list')
+    expect(list.hidden).toBe(true)
+    click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(list.hidden).toBe(false)
+  })
+
+  it('lists the track\'s own plugins, each with a Remove named for it', () => {
+    const { mixer } = drawn({ tracks: [track('a', 'A'), track('b', 'B')], nodes })
+    const names = id => [...mixer.element.querySelectorAll(`#strip-${id}-fx-list .fx-name`)].map(e => e.textContent)
+    expect(names('a')).toEqual(['SYNTH', 'VERB'])
+    expect(names('b')).toEqual(['FUZZ'])
+    expect(mixer.element.querySelector('#strip-a-fx-remove-verb').getAttribute('aria-label')).toBe('Remove VERB from A')
+    expect(mixer.element.querySelector('#strip-a-fx').textContent).toBe('FX 2')
+  })
+
+  it('removes the plugin asked for, and puts the focus on the FX button', () => {
+    const removed = []
+    const { mixer } = drawn({ tracks: [track('a', 'A')], nodes, onRemovePlugin: id => removed.push(id) })
+    const toggle = mixer.element.querySelector('#strip-a-fx')
+    let focused = 0
+    toggle.focus = () => { focused += 1 }
+    click(mixer.element.querySelector('#strip-a-fx-remove-verb'))
+    expect(removed).toEqual(['verb'])
+    expect(focused).toBe(1)
+  })
+
+  it('adds against its own track', () => {
+    const added = []
+    const { mixer } = drawn({ tracks: [track('a', 'A'), track('b', 'B')], nodes, onAddPlugin: id => added.push(id) })
+    click(mixer.element.querySelector('#strip-b-fx-add'))
+    expect(added).toEqual(['b'])
+  })
+
+  it('stays open and keeps its element across a redraw, and follows a plugin gone', () => {
+    const state = { list: nodes }
+    const mixer = createMixer(document, { onChange: () => {}, onAddPlugin: () => {}, onRemovePlugin: () => {} })
+    document.body.append(mixer.element)
+    const draw = () => mixer.draw({
+      tracks: [track('a', 'A')], nodes: state.list, audibility: [], audioOutputsOf, labelFor: x => x.label,
+      pluginsOf: id => state.list.filter(n => n.track === id).map(n => ({ id: n.id, label: n.id }))
+    })
+    draw()
+    click(mixer.element.querySelector('#strip-a-fx'))
+    const before = mixer.element.querySelector('#strip-a-fx')
+    state.list = nodes.filter(n => n.id !== 'verb')
+    draw()
+    expect(mixer.element.querySelector('#strip-a-fx')).toBe(before)
+    expect(before.getAttribute('aria-expanded')).toBe('true')
+    expect(mixer.element.querySelector('#strip-a-fx-remove-verb')).toBeNull()
+    expect(before.textContent).toBe('FX 1')
+  })
+
+  it('has an Add and no list rows on a track with no plugins', () => {
+    const { mixer } = drawn({ tracks: [track('c', 'C')], nodes })
+    expect(mixer.element.querySelectorAll('.fx-remove')).toHaveLength(0)
+    expect(mixer.element.querySelector('#strip-c-fx-add')).not.toBeNull()
+    expect(mixer.element.querySelector('#strip-c-fx').textContent).toBe('FX')
   })
 })

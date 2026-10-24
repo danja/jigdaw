@@ -33,7 +33,9 @@ export const HOST_CONFIG_KEYS = Object.freeze({
   maxTrackDelayMs: 'a whole number of milliseconds, at least 1',
   // How long a piece carried from one page to the other (src/host/Handoff.js) is offered. After this it is
   // forgotten, so a piece left over from last week is not offered as if it were what was just open.
-  handoffMinutes: 'a whole number of minutes, at least 1'
+  handoffMinutes: 'a whole number of minutes, at least 1',
+  // How often the studio page keeps a recovery copy of the open session, when it has changed (src/host/Recovery.js).
+  recoverySeconds: 'a whole number of seconds, at least 1'
 })
 
 const BOOLEAN_KEYS = new Set(['alignTracks'])

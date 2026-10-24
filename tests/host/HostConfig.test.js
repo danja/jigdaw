@@ -39,6 +39,13 @@ describe('the page settings', () => {
     for (const bad of [0, -5, 2.5, '2000']) expect(() => readHostConfig({ ...shipped, maxTrackDelayMs: bad }), String(bad)).toThrow(/maxTrackDelayMs/)
   })
 
+  it('refuses a recovery interval that is not a positive whole number of seconds', () => {
+    for (const bad of [0, -1, 1.5, '30']) expect(() => readHostConfig({ ...shipped, recoverySeconds: bad }), String(bad)).toThrow(/recoverySeconds/)
+    const { recoverySeconds, ...without } = shipped
+    expect(recoverySeconds).toBeGreaterThan(0)
+    expect(() => readHostConfig(without)).toThrow(/has no recoverySeconds/)
+  })
+
   it('refuses a handoff time that is not a positive whole number of minutes', () => {
     for (const bad of [0, -1, 1.5, '30']) expect(() => readHostConfig({ ...shipped, handoffMinutes: bad }), String(bad)).toThrow(/handoffMinutes/)
     const { handoffMinutes, ...without } = shipped

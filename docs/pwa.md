@@ -64,6 +64,8 @@ It is not offered by a dialog and it is not offered before the page has finished
 
 ## Where it is served
 
+The studio page keeps a recovery copy of the open session in IndexedDB every `recoverySeconds` from `web/host.json`, when the session has changed and holds a plugin. It is the bytes Save writes, taken without an undo step, and it is kept apart from any saved file: saving removes it, and the next visit offers it with the time it was kept and the choice Recover it or Discard it. While that offer waits, no newer copy replaces it. The simple page keeps none yet. Where local file storage is used instead, it follows [project-folder.md](project-folder.md): the files a web server could serve, with relative links and a Turtle manifest for the audio.
+
 A piece is carried between the two pages: the link to the other page keeps the open session (the same bytes Save writes, held in IndexedDB for `handoffMinutes` from `web/host.json`, once) and the other page offers it with Open it and Not now. A piece is the session's own RDF; nothing about carrying it is in the model.
 
 A phone starts on the simple page: `web/view.js`, loaded at the top of both pages, sends a screen narrower than 720px from the studio to `simple.html`, unless the person asked for the studio (the links to it carry `?studio`, which is remembered in the browser until they next visit the simple page). On the simple page, "Change the sound" on a track takes you to a rack screen for it (its plugins as generated panels, with Back to the instruments).

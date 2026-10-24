@@ -81,6 +81,15 @@ export function createRunner ({ tools, scheduler, session, beatsPerBar, currentB
           if (!r.ok) { report(step.line, r.error); return false }
           return true
         }
+        if (a.type === 'launch' || a.type === 'stop') {
+          // A scene is counted from 1 in a script, as bars are, and from 0 in the model.
+          const nodeId = a.node === null ? undefined : idOf(a.node, step.line)
+          if (a.node !== null && !nodeId) return false
+          const args = a.type === 'launch' ? { scene: a.scene - 1, ...(nodeId ? { nodeId } : {}) } : (nodeId ? { nodeId } : {})
+          const r = await tools[SCRIPTABLE[a.type]](args)
+          if (!r.ok) { report(step.line, r.error); return false }
+          return true
+        }
         const node = idOf(a.node, step.line)
         if (!node) return false
         if (a.type === 'set') {

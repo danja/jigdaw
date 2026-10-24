@@ -198,6 +198,7 @@ names the one the mix of every track arrives at. A node with no audio input is r
 | `clip_set_notes` | `clipId`, `notes[]` | |
 | `clip_set_controllers` | `clipId`, `controllers[]` | |
 | `clip_transform_notes` | `clipId`, `transform`, `grid?`, `strength?`, `ends?`, `semitones?`, `factor?`, `axis?`, `timing?`, `velocity?`, `seed?`, `indices?` | |
+| `clip_euclidean` | `clipId`, `pitch`, `pulses`, `steps`, `rotation?`, `stepBeats?`, `velocity?`, `lengthBeats?` | Lay a Euclidean rhythm into a MIDI clip, replacing notes at that pitch |
 | `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
 | `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `loopBeats?`, `scene?`, `startBeat?`, `color?` | Revision and the clip |
 | `clip_split` | `clipId`, `atBeat` | Both clip ids |
@@ -236,6 +237,10 @@ outputs arrive at, and refuses one that is not on that track.
 | `transport_play` | `fromBeat?` | Starts there; without it, at the loop's start when a loop is on, else at the beginning |
 | `transport_stop` | | |
 | `transport_panic` | | All notes off and all sound off to every plugin; the transport keeps running |
+| `launcher_launch` | `clipId` or `scene` | Launch a clip launcher slot, or every slot in a scene, at the next launch boundary; starts the transport if it is stopped. Changes no revision |
+| `launcher_stop` | `trackId?` | Stop the slot playing on a track, or every slot, at the next launch boundary |
+| `launcher_quantise` | `quantise?` | Read or set the launch quantisation: none, beat, bar, 2bars or 4bars |
+| `launcher_state` | | Each slot's state (stopped, queued, playing, stopping), with its scene and track |
 | `transport_configure` | `tempo?`, `timeSignature?`, `loop?`, `position?` | |
 
 `script_run` runs a Reel script, [livecoding.md](livecoding.md). It is the same operations the other tools

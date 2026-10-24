@@ -19,7 +19,7 @@ export function createKeysOverlay (document, { rows = KEY_ROWS, scopes = KEY_SCO
   heading.textContent = 'Keyboard shortcuts'
   const note = document.createElement('p')
   note.className = 'note'
-  note.textContent = 'Keys that act on one thing work only while that thing has the focus. Keys inside the piano roll and the timeline are not listed here yet.'
+  note.textContent = 'Keys that act on one thing work only while that thing has the focus. Keys inside the piano roll and the timeline are not listed here yet. The Menu key, or Shift and F10, opens the context menu of whatever has the focus: a clip, a track name, a plugin in a chain.'
   const close = document.createElement('button')
   close.type = 'button'
   close.id = 'close-keys'

@@ -76,7 +76,7 @@ describe('the application uses it', () => {
   // drawRack is in the browser bundle where there is no AudioContext to test
   // against. So the call is checked in the source, which is what the foreign
   // mark guards in tests/docs/conventions.test.js do for the same reason.
-  const app = appFile('web/app/Rack.js')
+  const app = appFile('web/app/Rack.js') + appFile('web/app/RackSlot.js')
 
   it('preserves the focus around the rack rebuild', () => {
     expect(app).toMatch(/import \{ preserveFocus \} from/)

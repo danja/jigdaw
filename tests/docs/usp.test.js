@@ -3,6 +3,9 @@
 // docs/usp.md and docs/jiggy-features.md state three figures about the system. A sentence
 // about the system is a claim, and nothing tests sentences, so these bind the figures to
 // what is counted here.
+import { createTools } from '../../src/mcp/tools.js'
+import { OpDispatcher } from '../../src/ops/OpDispatcher.js'
+import { toolsSource } from '../mcp/toolsSource.js'
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
@@ -26,9 +29,12 @@ describe.each(documents)('%s', (path, usp) => {
 
   it('states the number of agent tools', () => {
     // One `name:` per tool definition in the surface's source.
-    const source = readFileSync(join(root, 'src/mcp/tools.js'), 'utf8')
+    const source = toolsSource(root)
     const declared = [...source.matchAll(/^\s+name: '([a-z_]+)',/gm)].map(m => m[1])
     expect(new Set(declared).size).toBe(declared.length)
+    // And the groups are all assembled: what the source declares is what createTools builds, in the same set.
+    const built = createTools({ dispatcher: new OpDispatcher() }).map(t => t.name)
+    expect([...built].sort()).toEqual([...declared].sort())
     expect(usp).toContain(`**${declared.length} tools**`)
   })
 })

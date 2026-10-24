@@ -193,3 +193,22 @@ describe('nearest', () => {
     expect(nearest('cutof', ['gain', 'cutoff', 'cut', 'resonance'])[0]).toBe('cutoff')
   })
 })
+
+describe('launch and stop', () => {
+  const existing = new Map([['bass', { ports: [] }]])
+  const planOf = async source => plan(parse(source).statements, { beatsPerBar: 4, existing, resolvePlugin: async () => ({ ok: true, ports: [] }) })
+
+  it('plans a launch and a stop against plugins that exist, with when they happen', async () => {
+    const result = await planOf('launch 2\nat 3:1 launch bass 1\nevery 2 bars: stop bass')
+    expect(result.ok).toBe(true)
+    expect(result.plan.steps.map(s => [s.when.kind, s.action.type, s.action.node, s.action.scene])).toEqual([
+      ['now', 'launch', null, 2], ['at', 'launch', 'bass', 1], ['every', 'stop', 'bass', null]
+    ])
+  })
+
+  it('refuses a plugin that is not there, and says the nearest names', async () => {
+    const result = await planOf('launch bas 1\nstop bss')
+    expect(result.ok).toBe(false)
+    expect(result.errors.map(e => e.message)).toEqual([expect.stringContaining('no plugin called "bas"; nearest: bass'), expect.stringContaining('no plugin called "bss"')])
+  })
+})

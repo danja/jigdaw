@@ -903,3 +903,20 @@ describe('choosing notes', () => {
     expect(cell(62, 4).getAttribute('aria-label')).not.toContain('chosen')
   })
 })
+
+describe('a note with a chance of sounding', () => {
+  it('is marked in the square and said in its name, and the Set chance button sends the choice', () => {
+    const asked = []
+    const roll = createPianoRoll(document, { onChange: () => {}, onClose: () => {}, onTransform: (name, options) => { asked.push([name, options]) } })
+    document.body.append(roll.element)
+    roll.show({ id: 'c', startBeat: 0, lengthBeats: 4, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100, chance: 0.5 }, { startBeat: 1, lengthBeats: 1, pitch: 60, velocity: 100 }] }, { beatsPerBar: 4, label: 'Keys' })
+    const withChance = document.getElementById('roll-60-0')
+    const plain = document.getElementById('roll-60-4')
+    expect(withChance.textContent).toBe('◩')
+    expect(plain.textContent).toBe('■')
+    expect(withChance.getAttribute('aria-label')).toContain('50 percent chance of sounding')
+    expect(plain.getAttribute('aria-label')).not.toContain('chance')
+    document.getElementById('roll-chance').dispatchEvent(new window.Event('click', { bubbles: true }))
+    expect(asked).toEqual([['setChance', { chance: 0.5 }]])
+  })
+})

@@ -12,29 +12,21 @@
 // UI never reaches the engine, so a change that the compiler refuses never
 // reaches the audio graph at all, and the graph that is playing is always one
 // the model describes.
-import { Project, RevisionConflict, ChangeError, changesFor } from '../model/Project.js'
-import { findPort } from '../model/Endpoints.js'
+import { Project, changesFor } from '../model/Project.js'
+import { unroutableChange, failureResult } from './ChangesetChecks.js'
 import { compileGraph } from '../compiler/GraphCompiler.js'
-import { EventRouter, isMidi, carriesNotes } from '../engine/EventRouter.js'
-import { effectiveConnections } from './Bypass.js'
-import { expandComposites, flatIdOf } from './CompositeExpansion.js'
-import { parameterTargets } from '../host/CompositeParameters.js'
-import { collectState } from '../host/CompositeState.js'
-import { planUnpack } from './CompositeUnpack.js'
-import { planSwap, NEW_NODE } from './SwapPlugin.js'
-import { planPack } from './CompositePack.js'
-import { writeComposite } from '../rdf/CompositeWriter.js'
+import { EventRouter } from '../engine/EventRouter.js'
+import { EngineWiring } from './EngineWiring.js'
+import { ParameterOps } from './ParameterOps.js'
+import { PluginEdits } from './PluginEdits.js'
+import { PluginLoading } from './PluginLoading.js'
+import { EventDelivery } from './EventDelivery.js'
+import { LatencyOps } from './LatencyOps.js'
+import { expandComposites } from './CompositeExpansion.js'
 import { Transport } from '../engine/Transport.js'
 import { Inspections } from '../host/Inspections.js'
-import { decodeState, encodeState } from '../host/StateCodec.js'
 import { UndoHistory } from './UndoHistory.js'
 import { stepLabel } from './StepLabel.js'
-
-/** The note range of a MIDI connection or send, as the router takes it: only the ends that are set. */
-const rangeOf = ({ lowNote, highNote }) => ({
-  ...(lowNote === undefined ? {} : { lowNote }),
-  ...(highNote === undefined ? {} : { highNote })
-})
 
 /** Whether two snapshots say the same, ignoring the revision, which counts edits and not content. */
 const sameContent = (a, b) => JSON.stringify({ ...a, revision: 0 }) === JSON.stringify({ ...b, revision: 0 })
@@ -52,14 +44,6 @@ export class OpDispatcher {
   #router = null
   #inspections
 
-  // The compensation delays the running graph holds, by project connection
-  // id. Rebuilt with the links, and moved by a latency message without
-  // rebuilding them (docs/latency.md section 2).
-  #compensation = new Map()
-  #alignTracks = false
-  // The delay last given to each track, in frames, so the engine is asked only about a change.
-  #trackDelays = new Map()
-
   #foreign
 
   // The stacks and the snapshot-to-snapshot reconciliation live in
@@ -70,13 +54,18 @@ export class OpDispatcher {
   // A count and not a flag, so a group inside an undo, or an unrecorded firing during a group, ends only
   // its own suppression and never another's.
   #unrecorded = 0
+  #wiring
+  #latency
+  #parameters
+  #edits
+  #loading
+  #delivery
 
   constructor ({ project = new Project(), engine = null, foreign = null, inspections = new Inspections(), alignTracks = false } = {}) {
     this.#project = project
     // Whether tracks with less latency are delayed to line up with the slowest.
     // False here so a caller that says nothing changes nothing; the page passes
     // what web/host.json and the person's own choice say.
-    this.#alignTracks = alignTracks
     this.#engine = engine
     // Contract section 12. Absent by default: a host that supports no foreign
     // plugins conforms, and refusing is the safe default, so this has to be
@@ -87,6 +76,71 @@ export class OpDispatcher {
     // for rather than an optional capability; Inspections itself no-ops
     // where there is no storage to write to (a test, a worker).
     this.#inspections = inspections
+    const self = this
+    this.#latency = new LatencyOps({
+      get engine () { return self.#engine },
+      get project () { return self.#project },
+      composites: this.#composites,
+      engineIdOf: id => self.#engineIdOf(id),
+      compile: () => self.compile(),
+      emit: event => self.#emit(event)
+    }, { alignTracks })
+    this.#wiring = new EngineWiring({
+      get engine () { return self.#engine },
+      get project () { return self.#project },
+      get router () { return self.#router },
+      engineIdOf: id => self.#engineIdOf(id),
+      engineNode: id => self.engineNode(id),
+      isComposite: id => self.#composites.has(id),
+      compositeMidiEnds: (id, direction) => self.#delivery.compositeMidiEnds(id, direction),
+      expand: (nodes, connections, options) => self.#expand(nodes, connections, options),
+      applyTrackDelays: compiled => self.#latency.applyTrackDelays(compiled),
+      audibility: () => self.audibility(),
+      setCompensation: map => self.#latency.setCompensation(map)
+    })
+    this.#parameters = new ParameterOps({
+      get engine () { return self.#engine },
+      nodeIds: this.#nodeIds,
+      memberIds: this.#memberIds,
+      composites: this.#composites,
+      apply: (changes, options) => self.apply(changes, options),
+      emit: event => self.#emit(event),
+      engineNode: id => self.engineNode(id)
+    })
+    this.#edits = new PluginEdits({
+      get project () { return self.#project },
+      get engine () { return self.#engine },
+      composites: this.#composites,
+      grouped: (fn, options) => self.grouped(fn, options),
+      apply: (changes, options) => self.apply(changes, options),
+      addPlugin: (iri, node) => self.addPlugin(iri, node),
+      setParameter: (id, symbol, value) => self.setParameter(id, symbol, value),
+      getNodeState: id => self.getNodeState(id),
+      engineNode: id => self.engineNode(id)
+    })
+    this.#delivery = new EventDelivery({
+      get router () { return self.#router },
+      get engine () { return self.#engine },
+      get project () { return self.#project },
+      nodeIds: this.#nodeIds,
+      memberIds: this.#memberIds,
+      composites: this.#composites,
+      expand: (nodes, connections, options) => self.#expand(nodes, connections, options)
+    })
+    this.#loading = new PluginLoading({
+      get engine () { return self.#engine },
+      get project () { return self.#project },
+      get router () { return self.#router },
+      get foreign () { return self.#foreign },
+      get inspections () { return self.#inspections },
+      nodeIds: this.#nodeIds,
+      memberIds: this.#memberIds,
+      composites: this.#composites,
+      apply: (changes, options) => self.apply(changes, options),
+      emit: event => self.#emit(event),
+      rebuildLinks: () => self.#rebuildLinks(self.compile()),
+      onLatency: (nodeId, engineId, message, outerNodeId) => self.#latency.onLatency(nodeId, engineId, message, outerNodeId)
+    })
     if (engine) {
       this.#router = new EventRouter({
         engine,
@@ -126,82 +180,11 @@ export class OpDispatcher {
     return message
   }
 
-  /**
-   * The last few MIDI events that went over one connection, oldest first, as `{ frame, bytes }`: what
-   * a monitor shows. Empty for an audio connection, one not wired (a bypassed end, a plugin not
-   * loaded), or one nothing has gone over.
-   */
-  midiActivity (connectionId) {
-    const connection = this.#project.connection(connectionId)
-    if (!connection || !isMidi(connection.signalKind) || !this.#router) return []
-    const from = this.#nodeIds.get(connection.from.node)
-    const to = this.#nodeIds.get(connection.to.node)
-    return from && to ? this.#router.recent(from, to) : []
-  }
-
-  /**
-   * The engine nodes a composite's MIDI boundary is wired to inside: where MIDI delivered into it goes
-   * (`'in'`), or what makes the MIDI that leaves it (`'out'`). Found by expanding a connection between the
-   * composite and nowhere, so the boundary is read by the same code that wires the engine. Empty when the
-   * composite has no MIDI boundary in that direction.
-   */
-  #compositeMidiEnds (nodeId, direction) {
-    const composite = this.#composites.get(nodeId)
-    const own = composite.entry.iri
-    const boundary = composite.entry.tree.composite.connections
-      .find(c => (direction === 'in' ? c.from.node === own : c.to.node === own) && isMidi(c.signalKind))
-    if (!boundary) return []
-    const probe = '\u0000outside'
-    const edge = direction === 'in'
-      ? { from: { node: probe, portIndex: 0 }, to: { node: nodeId, portIndex: 0 } }
-      : { from: { node: nodeId, portIndex: 0 }, to: { node: probe, portIndex: 0 } }
-    const { connections } = this.#expand([{ id: probe }, { id: nodeId }], [{ id: probe, ...edge, signalKind: boundary.signalKind }])
-    // Only the connection to or from nowhere: the expansion also returns the composite's own wiring, whose ends are
-    // members that are not the boundary, and MIDI delivered to those would skip the plugins in front of them.
-    const crossing = connections.filter(c => (direction === 'in' ? c.from.node === probe : c.to.node === probe))
-    return crossing.map(c => this.#memberIds.get(direction === 'in' ? c.to.node : c.from.node)).filter(Boolean)
-  }
-
-  /** Deliver MIDI into a node, as if from outside the graph. */
-  sendEvents (nodeId, events) {
-    if (!this.#router) return false
-    if (this.#composites.has(nodeId)) {
-      // Into a composite is into whatever its MIDI input is wired to inside.
-      const targets = this.#compositeMidiEnds(nodeId, 'in')
-      for (const target of targets) this.#router.send(target, events)
-      return targets.length > 0
-    }
-    const engineId = this.#nodeIds.get(nodeId)
-    if (!engineId) return false
-    this.#router.send(engineId, events)
-    return true
-  }
-
-  /**
-   * Relay an opaque payload from a plugin's own interface to its processor,
-   * docs/messaging.md 2.4. Not an operation: it changes nothing the project
-   * records, and the host does not read it. Throttling is the caller's, which
-   * is where the interface's messages arrive.
-   */
-  relayToPlugin (nodeId, payload) {
-    const engineId = this.#nodeIds.get(nodeId)
-    if (!engineId || !this.#engine) return false
-    this.#engine.post(engineId, { type: 'plugin', payload })
-    return true
-  }
-
-  /**
-   * Hear a processor's opaque payloads for its own interface. Returns an
-   * unsubscribe function, or null for a node the engine has not loaded. Only
-   * this node's payloads: 2.4 forbids one plugin's reaching another.
-   */
-  onPluginMessage (nodeId, handler) {
-    const engineId = this.#nodeIds.get(nodeId)
-    if (!engineId || !this.#engine) return null
-    return this.#engine.onMessage(engineId, message => {
-      if (message?.type === 'plugin') handler(message.payload)
-    })
-  }
+  // MIDI delivery and plugin messages are in EventDelivery.js; the dispatcher keeps the names callers use.
+  midiActivity (connectionId) { return this.#delivery.midiActivity(connectionId) }
+  sendEvents (nodeId, events) { return this.#delivery.sendEvents(nodeId, events) }
+  relayToPlugin (nodeId, payload) { return this.#delivery.relayToPlugin(nodeId, payload) }
+  onPluginMessage (nodeId, handler) { return this.#delivery.onPluginMessage(nodeId, handler) }
 
   get project () { return this.#project }
   get revision () { return this.#project.revision }
@@ -220,93 +203,11 @@ export class OpDispatcher {
     }
   }
 
+  // Latency and track alignment are in LatencyOps.js; the dispatcher keeps the names callers use.
   /** Whether tracks are aligned to one another. */
-  get alignTracks () { return this.#alignTracks }
-
-  /** Turn alignment on or off, and give every track the delay that now applies. */
-  setAlignTracks (on) {
-    this.#alignTracks = Boolean(on)
-    const compiled = this.compile()
-    if (compiled.ok) this.#applyTrackDelays(compiled)
-  }
-
-  /**
-   * How late each track's signal is, in frames: the longest declared latency
-   * along its chain, counting what the compiler found ahead of each node.
-   * `alignFrames` is the delay added to line it up with the others arriving at the same place, which
-   * is zero when alignment is off, and `frames` is what the track itself has
-   * (docs/latency.md, "Between tracks").
-   */
-  trackLatencies () {
-    const compiled = this.compile()
-    const own = compiled.ok ? this.#trackFrames(compiled) : new Map(this.#project.tracks.map(t => [t.id, 0]))
-    const delays = this.#alignment(own)
-    return this.#project.tracks.map(track => ({
-      trackId: track.id,
-      frames: own.get(track.id) ?? 0,
-      alignFrames: delays.get(track.id) ?? 0
-    }))
-  }
-
-  /**
-   * The delay each track is given so that tracks arriving at the same place arrive together, in frames.
-   *
-   * A place is the master or a bus. Tracks feeding it are lined up with the slowest of them, and what a
-   * track arrives with is its own chain plus the slowest of the tracks that feed it, so a bus that is itself
-   * a track with latency passes that on to everything it takes to the master. Aligning everything to one
-   * slowest figure, as before, left a bus's latency out of the sum, and so a track through a bus arrived
-   * late by exactly what the bus adds. A send is a parallel copy and is not aligned here (docs/latency.md).
-   */
-  #alignment (own) {
-    const tracks = this.#project.tracks
-    const arrival = new Map()
-    const arrivalOf = id => {
-      if (!arrival.has(id)) {
-        const before = Math.max(0, ...tracks.filter(t => t.output === id).map(t => arrivalOf(t.id)))
-        arrival.set(id, (own.get(id) ?? 0) + before)
-      }
-      return arrival.get(id)
-    }
-    const slowest = new Map()
-    for (const t of tracks) {
-      const place = t.output ?? null
-      slowest.set(place, Math.max(slowest.get(place) ?? 0, arrivalOf(t.id)))
-    }
-    return new Map(tracks.map(t => [t.id, this.#alignTracks ? slowest.get(t.output ?? null) - arrivalOf(t.id) : 0]))
-  }
-
-  #trackFrames (compiled) {
-    return new Map(this.#project.tracks.map(track => [
-      track.id,
-      this.#project.nodes
-        .filter(n => n.track === track.id)
-        .flatMap(n => this.#flatIdsOf(n.id))
-        .reduce((most, id) => Math.max(most, (compiled.arrival.get(id) ?? 0) + this.#latencyOf(id)), 0)
-    ]))
-  }
-
-  /** The ids a model node has in the flat graph: its own, or its members'. */
-  #flatIdsOf (nodeId) {
-    return this.#composites.get(nodeId)?.flatIds ?? [nodeId]
-  }
-
-  /** Give each track the delay that lines it up, asking the engine only where it changed. */
-  #applyTrackDelays (compiled) {
-    if (!this.#engine) return
-    const delays = this.#alignment(this.#trackFrames(compiled))
-    for (const track of this.#project.tracks) {
-      const wanted = delays.get(track.id) ?? 0
-      if ((this.#trackDelays.get(track.id) ?? 0) === wanted) continue
-      try {
-        this.#engine.setTrackDelay(track.id, wanted)
-        this.#trackDelays.set(track.id, wanted)
-      } catch (error) {
-        // Not refused as an edit: the graph is fine, only the alignment could not be done.
-        console.error(`could not align track ${track.id}: ${error.message}`)
-      }
-    }
-    for (const id of [...this.#trackDelays.keys()]) if (!this.#project.track(id)) this.#trackDelays.delete(id)
-  }
+  get alignTracks () { return this.#latency.alignTracks }
+  setAlignTracks (on) { this.#latency.setAlignTracks(on) }
+  trackLatencies () { return this.#latency.trackLatencies() }
 
   /** The engine node behind a flat id: a plain node, or a member of a composite. */
   #engineIdOf (flatId) {
@@ -326,14 +227,7 @@ export class OpDispatcher {
   /** compileGraph over a project, after expansion. `project` may be a trial copy. */
   #compileProject (project) {
     const flat = this.#expand(project.nodes, project.connections)
-    return compileGraph({ nodes: flat.nodes, connections: flat.connections }, { latencyOf: id => this.#latencyOf(id) })
-  }
-
-  /** The latency each node declares, from what the engine actually loaded. */
-  #latencyOf (nodeId) {
-    const engineId = this.#engineIdOf(nodeId)
-    if (!engineId || !this.#engine) return 0
-    try { return this.#engine.get(engineId).ready?.latencyFrames ?? 0 } catch { return 0 }
+    return compileGraph({ nodes: flat.nodes, connections: flat.connections }, { latencyOf: id => this.#latency.latencyOf(id) })
   }
 
   /**
@@ -352,7 +246,7 @@ export class OpDispatcher {
     // throwing IndexSizeError out of AudioNode.connect in the middle of
     // rebuilding the links, after the change was committed. So the check
     // belongs here, which is the one layer holding both.
-    const unroutable = this.#unroutable(changes)
+    const unroutable = unroutableChange(changes, id => this.engineNode(id)?.profile)
     if (unroutable) {
       return { ok: false, kind: 'change', revision: this.#project.revision, message: unroutable }
     }
@@ -362,7 +256,7 @@ export class OpDispatcher {
       // before anything is compiled.
       this.#project.apply(changes, { expectedRevision, dryRun: true })
     } catch (error) {
-      return this.#failure(error)
+      return failureResult(error, this.#project.revision)
     }
 
     // Commit to a scratch project to see what the graph would become.
@@ -481,45 +375,6 @@ export class OpDispatcher {
     }
   }
 
-  /** The first end of a new connection that names a port its node has not got. */
-  #unroutable (changes) {
-    for (const change of changes ?? []) {
-      // Audio arrives at a track's or the master's audio input node, so the node must have an audio input.
-      // A node whose plugin is not loaded yet is not refused: it cannot be checked, and is not wired until it is.
-      if ((change?.op === 'setTrack' || change?.op === 'setMaster') && change.audioInput) {
-        const profile = this.engineNode(change.audioInput)?.profile
-        if (profile && (profile.audioInputs ?? 0) < 1) {
-          return `${change.audioInput} has no audio input, so audio cannot arrive at it`
-        }
-      }
-      if (change?.op !== 'addConnection') continue
-      for (const direction of ['from', 'to']) {
-        const endpoint = change[direction]
-        if (!endpoint?.node) continue
-        const found = findPort(
-          this.engineNode(endpoint.node)?.profile, endpoint, direction, change.signalKind)
-        if (!found.ok) return found.message
-      }
-    }
-    return null
-  }
-
-  #failure (error) {
-    if (error instanceof RevisionConflict) {
-      return {
-        ok: false,
-        kind: 'conflict',
-        revision: this.#project.revision,
-        expected: error.expected,
-        message: error.message
-      }
-    }
-    if (error instanceof ChangeError) {
-      return { ok: false, kind: 'change', revision: this.#project.revision, index: error.index, message: error.message }
-    }
-    throw error
-  }
-
   /** A copy of the project, for trying a changeset without committing it. */
   #clone () {
     const copy = new Project()
@@ -527,501 +382,14 @@ export class OpDispatcher {
     return copy
   }
 
-  /**
-   * Load a plugin and add it as a node.
-   *
-   * Loading reaches the network and can fail slowly, which does not sit well
-   * inside an atomic changeset, so it happens first and the node id joins the
-   * two halves. webmcp.md raises this as open; this is the answer.
-   */
-  /**
-   * Load a plugin and add a node for it.
-   *
-   * `id` names the node rather than letting one be minted, which is what
-   * reopening a saved project needs: the connections in the file name the nodes
-   * they join, so a node that came back under a different name would be joined
-   * to nothing. The model tracks ids it did not mint, so a later minted id
-   * cannot collide with one restored here.
-   *
-   * Everything else is passed through to addNode rather than enumerated here.
-   * It used to list the fields it forwarded, and the day a node gained a channel
-   * strip that list was silently one field short: a saved mix was written
-   * correctly, read correctly, and dropped on the way back in.
-   *
-   * Without a `track` the plugin gets a new track of its own, named after it,
-   * in the same changeset, so dropping an instrument in makes a sound without a
-   * second step. A plugin that accepts MIDI becomes that new track's MIDI
-   * input, since it is the only node there for notes to go to. On an existing
-   * track nothing is guessed: which node takes the notes is a person's call.
-   */
-  async addPlugin (iri, { position, foreign = false, ...node } = {}) {
-    if (!this.#engine) throw new Error('no engine: this dispatcher can edit a project but not play it')
+  /** Load a plugin and add it as a node, on a track of its own unless `track` is given; PluginLoading.js has the detail. */
+  addPlugin (iri, options) { return this.#loading.addPlugin(iri, options) }
 
-    let entry
-    try {
-      // One dispatcher, two load paths, and the branch is here rather than in
-      // two callers. A foreign plugin is instantiated by its own adapter and
-      // handed to the engine already built; everything after that, including
-      // the model edit and the links below, is identical.
-      // node.state, if this node came from a reopened session, is the
-      // string jig:nodeState holds; the engine wants the real
-      // structured-cloneable value a stateful plugin's own processor reads,
-      // which is what it was before saveSession stringified it for RDF.
-      // The model, just below, keeps the string form: writing it back out
-      // unchanged is what makes a session that is never touched again save
-      // byte for byte the same.
-      entry = foreign
-        ? await this.#addForeign(iri)
-        : await this.#engine.addPlugin(iri, { state: decodeState(node.state ?? null) })
-    } catch (error) {
-      // A ConsentRequired carries what a person has to be asked, so it travels
-      // out intact rather than being flattened into a message. Contract section
-      // 12.4: the asking happens where a person is, not in here.
-      if (error.name === 'ConsentRequired') {
-        return { ok: false, kind: 'consent', request: error.request, message: error.message }
-      }
-      // Contract section 10.3: a failed load is a recorded result, not only a
-      // rejected promise. Not for ConsentRequired above: nothing was actually
-      // attempted yet, so there is nothing to have observed.
-      this.#inspections.record({ iri, outcome: `failed: ${error.message}` })
-      return { ok: false, kind: 'load', step: error.step ?? null, message: error.message }
-    }
-    this.#inspections.record({ iri, outcome: 'loaded' })
+  // Unpacking, swapping and packing are in PluginEdits.js; the dispatcher keeps the names callers use.
+  unpackComposite (nodeId) { return this.#edits.unpackComposite(nodeId) }
+  swapPlugin (nodeId, iri) { return this.#edits.swapPlugin(nodeId, iri) }
+  packSelection (options) { return this.#edits.packSelection(options) }
 
-    const label = node.label ?? entry.profile.label
-    const changes = []
-    let newTrack = null
-    if (node.track === undefined || node.track === null) {
-      newTrack = this.#project.nextId('track')
-      changes.push({ op: 'addTrack', id: newTrack, label })
-    }
-    const nodeId = node.id ?? this.#project.nextId('node')
-    changes.push({ op: 'addNode', ...node, id: nodeId, track: node.track ?? newTrack, pluginIri: iri, label })
-    if (newTrack && (entry.profile.accepts ?? []).some(carriesNotes)) {
-      changes.push({ op: 'setTrack', id: newTrack, midiInput: nodeId })
-    }
-
-    const result = this.apply(changes)
-    if (!result.ok) {
-      // The model refused it, so the engine must not keep it either.
-      for (const id of entry.composite ? entry.members.map(m => m.entry.id) : [entry.id]) this.#engine.remove(id)
-      return result
-    }
-
-    if (entry.composite) return this.#adoptComposite(nodeId, entry, { result, track: node.track ?? newTrack, position })
-    this.#nodeIds.set(nodeId, entry.id)
-    // The links were rebuilt inside that apply, when this node was in the model
-    // and not yet in #nodeIds, so nothing could be wired to it. For a connection
-    // that is harmless and expected, because the other end arrives later anyway.
-    // For the path to the speakers it is not: a plugin loaded on its own would
-    // be silent until some unrelated edit happened to rebuild the links.
-    this.#rebuildLinks(this.compile())
-    // Listen from the moment it is loaded, not from the moment it is wired.
-    this.#router?.observe(entry.id)
-    // Hear latency changes the same way. Foreign nodes are excluded: a WAM
-    // speaks its own latency protocol over the same port (no fromFrame), and
-    // WamModule already consumes it.
-    if (!foreign) {
-      this.#engine.onMessage(entry.id, message => {
-        if (message?.type === 'latency') this.#onLatency(nodeId, entry.id, message)
-      })
-    }
-    if (position) this.#project.moveNode(nodeId, position.x, position.y)
-
-    this.#emit({ type: 'plugin-added', nodeId, trackId: node.track ?? newTrack, entry })
-    return { ...result, nodeId, trackId: node.track ?? newTrack, entry }
-  }
-
-  /**
-   * Take a loaded composite into the graph under one model node. Its members are engine nodes keyed by flat id,
-   * and everything the model says about the node (settings, bypass, track) is read through the composite's
-   * exposed ports and boundary, never by reaching a member directly.
-   */
-  #adoptComposite (nodeId, entry, { result, track, position }) {
-    const flatIds = []
-    for (const { path, entry: member } of entry.members) {
-      const flat = flatIdOf(nodeId, path)
-      flatIds.push(flat)
-      this.#memberIds.set(flat, member.id)
-    }
-    this.#composites.set(nodeId, { entry, flatIds })
-    this.#rebuildLinks(this.compile())
-    for (const [i, { entry: member }] of entry.members.entries()) {
-      this.#router?.observe(member.id)
-      this.#engine.onMessage(member.id, message => {
-        if (message?.type === 'latency') this.#onLatency(flatIds[i], member.id, message, nodeId)
-      })
-    }
-    if (position) this.#project.moveNode(nodeId, position.x, position.y)
-    this.#emit({ type: 'plugin-added', nodeId, trackId: track, entry })
-    return { ...result, nodeId, trackId: track, entry }
-  }
-
-  /**
-   * Turn a composite plugin's node back into its members, as ordinary nodes on the same track, joined to what was around it, with
-   * the value each had inside the rack so it sounds the same. One undoable edit. docs/nested-plugins.md section 12.
-   *
-   * The members are added first and the composite is removed last, in the same change as the wiring, so a member that will not load
-   * leaves the rack exactly as it was and no stray nodes behind. A composite with automation on it is refused: an envelope is on one
-   * of its exposed parameters, which will not exist, and dropping it silently would lose a person's work.
-   */
-  async unpackComposite (nodeId) {
-    const composite = this.#composites.get(nodeId)
-    if (!composite) return { ok: false, kind: 'change', message: `${nodeId} is not a composite plugin, so there is nothing to unpack` }
-    if (this.#project.envelopes.some(e => e.target.node === nodeId)) {
-      return { ok: false, kind: 'change', message: `${composite.entry.profile.label} has automation on it, which unpacking would lose. Remove its envelopes first.` }
-    }
-
-    const plan = planUnpack({ project: this.#project, nodeId, tree: composite.entry.tree, state: await this.getNodeState(nodeId) })
-
-    return this.grouped(async () => {
-      const made = new Map()
-      const abandon = async failure => {
-        for (const id of made.values()) this.apply([{ op: 'removeNode', id }])
-        return failure
-      }
-
-      for (const member of plan.members) {
-        const added = await this.addPlugin(member.plugin, {
-          track: plan.track, label: member.label, ...(member.state === null ? {} : { state: encodeState(member.state) })
-        })
-        if (!added.ok) return abandon({ ...added, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${added.message}` })
-        made.set(member.key, added.nodeId)
-        for (const [symbol, value] of Object.entries(member.settings)) {
-          const set = this.setParameter(added.nodeId, symbol, value)
-          if (!set.ok) return abandon({ ...set, message: `could not unpack ${composite.entry.profile.label}: ${member.label}: ${set.message}` })
-        }
-        if (plan.bypassed) this.apply([{ op: 'setNode', id: added.nodeId, bypassed: true }])
-      }
-
-      const idOf = e => (e.member === undefined ? e : { node: made.get(e.member), ...Object.fromEntries(Object.entries(e).filter(([k]) => k !== 'member')) })
-      const changes = [
-        { op: 'removeNode', id: nodeId },
-        ...plan.connections.map(c => ({ op: 'addConnection', from: idOf(c.from), to: idOf(c.to), signalKind: c.signalKind })),
-        ...(plan.midiInput ? [{ op: 'setTrack', id: plan.track, midiInput: made.get(plan.midiInput) }] : []),
-        ...(plan.audioInput ? [{ op: 'setTrack', id: plan.track, audioInput: made.get(plan.audioInput) }] : [])
-      ]
-      const result = this.apply(changes)
-      if (!result.ok) return abandon(result)
-      return { ...result, nodeIds: [...made.values()] }
-    }, { label: 'Unpack a composite plugin' })
-  }
-
-  /**
-   * Replace a plugin with another, in the same place: on its track, joined to what it was joined to wherever the new one has a port
-   * for it, with the settings it has parameters for, its label if a person gave one, and its bypass. One undoable edit. What could not
-   * be carried is returned in `dropped`, in words. The new one is loaded first and the old one removed in the same change as the wiring,
-   * so a plugin that will not load leaves the old one exactly as it was. Not for a composite (unpack it first), and refused when the
-   * old one has automation on it.
-   */
-  async swapPlugin (nodeId, iri) {
-    const old = this.#project.node(nodeId)
-    if (!old) return { ok: false, kind: 'change', message: `no such node: ${nodeId}` }
-    if (this.#composites.has(nodeId)) return { ok: false, kind: 'change', message: 'a composite plugin cannot be swapped; unpack it first' }
-    if (old.pluginIri === iri) return { ok: false, kind: 'change', message: 'that is the plugin already there' }
-    // Before anything is loaded, so a refusal changes nothing, not even the revision.
-    if (this.#project.envelopes.some(e => e.target.node === nodeId)) {
-      return { ok: false, kind: 'change', message: `${old.label ?? nodeId} has automation on it, which swapping would lose. Remove its envelopes first.` }
-    }
-    const oldProfile = this.engineNode(nodeId)?.profile ?? null
-
-    return this.grouped(async () => {
-      // A label a person gave is kept; the old plugin's own name is not, since it would be wrong for the new one.
-      const mine = old.label !== null && old.label !== undefined && old.label !== oldProfile?.label
-      const added = await this.addPlugin(iri, { track: old.track, ...(mine ? { label: old.label } : {}) })
-      if (!added.ok) return added
-      const newId = added.nodeId
-      const abandon = failure => { this.apply([{ op: 'removeNode', id: newId }]); return failure }
-
-      let plan
-      try {
-        plan = planSwap({ project: this.#project, nodeId, oldProfile, newProfile: added.entry.profile })
-      } catch (error) {
-        return abandon({ ok: false, kind: 'change', message: error.message })
-      }
-      const dropped = [...plan.dropped]
-      for (const [symbol, value] of Object.entries(plan.settings)) {
-        const set = this.setParameter(newId, symbol, value)
-        if (!set.ok) dropped.push(`the setting ${symbol} was not carried: ${set.message}`)
-      }
-      const idOf = e => (e.node === NEW_NODE ? { ...e, node: newId } : e)
-      const changes = [
-        { op: 'removeNode', id: nodeId },
-        ...plan.connections.map(c => ({ op: 'addConnection', from: idOf(c.from), to: idOf(c.to), signalKind: c.signalKind })),
-        ...(plan.bypassed ? [{ op: 'setNode', id: newId, bypassed: true }] : []),
-        ...(plan.midiInput ? [{ op: 'setTrack', id: plan.track, midiInput: newId }] : []),
-        ...(plan.audioInput ? [{ op: 'setTrack', id: plan.track, audioInput: newId }] : []),
-        ...(plan.masterInput ? [{ op: 'setMaster', audioInput: newId }] : [])
-      ]
-      const result = this.apply(changes)
-      if (!result.ok) return abandon(result)
-      return { ...result, nodeId: newId, replaced: nodeId, dropped }
-    }, { label: 'Swap a plugin' })
-  }
-
-  /**
-   * Describe a selection of nodes as a composite plugin, as the Turtle profile a person would publish. Changes nothing in the project:
-   * a composite is a plugin at an IRI, and an IRI is where only its author can put it, so what comes back is a document and not a node.
-   * Each member is pinned to the digest of the profile fetched for it now. docs/nested-plugins.md section 12.
-   *
-   * `iri` is where it will be published, `https:` or loopback `http:`. Returns `{ ok, turtle, summary, warnings }`, the warnings saying
-   * what a composite cannot carry (bypass, saved state, automation, a connection into a member's own parameter).
-   */
-  async packSelection ({ nodeIds, iri, label, comment = null, expose = 'set' } = {}) {
-    if (!/^(https:\/\/|http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/)/.test(iri ?? '')) {
-      return { ok: false, kind: 'change', message: 'a composite is published at an https IRI, or an http one on loopback, and needs one to be named by' }
-    }
-    if (typeof label !== 'string' || label.trim() === '') return { ok: false, kind: 'change', message: 'a composite needs a name' }
-    let plan
-    try {
-      plan = planPack({ project: this.#project, nodeIds, profileOf: id => this.engineNode(id)?.profile ?? null, expose })
-    } catch (error) {
-      return { ok: false, kind: 'change', message: error.message }
-    }
-
-    const warnings = [...plan.warnings]
-    const pins = new Map()
-    for (const plugin of new Set(plan.members.map(m => m.plugin))) {
-      try {
-        pins.set(plugin, await this.#engine.profileDigest(plugin))
-      } catch (error) {
-        warnings.push(`${plugin} could not be pinned (${error.message}), so a signature on this composite would not reach it`)
-      }
-    }
-    const turtle = writeComposite({
-      iri, label: label.trim(), comment,
-      ...plan,
-      members: plan.members.map(m => ({ ...m, pinnedDigest: pins.get(m.plugin) ?? null }))
-    })
-    return {
-      ok: true,
-      turtle,
-      summary: { members: plan.members.length, controls: plan.ports.length, audioInputs: plan.audioInputs, audioOutputs: plan.audioOutputs, pinned: pins.size },
-      warnings
-    }
-  }
-
-  /**
-   * Fetch a foreign profile, load it through its adapter, and adopt it.
-   *
-   * Private because there must be exactly one way into running foreign code,
-   * and it is the branch in addPlugin above.
-   */
-  async #addForeign (iri) {
-    if (!this.#foreign) {
-      throw new Error(
-        'this host does not load foreign plugins. Contract section 12 is optional and ' +
-        'supporting none of it conforms.')
-    }
-    const loaded = await this.#foreign.add(iri, this.#engine.context)
-    return this.#engine.adopt({
-      iri,
-      profile: loaded.profile,
-      node: loaded.node,
-      ready: loaded.ready
-    })
-  }
-
-  /**
-   * A processor reporting a new latency (docs/latency.md section 2).
-   *
-   * Not an operation: nothing the project records changed, so there is no
-   * revision, no history entry, and nothing to undo. The node's figure is
-   * updated, the unchanged project is recompiled, and each compensation delay
-   * that moved is retimed against the message's fromFrame rather than against
-   * this arrival. A handler that throws must not take down the fan-out, so a
-   * connection that is not in the running graph yet (one end still loading)
-   * is reported and skipped: the next full rebuild wires it with the current
-   * figures.
-   */
-  #onLatency (nodeId, engineId, message, outerNodeId = nodeId) {
-    if (this.#engineIdOf(nodeId) !== engineId || !this.#engine) return
-    let entry
-    try {
-      entry = this.#engine.get(engineId)
-    } catch {
-      return
-    }
-    const label = entry?.profile?.label ?? nodeId
-    const { latencyFrames, fromFrame } = message ?? {}
-    if (!Number.isFinite(latencyFrames) || latencyFrames < 0) {
-      console.error(`${label} reported an unusable latency: ${JSON.stringify(latencyFrames)}. A latency message carries a non-negative latencyFrames in frames.`)
-      return
-    }
-    if (!Number.isFinite(fromFrame) || fromFrame < 0) {
-      console.error(`${label} reported an unusable fromFrame: ${JSON.stringify(fromFrame)}. A latency message carries the absolute stream position its figure applies from.`)
-      return
-    }
-
-    entry.ready = { ...(entry.ready ?? {}), latencyFrames }
-    const compiled = this.compile()
-    if (!compiled.ok) {
-      console.error(`${label} changed its latency to ${latencyFrames} frames and the graph no longer compiles: ${compiled.errors[0].message}. Keeping the previous compensation.`)
-      return
-    }
-
-    const atTime = this.#engine.frameTime(fromFrame)
-    const after = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
-    for (const [connection, delayFrames] of after) {
-      if (this.#compensation.get(connection) === delayFrames) continue
-      try {
-        this.#engine.retime(connection, delayFrames, { atTime })
-      } catch (error) {
-        console.error(`${label}: cannot retime connection "${connection}": ${error.message}`)
-      }
-    }
-    for (const connection of this.#compensation.keys()) {
-      if (after.has(connection)) continue
-      try {
-        this.#engine.retime(connection, 0, { atTime })
-      } catch (error) {
-        console.error(`${label}: cannot retime connection "${connection}": ${error.message}`)
-      }
-    }
-    this.#compensation = after
-    this.#applyTrackDelays(compiled)
-    this.#emit({ type: 'latency', nodeId: outerNodeId, latencyFrames, fromFrame, compiled })
-  }
-
-  /**
-   * Set a parameter. Goes to the model and the AudioParam, never a message.
-   *
-   * The clamp is asked for before the write rather than corrected after it. The
-   * engine clamps to the declared range and the model must record what was
-   * actually applied, not what was asked for, per messaging.md 2.3: a surface
-   * renders what it is told, not what it requested. Writing the asked-for value
-   * and then writing the clamped one was two revisions for one edit, and the
-   * second went straight to the project, around this dispatcher's own gate.
-   */
-  setParameter (nodeId, symbol, value) {
-    let prepared
-    try {
-      prepared = this.#prepareParameter(nodeId, symbol, value)
-    } catch (error) {
-      return { ok: false, kind: 'change', message: error.message }
-    }
-    const result = this.apply([{ op: 'setSetting', node: nodeId, symbol, value: prepared.applied }])
-    if (!result.ok) return result
-
-    prepared.push()
-    this.#emit({ type: 'parameter', nodeId, symbol, value: prepared.applied })
-    return { ...result, value: prepared.applied }
-  }
-
-  /**
-   * What a write to one parameter would do: the value as the plugin will hold it, and how to send it.
-   *
-   * A plain node's value is clamped by the plugin's declared range. A composite's is clamped by the range its
-   * exposed port declares and sent unchanged to every real parameter that port drives (section 2.2), each of
-   * which clamps it again to its own. Throws, before anything has changed, for a parameter that is not there.
-   */
-  #prepareParameter (nodeId, symbol, value) {
-    const composite = this.#composites.get(nodeId)
-    if (composite) {
-      const port = composite.entry.profile.ports.find(p => p.symbol === symbol)
-      if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`)
-      const bounded = Math.min(port.maximum ?? Infinity, Math.max(port.minimum ?? -Infinity, value))
-      const targets = parameterTargets(composite.entry.tree, symbol).map(target => {
-        const engineId = this.#memberIds.get(flatIdOf(nodeId, target.path))
-        return { engineId, symbol: target.symbol, value: this.#engine ? this.#engine.clampParameter(engineId, target.symbol, bounded) : bounded }
-      })
-      return { applied: bounded, push: () => { for (const t of targets) this.#engine?.setParameter(t.engineId, t.symbol, t.value) } }
-    }
-    const engineId = this.#nodeIds.get(nodeId)
-    const applied = engineId && this.#engine ? this.#engine.clampParameter(engineId, symbol, value) : value
-    return { applied, push: () => { if (engineId && this.#engine) this.#engine.setParameter(engineId, symbol, applied) } }
-  }
-
-  /**
-   * Put a parameter back to its plugin's default and forget its setting, so
-   * the model says what a node that was never touched says. What undo does
-   * for a parameter that had not been set before the edit being undone:
-   * restoring "no setting" in the model alone left the AudioParam, the panel
-   * and an open editor all at the value being undone.
-   */
-  resetParameter (nodeId, symbol) {
-    const composite = this.#composites.get(nodeId)
-    let value = null
-    let prepared = null
-    try {
-      if (composite) {
-        const port = composite.entry.profile.ports.find(p => p.symbol === symbol)
-        if (!port) throw new Error(`${composite.entry.profile.label} has no parameter "${symbol}"`)
-        value = port.defaultValue
-        prepared = this.#prepareParameter(nodeId, symbol, value)
-      } else {
-        const engineId = this.#nodeIds.get(nodeId)
-        if (engineId && this.#engine) value = this.#engine.defaultParameter(engineId, symbol)
-      }
-    } catch (error) {
-      return { ok: false, kind: 'change', message: error.message }
-    }
-    const result = this.apply([{ op: 'clearSetting', node: nodeId, symbol }])
-    if (!result.ok) return result
-    if (prepared) {
-      prepared.push()
-      this.#emit({ type: 'parameter', nodeId, symbol, value: prepared.applied })
-      return { ...result, value: prepared.applied }
-    }
-    const engineId = this.#nodeIds.get(nodeId)
-    if (engineId && this.#engine && value !== null) {
-      this.#engine.setParameter(engineId, symbol, value)
-      this.#emit({ type: 'parameter', nodeId, symbol, value })
-    }
-    return { ...result, value }
-  }
-
-  /**
-   * Ask a node's own processor for its current state, live, rather than
-   * whatever `jig:nodeState` last happened to hold in the model. Called
-   * before writing a session, per contract section 8: parameter values are
-   * never part of state, so this is the only way a saved project carries
-   * what a stateful plugin is actually doing.
-   *
-   * `null` for a node the engine has no entry for (not yet loaded, or a
-   * foreign plugin, whose own adapter this does not reach into) and for a
-   * plugin that never answers, which are both ordinary rather than errors.
-   */
-  async getNodeState (nodeId) {
-    // A composite has no processor to ask, so the host assembles its state from its members (section 6).
-    const composite = this.#composites.get(nodeId)
-    if (composite && this.#engine) {
-      const state = await collectState(composite.entry.tree, path => this.#engine.requestState(this.#memberIds.get(flatIdOf(nodeId, path))))
-      return state ?? null
-    }
-    const engineId = this.#nodeIds.get(nodeId)
-    if (!engineId || !this.#engine) return null
-    // A plugin that declares jig:stateless never answers: asking would only wait out the timeout.
-    if (this.#engine.get(engineId)?.profile?.stateless) return null
-    return this.#engine.requestState(engineId)
-  }
-
-  /**
-   * Replace one `jig:userReplaceable` asset in a running node: a person
-   * choosing a different file from the generated panel. Not routed through
-   * `apply()`: it changes neither the graph nor a parameter the model
-   * tracks, only bytes a processor holds, which is exactly what
-   * `jig:nodeState` exists to carry, and the next `getNodeState` reflects it
-   * without this needing to touch the project itself.
-   */
-  loadAsset (nodeId, key, bytes) {
-    const engineId = this.#nodeIds.get(nodeId)
-    if (this.#composites.has(nodeId)) return { ok: false, message: 'a composite plugin has no assets of its own to replace' }
-    if (!engineId || !this.#engine) {
-      return { ok: false, message: 'no such node, or nothing to load an asset into' }
-    }
-    this.#engine.loadAsset(engineId, key, bytes)
-    return { ok: true }
-  }
-
-  /**
-   * Rebuild the audio links to match the compiled graph.
-   *
-   * The whole set is torn down and rebuilt rather than diffed. A diff is an
-   * optimisation and this is the correctness-first version: after any edit the
-   * links are exactly what the compiler said, with no stale delay node left
-   * feeding silence into a mix because an edge moved.
-   */
   /**
    * Let go of the engine nodes whose model nodes are gone.
    *
@@ -1052,22 +420,6 @@ export class OpDispatcher {
   }
 
   /**
-   * Make the engine's track strips match the model's tracks: one each, no
-   * more. Before the links, because the links end at them.
-   */
-  #syncTracks () {
-    if (!this.#engine) return
-    const wanted = new Set(this.#project.tracks.map(t => t.id))
-    for (const id of this.#engine.trackIds()) {
-      if (!wanted.has(id)) this.#engine.removeTrack(id)
-    }
-    const have = new Set(this.#engine.trackIds())
-    for (const id of wanted) {
-      if (!have.has(id)) this.#engine.addTrack(id)
-    }
-  }
-
-  /**
    * Whether each track is heard, after solo is resolved.
    *
    * Solo is resolved here because it cannot be resolved anywhere else. Whether
@@ -1090,235 +442,24 @@ export class OpDispatcher {
       silent: track.channel.muted || (anySoloed && !track.channel.soloed)
     }))
   }
-
-  /** Push every track's channel strip to the engine. */
-  /**
-   * The model's master, sends and bus outputs, made in the audio graph. Sends are
-   * torn down and made again each time, like the links: after an edit the audio
-   * is exactly what the model says. An output is set for every track and the
-   * engine touches the graph only where it changed.
-   */
-  #applyRouting () {
-    if (!this.#engine) return
-    this.#engine.clearSends()
-    for (const send of this.#project.sends) {
-      // A MIDI send is a route for the router, made with the connections' (#midiSendRoutes), not a gain.
-      if (send.kind === 'midi') continue
-      this.#engine.addSend(send.id, send.from, send.to, { level: send.level, tap: send.tap })
-    }
-    for (const track of this.#project.tracks) {
-      this.#engine.setTrackOutput(track.id, track.output ?? null)
-      this.#engine.setTrackArrival(track.id, this.#arrivalEngineId(track.audioInput))
-    }
-    this.#engine.setMasterArrival(this.#arrivalEngineId(this.#project.master.audioInput))
-    this.#engine.setMaster(this.#project.master)
-  }
-
-  /** The engine node audio arriving at a track or the master goes to, or null for the fader. */
-  #arrivalEngineId (nodeId) {
-    return (nodeId && this.#engineIdOf(nodeId)) || null
-  }
-
-  #applyChannels () {
-    if (!this.#engine) return
-    for (const { trackId, gain, pan, silent } of this.audibility()) {
-      this.#engine.setTrackChannel(trackId, { gain, pan, silent })
-    }
-  }
-
-  /**
-   * Connect everything that produces audio and feeds nothing to its track's
-   * fader.
-   *
-   * A sink is where the signal has arrived, so it is what a person expects to
-   * hear. Deriving it from the connections rather than declaring it keeps the
-   * rule the project format already states for processing order: the graph
-   * answers the question, and a second answer written down beside it would have
-   * no rule for which wins.
-   *
-   * A node with no audio outputs is not a sink for this purpose even when
-   * nothing follows it. A MIDI generator ends a path and produces nothing to
-   * hear, and connecting it throws.
-   */
-  #linkSinksToTracks () {
-    if (!this.#engine) return
-
-    const flat = this.#expandedInUse(this.#stepOverBypassed())
-    const feedsSomething = new Set()
-    for (const connection of flat.connections) {
-      if (isMidi(connection.signalKind)) continue
-      feedsSomething.add(connection.from.node)
-    }
-
-    for (const node of flat.nodes) {
-      if (feedsSomething.has(node.id)) continue
-      // A bypassed node is out of the signal: what it would make is not to be heard.
-      if (node.bypassed) continue
-      const engineId = this.#engineIdOf(node.id)
-      if (!engineId) continue
-      const entry = this.#engine.get(engineId)
-      if (!(entry?.node?.numberOfOutputs > 0)) continue
-      // A member is on the track of the composite it is in.
-      this.#engine.linkToTrack(engineId, this.#project.node(node.path[0]).track)
-    }
-  }
-
-  /**
-   * The project's connections with bypassed nodes stepped over, which is what the engine is given. The
-   * model keeps every connection; bypass changes only what is wired.
-   */
-  #stepOverBypassed () {
-    const passes = (nodeId, kind) => {
-      const profile = this.engineNode(nodeId)?.profile
-      if (!profile) return false
-      if (kind === 'audio') return (profile.audioInputs ?? 0) > 0 && (profile.audioOutputs ?? 0) > 0
-      return (profile.accepts ?? []).some(isMidi) && (profile.produces ?? []).some(isMidi)
-    }
-    return effectiveConnections(this.#project.connections, {
-      bypassed: nodeId => this.#project.node(nodeId)?.bypassed === true,
-      passes
-    })
-  }
-
-  /** What the engine is wired from: bypass applied to the project's own connections, then composites expanded. */
-  #connectionsInUse () {
-    // After bypass, so a bypassed composite is stepped over as one node and its members are left alone.
-    return this.#expandedInUse(this.#stepOverBypassed()).connections
-  }
-
-  #expandedInUse (connections) {
-    return this.#expand(this.#project.nodes, connections, { bypassed: id => this.#project.node(id)?.bypassed === true })
-  }
-
+  /** Make the engine's links, strips, sends, master and routes match the model; EngineWiring has the detail. */
   #rebuildLinks (compiled) {
-    if (!this.#engine) return
-
-    const delayFor = new Map(compiled.compensation.map(c => [c.connection, c.delayFrames]))
-    this.#compensation = delayFor
-    this.#engine.clearLinks()
-    this.#syncTracks()
-    this.#applyRouting()
-
-    const midiRoutes = []
-
-    for (const connection of this.#connectionsInUse()) {
-      const from = this.#engineIdOf(connection.from.node)
-      const to = this.#engineIdOf(connection.to.node)
-      // A connection between nodes that are not both loaded is in the model
-      // but not yet in the audio graph, which is normal while loading.
-      if (!from || !to) continue
-
-      // A MIDI connection is not an audio edge. It is the host carrying
-      // messages between two ports, so it must not reach connect().
-      if (isMidi(connection.signalKind)) {
-        midiRoutes.push({ from, to, ...rangeOf(connection) })
-        continue
-      }
-
-      // An endpoint names its port exactly one way, and a symbol names a
-      // parameter rather than an input. Passing portIndex ?? 0 for one of those
-      // wired it to audio input zero, which the model allows, the shapes
-      // enforce, connection_add exposes as toParameter, and nothing delivered.
-      this.#engine.link(from, to, {
-        fromOutput: connection.from.portIndex ?? 0,
-        toInput: connection.to.portIndex ?? 0,
-        toParameter: connection.to.portSymbol ?? null,
-        delayFrames: delayFor.get(connection.id) ?? 0,
-        connection: connection.id
-      })
-    }
-
-    this.#linkSinksToTracks()
-    this.#applyTrackDelays(compiled)
-    this.#applyChannels()
-    this.#router?.setRoutes([...midiRoutes, ...this.#midiSendRoutes(midiRoutes)])
+    this.#wiring.rebuildLinks(compiled)
   }
 
-  /**
-   * The routes a MIDI send makes: from the nodes at the MIDI end of the source track's chain, the ones that
-   * make MIDI and pass it nowhere by a connection, to the node the target track's MIDI clips play into. A
-   * target with no such node receives nothing, as its clips would play into nothing. A bypassed node is not
-   * routed from, as it passes nothing. A composite is read at its boundary: its MIDI output is what leaves
-   * it, and its MIDI input is where what arrives goes, as for any connection to it.
-   */
-  #midiSendRoutes (routes) {
-    const routed = new Set(routes.map(r => r.from))
-    const out = []
-    for (const send of this.#project.sends) {
-      if (send.kind !== 'midi') continue
-      const input = this.#project.track(send.to)?.midiInput
-      const targets = !input ? [] : this.#composites.has(input) ? this.#compositeMidiEnds(input, 'in') : [this.#arrivalEngineId(input)].filter(Boolean)
-      if (targets.length === 0) continue
-      for (const node of this.#project.nodes) {
-        if (node.track !== send.from || node.bypassed) continue
-        const sources = this.#composites.has(node.id)
-          ? this.#compositeMidiEnds(node.id, 'out')
-          : (this.engineNode(node.id)?.profile?.produces ?? []).some(isMidi) ? [this.#engineIdOf(node.id)].filter(Boolean) : []
-        for (const from of sources) {
-          if (routed.has(from)) continue
-          for (const to of targets) if (to !== from) out.push({ from, to, ...rangeOf(send) })
-        }
-      }
-    }
-    return out
-  }
 
-  /**
-   * Set several parameters as one edit.
-   *
-   * Not a loop over setParameter, which would be one revision and one compile
-   * per value: a preset of thirty parameters would arrive as thirty edits, be
-   * thirty entries in an undo stack, and be audible as a sweep through
-   * intermediate states. Clamped first, for the same reason as the single
-   * value, then written once, then pushed to the AudioParams.
-   */
-  setParameters (settings, { expectedRevision } = {}) {
-    if (!Array.isArray(settings) || settings.length === 0) {
-      return { ok: false, kind: 'change', message: 'needs a non-empty list of settings' }
-    }
 
-    const applied = []
-    for (const { nodeId, symbol, value } of settings) {
-      try {
-        const prepared = this.#prepareParameter(nodeId, symbol, value)
-        applied.push({ nodeId, symbol, value: prepared.applied, push: prepared.push })
-      } catch (error) {
-        return { ok: false, kind: 'change', message: error.message }
-      }
-    }
-
-    const result = this.apply(
-      applied.map(a => ({ op: 'setSetting', node: a.nodeId, symbol: a.symbol, value: a.value })),
-      { expectedRevision }
-    )
-    if (!result.ok) return result
-
-    for (const a of applied) {
-      a.push()
-      this.#emit({ type: 'parameter', nodeId: a.nodeId, symbol: a.symbol, value: a.value })
-    }
-
-    return { ...result, applied: applied.map(({ nodeId, symbol, value }) => ({ nodeId, symbol, value })) }
-  }
+  // The parameter operations are in ParameterOps.js; the dispatcher keeps the names callers use.
+  setParameter (nodeId, symbol, value) { return this.#parameters.setParameter(nodeId, symbol, value) }
+  setParameters (settings, options) { return this.#parameters.setParameters(settings, options) }
+  resetParameter (nodeId, symbol) { return this.#parameters.resetParameter(nodeId, symbol) }
+  getNodeState (nodeId) { return this.#parameters.getNodeState(nodeId) }
+  loadAsset (nodeId, key, bytes) { return this.#parameters.loadAsset(nodeId, key, bytes) }
+  audioParams (nodeId, symbol) { return this.#parameters.audioParams(nodeId, symbol) }
 
   /** Set any of a track's channel strip: gain, pan, mute, solo. */
   setTrackChannel (trackId, change, { expectedRevision } = {}) {
     return this.apply([{ op: 'setTrackChannel', track: trackId, ...change }], { expectedRevision })
-  }
-
-  /**
-   * The AudioParams a node's parameter is, for automation: one for a plugin, and for a composite one for every
-   * member parameter the exposed port drives. Empty for a parameter that is not there or a node not loaded.
-   */
-  audioParams (nodeId, symbol) {
-    const composite = this.#composites.get(nodeId)
-    if (composite && this.#engine) {
-      return parameterTargets(composite.entry.tree, symbol)
-        .map(target => this.#engine.get(this.#memberIds.get(flatIdOf(nodeId, target.path))).node.parameters?.get(target.symbol))
-        .filter(Boolean)
-    }
-    const param = this.engineNode(nodeId)?.node?.parameters?.get(symbol)
-    return param ? [param] : []
   }
 
   /** The engine node behind a model node, if it has been loaded. */

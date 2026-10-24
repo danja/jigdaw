@@ -375,7 +375,11 @@ jig:TransportShape a sh:NodeShape ;
         sh:message "A loop must start before it ends."
     ] ;
     sh:property [ sh:path jig:loopEnd ; sh:maxCount 1 ] ;
-    sh:property [ sh:path jig:loopEnabled ; sh:maxCount 1 ; sh:datatype xsd:boolean ] .
+    sh:property [ sh:path jig:loopEnabled ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [
+        sh:path jig:launchQuantise ; sh:maxCount 1 ; sh:in ( "none" "beat" "bar" "2bars" "4bars" ) ;
+        sh:message "A launch quantisation is none, beat, bar, 2bars or 4bars."
+    ] .
 
 jig:NodeShape_ a sh:NodeShape ;
     sh:targetClass jig:Node ;
@@ -553,6 +557,11 @@ jig:NoteShape a sh:NodeShape ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
         sh:minInclusive 1 ; sh:maxInclusive 127 ;
         sh:message "A note's velocity is 1 to 127. MIDI reads a note on of velocity 0 as a note off."
+    ] ;
+    sh:property [
+        sh:path jig:chance ;
+        sh:maxCount 1 ; sh:minExclusive 0 ; sh:maxInclusive 1 ;
+        sh:message "A note's chance of playing is above 0 and at most 1. Absent means it always plays."
     ] .
 
 jig:ConnectionShape a sh:NodeShape ;

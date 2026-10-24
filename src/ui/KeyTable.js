@@ -14,7 +14,9 @@ export const KEY_SCOPES = Object.freeze({
   chain: 'With a plugin focused in the chain strip',
   point: 'With an envelope point focused',
   script: 'In the script box',
-  browser: 'In the Browser'
+  browser: 'In the Browser',
+  menu: 'In a context menu',
+  grid: 'With a clip launcher cell focused'
 })
 
 const plain = key => ({ key })
@@ -27,6 +29,7 @@ export const KEY_ROWS = Object.freeze([
 
   { scope: 'clip', keys: 'Left or Right', does: 'Move the clip one grid step', press: [plain('ArrowLeft'), plain('ArrowRight')] },
   { scope: 'clip', keys: 'Shift + Left or Right', does: 'Make the clip one grid step shorter or longer', press: [{ key: 'ArrowLeft', shiftKey: true }, { key: 'ArrowRight', shiftKey: true }] },
+  { scope: 'clip', keys: 'Space', does: 'Add the clip to the selection, or take it out; Enter opens it', press: [plain(' ')] },
   { scope: 'clip', keys: 'S', does: 'Split at the playhead', press: [plain('s')] },
   { scope: 'clip', keys: 'D', does: 'Duplicate', press: [plain('d')] },
   { scope: 'clip', keys: 'M', does: 'Mute or unmute', press: [plain('m')] },
@@ -48,7 +51,13 @@ export const KEY_ROWS = Object.freeze([
 
   { scope: 'script', keys: 'Ctrl or Cmd + Enter', does: 'Run the script at the next bar; add Shift to run it now', press: [{ key: 'Enter', ctrlKey: true }, { key: 'Enter', ctrlKey: true, shiftKey: true }] },
 
-  { scope: 'browser', keys: 'Escape', does: 'Close the Browser and return to its button', press: [plain('Escape')] }
+  { scope: 'browser', keys: 'Escape', does: 'Close the Browser and return to its button', press: [plain('Escape')] },
+
+  { scope: 'menu', keys: 'Down or Up', does: 'Move to the next or previous action', press: [plain('ArrowDown'), plain('ArrowUp')] },
+  { scope: 'menu', keys: 'Home or End', does: 'Move to the first or last action', press: [plain('Home'), plain('End')] },
+  { scope: 'grid', keys: 'Arrow keys', does: 'Move to the cell above, below, left or right', press: [plain('ArrowUp'), plain('ArrowDown'), plain('ArrowLeft'), plain('ArrowRight')] },
+
+  { scope: 'menu', keys: 'Escape', does: 'Close the menu and return to the item it came from', press: [plain('Escape')] }
 ])
 
 // Files that handle keydown and whose keys are not in the table above. Each is a reason or a promise, so a new file

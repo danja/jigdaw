@@ -159,6 +159,15 @@ and real-time processing.
 - Keyboard before pointer. Anything reachable by mouse is reachable by tab, and the focus
   indicator is visible against the panel background.
 - Do not signal state by colour alone.
+- **Gestures on an item in a rich view** follow one default, and every gesture is a second way to do something a control or
+  key already does, never the only way ([docs/jiggy-features.md](docs/jiggy-features.md) lists what is built):
+  single click selects or opens the item's main view; double click opens or edits where that is the obvious default (a name
+  edits, an empty lane adds a clip, a plugin shows its controls); right click opens a context menu of the same actions that
+  are exposed elsewhere; hover may preview or reveal secondary controls, but never holds the only way to anything. Keyboard:
+  Enter activates, Space toggles selection where that fits, the Menu key or Shift+F10 opens the context menu, Escape dismisses
+  a menu or cancels a drag. Use the one menu, `src/ui/ContextMenu.js` (`attachMenu`), which leaves out an action that cannot act, keeps the
+  browser's own menu on a slider or field, and returns the focus to the item. A menu is checked in a real browser with a real
+  right click and with Shift+F10, since a DOM without a renderer proves neither.
 - **A control nobody can use is left out, not shown disabled.** Found twice: a port bar
   drawing 44 buttons where 43 were disabled modulation targets, and a channel strip's Level,
   Pan, Mute and Solo on a node declaring `jig:audioOutputs 0`, where none of the four reached

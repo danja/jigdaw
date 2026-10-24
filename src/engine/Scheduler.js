@@ -20,6 +20,7 @@
 
 import { automationBetween } from './Automation.js'
 import { playedContent } from '../model/ClipLoop.js'
+import { sounds } from './Chance.js'
 
 const NOTE_ON = 0x90
 const NOTE_OFF = 0x80
@@ -49,7 +50,7 @@ export function clipNotes (project) {
         if (on >= end) continue
         const off = Math.min(on + note.lengthBeats, end)
         if (!byNode.has(track.midiInput)) byNode.set(track.midiInput, [])
-        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity })
+        byNode.get(track.midiInput).push({ on, off, pitch: note.pitch, velocity: note.velocity, ...(note.chance === undefined ? {} : { chance: note.chance }) })
       }
     }
   }
@@ -145,6 +146,46 @@ export function notesBetween (transport, notes, start, end) {
   return found
 }
 
+/**
+ * The notes and controller events of the launcher's plays that fall in elapsed [start, end), as clipNotes and clipControllers give
+ * them for the arrangement: `{ on, off }` in elapsed seconds. A play repeats its pattern every `length` beats from `from` until `to`;
+ * a note is cut at the end of its pass and at `to`. The transport's loop is not applied: a launched pattern runs on the clock.
+ */
+export function launcherBetween (transport, plays, start, end) {
+  const notes = new Map()
+  const controllers = new Map()
+  if (plays.length === 0) return { notes, controllers }
+  const from = transport.beatAtSeconds(start)
+  const until = transport.beatAtSeconds(end)
+  const push = (map, nodeId, item) => { if (!map.has(nodeId)) map.set(nodeId, []); map.get(nodeId).push(item) }
+  for (const play of plays) {
+    const stop = play.to ?? Infinity
+    const first = Math.max(0, Math.floor((from - play.from) / play.length))
+    const last = Math.floor((Math.min(until, stop) - play.from) / play.length)
+    for (let pass = first; pass <= last; pass++) {
+      const origin = play.from + pass * play.length
+      const passEnd = Math.min(origin + play.length, stop)
+      for (const note of play.notes) {
+        const on = origin + note.startBeat
+        if (on < from || on >= until || on >= passEnd) continue
+        const off = Math.min(on + note.lengthBeats, passEnd)
+        push(notes, play.nodeId, { on: transport.secondsAtBeat(on), off: transport.secondsAtBeat(off), pitch: note.pitch, velocity: note.velocity, ...(note.chance === undefined ? {} : { chance: note.chance }) })
+      }
+      for (const event of play.controllers) {
+        const on = origin + event.atBeat
+        if (on < from || on >= until || on >= passEnd) continue
+        const bend = event.controller === 'pitchBend'
+        const bytes = bend
+          ? Uint8Array.from([PITCH_BEND, (event.value + 8192) & 0x7f, (event.value + 8192) >> 7])
+          : Uint8Array.from([CONTROL_CHANGE, event.controller, event.value])
+        const at = transport.secondsAtBeat(on)
+        push(controllers, play.nodeId, { on: at, off: at, bytes, bend })
+      }
+    }
+  }
+  return { notes, controllers }
+}
+
 /** An instruction from automationBetween with its times moved from elapsed seconds to the audio clock's. */
 const onClock = (instruction, origin) => ({
   ...instruction,
@@ -166,6 +207,7 @@ export class Scheduler {
   #playAudio
   #stopAudio
   #automation
+  #launcher
   #origin = null
   #until = 0
   // Started and not yet ended: { nodeId, pitch, off (elapsed), onFrame }.
@@ -187,8 +229,10 @@ export class Scheduler {
    * - `automation`: `{ envelopes(), apply(envelope, instruction), stop() }`, or nothing for a host that
    *   moves no parameters. `envelopes()` is `[{ id, target, points }]` as the project holds them; `apply`
    *   gets each instruction of Automation.js with its times on the audio clock.
+   * - `launcher()`: the plays of the clip launcher as they are now (LauncherPlays.js), or nothing for a host without one. While a
+   *   play covers a node, that node's arrangement notes and events inside the same beats are not played.
    */
-  constructor ({ now, sampleRate, lookahead, notes, controllers, transport, send, audio, playAudio, stopAudio, automation }) {
+  constructor ({ now, sampleRate, lookahead, notes, controllers, transport, send, audio, playAudio, stopAudio, automation, launcher }) {
     if (typeof now !== 'function' || typeof notes !== 'function' || typeof transport !== 'function' || typeof send !== 'function') {
       throw new Error('Scheduler needs now, notes, transport and send')
     }
@@ -213,6 +257,8 @@ export class Scheduler {
       throw new Error('Scheduler needs automation as { envelopes, apply, stop }, or none')
     }
     this.#automation = automation ?? null
+    if (launcher !== undefined && typeof launcher !== 'function') throw new Error('Scheduler needs launcher as a function, or none')
+    this.#launcher = launcher ?? null
   }
 
   get running () { return this.#origin !== null }
@@ -257,17 +303,40 @@ export class Scheduler {
       ? normal
       : [{ from: this.#seed, to: normal[0]?.to ?? Infinity, lo: this.#seed, hi: normal[0]?.hi ?? Infinity, shift: 0 }, ...normal.filter(p => p.from > 0)]
 
-    for (const [nodeId, notes] of this.#notes()) {
+    const plays = this.#launcher ? this.#launcher() : []
+    const launched = launcherBetween(transport, plays, start, end)
+    // The beats a launched slot covers on a node: the arrangement is silent there, so a loop can be put over a song.
+    const covered = (nodeId, beat) => plays.some(p => p.nodeId === nodeId && beat >= p.from && beat < (p.to ?? Infinity))
+    const playing = (nodeId, notes) => (plays.some(p => p.nodeId === nodeId) ? notes.filter(n => !covered(nodeId, n.on)) : notes)
+    for (const [nodeId, listed] of this.#notes()) {
+      const notes = playing(nodeId, listed)
       for (const note of notesBetween(transport, notes, start, end)) {
+        // A note with a chance sounds or not by a draw from where and when it falls (Chance.js).
+        if (!sounds(note.chance, `${nodeId}|${note.pitch}|${note.on.toFixed(6)}`)) continue
         const onFrame = this.#frame(note.on)
         add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1)
         this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame })
       }
     }
+    for (const [nodeId, list] of launched.notes) {
+      for (const note of list) {
+        if (!sounds(note.chance, `${nodeId}|${note.pitch}|${note.on.toFixed(6)}`)) continue
+        const onFrame = this.#frame(note.on)
+        add(nodeId, onFrame, Uint8Array.from([NOTE_ON, note.pitch, note.velocity]), 1)
+        this.#sounding.push({ nodeId, pitch: note.pitch, off: note.off, onFrame })
+      }
+    }
+    for (const [nodeId, list] of launched.controllers) {
+      for (const event of list) {
+        add(nodeId, this.#frame(event.on), event.bytes, 0.5)
+        if (event.bend) this.#bent.add(nodeId)
+      }
+    }
     // Controllers and the pitch bend wheel, in the same windows. At one frame they come after the offs and before the ons,
     // so a note struck on the beat is struck with the new value.
     if (this.#controllers) {
-      for (const [nodeId, events] of this.#controllers()) {
+      for (const [nodeId, listed] of this.#controllers()) {
+        const events = playing(nodeId, listed)
         for (const event of notesBetween(transport, events, start, end)) {
           add(nodeId, this.#frame(event.on), event.bytes, 0.5)
           if (event.bend) this.#bent.add(nodeId)

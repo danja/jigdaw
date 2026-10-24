@@ -82,6 +82,32 @@ starts on the simple page.
   and the value in decibels are the platform's), then Mute over Solo. A channel is 96px wide. Channels sit side by side and wrap, with
   the master at the right end. Seen in Chrome on 2026-10-24: a click above the
   middle of the master fader raised it to +2.2 dB and Down lowered it a step each press.
+  An FX button under each channel (FX 2 when two plugins are on it) opens a list of that track's plugins in signal order. Remove
+  takes one off, healing the chain as Remove on the Plugins tab does, and Add plugin opens the Browser with that track as the place
+  the next Load goes. Seen in Chrome on 2026-10-24: Add then Load put a plugin on the first track, and Remove took it off and left
+  the focus on FX.
+- **Mouse gestures and context menus.** Right click on a clip, a track's header, an empty stretch of lane, a plugin in a chain or a
+  mixer channel opens a menu of the actions that thing already has on buttons and keys; the Menu key or Shift+F10 opens the same menu
+  for whatever has the focus. A menu follows the ARIA menu pattern (Up, Down, Home, End, Enter, Escape, focus back where it came from),
+  and an action that cannot act is left out. Double click on empty lane adds a MIDI clip there on the grid, on a track's name moves the
+  focus to its name field, and on a plugin in a chain shows its controls on the Plugins tab. Escape during a clip, track or folder drag puts it
+  back. A single click still selects, and on a clip also opens it; Space on a focused clip adds it to the selection or takes it out, and Enter opens it. Seen in Chrome on 2026-10-24: the clip, lane, track and mixer menus,
+  Duplicate by keyboard from a menu, Shift+F10 on a track name, and a double click on a name selecting its field. Not yet: a hover
+  preview, menus on clips in the piano roll or on automation points.
+- **Clip launcher.** The Launcher tab is a grid: a column per track that has a MIDI input, a row per scene, and a cell per slot that says its state
+  in words (stopped, queued, playing, stopping, or empty). Pressing a cell launches its clip at the next boundary of the Launch on setting; pressing
+  an empty cell adds a one-bar clip and opens the piano roll; a scene button launches a row, Stop stops a track and Stop all every track. Arrow keys
+  move over the grid, and right click or the Menu key offers Launch, Stop, Edit the notes and Delete. The tools `launcher_launch`, `launcher_stop`,
+  `launcher_quantise` and `launcher_state` do the same for an agent. Launching changes no revision and is not saved. See
+  [clip-launcher.md](clip-launcher.md).
+- **Euclidean rhythm.** Above the note roll, Note, Onsets, Steps, Rotate and A step is, with Lay rhythm, put that many onsets spread as evenly as they
+  can be over the steps into the open clip, repeated to fill it. Notes already at that note are replaced and the rest are kept, and the text beside it says
+  so. One undo step; the same edit as the `clip_euclidean` tool. Seen in Chrome: 5 in 8 sixteenths laid over a four beat clip.
+- **Chance on a note.** Choose notes in the piano roll (or none, for all of them), pick a percentage beside Chance and press Set chance: each of those notes
+  then sounds only that often each time it comes round, drawn from where and when it falls so a render repeats exactly, and again on every pass of a loop. A note with a
+  chance is a half-filled square in the roll and is said as "50 percent chance of sounding"; 100% takes the chance away. The tool is `clip_transform_notes` with
+  `setChance`, and `chance` can be given on a note to `clip_set_notes`.
+- **Time readout.** The transport bar shows the position as minutes, seconds and tenths (from the tempo map, so it follows tempo changes and loops) beside the bar and beat.
 - **Settings.** A Settings tab holds what is not part of playing: Line tracks up for latency, the project's title, author and notes, and
   the Local agent and Agent bridge connections.
 - **Output meter with a clip hold.** The meter beside the transport shows the level of the mix, and a Clip button appears when it
@@ -164,7 +190,7 @@ starts on the simple page.
 
 ## For agents
 
-- **62 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
+- **67 tools** over the same dispatcher the page uses, through WebMCP: search and load plugins, edit tracks
   and clips, connect and bypass and reorder nodes, set and reset parameters, write envelopes, undo and redo, and play and stop.
   Nothing an agent does goes around the operations the interface uses, so it is undoable and checked the same
   way ([webmcp.md](webmcp.md)).

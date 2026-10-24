@@ -212,7 +212,7 @@ describe('the application keeps a panel current', () => {
   // checked in the source, the same way tests/ui/Focus.test.js checks that
   // drawRack calls preserveFocus. The panel is built in drawSlot, one plugin's
   // part of the rack, and the slice ends at that function's closing brace.
-  const app = appFile('web/app/Rack.js')
+  const app = appFile('web/app/Rack.js') + appFile('web/app/RackSlot.js')
   const drawStart = app.indexOf('function drawSlot')
   const draw = app.slice(drawStart, app.indexOf('\n  }\n', drawStart))
 

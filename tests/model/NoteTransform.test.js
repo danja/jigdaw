@@ -177,3 +177,28 @@ describe('strum', () => {
     expect(project.clip('clip-1').notes.map(n => n.startBeat)).toEqual([0, 0.25])
   })
 })
+
+describe('setChance', () => {
+  const notes = [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }, { startBeat: 1, lengthBeats: 1, pitch: 62, velocity: 100, chance: 0.5 }]
+
+  it('gives every note the chance, and takes it away with 1', async () => {
+    const { setChance } = await import('../../src/model/NoteTransform.js')
+    expect(setChance(notes, 0.25).map(n => n.chance)).toEqual([0.25, 0.25])
+    const cleared = setChance(notes, 1)
+    expect(cleared.every(n => !('chance' in n))).toBe(true)
+    expect(notes[1].chance).toBe(0.5)
+  })
+
+  it('refuses a chance that is not above 0 and at most 1', async () => {
+    const { setChance } = await import('../../src/model/NoteTransform.js')
+    for (const bad of [0, -0.1, 1.5, NaN, '0.5', undefined]) expect(() => setChance(notes, bad), String(bad)).toThrow(/chance/)
+  })
+
+  it('is one of the transforms the tool and the roll offer, applied to the chosen notes only', async () => {
+    const { NOTE_TRANSFORMS, describeNoteTransform } = await import('../../src/model/NoteTransform.js')
+    expect(NOTE_TRANSFORMS).toContain('setChance')
+    const project = { clip: () => ({ id: 'c', kind: 'midi', lengthBeats: 4, notes }) }
+    const [change] = describeNoteTransform(project, 'c', 'setChance', { chance: 0.75 }, { indices: [0] })
+    expect(change.notes.map(n => n.chance)).toEqual([0.75, 0.5])
+  })
+})

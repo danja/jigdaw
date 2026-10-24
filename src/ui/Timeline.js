@@ -46,6 +46,7 @@ import { createTimelineTools } from './TimelineTools.js'
 import { Selection } from '../model/Selection.js'
 import { barBeat, describeClip } from './ClipText.js'
 import { createClipButton } from './ClipButton.js'
+import { attachMenu } from './ContextMenu.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT } from './TimeView.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
 
@@ -83,7 +84,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null }, { view = new TimeView(), selection = new Selection() } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -180,7 +181,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx())
   }, { passive: false })
 
-  const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim })
+  const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu })
 
   // A folder is a run of neighbouring tracks that give the same name; two separate runs are two bars.
   // The folders hidden right now, read from the layout on each draw: a folder is hidden when any of its tracks says so.
@@ -255,7 +256,15 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       document.removeEventListener('pointermove', over)
       document.removeEventListener('pointerup', up)
       document.removeEventListener('pointercancel', clear)
+      document.removeEventListener('keydown', escape)
       for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+    }
+    // Escape drops the folder where it started: nothing is moved.
+    function escape (e) {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      clear()
+      folderBars.get(key)?.element.querySelector('.folder-toggle')?.focus()
     }
     function over (e) {
       const hit = e.target?.closest?.('.timeline-row')?.dataset.track
@@ -279,6 +288,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     document.addEventListener('pointermove', over)
     document.addEventListener('pointerup', up)
     document.addEventListener('pointercancel', clear)
+    document.addEventListener('keydown', escape)
   }
 
   /**
@@ -296,7 +306,15 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       document.removeEventListener('pointermove', over)
       document.removeEventListener('pointerup', up)
       document.removeEventListener('pointercancel', cancel)
+      document.removeEventListener('keydown', escape)
       for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
+    }
+    // Escape drops the track where it started: the release that follows moves nothing.
+    function escape (e) {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      clear()
+      document.getElementById(`show-track-${id}`)?.focus()
     }
     function over (e) {
       const hit = e.target?.closest?.('.timeline-row')?.dataset.track
@@ -316,6 +334,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     document.addEventListener('pointermove', over)
     document.addEventListener('pointerup', up)
     document.addEventListener('pointercancel', cancel)
+    document.addEventListener('keydown', escape)
   }
 
   function draw (args) {
@@ -372,7 +391,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.dataset.track = track.id
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep, onEdit: onEditTrack, onDeleteTrack, menu,
           onSelect: (id, { toggle }) => (toggle ? selection.toggle('track', id) : selection.set('track', [id]))
         })
         const lane = document.createElement('div')
@@ -381,8 +400,22 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         const body = document.createElement('div')
         body.className = 'timeline-body'
         body.append(header.element, lane)
-        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]), onBypass, onMove: onMoveInChain, onReplace })
+        const strip = createChainStrip(document, { onSelect: id => selection.set('node', [id]), onBypass, onMove: onMoveInChain, onReplace, onRemove: onRemoveNode, onShow: onShowNode, menu })
         const automation = createEnvelopeLanes(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, view })
+        // Double click on empty lane adds a MIDI clip there, on the grid; right click offers that and an audio file. A clip stops
+        // its own contextmenu event, and a double click on one lands on the clip, not here.
+        const beatAt = event => Math.max(0, snapBeat((event.clientX - lane.getBoundingClientRect().left) / ppb(), event))
+        lane.addEventListener('dblclick', event => { if (event.target === lane) onAdd(track.id, beatAt(event)) })
+        if (menu) {
+          attachMenu(lane, menu, event => {
+            if (event.target !== lane) return null
+            const at = beatAt(event)
+            return [
+              { label: 'Add a MIDI clip here', run: () => onAdd(track.id, at) },
+              { label: 'Add an audio file here', run: () => onAddAudio(track.id, at) }
+            ]
+          })
+        }
         row.append(body, automation.element, strip.element)
         entry = { row, header, lane, strip, automation }
         rows.set(track.id, entry)
@@ -397,7 +430,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       if (layout.color) entry.row.style.setProperty('--track-color', layout.color); else entry.row.style.removeProperty('--track-color')
       entry.header.update({
         label, channel: track.channel ?? {}, mixable: mixable(track), silent: silent(track), at, where: barBeat(at, beatsPerBar), selected: selection.has('track', track.id),
-        color: layout.color, size: layout.laneSize, latency: latencyFor(track), kind: kindFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
+        color: layout.color, size: layout.laneSize, first: tracks[0] === track, last: tracks.at(-1) === track, latency: latencyFor(track), kind: kindFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
       })
       entry.strip.update(chainFor(track), { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
       entry.automation.update(lanesFor(track), { beatsPerBar, width })
