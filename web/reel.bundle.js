@@ -30732,8 +30732,8 @@ async function openProject(dispatcher, read, { onLoading = () => {
     read.changes.filter((c3) => c3.op === "addNode"),
     read.changes.filter((c3) => c3.op === "addConnection")
   );
-  for (const change of additions) {
-    onLoading(change.pluginIri);
+  for (const [at, change] of additions.entries()) {
+    onLoading(change.pluginIri, at + 1, additions.length);
     const { op, pluginIri, ...node } = change;
     const result = await dispatcher.addPlugin(pluginIri, node);
     if (!result.ok) {
@@ -30772,6 +30772,67 @@ async function listPresets({ fetch: fetch2, index }) {
 }
 async function fetchPreset({ fetch: fetch2, url }) {
   return (await fetchOk(fetch2, url)).text();
+}
+
+// web/app/LoadProgress.js
+function pluginName(iri3) {
+  try {
+    const parts = new URL(iri3).pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] ?? iri3;
+  } catch {
+    return String(iri3);
+  }
+}
+function createLoadProgress(doc) {
+  const root = doc.createElement("div");
+  root.id = "load-progress";
+  root.setAttribute("role", "status");
+  root.hidden = true;
+  root.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 16px;background:var(--panel);color:var(--fg);border-top:1px solid var(--line);font-size:16px";
+  const text = doc.createElement("span");
+  text.style.cssText = "flex:1 1 14rem";
+  const bar = doc.createElement("progress");
+  bar.style.cssText = "flex:1 1 8rem;min-width:6rem;height:1rem";
+  const dismiss = doc.createElement("button");
+  dismiss.type = "button";
+  dismiss.textContent = "Dismiss";
+  dismiss.style.cssText = "min-height:44px;min-width:44px;font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:0 14px";
+  dismiss.hidden = true;
+  dismiss.addEventListener("click", () => {
+    root.hidden = true;
+  });
+  root.append(text, bar, dismiss);
+  doc.body.append(root);
+  const show = () => {
+    root.hidden = false;
+  };
+  return {
+    element: root,
+    /** A plugin is about to be fetched: `index` counts from 1 of `total`. */
+    loading(iri3, index, total) {
+      show();
+      dismiss.hidden = true;
+      bar.hidden = false;
+      bar.max = total;
+      bar.value = index - 1;
+      text.style.color = "";
+      const words = `Loading ${pluginName(iri3)}, ${index} of ${total}`;
+      text.textContent = words;
+      bar.setAttribute("aria-label", words);
+    },
+    /** Everything has been tried. A clean open goes away; a failure stays, in words, until dismissed. */
+    finished({ loaded, total, errors }) {
+      bar.hidden = true;
+      if (errors.length === 0) {
+        root.hidden = true;
+        return;
+      }
+      show();
+      dismiss.hidden = false;
+      text.style.color = "var(--err)";
+      text.textContent = `Something went wrong: ${loaded.size} of ${total} plugins loaded. ${errors.join(" ")}`;
+    }
+  };
 }
 
 // src/host/Zip.js
@@ -30929,6 +30990,7 @@ function unpackSession(files) {
 // web/app/Sessions.js
 function createSessions(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
+  const progress = createLoadProgress(document2);
   let openPresetByLabel = () => Promise.resolve();
   async function pack({ recorded = true } = {}) {
     const { dispatcher, media } = ctx2;
@@ -30996,15 +31058,25 @@ function createSessions(ctx2) {
     for (const [name, bytes] of files) {
       ctx2.media.put(new URL(name, ctx2.media.base).href, bytes);
     }
-    const opened = await openProject(d, read, {
-      onLoading: (iri3) => log2(`GET ${iri3}`),
-      onCleared: () => {
-        ctx2.rack.reset();
-        ctx2.editors.closeAll();
-        ctx2.arrangement.reset();
-      }
-    });
+    let opened;
+    try {
+      opened = await openProject(d, read, {
+        onLoading: (iri3, index, total) => {
+          log2(`GET ${iri3}`);
+          progress.loading(iri3, index, total);
+        },
+        onCleared: () => {
+          ctx2.rack.reset();
+          ctx2.editors.closeAll();
+          ctx2.arrangement.reset();
+        }
+      });
+    } catch (error2) {
+      progress.finished({ loaded: /* @__PURE__ */ new Set(), total: 0, errors: [error2.message] });
+      throw error2;
+    }
     for (const message of opened.errors) log2(message, "error");
+    progress.finished(opened);
     if (!opened.ok) return;
     try {
       let layout = { positions: /* @__PURE__ */ new Map(), tracks: /* @__PURE__ */ new Map() };
@@ -31038,6 +31110,7 @@ function createSessions(ctx2) {
     ctx2.history.updateButtons();
     ctx2.expose();
     log2(`opened ${opened.loaded.size} of ${opened.total} nodes`, "ok");
+    return opened;
   }
   function mount() {
     $2("save").addEventListener("click", () => saveSession().catch((error2) => log2(error2.message, "error")));

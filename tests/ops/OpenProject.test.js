@@ -108,6 +108,12 @@ describe('openProject', () => {
     await openProject(dispatcher, read, { onLoading: iri => seen.push(iri) })
     expect(seen.sort()).toEqual([`${SITE}plugins/nosuch/`, `${SITE}plugins/tremolo/`, `${SITE}plugins/tremolo/`])
   })
+
+  it('counts the plugin being fetched from 1 of the total, so a bar can be drawn', async () => {
+    const counts = []
+    await openProject(dispatcher, read, { onLoading: (iri, index, total) => counts.push([index, total]) })
+    expect(counts).toEqual([[1, 3], [2, 3], [3, 3]])
+  })
 })
 
 describe('inSignalOrder', () => {

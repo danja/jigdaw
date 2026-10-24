@@ -44,7 +44,7 @@ export function inSignalOrder (nodes, connections) {
  * rather than abandoning the rest: an unreachable origin should cost one node,
  * not the session.
  *
- * `onLoading(pluginIri)` is called before each fetch, for a log.
+ * `onLoading(pluginIri, index, total)` is called before each fetch, for a log and a progress bar; index counts from 1.
  * `onCleared()` is called once the old nodes are gone and before any new one
  * exists, which is when a surface caching anything by node id has to drop it:
  * the new nodes can reuse the old ids for different plugins.
@@ -75,8 +75,8 @@ export async function openProject (dispatcher, read, { onLoading = () => {}, onC
   const additions = inSignalOrder(
     read.changes.filter(c => c.op === 'addNode'),
     read.changes.filter(c => c.op === 'addConnection'))
-  for (const change of additions) {
-    onLoading(change.pluginIri)
+  for (const [at, change] of additions.entries()) {
+    onLoading(change.pluginIri, at + 1, additions.length)
     // The whole change, not a chosen few of its fields. The reader produces
     // everything a node carries, state included, and picking some of them
     // here is how a saved mix came back at unity.

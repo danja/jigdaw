@@ -260,14 +260,16 @@ async function openTune (tune) {
   }
   log(`Opening ${tune.label}...`)
   const text = await fetchPreset({ fetch: url => fetch(url), url: tune.url })
-  await ctx.sessions.openSession(text, tune.url)
+  const opened = await ctx.sessions.openSession(text, tune.url)
   current = tune.url
   picker.draw(tunes, { current })
   $('now').hidden = false
   $('playing').textContent = `Now playing: ${tune.label}`
   panels.clear()
   redraw()
-  log(`${tune.label} is ready. Press Play.`)
+  // A tune with a plugin missing opens, quietly silent in one place: say so rather than call it ready.
+  if (opened && opened.errors.length > 0) log(`${tune.label} opened with ${opened.loaded.size} of ${opened.total} instruments. ${opened.errors.join(' ')}`, 'error')
+  else log(`${tune.label} is ready. Press Play.`)
 }
 
 listPresets({ fetch: url => fetch(url), index: new URL('presets/index.json', document.baseURI).href })

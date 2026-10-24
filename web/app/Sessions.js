@@ -17,11 +17,13 @@ import { openProject } from '../../src/ops/OpenProject.js'
 import { listPresets, fetchPreset } from '../../src/ui/Presets.js'
 import { encodeState } from '../../src/host/StateCodec.js'
 import { clipAudio } from '../../src/engine/Scheduler.js'
+import { createLoadProgress } from './LoadProgress.js'
 import { readZip } from '../../src/host/Zip.js'
 import { packSession, unpackSession } from '../../src/host/SessionArchive.js'
 
 export function createSessions (ctx) {
   const { document, $, log } = ctx
+  const progress = createLoadProgress(document)
   let openPresetByLabel = () => Promise.resolve()
 
   /**
@@ -111,11 +113,19 @@ export function createSessions (ctx) {
       ctx.media.put(new URL(name, ctx.media.base).href, bytes)
     }
 
-    const opened = await openProject(d, read, {
-      onLoading: iri => log(`GET ${iri}`),
-      onCleared: () => { ctx.rack.reset(); ctx.editors.closeAll(); ctx.arrangement.reset() }
-    })
+    let opened
+    try {
+      opened = await openProject(d, read, {
+        onLoading: (iri, index, total) => { log(`GET ${iri}`); progress.loading(iri, index, total) },
+        onCleared: () => { ctx.rack.reset(); ctx.editors.closeAll(); ctx.arrangement.reset() }
+      })
+    } catch (error) {
+      // A load that throws must not leave "Loading" on the screen for good.
+      progress.finished({ loaded: new Set(), total: 0, errors: [error.message] })
+      throw error
+    }
     for (const message of opened.errors) log(message, 'error')
+    progress.finished(opened)
     if (!opened.ok) return
 
     // After the nodes exist: editor metadata naming nothing is dropped. Always
@@ -155,6 +165,7 @@ export function createSessions (ctx) {
     ctx.history.updateButtons()
     ctx.expose()
     log(`opened ${opened.loaded.size} of ${opened.total} nodes`, 'ok')
+    return opened
   }
 
 
