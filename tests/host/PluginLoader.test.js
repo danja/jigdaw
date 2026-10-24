@@ -1,5 +1,5 @@
 // tests/host/PluginLoader.test.js
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Readable } from 'node:stream'
@@ -8,6 +8,7 @@ import ParserN3 from '@rdfjs/parser-n3'
 import { PluginLoader, STEPS } from '../../src/host/PluginLoader.js'
 import { shapeValidatorFromFile, validateFile } from '../../src/validate/files.js'
 import { digestOf } from '../../src/host/Integrity.js'
+import { READY_TIMEOUT_MS } from '../../src/host/Instantiate.js'
 
 const root = resolve(import.meta.dirname, '../..')
 const parse = (text, baseIRI) =>
@@ -390,5 +391,32 @@ describe('PluginLoader.instantiate', () => {
       .catch(e => e)
     expect(error.step).toBe(STEPS.ready)
     expect(error.message).toContain('out of memory')
+  })
+
+  it('waits the full ready limit for a slow processor, then names the wait and the likely cause', async () => {
+    const { profile, granted } = await loadedProfile()
+    const patched = patchDigests(profile,
+      await digestOf(bytesOf(PROCESSOR_SOURCE)), await digestOf(MODULE_BYTES), await digestOf(ASSET_BYTES))
+    const loader = new PluginLoader({ fetch: fakeFetch(await routesFor()), parse, validate: () => true })
+    class SilentNode extends FakeNode {
+      constructor (...args) { super(...args); this.port.postMessage = () => {} }
+    }
+    // Only the timeout is faked: the loader's own awaits before it are real.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const pending = loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: SilentNode }).catch(e => e)
+      for (let i = 0; i < 50 && vi.getTimerCount() === 0; i++) await new Promise(resolve => setImmediate(resolve))
+      expect(vi.getTimerCount(), 'the ready wait started').toBeGreaterThan(0)
+      await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS - 1000)
+      let settled = false
+      pending.then(() => { settled = true })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(settled, 'still waiting just before the limit').toBe(false)
+      await vi.advanceTimersByTimeAsync(2000)
+      const error = await pending
+      expect(error.step).toBe(STEPS.ready)
+      expect(error.message).toContain(`did not report ready in ${READY_TIMEOUT_MS / 1000} seconds`)
+      expect(error.message).toContain('audio thread may be too busy')
+    } finally { vi.useRealTimers() }
   })
 })

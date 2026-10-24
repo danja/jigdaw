@@ -25,6 +25,13 @@ Where to start, in order. Everything else is below and is not ordered.
 
 Each of these is blocked on a choice, not on work.
 
+- [ ] **"Fender into the Ropery" does not load on a phone** (user report 2026-10-24, strandz.it/jigdaw on mobile: "room: ferrite did
+      not report ready", no sound, and the next example stalls). Not Monochord: the Ropery Ferrite times out. Measured on
+      the desktop, one Ferrite running the 294 KB Fender capture is 2.8x realtime, so a phone is likely below realtime; a
+      saturated audio thread would also leave the next plugin's init unanswered. Unconfirmed on the device. Done so far: the
+      ready limit is 30 s (`READY_TIMEOUT_MS`, was 10), a failed plugin is now shown in words with a progress bar. Open:
+      load every node before connecting any, so a running amp cannot starve the next init; a lighter capture or a
+      "needs a fast device" note on this preset; ask the phone's owner for the model and what the bar last said.
 - [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report, no buffer size or version yet. Mop costs
       1.70x realtime through the adapter's pure-interpreter WAMR, so every realtime block overruns. Output is otherwise correct,
       so it is throughput. 8b8 costs 0.20x through the same path and Mop under node's JIT 0.06x, which is why no browser or

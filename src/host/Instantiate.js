@@ -127,14 +127,20 @@ function transferablesIn (value, into = [], seen = new Set()) {
   return into
 }
 
+// How long a processor has to say it is ready. A phone's audio thread is shared with every plugin already running, and
+// a heavy one (a neural amp model) can leave it too busy to answer the next plugin's init for a long while, so the
+// limit is generous: it exists to catch a processor that never will, not to rush one that is slow.
+export const READY_TIMEOUT_MS = 30000
+
 /** Post init and await ready. Contract section 3.1 step 7. */
 function init (node, moduleBytes, assets, granted, context, profile, state) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null
       reject(new LoadError(STEPS.ready,
-        `"${profile.processor.registeredName}" did not report ready. A processor must post { type: "ready" } once its buffers exist.`))
-    }, 10000)
+        `"${profile.processor.registeredName}" did not report ready in ${READY_TIMEOUT_MS / 1000} seconds. A processor must post ` +
+        '{ type: "ready" } once its buffers exist. On a slow device the audio thread may be too busy running the plugins already loaded.'))
+    }, READY_TIMEOUT_MS)
 
     node.port.onmessage = event => {
       const message = event.data

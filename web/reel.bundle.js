@@ -18462,15 +18462,16 @@ function transferablesIn(value2, into = [], seen = /* @__PURE__ */ new Set()) {
   for (const item of Array.isArray(value2) ? value2 : Object.values(value2)) transferablesIn(item, into, seen);
   return into;
 }
+var READY_TIMEOUT_MS = 3e4;
 function init(node, moduleBytes, assets, granted, context, profile, state) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       node.port.onmessage = null;
       reject(new LoadError(
         STEPS.ready,
-        `"${profile.processor.registeredName}" did not report ready. A processor must post { type: "ready" } once its buffers exist.`
+        `"${profile.processor.registeredName}" did not report ready in ${READY_TIMEOUT_MS / 1e3} seconds. A processor must post { type: "ready" } once its buffers exist. On a slow device the audio thread may be too busy running the plugins already loaded.`
       ));
-    }, 1e4);
+    }, READY_TIMEOUT_MS);
     node.port.onmessage = (event) => {
       const message = event.data;
       if (message?.type === "ready") {
