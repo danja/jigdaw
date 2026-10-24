@@ -9,7 +9,7 @@
 // scale points as blank nodes, in a repository whose conventions forbid them.
 // The convention was three years of prose and nothing checked it.
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { parseText } from '../../src/rdf/parse.js'
 import {
@@ -172,8 +172,12 @@ describe('every Turtle document in this repository', () => {
 
   it('canonicalises, which is to say contains no blank node', async () => {
     const { execFileSync } = await import('node:child_process')
+    // Only files that still exist: the index keeps listing a deleted or renamed path until the
+    // change is staged, and reading it would report ENOENT instead of what this guard is for.
+    // tests/docs/conventions.test.js filters its walk the same way.
     const tracked = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'],
       { cwd: root, encoding: 'utf8' }).split('\n').filter(f => f.endsWith('.ttl'))
+      .filter(f => existsSync(join(root, f)))
 
     expect(tracked.length, 'no Turtle files found, so this checked nothing').toBeGreaterThan(5)
 
