@@ -47,7 +47,7 @@ suite('ferrite, a neural amp model and a cabinet impulse response', () => {
     const { profile } = await makeLoader(validator).loadProfile(CANONICAL)
     expect(profile.label).toBe('Ferrite')
     expect(profile.assets.map(a => a.iri.split('#').pop()).sort()).toEqual(['ir', 'nam'])
-    expect(profile.ports.map(p => p.symbol).sort()).toEqual(['amp', 'input', 'mix', 'output'])
+    expect(profile.ports.map(p => p.symbol).sort()).toEqual(['amp', 'input', 'light', 'mix', 'output'])
   })
 
   it('loads and reports ready, both assets fetched and verified alongside the module', async () => {

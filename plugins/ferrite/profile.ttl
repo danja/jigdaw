@@ -10,6 +10,7 @@
 @prefix trn:   <http://purl.org/stuff/transmissions/> .
 @prefix pu:    <http://purl.org/stuff/plugin-universe/> .
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
+@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
@@ -33,6 +34,7 @@
     trn:caution "One amp model, run on the mean of both input channels: an amp is a mono device, and a real capture is too heavy to run twice." ;
     trn:caution "Impulse responses are normalised to unit energy, so a response sets the tone and not the level. Stereo responses are mixed to mono." ;
     trn:caution "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did." ;
+    trn:caution "Light runs the smallest network of a slimmable .nam, about a seventh of the work and a little less detailed, for a phone or a busy session. A .nam that is not slimmable has one network and ignores it." ;
     trn:format trn:Jig , trn:WebAudio ;
     pu:licenceId "Apache-2.0" ;
 
@@ -47,7 +49,7 @@
     jig:processor <#processor> ;
     jig:asset <#nam> , <#ir> ;
 
-    lv2:port <#input> , <#output> , <#amp> , <#mix> .
+    lv2:port <#input> , <#output> , <#amp> , <#mix> , <#light> .
 
 <#module>
     a jig:Module ;
@@ -55,14 +57,14 @@
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi1 ;
     jig:wasmFeature jig:Simd128 ;
-    jig:integrity "sha384-xxym0XvQUpx9Py9vfGjH+TLE9yKN4ePIZ/XQ82vqQfyoetc41LnIpP8QNAumuNoA" .
+    jig:integrity "sha384-tLu69AtWV7s98Qr+e8Q4OBLmIQj3AVV+H9R2tYtWM0X0PHd/FEh6mbxsM+GxLd5N" .
 
 <#processor>
     a jig:Processor ;
     jig:location <ferrite-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "ferrite" ;
-    jig:integrity "sha384-02K0BqijijJue7izxA4+czPmL/MCqWKLwu6BUXx99pSCcucJ0kVz2mbmj90FMcgJ" .
+    jig:integrity "sha384-3iIa5Geuq66ksXxR8vOZFsUpAXDcKN+aFp4DBkr1VaNtUW7k2D6q4frwbmwznO3I" .
 
 <#nam>
     a jig:Resource ;
@@ -102,3 +104,10 @@
     lv2:symbol "mix" ; lv2:name "Mix" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 3 .
+
+<#light>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "light" ; lv2:name "Light" ;
+    lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    jig:paramIndex 4 ;
+    lv2:portProperty lv2:toggled .

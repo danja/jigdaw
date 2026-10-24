@@ -56,6 +56,8 @@ static mut INPUT_TRIM: f32 = 1.0;
 static mut OUTPUT_LEVEL: f32 = 1.0;
 static mut AMP_ON: bool = true;
 static mut MIX: f32 = 1.0;
+// Light picks the smallest network of a slimmable .nam (about a seventh of the work); a plain .nam has only one and ignores it.
+static mut LIGHT: bool = false;
 
 // Set once, in jig_init, and read by both loaders below: nam-rs's own
 // documentation is explicit that a rate mismatch "produces silently wrong
@@ -199,6 +201,14 @@ pub extern "C" fn jig_output_ptr(channel: u32) -> u32 {
     unsafe { OUTPUT[(channel as usize).min(1)].as_ptr() as u32 }
 }
 
+/// Choose which network of a slimmable model runs: a size of 0 selects the first (smallest) submodel, 1 the last (full).
+/// Switching only changes an index, so it is safe on the audio thread. A model that is not slimmable has one network.
+fn apply_size(model: &mut Model, light: bool) {
+    if let Some(slim) = model.as_slimmable_mut() {
+        slim.set_slim_size(if light { 0.0 } else { 1.0 });
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn jig_set_param(index: u32, value: f32) {
     unsafe {
@@ -207,6 +217,10 @@ pub extern "C" fn jig_set_param(index: u32, value: f32) {
             1 => OUTPUT_LEVEL = value,
             2 => AMP_ON = value >= 0.5,
             3 => MIX = value.clamp(0.0, 1.0),
+            4 => {
+                LIGHT = value >= 0.5;
+                if let Some(model) = MODEL.as_mut() { apply_size(model, LIGHT); }
+            }
             _ => {}
         }
     }
@@ -254,14 +268,19 @@ pub extern "C" fn jig_load_nam(len: u32) -> i32 {
         // real audio reaches it, exactly as nam-rs's own documentation
         // describes: without this the first receptive_field() samples are a
         // startup transient rather than the model's real response.
-        let receptive_field = model.receptive_field().min(MAX_FRAMES * 64);
+        // Every network of a slimmable model is settled, not only the one that will run: the Light switch can be
+        // flipped at any moment and a network that has only ever seen nothing would start with a transient.
         let mut warmup = [0.0f32; MAX_FRAMES];
-        let mut remaining = receptive_field;
-        while remaining > 0 {
-            let n = remaining.min(MAX_FRAMES);
-            model.process_buffer(&mut warmup[..n]);
-            remaining -= n;
+        for light in [true, false] {
+            apply_size(&mut model, light);
+            let mut remaining = model.receptive_field().min(MAX_FRAMES * 64);
+            while remaining > 0 {
+                let n = remaining.min(MAX_FRAMES);
+                model.process_buffer(&mut warmup[..n]);
+                remaining -= n;
+            }
         }
+        apply_size(&mut model, unsafe { LIGHT });
         unsafe { MODEL = Some(model); }
     }
     if matches_host { 0 } else { 1 }

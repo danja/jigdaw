@@ -23,7 +23,7 @@
 // as messaging.md's own `error` with `fatal: false` for the negative case
 // and `fatal: false` again for the rate mismatch, never as a made up
 // message type nothing listens for.
-const PARAM_INDEX = Object.freeze({ input: 0, output: 1, amp: 2, mix: 3 })
+const PARAM_INDEX = Object.freeze({ input: 0, output: 1, amp: 2, mix: 3, light: 4 })
 
 /** Which module exports each asset key loads through. Adding a third asset
  * some day is one more entry here, not a third copy of applyAsset. */
@@ -48,7 +48,8 @@ class FerriteProcessor extends AudioWorkletProcessor {
       { name: 'input', defaultValue: 1.0, minValue: 0.0, maxValue: 4.0, automationRate: 'k-rate' },
       { name: 'output', defaultValue: 1.0, minValue: 0.0, maxValue: 2.0, automationRate: 'k-rate' },
       { name: 'amp', defaultValue: 1, minValue: 0, maxValue: 1, automationRate: 'k-rate' },
-      { name: 'mix', defaultValue: 1.0, minValue: 0.0, maxValue: 1.0, automationRate: 'k-rate' }
+      { name: 'mix', defaultValue: 1.0, minValue: 0.0, maxValue: 1.0, automationRate: 'k-rate' },
+      { name: 'light', defaultValue: 0, minValue: 0, maxValue: 1, automationRate: 'k-rate' }
     ]
   }
 
