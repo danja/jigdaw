@@ -58,6 +58,7 @@ const CLASSIFIED = {
   onPluginMessage: { kind: 'plumbing', why: 'a plugin\'s own user interface listening to its processor' },
   subscribe: { kind: 'plumbing', why: 'the editor redrawing on a change' },
   clearHistory: { kind: 'plumbing', why: 'the page opening a session, which starts a history' },
+  withWiringHeld: { kind: 'plumbing', why: 'opening a session loads every plugin before connecting any, so a heavy one cannot starve the next init' },
   withoutRecording: { kind: 'plumbing', why: 'UndoHistory driving the dispatcher while it reconciles' },
   grouped: { kind: 'plumbing', why: 'makes a Reel script\'s run one undo step; the agent surface gets it with script_run (docs/livecoding.md)' },
 

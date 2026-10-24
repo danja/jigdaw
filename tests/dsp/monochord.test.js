@@ -131,14 +131,14 @@ const dB = (a, b) => 20 * Math.log10(a / b)
 /**
  * The frequency of the strongest component within a semitone of `near`, by a fine scan of a Hann
  * windowed transform. An autocorrelation lag is a whole number of samples and so cannot resolve
- * three cents at 880 Hz; this can, given 16384 samples.
+ * three cents at 880 Hz; this can, given 8192 samples.
  */
-function pitchOf (samples, from, near, length = 16384) {
+function pitchOf (samples, from, near, length = 8192) {
   let best = 0
   let bestHz = near
   const window = new Float64Array(length)
   for (let i = 0; i < length; i++) window[i] = samples[from + i] * (0.5 - 0.5 * Math.cos(2 * Math.PI * i / length))
-  for (let step = -60; step <= 60; step += 0.1) {
+  for (let step = -60; step <= 60; step += 0.5) {
     const hz = near * 2 ** (step / 1200)
     let re = 0
     let im = 0

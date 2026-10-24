@@ -54,6 +54,7 @@ export class OpDispatcher {
   // A count and not a flag, so a group inside an undo, or an unrecorded firing during a group, ends only
   // its own suppression and never another's.
   #unrecorded = 0
+  #wiringHeld = 0
   #wiring
   #latency
   #parameters
@@ -444,7 +445,26 @@ export class OpDispatcher {
   }
   /** Make the engine's links, strips, sends, master and routes match the model; EngineWiring has the detail. */
   #rebuildLinks (compiled) {
+    // While held, nothing is connected: the single rebuild on release does it, from the model as it then stands.
+    if (this.#wiringHeld > 0) return
     this.#wiring.rebuildLinks(compiled)
+  }
+
+  /**
+   * Run `work` with the audio graph left unconnected, then connect everything once. Opening a session loads its
+   * plugins one after another, and a plugin that is connected starts running at once, so a heavy one (a neural amp)
+   * was already using the audio thread while the next plugin was still being initialised, which on a slow device
+   * starved that init until it timed out. Loading first and connecting after means nothing runs until everything
+   * is there. The model still changes as usual; only the engine's links wait.
+   */
+  async withWiringHeld (work) {
+    this.#wiringHeld += 1
+    try {
+      return await work()
+    } finally {
+      this.#wiringHeld -= 1
+      this.#rebuildLinks(this.compile())   // a no-op while an outer hold is still on
+    }
   }
 
 

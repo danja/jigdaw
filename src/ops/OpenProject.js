@@ -49,11 +49,19 @@ export function inSignalOrder (nodes, connections) {
  * exists, which is when a surface caching anything by node id has to drop it:
  * the new nodes can reuse the old ids for different plugins.
  *
+ * Nothing is connected until the last plugin is in and the connections are added, so a plugin that is heavy to run
+ * cannot slow the loading of the ones after it.
+ *
  * Returns `{ ok, loaded, total, errors }`. `ok` is false only when the current
  * session could not be cleared, in which case nothing was loaded; a node that
  * failed is in `errors` and does not make the whole open fail.
  */
-export async function openProject (dispatcher, read, { onLoading = () => {}, onCleared = () => {} } = {}) {
+export function openProject (dispatcher, read, options = {}) {
+  // Loaded first, connected after: see OpDispatcher.withWiringHeld.
+  return dispatcher.withWiringHeld(() => loadProject(dispatcher, read, options))
+}
+
+async function loadProject (dispatcher, read, { onLoading = () => {}, onCleared = () => {} }) {
   const existing = [
     ...[...dispatcher.project.nodes].map(n => ({ op: 'removeNode', id: n.id })),
     ...[...dispatcher.project.tracks].map(t => ({ op: 'removeTrack', id: t.id }))

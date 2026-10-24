@@ -140,3 +140,49 @@ describe('inSignalOrder', () => {
     expect([...ordered].sort()).toEqual(['a', 'b', 'c'])
   })
 })
+
+describe('openProject connects after loading, not while', () => {
+  async function setup () {
+    const validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl'))
+    const site = sitePlugins(SITE, resolve(root, 'plugins'))
+    const loader = new PluginLoader({
+      fetch: site.fetch, parse: parseText, validator,
+      capabilities: detectCapabilities({ WebAssembly }), processorUrl: site.processorUrl
+    })
+    const engine = new Engine({ context: new OfflineContext({ sampleRate: 48000 }), loader, AudioWorkletNode: OfflineWorkletNode })
+    const events = []
+    const clearLinks = engine.clearLinks.bind(engine)
+    engine.clearLinks = () => { events.push('links'); return clearLinks() }
+    return { dispatcher: new OpDispatcher({ engine }), events }
+  }
+
+  it('makes no connection until the last plugin is loaded, so a heavy one cannot starve the next', async () => {
+    const { dispatcher, events } = await setup()
+    const read = readProject(await parseText(project, `${SITE}sessions/one/`))
+    await openProject(dispatcher, read, { onLoading: () => events.push('load') })
+    const lastLoad = events.lastIndexOf('load')
+    expect(lastLoad).toBeGreaterThan(0)
+    expect(events.indexOf('links'), 'the first connection came after every load began').toBeGreaterThan(lastLoad)
+    // And they were made: the held rebuild ran once the work was done.
+    expect(events.filter(e => e === 'links').length).toBeGreaterThan(0)
+  })
+
+  it('still connects when a plugin fails, and leaves the hold when the work throws', async () => {
+    const { dispatcher, events } = await setup()
+    await expect(dispatcher.withWiringHeld(async () => { throw new Error('boom') })).rejects.toThrow('boom')
+    const before = events.length
+    // A later edit connects as normal: the hold did not stay on.
+    const added = await dispatcher.addPlugin(`${SITE}plugins/tremolo/`)
+    expect(added.ok).toBe(true)
+    expect(events.length).toBeGreaterThan(before)
+  })
+
+  it('holds nest: only the outermost release connects', async () => {
+    const { dispatcher, events } = await setup()
+    await dispatcher.withWiringHeld(async () => {
+      await dispatcher.withWiringHeld(async () => {})
+      expect(events, 'leaving the inner hold connected nothing').toEqual([])
+    })
+    expect(events).toEqual(['links'])
+  })
+})

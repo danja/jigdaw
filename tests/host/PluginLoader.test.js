@@ -405,7 +405,8 @@ describe('PluginLoader.instantiate', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     try {
       const pending = loader.instantiate(patched, granted, fakeContext(), { AudioWorkletNode: SilentNode }).catch(e => e)
-      for (let i = 0; i < 50 && vi.getTimerCount() === 0; i++) await new Promise(resolve => setImmediate(resolve))
+      // The loader's own awaits (digests, compiling) are real and take as long as the machine is busy.
+      for (const until = Date.now() + 10000; vi.getTimerCount() === 0 && Date.now() < until;) await new Promise(resolve => setImmediate(resolve))
       expect(vi.getTimerCount(), 'the ready wait started').toBeGreaterThan(0)
       await vi.advanceTimersByTimeAsync(READY_TIMEOUT_MS - 1000)
       let settled = false
