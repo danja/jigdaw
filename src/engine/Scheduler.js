@@ -41,7 +41,7 @@ export function clipNotes (project) {
   const byNode = new Map()
   for (const track of project.tracks) {
     if (!track.midiInput) continue
-    for (const clip of project.clips) {
+    for (const clip of project.arrangementClips) {
       if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
       const end = clip.startBeat + clip.lengthBeats
       for (const note of playedContent(clip).notes) {
@@ -68,7 +68,7 @@ export function clipControllers (project) {
   const byNode = new Map()
   for (const track of project.tracks) {
     if (!track.midiInput) continue
-    for (const clip of project.clips) {
+    for (const clip of project.arrangementClips) {
       if (clip.track !== track.id || clip.kind !== 'midi' || clip.muted) continue
       const end = clip.startBeat + clip.lengthBeats
       for (const event of playedContent(clip).controllers) {
@@ -93,7 +93,7 @@ export function clipControllers (project) {
  * is the page's to find, from the track.
  */
 export function clipAudio (project) {
-  return project.clips
+  return project.arrangementClips
     .filter(c => c.kind === 'audio' && !c.muted)
     .map(c => ({ id: c.id, track: c.track, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats, on: c.startBeat, off: c.startBeat + c.lengthBeats }))
 }

@@ -43,9 +43,10 @@ export function panPosition (pan) {
  *
  * With `fader` the strip is a mixer channel: Level is a vertical slider, Pan a knob above it and the two buttons below. The
  * slider is the native range laid on its side (CSS `writing-mode`), so the keys, the role and the value text are the
- * platform's, and the strip's order reads top to bottom as it does on a desk.
+ * platform's, and the strip's order reads top to bottom as it does on a desk. `beside` is an element, a level meter, drawn
+ * standing next to the fader, so the channel is no wider than the two.
  */
-export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null, solo: withSolo = true, fader = false } = {}) {
+export function createStrip (document, channel, onChange, { label: initialLabel = '', id = null, solo: withSolo = true, fader = false, beside = null } = {}) {
   let label = initialLabel
   // The ids of the controls. From `id` when given, because a label is a name
   // for people and two tracks can share one; from the label otherwise.
@@ -97,7 +98,14 @@ export function createStrip (document, channel, onChange, { label: initialLabel 
     onChange({ gain: state.gain })
   })
   showGain()
-  gainRow.append(gainLabel, fader ? gain : gainDial.element, gainValue)
+  if (fader) {
+    // The fader and what measures it side by side, then its value under both.
+    const faderBox = document.createElement('div')
+    faderBox.className = 'strip-faderbox'
+    faderBox.append(gain)
+    if (beside) faderBox.append(beside)
+    gainRow.append(gainLabel, faderBox, gainValue)
+  } else gainRow.append(gainLabel, gainDial.element, gainValue)
 
   // ── Position ─────────────────────────────────────────────────────────────
   const panRow = document.createElement('div')

@@ -184,6 +184,7 @@ export function writeProject (project, { iri, created = null } = {}) {
       if (clip.fadeOutBeats > 0) statements.push(`${term(jig.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`)
     } else {
       if (clip.loopBeats) statements.push(`${term(jig.loopBeats)} ${decimal(clip.loopBeats)}`)
+      if (clip.scene !== undefined) statements.push(`${term(jig.scene)} ${clip.scene}`)
       if (clip.notes.length > 0) statements.push(`${term(jig.note)} ${clip.notes.map((_, i) => `<#${clip.id}-n${i + 1}>`).join(' , ')}`)
       const events = clip.controllers ?? []
       if (events.length > 0) statements.push(`${term(jig.controllerEvent)} ${events.map((_, i) => `<#${clip.id}-e${i + 1}>`).join(' , ')}`)

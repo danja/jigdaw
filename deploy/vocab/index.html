@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  192 terms.
+  193 terms.
 </p>
 
 <h2>Classes</h2>
@@ -560,6 +560,10 @@
   <dd>Increments on every committed change. A caller submitting a changeset
         names the revision it last saw and is rejected if the project has moved on. An agent
         and a person editing one project is the normal case here.</dd>
+  <dt id="scene"><code>jig:scene</code> <span class="label">clip launcher scene</span></dt>
+  <dd>The row of the clip launcher this clip sits in, counted from zero. A clip with a scene is a launcher clip: it has
+        no place on the timeline, so its start beat is 0 and the arrangement does not play it. A track has at most one clip in a
+        scene. Absent means an ordinary clip on the timeline.</dd>
   <dt id="scriptSource"><code>jig:scriptSource</code> <span class="label">script source</span></dt>
   <dd>The script as typed, every character, including its comments and its line breaks. Exactly one, and never empty.</dd>
   <dt id="sidechainInput"><code>jig:sidechainInput</code> <span class="label">sidechain input</span></dt>

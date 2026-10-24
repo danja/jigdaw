@@ -309,7 +309,7 @@ export function createTransport (ctx) {
     const t = d.project.transport
     const change = { op: 'setTransport', loopEnabled: !t.loopEnabled }
     if (!t.loopEnabled && !(t.loopEnd > t.loopStart)) {
-      const last = Math.max(0, ...d.project.clips.map(c => c.startBeat + c.lengthBeats))
+      const last = Math.max(0, ...d.project.arrangementClips.map(c => c.startBeat + c.lengthBeats))
       change.loopStart = 0
       change.loopEnd = Math.max(t.beatsPerBar * 4, Math.ceil(last / t.beatsPerBar) * t.beatsPerBar)
     }

@@ -193,13 +193,13 @@ names the one the mix of every track arrives at. A node with no audio input is r
 | `node_unpack` | `nodeId` | Ids of the members |
 | `node_swap` | `nodeId`, `iri` | New node id, and `dropped`: what could not be carried over |
 | `composite_pack` | `nodeIds[]`, `iri`, `label`, `comment?`, `expose?` | The profile as Turtle, a summary, warnings |
-| `clip_add` | `trackId`, `startBeat`, `lengthBeats`, `notes?`, `controllers?`, `loopBeats?` | Clip id |
+| `clip_add` | `trackId`, `startBeat` (not with `scene`), `lengthBeats`, `notes?`, `controllers?`, `loopBeats?`, `scene?` | Clip id |
 | `clip_add_audio` | `trackId`, `source`, `startBeat`, `lengthBeats`, `offsetSeconds?` | Clip id |
 | `clip_set_notes` | `clipId`, `notes[]` | |
 | `clip_set_controllers` | `clipId`, `controllers[]` | |
 | `clip_transform_notes` | `clipId`, `transform`, `grid?`, `strength?`, `ends?`, `semitones?`, `factor?`, `axis?`, `timing?`, `velocity?`, `seed?`, `indices?` | |
 | `clip_move` | `clipId`, `startBeat?`, `lengthBeats?`, `trackId?` | |
-| `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `loopBeats?`, `color?` | Revision and the clip |
+| `clip_set` | `clipId`, `muted?`, `locked?`, `fadeInBeats?`, `fadeOutBeats?`, `loopBeats?`, `scene?`, `startBeat?`, `color?` | Revision and the clip |
 | `clip_split` | `clipId`, `atBeat` | Both clip ids |
 | `clip_duplicate` | `clipId`, `startBeat?`, `trackId?` | Clip id |
 | `clip_trim` | `clipId`, `from?`, `to?` | |

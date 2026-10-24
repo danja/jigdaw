@@ -454,6 +454,10 @@ jig:ClipShape a sh:NodeShape ;
 jig:MidiClipShape a sh:NodeShape ;
     sh:targetClass jig:MidiClip ;
     sh:property [
+        sh:path jig:scene ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A clip's launcher scene is one whole number from zero."
+    ] ;
+    sh:property [
         sh:path jig:loopBeats ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minExclusive 0 ;
         sh:message "A clip's loop length is one decimal above zero, in beats."
     ] ;

@@ -172,6 +172,18 @@ describe('a project survives being written and read back', () => {
     expect(writeProject(original, { iri: IRI })).not.toContain('loopBeats')
   })
 
+  it('keeps a launcher clip\'s scene, and writes none for a clip on the timeline', async () => {
+    const original = builtProject()
+    const clip = original.clips.find(c => c.kind === 'midi')
+    expect(writeProject(original, { iri: IRI })).not.toContain('jig:scene')
+    original.apply([{ op: 'setClip', id: clip.id, scene: 4 }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('jig:scene 4')
+    const { project } = await reopen(turtle)
+    expect(project.clip(clip.id)).toMatchObject({ scene: 4, startBeat: 0 })
+    expect(project.launcherClips.map(c => c.id)).toEqual([clip.id])
+  })
+
   it('keeps the title, author and notes, with quotes and line breaks, and writes nothing for an empty field', async () => {
     const original = builtProject()
     original.setInfo({ title: 'Tide "one"', author: 'Dee', notes: 'Line one\nLine two \\ done' })
@@ -379,6 +391,19 @@ describe('what it writes satisfies the normative shapes', () => {
     const seen = report.violations.map(x => `${x.focusNode} ${x.path ?? '(node)'}: ${x.message}`)
     expect(seen, `violations:\n  ${seen.join('\n  ')}`).toEqual([])
     expect(report.conforms).toBe(true)
+  })
+
+  it('accepts a launcher scene and refuses one that is negative or written twice', async () => {
+    const original = builtProject()
+    const clip = original.clips.find(c => c.kind === 'midi')
+    original.apply([{ op: 'setClip', id: clip.id, scene: 2 }])
+    const good = writeProject(original, { iri: IRI })
+    expect((await validator.validate(await parseText(good, IRI))).conforms).toBe(true)
+    for (const [bad, why] of [[good.replace('jig:scene 2', 'jig:scene -1'), 'negative'], [good.replace('jig:scene 2', 'jig:scene 2 , 3'), 'twice']]) {
+      const report = await validator.validate(await parseText(bad, IRI))
+      expect(report.conforms, why).toBe(false)
+      expect(report.violations.some(x => String(x.path).endsWith('scene')), why).toBe(true)
+    }
   })
 })
 

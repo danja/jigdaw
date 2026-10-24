@@ -1,6 +1,6 @@
 # The clip launcher: what it is before it is drawn
 
-**Status:** a design, written 2026-10-24 and not built. It exists because the launcher touches the model, the scheduler, the
+**Status:** a design, written 2026-10-24. Built so far: the clip model below. Not built: playback, the tools that launch and stop, and the grid. It exists because the launcher touches the model, the scheduler, the
 tools and Reel at once, and a grid drawn first would fix decisions that belong to the model. It follows the slot states and the
 launch quantisation that [Oxide Studio](oxide-studio-review.md) uses, with the Jiggy rules applied: the term first, one Op per
 edit, and nothing a person cannot reach by keyboard.
@@ -21,9 +21,15 @@ edit, and nothing a person cannot reach by keyboard.
 
 ## The model
 
-A `jig:Slot` has a track, a scene index and a clip. A scene is an index with an optional name. Both are plain data in the project
-graph, written by `ProjectWriter` and read back, and added to `vocabs/shapes.ttl` in the same change. The ops are `addSlot`,
-`setSlot` (move it, clear it, give it another clip) and `removeSlot`, so an agent's `graph_apply_changes` can build a grid.
+**Decided and built on 2026-10-24.** A slot is not a new thing: it is a MIDI clip with a `jig:scene`, a whole number from zero, and
+it is kept off the timeline. Its `trn:startBeat` is 0, and the arrangement does not play, draw or export it (`Project.arrangementClips`
+is the clips on the timeline and `Project.launcherClips` the others). A track has at most one clip in a scene, so the grid is the
+tracks across and the scenes down, and an empty cell is a missing clip. Because it is an ordinary clip, the piano roll, undo, copy,
+lock and the agent tools work on it unchanged: `clip_add` and `clip_set` take `scene`, and `setClip` with `scene` null puts a clip
+back on the timeline. It is in `vocabs/jigdaw.ttl` and `vocabs/shapes.ttl`, written and read by the session files, and refused by
+the model for an audio clip, a second clip in a scene on a track, or a start other than 0.
+
+Scene names are not built. A scene is its number until a name is wanted, and then it is a small record of its own.
 
 The states of one slot are five, and the set is closed:
 

@@ -500,7 +500,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
       name: 'clip_add',
       description:
         'Add a MIDI clip to a track, at a beat and for a number of beats, optionally with its notes. ' +
-        'It plays into the track\'s MIDI input; track_set names that. Notes start relative to the clip.',
+        'It plays into the track\'s MIDI input; track_set names that. Notes start relative to the clip. With `scene` (a whole number from 0) ' +
+        'the clip goes in the clip launcher instead of on the timeline: it has no start beat, and a track has one clip in each scene.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -510,12 +511,15 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           notes: { type: 'array', items: NOTE_SCHEMA },
           controllers: { type: 'array', items: CONTROLLER_SCHEMA },
           loopBeats: { type: 'number', exclusiveMinimum: 0, description: 'Repeat the first this many beats of notes and events to fill the clip' },
+          scene: { type: 'integer', minimum: 0, description: 'A clip launcher row. The clip then has no start beat.' },
           expectedRevision: { type: 'integer' }
         },
-        required: ['trackId', 'startBeat', 'lengthBeats']
+        required: ['trackId', 'lengthBeats']
       },
-      async handler ({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats, notes, controllers, ...(loopBeats !== undefined ? { loopBeats } : {}) }], { expectedRevision })
+      async handler ({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, scene, expectedRevision } = {}) {
+        // A launcher clip has no place on the timeline, so its start is 0 whether or not the caller said so.
+        const at = scene === undefined ? startBeat : (startBeat ?? 0)
+        const result = dispatcher.apply([{ op: 'addClip', track: trackId, kind: 'midi', startBeat: at, lengthBeats, notes, controllers, ...(loopBeats !== undefined ? { loopBeats } : {}), ...(scene !== undefined ? { scene } : {}) }], { expectedRevision })
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind })
       }
     },
@@ -647,7 +651,8 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
         'Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked ' +
         'refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); ' +
         'fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first ' +
-        'that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). color is a lower case ' +
+        'that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). scene moves a MIDI clip ' +
+        'into a clip launcher row (it then has no start) or, as null, back onto the timeline at startBeat 0 unless startBeat is also given. color is a lower case ' +
         '#rrggbb or null, editor metadata that changes no revision and has no undo.',
       inputSchema: {
         type: 'object',
@@ -658,18 +663,20 @@ export function createTools ({ dispatcher, catalogue = null, loadPlugin = null, 
           fadeInBeats: { type: 'number', minimum: 0 },
           fadeOutBeats: { type: 'number', minimum: 0 },
           loopBeats: { type: ['number', 'null'], exclusiveMinimum: 0 },
+          scene: { type: ['integer', 'null'], minimum: 0 },
+          startBeat: { type: 'number', minimum: 0, description: 'With scene null: where the clip lands on the timeline.' },
           color: { type: ['string', 'null'] },
           expectedRevision: { type: 'integer' }
         },
         required: ['clipId']
       },
-      async handler ({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, color, expectedRevision } = {}) {
+      async handler ({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, scene, startBeat, color, expectedRevision } = {}) {
         const change = { op: 'setClip', id: clipId }
-        for (const [key, value] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats })) {
+        for (const [key, value] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats, scene, startBeat })) {
           if (value !== undefined) change[key] = value
         }
         const edited = Object.keys(change).length > 2
-        if (!edited && color === undefined) return failed('nothing to change: give muted, locked, a fade, loopBeats or a color', { kind: 'change' })
+        if (!edited && color === undefined) return failed('nothing to change: give muted, locked, a fade, loopBeats, scene or a color', { kind: 'change' })
         try {
           let revision = dispatcher.project.revision
           if (edited) {

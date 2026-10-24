@@ -318,7 +318,7 @@ export function createArrangement (ctx) {
       // header here agree on which tracks have anything to hear.
       mixable: track => mixable(track, nodes, id => ctx.dispatcher.engineNode(id)?.profile?.audioOutputs),
       silent: track => silent.get(track.id) === true,
-      clips: project?.clips ?? [],
+      clips: project?.arrangementClips ?? [],
       beatsPerBar: project?.transport.beatsPerBar ?? 4,
       // What to do first, as buttons over the requests the page already makes.
       empty: {

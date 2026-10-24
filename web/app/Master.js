@@ -15,10 +15,12 @@ import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
 
 export function createMaster (ctx) {
   const { $, log } = ctx
+  // The level of the whole mix, from the same analyser as the transport bar's (web/app/Meters.js feeds it). Beside the fader.
+  const meter = createMeter(ctx.document, { label: 'the master' })
   const strip = createStrip(ctx.document, { gain: 1, pan: 0, muted: false }, change => {
     const result = ctx.dispatcher?.apply([{ op: 'setMaster', ...change }])
     if (result && !result.ok) log(result.message, 'error')
-  }, { label: 'Master', id: 'strip-master', solo: false, fader: true })
+  }, { label: 'Master', id: 'strip-master', solo: false, fader: true, beside: meter.element })
 
   const summary = createChainSummary(ctx.document, {
     onShowPlugins: () => {
@@ -28,9 +30,6 @@ export function createMaster (ctx) {
     }
   })
   summary.element.hidden = true
-  // The level of the whole mix, from the same analyser as the transport bar's (web/app/Meters.js feeds it).
-  const meter = createMeter(ctx.document, { label: 'the master' })
-
   return {
     meter,
     mount () {
@@ -38,7 +37,7 @@ export function createMaster (ctx) {
       heading.textContent = 'Master'
       const wrapper = ctx.document.createElement('div')
       wrapper.className = 'mixer-channel master-channel'
-      wrapper.append(heading, strip.element, meter.element, summary.element)
+      wrapper.append(heading, strip.element, summary.element)
       $('master-mount').append(wrapper)
     },
     /** Show the project's master, whoever changed it. */

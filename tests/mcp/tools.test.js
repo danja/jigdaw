@@ -930,6 +930,36 @@ describe('trimming and copying clips', () => {
   })
 })
 
+describe('launcher clips through the tools', () => {
+  it('adds a clip to a scene with no start, lists it apart from the timeline, and undoes in one step', async () => {
+    const { trackId } = await call('track_add', {})
+    const added = await call('clip_add', { trackId, lengthBeats: 4, scene: 0, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }] })
+    expect(added.ok, added.error).toBe(true)
+    expect(dispatcher.project.clip(added.clipId)).toMatchObject({ scene: 0, startBeat: 0 })
+    expect(dispatcher.project.arrangementClips).toHaveLength(0)
+    await dispatcher.undo()
+    expect(dispatcher.project.clips).toHaveLength(0)
+  })
+
+  it('refuses a second clip in the same scene on a track and a start with a scene, saying why', async () => {
+    const { trackId } = await call('track_add', {})
+    await call('clip_add', { trackId, lengthBeats: 4, scene: 1 })
+    expect((await call('clip_add', { trackId, lengthBeats: 4, scene: 1 })).error).toMatch(/already holds/)
+    expect((await call('clip_add', { trackId, startBeat: 3, lengthBeats: 4, scene: 2 })).error).toMatch(/start is 0/)
+    expect((await call('clip_add', { trackId, lengthBeats: 4 })).ok).toBe(false)
+  })
+
+  it('moves a clip into a scene and back onto the timeline with clip_set', async () => {
+    const { trackId } = await call('track_add', {})
+    const { clipId } = await call('clip_add', { trackId, startBeat: 8, lengthBeats: 4 })
+    expect((await call('clip_set', { clipId, scene: 3 })).ok).toBe(true)
+    expect(dispatcher.project.clip(clipId)).toMatchObject({ scene: 3, startBeat: 0 })
+    expect((await call('clip_set', { clipId, scene: null, startBeat: 16 })).ok).toBe(true)
+    expect(dispatcher.project.clip(clipId)).toMatchObject({ startBeat: 16 })
+    expect(dispatcher.project.clip(clipId).scene).toBeUndefined()
+  })
+})
+
 describe('audio clips', () => {
   it('adds one by the IRI of its file, and refuses a relative one', async () => {
     const { trackId } = await call('track_add', {})

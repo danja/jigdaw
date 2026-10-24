@@ -13346,6 +13346,7 @@ var init_Vocabulary = __esm({
         PitchBendEvent: `${JIG}PitchBendEvent`,
         controllerEvent: `${JIG}controllerEvent`,
         loopBeats: `${JIG}loopBeats`,
+        scene: `${JIG}scene`,
         controller: `${JIG}controller`,
         bend: `${JIG}bend`,
         clip: `${JIG}clip`,
@@ -23461,6 +23462,15 @@ function isLoadableIRI(value2) {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]" || url.hostname === "::1" || url.hostname.endsWith(".localhost");
 }
 var connectionKey = (c3) => `${c3.signalKind}|${c3.from.node}:${c3.from.portIndex ?? c3.from.portSymbol}->${c3.to.node}:${c3.to.portIndex ?? c3.to.portSymbol}`;
+function checkScene(state, trackId, scene, exceptId = null) {
+  if (!Number.isInteger(scene) || scene < 0) throw new Error(`a scene is a whole number from zero: ${scene}`);
+  for (const other of state.clips.values()) {
+    if (other.id !== exceptId && other.track === trackId && other.scene === scene) {
+      throw new Error(`scene ${scene} on ${trackId} already holds ${other.id}`);
+    }
+  }
+  return scene;
+}
 var cloneClip = (c3) => ({ ...c3, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })) });
 var cloneState = (state) => ({
   clips: new Map([...state.clips].map(([id, c3]) => [id, cloneClip(c3)])),
@@ -23623,6 +23633,7 @@ var OPERATIONS = {
     for (const [id, clip] of [...state.clips]) {
       if (clip.track !== change.id) continue;
       if (change.moveNodesTo !== void 0 && state.tracks.has(change.moveNodesTo) && change.moveNodesTo !== change.id) {
+        if (clip.scene !== void 0) checkScene(state, change.moveNodesTo, clip.scene, clip.id);
         clip.track = change.moveNodesTo;
       } else {
         state.clips.delete(id);
@@ -23653,6 +23664,11 @@ var OPERATIONS = {
     if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`);
     noteExplicitId(counters, "clip", "clip", id);
     const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag("locked", change.locked ?? false) };
+    if (change.scene !== void 0 && change.scene !== null) {
+      if (change.kind !== "midi") throw new Error("only a MIDI clip can be in the clip launcher");
+      if (change.startBeat !== 0) throw new Error("a launcher clip has no place on the timeline, so its start is 0");
+      clip.scene = checkScene(state, change.track, change.scene);
+    }
     if (change.kind === "midi") {
       clip.notes = checkNotes(change.notes ?? []);
       clip.controllers = checkControllers(change.controllers ?? []);
@@ -23701,7 +23717,25 @@ var OPERATIONS = {
       else clip.loopBeats = checkLoopBeats(change.loopBeats);
     }
     if (change.locked !== void 0) clip.locked = checkFlag("locked", change.locked);
-    clip.startBeat = startBeat;
+    const track = change.track ?? clip.track;
+    let scene = clip.scene;
+    if (change.scene !== void 0) {
+      refuseIfLocked(clip, change, "moved");
+      if (change.scene === null) {
+        if (scene === void 0) throw new Error(`${change.id} is not in the clip launcher`);
+        scene = void 0;
+      } else if (clip.kind !== "midi") throw new Error("only a MIDI clip can be in the clip launcher");
+      else scene = change.scene;
+    }
+    if (scene !== void 0) {
+      if (change.startBeat !== void 0 && change.startBeat !== 0) throw new Error("a launcher clip has no place on the timeline, so its start is 0");
+      checkScene(state, track, scene, clip.id);
+      clip.scene = scene;
+      clip.startBeat = 0;
+    } else {
+      delete clip.scene;
+      clip.startBeat = startBeat;
+    }
     clip.lengthBeats = lengthBeats;
     if (change.track !== void 0) clip.track = change.track;
     return change.id;
@@ -23996,7 +24030,7 @@ var OPERATIONS = {
   }
 };
 function clipChange(c3) {
-  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [], ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
+  return c3.kind === "midi" ? { op: "addClip", id: c3.id, track: c3.track, kind: "midi", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, notes: c3.notes, controllers: c3.controllers ?? [], ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {}, ...c3.scene === void 0 ? {} : { scene: c3.scene } } : { op: "addClip", id: c3.id, track: c3.track, kind: "audio", startBeat: c3.startBeat, lengthBeats: c3.lengthBeats, muted: c3.muted, locked: c3.locked, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
 }
 function changesFor(snapshot) {
   return [
@@ -24064,6 +24098,14 @@ var Project = class {
   }
   get clips() {
     return [...this.#state.clips.values()];
+  }
+  /** The clips on the timeline: every clip except those in the clip launcher. */
+  get arrangementClips() {
+    return this.clips.filter((c3) => c3.scene === void 0);
+  }
+  /** The clips in the clip launcher, by scene and then track. */
+  get launcherClips() {
+    return this.clips.filter((c3) => c3.scene !== void 0).sort((a2, b) => a2.scene - b.scene || a2.track.localeCompare(b.track));
   }
   get transport() {
     return this.#state.transport;
@@ -27673,7 +27715,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_add",
-      description: "Add a MIDI clip to a track, at a beat and for a number of beats, optionally with its notes. It plays into the track's MIDI input; track_set names that. Notes start relative to the clip.",
+      description: "Add a MIDI clip to a track, at a beat and for a number of beats, optionally with its notes. It plays into the track's MIDI input; track_set names that. Notes start relative to the clip. With `scene` (a whole number from 0) the clip goes in the clip launcher instead of on the timeline: it has no start beat, and a track has one clip in each scene.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27683,12 +27725,14 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           notes: { type: "array", items: NOTE_SCHEMA },
           controllers: { type: "array", items: CONTROLLER_SCHEMA },
           loopBeats: { type: "number", exclusiveMinimum: 0, description: "Repeat the first this many beats of notes and events to fill the clip" },
+          scene: { type: "integer", minimum: 0, description: "A clip launcher row. The clip then has no start beat." },
           expectedRevision: { type: "integer" }
         },
-        required: ["trackId", "startBeat", "lengthBeats"]
+        required: ["trackId", "lengthBeats"]
       },
-      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, expectedRevision } = {}) {
-        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats, notes, controllers, ...loopBeats !== void 0 ? { loopBeats } : {} }], { expectedRevision });
+      async handler({ trackId, startBeat, lengthBeats, notes = [], controllers = [], loopBeats, scene, expectedRevision } = {}) {
+        const at = scene === void 0 ? startBeat : startBeat ?? 0;
+        const result = dispatcher.apply([{ op: "addClip", track: trackId, kind: "midi", startBeat: at, lengthBeats, notes, controllers, ...loopBeats !== void 0 ? { loopBeats } : {}, ...scene !== void 0 ? { scene } : {} }], { expectedRevision });
         return result.ok ? ok({ revision: result.revision, clipId: result.results[0] }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -27808,7 +27852,7 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
     },
     {
       name: "clip_set",
-      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
+      description: "Change how a clip behaves, in one edit. muted keeps it on the lane and does not play it; locked refuses later moves, edits and removal until it is unlocked (muting and unlocking still work); fadeInBeats and fadeOutBeats are straight-line fades on an audio clip. loopBeats makes a MIDI clip repeat its first that many beats of notes and events to fill its length (null clears it; notes after the loop end are kept but not played). scene moves a MIDI clip into a clip launcher row (it then has no start) or, as null, back onto the timeline at startBeat 0 unless startBeat is also given. color is a lower case #rrggbb or null, editor metadata that changes no revision and has no undo.",
       inputSchema: {
         type: "object",
         properties: {
@@ -27818,18 +27862,20 @@ function createTools({ dispatcher, catalogue = null, loadPlugin = null, openColl
           fadeInBeats: { type: "number", minimum: 0 },
           fadeOutBeats: { type: "number", minimum: 0 },
           loopBeats: { type: ["number", "null"], exclusiveMinimum: 0 },
+          scene: { type: ["integer", "null"], minimum: 0 },
+          startBeat: { type: "number", minimum: 0, description: "With scene null: where the clip lands on the timeline." },
           color: { type: ["string", "null"] },
           expectedRevision: { type: "integer" }
         },
         required: ["clipId"]
       },
-      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, color, expectedRevision } = {}) {
+      async handler({ clipId, muted, locked, fadeInBeats, fadeOutBeats, loopBeats, scene, startBeat, color, expectedRevision } = {}) {
         const change = { op: "setClip", id: clipId };
-        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats })) {
+        for (const [key, value2] of Object.entries({ muted, locked, fadeInBeats, fadeOutBeats, loopBeats, scene, startBeat })) {
           if (value2 !== void 0) change[key] = value2;
         }
         const edited = Object.keys(change).length > 2;
-        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade, loopBeats or a color", { kind: "change" });
+        if (!edited && color === void 0) return failed("nothing to change: give muted, locked, a fade, loopBeats, scene or a color", { kind: "change" });
         try {
           let revision = dispatcher.project.revision;
           if (edited) {
@@ -28780,7 +28826,7 @@ function clipNotes(project) {
   const byNode = /* @__PURE__ */ new Map();
   for (const track of project.tracks) {
     if (!track.midiInput) continue;
-    for (const clip of project.clips) {
+    for (const clip of project.arrangementClips) {
       if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
       for (const note of playedContent(clip).notes) {
@@ -28798,7 +28844,7 @@ function clipControllers(project) {
   const byNode = /* @__PURE__ */ new Map();
   for (const track of project.tracks) {
     if (!track.midiInput) continue;
-    for (const clip of project.clips) {
+    for (const clip of project.arrangementClips) {
       if (clip.track !== track.id || clip.kind !== "midi" || clip.muted) continue;
       const end = clip.startBeat + clip.lengthBeats;
       for (const event of playedContent(clip).controllers) {
@@ -28814,7 +28860,7 @@ function clipControllers(project) {
   return byNode;
 }
 function clipAudio(project) {
-  return project.clips.filter((c3) => c3.kind === "audio" && !c3.muted).map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
+  return project.arrangementClips.filter((c3) => c3.kind === "audio" && !c3.muted).map((c3) => ({ id: c3.id, track: c3.track, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats, on: c3.startBeat, off: c3.startBeat + c3.lengthBeats }));
 }
 function* segments(transport, start, end) {
   const loop = transport.loop;
@@ -29387,7 +29433,7 @@ function createTransport(ctx2) {
     const t = d.project.transport;
     const change = { op: "setTransport", loopEnabled: !t.loopEnabled };
     if (!t.loopEnabled && !(t.loopEnd > t.loopStart)) {
-      const last = Math.max(0, ...d.project.clips.map((c3) => c3.startBeat + c3.lengthBeats));
+      const last = Math.max(0, ...d.project.arrangementClips.map((c3) => c3.startBeat + c3.lengthBeats));
       change.loopStart = 0;
       change.loopEnd = Math.max(t.beatsPerBar * 4, Math.ceil(last / t.beatsPerBar) * t.beatsPerBar);
     }
@@ -29542,6 +29588,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
       if (clip.fadeOutBeats > 0) statements.push(`${term3(jig4.fadeOutBeats)} ${decimal(clip.fadeOutBeats)}`);
     } else {
       if (clip.loopBeats) statements.push(`${term3(jig4.loopBeats)} ${decimal(clip.loopBeats)}`);
+      if (clip.scene !== void 0) statements.push(`${term3(jig4.scene)} ${clip.scene}`);
       if (clip.notes.length > 0) statements.push(`${term3(jig4.note)} ${clip.notes.map((_, i2) => `<#${clip.id}-n${i2 + 1}>`).join(" , ")}`);
       const events = clip.controllers ?? [];
       if (events.length > 0) statements.push(`${term3(jig4.controllerEvent)} ${events.map((_, i2) => `<#${clip.id}-e${i2 + 1}>`).join(" , ")}`);
@@ -29917,6 +29964,8 @@ function readProject(dataset2) {
       if (kind === "midi") {
         const loopBeats = number3(one2(dataset2, clipIri, jig5.loopBeats), `loopBeats of clip ${id}`);
         if (loopBeats !== null) clip.loopBeats = loopBeats;
+        const scene = number3(one2(dataset2, clipIri, jig5.scene), `scene of clip ${id}`);
+        if (scene !== null) clip.scene = scene;
         clip.notes = objects3(dataset2, clipIri, jig5.note).map((t) => t.value).map((noteIri) => ({
           startBeat: number3(one2(dataset2, noteIri, trn6.startBeat), `startBeat of a note in ${id}`),
           lengthBeats: number3(one2(dataset2, noteIri, trn6.lengthBeats), `lengthBeats of a note in ${id}`),
@@ -30952,7 +31001,7 @@ async function bounce({
 function bounceSeconds(project, transport, { tailSeconds = 2, minimumBars = 4 } = {}) {
   const beatsPerBar = project.transport.beatsPerBar;
   const loop = project.transport.loopEnabled ? project.transport.loopEnd : 0;
-  const lastClip = Math.max(0, ...project.clips.map((c3) => c3.startBeat + c3.lengthBeats));
+  const lastClip = Math.max(0, ...project.arrangementClips.map((c3) => c3.startBeat + c3.lengthBeats));
   const beats = Math.max(loop, lastClip, minimumBars * beatsPerBar);
   return transport.secondsAtBeat(Math.ceil(beats / beatsPerBar) * beatsPerBar) + tailSeconds;
 }

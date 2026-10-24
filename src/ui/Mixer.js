@@ -72,16 +72,17 @@ export function createMixer (document, { onChange }) {
       const label = labelFor(track)
       let channel = channels.get(track.id)
       if (!channel) {
+        // What the track sounds like after its fader, which the page animates from the engine (web/app/Meters.js). It stands beside
+        // the fader, so a channel is the width of the two.
+        const meter = createMeter(document, { label })
         const strip = createStrip(document, track.channel, change => onChange(track.id, change),
-          { label, id: `strip-${track.id}`, fader: true })
+          { label, id: `strip-${track.id}`, fader: true, beside: meter.element })
         // The strip draws no visible heading of its own, so the channel has
         // one: nothing else on this tab says which track a strip belongs to.
         const wrapper = document.createElement('div')
         wrapper.className = 'mixer-channel'
         const heading = document.createElement('h3')
-        // What the track sounds like after its fader, which the page animates from the engine (web/app/Meters.js).
-        const meter = createMeter(document, { label })
-        wrapper.append(heading, strip.element, meter.element)
+        wrapper.append(heading, strip.element)
         channel = { wrapper, heading, strip, meter }
         channels.set(track.id, channel)
       }

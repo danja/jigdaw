@@ -242,4 +242,22 @@ describe('a mixer channel with a fader', () => {
     expect(mixer).toMatch(/createStrip\([\s\S]*fader: true/)
     expect(master).toMatch(/createStrip\([\s\S]*fader: true/)
   })
+
+  it('stands a given element beside the fader, in one box with it, so the channel is no wider than the two', () => {
+    const meter = document.createElement('div')
+    meter.className = 'meter-group'
+    const { element } = createStrip(document, {}, () => {}, { label: 'Pulse', id: 'strip-t1', fader: true, beside: meter })
+    const box = element.querySelector('.strip-faderbox')
+    expect([...box.children].map(c => c.className)).toEqual(['strip-fader', 'meter-group'])
+    expect(element.children[1].contains(box)).toBe(true)
+    // Nothing beside it, nothing drawn beside it.
+    const alone = createStrip(document, {}, () => {}, { label: 'Pulse', id: 'strip-t2', fader: true }).element
+    expect(alone.querySelector('.strip-faderbox').children).toHaveLength(1)
+  })
+
+  it('is the strip the mixer builds with its meter inside, not under', () => {
+    const mixer = readFileSync(resolve(import.meta.dirname, '../../src/ui/Mixer.js'), 'utf8')
+    expect(mixer).toMatch(/beside: meter\.element/)
+    expect(mixer).toMatch(/wrapper\.append\(heading, strip\.element\)/)
+  })
 })

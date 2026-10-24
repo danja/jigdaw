@@ -182,6 +182,10 @@ clips and notes as `rdf:List`, and here each is a named resource on its own arc 
   events repeat to fill the clip's length. A note that starts inside the pattern is cut at its end, and one that
   starts after it is kept in the file and not played while the loop is set. Absent means no loop, and a session
   saved before this existed reads as having none.
+- A MIDI clip may be a launcher clip. `jig:scene`, a whole number from zero, is the row of the clip launcher it sits in
+  ([clip-launcher.md](clip-launcher.md)). Such a clip has no place on the timeline: its `trn:startBeat` is 0 and the
+  arrangement does not play, draw or export it. A track has at most one clip in each scene. Absent means an ordinary clip
+  on the timeline, and a session saved before this existed reads as having none.
 - A clip belongs to its track. Removing the track removes its clips, unless the removal moves
   the track's nodes to another track, in which case the clips move with them.
 - An audio clip refers to its audio by `jig:source` and never embeds it. A session is a

@@ -136,7 +136,7 @@ export async function bounce ({
 export function bounceSeconds (project, transport, { tailSeconds = 2, minimumBars = 4 } = {}) {
   const beatsPerBar = project.transport.beatsPerBar
   const loop = project.transport.loopEnabled ? project.transport.loopEnd : 0
-  const lastClip = Math.max(0, ...project.clips.map(c => c.startBeat + c.lengthBeats))
+  const lastClip = Math.max(0, ...project.arrangementClips.map(c => c.startBeat + c.lengthBeats))
   const beats = Math.max(loop, lastClip, minimumBars * beatsPerBar)
   return transport.secondsAtBeat(Math.ceil(beats / beatsPerBar) * beatsPerBar) + tailSeconds
 }

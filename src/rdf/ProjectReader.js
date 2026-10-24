@@ -299,6 +299,8 @@ export function readProject (dataset) {
       if (kind === 'midi') {
         const loopBeats = number(one(dataset, clipIri, jig.loopBeats), `loopBeats of clip ${id}`)
         if (loopBeats !== null) clip.loopBeats = loopBeats
+        const scene = number(one(dataset, clipIri, jig.scene), `scene of clip ${id}`)
+        if (scene !== null) clip.scene = scene
         clip.notes = objects(dataset, clipIri, jig.note).map(t => t.value).map(noteIri => ({
           startBeat: number(one(dataset, noteIri, trn.startBeat), `startBeat of a note in ${id}`),
           lengthBeats: number(one(dataset, noteIri, trn.lengthBeats), `lengthBeats of a note in ${id}`),

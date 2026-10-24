@@ -122,6 +122,20 @@ const connectionKey = c =>
   `${c.signalKind}|${c.from.node}:${c.from.portIndex ?? c.from.portSymbol}` +
   `->${c.to.node}:${c.to.portIndex ?? c.to.portSymbol}`
 
+/**
+ * A scene is a row of the clip launcher: a whole number from zero. A clip with one is a launcher clip, kept off the timeline, and a
+ * track has at most one in each scene (docs/clip-launcher.md).
+ */
+function checkScene (state, trackId, scene, exceptId = null) {
+  if (!Number.isInteger(scene) || scene < 0) throw new Error(`a scene is a whole number from zero: ${scene}`)
+  for (const other of state.clips.values()) {
+    if (other.id !== exceptId && other.track === trackId && other.scene === scene) {
+      throw new Error(`scene ${scene} on ${trackId} already holds ${other.id}`)
+    }
+  }
+  return scene
+}
+
 /** A clip with its own copy of every list it holds, so an edit to one never reaches a snapshot of it. */
 const cloneClip = c => ({ ...c, notes: c.notes.map(n => ({ ...n })), controllers: (c.controllers ?? []).map(e => ({ ...e })) })
 
@@ -331,6 +345,7 @@ const OPERATIONS = {
     for (const [id, clip] of [...state.clips]) {
       if (clip.track !== change.id) continue
       if (change.moveNodesTo !== undefined && state.tracks.has(change.moveNodesTo) && change.moveNodesTo !== change.id) {
+        if (clip.scene !== undefined) checkScene(state, change.moveNodesTo, clip.scene, clip.id)
         clip.track = change.moveNodesTo
       } else {
         state.clips.delete(id)
@@ -363,6 +378,11 @@ const OPERATIONS = {
     if (state.clips.has(id)) throw new Error(`clip already exists: ${id}`)
     noteExplicitId(counters, 'clip', 'clip', id)
     const clip = { id, track: change.track, kind: change.kind, startBeat: change.startBeat, lengthBeats: change.lengthBeats, muted: checkMuted(change.muted ?? false), locked: checkFlag('locked', change.locked ?? false) }
+    if (change.scene !== undefined && change.scene !== null) {
+      if (change.kind !== 'midi') throw new Error('only a MIDI clip can be in the clip launcher')
+      if (change.startBeat !== 0) throw new Error('a launcher clip has no place on the timeline, so its start is 0')
+      clip.scene = checkScene(state, change.track, change.scene)
+    }
     if (change.kind === 'midi') {
       clip.notes = checkNotes(change.notes ?? [])
       clip.controllers = checkControllers(change.controllers ?? [])
@@ -415,7 +435,24 @@ const OPERATIONS = {
       else clip.loopBeats = checkLoopBeats(change.loopBeats)
     }
     if (change.locked !== undefined) clip.locked = checkFlag('locked', change.locked)
-    clip.startBeat = startBeat
+    const track = change.track ?? clip.track
+    // Into the launcher, out of it, or to another scene or track in it. A launcher clip has no start, so one moved in is put at 0.
+    let scene = clip.scene
+    if (change.scene !== undefined) {
+      refuseIfLocked(clip, change, 'moved')
+      if (change.scene === null) { if (scene === undefined) throw new Error(`${change.id} is not in the clip launcher`); scene = undefined }
+      else if (clip.kind !== 'midi') throw new Error('only a MIDI clip can be in the clip launcher')
+      else scene = change.scene
+    }
+    if (scene !== undefined) {
+      if (change.startBeat !== undefined && change.startBeat !== 0) throw new Error('a launcher clip has no place on the timeline, so its start is 0')
+      checkScene(state, track, scene, clip.id)
+      clip.scene = scene
+      clip.startBeat = 0
+    } else {
+      delete clip.scene
+      clip.startBeat = startBeat
+    }
     clip.lengthBeats = lengthBeats
     if (change.track !== undefined) clip.track = change.track
     return change.id
@@ -756,7 +793,7 @@ const OPERATIONS = {
 /** The addClip that recreates a clip from a snapshot. */
 export function clipChange (c) {
   return c.kind === 'midi'
-    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes, controllers: c.controllers ?? [], ...(c.loopBeats ? { loopBeats: c.loopBeats } : {}) }
+    ? { op: 'addClip', id: c.id, track: c.track, kind: 'midi', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, notes: c.notes, controllers: c.controllers ?? [], ...(c.loopBeats ? { loopBeats: c.loopBeats } : {}), ...(c.scene === undefined ? {} : { scene: c.scene }) }
     : { op: 'addClip', id: c.id, track: c.track, kind: 'audio', startBeat: c.startBeat, lengthBeats: c.lengthBeats, muted: c.muted, locked: c.locked, source: c.source, offsetSeconds: c.offsetSeconds, fadeInBeats: c.fadeInBeats, fadeOutBeats: c.fadeOutBeats }
 }
 
@@ -810,6 +847,10 @@ export class Project {
   get nodes () { return [...this.#state.nodes.values()] }
   get connections () { return [...this.#state.connections.values()] }
   get clips () { return [...this.#state.clips.values()] }
+  /** The clips on the timeline: every clip except those in the clip launcher. */
+  get arrangementClips () { return this.clips.filter(c => c.scene === undefined) }
+  /** The clips in the clip launcher, by scene and then track. */
+  get launcherClips () { return this.clips.filter(c => c.scene !== undefined).sort((a, b) => a.scene - b.scene || a.track.localeCompare(b.track)) }
   get transport () { return this.#state.transport }
   get master () { return this.#state.master }
   get sends () { return [...this.#state.sends.values()] }

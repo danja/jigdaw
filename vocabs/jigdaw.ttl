@@ -717,6 +717,11 @@ jig:clip a owl:ObjectProperty ; rdfs:domain jig:Track ; rdfs:range jig:Clip .
 jig:note a owl:ObjectProperty ; rdfs:domain jig:MidiClip ; rdfs:range jig:Note .
 jig:controllerEvent a owl:ObjectProperty ; rdfs:domain jig:MidiClip ;
     rdfs:comment "A controller or pitch bend event of a MIDI clip: a jig:ControllerEvent or a jig:PitchBendEvent." .
+jig:scene a owl:DatatypeProperty ; rdfs:domain jig:MidiClip ; rdfs:range xsd:integer ;
+    rdfs:label "clip launcher scene" ;
+    rdfs:comment """The row of the clip launcher this clip sits in, counted from zero. A clip with a scene is a launcher clip: it has
+        no place on the timeline, so its start beat is 0 and the arrangement does not play it. A track has at most one clip in a
+        scene. Absent means an ordinary clip on the timeline.""" .
 jig:loopBeats a owl:DatatypeProperty ; rdfs:domain jig:MidiClip ; rdfs:range xsd:decimal ;
     rdfs:label "loop length, in beats" ;
     rdfs:comment """The first this many beats of the clip's notes and events repeat to fill the clip's length. A note that

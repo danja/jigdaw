@@ -63,7 +63,7 @@ const nameEvent = text => [0, 0, meta(0x03, [...ENCODER.encode(text)])]
 
 /** Whether a track has anything a MIDI file would hold: an unmuted MIDI clip with notes or controller events. */
 export function trackHasMidi (project, trackId) {
-  return project.clips.some(c => c.track === trackId && c.kind === 'midi' && !c.muted && (c.notes.length > 0 || (c.controllers ?? []).length > 0))
+  return project.arrangementClips.some(c => c.track === trackId && c.kind === 'midi' && !c.muted && (c.notes.length > 0 || (c.controllers ?? []).length > 0))
 }
 
 /**
@@ -95,7 +95,7 @@ export function writeMidiFile (project, { trackIds = null } = {}) {
   let channel = 0
   for (const t of project.orderedTracks) {
     if (trackIds !== null && !trackIds.includes(t.id)) continue
-    const clips = project.clips.filter(c => c.track === t.id && c.kind === 'midi' && !c.muted)
+    const clips = project.arrangementClips.filter(c => c.track === t.id && c.kind === 'midi' && !c.muted)
     const events = []
     for (const clip of clips) {
       const played = playedContent(clip)

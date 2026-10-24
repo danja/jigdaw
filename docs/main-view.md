@@ -22,7 +22,7 @@ built by one module in `src/ui/`, so the layout can change without the parts cha
   between edits, so it sits beside the tracks and a visible "Load onto" says where a plugin will land.
 - **The transport is a bar across the top.** It is the one control needed from every tab, so it is outside them.
 - **Tabs swap the stage for the other views.** Routing, mixer and script are whole-screen views that do not
-  need the lanes. The tab row is allowed to wrap, so it cannot scroll the page sideways. The phone padding was set for four tabs. With the fifth, the Script tab, `npm run check:layout` found no horizontal overflow at 320px and up (2026-10-23); how tall the wrapped row is has not been measured.
+  need the lanes. The tab row is allowed to wrap, so it cannot scroll the page sideways. The phone padding was set for four tabs. With the fifth, the Script tab, and the sixth, Settings (the latency alignment, the project's details and the agent connections, moved there from the Mixer and the foot of the page on 2026-10-24), `npm run check:layout` found no horizontal overflow at 320px and up; how tall the wrapped row is has not been measured.
 - **One column below 760px.** The browser stacks above the stage, the header narrows, and the transport scrolls
   away with the page instead of staying fixed, since wrapped onto several rows it is a third of a phone's height.
 

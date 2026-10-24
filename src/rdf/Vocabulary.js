@@ -224,6 +224,7 @@ export const vocabulary = Object.freeze({
     PitchBendEvent: `${JIG}PitchBendEvent`,
     controllerEvent: `${JIG}controllerEvent`,
     loopBeats: `${JIG}loopBeats`,
+    scene: `${JIG}scene`,
     controller: `${JIG}controller`,
     bend: `${JIG}bend`,
     clip: `${JIG}clip`,

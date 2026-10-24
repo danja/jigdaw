@@ -215,7 +215,8 @@ ctx.tabs = createTabs(document, [
   { id: 'tracks', label: 'Plugins', panel: $('tracks-panel') },
   { id: 'routing', label: 'Routing', panel: $('routing-panel') },
   { id: 'mixer', label: 'Mixer', panel: $('mixer-panel') },
-  { id: 'script', label: 'Script', panel: $('script-panel') }
+  { id: 'script', label: 'Script', panel: $('script-panel') },
+  { id: 'settings', label: 'Settings', panel: $('settings-panel') }
 ])
 $('tabs-mount').append(ctx.tabs.element)
 

@@ -277,7 +277,9 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Session, clip launcher and interchange
 
-- [ ] **Clip launcher (session grid).** Designed in [docs/clip-launcher.md](docs/clip-launcher.md), not built: slots and scenes
+- [ ] **Clip launcher (session grid).** Designed in [docs/clip-launcher.md](docs/clip-launcher.md). Built 2026-10-24: a slot is a MIDI clip with
+      `jig:scene` kept off the timeline (model, session files, shapes, `clip_add` and `clip_set`). Not built: `LauncherState` and playback by
+      the scheduler, `launcher_*` tools, the grid and scene names. Design: slots and scenes
       as session data, the five slot states and the playing state outside the revision, launch quantisation kept with the
       transport, playback by the scheduler from the launch boundary, `launcher_*` tools. Open questions are at the end of that note.
       Follow actions later. Last on purpose: webdaw leaves it to milestone 9 and it needs the arrangement solid first.

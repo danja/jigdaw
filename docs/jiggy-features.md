@@ -78,9 +78,12 @@ starts on the simple page.
   with no declared delay is refused with the reason, and so is a loop of MIDI connections. A MIDI
   connection can be watched: the last 24 events over it, in words.
 - **Mixer channels.** The Mixer tab draws each track, and the master, as a channel: a Pan knob on top, a Level fader standing up
-  below it (the native range laid on its side, so the arrow keys, Home and End and the value in decibels are the platform's), then
-  Mute and Solo buttons and the level meter. Channels sit side by side and wrap. Seen in Chrome on 2026-10-24: a click above the
+  below it with the level meter standing beside it (the fader is the native range laid on its side, so the arrow keys, Home and End
+  and the value in decibels are the platform's), then Mute over Solo. A channel is 96px wide. Channels sit side by side and wrap, with
+  the master at the right end. Seen in Chrome on 2026-10-24: a click above the
   middle of the master fader raised it to +2.2 dB and Down lowered it a step each press.
+- **Settings.** A Settings tab holds what is not part of playing: Line tracks up for latency, the project's title, author and notes, and
+  the Local agent and Agent bridge connections.
 - **Output meter with a clip hold.** The meter beside the transport shows the level of the mix, and a Clip button appears when it
   reached full scale and stays until pressed. Every strip on the Mixer tab has a level meter of its own with the held peak in decibels
   beside it, and the Master channel lists the plugins on the master.

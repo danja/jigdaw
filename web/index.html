@@ -59,6 +59,14 @@
   .strip-desk { flex-direction:column; flex-wrap:nowrap; gap:10px; padding:10px 8px 14px; }
   .strip-desk input.strip-fader[type=range] { writing-mode:vertical-lr; direction:rtl; width:44px; min-width:44px; height:170px; margin:0; padding:0; cursor:pointer; }
   .strip-desk .strip-control .value { min-width:0; }
+  /* The fader with its meter standing beside it, and Mute over Solo, so a channel is narrow. */
+  .strip-faderbox { display:flex; align-items:flex-start; gap:6px; }
+  .strip-desk .strip-buttons { flex-direction:column; gap:6px; }
+  .mixer-channel .meter-group { flex-direction:column; justify-content:flex-start; align-items:center; gap:4px; margin:0; padding:0; }
+  .mixer-channel .meter { flex-direction:column-reverse; align-items:center; height:170px; width:14px; gap:2px; }
+  .mixer-channel .meter i { width:100%; height:auto; flex:1 1 0; }
+  .mixer-channel .meter-readout { min-width:0; font-size:11px; white-space:nowrap; }
+  .mixer-channel .meter-clip { min-width:44px; }
   .strip-control { display:flex; flex-direction:column; align-items:center; gap:3px; }
   .strip-control label { color:var(--dim); font-size:11px; }
   .strip-control .value { min-width:78px; text-align:center;
@@ -598,9 +606,12 @@
      on. Each channel gets a heading the strip itself does not draw, because
      nothing else on this tab says which track it belongs to. */
   .mixer { display:flex; flex-direction:row; flex-wrap:wrap; align-items:flex-start; gap:10px; }
-  .mixer-channel { width:132px; flex:none; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  /* The track channels, then the master at the right end as on a desk; a narrow screen wraps it underneath. */
+  .desk { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 28px; }
+  .desk > #mixer { flex:1 1 280px; min-width:0; }
+  .desk > #master-mount { flex:none; }
+  .mixer-channel { width:96px; flex:none; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
   .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
-  .mixer-channel .meter-group { justify-content:center; flex-wrap:wrap; padding:0 6px 10px; }
   .mixer-channel .strip { border-bottom:0; }
 
   /* The generated panel and the knob are in panel.css, shared with the simple page. */
@@ -819,21 +830,32 @@
 
     <div class="tabpanel" id="mixer-panel" hidden>
       <h2>Mixer</h2>
-      <div class="align">
-        <label><input type="checkbox" id="align-tracks"> Line tracks up for latency</label>
-        <p id="align-status" class="note" role="status"></p>
+      <div class="desk">
+        <div class="mixer" id="mixer"></div>
+        <div id="master-mount" class="mixer"></div>
       </div>
-      <div id="master-mount" class="mixer"></div>
-      <div class="mixer" id="mixer"></div>
     </div>
 
     <div class="tabpanel" id="script-panel" hidden>
       <h2>Script</h2>
       <div id="script-mount" class="script"></div>
     </div>
-  </section>
-</main>
 
+    <div class="tabpanel" id="settings-panel" hidden>
+      <h2>Settings</h2>
+      <h3>Playback</h3>
+      <div class="align">
+        <label><input type="checkbox" id="align-tracks"> Line tracks up for latency</label>
+        <p id="align-status" class="note" role="status"></p>
+      </div>
+
+      <h3>Project</h3>
+      <p class="note">The title, author and notes saved with this session.</p>
+<div id="project-settings">
+  <div id="project-body"></div>
+</div>
+
+      <h3>Agents</h3>
 <details class="agent">
   <summary>Local agent (experimental)</summary>
   <p class="note">
@@ -871,11 +893,9 @@
   </form>
   <p class="note" id="bridge-status" role="status">Not connected.</p>
 </details>
-
-<details class="log" id="project">
-  <summary>Project</summary>
-  <div id="project-body"></div>
-</details>
+    </div>
+  </section>
+</main>
 
 <details class="log" id="history">
   <summary>Undo history</summary>

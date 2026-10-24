@@ -110,7 +110,7 @@ describe('bounce', () => {
 
 describe('how long a render is', () => {
   const timing = { secondsAtBeat: b => b / 2 }
-  const project = (clips, transport = {}) => ({ clips, transport: { beatsPerBar: 4, loopEnabled: false, loopEnd: 0, ...transport } })
+  const project = (clips, transport = {}) => ({ clips, arrangementClips: clips, transport: { beatsPerBar: 4, loopEnabled: false, loopEnd: 0, ...transport } })
   it('is four bars when nothing is longer, plus the tail', () => {
     expect(bounceSeconds(project([]), timing)).toBe(16 / 2 + 2)
   })
