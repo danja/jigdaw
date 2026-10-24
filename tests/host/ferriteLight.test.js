@@ -65,18 +65,31 @@ describe('Ferrite Light', () => {
     expect(Array.from(render(nam, null).samples)).toEqual(Array.from(render(nam, 0).samples))
   })
 
-  it('applies when flipped after the model is loaded', () => {
-    const { e } = render(nam, 0)
-    const n = e.jig_max_frames()
-    const left = new Float32Array(e.memory.buffer, e.jig_input_ptr(0), n)
-    const out = new Float32Array(e.memory.buffer, e.jig_output_ptr(0), n)
-    const block = () => { for (let i = 0; i < n; i++) left[i] = 0.3 * Math.sin(i * 0.06); e.jig_process(n); return Array.from(out) }
-    e.jig_set_param(PARAM_LIGHT, 0)
-    const before = block()
-    e.jig_set_param(PARAM_LIGHT, 1)
-    const after = block()
-    expect(differs(before, after)).toBe(true)
-    expect(after.every(Number.isFinite)).toBe(true)
+  it('applies when flipped after the model is loaded: it then sounds like one that was Light from the start', () => {
+    // Fed the same continuous sine; after the flip the network has seen more than its receptive field, so the
+    // two should agree. Without the live switch the first stays on the full network and differs.
+    const make = initial => {
+      const { exports: e } = new WebAssembly.Instance(new WebAssembly.Module(wasmBytes), {})
+      e.jig_init(48000)
+      e.jig_set_param(PARAM_LIGHT, initial)
+      new Uint8Array(e.memory.buffer, e.jig_nam_ptr(), nam.length).set(nam)
+      e.jig_load_nam(nam.length)
+      const n = e.jig_max_frames()
+      const left = new Float32Array(e.memory.buffer, e.jig_input_ptr(0), n)
+      const right = new Float32Array(e.memory.buffer, e.jig_input_ptr(1), n)
+      const out = new Float32Array(e.memory.buffer, e.jig_output_ptr(0), n)
+      let phase = 0
+      return { e, block () { for (let i = 0; i < n; i++) { left[i] = right[i] = 0.3 * Math.sin(phase); phase += 0.06 } e.jig_process(n); return Array.from(out) } }
+    }
+    const flipped = make(0)
+    const control = make(1)
+    for (let b = 0; b < 20; b++) { flipped.block(); control.block() }
+    flipped.e.jig_set_param(PARAM_LIGHT, 1)
+    let last = []
+    let want = []
+    for (let b = 0; b < 100; b++) { last = flipped.block(); want = control.block() }
+    expect(last.every(Number.isFinite)).toBe(true)
+    expect(differs(last, want)).toBe(false)
   })
 
   it('does nothing to a model that is not slimmable', () => {
