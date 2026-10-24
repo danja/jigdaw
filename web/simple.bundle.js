@@ -29851,7 +29851,8 @@ function createTransport(ctx2) {
       playAudio: (clip, at) => playAudioClip(clip, at),
       stopAudio: () => clipPlayer.stopAll(),
       automation,
-      launcher: () => launcherPlays(d.project, ctx2.launcher.state)
+      // The simple page and Reel have no clip launcher, and the scheduler takes none as meaning no plays.
+      ...ctx2.launcher ? { launcher: () => launcherPlays(d.project, ctx2.launcher.state) } : {}
     });
     const sources = [...new Set(clipAudio(d.project).map((c3) => c3.source))];
     await Promise.all(sources.map((iri4) => clipPlayer.load(iri4)));

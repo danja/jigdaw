@@ -135,7 +135,8 @@ export function createTransport (ctx) {
       playAudio: (clip, at) => playAudioClip(clip, at),
       stopAudio: () => clipPlayer.stopAll(),
       automation: automation,
-      launcher: () => launcherPlays(d.project, ctx.launcher.state)
+      // The simple page and Reel have no clip launcher, and the scheduler takes none as meaning no plays.
+      ...(ctx.launcher ? { launcher: () => launcherPlays(d.project, ctx.launcher.state) } : {})
     })
     // Every audio clip's file decoded before the clock starts, so the first
     // pass plays them; one that cannot be had is said once and left silent.
