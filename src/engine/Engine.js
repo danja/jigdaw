@@ -342,6 +342,8 @@ export class Engine {
   openInput (...args) { return this.#mixing.openInput(...args) }
   closeInput (...args) { return this.#mixing.closeInput(...args) }
   inputTrackIds () { return this.#mixing.inputTrackIds() }
+  setMonitorMono (on) { return this.#mixing.setMonitorMono(on) }
+  get monitorMono () { return this.#mixing.monitorMono }
   setTrackChannel (...args) { return this.#mixing.setTrackChannel(...args) }
 
   /**

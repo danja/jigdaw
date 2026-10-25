@@ -93,7 +93,8 @@ export function createMixer (document, { onChange, onAddPlugin, onRemovePlugin, 
           id: `strip-${track.id}`,
           onAdd: () => onAddPlugin(track.id),
           onRemove: onRemovePlugin,
-          actions: fxActions
+          actions: fxActions,
+          menu
         })
         wrapper.append(heading, strip.element, fx.element)
         channel = { wrapper, heading, strip, meter, fx, track }

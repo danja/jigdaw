@@ -17,6 +17,9 @@ export class Mixing {
   #masterArrive = null
   #masterPre = null
   #masterArrival = null
+  // A listening aid after the master: sums the mix to one channel so a person can hear what a mono speaker would. Not part of
+  // the project, and not in a render (a render builds its own engine and never sets it).
+  #mono = null
   #sends = []
   #inputs = new Map()
   #masterHeld = new Set()
@@ -36,12 +39,19 @@ export class Mixing {
     if (typeof context.createGain === 'function') {
       this.#master = context.createGain()
       this.#master.connect(output ?? context.destination)
-      // Where the tracks arrive: through the pan, then the level. `master` stays the
-      // node the speakers hang off, as it always was.
+      // Where the tracks arrive: through the pan, then the mono stage, then the level. `master` stays the node the speakers hang
+      // off, as it always was. The mono stage is always in the path and passes both channels through unchanged: the switch only
+      // changes how many channels it takes in. Explicit, so what comes in is mixed down to that many whatever its own count; a
+      // down-mix to one is the average, and the speakers take one channel as both.
+      this.#mono = context.createGain()
+      this.#mono.channelCountMode = 'explicit'
+      this.#mono.channelInterpretation = 'speakers'
+      this.#mono.channelCount = 2
+      this.#mono.connect(this.#master)
       this.#masterPanner = typeof context.createStereoPanner === 'function' ? context.createStereoPanner() : null
-      if (this.#masterPanner) this.#masterPanner.connect(this.#master)
+      if (this.#masterPanner) this.#masterPanner.connect(this.#mono)
       this.#masterPre = context.createGain()
-      this.#masterPre.connect(this.#masterPanner ?? this.#master)
+      this.#masterPre.connect(this.#masterPanner ?? this.#mono)
       this.#masterArrive = context.createGain()
       this.#masterArrive.connect(this.#masterPre)
     }
@@ -215,6 +225,15 @@ export class Mixing {
     if (!this.#masterHeld.has('gain')) this.#master.gain.setValueAtTime(muted ? 0 : gain, at)
     if (this.#masterPanner && !this.#masterHeld.has('pan')) this.#masterPanner.pan.setValueAtTime(pan, at)
   }
+
+  /** Listen to the mix summed to mono, or not. A listening aid for checking how a mix folds down; nothing recorded or rendered hears it. */
+  setMonitorMono (on) {
+    if (!this.#mono) throw new Error('this context cannot sum the mix to mono')
+    this.#mono.channelCount = on ? 1 : 2
+  }
+
+  /** Whether the mix is being summed to mono for listening. */
+  get monitorMono () { return this.#mono?.channelCount === 1 }
 
   /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
   masterParam (which) {

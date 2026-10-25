@@ -19258,6 +19258,9 @@ var Mixing = class {
   #masterArrive = null;
   #masterPre = null;
   #masterArrival = null;
+  // A listening aid after the master: sums the mix to one channel so a person can hear what a mono speaker would. Not part of
+  // the project, and not in a render (a render builds its own engine and never sets it).
+  #mono = null;
   #sends = [];
   #inputs = /* @__PURE__ */ new Map();
   #masterHeld = /* @__PURE__ */ new Set();
@@ -19275,10 +19278,15 @@ var Mixing = class {
     if (typeof context.createGain === "function") {
       this.#master = context.createGain();
       this.#master.connect(output ?? context.destination);
+      this.#mono = context.createGain();
+      this.#mono.channelCountMode = "explicit";
+      this.#mono.channelInterpretation = "speakers";
+      this.#mono.channelCount = 2;
+      this.#mono.connect(this.#master);
       this.#masterPanner = typeof context.createStereoPanner === "function" ? context.createStereoPanner() : null;
-      if (this.#masterPanner) this.#masterPanner.connect(this.#master);
+      if (this.#masterPanner) this.#masterPanner.connect(this.#mono);
       this.#masterPre = context.createGain();
-      this.#masterPre.connect(this.#masterPanner ?? this.#master);
+      this.#masterPre.connect(this.#masterPanner ?? this.#mono);
       this.#masterArrive = context.createGain();
       this.#masterArrive.connect(this.#masterPre);
     }
@@ -19451,6 +19459,15 @@ var Mixing = class {
     const at = this.#context.currentTime;
     if (!this.#masterHeld.has("gain")) this.#master.gain.setValueAtTime(muted ? 0 : gain, at);
     if (this.#masterPanner && !this.#masterHeld.has("pan")) this.#masterPanner.pan.setValueAtTime(pan, at);
+  }
+  /** Listen to the mix summed to mono, or not. A listening aid for checking how a mix folds down; nothing recorded or rendered hears it. */
+  setMonitorMono(on) {
+    if (!this.#mono) throw new Error("this context cannot sum the mix to mono");
+    this.#mono.channelCount = on ? 1 : 2;
+  }
+  /** Whether the mix is being summed to mono for listening. */
+  get monitorMono() {
+    return this.#mono?.channelCount === 1;
   }
   /** The master's AudioParam for an envelope to schedule on: 'gain' or 'pan'. Null where the context has none. */
   masterParam(which) {
@@ -19899,6 +19916,12 @@ var Engine = class {
   }
   inputTrackIds() {
     return this.#mixing.inputTrackIds();
+  }
+  setMonitorMono(on) {
+    return this.#mixing.setMonitorMono(on);
+  }
+  get monitorMono() {
+    return this.#mixing.monitorMono;
   }
   setTrackChannel(...args) {
     return this.#mixing.setTrackChannel(...args);
@@ -32646,7 +32669,7 @@ function createMeter(document2, { label, bars = 12 } = {}) {
 }
 
 // src/ui/FxList.js
-function createFxList(document2, { id, onAdd, onRemove, actions = {} }) {
+function createFxList(document2, { id, onAdd, onRemove, actions = {}, menu = null }) {
   const { onBypass = null, onMove = null, onReplace = null, onShow = null } = actions;
   if (typeof onAdd !== "function") throw new Error("createFxList needs onAdd");
   if (typeof onRemove !== "function") throw new Error("createFxList needs onRemove");
@@ -32745,6 +32768,20 @@ function createFxList(document2, { id, onAdd, onRemove, actions = {} }) {
         }
         if (plugin.failed) name2.textContent = `${plugin.label} (failed to load)`;
         item.append(name2, row);
+        if (menu) {
+          attachMenu(item, menu, () => [
+            ...onBypass && usable ? [{ label: "Bypass", checked: plugin.bypassed === true, run: () => onBypass(plugin.id, !plugin.bypassed) }] : [],
+            ...onReplace && usable ? [{ label: "Replace with another plugin", run: () => onReplace(plugin.id) }] : [],
+            ...onMove && usable && plugin.canEarlier ? [{ label: "Move earlier", run: () => onMove(plugin.id, -1) }] : [],
+            ...onMove && usable && plugin.canLater ? [{ label: "Move later", run: () => onMove(plugin.id, 1) }] : [],
+            ...onShow && usable ? [{ label: "Show controls", run: () => onShow(plugin.id) }] : [],
+            "-",
+            { label: "Remove", danger: true, run: () => {
+              onRemove(plugin.id);
+              toggle.focus();
+            } }
+          ]);
+        }
         return item;
       }));
       list.hidden = plugins.length === 0;
@@ -32796,7 +32833,8 @@ function createMixer(document2, { onChange, onAddPlugin, onRemovePlugin, fxActio
           id: `strip-${track2.id}`,
           onAdd: () => onAddPlugin(track2.id),
           onRemove: onRemovePlugin,
-          actions: fxActions
+          actions: fxActions,
+          menu
         });
         wrapper.append(heading, strip.element, fx.element);
         channel = { wrapper, heading, strip, meter, fx, track: track2 };
@@ -42605,6 +42643,46 @@ function createAlign(ctx2) {
   return { preferred, sync, fromSession, mount };
 }
 
+// src/ui/MonoSwitch.js
+function createMonoSwitch(document2, { onChange }) {
+  if (typeof onChange !== "function") throw new Error("createMonoSwitch needs onChange");
+  const element = document2.createElement("div");
+  element.className = "mono-switch";
+  const button = document2.createElement("button");
+  button.type = "button";
+  button.id = "strip-master-mono";
+  button.className = "mono-button";
+  button.textContent = "Mono";
+  button.title = "Listen to the mix summed to one channel, to hear how it folds down. For listening only: it is not saved and is not in an export or a recording.";
+  button.setAttribute("aria-label", "Listen in mono");
+  button.setAttribute("aria-pressed", "false");
+  const said = document2.createElement("span");
+  said.className = "mono-said";
+  said.setAttribute("role", "status");
+  element.append(button, said);
+  let on = false;
+  const show = () => {
+    button.setAttribute("aria-pressed", String(on));
+    said.textContent = on ? "Listening in mono" : "";
+  };
+  async function set(next) {
+    const was = on;
+    on = Boolean(next);
+    show();
+    try {
+      await onChange(on);
+    } catch (error2) {
+      on = was;
+      show();
+      said.textContent = error2.message;
+    }
+  }
+  button.addEventListener("click", () => set(!on));
+  return { element, button, set, toggle: () => set(!on), get on() {
+    return on;
+  } };
+}
+
 // web/app/Master.js
 function createMaster(ctx2) {
   const { $: $2, log: log2 } = ctx2;
@@ -42626,22 +42704,31 @@ function createMaster(ctx2) {
     onAdd: () => ctx2.rack.addPluginTo(MASTER_TRACK),
     onRemove: (nodeId) => ctx2.rack.removePlugin(nodeId),
     // The rack is built after the master, so each is looked up when pressed.
+    menu: ctx2.menu,
     actions: Object.fromEntries(["onBypass", "onMove", "onReplace", "onShow"].map((name2) => [name2, (...args) => ctx2.rack.fxActions[name2](...args)]))
+  });
+  const mono = createMonoSwitch(ctx2.document, {
+    onChange: async (on) => {
+      await ctx2.runtime.ensureRunning();
+      ctx2.engine.setMonitorMono(on);
+    }
   });
   return {
     meter,
+    mono,
     mount() {
       const heading = ctx2.document.createElement("h3");
       heading.textContent = "Master";
       const wrapper = ctx2.document.createElement("div");
       wrapper.className = "mixer-channel master-channel";
-      wrapper.append(heading, strip.element, fx.element, summary.element);
+      wrapper.append(heading, strip.element, mono.element, fx.element, summary.element);
       attachMenu(wrapper, ctx2.menu, (event) => {
         if (event.target.closest?.("input")) return null;
         const { master } = ctx2.dispatcher.project;
         return [
           { label: "Mute", checked: Boolean(master.muted), run: () => ctx2.dispatcher.apply([{ op: "setMaster", muted: !master.muted }]) },
           { label: "Reset level and pan", run: () => ctx2.dispatcher.apply([{ op: "setMaster", gain: 1, pan: 0 }]) },
+          { label: "Listen in mono", checked: mono.on, run: () => mono.toggle() },
           "-",
           { label: "Add a plugin", run: () => ctx2.rack.addPluginTo(MASTER_TRACK) }
         ];

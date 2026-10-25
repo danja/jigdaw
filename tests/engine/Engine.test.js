@@ -268,8 +268,28 @@ describe('track strips', () => {
     const masterPre = masterArrive.outgoing[0].destination
     const masterPan = masterPre.outgoing[0].destination
     expect(masterPan.pan).toBeDefined()
-    expect(masterPan.outgoing.map(o => o.destination)).toEqual([engine.master])
+    // Then the mono stage, then the master. The stage passes both channels through until it is switched.
+    const mono = masterPan.outgoing[0].destination
+    expect([mono.channelCount, mono.channelCountMode, mono.channelInterpretation]).toEqual([2, 'explicit', 'speakers'])
+    expect(mono.outgoing.map(o => o.destination)).toEqual([engine.master])
     expect(engine.trackIds()).toEqual(['t1'])
+  })
+
+  it('sums the mix to one channel for listening when asked, and back to two', () => {
+    const { engine } = engineWith()
+    expect(engine.monitorMono).toBe(false)
+    engine.setMonitorMono(true)
+    expect(engine.monitorMono).toBe(true)
+    engine.setMonitorMono(false)
+    expect(engine.monitorMono).toBe(false)
+  })
+
+  it('cannot sum to mono on a context with no gain nodes, and says so', () => {
+    const context = fakeContext()
+    delete context.createGain
+    const bare = new Engine({ context, loader: noLoader, AudioWorkletNode: noWorklet })
+    expect(() => bare.setMonitorMono(true)).toThrow(/cannot sum the mix to mono/)
+    expect(bare.monitorMono).toBe(false)
   })
 
   it('connects a node to its track, and lets go of it with the other links', () => {

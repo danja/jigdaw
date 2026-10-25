@@ -14,11 +14,12 @@
 // earlier, and a neighbour that does not pass audio cannot be swapped with. `actions` holds the handlers, each optional, and
 // a control with no handler is not drawn.
 import { setIcon } from './Icons.js'
+import { attachMenu } from './ContextMenu.js'
 
 /**
  * `id` is the stem of the control ids, so two channels do not share them.
  */
-export function createFxList (document, { id, onAdd, onRemove, actions = {} }) {
+export function createFxList (document, { id, onAdd, onRemove, actions = {}, menu = null }) {
   const { onBypass = null, onMove = null, onReplace = null, onShow = null } = actions
   if (typeof onAdd !== 'function') throw new Error('createFxList needs onAdd')
   if (typeof onRemove !== 'function') throw new Error('createFxList needs onRemove')
@@ -123,6 +124,19 @@ export function createFxList (document, { id, onAdd, onRemove, actions = {} }) {
         if (plugin.bypassed) { item.classList.add('bypassed'); name.textContent = `${plugin.label} (bypassed)` }
         if (plugin.failed) name.textContent = `${plugin.label} (failed to load)`
         item.append(name, row)
+        // Right click, or the Menu key on one of its buttons: the same actions as the buttons, for a person who would rather not
+        // find the right one among five. Each is left out where it cannot act, as the buttons are.
+        if (menu) {
+          attachMenu(item, menu, () => [
+            ...(onBypass && usable ? [{ label: 'Bypass', checked: plugin.bypassed === true, run: () => onBypass(plugin.id, !plugin.bypassed) }] : []),
+            ...(onReplace && usable ? [{ label: 'Replace with another plugin', run: () => onReplace(plugin.id) }] : []),
+            ...(onMove && usable && plugin.canEarlier ? [{ label: 'Move earlier', run: () => onMove(plugin.id, -1) }] : []),
+            ...(onMove && usable && plugin.canLater ? [{ label: 'Move later', run: () => onMove(plugin.id, 1) }] : []),
+            ...(onShow && usable ? [{ label: 'Show controls', run: () => onShow(plugin.id) }] : []),
+            '-',
+            { label: 'Remove', danger: true, run: () => { onRemove(plugin.id); toggle.focus() } }
+          ])
+        }
         return item
       }))
       list.hidden = plugins.length === 0

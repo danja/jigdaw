@@ -11,6 +11,7 @@ import { createStrip } from '../../src/ui/Strip.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createMeter } from '../../src/ui/Meter.js'
 import { createFxList } from '../../src/ui/FxList.js'
+import { createMonoSwitch } from '../../src/ui/MonoSwitch.js'
 import { attachMenu } from '../../src/ui/ContextMenu.js'
 import { inSignalOrder } from '../../src/ops/OpenProject.js'
 import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
@@ -37,16 +38,25 @@ export function createMaster (ctx) {
     onAdd: () => ctx.rack.addPluginTo(MASTER_TRACK),
     onRemove: nodeId => ctx.rack.removePlugin(nodeId),
     // The rack is built after the master, so each is looked up when pressed.
+    menu: ctx.menu,
     actions: Object.fromEntries(['onBypass', 'onMove', 'onReplace', 'onShow'].map(name => [name, (...args) => ctx.rack.fxActions[name](...args)]))
+  })
+  // Listening in mono is the viewer's, for this visit: not in the session, and not in an export, which builds its own engine.
+  const mono = createMonoSwitch(ctx.document, {
+    onChange: async on => {
+      await ctx.runtime.ensureRunning()
+      ctx.engine.setMonitorMono(on)
+    }
   })
   return {
     meter,
+    mono,
     mount () {
       const heading = ctx.document.createElement('h3')
       heading.textContent = 'Master'
       const wrapper = ctx.document.createElement('div')
       wrapper.className = 'mixer-channel master-channel'
-      wrapper.append(heading, strip.element, fx.element, summary.element)
+      wrapper.append(heading, strip.element, mono.element, fx.element, summary.element)
       // The same kind of menu as a track's channel (src/ui/Mixer.js).
       attachMenu(wrapper, ctx.menu, event => {
         if (event.target.closest?.('input')) return null
@@ -54,6 +64,7 @@ export function createMaster (ctx) {
         return [
           { label: 'Mute', checked: Boolean(master.muted), run: () => ctx.dispatcher.apply([{ op: 'setMaster', muted: !master.muted }]) },
           { label: 'Reset level and pan', run: () => ctx.dispatcher.apply([{ op: 'setMaster', gain: 1, pan: 0 }]) },
+          { label: 'Listen in mono', checked: mono.on, run: () => mono.toggle() },
           '-',
           { label: 'Add a plugin', run: () => ctx.rack.addPluginTo(MASTER_TRACK) }
         ]

@@ -119,3 +119,49 @@ describe('the controls of a plugin in the FX list', () => {
     })
   })
 })
+
+describe('the menu on a plugin in the FX list', () => {
+  function withMenu (plugins) {
+    const opened = []
+    const calls = []
+    const fx = createFxList(document, {
+      id: 'strip-a',
+      onAdd: () => {},
+      onRemove: id => calls.push(['remove', id]),
+      actions: { onBypass: (id, on) => calls.push(['bypass', id, on]), onMove: (id, d) => calls.push(['move', id, d]), onReplace: id => calls.push(['replace', id]), onShow: id => calls.push(['show', id]) },
+      menu: { open: (items, where) => opened.push({ items, where }) }
+    })
+    document.body.append(fx.element)
+    fx.update({ label: 'Lead', plugins })
+    const open = index => { fx.element.querySelectorAll('li')[index].dispatchEvent(new document.defaultView.Event('contextmenu', { bubbles: true, cancelable: true })); return opened.at(-1) }
+    return { open, calls }
+  }
+  const labels = opened => opened.items.filter(i => i !== '-').map(i => i.label)
+
+  it('offers what the buttons do, with the same limits, and Remove last', () => {
+    const { open } = withMenu([plugin('a', { canLater: true }), plugin('b', { canEarlier: true, canLater: true })])
+    expect(labels(open(0))).toEqual(['Bypass', 'Replace with another plugin', 'Move later', 'Show controls', 'Remove'])
+    expect(labels(open(1))).toEqual(['Bypass', 'Replace with another plugin', 'Move earlier', 'Move later', 'Show controls', 'Remove'])
+  })
+
+  it('marks Bypass as checked when the plugin is bypassed, and a pick does what the button does', () => {
+    const { open, calls } = withMenu([plugin('a', { bypassed: true, canLater: true })])
+    const menu = open(0)
+    expect(menu.items.find(i => i.label === 'Bypass').checked).toBe(true)
+    for (const item of menu.items.filter(i => i !== '-')) item.run()
+    expect(calls).toEqual([['bypass', 'a', false], ['replace', 'a'], ['move', 'a', 1], ['show', 'a'], ['remove', 'a']])
+  })
+
+  it('offers only Remove for a plugin that failed or has not loaded', () => {
+    const { open } = withMenu([plugin('broken', { failed: 'no wasm', canEarlier: true, canLater: true }), plugin('slow', { loaded: false, canEarlier: true })])
+    expect(labels(open(0))).toEqual(['Remove'])
+    expect(labels(open(1))).toEqual(['Remove'])
+  })
+
+  it('opens no menu when the page gave none', () => {
+    const { fx } = build([plugin('a')])
+    const event = new document.defaultView.Event('contextmenu', { bubbles: true, cancelable: true })
+    fx.element.querySelector('li').dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+  })
+})

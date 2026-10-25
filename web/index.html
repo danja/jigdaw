@@ -638,6 +638,13 @@
   .fx-actions button { flex:none; min-width:44px; min-height:44px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
   .fx-actions .fx-show, .fx-actions .fx-remove { flex:1 1 auto; }
   .fx-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  /* A channel is narrow, so a plugin's buttons stacked one to a row make a long list. With its list open the channel is wider, and
+     the buttons wrap four to a row. Where :has is not supported the channel stays as it was and the list is only taller. */
+  .mixer-channel:has(.fx-toggle[aria-expanded="true"]) { min-width:min(220px, 100%); }
+  .mono-switch { padding:0 8px 8px; display:flex; flex-direction:column; gap:4px; }
+  .mono-button { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .mono-button[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .mono-said { font-size:12px; color:var(--dim); min-height:1em; overflow-wrap:anywhere; }
   .fx-list ul { list-style:none; margin:8px 0 0; padding:0; }
   .fx-list li { margin:0 0 8px; padding:6px; border:1px solid var(--line); border-radius:4px; }
   .fx-name { display:block; margin-bottom:4px; font-size:13px; overflow-wrap:anywhere; }
@@ -741,6 +748,7 @@
     .strip-toggle:not(#compact) { min-width:30px; min-height:30px; }
     button[data-icon]:not(#compact), .chain-move:not(#compact), .chain-replace:not(#compact), .chain-bypass:not(#compact) { min-width:30px; min-height:30px; }
     .fx-toggle:not(#compact), .fx-add:not(#compact), .fx-actions button:not(#compact) { min-height:28px; min-width:30px; }
+    .mono-button:not(#compact) { min-height:28px; }
     .swatch:not(#compact) { width:30px; height:30px; }
   }
 </style>

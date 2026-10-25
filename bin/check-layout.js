@@ -18,6 +18,22 @@ export const WIDTHS = Object.freeze([320, 360, 390, 720, 1280])
 export const PAGES = Object.freeze(['/?studio', '/simple.html'])
 const SETTLE_MS = 3500
 
+// The Mixer with a track holding three plugins and the lists of the channel and the master open: the widest the mixer gets. The
+// audio runtime starts on a click, as for a person, so this runs with a user gesture.
+const MIXER_WITH_LISTS = `(async () => {
+  [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'Add track').click()
+  for (let i = 0; i < 150 && !window.__jigdaw?.dispatcher; i++) await new Promise(done => setTimeout(done, 100))
+  const d = window.__jigdaw.dispatcher
+  for (const name of ['boost', 'tremolo', 'cascade']) await d.addPlugin(location.origin + '/plugins/' + name + '/', { track: 'track-1' })
+  const link = (id, a, b) => ({ op: 'addConnection', id, from: { node: a, portIndex: 0 }, to: { node: b, portIndex: 0 }, signalKind: 'http://purl.org/stuff/transmissions/Audio' })
+  d.apply([link('c1', 'node-1', 'node-2'), link('c2', 'node-2', 'node-3')])
+  d.apply([{ op: 'setNode', id: 'node-2', bypassed: true }])
+  ;[...document.querySelectorAll('[role=tab]')].find(t => t.textContent.trim() === 'Mixer').click()
+  await new Promise(done => setTimeout(done, 300))
+  for (const id of ['strip-track-1-fx', 'strip-master-fx']) document.getElementById(id).click()
+  return document.querySelectorAll('.fx-list:not([hidden]) li').length
+})()`
+
 // Run inside the page. Returns what overflows the viewport, and the touch targets that are too small.
 const MEASURE = `(() => {
   const width = innerWidth
@@ -46,9 +62,15 @@ async function measureAll ({ send, session, base, evaluate }) {
       if (page === '/?studio') {
         views.push({ view: 'Browser open', before: `document.getElementById('toggle-browser')?.click()` })
         views.push({ view: 'Keys list open', before: `document.getElementById('toggle-keys')?.click()` })
+        views.push({ view: 'Mixer with plugin lists open', before: MIXER_WITH_LISTS, gesture: true, needs: 3 })
       }
-      for (const { view, before } of views) {
-        if (before) { await evaluate(before); await sleep(300) }
+      for (const { view, before, gesture = false, needs = null } of views) {
+        if (before) {
+          const made = await evaluate(before, { gesture })
+          // A view that sets something up says how much it made, so a setup that quietly did nothing is a failure, not a pass.
+          if (needs !== null && made < needs) throw new Error(`${view}: expected ${needs} plugins listed, found ${made}`)
+          await sleep(300)
+        }
         const m = await evaluate(MEASURE)
         results.push({ page, width, view, ...m, fits: m.scrollWidth <= m.innerWidth })
       }
