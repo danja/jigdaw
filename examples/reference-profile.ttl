@@ -52,12 +52,12 @@
     trn:recommendedAfter <https://example.org/plugins/driftgate/> ;
     pu:licenceId "Apache-2.0" ;
 
-    ## trn:Jig names the format and trn:WebAudio the generic technology it is
-    ## built on, so a catalogue can say "Jig" the way it says "VST3". Both live
-    ## in trn: rather than being invented in jig: because a plugin format
-    ## belongs to the shared vocabulary, and forking it would leave two answers
-    ## to one question.
-    trn:format trn:Jig , trn:WebAudio ;
+    ## trn:Jig names the format, so a catalogue can say "Jig" the way it says
+    ## "VST3". It lives in trn: rather than being invented in jig: because a
+    ## plugin format belongs to the shared vocabulary, and forking it would
+    ## leave two answers to one question. trn:WebAudio, which this used to
+    ## declare as well, is deprecated upstream and its shape rejects it.
+    trn:format trn:Jig ;
 
     ## What it needs from the host. trn:requires is the transmissions property
     ## that already carries trn:HostTransport; the capabilities named here are

@@ -30,7 +30,7 @@
     trn:produces trn:Midi ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
     trn:caution "Only the note range and transpose touch notes. Control changes, pitch bend and other channel messages follow the channel settings alone, and system messages always pass." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
     trn:requires jig:MidiOut ;

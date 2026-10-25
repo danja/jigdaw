@@ -61,7 +61,8 @@ export function createRecord (ctx, { processorUrl = null, WorkletNode = globalTh
     // from the captured frames further down, so a tempo change mid-take moves
     // the end by the beat math rather than by the clock.
     const startBeat = ctx.transport.position().beat
-    await recorder.start(trackIds)
+    // A track with a live input is taken before its fader: muting it keeps the person out of the speakers, not out of the take.
+    await recorder.start(trackIds, { pre: engine.inputTrackIds() })
     recording = { trackIds, startBeat }
     show(true)
     log(started

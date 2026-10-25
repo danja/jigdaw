@@ -19,6 +19,14 @@ const { jig, trn } = v
 const RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
 const RDFS_LABEL = 'http://www.w3.org/2000/01/rdf-schema#label'
 
+/** An xsd:boolean, or null for none. Anything else is refused rather than read as false. */
+function readBoolean (term, what = 'alignTracks') {
+  if (term === null) return null
+  if (term.value === 'true' || term.value === '1') return true
+  if (term.value === 'false' || term.value === '0') return false
+  throw new Error(`${what} is true or false, not "${term.value}"`)
+}
+
 /** The one subject typed jig:Project. */
 export function findProject (dataset) {
   const found = []
@@ -396,6 +404,7 @@ export function readProject (dataset) {
       author: value(one(dataset, iri, v.dcterms.creator)),
       notes: value(one(dataset, iri, v.rdfs.comment))
     },
+    settings: { alignTracks: readBoolean(one(dataset, iri, jig.alignTracks)) },
     revision: number(one(dataset, iri, jig.revision), 'revision') ?? 0,
     changes
   }

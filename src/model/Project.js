@@ -19,6 +19,7 @@
 import { EditorState } from './EditorState.js'
 import { ScriptState } from './ScriptState.js'
 import { EMPTY_INFO, patchInfo } from './ProjectInfo.js'
+import { EMPTY_SETTINGS, patchSettings } from './ProjectSettings.js'
 import {
   MASTER_TRACK, emptyArrangement, arrangementChanges, arrangementReconcile
 } from './ArrangementOps.js'
@@ -93,6 +94,8 @@ export class Project {
   #scripts = new ScriptState()
   // Title, author and notes: words about the session, outside the revision.
   #info = { ...EMPTY_INFO }
+  // How the session wants to be played (track alignment), outside the revision for the same reason.
+  #settings = { ...EMPTY_SETTINGS }
 
   get revision () { return this.#revision }
   /** The title, or null. */
@@ -100,6 +103,8 @@ export class Project {
   set label (value) { this.setInfo({ title: value }) }
   get info () { return { ...this.#info } }
   setInfo (patch) { this.#info = patchInfo(this.#info, patch) }
+  get settings () { return { ...this.#settings } }
+  setSettings (patch) { this.#settings = patchSettings(this.#settings, patch) }
 
   get tracks () { return [...this.#state.tracks.values()] }
   get nodes () { return [...this.#state.nodes.values()] }

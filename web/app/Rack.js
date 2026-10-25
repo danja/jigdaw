@@ -14,7 +14,8 @@ import { preserveFocus } from '../../src/ui/Focus.js'
 import { isMidi, carriesNotes } from '../../src/engine/EventRouter.js'
 import { describeMidi } from '../../src/ui/MidiText.js'
 import { MASTER_TRACK } from '../../src/model/ArrangementOps.js'
-import { inSignalOrder } from '../../src/ops/OpenProject.js'
+import { chainSwapChanges } from '../../src/ops/ChainReorder.js'
+import { fxPluginsOf as describeFx } from '../../src/ui/FxModel.js'
 
 export { slotTitle } from './RackSlot.js'
 
@@ -36,6 +37,14 @@ export function createRack (ctx) {
   // The connection list on the page now, so its open MIDI watches can be redrawn on a timer.
   let watching = null
 
+  // What each channel's FX list does beyond Add and Remove: the same things the chain strip does, as the same Ops.
+  const fxActions = {
+    onBypass: (nodeId, bypassed) => editNode([{ op: 'setNode', id: nodeId, bypassed }]),
+    onMove: (nodeId, delta) => movePlugin(nodeId, delta),
+    onReplace: nodeId => ctx.swap.begin(nodeId),
+    onShow: nodeId => showPlugin(nodeId)
+  }
+
   // One strip per track, on the Mixer tab. The strips are the mixer's own to
   // cache, and a track that has gone takes its strip with it (src/ui/Mixer.js).
   const mixer = createMixer(document, {
@@ -45,8 +54,44 @@ export function createRack (ctx) {
     },
     menu: ctx.menu,
     onAddPlugin: trackId => addPluginTo(trackId),
-    onRemovePlugin: nodeId => removePlugin(nodeId)
+    onRemovePlugin: nodeId => removePlugin(nodeId),
+    fxActions
   })
+
+  const editNode = changes => {
+    const result = ctx.dispatcher.apply(changes)
+    if (!result.ok) log(result.message, 'error')
+    return result
+  }
+
+  /** The FX list's Move earlier and Move later: the same swap as the chain strip's, one changeset, one undo. */
+  function movePlugin (nodeId, delta) {
+    try {
+      const passesAudio = id => {
+        const profile = ctx.dispatcher.engineNode(id)?.profile
+        return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0
+      }
+      editNode(chainSwapChanges(ctx.dispatcher.project, nodeId, delta, { passesAudio }))
+    } catch (error) { log(error.message, 'error') }
+  }
+
+  /** The FX list's Controls: the Plugins tab, at the plugin's track. */
+  function showPlugin (nodeId) {
+    ctx.tabs.select('tracks')
+    const track = ctx.dispatcher.project.node(nodeId)?.track
+    document.getElementById(`track-group-${track}`)?.scrollIntoView({ block: 'start' })
+  }
+
+  /** The plugins on a track, or the master, as the FX list draws them (src/ui/FxModel.js). */
+  function fxPluginsOf (trackId) {
+    const { project } = ctx.dispatcher
+    return describeFx(project, trackId, {
+      profileOf: id => ctx.dispatcher.engineNode(id)?.profile,
+      labelOf: id => { const n = project.node(id); return n?.label ?? ctx.dispatcher.engineNode(id)?.profile?.label ?? id },
+      failedOf: id => ctx.dispatcher.engineNode(id)?.failed ?? null,
+      trackLabelOf: id => trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
+    })
+  }
 
   /** The FX list's Add: the next Load goes onto this track, and the Browser opens to choose it. */
   function addPluginTo (trackId) {
@@ -161,8 +206,7 @@ export function createRack (ctx) {
       audibility: dispatcher?.audibility() ?? [],
       audioOutputsOf: id => dispatcher.engineNode(id)?.profile?.audioOutputs,
       labelFor: labelOfTrack,
-      pluginsOf: trackId => inSignalOrder(nodes.filter(n => n.track === trackId), connections)
-        .map(n => ({ id: n.id, label: labelFor(n.id) }))
+      pluginsOf: trackId => fxPluginsOf(trackId).map(plugin => ({ ...plugin, label: labelFor(plugin.id) }))
     })
     restoreMixerFocus()
     drawTargets()
@@ -383,6 +427,8 @@ export function createRack (ctx) {
     drawTargets,
     addPluginTo,
     removePlugin,
+    fxPluginsOf,
+    fxActions,
     trackLabel,
     forgetNode,
     /** Drop every cache, for reopening a session over whatever was there before. */

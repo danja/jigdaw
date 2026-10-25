@@ -31,7 +31,7 @@
     trn:caution "The receiving synth must apply pitch bend per channel at the configured Bend range, in a one channel per note mode. Incoming pitch bend, channel aftertouch and system messages are dropped." ;
     trn:caution "The scale is a jig:asset the person replaces with a .scl file of their own; it is saved with the session. Ported from the Downspout VST3 of the same name, whose .kbm keyboard maps and MPE zone setup are also not supported here." ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "MIT" ;
     trn:requires jig:MidiEvents ;
     trn:requires jig:MidiOut ;

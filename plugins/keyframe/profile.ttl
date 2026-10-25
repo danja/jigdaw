@@ -35,7 +35,7 @@
     trn:caution "Economy quality joins the extrema with straight lines, which is the roughest reconstruction. Balanced and Full use a smooth curve between them. Full also places each extremum between samples." ;
     trn:caution "Changing Quality or Stereo empties the capture and restarts it, so it is heard as a short gap." ;
     trn:caution "Latency is a fixed 512 frames, which is two forced keyframe hops." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

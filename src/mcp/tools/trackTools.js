@@ -2,7 +2,7 @@
 //
 // Tracks and the general changeset: graph_apply_changes and the tools that edit a track.
 // One group of the agent tools (docs/webmcp.md); src/mcp/tools.js assembles them in order and is the front door.
-import { describeBus } from '../../model/TrackBus.js'
+import { describeBus, placeBus } from '../../model/TrackBus.js'
 import { duplicateTrack } from '../../ops/DuplicateTrack.js'
 import { ok, failed } from './Result.js'
 
@@ -116,6 +116,7 @@ export function trackTools ({ dispatcher }) {
           return failed(error.message, { kind: 'change' })
         }
         const result = dispatcher.apply(changes)
+        if (result.ok) placeBus(dispatcher.project, changes[0].id, trackIds)
         return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind })
       }
     },

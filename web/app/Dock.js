@@ -9,7 +9,7 @@ import { createAudioClipPanel } from '../../src/ui/AudioClipPanel.js'
 import { createChainSummary } from '../../src/ui/ChainSummary.js'
 import { createTrackPanel } from '../../src/ui/TrackPanel.js'
 import { createBulkTrackPanel } from '../../src/ui/BulkTrackPanel.js'
-import { describeBus } from '../../src/model/TrackBus.js'
+import { describeBus, placeBus } from '../../src/model/TrackBus.js'
 import { describeLevelShift, describePanShift, groupMembers } from '../../src/model/GroupChannel.js'
 import { trackHasMidi as hasMidi } from '../../src/model/MidiFile.js'
 import { createNodeView } from '../../src/ui/NodeView.js'
@@ -66,12 +66,16 @@ export function createDockPanel (ctx) {
     onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
     onFolder: folder => { for (const id of ctx.selection.ids) layoutOf(id, { folder }) },
     onExportMidi: () => exportMidi(ctx.selection.ids),
-    onBus: () => {
+    onBus: label => {
+      const members = ctx.selection.ids
       let changes
-      try { changes = describeBus(ctx.dispatcher.project, ctx.selection.ids) } catch (error) { log(error.message, 'error'); return }
+      try { changes = describeBus(ctx.dispatcher.project, members, label === undefined ? {} : { label }) } catch (error) { log(error.message, 'error'); return }
       const result = ctx.dispatcher.apply(changes)
       if (!result.ok) log(result.message, 'error')
-      else ctx.selection.set('track', [changes[0].id])
+      else {
+        placeBus(ctx.dispatcher.project, changes[0].id, members)
+        ctx.selection.set('track', [changes[0].id])
+      }
     }
   })
   dock.slot('tracks').append(bulk.element)

@@ -101,7 +101,24 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   bus.type = 'button'
   bus.id = 'bulk-bus'
   bus.textContent = 'Send to a new bus'
-  bus.addEventListener('click', () => onBus())
+  // Named when it is made, so a bus is not left as "Bus" and renamed after. Empty is the default name.
+  const busLabel = document.createElement('label')
+  busLabel.className = 'track-field'
+  busLabel.append(document.createTextNode('Bus name '))
+  const busName = document.createElement('input')
+  busName.type = 'text'
+  busName.id = 'bulk-bus-name'
+  busName.autocomplete = 'off'
+  busName.spellcheck = false
+  busName.maxLength = MAX_FOLDER_NAME
+  busLabel.append(busName)
+  const makeBus = () => {
+    const name = busName.value.trim()
+    busName.value = ''
+    onBus(name === '' ? undefined : name)
+  }
+  bus.addEventListener('click', makeBus)
+  busName.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); makeBus() } })
 
   // Relative moves keep the tracks' balance (src/model/GroupChannel.js).
   const shifts = document.createElement('div')
@@ -137,7 +154,7 @@ export function createBulkTrackPanel (document, { onChannel, onColor, onSize, on
   const actions = document.createElement('div')
   actions.className = 'track-actions'
   actions.append(mute, solo, bus, ...(onExportMidi ? [exportMidi] : []))
-  element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder)
+  element.append(summary, busLabel, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder)
 
   return {
     element,

@@ -43,18 +43,18 @@
 
 <#boost> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/boost/> ;
-    jig:pinnedDigest "sha384-n7D7sAZrPoSKQ7p7F2veUM4h8zDSn41dqb4wDVcghL+bzdmU0M479/qfhJGKMnKi" .
+    jig:pinnedDigest "sha384-efbUCIuUbdsw/j5nn0qdcbirus0R37YkIgeAZ0jGw7V8RWzekbewrKioYO52ZRQ/" .
 
 <#trem> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/tremolo/> ;
-    jig:pinnedDigest "sha384-QCo5cyOtayC3tzVEz2v3dV+3MN6gSFpmxMrD3BW0IUeDk5KveVOKepkJkLatxbw5" ;
+    jig:pinnedDigest "sha384-1VsjOFRTkNPBDb89JcVs4oMH2z7804wfh6uh4HQ0haVOvkCXX+OBpKvOln26GprH" ;
     jig:setting <#trem-rate> .
 
 <#trem-rate> a jig:ParameterSetting ; jig:symbol "rate" ; jig:value 4.5 .
 
 <#verb> a jig:Member ;
     jig:plugin <https://strandz.it/jigdaw/plugins/cascade/> ;
-    jig:pinnedDigest "sha384-Pyic6s4gJzwKpPjRUcI8UXsC4QDfw7hZ8UqdmrPBim2hdQbZQvpwd+gjOuQgeGsF" .
+    jig:pinnedDigest "sha384-61iBKMWOMBvUnAz3eo339sPyaUqscWqXLx4zT5DUSvY7xcVck+0/jY2Gtw92avsv" .
 
 # The rack's own input 0 and output 0 are connections from and to the composite itself.
 <#c-in> a jig:Connection ; jig:from <#c-in-from> ; jig:to <#c-in-to> ; jig:signalKind trn:Audio .

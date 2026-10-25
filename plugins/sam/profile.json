@@ -27,7 +27,7 @@
     "SAM's code is vendored in third_party/ and has no licence (abandonware; see third_party/SAM-LICENSE.md). Whether it may be redistributed with this plugin is the repository owner's decision, recorded in HUMANS.md.",
     "Ported from the Downspout VST3 of the same name. Not carried over: the six voice presets (set Speed, Pitch, Throat and Mouth by hand) and the Current Word read-out."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "abi": "jig:Abi2",
   "requires": [
     "jig:MidiEvents",

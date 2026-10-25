@@ -18,6 +18,7 @@
     "check-suites": "node bin/check-suites.js",
     "check:skins": "node bin/check-skins.js",
     "check:layout": "node bin/check-layout.js",
+    "check:alignment": "node bin/build-web.js && node bin/build-precache.js && node bin/check-alignment.js",
     "build:web": "node bin/build-web.js && node bin/build-precache.js",
     "serve": "node bin/serve.js",
     "mcp-bridge": "node bin/mcp-bridge.js",

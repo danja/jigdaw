@@ -30,7 +30,7 @@
     trn:produces trn:Audio ;
     trn:genre "EQ" ;
     trn:caution "A low pass or high pass corner within a few percent of Nyquist (half the sample rate) behaves like a gentler slope than the shape suggests, because the bilinear transform compresses the top octave." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

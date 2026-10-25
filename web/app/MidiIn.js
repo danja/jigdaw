@@ -13,16 +13,55 @@ const SAID = {
   [MIDI_STATUS.unsupported]: 'This browser has no Web MIDI.'
 }
 
+// Which controllers are turned off is the viewer's own setting, kept in this browser and never in a session: the same
+// session on another machine meets other controllers. Where storage is blocked it is forgotten on reload and nothing breaks.
+const STORE_KEY = 'jigdaw.midi.off'
+function loadOff (window) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(STORE_KEY) ?? '[]')
+    return Array.isArray(list) ? list.filter(id => typeof id === 'string') : []
+  } catch { return [] }
+}
+function saveOff (window, ids) { try { window.localStorage.setItem(STORE_KEY, JSON.stringify(ids)) } catch { /* private window: kept for this visit only */ } }
+
 export function createMidiIn (ctx) {
-  const { $, log, window } = ctx
+  const { $, log, window, document } = ctx
   // Armed tracks, for this page only: not part of a session, and forgotten on reload.
   const armed = new Set()
 
-  const say = ({ status, inputs }) => {
+  // One checkbox per controller, drawn only when there is a choice to make: with one controller a list of one is a control
+  // that cannot change anything.
+  const devices = document.createElement('fieldset')
+  devices.id = 'midi-devices'
+  devices.className = 'midi-devices'
+  devices.hidden = true
+  const legend = document.createElement('legend')
+  legend.textContent = 'Play from'
+  devices.append(legend)
+
+  function drawDevices (list) {
+    devices.hidden = list.length < 2
+    const boxes = list.map(device => {
+      const label = document.createElement('label')
+      const box = document.createElement('input')
+      box.type = 'checkbox'
+      box.checked = device.enabled
+      box.dataset.device = device.id
+      box.addEventListener('change', () => { midi.setEnabled(device.id, box.checked); saveOff(window, midi.disabled) })
+      label.append(box, document.createTextNode(` ${device.name}`))
+      return label
+    })
+    devices.replaceChildren(legend, ...boxes)
+  }
+
+  const say = ({ status, inputs, devices: list = [] }) => {
     $('midi-in').setAttribute('aria-pressed', String(status === MIDI_STATUS.on))
+    const off = list.filter(d => !d.enabled).length
     $('midi-state').textContent = status === MIDI_STATUS.on
-      ? (inputs.length === 0 ? 'MIDI in: no controller found.' : `MIDI in: ${inputs.join(', ')}.`)
+      ? (inputs.length === 0 ? 'MIDI in: no controller found.'
+        : `MIDI in: ${list.filter(d => d.enabled).map(d => d.name).join(', ') || 'every controller is turned off'}${off > 0 ? `, ${off} turned off` : ''}.`)
       : SAID[status]
+    drawDevices(status === MIDI_STATUS.on ? list : [])
   }
 
   /** The tracks a message goes to: those armed, else the selected one. */
@@ -45,10 +84,12 @@ export function createMidiIn (ctx) {
         ctx.midiRecord.capture(nodeId, bytes)
       }
     },
-    onChange: say
+    onChange: say,
+    disabled: loadOff(window)
   })
 
   function mount () {
+    $('midi-state').after(devices)
     say({ status: midi.status, inputs: [] })
     $('midi-in').addEventListener('click', async () => {
       if (midi.status === MIDI_STATUS.on) { midi.disable(); return }

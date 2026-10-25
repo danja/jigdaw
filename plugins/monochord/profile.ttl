@@ -33,7 +33,7 @@
     trn:caution "Exciter changes apply to the next note. A note already sounding keeps the exciter it started with." ;
     trn:caution "The bow keeps sounding while the key is held and its level follows the note velocity; Hardness does not affect it." ;
     trn:caution "Stiffness above about 0.7 detunes the upper partials audibly on a low note (partial 6 is +3 cents at 0.5, +20 at 0.7, +62 at 0.9)." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "MIT" ;
     trn:requires jig:MidiEvents ;
 

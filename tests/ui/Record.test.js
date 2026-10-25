@@ -51,7 +51,7 @@ function fakeContext () {
   }
 }
 
-function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
+function build ({ tracks = ['t1', 't2'], playing = false, inputs = [] } = {}) {
   FakeNode.reset()
   // A real document: the record button is drawn as an icon, which needs real SVG elements.
   const page = parseHTML('<!doctype html><html><body><button id="record" data-icon="record">Record</button></body></html>')
@@ -62,6 +62,7 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
   const mediaBase = 'https://s.test/sessions/1/'
   let played = 0
   const order = []
+  const taps = []
   let beat = 4
   const dispatcher = new OpDispatcher()
   dispatcher.apply(tracks.map(id => ({ op: 'addTrack', id })))
@@ -72,8 +73,9 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
     runtime: { ensureRunning: async () => dispatcher },
     engine: {
       trackIds: () => tracks,
+      inputTrackIds: () => inputs,
       context,
-      trackTap: () => ({ connect () {} })
+      trackTap: (id, { pre = false } = {}) => { taps.push([id, pre]); return { connect () {} } }
     },
     dispatcher,
     media: {
@@ -97,7 +99,7 @@ function build ({ tracks = ['t1', 't2'], playing = false } = {}) {
     const chunk = new Float32Array(CAPTURE_FRAMES * 2).fill(value)
     node.port.onmessage({ data: chunk })
   }
-  return { ctx, page, record, dispatcher, logLines, mediaFiles, nodes, feed, order, played: () => played }
+  return { ctx, page, record, dispatcher, logLines, mediaFiles, nodes, feed, order, taps, played: () => played }
 }
 
 describe('record', () => {
@@ -134,6 +136,13 @@ describe('record', () => {
     await setup.record.toggle()
     expect(setup.played()).toBe(0)
     expect(setup.record.isRecording()).toBe(true)
+  })
+
+  it('takes a track with a live input before its fader, and the others after it', async () => {
+    // Muting the track keeps a person out of the speakers; the take must not go quiet with it.
+    setup = build({ inputs: ['t2'] })
+    await setup.record.toggle()
+    expect(setup.taps).toEqual([['t1', false], ['t2', true]])
   })
 
   it('waits for beat zero after starting the transport, so a count-in is not recorded into the take', async () => {

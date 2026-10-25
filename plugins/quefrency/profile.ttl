@@ -35,7 +35,7 @@
     trn:caution "Lifter must sit below the shortest pitch period in the input, or harmonics leak into the formant envelope and move with it." ;
     trn:caution "MIDI control changes drive the parameters, one controller per port as the profile's midi:binding declarations say, on any channel. Value 64 is each parameter's default where the default lies inside its range, so a centred controller changes nothing; 64 and above selects the true envelope." ;
     trn:caution "A controller's value is not shown on the panel and is not saved with the project. It holds until the host's own value for that parameter next changes, and then the host's value wins." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 

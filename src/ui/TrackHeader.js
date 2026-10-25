@@ -17,7 +17,7 @@ import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE, LANE_SIZES } from '../model/EditorState.js'
 import { attachMenu } from './ContextMenu.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -35,6 +35,14 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return
     event.preventDefault()
     onMove(id, event.key === 'ArrowUp' ? -1 : 1)
+  })
+  // Shift with Up or Down extends the selection to the track above or below, as a list does, so choosing a run of tracks
+  // needs neither the pointer nor a click on each.
+  name.addEventListener('keydown', event => {
+    if (!onExtend || !event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+    event.preventDefault()
+    onExtend(id, event.key === 'ArrowUp' ? -1 : 1)
   })
   // Plus and minus make the lane one size taller or shorter, so resizing does not need the pointer or the dock.
   name.addEventListener('keydown', event => {

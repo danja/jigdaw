@@ -81,8 +81,12 @@ Jiggy does this by default. `alignTracks` in `web/host.json` is the starting val
 checkbox on the Mixer tab changes it and is remembered in the person's browser, and each
 track's header says its own latency and how much it was delayed to line up. The largest
 delay it can give is `maxTrackDelayMs` in the same file; a difference beyond that is reported
-in the console and that track is left as it was. `OpDispatcher.trackLatencies()` reports both
+in the console, on the page's log, and that track is left as it was. `OpDispatcher.trackLatencies()` reports both
 figures.
+
+The setting belongs to the session as well as the person: a session saved with `jig:alignTracks`
+([project-format.md](project-format.md)) is played the way it was saved, so two people hear it alike, and a session
+that says nothing is played by the person's own preference.
 
 ### MIDI loops
 

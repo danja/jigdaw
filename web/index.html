@@ -458,6 +458,12 @@
   .head-slider input { min-height:28px; margin:0; width:100%; }
   .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
   .midi-state { color:var(--dim); font-size:12px; max-width:16rem; }
+  .mic-devices { color:var(--dim); font-size:12px; display:inline-flex; align-items:center; gap:6px; min-height:44px; }
+  .mic-devices select { min-height:44px; max-width:14rem; }
+  .midi-devices { border:0; margin:0; padding:0; color:var(--dim); font-size:12px; display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
+  .midi-devices legend { float:left; padding:0 6px 0 0; }
+  .midi-devices label { display:inline-flex; align-items:center; gap:4px; min-height:44px; }
+  .midi-devices input { min-width:24px; min-height:24px; }
   .timeline-head > .head-arm.head-arm { flex:1 1 100%; }
   .head-arm[aria-pressed="true"] { background:var(--err); color:#111; border-color:var(--err); }
   .head-latency { flex:1 1 100%; margin:0; font-size:12px; color:var(--dim); }
@@ -627,7 +633,11 @@
   .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
   .mixer-channel .strip { border-bottom:0; }
   .fx { padding:0 8px 10px; }
-  .fx-toggle, .fx-add, .fx-remove { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-toggle, .fx-add { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-actions { display:flex; flex-wrap:wrap; gap:4px; }
+  .fx-actions button { flex:none; min-width:44px; min-height:44px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-actions .fx-show, .fx-actions .fx-remove { flex:1 1 auto; }
+  .fx-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
   .fx-list ul { list-style:none; margin:8px 0 0; padding:0; }
   .fx-list li { margin:0 0 8px; padding:6px; border:1px solid var(--line); border-radius:4px; }
   .fx-name { display:block; margin-bottom:4px; font-size:13px; overflow-wrap:anywhere; }
@@ -730,7 +740,7 @@
     button:not(#compact):not([data-icon]):not(.chain-move):not(.chain-replace):not(.chain-bypass):not(.strip-toggle) { min-width:0; }
     .strip-toggle:not(#compact) { min-width:30px; min-height:30px; }
     button[data-icon]:not(#compact), .chain-move:not(#compact), .chain-replace:not(#compact), .chain-bypass:not(#compact) { min-width:30px; min-height:30px; }
-    .fx-toggle:not(#compact), .fx-add:not(#compact), .fx-remove:not(#compact) { min-height:28px; }
+    .fx-toggle:not(#compact), .fx-add:not(#compact), .fx-actions button:not(#compact) { min-height:28px; min-width:30px; }
     .swatch:not(#compact) { width:30px; height:30px; }
   }
 </style>
@@ -772,6 +782,8 @@
   <span class="position" id="clock" aria-live="off" title="Minutes, seconds and tenths, from the tempo map">0:00.0</span>
   <button id="midi-in" data-icon="midiIn" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
   <span id="midi-state" class="midi-state" role="status"></span>
+  <button id="mic-in" data-icon="mic" type="button" aria-pressed="false" hidden title="Play a microphone into the selected track. Mute the track to record it without hearing it">Mic in</button>
+  <span id="mic-state" class="midi-state" role="status"></span>
   <span class="history">
       <button id="undo" data-icon="undo" title="Undo the last edit" disabled>Undo</button>
       <button id="redo" data-icon="redo" title="Redo the last undone edit" disabled>Redo</button>

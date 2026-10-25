@@ -157,6 +157,9 @@ export function createSessions (ctx) {
 
     // Replaced even when the file has none, as the layout and scripts are: the last session's title is not this one's.
     try { d.project.setInfo(read.info) } catch (error) { d.project.setInfo({ title: null, author: null, notes: null }); log(`project info ignored: ${error.message}`, 'error') }
+    // Replaced even when the file says nothing: the last session's setting is not this one's.
+    try { d.project.setSettings(read.settings) } catch (error) { d.project.setSettings({ alignTracks: null }); log(`project settings ignored: ${error.message}`, 'error') }
+    ctx.align?.fromSession()
     // Not on the simple page or the reel page, which have no Project section.
     ctx.projectInfo?.refresh()
 

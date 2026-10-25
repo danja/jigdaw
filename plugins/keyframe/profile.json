@@ -27,7 +27,7 @@
     "Changing Quality or Stereo empties the capture and restarts it, so it is heard as a short gap.",
     "Latency is a fixed 512 frames, which is two forced keyframe hops."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

@@ -57,6 +57,13 @@ The project node may also carry a title (`rdfs:label`), an author (`dcterms:crea
 session. They are not part of what a revision covers, nothing compiles them, and changing them is
 not an undo step.
 
+The project node may also say `jig:alignTracks true` or `false`: whether the session's tracks are
+delayed to line up with one another for latency ([latency.md](latency.md), "Between tracks"). It is
+how the session wants to be played, so it is outside a revision and not an undo step, like the words
+above. A host that opens the session uses it, and says so. Left out, the session does not say and
+the person's own preference decides; a host writes it only once a person has chosen, so a session
+that never had it is saved without it.
+
 **Nodes are instances, not plugins.** A node names the plugin it instantiates with
 `jig:plugin`, as a dereferenceable `https:` IRI. Two instances of one plugin are two nodes
 with the same `jig:plugin` and different settings.

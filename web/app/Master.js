@@ -35,7 +35,9 @@ export function createMaster (ctx) {
   const fx = createFxList(ctx.document, {
     id: 'strip-master',
     onAdd: () => ctx.rack.addPluginTo(MASTER_TRACK),
-    onRemove: nodeId => ctx.rack.removePlugin(nodeId)
+    onRemove: nodeId => ctx.rack.removePlugin(nodeId),
+    // The rack is built after the master, so each is looked up when pressed.
+    actions: Object.fromEntries(['onBypass', 'onMove', 'onReplace', 'onShow'].map(name => [name, (...args) => ctx.rack.fxActions[name](...args)]))
   })
   return {
     meter,
@@ -65,7 +67,7 @@ export function createMaster (ctx) {
       strip.update(project.master, { label: 'Master' })
       const nodes = inSignalOrder(project.nodes.filter(n => n.track === MASTER_TRACK), project.connections)
       const labelOf = node => node.label ?? ctx.dispatcher.engineNode(node.id)?.profile?.label ?? node.id
-      fx.update({ label: 'Master', plugins: nodes.map(node => ({ id: node.id, label: labelOf(node) })) })
+      fx.update({ label: 'Master', plugins: ctx.rack.fxPluginsOf(MASTER_TRACK) })
       summary.element.hidden = nodes.length === 0
       if (nodes.length === 0) return
       const input = project.master.audioInput ? project.node(project.master.audioInput) : null

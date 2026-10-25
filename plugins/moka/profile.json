@@ -5,7 +5,7 @@
   "vendor": "danja",
   "developer": "http://danny.ayers.name",
   "version": "1.0.0",
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "MIT",
   "prefers": [],
   "registeredName": "moka",

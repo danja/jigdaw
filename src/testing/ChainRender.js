@@ -15,9 +15,11 @@
 // The master is reported under its own id, MASTER_TRACK: the sum of every track with no bus, through the master's audio
 // input plugin when it has one.
 //
-// Not a mixer: only the first audio input of a node is fed, a track's level is
-// the peak of what reaches its input, and faders and the master are not
-// applied (a send's own level is). It answers "does anything reach this track", not "how loud is it".
+// Not a mixer: only the first audio input of a node is fed, and by default a track's level is the peak of what reaches its
+// input, with no fader applied (a send's own level is). That answers "does anything reach this track". With `faders: true`
+// each track's gain, mute and solo and the master's gain and mute are applied, so the peaks are what is heard, which is
+// what finds a preset whose master or fader leaves a sound at a level nobody can hear. Pan, a send's tap and the
+// alignment delays are still not modelled.
 
 import { Scheduler, clipNotes, clipControllers } from '../engine/Scheduler.js'
 import { MASTER_TRACK } from '../model/ArrangementOps.js'
@@ -27,14 +29,22 @@ const settle = () => new Promise(resolve => setImmediate(resolve))
 /**
  * Returns a Map trackId -> peak of the audio that reached that track's input.
  * `quanta` render quanta of 128 frames are played from beat zero. `clips: false` leaves the clips unplayed.
+ * `faders: true` applies the track faders (gain, mute, solo) and the master's, so a peak is what is heard.
  */
-export async function renderChain (dispatcher, engine, { quanta = 1500, quantum = 128, clips = true, lookaheadSeconds = 0.12 } = {}) {
+export async function renderChain (dispatcher, engine, { quanta = 1500, quantum = 128, clips = true, lookaheadSeconds = 0.12, faders = false } = {}) {
   const entries = engine.nodes()
   const byNode = new Map(entries.map(e => [e.node, e]))
   // The master is a place sound arrives like a track, under its own id.
   const places = [...dispatcher.project.tracks.map(t => t.id), MASTER_TRACK]
   const trackOf = new Map(places.map(id => [engine.trackInput(id), id]))
   const peaks = new Map(places.map(id => [id, 0]))
+  // How much of what arrives at each place is heard. One everywhere unless `faders` asks for the mix.
+  const heard = new Map(places.map(id => [id, 1]))
+  if (faders) {
+    for (const t of dispatcher.audibility()) heard.set(t.trackId, t.silent ? 0 : t.gain)
+    const { master } = dispatcher.project
+    heard.set(MASTER_TRACK, master.muted ? 0 : master.gain)
+  }
 
   // Order: a node after everything that feeds it, by audio connections the engine made and MIDI
   // connections the model holds.
@@ -120,9 +130,9 @@ export async function renderChain (dispatcher, engine, { quanta = 1500, quantum 
         if (c.input !== 0 || c.output !== 0) continue
         const track = trackOf.get(c.destination)
         if (track !== undefined) {
-          for (const channel of output) for (const v of channel) peaks.set(track, Math.max(peaks.get(track), Math.abs(v)))
+          for (const channel of output) for (const v of channel) peaks.set(track, Math.max(peaks.get(track), Math.abs(v) * heard.get(track)))
           if (!atFader.has(track)) atFader.set(track, silent())
-          addInto(atFader.get(track), output)
+          addInto(atFader.get(track), output, heard.get(track))
         } else if (byNode.has(c.destination)) {
           const sum = arriving.get(c.destination) ?? output.map(() => new Float32Array(quantum))
           output.forEach((channel, i) => { const into = sum[Math.min(i, sum.length - 1)]; for (let s = 0; s < quantum; s++) into[s] += channel[s] })
@@ -135,7 +145,7 @@ export async function renderChain (dispatcher, engine, { quanta = 1500, quantum 
       if (!peaks.has(to) || inputNodeOf(to)) continue
       const mixed = silent()
       for (const { from, level } of sources) if (atFader.has(from)) addInto(mixed, atFader.get(from), level)
-      for (const channel of mixed) for (const v of channel) peaks.set(to, Math.max(peaks.get(to), Math.abs(v)))
+      for (const channel of mixed) for (const v of channel) peaks.set(to, Math.max(peaks.get(to), Math.abs(v) * heard.get(to)))
     }
     await settle()
   }

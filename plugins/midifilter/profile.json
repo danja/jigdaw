@@ -19,7 +19,7 @@
     "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can.",
     "Only the note range and transpose touch notes. Control changes, pitch bend and other channel messages follow the channel settings alone, and system messages always pass."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "requires": [
     "jig:MidiEvents",

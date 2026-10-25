@@ -45,6 +45,8 @@ import { createLayout } from './app/Layout.js'
 import { createKeys } from './app/Keys.js'
 import { createSwap } from './app/Swap.js'
 import { createMidiIn } from './app/MidiIn.js'
+import { createMicIn } from './app/MicIn.js'
+import { microphoneAvailable } from '../src/host/Microphone.js'
 import { createAlign } from './app/Align.js'
 import { createMaster } from './app/Master.js'
 import { createMeters } from './app/Meters.js'
@@ -112,6 +114,12 @@ ctx.layout = createLayout(ctx)
 ctx.keys = createKeys(ctx)
 ctx.swap = createSwap(ctx)
 ctx.midiIn = createMidiIn(ctx)
+// A check from outside may set `window.__jigdawMicrophone` to a function returning a stream, as on the simple page.
+ctx.micIn = createMicIn(ctx, {
+  getUserMedia: constraints => (window.__jigdawMicrophone ?? (c => navigator.mediaDevices.getUserMedia(c)))(constraints),
+  mediaDevices: navigator.mediaDevices,
+  available: Boolean(window.__jigdawMicrophone) || microphoneAvailable(navigator.mediaDevices)
+})
 ctx.launcher = createLauncher(ctx)
 ctx.script = createScript(ctx)
 
@@ -196,6 +204,7 @@ ctx.layout.mount()
 ctx.keys.mount()
 ctx.swap.mount()
 ctx.midiIn.mount()
+ctx.micIn.mount()
 ctx.align.mount()
 
 // Show the whole IRI, not a path. A plugin is identified by an absolute IRI,

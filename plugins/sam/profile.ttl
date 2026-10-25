@@ -33,7 +33,7 @@
     trn:caution "The words are a jig:asset the person replaces with a plain text file of their own, up to 2000 printable ASCII characters and 512 words, and are saved with the session. A lone _ is a rest. Phonetic reads SAM phoneme codes, e.g. /HEH3LOW2 WER4LD." ;
     trn:caution "SAM's code is vendored in third_party/ and has no licence (abandonware; see third_party/SAM-LICENSE.md). Whether it may be redistributed with this plugin is the repository owner's decision, recorded in HUMANS.md." ;
     trn:caution "Ported from the Downspout VST3 of the same name. Not carried over: the six voice presets (set Speed, Pitch, Throat and Mouth by hand) and the Current Word read-out." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     trn:requires jig:MidiEvents ;
     trn:requires trn:HostTransport ;
 

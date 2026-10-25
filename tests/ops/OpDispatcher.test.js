@@ -447,6 +447,8 @@ describe('aligning tracks', () => {
     engine.setTrackDelay = () => { throw new Error('more than this host allows') }
     const d = new OpDispatcher({ engine, alignTracks: true })
     const errors = []
+    const warnings = []
+    d.subscribe(event => { if (event.type === 'warning') warnings.push(event.message) })
     const original = console.error
     console.error = m => errors.push(m)
     try {
@@ -454,6 +456,10 @@ describe('aligning tracks', () => {
       await d.addPlugin(IRI, { track: 'a' })
       expect(errors.some(m => /could not align track b: more than this host allows/.test(m))).toBe(true)
       expect(d.project.tracks).toHaveLength(2)
+      // Said as an event too, so the page can show it, and once: another rebuild that fails the same way adds nothing.
+      expect(warnings).toEqual(['could not align track b: more than this host allows'])
+      d.apply([{ op: 'addTrack', id: 'c' }])
+      expect(warnings.filter(m => m.includes('track b'))).toHaveLength(1)
     } finally { console.error = original }
   })
 })

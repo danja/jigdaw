@@ -17,6 +17,8 @@ export class LatencyOps {
   #alignTracks
   // The delay last given to each track, in frames, so the engine is asked only about a change.
   #trackDelays = new Map()
+  // Failed alignments already told to the person, so a rebuild that fails the same way says nothing more.
+  #warned = new Set()
 
   constructor (host, { alignTracks = false } = {}) {
     this.#host = host
@@ -81,7 +83,14 @@ export class LatencyOps {
         this.#trackDelays.set(track.id, wanted)
       } catch (error) {
         // Not refused as an edit: the graph is fine, only the alignment could not be done.
-        console.error(`could not align track ${track.id}: ${error.message}`)
+        const message = `could not align track ${track.id}: ${error.message}`
+        console.error(message)
+        // The console is not where a person looks: say it on the page too, once per track and delay.
+        const key = `${track.id}:${wanted}`
+        if (!this.#warned.has(key)) {
+          this.#warned.add(key)
+          this.#host.emit({ type: 'warning', message })
+        }
       }
     }
     for (const id of [...this.#trackDelays.keys()]) if (!this.#host.project.track(id)) this.#trackDelays.delete(id)

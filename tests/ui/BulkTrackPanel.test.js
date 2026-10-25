@@ -86,10 +86,29 @@ describe('the folder controls', () => {
 })
 
 describe('the bus button', () => {
-  it('asks for a bus with no argument', () => {
+  it('asks for a bus with no name when none is typed', () => {
     const { $, calls } = build()
     $('bulk-bus').dispatchEvent(new window.Event('click', { bubbles: true }))
-    expect(calls).toEqual([['bus']])
+    expect(calls).toEqual([['bus', undefined]])
+  })
+
+  it('passes the name typed beside it, trimmed, and clears the field', () => {
+    const { $, calls } = build()
+    $('bulk-bus-name').value = '  Drums bus '
+    $('bulk-bus').dispatchEvent(new window.Event('click', { bubbles: true }))
+    expect(calls).toEqual([['bus', 'Drums bus']])
+    expect($('bulk-bus-name').value).toBe('')
+  })
+
+  it('makes the bus from the name field with Enter, and labels the field', () => {
+    const { $, calls } = build()
+    const field = $('bulk-bus-name')
+    field.value = 'Keys'
+    const enter = new window.Event('keydown', { bubbles: true, cancelable: true })
+    Object.defineProperty(enter, 'key', { value: 'Enter' })
+    field.dispatchEvent(enter)
+    expect(calls).toEqual([['bus', 'Keys']])
+    expect(field.closest('label').textContent).toMatch(/Bus name/)
   })
 })
 

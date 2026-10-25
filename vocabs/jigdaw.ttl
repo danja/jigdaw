@@ -548,6 +548,14 @@ jig:TempoPoint a owl:Class ;
     rdfs:label "Tempo Point" ;
     rdfs:comment "A tempo, from a given beat onward. Ordered by jig:atBeat, not by position in a list." .
 
+jig:alignTracks a owl:DatatypeProperty ;
+    rdfs:domain jig:Project ; rdfs:range xsd:boolean ;
+    rdfs:label "align tracks" ;
+    rdfs:comment """Whether the tracks of this session are delayed to line up with one another for latency
+        (docs/latency.md, "Between tracks"). Absent means the session does not say, and a host uses
+        the person's own preference. How a session is played, not what it contains: it is not part
+        of a revision and changing it is not an undo step.""" .
+
 jig:revision a owl:DatatypeProperty ;
     rdfs:domain jig:Project ; rdfs:range xsd:integer ;
     rdfs:label "revision" ;

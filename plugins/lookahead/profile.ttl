@@ -30,7 +30,7 @@
     trn:produces trn:Audio ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
     trn:caution "Changing position changes latency while audio flows. The host recompensates from the reported frame, and the switch itself is audible as a jump: latency.md says a plugin that can pad to its worst case should, and this one exists to exercise the other path." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
 
     jig:audioInputs 1 ;

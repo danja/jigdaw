@@ -63,7 +63,65 @@ describe('the bundled presets, played', () => {
       // And the sum of them is heard at the master, through its plugin where it has one.
       expect(peaks.get('master'), `the master in ${file}`).toBeGreaterThan(1e-4)
     }, 120000)
+
+    it(`${file}: with the faders and the master applied, every one of them is still audible`, async () => {
+      const { dispatcher, engine } = await open(file, validator)
+      const timing = dispatcher.transport()
+      const firstClips = dispatcher.project.tracks.map(t => Math.min(...dispatcher.project.clips.filter(c => c.track === t.id).map(c => c.startBeat))).filter(Number.isFinite)
+      const seconds = Math.max(SECONDS, ...firstClips.map(beat => timing.secondsAtBeat(beat) + 3))
+      const peaks = await renderChain(dispatcher, engine, { quanta: Math.ceil(seconds * 48000 / 128), faders: true })
+      const makesSound = track => dispatcher.project.nodes.some(n => n.track === track.id && (dispatcher.engineNode(n.id)?.profile.audioOutputs ?? 0) > 0)
+      // About -54 dB: a sound quieter than this is, to anyone listening, not there. A preset that leaves its master at 0.06
+      // over a quiet instrument is the case this is for.
+      const AUDIBLE = 2e-3
+      for (const track of dispatcher.project.tracks.filter(makesSound)) {
+        expect(peaks.get(track.id), `${track.label ?? track.id} after its fader in ${file}`).toBeGreaterThan(AUDIBLE)
+      }
+      expect(peaks.get('master'), `the master after its fader in ${file}`).toBeGreaterThan(AUDIBLE)
+    }, 120000)
   }
+})
+
+describe('renderChain with the faders applied', () => {
+  let validator
+  beforeAll(async () => { validator = await shapeValidatorFromFile(resolve(root, 'vocabs/shapes.ttl')) })
+  const quanta = Math.ceil(4 * 48000 / 128)
+  const render = async (edit, options) => {
+    const { dispatcher, engine } = await open('chiptune.ttl', validator)
+    if (edit) { const done = dispatcher.apply(edit(dispatcher.project)); expect(done.ok, done.message).toBe(true) }
+    return { peaks: await renderChain(dispatcher, engine, { quanta, ...options }), dispatcher }
+  }
+
+  it('leaves the peaks as they were when not asked', async () => {
+    const plain = (await render(null, {})).peaks
+    const halved = (await render(project => [{ op: 'setMaster', gain: 0.5 }, { op: 'setTrackChannel', track: project.tracks[0].id, gain: 0.5 }], {})).peaks
+    expect([...halved]).toEqual([...plain])
+  })
+
+  it('scales a track by its fader, and the master by the master fader', async () => {
+    const { peaks: flat, dispatcher } = await render(null, { faders: true })
+    const first = dispatcher.project.tracks[0].id
+    const track = (await render(project => [{ op: 'setTrackChannel', track: project.tracks[0].id, gain: 0.5 }], { faders: true })).peaks
+    expect(flat.get(first)).toBeGreaterThan(0)
+    // The preset's own faders are not all at one, so the ratio is the new gain over the old.
+    expect(track.get(first) / flat.get(first)).toBeCloseTo(0.5 / dispatcher.project.track(first).channel.gain, 3)
+    const master = (await render(() => [{ op: 'setMaster', gain: 0.5 }], { faders: true })).peaks
+    expect(flat.get('master')).toBeGreaterThan(0)
+    expect(master.get('master') / flat.get('master')).toBeCloseTo(0.5 / dispatcher.project.master.gain, 3)
+  })
+
+  it('hears nothing from a muted track, nor from anything but the soloed one, nor from a muted master', async () => {
+    const { dispatcher } = await render(null, { faders: true })
+    const [first, second] = dispatcher.project.tracks.map(t => t.id)
+    expect((await render(project => [{ op: 'setTrackChannel', track: project.tracks[0].id, muted: true }], { faders: true })).peaks.get(first)).toBe(0)
+    const soloed = (await render(project => [{ op: 'setTrackChannel', track: project.tracks[0].id, soloed: true }], { faders: true })).peaks
+    expect(soloed.get(first)).toBeGreaterThan(0)
+    expect(soloed.get(second)).toBe(0)
+    expect((await render(() => [{ op: 'setMaster', muted: true }], { faders: true })).peaks.get('master')).toBe(0)
+    // What a muted track hands on, to the master or to a bus, is nothing as well: with every track muted the sum is silent.
+    const allMuted = await render(project => project.tracks.map(t => ({ op: 'setTrackChannel', track: t.id, muted: true })), { faders: true })
+    expect(allMuted.peaks.get('master')).toBe(0)
+  })
 })
 
 // What the offline context records of the audio graph: every node lists where it connects to.

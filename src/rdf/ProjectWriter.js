@@ -123,6 +123,8 @@ export function writeProject (project, { iri, created = null } = {}) {
   if (title) lines.push(`    rdfs:label ${string(title)} ;`)
   if (author) lines.push(`    dcterms:creator ${string(author)} ;`)
   if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`)
+  // Only when the session says: one that does not leaves a person's own preference to decide, and is saved unchanged.
+  if (project.settings.alignTracks !== null) lines.push(`    ${term(jig.alignTracks)} ${project.settings.alignTracks ? 'true' : 'false'} ;`)
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`)
   lines.push(`    ${term(jig.revision)} ${integer(project.revision)} ;`)
   if (tracks.length > 0) {

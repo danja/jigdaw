@@ -28,7 +28,7 @@
     "Every control but Program answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say. A host automating a parameter and a controller sending its CC will fight.",
     "Channel volume, expression, pan, sustain and pitch bend arrive as MIDI on each channel and are not panel controls: CC 7, 11, 10 and 64 behave as mop does."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Zlib",
   "requires": [
     "jig:MidiEvents"

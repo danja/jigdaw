@@ -31,7 +31,7 @@
     trn:caution "Twelve voices. A thirteenth note steals the oldest, releasing voices first, rather than being refused." ;
     trn:caution "A velocity-100 single note reaches at least -10 dBFS at the default setting on every model; dense chords stay bounded through the final soft clip." ;
     trn:caution "CC 120 and 123 silence every voice, like an all-notes-off." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 

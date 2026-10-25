@@ -56,7 +56,7 @@ describe('createMidiInput', () => {
   it('says it was refused, and does not throw, when the browser rejects the request', async () => {
     const { midi, changes } = build({ reject: true })
     expect(await midi.enable()).toBe(MIDI_STATUS.denied)
-    expect(changes.at(-1)).toEqual({ status: 'denied', inputs: [] })
+    expect(changes.at(-1)).toEqual({ status: 'denied', inputs: [], devices: [] })
   })
 
   it('says it is unsupported and does not ask', async () => {
@@ -98,5 +98,67 @@ describe('createMidiInput', () => {
 
   it('will not be built without its handlers', () => {
     expect(() => createMidiInput({ requestAccess: null, onMessage () {} })).toThrow(/onChange/)
+  })
+})
+
+describe('choosing among several controllers', () => {
+  const two = () => fakeAccess([{ id: 'a', name: 'Keys' }, { id: 'b', name: 'Pads' }])
+
+  it('lists every connected controller with whether it is on, and not one that was unplugged', async () => {
+    const { midi, access } = build({ access: two() })
+    await midi.enable()
+    expect(midi.devices).toEqual([{ id: 'a', name: 'Keys', enabled: true }, { id: 'b', name: 'Pads', enabled: true }])
+    access.inputs.get('b').state = 'disconnected'
+    expect(midi.devices.map(d => d.id)).toEqual(['a'])
+  })
+
+  it('drops the messages of a controller turned off, and still passes the other', async () => {
+    const { midi, access, messages } = build({ access: two() })
+    await midi.enable()
+    midi.setEnabled('a', false)
+    play(access.inputs.get('a'), 0x90, 60, 100)
+    play(access.inputs.get('b'), 0x99, 36, 90)
+    expect(messages).toEqual([[[0x99, 36, 90], 'Pads']])
+    midi.setEnabled('a', true)
+    play(access.inputs.get('a'), 0x90, 62, 100)
+    expect(messages.at(-1)).toEqual([[0x90, 62, 100], 'Keys'])
+  })
+
+  it('starts with the controllers it was told were off, before any of them is heard', async () => {
+    const messages = []
+    const access = two()
+    const midi = createMidiInput({ requestAccess: async () => access, onMessage: (b, n) => messages.push(n), onChange () {}, disabled: ['a'] })
+    await midi.enable()
+    play(access.inputs.get('a'), 0x90, 60, 100)
+    play(access.inputs.get('b'), 0x90, 60, 100)
+    expect(messages).toEqual(['Pads'])
+    expect(midi.devices.find(d => d.id === 'a').enabled).toBe(false)
+  })
+
+  it('says every change of the choice to onChange, and gives back the ids turned off to keep', async () => {
+    const { midi, changes } = build({ access: two() })
+    await midi.enable()
+    midi.setEnabled('b', false)
+    expect(changes.at(-1).devices).toEqual([{ id: 'a', name: 'Keys', enabled: true }, { id: 'b', name: 'Pads', enabled: false }])
+    expect(midi.disabled).toEqual(['b'])
+  })
+
+  it('keeps the choice while MIDI in is turned off and on again', async () => {
+    const { midi, access, messages } = build({ access: two() })
+    await midi.enable()
+    midi.setEnabled('a', false)
+    midi.disable()
+    await midi.enable()
+    play(access.inputs.get('a'), 0x90, 60, 100)
+    expect(messages).toEqual([])
+  })
+
+  it('names a controller plugged in later as on, as hot plugging always did', async () => {
+    const { midi, access, messages } = build()
+    await midi.enable()
+    access.inputs.set('c', { id: 'c', name: 'New', state: 'connected', onmidimessage: null })
+    access.onstatechange()
+    play(access.inputs.get('c'), 0x90, 60, 100)
+    expect(messages).toEqual([[[0x90, 60, 100], 'New']])
   })
 })

@@ -19,6 +19,8 @@
     jig:track <#track> ;
     jig:connection <#c> ;
     jig:master <#master> , <#master2> ;
+    # Said twice, and one of them is not a boolean.
+    jig:alignTracks true , "maybe" ;
     jig:transport <#transport> .
 
 <#a>

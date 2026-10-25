@@ -16,10 +16,10 @@ Sections: [Next](#next), [Decisions](#decisions-for-the-maintainer), [Checks in 
 Where to start, in order. Everything else is below and is not ordered.
 
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
-2. The `trn:WebAudio` profile term, in both generators (`bin/write-profile.js`, `bin/jsfx-import.js`).
+2. (done 2026-10-24: see the trn:Jig item under Decisions.)
 3. The browser checks that need only a window in front (Checks in a real browser).
 4. The rest of the Tracks section: a drop target on another folder's bar, and the screen reader and touch passes it lists.
-5. Decide the docked mixer against the tab, which unblocks the Mixer section.
+5. (done 2026-10-25: the mixer stays in a tab for now; see Decisions.)
 
 ## Decisions for the maintainer
 
@@ -37,11 +37,13 @@ Each of these is blocked on a choice, not on work.
       build dependencies; the interpreter was chosen in `native/cmake/FindOrFetchWamr.cmake` because the gain was not
       needed, and for Mop 2x or more is), or Mop-side surgery against the unmodified-Opal rule. Confirmation from a person is
       in HUMANS.md.
-- [ ] **Generated profiles still declare the deprecated `trn:WebAudio`.** Found 2026-10-02. plugin-universe has deprecated it
-      for `trn:Jig` (its harvester maps the old term on ingest) and its raw shape rejects it, so every profile
-      `bin/write-profile.js` emits fails that shape with one violation. `bin/jsfx-import.js` (line 83) is a second generator
-      with the same term. Fixing the generators changes every plugin's canonical digest, and so every pin on it and every
-      signed bundle. A composite declares only `trn:Jig` and conforms.
+- [x] **Generated profiles declared the deprecated `trn:WebAudio`** (found 2026-10-02, done 2026-10-24). Every plugin's `profile.json`
+      now says `"format": "trn:Jig"` (8b8 declared only `trn:WebAudio`), as does `bin/jsfx-import.js` and
+      `examples/reference-profile.ttl`; every `profile.ttl` was regenerated, the index and bundles rebuilt, and the three
+      pins of `plugins/stomp-rack` renewed by hand from `bin/pin.js`, which only prints them. This changed every plugin's
+      canonical digest: anything pinned to one or signed over one before today needs renewing. `tests/validate/DeprecatedFormat.test.js`
+      holds the rule over every plugin's sources and profiles and both generators. Not yet run: plugin-universe's own raw
+      shape over the new profiles (its repository is the check that matters).
 - [ ] **MIDI loops are refused** (error kind `midi-cycle`, `docs/latency.md`). This was an agent decision, not the
       maintainer's; say if they should be allowed with some limit instead.
 - [ ] **Keyframe: should `quality` default to Balanced?** Measured 2026-10-01 under WAMR: Economy is about 15 percent cheaper
@@ -58,8 +60,8 @@ Each of these is blocked on a choice, not on work.
 - [ ] **Reel: a failure after the swap begins has already stopped the old script.** Decide whether that is acceptable.
 - [ ] **Reel: timed parameter sets are accurate to the tick.** Sample accuracy means giving `parameter_set` an `atFrame`.
 - [ ] **Reel: parse errors are reported before planning,** so a typo shows before a bad range. Decide whether the order matters.
-- [ ] **Layout of the main view: docked mixer or tab.** [docs/main-view.md](docs/main-view.md) names the open question, a
-      docked mixer in the Reaper manner against the tab. Decide, and revise the document with the answer.
+- [x] **Layout of the main view: docked mixer or tab.** Decided 2026-10-25: for now the mixer stays in a tab, and
+      [docs/main-view.md](docs/main-view.md) says so and what would reopen it. The Mixer section below is unblocked on that basis.
 
 ## Checks in a real browser or by a person
 
@@ -151,7 +153,7 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
 
 ### SVG skins
 
-- [ ] `npm run check:skins` and `npm run check:layout` run in real Chrome and are not part of `npm test`.
+- [ ] `npm run check:skins`, `npm run check:layout` and `npm run check:alignment` run in real Chrome and are not part of `npm test`.
 - [ ] A flattened bundle's skin fetches its artwork from the canonical IRI.
 - [ ] Meters in a skin wait for a named meter feed.
 
@@ -253,20 +255,58 @@ Workflow alongside from Routing, and the launcher last.
       target on another folder's bar, for a folder's grip and a track's grip, including a collapsed folder (`dropAt` in
       `src/ui/Timeline.js`); seen in real Chrome with a real drag up, onto a collapsed bar, and down. A drop lands above the
       folder, never inside it: putting a track into a folder is still done by its Folder field.
-- [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel,
-      one undo step; seen in Chrome with two empty tracks. Not seen: audible summing of tracks with plugins; the bus is
-      not placed after its members in the order; no way to name it on creation from the page.
-- [ ] **Linked faders as a group parameter: what is left.** A fader in the track's header rather than the panel (judged a poor fit: a relative control that springs back to zero sits awkwardly beside the steppers and typed amounts), and the folder case of Members by was not seen in Chrome.
-- [ ] **Collapsed lane and reorder: what is left.** Not seen: reorder by touch, on a medium or large lane, onto a folder's collapsed rows; and no spoken announcement of a track's new place.
-- [ ] **Bulk selection: what is left.** A range select by Shift with the keyboard.
-- [ ] **Track input and monitoring.** Choosing among several MIDI and audio inputs, MIDI panic, input monitoring, the
-      microphone as a choice on any studio track (the studio page has no record-voice button), a visible state when Web MIDI
-      is denied. MIDI learn is under Phase D.
-- [ ] **Track alignment.** Clips and live MIDI are not offset; the setting is not in the saved session, so two people can hear
-      differently; a limit warning is in the console, not on the page; no render comparison has measured that audio really
-      arrives aligned.
-- [ ] **Master and offline render.** The offline render does not include the clips' audio and applies no fader, so what it
-      checks is that sound reaches each place, not how it sounds.
+- [ ] **Bus: what is left.** Built: `src/model/TrackBus.js`, the `track_bus` tool and "Send to a new bus" in the bulk panel, one undo
+      step. Done 2026-10-24: a Bus name field beside the button (Enter makes it too), and `placeBus` puts the bus just after the last
+      track that feeds it, after a folder rather than inside one, by both the panel and the tool (order only, so no undo of its
+      own); seen in real Chrome: Lead and Counter named "Melodics" landed between Counter and Chords. Not seen: audible summing of
+      tracks with plugins; a bus already in the order when more tracks are later added to it.
+- [x] **Linked faders as a group parameter.** Done. The folder case of Members by was seen in real Chrome on 2026-10-25: Kick and
+      Snare in the folder "Drums", Bass outside it, Kick selected, a real click on the Members by field, -6 and Apply; Snare went to
+      0.5012 (-6 dB), Kick and Bass stayed at 1, and one real click on Undo put Snare back. Decided: no fader in the track's header.
+      A relative control that springs back to zero sits awkwardly beside the steppers and typed amounts, and the panel already has
+      both ways to move a group, so a third would only be a second place to find the same thing.
+- [ ] **Collapsed lane and reorder: what is left.** Not seen: reorder by touch, on a medium or large lane, onto a folder's collapsed rows.
+      Done 2026-10-24: a move says where the track went ("Lead moved to place 2 of 6.", or that it is already first or last; a
+      folder says it moved) in a polite status region in `src/ui/Timeline.js`; the Alt and Down key seen in real Chrome. Left of
+      that: a real screen reader has not heard it. `src/ui/Timeline.js` was 550 lines and is now 340: the folder bars, the track and
+      folder drags, the drop targets and the Shift-arrow selection moved to `src/ui/TimelineReorder.js` (about 240), with the
+      same bodies and the existing tests unchanged; Chrome ran selection, Alt and Down with its announcement, and a drag after it.
+- [ ] **Bulk selection: what is left.** Shift with Up or Down on a track name now extends the selection from where the run
+      began (done 2026-10-24: `extendTrackSelection` in `src/ui/Timeline.js`, in the key list; seen in real Chrome with real keys,
+      Counter to Bass with the bulk panel opening and the focus on Bass). Left: Shift with a click is still a toggle, not a range
+      (Ctrl or Cmd would be the toggle), a screen reader pass on the spoken result, and a range that crosses a collapsed folder
+      skips its hidden tracks rather than selecting them.
+- [ ] **Track input and monitoring.** Done 2026-10-24: choosing among several MIDI controllers. With two or more connected, a "Play
+      from" checkbox per controller sits beside the MIDI in button; one turned off is dropped at `src/host/MidiInput.js`, the state
+      line says which are on and how many are off, and the choice is kept in this browser's storage (key `jigdaw.midi.off`,
+      never in a session) and survives storage being blocked. Seen in real Chrome with two fake controllers and a real click;
+      not with real hardware. The denied-MIDI message was already on the page, and panic is Ctrl+full stop and the toolbar's
+      warning button. Done 2026-10-25: the microphone as an input on any studio track (`web/app/MicIn.js`). Mic in feeds the
+      selected track, with a list of microphones when the browser has more than one (named once the page has been allowed a
+      microphone; asked for by exact id so an unplugged one is an error). Monitoring is the track itself: heard through its
+      fader, silent when muted, and Record takes a track with a live input before its fader so the mute does not silence the
+      take. A track removed takes its input with it and the button says so. Seen in real Chrome with a stand-in stream and real
+      clicks (a muted track kept a clip); not with a real microphone or device list. Left: only one track can hold the
+      microphone at a time, input monitoring through an FX chain (see the chains item), a level meter on the input, a choice
+      of channel on a multi-channel interface, and a screen reader pass on the state line. MIDI learn is under Phase D.
+- [ ] **Track alignment.** Clips and live MIDI are not offset. Done 2026-10-25: the setting is saved in the session (`jig:alignTracks`,
+      held by `Project.settings`, outside a revision and not an undo step). A session that says wins over the person's own preference
+      when opened and the status says so; one that says nothing gets the preference, not the last session's value; changing the box
+      makes the session say, and a session that never said is saved unchanged. Seen in real Chrome: unchecking wrote
+      `jig:alignTracks false` and left the revision alone; a session saying true opened with the box on over a preference of off
+      (preference untouched); one saying nothing opened with it off. The agent surface does not offer it yet (see the parity item).
+      Done 2026-10-25: a failed alignment (a delay past the host's limit) is now said on the page's log as well as
+      the console, once per track and delay (a `warning` event from the dispatcher). Done 2026-10-25: `npm run check:alignment`
+      (`bin/check-alignment.js`, real headless Chrome, not part of `npm test`) renders two tracks playing the same click, one
+      through Lookahead at 512 frames as its audio input and one with no plugin. With alignment on both channels hold one click,
+      at the start plus 512 frames; with it off two, 512 apart (the control). Seen passing, and failing (a stray click at the
+      start) when `Bounce` was made to ignore alignment. A second scenario sends a 512-frame track and a plain one into a bus holding 256 frames, with a plain track straight to the master: with alignment on all three clicks meet at the start plus 768, off they sit at 0, 256 and 768. Broken on purpose (a bus's latency left out of the arrival) it fails. Not measured: a send, a bus fed by a composite, or live play rather than the render.
+- [ ] **Master and offline render.** Done 2026-10-25: `renderChain` (`src/testing/ChainRender.js`, the test helper) takes
+      `faders: true`, which applies each track's gain, mute and solo and the master's gain and mute, so its peaks are what is
+      heard; `tests/host/presetRender.test.js` now asserts every bundled preset is above about -54 dB at each sound-making track
+      and at the master after the faders (all nine pass, Fender included). Left: pan, a send's pre/post tap and the alignment
+      delays are not modelled there, and the helper still does not play audio clips (the real `Bounce` does, with faders and the
+      master, and has its own tests), clip alignment is measured on the real render by `npm run check:alignment` (see Track alignment).
 
 ### Routing and plugin chains
 
@@ -276,8 +316,9 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Connections.** A drawn line as an extra to the text cables; port names from the profile beyond "Audio out 1" and "MIDI
       out" (Dynamix's key is the only named one); a "why not" for a missing matrix cell; matrix column headers are wide at
       phone width.
-- [ ] **Sends and buses.** A return-track marker beyond the header text, the alignment delay counting a bus's latency, a send's
-      own alignment, send pan, and a level meter per send.
+- [ ] **Sends and buses.** A return-track marker beyond the header text, a send's
+      own alignment (the bus's latency in the alignment delay is done: `trackDelays` counts it and `npm run check:alignment` measures it
+      through a real bus, 2026-10-25), send pan, and a level meter per send.
 - [ ] **MIDI routing.** A note-range split as a connection property rather than only a plugin, and the MIDI monitor on the
       routing matrix and the chain strip (it is in the plugin view only).
 - [ ] **Parallel chains and layers.** Two chains from one input mixed back, openDAW's "effect composite". Only after the nested
@@ -311,7 +352,7 @@ Workflow alongside from Routing, and the launcher last.
 
 ### Mixer
 
-- [ ] **Mixer as a dock or a page** built from the same track list and selection.
+- [ ] **Mixer as a dock or a page** built from the same track list and selection. Decided 2026-10-25: a page (the tab) for now, so this is only the point where the tab and a future dock would share code; nothing to build until the decision is reopened.
 - [ ] **Master strip.** A mono switch, and controls beyond level, pan and mute (the term-first rule applies to whatever
       controls it carries).
 - [ ] **Insert slots on the strip: what is left.** Each channel's FX button lists the track's plugins with Add and Remove (`src/ui/FxList.js`, seen in Chrome 2026-10-24). Left: bypass, replace and reorder there, as the chain strip has them; a plugin's own controls from the list; touch.

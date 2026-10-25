@@ -33,7 +33,7 @@
     trn:caution "Every control answers to a MIDI CC as well, one controller per port as the profile's midi:binding declarations say, which is what the hardware does. A host automating a parameter and a controller sending its CC will fight." ;
     trn:caution "Roll and Retrigger are positions on an exponential curve from about 1.5Hz to 45Hz rather than a rate in hertz. The figure shown is the one the device's own panel shows." ;
     trn:caution "The firmware's EEPROM is a scratch array that is never persisted. Its SAVE command has nowhere to write, and settings belong in the project graph instead." ;
-    trn:format trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "Apache-2.0" ;
     trn:requires jig:MidiEvents ;
 

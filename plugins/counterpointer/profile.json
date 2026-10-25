@@ -22,7 +22,7 @@
     "Monophonic by design. A new step ends the note before it rather than overlapping.",
     "With pass_input on, incoming notes continue downstream alongside the counter-melody, including while stopped or still learning."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "abi": "jig:Abi2",
   "requires": [

@@ -222,6 +222,24 @@ describe('a project survives being written and read back', () => {
     expect((await reopen(bare)).read.info).toEqual({ title: null, author: null, notes: null })
   })
 
+  it('keeps whether tracks are lined up, writing it only once the session says, and refuses a value that is not true or false', async () => {
+    const original = builtProject()
+    const bare = writeProject(original, { iri: IRI })
+    expect(bare).not.toContain('alignTracks')
+    expect((await reopen(bare)).read.settings).toEqual({ alignTracks: null })
+    for (const on of [true, false]) {
+      original.setSettings({ alignTracks: on })
+      const turtle = writeProject(original, { iri: IRI })
+      expect(turtle).toContain(`jig:alignTracks ${on}`)
+      const { read, project } = await reopen(turtle)
+      expect(read.settings).toEqual({ alignTracks: on })
+      project.setSettings(read.settings)
+      expect(writeProject(project, { iri: IRI })).toBe(turtle)
+    }
+    const bad = writeProject(original, { iri: IRI }).replace('jig:alignTracks false', 'jig:alignTracks "maybe"')
+    await expect(reopen(bad)).rejects.toThrow(/alignTracks is true or false, not "maybe"/)
+  })
+
   it('keeps a muted clip muted, writing the flag only where it is true', async () => {
     const original = builtProject()
     const clip = original.clips[0]

@@ -90,12 +90,14 @@ export function createRuntime (ctx) {
     dispatcher.subscribe(event => {
       // What was applied, told to an open editor, whoever applied it: the editor
       // itself, the panel, undo, a session opening or an agent. messaging.md 2.3.
+      if (event.type === 'warning') ctx.log(event.message, 'error')
       if (event.type === 'parameter') ctx.editors.parameter(event.nodeId, event.symbol, event.value)
       if (event.type === 'changed') {
         const state = $('state')
         if (state) state.textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ` +
           `${event.compiled.totalLatency} frames latency`
         ctx.rack.draw()
+        ctx.micIn?.refresh()
         ctx.history.updateButtons()
         ctx.transport.showTransport()
       }

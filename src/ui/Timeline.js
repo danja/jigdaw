@@ -39,7 +39,7 @@ import { createTrackHeader } from './TrackHeader.js'
 import { createChainStrip } from './ChainStrip.js'
 import { createEnvelopeLanes } from './EnvelopeLanes.js'
 import { createMasterRow } from './MasterRow.js'
-import { createFolderBar } from './FolderBar.js'
+import { createReorder } from './TimelineReorder.js'
 import { createLoopRow } from './LoopRow.js'
 import { createRuler } from './Ruler.js'
 import { createTimelineTools } from './TimelineTools.js'
@@ -101,6 +101,12 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     onRouting: on => { element.dataset.routing = on ? 'on' : 'off' }
   })
   element.append(tools.element, scroller)
+  // What a reorder did, in words, for a screen reader: a track that moves is drawn somewhere else and nothing says where.
+  const said = document.createElement('div')
+  said.className = 'visually-hidden'
+  said.setAttribute('role', 'status')
+  said.setAttribute('aria-live', 'polite')
+  element.append(said)
   // Where the transport is. Drawn over the lanes, never read: the position
   // readout in the transport bar says the same in words.
   const head = document.createElement('div')
@@ -183,185 +189,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
 
   const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu })
 
-  // A folder is a run of neighbouring tracks that give the same name; two separate runs are two bars.
-  // The folders hidden right now, read from the layout on each draw: a folder is hidden when any of its tracks says so.
-  let collapsedFolders = new Set()
-  const folderBars = new Map()
-  function withFolders (tracks, rowsInOrder, layoutFor) {
-    collapsedFolders = new Set(tracks.filter(t => layoutFor(t).folder && layoutFor(t).folderCollapsed).map(t => layoutFor(t).folder))
-    const out = []
-    const seen = new Map()
-    const live = new Set()
-    for (let i = 0; i < tracks.length;) {
-      const name = layoutFor(tracks[i]).folder ?? null
-      let end = i + 1
-      while (name !== null && end < tracks.length && layoutFor(tracks[end]).folder === name) end++
-      if (name !== null) {
-        const nth = seen.get(name) ?? 0
-        seen.set(name, nth + 1)
-        const key = `${name}\u0000${nth}`
-        live.add(key)
-        let bar = folderBars.get(key)
-        if (!bar) {
-          bar = createFolderBar(document, { onMove: delta => moveFolder(key, delta), onGrip: event => dragFolder(key, event), onToggle: folder => { onFolderCollapse(folder, !collapsedFolders.has(folder)); folderBars.get(key)?.element.querySelector('.folder-toggle').focus() } })
-          folderBars.set(key, bar)
-        }
-        bar.runStart = i
-        bar.runLength = end - i
-        bar.firstTrack = tracks[i].id
-        bar.runIds = tracks.slice(i, end).map(t => t.id)
-        bar.neighbours = { up: tracks[i - 1]?.id ?? null, down: tracks[end]?.id ?? null }
-        bar.update({ name, count: end - i, collapsed: collapsedFolders.has(name), canUp: i > 0, canDown: end < tracks.length })
-        out.push(bar.element)
-      }
-      if (name === null || !collapsedFolders.has(name)) out.push(...rowsInOrder.slice(i, end))
-      i = end
-    }
-    for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key)
-    return out
-  }
-
-  /**
-   * What a drag can land on under `element`: a track's row, or the bar of a folder the drag is not part of. A bar stands for
-   * the row beside it, so the rest of the drop is the same as for a row: dragged up, the drop lands above the folder's first
-   * track; dragged down, just above the bar, past the end of what the folder held, and never inside it. That is the only way
-   * onto a collapsed folder, whose rows are not drawn. Returns the row's id and the element to mark, or null.
-   */
-  function dropAt (element, own) {
-    const bar = [...folderBars.values()].find(b => b.element.contains(element))
-    if (bar) {
-      if (bar.runIds.some(id => own.includes(id))) return null
-      const order = lastArgs.tracks.map(t => t.id)
-      const up = order.indexOf(own[0]) > bar.runStart
-      return { row: up ? bar.firstTrack : order[bar.runStart - 1], mark: bar.element }
-    }
-    const row = element?.closest?.('.timeline-row')
-    const id = row?.dataset.track
-    return id && rows.has(id) ? { row: id, mark: row } : null
-  }
-
-  /**
-   * Move a whole run of folder tracks one place: the track past the run hops over it, so the run keeps its order. One
-   * layout change, so no undo, like moving a single track.
-   */
-  function moveFolder (key, delta) {
-    const bar = folderBars.get(key)
-    if (!bar) return
-    const first = bar.firstTrack
-    if (delta < 0) onMoveTrack(bar.neighbours.up, bar.runLength)
-    else onMoveTrack(bar.neighbours.down, -bar.runLength)
-    // The run sits somewhere else now; keep focus on the folder, on the button that was pressed if it still is one.
-    const moved = [...folderBars.values()].find(b => b.firstTrack === first)
-    const wanted = moved?.element.querySelector(delta < 0 ? '.folder-move-up' : '.folder-move-down')
-    const target = wanted && !wanted.hidden ? wanted : moved?.element.querySelector('.folder-toggle')
-    target?.focus()
-  }
-
-  /**
-   * Drag a whole folder by its grip to the row of a track outside it. The tracks between hop over the run one by one, in order, so
-   * the run lands where the row was (above it dragged up, below it dragged down) and nothing else is reordered. The same calls
-   * as the Move buttons, a layout change with no undo.
-   */
-  function dragFolder (key, event) {
-    event.preventDefault()
-    event.target?.releasePointerCapture?.(event.pointerId)
-    const bar = folderBars.get(key)
-    if (!bar) return
-    const run = bar.runIds
-    const first = bar.firstTrack
-    let target = null
-    let marked = null
-    for (const id of run) rows.get(id)?.row.classList.add('dragging')
-    const clear = () => {
-      document.removeEventListener('pointermove', over)
-      document.removeEventListener('pointerup', up)
-      document.removeEventListener('pointercancel', clear)
-      document.removeEventListener('keydown', escape)
-      for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
-      for (const { element } of folderBars.values()) element.classList.remove('drop-target')
-    }
-    // Escape drops the folder where it started: nothing is moved.
-    function escape (e) {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      clear()
-      folderBars.get(key)?.element.querySelector('.folder-toggle')?.focus()
-    }
-    function over (e) {
-      const hit = dropAt(e.target, run)
-      // A bar beside the run's own edge stands for one of its own tracks: nowhere to go, and nothing marked.
-      if (!hit || hit.row === target || run.includes(hit.row)) return
-      marked?.classList.remove('drop-target')
-      target = hit.row
-      marked = hit.mark
-      marked.classList.add('drop-target')
-    }
-    function up () {
-      clear()
-      if (target) {
-        const order = lastArgs.tracks.map(t => t.id)
-        const at = order.indexOf(run[0])
-        const to = order.indexOf(target)
-        if (to < at) for (let k = at - 1; k >= to; k--) onMoveTrack(order[k], run.length)
-        else for (let k = at + run.length; k <= to; k++) onMoveTrack(order[k], -run.length)
-      }
-      const moved = [...folderBars.values()].find(b => b.firstTrack === first)
-      moved?.element.querySelector('.folder-toggle')?.focus()
-    }
-    document.addEventListener('pointermove', over)
-    document.addEventListener('pointerup', up)
-    document.addEventListener('pointercancel', clear)
-    document.addEventListener('keydown', escape)
-  }
-
-  /**
-   * Drag a track by its grip to the row of another. The row under the pointer is marked while the pointer is down, and
-   * one move of that many places is made on release, so one drag is one reorder (the same call as Alt with Up or Down).
-   */
-  function dragTrack (id, event) {
-    event.preventDefault()
-    // A touch pointer is held by the element it began on, which would hide every row but the first from the move.
-    event.target?.releasePointerCapture?.(event.pointerId)
-    const rowOf = trackId => rows.get(trackId)?.row
-    let target = id
-    let marked = null
-    rowOf(id)?.classList.add('dragging')
-    const clear = () => {
-      document.removeEventListener('pointermove', over)
-      document.removeEventListener('pointerup', up)
-      document.removeEventListener('pointercancel', cancel)
-      document.removeEventListener('keydown', escape)
-      for (const { row } of rows.values()) row.classList.remove('dragging', 'drop-target')
-      for (const { element } of folderBars.values()) element.classList.remove('drop-target')
-    }
-    // Escape drops the track where it started: the release that follows moves nothing.
-    function escape (e) {
-      if (e.key !== 'Escape') return
-      e.preventDefault()
-      clear()
-      document.getElementById(`show-track-${id}`)?.focus()
-    }
-    function over (e) {
-      const hit = dropAt(e.target, [id])
-      if (!hit || hit.row === target) return
-      marked?.classList.remove('drop-target')
-      target = hit.row
-      marked = hit.mark
-      if (target !== id) marked.classList.add('drop-target')
-    }
-    function up () {
-      clear()
-      const order = lastArgs.tracks.map(t => t.id)
-      const delta = order.indexOf(target) - order.indexOf(id)
-      if (delta !== 0) onMoveTrack(id, delta)
-      document.getElementById(`show-track-${id}`)?.focus()
-    }
-    function cancel () { clear() }
-    document.addEventListener('pointermove', over)
-    document.addEventListener('pointerup', up)
-    document.addEventListener('pointercancel', cancel)
-    document.addEventListener('keydown', escape)
-  }
+  const reorder = createReorder(document, { rows, current: () => lastArgs, scroller, selection, say: text => { said.textContent = text }, onMoveTrack, onFolderCollapse })
+  const { withFolders, moveTrack, dragTrack, extendTrackSelection } = reorder
 
   function draw (args) {
     lastArgs = args
@@ -417,8 +246,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.dataset.track = track.id
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: onMoveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep, onEdit: onEditTrack, onDeleteTrack, menu,
-          onSelect: (id, { toggle }) => (toggle ? selection.toggle('track', id) : selection.set('track', [id]))
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: moveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep, onExtend: extendTrackSelection, onEdit: onEditTrack, onDeleteTrack, menu,
+          onSelect: (id, { toggle }) => { reorder.anchor(id); if (toggle) selection.toggle('track', id); else selection.set('track', [id]) }
         })
         const lane = document.createElement('div')
         lane.className = 'timeline-lane'

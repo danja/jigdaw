@@ -20,7 +20,7 @@
     "The scale is a jig:asset the person replaces with a .scl file of their own; it is saved with the session. Ported from the Downspout VST3 of the same name, whose .kbm keyboard maps and MPE zone setup are also not supported here.",
     "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "MIT",
   "requires": [
     "jig:MidiEvents",

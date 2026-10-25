@@ -254,6 +254,7 @@ export const vocabulary = Object.freeze({
     loopStart: `${JIG}loopStart`,
     loopEnd: `${JIG}loopEnd`,
     loopEnabled: `${JIG}loopEnabled`,
+    alignTracks: `${JIG}alignTracks`,
     launchQuantise: `${JIG}launchQuantise`,
     Master: `${JIG}Master`,
     master: `${JIG}master`,

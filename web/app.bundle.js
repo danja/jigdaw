@@ -13376,6 +13376,7 @@ var init_Vocabulary = __esm({
         loopStart: `${JIG}loopStart`,
         loopEnd: `${JIG}loopEnd`,
         loopEnabled: `${JIG}loopEnabled`,
+        alignTracks: `${JIG}alignTracks`,
         launchQuantise: `${JIG}launchQuantise`,
         Master: `${JIG}Master`,
         master: `${JIG}master`,
@@ -19525,6 +19526,10 @@ var Mixing = class {
     source.connect(strip.pre);
     this.#inputs.set(trackId, { source, stream });
   }
+  /** The tracks that have a live input, which a take records before the fader. */
+  inputTrackIds() {
+    return [...this.#inputs.keys()];
+  }
   /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
   closeInput(trackId) {
     const held = this.#inputs.get(trackId);
@@ -19891,6 +19896,9 @@ var Engine = class {
   }
   closeInput(...args) {
     return this.#mixing.closeInput(...args);
+  }
+  inputTrackIds() {
+    return this.#mixing.inputTrackIds();
   }
   setTrackChannel(...args) {
     return this.#mixing.setTrackChannel(...args);
@@ -20909,6 +20917,19 @@ function patchInfo(current, patch) {
   return next;
 }
 
+// src/model/ProjectSettings.js
+var EMPTY_SETTINGS = Object.freeze({ alignTracks: null });
+function patchSettings(current, patch) {
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new Error("project settings are an object with alignTracks");
+  const next = { ...current };
+  for (const [key, value2] of Object.entries(patch)) {
+    if (!(key in EMPTY_SETTINGS)) throw new Error(`unknown project setting: ${key}`);
+    if (value2 !== null && typeof value2 !== "boolean") throw new Error(`${key} is true or false, or null for not stated`);
+    next[key] = value2;
+  }
+  return next;
+}
+
 // src/model/ProjectRules.js
 var DEFAULT_CHANNEL = Object.freeze({ gain: 1, pan: 0, muted: false, soloed: false });
 var DEFAULT_TRANSPORT = Object.freeze({
@@ -21737,6 +21758,8 @@ var Project = class {
   #scripts = new ScriptState();
   // Title, author and notes: words about the session, outside the revision.
   #info = { ...EMPTY_INFO };
+  // How the session wants to be played (track alignment), outside the revision for the same reason.
+  #settings = { ...EMPTY_SETTINGS };
   get revision() {
     return this.#revision;
   }
@@ -21752,6 +21775,12 @@ var Project = class {
   }
   setInfo(patch) {
     this.#info = patchInfo(this.#info, patch);
+  }
+  get settings() {
+    return { ...this.#settings };
+  }
+  setSettings(patch) {
+    this.#settings = patchSettings(this.#settings, patch);
   }
   get tracks() {
     return [...this.#state.tracks.values()];
@@ -23470,6 +23499,8 @@ var LatencyOps = class {
   #alignTracks;
   // The delay last given to each track, in frames, so the engine is asked only about a change.
   #trackDelays = /* @__PURE__ */ new Map();
+  // Failed alignments already told to the person, so a rebuild that fails the same way says nothing more.
+  #warned = /* @__PURE__ */ new Set();
   constructor(host, { alignTracks = false } = {}) {
     this.#host = host;
     this.#alignTracks = alignTracks;
@@ -23526,7 +23557,13 @@ var LatencyOps = class {
         this.#host.engine.setTrackDelay(track2.id, wanted);
         this.#trackDelays.set(track2.id, wanted);
       } catch (error2) {
-        console.error(`could not align track ${track2.id}: ${error2.message}`);
+        const message = `could not align track ${track2.id}: ${error2.message}`;
+        console.error(message);
+        const key = `${track2.id}:${wanted}`;
+        if (!this.#warned.has(key)) {
+          this.#warned.add(key);
+          this.#host.emit({ type: "warning", message });
+        }
       }
     }
     for (const id of [...this.#trackDelays.keys()]) if (!this.#host.project.track(id)) this.#trackDelays.delete(id);
@@ -25908,6 +25945,7 @@ var ICONS = Object.freeze({
   tap: "M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.91-1.38z",
   click: "M9.5 2h5l4.5 20H5L9.5 2zm2.4 2L8.2 20h7.6L12.1 4zM11 8h2v8h-2z",
   midiIn: "M4 5h16v14H4V5zm2 2v10h2.2v-4H9V7H6zm4.2 0v6H11v4h2v-4h.8V7h-3.6zm5 0v6h.8v4h2V7h-2.8z",
+  mic: "M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z",
   midiExport: "M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z",
   midiImport: "M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z",
   recordMidi: "M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0-5C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z",
@@ -29821,6 +29859,21 @@ function sessionTools({ dispatcher, catalogue, loadPlugin, openCollection }) {
 }
 
 // src/model/TrackBus.js
+function placeBus(project, busId, memberIds) {
+  const order = project.orderedTracks.map((t) => t.id);
+  const members = new Set(memberIds);
+  let last = -1;
+  order.forEach((id, index) => {
+    if (members.has(id)) last = index;
+  });
+  if (last < 0) return false;
+  const folder = project.trackLayout(order[last]).folder;
+  if (folder) {
+    while (last + 1 < order.length && order[last + 1] !== busId && project.trackLayout(order[last + 1]).folder === folder) last++;
+  }
+  const delta = last + 1 - order.indexOf(busId);
+  return delta < 0 ? project.moveTrack(busId, delta) : false;
+}
 function describeBus(project, trackIds, { label = "Bus", newTrackId = project.nextId("track") } = {}) {
   const ids = [...new Set(trackIds)];
   if (ids.length < 2) throw new Error("a bus takes two or more different tracks");
@@ -30026,6 +30079,7 @@ function trackTools({ dispatcher }) {
           return failed(error2.message, { kind: "change" });
         }
         const result = dispatcher.apply(changes);
+        if (result.ok) placeBus(dispatcher.project, changes[0].id, trackIds);
         return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -31523,11 +31577,13 @@ function createRuntime(ctx2) {
     ctx2.align.sync();
     dispatcher.project.editor.subscribe(() => ctx2.rack.draw());
     dispatcher.subscribe((event) => {
+      if (event.type === "warning") ctx2.log(event.message, "error");
       if (event.type === "parameter") ctx2.editors.parameter(event.nodeId, event.symbol, event.value);
       if (event.type === "changed") {
         const state = $2("state");
         if (state) state.textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
         ctx2.rack.draw();
+        ctx2.micIn?.refresh();
         ctx2.history.updateButtons();
         ctx2.transport.showTransport();
       }
@@ -32229,7 +32285,7 @@ function createRecord(ctx2, { processorUrl = null, WorkletNode = globalThis.Audi
     if (!started) await ctx2.transport.play();
     if (!started) await ctx2.transport.untilStart();
     const startBeat = ctx2.transport.position().beat;
-    await recorder.start(trackIds);
+    await recorder.start(trackIds, { pre: engine.inputTrackIds() });
     recording = { trackIds, startBeat };
     show(true);
     log2(started ? `recording ${trackIds.length} track(s) from beat ${startBeat.toFixed(2)}` : `playing and recording ${trackIds.length} track(s) from the top`);
@@ -32590,7 +32646,8 @@ function createMeter(document2, { label, bars = 12 } = {}) {
 }
 
 // src/ui/FxList.js
-function createFxList(document2, { id, onAdd, onRemove }) {
+function createFxList(document2, { id, onAdd, onRemove, actions = {} }) {
+  const { onBypass = null, onMove = null, onReplace = null, onShow = null } = actions;
   if (typeof onAdd !== "function") throw new Error("createFxList needs onAdd");
   if (typeof onRemove !== "function") throw new Error("createFxList needs onRemove");
   const element = document2.createElement("div");
@@ -32624,7 +32681,10 @@ function createFxList(document2, { id, onAdd, onRemove }) {
   return {
     element,
     toggle,
-    /** `plugins` is `[{ id, label }]` in signal order; `label` names the track for the controls' names. */
+    /**
+     * `plugins` is `[{ id, label, loaded, failed, bypassed, canEarlier, canLater }]` in signal order (src/ui/FxModel.js; the last
+     * five may be left out for a plain list); `label` names the track for the controls' names.
+     */
     update({ label, plugins }) {
       toggle.setAttribute("aria-label", `Plugins on ${label}: ${plugins.length}`);
       region.setAttribute("aria-label", `Plugins on ${label}`);
@@ -32635,17 +32695,56 @@ function createFxList(document2, { id, onAdd, onRemove }) {
         const name2 = document2.createElement("span");
         name2.className = "fx-name";
         name2.textContent = plugin.label;
-        const remove = document2.createElement("button");
-        remove.type = "button";
-        remove.className = "fx-remove";
-        remove.id = `${id}-fx-remove-${plugin.id}`;
-        remove.textContent = "Remove";
-        remove.setAttribute("aria-label", `Remove ${plugin.label} from ${label}`);
-        remove.addEventListener("click", () => {
+        const buttons = [];
+        const usable = plugin.loaded !== false && !plugin.failed;
+        const button = (kind, text, run) => {
+          const b = document2.createElement("button");
+          b.type = "button";
+          b.className = `fx-${kind}`;
+          b.id = `${id}-fx-${kind}-${plugin.id}`;
+          b.textContent = text;
+          b.addEventListener("click", run);
+          buttons.push(b);
+          return b;
+        };
+        if (onBypass && usable) {
+          const b = button("bypass", "Bypass", () => onBypass(plugin.id, !plugin.bypassed));
+          setIcon(document2, b, "bypass", `Bypass ${plugin.label} on ${label}`);
+          b.setAttribute("aria-pressed", String(plugin.bypassed === true));
+        }
+        if (onMove && usable) {
+          for (const [delta, can, icon, text] of [[-1, plugin.canEarlier, "earlier", "earlier"], [1, plugin.canLater, "later", "later"]]) {
+            if (!can) continue;
+            const b = button(`move-${text}`, `Move ${text}`, () => {
+              onMove(plugin.id, delta);
+              const again = region.querySelector(`#${id}-fx-move-${text}-${plugin.id}`) ?? region.querySelector(`#${id}-fx-move-${text === "earlier" ? "later" : "earlier"}-${plugin.id}`);
+              (again ?? toggle).focus();
+            });
+            setIcon(document2, b, icon, `Move ${plugin.label} ${text} on ${label}`);
+          }
+        }
+        if (onReplace && usable) {
+          const b = button("replace", "Replace", () => onReplace(plugin.id));
+          setIcon(document2, b, "replace", `Replace ${plugin.label} on ${label}`);
+        }
+        if (onShow && usable) {
+          const b = button("show", "Controls", () => onShow(plugin.id));
+          b.setAttribute("aria-label", `Show the controls of ${plugin.label} on ${label}`);
+        }
+        const remove = button("remove", "Remove", () => {
           onRemove(plugin.id);
           toggle.focus();
         });
-        item.append(name2, remove);
+        remove.setAttribute("aria-label", `Remove ${plugin.label} from ${label}`);
+        const row = document2.createElement("div");
+        row.className = "fx-actions";
+        row.append(...buttons);
+        if (plugin.bypassed) {
+          item.classList.add("bypassed");
+          name2.textContent = `${plugin.label} (bypassed)`;
+        }
+        if (plugin.failed) name2.textContent = `${plugin.label} (failed to load)`;
+        item.append(name2, row);
         return item;
       }));
       list.hidden = plugins.length === 0;
@@ -32659,7 +32758,7 @@ function mixable(track2, nodes, audioOutputsOf) {
   if (onTrack.length === 0) return true;
   return onTrack.some((n2) => (audioOutputsOf(n2.id) ?? 1) > 0);
 }
-function createMixer(document2, { onChange, onAddPlugin, onRemovePlugin, menu = null }) {
+function createMixer(document2, { onChange, onAddPlugin, onRemovePlugin, fxActions = {}, menu = null }) {
   if (typeof onChange !== "function") throw new Error("createMixer needs an onChange");
   if (typeof onAddPlugin !== "function") throw new Error("createMixer needs an onAddPlugin");
   if (typeof onRemovePlugin !== "function") throw new Error("createMixer needs an onRemovePlugin");
@@ -32696,7 +32795,8 @@ function createMixer(document2, { onChange, onAddPlugin, onRemovePlugin, menu = 
         const fx = createFxList(document2, {
           id: `strip-${track2.id}`,
           onAdd: () => onAddPlugin(track2.id),
-          onRemove: onRemovePlugin
+          onRemove: onRemovePlugin,
+          actions: fxActions
         });
         wrapper.append(heading, strip.element, fx.element);
         channel = { wrapper, heading, strip, meter, fx, track: track2 };
@@ -33989,6 +34089,96 @@ function describeMidi(bytes) {
   }
 }
 
+// src/ui/ChainModel.js
+function kindOf3(connection) {
+  if (isMidiSignal(connection.signalKind)) return "MIDI";
+  return connection.to.portSymbol !== void 0 && connection.to.portSymbol !== null ? "modulation" : "audio";
+}
+var kindsOf = (ports) => [...new Set(ports.filter((p) => p.portSymbol === void 0).map((p) => isMidiSignal(p.kind) ? "MIDI" : "audio"))];
+var join = (list) => list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLabelOf }) {
+  const track2 = project.track(trackId);
+  const onTrack = project.nodes.filter((n2) => n2.track === trackId);
+  const ids = new Set(onTrack.map((n2) => n2.id));
+  const ordered = inSignalOrder(onTrack, project.connections);
+  const nodes = ordered.map((node) => {
+    const profile = profileOf(node.id);
+    const sends = project.connections.filter((c3) => c3.from.node === node.id).map((c3) => {
+      const target2 = project.node(c3.to.node);
+      return {
+        id: c3.id,
+        kind: kindOf3(c3),
+        toNode: c3.to.node,
+        toLabel: labelOf(c3.to.node),
+        toTrack: target2?.track ?? null,
+        toTrackLabel: target2 ? trackLabelOf(target2.track) : null,
+        other: Boolean(target2) && target2.track !== trackId,
+        parameter: c3.to.portSymbol ?? null
+      };
+    });
+    const receives = project.connections.filter((c3) => c3.to.node === node.id && !ids.has(c3.from.node)).map((c3) => {
+      const source = project.node(c3.from.node);
+      return {
+        id: c3.id,
+        kind: kindOf3(c3),
+        fromNode: c3.from.node,
+        fromLabel: labelOf(c3.from.node),
+        fromTrack: source?.track ?? null,
+        fromTrackLabel: source ? trackLabelOf(source.track) : null
+      };
+    });
+    return {
+      id: node.id,
+      label: labelOf(node.id),
+      loaded: profile !== void 0,
+      failed: failedOf(node.id) ?? null,
+      bypassed: node.bypassed === true,
+      passesAudio: kindsOf(inputsOf(profile)).includes("audio") && kindsOf(outputsOf(profile)).includes("audio"),
+      takes: kindsOf(inputsOf(profile)),
+      gives: kindsOf(outputsOf(profile)),
+      takesMidiFromTrack: track2?.midiInput === node.id,
+      takesAudioFromTrack: track2?.audioInput === node.id,
+      // On the master, the node the mix of every track arrives at.
+      takesMix: trackId === MASTER_TRACK && project.master.audioInput === node.id,
+      sends,
+      receives
+    };
+  });
+  return { trackId, nodes };
+}
+function say(node) {
+  const parts = [node.label];
+  if (node.bypassed) parts.push("bypassed");
+  if (node.failed) parts.push(`failed to load: ${node.failed}`);
+  else if (!node.loaded) parts.push("not loaded yet");
+  else {
+    parts.push(node.takes.length ? `takes ${join(node.takes)}` : "takes no signal");
+    parts.push(node.gives.length ? `gives ${join(node.gives)}` : "gives no signal");
+  }
+  if (node.takesMidiFromTrack) parts.push("the track's MIDI clips play into it");
+  if (node.takesAudioFromTrack) parts.push("audio sent to the track, and its audio clips, arrive at it");
+  if (node.takesMix) parts.push("the mix of every track arrives at it");
+  for (const s of node.sends) {
+    parts.push(`sends ${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ""}${s.other ? ` on ${s.toTrackLabel}` : ""}`);
+  }
+  for (const r of node.receives) parts.push(`receives ${r.kind} from ${r.fromLabel} on ${r.fromTrackLabel}`);
+  return parts.join("; ");
+}
+
+// src/ui/FxModel.js
+function fxPluginsOf(project, trackId, deps) {
+  const { nodes } = describeChain(project, trackId, deps);
+  return nodes.map((node, index) => ({
+    id: node.id,
+    label: node.label,
+    loaded: node.loaded,
+    failed: node.failed,
+    bypassed: node.bypassed,
+    canEarlier: node.passesAudio && nodes[index - 1]?.passesAudio === true,
+    canLater: node.passesAudio && nodes[index + 1]?.passesAudio === true
+  }));
+}
+
 // web/app/Rack.js
 var NEW_TRACK = "";
 var MASTER_TARGET = MASTER_TRACK;
@@ -33998,6 +34188,12 @@ function createRack(ctx2) {
   const keyboards = /* @__PURE__ */ new Set();
   let loadTarget = null;
   let watching = null;
+  const fxActions = {
+    onBypass: (nodeId, bypassed) => editNode([{ op: "setNode", id: nodeId, bypassed }]),
+    onMove: (nodeId, delta) => movePlugin(nodeId, delta),
+    onReplace: (nodeId) => ctx2.swap.begin(nodeId),
+    onShow: (nodeId) => showPlugin(nodeId)
+  };
   const mixer = createMixer(document2, {
     onChange: (trackId, change) => {
       const result = ctx2.dispatcher.setTrackChannel(trackId, change);
@@ -34005,8 +34201,42 @@ function createRack(ctx2) {
     },
     menu: ctx2.menu,
     onAddPlugin: (trackId) => addPluginTo(trackId),
-    onRemovePlugin: (nodeId) => removePlugin(nodeId)
+    onRemovePlugin: (nodeId) => removePlugin(nodeId),
+    fxActions
   });
+  const editNode = (changes) => {
+    const result = ctx2.dispatcher.apply(changes);
+    if (!result.ok) log2(result.message, "error");
+    return result;
+  };
+  function movePlugin(nodeId, delta) {
+    try {
+      const passesAudio = (id) => {
+        const profile = ctx2.dispatcher.engineNode(id)?.profile;
+        return (profile?.audioInputs ?? 0) > 0 && (profile?.audioOutputs ?? 0) > 0;
+      };
+      editNode(chainSwapChanges(ctx2.dispatcher.project, nodeId, delta, { passesAudio }));
+    } catch (error2) {
+      log2(error2.message, "error");
+    }
+  }
+  function showPlugin(nodeId) {
+    ctx2.tabs.select("tracks");
+    const track2 = ctx2.dispatcher.project.node(nodeId)?.track;
+    document2.getElementById(`track-group-${track2}`)?.scrollIntoView({ block: "start" });
+  }
+  function fxPluginsOf2(trackId) {
+    const { project } = ctx2.dispatcher;
+    return fxPluginsOf(project, trackId, {
+      profileOf: (id) => ctx2.dispatcher.engineNode(id)?.profile,
+      labelOf: (id) => {
+        const n2 = project.node(id);
+        return n2?.label ?? ctx2.dispatcher.engineNode(id)?.profile?.label ?? id;
+      },
+      failedOf: (id) => ctx2.dispatcher.engineNode(id)?.failed ?? null,
+      trackLabelOf: (id) => trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))
+    });
+  }
   function addPluginTo(trackId) {
     loadTarget = trackId;
     drawTargets();
@@ -34082,7 +34312,7 @@ function createRack(ctx2) {
       audibility: dispatcher?.audibility() ?? [],
       audioOutputsOf: (id) => dispatcher.engineNode(id)?.profile?.audioOutputs,
       labelFor: labelOfTrack,
-      pluginsOf: (trackId) => inSignalOrder(nodes.filter((n2) => n2.track === trackId), connections).map((n2) => ({ id: n2.id, label: labelFor(n2.id) }))
+      pluginsOf: (trackId) => fxPluginsOf2(trackId).map((plugin) => ({ ...plugin, label: labelFor(plugin.id) }))
     });
     restoreMixerFocus();
     drawTargets();
@@ -34260,6 +34490,8 @@ function createRack(ctx2) {
     drawTargets,
     addPluginTo,
     removePlugin,
+    fxPluginsOf: fxPluginsOf2,
+    fxActions,
     trackLabel,
     forgetNode,
     /** Drop every cache, for reopening a session over whatever was there before. */
@@ -34798,7 +35030,7 @@ function trackKind(project, track2, profileOf) {
 var TRACK_KIND_LABELS = Object.freeze({ bus: "Bus", instrument: "Instrument", midi: "MIDI", audio: "Audio" });
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
@@ -34813,6 +35045,12 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
     if (!event.altKey || event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     onMove(id, event.key === "ArrowUp" ? -1 : 1);
+  });
+  name2.addEventListener("keydown", (event) => {
+    if (!onExtend || !event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    onExtend(id, event.key === "ArrowUp" ? -1 : 1);
   });
   name2.addEventListener("keydown", (event) => {
     if (!onSizeStep || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -35005,82 +35243,6 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       }
     }
   };
-}
-
-// src/ui/ChainModel.js
-function kindOf3(connection) {
-  if (isMidiSignal(connection.signalKind)) return "MIDI";
-  return connection.to.portSymbol !== void 0 && connection.to.portSymbol !== null ? "modulation" : "audio";
-}
-var kindsOf = (ports) => [...new Set(ports.filter((p) => p.portSymbol === void 0).map((p) => isMidiSignal(p.kind) ? "MIDI" : "audio"))];
-var join = (list) => list.length <= 1 ? list.join("") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
-function describeChain(project, trackId, { profileOf, labelOf, failedOf, trackLabelOf }) {
-  const track2 = project.track(trackId);
-  const onTrack = project.nodes.filter((n2) => n2.track === trackId);
-  const ids = new Set(onTrack.map((n2) => n2.id));
-  const ordered = inSignalOrder(onTrack, project.connections);
-  const nodes = ordered.map((node) => {
-    const profile = profileOf(node.id);
-    const sends = project.connections.filter((c3) => c3.from.node === node.id).map((c3) => {
-      const target2 = project.node(c3.to.node);
-      return {
-        id: c3.id,
-        kind: kindOf3(c3),
-        toNode: c3.to.node,
-        toLabel: labelOf(c3.to.node),
-        toTrack: target2?.track ?? null,
-        toTrackLabel: target2 ? trackLabelOf(target2.track) : null,
-        other: Boolean(target2) && target2.track !== trackId,
-        parameter: c3.to.portSymbol ?? null
-      };
-    });
-    const receives = project.connections.filter((c3) => c3.to.node === node.id && !ids.has(c3.from.node)).map((c3) => {
-      const source = project.node(c3.from.node);
-      return {
-        id: c3.id,
-        kind: kindOf3(c3),
-        fromNode: c3.from.node,
-        fromLabel: labelOf(c3.from.node),
-        fromTrack: source?.track ?? null,
-        fromTrackLabel: source ? trackLabelOf(source.track) : null
-      };
-    });
-    return {
-      id: node.id,
-      label: labelOf(node.id),
-      loaded: profile !== void 0,
-      failed: failedOf(node.id) ?? null,
-      bypassed: node.bypassed === true,
-      passesAudio: kindsOf(inputsOf(profile)).includes("audio") && kindsOf(outputsOf(profile)).includes("audio"),
-      takes: kindsOf(inputsOf(profile)),
-      gives: kindsOf(outputsOf(profile)),
-      takesMidiFromTrack: track2?.midiInput === node.id,
-      takesAudioFromTrack: track2?.audioInput === node.id,
-      // On the master, the node the mix of every track arrives at.
-      takesMix: trackId === MASTER_TRACK && project.master.audioInput === node.id,
-      sends,
-      receives
-    };
-  });
-  return { trackId, nodes };
-}
-function say(node) {
-  const parts = [node.label];
-  if (node.bypassed) parts.push("bypassed");
-  if (node.failed) parts.push(`failed to load: ${node.failed}`);
-  else if (!node.loaded) parts.push("not loaded yet");
-  else {
-    parts.push(node.takes.length ? `takes ${join(node.takes)}` : "takes no signal");
-    parts.push(node.gives.length ? `gives ${join(node.gives)}` : "gives no signal");
-  }
-  if (node.takesMidiFromTrack) parts.push("the track's MIDI clips play into it");
-  if (node.takesAudioFromTrack) parts.push("audio sent to the track, and its audio clips, arrive at it");
-  if (node.takesMix) parts.push("the mix of every track arrives at it");
-  for (const s of node.sends) {
-    parts.push(`sends ${s.kind} to ${s.toLabel}${s.parameter ? ` (${s.parameter})` : ""}${s.other ? ` on ${s.toTrackLabel}` : ""}`);
-  }
-  for (const r of node.receives) parts.push(`receives ${r.kind} from ${r.fromLabel} on ${r.fromTrackLabel}`);
-  return parts.join("; ");
 }
 
 // src/ui/ChainStrip.js
@@ -35499,6 +35661,198 @@ function createFolderBar(document2, { onToggle, onMove = null, onGrip = null }) 
       button.setAttribute("aria-expanded", String(!collapsed));
       button.setAttribute("aria-label", `${collapsed ? "Show" : "Hide"} the ${tracks} in folder ${folder}`);
       element.setAttribute("aria-label", `Folder ${folder}`);
+    }
+  };
+}
+
+// src/ui/TimelineReorder.js
+function createReorder(document2, { rows, current, scroller, selection, say: say2, onMoveTrack, onFolderCollapse }) {
+  let collapsedFolders = /* @__PURE__ */ new Set();
+  const folderBars = /* @__PURE__ */ new Map();
+  function withFolders(tracks, rowsInOrder, layoutFor) {
+    collapsedFolders = new Set(tracks.filter((t) => layoutFor(t).folder && layoutFor(t).folderCollapsed).map((t) => layoutFor(t).folder));
+    const out = [];
+    const seen = /* @__PURE__ */ new Map();
+    const live = /* @__PURE__ */ new Set();
+    for (let i2 = 0; i2 < tracks.length; ) {
+      const name2 = layoutFor(tracks[i2]).folder ?? null;
+      let end = i2 + 1;
+      while (name2 !== null && end < tracks.length && layoutFor(tracks[end]).folder === name2) end++;
+      if (name2 !== null) {
+        const nth = seen.get(name2) ?? 0;
+        seen.set(name2, nth + 1);
+        const key = `${name2}\0${nth}`;
+        live.add(key);
+        let bar = folderBars.get(key);
+        if (!bar) {
+          bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onGrip: (event) => dragFolder(key, event), onToggle: (folder) => {
+            onFolderCollapse(folder, !collapsedFolders.has(folder));
+            folderBars.get(key)?.element.querySelector(".folder-toggle").focus();
+          } });
+          folderBars.set(key, bar);
+        }
+        bar.runStart = i2;
+        bar.runLength = end - i2;
+        bar.firstTrack = tracks[i2].id;
+        bar.runIds = tracks.slice(i2, end).map((t) => t.id);
+        bar.neighbours = { up: tracks[i2 - 1]?.id ?? null, down: tracks[end]?.id ?? null };
+        bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2), canUp: i2 > 0, canDown: end < tracks.length });
+        out.push(bar.element);
+      }
+      if (name2 === null || !collapsedFolders.has(name2)) out.push(...rowsInOrder.slice(i2, end));
+      i2 = end;
+    }
+    for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key);
+    return out;
+  }
+  function moveTrack(id, delta) {
+    const tracks = current().tracks;
+    const from = tracks.findIndex((t) => t.id === id);
+    const label = from < 0 ? id : current().labelFor(tracks[from]);
+    const moved = onMoveTrack(id, delta);
+    if (from < 0) return moved;
+    const to = Math.min(Math.max(from + delta, 0), tracks.length - 1);
+    if (to === from) say2(`${label} is already ${delta < 0 ? "first" : "last"}.`);
+    else say2(`${label} moved to place ${to + 1} of ${tracks.length}.`);
+    return moved;
+  }
+  let rangeAnchor = null;
+  function extendTrackSelection(id, delta) {
+    const shown = current().tracks.map((t) => t.id).filter((t) => rows.get(t) && scroller.contains(rows.get(t).row));
+    const at = shown.indexOf(id);
+    if (at < 0) return;
+    const to = Math.min(Math.max(at + delta, 0), shown.length - 1);
+    const from = shown.includes(rangeAnchor) ? shown.indexOf(rangeAnchor) : at;
+    rangeAnchor = shown[from];
+    selection.set("track", shown.slice(Math.min(from, to), Math.max(from, to) + 1));
+    document2.getElementById(`show-track-${shown[to]}`)?.focus();
+  }
+  function dropAt(element, own) {
+    const bar = [...folderBars.values()].find((b) => b.element.contains(element));
+    if (bar) {
+      if (bar.runIds.some((id2) => own.includes(id2))) return null;
+      const order = current().tracks.map((t) => t.id);
+      const up = order.indexOf(own[0]) > bar.runStart;
+      return { row: up ? bar.firstTrack : order[bar.runStart - 1], mark: bar.element };
+    }
+    const row = element?.closest?.(".timeline-row");
+    const id = row?.dataset.track;
+    return id && rows.has(id) ? { row: id, mark: row } : null;
+  }
+  function moveFolder(key, delta) {
+    const bar = folderBars.get(key);
+    if (!bar) return;
+    const first4 = bar.firstTrack;
+    if (delta < 0) onMoveTrack(bar.neighbours.up, bar.runLength);
+    else onMoveTrack(bar.neighbours.down, -bar.runLength);
+    say2(`Folder ${key.split("\0")[0]} moved ${delta < 0 ? "up" : "down"}.`);
+    const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
+    const wanted = moved?.element.querySelector(delta < 0 ? ".folder-move-up" : ".folder-move-down");
+    const target2 = wanted && !wanted.hidden ? wanted : moved?.element.querySelector(".folder-toggle");
+    target2?.focus();
+  }
+  function dragFolder(key, event) {
+    event.preventDefault();
+    event.target?.releasePointerCapture?.(event.pointerId);
+    const bar = folderBars.get(key);
+    if (!bar) return;
+    const run = bar.runIds;
+    const first4 = bar.firstTrack;
+    let target2 = null;
+    let marked = null;
+    for (const id of run) rows.get(id)?.row.classList.add("dragging");
+    const clear = () => {
+      document2.removeEventListener("pointermove", over);
+      document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", clear);
+      document2.removeEventListener("keydown", escape);
+      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
+      for (const { element } of folderBars.values()) element.classList.remove("drop-target");
+    };
+    function escape(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      clear();
+      folderBars.get(key)?.element.querySelector(".folder-toggle")?.focus();
+    }
+    function over(e) {
+      const hit = dropAt(e.target, run);
+      if (!hit || hit.row === target2 || run.includes(hit.row)) return;
+      marked?.classList.remove("drop-target");
+      target2 = hit.row;
+      marked = hit.mark;
+      marked.classList.add("drop-target");
+    }
+    function up() {
+      clear();
+      if (target2) {
+        const order = current().tracks.map((t) => t.id);
+        const at = order.indexOf(run[0]);
+        const to = order.indexOf(target2);
+        if (to < at) for (let k = at - 1; k >= to; k--) onMoveTrack(order[k], run.length);
+        else for (let k = at + run.length; k <= to; k++) onMoveTrack(order[k], -run.length);
+        say2(`Folder ${key.split("\0")[0]} moved.`);
+      }
+      const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
+      moved?.element.querySelector(".folder-toggle")?.focus();
+    }
+    document2.addEventListener("pointermove", over);
+    document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", clear);
+    document2.addEventListener("keydown", escape);
+  }
+  function dragTrack(id, event) {
+    event.preventDefault();
+    event.target?.releasePointerCapture?.(event.pointerId);
+    const rowOf = (trackId) => rows.get(trackId)?.row;
+    let target2 = id;
+    let marked = null;
+    rowOf(id)?.classList.add("dragging");
+    const clear = () => {
+      document2.removeEventListener("pointermove", over);
+      document2.removeEventListener("pointerup", up);
+      document2.removeEventListener("pointercancel", cancel);
+      document2.removeEventListener("keydown", escape);
+      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
+      for (const { element } of folderBars.values()) element.classList.remove("drop-target");
+    };
+    function escape(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      clear();
+      document2.getElementById(`show-track-${id}`)?.focus();
+    }
+    function over(e) {
+      const hit = dropAt(e.target, [id]);
+      if (!hit || hit.row === target2) return;
+      marked?.classList.remove("drop-target");
+      target2 = hit.row;
+      marked = hit.mark;
+      if (target2 !== id) marked.classList.add("drop-target");
+    }
+    function up() {
+      clear();
+      const order = current().tracks.map((t) => t.id);
+      const delta = order.indexOf(target2) - order.indexOf(id);
+      if (delta !== 0) moveTrack(id, delta);
+      document2.getElementById(`show-track-${id}`)?.focus();
+    }
+    function cancel() {
+      clear();
+    }
+    document2.addEventListener("pointermove", over);
+    document2.addEventListener("pointerup", up);
+    document2.addEventListener("pointercancel", cancel);
+    document2.addEventListener("keydown", escape);
+  }
+  return {
+    withFolders,
+    moveTrack,
+    dragTrack,
+    extendTrackSelection,
+    /** A click chose this track: a run of Shift+arrow presses starts from it. */
+    anchor(id) {
+      rangeAnchor = id;
     }
   };
 }
@@ -36372,6 +36726,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     }
   });
   element.append(tools.element, scroller);
+  const said = document2.createElement("div");
+  said.className = "visually-hidden";
+  said.setAttribute("role", "status");
+  said.setAttribute("aria-live", "polite");
+  element.append(said);
   const head = document2.createElement("div");
   head.className = "playhead";
   head.setAttribute("aria-hidden", "true");
@@ -36437,160 +36796,10 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx());
   }, { passive: false });
   const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu });
-  let collapsedFolders = /* @__PURE__ */ new Set();
-  const folderBars = /* @__PURE__ */ new Map();
-  function withFolders(tracks, rowsInOrder, layoutFor) {
-    collapsedFolders = new Set(tracks.filter((t) => layoutFor(t).folder && layoutFor(t).folderCollapsed).map((t) => layoutFor(t).folder));
-    const out = [];
-    const seen = /* @__PURE__ */ new Map();
-    const live = /* @__PURE__ */ new Set();
-    for (let i2 = 0; i2 < tracks.length; ) {
-      const name2 = layoutFor(tracks[i2]).folder ?? null;
-      let end = i2 + 1;
-      while (name2 !== null && end < tracks.length && layoutFor(tracks[end]).folder === name2) end++;
-      if (name2 !== null) {
-        const nth = seen.get(name2) ?? 0;
-        seen.set(name2, nth + 1);
-        const key = `${name2}\0${nth}`;
-        live.add(key);
-        let bar = folderBars.get(key);
-        if (!bar) {
-          bar = createFolderBar(document2, { onMove: (delta) => moveFolder(key, delta), onGrip: (event) => dragFolder(key, event), onToggle: (folder) => {
-            onFolderCollapse(folder, !collapsedFolders.has(folder));
-            folderBars.get(key)?.element.querySelector(".folder-toggle").focus();
-          } });
-          folderBars.set(key, bar);
-        }
-        bar.runStart = i2;
-        bar.runLength = end - i2;
-        bar.firstTrack = tracks[i2].id;
-        bar.runIds = tracks.slice(i2, end).map((t) => t.id);
-        bar.neighbours = { up: tracks[i2 - 1]?.id ?? null, down: tracks[end]?.id ?? null };
-        bar.update({ name: name2, count: end - i2, collapsed: collapsedFolders.has(name2), canUp: i2 > 0, canDown: end < tracks.length });
-        out.push(bar.element);
-      }
-      if (name2 === null || !collapsedFolders.has(name2)) out.push(...rowsInOrder.slice(i2, end));
-      i2 = end;
-    }
-    for (const key of [...folderBars.keys()]) if (!live.has(key)) folderBars.delete(key);
-    return out;
-  }
-  function dropAt(element2, own) {
-    const bar = [...folderBars.values()].find((b) => b.element.contains(element2));
-    if (bar) {
-      if (bar.runIds.some((id2) => own.includes(id2))) return null;
-      const order = lastArgs.tracks.map((t) => t.id);
-      const up = order.indexOf(own[0]) > bar.runStart;
-      return { row: up ? bar.firstTrack : order[bar.runStart - 1], mark: bar.element };
-    }
-    const row = element2?.closest?.(".timeline-row");
-    const id = row?.dataset.track;
-    return id && rows.has(id) ? { row: id, mark: row } : null;
-  }
-  function moveFolder(key, delta) {
-    const bar = folderBars.get(key);
-    if (!bar) return;
-    const first4 = bar.firstTrack;
-    if (delta < 0) onMoveTrack(bar.neighbours.up, bar.runLength);
-    else onMoveTrack(bar.neighbours.down, -bar.runLength);
-    const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
-    const wanted = moved?.element.querySelector(delta < 0 ? ".folder-move-up" : ".folder-move-down");
-    const target2 = wanted && !wanted.hidden ? wanted : moved?.element.querySelector(".folder-toggle");
-    target2?.focus();
-  }
-  function dragFolder(key, event) {
-    event.preventDefault();
-    event.target?.releasePointerCapture?.(event.pointerId);
-    const bar = folderBars.get(key);
-    if (!bar) return;
-    const run = bar.runIds;
-    const first4 = bar.firstTrack;
-    let target2 = null;
-    let marked = null;
-    for (const id of run) rows.get(id)?.row.classList.add("dragging");
-    const clear = () => {
-      document2.removeEventListener("pointermove", over);
-      document2.removeEventListener("pointerup", up);
-      document2.removeEventListener("pointercancel", clear);
-      document2.removeEventListener("keydown", escape);
-      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
-      for (const { element: element2 } of folderBars.values()) element2.classList.remove("drop-target");
-    };
-    function escape(e) {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      clear();
-      folderBars.get(key)?.element.querySelector(".folder-toggle")?.focus();
-    }
-    function over(e) {
-      const hit = dropAt(e.target, run);
-      if (!hit || hit.row === target2 || run.includes(hit.row)) return;
-      marked?.classList.remove("drop-target");
-      target2 = hit.row;
-      marked = hit.mark;
-      marked.classList.add("drop-target");
-    }
-    function up() {
-      clear();
-      if (target2) {
-        const order = lastArgs.tracks.map((t) => t.id);
-        const at = order.indexOf(run[0]);
-        const to = order.indexOf(target2);
-        if (to < at) for (let k = at - 1; k >= to; k--) onMoveTrack(order[k], run.length);
-        else for (let k = at + run.length; k <= to; k++) onMoveTrack(order[k], -run.length);
-      }
-      const moved = [...folderBars.values()].find((b) => b.firstTrack === first4);
-      moved?.element.querySelector(".folder-toggle")?.focus();
-    }
-    document2.addEventListener("pointermove", over);
-    document2.addEventListener("pointerup", up);
-    document2.addEventListener("pointercancel", clear);
-    document2.addEventListener("keydown", escape);
-  }
-  function dragTrack(id, event) {
-    event.preventDefault();
-    event.target?.releasePointerCapture?.(event.pointerId);
-    const rowOf = (trackId) => rows.get(trackId)?.row;
-    let target2 = id;
-    let marked = null;
-    rowOf(id)?.classList.add("dragging");
-    const clear = () => {
-      document2.removeEventListener("pointermove", over);
-      document2.removeEventListener("pointerup", up);
-      document2.removeEventListener("pointercancel", cancel);
-      document2.removeEventListener("keydown", escape);
-      for (const { row } of rows.values()) row.classList.remove("dragging", "drop-target");
-      for (const { element: element2 } of folderBars.values()) element2.classList.remove("drop-target");
-    };
-    function escape(e) {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      clear();
-      document2.getElementById(`show-track-${id}`)?.focus();
-    }
-    function over(e) {
-      const hit = dropAt(e.target, [id]);
-      if (!hit || hit.row === target2) return;
-      marked?.classList.remove("drop-target");
-      target2 = hit.row;
-      marked = hit.mark;
-      if (target2 !== id) marked.classList.add("drop-target");
-    }
-    function up() {
-      clear();
-      const order = lastArgs.tracks.map((t) => t.id);
-      const delta = order.indexOf(target2) - order.indexOf(id);
-      if (delta !== 0) onMoveTrack(id, delta);
-      document2.getElementById(`show-track-${id}`)?.focus();
-    }
-    function cancel() {
-      clear();
-    }
-    document2.addEventListener("pointermove", over);
-    document2.addEventListener("pointerup", up);
-    document2.addEventListener("pointercancel", cancel);
-    document2.addEventListener("keydown", escape);
-  }
+  const reorder = createReorder(document2, { rows, current: () => lastArgs, scroller, selection, say: (text) => {
+    said.textContent = text;
+  }, onMoveTrack, onFolderCollapse });
+  const { withFolders, moveTrack, dragTrack, extendTrackSelection } = reorder;
   function draw2(args) {
     lastArgs = args;
     scroller.style.setProperty("--view", `${scroller.clientWidth}px`);
@@ -36653,16 +36862,21 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onAdd,
           onAddAudio,
           onChannel,
-          onMove: onMoveTrack,
+          onMove: moveTrack,
           onArm,
           onDuplicateTrack,
           onGrip: dragTrack,
           onExpand: onExpandTrack,
           onSizeStep,
+          onExtend: extendTrackSelection,
           onEdit: onEditTrack,
           onDeleteTrack,
           menu,
-          onSelect: (id, { toggle }) => toggle ? selection.toggle("track", id) : selection.set("track", [id])
+          onSelect: (id, { toggle }) => {
+            reorder.anchor(id);
+            if (toggle) selection.toggle("track", id);
+            else selection.set("track", [id]);
+          }
         });
         const lane = document2.createElement("div");
         lane.className = "timeline-lane";
@@ -38924,7 +39138,28 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
   bus.type = "button";
   bus.id = "bulk-bus";
   bus.textContent = "Send to a new bus";
-  bus.addEventListener("click", () => onBus());
+  const busLabel = document2.createElement("label");
+  busLabel.className = "track-field";
+  busLabel.append(document2.createTextNode("Bus name "));
+  const busName = document2.createElement("input");
+  busName.type = "text";
+  busName.id = "bulk-bus-name";
+  busName.autocomplete = "off";
+  busName.spellcheck = false;
+  busName.maxLength = MAX_FOLDER_NAME;
+  busLabel.append(busName);
+  const makeBus = () => {
+    const name2 = busName.value.trim();
+    busName.value = "";
+    onBus(name2 === "" ? void 0 : name2);
+  };
+  bus.addEventListener("click", makeBus);
+  busName.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      makeBus();
+    }
+  });
   const shifts = document2.createElement("div");
   shifts.className = "track-actions";
   shifts.setAttribute("role", "group");
@@ -38953,7 +39188,7 @@ function createBulkTrackPanel(document2, { onChannel, onColor, onSize, onFolder,
   const actions = document2.createElement("div");
   actions.className = "track-actions";
   actions.append(mute, solo, bus, ...onExportMidi ? [exportMidi] : []);
-  element.append(summary, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder);
+  element.append(summary, busLabel, actions, shifts, levelBy.element, panBy.element, colors, sizeLabel, folderLabel, unfolder);
   return {
     element,
     /** `tracks` are the selected ones, each with its `channel`; `labels` names them for the summary,
@@ -39386,17 +39621,21 @@ function createDockPanel(ctx2) {
       for (const id of ctx2.selection.ids) layoutOf(id, { folder });
     },
     onExportMidi: () => exportMidi(ctx2.selection.ids),
-    onBus: () => {
+    onBus: (label) => {
+      const members = ctx2.selection.ids;
       let changes;
       try {
-        changes = describeBus(ctx2.dispatcher.project, ctx2.selection.ids);
+        changes = describeBus(ctx2.dispatcher.project, members, label === void 0 ? {} : { label });
       } catch (error2) {
         log2(error2.message, "error");
         return;
       }
       const result = ctx2.dispatcher.apply(changes);
       if (!result.ok) log2(result.message, "error");
-      else ctx2.selection.set("track", [changes[0].id]);
+      else {
+        placeBus(ctx2.dispatcher.project, changes[0].id, members);
+        ctx2.selection.set("track", [changes[0].id]);
+      }
     }
   });
   dock.slot("tracks").append(bulk.element);
@@ -40364,6 +40603,7 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
   if (title) lines.push(`    rdfs:label ${string(title)} ;`);
   if (author) lines.push(`    dcterms:creator ${string(author)} ;`);
   if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`);
+  if (project.settings.alignTracks !== null) lines.push(`    ${term3(jig6.alignTracks)} ${project.settings.alignTracks ? "true" : "false"} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
   lines.push(`    ${term3(jig6.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
@@ -40661,6 +40901,12 @@ function readScripts(dataset2, projectIri) {
 var { jig: jig8, trn: trn6 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
+function readBoolean(term5, what = "alignTracks") {
+  if (term5 === null) return null;
+  if (term5.value === "true" || term5.value === "1") return true;
+  if (term5.value === "false" || term5.value === "0") return false;
+  throw new Error(`${what} is true or false, not "${term5.value}"`);
+}
 function findProject(dataset2) {
   const found = [];
   for (const quad3 of dataset2) {
@@ -40973,6 +41219,7 @@ function readProject(dataset2) {
       author: value(one2(dataset2, iri5, vocabulary.dcterms.creator)),
       notes: value(one2(dataset2, iri5, vocabulary.rdfs.comment))
     },
+    settings: { alignTracks: readBoolean(one2(dataset2, iri5, jig8.alignTracks)) },
     revision: number4(one2(dataset2, iri5, jig8.revision), "revision") ?? 0,
     changes
   };
@@ -41199,6 +41446,13 @@ function createSessions(ctx2) {
       d.project.setInfo({ title: null, author: null, notes: null });
       log2(`project info ignored: ${error2.message}`, "error");
     }
+    try {
+      d.project.setSettings(read.settings);
+    } catch (error2) {
+      d.project.setSettings({ alignTracks: null });
+      log2(`project settings ignored: ${error2.message}`, "error");
+    }
+    ctx2.align?.fromSession();
     ctx2.projectInfo?.refresh();
     ctx2.transport.showTransport();
     ctx2.rack.draw();
@@ -41851,6 +42105,7 @@ var KEY_ROWS = Object.freeze([
   { scope: "clip", keys: "Delete or Backspace", does: "Delete", press: [plain("Delete"), plain("Backspace")] },
   { scope: "track", keys: "Alt + Up or Down", does: "Move the track earlier or later in the order", press: [{ key: "ArrowUp", altKey: true }, { key: "ArrowDown", altKey: true }] },
   { scope: "track", keys: "+ and -", does: "Make the lane one size taller or shorter", press: [plain("+"), plain("-")] },
+  { scope: "track", keys: "Shift + Up or Down", does: "Extend the selection to the track above or below", press: [{ key: "ArrowUp", shiftKey: true }, { key: "ArrowDown", shiftKey: true }] },
   { scope: "track", keys: "D", does: "Duplicate the track", press: [plain("d")] },
   { scope: "chain", keys: "Alt + Left or Right", does: "Move the plugin earlier or later in the chain, where it can", press: [{ key: "ArrowLeft", altKey: true }, { key: "ArrowRight", altKey: true }] },
   { scope: "point", keys: "Left or Right", does: "Move the point in time by one grid step", press: [plain("ArrowLeft"), plain("ArrowRight")] },
@@ -41877,7 +42132,8 @@ var UNLISTED_KEY_FILES = Object.freeze({
   "src/ui/BulkTrackPanel.js": "Enter commits a field",
   "src/ui/PianoRoll.js": "not listed yet: the roll has many keys and wants its own section",
   "src/ui/RollLane.js": "not listed yet: goes with the piano roll section",
-  "src/ui/Timeline.js": "not listed yet: plus and minus zoom the timeline when it has focus"
+  "src/ui/Timeline.js": "not listed yet: plus and minus zoom the timeline when it has focus",
+  "src/ui/TimelineReorder.js": "Escape drops a track or a folder being dragged where it started, said in docs/jiggy-features.md; the grip is a second way to what Alt with Up or Down, listed above, already does"
 });
 
 // src/ui/KeysOverlay.js
@@ -41996,21 +42252,24 @@ function channelMessage(data) {
   if (status < 128 || status >= 240) return null;
   return Uint8Array.from(data);
 }
-function createMidiInput({ requestAccess, onMessage, onChange }) {
+function createMidiInput({ requestAccess, onMessage, onChange, disabled = [] }) {
   for (const [name2, fn] of Object.entries({ onMessage, onChange })) {
     if (typeof fn !== "function") throw new Error(`createMidiInput needs ${name2}`);
   }
   let access = null;
   let status = requestAccess ? MIDI_STATUS.off : MIDI_STATUS.unsupported;
   const hooked = /* @__PURE__ */ new Set();
+  const off = new Set(disabled);
   const names = () => access ? [...access.inputs.values()].filter((i2) => i2.state !== "disconnected").map((i2) => i2.name ?? i2.id) : [];
-  const tell = () => onChange({ status, inputs: names() });
+  const devices = () => access ? [...access.inputs.values()].filter((i2) => i2.state !== "disconnected").map((i2) => ({ id: i2.id, name: i2.name ?? i2.id, enabled: !off.has(i2.id) })) : [];
+  const tell = () => onChange({ status, inputs: names(), devices: devices() });
   function hook() {
     if (!access) return;
     for (const input of access.inputs.values()) {
       if (hooked.has(input.id)) continue;
       hooked.add(input.id);
       input.onmidimessage = (event) => {
+        if (off.has(input.id)) return;
         const bytes = channelMessage(event.data);
         if (bytes) onMessage(bytes, input.name ?? input.id);
       };
@@ -42022,6 +42281,19 @@ function createMidiInput({ requestAccess, onMessage, onChange }) {
     },
     get inputs() {
       return names();
+    },
+    get devices() {
+      return devices();
+    },
+    /** The ids turned off, for the caller to keep. */
+    get disabled() {
+      return [...off];
+    },
+    /** Listen to a controller again, or stop listening to it. Heard by `onChange`, and kept while MIDI in is turned off and on. */
+    setEnabled(id, on) {
+      if (on) off.delete(id);
+      else off.add(id);
+      tell();
     },
     /** Ask the browser, and start listening to every input, including ones plugged in later. */
     async enable() {
@@ -42064,12 +42336,53 @@ var SAID2 = {
   [MIDI_STATUS.denied]: "MIDI in was blocked by the browser. Allow it in the site settings, then try again.",
   [MIDI_STATUS.unsupported]: "This browser has no Web MIDI."
 };
+var STORE_KEY = "jigdaw.midi.off";
+function loadOff(window2) {
+  try {
+    const list = JSON.parse(window2.localStorage.getItem(STORE_KEY) ?? "[]");
+    return Array.isArray(list) ? list.filter((id) => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function saveOff(window2, ids) {
+  try {
+    window2.localStorage.setItem(STORE_KEY, JSON.stringify(ids));
+  } catch {
+  }
+}
 function createMidiIn(ctx2) {
-  const { $: $2, log: log2, window: window2 } = ctx2;
+  const { $: $2, log: log2, window: window2, document: document2 } = ctx2;
   const armed = /* @__PURE__ */ new Set();
-  const say2 = ({ status, inputs }) => {
+  const devices = document2.createElement("fieldset");
+  devices.id = "midi-devices";
+  devices.className = "midi-devices";
+  devices.hidden = true;
+  const legend = document2.createElement("legend");
+  legend.textContent = "Play from";
+  devices.append(legend);
+  function drawDevices(list) {
+    devices.hidden = list.length < 2;
+    const boxes = list.map((device) => {
+      const label = document2.createElement("label");
+      const box = document2.createElement("input");
+      box.type = "checkbox";
+      box.checked = device.enabled;
+      box.dataset.device = device.id;
+      box.addEventListener("change", () => {
+        midi2.setEnabled(device.id, box.checked);
+        saveOff(window2, midi2.disabled);
+      });
+      label.append(box, document2.createTextNode(` ${device.name}`));
+      return label;
+    });
+    devices.replaceChildren(legend, ...boxes);
+  }
+  const say2 = ({ status, inputs, devices: list = [] }) => {
     $2("midi-in").setAttribute("aria-pressed", String(status === MIDI_STATUS.on));
-    $2("midi-state").textContent = status === MIDI_STATUS.on ? inputs.length === 0 ? "MIDI in: no controller found." : `MIDI in: ${inputs.join(", ")}.` : SAID2[status];
+    const off = list.filter((d) => !d.enabled).length;
+    $2("midi-state").textContent = status === MIDI_STATUS.on ? inputs.length === 0 ? "MIDI in: no controller found." : `MIDI in: ${list.filter((d) => d.enabled).map((d) => d.name).join(", ") || "every controller is turned off"}${off > 0 ? `, ${off} turned off` : ""}.` : SAID2[status];
+    drawDevices(status === MIDI_STATUS.on ? list : []);
   };
   function targets() {
     const project = ctx2.dispatcher?.project;
@@ -42089,9 +42402,11 @@ function createMidiIn(ctx2) {
         ctx2.midiRecord.capture(nodeId, bytes);
       }
     },
-    onChange: say2
+    onChange: say2,
+    disabled: loadOff(window2)
   });
   function mount() {
+    $2("midi-state").after(devices);
     say2({ status: midi2.status, inputs: [] });
     $2("midi-in").addEventListener("click", async () => {
       if (midi2.status === MIDI_STATUS.on) {
@@ -42112,6 +42427,137 @@ function createMidiIn(ctx2) {
   };
 }
 
+// src/host/Microphone.js
+var AUDIO_CONSTRAINTS = Object.freeze({
+  audio: Object.freeze({ echoCancellation: false, noiseSuppression: false, autoGainControl: false })
+});
+var constraintsFor = (deviceId) => deviceId ? { audio: { ...AUDIO_CONSTRAINTS.audio, deviceId: { exact: deviceId } } } : AUDIO_CONSTRAINTS;
+function explain(error2) {
+  switch (error2?.name) {
+    case "NotAllowedError":
+    case "SecurityError":
+      return "The browser did not let this page use the microphone. Allow it in the site settings, then try again.";
+    case "NotFoundError":
+    case "OverconstrainedError":
+      return "No microphone was found. Plug one in, then try again.";
+    case "NotReadableError":
+    case "AbortError":
+      return "The microphone could not be opened. Another app may be using it.";
+    default:
+      return `The microphone could not be used: ${error2?.message ?? "unknown error"}`;
+  }
+}
+var microphoneAvailable = (mediaDevices) => typeof mediaDevices?.getUserMedia === "function";
+async function listInputs(mediaDevices) {
+  const all = await mediaDevices.enumerateDevices();
+  return all.filter((d) => d.kind === "audioinput" && d.deviceId !== "").map((d, i2) => ({ id: d.deviceId, name: d.label || `Microphone ${i2 + 1}` }));
+}
+async function openMicrophone(getUserMedia, { deviceId = null } = {}) {
+  try {
+    return await getUserMedia(constraintsFor(deviceId));
+  } catch (error2) {
+    throw new Error(explain(error2), { cause: error2 });
+  }
+}
+
+// web/app/MicIn.js
+function createMicIn(ctx2, { getUserMedia, mediaDevices, available }) {
+  const { $: $2, log: log2, document: document2 } = ctx2;
+  let live = null;
+  const devices = document2.createElement("label");
+  devices.className = "mic-devices";
+  devices.hidden = true;
+  const select = document2.createElement("select");
+  select.id = "mic-device";
+  devices.append("Microphone ", select);
+  const say2 = (text) => {
+    $2("mic-state").textContent = text;
+  };
+  const trackLabel = (id) => ctx2.dispatcher?.project.track(id)?.label ?? id;
+  function show() {
+    $2("mic-in").setAttribute("aria-pressed", String(live !== null));
+    if (live) {
+      const name2 = [...select.options].find((o2) => o2.selected)?.textContent;
+      say2(`Mic in${name2 ? `: ${name2}` : ""}, into ${trackLabel(live.track)}.`);
+    }
+  }
+  const chosen = () => [...select.options].find((o2) => o2.selected)?.value ?? null;
+  async function drawDevices(current) {
+    const list = await listInputs(mediaDevices);
+    devices.hidden = list.length < 2;
+    select.replaceChildren(...list.map((d) => {
+      const option = document2.createElement("option");
+      option.value = d.id;
+      option.textContent = d.name;
+      return option;
+    }));
+    const match = [...select.options].find((o2) => o2.value === current);
+    if (match) match.selected = true;
+  }
+  async function open(track2, deviceId) {
+    await ctx2.runtime.ensureRunning();
+    const stream = await openMicrophone(getUserMedia, { deviceId });
+    try {
+      if (live && live.track !== track2) ctx2.engine.closeInput(live.track);
+      ctx2.engine.openInput(track2, stream);
+    } catch (error2) {
+      for (const t of stream.getTracks?.() ?? []) t.stop();
+      throw error2;
+    }
+    const opened = stream.getAudioTracks?.()[0]?.getSettings?.().deviceId ?? deviceId;
+    live = { track: track2, deviceId: opened };
+    await drawDevices(opened);
+    show();
+  }
+  function off() {
+    if (!live) return;
+    ctx2.engine.closeInput(live.track);
+    live = null;
+    show();
+    say2("Mic in is off.");
+  }
+  function refresh() {
+    if (live && !ctx2.engine?.inputTrackIds().includes(live.track)) {
+      live = null;
+      show();
+      say2("Mic in is off: the track it was feeding is gone.");
+    }
+  }
+  async function toggle() {
+    if (live) {
+      off();
+      return;
+    }
+    const track2 = ctx2.selection.kind === "track" ? ctx2.selection.ids[0] : null;
+    if (!track2) {
+      say2("Select a track first, then press Mic in.");
+      return;
+    }
+    await open(track2, null);
+  }
+  function mount() {
+    if (!available) return;
+    $2("mic-in").hidden = false;
+    $2("mic-state").after(devices);
+    $2("mic-in").addEventListener("click", () => toggle().catch((error2) => {
+      say2(error2.message);
+      log2(error2.message, "error");
+    }));
+    select.addEventListener("change", () => {
+      if (!live) return;
+      const was = live;
+      open(was.track, chosen()).catch((error2) => {
+        log2(error2.message, "error");
+        drawDevices(was.deviceId).then(() => {
+          show();
+          say2(`${error2.message} The previous microphone is still in use.`);
+        });
+      });
+    });
+  }
+  return { mount, refresh, active: () => live !== null };
+}
+
 // web/app/Align.js
 var KEY4 = "jigdaw.alignTracks";
 function createAlign(ctx2) {
@@ -42129,7 +42575,15 @@ function createAlign(ctx2) {
     const on = ctx2.dispatcher?.alignTracks;
     if (on === void 0) return;
     $2("align-tracks").checked = on;
-    $2("align-status").textContent = on ? "Tracks with less latency are delayed to line up with the slowest." : "Tracks are not lined up: a track with latency sounds later than one without.";
+    const said = ctx2.dispatcher.project.settings.alignTracks !== null;
+    $2("align-status").textContent = (on ? "Tracks with less latency are delayed to line up with the slowest." : "Tracks are not lined up: a track with latency sounds later than one without.") + (said ? " This session says so." : "");
+  }
+  function fromSession() {
+    const d = ctx2.dispatcher;
+    const said = d.project.settings.alignTracks;
+    d.setAlignTracks(said ?? preferred(ctx2.hostConfig.alignTracks));
+    sync();
+    ctx2.rack?.draw();
   }
   function mount() {
     $2("align-tracks").addEventListener("change", async () => {
@@ -42143,11 +42597,12 @@ function createAlign(ctx2) {
         return null;
       });
       d?.setAlignTracks(on);
+      d?.project.setSettings({ alignTracks: on });
       sync();
       ctx2.rack.draw();
     });
   }
-  return { preferred, sync, mount };
+  return { preferred, sync, fromSession, mount };
 }
 
 // web/app/Master.js
@@ -42169,7 +42624,9 @@ function createMaster(ctx2) {
   const fx = createFxList(ctx2.document, {
     id: "strip-master",
     onAdd: () => ctx2.rack.addPluginTo(MASTER_TRACK),
-    onRemove: (nodeId) => ctx2.rack.removePlugin(nodeId)
+    onRemove: (nodeId) => ctx2.rack.removePlugin(nodeId),
+    // The rack is built after the master, so each is looked up when pressed.
+    actions: Object.fromEntries(["onBypass", "onMove", "onReplace", "onShow"].map((name2) => [name2, (...args) => ctx2.rack.fxActions[name2](...args)]))
   });
   return {
     meter,
@@ -42198,7 +42655,7 @@ function createMaster(ctx2) {
       strip.update(project.master, { label: "Master" });
       const nodes = inSignalOrder(project.nodes.filter((n2) => n2.track === MASTER_TRACK), project.connections);
       const labelOf = (node) => node.label ?? ctx2.dispatcher.engineNode(node.id)?.profile?.label ?? node.id;
-      fx.update({ label: "Master", plugins: nodes.map((node) => ({ id: node.id, label: labelOf(node) })) });
+      fx.update({ label: "Master", plugins: ctx2.rack.fxPluginsOf(MASTER_TRACK) });
       summary.element.hidden = nodes.length === 0;
       if (nodes.length === 0) return;
       const input = project.master.audioInput ? project.node(project.master.audioInput) : null;
@@ -43736,6 +44193,11 @@ ctx.layout = createLayout(ctx);
 ctx.keys = createKeys(ctx);
 ctx.swap = createSwap(ctx);
 ctx.midiIn = createMidiIn(ctx);
+ctx.micIn = createMicIn(ctx, {
+  getUserMedia: (constraints) => (window.__jigdawMicrophone ?? ((c3) => navigator.mediaDevices.getUserMedia(c3)))(constraints),
+  mediaDevices: navigator.mediaDevices,
+  available: Boolean(window.__jigdawMicrophone) || microphoneAvailable(navigator.mediaDevices)
+});
 ctx.launcher = createLauncher(ctx);
 ctx.script = createScript(ctx);
 var { loading, browser, transport } = ctx;
@@ -43832,6 +44294,7 @@ ctx.layout.mount();
 ctx.keys.mount();
 ctx.swap.mount();
 ctx.midiIn.mount();
+ctx.micIn.mount();
 ctx.align.mount();
 $("iri").value = new URL($("iri").value, document.baseURI).href;
 $("collection").value = new URL($("collection").value, document.baseURI).href;

@@ -350,6 +350,7 @@ jig:ProjectShape a sh:NodeShape ;
     sh:property [ sh:path rdfs:label ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path dcterms:creator ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path rdfs:comment ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path jig:alignTracks ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:message "A project says at most once, with true or false, whether its tracks are lined up." ] ;
     sh:property [ sh:path jig:transport ; sh:maxCount 1 ] ;
     sh:property [ sh:path jig:node ; sh:nodeKind sh:IRI ] ;
     sh:property [ sh:path jig:track ; sh:nodeKind sh:IRI ] ;

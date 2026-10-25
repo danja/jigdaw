@@ -341,6 +341,7 @@ export class Engine {
   trackMeter (...args) { return this.#mixing.trackMeter(...args) }
   openInput (...args) { return this.#mixing.openInput(...args) }
   closeInput (...args) { return this.#mixing.closeInput(...args) }
+  inputTrackIds () { return this.#mixing.inputTrackIds() }
   setTrackChannel (...args) { return this.#mixing.setTrackChannel(...args) }
 
   /**

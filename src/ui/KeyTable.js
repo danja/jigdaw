@@ -41,6 +41,7 @@ export const KEY_ROWS = Object.freeze([
 
   { scope: 'track', keys: 'Alt + Up or Down', does: 'Move the track earlier or later in the order', press: [{ key: 'ArrowUp', altKey: true }, { key: 'ArrowDown', altKey: true }] },
   { scope: 'track', keys: '+ and -', does: 'Make the lane one size taller or shorter', press: [plain('+'), plain('-')] },
+  { scope: 'track', keys: 'Shift + Up or Down', does: 'Extend the selection to the track above or below', press: [{ key: 'ArrowUp', shiftKey: true }, { key: 'ArrowDown', shiftKey: true }] },
   { scope: 'track', keys: 'D', does: 'Duplicate the track', press: [plain('d')] },
 
   { scope: 'chain', keys: 'Alt + Left or Right', does: 'Move the plugin earlier or later in the chain, where it can', press: [{ key: 'ArrowLeft', altKey: true }, { key: 'ArrowRight', altKey: true }] },
@@ -77,5 +78,6 @@ export const UNLISTED_KEY_FILES = Object.freeze({
   'src/ui/BulkTrackPanel.js': 'Enter commits a field',
   'src/ui/PianoRoll.js': 'not listed yet: the roll has many keys and wants its own section',
   'src/ui/RollLane.js': 'not listed yet: goes with the piano roll section',
-  'src/ui/Timeline.js': 'not listed yet: plus and minus zoom the timeline when it has focus'
+  'src/ui/Timeline.js': 'not listed yet: plus and minus zoom the timeline when it has focus',
+  'src/ui/TimelineReorder.js': 'Escape drops a track or a folder being dragged where it started, said in docs/jiggy-features.md; the grip is a second way to what Alt with Up or Down, listed above, already does'
 })

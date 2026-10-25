@@ -23,7 +23,7 @@
     "A velocity-100 single note reaches at least -10 dBFS at the default setting on every model; dense chords stay bounded through the final soft clip.",
     "CC 120 and 123 silence every voice, like an all-notes-off."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "abi": "jig:Abi1",
   "requires": [

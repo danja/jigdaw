@@ -31,8 +31,10 @@ built by one module in `src/ui/`, so the layout can change without the parts cha
 - **The mixer as a panel docked under the arrangement, as Reaper does.** Keeps level and pan beside the clips
   without a tab switch. Not taken because the track header already carries level, pan, mute and solo, so a
   second strip would show the same controls twice; and the mixer's wider strips (inserts, sends, meters) need a
-  width a phone does not have. This is the main open question: [INBOX](../INBOX.md) asks for the arrangement and
-  mixer to follow Reaper where possible, and the cost of a docked mixer should be weighed against the tab.
+  width a phone does not have. Decided 2026-10-25: for now the mixer stays in a tab. [INBOX](../INBOX.md) asks for the
+  arrangement and mixer to follow Reaper where possible, so this is the answer for now and not a closed question. What would
+  reopen it: a person finding the tab switch costly while mixing against clips, or a layout that gives the strips their width
+  without taking the lanes'.
 - **Track headers inside the lanes, scrolling sideways with them.** Simpler to build. Rejected because the name
   and the mute of a track would scroll out of view exactly when the arrangement is long, which is when they are
   needed.

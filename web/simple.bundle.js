@@ -13376,6 +13376,7 @@ var init_Vocabulary = __esm({
         loopStart: `${JIG}loopStart`,
         loopEnd: `${JIG}loopEnd`,
         loopEnabled: `${JIG}loopEnabled`,
+        alignTracks: `${JIG}alignTracks`,
         launchQuantise: `${JIG}launchQuantise`,
         Master: `${JIG}Master`,
         master: `${JIG}master`,
@@ -22696,6 +22697,10 @@ var Mixing = class {
     source.connect(strip.pre);
     this.#inputs.set(trackId, { source, stream });
   }
+  /** The tracks that have a live input, which a take records before the fader. */
+  inputTrackIds() {
+    return [...this.#inputs.keys()];
+  }
   /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
   closeInput(trackId) {
     const held = this.#inputs.get(trackId);
@@ -23063,6 +23068,9 @@ var Engine = class {
   closeInput(...args) {
     return this.#mixing.closeInput(...args);
   }
+  inputTrackIds() {
+    return this.#mixing.inputTrackIds();
+  }
   setTrackChannel(...args) {
     return this.#mixing.setTrackChannel(...args);
   }
@@ -23428,6 +23436,19 @@ function patchInfo(current2, patch) {
     const text = key === "notes" ? value2.trim() : value2.trim().replace(/\s+/g, " ");
     if (text.length > INFO_LIMITS[key]) throw new Error(`${key} is at most ${INFO_LIMITS[key]} characters`);
     next[key] = text === "" ? null : text;
+  }
+  return next;
+}
+
+// src/model/ProjectSettings.js
+var EMPTY_SETTINGS = Object.freeze({ alignTracks: null });
+function patchSettings(current2, patch) {
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new Error("project settings are an object with alignTracks");
+  const next = { ...current2 };
+  for (const [key, value2] of Object.entries(patch)) {
+    if (!(key in EMPTY_SETTINGS)) throw new Error(`unknown project setting: ${key}`);
+    if (value2 !== null && typeof value2 !== "boolean") throw new Error(`${key} is true or false, or null for not stated`);
+    next[key] = value2;
   }
   return next;
 }
@@ -24183,6 +24204,8 @@ var Project = class {
   #scripts = new ScriptState();
   // Title, author and notes: words about the session, outside the revision.
   #info = { ...EMPTY_INFO };
+  // How the session wants to be played (track alignment), outside the revision for the same reason.
+  #settings = { ...EMPTY_SETTINGS };
   get revision() {
     return this.#revision;
   }
@@ -24198,6 +24221,12 @@ var Project = class {
   }
   setInfo(patch) {
     this.#info = patchInfo(this.#info, patch);
+  }
+  get settings() {
+    return { ...this.#settings };
+  }
+  setSettings(patch) {
+    this.#settings = patchSettings(this.#settings, patch);
   }
   get tracks() {
     return [...this.#state.tracks.values()];
@@ -25916,6 +25945,8 @@ var LatencyOps = class {
   #alignTracks;
   // The delay last given to each track, in frames, so the engine is asked only about a change.
   #trackDelays = /* @__PURE__ */ new Map();
+  // Failed alignments already told to the person, so a rebuild that fails the same way says nothing more.
+  #warned = /* @__PURE__ */ new Set();
   constructor(host, { alignTracks = false } = {}) {
     this.#host = host;
     this.#alignTracks = alignTracks;
@@ -25972,7 +26003,13 @@ var LatencyOps = class {
         this.#host.engine.setTrackDelay(track.id, wanted);
         this.#trackDelays.set(track.id, wanted);
       } catch (error2) {
-        console.error(`could not align track ${track.id}: ${error2.message}`);
+        const message = `could not align track ${track.id}: ${error2.message}`;
+        console.error(message);
+        const key = `${track.id}:${wanted}`;
+        if (!this.#warned.has(key)) {
+          this.#warned.add(key);
+          this.#host.emit({ type: "warning", message });
+        }
       }
     }
     for (const id of [...this.#trackDelays.keys()]) if (!this.#host.project.track(id)) this.#trackDelays.delete(id);
@@ -27410,6 +27447,21 @@ function sessionTools({ dispatcher, catalogue, loadPlugin, openCollection }) {
 }
 
 // src/model/TrackBus.js
+function placeBus(project, busId, memberIds) {
+  const order = project.orderedTracks.map((t) => t.id);
+  const members = new Set(memberIds);
+  let last = -1;
+  order.forEach((id, index) => {
+    if (members.has(id)) last = index;
+  });
+  if (last < 0) return false;
+  const folder = project.trackLayout(order[last]).folder;
+  if (folder) {
+    while (last + 1 < order.length && order[last + 1] !== busId && project.trackLayout(order[last + 1]).folder === folder) last++;
+  }
+  const delta = last + 1 - order.indexOf(busId);
+  return delta < 0 ? project.moveTrack(busId, delta) : false;
+}
 function describeBus(project, trackIds, { label = "Bus", newTrackId = project.nextId("track") } = {}) {
   const ids = [...new Set(trackIds)];
   if (ids.length < 2) throw new Error("a bus takes two or more different tracks");
@@ -27615,6 +27667,7 @@ function trackTools({ dispatcher }) {
           return failed(error2.message, { kind: "change" });
         }
         const result = dispatcher.apply(changes);
+        if (result.ok) placeBus(dispatcher.project, changes[0].id, trackIds);
         return result.ok ? ok({ revision: result.revision, trackId: changes[0].id }) : failed(result.message, { kind: result.kind });
       }
     },
@@ -29109,11 +29162,13 @@ function createRuntime(ctx2) {
     ctx2.align.sync();
     dispatcher.project.editor.subscribe(() => ctx2.rack.draw());
     dispatcher.subscribe((event) => {
+      if (event.type === "warning") ctx2.log(event.message, "error");
       if (event.type === "parameter") ctx2.editors.parameter(event.nodeId, event.symbol, event.value);
       if (event.type === "changed") {
         const state = $2("state");
         if (state) state.textContent = `rev ${event.revision}, ${dispatcher.project.nodes.length} nodes, ${event.compiled.totalLatency} frames latency`;
         ctx2.rack.draw();
+        ctx2.micIn?.refresh();
         ctx2.history.updateButtons();
         ctx2.transport.showTransport();
       }
@@ -30145,6 +30200,7 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
   if (title) lines.push(`    rdfs:label ${string(title)} ;`);
   if (author) lines.push(`    dcterms:creator ${string(author)} ;`);
   if (notes) lines.push(`    rdfs:comment ${string(notes)} ;`);
+  if (project.settings.alignTracks !== null) lines.push(`    ${term3(jig4.alignTracks)} ${project.settings.alignTracks ? "true" : "false"} ;`);
   if (created) lines.push(`    dcterms:created ${string(created)}^^xsd:dateTime ;`);
   lines.push(`    ${term3(jig4.revision)} ${integer(project.revision)} ;`);
   if (tracks.length > 0) {
@@ -30442,6 +30498,12 @@ function readScripts(dataset2, projectIri) {
 var { jig: jig6, trn: trn6 } = vocabulary;
 var RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 var RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
+function readBoolean(term5, what = "alignTracks") {
+  if (term5 === null) return null;
+  if (term5.value === "true" || term5.value === "1") return true;
+  if (term5.value === "false" || term5.value === "0") return false;
+  throw new Error(`${what} is true or false, not "${term5.value}"`);
+}
 function findProject(dataset2) {
   const found = [];
   for (const quad3 of dataset2) {
@@ -30754,6 +30816,7 @@ function readProject(dataset2) {
       author: value(one2(dataset2, iri4, vocabulary.dcterms.creator)),
       notes: value(one2(dataset2, iri4, vocabulary.rdfs.comment))
     },
+    settings: { alignTracks: readBoolean(one2(dataset2, iri4, jig6.alignTracks)) },
     revision: number3(one2(dataset2, iri4, jig6.revision), "revision") ?? 0,
     changes
   };
@@ -31183,6 +31246,13 @@ function createSessions(ctx2) {
       d.project.setInfo({ title: null, author: null, notes: null });
       log2(`project info ignored: ${error2.message}`, "error");
     }
+    try {
+      d.project.setSettings(read.settings);
+    } catch (error2) {
+      d.project.setSettings({ alignTracks: null });
+      log2(`project settings ignored: ${error2.message}`, "error");
+    }
+    ctx2.align?.fromSession();
     ctx2.projectInfo?.refresh();
     ctx2.transport.showTransport();
     ctx2.rack.draw();
@@ -31511,6 +31581,7 @@ var TrackRecorder = class {
 var AUDIO_CONSTRAINTS = Object.freeze({
   audio: Object.freeze({ echoCancellation: false, noiseSuppression: false, autoGainControl: false })
 });
+var constraintsFor = (deviceId) => deviceId ? { audio: { ...AUDIO_CONSTRAINTS.audio, deviceId: { exact: deviceId } } } : AUDIO_CONSTRAINTS;
 function explain(error2) {
   switch (error2?.name) {
     case "NotAllowedError":
@@ -31527,9 +31598,9 @@ function explain(error2) {
   }
 }
 var microphoneAvailable = (mediaDevices) => typeof mediaDevices?.getUserMedia === "function";
-async function openMicrophone(getUserMedia2) {
+async function openMicrophone(getUserMedia2, { deviceId = null } = {}) {
   try {
-    return await getUserMedia2(AUDIO_CONSTRAINTS);
+    return await getUserMedia2(constraintsFor(deviceId));
   } catch (error2) {
     throw new Error(explain(error2), { cause: error2 });
   }

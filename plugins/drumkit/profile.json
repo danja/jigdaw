@@ -22,7 +22,7 @@
     "CC 120 and 123 reset every voice and the master bus, like an all-notes-off.",
     "The eleven trig outputs the native wrapper exposes as UI LEDs are not parameters here and have no panel control."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "abi": "jig:Abi2",
   "requires": [

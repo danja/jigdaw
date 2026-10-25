@@ -30,7 +30,7 @@
     trn:produces trn:Audio ;
     trn:caution "Follows per-channel pitch bend (2 semitones, or the range set by RPN 0), so Retune can drive it microtonally. Ported from the Downspout VST3 of the same name; its factory presets and panel are not carried over." ;
     trn:caution "Declares no jig:module and so no jig:abi. A host that loads a module directly, such as the native adapter, cannot load this plugin; a JavaScript AudioWorklet host can." ;
-    trn:format trn:Jig , trn:WebAudio ;
+    trn:format trn:Jig ;
     pu:licenceId "MIT" ;
     trn:requires jig:MidiEvents ;
 

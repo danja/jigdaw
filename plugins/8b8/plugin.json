@@ -27,7 +27,7 @@
     "Roll and Retrigger are positions on an exponential curve from about 1.5Hz to 45Hz rather than a rate in hertz. The figure shown is the one the device's own panel shows.",
     "The firmware's EEPROM is a scratch array that is never persisted. Its SAVE command has nowhere to write, and settings belong in the project graph instead."
   ],
-  "format": "trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "requires": [
     "jig:MidiEvents"

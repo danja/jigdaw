@@ -28,18 +28,23 @@ export function channelMessage (data) {
  * `requestAccess()` is `navigator.requestMIDIAccess` bound to `navigator`
  * (calling it detached throws Illegal invocation in a browser), or null where
  * the browser has none. `onMessage(bytes, inputName)` gets each channel message.
- * `onChange({ status, inputs })` hears every state change, `inputs` being names.
+ * `onChange({ status, inputs, devices })` hears every state change, `inputs` being the names of what is connected and `devices` each one
+ * as `{ id, name, enabled }`. A controller can be turned off without unplugging it, which is how one of several is chosen: its
+ * messages are dropped here, so nothing past this point has to know. `disabled` is the ids that start turned off, and the caller
+ * keeps them from one visit to the next, since the browser keeps a controller's id the same.
  */
-export function createMidiInput ({ requestAccess, onMessage, onChange }) {
+export function createMidiInput ({ requestAccess, onMessage, onChange, disabled = [] }) {
   for (const [name, fn] of Object.entries({ onMessage, onChange })) {
     if (typeof fn !== 'function') throw new Error(`createMidiInput needs ${name}`)
   }
   let access = null
   let status = requestAccess ? MIDI_STATUS.off : MIDI_STATUS.unsupported
   const hooked = new Set()
+  const off = new Set(disabled)
 
   const names = () => (access ? [...access.inputs.values()].filter(i => i.state !== 'disconnected').map(i => i.name ?? i.id) : [])
-  const tell = () => onChange({ status, inputs: names() })
+  const devices = () => (access ? [...access.inputs.values()].filter(i => i.state !== 'disconnected').map(i => ({ id: i.id, name: i.name ?? i.id, enabled: !off.has(i.id) })) : [])
+  const tell = () => onChange({ status, inputs: names(), devices: devices() })
 
   function hook () {
     if (!access) return
@@ -47,6 +52,7 @@ export function createMidiInput ({ requestAccess, onMessage, onChange }) {
       if (hooked.has(input.id)) continue
       hooked.add(input.id)
       input.onmidimessage = event => {
+        if (off.has(input.id)) return
         const bytes = channelMessage(event.data)
         if (bytes) onMessage(bytes, input.name ?? input.id)
       }
@@ -56,6 +62,15 @@ export function createMidiInput ({ requestAccess, onMessage, onChange }) {
   return {
     get status () { return status },
     get inputs () { return names() },
+    get devices () { return devices() },
+    /** The ids turned off, for the caller to keep. */
+    get disabled () { return [...off] },
+
+    /** Listen to a controller again, or stop listening to it. Heard by `onChange`, and kept while MIDI in is turned off and on. */
+    setEnabled (id, on) {
+      if (on) off.delete(id); else off.add(id)
+      tell()
+    },
 
     /** Ask the browser, and start listening to every input, including ones plugged in later. */
     async enable () {

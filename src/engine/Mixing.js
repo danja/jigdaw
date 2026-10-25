@@ -299,6 +299,9 @@ export class Mixing {
     this.#inputs.set(trackId, { source, stream })
   }
 
+  /** The tracks that have a live input, which a take records before the fader. */
+  inputTrackIds () { return [...this.#inputs.keys()] }
+
   /** Let go of a track's live input, and stop the stream so the browser's recording light goes out. */
   closeInput (trackId) {
     const held = this.#inputs.get(trackId)

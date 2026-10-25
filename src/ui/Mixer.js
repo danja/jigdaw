@@ -42,13 +42,14 @@ export function mixable (track, nodes, audioOutputsOf) {
  * Build a mixer.
  *
  * `onChange(trackId, change)` receives the part of one strip that changed.
- * `onAddPlugin(trackId)` and `onRemovePlugin(nodeId)` serve each channel's FX list (FxList.js).
+ * `onAddPlugin(trackId)` and `onRemovePlugin(nodeId)` serve each channel's FX list (FxList.js), and `fxActions` is the rest of
+ * what that list can do (bypass, move, replace, show), each handler optional.
  * Returns `{ element, draw, meters }`; `draw` is called with the project's tracks and
  * nodes, what the dispatcher says each track sounds like after solo, how
  * to read a node's audio outputs, and `pluginsOf(trackId)`, the track's plugins
- * as `[{ id, label }]` in signal order.
+ * as `[{ id, label }]` in signal order, with the fields src/ui/FxModel.js adds where `fxActions` is given.
  */
-export function createMixer (document, { onChange, onAddPlugin, onRemovePlugin, menu = null }) {
+export function createMixer (document, { onChange, onAddPlugin, onRemovePlugin, fxActions = {}, menu = null }) {
   if (typeof onChange !== 'function') throw new Error('createMixer needs an onChange')
   if (typeof onAddPlugin !== 'function') throw new Error('createMixer needs an onAddPlugin')
   if (typeof onRemovePlugin !== 'function') throw new Error('createMixer needs an onRemovePlugin')
@@ -91,7 +92,8 @@ export function createMixer (document, { onChange, onAddPlugin, onRemovePlugin, 
         const fx = createFxList(document, {
           id: `strip-${track.id}`,
           onAdd: () => onAddPlugin(track.id),
-          onRemove: onRemovePlugin
+          onRemove: onRemovePlugin,
+          actions: fxActions
         })
         wrapper.append(heading, strip.element, fx.element)
         channel = { wrapper, heading, strip, meter, fx, track }

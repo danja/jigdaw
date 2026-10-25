@@ -19,6 +19,9 @@ starts on the simple page.
 - Web MIDI input plays into the armed track, or the selected one when none is armed, with a note
   stamp located by stream position.
 - A microphone can be recorded into a new track from the simple page.
+- In the studio, Mic in feeds the selected track from a microphone, chosen from a list when the browser has more than one.
+  It is heard through that track like anything else on it; Record takes a track with a live input before its fader, so
+  muting the track keeps a person out of the speakers and leaves the take intact.
 - Events are scheduled ahead of the audio clock and located by stream position, never by block
   count, so a note fires in the block that contains it.
 

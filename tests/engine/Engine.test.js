@@ -692,6 +692,15 @@ describe('Engine live input (a microphone into a track)', () => {
     expect(b.stopped).toHaveLength(2)
   })
 
+  it('lists the tracks that hold a live input, and drops one when its input is let go', () => {
+    const { engine } = make()
+    expect(engine.inputTrackIds()).toEqual([])
+    engine.openInput('m', fakeStream())
+    expect(engine.inputTrackIds()).toEqual(['m'])
+    engine.closeInput('m')
+    expect(engine.inputTrackIds()).toEqual([])
+  })
+
   it('refuses a strip that is not there, and a context that cannot take a live input', () => {
     const { engine } = make()
     expect(() => engine.openInput('ghost', fakeStream())).toThrow(/no such track strip/)

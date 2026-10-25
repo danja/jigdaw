@@ -27,7 +27,7 @@
     "Needs WebAssembly SIMD, which every current browser has. The native adapter's interpreter does not, and could not run a real capture in real time if it did.",
     "Light runs the smallest network of a slimmable .nam, about a seventh of the work and a little less detailed, for a phone or a busy session. A .nam that is not slimmable has one network and ignores it."
   ],
-  "format": "trn:Jig , trn:WebAudio",
+  "format": "trn:Jig",
   "licenceId": "Apache-2.0",
   "requires": [],
   "prefers": [],

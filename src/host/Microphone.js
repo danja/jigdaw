@@ -13,6 +13,11 @@ export const AUDIO_CONSTRAINTS = Object.freeze({
   audio: Object.freeze({ echoCancellation: false, noiseSuppression: false, autoGainControl: false })
 })
 
+/** The constraints for one device, or for the browser's default when no id is given. `exact`: a missing device is an error, not a quiet switch. */
+export const constraintsFor = deviceId => (deviceId
+  ? { audio: { ...AUDIO_CONSTRAINTS.audio, deviceId: { exact: deviceId } } }
+  : AUDIO_CONSTRAINTS)
+
 /** What a browser error means to someone holding a microphone. */
 export function explain (error) {
   switch (error?.name) {
@@ -34,12 +39,22 @@ export function explain (error) {
 export const microphoneAvailable = mediaDevices => typeof mediaDevices?.getUserMedia === 'function'
 
 /**
- * Open the microphone. Resolves with the stream, or throws an Error whose message is
- * the sentence to show, with the browser's own error as `cause`.
+ * The audio inputs the browser lists, as { id, name }. A browser gives no names until the page has been
+ * allowed a microphone once, so an unnamed one is called "Microphone N" by its place in the list.
  */
-export async function openMicrophone (getUserMedia) {
+export async function listInputs (mediaDevices) {
+  const all = await mediaDevices.enumerateDevices()
+  return all.filter(d => d.kind === 'audioinput' && d.deviceId !== '')
+    .map((d, i) => ({ id: d.deviceId, name: d.label || `Microphone ${i + 1}` }))
+}
+
+/**
+ * Open the microphone, a particular one when `deviceId` is given. Resolves with the stream, or throws an
+ * Error whose message is the sentence to show, with the browser's own error as `cause`.
+ */
+export async function openMicrophone (getUserMedia, { deviceId = null } = {}) {
   try {
-    return await getUserMedia(AUDIO_CONSTRAINTS)
+    return await getUserMedia(constraintsFor(deviceId))
   } catch (error) {
     throw new Error(explain(error), { cause: error })
   }

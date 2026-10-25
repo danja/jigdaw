@@ -632,6 +632,13 @@ describe('tracks', () => {
     expect((await call('track_bus', { trackIds: [a, 'ghost'] })).error).toMatch(/no such track: ghost/)
   })
 
+  it('places the bus just after the last track that feeds it', async () => {
+    const [a, b, c] = [(await call('track_add', {})).trackId, (await call('track_add', {})).trackId, (await call('track_add', {})).trackId]
+    const made = await call('track_bus', { trackIds: [a, b] })
+    const order = dispatcher.project.orderedTracks.map(t => t.id)
+    expect(order.slice(order.indexOf(a))).toEqual([a, b, made.trackId, c])
+  })
+
   it('passes a track through plugin_load', async () => {
     const seen = []
     const tools = createTools({

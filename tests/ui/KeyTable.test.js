@@ -54,7 +54,7 @@ const BINDERS = {
       const rec = name => (...a) => calls.push([name, ...a])
       const header = createTrackHeader(document, {
         id: 't1', onSelect: rec('select'), onAdd: rec('add'), onAddAudio: rec('addAudio'), onChannel: rec('channel'), onMove: rec('move'), onArm: rec('arm'),
-        onDuplicateTrack: rec('duplicate'), onSizeStep: rec('size')
+        onDuplicateTrack: rec('duplicate'), onSizeStep: rec('size'), onExtend: rec('extend')
       })
       document.body.append(header.element)
       header.update({ label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, mixable: true, silent: false, at: 8, where: 'bar 3 beat 1' })
