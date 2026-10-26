@@ -92,6 +92,31 @@ describe('the node view', () => {
     expect(document.querySelector('.node-automate').hidden).toBe(true)
   })
 
+  it('does not say a plugin with sound going to its track is unconnected', () => {
+    build({ node: { id: 'synth' }, label: 'Quartet', trackLabel: 'Bass', profile: synth })
+    const said = document.querySelector('.connections .empty').textContent
+    expect(said).not.toMatch(/Nothing is connected/)
+    expect(said).toMatch(/straight to the level and pan of Bass/)
+  })
+
+  it('says a plugin that makes no audio is not joined to another one, without claiming it reaches the track', () => {
+    build()
+    const said = document.querySelector('.connections .empty').textContent
+    expect(said).toMatch(/Not joined to another plugin/)
+    expect(said).not.toMatch(/level and pan/)
+  })
+
+  it('shows the plugin\'s own control panel above its connections, and leaves it in place on a redraw', () => {
+    const panel = document.createElement('div')
+    panel.id = 'the-panel'
+    const { view, state } = build({ panel })
+    expect(document.querySelector('.node-panel #the-panel')).toBe(panel)
+    view.show(state)
+    expect(document.querySelector('.node-panel').firstChild).toBe(panel)
+    view.show({ ...state, panel: null })
+    expect(document.querySelector('.node-panel').children.length).toBe(0)
+  })
+
   it('says what the plugin is, where it is, and its ports', () => {
     build()
     expect(document.querySelector('.node-heading').textContent).toBe('Gen, on Drums.')

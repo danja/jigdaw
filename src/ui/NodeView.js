@@ -27,6 +27,9 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
   show.textContent = 'Show plugin panel'
   show.addEventListener('click', () => onShowPlugin())
   const listMount = document.createElement('div')
+  // The plugin's own controls, so choosing a plugin shows what it does and not only what it is joined to.
+  const panelMount = document.createElement('div')
+  panelMount.className = 'node-panel'
   const form = document.createElement('form')
   form.className = 'node-connect'
   form.setAttribute('aria-label', 'Connect this plugin to another')
@@ -72,7 +75,7 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
     event.preventDefault()
     if (automateNode && automateChosen) onAutomate(automateNode, automateChosen)
   })
-  element.append(heading, ports, show, listMount, form, automate)
+  element.append(heading, ports, panelMount, show, listMount, form, automate)
 
   let sources = []
   let targets = []
@@ -116,7 +119,10 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
      * `connections` those that involve it, `others` every other node as
      * `{ node, profile, label, trackLabel }`, `labelFor(id)` a node's name.
      */
-    show ({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = new Set(), onlyPort = null }) {
+    show ({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = new Set(), onlyPort = null, panel = null }) {
+      // Left where it is when it is already there: taking a knob out of the document under a drag loses the pointer.
+      if (!panel) panelMount.replaceChildren()
+      else if (panelMount.firstChild !== panel) panelMount.replaceChildren(panel)
       heading.textContent = `${label}, on ${trackLabel}.`
       const ins = inputsOf(profile).filter(p => p.portSymbol === undefined).map(p => p.name)
       const outs = outputsOf(profile).map(p => p.name)
@@ -124,7 +130,11 @@ export function createNodeView (document, { onDisconnect, onConnect, onShowPlugi
         ? `Takes: ${ins.join(', ') || 'nothing'}. Gives: ${outs.join(', ') || 'nothing'}.`
         : 'Not loaded, so its ports are not known.'
       list = createConnectionList(document, {
-        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect, monitor, onRange
+        connections, labelFor: id => (id === node.id ? label : labelFor(id)), onRemove: onDisconnect, monitor, onRange,
+        // A plugin nothing else is joined to is not unconnected: what a track's last plugin gives goes to the track's own level and pan.
+        emptyText: (profile?.audioOutputs ?? 0) > 0
+          ? `Not joined to another plugin. Its sound goes straight to the level and pan of ${trackLabel}, and on to the master. Choose an output, then an input, to route it elsewhere.`
+          : 'Not joined to another plugin. Choose an output, then an input, to connect it.'
       })
       listMount.replaceChildren(list)
 

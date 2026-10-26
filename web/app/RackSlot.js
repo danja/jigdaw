@@ -69,6 +69,51 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
   }
 
   /** One plugin on a track: its header, its ports, its panel and its keyboard. */
+
+  /**
+   * A node's control panel, built once per `cache` and brought up to date with what the model holds. The rack keeps one cache and the
+   * dock another, since one element cannot be in two places.
+   */
+  function panelFor (node, profile, cache, scope = `panel-${node.id}`) {
+    const { dispatcher } = ctx
+    let panel = cache.get(node.id)
+    // A panel drawn before its skin arrived is drawn again with it. Asking also starts the fetch.
+    const skinReady = ctx.skins.ready(profile)
+    if (panel && panel.skinned !== skinReady) panel = null
+    if (!panel) {
+      const skin = skinReady ? ctx.skins.prepare(profile, scope) : null
+      panel = createPanel(document, profile, (symbol, value) => {
+        const applied = dispatcher.setParameter(node.id, symbol, value)
+        if (applied.ok) panel.update(symbol, applied.value)
+      }, async (key, file) => {
+        const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer())
+        if (!result.ok) log(`${node.id}.${key}: ${result.message}`, 'error')
+        else showAssetText(panel, profile, dispatcher, node.id)
+        return result
+      }, { scope, skin })
+      cache.set(node.id, panel)
+      showAssetText(panel, profile, dispatcher, node.id)
+    }
+    // node.settings is the model's record of what was actually set, post
+    // clamp, and it is the only thing that changes when a parameter is set
+    // from outside the panel: WebMCP, a saved project reopening, or another
+    // surface entirely. A freshly created panel starts every control at its
+    // declared default (createPanel's own doing) and a reused one keeps
+    // whatever it last showed, so without this a panel drawn from the cache
+    // never learns that anything changed underneath it. Unconditional on
+    // every redraw, per messaging.md 2.3: a surface renders what it is told.
+    // A port with no setting is at its default, which is what undoing the
+    // first change to it leaves: pushing only the settings that exist left the
+    // knob at the value being undone.
+    for (const [symbol, value] of node.settings) panel.update(symbol, value)
+    for (const port of profile.ports ?? []) {
+      if (!node.settings.has(port.symbol)) panel.update(port.symbol, port.defaultValue)
+    }
+    // The generated panel brings its own heading, which the slot already has.
+    panel.element.querySelector('h3')?.remove()
+    return panel
+  }
+
   function drawSlot (node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track }) {
     const { dispatcher, engine } = ctx
     const entry = dispatcher.engineNode(node.id)
@@ -280,41 +325,7 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
     group.append(element)
 
     if (!profile) return
-    let panel = panels.get(node.id)
-    // A panel drawn before its skin arrived is drawn again with it. Asking also starts the fetch.
-    const skinReady = ctx.skins.ready(profile)
-    if (panel && panel.skinned !== skinReady) panel = null
-    if (!panel) {
-      const skin = skinReady ? ctx.skins.prepare(profile, `panel-${node.id}`) : null
-      panel = createPanel(document, profile, (symbol, value) => {
-        const applied = dispatcher.setParameter(node.id, symbol, value)
-        if (applied.ok) panel.update(symbol, applied.value)
-      }, async (key, file) => {
-        const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer())
-        if (!result.ok) log(`${node.id}.${key}: ${result.message}`, 'error')
-        else showAssetText(panel, profile, dispatcher, node.id)
-        return result
-      }, { scope: `panel-${node.id}`, skin })
-      panels.set(node.id, panel)
-      showAssetText(panel, profile, dispatcher, node.id)
-    }
-    // node.settings is the model's record of what was actually set, post
-    // clamp, and it is the only thing that changes when a parameter is set
-    // from outside the panel: WebMCP, a saved project reopening, or another
-    // surface entirely. A freshly created panel starts every control at its
-    // declared default (createPanel's own doing) and a reused one keeps
-    // whatever it last showed, so without this a panel drawn from the cache
-    // never learns that anything changed underneath it. Unconditional on
-    // every redraw, per messaging.md 2.3: a surface renders what it is told.
-    // A port with no setting is at its default, which is what undoing the
-    // first change to it leaves: pushing only the settings that exist left the
-    // knob at the value being undone.
-    for (const [symbol, value] of node.settings) panel.update(symbol, value)
-    for (const port of profile.ports ?? []) {
-      if (!node.settings.has(port.symbol)) panel.update(port.symbol, port.defaultValue)
-    }
-    // The generated panel brings its own heading, which the slot already has.
-    panel.element.querySelector('h3')?.remove()
+    const panel = panelFor(node, profile, panels)
     element.append(panel.element)
 
     // An instrument gets a keyboard, so it can be played. Only an
@@ -347,5 +358,5 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
     }
   }
 
-  return { slot, gap, wire, drawSlot, ...slots }
+  return { slot, gap, wire, drawSlot, panelFor, ...slots }
 }

@@ -33952,7 +33952,7 @@ function createPortBar(document2, { node, profile, pending, onPick, onCancel }) 
   }
   return element;
 }
-function createConnectionList(document2, { connections, labelFor, onRemove, monitor, onRange = null }) {
+function createConnectionList(document2, { connections, labelFor, onRemove, monitor, onRange = null, emptyText = "Nothing is connected. Choose an output, then an input." }) {
   if (typeof monitor !== "function") throw new Error("createConnectionList needs monitor");
   const refreshers = [];
   const element = document2.createElement("div");
@@ -33965,7 +33965,7 @@ function createConnectionList(document2, { connections, labelFor, onRemove, moni
   if (connections.length === 0) {
     const none = document2.createElement("p");
     none.className = "empty";
-    none.textContent = "Nothing is connected. Choose an output, then an input.";
+    none.textContent = emptyText;
     element.append(none);
     return element;
   }
@@ -34163,6 +34163,32 @@ function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode
     }
     return element;
   }
+  function panelFor(node, profile, cache, scope = `panel-${node.id}`) {
+    const { dispatcher } = ctx2;
+    let panel = cache.get(node.id);
+    const skinReady = ctx2.skins.ready(profile);
+    if (panel && panel.skinned !== skinReady) panel = null;
+    if (!panel) {
+      const skin = skinReady ? ctx2.skins.prepare(profile, scope) : null;
+      panel = createPanel(document2, profile, (symbol, value2) => {
+        const applied = dispatcher.setParameter(node.id, symbol, value2);
+        if (applied.ok) panel.update(symbol, applied.value);
+      }, async (key, file) => {
+        const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
+        if (!result.ok) log2(`${node.id}.${key}: ${result.message}`, "error");
+        else showAssetText(panel, profile, dispatcher, node.id);
+        return result;
+      }, { scope, skin });
+      cache.set(node.id, panel);
+      showAssetText(panel, profile, dispatcher, node.id);
+    }
+    for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
+    for (const port of profile.ports ?? []) {
+      if (!node.settings.has(port.symbol)) panel.update(port.symbol, port.defaultValue);
+    }
+    panel.element.querySelector("h3")?.remove();
+    return panel;
+  }
   function drawSlot(node, group, { tracks, labelOfTrack, labelFor, nodes, allNodes, track: track2 }) {
     const { dispatcher, engine } = ctx2;
     const entry = dispatcher.engineNode(node.id);
@@ -34333,28 +34359,7 @@ function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode
     }));
     group.append(element);
     if (!profile) return;
-    let panel = panels.get(node.id);
-    const skinReady = ctx2.skins.ready(profile);
-    if (panel && panel.skinned !== skinReady) panel = null;
-    if (!panel) {
-      const skin = skinReady ? ctx2.skins.prepare(profile, `panel-${node.id}`) : null;
-      panel = createPanel(document2, profile, (symbol, value2) => {
-        const applied = dispatcher.setParameter(node.id, symbol, value2);
-        if (applied.ok) panel.update(symbol, applied.value);
-      }, async (key, file) => {
-        const result = dispatcher.loadAsset(node.id, key, await file.arrayBuffer());
-        if (!result.ok) log2(`${node.id}.${key}: ${result.message}`, "error");
-        else showAssetText(panel, profile, dispatcher, node.id);
-        return result;
-      }, { scope: `panel-${node.id}`, skin });
-      panels.set(node.id, panel);
-      showAssetText(panel, profile, dispatcher, node.id);
-    }
-    for (const [symbol, value2] of node.settings) panel.update(symbol, value2);
-    for (const port of profile.ports ?? []) {
-      if (!node.settings.has(port.symbol)) panel.update(port.symbol, port.defaultValue);
-    }
-    panel.element.querySelector("h3")?.remove();
+    const panel = panelFor(node, profile, panels);
     element.append(panel.element);
     if (playable(profile)) {
       const style = getComputedStyle(element);
@@ -34374,7 +34379,7 @@ function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode
       element.append(keyboard.element);
     }
   }
-  return { slot, gap, wire, drawSlot, ...slots };
+  return { slot, gap, wire, drawSlot, panelFor, ...slots };
 }
 
 // src/ui/MidiText.js
@@ -34568,8 +34573,10 @@ function createRack(ctx2) {
       log2(`removed ${node?.label ?? nodeId}`);
     }
   }
+  const dockPanels = /* @__PURE__ */ new Map();
   const forgetNode = (id) => {
     panels.delete(id);
+    dockPanels.delete(id);
   };
   const slots = createSlots(ctx2, { panels, keyboards, redraw: () => drawRack(), forgetNode });
   function trackLabel(track2, index) {
@@ -34814,7 +34821,13 @@ function createRack(ctx2) {
     /** Drop every cache, for reopening a session over whatever was there before. */
     reset() {
       panels.clear();
+      dockPanels.clear();
       loadTarget = null;
+    },
+    /** The control panel of a node for the dock, a second one beside the Plugins tab's own; null where the plugin has no profile. */
+    panelFor(node) {
+      const profile = ctx2.dispatcher.engineNode(node.id)?.profile;
+      return profile ? slots.panelFor(node, profile, dockPanels, `dock-panel-${node.id}`).element : null;
     },
     /** The track the Load onto menu names, or null for a new one. */
     targetTrack() {
@@ -39717,6 +39730,8 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAu
   show.textContent = "Show plugin panel";
   show.addEventListener("click", () => onShowPlugin());
   const listMount = document2.createElement("div");
+  const panelMount = document2.createElement("div");
+  panelMount.className = "node-panel";
   const form = document2.createElement("form");
   form.className = "node-connect";
   form.setAttribute("aria-label", "Connect this plugin to another");
@@ -39762,7 +39777,7 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAu
     event.preventDefault();
     if (automateNode && automateChosen) onAutomate(automateNode, automateChosen);
   });
-  element.append(heading, ports, show, listMount, form, automate);
+  element.append(heading, ports, panelMount, show, listMount, form, automate);
   let sources = [];
   let targets = [];
   let fromIndex = 0;
@@ -39806,7 +39821,9 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAu
      * `connections` those that involve it, `others` every other node as
      * `{ node, profile, label, trackLabel }`, `labelFor(id)` a node's name.
      */
-    show({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = /* @__PURE__ */ new Set(), onlyPort = null }) {
+    show({ node, label, trackLabel, profile, connections, others, labelFor, monitor, automated = /* @__PURE__ */ new Set(), onlyPort = null, panel = null }) {
+      if (!panel) panelMount.replaceChildren();
+      else if (panelMount.firstChild !== panel) panelMount.replaceChildren(panel);
       heading.textContent = `${label}, on ${trackLabel}.`;
       const ins = inputsOf(profile).filter((p) => p.portSymbol === void 0).map((p) => p.name);
       const outs = outputsOf(profile).map((p) => p.name);
@@ -39816,7 +39833,9 @@ function createNodeView(document2, { onDisconnect, onConnect, onShowPlugin, onAu
         labelFor: (id) => id === node.id ? label : labelFor(id),
         onRemove: onDisconnect,
         monitor,
-        onRange
+        onRange,
+        // A plugin nothing else is joined to is not unconnected: what a track's last plugin gives goes to the track's own level and pan.
+        emptyText: (profile?.audioOutputs ?? 0) > 0 ? `Not joined to another plugin. Its sound goes straight to the level and pan of ${trackLabel}, and on to the master. Choose an output, then an input, to route it elsewhere.` : "Not joined to another plugin. Choose an output, then an input, to connect it."
       });
       listMount.replaceChildren(list);
       const automatable = (profile?.ports ?? []).filter((p) => Number.isFinite(p.minimum) && p.maximum > p.minimum && !automated.has(p.symbol));
@@ -40232,6 +40251,7 @@ function createDockPanel(ctx2) {
           trackLabel: tl(n2.track)
         })),
         labelFor: labelOf,
+        panel: ctx2.rack.panelFor(node),
         automated: new Set(project.envelopes.filter((e) => e.target.node === node.id).map((e) => e.target.symbol)),
         monitor: (connectionId) => ctx2.dispatcher.midiActivity(connectionId).map((e) => describeMidi(e.bytes))
       });

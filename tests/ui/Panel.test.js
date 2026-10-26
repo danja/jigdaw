@@ -210,10 +210,10 @@ describe('the application keeps a panel current', () => {
   // panel that was already on screen. drawRack is in the browser bundle, where
   // there is no AudioContext to build a real Engine against, so the wiring is
   // checked in the source, the same way tests/ui/Focus.test.js checks that
-  // drawRack calls preserveFocus. The panel is built in drawSlot, one plugin's
-  // part of the rack, and the slice ends at that function's closing brace.
+  // drawRack calls preserveFocus. The panel is built in panelFor, which drawSlot calls for
+  // the Plugins tab and the dock calls for its own copy, and the slice ends at that function's closing brace.
   const app = appFile('web/app/Rack.js') + appFile('web/app/RackSlot.js')
-  const drawStart = app.indexOf('function drawSlot')
+  const drawStart = app.indexOf('function panelFor')
   const draw = app.slice(drawStart, app.indexOf('\n  }\n', drawStart))
 
   it('finds the function it checks', () => {
@@ -226,19 +226,22 @@ describe('the application keeps a panel current', () => {
     const defaults = draw.indexOf('panel.update(port.symbol, port.defaultValue)')
     expect(defaults, 'an unset port is never put back to its default').toBeGreaterThan(-1)
     expect(defaults).toBeGreaterThan(settings)
-    expect(defaults).toBeLessThan(draw.indexOf('element.append(panel.element)'))
+    expect(defaults).toBeLessThan(draw.indexOf('return panel'))
   })
 
   it('scopes each panel to its node, so two instances of a plugin share no id', () => {
-    expect(draw).toMatch(/scope: `panel-\$\{node\.id\}`/)
+    expect(draw).toMatch(/scope = `panel-\$\{node\.id\}`/)
+    // And the dock's copy has a scope of its own, since one id cannot be on two elements.
+    expect(appFile('web/app/Rack.js')).toMatch(/`dock-panel-\$\{node\.id\}`/)
+    expect(appFile('web/app/RackSlot.js')).toMatch(/panelFor\(node, profile, panels\)/)
   })
 
   it('pushes node.settings into the panel on every redraw', () => {
     const push = draw.indexOf('for (const [symbol, value] of node.settings)')
-    const appended = draw.indexOf('element.append(panel.element)')
+    const appended = draw.indexOf('return panel')
     expect(push, 'drawRack does not push node.settings into the panel').toBeGreaterThan(-1)
     expect(push, 'the panel must exist, cached or fresh, before its settings can be pushed')
-      .toBeGreaterThan(draw.indexOf('panels.set(node.id, panel)'))
+      .toBeGreaterThan(draw.indexOf('cache.set(node.id, panel)'))
     expect(push, 'settings are pushed before the panel is shown, not after')
       .toBeLessThan(appended)
   })
@@ -249,7 +252,7 @@ describe('the application keeps a panel current', () => {
     // never learned that anything had changed. The push must sit outside the
     // `if (!panel)` branch that guards construction.
     const ifNoPanel = draw.indexOf('if (!panel)')
-    const closeOfThatBlock = draw.indexOf('}', draw.indexOf('panels.set(node.id, panel)'))
+    const closeOfThatBlock = draw.indexOf('}', draw.indexOf('cache.set(node.id, panel)'))
     const push = draw.indexOf('for (const [symbol, value] of node.settings)')
     expect(ifNoPanel).toBeGreaterThan(-1)
     expect(push, 'the settings push must run after the creation branch closes, on every redraw')

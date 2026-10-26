@@ -109,7 +109,8 @@ export function createRack (ctx) {
   }
 
   /** Drop everything cached for one node: its panel. */
-  const forgetNode = id => { panels.delete(id) }
+  const dockPanels = new Map()
+  const forgetNode = id => { panels.delete(id); dockPanels.delete(id) }
   // Each plugin's slot, and the wire or gap between two (RackSlot.js).
   const slots = createSlots(ctx, { panels, keyboards, redraw: () => drawRack(), forgetNode })
 
@@ -432,7 +433,12 @@ export function createRack (ctx) {
     trackLabel,
     forgetNode,
     /** Drop every cache, for reopening a session over whatever was there before. */
-    reset () { panels.clear(); loadTarget = null },
+    reset () { panels.clear(); dockPanels.clear(); loadTarget = null },
+    /** The control panel of a node for the dock, a second one beside the Plugins tab's own; null where the plugin has no profile. */
+    panelFor (node) {
+      const profile = ctx.dispatcher.engineNode(node.id)?.profile
+      return profile ? slots.panelFor(node, profile, dockPanels, `dock-panel-${node.id}`).element : null
+    },
     /** The track the Load onto menu names, or null for a new one. */
     targetTrack () { return $('target').value === NEW_TRACK ? null : $('target').value },
     /** Where the next Load goes: where this one went. */

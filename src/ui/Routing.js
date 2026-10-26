@@ -125,7 +125,7 @@ export function createPortBar (document, { node, profile, pending, onPick, onCan
  * point: this is the first thing in the interface that tells the truth about a
  * graph that is not a chain.
  */
-export function createConnectionList (document, { connections, labelFor, onRemove, monitor, onRange = null }) {
+export function createConnectionList (document, { connections, labelFor, onRemove, monitor, onRange = null, emptyText = 'Nothing is connected. Choose an output, then an input.' }) {
   if (typeof monitor !== 'function') throw new Error('createConnectionList needs monitor')
   const refreshers = []
   const element = document.createElement('div')
@@ -138,7 +138,7 @@ export function createConnectionList (document, { connections, labelFor, onRemov
   if (connections.length === 0) {
     const none = document.createElement('p')
     none.className = 'empty'
-    none.textContent = 'Nothing is connected. Choose an output, then an input.'
+    none.textContent = emptyText
     element.append(none)
     return element
   }

@@ -212,6 +212,7 @@ export function createDockPanel (ctx) {
           node: n, profile: ctx.dispatcher.engineNode(n.id)?.profile, label: labelOf(n.id), trackLabel: tl(n.track)
         })),
         labelFor: labelOf,
+        panel: ctx.rack.panelFor(node),
         automated: new Set(project.envelopes.filter(e => e.target.node === node.id).map(e => e.target.symbol)),
         monitor: connectionId => ctx.dispatcher.midiActivity(connectionId).map(e => describeMidi(e.bytes))
       })
