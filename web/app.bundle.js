@@ -35347,7 +35347,7 @@ function trackKind(project, track2, profileOf) {
 var TRACK_KIND_LABELS = Object.freeze({ bus: "Bus", instrument: "Instrument", midi: "MIDI", audio: "Audio" });
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
@@ -35477,6 +35477,14 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   };
   const level = slider("Level", "gain", 0, 2, 1, (n2) => `${decibels(n2)} dB`, (n2) => `${decibels(n2)} decibels`);
   const pan = slider("Pan", "pan", -1, 1, 0, panPosition, panPosition);
+  const fx = document2.createElement("button");
+  fx.type = "button";
+  fx.className = "strip-toggle head-fx";
+  fx.id = `head-${id}-fx`;
+  fx.textContent = "FX";
+  fx.setAttribute("aria-pressed", "false");
+  fx.hidden = true;
+  fx.addEventListener("click", () => onFx(id));
   const routing = document2.createElement("p");
   routing.className = "head-routing";
   routing.hidden = true;
@@ -35490,7 +35498,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const latency = document2.createElement("p");
   latency.className = "head-latency";
   latency.hidden = true;
-  mix.append(mute, solo, level.label, pan.label, silent);
+  mix.append(mute, solo, ...onFx ? [fx] : [], level.label, pan.label, silent);
   const title = document2.createElement("div");
   title.className = "head-title";
   title.append(name2, ...onGrip ? [grip] : [], ...onExpand ? [expand2] : []);
@@ -35502,7 +35510,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null, first: first4 = false, last = false }) {
+    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first: first4 = false, last = false }) {
       Object.assign(now, { label, mixable: mixable2, channel, canArm, armed, size, first: first4, last, at: place });
       name2.textContent = label;
       name2.setAttribute("aria-label", `Select ${label}`);
@@ -35536,6 +35544,10 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
         control.show(channel[key]);
         control.input.setAttribute("aria-label", `${key === "gain" ? "Level" : "Pan"}, ${label}`);
       }
+      fx.hidden = fxCount === 0;
+      fx.setAttribute("aria-pressed", String(fxShown));
+      fx.setAttribute("aria-label", `${fxShown ? "Hide" : "Show"} the plugins of ${label}`);
+      fx.title = fx.getAttribute("aria-label");
       silent.hidden = !isSilent;
       routing.hidden = routed === null;
       routing.textContent = routed ?? "";
@@ -36226,12 +36238,11 @@ var COLORS = Object.freeze([
   { name: "Purple", value: "#8e4ec6" },
   { name: "Pink", value: "#e93d82" }
 ]);
-var SIZES = Object.freeze([["collapsed", "Collapsed"], ["small", "Small"], ["medium", "Medium"], ["large", "Large"]]);
 function colorName(value2) {
   return COLORS.find((c3) => c3.value === value2)?.name ?? (value2 ? value2 : "None");
 }
-function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
-  for (const [name3, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
+function createTrackPanel(document2, { onRename, onColor, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
+  for (const [name3, fn] of Object.entries({ onRename, onColor, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== "function") throw new Error(`createTrackPanel needs ${name3}`);
   }
   const element = document2.createElement("div");
@@ -36300,19 +36311,6 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
     return button;
   });
   colorGroup.append(colorSaid);
-  const sizeLabel = document2.createElement("label");
-  sizeLabel.className = "track-field";
-  sizeLabel.append(Object.assign(document2.createElement("span"), { textContent: "Lane size" }));
-  const size = document2.createElement("select");
-  size.id = "track-size-input";
-  for (const [value2, text] of SIZES) {
-    const option = document2.createElement("option");
-    option.value = value2;
-    option.textContent = text;
-    size.append(option);
-  }
-  size.addEventListener("change", () => onSize(trackId, size.value));
-  sizeLabel.append(size);
   const up = document2.createElement("button");
   up.type = "button";
   up.id = "track-move-up";
@@ -36377,7 +36375,7 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
   actions.append(position2, up, down, freeze, ...onExportMidi ? [exportMidi] : [], remove);
   const fields = document2.createElement("div");
   fields.className = "track-fields";
-  fields.append(nameLabel, folderLabel, sizeLabel);
+  fields.append(nameLabel, folderLabel);
   element.append(fields, colorGroup, group, actions);
   return {
     element,
@@ -36401,7 +36399,6 @@ function createTrackPanel(document2, { onRename, onColor, onSize, onFolder, onMo
       }));
       colorSaid.textContent = ` ${colorName(layout.color)}`;
       for (const button of swatches) button.setAttribute("aria-pressed", String((button.dataset.color || null) === layout.color));
-      for (const option of size.options) option.selected = option.value === layout.laneSize;
       group.hidden = !onGroupLevel || members === 0;
       exportMidi.hidden = !hasMidi;
       group.setAttribute("aria-label", `Move the ${members} tracks in this bus or folder together`);
@@ -37127,6 +37124,12 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
   let programmatic = null;
   const ruler = createRuler(document2, { ppb: () => ppb(), onSeek: onSeek && ((beat) => onSeek(beat)), snapBeat: (beat, e) => snapBeat(beat, e) });
   const rows = /* @__PURE__ */ new Map();
+  const fxOpen = /* @__PURE__ */ new Set();
+  function toggleFx(id) {
+    if (fxOpen.has(id)) fxOpen.delete(id);
+    else fxOpen.add(id);
+    if (lastArgs) draw2(lastArgs);
+  }
   const masterRow = createMasterRow(document2, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view });
   const ppb = () => view.pixelsPerBeat;
   const bpb = () => lastArgs?.beatsPerBar ?? 4;
@@ -37272,6 +37275,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onArm,
           onDuplicateTrack,
           onGrip: dragTrack,
+          onFx: toggleFx,
           onExpand: onExpandTrack,
           onSizeStep,
           onExtend: extendTrackSelection,
@@ -37316,6 +37320,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       entry.row.setAttribute("aria-label", `Track ${label}`);
       const layout = layoutFor(track2);
       entry.row.dataset.size = layout.laneSize;
+      const chain = chainFor(track2);
+      entry.row.dataset.fx = fxOpen.has(track2.id) && chain.nodes.length > 0 ? "on" : "off";
       if (layout.laneHeight && layout.laneSize !== "collapsed") entry.lane.style.minHeight = `${layout.laneHeight}px`;
       else entry.lane.style.removeProperty("min-height");
       if (layout.color) entry.row.style.setProperty("--track-color", layout.color);
@@ -37336,9 +37342,11 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         kind: kindFor(track2),
         canArm: canArm(track2),
         armed: armed(track2),
-        routing: routingFor(track2)
+        routing: routingFor(track2),
+        fx: entry.row.dataset.fx === "on",
+        fxCount: chain.nodes.length
       });
-      entry.strip.update(chainFor(track2), { label, selected: selection.kind === "node" ? selection.ids[0] : null });
+      entry.strip.update(chain, { label, selected: selection.kind === "node" ? selection.ids[0] : null });
       entry.automation.update(lanesFor(track2), { beatsPerBar, width });
       entry.lane.style.width = `${width}px`;
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`;
@@ -40164,7 +40172,6 @@ function createDockPanel(ctx2) {
       if (!result.ok) log2(result.message, "error");
     },
     onColor: (id, color) => layoutOf(id, { color }),
-    onSize: (id, laneSize) => layoutOf(id, { laneSize, laneHeight: null }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels2) => shift(describeLevelShift, decibels2, groupMembers(ctx2.dispatcher.project, id)),
     onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx2.dispatcher.project, id)),

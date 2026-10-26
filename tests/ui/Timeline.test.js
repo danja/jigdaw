@@ -330,6 +330,27 @@ describe('rows are kept across a redraw', () => {
     expect(before.isConnected).toBe(true)
   })
 
+  it('shows a lane\'s plugins when its FX button is pressed, and hides them when it is pressed again, for that lane alone', () => {
+    const { timeline } = build()
+    const drawWith = () => timeline.draw({
+      tracks: tracks.map(t => ({ ...t, channel: { gain: 1, pan: 0, muted: false, soloed: false } })),
+      clips, beatsPerBar: 4, labelFor: t => t.label, playsIntoNothing: () => false,
+      chainFor: t => ({ nodes: t.id === 't1' ? [{ id: 'n1', label: 'Pulse', bypassed: false, failed: false, loaded: true, passesAudio: true, takes: [], gives: ['Audio'], sends: [], receives: [] }] : [] })
+    })
+    drawWith()
+    const row = id => document.querySelector(`.timeline-row[data-track="${id}"]`)
+    // The track with no plugins has nothing to show, so it gets no button.
+    expect(document.getElementById('head-t2-fx').hidden).toBe(true)
+    expect(document.getElementById('head-t1-fx').hidden).toBe(false)
+    expect(row('t1').dataset.fx).toBe('off')
+    document.getElementById('head-t1-fx').dispatchEvent(event('click'))
+    expect(row('t1').dataset.fx).toBe('on')
+    expect(row('t2').dataset.fx).toBe('off')
+    expect(document.getElementById('head-t1-fx').getAttribute('aria-pressed')).toBe('true')
+    document.getElementById('head-t1-fx').dispatchEvent(event('click'))
+    expect(row('t1').dataset.fx).toBe('off')
+  })
+
   it('forwards a channel change with the track it is for', () => {
     const { timeline, calls } = build()
     draw(timeline)

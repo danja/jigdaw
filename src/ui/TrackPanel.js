@@ -1,6 +1,6 @@
 // src/ui/TrackPanel.js
 //
-// What a person can do to one track: name it, colour it, size its lane, move it
+// What a person can do to one track: name it, colour it, move it
 // up or down, delete it. It lives in the dock beside the track's chain, so the
 // header stays free for the controls used during playing.
 //
@@ -24,14 +24,13 @@ export const COLORS = Object.freeze([
   { name: 'Pink', value: '#e93d82' }
 ])
 
-const SIZES = Object.freeze([['collapsed', 'Collapsed'], ['small', 'Small'], ['medium', 'Medium'], ['large', 'Large']])
 
 export function colorName (value) {
   return COLORS.find(c => c.value === value)?.name ?? (value ? value : 'None')
 }
 
-export function createTrackPanel (document, { onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
-  for (const [name, fn] of Object.entries({ onRename, onColor, onSize, onFolder, onMove, onDelete, onFreeze })) {
+export function createTrackPanel (document, { onRename, onColor, onFolder, onMove, onDelete, onFreeze, onGroupLevel = null, onGroupPan = null, onExportMidi = null }) {
+  for (const [name, fn] of Object.entries({ onRename, onColor, onFolder, onMove, onDelete, onFreeze })) {
     if (typeof fn !== 'function') throw new Error(`createTrackPanel needs ${name}`)
   }
   const element = document.createElement('div')
@@ -96,21 +95,6 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
     return button
   })
   colorGroup.append(colorSaid)
-
-  // Lane size
-  const sizeLabel = document.createElement('label')
-  sizeLabel.className = 'track-field'
-  sizeLabel.append(Object.assign(document.createElement('span'), { textContent: 'Lane size' }))
-  const size = document.createElement('select')
-  size.id = 'track-size-input'
-  for (const [value, text] of SIZES) {
-    const option = document.createElement('option')
-    option.value = value
-    option.textContent = text
-    size.append(option)
-  }
-  size.addEventListener('change', () => onSize(trackId, size.value))
-  sizeLabel.append(size)
 
   // Order and delete
   const up = document.createElement('button')
@@ -184,10 +168,10 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
   const actions = document.createElement('div')
   actions.className = 'track-actions track-main-actions'
   actions.append(position, up, down, freeze, ...(onExportMidi ? [exportMidi] : []), remove)
-  // Name, folder and lane size share one row, wrapping on a narrow dock; the actions follow, with Delete at the far end.
+  // Name and folder share one row, wrapping on a narrow dock; the actions follow, with Delete at the far end.
   const fields = document.createElement('div')
   fields.className = 'track-fields'
-  fields.append(nameLabel, folderLabel, sizeLabel)
+  fields.append(nameLabel, folderLabel)
   element.append(fields, colorGroup, group, actions)
 
   return {
@@ -207,7 +191,6 @@ export function createTrackPanel (document, { onRename, onColor, onSize, onFolde
       folderNames.replaceChildren(...folders.map(text => { const option = document.createElement('option'); option.value = text; return option }))
       colorSaid.textContent = ` ${colorName(layout.color)}`
       for (const button of swatches) button.setAttribute('aria-pressed', String((button.dataset.color || null) === layout.color))
-      for (const option of size.options) option.selected = option.value === layout.laneSize
       group.hidden = !onGroupLevel || members === 0
       exportMidi.hidden = !hasMidi
       group.setAttribute('aria-label', `Move the ${members} tracks in this bus or folder together`)

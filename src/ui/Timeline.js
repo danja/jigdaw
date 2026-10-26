@@ -132,6 +132,12 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   // track's row is reused, so a redraw moves nothing that has not changed.
   const ruler = createRuler(document, { ppb: () => ppb(), onSeek: onSeek && (beat => onSeek(beat)), snapBeat: (beat, e) => snapBeat(beat, e) })
   const rows = new Map()
+  // The tracks whose plugins are shown under their lane by the FX button. Kept here and not in the session: a view, not a document.
+  const fxOpen = new Set()
+  function toggleFx (id) {
+    if (fxOpen.has(id)) fxOpen.delete(id); else fxOpen.add(id)
+    if (lastArgs) draw(lastArgs)
+  }
   // The master's own row after the tracks: its automation lanes and the way to add one.
   const masterRow = createMasterRow(document, { onChange: onEnvelope, onRemove: onRemoveEnvelope, onAutomate: onAutomateMaster, view })
   const ppb = () => view.pixelsPerBeat
@@ -271,7 +277,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.dataset.track = track.id
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: moveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onExpand: onExpandTrack, onSizeStep, onExtend: extendTrackSelection, onEdit: onEditTrack, onDeleteTrack, menu,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: moveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onFx: toggleFx, onExpand: onExpandTrack, onSizeStep, onExtend: extendTrackSelection, onEdit: onEditTrack, onDeleteTrack, menu,
           onSelect: (id, { toggle }) => { reorder.anchor(id); if (toggle) selection.toggle('track', id); else selection.set('track', [id]) }
         })
         const lane = document.createElement('div')
@@ -309,15 +315,17 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       entry.row.setAttribute('aria-label', `Track ${label}`)
       const layout = layoutFor(track)
       entry.row.dataset.size = layout.laneSize
+      const chain = chainFor(track)
+      entry.row.dataset.fx = fxOpen.has(track.id) && chain.nodes.length > 0 ? 'on' : 'off'
       // A height of its own, dragged to, replaces the height of the size; a collapsed lane stays a bar.
       if (layout.laneHeight && layout.laneSize !== 'collapsed') entry.lane.style.minHeight = `${layout.laneHeight}px`
       else entry.lane.style.removeProperty('min-height')
       if (layout.color) entry.row.style.setProperty('--track-color', layout.color); else entry.row.style.removeProperty('--track-color')
       entry.header.update({
         label, channel: track.channel ?? {}, mixable: mixable(track), silent: silent(track), at, where: barBeat(at, beatsPerBar), selected: selection.has('track', track.id),
-        color: layout.color, size: layout.laneSize, first: tracks[0] === track, last: tracks.at(-1) === track, latency: latencyFor(track), kind: kindFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track)
+        color: layout.color, size: layout.laneSize, first: tracks[0] === track, last: tracks.at(-1) === track, latency: latencyFor(track), kind: kindFor(track), canArm: canArm(track), armed: armed(track), routing: routingFor(track), fx: entry.row.dataset.fx === 'on', fxCount: chain.nodes.length
       })
-      entry.strip.update(chainFor(track), { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
+      entry.strip.update(chain, { label, selected: selection.kind === 'node' ? selection.ids[0] : null })
       entry.automation.update(lanesFor(track), { beatsPerBar, width })
       entry.lane.style.width = `${width}px`
       entry.lane.style.backgroundSize = `${beatsPerBar * ppb()}px 100%`

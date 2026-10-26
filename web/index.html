@@ -410,6 +410,8 @@
   .timeline-chain { position:sticky; left:var(--head); margin-left:var(--head); width:calc(var(--view, 100vw) - var(--head) - 16px); box-sizing:border-box;
     padding:4px 8px 8px; }
   .timeline-chain[hidden], .timeline[data-routing="off"] .timeline-chain, .timeline-row[data-size="small"] .timeline-chain { display:none; }
+  /* The FX button on a lane shows that lane's plugins whatever the Routing button and the lane size say. */
+  .timeline .timeline-row[data-fx="on"] .timeline-chain:not([hidden]) { display:block; }
   .chain-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
   .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
     border:1px solid var(--line); border-radius:6px; background:var(--lane); }
@@ -491,7 +493,7 @@
   .loop-handle:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .timeline-ruler i { position:absolute; bottom:0; height:6px; border-left:1px solid var(--line); }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
-  .timeline { --head:16rem; }
+  .timeline { --head:18rem; }
   .timeline-row { border-top:1px solid var(--line); width:max-content; }
   .timeline-folder { position:sticky; left:0; width:var(--view, 100%); border-top:1px solid var(--line); background:var(--panel, transparent); }
   .folder-toggle { min-height:44px; padding:0 0.75rem; text-align:left; background:none; border:0; color:var(--fg); font-weight:600; }
@@ -601,7 +603,7 @@
   .timeline-row[data-size="collapsed"] .lane-resize { display:none; }
   .timeline-row[data-size="small"] .timeline-lane { min-height:44px; }
   .timeline-row[data-size="large"] .timeline-lane { min-height:320px; }
-  /* A collapsed lane is a thin bar: the name and the grip, and nothing else. The Lane size choice in the dock brings it back. */
+  /* A collapsed lane is a thin bar: the name and the grip, and nothing else. The Expand button on the lane, plus and minus, and the lane menu bring it back. */
   .timeline-row[data-size="collapsed"] > :not(.timeline-body) { display:none; }
   .timeline-row[data-size="collapsed"] .timeline-lane { min-height:0; height:8px; overflow:hidden; }
   .timeline-row[data-size="collapsed"] .timeline-lane > * { visibility:hidden; }

@@ -12,10 +12,10 @@ const event = (type, props = {}) => {
   return e
 }
 
-function build () {
+function build ({ withFx = false } = {}) {
   const calls = []
   const rec = name => (...args) => calls.push([name, ...args])
-  const header = createTrackHeader(document, { id: 't1', onSelect: rec('select'), onAdd: rec('add'), onAddAudio: rec('addAudio'), onChannel: rec('channel'), onMove: rec('move'), onArm: rec('arm') })
+  const header = createTrackHeader(document, { id: 't1', onSelect: rec('select'), onAdd: rec('add'), onAddAudio: rec('addAudio'), onChannel: rec('channel'), onMove: rec('move'), onArm: rec('arm'), ...(withFx ? { onFx: rec('fx') } : {}) })
   document.body.append(header.element)
   const state = { label: 'Bass', channel: { gain: 1, pan: 0, muted: false, soloed: false }, mixable: true, silent: false, at: 8, where: 'bar 3 beat 1' }
   header.update(state)
@@ -57,6 +57,27 @@ describe('a track header', () => {
     expect($('head-t1-pan').closest('.dial').classList.contains('head-dial')).toBe(true)
     // And a hover says what the knob is set to.
     expect($('head-t1-pan').closest('.dial').title).toBe('Pan centre')
+  })
+
+  it('puts an FX button after Solo that is there only for a track with plugins, and says what it will do', () => {
+    const { header, state, $, calls } = build({ withFx: true })
+    const row = $('head-t1-soloed').parentElement
+    expect([...row.children].indexOf($('head-t1-fx'))).toBe([...row.children].indexOf($('head-t1-soloed')) + 1)
+    expect($('head-t1-fx').hidden).toBe(true)
+    header.update({ ...state, fxCount: 2 })
+    expect($('head-t1-fx').hidden).toBe(false)
+    expect($('head-t1-fx').getAttribute('aria-label')).toBe('Show the plugins of Bass')
+    expect($('head-t1-fx').getAttribute('aria-pressed')).toBe('false')
+    $('head-t1-fx').dispatchEvent(event('click'))
+    expect(calls).toContainEqual(['fx', 't1'])
+    header.update({ ...state, fxCount: 2, fx: true })
+    expect($('head-t1-fx').getAttribute('aria-pressed')).toBe('true')
+    expect($('head-t1-fx').getAttribute('aria-label')).toBe('Hide the plugins of Bass')
+  })
+
+  it('has no FX button where the page cannot show plugins', () => {
+    const { $ } = build()
+    expect($('head-t1-fx')).toBeNull()
   })
 
   it('sends only the part that changed, once per movement', () => {

@@ -26,11 +26,11 @@ describe('lane height, wired', () => {
     expect(own).toMatch(/onLaneReset:/)
   })
 
-  it('puts a dragged height away whenever a size is chosen: by plus and minus, by expanding a collapsed lane, and in the dock for one track or several', () => {
+  it('puts a dragged height away whenever a size is chosen: by plus and minus, by expanding a collapsed lane, and in the dock for several', () => {
     expect(arrangement).toMatch(/laneSize: next, laneHeight: null/)
     expect(arrangement).toMatch(/laneSize: 'small', laneHeight: null/)
     expect(dock).toMatch(/onSize: laneSize => \{ for \(const id of ctx\.selection\.ids\) layoutOf\(id, \{ laneSize, laneHeight: null \}\) \}/)
-    expect(dock).toMatch(/onSize: \(id, laneSize\) => layoutOf\(id, \{ laneSize, laneHeight: null \}\)/)
+    expect(dock).not.toMatch(/onSize: \(id, laneSize\)/)
   })
 
   it('has a grip style that is hidden on a collapsed lane and larger for a finger', () => {

@@ -18,7 +18,7 @@ import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE, LANE_SIZES } from '../model/EditorState.js'
 import { attachMenu } from './ContextMenu.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -172,6 +172,16 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const level = slider('Level', 'gain', 0, 2, 1, n => `${decibels(n)} dB`, n => `${decibels(n)} decibels`)
   const pan = slider('Pan', 'pan', -1, 1, 0, panPosition, panPosition)
 
+  // FX: shows or hides the plugins on this track under its lane. Left out where the page cannot, and for a track with no plugins.
+  const fx = document.createElement('button')
+  fx.type = 'button'
+  fx.className = 'strip-toggle head-fx'
+  fx.id = `head-${id}-fx`
+  fx.textContent = 'FX'
+  fx.setAttribute('aria-pressed', 'false')
+  fx.hidden = true
+  fx.addEventListener('click', () => onFx(id))
+
   // How this track is routed besides straight to the master, in words.
   const routing = document.createElement('p')
   routing.className = 'head-routing'
@@ -193,7 +203,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   latency.className = 'head-latency'
   latency.hidden = true
 
-  mix.append(mute, solo, level.label, pan.label, silent)
+  mix.append(mute, solo, ...(onFx ? [fx] : []), level.label, pan.label, silent)
   const title = document.createElement('div')
   title.className = 'head-title'
   title.append(name, ...(onGrip ? [grip] : []), ...(onExpand ? [expand] : []))
@@ -206,7 +216,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, routing: routed = null, kind = null, first = false, last = false }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first = false, last = false }) {
       Object.assign(now, { label, mixable, channel, canArm, armed, size, first, last, at: place })
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
@@ -243,6 +253,10 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
         control.show(channel[key])
         control.input.setAttribute('aria-label', `${key === 'gain' ? 'Level' : 'Pan'}, ${label}`)
       }
+      fx.hidden = fxCount === 0
+      fx.setAttribute('aria-pressed', String(fxShown))
+      fx.setAttribute('aria-label', `${fxShown ? 'Hide' : 'Show'} the plugins of ${label}`)
+      fx.title = fx.getAttribute('aria-label')
       silent.hidden = !isSilent
       routing.hidden = routed === null
       routing.textContent = routed ?? ''

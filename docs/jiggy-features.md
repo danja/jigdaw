@@ -30,7 +30,7 @@ starts on the simple page.
 
 ## The track view
 
-- **Tracks.** Rename, colour, three lane sizes (or drag the bottom edge of a lane to any height; Escape cancels the drag), Level and Pan as small knobs in the row with Mute and Solo, reorder (Alt with Up or Down on a name), select several
+- **Tracks.** Rename, colour, lane sizes (set by plus and minus, the lane menu or Expand, or drag the bottom edge of a lane to any height; Escape cancels the drag), Level and Pan as small knobs in the row with Mute and Solo, an FX button after Solo that shows that lane's plugins under it (there only for a lane that has some), reorder (Alt with Up or Down on a name), select several
   and edit them together, delete with their plugins in one undoable step. A track says its own latency
   and how much it was delayed to line up with the others.
 - **Timeline.** A ruler with zoom, a snap grid (bar, beat, halves, quarters, eighths, off), a loop row with

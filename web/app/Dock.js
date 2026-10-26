@@ -150,7 +150,6 @@ export function createDockPanel (ctx) {
       if (!result.ok) log(result.message, 'error')
     },
     onColor: (id, color) => layoutOf(id, { color }),
-    onSize: (id, laneSize) => layoutOf(id, { laneSize, laneHeight: null }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels) => shift(describeLevelShift, decibels, groupMembers(ctx.dispatcher.project, id)),
     onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx.dispatcher.project, id)),

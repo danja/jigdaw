@@ -15,7 +15,7 @@ const event = (type, props = {}) => {
 function build (over = {}) {
   const calls = []
   const rec = name => (...a) => calls.push([name, ...a])
-  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onSize: rec('size'), onFolder: rec('folder'), onMove: rec('move'), onDelete: rec('delete'), onFreeze: rec('freeze') })
+  const panel = createTrackPanel(document, { onRename: rec('rename'), onColor: rec('color'), onFolder: rec('folder'), onMove: rec('move'), onDelete: rec('delete'), onFreeze: rec('freeze') })
   document.body.append(panel.element)
   const state = { id: 't2', name: 'Bass', defaultName: 'Bass', layout: { order: null, color: null, laneSize: 'medium' }, index: 1, count: 3, plugins: 2, ...over }
   panel.show(state)
@@ -23,13 +23,10 @@ function build (over = {}) {
 }
 
 describe('the track panel', () => {
-  it('offers Collapsed among the lane sizes, and commits it', () => {
-    const { $, calls } = build()
-    const options = [...$('track-size-input').options].map(o => o.value)
-    expect(options).toEqual(['collapsed', 'small', 'medium', 'large'])
-    $('track-size-input').options[0].selected = true
-    $('track-size-input').dispatchEvent(event('change'))
-    expect(calls).toContainEqual(['size', 't2', 'collapsed'])
+  it('has no lane size choice: the size is set on the lane, by its grip, its keys and its menu', () => {
+    const { $ } = build()
+    expect($('track-size-input')).toBeNull()
+    expect(document.body.textContent).not.toMatch(/Lane size/)
   })
 
   it('commits a folder name trimmed, and an empty one as null, and offers the names in use', () => {
@@ -92,13 +89,6 @@ describe('the track panel', () => {
   it('names a colour it does not know by its value, and none as None', () => {
     expect(colorName('#123456')).toBe('#123456')
     expect(colorName(null)).toBe('None')
-  })
-
-  it('changes the lane size', () => {
-    const { $, calls } = build()
-    Object.defineProperty($('track-size-input'), 'value', { value: 'large', configurable: true })
-    $('track-size-input').dispatchEvent(event('change'))
-    expect(calls).toEqual([['size', 't2', 'large']])
   })
 
   it('moves up and down, and leaves out the move that goes nowhere', () => {
