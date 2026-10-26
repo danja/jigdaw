@@ -586,3 +586,76 @@ describe('which controls come first', () => {
     expect(more.querySelector('label[for]')).not.toBeNull()
   })
 })
+
+
+describe('a pad on the panel', () => {
+  const ports = () => [
+    port({ symbol: 'density', name: 'Density', defaultValue: 0.5 }),
+    port({ symbol: 'variation', name: 'Variation', defaultValue: 0.25 }),
+    port({ symbol: 'seed', name: 'Seed', minimum: 1, maximum: 100, defaultValue: 1 })
+  ]
+  const withPad = (extra = {}) => {
+    const changes = []
+    const panel = createPanel(document, { iri: 'https://example.test/p/', label: 'P', ports: ports(), pads: [{ label: 'Feel', x: 'density', y: 'variation' }], ...extra }, (symbol, value) => changes.push([symbol, value]))
+    document.body.append(panel.element)
+    const surface = panel.element.querySelector('.pad-surface')
+    if (surface) surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 })
+    return { panel, changes, surface, element: panel.element }
+  }
+  const press = (surface, clientX, clientY) => {
+    const e = new document.defaultView.Event('pointerdown', { bubbles: true, cancelable: true })
+    for (const [k, v] of Object.entries({ button: 0, clientX, clientY })) Object.defineProperty(e, k, { value: v })
+    surface.dispatchEvent(e)
+    document.dispatchEvent(new document.defaultView.Event('pointerup'))
+  }
+
+  it('is drawn above the controls, and the two ports it sets are still controls of their own', () => {
+    const { element } = withPad()
+    const pads = element.querySelector('.pads')
+    expect(pads).not.toBeNull()
+    expect(pads.compareDocumentPosition(element.querySelector('.controls')) & 4).toBeTruthy()
+    expect([...element.querySelectorAll('.control label')].map(l => l.textContent)).toEqual(['Density', 'Variation', 'Seed'])
+  })
+
+  it('draws none for a profile that has none, as every profile did before pads', () => {
+    const panel = createPanel(document, profile(ports()), () => {})
+    expect(panel.element.querySelector('.pads')).toBeNull()
+    const absent = createPanel(document, { ...profile(ports()), pads: [] }, () => {})
+    expect(absent.element.querySelector('.pads')).toBeNull()
+  })
+
+  it('tells the host both values, as a drag of each knob would', () => {
+    const { surface, changes } = withPad()
+    press(surface, 80, 20)
+    expect(changes).toEqual([['density', 0.8], ['variation', 0.8]])
+  })
+
+  it('moves the two controls it sets, so the readouts and the controls agree with the pad', () => {
+    const { surface, element } = withPad()
+    press(surface, 80, 20)
+    expect(element.querySelector('input[id$="density"]').value).toBe('0.8')
+    expect(element.querySelector('input[id$="variation"]').value).toBe('0.8')
+    expect(element.querySelector('input[id$="seed"]').value).toBe('1')
+  })
+
+  it('starts the puck where the two ports\' defaults are, and follows a host update', () => {
+    const { panel, element } = withPad()
+    const puck = element.querySelector('.pad-puck')
+    expect(puck.style.left).toBe('50%')
+    expect(puck.style.top).toBe('75%')
+    panel.update('density', 1)
+    expect(puck.style.left).toBe('100%')
+    panel.update('seed', 50)
+    expect(puck.style.left).toBe('100%')
+  })
+
+  it('is not read to a screen reader as a control: the controls beside it carry the meaning', () => {
+    const { element } = withPad()
+    expect(element.querySelector('.pad-surface').getAttribute('aria-hidden')).toBe('true')
+    expect(element.querySelector('.pad').getAttribute('role')).toBe('group')
+  })
+
+  it('is refused when it names a port the plugin does not have', () => {
+    expect(() => withPad({ pads: [{ label: 'Feel', x: 'density', y: 'nope' }] })).toThrow(/must both be ports of the plugin/)
+  })
+})

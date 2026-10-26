@@ -322,5 +322,13 @@
       "paramIndex": 12,
       "toggled": true
     }
+  ],
+  "pads": [
+    {
+      "id": "feel",
+      "label": "Feel",
+      "x": "density",
+      "y": "hold"
+    }
   ]
 }

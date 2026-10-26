@@ -13317,6 +13317,11 @@ var init_Vocabulary = __esm({
         // The panel section a control belongs under. A plain label: groups are
         // per-plugin display hints, never addressed across documents.
         controlGroup: `${JIG}controlGroup`,
+        // A two-axis pad over two ports (docs/plugin-profiles.md, "A pad for two controls").
+        ControlPad: `${JIG}ControlPad`,
+        pad: `${JIG}pad`,
+        padX: `${JIG}padX`,
+        padY: `${JIG}padY`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13564,12 +13569,33 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readPads(dataset2, subject, ports) {
+  return objects(dataset2, subject, jig.pad).map((pad) => {
+    const where = `pad ${pad.value}`;
+    const label = asString(one(dataset2, pad, rdfs.label));
+    if (!label) throw new Error(`${where}: a control pad needs an rdfs:label`);
+    const axis = (predicate) => {
+      const target2 = one(dataset2, pad, predicate);
+      if (!target2) throw new Error(`${where}: missing ${predicate.slice(JIG.length)}`);
+      const port = ports.find((p) => p.iri === target2.value);
+      if (!port) throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${target2.value}, which is not a port of this profile`);
+      if (port.widget !== "dial") throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`);
+      return port.symbol;
+    };
+    const x = axis(jig.padX);
+    const y = axis(jig.padY);
+    if (x === y) throw new Error(`${where}: both axes are ${x}`);
+    return { iri: pad.value, label, x, y };
+  });
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
     iri: term5.value,
     symbol: asString(one(dataset2, term5, lv2.symbol)),
     name: asString(one(dataset2, term5, lv2.name)),
+    // One plain sentence saying what the control does, or null. The panel shows it on hover and focus and a screen reader hears it on focus.
+    comment: asString(one(dataset2, term5, rdfs.comment)),
     defaultValue: asNumber(one(dataset2, term5, lv2.default)),
     minimum: asNumber(one(dataset2, term5, lv2.minimum)),
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
@@ -13666,6 +13692,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
   const subject = findSubject(dataset2);
   const base = baseIRI ?? subject.value;
   const capabilities = values(dataset2, subject, trn.requires);
+  const ports = orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)));
   return {
     iri: subject.value,
     label: asString(one(dataset2, subject, rdfs.label)),
@@ -13696,7 +13723,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
     skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
+    ports,
+    // Two-axis pads over pairs of the ports above, in the order the profile gives them.
+    pads: readPads(dataset2, subject, ports)
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdfTerms, iri, asString, values;

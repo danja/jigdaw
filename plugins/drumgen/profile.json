@@ -60,20 +60,62 @@
       "maximum": 13,
       "paramIndex": 0,
       "scalePoints": [
-        { "label": "Rock", "value": 0 },
-        { "label": "Disco", "value": 1 },
-        { "label": "Shuffle", "value": 2 },
-        { "label": "Electro", "value": 3 },
-        { "label": "Dub", "value": 4 },
-        { "label": "Motorik", "value": 5 },
-        { "label": "Bossa", "value": 6 },
-        { "label": "Afro", "value": 7 },
-        { "label": "Breakbeat", "value": 8 },
-        { "label": "Amen", "value": 9 },
-        { "label": "Jungle", "value": 10 },
-        { "label": "Hip Hop", "value": 11 },
-        { "label": "Jazz", "value": 12 },
-        { "label": "Fugue", "value": 13 }
+        {
+          "label": "Rock",
+          "value": 0
+        },
+        {
+          "label": "Disco",
+          "value": 1
+        },
+        {
+          "label": "Shuffle",
+          "value": 2
+        },
+        {
+          "label": "Electro",
+          "value": 3
+        },
+        {
+          "label": "Dub",
+          "value": 4
+        },
+        {
+          "label": "Motorik",
+          "value": 5
+        },
+        {
+          "label": "Bossa",
+          "value": 6
+        },
+        {
+          "label": "Afro",
+          "value": 7
+        },
+        {
+          "label": "Breakbeat",
+          "value": 8
+        },
+        {
+          "label": "Amen",
+          "value": 9
+        },
+        {
+          "label": "Jungle",
+          "value": 10
+        },
+        {
+          "label": "Hip Hop",
+          "value": 11
+        },
+        {
+          "label": "Jazz",
+          "value": 12
+        },
+        {
+          "label": "Fugue",
+          "value": 13
+        }
       ]
     },
     {
@@ -84,13 +126,34 @@
       "maximum": 6,
       "paramIndex": 1,
       "scalePoints": [
-        { "label": "Auto", "value": 0 },
-        { "label": "Straight", "value": 1 },
-        { "label": "Reel", "value": 2 },
-        { "label": "Waltz", "value": 3 },
-        { "label": "Jig", "value": 4 },
-        { "label": "Slip Jig", "value": 5 },
-        { "label": "Diddley", "value": 6 }
+        {
+          "label": "Auto",
+          "value": 0
+        },
+        {
+          "label": "Straight",
+          "value": 1
+        },
+        {
+          "label": "Reel",
+          "value": 2
+        },
+        {
+          "label": "Waltz",
+          "value": 3
+        },
+        {
+          "label": "Jig",
+          "value": 4
+        },
+        {
+          "label": "Slip Jig",
+          "value": 5
+        },
+        {
+          "label": "Diddley",
+          "value": 6
+        }
       ]
     },
     {
@@ -109,8 +172,14 @@
       "maximum": 1,
       "paramIndex": 3,
       "scalePoints": [
-        { "label": "Flues Drumkit", "value": 0 },
-        { "label": "GM", "value": 1 }
+        {
+          "label": "Flues Drumkit",
+          "value": 0
+        },
+        {
+          "label": "GM",
+          "value": 1
+        }
       ]
     },
     {
@@ -129,10 +198,22 @@
       "maximum": 3,
       "paramIndex": 5,
       "scalePoints": [
-        { "label": "Eighth", "value": 0 },
-        { "label": "Sixteenth", "value": 1 },
-        { "label": "Sixteenth Triplet", "value": 2 },
-        { "label": "Quarter", "value": 3 }
+        {
+          "label": "Eighth",
+          "value": 0
+        },
+        {
+          "label": "Sixteenth",
+          "value": 1
+        },
+        {
+          "label": "Sixteenth Triplet",
+          "value": 2
+        },
+        {
+          "label": "Quarter",
+          "value": 3
+        }
       ]
     },
     {
@@ -257,6 +338,14 @@
       "minimum": 0,
       "maximum": 16,
       "paramIndex": 20
+    }
+  ],
+  "pads": [
+    {
+      "id": "feel",
+      "label": "Feel",
+      "x": "density",
+      "y": "variation"
     }
   ]
 }

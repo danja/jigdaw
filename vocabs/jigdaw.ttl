@@ -461,6 +461,33 @@ jig:AutomationRate a owl:Class ; rdfs:label "Automation Rate" .
 jig:ARate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "a-rate" .
 jig:KRate a owl:NamedIndividual , jig:AutomationRate ; rdfs:label "k-rate" .
 
+jig:ControlPad a owl:Class ;
+    rdfs:label "Control pad" ;
+    rdfs:comment """A two-axis pad over two of a plugin's ports, drawn by the generated panel as a
+        square the pointer drags across: left to right sets one port and bottom to top sets the
+        other, so one gesture moves two controls together, as a Drummer's "simple to complex" and
+        "soft to loud" pad does. A shortcut and never the only way: both ports stay on the panel
+        as ordinary controls, which a keyboard and a screen reader use. Named by rdfs:label
+        ("Feel"), with jig:padX and jig:padY naming the ports.""" .
+
+jig:pad a owl:ObjectProperty ;
+    rdfs:domain jig:WebPlugin ; rdfs:range jig:ControlPad ;
+    rdfs:label "pad" ;
+    rdfs:comment """A control pad this plugin offers. A plugin may have several. A host that does not
+        draw pads ignores it and loses nothing, since the two ports are controls in their own right.""" .
+
+jig:padX a owl:ObjectProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range lv2:Port ;
+    rdfs:label "pad across" ;
+    rdfs:comment """The port the pad sets as the pointer moves left to right: its minimum at the left
+        edge and its maximum at the right. Must be a continuous control, not a switch or a selector.""" .
+
+jig:padY a owl:ObjectProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range lv2:Port ;
+    rdfs:label "pad up" ;
+    rdfs:comment """The port the pad sets as the pointer moves bottom to top: its minimum at the bottom
+        edge and its maximum at the top. A different port from jig:padX, and a continuous control.""" .
+
 jig:controlGroup a owl:DatatypeProperty ;
     rdfs:domain lv2:Port ; rdfs:range xsd:string ;
     rdfs:label "control group" ;

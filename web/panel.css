@@ -87,3 +87,16 @@ input[type=checkbox]:not(.skin-input) { width:22px; height:22px; }
 .more-controls > summary { min-height:44px; display:flex; align-items:center; padding:0 6px; cursor:pointer; color:var(--dim); }
 .more-controls > summary:hover { color:var(--fg); }
 .more-controls[open] > summary { margin-bottom:6px; }
+
+/* The help line under a plugin's heading: what the hovered or focused control does. It keeps its height empty, so showing it moves nothing. */
+.control-help { min-height:1.6em; margin:0 0 6px; font-size:14px; line-height:1.6; color:var(--dim); }
+.control-help b { margin-right:2px; color:var(--fg); font-weight:600; }
+
+/* A pad: a square that sets two controls at once. It is a pointer shortcut and the controls stay, so it is sized for a thumb and no more. */
+.pads { display:flex; flex-wrap:wrap; gap:12px; margin:0 0 12px; }
+.pad { flex:0 1 220px; min-width:160px; }
+.pad-surface { position:relative; width:100%; aspect-ratio:1; min-height:160px; touch-action:none; cursor:crosshair; border:1px solid var(--line); border-radius:8px;
+  background:linear-gradient(to right, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)), linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)), var(--field); }
+.pad-puck { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:var(--accent); border:2px solid var(--fg); pointer-events:none; }
+.pad-caption { margin:6px 0 0; font-size:14px; color:var(--dim); }
+.pad-caption b { color:var(--fg); }

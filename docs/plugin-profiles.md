@@ -198,6 +198,59 @@ A plugin with no `jig:ui` gets a generated panel from these declarations. That i
 expected case rather than a degraded one: it is consistent with every other plugin, it is
 accessible, and it costs the author nothing.
 
+## A pad for two controls
+
+**A plugin can offer a square pad that sets two of its controls at once.** Someone who drags across it moves one control with the
+left to right position and the other with the bottom to top position, which is how a player thinks about "simpler or busier, steadier
+or more varied" and not how a row of knobs asks for it. It is a shortcut: both controls stay on the panel, so a keyboard and a screen
+reader use those, and a host that does not draw pads loses nothing.
+
+A pad is a resource of type `jig:ControlPad` with a name and two ports of the same profile:
+
+```turtle
+<> jig:pad <#feel> .
+
+<#feel>
+    a jig:ControlPad ;
+    rdfs:label "Feel" ;
+    jig:padX <#density> ;
+    jig:padY <#variation> .
+```
+
+- `jig:padX` is set by the pointer's left to right position, its minimum at the left edge and its maximum at the right. `jig:padY` is
+  set bottom to top, its minimum at the bottom. The mapping is linear across each port's own range.
+- Both must be continuous controls, drawn as dials. A switch or a selector has no range to drag across, and the profile is refused
+  naming the pad. The two must be different ports, and each must be declared in this profile with a symbol.
+- Under the pad, in words, the panel says which control is across and which is up, so the pad is never explained by position alone.
+- The puck follows the two controls, whatever moves them: a knob, a preset, automation, an agent.
+- A plugin may have several pads. DrumGen, BassGen and MelGen each offer one called Feel: density across, and variation, hold or leap up.
+
+Four terms are ours, in the vocabulary first: `jig:ControlPad`, `jig:pad`, `jig:padX` and `jig:padY`. Nothing in LV2 describes a pad
+(its port groups combine ports that carry one stream, and say nothing about layout).
+
+## What a control does
+
+**A port can say in one sentence what its control does, and the panel shows it when the control is hovered or focused.** Give the
+port an `rdfs:comment`, a single string of at most 240 characters. The shape rejects two of them and a longer one, because the
+panel has one line for it.
+
+```turtle
+<#cutoff>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
+    lv2:default 6000 ; lv2:minimum 100 ; lv2:maximum 18000 ;
+    rdfs:comment "A lowpass filter, so lower is darker and duller and higher is brighter." .
+```
+
+- The sentence appears in one line under the plugin's heading, after the control's name in bold, while the pointer is over the control
+  or the control has the focus. A keyboard and a touch get exactly what a pointer gets. Escape puts it away and moves nothing.
+- The same sentence is the control's description, which a screen reader reads after the value when the control takes the focus.
+  The line itself is hidden from a screen reader so it is not said twice.
+- A port with no comment gets nothing, and a plugin with no comments gets no help line at all. Say what the control does to the
+  sound, in words a player uses, and leave out what its name already says ("Gain: how loud the synth is" is worth writing;
+  "Gain: the gain" is not).
+- Pulse and DrumKit are the worked examples. DrumKit's help is on the 14 controls it ranks first.
+
 ## Which controls come first
 
 **A plugin with many parameters can say which few matter most, and the generated panel shows those first.** Give a port

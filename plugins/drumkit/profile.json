@@ -86,7 +86,8 @@
       "maximum": 1.5,
       "paramIndex": 4,
       "group": "Kick",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the kick drum is in the mix."
     },
     {
       "symbol": "snare_tone",
@@ -114,7 +115,8 @@
       "maximum": 1.5,
       "paramIndex": 7,
       "group": "Snare",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the snare is in the mix."
     },
     {
       "symbol": "clap_density",
@@ -142,7 +144,8 @@
       "maximum": 1.5,
       "paramIndex": 10,
       "group": "Clap",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the clap is in the mix."
     },
     {
       "symbol": "tom1_pitch",
@@ -170,7 +173,8 @@
       "maximum": 1.5,
       "paramIndex": 13,
       "group": "Tom 1",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the low tom is in the mix."
     },
     {
       "symbol": "tom2_pitch",
@@ -198,7 +202,8 @@
       "maximum": 1.5,
       "paramIndex": 16,
       "group": "Tom 2",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the high tom is in the mix."
     },
     {
       "symbol": "hh_closed_brightness",
@@ -226,7 +231,8 @@
       "maximum": 1.5,
       "paramIndex": 19,
       "group": "Closed HH",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the closed hi-hat is in the mix."
     },
     {
       "symbol": "hh_open_brightness",
@@ -254,7 +260,8 @@
       "maximum": 1.5,
       "paramIndex": 22,
       "group": "Open HH",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the open hi-hat is in the mix."
     },
     {
       "symbol": "crash_brightness",
@@ -282,7 +289,8 @@
       "maximum": 1.5,
       "paramIndex": 25,
       "group": "Crash",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the crash cymbal is in the mix."
     },
     {
       "symbol": "cowbell_tone",
@@ -310,7 +318,8 @@
       "maximum": 1.5,
       "paramIndex": 28,
       "group": "Cowbell",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the cowbell is in the mix."
     },
     {
       "symbol": "clave_tone",
@@ -338,7 +347,8 @@
       "maximum": 1.5,
       "paramIndex": 31,
       "group": "Clave",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the clave is in the mix."
     },
     {
       "symbol": "bash_size",
@@ -402,7 +412,8 @@
       "maximum": 1.5,
       "paramIndex": 38,
       "group": "Bash",
-      "displayPriority": 60
+      "displayPriority": 60,
+      "comment": "How loud the bash is in the mix."
     },
     {
       "symbol": "bit_crush",
@@ -420,7 +431,8 @@
       "maximum": 1.0,
       "paramIndex": 40,
       "group": "Master",
-      "displayPriority": 80
+      "displayPriority": 80,
+      "comment": "How hard the whole kit is pushed into distortion, for grit."
     },
     {
       "symbol": "master_reverb",
@@ -430,7 +442,8 @@
       "maximum": 1.0,
       "paramIndex": 41,
       "group": "Master",
-      "displayPriority": 80
+      "displayPriority": 80,
+      "comment": "How much room reverb is added to the whole kit."
     },
     {
       "symbol": "master_gain",
@@ -440,7 +453,8 @@
       "maximum": 1.0,
       "paramIndex": 42,
       "group": "Master",
-      "displayPriority": 100
+      "displayPriority": 100,
+      "comment": "The overall level of the kit, after the effects."
     },
     {
       "symbol": "kick_mute",

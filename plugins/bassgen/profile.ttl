@@ -46,7 +46,8 @@
     jig:module <#module> ;
     jig:processor <#processor> ;
 
-    lv2:port <#root> , <#scale> , <#genre> , <#length> , <#subdivision> , <#density> , <#register> , <#hold> , <#accent> , <#colour> , <#vary> , <#seed> , <#follow> .
+    lv2:port <#root> , <#scale> , <#genre> , <#length> , <#subdivision> , <#density> , <#register> , <#hold> , <#accent> , <#colour> , <#vary> , <#seed> , <#follow> ;
+    jig:pad <#feel> .
 
 <#module>
     a jig:Module ;
@@ -61,6 +62,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "bassgen" ;
     jig:integrity "sha384-QbzJTqhcM7WdQmxcwDLCx8x9XYNV2d6NOymy6c1GZYy5vAd5fs1koLTFLf0FZFoA" .
+
+<#feel>
+    a jig:ControlPad ;
+    rdfs:label "Feel" ;
+    jig:padX <#density> ;
+    jig:padY <#hold> .
 
 <#root>
     a lv2:InputPort , lv2:ControlPort ;

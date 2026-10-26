@@ -23,6 +23,7 @@
 import { createDial } from './Dial.js'
 import { createSkinPanel } from './SkinPanel.js'
 import { splitPrimary } from './PrimaryControls.js'
+import { createPad } from './Pad.js'
 import { formatValue, spokenValue } from './PortText.js'
 
 export { UNIT_LABELS, formatValue, SPOKEN_UNITS, spokenValue } from './PortText.js'
@@ -87,6 +88,51 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     mark.title = 'Runs in this page with this page\'s privileges. It is not sandboxed.'
     heading.append(' ', mark)
     root.classList.add('is-foreign')
+  }
+
+  // Help for a control, from the port's own rdfs:comment: one line under the heading showing what the hovered or focused control does,
+  // and the same words as the control's description, which is what a screen reader reads on focus. The line is drawn only for a plugin
+  // that has any help, and reserves its height, so a panel that says nothing gets nothing and a panel that does not jump when it shows.
+  // It never takes the focus and never covers a control, and Escape puts it away (WCAG 1.4.13: dismissible, hoverable, persistent).
+  let helpLine = null
+  let focusedPort = null
+  if (profile.ports.some(p => p.comment)) {
+    helpLine = document.createElement('p')
+    helpLine.className = 'control-help'
+    // Hidden from assistive technology because the control already carries these words as its description, and saying them twice is noise.
+    helpLine.setAttribute('aria-hidden', 'true')
+    root.append(helpLine)
+  }
+  const showHelp = port => {
+    // The control's name in bold, then the sentence: a colon between them doubled up with any colon the author's sentence had.
+    const name = document.createElement('b')
+    name.textContent = port.name ?? port.symbol
+    helpLine.replaceChildren(name, document.createTextNode(` ${port.comment}`))
+  }
+  const clearHelp = () => { helpLine.replaceChildren() }
+  // When the pointer leaves, what has the focus is the next thing to explain, if it has anything to say.
+  const settleHelp = () => { if (focusedPort) showHelp(focusedPort); else clearHelp() }
+
+  // Pads: squares that set two of the plugin's ports at once (src/ui/Pad.js). Drawn above the controls, which stay where they are: the pad
+  // is a pointer shortcut and the two ports it sets are still the controls a keyboard and a screen reader use. A profile with no pads
+  // draws none, which is every profile there was before pads.
+  const padHandles = []
+  const pads = Array.isArray(profile.pads) ? profile.pads : []
+  if (pads.length > 0) {
+    const row = document.createElement('div')
+    row.className = 'pads'
+    root.append(row)
+    pads.forEach((pad, index) => {
+      const handle = createPad(document, {
+        pad,
+        ports: profile.ports,
+        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, '_'),
+        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+        onSet: (symbol, value) => { for (const fn of setters.get(symbol) ?? []) fn(value); onChange(symbol, value) }
+      })
+      row.append(handle.element)
+      padHandles.push({ pad, handle })
+    })
   }
 
   // No description. rdfs:comment is three lines of prose above the controls,
@@ -196,12 +242,30 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     const readoutId = `${id}-value`
     readout.id = readoutId
     input.setAttribute('aria-describedby', readoutId)
-    if (port.comment) input.title = port.comment
     // The full name, because a knob's caption is narrow and a long one wraps
     // or is read in pieces. The accessible name is the label and is never
-    // shortened; this is for a pointer.
-    else if (port.name) input.title = port.name
+    // shortened; this is for a pointer. A control with help of its own has it
+    // in the help line instead, which a keyboard and a touch reach as well.
+    if (!port.comment && port.name) input.title = port.name
     row.append(knob ?? input, readout)
+    if (port.comment) {
+      const helpId = `${id}-help`
+      const words = document.createElement('span')
+      words.className = 'visually-hidden'
+      words.id = helpId
+      words.textContent = port.comment
+      row.append(words)
+      input.setAttribute('aria-describedby', `${readoutId} ${helpId}`)
+      row.addEventListener('pointerenter', () => showHelp(port))
+      row.addEventListener('pointerleave', settleHelp)
+      row.addEventListener('focusin', () => { focusedPort = port; showHelp(port) })
+      row.addEventListener('focusout', event => {
+        if (row.contains(event.relatedTarget)) return
+        focusedPort = null
+        clearHelp()
+      })
+      row.addEventListener('keydown', event => { if (event.key === 'Escape') clearHelp() })
+    }
     grid.append(row)
 
     // Render the declared default through the same path a host update takes.
@@ -283,6 +347,14 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       everything.hidden = !cramped
       root.classList.toggle('skin-cramped', cramped)
     })
+  }
+
+  // Each pad follows its two ports, whatever moves them, and starts where the profile's defaults put them.
+  for (const { pad, handle } of padHandles) {
+    for (const symbol of [pad.x, pad.y]) {
+      onValue(symbol, v => handle.update(symbol, v))
+      handle.update(symbol, profile.ports.find(p => p.symbol === symbol).defaultValue)
+    }
   }
 
   // One file picker per jig:userReplaceable asset, after the parameters:

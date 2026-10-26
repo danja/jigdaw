@@ -301,6 +301,44 @@ with the other roles, and when it arrives the creator can choose which role link
    home connections will meet this once in a while, and the page must say what failed.
 3. A WebSocket relay for larger rooms. It is not needed for a band.
 
+## A canonical form to compare and to sign
+
+**The session graph has a canonical form we already compute, and a collaboration needs one for three jobs: saying whether two replicas
+agree, signing a checkpoint, and proving a codec change kept the session.** `src/rdf/Canonical.js` serialises a profile as N-Triples
+sorted in code point order and digests that. It is the blank-node-free subset of [RDFC-1.0](https://www.w3.org/TR/rdf-canon/), the W3C's
+RDF dataset canonicalisation, where the algorithm reduces to exactly that. A session has no blank nodes for the same reason a profile
+has none, so the same function applies to the effective snapshot of a room (the replica after the filter described above).
+
+What the W3C's [RDFC-1.0 implementation report](https://w3c.github.io/rdf-canon/reports/) says, as read on 2026-10-26 and not checked
+by running any of it: it is an informal report dated 24 February 2026 on a suite of 86 tests, covering 11 implementations in Java, Python,
+C++, JavaScript, TypeScript, Rust, Elixir and Ruby. Ten pass all 86. The one that does not, RDF-URDNA, passes 84, and its two untested
+cases are about N-Quads escaping. The two in JavaScript or TypeScript, `rdf-canonize` and `rdfjs-c14n`, both pass everything. The suite is
+mostly blank-node edge cases, including graphs built to defeat a canonicaliser, which matters below.
+
+- **Do replicas agree?** Each peer can digest the canonical form of its effective snapshot and send the digest with its presence, a few
+  bytes in place of the state. Equal digests mean the peers show the same session, and a difference is a convergence bug or a message
+  still in flight, so the page says "in sync" or "catching up" in words. It is also the strongest convergence test there is: replicas fed the
+  same updates in different orders must give the same digest, which is a better assertion than comparing two snapshots field by field.
+- **A signed checkpoint.** A member can sign the digest of the session at a moment, and the signature names that exact state, in the way
+  a bundle's profile digest does ([plugin-bundles.md](plugin-bundles.md)). A returning member, or one who has just joined, can check a
+  checkpoint against the state they were given, and a room has a point to return to that does not depend on trusting whoever sent the
+  bytes. It needs no change to the replica format.
+- **A codec change.** The way across codecs is a Turtle snapshot. The digest before and after is the proof that the session is the same
+  one, apart from undo history, which is the claim the envelope section makes.
+- **A second host agrees.** The native adapter computes the same digest if it implements the same form. That the report lists C++ and Rust
+  implementations that pass the whole suite is the reason to expect one can be had, and the sorted N-Triples form is simple enough to write
+  without a library if not.
+
+**Peers are untrusted, and a blank node from one is refused.** A remote update that brings a blank node into the session is dropped by
+the same validators as any other bad value. The report's "poison" graphs exist because canonicalising blank nodes is expensive in the worst
+case, so a graph from a stranger that contains them is a way to make a page do a great deal of work. Refusing them at the door keeps the
+cheap form the only one the session ever needs, and means we never implement the expensive half of the algorithm. If a future import brings in
+a graph with blank nodes (a third party's profile, for example), skolemise it to IRIs as the session format already says, and do that before
+the graph reaches the replica.
+
+Open: whether the digest rides in the presence message or in its own `sync` kind of the envelope, how often it is worth taking on a large
+session (3000 notes is the size the rest of this note tests at), and whether a checkpoint is signed by one member or by each.
+
 ## Agents as peers
 
 **An agent is a peer through the surface it already has.** The WebMCP tools call the dispatcher, so an agent's edit is an ordinary
@@ -339,7 +377,7 @@ network first.
 
 **The tests are the ones that would catch the two ways a merge goes wrong: replicas that disagree, and a state the model refuses.**
 
-- **Convergence.** Random edits on three replicas, delivered shuffled, duplicated and delayed, then compared as snapshots. The fake
+- **Convergence.** Random edits on three replicas, delivered shuffled, duplicated and delayed, then compared by the canonical digest of their effective snapshots (and as snapshots, to say what differs when the digests do not). The fake
   transport must refuse nothing a real one would not, so it drops, reorders and repeats on purpose. A fake that only delivers in
   order passes the cases that were never the problem.
 - **One counterexample per rule.** A removal against an edit, a dangling connection, two arcs that make a cycle, an out-of-range

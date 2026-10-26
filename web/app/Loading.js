@@ -69,10 +69,12 @@ export function createLoading (ctx) {
   const { document, log } = ctx
 
   /**
-   * `newTrack` loads onto a track of its own, whatever the Load onto menu says and without taking the place of a plugin being
-   * replaced: for the Add a track chooser, which means a new track. Returns the id of the track it went onto, or nothing when it did not load.
+   * For the Add a track chooser, which builds a track from one plugin or several and so says where each goes, whatever the Load onto
+   * menu says and without taking the place of a plugin being replaced: `newTrack` loads onto a track of its own, and `onto` onto the
+   * track with that id, after what is already on it, joined to it as any second plugin loaded onto a track is. Returns
+   * `{ trackId, nodeId }` for what it loaded, or nothing when it did not load.
    */
-  async function loadPlugin (input, { newTrack = false } = {}) {
+  async function loadPlugin (input, { newTrack = false, onto = null } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const iri = new URL(input, document.baseURI).href
     log(`GET ${iri}`)
@@ -90,9 +92,9 @@ export function createLoading (ctx) {
 
     // The Load onto menu. Read before anything is awaited, so a second Load
     // pressed while this one fetches does not change where this one lands.
-    const track = newTrack ? null : ctx.rack.targetTrack()
+    const track = newTrack ? null : (onto ?? ctx.rack.targetTrack())
     // A Replace asked for first: this load swaps the plugin in, and is the end of that mode whether it works or not.
-    const replacing = newTrack ? null : ctx.swap.target()
+    const replacing = newTrack || onto ? null : ctx.swap.target()
     if (replacing) {
       ctx.swap.end()
       const swapped = await d.swapPlugin(replacing, iri)
@@ -171,7 +173,7 @@ export function createLoading (ctx) {
     // anything.
     ctx.rack.draw()
     ctx.expose()
-    return trackId
+    return { trackId, nodeId }
   }
 
   return { loadPlugin }

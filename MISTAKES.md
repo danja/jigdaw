@@ -5,6 +5,20 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## 2026-10-26: A pad set only one of its two controls
+
+**What happened.** The new Feel pad moved the across control and left the up control where it was. Every unit test passed, including ones that
+dragged the pad and checked both values. A real drag in Chrome set density to 0.9 and left variation at 0.35.
+
+**Root cause.** The pad sent the across value, then read its own state to send the up value. In the page, sending the first value makes the
+rack redraw, and a redraw pushes every port's last value back through `panel.update()`, including the up port's old one, so the pad's state was
+overwritten between the two sends. The tests used an `onChange` that did nothing, a stand-in more permissive than the real one, which never
+redraws (CLAUDE.md, "a fake more permissive than the real thing").
+
+**Prevention.** Both values are worked out before either is sent, and `tests/ui/Pad.test.js` has an `onSet` that pushes old values back the way
+the rack does; reverting the fix fails exactly that test. Checked with a real drag. Any widget that sets two things at once should be tried against
+a host that echoes, since the echo is where the second write goes wrong.
+
 ## 2026-10-26: The first track's name field said "Track 0"
 
 **What happened.** The track editor in the dock showed "Track 0" as the placeholder of the first track's name field, while its heading said "Track 1". Found

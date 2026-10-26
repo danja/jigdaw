@@ -13317,6 +13317,11 @@ var init_Vocabulary = __esm({
         // The panel section a control belongs under. A plain label: groups are
         // per-plugin display hints, never addressed across documents.
         controlGroup: `${JIG}controlGroup`,
+        // A two-axis pad over two ports (docs/plugin-profiles.md, "A pad for two controls").
+        ControlPad: `${JIG}ControlPad`,
+        pad: `${JIG}pad`,
+        padX: `${JIG}padX`,
+        padY: `${JIG}padY`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13564,12 +13569,33 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readPads(dataset2, subject, ports) {
+  return objects(dataset2, subject, jig.pad).map((pad) => {
+    const where = `pad ${pad.value}`;
+    const label = asString(one(dataset2, pad, rdfs.label));
+    if (!label) throw new Error(`${where}: a control pad needs an rdfs:label`);
+    const axis = (predicate) => {
+      const target2 = one(dataset2, pad, predicate);
+      if (!target2) throw new Error(`${where}: missing ${predicate.slice(JIG.length)}`);
+      const port = ports.find((p) => p.iri === target2.value);
+      if (!port) throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${target2.value}, which is not a port of this profile`);
+      if (port.widget !== "dial") throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`);
+      return port.symbol;
+    };
+    const x = axis(jig.padX);
+    const y = axis(jig.padY);
+    if (x === y) throw new Error(`${where}: both axes are ${x}`);
+    return { iri: pad.value, label, x, y };
+  });
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
     iri: term5.value,
     symbol: asString(one(dataset2, term5, lv2.symbol)),
     name: asString(one(dataset2, term5, lv2.name)),
+    // One plain sentence saying what the control does, or null. The panel shows it on hover and focus and a screen reader hears it on focus.
+    comment: asString(one(dataset2, term5, rdfs.comment)),
     defaultValue: asNumber(one(dataset2, term5, lv2.default)),
     minimum: asNumber(one(dataset2, term5, lv2.minimum)),
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
@@ -13666,6 +13692,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
   const subject = findSubject(dataset2);
   const base = baseIRI ?? subject.value;
   const capabilities = values(dataset2, subject, trn.requires);
+  const ports = orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)));
   return {
     iri: subject.value,
     label: asString(one(dataset2, subject, rdfs.label)),
@@ -13696,7 +13723,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
     skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
+    ports,
+    // Two-axis pads over pairs of the ports above, in the order the profile gives them.
+    pads: readPads(dataset2, subject, ports)
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdfTerms, iri, asString, values;
@@ -34268,6 +34297,79 @@ function splitPrimary(ports) {
   return { primary, rest: ports.filter((p) => !ranked.includes(p)) };
 }
 
+// src/ui/Pad.js
+function fractionOf2(value2, port) {
+  const span = port.maximum - port.minimum;
+  if (!(span > 0)) return 0.5;
+  return Math.min(1, Math.max(0, (value2 - port.minimum) / span));
+}
+function valueAt(fraction, port) {
+  const f = Math.min(1, Math.max(0, fraction));
+  return port.minimum + f * (port.maximum - port.minimum);
+}
+function createPad(document2, { pad, ports, onSet, id }) {
+  const portX = ports.find((p) => p.symbol === pad.x);
+  const portY = ports.find((p) => p.symbol === pad.y);
+  if (!portX || !portY) throw new Error(`pad ${pad.label}: ${pad.x} and ${pad.y} must both be ports of the plugin`);
+  const element = document2.createElement("div");
+  element.className = "pad";
+  element.setAttribute("role", "group");
+  const captionId = `${id}-caption`;
+  element.setAttribute("aria-labelledby", captionId);
+  const surface = document2.createElement("div");
+  surface.className = "pad-surface";
+  surface.setAttribute("aria-hidden", "true");
+  const puck = document2.createElement("div");
+  puck.className = "pad-puck";
+  surface.append(puck);
+  const caption = document2.createElement("p");
+  caption.className = "pad-caption";
+  caption.id = captionId;
+  const name = document2.createElement("b");
+  name.textContent = pad.label;
+  caption.append(name, document2.createTextNode(` Across is ${portX.name ?? portX.symbol}, up is ${portY.name ?? portY.symbol}.`));
+  element.append(surface, caption);
+  const at = { x: 0.5, y: 0.5 };
+  const place = () => {
+    puck.style.left = `${at.x * 100}%`;
+    puck.style.top = `${(1 - at.y) * 100}%`;
+  };
+  place();
+  const set = (event) => {
+    const box = surface.getBoundingClientRect();
+    if (!(box.width > 0 && box.height > 0)) return;
+    at.x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    at.y = Math.min(1, Math.max(0, 1 - (event.clientY - box.top) / box.height));
+    place();
+    const across = valueAt(at.x, portX);
+    const up = valueAt(at.y, portY);
+    onSet(portX.symbol, across);
+    onSet(portY.symbol, up);
+  };
+  surface.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    set(event);
+    const stop = () => {
+      document2.removeEventListener("pointermove", set);
+      document2.removeEventListener("pointerup", stop);
+      document2.removeEventListener("pointercancel", stop);
+    };
+    document2.addEventListener("pointermove", set);
+    document2.addEventListener("pointerup", stop);
+    document2.addEventListener("pointercancel", stop);
+  });
+  return {
+    element,
+    update(symbol, value2) {
+      if (symbol === portX.symbol) at.x = fractionOf2(value2, portX);
+      else if (symbol === portY.symbol) at.y = fractionOf2(value2, portY);
+      else return;
+      place();
+    }
+  };
+}
+
 // src/ui/Panel.js
 function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null, skinLayout = {} } = {}) {
   const root = document2.createElement("section");
@@ -34286,6 +34388,47 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     mark.title = "Runs in this page with this page's privileges. It is not sandboxed.";
     heading.append(" ", mark);
     root.classList.add("is-foreign");
+  }
+  let helpLine = null;
+  let focusedPort = null;
+  if (profile.ports.some((p) => p.comment)) {
+    helpLine = document2.createElement("p");
+    helpLine.className = "control-help";
+    helpLine.setAttribute("aria-hidden", "true");
+    root.append(helpLine);
+  }
+  const showHelp = (port) => {
+    const name = document2.createElement("b");
+    name.textContent = port.name ?? port.symbol;
+    helpLine.replaceChildren(name, document2.createTextNode(` ${port.comment}`));
+  };
+  const clearHelp = () => {
+    helpLine.replaceChildren();
+  };
+  const settleHelp = () => {
+    if (focusedPort) showHelp(focusedPort);
+    else clearHelp();
+  };
+  const padHandles = [];
+  const pads = Array.isArray(profile.pads) ? profile.pads : [];
+  if (pads.length > 0) {
+    const row = document2.createElement("div");
+    row.className = "pads";
+    root.append(row);
+    pads.forEach((pad, index) => {
+      const handle = createPad(document2, {
+        pad,
+        ports: profile.ports,
+        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
+        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+        onSet: (symbol, value2) => {
+          for (const fn of setters.get(symbol) ?? []) fn(value2);
+          onChange(symbol, value2);
+        }
+      });
+      row.append(handle.element);
+      padHandles.push({ pad, handle });
+    });
   }
   const setters = /* @__PURE__ */ new Map();
   const onValue = (symbol, fn) => {
@@ -34359,9 +34502,31 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     const readoutId = `${id}-value`;
     readout.id = readoutId;
     input.setAttribute("aria-describedby", readoutId);
-    if (port.comment) input.title = port.comment;
-    else if (port.name) input.title = port.name;
+    if (!port.comment && port.name) input.title = port.name;
     row.append(knob ?? input, readout);
+    if (port.comment) {
+      const helpId = `${id}-help`;
+      const words = document2.createElement("span");
+      words.className = "visually-hidden";
+      words.id = helpId;
+      words.textContent = port.comment;
+      row.append(words);
+      input.setAttribute("aria-describedby", `${readoutId} ${helpId}`);
+      row.addEventListener("pointerenter", () => showHelp(port));
+      row.addEventListener("pointerleave", settleHelp);
+      row.addEventListener("focusin", () => {
+        focusedPort = port;
+        showHelp(port);
+      });
+      row.addEventListener("focusout", (event) => {
+        if (row.contains(event.relatedTarget)) return;
+        focusedPort = null;
+        clearHelp();
+      });
+      row.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") clearHelp();
+      });
+    }
     grid.append(row);
     setters.get(port.symbol).at(-1)(port.defaultValue);
   }
@@ -34420,6 +34585,12 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       everything.hidden = !cramped;
       root.classList.toggle("skin-cramped", cramped);
     });
+  }
+  for (const { pad, handle } of padHandles) {
+    for (const symbol of [pad.x, pad.y]) {
+      onValue(symbol, (v) => handle.update(symbol, v));
+      handle.update(symbol, profile.ports.find((p) => p.symbol === symbol).defaultValue);
+    }
   }
   let assetGrid = null;
   const textAreas = /* @__PURE__ */ new Map();

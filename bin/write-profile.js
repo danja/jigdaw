@@ -147,7 +147,13 @@ if (skin) w('    jig:skin <#skin> ;')
 const listed = [...assets.map(a => `<#${a.key}>`), ...(skin ? ['<#skin>', '<#skin-artwork>'] : [])]
 if (listed.length > 0) w(`    jig:asset ${listed.join(' , ')} ;`)
 w('')
-w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} .`)
+const pads = template.pads ?? []
+if (pads.length === 0) {
+  w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} .`)
+} else {
+  w(`    lv2:port ${template.ports.map(p => `<#${p.symbol}>`).join(' , ')} ;`)
+  w(`    jig:pad ${pads.map(pad => `<#${pad.id}>`).join(' , ')} .`)
+}
 w('')
 if (hasModule) {
   w('<#module>')
@@ -194,6 +200,20 @@ if (skin) {
   w(`    jig:integrity "${skin.artworkIntegrity}" .`)
 }
 
+// A pad is a named pair of this plugin's own ports; the panel draws it as a square the pointer drags across. Checked here so a pad that
+// names a port the profile does not have is an error in the build, not a pad that moves nothing.
+for (const pad of pads) {
+  for (const axis of ['x', 'y']) {
+    if (!template.ports.some(p => p.symbol === pad[axis])) throw new Error(`pad ${pad.id}: ${axis} names ${pad[axis]}, which is not a port of this plugin`)
+  }
+  w('')
+  w(`<#${pad.id}>`)
+  w('    a jig:ControlPad ;')
+  w(`    rdfs:label ${JSON.stringify(pad.label)} ;`)
+  w(`    jig:padX <#${pad.x}> ;`)
+  w(`    jig:padY <#${pad.y}> .`)
+}
+
 for (const asset of assets) {
   w('')
   w(`<#${asset.key}>`)
@@ -222,6 +242,8 @@ for (const port of template.ports) {
   // The panel section this control belongs under. A plain label: groups are
   // per-plugin display hints, never addressed across documents.
   if (port.group) line += ` ;\n    jig:controlGroup ${JSON.stringify(port.group)}`
+  // One plain sentence saying what the control does: the panel shows it on hover and focus, and a screen reader reads it on focus.
+  if (port.comment) line += ` ;\n    rdfs:comment ${JSON.stringify(port.comment)}`
   // How much the author says this control matters, for a panel that shows the few first. Higher is more important.
   if (port.displayPriority !== undefined) line += ` ;\n    pprops:displayPriority ${port.displayPriority}`
   if (port.unit) line += ` ;\n    units:unit units:${port.unit}`

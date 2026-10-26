@@ -96,6 +96,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 4 ;
     jig:controlGroup "Kick" ;
+    rdfs:comment "How loud the kick drum is in the mix." ;
     pprops:displayPriority 60 .
 
 <#snare_tone>
@@ -118,6 +119,7 @@
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 7 ;
     jig:controlGroup "Snare" ;
+    rdfs:comment "How loud the snare is in the mix." ;
     pprops:displayPriority 60 .
 
 <#clap_density>
@@ -140,6 +142,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 10 ;
     jig:controlGroup "Clap" ;
+    rdfs:comment "How loud the clap is in the mix." ;
     pprops:displayPriority 60 .
 
 <#tom1_pitch>
@@ -162,6 +165,7 @@
     lv2:default 0.74 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 13 ;
     jig:controlGroup "Tom 1" ;
+    rdfs:comment "How loud the low tom is in the mix." ;
     pprops:displayPriority 60 .
 
 <#tom2_pitch>
@@ -184,6 +188,7 @@
     lv2:default 0.72 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 16 ;
     jig:controlGroup "Tom 2" ;
+    rdfs:comment "How loud the high tom is in the mix." ;
     pprops:displayPriority 60 .
 
 <#hh_closed_brightness>
@@ -206,6 +211,7 @@
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 19 ;
     jig:controlGroup "Closed HH" ;
+    rdfs:comment "How loud the closed hi-hat is in the mix." ;
     pprops:displayPriority 60 .
 
 <#hh_open_brightness>
@@ -228,6 +234,7 @@
     lv2:default 1.02 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 22 ;
     jig:controlGroup "Open HH" ;
+    rdfs:comment "How loud the open hi-hat is in the mix." ;
     pprops:displayPriority 60 .
 
 <#crash_brightness>
@@ -250,6 +257,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 25 ;
     jig:controlGroup "Crash" ;
+    rdfs:comment "How loud the crash cymbal is in the mix." ;
     pprops:displayPriority 60 .
 
 <#cowbell_tone>
@@ -272,6 +280,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 28 ;
     jig:controlGroup "Cowbell" ;
+    rdfs:comment "How loud the cowbell is in the mix." ;
     pprops:displayPriority 60 .
 
 <#clave_tone>
@@ -294,6 +303,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 31 ;
     jig:controlGroup "Clave" ;
+    rdfs:comment "How loud the clave is in the mix." ;
     pprops:displayPriority 60 .
 
 <#bash_size>
@@ -344,6 +354,7 @@
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 38 ;
     jig:controlGroup "Bash" ;
+    rdfs:comment "How loud the bash is in the mix." ;
     pprops:displayPriority 60 .
 
 <#bit_crush>
@@ -358,6 +369,7 @@
     lv2:default 0.25 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 40 ;
     jig:controlGroup "Master" ;
+    rdfs:comment "How hard the whole kit is pushed into distortion, for grit." ;
     pprops:displayPriority 80 .
 
 <#master_reverb>
@@ -366,6 +378,7 @@
     lv2:default 0.2 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 41 ;
     jig:controlGroup "Master" ;
+    rdfs:comment "How much room reverb is added to the whole kit." ;
     pprops:displayPriority 80 .
 
 <#master_gain>
@@ -374,6 +387,7 @@
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 42 ;
     jig:controlGroup "Master" ;
+    rdfs:comment "The overall level of the kit, after the effects." ;
     pprops:displayPriority 100 .
 
 <#kick_mute>

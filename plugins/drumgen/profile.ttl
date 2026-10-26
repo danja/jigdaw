@@ -47,7 +47,8 @@
     jig:module <#module> ;
     jig:processor <#processor> ;
 
-    lv2:port <#genre> , <#style_mode> , <#channel> , <#kit_map> , <#bars> , <#resolution> , <#density> , <#variation> , <#fill_amount> , <#seed> , <#kick_amt> , <#backbeat_amt> , <#hat_amt> , <#aux_amt> , <#new> , <#mutate> , <#fill> , <#tom_amt> , <#metal_amt> , <#vary> , <#conductor_ch> .
+    lv2:port <#genre> , <#style_mode> , <#channel> , <#kit_map> , <#bars> , <#resolution> , <#density> , <#variation> , <#fill_amount> , <#seed> , <#kick_amt> , <#backbeat_amt> , <#hat_amt> , <#aux_amt> , <#new> , <#mutate> , <#fill> , <#tom_amt> , <#metal_amt> , <#vary> , <#conductor_ch> ;
+    jig:pad <#feel> .
 
 <#module>
     a jig:Module ;
@@ -62,6 +63,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "drumgen" ;
     jig:integrity "sha384-pJc9mcfCvemwpvMnHdiQGrJBzkCnMZvvjJfayycs9KNsfrBZmabrjlpsWcjZkxR1" .
+
+<#feel>
+    a jig:ControlPad ;
+    rdfs:label "Feel" ;
+    jig:padX <#density> ;
+    jig:padY <#variation> .
 
 <#genre>
     a lv2:InputPort , lv2:ControlPort ;

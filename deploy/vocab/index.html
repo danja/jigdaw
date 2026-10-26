@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  197 terms.
+  201 terms.
 </p>
 
 <h2>Classes</h2>
@@ -88,6 +88,13 @@
   <dd>A MIDI continuous controller set to a value at a beat of a MIDI clip: modulation, volume,
         pan, sustain and the rest. Its trn:startBeat is relative to the start of its clip, like a note's. The
         controller holds its value until another event for it changes it, so a clip's events are a step curve.</dd>
+  <dt id="ControlPad"><code>jig:ControlPad</code> <span class="label">Control pad</span></dt>
+  <dd>A two-axis pad over two of a plugin's ports, drawn by the generated panel as a
+        square the pointer drags across: left to right sets one port and bottom to top sets the
+        other, so one gesture moves two controls together, as a Drummer's "simple to complex" and
+        "soft to loud" pad does. A shortcut and never the only way: both ports stay on the panel
+        as ordinary controls, which a keyboard and a screen reader use. Named by rdfs:label
+        ("Feel"), with jig:padX and jig:padY naming the ports.</dd>
   <dt id="Curve"><code>jig:Curve</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="Endpoint"><code>jig:Endpoint</code></dt>
@@ -321,6 +328,15 @@
   <dt id="output"><code>jig:output</code></dt>
   <dd>The track this track's output goes to instead of the master. Makes the
         target a bus. Absent means the master. Cycles are refused.</dd>
+  <dt id="pad"><code>jig:pad</code></dt>
+  <dd>A control pad this plugin offers. A plugin may have several. A host that does not
+        draw pads ignores it and loses nothing, since the two ports are controls in their own right.</dd>
+  <dt id="padX"><code>jig:padX</code> <span class="label">pad across</span></dt>
+  <dd>The port the pad sets as the pointer moves left to right: its minimum at the left
+        edge and its maximum at the right. Must be a continuous control, not a switch or a selector.</dd>
+  <dt id="padY"><code>jig:padY</code> <span class="label">pad up</span></dt>
+  <dd>The port the pad sets as the pointer moves bottom to top: its minimum at the bottom
+        edge and its maximum at the top. A different port from jig:padX, and a continuous control.</dd>
   <dt id="plugin"><code>jig:plugin</code></dt>
   <dd>The plugin IRI this node, or this member of a composite, instantiates. Dereferenceable, so a project
         carries everything needed to reconstruct itself on a machine that has never seen

@@ -43,7 +43,25 @@
     jig:audioOutputs 1 ;
 
     jig:processor <#processor> ;
-    lv2:port <#cutoff> , <#rate> .
+    lv2:port <#cutoff> , <#rate> ;
+    # Three pads, each wrong: see below. The last is not typed as a pad at all.
+    jig:pad <#pad-one> , <#pad-two> , <#not-a-pad> .
+
+# No name, and the same port on both axes.
+<#pad-one>
+    a jig:ControlPad ;
+    jig:padX <#cutoff> ;
+    jig:padY <#cutoff> .
+
+# An axis that names no port of this profile, and no second axis.
+<#pad-two>
+    a jig:ControlPad ;
+    rdfs:label "Ghost" ;
+    jig:padX <#nowhere> .
+
+# Offered as a pad but not typed as one.
+<#not-a-pad>
+    rdfs:label "Plain" .
 
 <#processor>
     a jig:Processor ;
@@ -62,7 +80,9 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
     # Default sits outside its own range.
-    lv2:default 25000.0 ; lv2:minimum 20.0 ; lv2:maximum 18000.0 .
+    lv2:default 25000.0 ; lv2:minimum 20.0 ; lv2:maximum 18000.0 ;
+    # A help of more than 240 characters: the panel has one line for it.
+    rdfs:comment "This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence." .
 
 <#rate>
     a lv2:InputPort , lv2:ControlPort ;
@@ -72,4 +92,6 @@
     # Not one of the two permitted automation rates.
     jig:automationRate jig:FastRate ;
     # A priority below zero: nothing can be less important than not shown.
-    pprops:displayPriority -1 .
+    pprops:displayPriority -1 ;
+    # Two helps for one control: the panel has room for one.
+    rdfs:comment "Speed of the wobble." , "How fast it goes round." .

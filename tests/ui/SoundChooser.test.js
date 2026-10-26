@@ -3,7 +3,7 @@
 // Which catalogue entries are offered as sounds, how each is described, which notes Hear plays, and the dialog's controls.
 import { describe, it, expect } from 'vitest'
 import { parseHTML } from 'linkedom'
-import { firstSentence, soundsFrom, phraseFor, createSoundChooser } from '../../src/ui/SoundChooser.js'
+import { firstSentence, soundsFrom, drumGeneratorsFrom, groupsFrom, phraseFor, createSoundChooser } from '../../src/ui/SoundChooser.js'
 
 const { document } = parseHTML('<!doctype html><body></body>')
 
@@ -55,8 +55,72 @@ describe('soundsFrom', () => {
     expect(kit.load).toBe('d')
   })
 
+  it('is one part, loaded from where the Browser would load it', () => {
+    const [kit, zed] = soundsFrom(results)
+    expect(zed.parts).toEqual([{ load: 'https://example.test/a/', label: 'Zed' }])
+    expect(kit.parts).toEqual([{ load: 'd', label: 'Kit' }])
+  })
+
   it('is empty for no results, so the dialog can say there are none', () => {
     expect(soundsFrom([])).toEqual([])
+  })
+})
+
+describe('drumGeneratorsFrom', () => {
+  const results = [
+    { iri: 'g1', homepage: 'https://example.test/g1/', label: 'Beat', comment: 'Writes a beat. More.', roles: ['MidiGenerator'], produces: ['Midi', 'DrumMidi'], web: true },
+    { iri: 'g2', label: 'Bass', comment: 'Writes bass.', roles: ['MidiGenerator'], produces: ['Midi', 'BassMidi'], web: true },
+    { iri: 'g3', label: 'Native beat', roles: ['MidiGenerator'], produces: ['DrumMidi'], web: false },
+    { iri: 'g4', label: 'Filter', roles: ['MidiProcessor'], produces: ['DrumMidi'], web: true },
+    { iri: 'g5', label: 'Bare', roles: ['MidiGenerator'], web: true }
+  ]
+
+  it('keeps the MIDI generators this host can run that write drum notes, and nothing else', () => {
+    expect(drumGeneratorsFrom(results).map(g => g.label)).toEqual(['Beat'])
+  })
+
+  it('loads from the homepage and describes itself in a line', () => {
+    expect(drumGeneratorsFrom(results)[0]).toEqual({ iri: 'g1', load: 'https://example.test/g1/', label: 'Beat', about: 'Writes a beat.' })
+  })
+})
+
+describe('groupsFrom', () => {
+  const instruments = [
+    { iri: 'a', label: 'Zed', comment: 'Plays.', roles: ['Instrument'], web: true },
+    { iri: 'k', label: 'Kit', comment: 'Drums.', roles: ['Instrument', 'DrumInstrument'], web: true }
+  ]
+  const generators = [{ iri: 'g', label: 'Beat', comment: 'Writes a beat.', roles: ['MidiGenerator'], produces: ['DrumMidi'], web: true }]
+
+  it('lists instruments that are not drum kits under Instruments, and drums under Drums', () => {
+    const groups = groupsFrom({ instruments, generators })
+    expect(groups.map(g => g.heading)).toEqual(['Instruments', 'Drums'])
+    expect(groups[0].sounds.map(s => s.label)).toEqual(['Zed'])
+  })
+
+  it('offers each drum kit played by each beat generator first, then the kit alone', () => {
+    const drums = groupsFrom({ instruments, generators })[1].sounds
+    expect(drums.map(s => s.label)).toEqual(['Kit with Beat', 'Kit'])
+  })
+
+  it('loads the generator first and the kit second, so the generator\'s notes are joined to the kit', () => {
+    const [beat] = groupsFrom({ instruments, generators })[1].sounds
+    expect(beat.parts.map(p => p.label)).toEqual(['Beat', 'Kit'])
+    expect(beat.generated).toBe(true)
+    expect(beat.drums).toBe(true)
+  })
+
+  it('gives each sound its own key, so the one on the trial track can be told from its parts', () => {
+    const all = groupsFrom({ instruments, generators }).flatMap(g => g.sounds)
+    expect(new Set(all.map(s => s.iri)).size).toBe(all.length)
+  })
+
+  it('has a kit alone and no generated drums when there is no beat generator, and no Drums group with no kit', () => {
+    expect(groupsFrom({ instruments, generators: [] })[1].sounds.map(s => s.label)).toEqual(['Kit'])
+    expect(groupsFrom({ instruments: [instruments[0]], generators }).map(g => g.heading)).toEqual(['Instruments'])
+  })
+
+  it('is empty when there is nothing, so the dialog can say there are none', () => {
+    expect(groupsFrom({ instruments: [], generators: [] })).toEqual([])
   })
 })
 
@@ -86,7 +150,7 @@ describe('phraseFor', () => {
 describe('the chooser dialog', () => {
   const build = (sounds, calls = []) => {
     const chooser = createSoundChooser(document, {
-      sounds,
+      groups: sounds.length === 0 ? [] : [{ heading: 'Instruments', sounds: sounds.filter(s => !s.drums) }, { heading: 'Drums', sounds: sounds.filter(s => s.drums) }].filter(g => g.sounds.length > 0),
       onHear: s => calls.push(`hear ${s.label}`),
       onAdd: s => calls.push(`add ${s.label}`),
       onEmpty: () => calls.push('empty'),
@@ -136,6 +200,15 @@ describe('the chooser dialog', () => {
     expect(marks).toEqual(['', ' (on the trial track)'])
     heard(null)
     expect([...element.querySelectorAll('.sound-mark')].map(m => m.textContent)).toEqual(['', ''])
+  })
+
+  it('lists the sounds under a heading for each group, each list named by its heading', () => {
+    const { element } = build(sounds)
+    const headings = [...element.querySelectorAll('h3')].map(h => h.textContent)
+    expect(headings).toEqual(['Instruments', 'Drums'])
+    for (const list of element.querySelectorAll('ul.sound-list')) {
+      expect(document.getElementById(list.getAttribute('aria-labelledby')).tagName).toBe('H3')
+    }
   })
 
   it('says there are no sounds, rather than showing an empty list, when it has none', () => {

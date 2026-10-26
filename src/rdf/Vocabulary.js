@@ -195,6 +195,11 @@ export const vocabulary = Object.freeze({
     // The panel section a control belongs under. A plain label: groups are
     // per-plugin display hints, never addressed across documents.
     controlGroup: `${JIG}controlGroup`,
+    // A two-axis pad over two ports (docs/plugin-profiles.md, "A pad for two controls").
+    ControlPad: `${JIG}ControlPad`,
+    pad: `${JIG}pad`,
+    padX: `${JIG}padX`,
+    padY: `${JIG}padY`,
 
     // Projects
     Project: `${JIG}Project`,

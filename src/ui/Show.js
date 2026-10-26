@@ -62,7 +62,8 @@ export const FROM = Object.freeze({
   '#tab-mixer': 'standard',
   '#tab-launcher': 'standard',
   '#tab-settings': 'standard',
-  '#tab-tracks': 'advanced',
+  // A plugin's controls (its panel, its primary controls, its pad and its help) are on this tab, so a person making a piece needs it.
+  '#tab-tracks': 'standard',
   '#tab-routing': 'advanced',
   '#tab-script': 'advanced',
   // Below the stage.

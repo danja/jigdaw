@@ -159,12 +159,39 @@ function readDisplayPriority (dataset, term) {
   return priority
 }
 
+/**
+ * The pads a plugin offers, with each axis resolved to a port's symbol. An axis that names no port of the profile, a port that is not a
+ * continuous control, or the same port twice is a defect in the profile and is refused, naming the pad: a pad that moved nothing, or a
+ * switch, would be drawn and quietly do nothing.
+ */
+function readPads (dataset, subject, ports) {
+  return objects(dataset, subject, jig.pad).map(pad => {
+    const where = `pad ${pad.value}`
+    const label = asString(one(dataset, pad, rdfs.label))
+    if (!label) throw new Error(`${where}: a control pad needs an rdfs:label`)
+    const axis = predicate => {
+      const target = one(dataset, pad, predicate)
+      if (!target) throw new Error(`${where}: missing ${predicate.slice(JIG.length)}`)
+      const port = ports.find(p => p.iri === target.value)
+      if (!port) throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${target.value}, which is not a port of this profile`)
+      if (port.widget !== 'dial') throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`)
+      return port.symbol
+    }
+    const x = axis(jig.padX)
+    const y = axis(jig.padY)
+    if (x === y) throw new Error(`${where}: both axes are ${x}`)
+    return { iri: pad.value, label, x, y }
+  })
+}
+
 export function readPort (dataset, term) {
   const properties = values(dataset, term, lv2.portProperty)
   const port = {
     iri: term.value,
     symbol: asString(one(dataset, term, lv2.symbol)),
     name: asString(one(dataset, term, lv2.name)),
+    // One plain sentence saying what the control does, or null. The panel shows it on hover and focus and a screen reader hears it on focus.
+    comment: asString(one(dataset, term, rdfs.comment)),
     defaultValue: asNumber(one(dataset, term, lv2.default)),
     minimum: asNumber(one(dataset, term, lv2.minimum)),
     maximum: asNumber(one(dataset, term, lv2.maximum)),
@@ -307,6 +334,7 @@ export function readProfile (dataset, { baseIRI } = {}) {
   const base = baseIRI ?? subject.value
 
   const capabilities = values(dataset, subject, trn.requires)
+  const ports = orderPorts(objects(dataset, subject, lv2.port).map(t => readPort(dataset, t)))
 
   return {
     iri: subject.value,
@@ -343,7 +371,9 @@ export function readProfile (dataset, { baseIRI } = {}) {
     skin: readResource(dataset, one(dataset, subject, jig.skin), base, subject.value),
     assets: objects(dataset, subject, jig.asset).map(t => readResource(dataset, t, base, subject.value)),
 
-    ports: orderPorts(objects(dataset, subject, lv2.port).map(t => readPort(dataset, t)))
+    ports,
+    // Two-axis pads over pairs of the ports above, in the order the profile gives them.
+    pads: readPads(dataset, subject, ports)
   }
 }
 

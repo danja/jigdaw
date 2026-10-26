@@ -63,7 +63,8 @@
           "value": 2
         }
       ],
-      "paramIndex": 0
+      "paramIndex": 0,
+      "comment": "The shape of the note: saw is bright and buzzy, square is hollow, triangle is soft."
     },
     {
       "symbol": "attack",
@@ -72,7 +73,8 @@
       "minimum": 0.5,
       "maximum": 500.0,
       "unit": "ms",
-      "paramIndex": 1
+      "paramIndex": 1,
+      "comment": "How slowly a note fades in when you press a key."
     },
     {
       "symbol": "release",
@@ -81,7 +83,8 @@
       "minimum": 1.0,
       "maximum": 4000.0,
       "unit": "ms",
-      "paramIndex": 2
+      "paramIndex": 2,
+      "comment": "How long a note takes to die away after you let go of the key."
     },
     {
       "symbol": "cutoff",
@@ -90,7 +93,8 @@
       "minimum": 100.0,
       "maximum": 18000.0,
       "unit": "hz",
-      "paramIndex": 3
+      "paramIndex": 3,
+      "comment": "A lowpass filter: lower makes the sound darker and duller, higher lets the brightness through."
     },
     {
       "symbol": "gain",
@@ -98,7 +102,8 @@
       "default": 0.3,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 4
+      "paramIndex": 4,
+      "comment": "How loud the synth is."
     }
   ],
   "abi": "jig:Abi1"

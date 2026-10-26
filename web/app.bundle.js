@@ -13317,6 +13317,11 @@ var init_Vocabulary = __esm({
         // The panel section a control belongs under. A plain label: groups are
         // per-plugin display hints, never addressed across documents.
         controlGroup: `${JIG}controlGroup`,
+        // A two-axis pad over two ports (docs/plugin-profiles.md, "A pad for two controls").
+        ControlPad: `${JIG}ControlPad`,
+        pad: `${JIG}pad`,
+        padX: `${JIG}padX`,
+        padY: `${JIG}padY`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13564,12 +13569,33 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readPads(dataset2, subject, ports) {
+  return objects(dataset2, subject, jig.pad).map((pad) => {
+    const where = `pad ${pad.value}`;
+    const label = asString(one(dataset2, pad, rdfs.label));
+    if (!label) throw new Error(`${where}: a control pad needs an rdfs:label`);
+    const axis = (predicate) => {
+      const target2 = one(dataset2, pad, predicate);
+      if (!target2) throw new Error(`${where}: missing ${predicate.slice(JIG.length)}`);
+      const port = ports.find((p) => p.iri === target2.value);
+      if (!port) throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${target2.value}, which is not a port of this profile`);
+      if (port.widget !== "dial") throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`);
+      return port.symbol;
+    };
+    const x = axis(jig.padX);
+    const y = axis(jig.padY);
+    if (x === y) throw new Error(`${where}: both axes are ${x}`);
+    return { iri: pad.value, label, x, y };
+  });
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
     iri: term5.value,
     symbol: asString(one(dataset2, term5, lv2.symbol)),
     name: asString(one(dataset2, term5, lv2.name)),
+    // One plain sentence saying what the control does, or null. The panel shows it on hover and focus and a screen reader hears it on focus.
+    comment: asString(one(dataset2, term5, rdfs.comment)),
     defaultValue: asNumber(one(dataset2, term5, lv2.default)),
     minimum: asNumber(one(dataset2, term5, lv2.minimum)),
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
@@ -13666,6 +13692,7 @@ function readProfile(dataset2, { baseIRI } = {}) {
   const subject = findSubject(dataset2);
   const base = baseIRI ?? subject.value;
   const capabilities = values(dataset2, subject, trn.requires);
+  const ports = orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)));
   return {
     iri: subject.value,
     label: asString(one(dataset2, subject, rdfs.label)),
@@ -13696,7 +13723,9 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ui: readResource(dataset2, one(dataset2, subject, jig.ui), base, subject.value),
     skin: readResource(dataset2, one(dataset2, subject, jig.skin), base, subject.value),
     assets: objects(dataset2, subject, jig.asset).map((t) => readResource(dataset2, t, base, subject.value)),
-    ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
+    ports,
+    // Two-axis pads over pairs of the ports above, in the order the profile gives them.
+    pads: readPads(dataset2, subject, ports)
   };
 }
 var jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdfTerms, iri, asString, values;
@@ -33216,6 +33245,79 @@ function splitPrimary(ports) {
   return { primary, rest: ports.filter((p) => !ranked.includes(p)) };
 }
 
+// src/ui/Pad.js
+function fractionOf2(value2, port) {
+  const span = port.maximum - port.minimum;
+  if (!(span > 0)) return 0.5;
+  return Math.min(1, Math.max(0, (value2 - port.minimum) / span));
+}
+function valueAt(fraction, port) {
+  const f = Math.min(1, Math.max(0, fraction));
+  return port.minimum + f * (port.maximum - port.minimum);
+}
+function createPad(document2, { pad, ports, onSet, id }) {
+  const portX = ports.find((p) => p.symbol === pad.x);
+  const portY = ports.find((p) => p.symbol === pad.y);
+  if (!portX || !portY) throw new Error(`pad ${pad.label}: ${pad.x} and ${pad.y} must both be ports of the plugin`);
+  const element = document2.createElement("div");
+  element.className = "pad";
+  element.setAttribute("role", "group");
+  const captionId = `${id}-caption`;
+  element.setAttribute("aria-labelledby", captionId);
+  const surface = document2.createElement("div");
+  surface.className = "pad-surface";
+  surface.setAttribute("aria-hidden", "true");
+  const puck = document2.createElement("div");
+  puck.className = "pad-puck";
+  surface.append(puck);
+  const caption = document2.createElement("p");
+  caption.className = "pad-caption";
+  caption.id = captionId;
+  const name2 = document2.createElement("b");
+  name2.textContent = pad.label;
+  caption.append(name2, document2.createTextNode(` Across is ${portX.name ?? portX.symbol}, up is ${portY.name ?? portY.symbol}.`));
+  element.append(surface, caption);
+  const at = { x: 0.5, y: 0.5 };
+  const place = () => {
+    puck.style.left = `${at.x * 100}%`;
+    puck.style.top = `${(1 - at.y) * 100}%`;
+  };
+  place();
+  const set = (event) => {
+    const box = surface.getBoundingClientRect();
+    if (!(box.width > 0 && box.height > 0)) return;
+    at.x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    at.y = Math.min(1, Math.max(0, 1 - (event.clientY - box.top) / box.height));
+    place();
+    const across = valueAt(at.x, portX);
+    const up = valueAt(at.y, portY);
+    onSet(portX.symbol, across);
+    onSet(portY.symbol, up);
+  };
+  surface.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    set(event);
+    const stop = () => {
+      document2.removeEventListener("pointermove", set);
+      document2.removeEventListener("pointerup", stop);
+      document2.removeEventListener("pointercancel", stop);
+    };
+    document2.addEventListener("pointermove", set);
+    document2.addEventListener("pointerup", stop);
+    document2.addEventListener("pointercancel", stop);
+  });
+  return {
+    element,
+    update(symbol, value2) {
+      if (symbol === portX.symbol) at.x = fractionOf2(value2, portX);
+      else if (symbol === portY.symbol) at.y = fractionOf2(value2, portY);
+      else return;
+      place();
+    }
+  };
+}
+
 // src/ui/Panel.js
 function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null, skinLayout = {} } = {}) {
   const root = document2.createElement("section");
@@ -33234,6 +33336,47 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     mark.title = "Runs in this page with this page's privileges. It is not sandboxed.";
     heading.append(" ", mark);
     root.classList.add("is-foreign");
+  }
+  let helpLine = null;
+  let focusedPort = null;
+  if (profile.ports.some((p) => p.comment)) {
+    helpLine = document2.createElement("p");
+    helpLine.className = "control-help";
+    helpLine.setAttribute("aria-hidden", "true");
+    root.append(helpLine);
+  }
+  const showHelp = (port) => {
+    const name2 = document2.createElement("b");
+    name2.textContent = port.name ?? port.symbol;
+    helpLine.replaceChildren(name2, document2.createTextNode(` ${port.comment}`));
+  };
+  const clearHelp = () => {
+    helpLine.replaceChildren();
+  };
+  const settleHelp = () => {
+    if (focusedPort) showHelp(focusedPort);
+    else clearHelp();
+  };
+  const padHandles = [];
+  const pads = Array.isArray(profile.pads) ? profile.pads : [];
+  if (pads.length > 0) {
+    const row = document2.createElement("div");
+    row.className = "pads";
+    root.append(row);
+    pads.forEach((pad, index) => {
+      const handle = createPad(document2, {
+        pad,
+        ports: profile.ports,
+        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
+        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+        onSet: (symbol, value2) => {
+          for (const fn of setters.get(symbol) ?? []) fn(value2);
+          onChange(symbol, value2);
+        }
+      });
+      row.append(handle.element);
+      padHandles.push({ pad, handle });
+    });
   }
   const setters = /* @__PURE__ */ new Map();
   const onValue = (symbol, fn) => {
@@ -33307,9 +33450,31 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     const readoutId = `${id}-value`;
     readout2.id = readoutId;
     input.setAttribute("aria-describedby", readoutId);
-    if (port.comment) input.title = port.comment;
-    else if (port.name) input.title = port.name;
+    if (!port.comment && port.name) input.title = port.name;
     row.append(knob ?? input, readout2);
+    if (port.comment) {
+      const helpId = `${id}-help`;
+      const words2 = document2.createElement("span");
+      words2.className = "visually-hidden";
+      words2.id = helpId;
+      words2.textContent = port.comment;
+      row.append(words2);
+      input.setAttribute("aria-describedby", `${readoutId} ${helpId}`);
+      row.addEventListener("pointerenter", () => showHelp(port));
+      row.addEventListener("pointerleave", settleHelp);
+      row.addEventListener("focusin", () => {
+        focusedPort = port;
+        showHelp(port);
+      });
+      row.addEventListener("focusout", (event) => {
+        if (row.contains(event.relatedTarget)) return;
+        focusedPort = null;
+        clearHelp();
+      });
+      row.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") clearHelp();
+      });
+    }
     grid.append(row);
     setters.get(port.symbol).at(-1)(port.defaultValue);
   }
@@ -33368,6 +33533,12 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
       everything.hidden = !cramped;
       root.classList.toggle("skin-cramped", cramped);
     });
+  }
+  for (const { pad, handle } of padHandles) {
+    for (const symbol of [pad.x, pad.y]) {
+      onValue(symbol, (v) => handle.update(symbol, v));
+      handle.update(symbol, profile.ports.find((p) => p.symbol === symbol).defaultValue);
+    }
   }
   let assetGrid = null;
   const textAreas = /* @__PURE__ */ new Map();
@@ -37297,7 +37468,7 @@ function createRollLane(document2, { id, label, min, max, onSet, onFocus = null,
   let activeDrag = null;
   const clamp3 = (value2) => Math.min(max, Math.max(min, Math.round(value2)));
   const heightOf = (value2) => `${Math.max(2, (value2 - min) / (max - min) * LANE_HEIGHT2)}px`;
-  const valueAt = (clientY) => {
+  const valueAt2 = (clientY) => {
     const rect = bars.getBoundingClientRect();
     return clamp3(min + (1 - (clientY - rect.top) / (rect.height || LANE_HEIGHT2)) * (max - min));
   };
@@ -37367,7 +37538,7 @@ function createRollLane(document2, { id, label, min, max, onSet, onFocus = null,
       b.focus?.();
       let value2 = item.value;
       const move = (e) => {
-        value2 = valueAt(e.clientY);
+        value2 = valueAt2(e.clientY);
         fill.style.height = heightOf(value2);
         b.setAttribute("aria-valuenow", String(value2));
       };
@@ -37397,7 +37568,7 @@ function createRollLane(document2, { id, label, min, max, onSet, onFocus = null,
       if (event.button !== 0 || event.target !== bars) return;
       event.preventDefault();
       const rect = bars.getBoundingClientRect();
-      onAdd(Math.min(1, Math.max(0, (event.clientX - rect.left) / (rect.width || 1))), valueAt(event.clientY));
+      onAdd(Math.min(1, Math.max(0, (event.clientX - rect.left) / (rect.width || 1))), valueAt2(event.clientY));
     });
   }
   function draw2(next, { keepFocus = bars.contains(document2.activeElement) } = {}) {
@@ -40315,7 +40486,7 @@ function askConsent(document2, request) {
 }
 function createLoading(ctx2) {
   const { document: document2, log: log2 } = ctx2;
-  async function loadPlugin(input, { newTrack = false } = {}) {
+  async function loadPlugin(input, { newTrack = false, onto = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const iri5 = new URL(input, document2.baseURI).href;
     log2(`GET ${iri5}`);
@@ -40325,8 +40496,8 @@ function createLoading(ctx2) {
       const seen = await support.classify(iri5).catch(() => null);
       foreign = seen?.kind === "foreign";
     }
-    const track2 = newTrack ? null : ctx2.rack.targetTrack();
-    const replacing = newTrack ? null : ctx2.swap.target();
+    const track2 = newTrack ? null : onto ?? ctx2.rack.targetTrack();
+    const replacing = newTrack || onto ? null : ctx2.swap.target();
     if (replacing) {
       ctx2.swap.end();
       const swapped = await d.swapPlugin(replacing, iri5);
@@ -40378,7 +40549,7 @@ function createLoading(ctx2) {
     }
     ctx2.rack.draw();
     ctx2.expose();
-    return trackId;
+    return { trackId, nodeId };
   }
   return { loadPlugin };
 }
@@ -40398,14 +40569,40 @@ function firstSentence(text, limit = 110) {
   return `${(space > 0 ? cut.slice(0, space) : cut).replace(/[,;:\s]+$/, "")}\u2026`;
 }
 function soundsFrom(results) {
-  return results.filter((r) => r.web && (r.roles ?? []).includes("Instrument")).map((r) => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment), drums: (r.roles ?? []).includes("DrumInstrument") })).sort((a2, b) => a2.label.localeCompare(b.label));
+  return results.filter((r) => r.web && (r.roles ?? []).includes("Instrument")).map((r) => {
+    const load = r.homepage ?? r.iri;
+    return { iri: r.iri, load, label: r.label, about: firstSentence(r.comment), drums: (r.roles ?? []).includes("DrumInstrument"), parts: [{ load, label: r.label }] };
+  }).sort((a2, b) => a2.label.localeCompare(b.label));
+}
+function drumGeneratorsFrom(results) {
+  return results.filter((r) => r.web && (r.roles ?? []).includes("MidiGenerator") && (r.produces ?? []).includes("DrumMidi")).map((r) => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment) })).sort((a2, b) => a2.label.localeCompare(b.label));
+}
+function groupsFrom({ instruments, generators }) {
+  const sounds2 = soundsFrom(instruments);
+  const kits = sounds2.filter((s) => s.drums);
+  const beats2 = drumGeneratorsFrom(generators);
+  const drums = [
+    ...kits.flatMap((kit) => beats2.map((beat) => ({
+      iri: `${kit.iri}+${beat.iri}`,
+      label: `${kit.label} with ${beat.label}`,
+      about: `${beat.label} writes the beat and ${kit.label} plays it. Press Play after adding it, and drag the Feel pad.`,
+      drums: true,
+      generated: true,
+      parts: [{ load: beat.load, label: beat.label }, { load: kit.load, label: kit.label }]
+    }))),
+    ...kits.map((kit) => ({ ...kit, about: `${kit.about} Played by hand or by clips.` }))
+  ];
+  return [
+    { heading: "Instruments", sounds: sounds2.filter((s) => !s.drums) },
+    { heading: "Drums", sounds: drums }
+  ].filter((group) => group.sounds.length > 0);
 }
 function phraseFor(sound) {
   const notes = sound.drums ? [36, 42, 38, 42] : [60, 64, 67, 72];
   const step = sound.drums ? 0.25 : 0.3;
   return notes.map((pitch, i2) => ({ at: i2 * step, length: sound.drums ? 0.15 : 0.45, pitch, velocity: 100 }));
 }
-function createSoundChooser(document2, { sounds: sounds2, onHear, onAdd, onEmpty, onCancel }) {
+function createSoundChooser(document2, { groups, onHear, onAdd, onEmpty, onCancel }) {
   const dialog = document2.createElement("dialog");
   dialog.className = "chooser";
   dialog.setAttribute("aria-labelledby", "sound-chooser-title");
@@ -40418,39 +40615,51 @@ function createSoundChooser(document2, { sounds: sounds2, onHear, onAdd, onEmpty
   const status = document2.createElement("p");
   status.className = "note";
   status.setAttribute("role", "status");
-  const list = document2.createElement("ul");
-  list.className = "sound-list";
   const rows = /* @__PURE__ */ new Map();
-  for (const sound of sounds2) {
-    const item = document2.createElement("li");
-    const words2 = document2.createElement("div");
-    words2.className = "sound-words";
-    const name2 = document2.createElement("strong");
-    name2.textContent = sound.label;
-    const mark = document2.createElement("span");
-    mark.className = "sound-mark";
-    const about = document2.createElement("span");
-    about.className = "sound-about";
-    about.textContent = sound.about;
-    words2.append(name2, mark, about);
-    const hear = document2.createElement("button");
-    hear.type = "button";
-    hear.textContent = "Hear";
-    hear.setAttribute("aria-label", `Hear ${sound.label}`);
-    hear.addEventListener("click", () => onHear(sound));
-    const add = document2.createElement("button");
-    add.type = "button";
-    add.textContent = "Add";
-    add.setAttribute("aria-label", `Add ${sound.label}`);
-    add.addEventListener("click", () => onAdd(sound));
-    item.append(words2, hear, add);
-    list.append(item);
-    rows.set(sound.iri, mark);
-  }
+  const lists = groups.map((group, index) => {
+    const section = document2.createElement("section");
+    const heading = document2.createElement("h3");
+    heading.id = `sound-group-${index}`;
+    heading.textContent = group.heading;
+    const list = document2.createElement("ul");
+    list.className = "sound-list";
+    list.setAttribute("aria-labelledby", heading.id);
+    for (const sound of group.sounds) {
+      const item = document2.createElement("li");
+      const words2 = document2.createElement("div");
+      words2.className = "sound-words";
+      const name2 = document2.createElement("strong");
+      name2.textContent = sound.label;
+      const mark = document2.createElement("span");
+      mark.className = "sound-mark";
+      const about = document2.createElement("span");
+      about.className = "sound-about";
+      about.textContent = sound.about;
+      words2.append(name2, mark, about);
+      const hear = document2.createElement("button");
+      hear.type = "button";
+      hear.textContent = "Hear";
+      hear.setAttribute("aria-label", `Hear ${sound.label}`);
+      hear.addEventListener("click", () => onHear(sound));
+      const add = document2.createElement("button");
+      add.type = "button";
+      add.textContent = "Add";
+      add.setAttribute("aria-label", `Add ${sound.label}`);
+      add.addEventListener("click", () => onAdd(sound));
+      item.append(words2, hear, add);
+      list.append(item);
+      rows.set(sound.iri, mark);
+    }
+    section.append(heading, list);
+    return section;
+  });
   const none = document2.createElement("p");
   none.className = "note";
   none.textContent = "No sounds are available to load here.";
-  none.hidden = sounds2.length > 0;
+  none.hidden = groups.length > 0;
+  const scroll = document2.createElement("div");
+  scroll.className = "sound-scroll";
+  scroll.append(...lists, none);
   const buttons = document2.createElement("div");
   buttons.className = "consent-buttons";
   const empty = document2.createElement("button");
@@ -40462,7 +40671,7 @@ function createSoundChooser(document2, { sounds: sounds2, onHear, onAdd, onEmpty
   cancel.textContent = "Cancel";
   cancel.addEventListener("click", () => onCancel());
   buttons.append(empty, cancel);
-  dialog.append(title, help, status, list, none, buttons);
+  dialog.append(title, help, status, scroll, buttons);
   dialog.addEventListener("cancel", () => onCancel());
   return {
     element: dialog,
@@ -40484,14 +40693,14 @@ function createAddTrack(ctx2) {
   const isOpen = () => chooser !== null;
   async function removeTrial() {
     if (!trial) return;
-    const { nodeId, trackId } = trial;
+    const { nodeIds, trackId } = trial;
     trial = null;
     const d = ctx2.dispatcher;
     await d.withoutRecording(() => {
-      const result = d.apply([{ op: "removeNode", id: nodeId }, { op: "removeTrack", id: trackId }]);
+      const result = d.apply([...nodeIds.map((id) => ({ op: "removeNode", id })), { op: "removeTrack", id: trackId }]);
       if (!result.ok) log2(result.message, "error");
     });
-    ctx2.rack.forgetNode(nodeId);
+    for (const id of nodeIds) ctx2.rack.forgetNode(id);
     ctx2.rack.draw();
     ctx2.expose();
   }
@@ -40500,6 +40709,28 @@ function createAddTrack(ctx2) {
     chooser = null;
     if (element.open) element.close();
     element.remove();
+  }
+  async function loadSound(sound) {
+    const loaded = [];
+    let trackId = null;
+    for (const part of sound.parts) {
+      const result = await ctx2.loading.loadPlugin(part.load, trackId === null ? { newTrack: true } : { onto: trackId });
+      if (!result) {
+        if (loaded.length > 0) {
+          trial = { trackId, nodeIds: loaded };
+          await removeTrial();
+        }
+        return null;
+      }
+      trackId = result.trackId;
+      loaded.push(result.nodeId);
+    }
+    const playsId = loaded.at(-1);
+    if (loaded.length > 1) {
+      const routed = ctx2.dispatcher.apply([{ op: "setTrack", id: trackId, midiInput: playsId }]);
+      if (!routed.ok) log2(routed.message, "error");
+    }
+    return { trackId, nodeIds: loaded, playsId };
   }
   function play(nodeId, sound) {
     const { currentTime, sampleRate } = ctx2.engine.context;
@@ -40517,13 +40748,12 @@ function createAddTrack(ctx2) {
       chooser.say(`Loading ${sound.label}`);
       await removeTrial();
       const d = await ctx2.runtime.ensureRunning();
-      const result = await d.withoutRecording(() => d.addPlugin(sound.load));
-      if (!result.ok) {
-        log2(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
-        chooser?.say(`${sound.label} did not load: ${result.message}`);
+      const made = await d.withoutRecording(() => loadSound(sound));
+      if (!made) {
+        chooser?.say(`${sound.label} did not load. The log says why.`);
         return;
       }
-      trial = { nodeId: result.nodeId, trackId: result.trackId };
+      trial = { trackId: made.trackId, nodeIds: made.nodeIds };
       if (!isOpen()) {
         await removeTrial();
         return;
@@ -40531,8 +40761,8 @@ function createAddTrack(ctx2) {
       ctx2.rack.draw();
       ctx2.expose();
       chooser.heard(sound.iri);
-      play(result.nodeId, sound);
-      chooser.say(`Playing ${sound.label}. Add keeps it, or hear another.`);
+      play(made.playsId, sound);
+      chooser.say(sound.generated ? `Playing the ${sound.parts.at(-1).label} by hand. Add keeps it, and Play then runs the beat.` : `Playing ${sound.label}. Add keeps it, or hear another.`);
     } catch (error2) {
       log2(error2.message, "error");
       chooser?.say(error2.message);
@@ -40546,13 +40776,14 @@ function createAddTrack(ctx2) {
     try {
       chooser.say(`Adding ${sound.label}`);
       await removeTrial();
-      const trackId = await ctx2.loading.loadPlugin(sound.load, { newTrack: true });
-      if (!trackId) {
+      const made = await ctx2.dispatcher.grouped(() => loadSound(sound), { label: "Add a track" });
+      if (!made) {
         chooser?.say(`${sound.label} did not load. The log says why.`);
         return;
       }
-      ctx2.selection.set("track", [trackId]);
+      ctx2.selection.set("track", [made.trackId]);
       if (isOpen()) close();
+      if (sound.generated && ctx2.show.allowsTab("tracks")) ctx2.tabs.select("tracks");
     } catch (error2) {
       log2(error2.message, "error");
       chooser?.say(error2.message);
@@ -40567,16 +40798,21 @@ function createAddTrack(ctx2) {
   }
   async function open() {
     if (isOpen()) return;
-    let sounds2 = [];
+    let groups = [];
     let problem = null;
     try {
-      sounds2 = soundsFrom((await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS })).results);
+      const catalogue = ctx2.browser.catalogue();
+      const [instruments, generators] = await Promise.all([
+        catalogue.search({ role: "Instrument", limit: MAX_RESULTS }),
+        catalogue.search({ role: "MidiGenerator", produces: "DrumMidi", limit: MAX_RESULTS })
+      ]);
+      groups = groupsFrom({ instruments: instruments.results, generators: generators.results });
     } catch (error2) {
       problem = error2.message;
       log2(`sounds: ${error2.message}`, "error");
     }
     chooser = createSoundChooser(document2, {
-      sounds: sounds2,
+      groups,
       onHear: hear,
       onAdd: add,
       onEmpty: async () => {
@@ -44620,7 +44856,8 @@ var FROM = Object.freeze({
   "#tab-mixer": "standard",
   "#tab-launcher": "standard",
   "#tab-settings": "standard",
-  "#tab-tracks": "advanced",
+  // A plugin's controls (its panel, its primary controls, its pad and its help) are on this tab, so a person making a piece needs it.
+  "#tab-tracks": "standard",
   "#tab-routing": "advanced",
   "#tab-script": "advanced",
   // Below the stage.

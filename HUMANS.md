@@ -69,8 +69,8 @@ is wrong in INBOX.md.
   Show steps, start screen, Add a track chooser, grouped transport, clip repeat, light and dark themes and "More controls" were all
   checked by code and in Chrome, none by a person who did not build them. Also listen to the Hear button on each of the eight
   instruments, and to a DrumKit loaded through it.
-- **Deploy to see DrumKit's primary controls:** the live site still serves the old `plugins/drumkit/profile.ttl`, and the page loads
-  plugins from their canonical address, so "More controls (61)" appears only after a deploy (checked locally by loading the local copy).
+- **Deploy the help text:** the page loads plugins from their canonical address, so the help on Pulse's and DrumKit's controls (new 2026-10-26)
+  shows on the live site only after a deploy; it was checked by loading the local copies. DrumKit's "More controls (61)" was deployed and is live.
 
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 

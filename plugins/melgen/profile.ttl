@@ -46,7 +46,8 @@
     jig:module <#module> ;
     jig:processor <#processor> ;
 
-    lv2:port <#root_note> , <#scale> , <#channel> , <#length_beats> , <#phrase_bars> , <#subdivision> , <#period> , <#contour> , <#answer> , <#density> , <#register> , <#hold> , <#accent> , <#structure> , <#range> , <#leap> , <#rest> , <#cadence> , <#seed> , <#vary> , <#new> , <#notes> , <#rhythm> , <#follow> , <#color> , <#conductor_ch> .
+    lv2:port <#root_note> , <#scale> , <#channel> , <#length_beats> , <#phrase_bars> , <#subdivision> , <#period> , <#contour> , <#answer> , <#density> , <#register> , <#hold> , <#accent> , <#structure> , <#range> , <#leap> , <#rest> , <#cadence> , <#seed> , <#vary> , <#new> , <#notes> , <#rhythm> , <#follow> , <#color> , <#conductor_ch> ;
+    jig:pad <#feel> .
 
 <#module>
     a jig:Module ;
@@ -61,6 +62,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "melgen" ;
     jig:integrity "sha384-d06DP2EY4X4AlXGoatsO8HL3DdMpuo3eFRIz23lMmPgizWc1V864ZtqmTIvxA5Dd" .
+
+<#feel>
+    a jig:ControlPad ;
+    rdfs:label "Feel" ;
+    jig:padX <#density> ;
+    jig:padY <#leap> .
 
 <#root_note>
     a lv2:InputPort , lv2:ControlPort ;

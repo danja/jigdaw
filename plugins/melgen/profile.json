@@ -59,29 +59,98 @@
       "maximum": 22,
       "paramIndex": 1,
       "scalePoints": [
-        { "label": "Major", "value": 0 },
-        { "label": "Ionian", "value": 1 },
-        { "label": "Minor", "value": 2 },
-        { "label": "Harmonic Minor", "value": 3 },
-        { "label": "Melodic Minor", "value": 4 },
-        { "label": "Dorian", "value": 5 },
-        { "label": "Phrygian", "value": 6 },
-        { "label": "Lydian", "value": 7 },
-        { "label": "Mixolydian", "value": 8 },
-        { "label": "Locrian", "value": 9 },
-        { "label": "Phrygian Dominant", "value": 10 },
-        { "label": "Neapolitan Major", "value": 11 },
-        { "label": "Neapolitan Minor", "value": 12 },
-        { "label": "Pent Major", "value": 13 },
-        { "label": "Pent Minor", "value": 14 },
-        { "label": "Blues", "value": 15 },
-        { "label": "Whole Tone", "value": 16 },
-        { "label": "Altered", "value": 17 },
-        { "label": "Half Whole Diminished", "value": 18 },
-        { "label": "Whole Half Diminished", "value": 19 },
-        { "label": "Bebop Dominant", "value": 20 },
-        { "label": "Bebop Major", "value": 21 },
-        { "label": "Bebop Minor", "value": 22 }
+        {
+          "label": "Major",
+          "value": 0
+        },
+        {
+          "label": "Ionian",
+          "value": 1
+        },
+        {
+          "label": "Minor",
+          "value": 2
+        },
+        {
+          "label": "Harmonic Minor",
+          "value": 3
+        },
+        {
+          "label": "Melodic Minor",
+          "value": 4
+        },
+        {
+          "label": "Dorian",
+          "value": 5
+        },
+        {
+          "label": "Phrygian",
+          "value": 6
+        },
+        {
+          "label": "Lydian",
+          "value": 7
+        },
+        {
+          "label": "Mixolydian",
+          "value": 8
+        },
+        {
+          "label": "Locrian",
+          "value": 9
+        },
+        {
+          "label": "Phrygian Dominant",
+          "value": 10
+        },
+        {
+          "label": "Neapolitan Major",
+          "value": 11
+        },
+        {
+          "label": "Neapolitan Minor",
+          "value": 12
+        },
+        {
+          "label": "Pent Major",
+          "value": 13
+        },
+        {
+          "label": "Pent Minor",
+          "value": 14
+        },
+        {
+          "label": "Blues",
+          "value": 15
+        },
+        {
+          "label": "Whole Tone",
+          "value": 16
+        },
+        {
+          "label": "Altered",
+          "value": 17
+        },
+        {
+          "label": "Half Whole Diminished",
+          "value": 18
+        },
+        {
+          "label": "Whole Half Diminished",
+          "value": 19
+        },
+        {
+          "label": "Bebop Dominant",
+          "value": 20
+        },
+        {
+          "label": "Bebop Major",
+          "value": 21
+        },
+        {
+          "label": "Bebop Minor",
+          "value": 22
+        }
       ]
     },
     {
@@ -116,10 +185,22 @@
       "maximum": 3,
       "paramIndex": 5,
       "scalePoints": [
-        { "label": "Eighth", "value": 0 },
-        { "label": "Sixteenth", "value": 1 },
-        { "label": "Sixteenth Triplet", "value": 2 },
-        { "label": "Quarter", "value": 3 }
+        {
+          "label": "Eighth",
+          "value": 0
+        },
+        {
+          "label": "Sixteenth",
+          "value": 1
+        },
+        {
+          "label": "Sixteenth Triplet",
+          "value": 2
+        },
+        {
+          "label": "Quarter",
+          "value": 3
+        }
       ]
     },
     {
@@ -130,12 +211,30 @@
       "maximum": 5,
       "paramIndex": 6,
       "scalePoints": [
-        { "label": "Free", "value": 0 },
-        { "label": "A A", "value": 1 },
-        { "label": "A B", "value": 2 },
-        { "label": "A A'", "value": 3 },
-        { "label": "Call Answer", "value": 4 },
-        { "label": "A B A", "value": 5 }
+        {
+          "label": "Free",
+          "value": 0
+        },
+        {
+          "label": "A A",
+          "value": 1
+        },
+        {
+          "label": "A B",
+          "value": 2
+        },
+        {
+          "label": "A A'",
+          "value": 3
+        },
+        {
+          "label": "Call Answer",
+          "value": 4
+        },
+        {
+          "label": "A B A",
+          "value": 5
+        }
       ]
     },
     {
@@ -146,12 +245,30 @@
       "maximum": 5,
       "paramIndex": 7,
       "scalePoints": [
-        { "label": "Wandering", "value": 0 },
-        { "label": "Flat", "value": 1 },
-        { "label": "Rising", "value": 2 },
-        { "label": "Falling", "value": 3 },
-        { "label": "Arch", "value": 4 },
-        { "label": "Inverted Arch", "value": 5 }
+        {
+          "label": "Wandering",
+          "value": 0
+        },
+        {
+          "label": "Flat",
+          "value": 1
+        },
+        {
+          "label": "Rising",
+          "value": 2
+        },
+        {
+          "label": "Falling",
+          "value": 3
+        },
+        {
+          "label": "Arch",
+          "value": 4
+        },
+        {
+          "label": "Inverted Arch",
+          "value": 5
+        }
       ]
     },
     {
@@ -162,12 +279,30 @@
       "maximum": 5,
       "paramIndex": 8,
       "scalePoints": [
-        { "label": "Related", "value": 0 },
-        { "label": "Same", "value": 1 },
-        { "label": "Transpose", "value": 2 },
-        { "label": "Invert", "value": 3 },
-        { "label": "Compress", "value": 4 },
-        { "label": "Expand", "value": 5 }
+        {
+          "label": "Related",
+          "value": 0
+        },
+        {
+          "label": "Same",
+          "value": 1
+        },
+        {
+          "label": "Transpose",
+          "value": 2
+        },
+        {
+          "label": "Invert",
+          "value": 3
+        },
+        {
+          "label": "Compress",
+          "value": 4
+        },
+        {
+          "label": "Expand",
+          "value": 5
+        }
       ]
     },
     {
@@ -308,6 +443,14 @@
       "minimum": 0,
       "maximum": 16,
       "paramIndex": 25
+    }
+  ],
+  "pads": [
+    {
+      "id": "feel",
+      "label": "Feel",
+      "x": "density",
+      "y": "leap"
     }
   ]
 }

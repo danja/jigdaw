@@ -131,6 +131,90 @@ describe('a port\'s display priority', () => {
   })
 })
 
+describe('a port\'s help', () => {
+  const read = async lines => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText([
+      '@prefix jig: <http://purl.org/stuff/jigdaw/> .',
+      '@prefix lv2: <http://lv2plug.in/ns/lv2core#> .',
+      '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .',
+      '<> a jig:WebPlugin ; lv2:port <#mix> .',
+      '<#mix> a lv2:InputPort , lv2:ControlPort ;',
+      '  lv2:symbol "mix" ; lv2:name "Mix" ;',
+      `  ${lines}lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1 .`
+    ].join('\n'), 'urn:test')
+    return readProfile(dataset).ports[0]
+  }
+
+  it('is the port\'s own rdfs:comment', async () => {
+    expect((await read('rdfs:comment "How much of the wet signal is heard." ; ')).comment).toBe('How much of the wet signal is heard.')
+  })
+
+  it('is null where the profile says nothing, not an empty string', async () => {
+    expect((await read('')).comment).toBeNull()
+  })
+
+  it('is the port\'s own and not the plugin\'s, which says something else', async () => {
+    const profile = readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test'))
+    for (const port of profile.ports) expect(port.comment, port.symbol).not.toBe(profile.comment)
+  })
+})
+
+describe('a plugin\'s pads', () => {
+  const read = async (pad, extraPorts = '') => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText([
+      '@prefix jig: <http://purl.org/stuff/jigdaw/> .',
+      '@prefix lv2: <http://lv2plug.in/ns/lv2core#> .',
+      '@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .',
+      '<> a jig:WebPlugin ; lv2:port <#density> , <#variation> , <#mode> ; jig:pad <#feel> .',
+      '<#density> a lv2:InputPort , lv2:ControlPort ; lv2:symbol "density" ; lv2:name "Density" ; lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 .',
+      '<#variation> a lv2:InputPort , lv2:ControlPort ; lv2:symbol "variation" ; lv2:name "Variation" ; lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 .',
+      '<#mode> a lv2:InputPort , lv2:ControlPort ; lv2:symbol "mode" ; lv2:name "Mode" ; lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;',
+      '  lv2:portProperty lv2:enumeration ; lv2:scalePoint <#m0> , <#m1> , <#m2> .',
+      '<#m0> rdfs:label "A" ; lv2:default 0 .', '<#m1> rdfs:label "B" ; lv2:default 1 .', '<#m2> rdfs:label "C" ; lv2:default 2 .',
+      pad, extraPorts
+    ].join('\n'), 'urn:test')
+    return readProfile(dataset)
+  }
+  // Each part can be replaced, or left out with null, so a pad missing something is written as Turtle that parses.
+  const padLines = (parts = {}) => {
+    const part = (key, text) => (key in parts ? parts[key] : text)
+    const properties = [part('label', 'rdfs:label "Feel"'), part('x', 'jig:padX <#density>'), part('y', 'jig:padY <#variation>')].filter(Boolean)
+    return `<#feel> a jig:ControlPad ; ${properties.join(' ; ')} .`
+  }
+
+  it('are read with each axis as the port\'s symbol', async () => {
+    const profile = await read(padLines())
+    expect(profile.pads).toEqual([{ iri: 'urn:test#feel'.replace('urn:test', profile.iri), label: 'Feel', x: 'density', y: 'variation' }])
+  })
+
+  it('are an empty list, not absent, for a profile with none', async () => {
+    const profile = readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test'))
+    expect(profile.pads).toEqual([])
+  })
+
+  it('are refused, naming the pad, when they have no name', async () => {
+    await expect(read(padLines({ label: null }))).rejects.toThrow(/needs an rdfs:label/)
+  })
+
+  it('are refused when an axis is missing', async () => {
+    await expect(read(padLines({ y: null }))).rejects.toThrow(/missing padY/)
+  })
+
+  it('are refused when an axis names something that is not a port of the profile', async () => {
+    await expect(read(padLines({ y: 'jig:padY <#nowhere>' }))).rejects.toThrow(/padY names .*#nowhere, which is not a port of this profile/)
+  })
+
+  it('are refused when an axis is a selector or a switch, which has no continuous range to drag across', async () => {
+    await expect(read(padLines({ y: 'jig:padY <#mode>' }))).rejects.toThrow(/padY names mode, which is a selector, and a pad needs a continuous control/)
+  })
+
+  it('are refused when both axes are the same port', async () => {
+    await expect(read(padLines({ y: 'jig:padY <#density>' }))).rejects.toThrow(/both axes are density/)
+  })
+})
+
 describe('widgetFor', () => {
   // Contract section 5.3. The shape of the declaration decides, never a name.
   const port = over => ({ toggled: false, enumeration: false, scalePoints: [], ...over })

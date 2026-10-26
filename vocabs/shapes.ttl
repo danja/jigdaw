@@ -322,6 +322,11 @@ jig:PortShape a sh:NodeShape ;
         sh:message "A port needs a human-readable name, because the generated panel has nothing else to print on the control."
     ] ;
     sh:property [
+        sh:path rdfs:comment ;
+        sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 240 ;
+        sh:message "A port's rdfs:comment is the help the panel shows when the control is hovered or focused: one string, at most 240 characters, one plain sentence saying what the control does. Two of them, or an essay, cannot be shown in the line the panel has for it."
+    ] ;
+    sh:property [
         sh:path pprops:displayPriority ;
         sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
         sh:message "pprops:displayPriority, where a port has one, is a single nonnegative integer. A panel shows the ports that have one first, highest first, so a negative or fractional priority is a priority nothing can order by."
@@ -341,6 +346,52 @@ jig:PortShape a sh:NodeShape ;
         sh:greaterThanOrEquals lv2:minimum ;
         sh:lessThanOrEquals lv2:maximum ;
         sh:message "A port's lv2:default must lie between its lv2:minimum and lv2:maximum."
+    ] .
+
+jig:ControlPadShape a sh:NodeShape ;
+    sh:targetClass jig:ControlPad ;
+    rdfs:label "Control pad shape" ;
+    sh:nodeKind sh:IRI ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A control pad needs a name, because the panel draws it as a labelled group and a screen reader has nothing else to call it."
+    ] ;
+    sh:property [
+        sh:path jig:padX ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:node jig:PadPortShape ;
+        sh:message "A control pad needs exactly one jig:padX, naming a port of this plugin that has a symbol."
+    ] ;
+    sh:property [
+        sh:path jig:padY ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:node jig:PadPortShape ;
+        sh:message "A control pad needs exactly one jig:padY, naming a port of this plugin that has a symbol."
+    ] ;
+    sh:property [
+        sh:path jig:padX ;
+        sh:disjoint jig:padY ;
+        sh:message "A pad's two axes are two different ports: one port on both axes is a diagonal line, not a pad."
+    ] .
+
+# What the axes of a pad point at: a port declared in the same document, which has a symbol. A name for a port that is not there would
+# be a pad that moves nothing.
+jig:PadPortShape a sh:NodeShape ;
+    rdfs:label "Pad port shape" ;
+    sh:property [
+        sh:path lv2:symbol ;
+        sh:minCount 1 ;
+        sh:message "A pad axis must name a port declared in this profile, with an lv2:symbol."
+    ] .
+
+jig:WebPluginPadShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:pad ;
+    rdfs:label "Plugin pad shape" ;
+    sh:property [
+        sh:path jig:pad ;
+        sh:nodeKind sh:IRI ; sh:class jig:ControlPad ;
+        sh:message "jig:pad must name a resource typed jig:ControlPad."
     ] .
 
 ## -- Projects ----------------------------------------------------------------

@@ -53,8 +53,8 @@ describe('the tabs', () => {
     expect(tabsDrawnAt('simple', tabs)).toEqual(['arrangement'])
   })
 
-  it('add the mixer, the launcher and settings in Standard, in the page order', () => {
-    expect(tabsDrawnAt('standard', tabs)).toEqual(['arrangement', 'mixer', 'launcher', 'settings'])
+  it('add the plugins, the mixer, the launcher and settings in Standard, in the page order', () => {
+    expect(tabsDrawnAt('standard', tabs)).toEqual(['arrangement', 'tracks', 'mixer', 'launcher', 'settings'])
   })
 
   it('are all seven in Advanced', () => {
