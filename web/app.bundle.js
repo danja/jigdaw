@@ -32787,6 +32787,10 @@ function createFxList(document2, { id, onAdd, onRemove, actions = {}, menu = nul
   add.addEventListener("click", onAdd);
   region.append(list, add);
   toggle.addEventListener("click", () => {
+    if (list.children.length === 0) {
+      onAdd();
+      return;
+    }
     const open = toggle.getAttribute("aria-expanded") !== "true";
     toggle.setAttribute("aria-expanded", String(open));
     region.hidden = !open;
@@ -41705,8 +41709,14 @@ function createBrowser(ctx2) {
     const i2 = Math.max(0, Math.min(buttons.length - 1, index));
     buttons[i2].focus();
   }
+  let debounce = null;
+  $2("q").addEventListener("input", () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => search(), 200);
+  });
   $2("q").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
+      clearTimeout(debounce);
       event.preventDefault();
       search();
     }

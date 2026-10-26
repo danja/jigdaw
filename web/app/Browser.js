@@ -218,8 +218,16 @@ export function createBrowser (ctx) {
     buttons[i].focus()
   }
 
+  // Search as you type, like Reaper's FX browser: a short debounce so a
+  // fast typist does not fire a request per keystroke. Enter still runs
+  // immediately.
+  let debounce = null
+  $('q').addEventListener('input', () => {
+    clearTimeout(debounce)
+    debounce = setTimeout(() => search(), 200)
+  })
   $('q').addEventListener('keydown', event => {
-    if (event.key === 'Enter') { event.preventDefault(); search() }
+    if (event.key === 'Enter') { clearTimeout(debounce); event.preventDefault(); search() }
   })
   $('results').addEventListener('keydown', event => {
     const buttons = [...$('results').querySelectorAll('button')]

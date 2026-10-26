@@ -50,6 +50,9 @@ export function createFxList (document, { id, onAdd, onRemove, actions = {}, men
   region.append(list, add)
 
   toggle.addEventListener('click', () => {
+    // With no plugins on the track, the FX button's job is to get one: open the
+    // browser rather than an empty list. With plugins present, it discloses them.
+    if (list.children.length === 0) { onAdd(); return }
     const open = toggle.getAttribute('aria-expanded') !== 'true'
     toggle.setAttribute('aria-expanded', String(open))
     region.hidden = !open
