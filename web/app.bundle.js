@@ -32787,10 +32787,8 @@ function createFxList(document2, { id, onAdd, onRemove, actions = {}, menu = nul
   add.addEventListener("click", onAdd);
   region.append(list, add);
   toggle.addEventListener("click", () => {
-    if (list.children.length === 0) {
-      onAdd();
-      return;
-    }
+    onAdd();
+    if (list.children.length === 0) return;
     const open = toggle.getAttribute("aria-expanded") !== "true";
     toggle.setAttribute("aria-expanded", String(open));
     region.hidden = !open;
