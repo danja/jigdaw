@@ -28,6 +28,11 @@ export const OPERATIONS = {
       channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
       midiInput: null,
       audioInput: null,
+      // Whether this track is armed to record MIDI or audio. A UI toggle sets it;
+      // the recorder honours it when the transport runs.
+      armed: false,
+      // The source feeding a recorded take on this track: 'midi', 'audio' or null.
+      recordSource: null,
       // The bus this track's output goes to instead of the master, or null.
       output: null
     })
@@ -48,6 +53,8 @@ export const OPERATIONS = {
       checkTrackOutput(state, change.id, change.output)
       track.output = change.output
     }
+    if (change.armed !== undefined) track.armed = Boolean(change.armed)
+    if (change.recordSource !== undefined) track.recordSource = change.recordSource
     return change.id
   },
 

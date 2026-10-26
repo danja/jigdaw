@@ -65,7 +65,15 @@ export function createArrangement (ctx) {
     onOpen: id => openClip(id),
     onSetLoop: range => ctx.transport.setLoopRange(range),
     onSeek: beat => ctx.transport.seek(beat),
-    onArm: (trackId, on) => { ctx.midiIn.arm(trackId, on); ctx.rack.draw() },
+    onArm: (trackId, on) => {
+      const source = ctx.dispatcher.project.track(trackId)?.recordSource ?? 'midi'
+      if (source === 'audio') ctx.micIn.arm(trackId, on); else ctx.midiIn.arm(trackId, on)
+      ctx.rack.draw()
+    },
+    onArmSource: (trackId, source) => {
+      ctx.dispatcher.apply([{ op: 'setTrack', id: trackId, recordSource: source }])
+      ctx.rack.draw()
+    },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
     onMoveTrack: (trackId, delta) => ctx.dispatcher.project.moveTrack(trackId, delta),
     // Saved with the session: stated on every track of the folder, which is how the editor graph knows a folder.
@@ -396,8 +404,9 @@ export function createArrangement (ctx) {
       }),
       routingFor: track => describeRouting(project, track.id, id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
       kindFor: track => trackKind(project, track, id => ctx.dispatcher.engineNode(id)?.profile),
-      canArm: track => Boolean(track.midiInput),
-      armed: track => ctx.midiIn.armed(track.id),
+      canArm: track => Boolean(track.midiInput) || Boolean(track.audioInput),
+      armed: track => ctx.midiIn.armed(track.id) || ctx.micIn?.armed?.(track.id) === true,
+      armSource: track => track.recordSource ?? (track.audioInput && !track.midiInput ? 'audio' : 'midi'),
       latencyFor: track => {
         const found = latencies.get(track.id)
         return found === undefined ? null : { frames: found.frames, alignFrames: found.alignFrames, rate: sampleRate }

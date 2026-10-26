@@ -229,6 +229,8 @@ export const vocabulary = Object.freeze({
     onTrack: `${JIG}onTrack`,
     midiInput: `${JIG}midiInput`,
     audioInput: `${JIG}audioInput`,
+    armed: `${JIG}armed`,
+    recordSource: `${JIG}recordSource`,
     Clip: `${JIG}Clip`,
     MidiClip: `${JIG}MidiClip`,
     AudioClip: `${JIG}AudioClip`,

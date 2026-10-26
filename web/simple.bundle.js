@@ -13350,6 +13350,8 @@ var init_Vocabulary = __esm({
         onTrack: `${JIG}onTrack`,
         midiInput: `${JIG}midiInput`,
         audioInput: `${JIG}audioInput`,
+        armed: `${JIG}armed`,
+        recordSource: `${JIG}recordSource`,
         Clip: `${JIG}Clip`,
         MidiClip: `${JIG}MidiClip`,
         AudioClip: `${JIG}AudioClip`,
@@ -18504,6 +18506,15 @@ function parameterDescriptors(ports) {
 
 // src/host/Instantiate.js
 init_LoadError();
+var registeredByContext = /* @__PURE__ */ new WeakMap();
+function registeredNamesFor(context) {
+  let set = registeredByContext.get(context);
+  if (!set) {
+    set = /* @__PURE__ */ new Set();
+    registeredByContext.set(context, set);
+  }
+  return set;
+}
 async function instantiate(profile, granted, context, {
   fetchVerified,
   AudioWorkletNode = globalThis.AudioWorkletNode,
@@ -18527,17 +18538,21 @@ async function instantiate(profile, granted, context, {
     const name2 = asset.iri?.split("#").pop() ?? asset.iri;
     assets[name2] = await fetchVerified(asset, { kind: `asset "${name2}"` });
   }
-  const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
-  try {
-    await context.audioWorklet.addModule(url);
-  } catch (cause) {
-    throw new LoadError(
-      STEPS.registerProcessor,
-      `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
-      { cause }
-    );
-  }
+  const registered = registeredNamesFor(context);
   const name = profile.processor.registeredName;
+  const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
+  if (name && !registered.has(name)) {
+    try {
+      await context.audioWorklet.addModule(url);
+    } catch (cause) {
+      throw new LoadError(
+        STEPS.registerProcessor,
+        `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
+        { cause }
+      );
+    }
+    if (name) registered.add(name);
+  }
   if (!name) {
     throw new LoadError(
       STEPS.constructNode,
@@ -23901,6 +23916,11 @@ var OPERATIONS = {
       channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
       midiInput: null,
       audioInput: null,
+      // Whether this track is armed to record MIDI or audio. A UI toggle sets it;
+      // the recorder honours it when the transport runs.
+      armed: false,
+      // The source feeding a recorded take on this track: 'midi', 'audio' or null.
+      recordSource: null,
       // The bus this track's output goes to instead of the master, or null.
       output: null
     });
@@ -23920,6 +23940,8 @@ var OPERATIONS = {
       checkTrackOutput(state, change.id, change.output);
       track.output = change.output;
     }
+    if (change.armed !== void 0) track.armed = Boolean(change.armed);
+    if (change.recordSource !== void 0) track.recordSource = change.recordSource;
     return change.id;
   },
   /**
@@ -30326,6 +30348,8 @@ function writeProject(project, { iri: iri4, created = null } = {}) {
     if (track.midiInput) statements.push(`${term3(jig4.midiInput)} <#${track.midiInput}>`);
     if (track.audioInput) statements.push(`${term3(jig4.audioInput)} <#${track.audioInput}>`);
     if (track.output) statements.push(`${term3(jig4.output)} <#${track.output}>`);
+    if (track.armed) statements.push(`${term3(jig4.armed)} true`);
+    if (track.recordSource) statements.push(`${term3(jig4.recordSource)} ${string(track.recordSource)}`);
     const clips = (project.clips ?? []).filter((c3) => c3.track === track.id).sort(byId);
     if (clips.length > 0) statements.push(`${term3(jig4.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
@@ -30760,7 +30784,9 @@ function readProject(dataset2) {
     channel: readChannel(dataset2, trackIri, id),
     midiInput: value(one2(dataset2, trackIri, jig6.midiInput)),
     audioInput: value(one2(dataset2, trackIri, jig6.audioInput)),
-    output: value(one2(dataset2, trackIri, jig6.output))
+    output: value(one2(dataset2, trackIri, jig6.output)),
+    armed: value(one2(dataset2, trackIri, jig6.armed)) === "true",
+    recordSource: value(one2(dataset2, trackIri, jig6.recordSource))
   }));
   const clips = [];
   for (const trackIri of trackIris) {
@@ -30869,7 +30895,10 @@ function readProject(dataset2) {
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue;
     const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri4, `${what} of track ${t.id}`);
-    changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
+    const extra = {};
+    if (t.armed) extra.armed = true;
+    if (t.recordSource) extra.recordSource = t.recordSource;
+    changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput"), ...extra });
   }
   changes.push(...connections);
   changes.push(...clips);

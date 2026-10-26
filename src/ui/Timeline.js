@@ -90,7 +90,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onArmSource = null, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -277,7 +277,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         row.dataset.track = track.id
         row.setAttribute('role', 'group')
         const header = createTrackHeader(document, {
-          id: track.id, onAdd, onAddAudio, onChannel, onMove: moveTrack, onArm, onDuplicateTrack, onGrip: dragTrack, onFx: toggleFx, onExpand: onExpandTrack, onSizeStep, onExtend: extendTrackSelection, onEdit: onEditTrack, onDeleteTrack, menu,
+          id: track.id, onAdd, onAddAudio, onChannel, onMove: moveTrack, onArm, onArmSource, onDuplicateTrack, onGrip: dragTrack, onFx: toggleFx, onExpand: onExpandTrack, onSizeStep, onExtend: extendTrackSelection, onEdit: onEditTrack, onDeleteTrack, menu,
           onSelect: (id, { toggle }) => { reorder.anchor(id); if (toggle) selection.toggle('track', id); else selection.set('track', [id]) }
         })
         const lane = document.createElement('div')

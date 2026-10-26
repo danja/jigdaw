@@ -18,7 +18,7 @@ import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE, LANE_SIZES } from '../model/EditorState.js'
 import { attachMenu } from './ContextMenu.js'
 
-export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onArmSource = null, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTrackHeader needs ${name}`)
   }
@@ -131,6 +131,20 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   arm.setAttribute('aria-pressed', 'false')
   arm.addEventListener('click', () => onArm(id, arm.getAttribute('aria-pressed') !== 'true'))
 
+  // Source of what the arm button records: MIDI or audio (microphone). Left out
+  // where the track cannot be armed, or where the page did not hand in a setter.
+  const source = document.createElement('select')
+  source.className = 'head-arm-source'
+  source.id = `head-${id}-arm-source`
+  source.hidden = true
+  for (const [value, label] of [['midi', 'MIDI'], ['audio', 'Audio']]) {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = label
+    source.append(option)
+  }
+  if (onArmSource) source.addEventListener('change', () => onArmSource(id, source.value))
+
   // Only where the page can copy a track; a button that did nothing would be left out.
   const duplicate = document.createElement('button')
   duplicate.type = 'button'
@@ -207,7 +221,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const title = document.createElement('div')
   title.className = 'head-title'
   title.append(name, ...(onGrip ? [grip] : []), ...(onExpand ? [expand] : []))
-  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
+  element.append(title, kindLabel, arm, source, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
 
   return {
     element,
@@ -216,7 +230,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first = false, last = false }) {
+    update ({ label, channel, mixable, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, armSource = 'midi', fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first = false, last = false }) {
       Object.assign(now, { label, mixable, channel, canArm, armed, size, first, last, at: place })
       name.textContent = label
       name.setAttribute('aria-label', `Select ${label}`)
@@ -264,6 +278,8 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       arm.setAttribute('aria-pressed', String(armed))
       // Said in text too, not only by the colour it turns.
       arm.textContent = armed ? 'Armed' : 'Arm'
+      source.hidden = !canArm || !onArmSource
+      if (!source.hidden) source.value = armSource
       arm.setAttribute('aria-label', `Arm ${label} for MIDI input`)
       latency.hidden = !(late && (late.frames > 0 || late.alignFrames > 0))
       if (!latency.hidden) {

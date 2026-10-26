@@ -13350,6 +13350,8 @@ var init_Vocabulary = __esm({
         onTrack: `${JIG}onTrack`,
         midiInput: `${JIG}midiInput`,
         audioInput: `${JIG}audioInput`,
+        armed: `${JIG}armed`,
+        recordSource: `${JIG}recordSource`,
         Clip: `${JIG}Clip`,
         MidiClip: `${JIG}MidiClip`,
         AudioClip: `${JIG}AudioClip`,
@@ -18449,6 +18451,15 @@ function parameterDescriptors(ports) {
 
 // src/host/Instantiate.js
 init_LoadError();
+var registeredByContext = /* @__PURE__ */ new WeakMap();
+function registeredNamesFor(context) {
+  let set = registeredByContext.get(context);
+  if (!set) {
+    set = /* @__PURE__ */ new Set();
+    registeredByContext.set(context, set);
+  }
+  return set;
+}
 async function instantiate(profile, granted, context, {
   fetchVerified,
   AudioWorkletNode = globalThis.AudioWorkletNode,
@@ -18472,17 +18483,21 @@ async function instantiate(profile, granted, context, {
     const name3 = asset.iri?.split("#").pop() ?? asset.iri;
     assets[name3] = await fetchVerified(asset, { kind: `asset "${name3}"` });
   }
-  const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
-  try {
-    await context.audioWorklet.addModule(url);
-  } catch (cause) {
-    throw new LoadError(
-      STEPS.registerProcessor,
-      `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
-      { cause }
-    );
-  }
+  const registered = registeredNamesFor(context);
   const name2 = profile.processor.registeredName;
+  const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl);
+  if (name2 && !registered.has(name2)) {
+    try {
+      await context.audioWorklet.addModule(url);
+    } catch (cause) {
+      throw new LoadError(
+        STEPS.registerProcessor,
+        `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
+        { cause }
+      );
+    }
+    if (name2) registered.add(name2);
+  }
   if (!name2) {
     throw new LoadError(
       STEPS.constructNode,
@@ -21465,6 +21480,11 @@ var OPERATIONS = {
       channel: nextChannel(DEFAULT_CHANNEL, change.channel ?? {}),
       midiInput: null,
       audioInput: null,
+      // Whether this track is armed to record MIDI or audio. A UI toggle sets it;
+      // the recorder honours it when the transport runs.
+      armed: false,
+      // The source feeding a recorded take on this track: 'midi', 'audio' or null.
+      recordSource: null,
       // The bus this track's output goes to instead of the master, or null.
       output: null
     });
@@ -21484,6 +21504,8 @@ var OPERATIONS = {
       checkTrackOutput(state, change.id, change.output);
       track2.output = change.output;
     }
+    if (change.armed !== void 0) track2.armed = Boolean(change.armed);
+    if (change.recordSource !== void 0) track2.recordSource = change.recordSource;
     return change.id;
   },
   /**
@@ -35358,7 +35380,7 @@ function trackKind(project, track2, profileOf) {
 var TRACK_KIND_LABELS = Object.freeze({ bus: "Bus", instrument: "Instrument", midi: "MIDI", audio: "Audio" });
 
 // src/ui/TrackHeader.js
-function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
+function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChannel, onMove, onArm, onArmSource = null, onDuplicateTrack = null, onGrip = null, onFx = null, onExpand = null, onSizeStep = null, onExtend = null, onEdit = null, onDeleteTrack = null, menu = null }) {
   for (const [name3, fn] of Object.entries({ onSelect, onAdd, onAddAudio, onChannel, onMove, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTrackHeader needs ${name3}`);
   }
@@ -35450,6 +35472,17 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   arm.textContent = "Arm";
   arm.setAttribute("aria-pressed", "false");
   arm.addEventListener("click", () => onArm(id, arm.getAttribute("aria-pressed") !== "true"));
+  const source = document2.createElement("select");
+  source.className = "head-arm-source";
+  source.id = `head-${id}-arm-source`;
+  source.hidden = true;
+  for (const [value2, label] of [["midi", "MIDI"], ["audio", "Audio"]]) {
+    const option = document2.createElement("option");
+    option.value = value2;
+    option.textContent = label;
+    source.append(option);
+  }
+  if (onArmSource) source.addEventListener("change", () => onArmSource(id, source.value));
   const duplicate = document2.createElement("button");
   duplicate.type = "button";
   duplicate.className = "head-duplicate";
@@ -35513,7 +35546,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const title = document2.createElement("div");
   title.className = "head-title";
   title.append(name2, ...onGrip ? [grip] : [], ...onExpand ? [expand2] : []);
-  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
+  element.append(title, kindLabel, arm, source, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
   return {
     element,
     /**
@@ -35521,7 +35554,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
      * to hear; `silent` is what solo did to it, which is not the same as muted;
      * `at` and `where` are where the next clip goes and how to say so.
      */
-    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first: first4 = false, last = false }) {
+    update({ label, channel, mixable: mixable2, silent: isSilent, at: place, where, selected = false, color = null, size = DEFAULT_LANE_SIZE, latency: late = null, canArm = false, armed = false, armSource = "midi", fx: fxShown = false, fxCount = 0, routing: routed = null, kind = null, first: first4 = false, last = false }) {
       Object.assign(now, { label, mixable: mixable2, channel, canArm, armed, size, first: first4, last, at: place });
       name2.textContent = label;
       name2.setAttribute("aria-label", `Select ${label}`);
@@ -35565,6 +35598,8 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       arm.hidden = !canArm;
       arm.setAttribute("aria-pressed", String(armed));
       arm.textContent = armed ? "Armed" : "Arm";
+      source.hidden = !canArm || !onArmSource;
+      if (!source.hidden) source.value = armSource;
       arm.setAttribute("aria-label", `Arm ${label} for MIDI input`);
       latency.hidden = !(late && (late.frames > 0 || late.alignFrames > 0));
       if (!latency.hidden) {
@@ -37098,7 +37133,7 @@ function createLaneResize(document2, { lane, onCommit, onReset }) {
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onArmSource = null, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -37284,6 +37319,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           onChannel,
           onMove: moveTrack,
           onArm,
+          onArmSource,
           onDuplicateTrack,
           onGrip: dragTrack,
           onFx: toggleFx,
@@ -38851,7 +38887,13 @@ function createArrangement(ctx2) {
     onSetLoop: (range) => ctx2.transport.setLoopRange(range),
     onSeek: (beat) => ctx2.transport.seek(beat),
     onArm: (trackId, on) => {
-      ctx2.midiIn.arm(trackId, on);
+      const source = ctx2.dispatcher.project.track(trackId)?.recordSource ?? "midi";
+      if (source === "audio") ctx2.micIn.arm(trackId, on);
+      else ctx2.midiIn.arm(trackId, on);
+      ctx2.rack.draw();
+    },
+    onArmSource: (trackId, source) => {
+      ctx2.dispatcher.apply([{ op: "setTrack", id: trackId, recordSource: source }]);
       ctx2.rack.draw();
     },
     // Order is layout, not an edit: no revision, no undo, and the editor graph tells the page.
@@ -39197,8 +39239,9 @@ function createArrangement(ctx2) {
       }),
       routingFor: (track2) => describeRouting(project, track2.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
       kindFor: (track2) => trackKind(project, track2, (id) => ctx2.dispatcher.engineNode(id)?.profile),
-      canArm: (track2) => Boolean(track2.midiInput),
-      armed: (track2) => ctx2.midiIn.armed(track2.id),
+      canArm: (track2) => Boolean(track2.midiInput) || Boolean(track2.audioInput),
+      armed: (track2) => ctx2.midiIn.armed(track2.id) || ctx2.micIn?.armed?.(track2.id) === true,
+      armSource: (track2) => track2.recordSource ?? (track2.audioInput && !track2.midiInput ? "audio" : "midi"),
       latencyFor: (track2) => {
         const found = latencies.get(track2.id);
         return found === void 0 ? null : { frames: found.frames, alignFrames: found.alignFrames, rate: sampleRate };
@@ -41918,6 +41961,8 @@ function writeProject(project, { iri: iri5, created = null } = {}) {
     if (track2.midiInput) statements.push(`${term3(jig6.midiInput)} <#${track2.midiInput}>`);
     if (track2.audioInput) statements.push(`${term3(jig6.audioInput)} <#${track2.audioInput}>`);
     if (track2.output) statements.push(`${term3(jig6.output)} <#${track2.output}>`);
+    if (track2.armed) statements.push(`${term3(jig6.armed)} true`);
+    if (track2.recordSource) statements.push(`${term3(jig6.recordSource)} ${string(track2.recordSource)}`);
     const clips = (project.clips ?? []).filter((c3) => c3.track === track2.id).sort(byId);
     if (clips.length > 0) statements.push(`${term3(jig6.clip)} ${clips.map((c3) => `<#${c3.id}>`).join(" , ")}`);
     lines.push(statements.map((st) => `    ${st}`).join(" ;\n") + " .");
@@ -42352,7 +42397,9 @@ function readProject(dataset2) {
     channel: readChannel(dataset2, trackIri, id),
     midiInput: value(one2(dataset2, trackIri, jig8.midiInput)),
     audioInput: value(one2(dataset2, trackIri, jig8.audioInput)),
-    output: value(one2(dataset2, trackIri, jig8.output))
+    output: value(one2(dataset2, trackIri, jig8.output)),
+    armed: value(one2(dataset2, trackIri, jig8.armed)) === "true",
+    recordSource: value(one2(dataset2, trackIri, jig8.recordSource))
   }));
   const clips = [];
   for (const trackIri of trackIris) {
@@ -42461,7 +42508,10 @@ function readProject(dataset2) {
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue;
     const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri5, `${what} of track ${t.id}`);
-    changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput") });
+    const extra = {};
+    if (t.armed) extra.armed = true;
+    if (t.recordSource) extra.recordSource = t.recordSource;
+    changes.push({ op: "setTrack", id: t.id, midiInput: input(t.midiInput, "midiInput"), audioInput: input(t.audioInput, "audioInput"), ...extra });
   }
   changes.push(...connections);
   changes.push(...clips);
@@ -43848,9 +43898,22 @@ function createMicIn(ctx2, { getUserMedia, mediaDevices, available }) {
       });
     });
   }
+  function armed(trackId) {
+    return live !== null && live.track === trackId;
+  }
+  async function arm(trackId, on) {
+    if (on) await open(trackId, chosen());
+    else if (live && live.track === trackId) {
+      ctx2.engine.closeInput(trackId);
+      live = null;
+      show();
+    }
+  }
   return {
     mount,
     refresh,
+    armed,
+    arm,
     active: () => live !== null,
     /** Whether the browser can be asked for a microphone at all: the button is left out of the page when not. */
     available: Boolean(available),

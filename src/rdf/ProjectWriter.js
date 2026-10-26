@@ -161,6 +161,8 @@ export function writeProject (project, { iri, created = null } = {}) {
     if (track.midiInput) statements.push(`${term(jig.midiInput)} <#${track.midiInput}>`)
     if (track.audioInput) statements.push(`${term(jig.audioInput)} <#${track.audioInput}>`)
     if (track.output) statements.push(`${term(jig.output)} <#${track.output}>`)
+    if (track.armed) statements.push(`${term(jig.armed)} true`)
+    if (track.recordSource) statements.push(`${term(jig.recordSource)} ${string(track.recordSource)}`)
     const clips = (project.clips ?? []).filter(c => c.track === track.id).sort(byId)
     if (clips.length > 0) statements.push(`${term(jig.clip)} ${clips.map(c => `<#${c.id}>`).join(' , ')}`)
     lines.push(statements.map(st => `    ${st}`).join(' ;\n') + ' .')

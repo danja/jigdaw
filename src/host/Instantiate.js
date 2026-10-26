@@ -16,6 +16,16 @@ import { verifyIntegrity } from './Integrity.js'
 import { parameterDescriptors } from './Parameters.js'
 import { LoadError, STEPS } from './LoadError.js'
 
+// Per-AudioContext set of processor names already registered in that context.
+// addModule throws if a name is registered twice, so this keeps a repeated load
+// of the same plugin from failing.
+const registeredByContext = new WeakMap()
+function registeredNamesFor (context) {
+  let set = registeredByContext.get(context)
+  if (!set) { set = new Set(); registeredByContext.set(context, set) }
+  return set
+}
+
 /**
  * Steps 4 to 8. Returns a connected-ready AudioWorkletNode.
  *
@@ -61,16 +71,25 @@ export async function instantiate (profile, granted, context, {
     assets[name] = await fetchVerified(asset, { kind: `asset "${name}"` })
   }
 
+  // A processor name can only be registered once per AudioContext. Loading the
+  // same plugin twice (or reopening a session that already loaded it) would
+  // otherwise throw "An AudioWorkletProcessor with name X is already registered"
+  // from addModule. Track what this context has already registered and skip the
+  // second addModule, since the constructor is already available.
+  const registered = registeredNamesFor(context)
+  const name = profile.processor.registeredName
   const url = await resolveProcessorUrl(processorBytes, profile.processor.location, processorUrl)
-  try {
-    await context.audioWorklet.addModule(url)
-  } catch (cause) {
-    throw new LoadError(STEPS.registerProcessor,
-      `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
-      { cause })
+  if (name && !registered.has(name)) {
+    try {
+      await context.audioWorklet.addModule(url)
+    } catch (cause) {
+      throw new LoadError(STEPS.registerProcessor,
+        `the processor at ${profile.processor.location} failed to register: ${cause.message}`,
+        { cause })
+    }
+    if (name) registered.add(name)
   }
 
-  const name = profile.processor.registeredName
   if (!name) {
     throw new LoadError(STEPS.constructNode,
       'the profile declares no jig:registeredName, and a worklet cannot be asked what it registered')

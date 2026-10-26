@@ -231,7 +231,9 @@ export function readProject (dataset) {
       channel: readChannel(dataset, trackIri, id),
       midiInput: value(one(dataset, trackIri, jig.midiInput)),
       audioInput: value(one(dataset, trackIri, jig.audioInput)),
-      output: value(one(dataset, trackIri, jig.output))
+      output: value(one(dataset, trackIri, jig.output)),
+      armed: value(one(dataset, trackIri, jig.armed)) === 'true',
+      recordSource: value(one(dataset, trackIri, jig.recordSource))
     }))
 
   // Clips, on the tracks that hold them. The kind is the clip's type, which
@@ -355,7 +357,10 @@ export function readProject (dataset) {
   for (const t of tracks) {
     if (t.midiInput === null && t.audioInput === null) continue
     const input = (nodeIri, what) => (nodeIri === null ? null : idOf(nodeIri, iri, `${what} of track ${t.id}`))
-    changes.push({ op: 'setTrack', id: t.id, midiInput: input(t.midiInput, 'midiInput'), audioInput: input(t.audioInput, 'audioInput') })
+    const extra = {}
+    if (t.armed) extra.armed = true
+    if (t.recordSource) extra.recordSource = t.recordSource
+    changes.push({ op: 'setTrack', id: t.id, midiInput: input(t.midiInput, 'midiInput'), audioInput: input(t.audioInput, 'audioInput'), ...extra })
   }
   changes.push(...connections)
   changes.push(...clips)

@@ -105,9 +105,17 @@ export function createMicIn (ctx, { getUserMedia, mediaDevices, available }) {
     })
   }
 
+  function armed (trackId) { return live !== null && live.track === trackId }
+  async function arm (trackId, on) {
+    if (on) await open(trackId, chosen())
+    else if (live && live.track === trackId) { ctx.engine.closeInput(trackId); live = null; show() }
+  }
+
   return {
     mount,
     refresh,
+    armed,
+    arm,
     active: () => live !== null,
     /** Whether the browser can be asked for a microphone at all: the button is left out of the page when not. */
     available: Boolean(available),
