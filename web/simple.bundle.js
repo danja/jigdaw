@@ -35059,8 +35059,16 @@ var ctx = {
   history: { updateButtons() {
   } },
   // No alignment setting on this page: the starting value in web/host.json applies.
-  align: { preferred: (fromConfig) => fromConfig, sync() {
-  } },
+  align: {
+    preferred: (fromConfig) => fromConfig,
+    sync() {
+    },
+    // What the opened session says, or the starting value when it says nothing, as the studio page does without its checkbox.
+    fromSession() {
+      const d = ctx.dispatcher;
+      d.setAlignTracks(d.project.settings.alignTracks ?? ctx.hostConfig.alignTracks);
+    }
+  },
   /** For the console and for a check driven from outside the page, as on the studio page. */
   expose() {
     window.__jigdaw = { dispatcher: ctx.dispatcher, engine: ctx.engine, bounce: ctx.bounce };
