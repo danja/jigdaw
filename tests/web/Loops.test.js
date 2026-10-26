@@ -10,8 +10,9 @@ import { createLoops } from '../../web/app/Loops.js'
 const index = {
   loops: [
     { id: 'rock', label: 'Rock', kind: 'drums', lengthBeats: 4, about: 'A beat.', licence: 'CC0-1.0', notes: [{ startBeat: 0, lengthBeats: 0.25, pitch: 36, velocity: 100 }, { startBeat: 2, lengthBeats: 0.25, pitch: 38, velocity: 100 }] },
-    { id: 'walk', label: 'Walk', kind: 'bass', lengthBeats: 8, about: 'A line.', licence: 'CC0-1.0', notes: [{ startBeat: 0, lengthBeats: 1, pitch: 36, velocity: 96 }] }
-  ]
+    { id: 'walk', label: 'Walk', kind: 'bass', gain: 1.5, lengthBeats: 8, about: 'A line.', licence: 'CC0-1.0', notes: [{ startBeat: 0, lengthBeats: 1, pitch: 36, velocity: 96 }] }
+  ],
+  sets: [{ id: 'starter', label: 'Starter', about: 'Two parts.', licence: 'CC0-1.0', bpm: 100, key: 'A minor', loops: ['rock', 'walk'] }]
 }
 const instruments = [
   { iri: 'https://example.test/plugins/drumkit/', homepage: 'https://example.test/kit/', label: 'DrumKit', comment: 'Drums.', roles: ['Instrument', 'DrumInstrument'], web: true },
@@ -21,7 +22,7 @@ const instruments = [
 const realFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = realFetch })
 
-function setup ({ selectedTrack = null, tracks = {}, nodeRoles: roles = {}, fetchResult = { ok: true, status: 200, json: async () => index }, applyFails = null, loadFails = false, search } = {}) {
+function setup ({ selectedTrack = null, tracks = {}, nodeRoles: roles = {}, failAfter = null, fetchResult = { ok: true, status: 200, json: async () => index }, applyFails = null, loadFails = false, search } = {}) {
   const { document } = parseHTML('<!doctype html><body></body>')
   Object.defineProperty(document, 'baseURI', { value: 'http://test.local/' })
   const create = document.createElement.bind(document)
@@ -44,7 +45,7 @@ function setup ({ selectedTrack = null, tracks = {}, nodeRoles: roles = {}, fetc
   let counter = 0
   const dispatcher = {
     engineNode: id => (nodeRoles.has(id) ? { profile: { roles: nodeRoles.get(id) } } : { profile: { roles: [] } }),
-    project: { track: id => trackMap.get(id) ?? null, transport: { tempoPoints: [{ atBeat: 0, bpm: 120 }], beatsPerBar: 4 } },
+    project: { get tracks () { return [...trackMap.values()] }, track: id => trackMap.get(id) ?? null, transport: { tempoPoints: [{ atBeat: 0, bpm: 120 }], beatsPerBar: 4 } },
     async grouped (fn, options) { groups.push(options.label); return fn() },
     apply (changes) {
       applied.push(...changes)
@@ -62,7 +63,15 @@ function setup ({ selectedTrack = null, tracks = {}, nodeRoles: roles = {}, fetc
     engine: { context: { currentTime: 1, sampleRate: 48000 } },
     transport: { position: () => ({ beat: 5.4 }) },
     selection,
-    loading: { loadPlugin: async (url, options) => { loaded.push({ url, options }); if (loadFails) return undefined; const trackId = 'new-track'; trackMap.set(trackId, { id: trackId, midiInput: 'n1' }); return { trackId, nodeId: 'n1' } } },
+    loading: {
+      loadPlugin: async (url, options) => {
+        loaded.push({ url, options })
+        if (loadFails || (failAfter !== null && loaded.length > failAfter)) return undefined
+        const trackId = loaded.length === 1 ? 'new-track' : `new-track-${loaded.length}`
+        trackMap.set(trackId, { id: trackId, midiInput: 'n1' })
+        return { trackId, nodeId: 'n1' }
+      }
+    },
     browser: { catalogue: () => ({ search: async query => (search ? search(query) : { results: instruments }) }) }
   }
   return { ctx, document, sent, groups, applied, loaded, selected, logs, fetched, loops: createLoops(ctx) }
@@ -78,7 +87,7 @@ describe('opening the dialog', () => {
     const { loops, document, fetched } = setup()
     await loops.open()
     expect(fetched).toEqual(['http://test.local/loops/index.json'])
-    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Drums', 'Bass'])
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Starter sets', 'Drums', 'Bass'])
     await loops.open()
     expect(document.querySelectorAll('dialog')).toHaveLength(1)
   })
@@ -176,6 +185,27 @@ describe('adding a loop with no track for it', () => {
     expect(loaded[0].url).toBe('https://example.test/pulse/')
   })
 
+  it('gives a track made for a loop the level the loop suggests, and a loop with no suggestion no change to the fader', async () => {
+    const walk = setup()
+    await walk.loops.open()
+    click(walk.document, 'Add Walk')
+    await settle()
+    expect(walk.applied.filter(c => c.op === 'setTrackChannel')).toEqual([{ op: 'setTrackChannel', track: 'new-track', gain: 1.5 }])
+    const rock = setup()
+    await rock.loops.open()
+    click(rock.document, 'Add Rock')
+    await settle()
+    expect(rock.applied.filter(c => c.op === 'setTrackChannel')).toEqual([])
+  })
+
+  it('leaves the fader of a track the person already has alone, whatever the loop suggests', async () => {
+    const { loops, document, applied } = setup({ selectedTrack: 't1', tracks: { t1: { id: 't1', midiInput: 'n9' } } })
+    await loops.open()
+    click(document, 'Add Walk')
+    await settle()
+    expect(applied.filter(c => c.op === 'setTrackChannel')).toEqual([])
+  })
+
   it('does the same for a drum loop when the selected track is not a drum kit, and for a pitched loop when it is', async () => {
     const synth = setup({ selectedTrack: 't1', tracks: { t1: { id: 't1', midiInput: 'n9' } } })
     await synth.loops.open()
@@ -251,5 +281,52 @@ describe('closing', () => {
     document.querySelector('dialog').dispatchEvent(new document.defaultView.Event('cancel'))
     expect(loops.isOpen()).toBe(false)
     expect(applied).toEqual([])
+  })
+})
+
+
+describe('adding a set', () => {
+  const addSet = async options => {
+    const made = setup(options)
+    await made.loops.open()
+    click(made.document, 'Add all of Starter')
+    await settle()
+    return made
+  }
+
+  it('is offered at the top of the dialog with the loops it holds', async () => {
+    const { loops, document } = setup()
+    await loops.open()
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Starter sets', 'Drums', 'Bass'])
+  })
+
+  it('makes a track for each loop with the sound that suits it, named for the loop, each with its clip at the start, as one group', async () => {
+    const { applied, loaded, groups, selected, document } = await addSet()
+    expect(loaded.map(l => l.url)).toEqual(['https://example.test/kit/', 'https://example.test/pulse/'])
+    expect(applied.filter(c => c.op === 'setTrack')).toEqual([{ op: 'setTrack', id: 'new-track', label: 'Rock' }, { op: 'setTrack', id: 'new-track-2', label: 'Walk' }])
+    // Only the loop that suggests a level gets one, and only on a track made for it.
+    expect(applied.filter(c => c.op === 'setTrackChannel')).toEqual([{ op: 'setTrackChannel', track: 'new-track-2', gain: 1.5 }])
+    expect(clips(applied).map(c => [c.track, c.startBeat, c.lengthBeats])).toEqual([['new-track', 0, 4], ['new-track-2', 0, 8]])
+    expect(groups).toEqual(['Add Starter'])
+    expect(selected).toEqual([['track', ['new-track']]])
+    expect(document.querySelectorAll('dialog')).toHaveLength(0)
+  })
+
+  it('sets the tempo of the set when the project has no tracks, and in the same group', async () => {
+    const { applied } = await addSet()
+    expect(applied[0]).toEqual({ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: 100 }] })
+  })
+
+  it('leaves the tempo alone when there is already a track, and says so, since changing it would move the person\'s own work', async () => {
+    const { applied, logs } = await addSet({ tracks: { t1: { id: 't1', midiInput: 'n9' } } })
+    expect(applied.some(c => c.op === 'setTransport')).toBe(false)
+    expect(logs.some(l => /kept the tempo you have: Starter is written for 100 BPM/.test(l.message))).toBe(true)
+  })
+
+  it('says why when a part does not load, stays open, and what was made is still one group to undo', async () => {
+    const { groups, loops, document } = await addSet({ failAfter: 1 })
+    expect(document.querySelector('[role="status"]').textContent).toMatch(/Pulse did not load/)
+    expect(loops.isOpen()).toBe(true)
+    expect(groups).toEqual(['Add Starter'])
   })
 })

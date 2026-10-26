@@ -26,6 +26,10 @@ export function checkLoop (loop) {
   if (typeof loop.about !== 'string' || loop.about.trim() === '') fail(loop, 'needs a line saying what it is')
   if (typeof loop.licence !== 'string' || loop.licence.trim() === '') fail(loop, 'needs a licence')
   if (!(Number.isFinite(loop.lengthBeats) && loop.lengthBeats > 0)) fail(loop, 'needs a length in beats above zero')
+  if (loop.key !== undefined && (typeof loop.key !== 'string' || loop.key.trim() === '')) fail(loop, 'has a key that is not a name')
+  if (loop.bpm !== undefined && !(Number.isFinite(loop.bpm) && loop.bpm > 0)) fail(loop, 'has a tempo that is not above zero')
+  // A suggested level for the track the loop gets when it is added with a track of its own, so the parts of a set start in balance.
+  if (loop.gain !== undefined && !(Number.isFinite(loop.gain) && loop.gain >= 0 && loop.gain <= 2)) fail(loop, 'has a gain that is not from 0 to 2')
   if (!Array.isArray(loop.notes) || loop.notes.length === 0) fail(loop, 'needs at least one note')
   for (const [i, note] of loop.notes.entries()) {
     const where = `note ${i}`
@@ -51,6 +55,31 @@ export function loopsFromIndex (index) {
   return loops
 }
 
+/**
+ * The sets of a library file, each a few loops added together on a track of their own at a tempo (a deep house starter: drums, bass, stabs and a
+ * pad). A set is checked against the loops it names, which must all be there, and must be at least two, since one loop is a loop.
+ */
+export function setsFromIndex (index, loops) {
+  const known = new Set(loops.map(l => l.id))
+  const sets = index.sets ?? []
+  if (!Array.isArray(sets)) throw new Error('the loop library sets are not a list')
+  const seen = new Set()
+  return sets.map(set => {
+    const fail = message => { throw new Error(`set ${set?.id ?? '(no id)'}: ${message}`) }
+    if (!set || typeof set.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(set.id)) fail('needs an id of lowercase letters, digits and hyphens')
+    if (seen.has(set.id)) fail('another set has the same id')
+    seen.add(set.id)
+    if (typeof set.label !== 'string' || set.label.trim() === '') fail('needs a label')
+    if (typeof set.about !== 'string' || set.about.trim() === '') fail('needs a line saying what it is')
+    if (typeof set.licence !== 'string' || set.licence.trim() === '') fail('needs a licence')
+    if (!(Number.isFinite(set.bpm) && set.bpm > 0)) fail('needs a tempo above zero')
+    if (!Array.isArray(set.loops) || set.loops.length < 2) fail('needs at least two loops')
+    for (const id of set.loops) if (!known.has(id)) fail(`names ${id}, which is not a loop`)
+    if (new Set(set.loops).size !== set.loops.length) fail('names a loop twice')
+    return set
+  })
+}
+
 /** The loops under a heading for each kind that has any, in the order of KINDS. */
 export function groupsOf (loops) {
   return KINDS
@@ -58,11 +87,19 @@ export function groupsOf (loops) {
     .filter(group => group.loops.length > 0)
 }
 
-/** How long a loop is, in words: "2 bars", or "6 beats" when it is not a whole number of bars. */
+/** How long a loop is, in words: "2 bars", or "6 beats" when it is not a whole number of bars, then its key where it has one. */
 export function lengthText (loop, beatsPerBar = 4) {
   const bars = loop.lengthBeats / beatsPerBar
-  if (Number.isInteger(bars)) return `${bars} ${bars === 1 ? 'bar' : 'bars'}`
-  return `${loop.lengthBeats} beats`
+  const length = Number.isInteger(bars) ? `${bars} ${bars === 1 ? 'bar' : 'bars'}` : `${loop.lengthBeats} beats`
+  return loop.key ? `${length}, ${loop.key}` : length
+}
+
+/** A set in words: how many tracks, how long, and the tempo and key it asks for. */
+export function setText (set, loops) {
+  const parts = loops.filter(l => set.loops.includes(l.id))
+  const beats = Math.max(...parts.map(l => l.lengthBeats))
+  const bars = beats / 4
+  return `${set.loops.length} tracks, ${Number.isInteger(bars) ? `${bars} bars` : `${beats} beats`}, ${set.bpm} BPM${set.key ? `, ${set.key}` : ''}`
 }
 
 /**
@@ -100,9 +137,10 @@ export function eventsFor (loop, { bpm, sampleRate, startFrame }) {
 /**
  * The dialog. `groups` is from groupsOf. `canHear` says whether there is an instrument to play a loop through: a boolean, or a function of the
  * loop, since a drum loop and a bass loop want different instruments. Where there is not, Hear is left out for that loop, and the text says what to
- * do, rather than a button that cannot act. Returns `{ element, say(text) }`.
+ * do, rather than a button that cannot act. `sets` are added whole with an Add of their own and no Hear, since a set is several parts that sound
+ * together once added. Returns `{ element, say(text) }`.
  */
-export function createLoopBrowser (document, { groups, canHear, beatsPerBar = 4, onHear, onAdd, onClose }) {
+export function createLoopBrowser (document, { groups, sets = [], loops = [], canHear, beatsPerBar = 4, onHear, onAdd, onAddSet = () => {}, onClose }) {
   const dialog = document.createElement('dialog')
   dialog.className = 'chooser loops'
   dialog.setAttribute('aria-labelledby', 'loops-title')
@@ -115,14 +153,46 @@ export function createLoopBrowser (document, { groups, canHear, beatsPerBar = 4,
   const help = document.createElement('p')
   help.className = 'note'
   help.textContent = anyHearable
-    ? 'Starting points, in C: add one, then change it in the piano roll. Hear plays a loop through the instrument on the selected track.'
-    : 'Starting points, in C: add one, then change it in the piano roll. Add puts it on the selected track that has an instrument, or on a new track with a sound to suit it. Select a track with an instrument to hear a loop before adding it.'
+    ? 'Starting points, each in the key it names: add one, then change it in the piano roll. Hear plays a loop through the instrument on the selected track.'
+    : 'Starting points, each in the key it names: add one, then change it in the piano roll. Add puts it on the selected track that has an instrument, or on a new track with a sound to suit it. Select a track with an instrument to hear a loop before adding it.'
   const status = document.createElement('p')
   status.className = 'note'
   status.setAttribute('role', 'status')
 
   const scroll = document.createElement('div')
   scroll.className = 'sound-scroll'
+  if (sets.length > 0) {
+    const section = document.createElement('section')
+    const heading = document.createElement('h3')
+    heading.id = 'loop-sets'
+    heading.textContent = 'Starter sets'
+    const list = document.createElement('ul')
+    list.className = 'sound-list'
+    list.setAttribute('aria-labelledby', heading.id)
+    for (const set of sets) {
+      const item = document.createElement('li')
+      const words = document.createElement('div')
+      words.className = 'sound-words'
+      const name = document.createElement('strong')
+      name.textContent = `${set.label} `
+      const mark = document.createElement('span')
+      mark.className = 'sound-mark'
+      mark.textContent = `(${setText(set, loops)})`
+      const about = document.createElement('span')
+      about.className = 'sound-about'
+      about.textContent = set.about
+      words.append(name, mark, about)
+      const add = document.createElement('button')
+      add.type = 'button'
+      add.textContent = 'Add all'
+      add.setAttribute('aria-label', `Add all of ${set.label}`)
+      add.addEventListener('click', () => onAddSet(set))
+      item.append(words, add)
+      list.append(item)
+    }
+    section.append(heading, list)
+    scroll.append(section)
+  }
   groups.forEach((group, index) => {
     const section = document.createElement('section')
     const heading = document.createElement('h3')
@@ -165,7 +235,7 @@ export function createLoopBrowser (document, { groups, canHear, beatsPerBar = 4,
     section.append(heading, list)
     scroll.append(section)
   })
-  if (groups.length === 0) {
+  if (groups.length === 0 && sets.length === 0) {
     const none = document.createElement('p')
     none.className = 'note'
     none.textContent = 'There are no loops to offer.'

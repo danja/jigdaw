@@ -40948,6 +40948,9 @@ function checkLoop(loop) {
   if (typeof loop.about !== "string" || loop.about.trim() === "") fail(loop, "needs a line saying what it is");
   if (typeof loop.licence !== "string" || loop.licence.trim() === "") fail(loop, "needs a licence");
   if (!(Number.isFinite(loop.lengthBeats) && loop.lengthBeats > 0)) fail(loop, "needs a length in beats above zero");
+  if (loop.key !== void 0 && (typeof loop.key !== "string" || loop.key.trim() === "")) fail(loop, "has a key that is not a name");
+  if (loop.bpm !== void 0 && !(Number.isFinite(loop.bpm) && loop.bpm > 0)) fail(loop, "has a tempo that is not above zero");
+  if (loop.gain !== void 0 && !(Number.isFinite(loop.gain) && loop.gain >= 0 && loop.gain <= 2)) fail(loop, "has a gain that is not from 0 to 2");
   if (!Array.isArray(loop.notes) || loop.notes.length === 0) fail(loop, "needs at least one note");
   for (const [i2, note] of loop.notes.entries()) {
     const where = `note ${i2}`;
@@ -40970,13 +40973,41 @@ function loopsFromIndex(index) {
   }
   return loops;
 }
+function setsFromIndex(index, loops) {
+  const known = new Set(loops.map((l) => l.id));
+  const sets = index.sets ?? [];
+  if (!Array.isArray(sets)) throw new Error("the loop library sets are not a list");
+  const seen = /* @__PURE__ */ new Set();
+  return sets.map((set) => {
+    const fail2 = (message) => {
+      throw new Error(`set ${set?.id ?? "(no id)"}: ${message}`);
+    };
+    if (!set || typeof set.id !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(set.id)) fail2("needs an id of lowercase letters, digits and hyphens");
+    if (seen.has(set.id)) fail2("another set has the same id");
+    seen.add(set.id);
+    if (typeof set.label !== "string" || set.label.trim() === "") fail2("needs a label");
+    if (typeof set.about !== "string" || set.about.trim() === "") fail2("needs a line saying what it is");
+    if (typeof set.licence !== "string" || set.licence.trim() === "") fail2("needs a licence");
+    if (!(Number.isFinite(set.bpm) && set.bpm > 0)) fail2("needs a tempo above zero");
+    if (!Array.isArray(set.loops) || set.loops.length < 2) fail2("needs at least two loops");
+    for (const id of set.loops) if (!known.has(id)) fail2(`names ${id}, which is not a loop`);
+    if (new Set(set.loops).size !== set.loops.length) fail2("names a loop twice");
+    return set;
+  });
+}
 function groupsOf(loops) {
   return KINDS4.map((k) => ({ heading: k.heading, kind: k.kind, loops: loops.filter((l) => l.kind === k.kind) })).filter((group) => group.loops.length > 0);
 }
 function lengthText(loop, beatsPerBar = 4) {
   const bars = loop.lengthBeats / beatsPerBar;
-  if (Number.isInteger(bars)) return `${bars} ${bars === 1 ? "bar" : "bars"}`;
-  return `${loop.lengthBeats} beats`;
+  const length = Number.isInteger(bars) ? `${bars} ${bars === 1 ? "bar" : "bars"}` : `${loop.lengthBeats} beats`;
+  return loop.key ? `${length}, ${loop.key}` : length;
+}
+function setText(set, loops) {
+  const parts = loops.filter((l) => set.loops.includes(l.id));
+  const beats2 = Math.max(...parts.map((l) => l.lengthBeats));
+  const bars = beats2 / 4;
+  return `${set.loops.length} tracks, ${Number.isInteger(bars) ? `${bars} bars` : `${beats2} beats`}, ${set.bpm} BPM${set.key ? `, ${set.key}` : ""}`;
 }
 function addClipChange({ loop, track: track2, startBeat }) {
   if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a loop is added at a beat at or after the start");
@@ -40999,7 +41030,8 @@ function eventsFor(loop, { bpm, sampleRate, startFrame }) {
   events.sort((a2, b) => a2.frame - b.frame || a2.order - b.order);
   return events.map(({ frame: frame2, bytes }) => ({ frame: frame2, bytes }));
 }
-function createLoopBrowser(document2, { groups, canHear, beatsPerBar = 4, onHear, onAdd, onClose }) {
+function createLoopBrowser(document2, { groups, sets = [], loops = [], canHear, beatsPerBar = 4, onHear, onAdd, onAddSet = () => {
+}, onClose }) {
   const dialog = document2.createElement("dialog");
   dialog.className = "chooser loops";
   dialog.setAttribute("aria-labelledby", "loops-title");
@@ -41010,12 +41042,44 @@ function createLoopBrowser(document2, { groups, canHear, beatsPerBar = 4, onHear
   const anyHearable = groups.some((g) => g.loops.some(hearable));
   const help = document2.createElement("p");
   help.className = "note";
-  help.textContent = anyHearable ? "Starting points, in C: add one, then change it in the piano roll. Hear plays a loop through the instrument on the selected track." : "Starting points, in C: add one, then change it in the piano roll. Add puts it on the selected track that has an instrument, or on a new track with a sound to suit it. Select a track with an instrument to hear a loop before adding it.";
+  help.textContent = anyHearable ? "Starting points, each in the key it names: add one, then change it in the piano roll. Hear plays a loop through the instrument on the selected track." : "Starting points, each in the key it names: add one, then change it in the piano roll. Add puts it on the selected track that has an instrument, or on a new track with a sound to suit it. Select a track with an instrument to hear a loop before adding it.";
   const status = document2.createElement("p");
   status.className = "note";
   status.setAttribute("role", "status");
   const scroll = document2.createElement("div");
   scroll.className = "sound-scroll";
+  if (sets.length > 0) {
+    const section = document2.createElement("section");
+    const heading = document2.createElement("h3");
+    heading.id = "loop-sets";
+    heading.textContent = "Starter sets";
+    const list = document2.createElement("ul");
+    list.className = "sound-list";
+    list.setAttribute("aria-labelledby", heading.id);
+    for (const set of sets) {
+      const item = document2.createElement("li");
+      const words2 = document2.createElement("div");
+      words2.className = "sound-words";
+      const name2 = document2.createElement("strong");
+      name2.textContent = `${set.label} `;
+      const mark = document2.createElement("span");
+      mark.className = "sound-mark";
+      mark.textContent = `(${setText(set, loops)})`;
+      const about = document2.createElement("span");
+      about.className = "sound-about";
+      about.textContent = set.about;
+      words2.append(name2, mark, about);
+      const add = document2.createElement("button");
+      add.type = "button";
+      add.textContent = "Add all";
+      add.setAttribute("aria-label", `Add all of ${set.label}`);
+      add.addEventListener("click", () => onAddSet(set));
+      item.append(words2, add);
+      list.append(item);
+    }
+    section.append(heading, list);
+    scroll.append(section);
+  }
   groups.forEach((group, index) => {
     const section = document2.createElement("section");
     const heading = document2.createElement("h3");
@@ -41058,7 +41122,7 @@ function createLoopBrowser(document2, { groups, canHear, beatsPerBar = 4, onHear
     section.append(heading, list);
     scroll.append(section);
   });
-  if (groups.length === 0) {
+  if (groups.length === 0 && sets.length === 0) {
     const none = document2.createElement("p");
     none.className = "note";
     none.textContent = "There are no loops to offer.";
@@ -41084,12 +41148,15 @@ function createLoops(ctx2) {
   let browser2 = null;
   let library = null;
   let busy = false;
+  let instruments = null;
   const isOpen = () => browser2 !== null;
   async function load() {
     if (library) return library;
     const response = await fetch(new URL("loops/index.json", document2.baseURI));
     if (!response.ok) throw new Error(`the loop library answered ${response.status}`);
-    library = loopsFromIndex(await response.json());
+    const index = await response.json();
+    const loops = loopsFromIndex(index);
+    library = { loops, sets: setsFromIndex(index, loops) };
     return library;
   }
   function targetTrack(loop) {
@@ -41103,8 +41170,8 @@ function createLoops(ctx2) {
   }
   async function voiceFor(kind) {
     const directory = KINDS4.find((k) => k.kind === kind).voice;
-    const { results } = await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS });
-    const sound = soundsFrom(results).find((s) => directoryOf(s.iri) === directory);
+    instruments ??= (await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS })).results;
+    const sound = soundsFrom(instruments).find((s) => directoryOf(s.iri) === directory);
     if (!sound) throw new Error(`there is no ${directory} here to play a ${kind} loop`);
     return { load: sound.load, label: sound.label };
   }
@@ -41145,6 +41212,7 @@ function createLoops(ctx2) {
         const track2 = targetTrack(loop);
         let trackId;
         let startBeat;
+        const level = [];
         if (track2) {
           trackId = track2.id;
           startBeat = Math.max(0, Math.round(ctx2.transport.position().beat));
@@ -41154,8 +41222,9 @@ function createLoops(ctx2) {
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`);
           trackId = loaded.trackId;
           startBeat = 0;
+          if (loop.gain !== void 0) level.push({ op: "setTrackChannel", track: trackId, gain: loop.gain });
         }
-        const applied = d.apply([addClipChange({ loop, track: trackId, startBeat })]);
+        const applied = d.apply([...level, addClipChange({ loop, track: trackId, startBeat })]);
         if (!applied.ok) throw new Error(applied.message);
         return { trackId };
       }, { label: "Add a loop" });
@@ -41169,22 +41238,67 @@ function createLoops(ctx2) {
       busy = false;
     }
   }
+  async function addSet(set) {
+    if (busy) return;
+    busy = true;
+    try {
+      browser2.say(`Adding ${set.label}`);
+      const d = await ctx2.runtime.ensureRunning();
+      const parts = set.loops.map((id) => library.loops.find((l) => l.id === id));
+      const trackIds = await d.grouped(async () => {
+        if (d.project.tracks.length === 0) {
+          const tempo = d.apply([{ op: "setTransport", tempoPoints: [{ atBeat: 0, bpm: set.bpm }] }]);
+          if (!tempo.ok) throw new Error(tempo.message);
+        } else {
+          log2(`kept the tempo you have: ${set.label} is written for ${set.bpm} BPM`, "info");
+        }
+        const made = [];
+        for (const loop of parts) {
+          const voice = await voiceFor(loop.kind);
+          const loaded = await ctx2.loading.loadPlugin(voice.load, { newTrack: true });
+          if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`);
+          const applied = d.apply([
+            { op: "setTrack", id: loaded.trackId, label: loop.label },
+            ...loop.gain === void 0 ? [] : [{ op: "setTrackChannel", track: loaded.trackId, gain: loop.gain }],
+            addClipChange({ loop, track: loaded.trackId, startBeat: 0 })
+          ]);
+          if (!applied.ok) throw new Error(applied.message);
+          made.push(loaded.trackId);
+        }
+        return made;
+      }, { label: `Add ${set.label}` });
+      ctx2.selection.set("track", [trackIds[0]]);
+      if (isOpen()) close();
+      log2(`added ${set.label}`, "ok");
+    } catch (error2) {
+      log2(error2.message, "error");
+      browser2?.say(error2.message);
+    } finally {
+      busy = false;
+    }
+  }
   async function open() {
     if (isOpen()) return;
+    instruments = null;
     let loops = [];
+    let sets = [];
     let problem = null;
     try {
-      loops = await load();
+      ;
+      ({ loops, sets } = await load());
     } catch (error2) {
       problem = error2.message;
       log2(`loops: ${error2.message}`, "error");
     }
     browser2 = createLoopBrowser(document2, {
       groups: groupsOf(loops),
+      sets,
+      loops,
       canHear: (loop) => targetTrack(loop) !== null,
       beatsPerBar: ctx2.dispatcher?.project.transport.beatsPerBar,
       onHear: hear,
       onAdd: add,
+      onAddSet: addSet,
       onClose: () => {
         if (isOpen()) close();
       }

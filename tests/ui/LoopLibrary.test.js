@@ -6,7 +6,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { parseHTML } from 'linkedom'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { KINDS, checkLoop, loopsFromIndex, groupsOf, lengthText, addClipChange, eventsFor, createLoopBrowser } from '../../src/ui/LoopLibrary.js'
+import { KINDS, checkLoop, loopsFromIndex, setsFromIndex, groupsOf, lengthText, setText, addClipChange, eventsFor, createLoopBrowser } from '../../src/ui/LoopLibrary.js'
+import { euclid } from '../../src/model/Euclidean.js'
 
 let document
 let window
@@ -30,6 +31,13 @@ describe('checkLoop', () => {
       [{ about: '' }, /needs a line/],
       [{ licence: '' }, /needs a licence/],
       [{ lengthBeats: 0 }, /length in beats above zero/],
+      [{ key: '' }, /key that is not a name/],
+      [{ key: 7 }, /key that is not a name/],
+      [{ bpm: 0 }, /tempo that is not above zero/],
+      [{ bpm: 'fast' }, /tempo that is not above zero/],
+      [{ gain: -1 }, /gain that is not from 0 to 2/],
+      [{ gain: 3 }, /gain that is not from 0 to 2/],
+      [{ gain: 'loud' }, /gain that is not from 0 to 2/],
       [{ notes: [] }, /at least one note/],
       [{ notes: [{ startBeat: -1, lengthBeats: 1, pitch: 60, velocity: 90 }] }, /note 0 starts before the loop/],
       [{ notes: [{ startBeat: 0, lengthBeats: 0, pitch: 60, velocity: 90 }] }, /note 0 has no length/],
@@ -61,6 +69,33 @@ describe('loopsFromIndex', () => {
   })
 })
 
+describe('setsFromIndex', () => {
+  const loops = [loop({ id: 'a' }), loop({ id: 'b' }), loop({ id: 'c' })]
+  const set = over => ({ id: 'house', label: 'House', about: 'A set.', licence: 'CC0-1.0', bpm: 120, loops: ['a', 'b'], ...over })
+
+  it('returns the sets of a library, and none for a library with none', () => {
+    expect(setsFromIndex({ sets: [set()] }, loops)).toHaveLength(1)
+    expect(setsFromIndex({}, loops)).toEqual([])
+  })
+
+  it('refuses each malformed part, naming the set and the reason', () => {
+    const cases = [
+      [{ id: 'Bad Id' }, /needs an id/], [{ label: '' }, /needs a label/], [{ about: '' }, /needs a line/], [{ licence: '' }, /needs a licence/],
+      [{ bpm: 0 }, /needs a tempo above zero/], [{ loops: ['a'] }, /at least two loops/], [{ loops: 'ab' }, /at least two loops/],
+      [{ loops: ['a', 'zzz'] }, /names zzz, which is not a loop/], [{ loops: ['a', 'a'] }, /names a loop twice/]
+    ]
+    for (const [over, pattern] of cases) expect(() => setsFromIndex({ sets: [set(over)] }, loops), JSON.stringify(over)).toThrow(pattern)
+    expect(() => setsFromIndex({ sets: [set(), set()] }, loops)).toThrow(/another set has the same id/)
+    expect(() => setsFromIndex({ sets: 'x' }, loops)).toThrow(/not a list/)
+  })
+
+  it('says a set in words: how many tracks, how long, at what tempo and in what key', () => {
+    const long = loop({ id: 'b', lengthBeats: 16 })
+    expect(setText(set({ key: 'A minor' }), [loop({ id: 'a' }), long])).toBe('2 tracks, 4 bars, 120 BPM, A minor')
+    expect(setText(set(), [loop({ id: 'a' }), loop({ id: 'b' })])).toBe('2 tracks, 1 bars, 120 BPM')
+  })
+})
+
 describe('groupsOf and lengthText', () => {
   it('groups by kind in the order of KINDS and leaves out a kind with nothing', () => {
     const groups = groupsOf([loop({ id: 'a', kind: 'melody' }), loop({ id: 'b', kind: 'drums' }), loop({ id: 'c', kind: 'drums' })])
@@ -74,6 +109,7 @@ describe('groupsOf and lengthText', () => {
     expect(lengthText({ lengthBeats: 8 })).toBe('2 bars')
     expect(lengthText({ lengthBeats: 6 })).toBe('6 beats')
     expect(lengthText({ lengthBeats: 6 }, 3)).toBe('2 bars')
+    expect(lengthText({ lengthBeats: 8, key: 'A minor' })).toBe('2 bars, A minor')
   })
 })
 
@@ -167,6 +203,75 @@ describe('the real library', () => {
   })
 })
 
+describe('deep house that writes itself, as it is in the library', () => {
+  const index = JSON.parse(readFileSync(resolve(import.meta.dirname, '../../web/loops/index.json'), 'utf8'))
+  const byId = Object.fromEntries(loopsFromIndex(index).map(l => [l.id, l]))
+  const [set] = setsFromIndex(index, Object.values(byId))
+  const bar = (loop, n) => loop.notes.filter(note => note.startBeat >= n * 4 && note.startBeat < (n + 1) * 4)
+  const stepsOf = (notes, pitch, n) => notes.filter(x => x.pitch === pitch && x.startBeat >= n * 4 && x.startBeat < (n + 1) * 4).map(x => Math.round((x.startBeat - n * 4) * 4))
+  const CHORDS = [{ root: 9, pcs: [9, 0, 4, 7] }, { root: 5, pcs: [5, 9, 0, 4] }, { root: 2, pcs: [2, 5, 9, 0] }, { root: 4, pcs: [4, 7, 11, 2] }]
+
+  it('is one set of four loops at 120 BPM in A minor, in the order drums, bass, stabs, pad', () => {
+    expect(set.loops).toEqual(['deep-house-drums', 'deep-house-bass', 'deep-house-stabs', 'deep-house-pad'])
+    expect(set.bpm).toBe(120)
+    expect(set.key).toBe('A minor')
+    for (const id of set.loops) expect(byId[id], id).toMatchObject({ lengthBeats: 16, bpm: 120 })
+  })
+
+  it('has the kick on every beat, the clap on two and four, and the open hat on the offbeats, exactly as the rules say, in every bar', () => {
+    const notes = byId['deep-house-drums'].notes
+    for (let n = 0; n < 4; n++) {
+      expect(stepsOf(notes, 36, n)).toEqual([0, 4, 8, 12])
+      expect(stepsOf(notes, 39, n)).toEqual([4, 12])
+      expect(stepsOf(notes, 46, n)).toEqual([2, 6, 10, 14])
+    }
+  })
+
+  it('has a hat that is a part of Euclidean nine in sixteen with about a fifth missing, and never a hit the rule does not make', () => {
+    const rule = euclid(9, 16).flatMap((on, i) => (on ? [i] : []))
+    let total = 0
+    for (let n = 0; n < 4; n++) {
+      const hits = stepsOf(byId['deep-house-drums'].notes, 42, n)
+      for (const step of hits) expect(rule, `bar ${n} step ${step}`).toContain(step)
+      total += hits.length
+    }
+    expect(total).toBeLessThan(36)
+    expect(total).toBeGreaterThanOrEqual(24)
+  })
+
+  it('has a bass that plays only the root of the chord of its bar, in one of two octaves, on steps of Euclidean five in sixteen turned by two', () => {
+    const rule = euclid(5, 16, 2).flatMap((on, i) => (on ? [i] : []))
+    byId['deep-house-bass'].notes.forEach(note => {
+      const n = Math.floor(note.startBeat / 4)
+      expect(note.pitch % 12, `bar ${n} pitch ${note.pitch}`).toBe(CHORDS[n].root)
+      expect(rule).toContain(Math.round((note.startBeat - n * 4) * 4))
+    })
+    for (let n = 0; n < 4; n++) expect(bar(byId['deep-house-bass'], n).length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('has stabs that strike the whole chord together on 3, 7, 11 and 15, and nothing else', () => {
+    for (let n = 0; n < 4; n++) {
+      const notes = bar(byId['deep-house-stabs'], n)
+      expect([...new Set(notes.map(x => Math.round((x.startBeat - n * 4) * 4)))].sort((a, b) => a - b)).toEqual([3, 7, 11, 15])
+      expect([...new Set(notes.map(x => x.pitch % 12))].sort((a, b) => a - b)).toEqual([...CHORDS[n].pcs].sort((a, b) => a - b))
+    }
+  })
+
+  it('has a pad that holds each chord for its whole bar and plays nothing else', () => {
+    for (let n = 0; n < 4; n++) {
+      const notes = bar(byId['deep-house-pad'], n)
+      expect(notes).toHaveLength(4)
+      for (const note of notes) { expect(note.startBeat).toBe(n * 4); expect(note.lengthBeats).toBe(4) }
+      expect([...new Set(notes.map(x => x.pitch % 12))].sort((a, b) => a - b)).toEqual([...CHORDS[n].pcs].sort((a, b) => a - b))
+    }
+  })
+
+  it('is the same every time it is generated, since its random is seeded', () => {
+    expect(byId['deep-house-drums'].notes.length).toBe(69)
+    expect(byId['deep-house-bass'].notes.length).toBe(20)
+  })
+})
+
 describe('the loop dialog', () => {
   const groups = [{ heading: 'Drums', kind: 'drums', loops: [loop()] }, { heading: 'Bass', kind: 'bass', loops: [loop({ id: 'walk', label: 'Walk', kind: 'bass', lengthBeats: 8 })] }]
   const build = (options = {}) => {
@@ -204,6 +309,18 @@ describe('the loop dialog', () => {
     const { element } = build({ canHear: false })
     expect([...element.querySelectorAll('li button')].map(b => b.getAttribute('aria-label'))).toEqual(['Add Rock', 'Add Walk'])
     expect(element.querySelector('p.note').textContent).toMatch(/Select a track with an instrument to hear/)
+  })
+
+  it('lists the sets first, each with an Add all and no Hear, and says what is in it', () => {
+    const set = { id: 'house', label: 'House', about: 'A set of parts.', licence: 'CC0-1.0', bpm: 120, key: 'A minor', loops: ['rock', 'walk'] }
+    const calls = []
+    const { element } = build({ sets: [set], loops: [loop(), loop({ id: 'walk', label: 'Walk', kind: 'bass' })], onAddSet: s => calls.push(`set ${s.id}`) })
+    expect([...element.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Starter sets', 'Drums', 'Bass'])
+    const first = element.querySelector('li')
+    expect(first.querySelector('.sound-mark').textContent).toBe('(2 tracks, 1 bars, 120 BPM, A minor)')
+    expect([...first.querySelectorAll('button')].map(b => b.getAttribute('aria-label'))).toEqual(['Add all of House'])
+    click('Add all of House')
+    expect(calls).toEqual(['set house'])
   })
 
   it('can decide Hear loop by loop, so a drum loop is offered Hear where a bass loop is not', () => {

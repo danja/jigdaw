@@ -435,6 +435,7 @@
       "id": "root-and-fifth",
       "label": "Root and fifth",
       "kind": "bass",
+      "key": "C minor",
       "lengthBeats": 4,
       "about": "Eighth notes on C, with the fifth below the octave lifting the end of each half bar.",
       "licence": "CC0-1.0",
@@ -493,6 +494,7 @@
       "id": "walking-line",
       "label": "Walking line",
       "kind": "bass",
+      "key": "C minor",
       "lengthBeats": 8,
       "about": "Quarter notes climbing through C minor and back down over two bars.",
       "licence": "CC0-1.0",
@@ -551,6 +553,7 @@
       "id": "offbeat-bass",
       "label": "Offbeat bass",
       "kind": "bass",
+      "key": "C",
       "lengthBeats": 4,
       "about": "A single note on the offbeats, the other half of Four on the floor.",
       "licence": "CC0-1.0",
@@ -585,6 +588,7 @@
       "id": "funk-bass",
       "label": "Funk bass",
       "kind": "bass",
+      "key": "C minor",
       "lengthBeats": 4,
       "about": "Short, bouncing notes with gaps, leaning on the one.",
       "licence": "CC0-1.0",
@@ -637,6 +641,7 @@
       "id": "minor-four-chords",
       "label": "Minor four chords",
       "kind": "chords",
+      "key": "C minor",
       "lengthBeats": 16,
       "about": "C minor, A flat, E flat, B flat: a bar of each, the sound of a thousand songs.",
       "licence": "CC0-1.0",
@@ -719,6 +724,7 @@
       "id": "pop-four-chords",
       "label": "Pop four chords",
       "kind": "chords",
+      "key": "C major",
       "lengthBeats": 16,
       "about": "C, G, A minor, F: a bar of each, bright and familiar.",
       "licence": "CC0-1.0",
@@ -801,6 +807,7 @@
       "id": "slow-arpeggio",
       "label": "Slow arpeggio",
       "kind": "chords",
+      "key": "C minor",
       "lengthBeats": 8,
       "about": "A C minor chord spelled out in eighth notes, up and then down, over two bars.",
       "licence": "CC0-1.0",
@@ -907,6 +914,7 @@
       "id": "simple-riff",
       "label": "Simple riff",
       "kind": "melody",
+      "key": "C minor",
       "lengthBeats": 8,
       "about": "A C minor pentatonic riff that answers itself over two bars.",
       "licence": "CC0-1.0",
@@ -989,6 +997,7 @@
       "id": "rising-phrase",
       "label": "Rising phrase",
       "kind": "melody",
+      "key": "C minor",
       "lengthBeats": 8,
       "about": "Step by step up the C minor scale, then a pause on the top note.",
       "licence": "CC0-1.0",
@@ -1053,6 +1062,7 @@
       "id": "call-and-answer",
       "label": "Call and answer",
       "kind": "melody",
+      "key": "C minor",
       "lengthBeats": 16,
       "about": "Four bars: a short question, then the answer that comes home to C.",
       "licence": "CC0-1.0",
@@ -1171,6 +1181,1087 @@
           "pitch": 60,
           "velocity": 96
         }
+      ]
+    },
+    {
+      "id": "deep-house-drums",
+      "label": "Deep house drums",
+      "kind": "drums",
+      "gain": 0.5,
+      "bpm": 120,
+      "lengthBeats": 16,
+      "licence": "CC0-1.0",
+      "about": "Kick on every beat, clap on two and four, open hat on the offbeats, and a busy hat with a fifth of its hits missing: four rules, no written notes.",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 2.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 3.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 6,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 5.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 6.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 7.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 5.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 6,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 6.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 6.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 7.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 9,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 10,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 11,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 9,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 11,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 8.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 9.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 10.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 11.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 9.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 10,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 10.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 10.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 11.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 13,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 14,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 15,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 13,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 15,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 12.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 13.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 14.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 15.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 76
+        },
+        {
+          "startBeat": 12.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 13,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 13.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 14,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 14.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 14.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        },
+        {
+          "startBeat": 15.25,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 80
+        }
+      ]
+    },
+    {
+      "id": "deep-house-bass",
+      "label": "Deep house bass",
+      "kind": "bass",
+      "key": "A minor",
+      "gain": 1,
+      "bpm": 120,
+      "lengthBeats": 16,
+      "licence": "CC0-1.0",
+      "about": "Five hits a bar, each the root of the chord of that bar in one of two octaves: a rubbery bass line that follows Am7, Fmaj7, Dm7 and Em7.",
+      "notes": [
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.4,
+          "pitch": 33,
+          "velocity": 104
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.4,
+          "pitch": 45,
+          "velocity": 104
+        },
+        {
+          "startBeat": 2.25,
+          "lengthBeats": 0.4,
+          "pitch": 45,
+          "velocity": 104
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.4,
+          "pitch": 33,
+          "velocity": 104
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.4,
+          "pitch": 33,
+          "velocity": 104
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.4,
+          "pitch": 29,
+          "velocity": 104
+        },
+        {
+          "startBeat": 5.5,
+          "lengthBeats": 0.4,
+          "pitch": 41,
+          "velocity": 104
+        },
+        {
+          "startBeat": 6.25,
+          "lengthBeats": 0.4,
+          "pitch": 41,
+          "velocity": 104
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 0.4,
+          "pitch": 29,
+          "velocity": 104
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.4,
+          "pitch": 29,
+          "velocity": 104
+        },
+        {
+          "startBeat": 8.5,
+          "lengthBeats": 0.4,
+          "pitch": 50,
+          "velocity": 104
+        },
+        {
+          "startBeat": 9.5,
+          "lengthBeats": 0.4,
+          "pitch": 50,
+          "velocity": 104
+        },
+        {
+          "startBeat": 10.25,
+          "lengthBeats": 0.4,
+          "pitch": 50,
+          "velocity": 104
+        },
+        {
+          "startBeat": 11,
+          "lengthBeats": 0.4,
+          "pitch": 38,
+          "velocity": 104
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.4,
+          "pitch": 50,
+          "velocity": 104
+        },
+        {
+          "startBeat": 12.5,
+          "lengthBeats": 0.4,
+          "pitch": 40,
+          "velocity": 104
+        },
+        {
+          "startBeat": 13.5,
+          "lengthBeats": 0.4,
+          "pitch": 40,
+          "velocity": 104
+        },
+        {
+          "startBeat": 14.25,
+          "lengthBeats": 0.4,
+          "pitch": 52,
+          "velocity": 104
+        },
+        {
+          "startBeat": 15,
+          "lengthBeats": 0.4,
+          "pitch": 52,
+          "velocity": 104
+        },
+        {
+          "startBeat": 15.75,
+          "lengthBeats": 0.25,
+          "pitch": 52,
+          "velocity": 104
+        }
+      ]
+    },
+    {
+      "id": "deep-house-stabs",
+      "label": "Deep house stabs",
+      "kind": "chords",
+      "key": "A minor",
+      "gain": 0.3,
+      "bpm": 120,
+      "lengthBeats": 16,
+      "licence": "CC0-1.0",
+      "about": "The whole chord struck on four offbeat hits a bar, for an electric piano.",
+      "notes": [
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 84
+        },
+        {
+          "startBeat": 1.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 1.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 1.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 1.75,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 84
+        },
+        {
+          "startBeat": 2.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 2.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 2.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 2.75,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 84
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 84
+        },
+        {
+          "startBeat": 4.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 4.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 4.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 4.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 5.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 5.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 5.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 5.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 6.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 6.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 6.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 6.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 7.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 8.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 8.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 8.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 8.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 9.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 9.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 9.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 9.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 10.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 10.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 10.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 10.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.5,
+          "pitch": 53,
+          "velocity": 84
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.5,
+          "pitch": 57,
+          "velocity": 84
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 84
+        },
+        {
+          "startBeat": 11.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 12.75,
+          "lengthBeats": 0.5,
+          "pitch": 55,
+          "velocity": 84
+        },
+        {
+          "startBeat": 12.75,
+          "lengthBeats": 0.5,
+          "pitch": 59,
+          "velocity": 84
+        },
+        {
+          "startBeat": 12.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 12.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 13.75,
+          "lengthBeats": 0.5,
+          "pitch": 55,
+          "velocity": 84
+        },
+        {
+          "startBeat": 13.75,
+          "lengthBeats": 0.5,
+          "pitch": 59,
+          "velocity": 84
+        },
+        {
+          "startBeat": 13.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 13.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 14.75,
+          "lengthBeats": 0.5,
+          "pitch": 55,
+          "velocity": 84
+        },
+        {
+          "startBeat": 14.75,
+          "lengthBeats": 0.5,
+          "pitch": 59,
+          "velocity": 84
+        },
+        {
+          "startBeat": 14.75,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 14.75,
+          "lengthBeats": 0.5,
+          "pitch": 64,
+          "velocity": 84
+        },
+        {
+          "startBeat": 15.75,
+          "lengthBeats": 0.25,
+          "pitch": 55,
+          "velocity": 84
+        },
+        {
+          "startBeat": 15.75,
+          "lengthBeats": 0.25,
+          "pitch": 59,
+          "velocity": 84
+        },
+        {
+          "startBeat": 15.75,
+          "lengthBeats": 0.25,
+          "pitch": 62,
+          "velocity": 84
+        },
+        {
+          "startBeat": 15.75,
+          "lengthBeats": 0.25,
+          "pitch": 64,
+          "velocity": 84
+        }
+      ]
+    },
+    {
+      "id": "deep-house-pad",
+      "label": "Deep house pad",
+      "kind": "chords",
+      "key": "A minor",
+      "gain": 0.22,
+      "bpm": 120,
+      "lengthBeats": 16,
+      "licence": "CC0-1.0",
+      "about": "Each chord held for its bar, for strings: the one part that is written and not made by a rule.",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 57,
+          "velocity": 64
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 64
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 64,
+          "velocity": 64
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 67,
+          "velocity": 64
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 53,
+          "velocity": 64
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 57,
+          "velocity": 64
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 64
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 64,
+          "velocity": 64
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 53,
+          "velocity": 64
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 57,
+          "velocity": 64
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 64
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 62,
+          "velocity": 64
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 55,
+          "velocity": 64
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 59,
+          "velocity": 64
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 62,
+          "velocity": 64
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 64,
+          "velocity": 64
+        }
+      ]
+    }
+  ],
+  "sets": [
+    {
+      "id": "deep-house",
+      "label": "Deep house that writes itself",
+      "about": "Four rules and no written notes, over four chords: drums, bass and stabs follow the chords while a pad holds them. Add a delay on the stabs, a ping-pong at a dotted eighth, for the rest of the sound.",
+      "bpm": 120,
+      "key": "A minor",
+      "licence": "CC0-1.0",
+      "loops": [
+        "deep-house-drums",
+        "deep-house-bass",
+        "deep-house-stabs",
+        "deep-house-pad"
       ]
     }
   ]

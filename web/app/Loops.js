@@ -5,18 +5,22 @@
 // Add puts the loop at the playhead on the selected track when that track has an instrument that suits it (drums to a drum kit, anything else to
 // anything but one). With no such track, it makes a
 // new one with a sound to suit the kind of loop (a drum kit for drums, and so on, chosen in LoopLibrary.KINDS) and puts the clip at the start.
-// Either way it is one group, so one undo takes back the clip and the track made for it. Hear needs an instrument to play through, so it is
+// Either way it is one group, so one undo takes back the clip and the track made for it. A set (a deep house starter: drums, bass, stabs, pad) is
+// several loops each on a track of its own, again as one group, with the tempo it asks for when the project has no tracks yet and so nothing to
+// be put out of time by it. Hear needs an instrument to play through, so it is
 // offered only when there is one, and the dialog says what to do when there is not.
 import { MAX_RESULTS } from '../../src/catalogue/limits.js'
 import { soundsFrom } from '../../src/ui/SoundChooser.js'
 import { directoryOf } from '../../src/ui/SoundRecipes.js'
-import { KINDS, loopsFromIndex, groupsOf, addClipChange, eventsFor, createLoopBrowser } from '../../src/ui/LoopLibrary.js'
+import { KINDS, loopsFromIndex, setsFromIndex, groupsOf, addClipChange, eventsFor, createLoopBrowser } from '../../src/ui/LoopLibrary.js'
 
 export function createLoops (ctx) {
   const { document, log } = ctx
   let browser = null
   let library = null
   let busy = false
+  // The instruments this host can run, asked for once a visit to the dialog, since a set looks one up for each of its loops.
+  let instruments = null
 
   const isOpen = () => browser !== null
 
@@ -25,7 +29,9 @@ export function createLoops (ctx) {
     if (library) return library
     const response = await fetch(new URL('loops/index.json', document.baseURI))
     if (!response.ok) throw new Error(`the loop library answered ${response.status}`)
-    library = loopsFromIndex(await response.json())
+    const index = await response.json()
+    const loops = loopsFromIndex(index)
+    library = { loops, sets: setsFromIndex(index, loops) }
     return library
   }
 
@@ -46,8 +52,8 @@ export function createLoops (ctx) {
   /** The instrument that suits a kind of loop, found among the plugins this host can run. */
   async function voiceFor (kind) {
     const directory = KINDS.find(k => k.kind === kind).voice
-    const { results } = await ctx.browser.catalogue().search({ role: 'Instrument', limit: MAX_RESULTS })
-    const sound = soundsFrom(results).find(s => directoryOf(s.iri) === directory)
+    instruments ??= (await ctx.browser.catalogue().search({ role: 'Instrument', limit: MAX_RESULTS })).results
+    const sound = soundsFrom(instruments).find(s => directoryOf(s.iri) === directory)
     if (!sound) throw new Error(`there is no ${directory} here to play a ${kind} loop`)
     return { load: sound.load, label: sound.label }
   }
@@ -88,6 +94,8 @@ export function createLoops (ctx) {
         const track = targetTrack(loop)
         let trackId
         let startBeat
+        // The level a loop suggests is for a track made for it. A person's own track keeps its fader, and so does the mix around it.
+        const level = []
         if (track) {
           trackId = track.id
           startBeat = Math.max(0, Math.round(ctx.transport.position().beat))
@@ -97,8 +105,9 @@ export function createLoops (ctx) {
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`)
           trackId = loaded.trackId
           startBeat = 0
+          if (loop.gain !== undefined) level.push({ op: 'setTrackChannel', track: trackId, gain: loop.gain })
         }
-        const applied = d.apply([addClipChange({ loop, track: trackId, startBeat })])
+        const applied = d.apply([...level, addClipChange({ loop, track: trackId, startBeat })])
         if (!applied.ok) throw new Error(applied.message)
         return { trackId }
       }, { label: 'Add a loop' })
@@ -113,23 +122,72 @@ export function createLoops (ctx) {
     }
   }
 
+  /**
+   * Add every loop of a set, each on a track of its own named for it, as one group. The tempo is set to the set's when there are no tracks yet,
+   * and left alone when there are, since changing it would move the person's own work off the beat; the log says which.
+   */
+  async function addSet (set) {
+    if (busy) return
+    busy = true
+    try {
+      browser.say(`Adding ${set.label}`)
+      const d = await ctx.runtime.ensureRunning()
+      const parts = set.loops.map(id => library.loops.find(l => l.id === id))
+      const trackIds = await d.grouped(async () => {
+        if (d.project.tracks.length === 0) {
+          const tempo = d.apply([{ op: 'setTransport', tempoPoints: [{ atBeat: 0, bpm: set.bpm }] }])
+          if (!tempo.ok) throw new Error(tempo.message)
+        } else {
+          log(`kept the tempo you have: ${set.label} is written for ${set.bpm} BPM`, 'info')
+        }
+        const made = []
+        for (const loop of parts) {
+          const voice = await voiceFor(loop.kind)
+          const loaded = await ctx.loading.loadPlugin(voice.load, { newTrack: true })
+          if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`)
+          const applied = d.apply([
+            { op: 'setTrack', id: loaded.trackId, label: loop.label },
+            ...(loop.gain === undefined ? [] : [{ op: 'setTrackChannel', track: loaded.trackId, gain: loop.gain }]),
+            addClipChange({ loop, track: loaded.trackId, startBeat: 0 })
+          ])
+          if (!applied.ok) throw new Error(applied.message)
+          made.push(loaded.trackId)
+        }
+        return made
+      }, { label: `Add ${set.label}` })
+      ctx.selection.set('track', [trackIds[0]])
+      if (isOpen()) close()
+      log(`added ${set.label}`, 'ok')
+    } catch (error) {
+      log(error.message, 'error')
+      browser?.say(error.message)
+    } finally {
+      busy = false
+    }
+  }
+
   /** Open the dialog. */
   async function open () {
     if (isOpen()) return
+    instruments = null
     let loops = []
+    let sets = []
     let problem = null
     try {
-      loops = await load()
+      ;({ loops, sets } = await load())
     } catch (error) {
       problem = error.message
       log(`loops: ${error.message}`, 'error')
     }
     browser = createLoopBrowser(document, {
       groups: groupsOf(loops),
+      sets,
+      loops,
       canHear: loop => targetTrack(loop) !== null,
       beatsPerBar: ctx.dispatcher?.project.transport.beatsPerBar,
       onHear: hear,
       onAdd: add,
+      onAddSet: addSet,
       onClose: () => { if (isOpen()) close() }
     })
     document.body.append(browser.element)
