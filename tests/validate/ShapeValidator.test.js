@@ -31,7 +31,7 @@ const EXPECTED = {
   'examples/reference-composite.ttl': 0,
   'examples/counterexample-composite-wiring.ttl': 0,
   'examples/reference-editor.ttl': 0,
-  'examples/counterexample-profile.ttl': 24,
+  'examples/counterexample-profile.ttl': 27,
   'examples/counterexample-project.ttl': 59,
   'examples/counterexample-provenance.ttl': 11,
   'examples/counterexample-foreign.ttl': 11,

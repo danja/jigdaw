@@ -20,7 +20,7 @@ describe('repeating a clip, wired', () => {
   })
 
   it('has the timeline take both and hand both to every clip it draws', () => {
-    expect(timeline).toMatch(/onRepeat = null, onStopRepeat = null \}/)
+    expect(timeline).toMatch(/onRepeat = null, onStopRepeat = null/)
     expect(timeline).toMatch(/createClipButton\(document, \{[^}]*onRepeat, onStopRepeat/)
   })
 

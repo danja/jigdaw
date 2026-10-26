@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -71,6 +72,8 @@
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 127 ;
     jig:paramIndex 0 ;
     jig:controlGroup "Instrument" ;
+    rdfs:comment "Which of the 128 General MIDI instruments is played." ;
+    pprops:displayPriority 100 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#program-0> ,
@@ -464,6 +467,7 @@
     lv2:default 8 ; lv2:minimum 1 ; lv2:maximum 18 ;
     jig:paramIndex 1 ;
     jig:controlGroup "Instrument" ;
+    rdfs:comment "How many notes can sound at once." ;
     midi:binding <#voices-cc> .
 
 <#voices-cc> a midi:Controller ; midi:controllerNumber 70 .
@@ -474,6 +478,8 @@
     lv2:default 0.8 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 2 ;
     jig:controlGroup "Output" ;
+    rdfs:comment "The overall level of the instrument." ;
+    pprops:displayPriority 90 ;
     midi:binding <#gain-cc> .
 
 <#gain-cc> a midi:Controller ; midi:controllerNumber 71 .

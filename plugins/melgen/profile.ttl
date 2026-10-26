@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -67,7 +68,12 @@
     a jig:ControlPad ;
     rdfs:label "Feel" ;
     jig:padX <#density> ;
-    jig:padY <#leap> .
+    jig:padY <#leap> ;
+    jig:padChoice <#scale> ;
+    jig:padXLow "sparse" ;
+    jig:padXHigh "busy" ;
+    jig:padYLow "smooth" ;
+    jig:padYHigh "jumpy" .
 
 <#root_note>
     a lv2:InputPort , lv2:ControlPort ;
@@ -80,6 +86,8 @@
     lv2:symbol "scale" ; lv2:name "Scale" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 22 ;
     jig:paramIndex 1 ;
+    rdfs:comment "The set of notes the melody chooses from." ;
+    pprops:displayPriority 95 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#scale-0> ,
@@ -272,7 +280,9 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "density" ; lv2:name "Density" ;
     lv2:default 0.48 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    rdfs:comment "How many steps of the phrase carry a note." ;
+    pprops:displayPriority 100 .
 
 <#register>
     a lv2:InputPort , lv2:ControlPort ;
@@ -284,7 +294,9 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hold" ; lv2:name "Hold" ;
     lv2:default 0.42 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    rdfs:comment "How long each note lasts." ;
+    pprops:displayPriority 60 .
 
 <#accent>
     a lv2:InputPort , lv2:ControlPort ;
@@ -302,19 +314,25 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "range" ; lv2:name "Range" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 14 .
+    jig:paramIndex 14 ;
+    rdfs:comment "How wide a span of notes the melody roams over." ;
+    pprops:displayPriority 90 .
 
 <#leap>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "leap" ; lv2:name "Leap" ;
     lv2:default 0.28 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 15 .
+    jig:paramIndex 15 ;
+    rdfs:comment "How often the melody jumps instead of moving by step." ;
+    pprops:displayPriority 80 .
 
 <#rest>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "rest" ; lv2:name "Rest" ;
     lv2:default 0.24 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 16 .
+    jig:paramIndex 16 ;
+    rdfs:comment "How often the melody pauses." ;
+    pprops:displayPriority 70 .
 
 <#cadence>
     a lv2:InputPort , lv2:ControlPort ;
@@ -326,7 +344,8 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "seed" ; lv2:name "Seed" ;
     lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 65535 ;
-    jig:paramIndex 18 .
+    jig:paramIndex 18 ;
+    rdfs:comment "The number of the melody: the same number always gives the same tune." .
 
 <#vary>
     a lv2:InputPort , lv2:ControlPort ;

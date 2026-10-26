@@ -100,7 +100,7 @@ export function createAddTrack (ctx) {
       chooser.heard(sound.iri)
       play(made.playsId, sound)
       chooser.say(sound.generated
-        ? `Playing the ${sound.parts.at(-1).label} by hand. Add keeps it, and Play then runs the beat.`
+        ? `Playing the ${sound.parts.at(-1).label} by hand. Add keeps it, and Play then runs ${sound.parts[0].label}.`
         : `Playing ${sound.label}. Add keeps it, or hear another.`)
     } catch (error) {
       log(error.message, 'error')
@@ -110,14 +110,28 @@ export function createAddTrack (ctx) {
     }
   }
 
+  /** A microphone is a track with a live input and no plugin: an empty track, fed from the microphone. */
+  async function addMicrophone (sound) {
+    chooser.say('Asking for the microphone')
+    await removeTrial()
+    const trackId = await ctx.arrangement.addTrack()
+    if (!trackId) { chooser?.say('The track could not be made. The log says why.'); return }
+    if (isOpen()) close()
+    // The track stays if the microphone is refused: the person chose a track, and the reason is said, not hidden.
+    await ctx.micIn.listen(trackId)
+  }
+
   async function add (sound) {
     if (busy) return
     busy = true
     try {
+      if (sound.kind === 'microphone') { await addMicrophone(sound); return }
       chooser.say(`Adding ${sound.label}`)
       await removeTrial()
+      // The dispatcher does not exist until the first thing that needs sound, and a person may press Add before ever pressing Hear.
+      const d = await ctx.runtime.ensureRunning()
       // One group, so one undo takes back the track, every plugin on it and the joins between them.
-      const made = await ctx.dispatcher.grouped(() => loadSound(sound), { label: 'Add a track' })
+      const made = await d.grouped(() => loadSound(sound), { label: 'Add a track' })
       if (!made) { chooser?.say(`${sound.label} did not load. The log says why.`); return }
       ctx.selection.set('track', [made.trackId])
       if (isOpen()) close()
@@ -146,9 +160,9 @@ export function createAddTrack (ctx) {
       const catalogue = ctx.browser.catalogue()
       const [instruments, generators] = await Promise.all([
         catalogue.search({ role: 'Instrument', limit: MAX_RESULTS }),
-        catalogue.search({ role: 'MidiGenerator', produces: 'DrumMidi', limit: MAX_RESULTS })
+        catalogue.search({ role: 'MidiGenerator', limit: MAX_RESULTS })
       ])
-      groups = groupsFrom({ instruments: instruments.results, generators: generators.results })
+      groups = groupsFrom({ instruments: instruments.results, generators: generators.results, microphone: ctx.micIn?.available === true })
     } catch (error) {
       problem = error.message
       log(`sounds: ${error.message}`, 'error')

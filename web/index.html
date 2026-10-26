@@ -199,6 +199,9 @@
   /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
      nothing to act on because .send-level sets a display and that beat the attribute. */
   [hidden] { display:none !important; }
+  /* A control's title, drawn beside it while it has the keyboard focus (web/app/Help.js). Never takes a click, so it covers nothing a person aims at. */
+  .help-tip { position:fixed; z-index:60; max-width:22rem; padding:6px 10px; font-size:14px; line-height:1.4; color:var(--fg); background:var(--raised);
+    border:1px solid var(--rule); border-radius:6px; pointer-events:none; }
   /* The step the person is on (src/ui/Show.js). What it does not reach is left out of the layout, the tab order and the
      accessibility tree, and never disabled. The step is on <html> and each control's first step is on the control. */
   html[data-step="simple"] [data-from="standard"], html[data-step="simple"] [data-from="advanced"],

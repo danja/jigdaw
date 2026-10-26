@@ -9,15 +9,16 @@ import { parseHTML } from 'linkedom'
 import { createAddTrack } from '../../web/app/AddTrack.js'
 
 const instruments = [
-  { iri: 'jig:pulse', homepage: 'https://example.test/pulse/', label: 'Pulse', comment: 'A square wave synth. Nine voices.', roles: ['Instrument'], web: true },
+  { iri: 'https://example.test/plugins/pulse/', homepage: 'https://example.test/pulse/', label: 'Pulse', comment: 'A square wave synth. Nine voices.', roles: ['Instrument'], web: true },
   { iri: 'jig:kit', homepage: 'https://example.test/kit/', label: 'Kit', comment: 'Drums.', roles: ['Instrument', 'DrumInstrument'], web: true },
   { iri: 'jig:boost', label: 'Boost', comment: 'Louder.', roles: ['AudioEffect'], web: true }
 ]
 const generators = [
-  { iri: 'jig:beat', homepage: 'https://example.test/beat/', label: 'Beat', comment: 'Writes a beat.', roles: ['MidiGenerator'], produces: ['Midi', 'DrumMidi'], web: true }
+  { iri: 'jig:beat', homepage: 'https://example.test/beat/', label: 'Beat', comment: 'Writes a beat.', roles: ['MidiGenerator'], produces: ['Midi', 'DrumMidi'], web: true },
+  { iri: 'https://example.test/plugins/bassgen/', homepage: 'https://example.test/bassgen/', label: 'BassGen', comment: 'Writes bass.', roles: ['MidiGenerator'], produces: ['Midi', 'BassMidi'], web: true }
 ]
 
-function setup ({ search, loadPlugin } = {}) {
+function setup ({ search, loadPlugin, micAvailable = true, micFails = false } = {}) {
   const { document } = parseHTML('<!doctype html><body></body>')
   const create = document.createElement.bind(document)
   document.createElement = tag => {
@@ -36,6 +37,7 @@ function setup ({ search, loadPlugin } = {}) {
   const logs = []
   const searches = []
   const tabs = []
+  const mic = []
   let counter = 0
   let nodeCounter = 0
   const dispatcher = {
@@ -73,11 +75,13 @@ function setup ({ search, loadPlugin } = {}) {
   const selected = []
   const emptied = []
   let allowed = true
+  // As in the page: there is no dispatcher until the first thing that needs sound asks for one, so a test that forgets to ask finds null.
+  let running = false
   const ctx = {
     document,
     log: (message, kind) => logs.push({ message, kind }),
-    runtime: { ensureRunning: async () => dispatcher },
-    dispatcher,
+    runtime: { ensureRunning: async () => { running = true; return dispatcher } },
+    get dispatcher () { return running ? dispatcher : null },
     engine: { context: { currentTime: 1, sampleRate: 48000 } },
     rack: { forgetNode () {}, draw () {} },
     expose () {},
@@ -92,11 +96,12 @@ function setup ({ search, loadPlugin } = {}) {
         }
       })
     },
-    arrangement: { addTrack: async () => { emptied.push(true) } },
+    arrangement: { addTrack: async () => { emptied.push(true); counter += 1; tracks.set(`t${counter}`, true); return `t${counter}` } },
+    micIn: { available: micAvailable, listen: async track => { mic.push(track); if (micFails) throw new Error('the microphone was refused') } },
     show: { allowsTab: () => allowed },
     tabs: { select: id => tabs.push(id) }
   }
-  return { ctx, document, tracks, nodes, sent, logs, loaded, selected, emptied, events, groups, midiInputs, searches, tabs, deny: () => { allowed = false }, chooser: createAddTrack(ctx) }
+  return { ctx, document, tracks, nodes, sent, logs, loaded, selected, emptied, events, groups, midiInputs, searches, tabs, mic, deny: () => { allowed = false }, chooser: createAddTrack(ctx) }
 }
 
 const buttonNamed = (document, name) => [...document.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === name || b.textContent === name)
@@ -108,9 +113,9 @@ describe('opening the chooser', () => {
     const { chooser, document, searches } = setup()
     await chooser.open()
     expect(searches).toContainEqual(expect.objectContaining({ role: 'Instrument' }))
-    expect(searches).toContainEqual(expect.objectContaining({ role: 'MidiGenerator', produces: 'DrumMidi' }))
-    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Instruments', 'Drums'])
-    expect([...document.querySelectorAll('.sound-list strong')].map(e => e.textContent)).toEqual(['Pulse', 'Kit with Beat', 'Kit'])
+    expect(searches).toContainEqual(expect.objectContaining({ role: 'MidiGenerator' }))
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Instruments', 'Make notes for me', 'Drums', 'Voice'])
+    expect([...document.querySelectorAll('.sound-list strong')].map(e => e.textContent)).toEqual(['Pulse', 'Bass line', 'Kit with Beat', 'Kit', 'A microphone'])
     expect(chooser.isOpen()).toBe(true)
   })
 
@@ -174,7 +179,7 @@ describe('hearing a sound', () => {
     expect(midiInputs).toEqual([['t1', 'n2']])
     expect(sent[0].id).toBe('n2')
     expect(sent[0].events.filter(e => e.bytes[0] === 0x90).map(e => e.bytes[1])).toEqual([36, 42, 38, 42])
-    expect(document.querySelector('[role="status"]').textContent).toMatch(/by hand.*Play then runs the beat/)
+    expect(document.querySelector('[role="status"]').textContent).toMatch(/Playing the Kit by hand\. Add keeps it, and Play then runs Beat\./)
   })
 
   it('plays a kit alone with the same drum notes, and leaves its MIDI input as the loader made it', async () => {
@@ -279,7 +284,9 @@ describe('ending the chooser leaves no trial track', () => {
 
   it('An empty track takes the trial away, closes, and makes an empty track', async () => {
     const { tracks, nodes, emptied, chooser } = await hearThen(({ document }) => click(document, 'An empty track'))
-    expect(tracks.size + nodes.size).toBe(0)
+    // The trial's track and plugins are gone, and what is left is the one empty track that was asked for.
+    expect(nodes.size).toBe(0)
+    expect([...tracks.keys()]).toHaveLength(1)
     expect(emptied).toHaveLength(1)
     expect(chooser.isOpen()).toBe(false)
   })
@@ -330,6 +337,16 @@ describe('adding a sound', () => {
     expect(tabs).toEqual([])
   })
 
+  it('adds before anything has been heard, when the engine has not started yet, by starting it', async () => {
+    const { chooser, document, groups, tracks } = setup()
+    await chooser.open()
+    click(document, 'Add Pulse')
+    await settle()
+    expect(groups).toEqual(['Add a track'])
+    expect([...tracks.keys()]).toEqual(['t1'])
+    expect(chooser.isOpen()).toBe(false)
+  })
+
   it('adds without having heard it, and then there is no trial to remove', async () => {
     const { chooser, document, loaded, events } = setup()
     await chooser.open()
@@ -348,5 +365,87 @@ describe('adding a sound', () => {
     await settle()
     expect(chooser.isOpen()).toBe(true)
     expect(document.querySelector('[role="status"]').textContent).toMatch(/did not load/)
+  })
+})
+
+
+describe('making notes for me', () => {
+  it('lists a generator with its instrument as one sound, when both are among the plugins that can be run', async () => {
+    const { chooser, document } = setup()
+    await chooser.open()
+    expect(document.getElementById('Add Bass line') ?? buttonNamed(document, 'Add Bass line')).toBeTruthy()
+    expect(buttonNamed(document, 'Hear Bass line')).toBeTruthy()
+  })
+
+  it('leaves out a recipe whose generator or instrument is not there, and the group with it', async () => {
+    const { chooser, document } = setup({ search: async query => ({ results: query.role === 'Instrument' ? instruments : [] }) })
+    await chooser.open()
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toEqual(['Instruments', 'Drums', 'Voice'])
+  })
+
+  it('loads the generator first and the instrument second, makes the instrument the input of the track, and puts the controls in front', async () => {
+    const { chooser, document, loaded, midiInputs, tabs, groups } = setup()
+    await chooser.open()
+    click(document, 'Add Bass line')
+    await settle()
+    expect(loaded.map(l => l.url)).toEqual(['https://example.test/bassgen/', 'https://example.test/pulse/'])
+    expect(midiInputs).toEqual([['t1', 'n2']])
+    expect(tabs).toEqual(['tracks'])
+    expect(groups).toEqual(['Add a track'])
+  })
+
+  it('plays the instrument by hand when heard, with a chord and not drum notes', async () => {
+    const { chooser, document, sent } = setup()
+    await chooser.open()
+    click(document, 'Hear Bass line')
+    await settle()
+    expect(sent[0].id).toBe('n2')
+    expect(sent[0].events.filter(e => e.bytes[0] === 0x90).map(e => e.bytes[1])).toEqual([60, 64, 67, 72])
+  })
+})
+
+describe('a microphone', () => {
+  it('is offered where the browser can be asked for one, with no Hear, since there is nothing to hear before it is on', async () => {
+    const { chooser, document } = setup()
+    await chooser.open()
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).toContain('Voice')
+    expect(buttonNamed(document, 'Add A microphone')).toBeTruthy()
+    expect(buttonNamed(document, 'Hear A microphone')).toBeUndefined()
+  })
+
+  it('is left out where the browser cannot be asked, rather than offered and refused', async () => {
+    const { chooser, document } = setup({ micAvailable: false })
+    await chooser.open()
+    expect([...document.querySelectorAll('h3')].map(h => h.textContent)).not.toContain('Voice')
+  })
+
+  it('is an empty track fed from the microphone, closing the dialog first', async () => {
+    const { chooser, document, mic, emptied } = setup()
+    await chooser.open()
+    click(document, 'Add A microphone')
+    await settle()
+    expect(emptied).toHaveLength(1)
+    expect(mic).toEqual(['t1'])
+    expect(chooser.isOpen()).toBe(false)
+  })
+
+  it('takes a trial track away first, so hearing something and then choosing the microphone leaves only the microphone track', async () => {
+    const { chooser, document, tracks, nodes } = setup()
+    await chooser.open()
+    click(document, 'Hear Pulse')
+    await settle()
+    click(document, 'Add A microphone')
+    await settle()
+    expect(nodes.size).toBe(0)
+    expect([...tracks.keys()]).toHaveLength(1)
+  })
+
+  it('keeps the track and says why when the microphone is refused', async () => {
+    const { chooser, document, tracks, logs } = setup({ micFails: true })
+    await chooser.open()
+    click(document, 'Add A microphone')
+    await settle()
+    expect(tracks.size).toBe(1)
+    expect(logs.at(-1)).toEqual({ message: 'the microphone was refused', kind: 'error' })
   })
 })

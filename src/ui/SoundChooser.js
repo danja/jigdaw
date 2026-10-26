@@ -11,6 +11,8 @@
 // kit played by a beat generator is two, the generator first so that its output is joined to the kit's input as loading a second plugin
 // onto a track does. They are listed by kind, Instruments and Drums, as the New Track screens of other DAWs list them.
 
+import { noteMakersFrom } from './SoundRecipes.js'
+
 /** The first sentence of a description, cut to `limit` characters at a word if it runs on. Empty for nothing. */
 export function firstSentence (text, limit = 110) {
   const flat = String(text ?? '').replace(/\s+/g, ' ').trim()
@@ -39,6 +41,13 @@ export function soundsFrom (results) {
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
+/** Every MIDI generator this host can run, as `{ iri, load, label, about }`: the generators the recipes in SoundRecipes.js are made from. */
+export function generatorsFrom (results) {
+  return results
+    .filter(r => r.web && (r.roles ?? []).includes('MidiGenerator'))
+    .map(r => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment) }))
+}
+
 /**
  * The beat generators this host can run: MIDI generators that write drum notes, which a drum kit plays. A generator that writes a
  * melody or a bass line is not one, and neither is a native plugin the catalogue merely knows about.
@@ -54,10 +63,14 @@ export function drumGeneratorsFrom (results) {
  * The chooser's groups. Instruments are every sound that is not a drum kit. Drums are each drum kit played by each beat generator, which
  * is the beat made for the person, then each kit alone, for playing it by hand. A group with nothing in it is left out.
  */
-export function groupsFrom ({ instruments, generators }) {
+export function groupsFrom ({ instruments, generators, microphone = false }) {
   const sounds = soundsFrom(instruments)
   const kits = sounds.filter(s => s.drums)
   const beats = drumGeneratorsFrom(generators)
+  const makers = noteMakersFrom({
+    instruments: sounds.filter(s => !s.drums).map(s => ({ iri: s.iri, load: s.load, label: s.label })),
+    generators: generatorsFrom(generators)
+  })
   const drums = [
     ...kits.flatMap(kit => beats.map(beat => ({
       iri: `${kit.iri}+${beat.iri}`,
@@ -69,9 +82,16 @@ export function groupsFrom ({ instruments, generators }) {
     }))),
     ...kits.map(kit => ({ ...kit, about: `${kit.about} Played by hand or by clips.` }))
   ]
+  // A microphone is not a plugin: the person's own sound, fed live into a track. Offered only where the browser can be asked for one, and with
+  // no Hear, since there is nothing to play before it is on.
+  const voice = microphone
+    ? [{ iri: 'microphone', kind: 'microphone', noHear: true, label: 'A microphone', about: 'A track fed live from your microphone. Mute the track to record without hearing yourself.', drums: false, parts: [] }]
+    : []
   return [
     { heading: 'Instruments', sounds: sounds.filter(s => !s.drums) },
-    { heading: 'Drums', sounds: drums }
+    { heading: 'Make notes for me', sounds: makers },
+    { heading: 'Drums', sounds: drums },
+    { heading: 'Voice', sounds: voice }
   ].filter(group => group.sounds.length > 0)
 }
 
@@ -129,17 +149,21 @@ export function createSoundChooser (document, { groups, onHear, onAdd, onEmpty, 
       about.className = 'sound-about'
       about.textContent = sound.about
       words.append(name, mark, about)
-      const hear = document.createElement('button')
-      hear.type = 'button'
-      hear.textContent = 'Hear'
-      hear.setAttribute('aria-label', `Hear ${sound.label}`)
-      hear.addEventListener('click', () => onHear(sound))
+      // A sound with nothing to play before it is on has no Hear, left out and not disabled.
+      let hear = null
+      if (!sound.noHear) {
+        hear = document.createElement('button')
+        hear.type = 'button'
+        hear.textContent = 'Hear'
+        hear.setAttribute('aria-label', `Hear ${sound.label}`)
+        hear.addEventListener('click', () => onHear(sound))
+      }
       const add = document.createElement('button')
       add.type = 'button'
       add.textContent = 'Add'
       add.setAttribute('aria-label', `Add ${sound.label}`)
       add.addEventListener('click', () => onAdd(sound))
-      item.append(words, hear, add)
+      item.append(...[words, hear, add].filter(Boolean))
       list.append(item)
       rows.set(sound.iri, mark)
     }

@@ -118,22 +118,12 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
   // draws none, which is every profile there was before pads.
   const padHandles = []
   const pads = Array.isArray(profile.pads) ? profile.pads : []
-  if (pads.length > 0) {
-    const row = document.createElement('div')
-    row.className = 'pads'
-    root.append(row)
-    pads.forEach((pad, index) => {
-      const handle = createPad(document, {
-        pad,
-        ports: profile.ports,
-        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, '_'),
-        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
-        onSet: (symbol, value) => { for (const fn of setters.get(symbol) ?? []) fn(value); onChange(symbol, value) }
-      })
-      row.append(handle.element)
-      padHandles.push({ pad, handle })
-    })
-  }
+  // The row is made here so it sits above whatever is drawn after it, and filled below, once the controls can be made. A selector a pad
+  // names as its choice is moved beside the pad and not drawn twice, except under a skin, which draws its own controls and is left alone.
+  const padsRow = pads.length > 0 ? document.createElement('div') : null
+  if (padsRow) { padsRow.className = 'pads'; root.append(padsRow) }
+  const moved = skin ? new Set() : new Set(pads.map(p => p.choice).filter(Boolean))
+  const listed = profile.ports.filter(p => !moved.has(p.symbol))
 
   // No description. rdfs:comment is three lines of prose above the controls,
   // it is the same three lines every time the plugin is loaded, and the
@@ -157,7 +147,31 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     // The panel, not the skin: the skin is put away when it is cramped and then has no size to observe.
     if (Observer) new Observer(() => skinPanel.fit()).observe(root)
   }
-  const unskinned = skinPanel ? profile.ports.filter(p => !skinPanel.bound.has(p.symbol)) : profile.ports
+  const unskinned = skinPanel ? profile.ports.filter(p => !skinPanel.bound.has(p.symbol)) : listed
+
+  // The pads, now that the controls can be made. A pad with a choice is a pad and that one selector side by side.
+  pads.forEach((pad, index) => {
+    const handle = createPad(document, {
+      pad,
+      ports: profile.ports,
+      id: `${scope}-pad-${index}`.replace(/[^\w-]/g, '_'),
+      // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+      onSet: (symbol, value) => { for (const fn of setters.get(symbol) ?? []) fn(value); onChange(symbol, value) }
+    })
+    const choice = moved.has(pad.choice) ? profile.ports.find(p => p.symbol === pad.choice) : null
+    if (choice) {
+      const holder = document.createElement('div')
+      holder.className = 'pad-with-choice'
+      const box = document.createElement('div')
+      box.className = 'pad-choice'
+      addControl(box, choice, 'pad-')
+      holder.append(handle.element, box)
+      padsRow.append(holder)
+    } else {
+      padsRow.append(handle.element)
+    }
+    padHandles.push({ pad, handle })
+  })
 
   function addControl (grid, port, tag) {
     const row = document.createElement('div')
@@ -327,7 +341,7 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     parent.append(more)
   }
 
-  if (!skinPanel) addWithMore(root, profile.ports, '', null)
+  if (!skinPanel) addWithMore(root, listed, '', null)
   else {
     // Under a drawing, controls the drawing does not have need saying so.
     const others = document.createElement('div')

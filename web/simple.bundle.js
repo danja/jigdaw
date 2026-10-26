@@ -13322,6 +13322,11 @@ var init_Vocabulary = __esm({
         pad: `${JIG}pad`,
         padX: `${JIG}padX`,
         padY: `${JIG}padY`,
+        padXLow: `${JIG}padXLow`,
+        padXHigh: `${JIG}padXHigh`,
+        padYLow: `${JIG}padYLow`,
+        padYHigh: `${JIG}padYHigh`,
+        padChoice: `${JIG}padChoice`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13585,7 +13590,17 @@ function readPads(dataset2, subject, ports) {
     const x = axis(jig.padX);
     const y = axis(jig.padY);
     if (x === y) throw new Error(`${where}: both axes are ${x}`);
-    return { iri: pad.value, label, x, y };
+    let choice = null;
+    const choiceTerm = one(dataset2, pad, jig.padChoice);
+    if (choiceTerm) {
+      const port = ports.find((p) => p.iri === choiceTerm.value);
+      if (!port) throw new Error(`${where}: padChoice names ${choiceTerm.value}, which is not a port of this profile`);
+      if (port.widget !== "selector") throw new Error(`${where}: padChoice names ${port.symbol}, which is a ${port.widget}, and a pad's choice must be a selector`);
+      if (port.symbol === x || port.symbol === y) throw new Error(`${where}: padChoice is ${port.symbol}, which is also an axis`);
+      choice = port.symbol;
+    }
+    const end = (predicate) => asString(one(dataset2, pad, predicate));
+    return { iri: pad.value, label, x, y, choice, xLow: end(jig.padXLow), xHigh: end(jig.padXHigh), yLow: end(jig.padYLow), yHigh: end(jig.padYHigh) };
   });
 }
 function readPort(dataset2, term5) {
@@ -34322,12 +34337,24 @@ function createPad(document2, { pad, ports, onSet, id }) {
   const puck = document2.createElement("div");
   puck.className = "pad-puck";
   surface.append(puck);
+  const end = (className, text) => {
+    if (!text) return;
+    const label = document2.createElement("span");
+    label.className = `pad-end ${className}`;
+    label.textContent = text;
+    surface.append(label);
+  };
+  end("pad-end-left", pad.xLow);
+  end("pad-end-right", pad.xHigh);
+  end("pad-end-bottom", pad.yLow);
+  end("pad-end-top", pad.yHigh);
+  const axis = (port, low, high) => `${port.name ?? port.symbol}${low && high ? `, from ${low} to ${high}` : low ? `, low is ${low}` : high ? `, high is ${high}` : ""}`;
   const caption = document2.createElement("p");
   caption.className = "pad-caption";
   caption.id = captionId;
   const name = document2.createElement("b");
   name.textContent = pad.label;
-  caption.append(name, document2.createTextNode(` Across is ${portX.name ?? portX.symbol}, up is ${portY.name ?? portY.symbol}.`));
+  caption.append(name, document2.createTextNode(` Across is ${axis(portX, pad.xLow, pad.xHigh)}, up is ${axis(portY, pad.yLow, pad.yHigh)}.`));
   element.append(surface, caption);
   const at = { x: 0.5, y: 0.5 };
   const place = () => {
@@ -34411,25 +34438,13 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
   };
   const padHandles = [];
   const pads = Array.isArray(profile.pads) ? profile.pads : [];
-  if (pads.length > 0) {
-    const row = document2.createElement("div");
-    row.className = "pads";
-    root.append(row);
-    pads.forEach((pad, index) => {
-      const handle = createPad(document2, {
-        pad,
-        ports: profile.ports,
-        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
-        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
-        onSet: (symbol, value2) => {
-          for (const fn of setters.get(symbol) ?? []) fn(value2);
-          onChange(symbol, value2);
-        }
-      });
-      row.append(handle.element);
-      padHandles.push({ pad, handle });
-    });
+  const padsRow = pads.length > 0 ? document2.createElement("div") : null;
+  if (padsRow) {
+    padsRow.className = "pads";
+    root.append(padsRow);
   }
+  const moved = skin ? /* @__PURE__ */ new Set() : new Set(pads.map((p) => p.choice).filter(Boolean));
+  const listed = profile.ports.filter((p) => !moved.has(p.symbol));
   const setters = /* @__PURE__ */ new Map();
   const onValue = (symbol, fn) => {
     if (!setters.has(symbol)) setters.set(symbol, []);
@@ -34443,7 +34458,32 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     const Observer = document2.defaultView?.ResizeObserver;
     if (Observer) new Observer(() => skinPanel.fit()).observe(root);
   }
-  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : profile.ports;
+  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : listed;
+  pads.forEach((pad, index) => {
+    const handle = createPad(document2, {
+      pad,
+      ports: profile.ports,
+      id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
+      // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+      onSet: (symbol, value2) => {
+        for (const fn of setters.get(symbol) ?? []) fn(value2);
+        onChange(symbol, value2);
+      }
+    });
+    const choice = moved.has(pad.choice) ? profile.ports.find((p) => p.symbol === pad.choice) : null;
+    if (choice) {
+      const holder = document2.createElement("div");
+      holder.className = "pad-with-choice";
+      const box = document2.createElement("div");
+      box.className = "pad-choice";
+      addControl(box, choice, "pad-");
+      holder.append(handle.element, box);
+      padsRow.append(holder);
+    } else {
+      padsRow.append(handle.element);
+    }
+    padHandles.push({ pad, handle });
+  });
   function addControl(grid, port, tag) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
@@ -34569,7 +34609,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     addSections(more, rest, tag, null);
     parent.append(more);
   }
-  if (!skinPanel) addWithMore(root, profile.ports, "", null);
+  if (!skinPanel) addWithMore(root, listed, "", null);
   else {
     const others = document2.createElement("div");
     others.className = "skin-others";

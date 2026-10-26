@@ -116,7 +116,9 @@
           "label": "Fugue",
           "value": 13
         }
-      ]
+      ],
+      "displayPriority": 100,
+      "comment": "The drum style the pattern is built in."
     },
     {
       "symbol": "style_mode",
@@ -222,7 +224,9 @@
       "default": 0.58,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 6
+      "paramIndex": 6,
+      "displayPriority": 90,
+      "comment": "How busy the pattern is: more hits across the bar."
     },
     {
       "symbol": "variation",
@@ -230,7 +234,9 @@
       "default": 0.35,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 7
+      "paramIndex": 7,
+      "displayPriority": 80,
+      "comment": "How much the pattern changes as it plays."
     },
     {
       "symbol": "fill_amount",
@@ -246,7 +252,8 @@
       "default": 1,
       "minimum": 0,
       "maximum": 65535,
-      "paramIndex": 9
+      "paramIndex": 9,
+      "comment": "The number of the pattern: the same number always gives the same beat."
     },
     {
       "symbol": "kick_amt",
@@ -254,7 +261,9 @@
       "default": 0.78,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 10
+      "paramIndex": 10,
+      "displayPriority": 60,
+      "comment": "How much kick drum the pattern uses."
     },
     {
       "symbol": "backbeat_amt",
@@ -262,7 +271,9 @@
       "default": 0.76,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 11
+      "paramIndex": 11,
+      "displayPriority": 60,
+      "comment": "How strongly the backbeat, beats two and four, is played."
     },
     {
       "symbol": "hat_amt",
@@ -270,7 +281,9 @@
       "default": 0.82,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 12
+      "paramIndex": 12,
+      "displayPriority": 60,
+      "comment": "How much hi-hat the pattern uses."
     },
     {
       "symbol": "aux_amt",
@@ -287,7 +300,9 @@
       "minimum": 0,
       "maximum": 1,
       "paramIndex": 14,
-      "toggled": true
+      "toggled": true,
+      "displayPriority": 50,
+      "comment": "Starts a fresh pattern."
     },
     {
       "symbol": "mutate",
@@ -305,7 +320,9 @@
       "minimum": 0,
       "maximum": 1,
       "paramIndex": 16,
-      "toggled": true
+      "toggled": true,
+      "displayPriority": 50,
+      "comment": "Builds a drum fill into the bar about to play."
     },
     {
       "symbol": "tom_amt",
@@ -345,7 +362,12 @@
       "id": "feel",
       "label": "Feel",
       "x": "density",
-      "y": "variation"
+      "y": "variation",
+      "choice": "genre",
+      "xLow": "simple",
+      "xHigh": "busy",
+      "yLow": "steady",
+      "yHigh": "varied"
     }
   ]
 }

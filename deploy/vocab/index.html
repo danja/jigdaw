@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  201 terms.
+  206 terms.
 </p>
 
 <h2>Classes</h2>
@@ -331,6 +331,10 @@
   <dt id="pad"><code>jig:pad</code></dt>
   <dd>A control pad this plugin offers. A plugin may have several. A host that does not
         draw pads ignores it and loses nothing, since the two ports are controls in their own right.</dd>
+  <dt id="padChoice"><code>jig:padChoice</code> <span class="label">pad choice</span></dt>
+  <dd>A selector port the panel draws beside the pad, a style or a genre to be chosen before the pad is
+        played across. The control is the port's own, moved beside the pad and not copied, so it is still one control with one
+        name. Must be a selector (an enumeration), not a continuous control.</dd>
   <dt id="padX"><code>jig:padX</code> <span class="label">pad across</span></dt>
   <dd>The port the pad sets as the pointer moves left to right: its minimum at the left
         edge and its maximum at the right. Must be a continuous control, not a switch or a selector.</dd>
@@ -558,6 +562,16 @@
   <dd>Channels per output. A host declaring outputChannelCount on the node
         must agree with this, and a plugin writing a different number of channels is a
         load-time error rather than a silent half-signal.</dd>
+  <dt id="padXHigh"><code>jig:padXHigh</code> <span class="label">pad across, high end</span></dt>
+  <dd>A word or two for what the right edge of the pad means ("busy"). See jig:padXLow.</dd>
+  <dt id="padXLow"><code>jig:padXLow</code> <span class="label">pad across, low end</span></dt>
+  <dd>A word or two for what the left edge of the pad means ("simple"). Optional, with jig:padXHigh: the panel
+        draws them at the ends of the axis and says them in the pad's caption, so the axis is explained in words as well as by
+        the name of the control.</dd>
+  <dt id="padYHigh"><code>jig:padYHigh</code> <span class="label">pad up, high end</span></dt>
+  <dd>A word or two for what the top edge of the pad means ("varied"). See jig:padXLow.</dd>
+  <dt id="padYLow"><code>jig:padYLow</code> <span class="label">pad up, low end</span></dt>
+  <dd>A word or two for what the bottom edge of the pad means ("steady"). See jig:padXLow.</dd>
   <dt id="pan"><code>jig:pan</code></dt>
   <dd>Stereo position from -1.0 at the left to 1.0 at the right, as
         StereoPannerNode takes it. Absent means centre.</dd>

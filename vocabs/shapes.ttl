@@ -370,6 +370,20 @@ jig:ControlPadShape a sh:NodeShape ;
         sh:message "A control pad needs exactly one jig:padY, naming a port of this plugin that has a symbol."
     ] ;
     sh:property [
+        sh:path jig:padXLow ;
+        sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 24 ;
+        sh:message "An end label on a pad is one short string, at most 24 characters: it is drawn at the end of an axis."
+    ] ;
+    sh:property [ sh:path jig:padXHigh ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 24 ; sh:message "An end label on a pad is one short string, at most 24 characters." ] ;
+    sh:property [ sh:path jig:padYLow ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 24 ; sh:message "An end label on a pad is one short string, at most 24 characters." ] ;
+    sh:property [ sh:path jig:padYHigh ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 24 ; sh:message "An end label on a pad is one short string, at most 24 characters." ] ;
+    sh:property [
+        sh:path jig:padChoice ;
+        sh:maxCount 1 ; sh:nodeKind sh:IRI ;
+        sh:node jig:PadPortShape ;
+        sh:message "A pad's choice, where it has one, is one port of this plugin that has a symbol."
+    ] ;
+    sh:property [
         sh:path jig:padX ;
         sh:disjoint jig:padY ;
         sh:message "A pad's two axes are two different ports: one port on both axes is a diagonal line, not a pad."

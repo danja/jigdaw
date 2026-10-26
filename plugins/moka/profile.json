@@ -70,7 +70,9 @@
           "value": 5
         }
       ],
-      "paramIndex": 0
+      "paramIndex": 0,
+      "displayPriority": 100,
+      "comment": "Which kind of struck object the notes sound like."
     },
     {
       "symbol": "decay",
@@ -78,7 +80,9 @@
       "default": 0.55,
       "minimum": 0,
       "maximum": 1,
-      "paramIndex": 1
+      "paramIndex": 1,
+      "displayPriority": 80,
+      "comment": "How long each note rings."
     },
     {
       "symbol": "mallet",
@@ -86,7 +90,9 @@
       "default": 0.75,
       "minimum": 0,
       "maximum": 1,
-      "paramIndex": 2
+      "paramIndex": 2,
+      "displayPriority": 70,
+      "comment": "How hard the mallet is: harder is brighter and sharper."
     },
     {
       "symbol": "tone",
@@ -118,7 +124,8 @@
       "default": 4,
       "minimum": 1,
       "maximum": 12,
-      "paramIndex": 6
+      "paramIndex": 6,
+      "comment": "How many notes can sound at once."
     },
     {
       "symbol": "level",
@@ -126,7 +133,9 @@
       "default": 0.7,
       "minimum": 0,
       "maximum": 1,
-      "paramIndex": 7
+      "paramIndex": 7,
+      "displayPriority": 60,
+      "comment": "How loud the instrument is."
     },
     {
       "symbol": "release",

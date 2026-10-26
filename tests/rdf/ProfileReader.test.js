@@ -180,13 +180,13 @@ describe('a plugin\'s pads', () => {
   // Each part can be replaced, or left out with null, so a pad missing something is written as Turtle that parses.
   const padLines = (parts = {}) => {
     const part = (key, text) => (key in parts ? parts[key] : text)
-    const properties = [part('label', 'rdfs:label "Feel"'), part('x', 'jig:padX <#density>'), part('y', 'jig:padY <#variation>')].filter(Boolean)
+    const properties = [part('label', 'rdfs:label "Feel"'), part('x', 'jig:padX <#density>'), part('y', 'jig:padY <#variation>'), parts.extra].filter(Boolean)
     return `<#feel> a jig:ControlPad ; ${properties.join(' ; ')} .`
   }
 
   it('are read with each axis as the port\'s symbol', async () => {
     const profile = await read(padLines())
-    expect(profile.pads).toEqual([{ iri: 'urn:test#feel'.replace('urn:test', profile.iri), label: 'Feel', x: 'density', y: 'variation' }])
+    expect(profile.pads).toEqual([{ iri: 'urn:test#feel'.replace('urn:test', profile.iri), label: 'Feel', x: 'density', y: 'variation', choice: null, xLow: null, xHigh: null, yLow: null, yHigh: null }])
   })
 
   it('are an empty list, not absent, for a profile with none', async () => {
@@ -208,6 +208,18 @@ describe('a plugin\'s pads', () => {
 
   it('are refused when an axis is a selector or a switch, which has no continuous range to drag across', async () => {
     await expect(read(padLines({ y: 'jig:padY <#mode>' }))).rejects.toThrow(/padY names mode, which is a selector, and a pad needs a continuous control/)
+  })
+
+  it('carry their end labels and their choice, each null where the profile gives none', async () => {
+    const plain = (await read(padLines())).pads[0]
+    expect([plain.choice, plain.xLow, plain.xHigh, plain.yLow, plain.yHigh]).toEqual([null, null, null, null, null])
+    const full = (await read(padLines({ extra: 'jig:padChoice <#mode> ; jig:padXLow "simple" ; jig:padXHigh "busy" ; jig:padYLow "steady" ; jig:padYHigh "varied"' }))).pads[0]
+    expect([full.choice, full.xLow, full.xHigh, full.yLow, full.yHigh]).toEqual(['mode', 'simple', 'busy', 'steady', 'varied'])
+  })
+
+  it('are refused when the choice is a port that is not a selector, is not a port, or is also an axis', async () => {
+    await expect(read(padLines({ extra: 'jig:padChoice <#variation>' }))).rejects.toThrow(/padChoice names variation, which is a dial, and a pad's choice must be a selector/)
+    await expect(read(padLines({ extra: 'jig:padChoice <#nowhere>' }))).rejects.toThrow(/padChoice names .*#nowhere, which is not a port of this profile/)
   })
 
   it('are refused when both axes are the same port', async () => {

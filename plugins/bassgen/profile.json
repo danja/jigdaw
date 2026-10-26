@@ -61,7 +61,8 @@
       "default": 36,
       "minimum": 12,
       "maximum": 72,
-      "paramIndex": 0
+      "paramIndex": 0,
+      "comment": "The note the bass line is built around."
     },
     {
       "symbol": "scale",
@@ -163,7 +164,8 @@
           "label": "Bebop Minor",
           "value": 22
         }
-      ]
+      ],
+      "comment": "The set of notes the bass line chooses from."
     },
     {
       "symbol": "genre",
@@ -221,7 +223,9 @@
           "label": "Moroder",
           "value": 11
         }
-      ]
+      ],
+      "displayPriority": 95,
+      "comment": "The style of bass line, which decides where in the bar notes tend to fall."
     },
     {
       "symbol": "length",
@@ -229,7 +233,8 @@
       "default": 16,
       "minimum": 1,
       "maximum": 32,
-      "paramIndex": 3
+      "paramIndex": 3,
+      "comment": "How many steps long the pattern is before it repeats."
     },
     {
       "symbol": "subdivision",
@@ -255,7 +260,8 @@
           "label": "Quarter",
           "value": 3
         }
-      ]
+      ],
+      "comment": "How finely each beat is divided into steps."
     },
     {
       "symbol": "density",
@@ -263,7 +269,9 @@
       "default": 0.45,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 5
+      "paramIndex": 5,
+      "displayPriority": 100,
+      "comment": "How many steps of the pattern play a note."
     },
     {
       "symbol": "register",
@@ -271,7 +279,9 @@
       "default": 1,
       "minimum": 0,
       "maximum": 3,
-      "paramIndex": 6
+      "paramIndex": 6,
+      "displayPriority": 60,
+      "comment": "Which octave the bass line sits in; higher numbers are higher."
     },
     {
       "symbol": "hold",
@@ -279,7 +289,9 @@
       "default": 0.35,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 7
+      "paramIndex": 7,
+      "displayPriority": 80,
+      "comment": "How long each note lasts, from short and detached to running into the next."
     },
     {
       "symbol": "accent",
@@ -287,7 +299,9 @@
       "default": 0.45,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 8
+      "paramIndex": 8,
+      "displayPriority": 70,
+      "comment": "How hard the notes are played, with the first beat of each bar hardest."
     },
     {
       "symbol": "colour",
@@ -295,7 +309,8 @@
       "default": 0.5,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 9
+      "paramIndex": 9,
+      "comment": "At either extreme, pushes some notes an octave up or down."
     },
     {
       "symbol": "vary",
@@ -303,7 +318,9 @@
       "default": 0.0,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 10
+      "paramIndex": 10,
+      "displayPriority": 50,
+      "comment": "How much the pattern is mutated away from the one it started as."
     },
     {
       "symbol": "seed",
@@ -311,7 +328,8 @@
       "default": 1,
       "minimum": 1,
       "maximum": 9999,
-      "paramIndex": 11
+      "paramIndex": 11,
+      "comment": "The number of the pattern: the same number always gives the same bass line."
     },
     {
       "symbol": "follow",
@@ -328,7 +346,12 @@
       "id": "feel",
       "label": "Feel",
       "x": "density",
-      "y": "hold"
+      "y": "hold",
+      "choice": "genre",
+      "xLow": "sparse",
+      "xHigh": "busy",
+      "yLow": "short",
+      "yHigh": "held"
     }
   ]
 }

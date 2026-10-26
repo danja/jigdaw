@@ -210,8 +210,17 @@ for (const pad of pads) {
   w(`<#${pad.id}>`)
   w('    a jig:ControlPad ;')
   w(`    rdfs:label ${JSON.stringify(pad.label)} ;`)
+  const extras = []
+  if (pad.choice) {
+    if (!template.ports.some(p => p.symbol === pad.choice)) throw new Error(`pad ${pad.id}: choice names ${pad.choice}, which is not a port of this plugin`)
+    extras.push(`jig:padChoice <#${pad.choice}>`)
+  }
+  for (const [key, term] of [['xLow', 'padXLow'], ['xHigh', 'padXHigh'], ['yLow', 'padYLow'], ['yHigh', 'padYHigh']]) {
+    if (pad[key]) extras.push(`jig:${term} ${JSON.stringify(pad[key])}`)
+  }
   w(`    jig:padX <#${pad.x}> ;`)
-  w(`    jig:padY <#${pad.y}> .`)
+  w(`    jig:padY <#${pad.y}>${extras.length > 0 ? ' ;' : ' .'}`)
+  extras.forEach((line, i) => w(`    ${line}${i === extras.length - 1 ? ' .' : ' ;'}`))
 }
 
 for (const asset of assets) {

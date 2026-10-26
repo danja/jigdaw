@@ -1,7 +1,8 @@
 // src/ui/Pad.js
 //
 // A two-axis pad: a square the pointer drags across to set two of a plugin's ports at once, left to right for one and bottom to top for
-// the other (docs/plugin-profiles.md, "A pad for two controls"). GarageBand's Drummer pad is the idea.
+// the other (docs/plugin-profiles.md, "A pad for two controls"). GarageBand's Drummer pad is the idea. A pad may carry a word for each end
+// of each axis ("simple", "busy"), drawn at the ends and said in the caption.
 //
 // A pad is a shortcut and never the only way. Both ports stay on the panel as ordinary controls, which a keyboard and a screen reader
 // use, so the pad is hidden from assistive technology and has no stop of its own in the tab order; what it does is what those two
@@ -44,12 +45,27 @@ export function createPad (document, { pad, ports, onSet, id }) {
   puck.className = 'pad-puck'
   surface.append(puck)
 
+  // Words at the ends of the axes, drawn inside the square where the pointer goes, and the same words in the caption below so they are
+  // read as well as seen. Each is optional, and an axis with only one end named says only that one.
+  const end = (className, text) => {
+    if (!text) return
+    const label = document.createElement('span')
+    label.className = `pad-end ${className}`
+    label.textContent = text
+    surface.append(label)
+  }
+  end('pad-end-left', pad.xLow)
+  end('pad-end-right', pad.xHigh)
+  end('pad-end-bottom', pad.yLow)
+  end('pad-end-top', pad.yHigh)
+  const axis = (port, low, high) => `${port.name ?? port.symbol}${low && high ? `, from ${low} to ${high}` : low ? `, low is ${low}` : high ? `, high is ${high}` : ''}`
+
   const caption = document.createElement('p')
   caption.className = 'pad-caption'
   caption.id = captionId
   const name = document.createElement('b')
   name.textContent = pad.label
-  caption.append(name, document.createTextNode(` Across is ${portX.name ?? portX.symbol}, up is ${portY.name ?? portY.symbol}.`))
+  caption.append(name, document.createTextNode(` Across is ${axis(portX, pad.xLow, pad.xHigh)}, up is ${axis(portY, pad.yLow, pad.yHigh)}.`))
 
   element.append(surface, caption)
 

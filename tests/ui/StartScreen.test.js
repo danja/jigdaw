@@ -9,6 +9,7 @@ const run = (log = []) => ({
   template: name => log.push(`template ${name}`),
   emptyTrack: () => log.push('empty'),
   sound: () => log.push('sound'),
+  loops: () => log.push('loops'),
   browse: () => log.push('browse'),
   open: () => log.push('open')
 })
@@ -18,7 +19,7 @@ describe('the start screen', () => {
     const groups = describeStart({ tunes: ['Chiptune', 'Acid'], templates: ['My band'], run: run() })
     expect(groups.map(g => g.heading)).toEqual(['Play a tune', 'Start a new piece', 'From a template', 'Open a saved piece'])
     expect(groups[0].actions.map(a => a.label)).toEqual(['Chiptune', 'Acid'])
-    expect(groups[1].actions.map(a => a.label)).toEqual(['A track with a sound', 'An empty track', 'Find a plugin'])
+    expect(groups[1].actions.map(a => a.label)).toEqual(['A track with a sound', 'A loop to start from', 'An empty track', 'Find a plugin'])
     expect(groups[2].actions.map(a => a.label)).toEqual(['My band'])
     expect(groups[3].actions.map(a => a.label)).toEqual(['Choose a file'])
   })
@@ -35,11 +36,11 @@ describe('the start screen', () => {
     groups[1].actions.forEach(a => a.run())
     groups[2].actions[0].run()
     groups[3].actions[0].run()
-    expect(log).toEqual(['tune Acid', 'sound', 'empty', 'browse', 'template My band', 'open'])
+    expect(log).toEqual(['tune Acid', 'sound', 'loops', 'empty', 'browse', 'template My band', 'open'])
   })
 
   it('refuses a screen that cannot do something it would offer, rather than drawing a button that does nothing', () => {
-    for (const key of ['tune', 'template', 'emptyTrack', 'sound', 'browse', 'open']) {
+    for (const key of ['tune', 'template', 'emptyTrack', 'sound', 'loops', 'browse', 'open']) {
       const partial = run()
       delete partial[key]
       expect(() => describeStart({ tunes: [], templates: [], run: partial }), key).toThrow(`the start screen needs run.${key}`)

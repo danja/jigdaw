@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -69,6 +70,8 @@
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 2 ;
     jig:paramIndex 0 ;
     jig:controlGroup "Exciter" ;
+    rdfs:comment "How the string is set going: plucked, bowed or hammered." ;
+    pprops:displayPriority 100 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#exciter-0> ,
@@ -93,7 +96,9 @@
     lv2:symbol "hardness" ; lv2:name "Hardness" ;
     lv2:default 0.6 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 2 ;
-    jig:controlGroup "Exciter" .
+    jig:controlGroup "Exciter" ;
+    rdfs:comment "How hard the string is plucked or struck." ;
+    pprops:displayPriority 80 .
 
 <#bow_pressure>
     a lv2:InputPort , lv2:ControlPort ;
@@ -108,6 +113,8 @@
     lv2:default 3 ; lv2:minimum 0.1 ; lv2:maximum 20 ;
     jig:paramIndex 4 ;
     jig:controlGroup "String" ;
+    rdfs:comment "How many seconds a note takes to die away." ;
+    pprops:displayPriority 90 ;
     units:unit units:s .
 
 <#damping>
@@ -115,7 +122,9 @@
     lv2:symbol "damping" ; lv2:name "Damping" ;
     lv2:default 0.3 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 5 ;
-    jig:controlGroup "String" .
+    jig:controlGroup "String" ;
+    rdfs:comment "How much the string is damped: more is duller and shorter." ;
+    pprops:displayPriority 70 .
 
 <#stiffness>
     a lv2:InputPort , lv2:ControlPort ;
@@ -151,6 +160,7 @@
     lv2:default 250 ; lv2:minimum 5 ; lv2:maximum 2000 ;
     jig:paramIndex 10 ;
     jig:controlGroup "Output" ;
+    rdfs:comment "How long a note takes to stop after the key is let go." ;
     units:unit units:ms .
 
 <#master>
@@ -158,7 +168,9 @@
     lv2:symbol "master" ; lv2:name "Master" ;
     lv2:default 0.6 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 11 ;
-    jig:controlGroup "Output" .
+    jig:controlGroup "Output" ;
+    rdfs:comment "The overall level of the instrument." ;
+    pprops:displayPriority 60 .
 
 <#velocity>
     a lv2:InputPort , lv2:ControlPort ;

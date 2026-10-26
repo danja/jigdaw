@@ -1,0 +1,1177 @@
+{
+  "generated": "bin/write-loops.js",
+  "note": "Generated from the patterns in bin/write-loops.js. Do not edit; run npm run build:loops. Every loop is original and offered under CC0-1.0.",
+  "licence": "CC0-1.0",
+  "loops": [
+    {
+      "id": "four-on-the-floor",
+      "label": "Four on the floor",
+      "kind": "drums",
+      "lengthBeats": 4,
+      "about": "A house beat: a kick on every beat, a clap on two and four, open hats between.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 64
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 64
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 64
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 46,
+          "velocity": 64
+        }
+      ]
+    },
+    {
+      "id": "rock-beat",
+      "label": "Rock beat",
+      "kind": "drums",
+      "lengthBeats": 4,
+      "about": "Kick on one and the and of three, snare on two and four, eighth-note hats.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        }
+      ]
+    },
+    {
+      "id": "boom-bap",
+      "label": "Boom bap",
+      "kind": "drums",
+      "lengthBeats": 4,
+      "about": "A hip hop groove: a lazy kick, a hard snare on two and four, busy hats.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 64
+        }
+      ]
+    },
+    {
+      "id": "half-time",
+      "label": "Half time",
+      "kind": "drums",
+      "lengthBeats": 4,
+      "about": "The snare waits for beat three, so everything feels slower than the tempo.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        }
+      ]
+    },
+    {
+      "id": "breakbeat",
+      "label": "Breakbeat",
+      "kind": "drums",
+      "lengthBeats": 4,
+      "about": "A syncopated break: kicks and snares fall off the beat.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 120
+        },
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 120
+        },
+        {
+          "startBeat": 3.75,
+          "lengthBeats": 0.25,
+          "pitch": 38,
+          "velocity": 64
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.25,
+          "pitch": 42,
+          "velocity": 100
+        },
+        {
+          "startBeat": 1.75,
+          "lengthBeats": 0.25,
+          "pitch": 37,
+          "velocity": 64
+        }
+      ]
+    },
+    {
+      "id": "root-and-fifth",
+      "label": "Root and fifth",
+      "kind": "bass",
+      "lengthBeats": 4,
+      "about": "Eighth notes on C, with the fifth below the octave lifting the end of each half bar.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.5,
+          "pitch": 43,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.5,
+          "pitch": 43,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 39,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "walking-line",
+      "label": "Walking line",
+      "kind": "bass",
+      "lengthBeats": 8,
+      "about": "Quarter notes climbing through C minor and back down over two bars.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 1,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 1,
+          "pitch": 39,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 1,
+          "pitch": 41,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 1,
+          "pitch": 43,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 1,
+          "pitch": 44,
+          "velocity": 96
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 1,
+          "pitch": 43,
+          "velocity": 96
+        },
+        {
+          "startBeat": 6,
+          "lengthBeats": 1,
+          "pitch": 41,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 1,
+          "pitch": 39,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "offbeat-bass",
+      "label": "Offbeat bass",
+      "kind": "bass",
+      "lengthBeats": 4,
+      "about": "A single note on the offbeats, the other half of Four on the floor.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "funk-bass",
+      "label": "Funk bass",
+      "kind": "bass",
+      "lengthBeats": 4,
+      "about": "Short, bouncing notes with gaps, leaning on the one.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 112
+        },
+        {
+          "startBeat": 0.75,
+          "lengthBeats": 0.25,
+          "pitch": 36,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.5,
+          "pitch": 39,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.25,
+          "pitch": 43,
+          "velocity": 104
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 41,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.25,
+          "lengthBeats": 0.25,
+          "pitch": 39,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 36,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "minor-four-chords",
+      "label": "Minor four chords",
+      "kind": "chords",
+      "lengthBeats": 16,
+      "about": "C minor, A flat, E flat, B flat: a bar of each, the sound of a thousand songs.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 80
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 63,
+          "velocity": 80
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 67,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 56,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 63,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 63,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 67,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 70,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 58,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 62,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 65,
+          "velocity": 80
+        }
+      ]
+    },
+    {
+      "id": "pop-four-chords",
+      "label": "Pop four chords",
+      "kind": "chords",
+      "lengthBeats": 16,
+      "about": "C, G, A minor, F: a bar of each, bright and familiar.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 80
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 64,
+          "velocity": 80
+        },
+        {
+          "startBeat": 0,
+          "lengthBeats": 4,
+          "pitch": 67,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 55,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 59,
+          "velocity": 80
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 4,
+          "pitch": 62,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 57,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 80
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 4,
+          "pitch": 64,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 53,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 57,
+          "velocity": 80
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 4,
+          "pitch": 60,
+          "velocity": 80
+        }
+      ]
+    },
+    {
+      "id": "slow-arpeggio",
+      "label": "Slow arpeggio",
+      "kind": "chords",
+      "lengthBeats": 8,
+      "about": "A C minor chord spelled out in eighth notes, up and then down, over two bars.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 96
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 55,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 0.5,
+          "pitch": 56,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 96
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 0.5,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 5.5,
+          "lengthBeats": 0.5,
+          "pitch": 68,
+          "velocity": 96
+        },
+        {
+          "startBeat": 6,
+          "lengthBeats": 0.5,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 6.5,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 0.5,
+          "pitch": 56,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7.5,
+          "lengthBeats": 0.5,
+          "pitch": 51,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "simple-riff",
+      "label": "Simple riff",
+      "kind": "melody",
+      "lengthBeats": 8,
+      "about": "A C minor pentatonic riff that answers itself over two bars.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 1,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 1,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 1,
+          "pitch": 74,
+          "velocity": 96
+        },
+        {
+          "startBeat": 6,
+          "lengthBeats": 0.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 6.5,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 1,
+          "pitch": 67,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "rising-phrase",
+      "label": "Rising phrase",
+      "kind": "melody",
+      "lengthBeats": 8,
+      "about": "Step by step up the C minor scale, then a pause on the top note.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 60,
+          "velocity": 96
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 62,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 0.5,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1.5,
+          "lengthBeats": 0.5,
+          "pitch": 65,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 2.5,
+          "lengthBeats": 0.5,
+          "pitch": 68,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 3,
+          "pitch": 72,
+          "velocity": 96
+        }
+      ]
+    },
+    {
+      "id": "call-and-answer",
+      "label": "Call and answer",
+      "kind": "melody",
+      "lengthBeats": 16,
+      "about": "Four bars: a short question, then the answer that comes home to C.",
+      "licence": "CC0-1.0",
+      "notes": [
+        {
+          "startBeat": 0,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 0.5,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 1,
+          "lengthBeats": 1.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 3.5,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4,
+          "lengthBeats": 0.5,
+          "pitch": 65,
+          "velocity": 96
+        },
+        {
+          "startBeat": 4.5,
+          "lengthBeats": 0.5,
+          "pitch": 68,
+          "velocity": 96
+        },
+        {
+          "startBeat": 5,
+          "lengthBeats": 1.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7,
+          "lengthBeats": 0.5,
+          "pitch": 68,
+          "velocity": 96
+        },
+        {
+          "startBeat": 7.5,
+          "lengthBeats": 0.5,
+          "pitch": 65,
+          "velocity": 96
+        },
+        {
+          "startBeat": 8,
+          "lengthBeats": 0.5,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 8.5,
+          "lengthBeats": 0.5,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 9,
+          "lengthBeats": 1.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 11,
+          "lengthBeats": 0.5,
+          "pitch": 74,
+          "velocity": 96
+        },
+        {
+          "startBeat": 11.5,
+          "lengthBeats": 0.5,
+          "pitch": 72,
+          "velocity": 96
+        },
+        {
+          "startBeat": 12,
+          "lengthBeats": 1,
+          "pitch": 70,
+          "velocity": 96
+        },
+        {
+          "startBeat": 13,
+          "lengthBeats": 1,
+          "pitch": 67,
+          "velocity": 96
+        },
+        {
+          "startBeat": 14,
+          "lengthBeats": 1,
+          "pitch": 63,
+          "velocity": 96
+        },
+        {
+          "startBeat": 15,
+          "lengthBeats": 1,
+          "pitch": 60,
+          "velocity": 96
+        }
+      ]
+    }
+  ]
+}

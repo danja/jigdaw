@@ -105,5 +105,13 @@ export function createMicIn (ctx, { getUserMedia, mediaDevices, available }) {
     })
   }
 
-  return { mount, refresh, active: () => live !== null }
+  return {
+    mount,
+    refresh,
+    active: () => live !== null,
+    /** Whether the browser can be asked for a microphone at all: the button is left out of the page when not. */
+    available: Boolean(available),
+    /** Feed `track` from the default microphone, for a caller that has just made the track (the Add a track chooser). */
+    listen: track => open(track, null)
+  }
 }

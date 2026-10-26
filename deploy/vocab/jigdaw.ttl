@@ -488,6 +488,35 @@ jig:padY a owl:ObjectProperty ;
     rdfs:comment """The port the pad sets as the pointer moves bottom to top: its minimum at the bottom
         edge and its maximum at the top. A different port from jig:padX, and a continuous control.""" .
 
+jig:padXLow a owl:DatatypeProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range xsd:string ;
+    rdfs:label "pad across, low end" ;
+    rdfs:comment """A word or two for what the left edge of the pad means ("simple"). Optional, with jig:padXHigh: the panel
+        draws them at the ends of the axis and says them in the pad's caption, so the axis is explained in words as well as by
+        the name of the control.""" .
+
+jig:padXHigh a owl:DatatypeProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range xsd:string ;
+    rdfs:label "pad across, high end" ;
+    rdfs:comment "A word or two for what the right edge of the pad means (\"busy\"). See jig:padXLow." .
+
+jig:padYLow a owl:DatatypeProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range xsd:string ;
+    rdfs:label "pad up, low end" ;
+    rdfs:comment "A word or two for what the bottom edge of the pad means (\"steady\"). See jig:padXLow." .
+
+jig:padYHigh a owl:DatatypeProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range xsd:string ;
+    rdfs:label "pad up, high end" ;
+    rdfs:comment "A word or two for what the top edge of the pad means (\"varied\"). See jig:padXLow." .
+
+jig:padChoice a owl:ObjectProperty ;
+    rdfs:domain jig:ControlPad ; rdfs:range lv2:Port ;
+    rdfs:label "pad choice" ;
+    rdfs:comment """A selector port the panel draws beside the pad, a style or a genre to be chosen before the pad is
+        played across. The control is the port's own, moved beside the pad and not copied, so it is still one control with one
+        name. Must be a selector (an enumeration), not a continuous control.""" .
+
 jig:controlGroup a owl:DatatypeProperty ;
     rdfs:domain lv2:Port ; rdfs:range xsd:string ;
     rdfs:label "control group" ;

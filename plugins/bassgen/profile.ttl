@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -67,19 +68,26 @@
     a jig:ControlPad ;
     rdfs:label "Feel" ;
     jig:padX <#density> ;
-    jig:padY <#hold> .
+    jig:padY <#hold> ;
+    jig:padChoice <#genre> ;
+    jig:padXLow "sparse" ;
+    jig:padXHigh "busy" ;
+    jig:padYLow "short" ;
+    jig:padYHigh "held" .
 
 <#root>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "root" ; lv2:name "Root" ;
     lv2:default 36 ; lv2:minimum 12 ; lv2:maximum 72 ;
-    jig:paramIndex 0 .
+    jig:paramIndex 0 ;
+    rdfs:comment "The note the bass line is built around." .
 
 <#scale>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "scale" ; lv2:name "Scale" ;
     lv2:default 2 ; lv2:minimum 0 ; lv2:maximum 22 ;
     jig:paramIndex 1 ;
+    rdfs:comment "The set of notes the bass line chooses from." ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#scale-0> ,
@@ -157,6 +165,8 @@
     lv2:symbol "genre" ; lv2:name "Genre" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 11 ;
     jig:paramIndex 2 ;
+    rdfs:comment "The style of bass line, which decides where in the bar notes tend to fall." ;
+    pprops:displayPriority 95 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#genre-0> ,
@@ -200,13 +210,15 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "length" ; lv2:name "Length" ;
     lv2:default 16 ; lv2:minimum 1 ; lv2:maximum 32 ;
-    jig:paramIndex 3 .
+    jig:paramIndex 3 ;
+    rdfs:comment "How many steps long the pattern is before it repeats." .
 
 <#subdivision>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "subdivision" ; lv2:name "Subdivision" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 3 ;
     jig:paramIndex 4 ;
+    rdfs:comment "How finely each beat is divided into steps." ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#subdivision-0> ,
@@ -226,43 +238,55 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "density" ; lv2:name "Density" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 5 .
+    jig:paramIndex 5 ;
+    rdfs:comment "How many steps of the pattern play a note." ;
+    pprops:displayPriority 100 .
 
 <#register>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "register" ; lv2:name "Register" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 3 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    rdfs:comment "Which octave the bass line sits in; higher numbers are higher." ;
+    pprops:displayPriority 60 .
 
 <#hold>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hold" ; lv2:name "Hold" ;
     lv2:default 0.35 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    rdfs:comment "How long each note lasts, from short and detached to running into the next." ;
+    pprops:displayPriority 80 .
 
 <#accent>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "accent" ; lv2:name "Accent" ;
     lv2:default 0.45 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 8 .
+    jig:paramIndex 8 ;
+    rdfs:comment "How hard the notes are played, with the first beat of each bar hardest." ;
+    pprops:displayPriority 70 .
 
 <#colour>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "colour" ; lv2:name "Colour" ;
     lv2:default 0.5 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    rdfs:comment "At either extreme, pushes some notes an octave up or down." .
 
 <#vary>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "vary" ; lv2:name "Vary" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 10 .
+    jig:paramIndex 10 ;
+    rdfs:comment "How much the pattern is mutated away from the one it started as." ;
+    pprops:displayPriority 50 .
 
 <#seed>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "seed" ; lv2:name "Seed" ;
     lv2:default 1 ; lv2:minimum 1 ; lv2:maximum 9999 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    rdfs:comment "The number of the pattern: the same number always gives the same bass line." .
 
 <#follow>
     a lv2:InputPort , lv2:ControlPort ;

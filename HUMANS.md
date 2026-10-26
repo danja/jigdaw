@@ -69,8 +69,9 @@ is wrong in INBOX.md.
   Show steps, start screen, Add a track chooser, grouped transport, clip repeat, light and dark themes and "More controls" were all
   checked by code and in Chrome, none by a person who did not build them. Also listen to the Hear button on each of the eight
   instruments, and to a DrumKit loaded through it.
+- **Listen to the new sounds and loops** (2026-10-26, nothing here has been heard, only measured): the four "Make notes for me" pairs in the Add a track chooser (BassGen with Pulse, MelGen with Canticle, Markov with Moka, Sprout with Monochord) and whether each pairing is a good one, DrumKit with DrumGen and the Feel pad, and the 15 loops in the Loops dialog (`web/loops/index.json`), which were written as patterns and never played by a person. Say which are weak or wrong, and whether Hear and Add feel right.
 - **Deploy the help text:** the page loads plugins from their canonical address, so the help on Pulse's and DrumKit's controls (new 2026-10-26)
-  shows on the live site only after a deploy; it was checked by loading the local copies. DrumKit's "More controls (61)" was deployed and is live.
+  shows on the live site only after a deploy; it was checked by loading the local copies. The same goes for the ranked controls and help on BassGen, DrumGen, MelGen, Moka, Monochord, Canticle and Mop, the pads' end labels, and `web/loops/index.json`. DrumKit's "More controls (61)" was deployed and is live.
 
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 

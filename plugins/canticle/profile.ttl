@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -67,6 +68,8 @@
     lv2:symbol "model" ; lv2:name "Model" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 4 ;
     jig:paramIndex 0 ;
+    rdfs:comment "The kind of tone: keys, reed, pad, pluck or glass." ;
+    pprops:displayPriority 100 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#model-0> ,
@@ -107,25 +110,31 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "attack" ; lv2:name "Attack" ;
     lv2:default 0.1 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 4 .
+    jig:paramIndex 4 ;
+    rdfs:comment "How slowly a note fades in when you press a key." ;
+    pprops:displayPriority 80 .
 
 <#decay>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "decay" ; lv2:name "Decay" ;
     lv2:default 0.34 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 5 .
+    jig:paramIndex 5 ;
+    rdfs:comment "How quickly a note falls from its first peak to the sustain level." .
 
 <#sustain>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "sustain" ; lv2:name "Sustain" ;
     lv2:default 0.78 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    rdfs:comment "The level a held note settles to after its first moment." .
 
 <#release>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "release" ; lv2:name "Release" ;
     lv2:default 0.42 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    rdfs:comment "How long a note takes to die away after you let go of the key." ;
+    pprops:displayPriority 70 .
 
 <#detune>
     a lv2:InputPort , lv2:ControlPort ;
@@ -149,7 +158,9 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "output" ; lv2:name "Output" ;
     lv2:default 0.68 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    rdfs:comment "The overall level of the instrument." ;
+    pprops:displayPriority 60 .
 
 <#metal>
     a lv2:InputPort , lv2:ControlPort ;

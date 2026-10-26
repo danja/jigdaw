@@ -223,9 +223,16 @@ A pad is a resource of type `jig:ControlPad` with a name and two ports of the sa
   naming the pad. The two must be different ports, and each must be declared in this profile with a symbol.
 - Under the pad, in words, the panel says which control is across and which is up, so the pad is never explained by position alone.
 - The puck follows the two controls, whatever moves them: a knob, a preset, automation, an agent.
-- A plugin may have several pads. DrumGen, BassGen and MelGen each offer one called Feel: density across, and variation, hold or leap up.
+- A pad may carry a word for each end of each axis, `jig:padXLow`, `jig:padXHigh`, `jig:padYLow` and `jig:padYHigh`, each one short string
+  of at most 24 characters ("simple", "busy"). They are drawn at the ends of the axes inside the square and said in the caption, which then
+  reads "Across is Density, from simple to busy". Each is optional, and an axis with one end named says only that one.
+- A pad may name a selector with `jig:padChoice`: a style or a genre to choose before playing across it. The panel draws that port's own
+  control beside the pad and not in the grid, so it is one control with one name and not a copy. It must be a selector (an enumeration), and not
+  one of the pad's axes. Under a plugin skin, which draws its own controls, the choice stays where the skin puts it.
+- A plugin may have several pads. DrumGen, BassGen and MelGen each offer one called Feel: density across, and variation, hold or leap up, with
+  the genre (or, for MelGen, the scale) beside it.
 
-Four terms are ours, in the vocabulary first: `jig:ControlPad`, `jig:pad`, `jig:padX` and `jig:padY`. Nothing in LV2 describes a pad
+Nine terms are ours, in the vocabulary first: `jig:ControlPad`, `jig:pad`, `jig:padX`, `jig:padY`, the four end labels and `jig:padChoice`. Nothing in LV2 describes a pad
 (its port groups combine ports that carry one stream, and say nothing about layout).
 
 ## What a control does
@@ -249,7 +256,7 @@ panel has one line for it.
 - A port with no comment gets nothing, and a plugin with no comments gets no help line at all. Say what the control does to the
   sound, in words a player uses, and leave out what its name already says ("Gain: how loud the synth is" is worth writing;
   "Gain: the gain" is not).
-- Pulse and DrumKit are the worked examples. DrumKit's help is on the 14 controls it ranks first.
+- Pulse and DrumKit were the first worked examples. BassGen, DrumGen, MelGen, Moka, Monochord, Canticle and Mop now rank and explain their main controls too, each sentence taken from what the plugin's own source does, and a test over every profile in the repository checks that a ranked control has a sentence, that a ranking puts something away and keeps to a few, and that each sentence is finished.
 
 ## Which controls come first
 

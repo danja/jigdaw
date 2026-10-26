@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -68,13 +69,20 @@
     a jig:ControlPad ;
     rdfs:label "Feel" ;
     jig:padX <#density> ;
-    jig:padY <#variation> .
+    jig:padY <#variation> ;
+    jig:padChoice <#genre> ;
+    jig:padXLow "simple" ;
+    jig:padXHigh "busy" ;
+    jig:padYLow "steady" ;
+    jig:padYHigh "varied" .
 
 <#genre>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "genre" ; lv2:name "Genre" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 13 ;
     jig:paramIndex 0 ;
+    rdfs:comment "The drum style the pattern is built in." ;
+    pprops:displayPriority 100 ;
     lv2:portProperty lv2:enumeration ;
     lv2:scalePoint
         <#genre-0> ,
@@ -199,13 +207,17 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "density" ; lv2:name "Density" ;
     lv2:default 0.58 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 6 .
+    jig:paramIndex 6 ;
+    rdfs:comment "How busy the pattern is: more hits across the bar." ;
+    pprops:displayPriority 90 .
 
 <#variation>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "variation" ; lv2:name "Variation" ;
     lv2:default 0.35 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 7 .
+    jig:paramIndex 7 ;
+    rdfs:comment "How much the pattern changes as it plays." ;
+    pprops:displayPriority 80 .
 
 <#fill_amount>
     a lv2:InputPort , lv2:ControlPort ;
@@ -217,25 +229,32 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "seed" ; lv2:name "Seed" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 65535 ;
-    jig:paramIndex 9 .
+    jig:paramIndex 9 ;
+    rdfs:comment "The number of the pattern: the same number always gives the same beat." .
 
 <#kick_amt>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "kick_amt" ; lv2:name "Kick Amount" ;
     lv2:default 0.78 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 10 .
+    jig:paramIndex 10 ;
+    rdfs:comment "How much kick drum the pattern uses." ;
+    pprops:displayPriority 60 .
 
 <#backbeat_amt>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "backbeat_amt" ; lv2:name "Backbeat Amount" ;
     lv2:default 0.76 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 11 .
+    jig:paramIndex 11 ;
+    rdfs:comment "How strongly the backbeat, beats two and four, is played." ;
+    pprops:displayPriority 60 .
 
 <#hat_amt>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "hat_amt" ; lv2:name "Hat Amount" ;
     lv2:default 0.82 ; lv2:minimum 0 ; lv2:maximum 1 ;
-    jig:paramIndex 12 .
+    jig:paramIndex 12 ;
+    rdfs:comment "How much hi-hat the pattern uses." ;
+    pprops:displayPriority 60 .
 
 <#aux_amt>
     a lv2:InputPort , lv2:ControlPort ;
@@ -248,6 +267,8 @@
     lv2:symbol "new" ; lv2:name "New" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 14 ;
+    rdfs:comment "Starts a fresh pattern." ;
+    pprops:displayPriority 50 ;
     lv2:portProperty lv2:toggled .
 
 <#mutate>
@@ -262,6 +283,8 @@
     lv2:symbol "fill" ; lv2:name "Fill" ;
     lv2:default 0 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 16 ;
+    rdfs:comment "Builds a drum fill into the bar about to play." ;
+    pprops:displayPriority 50 ;
     lv2:portProperty lv2:toggled .
 
 <#tom_amt>

@@ -14,9 +14,9 @@ const GRID_LABELS = { off: 'Off', bar: 'Bar', beat: 'Beat' }
  * `zoom(factor)` and `fit()` act on the lanes, which this module does not know.
  * `onRouting(on)` is told when the chain strips are shown or hidden, and once at
  * the start. `onSeek(beat)` is null when the page cannot seek, and then there is
- * no Go to bar. `onAddTrack()` likewise leaves out Add track.
+ * no Go to bar. `onAddTrack()` likewise leaves out Add track, and `onLoops()` Loops, which opens the loop library.
  */
-export function createTimelineTools (document, { view, bpb, zoom, fit, onSeek = null, onAddTrack = null, onRouting }) {
+export function createTimelineTools (document, { view, bpb, zoom, fit, onSeek = null, onAddTrack = null, onLoops = null, onRouting }) {
   const element = document.createElement('div')
   element.className = 'timeline-tools'
   element.setAttribute('role', 'group')
@@ -84,6 +84,7 @@ export function createTimelineTools (document, { view, bpb, zoom, fit, onSeek = 
     iconTool('zoomIn', 'Zoom in', () => zoom(1.5)),
     tool('Fit', () => fit()),
     ...(onAddTrack ? [tool('Add track', () => onAddTrack())] : []),
+    ...(onLoops ? [tool('Loops', () => onLoops())] : []),
     followButton, routingButton, zoomStatus, snapLabel, ...(onSeek ? [seekLabel] : []))
   setRouting(true)
 

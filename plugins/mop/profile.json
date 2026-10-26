@@ -570,7 +570,9 @@
           "label": "Gunshot",
           "value": 127
         }
-      ]
+      ],
+      "displayPriority": 100,
+      "comment": "Which of the 128 General MIDI instruments is played."
     },
     {
       "symbol": "voices",
@@ -580,7 +582,8 @@
       "maximum": 18,
       "controller": 70,
       "group": "Instrument",
-      "paramIndex": 1
+      "paramIndex": 1,
+      "comment": "How many notes can sound at once."
     },
     {
       "symbol": "gain",
@@ -590,7 +593,9 @@
       "maximum": 1,
       "controller": 71,
       "group": "Output",
-      "paramIndex": 2
+      "paramIndex": 2,
+      "displayPriority": 90,
+      "comment": "The overall level of the instrument."
     },
     {
       "symbol": "bend_range",

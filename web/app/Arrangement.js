@@ -36,7 +36,9 @@ export function createArrangement (ctx) {
   async function addTrack () {
     await ctx.runtime.ensureRunning()
     const result = edit([{ op: 'addTrack' }])
-    if (result.ok) ctx.selection.set('track', [result.results[0]])
+    if (!result.ok) return null
+    ctx.selection.set('track', [result.results[0]])
+    return result.results[0]
   }
 
   // Where the next imported audio file goes, while the file picker is open.
@@ -80,6 +82,7 @@ export function createArrangement (ctx) {
     onExpandTrack: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: 'small' }),
     // The toolbar's Add track opens the chooser, which has An empty track in it.
     onAddTrack: () => ctx.addTrack.open(),
+    onLoops: () => ctx.loops.open(),
     onDuplicateTrack: async trackId => {
       const result = await duplicateTrack(ctx.dispatcher, trackId)
       if (!result.ok) { log(result.message, 'error'); return }
@@ -369,6 +372,7 @@ export function createArrangement (ctx) {
             template: name => ctx.templates.open(name).catch(error => log(error.message, 'error')),
             emptyTrack: () => addTrack(),
             sound: () => ctx.addTrack.open(),
+            loops: () => ctx.loops.open(),
             browse: () => ctx.layout.showBrowser(true),
             open: () => document.getElementById('openfile').click()
           }

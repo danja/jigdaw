@@ -29,6 +29,7 @@
     "wam": "node bin/wam.js",
     "wam:fixtures": "node bin/wam-fixtures.js",
     "build": "npm run build:index && npm run build:vocab && npm run build:web",
+    "build:loops": "node bin/write-loops.js",
     "build:icons": "node bin/build-icons.js",
     "build:precache": "node bin/build-precache.js"
   },

@@ -13322,6 +13322,11 @@ var init_Vocabulary = __esm({
         pad: `${JIG}pad`,
         padX: `${JIG}padX`,
         padY: `${JIG}padY`,
+        padXLow: `${JIG}padXLow`,
+        padXHigh: `${JIG}padXHigh`,
+        padYLow: `${JIG}padYLow`,
+        padYHigh: `${JIG}padYHigh`,
+        padChoice: `${JIG}padChoice`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13585,7 +13590,17 @@ function readPads(dataset2, subject, ports) {
     const x = axis(jig.padX);
     const y = axis(jig.padY);
     if (x === y) throw new Error(`${where}: both axes are ${x}`);
-    return { iri: pad.value, label, x, y };
+    let choice = null;
+    const choiceTerm = one(dataset2, pad, jig.padChoice);
+    if (choiceTerm) {
+      const port = ports.find((p) => p.iri === choiceTerm.value);
+      if (!port) throw new Error(`${where}: padChoice names ${choiceTerm.value}, which is not a port of this profile`);
+      if (port.widget !== "selector") throw new Error(`${where}: padChoice names ${port.symbol}, which is a ${port.widget}, and a pad's choice must be a selector`);
+      if (port.symbol === x || port.symbol === y) throw new Error(`${where}: padChoice is ${port.symbol}, which is also an axis`);
+      choice = port.symbol;
+    }
+    const end = (predicate) => asString(one(dataset2, pad, predicate));
+    return { iri: pad.value, label, x, y, choice, xLow: end(jig.padXLow), xHigh: end(jig.padXHigh), yLow: end(jig.padYLow), yHigh: end(jig.padYHigh) };
   });
 }
 function readPort(dataset2, term5) {

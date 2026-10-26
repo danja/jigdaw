@@ -151,7 +151,9 @@
           "label": "Bebop Minor",
           "value": 22
         }
-      ]
+      ],
+      "displayPriority": 95,
+      "comment": "The set of notes the melody chooses from."
     },
     {
       "symbol": "channel",
@@ -311,7 +313,9 @@
       "default": 0.48,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 9
+      "paramIndex": 9,
+      "displayPriority": 100,
+      "comment": "How many steps of the phrase carry a note."
     },
     {
       "symbol": "register",
@@ -327,7 +331,9 @@
       "default": 0.42,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 11
+      "paramIndex": 11,
+      "displayPriority": 60,
+      "comment": "How long each note lasts."
     },
     {
       "symbol": "accent",
@@ -351,7 +357,9 @@
       "default": 0.45,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 14
+      "paramIndex": 14,
+      "displayPriority": 90,
+      "comment": "How wide a span of notes the melody roams over."
     },
     {
       "symbol": "leap",
@@ -359,7 +367,9 @@
       "default": 0.28,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 15
+      "paramIndex": 15,
+      "displayPriority": 80,
+      "comment": "How often the melody jumps instead of moving by step."
     },
     {
       "symbol": "rest",
@@ -367,7 +377,9 @@
       "default": 0.24,
       "minimum": 0.0,
       "maximum": 1.0,
-      "paramIndex": 16
+      "paramIndex": 16,
+      "displayPriority": 70,
+      "comment": "How often the melody pauses."
     },
     {
       "symbol": "cadence",
@@ -383,7 +395,8 @@
       "default": 1,
       "minimum": 1,
       "maximum": 65535,
-      "paramIndex": 18
+      "paramIndex": 18,
+      "comment": "The number of the melody: the same number always gives the same tune."
     },
     {
       "symbol": "vary",
@@ -450,7 +463,12 @@
       "id": "feel",
       "label": "Feel",
       "x": "density",
-      "y": "leap"
+      "y": "leap",
+      "choice": "scale",
+      "xLow": "sparse",
+      "xHigh": "busy",
+      "yLow": "smooth",
+      "yHigh": "jumpy"
     }
   ]
 }

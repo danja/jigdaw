@@ -5,6 +5,18 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## 2026-10-26: Add in the chooser failed before anything had been heard
+
+**What happened.** Pressing Add in the Add a track chooser, as the first thing done in a fresh page, failed with "Cannot read properties of null (reading
+'grouped')". Hear first, then Add, worked, which is the order every earlier check used.
+
+**Root cause.** `ctx.dispatcher` does not exist until the first thing that needs sound asks for it (`ctx.runtime.ensureRunning()`). Add, now run as one
+undo group, used `ctx.dispatcher` directly, where it used to reach it through `loadPlugin`, which started the engine itself. The test stand-in gave the
+code a dispatcher from the start, a stand-in more permissive than the page.
+
+**Prevention.** The stand-in's dispatcher is null until `ensureRunning` is called, as in the page, and a test adds before hearing; removing the call
+fails four tests. Found by a real click on a freshly loaded page, which is the first step a person takes.
+
 ## 2026-10-26: A pad set only one of its two controls
 
 **What happened.** The new Feel pad moved the across control and left the up control where it was. Every unit test passed, including ones that

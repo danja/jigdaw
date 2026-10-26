@@ -13322,6 +13322,11 @@ var init_Vocabulary = __esm({
         pad: `${JIG}pad`,
         padX: `${JIG}padX`,
         padY: `${JIG}padY`,
+        padXLow: `${JIG}padXLow`,
+        padXHigh: `${JIG}padXHigh`,
+        padYLow: `${JIG}padYLow`,
+        padYHigh: `${JIG}padYHigh`,
+        padChoice: `${JIG}padChoice`,
         // Projects
         Project: `${JIG}Project`,
         Track: `${JIG}Track`,
@@ -13585,7 +13590,17 @@ function readPads(dataset2, subject, ports) {
     const x = axis(jig.padX);
     const y = axis(jig.padY);
     if (x === y) throw new Error(`${where}: both axes are ${x}`);
-    return { iri: pad.value, label, x, y };
+    let choice = null;
+    const choiceTerm = one(dataset2, pad, jig.padChoice);
+    if (choiceTerm) {
+      const port = ports.find((p) => p.iri === choiceTerm.value);
+      if (!port) throw new Error(`${where}: padChoice names ${choiceTerm.value}, which is not a port of this profile`);
+      if (port.widget !== "selector") throw new Error(`${where}: padChoice names ${port.symbol}, which is a ${port.widget}, and a pad's choice must be a selector`);
+      if (port.symbol === x || port.symbol === y) throw new Error(`${where}: padChoice is ${port.symbol}, which is also an axis`);
+      choice = port.symbol;
+    }
+    const end = (predicate) => asString(one(dataset2, pad, predicate));
+    return { iri: pad.value, label, x, y, choice, xLow: end(jig.padXLow), xHigh: end(jig.padXHigh), yLow: end(jig.padYLow), yHigh: end(jig.padYHigh) };
   });
 }
 function readPort(dataset2, term5) {
@@ -33270,12 +33285,24 @@ function createPad(document2, { pad, ports, onSet, id }) {
   const puck = document2.createElement("div");
   puck.className = "pad-puck";
   surface.append(puck);
+  const end = (className, text) => {
+    if (!text) return;
+    const label = document2.createElement("span");
+    label.className = `pad-end ${className}`;
+    label.textContent = text;
+    surface.append(label);
+  };
+  end("pad-end-left", pad.xLow);
+  end("pad-end-right", pad.xHigh);
+  end("pad-end-bottom", pad.yLow);
+  end("pad-end-top", pad.yHigh);
+  const axis = (port, low, high) => `${port.name ?? port.symbol}${low && high ? `, from ${low} to ${high}` : low ? `, low is ${low}` : high ? `, high is ${high}` : ""}`;
   const caption = document2.createElement("p");
   caption.className = "pad-caption";
   caption.id = captionId;
   const name2 = document2.createElement("b");
   name2.textContent = pad.label;
-  caption.append(name2, document2.createTextNode(` Across is ${portX.name ?? portX.symbol}, up is ${portY.name ?? portY.symbol}.`));
+  caption.append(name2, document2.createTextNode(` Across is ${axis(portX, pad.xLow, pad.xHigh)}, up is ${axis(portY, pad.yLow, pad.yHigh)}.`));
   element.append(surface, caption);
   const at = { x: 0.5, y: 0.5 };
   const place = () => {
@@ -33359,25 +33386,13 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
   };
   const padHandles = [];
   const pads = Array.isArray(profile.pads) ? profile.pads : [];
-  if (pads.length > 0) {
-    const row = document2.createElement("div");
-    row.className = "pads";
-    root.append(row);
-    pads.forEach((pad, index) => {
-      const handle = createPad(document2, {
-        pad,
-        ports: profile.ports,
-        id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
-        // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
-        onSet: (symbol, value2) => {
-          for (const fn of setters.get(symbol) ?? []) fn(value2);
-          onChange(symbol, value2);
-        }
-      });
-      row.append(handle.element);
-      padHandles.push({ pad, handle });
-    });
+  const padsRow = pads.length > 0 ? document2.createElement("div") : null;
+  if (padsRow) {
+    padsRow.className = "pads";
+    root.append(padsRow);
   }
+  const moved = skin ? /* @__PURE__ */ new Set() : new Set(pads.map((p) => p.choice).filter(Boolean));
+  const listed = profile.ports.filter((p) => !moved.has(p.symbol));
   const setters = /* @__PURE__ */ new Map();
   const onValue = (symbol, fn) => {
     if (!setters.has(symbol)) setters.set(symbol, []);
@@ -33391,7 +33406,32 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     const Observer = document2.defaultView?.ResizeObserver;
     if (Observer) new Observer(() => skinPanel.fit()).observe(root);
   }
-  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : profile.ports;
+  const unskinned = skinPanel ? profile.ports.filter((p) => !skinPanel.bound.has(p.symbol)) : listed;
+  pads.forEach((pad, index) => {
+    const handle = createPad(document2, {
+      pad,
+      ports: profile.ports,
+      id: `${scope}-pad-${index}`.replace(/[^\w-]/g, "_"),
+      // Through the same path a knob takes: the two controls draw the new value and the host is told, exactly as for a drag of either.
+      onSet: (symbol, value2) => {
+        for (const fn of setters.get(symbol) ?? []) fn(value2);
+        onChange(symbol, value2);
+      }
+    });
+    const choice = moved.has(pad.choice) ? profile.ports.find((p) => p.symbol === pad.choice) : null;
+    if (choice) {
+      const holder = document2.createElement("div");
+      holder.className = "pad-with-choice";
+      const box = document2.createElement("div");
+      box.className = "pad-choice";
+      addControl(box, choice, "pad-");
+      holder.append(handle.element, box);
+      padsRow.append(holder);
+    } else {
+      padsRow.append(handle.element);
+    }
+    padHandles.push({ pad, handle });
+  });
   function addControl(grid, port, tag) {
     const row = document2.createElement("div");
     row.className = `control control-${port.widget}`;
@@ -33517,7 +33557,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     addSections(more, rest, tag, null);
     parent.append(more);
   }
-  if (!skinPanel) addWithMore(root, profile.ports, "", null);
+  if (!skinPanel) addWithMore(root, listed, "", null);
   else {
     const others = document2.createElement("div");
     others.className = "skin-others";
@@ -36620,7 +36660,7 @@ function finite(n2, what) {
 
 // src/ui/TimelineTools.js
 var GRID_LABELS = { off: "Off", bar: "Bar", beat: "Beat" };
-function createTimelineTools(document2, { view, bpb, zoom, fit, onSeek = null, onAddTrack = null, onRouting }) {
+function createTimelineTools(document2, { view, bpb, zoom, fit, onSeek = null, onAddTrack = null, onLoops = null, onRouting }) {
   const element = document2.createElement("div");
   element.className = "timeline-tools";
   element.setAttribute("role", "group");
@@ -36691,6 +36731,7 @@ function createTimelineTools(document2, { view, bpb, zoom, fit, onSeek = null, o
     iconTool("zoomIn", "Zoom in", () => zoom(1.5)),
     tool("Fit", () => fit()),
     ...onAddTrack ? [tool("Add track", () => onAddTrack())] : [],
+    ...onLoops ? [tool("Loops", () => onLoops())] : [],
     followButton,
     routingButton,
     zoomStatus,
@@ -36995,7 +37036,7 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -37010,6 +37051,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     view,
     onSeek,
     onAddTrack,
+    onLoops,
     bpb: () => bpb(),
     zoom: (factor2) => zoom(factor2),
     fit: () => fit(),
@@ -38676,7 +38718,7 @@ function createClipActions(document2, { onAction, onColor }) {
 
 // src/ui/StartScreen.js
 function describeStart({ tunes, templates, run }) {
-  for (const key of ["tune", "template", "emptyTrack", "sound", "browse", "open"]) {
+  for (const key of ["tune", "template", "emptyTrack", "sound", "loops", "browse", "open"]) {
     if (typeof run[key] !== "function") throw new Error(`the start screen needs run.${key}`);
   }
   const groups = [
@@ -38685,6 +38727,7 @@ function describeStart({ tunes, templates, run }) {
       heading: "Start a new piece",
       actions: [
         { label: "A track with a sound", run: () => run.sound() },
+        { label: "A loop to start from", run: () => run.loops() },
         { label: "An empty track", run: () => run.emptyTrack() },
         { label: "Find a plugin", run: () => run.browse() }
       ]
@@ -38706,7 +38749,9 @@ function createArrangement(ctx2) {
   async function addTrack() {
     await ctx2.runtime.ensureRunning();
     const result = edit([{ op: "addTrack" }]);
-    if (result.ok) ctx2.selection.set("track", [result.results[0]]);
+    if (!result.ok) return null;
+    ctx2.selection.set("track", [result.results[0]]);
+    return result.results[0];
   }
   let pendingAudio = null;
   const waveformsRequested = /* @__PURE__ */ new Set();
@@ -38748,6 +38793,7 @@ function createArrangement(ctx2) {
     onExpandTrack: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: "small" }),
     // The toolbar's Add track opens the chooser, which has An empty track in it.
     onAddTrack: () => ctx2.addTrack.open(),
+    onLoops: () => ctx2.loops.open(),
     onDuplicateTrack: async (trackId) => {
       const result = await duplicateTrack(ctx2.dispatcher, trackId);
       if (!result.ok) {
@@ -39049,6 +39095,7 @@ function createArrangement(ctx2) {
             template: (name2) => ctx2.templates.open(name2).catch((error2) => log2(error2.message, "error")),
             emptyTrack: () => addTrack(),
             sound: () => ctx2.addTrack.open(),
+            loops: () => ctx2.loops.open(),
             browse: () => ctx2.layout.showBrowser(true),
             open: () => document2.getElementById("openfile").click()
           }
@@ -40557,6 +40604,31 @@ function createLoading(ctx2) {
 // src/catalogue/limits.js
 var MAX_RESULTS = 200;
 
+// src/ui/SoundRecipes.js
+var NOTE_MAKERS = Object.freeze([
+  { label: "Bass line", generator: "bassgen", instrument: "pulse" },
+  { label: "Melody", generator: "melgen", instrument: "canticle" },
+  { label: "Wandering melody", generator: "markov", instrument: "moka" },
+  { label: "Growing pattern", generator: "sprout", instrument: "monochord" }
+]);
+var directoryOf = (iri5) => (/\/plugins\/([^/]+)\/?$/.exec(iri5) ?? [])[1] ?? null;
+function noteMakersFrom({ instruments, generators }) {
+  const find = (list, directory) => list.find((item) => directoryOf(item.iri) === directory);
+  return NOTE_MAKERS.flatMap((recipe) => {
+    const generator = find(generators, recipe.generator);
+    const instrument = find(instruments, recipe.instrument);
+    if (!generator || !instrument) return [];
+    return [{
+      iri: `${instrument.iri}+${generator.iri}`,
+      label: recipe.label,
+      about: `${generator.label} writes it and ${instrument.label} plays it. Press Play after adding it.`,
+      drums: false,
+      generated: true,
+      parts: [{ load: generator.load, label: generator.label }, { load: instrument.load, label: instrument.label }]
+    }];
+  });
+}
+
 // src/ui/SoundChooser.js
 function firstSentence(text, limit = 110) {
   const flat = String(text ?? "").replace(/\s+/g, " ").trim();
@@ -40574,13 +40646,20 @@ function soundsFrom(results) {
     return { iri: r.iri, load, label: r.label, about: firstSentence(r.comment), drums: (r.roles ?? []).includes("DrumInstrument"), parts: [{ load, label: r.label }] };
   }).sort((a2, b) => a2.label.localeCompare(b.label));
 }
+function generatorsFrom(results) {
+  return results.filter((r) => r.web && (r.roles ?? []).includes("MidiGenerator")).map((r) => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment) }));
+}
 function drumGeneratorsFrom(results) {
   return results.filter((r) => r.web && (r.roles ?? []).includes("MidiGenerator") && (r.produces ?? []).includes("DrumMidi")).map((r) => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment) })).sort((a2, b) => a2.label.localeCompare(b.label));
 }
-function groupsFrom({ instruments, generators }) {
+function groupsFrom({ instruments, generators, microphone = false }) {
   const sounds2 = soundsFrom(instruments);
   const kits = sounds2.filter((s) => s.drums);
   const beats2 = drumGeneratorsFrom(generators);
+  const makers = noteMakersFrom({
+    instruments: sounds2.filter((s) => !s.drums).map((s) => ({ iri: s.iri, load: s.load, label: s.label })),
+    generators: generatorsFrom(generators)
+  });
   const drums = [
     ...kits.flatMap((kit) => beats2.map((beat) => ({
       iri: `${kit.iri}+${beat.iri}`,
@@ -40592,9 +40671,12 @@ function groupsFrom({ instruments, generators }) {
     }))),
     ...kits.map((kit) => ({ ...kit, about: `${kit.about} Played by hand or by clips.` }))
   ];
+  const voice = microphone ? [{ iri: "microphone", kind: "microphone", noHear: true, label: "A microphone", about: "A track fed live from your microphone. Mute the track to record without hearing yourself.", drums: false, parts: [] }] : [];
   return [
     { heading: "Instruments", sounds: sounds2.filter((s) => !s.drums) },
-    { heading: "Drums", sounds: drums }
+    { heading: "Make notes for me", sounds: makers },
+    { heading: "Drums", sounds: drums },
+    { heading: "Voice", sounds: voice }
   ].filter((group) => group.sounds.length > 0);
 }
 function phraseFor(sound) {
@@ -40636,17 +40718,20 @@ function createSoundChooser(document2, { groups, onHear, onAdd, onEmpty, onCance
       about.className = "sound-about";
       about.textContent = sound.about;
       words2.append(name2, mark, about);
-      const hear = document2.createElement("button");
-      hear.type = "button";
-      hear.textContent = "Hear";
-      hear.setAttribute("aria-label", `Hear ${sound.label}`);
-      hear.addEventListener("click", () => onHear(sound));
+      let hear = null;
+      if (!sound.noHear) {
+        hear = document2.createElement("button");
+        hear.type = "button";
+        hear.textContent = "Hear";
+        hear.setAttribute("aria-label", `Hear ${sound.label}`);
+        hear.addEventListener("click", () => onHear(sound));
+      }
       const add = document2.createElement("button");
       add.type = "button";
       add.textContent = "Add";
       add.setAttribute("aria-label", `Add ${sound.label}`);
       add.addEventListener("click", () => onAdd(sound));
-      item.append(words2, hear, add);
+      item.append(...[words2, hear, add].filter(Boolean));
       list.append(item);
       rows.set(sound.iri, mark);
     }
@@ -40762,7 +40847,7 @@ function createAddTrack(ctx2) {
       ctx2.expose();
       chooser.heard(sound.iri);
       play(made.playsId, sound);
-      chooser.say(sound.generated ? `Playing the ${sound.parts.at(-1).label} by hand. Add keeps it, and Play then runs the beat.` : `Playing ${sound.label}. Add keeps it, or hear another.`);
+      chooser.say(sound.generated ? `Playing the ${sound.parts.at(-1).label} by hand. Add keeps it, and Play then runs ${sound.parts[0].label}.` : `Playing ${sound.label}. Add keeps it, or hear another.`);
     } catch (error2) {
       log2(error2.message, "error");
       chooser?.say(error2.message);
@@ -40770,13 +40855,29 @@ function createAddTrack(ctx2) {
       busy = false;
     }
   }
+  async function addMicrophone(sound) {
+    chooser.say("Asking for the microphone");
+    await removeTrial();
+    const trackId = await ctx2.arrangement.addTrack();
+    if (!trackId) {
+      chooser?.say("The track could not be made. The log says why.");
+      return;
+    }
+    if (isOpen()) close();
+    await ctx2.micIn.listen(trackId);
+  }
   async function add(sound) {
     if (busy) return;
     busy = true;
     try {
+      if (sound.kind === "microphone") {
+        await addMicrophone(sound);
+        return;
+      }
       chooser.say(`Adding ${sound.label}`);
       await removeTrial();
-      const made = await ctx2.dispatcher.grouped(() => loadSound(sound), { label: "Add a track" });
+      const d = await ctx2.runtime.ensureRunning();
+      const made = await d.grouped(() => loadSound(sound), { label: "Add a track" });
       if (!made) {
         chooser?.say(`${sound.label} did not load. The log says why.`);
         return;
@@ -40804,9 +40905,9 @@ function createAddTrack(ctx2) {
       const catalogue = ctx2.browser.catalogue();
       const [instruments, generators] = await Promise.all([
         catalogue.search({ role: "Instrument", limit: MAX_RESULTS }),
-        catalogue.search({ role: "MidiGenerator", produces: "DrumMidi", limit: MAX_RESULTS })
+        catalogue.search({ role: "MidiGenerator", limit: MAX_RESULTS })
       ]);
-      groups = groupsFrom({ instruments: instruments.results, generators: generators.results });
+      groups = groupsFrom({ instruments: instruments.results, generators: generators.results, microphone: ctx2.micIn?.available === true });
     } catch (error2) {
       problem = error2.message;
       log2(`sounds: ${error2.message}`, "error");
@@ -40825,6 +40926,273 @@ function createAddTrack(ctx2) {
     chooser.element.showModal();
     chooser.element.querySelector("button")?.focus();
     if (problem) chooser.say(`The sounds could not be listed: ${problem}`);
+  }
+  return { open, isOpen };
+}
+
+// src/ui/LoopLibrary.js
+var KINDS4 = Object.freeze([
+  { kind: "drums", heading: "Drums", voice: "drumkit" },
+  { kind: "bass", heading: "Bass", voice: "pulse" },
+  { kind: "chords", heading: "Chords", voice: "canticle" },
+  { kind: "melody", heading: "Melody", voice: "moka" }
+]);
+var fail = (loop, message) => {
+  throw new Error(`loop ${loop?.id ?? "(no id)"}: ${message}`);
+};
+function checkLoop(loop) {
+  if (!loop || typeof loop !== "object") fail(loop, "is not an object");
+  if (typeof loop.id !== "string" || !/^[a-z0-9][a-z0-9-]*$/.test(loop.id)) fail(loop, "needs an id of lowercase letters, digits and hyphens");
+  if (typeof loop.label !== "string" || loop.label.trim() === "") fail(loop, "needs a label");
+  if (!KINDS4.some((k) => k.kind === loop.kind)) fail(loop, `has kind ${loop.kind}, which is not one of ${KINDS4.map((k) => k.kind).join(", ")}`);
+  if (typeof loop.about !== "string" || loop.about.trim() === "") fail(loop, "needs a line saying what it is");
+  if (typeof loop.licence !== "string" || loop.licence.trim() === "") fail(loop, "needs a licence");
+  if (!(Number.isFinite(loop.lengthBeats) && loop.lengthBeats > 0)) fail(loop, "needs a length in beats above zero");
+  if (!Array.isArray(loop.notes) || loop.notes.length === 0) fail(loop, "needs at least one note");
+  for (const [i2, note] of loop.notes.entries()) {
+    const where = `note ${i2}`;
+    if (!(Number.isFinite(note.startBeat) && note.startBeat >= 0)) fail(loop, `${where} starts before the loop`);
+    if (!(Number.isFinite(note.lengthBeats) && note.lengthBeats > 0)) fail(loop, `${where} has no length`);
+    if (note.startBeat >= loop.lengthBeats) fail(loop, `${where} starts at or after the end of the loop`);
+    if (note.startBeat + note.lengthBeats > loop.lengthBeats + 1e-9) fail(loop, `${where} runs past the end of the loop`);
+    if (!(Number.isInteger(note.pitch) && note.pitch >= 0 && note.pitch <= 127)) fail(loop, `${where} has pitch ${note.pitch}, which is not a MIDI note`);
+    if (!(Number.isInteger(note.velocity) && note.velocity >= 1 && note.velocity <= 127)) fail(loop, `${where} has velocity ${note.velocity}, which is not 1 to 127`);
+  }
+  return loop;
+}
+function loopsFromIndex(index) {
+  if (!index || !Array.isArray(index.loops)) throw new Error("the loop library has no loops list");
+  const loops = index.loops.map(checkLoop);
+  const seen = /* @__PURE__ */ new Set();
+  for (const loop of loops) {
+    if (seen.has(loop.id)) throw new Error(`loop ${loop.id}: another loop has the same id`);
+    seen.add(loop.id);
+  }
+  return loops;
+}
+function groupsOf(loops) {
+  return KINDS4.map((k) => ({ heading: k.heading, kind: k.kind, loops: loops.filter((l) => l.kind === k.kind) })).filter((group) => group.loops.length > 0);
+}
+function lengthText(loop, beatsPerBar = 4) {
+  const bars = loop.lengthBeats / beatsPerBar;
+  if (Number.isInteger(bars)) return `${bars} ${bars === 1 ? "bar" : "bars"}`;
+  return `${loop.lengthBeats} beats`;
+}
+function addClipChange({ loop, track: track2, startBeat }) {
+  if (!(Number.isFinite(startBeat) && startBeat >= 0)) throw new Error("a loop is added at a beat at or after the start");
+  return {
+    op: "addClip",
+    track: track2,
+    kind: "midi",
+    startBeat,
+    lengthBeats: loop.lengthBeats,
+    notes: loop.notes.map((n2) => ({ startBeat: n2.startBeat, lengthBeats: n2.lengthBeats, pitch: n2.pitch, velocity: n2.velocity }))
+  };
+}
+function eventsFor(loop, { bpm, sampleRate, startFrame }) {
+  if (!(bpm > 0 && sampleRate > 0)) throw new Error("events need a tempo and a sample rate above zero");
+  const frame = (beat) => startFrame + Math.round(beat * (60 / bpm) * sampleRate);
+  const events = loop.notes.flatMap((n2) => [
+    { frame: frame(n2.startBeat), order: 1, bytes: Uint8Array.from([144, n2.pitch, n2.velocity]) },
+    { frame: frame(n2.startBeat + n2.lengthBeats), order: 0, bytes: Uint8Array.from([128, n2.pitch, 0]) }
+  ]);
+  events.sort((a2, b) => a2.frame - b.frame || a2.order - b.order);
+  return events.map(({ frame: frame2, bytes }) => ({ frame: frame2, bytes }));
+}
+function createLoopBrowser(document2, { groups, canHear, beatsPerBar = 4, onHear, onAdd, onClose }) {
+  const dialog = document2.createElement("dialog");
+  dialog.className = "chooser loops";
+  dialog.setAttribute("aria-labelledby", "loops-title");
+  const title = document2.createElement("h2");
+  title.id = "loops-title";
+  title.textContent = "Loops";
+  const hearable = (loop) => (typeof canHear === "function" ? canHear(loop) : canHear) === true;
+  const anyHearable = groups.some((g) => g.loops.some(hearable));
+  const help = document2.createElement("p");
+  help.className = "note";
+  help.textContent = anyHearable ? "Starting points, in C: add one, then change it in the piano roll. Hear plays a loop through the instrument on the selected track." : "Starting points, in C: add one, then change it in the piano roll. Add puts it on the selected track that has an instrument, or on a new track with a sound to suit it. Select a track with an instrument to hear a loop before adding it.";
+  const status = document2.createElement("p");
+  status.className = "note";
+  status.setAttribute("role", "status");
+  const scroll = document2.createElement("div");
+  scroll.className = "sound-scroll";
+  groups.forEach((group, index) => {
+    const section = document2.createElement("section");
+    const heading = document2.createElement("h3");
+    heading.id = `loop-group-${index}`;
+    heading.textContent = group.heading;
+    const list = document2.createElement("ul");
+    list.className = "sound-list";
+    list.setAttribute("aria-labelledby", heading.id);
+    for (const loop of group.loops) {
+      const item = document2.createElement("li");
+      const words2 = document2.createElement("div");
+      words2.className = "sound-words";
+      const name2 = document2.createElement("strong");
+      name2.textContent = `${loop.label} `;
+      const length = document2.createElement("span");
+      length.className = "sound-mark";
+      length.textContent = `(${lengthText(loop, beatsPerBar)})`;
+      const about = document2.createElement("span");
+      about.className = "sound-about";
+      about.textContent = loop.about;
+      words2.append(name2, length, about);
+      const buttons2 = [];
+      if (hearable(loop)) {
+        const hear = document2.createElement("button");
+        hear.type = "button";
+        hear.textContent = "Hear";
+        hear.setAttribute("aria-label", `Hear ${loop.label}`);
+        hear.addEventListener("click", () => onHear(loop));
+        buttons2.push(hear);
+      }
+      const add = document2.createElement("button");
+      add.type = "button";
+      add.textContent = "Add";
+      add.setAttribute("aria-label", `Add ${loop.label}`);
+      add.addEventListener("click", () => onAdd(loop));
+      buttons2.push(add);
+      item.append(words2, ...buttons2);
+      list.append(item);
+    }
+    section.append(heading, list);
+    scroll.append(section);
+  });
+  if (groups.length === 0) {
+    const none = document2.createElement("p");
+    none.className = "note";
+    none.textContent = "There are no loops to offer.";
+    scroll.append(none);
+  }
+  const buttons = document2.createElement("div");
+  buttons.className = "consent-buttons";
+  const close = document2.createElement("button");
+  close.type = "button";
+  close.textContent = "Close";
+  close.addEventListener("click", () => onClose());
+  buttons.append(close);
+  dialog.append(title, help, status, scroll, buttons);
+  dialog.addEventListener("cancel", () => onClose());
+  return { element: dialog, say(text) {
+    status.textContent = text;
+  } };
+}
+
+// web/app/Loops.js
+function createLoops(ctx2) {
+  const { document: document2, log: log2 } = ctx2;
+  let browser2 = null;
+  let library = null;
+  let busy = false;
+  const isOpen = () => browser2 !== null;
+  async function load() {
+    if (library) return library;
+    const response = await fetch(new URL("loops/index.json", document2.baseURI));
+    if (!response.ok) throw new Error(`the loop library answered ${response.status}`);
+    library = loopsFromIndex(await response.json());
+    return library;
+  }
+  function targetTrack(loop) {
+    const { selection, dispatcher } = ctx2;
+    if (selection.kind !== "track") return null;
+    const track2 = dispatcher?.project.track(selection.ids[0]);
+    if (!track2?.midiInput) return null;
+    const roles = dispatcher.engineNode(track2.midiInput)?.profile?.roles ?? [];
+    const isDrumKit = roles.some((role) => role.endsWith("DrumInstrument"));
+    return isDrumKit === (loop.kind === "drums") ? track2 : null;
+  }
+  async function voiceFor(kind) {
+    const directory = KINDS4.find((k) => k.kind === kind).voice;
+    const { results } = await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS });
+    const sound = soundsFrom(results).find((s) => directoryOf(s.iri) === directory);
+    if (!sound) throw new Error(`there is no ${directory} here to play a ${kind} loop`);
+    return { load: sound.load, label: sound.label };
+  }
+  function close() {
+    const { element } = browser2;
+    browser2 = null;
+    if (element.open) element.close();
+    element.remove();
+  }
+  async function hear(loop) {
+    if (busy) return;
+    busy = true;
+    try {
+      const track2 = targetTrack(loop);
+      if (!track2) {
+        browser2?.say("Select a track with an instrument that suits this loop to hear it.");
+        return;
+      }
+      const d = await ctx2.runtime.ensureRunning();
+      const { currentTime, sampleRate } = ctx2.engine.context;
+      const bpm = d.project.transport.tempoPoints[0].bpm;
+      d.sendEvents(track2.midiInput, eventsFor(loop, { bpm, sampleRate, startFrame: Math.round((currentTime + 0.05) * sampleRate) }));
+      browser2?.say(`Playing ${loop.label} through ${track2.label ?? track2.id}.`);
+    } catch (error2) {
+      log2(error2.message, "error");
+      browser2?.say(error2.message);
+    } finally {
+      busy = false;
+    }
+  }
+  async function add(loop) {
+    if (busy) return;
+    busy = true;
+    try {
+      browser2.say(`Adding ${loop.label}`);
+      const d = await ctx2.runtime.ensureRunning();
+      const made = await d.grouped(async () => {
+        const track2 = targetTrack(loop);
+        let trackId;
+        let startBeat;
+        if (track2) {
+          trackId = track2.id;
+          startBeat = Math.max(0, Math.round(ctx2.transport.position().beat));
+        } else {
+          const voice = await voiceFor(loop.kind);
+          const loaded = await ctx2.loading.loadPlugin(voice.load, { newTrack: true });
+          if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`);
+          trackId = loaded.trackId;
+          startBeat = 0;
+        }
+        const applied = d.apply([addClipChange({ loop, track: trackId, startBeat })]);
+        if (!applied.ok) throw new Error(applied.message);
+        return { trackId };
+      }, { label: "Add a loop" });
+      ctx2.selection.set("track", [made.trackId]);
+      if (isOpen()) close();
+      log2(`added ${loop.label}`, "ok");
+    } catch (error2) {
+      log2(error2.message, "error");
+      browser2?.say(error2.message);
+    } finally {
+      busy = false;
+    }
+  }
+  async function open() {
+    if (isOpen()) return;
+    let loops = [];
+    let problem = null;
+    try {
+      loops = await load();
+    } catch (error2) {
+      problem = error2.message;
+      log2(`loops: ${error2.message}`, "error");
+    }
+    browser2 = createLoopBrowser(document2, {
+      groups: groupsOf(loops),
+      canHear: (loop) => targetTrack(loop) !== null,
+      beatsPerBar: ctx2.dispatcher?.project.transport.beatsPerBar,
+      onHear: hear,
+      onAdd: add,
+      onClose: () => {
+        if (isOpen()) close();
+      }
+    });
+    document2.body.append(browser2.element);
+    browser2.element.showModal();
+    browser2.element.querySelector("button")?.focus();
+    if (problem) browser2.say(`The loops could not be read: ${problem}`);
   }
   return { open, isOpen };
 }
@@ -42746,6 +43114,7 @@ var KEY_ROWS = Object.freeze([
 ]);
 var UNLISTED_KEY_FILES = Object.freeze({
   "src/ui/Tabs.js": "the tabs pattern: arrows, Home and End, as in the WAI-ARIA authoring practices",
+  "web/app/Help.js": "Escape puts a help tip away; no other key is read",
   "src/ui/RoutingMatrix.js": "the grid pattern: arrows, Home and End",
   "src/ui/Dock.js": "the splitter pattern: arrows, Home and End",
   "src/ui/Keyboard.js": "the on-screen piano plays notes; its keys are its own help text",
@@ -43179,7 +43548,15 @@ function createMicIn(ctx2, { getUserMedia, mediaDevices, available }) {
       });
     });
   }
-  return { mount, refresh, active: () => live !== null };
+  return {
+    mount,
+    refresh,
+    active: () => live !== null,
+    /** Whether the browser can be asked for a microphone at all: the button is left out of the page when not. */
+    available: Boolean(available),
+    /** Feed `track` from the default microphone, for a caller that has just made the track (the Add a track chooser). */
+    listen: (track2) => open(track2, null)
+  };
 }
 
 // web/app/Align.js
@@ -43963,7 +44340,7 @@ var hint = (word, candidates) => {
 async function plan(statements, context) {
   const { beatsPerBar, existing = /* @__PURE__ */ new Map(), resolvePlugin } = context;
   const errors = [];
-  const fail = (line, message, column = null) => errors.push({ line, column, message });
+  const fail2 = (line, message, column = null) => errors.push({ line, column, message });
   if (statements.length > MAX_STATEMENTS) {
     return { ok: false, errors: [{ line: null, column: null, message: `a script is limited to ${MAX_STATEMENTS} statements, this has ${statements.length}` }] };
   }
@@ -43972,7 +44349,7 @@ async function plan(statements, context) {
   const fetched = /* @__PURE__ */ new Map();
   for (const s of statements.filter((s2) => s2.type === "load")) {
     if (scope.has(s.name)) {
-      fail(s.line, `"${s.name}" is already a plugin name`, s.column);
+      fail2(s.line, `"${s.name}" is already a plugin name`, s.column);
       continue;
     }
     if (!fetched.has(s.iri)) fetched.set(s.iri, resolvePlugin(s.iri));
@@ -43987,7 +44364,7 @@ async function plan(statements, context) {
       result = { ok: false, message: error2.message };
     }
     if (!result?.ok) {
-      fail(s.line, `cannot load ${s.name} from ${s.iri}: ${result?.message ?? "refused"}${result?.step ? ` (at ${result.step})` : ""}`, s.column);
+      fail2(s.line, `cannot load ${s.name} from ${s.iri}: ${result?.message ?? "refused"}${result?.step ? ` (at ${result.step})` : ""}`, s.column);
     } else {
       scope.set(s.name, result.ports);
     }
@@ -43996,14 +44373,14 @@ async function plan(statements, context) {
   const out = { seed: 1, loads: loads.map(({ name: name2, iri: iri5, line }) => ({ name: name2, iri: iri5, line })), lets: [], steps: [] };
   const portOf = (name2, symbol, line, column) => {
     if (!scope.has(name2)) {
-      fail(line, `no plugin called "${name2}"${hint(name2, scope.keys())}`, column);
+      fail2(line, `no plugin called "${name2}"${hint(name2, scope.keys())}`, column);
       return null;
     }
     const ports = scope.get(name2);
     if (!ports) return null;
     const port = ports.find((p) => p.symbol === symbol);
     if (!port) {
-      fail(line, `${name2} has no parameter "${symbol}"${hint(symbol, ports.map((p) => p.symbol))}`, column);
+      fail2(line, `${name2} has no parameter "${symbol}"${hint(symbol, ports.map((p) => p.symbol))}`, column);
       return null;
     }
     return port;
@@ -44014,17 +44391,17 @@ async function plan(statements, context) {
       b = bounds(expr, lets);
     } catch (error2) {
       if (!(error2 instanceof ReelError)) throw error2;
-      fail(line, error2.message, error2.column);
+      fail2(line, error2.message, error2.column);
       return null;
     }
     const unit = portDimension(port.unit);
     if (b.dim !== null) {
       if (!unit?.dim) {
-        fail(line, `${name2}.${port.symbol} takes ${unit ? `${unit.name}` : "a plain number"}, not a ${b.dim} quantity`, expr.column);
+        fail2(line, `${name2}.${port.symbol} takes ${unit ? `${unit.name}` : "a plain number"}, not a ${b.dim} quantity`, expr.column);
         return null;
       }
       if (unit.dim !== b.dim) {
-        fail(line, `${name2}.${port.symbol} is in ${unit.name}, and this value is ${b.dim}`, expr.column);
+        fail2(line, `${name2}.${port.symbol} is in ${unit.name}, and this value is ${b.dim}`, expr.column);
         return null;
       }
     }
@@ -44034,7 +44411,7 @@ async function plan(statements, context) {
     const { minimum, maximum } = port;
     if (lo < minimum - 1e-9 || hi > maximum + 1e-9) {
       const reach = lo === hi ? `${lo}` : `${lo} to ${hi}`;
-      fail(line, `${name2}.${port.symbol} can be set to ${reach}, outside its range ${minimum} to ${maximum}`, expr.column);
+      fail2(line, `${name2}.${port.symbol} can be set to ${reach}, outside its range ${minimum} to ${maximum}`, expr.column);
       return null;
     }
     return { unit: port.unit ?? null, factor: factor2, minimum, maximum };
@@ -44044,7 +44421,7 @@ async function plan(statements, context) {
   const action2 = (a2, when, line) => {
     if (a2.type === "launch" || a2.type === "stop") {
       if (a2.name !== null && !scope.has(a2.name)) {
-        fail(line, `no plugin called "${a2.name}"${hint(a2.name, scope.keys())}`, a2.column);
+        fail2(line, `no plugin called "${a2.name}"${hint(a2.name, scope.keys())}`, a2.column);
         return;
       }
       out.steps.push({ line, when, action: { type: a2.type, node: a2.name, scene: a2.scene ?? null } });
@@ -44058,7 +44435,7 @@ async function plan(statements, context) {
       if (meta2) out.steps.push({ line, when, action: { type: "set", node: name2, symbol, expr: a2.expr, port: meta2 } });
     } else {
       if (when.kind === "every") {
-        fail(line, "a ramp cannot be repeated by every; use at to place it", a2.column);
+        fail2(line, "a ramp cannot be repeated by every; use at to place it", a2.column);
         return;
       }
       const from = check(a2.from, port, name2, line);
@@ -44077,7 +44454,7 @@ async function plan(statements, context) {
         break;
       case "let": {
         if (lets.has(s.name)) {
-          fail(s.line, `"${s.name}" is already defined`, s.column);
+          fail2(s.line, `"${s.name}" is already defined`, s.column);
           break;
         }
         try {
@@ -44085,12 +44462,12 @@ async function plan(statements, context) {
           out.lets.push({ name: s.name, expr: s.expr, line: s.line });
         } catch (error2) {
           if (!(error2 instanceof ReelError)) throw error2;
-          fail(s.line, error2.message, error2.column);
+          fail2(s.line, error2.message, error2.column);
         }
         break;
       }
       case "connect": {
-        for (const end of [s.from, s.to]) if (!scope.has(end)) fail(s.line, `no plugin called "${end}"${hint(end, scope.keys())}`, s.column);
+        for (const end of [s.from, s.to]) if (!scope.has(end)) fail2(s.line, `no plugin called "${end}"${hint(end, scope.keys())}`, s.column);
         if (scope.has(s.from) && scope.has(s.to)) out.steps.push({ line: s.line, when: { kind: "now" }, action: { type: "connect", from: s.from, to: s.to } });
         break;
       }
@@ -44107,7 +44484,7 @@ async function plan(statements, context) {
         action2(s.body, { kind: "every", beats: lengthBeats(s.length) }, s.line);
         break;
       default:
-        fail(s.line, `unknown statement ${s.type}`);
+        fail2(s.line, `unknown statement ${s.type}`);
     }
   }
   return errors.length ? { ok: false, errors } : { ok: true, plan: out };
@@ -44970,6 +45347,57 @@ function createTheme(ctx2) {
   return { mount };
 }
 
+// web/app/Help.js
+function createHelp(ctx2) {
+  const { document: document2, window: window2 } = ctx2;
+  let tip = null;
+  let shownFor = null;
+  function hide() {
+    if (tip) tip.hidden = true;
+    shownFor = null;
+  }
+  function show(element, text) {
+    if (!tip) {
+      tip = document2.createElement("div");
+      tip.className = "help-tip";
+      tip.setAttribute("aria-hidden", "true");
+      document2.body.append(tip);
+    }
+    tip.textContent = text;
+    tip.hidden = false;
+    shownFor = element;
+    const box = element.getBoundingClientRect();
+    const width = tip.offsetWidth || 0;
+    const left = Math.max(8, Math.min(box.left, (window2.innerWidth || 0) - width - 8));
+    tip.style.left = `${left}px`;
+    tip.style.top = `${box.bottom + 6}px`;
+  }
+  function mount() {
+    document2.addEventListener("focusin", (event) => {
+      const focused = event.target;
+      const element = focused?.closest?.("[title]");
+      const text = element?.getAttribute("title");
+      if (!element || !text || !focused.matches(":focus-visible")) {
+        hide();
+        return;
+      }
+      const name2 = (element.getAttribute("aria-label") ?? element.labels?.[0]?.textContent ?? "").trim();
+      if (name2 === text.trim()) {
+        hide();
+        return;
+      }
+      show(element, text);
+    });
+    document2.addEventListener("focusout", hide);
+    document2.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && shownFor) hide();
+    });
+    window2.addEventListener("scroll", hide, true);
+    window2.addEventListener("resize", hide);
+  }
+  return { mount, hide };
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -45019,6 +45447,7 @@ ctx.skins.onReady(() => ctx.rack.draw());
 ctx.loading = createLoading(ctx);
 ctx.browser = createBrowser(ctx);
 ctx.addTrack = createAddTrack(ctx);
+ctx.loops = createLoops(ctx);
 ctx.sessions = createSessions(ctx);
 ctx.history = createHistory(ctx);
 ctx.projectInfo = createProjectInfo(ctx);
@@ -45153,6 +45582,7 @@ ctx.tabs = createTabs(document, TABS, { allowed: (id) => ctx.show.allowsTab(id),
 $("tabs-mount").append(ctx.tabs.element);
 ctx.show.mount(TABS, ctx.tabs);
 createTheme(ctx).mount();
+createHelp(ctx).mount();
 ctx.rack.draw();
 log("ready. Load the synth and press a key, or search for a plugin.");
 window.__jigdawLoad = loading.loadPlugin;

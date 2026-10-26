@@ -659,3 +659,45 @@ describe('a pad on the panel', () => {
     expect(() => withPad({ pads: [{ label: 'Feel', x: 'density', y: 'nope' }] })).toThrow(/must both be ports of the plugin/)
   })
 })
+
+
+describe('a pad with a choice beside it', () => {
+  const genre = port({ symbol: 'genre', name: 'Genre', widget: 'selector', enumeration: true, scalePoints: [{ label: 'Rock', value: 0 }, { label: 'House', value: 1 }, { label: 'Funk', value: 2 }], defaultValue: 0, minimum: 0, maximum: 2 })
+  const ports = () => [port({ symbol: 'density', name: 'Density' }), port({ symbol: 'variation', name: 'Variation' }), genre, port({ symbol: 'seed', name: 'Seed' })]
+  const build = (extra = {}, over = {}) => {
+    const changes = []
+    const panel = createPanel(document, { iri: 'https://example.test/p/', label: 'P', ports: ports(), pads: [{ label: 'Feel', x: 'density', y: 'variation', choice: 'genre', xLow: 'simple', xHigh: 'busy', yLow: null, yHigh: null, ...extra }], ...over }, (symbol, value) => changes.push([symbol, value]))
+    document.body.append(panel.element)
+    return { panel, changes, element: panel.element }
+  }
+
+  it('draws the selector beside the pad, and nowhere else, so it is one control with one name', () => {
+    const { element } = build()
+    const beside = element.querySelector('.pad-with-choice')
+    expect(beside.querySelector('.pad')).not.toBeNull()
+    expect(beside.querySelector('select')).not.toBeNull()
+    expect(element.querySelectorAll('select')).toHaveLength(1)
+    expect([...element.querySelectorAll('.control label')].map(l => l.textContent)).toEqual(['Genre', 'Density', 'Variation', 'Seed'])
+  })
+
+  it('still tells the host when the selector is changed, as the control it was', () => {
+    const { element, changes } = build()
+    const select = element.querySelector('.pad-with-choice select')
+    // linkedom has no select.value setter: marking the option is what a choice in a browser does.
+    for (const option of select.options) option.selected = option.value === '2'
+    select.dispatchEvent(new document.defaultView.Event('change', { bubbles: true }))
+    expect(changes).toEqual([['genre', 2]])
+  })
+
+  it('follows a host update of the selector, as it would in the grid', () => {
+    const { panel, element } = build()
+    panel.update('genre', 1)
+    expect(element.querySelector('.pad-with-choice .value').textContent).toBe('House')
+  })
+
+  it('draws a pad with no choice as the pad alone, and every port in the grid', () => {
+    const { element } = build({ choice: null })
+    expect(element.querySelector('.pad-with-choice')).toBeNull()
+    expect(element.querySelectorAll('.controls .control')).toHaveLength(4)
+  })
+})

@@ -200,6 +200,11 @@ export const vocabulary = Object.freeze({
     pad: `${JIG}pad`,
     padX: `${JIG}padX`,
     padY: `${JIG}padY`,
+    padXLow: `${JIG}padXLow`,
+    padXHigh: `${JIG}padXHigh`,
+    padYLow: `${JIG}padYLow`,
+    padYHigh: `${JIG}padYHigh`,
+    padChoice: `${JIG}padChoice`,
 
     // Projects
     Project: `${JIG}Project`,

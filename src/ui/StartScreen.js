@@ -15,7 +15,7 @@
  * arguments except `tune(name)` and `template(name)`, which are given the name that was pressed.
  */
 export function describeStart ({ tunes, templates, run }) {
-  for (const key of ['tune', 'template', 'emptyTrack', 'sound', 'browse', 'open']) {
+  for (const key of ['tune', 'template', 'emptyTrack', 'sound', 'loops', 'browse', 'open']) {
     if (typeof run[key] !== 'function') throw new Error(`the start screen needs run.${key}`)
   }
   const groups = [
@@ -24,6 +24,7 @@ export function describeStart ({ tunes, templates, run }) {
       heading: 'Start a new piece',
       actions: [
         { label: 'A track with a sound', run: () => run.sound() },
+        { label: 'A loop to start from', run: () => run.loops() },
         { label: 'An empty track', run: () => run.emptyTrack() },
         { label: 'Find a plugin', run: () => run.browse() }
       ]

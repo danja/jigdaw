@@ -35,6 +35,7 @@ import { createMatrix } from './app/Matrix.js'
 import { Selection } from '../src/model/Selection.js'
 import { createLoading } from './app/Loading.js'
 import { createAddTrack } from './app/AddTrack.js'
+import { createLoops } from './app/Loops.js'
 import { createBrowser } from './app/Browser.js'
 import { createSessions } from './app/Sessions.js'
 import { createHistory } from './app/History.js'
@@ -55,6 +56,7 @@ import { createPwa } from './app/Pwa.js'
 import { createScript } from './app/Script.js'
 import { createShow } from './app/Show.js'
 import { createTheme } from './app/Theme.js'
+import { createHelp } from './app/Help.js'
 
 const $ = id => document.getElementById(id)
 
@@ -108,6 +110,7 @@ ctx.skins.onReady(() => ctx.rack.draw())
 ctx.loading = createLoading(ctx)
 ctx.browser = createBrowser(ctx)
 ctx.addTrack = createAddTrack(ctx)
+ctx.loops = createLoops(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.history = createHistory(ctx)
 ctx.projectInfo = createProjectInfo(ctx)
@@ -248,6 +251,7 @@ ctx.tabs = createTabs(document, TABS, { allowed: id => ctx.show.allowsTab(id), o
 $('tabs-mount').append(ctx.tabs.element)
 ctx.show.mount(TABS, ctx.tabs)
 createTheme(ctx).mount()
+createHelp(ctx).mount()
 
 ctx.rack.draw()
 log('ready. Load the synth and press a key, or search for a plugin.')

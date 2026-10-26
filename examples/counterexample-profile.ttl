@@ -51,13 +51,18 @@
 <#pad-one>
     a jig:ControlPad ;
     jig:padX <#cutoff> ;
-    jig:padY <#cutoff> .
+    jig:padY <#cutoff> ;
+    # An end label that is a number, and a choice that is no port of this profile.
+    jig:padXLow 5 ;
+    jig:padChoice <#nowhere> .
 
 # An axis that names no port of this profile, and no second axis.
 <#pad-two>
     a jig:ControlPad ;
     rdfs:label "Ghost" ;
-    jig:padX <#nowhere> .
+    jig:padX <#nowhere> ;
+    # An end label too long to draw at the end of an axis.
+    jig:padYHigh "a label that runs on far too long" .
 
 # Offered as a pad but not typed as one.
 <#not-a-pad>

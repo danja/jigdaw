@@ -67,7 +67,9 @@
           "value": 2
         }
       ],
-      "paramIndex": 0
+      "paramIndex": 0,
+      "displayPriority": 100,
+      "comment": "How the string is set going: plucked, bowed or hammered."
     },
     {
       "symbol": "position",
@@ -85,7 +87,9 @@
       "minimum": 0,
       "maximum": 1,
       "group": "Exciter",
-      "paramIndex": 2
+      "paramIndex": 2,
+      "displayPriority": 80,
+      "comment": "How hard the string is plucked or struck."
     },
     {
       "symbol": "bow_pressure",
@@ -104,7 +108,9 @@
       "maximum": 20,
       "group": "String",
       "unit": "s",
-      "paramIndex": 4
+      "paramIndex": 4,
+      "displayPriority": 90,
+      "comment": "How many seconds a note takes to die away."
     },
     {
       "symbol": "damping",
@@ -113,7 +119,9 @@
       "minimum": 0,
       "maximum": 1,
       "group": "String",
-      "paramIndex": 5
+      "paramIndex": 5,
+      "displayPriority": 70,
+      "comment": "How much the string is damped: more is duller and shorter."
     },
     {
       "symbol": "stiffness",
@@ -159,7 +167,8 @@
       "maximum": 2000,
       "group": "Output",
       "unit": "ms",
-      "paramIndex": 10
+      "paramIndex": 10,
+      "comment": "How long a note takes to stop after the key is let go."
     },
     {
       "symbol": "master",
@@ -168,7 +177,9 @@
       "minimum": 0,
       "maximum": 1,
       "group": "Output",
-      "paramIndex": 11
+      "paramIndex": 11,
+      "displayPriority": 60,
+      "comment": "The overall level of the instrument."
     },
     {
       "symbol": "velocity",

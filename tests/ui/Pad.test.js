@@ -144,6 +144,21 @@ describe('the pad', () => {
     expect(() => build({ label: 'Feel', x: 'density', y: 'missing' })).toThrow('pad Feel: density and missing must both be ports of the plugin')
   })
 
+  it('draws a word at each end of an axis that has one, and says them in the caption', () => {
+    const { element } = build({ label: 'Feel', x: 'density', y: 'variation', xLow: 'simple', xHigh: 'busy', yLow: 'steady', yHigh: 'varied' })
+    const ends = [...element.querySelectorAll('.pad-end')].map(e => [e.className.replace('pad-end ', ''), e.textContent])
+    expect(ends).toEqual([['pad-end-left', 'simple'], ['pad-end-right', 'busy'], ['pad-end-bottom', 'steady'], ['pad-end-top', 'varied']])
+    expect(document.getElementById(element.getAttribute('aria-labelledby')).textContent).toBe('Feel Across is Density, from simple to busy, up is Variation, from steady to varied.')
+  })
+
+  it('says only the end that is named when an axis names one, and nothing extra when none', () => {
+    const one = build({ label: 'Feel', x: 'density', y: 'variation', xHigh: 'busy' })
+    expect(one.element.querySelectorAll('.pad-end')).toHaveLength(1)
+    expect(document.getElementById(one.element.getAttribute('aria-labelledby')).textContent).toBe('Feel Across is Density, high is busy, up is Variation.')
+    const none = build({ label: 'Feel', x: 'density', y: 'variation', xLow: null, xHigh: null })
+    expect(none.element.querySelectorAll('.pad-end')).toHaveLength(0)
+  })
+
   it('is a named group that a screen reader skips the drawing of, with the controls named in words under it', () => {
     const { element, surface } = build()
     expect(element.getAttribute('role')).toBe('group')

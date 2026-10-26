@@ -37,7 +37,8 @@ export function shellFiles () {
     web('manifest.webmanifest'),
     ['vocabs/shapes.ttl', 'vocabs/shapes.ttl'],
     ...inDir('icons', f => f.endsWith('.png')),
-    ...inDir('presets', f => f.endsWith('.ttl') || f === 'index.json')
+    ...inDir('presets', f => f.endsWith('.ttl') || f === 'index.json'),
+    ...inDir('loops', f => f === 'index.json')
   ]
 }
 

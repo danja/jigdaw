@@ -65,6 +65,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onAddAudio(trackId, startBeat)`: a new audio clip, from a file the page
  *   asks the person for.
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
+ * - `onLoops()`: open the loop library. Optional: without it the toolbar has no Loops button.
  * - `onRepeat(clipId, lengthBeats)` and `onStopRepeat(clipId)`: make a MIDI clip that long by repeating its pattern, and stop it
  *   repeating. Optional: without `onRepeat` a clip has no loop handle, no R key and no repeat menu items.
  * - `onOpen(clipId)` and `onRemove(clipId)`.
@@ -86,7 +87,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -99,7 +100,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
   scroller.setAttribute('role', 'region')
   scroller.setAttribute('aria-label', 'Arrangement, scrolls sideways')
   const tools = createTimelineTools(document, {
-    view, onSeek, onAddTrack, bpb: () => bpb(), zoom: factor => zoom(factor), fit: () => fit(),
+    view, onSeek, onAddTrack, onLoops, bpb: () => bpb(), zoom: factor => zoom(factor), fit: () => fit(),
     onRouting: on => { element.dataset.routing = on ? 'on' : 'off' }
   })
   element.append(tools.element, scroller)
