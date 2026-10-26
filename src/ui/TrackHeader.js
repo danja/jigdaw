@@ -131,12 +131,12 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   arm.setAttribute('aria-pressed', 'false')
   arm.addEventListener('click', () => onArm(id, arm.getAttribute('aria-pressed') !== 'true'))
 
-  // Source of what the arm button records: MIDI or audio (microphone). Left out
-  // where the track cannot be armed, or where the page did not hand in a setter.
+  // Source of what the arm button records, on its own line below the buttons so
+  // it does not squeeze the title. Left out where the page did not hand in a setter.
   const source = document.createElement('select')
   source.className = 'head-arm-source'
   source.id = `head-${id}-arm-source`
-  source.hidden = true
+  source.hidden = !onArmSource
   for (const [value, label] of [['midi', 'MIDI'], ['audio', 'Audio']]) {
     const option = document.createElement('option')
     option.value = value
@@ -144,6 +144,10 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
     source.append(option)
   }
   if (onArmSource) source.addEventListener('change', () => onArmSource(id, source.value))
+  const sourceRow = document.createElement('div')
+  sourceRow.className = 'head-arm-source-row'
+  sourceRow.append(source)
+  sourceRow.hidden = !onArmSource
 
   // Only where the page can copy a track; a button that did nothing would be left out.
   const duplicate = document.createElement('button')
@@ -221,7 +225,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const title = document.createElement('div')
   title.className = 'head-title'
   title.append(name, ...(onGrip ? [grip] : []), ...(onExpand ? [expand] : []))
-  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []), sourceRow)
 
   return {
     element,
@@ -278,6 +282,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
       arm.setAttribute('aria-pressed', String(armed))
       // Said in text too, not only by the colour it turns.
       arm.textContent = armed ? 'Armed' : 'Arm'
+      if (onArmSource) { source.hidden = false; source.value = armSource; sourceRow.hidden = false }
       source.hidden = !canArm || !onArmSource
       if (!source.hidden) source.value = armSource
       arm.setAttribute('aria-label', `Arm ${label} for MIDI input`)

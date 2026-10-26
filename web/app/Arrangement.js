@@ -404,7 +404,7 @@ export function createArrangement (ctx) {
       }),
       routingFor: track => describeRouting(project, track.id, id => ctx.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
       kindFor: track => trackKind(project, track, id => ctx.dispatcher.engineNode(id)?.profile),
-      canArm: track => Boolean(track.midiInput) || Boolean(track.audioInput),
+      canArm: () => true,
       armed: track => ctx.midiIn.armed(track.id) || ctx.micIn?.armed?.(track.id) === true,
       armSource: track => track.recordSource ?? (track.audioInput && !track.midiInput ? 'audio' : 'midi'),
       latencyFor: track => {

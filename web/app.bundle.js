@@ -35475,7 +35475,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const source = document2.createElement("select");
   source.className = "head-arm-source";
   source.id = `head-${id}-arm-source`;
-  source.hidden = true;
+  source.hidden = !onArmSource;
   for (const [value2, label] of [["midi", "MIDI"], ["audio", "Audio"]]) {
     const option = document2.createElement("option");
     option.value = value2;
@@ -35483,6 +35483,10 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
     source.append(option);
   }
   if (onArmSource) source.addEventListener("change", () => onArmSource(id, source.value));
+  const sourceRow = document2.createElement("div");
+  sourceRow.className = "head-arm-source-row";
+  sourceRow.append(source);
+  sourceRow.hidden = !onArmSource;
   const duplicate = document2.createElement("button");
   duplicate.type = "button";
   duplicate.className = "head-duplicate";
@@ -35546,7 +35550,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const title = document2.createElement("div");
   title.className = "head-title";
   title.append(name2, ...onGrip ? [grip] : [], ...onExpand ? [expand2] : []);
-  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : [], sourceRow);
   return {
     element,
     /**
@@ -35598,6 +35602,11 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
       arm.hidden = !canArm;
       arm.setAttribute("aria-pressed", String(armed));
       arm.textContent = armed ? "Armed" : "Arm";
+      if (onArmSource) {
+        source.hidden = false;
+        source.value = armSource;
+        sourceRow.hidden = false;
+      }
       source.hidden = !canArm || !onArmSource;
       if (!source.hidden) source.value = armSource;
       arm.setAttribute("aria-label", `Arm ${label} for MIDI input`);
@@ -39239,7 +39248,7 @@ function createArrangement(ctx2) {
       }),
       routingFor: (track2) => describeRouting(project, track2.id, (id) => ctx2.rack.trackLabel(project.track(id), project.tracks.indexOf(project.track(id)))),
       kindFor: (track2) => trackKind(project, track2, (id) => ctx2.dispatcher.engineNode(id)?.profile),
-      canArm: (track2) => Boolean(track2.midiInput) || Boolean(track2.audioInput),
+      canArm: () => true,
       armed: (track2) => ctx2.midiIn.armed(track2.id) || ctx2.micIn?.armed?.(track2.id) === true,
       armSource: (track2) => track2.recordSource ?? (track2.audioInput && !track2.midiInput ? "audio" : "midi"),
       latencyFor: (track2) => {
