@@ -1,0 +1,1036 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/octet/",
+  "label": "Octet",
+  "comment": "Eight-band parametric equalizer, stereo, with 12 and 48 dB cuts, shelves, bells and notches, Left/Right and Mid/Side modes, a spectrum analyser and a graphic editor with a draggable node per band. A fresh instance passes the signal unchanged.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "octet",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio",
+    "trn:MidiCC"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "EQ"
+  ],
+  "cautions": [
+    "The graphic display (the response curves, a node to drag for each band and the spectrum analyser) is the plugin's own editor. A host shows it only for a plugin served from another origin than its own page; every control is also on the generated panel.",
+    "MIDI controllers 1 to 4 on the CC channel drive one band and the output, as in Drift. The panel does not follow them.",
+    "The 48 dB cuts are 8th-order Butterworth; a corner within a few percent of half the sample rate behaves like a gentler slope, because the bilinear transform compresses the top octave."
+  ],
+  "format": "trn:Jig",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "stateless": true
+  },
+  "resources": {
+    "module": "octet.wasm",
+    "processor": "octet-processor.js",
+    "ui": "ui/index.html"
+  },
+  "ports": [
+    {
+      "symbol": "mode",
+      "name": "Mode",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Stereo and output",
+      "paramIndex": 0,
+      "displayPriority": 100,
+      "comment": "Stereo treats both channels alike, Left/Right and Mid/Side give each band a channel of its own.",
+      "scalePoints": [
+        {
+          "label": "Stereo",
+          "value": 0
+        },
+        {
+          "label": "Left/Right",
+          "value": 1
+        },
+        {
+          "label": "Mid/Side",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "symbol": "output",
+      "name": "Output",
+      "default": 0,
+      "minimum": -12,
+      "maximum": 12,
+      "group": "Stereo and output",
+      "paramIndex": 1,
+      "displayPriority": 95,
+      "unit": "db",
+      "comment": "The level after every band, in decibels."
+    },
+    {
+      "symbol": "band1_on",
+      "name": "Band 1 On",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 1",
+      "paramIndex": 2,
+      "toggled": true,
+      "comment": "Band 1: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band1_type",
+      "name": "Band 1 Type",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 1",
+      "paramIndex": 3,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 1: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band1_freq",
+      "name": "Band 1 Frequency",
+      "default": 30,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 1",
+      "paramIndex": 4,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 1: the corner or centre frequency."
+    },
+    {
+      "symbol": "band1_gain",
+      "name": "Band 1 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 1",
+      "paramIndex": 5,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 1: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band1_q",
+      "name": "Band 1 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 1",
+      "paramIndex": 6,
+      "comment": "Band 1: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band1_channel",
+      "name": "Band 1 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 1",
+      "paramIndex": 7,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 1: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band2_on",
+      "name": "Band 2 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 2",
+      "paramIndex": 8,
+      "toggled": true,
+      "comment": "Band 2: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band2_type",
+      "name": "Band 2 Type",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 2",
+      "paramIndex": 9,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 2: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band2_freq",
+      "name": "Band 2 Frequency",
+      "default": 100,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 2",
+      "paramIndex": 10,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 2: the corner or centre frequency."
+    },
+    {
+      "symbol": "band2_gain",
+      "name": "Band 2 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 2",
+      "paramIndex": 11,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 2: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band2_q",
+      "name": "Band 2 Q",
+      "default": 0.71,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 2",
+      "paramIndex": 12,
+      "comment": "Band 2: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band2_channel",
+      "name": "Band 2 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 2",
+      "paramIndex": 13,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 2: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band3_on",
+      "name": "Band 3 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 3",
+      "paramIndex": 14,
+      "toggled": true,
+      "comment": "Band 3: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band3_type",
+      "name": "Band 3 Type",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 3",
+      "paramIndex": 15,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 3: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band3_freq",
+      "name": "Band 3 Frequency",
+      "default": 250,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 3",
+      "paramIndex": 16,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 3: the corner or centre frequency."
+    },
+    {
+      "symbol": "band3_gain",
+      "name": "Band 3 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 3",
+      "paramIndex": 17,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 3: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band3_q",
+      "name": "Band 3 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 3",
+      "paramIndex": 18,
+      "comment": "Band 3: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band3_channel",
+      "name": "Band 3 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 3",
+      "paramIndex": 19,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 3: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band4_on",
+      "name": "Band 4 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 4",
+      "paramIndex": 20,
+      "toggled": true,
+      "comment": "Band 4: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band4_type",
+      "name": "Band 4 Type",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 4",
+      "paramIndex": 21,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 4: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band4_freq",
+      "name": "Band 4 Frequency",
+      "default": 600,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 4",
+      "paramIndex": 22,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 4: the corner or centre frequency."
+    },
+    {
+      "symbol": "band4_gain",
+      "name": "Band 4 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 4",
+      "paramIndex": 23,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 4: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band4_q",
+      "name": "Band 4 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 4",
+      "paramIndex": 24,
+      "comment": "Band 4: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band4_channel",
+      "name": "Band 4 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 4",
+      "paramIndex": 25,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 4: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band5_on",
+      "name": "Band 5 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 5",
+      "paramIndex": 26,
+      "toggled": true,
+      "comment": "Band 5: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band5_type",
+      "name": "Band 5 Type",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 5",
+      "paramIndex": 27,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 5: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band5_freq",
+      "name": "Band 5 Frequency",
+      "default": 1500,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 5",
+      "paramIndex": 28,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 5: the corner or centre frequency."
+    },
+    {
+      "symbol": "band5_gain",
+      "name": "Band 5 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 5",
+      "paramIndex": 29,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 5: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band5_q",
+      "name": "Band 5 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 5",
+      "paramIndex": 30,
+      "comment": "Band 5: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band5_channel",
+      "name": "Band 5 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 5",
+      "paramIndex": 31,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 5: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band6_on",
+      "name": "Band 6 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 6",
+      "paramIndex": 32,
+      "toggled": true,
+      "comment": "Band 6: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band6_type",
+      "name": "Band 6 Type",
+      "default": 3,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 6",
+      "paramIndex": 33,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 6: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band6_freq",
+      "name": "Band 6 Frequency",
+      "default": 4000,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 6",
+      "paramIndex": 34,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 6: the corner or centre frequency."
+    },
+    {
+      "symbol": "band6_gain",
+      "name": "Band 6 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 6",
+      "paramIndex": 35,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 6: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band6_q",
+      "name": "Band 6 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 6",
+      "paramIndex": 36,
+      "comment": "Band 6: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band6_channel",
+      "name": "Band 6 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 6",
+      "paramIndex": 37,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 6: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band7_on",
+      "name": "Band 7 On",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 7",
+      "paramIndex": 38,
+      "toggled": true,
+      "comment": "Band 7: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band7_type",
+      "name": "Band 7 Type",
+      "default": 5,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 7",
+      "paramIndex": 39,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 7: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band7_freq",
+      "name": "Band 7 Frequency",
+      "default": 8000,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 7",
+      "paramIndex": 40,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 7: the corner or centre frequency."
+    },
+    {
+      "symbol": "band7_gain",
+      "name": "Band 7 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 7",
+      "paramIndex": 41,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 7: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band7_q",
+      "name": "Band 7 Q",
+      "default": 0.71,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 7",
+      "paramIndex": 42,
+      "comment": "Band 7: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band7_channel",
+      "name": "Band 7 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 7",
+      "paramIndex": 43,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 7: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "band8_on",
+      "name": "Band 8 On",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Band 8",
+      "paramIndex": 44,
+      "toggled": true,
+      "comment": "Band 8: switches it on. A band that is off, or a bell or shelf at 0 dB, changes nothing."
+    },
+    {
+      "symbol": "band8_type",
+      "name": "Band 8 Type",
+      "default": 7,
+      "minimum": 0,
+      "maximum": 7,
+      "group": "Band 8",
+      "paramIndex": 45,
+      "scalePoints": [
+        {
+          "label": "HP 12",
+          "value": 0
+        },
+        {
+          "label": "HP 48",
+          "value": 1
+        },
+        {
+          "label": "Low shelf",
+          "value": 2
+        },
+        {
+          "label": "Bell",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        },
+        {
+          "label": "High shelf",
+          "value": 5
+        },
+        {
+          "label": "LP 12",
+          "value": 6
+        },
+        {
+          "label": "LP 48",
+          "value": 7
+        }
+      ],
+      "comment": "Band 8: the shape. The 48 dB cuts are 8th-order Butterworth, so they are 3 dB down at the corner."
+    },
+    {
+      "symbol": "band8_freq",
+      "name": "Band 8 Frequency",
+      "default": 18000,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Band 8",
+      "paramIndex": 46,
+      "unit": "hz",
+      "displayPriority": 50,
+      "comment": "Band 8: the corner or centre frequency."
+    },
+    {
+      "symbol": "band8_gain",
+      "name": "Band 8 Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "group": "Band 8",
+      "paramIndex": 47,
+      "unit": "db",
+      "displayPriority": 55,
+      "comment": "Band 8: boost or cut, for a bell or a shelf. Cuts and notches have no gain."
+    },
+    {
+      "symbol": "band8_q",
+      "name": "Band 8 Q",
+      "default": 1,
+      "minimum": 0.1,
+      "maximum": 18,
+      "group": "Band 8",
+      "paramIndex": 48,
+      "comment": "Band 8: how narrow a bell or notch is, or how steep a shelf. Cuts have no Q."
+    },
+    {
+      "symbol": "band8_channel",
+      "name": "Band 8 Channel",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Band 8",
+      "paramIndex": 49,
+      "scalePoints": [
+        {
+          "label": "Both",
+          "value": 0
+        },
+        {
+          "label": "A: left or mid",
+          "value": 1
+        },
+        {
+          "label": "B: right or side",
+          "value": 2
+        }
+      ],
+      "comment": "Band 8: which channel it acts on in Left/Right and Mid/Side modes. Stereo mode ignores it."
+    },
+    {
+      "symbol": "cc_channel",
+      "name": "CC Channel",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 16,
+      "group": "MIDI",
+      "paramIndex": 50,
+      "comment": "The MIDI channel whose controllers 1 to 4 drive one band, as in Drift. 0 ignores MIDI."
+    },
+    {
+      "symbol": "cc_band",
+      "name": "CC Band",
+      "default": 4,
+      "minimum": 1,
+      "maximum": 8,
+      "group": "MIDI",
+      "paramIndex": 51,
+      "comment": "The band controllers 1 to 3 drive: 1 its frequency, 2 its gain, 3 its Q. Controller 4 sets the output. A controller holds its control until you move it."
+    },
+    {
+      "symbol": "spectrum_source",
+      "name": "Spectrum",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Display",
+      "paramIndex": 52,
+      "displayPriority": 90,
+      "comment": "The analyser behind the response curve in the editor: off, the input before the EQ, or the output after it.",
+      "scalePoints": [
+        {
+          "label": "Off",
+          "value": 0
+        },
+        {
+          "label": "Pre",
+          "value": 1
+        },
+        {
+          "label": "Post",
+          "value": 2
+        }
+      ]
+    }
+  ],
+  "licenceId": "MIT"
+}

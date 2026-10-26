@@ -1241,6 +1241,91 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/octet/",
+      "label": "Octet",
+      "comment": "Eight-band parametric equalizer, stereo, with 12 and 48 dB cuts, shelves, bells and notches, Left/Right and Mid/Side modes, a spectrum analyser and a graphic editor with a draggable node per band. A fresh instance passes the signal unchanged.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/octet/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Audio",
+        "MidiCC"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "The graphic display (the response curves, a node to drag for each band and the spectrum analyser) is the plugin's own editor. A host shows it only for a plugin served from another origin than its own page; every control is also on the generated panel.",
+        "MIDI controllers 1 to 4 on the CC channel drive one band and the output, as in Drift. The panel does not follow them.",
+        "The 48 dB cuts are 8th-order Butterworth; a corner within a few percent of half the sample rate behaves like a gentler slope, because the bilinear transform compresses the top octave."
+      ],
+      "parameters": [
+        "mode",
+        "output",
+        "band1_on",
+        "band1_type",
+        "band1_freq",
+        "band1_gain",
+        "band1_q",
+        "band1_channel",
+        "band2_on",
+        "band2_type",
+        "band2_freq",
+        "band2_gain",
+        "band2_q",
+        "band2_channel",
+        "band3_on",
+        "band3_type",
+        "band3_freq",
+        "band3_gain",
+        "band3_q",
+        "band3_channel",
+        "band4_on",
+        "band4_type",
+        "band4_freq",
+        "band4_gain",
+        "band4_q",
+        "band4_channel",
+        "band5_on",
+        "band5_type",
+        "band5_freq",
+        "band5_gain",
+        "band5_q",
+        "band5_channel",
+        "band6_on",
+        "band6_type",
+        "band6_freq",
+        "band6_gain",
+        "band6_q",
+        "band6_channel",
+        "band7_on",
+        "band7_type",
+        "band7_freq",
+        "band7_gain",
+        "band7_q",
+        "band7_channel",
+        "band8_on",
+        "band8_type",
+        "band8_freq",
+        "band8_gain",
+        "band8_q",
+        "band8_channel",
+        "cc_channel",
+        "cc_band",
+        "spectrum_source"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/parameq/",
       "label": "Parameq",
       "comment": "Six-band stereo parametric equalizer in C++: peak, low and high shelf, low and high pass, band pass and notch shapes per band, each with its own enable, frequency, gain and Q.",

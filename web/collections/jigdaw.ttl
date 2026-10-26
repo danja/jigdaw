@@ -49,6 +49,7 @@
         <../plugins/moka/> ,
         <../plugins/monochord/> ,
         <../plugins/mop/> ,
+        <../plugins/octet/> ,
         <../plugins/parameq/> ,
         <../plugins/pulse/> ,
         <../plugins/quartet/> ,
@@ -85,6 +86,7 @@
 <../plugins/moka/> rdfs:label "Moka" .
 <../plugins/monochord/> rdfs:label "Monochord" .
 <../plugins/mop/> rdfs:label "Mop" .
+<../plugins/octet/> rdfs:label "Octet" .
 <../plugins/parameq/> rdfs:label "Parameq" .
 <../plugins/pulse/> rdfs:label "Pulse" .
 <../plugins/quartet/> rdfs:label "Quartet" .

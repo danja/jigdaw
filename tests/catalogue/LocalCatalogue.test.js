@@ -53,7 +53,7 @@ describe('the plugins this host serves', () => {
     expect((await catalogue.search({ role: 'Instrument' })).map(e => e.label).sort())
       .toEqual(['8-Bit 8asterd', 'Canticle', 'DrumKit', 'Moka', 'Monochord', 'Mop', 'Pulse', 'Quartet', 'Sam'])
     expect((await catalogue.search({ role: 'AudioEffect' })).map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Octet', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
     // BassGen accepts MIDI too: it can be steered from a keyboard. DrumKit
     // takes drum notes the same way a keyboard takes pitched ones.
     expect((await catalogue.search({ accepts: 'Midi' })).map(e => e.label).sort())
@@ -64,7 +64,7 @@ describe('the plugins this host serves', () => {
   it('takes a full IRI for a facet as well as a bare name', async () => {
     const full = await catalogue.search({ role: 'http://purl.org/stuff/transmissions/AudioEffect' })
     expect(full.map(e => e.label).sort())
-      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
+      .toEqual(['Boost', 'Cascade', 'Dynamix', 'Ferrite', 'JigDAW Gain Trim', 'JigDAW One-Pole Filter', 'JigDAW Soft Clipper', 'Keyframe', 'Lookahead', 'Octet', 'Parameq', 'Quefrency', 'Squelch', 'Stomp rack', 'Tremolo'])
   })
 
   it('returns nothing rather than everything when nothing matches', async () => {

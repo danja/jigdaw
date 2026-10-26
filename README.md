@@ -13,7 +13,7 @@ integrity digest. There is no registry, and no install step distinct from having
 [docs/](docs/), the vocabulary and shapes in [vocabs/](vocabs/), and the examples that validate against
 them. The code is here too, as sample applications that show the specification working and test it
 by implementing it: Jiggy, a host that runs the plugins in a browser ([below](#sample-applications)),
-a second host that runs them as a VST3, 35 worked plugins, and a validator that enforces the
+a second host that runs them as a VST3, 36 worked plugins, and a validator that enforces the
 specification on its own files. None of it is required to use the format.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
@@ -100,7 +100,7 @@ violates every constraint once and must not.
 
 ## Writing a plugin
 
-35 worked plugins are in [plugins/](plugins/): a subtractive synth,
+36 worked plugins are in [plugins/](plugins/): a subtractive synth,
 a reverb, a compressor/expander/limiter/clipper with a side chain input, a transport-synced
 bass line generator, a transport-synced drum pattern generator, a synthesised drum
 instrument, a phrase-aware melody generator, a long-form bass section planner, a
