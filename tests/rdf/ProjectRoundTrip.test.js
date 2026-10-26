@@ -514,6 +514,19 @@ describe('the editor graph, track layout', () => {
     expect(tracks.get('track-10').laneSize).toBe('collapsed')
   })
 
+  it('round trips a lane dragged to a height of its own, writes nothing for one that was not, and reads it as a number', async () => {
+    const project = builtProject()
+    expect(writeEditor(project, { iri: IRI })).not.toContain('laneHeight')
+    project.setTrackLayout('track-10', { laneHeight: 180 })
+    const text = writeEditor(project, { iri: IRI })
+    expect(text).toContain('jig:laneHeight 180')
+    const read = readEditor(await parseText(text, IRI), IRI).tracks.get('track-10').laneHeight
+    expect(read).toBe(180)
+    expect(typeof read).toBe('number')
+    project.setTrackLayout('track-10', { laneHeight: null })
+    expect(writeEditor(project, { iri: IRI })).not.toContain('laneHeight')
+  })
+
   it('round trips order, colour and lane size, and writes nothing for the default', async () => {
     const project = builtProject()
     project.setTrackLayout('track-10', { order: 0, color: '#3366cc', laneSize: 'large', folder: 'Drums' })

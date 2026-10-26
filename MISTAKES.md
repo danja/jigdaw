@@ -5,6 +5,17 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## A `--help` flag that was not one regrew 69 tracked files (2026-10-26)
+
+**What happened.** Looking for the options of `bin/build-gallery.js`, `node bin/build-gallery.js --help` ran the whole build: it
+retook all 35 screenshots and rewrote every panel page and `web/gallery.html`.
+
+**Root cause.** The script parses only `--shots`, `--no-shots`, `--width` and `--height`, and runs on any arguments. Asking a
+generator for help is running it.
+
+**Prevention.** Read a script's header for its options before running it with a guess. The regeneration was due anyway (the new
+plugin needed its shot), so nothing was lost, but it was not chosen.
+
 ## 2026-10-26: Add in the chooser failed before anything had been heard
 
 **What happened.** Pressing Add in the Add a track chooser, as the first thing done in a fresh page, failed with "Cannot read properties of null (reading

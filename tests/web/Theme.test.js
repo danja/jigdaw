@@ -135,7 +135,9 @@ const PAIRS = [
   ['hilite', 'bg', 3, 'the playhead and selection on the page'], ['hilite', 'lane', 3, 'the playhead and selection on a lane'],
   ['focus', 'bg', 3, 'the focus ring on the page'], ['focus', 'lane', 3, 'the focus ring on a lane'], ['focus', 'panel', 3, 'the focus ring on a panel'],
   ['accent', 'bg', 3, 'an accent border'], ['accent', 'panel', 3, 'an accent border on a panel'],
-  ['outline-strong', 'lane', 3, 'a strong outline on a lane']
+  ['outline-strong', 'lane', 3, 'a strong outline on a lane'],
+  ['play-ink', 'control', 3, 'the green Play icon on its button'], ['rec-ink', 'control', 3, 'the red Record icon on its button'],
+  ['#fff', 'play-fill', 3, 'the white Play icon on its filled button'], ['#fff', 'rec-fill', 3, 'the white Record icon on its filled button']
 ]
 
 describe('the two themes in the studio page', () => {

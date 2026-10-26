@@ -120,6 +120,12 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       `plugins_search` tool to 25, so a caller that does not pass a limit sees a page of 34 plugins and nothing says there is more.
       The page's search bar was fixed 2026-10-24 (it asked for 25 and hid eight, Sam among them; it now asks for `MAX_RESULTS`,
       `tests/catalogue/BrowseAll.test.js`). Decide whether a result set should say when it was cut short.
+- [x] **Ported Downspout's Quartet to a Jig, opening as a bass, and made it the bass of the Deep house set** (asked 2026-10-26, done
+      the same day). `plugins/quartet/`: freestanding C++ (`jig:Abi2`, 59 parameters, no state), checked against the original core
+      compiled natively over four scripts (largest difference 6e-8 of full scale; a fixture holds the module to it). The defaults are
+      a mono FM bass. A loop may name its own voice (`voice` in `web/loops/index.json`, `bin/write-loops.js`), and Deep house bass names
+      Quartet; its level was set so its RMS matches what Pulse had at gain 1 (0.5). Open: the VST3's routing drawing and filter plot are not
+      reproduced; the sound has not been listened to by a person.
 - [x] **Ported Downspout's Monochord to a Jig and made it the voice in "Fender into the Ropery"** (asked 2026-10-24, done the
       same day). `plugins/monochord/`: freestanding C++ (`jig:Abi2`, 14 parameters, no state), checked against the original
       core compiled natively (largest difference 3e-11 of full scale for each exciter). The Guitar node in
@@ -376,6 +382,12 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, measured at a real phone width.
 - [ ] **Agent-driven arrangement.** An agent builds a track from profiles: chooses plugins by role, connects them, writes a
       clip. Regress with a scripted session against the real dispatcher.
+- [ ] **Replace the RDF libraries with `factoidal-core` (npm).** Today `@zazuko/env`, `@rdfjs/parser-n3` and
+      `rdf-validate-shacl` do the parsing, dataset and SHACL work. Find every import of them (`src/rdf/`, `src/validate/`, `bin/`),
+      list what each one is used for, and move them onto `factoidal-core` behind the existing modules so callers do not change.
+      Do it before live collaboration, which builds its RDF mapping and canonical form on whichever library is left. Gate: the
+      full suite, `tests/rdf/Canonical.test.js` over every tracked `.ttl`, the shape counterexample counts and the 3000 note
+      round-trip timing all unchanged. Check first that `factoidal-core` runs in the browser bundle and in node 20.
 - [ ] **Live collaboration** (a band of 3 or 4, remote). Design written 2026-10-26: [docs/collaboration.md](docs/collaboration.md).
       A CRDT replica (Yjs first) behind an RDF mapping derived from `vocabs/shapes.ttl`, wrapped in an envelope with a negotiated
       codec so the engine can change. Join by secret link and knock; "anyone with the link" is a room mode that stays open until

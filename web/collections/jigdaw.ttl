@@ -51,6 +51,7 @@
         <../plugins/mop/> ,
         <../plugins/parameq/> ,
         <../plugins/pulse/> ,
+        <../plugins/quartet/> ,
         <../plugins/quefrency/> ,
         <../plugins/retune/> ,
         <../plugins/sam/> ,
@@ -86,6 +87,7 @@
 <../plugins/mop/> rdfs:label "Mop" .
 <../plugins/parameq/> rdfs:label "Parameq" .
 <../plugins/pulse/> rdfs:label "Pulse" .
+<../plugins/quartet/> rdfs:label "Quartet" .
 <../plugins/quefrency/> rdfs:label "Quefrency" .
 <../plugins/retune/> rdfs:label "Retune" .
 <../plugins/sam/> rdfs:label "Sam" .

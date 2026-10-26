@@ -142,6 +142,9 @@ that make it a particular patch. The presets in `web/presets` and the composites
 - Grouped, not scattered: File (open, save, export, import), Edit (undo, redo), and Input (MIDI in, mic in, record MIDI).
 - Moved out of the bar into a menu, in Advanced: Panic, stems, install, the keys list stays one key away.
 - Text beside the icon for the five that matter first, as other DAWs do. Icon only is for a person who has learned the set.
+- Two rows. The top row is the tempo, time signature and position with File, Edit and Input; the row below it is the buttons that
+  play: Rewind, Play (green icon), Stop, Record (red icon), Loop, Click and the count-in. Rewind returns to the start. The colours are
+  a second cue beside the words and the shapes, never the only one.
 - A recovery notice and an update notice are one line, in one place, and never above the transport. Both appeared above the tabs
   in the check above and pushed the work down by about a hundred pixels.
 

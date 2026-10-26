@@ -69,6 +69,7 @@ export const KEY_ROWS = Object.freeze([
 // with a keydown handler cannot appear without a decision (tests/ui/KeyTable.test.js walks src/ and web/).
 export const UNLISTED_KEY_FILES = Object.freeze({
   'src/ui/Tabs.js': 'the tabs pattern: arrows, Home and End, as in the WAI-ARIA authoring practices',
+  'src/ui/LaneResize.js': 'Escape cancels a lane drag; no other key is read',
   'web/app/Help.js': 'Escape puts a help tip away; no other key is read',
   'src/ui/RoutingMatrix.js': 'the grid pattern: arrows, Home and End',
   'src/ui/Dock.js': 'the splitter pattern: arrows, Home and End',

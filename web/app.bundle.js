@@ -13428,6 +13428,7 @@ var init_Vocabulary = __esm({
         order: `${JIG}order`,
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
+        laneHeight: `${JIG}laneHeight`,
         folder: `${JIG}folder`,
         folderCollapsed: `${JIG}folderCollapsed`,
         // Scripts saved with a session. docs/project-format.md.
@@ -20787,6 +20788,8 @@ function createAutomationHost(ctx2) {
 
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["collapsed", "small", "medium", "large"]);
+var MIN_LANE_HEIGHT = 24;
+var MAX_LANE_HEIGHT = 800;
 var DEFAULT_LANE_SIZE = "small";
 var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
@@ -20813,7 +20816,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, laneHeight: null, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -20838,6 +20841,12 @@ var EditorState = class _EditorState {
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
       next.laneSize = patch.laneSize;
+    }
+    if (patch.laneHeight !== void 0) {
+      if (patch.laneHeight !== null && !(Number.isInteger(patch.laneHeight) && patch.laneHeight >= MIN_LANE_HEIGHT && patch.laneHeight <= MAX_LANE_HEIGHT)) {
+        throw new Error(`laneHeight must be a whole number of pixels from ${MIN_LANE_HEIGHT} to ${MAX_LANE_HEIGHT}, or null`);
+      }
+      next.laneHeight = patch.laneHeight;
     }
     this.#tracks.set(id, next);
     this.#changed();
@@ -26006,6 +26015,7 @@ var SVG_NS = "http://www.w3.org/2000/svg";
 var ICONS = Object.freeze({
   play: "M8 5v14l11-7z",
   stop: "M6 6h12v12H6z",
+  rewind: "M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z",
   record: "M12 6a6 6 0 1 0 0 12 6 6 0 0 0 0-12z",
   loop: "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z",
   undo: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z",
@@ -35448,32 +35458,25 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   };
   const mute = toggle("muted");
   const solo = toggle("soloed");
-  const slider = (text, key, min, max, format, speak) => {
-    const label = document2.createElement("label");
-    label.className = "head-slider";
-    const caption = document2.createElement("span");
-    caption.textContent = text;
-    const input = document2.createElement("input");
-    input.type = "range";
-    input.min = String(min);
-    input.max = String(max);
+  const slider = (text, key, min, max, defaultValue, format, speak) => {
+    const dial = createDial(document2, { minimum: min, maximum: max, defaultValue }, `head-${id}-${key}`);
+    dial.element.classList.add("head-dial");
+    const input = dial.input;
     input.step = "0.01";
-    input.id = `head-${id}-${key}`;
-    const value2 = document2.createElement("span");
-    value2.className = "value";
+    const label = dial.element;
     const show = (n2) => {
-      value2.textContent = format(n2);
+      dial.render(n2);
+      label.title = `${text} ${format(n2)}`;
       input.setAttribute("aria-valuetext", speak(n2));
     };
     input.addEventListener("input", () => {
       show(Number(input.value));
       onChannel(id, { [key]: Number(input.value) });
     });
-    label.append(caption, input, value2);
     return { label, input, show };
   };
-  const level = slider("Level", "gain", 0, 2, (n2) => `${decibels(n2)} dB`, (n2) => `${decibels(n2)} decibels`);
-  const pan = slider("Pan", "pan", -1, 1, panPosition, panPosition);
+  const level = slider("Level", "gain", 0, 2, 1, (n2) => `${decibels(n2)} dB`, (n2) => `${decibels(n2)} decibels`);
+  const pan = slider("Pan", "pan", -1, 1, 0, panPosition, panPosition);
   const routing = document2.createElement("p");
   routing.className = "head-routing";
   routing.hidden = true;
@@ -37035,8 +37038,59 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
   return clipButton;
 }
 
+// src/ui/LaneResize.js
+var clampHeight = (height) => Math.min(MAX_LANE_HEIGHT, Math.max(MIN_LANE_HEIGHT, Math.round(height)));
+function createLaneResize(document2, { lane, onCommit, onReset }) {
+  const grip = document2.createElement("div");
+  grip.className = "lane-resize";
+  grip.setAttribute("aria-hidden", "true");
+  grip.title = "Drag to change the height of this lane. Double click to put it back.";
+  grip.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const startY = event.clientY;
+    const before = lane.style.minHeight;
+    const startHeight = lane.getBoundingClientRect().height;
+    let height = startHeight;
+    const move = (e) => {
+      height = clampHeight(startHeight + (e.clientY - startY));
+      lane.style.minHeight = `${height}px`;
+    };
+    const stop = () => {
+      document2.removeEventListener("pointermove", move);
+      document2.removeEventListener("pointerup", release);
+      document2.removeEventListener("pointercancel", cancel);
+      document2.removeEventListener("keydown", escape);
+    };
+    function release() {
+      stop();
+      if (Math.round(height) !== Math.round(startHeight)) onCommit(height);
+      else lane.style.minHeight = before;
+    }
+    function cancel() {
+      stop();
+      lane.style.minHeight = before;
+    }
+    function escape(e) {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      cancel();
+    }
+    document2.addEventListener("pointermove", move);
+    document2.addEventListener("pointerup", release);
+    document2.addEventListener("pointercancel", cancel);
+    document2.addEventListener("keydown", escape);
+  });
+  grip.addEventListener("dblclick", (event) => {
+    event.stopPropagation();
+    onReset();
+  });
+  return grip;
+}
+
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -37232,6 +37286,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         });
         const lane = document2.createElement("div");
         lane.className = "timeline-lane";
+        const grip = onLaneHeight ? createLaneResize(document2, { lane, onCommit: (height) => onLaneHeight(track2.id, height), onReset: () => onLaneReset?.(track2.id) }) : null;
         const body = document2.createElement("div");
         body.className = "timeline-body";
         body.append(header.element, lane);
@@ -37252,7 +37307,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
           });
         }
         row.append(body, automation.element, strip.element);
-        entry = { row, header, lane, strip, automation };
+        entry = { row, header, lane, grip, strip, automation };
         rows.set(track2.id, entry);
       }
       const own = clips.filter((c3) => c3.track === track2.id);
@@ -37261,6 +37316,8 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       entry.row.setAttribute("aria-label", `Track ${label}`);
       const layout = layoutFor(track2);
       entry.row.dataset.size = layout.laneSize;
+      if (layout.laneHeight && layout.laneSize !== "collapsed") entry.lane.style.minHeight = `${layout.laneHeight}px`;
+      else entry.lane.style.removeProperty("min-height");
       if (layout.color) entry.row.style.setProperty("--track-color", layout.color);
       else entry.row.style.removeProperty("--track-color");
       entry.header.update({
@@ -37292,6 +37349,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
         peaks: clip.kind === "audio" ? peaksFor(clip, Math.max(1, Math.round(clip.lengthBeats * ppb() / 3))) : null,
         problem: clip.kind === "audio" ? unplayable(clip) : null
       })));
+      if (entry.grip) entry.lane.append(entry.grip);
       return entry.row;
     });
     const current = [...scroller.children];
@@ -38788,9 +38846,12 @@ function createArrangement(ctx2) {
     onSizeStep: (trackId, by) => {
       const { laneSize } = ctx2.dispatcher.project.trackLayout(trackId);
       const next = LANE_SIZES[LANE_SIZES.indexOf(laneSize) + by];
-      if (next) ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: next });
+      if (next) ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: next, laneHeight: null });
     },
-    onExpandTrack: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: "small" }),
+    onExpandTrack: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: "small", laneHeight: null }),
+    // The grip along a lane's bottom edge: a height of its own, kept with the layout, and put back by a double click.
+    onLaneHeight: (trackId, height) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneHeight: height }),
+    onLaneReset: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneHeight: null }),
     // The toolbar's Add track opens the chooser, which has An empty track in it.
     onAddTrack: () => ctx2.addTrack.open(),
     onLoops: () => ctx2.loops.open(),
@@ -39067,6 +39128,7 @@ function createArrangement(ctx2) {
     if (!clip || clip.kind !== "midi") return;
     const track2 = project.tracks.find((t) => t.id === clip.track);
     pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx2.rack.trackLabel(track2, project.tracks.indexOf(track2)) });
+    pianoRoll.element.scrollIntoView?.({ block: "nearest" });
   }
   function draw2(tracks, labelOfTrack) {
     const project = ctx2.dispatcher?.project;
@@ -40004,7 +40066,7 @@ function createDockPanel(ctx2) {
       for (const id of ctx2.selection.ids) layoutOf(id, { color });
     },
     onSize: (laneSize) => {
-      for (const id of ctx2.selection.ids) layoutOf(id, { laneSize });
+      for (const id of ctx2.selection.ids) layoutOf(id, { laneSize, laneHeight: null });
     },
     onFolder: (folder) => {
       for (const id of ctx2.selection.ids) layoutOf(id, { folder });
@@ -40102,7 +40164,7 @@ function createDockPanel(ctx2) {
       if (!result.ok) log2(result.message, "error");
     },
     onColor: (id, color) => layoutOf(id, { color }),
-    onSize: (id, laneSize) => layoutOf(id, { laneSize }),
+    onSize: (id, laneSize) => layoutOf(id, { laneSize, laneHeight: null }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels2) => shift(describeLevelShift, decibels2, groupMembers(ctx2.dispatcher.project, id)),
     onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx2.dispatcher.project, id)),
@@ -40951,6 +41013,7 @@ function checkLoop(loop) {
   if (loop.key !== void 0 && (typeof loop.key !== "string" || loop.key.trim() === "")) fail(loop, "has a key that is not a name");
   if (loop.bpm !== void 0 && !(Number.isFinite(loop.bpm) && loop.bpm > 0)) fail(loop, "has a tempo that is not above zero");
   if (loop.gain !== void 0 && !(Number.isFinite(loop.gain) && loop.gain >= 0 && loop.gain <= 2)) fail(loop, "has a gain that is not from 0 to 2");
+  if (loop.voice !== void 0 && !(typeof loop.voice === "string" && /^[a-z0-9][a-z0-9-]*$/.test(loop.voice))) fail(loop, "has a voice that is not a plugin directory name");
   if (!Array.isArray(loop.notes) || loop.notes.length === 0) fail(loop, "needs at least one note");
   for (const [i2, note] of loop.notes.entries()) {
     const where = `note ${i2}`;
@@ -41168,8 +41231,8 @@ function createLoops(ctx2) {
     const isDrumKit = roles.some((role) => role.endsWith("DrumInstrument"));
     return isDrumKit === (loop.kind === "drums") ? track2 : null;
   }
-  async function voiceFor(kind) {
-    const directory = KINDS4.find((k) => k.kind === kind).voice;
+  async function voiceFor(kind, voice = null) {
+    const directory = voice ?? KINDS4.find((k) => k.kind === kind).voice;
     instruments ??= (await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS })).results;
     const sound = soundsFrom(instruments).find((s) => directoryOf(s.iri) === directory);
     if (!sound) throw new Error(`there is no ${directory} here to play a ${kind} loop`);
@@ -41217,7 +41280,7 @@ function createLoops(ctx2) {
           trackId = track2.id;
           startBeat = Math.max(0, Math.round(ctx2.transport.position().beat));
         } else {
-          const voice = await voiceFor(loop.kind);
+          const voice = await voiceFor(loop.kind, loop.voice);
           const loaded = await ctx2.loading.loadPlugin(voice.load, { newTrack: true });
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`);
           trackId = loaded.trackId;
@@ -41254,7 +41317,7 @@ function createLoops(ctx2) {
         }
         const made = [];
         for (const loop of parts) {
-          const voice = await voiceFor(loop.kind);
+          const voice = await voiceFor(loop.kind, loop.voice);
           const loaded = await ctx2.loading.loadPlugin(voice.load, { newTrack: true });
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`);
           const applied = d.apply([
@@ -41866,11 +41929,12 @@ function writeEditor(project, { iri: iri5 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig6.x)} ${decimal(x)} ; ${term3(jig6.y)} ${decimal(y)} .`);
   }
   for (const track2 of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track2.id);
+    const { order, color, laneSize, laneHeight, folder, folderCollapsed } = editor.track(track2.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig6.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig6.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig6.laneSize)} ${string(laneSize)}`);
+    if (laneHeight !== null) parts.push(`${term3(jig6.laneHeight)} ${integer(laneHeight)}`);
     if (folder !== null) parts.push(`${term3(jig6.folder)} ${string(folder)}`);
     if (folderCollapsed) parts.push(`${term3(jig6.folderCollapsed)} true`);
     if (parts.length > 0) lines.push(`<#${track2.id}> ${parts.join(" ; ")} .`);
@@ -41966,6 +42030,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
     } else if (p === jig7.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
+    } else if (p === jig7.laneHeight) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).laneHeight = number4(quad3.object, "laneHeight");
     } else if (p === jig7.folder) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
     } else if (p === jig7.folderCollapsed) {
@@ -43228,6 +43294,7 @@ var KEY_ROWS = Object.freeze([
 ]);
 var UNLISTED_KEY_FILES = Object.freeze({
   "src/ui/Tabs.js": "the tabs pattern: arrows, Home and End, as in the WAI-ARIA authoring practices",
+  "src/ui/LaneResize.js": "Escape cancels a lane drag; no other key is read",
   "web/app/Help.js": "Escape puts a help tip away; no other key is read",
   "src/ui/RoutingMatrix.js": "the grid pattern: arrows, Home and End",
   "src/ui/Dock.js": "the splitter pattern: arrows, Home and End",
@@ -45316,6 +45383,7 @@ var FROM = Object.freeze({
   // Play, stop and the things a person needs the first minute.
   "#toggle-browser": "simple",
   "#toggle-keys": "simple",
+  "#rewind": "simple",
   "#play": "simple",
   "#stop": "simple",
   "#loop": "simple",
@@ -45598,6 +45666,13 @@ $("collectionbar").addEventListener("submit", (e) => {
   browser.openCollection($("collection").value.trim()).catch((error2) => log(error2.message, "error"));
 });
 $("play").addEventListener("click", () => transport.play().catch((error2) => log(error2.message, "error")));
+$("rewind").addEventListener("click", () => {
+  try {
+    transport.seek(0);
+  } catch (error2) {
+    log(error2.message, "error");
+  }
+});
 $("stop").addEventListener("click", () => {
   Promise.all([ctx.record.finishTake(), ctx.midiRecord.finishTake()]).catch((error2) => log(error2.message, "error")).finally(() => transport.stop());
 });

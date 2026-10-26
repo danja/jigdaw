@@ -99,7 +99,7 @@ describe('which plugins get a keyboard', () => {
     expect(plugins.length).toBeGreaterThan(0)
     const got = plugins.filter(p => playable(p.profile)).map(p => p.name).sort()
     const not = plugins.filter(p => !playable(p.profile)).map(p => p.name).sort()
-    expect(got).toEqual(['8b8', 'canticle', 'drumkit', 'moka', 'monochord', 'mop', 'pulse', 'sam'])
+    expect(got).toEqual(['8b8', 'canticle', 'drumkit', 'moka', 'monochord', 'mop', 'pulse', 'quartet', 'sam'])
     expect(not).toEqual(['bassgen', 'boost', 'cadence', 'cascade', 'conductor', 'counterpointer', 'dice', 'drumgen', 'dynamix', 'ferrite', 'ground', 'jsfx-gain-trim', 'jsfx-one-pole-filter', 'jsfx-soft-clipper', 'keyframe', 'lookahead', 'markov', 'melgen', 'midifilter', 'parameq', 'quefrency', 'retune', 'sprout', 'squelch', 'stomp-rack', 'tremolo'])
   })
 

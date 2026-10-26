@@ -6,7 +6,7 @@ describe('EditorState', () => {
   it('starts as the default and says so', () => {
     const editor = new EditorState()
     expect(editor.isDefault).toBe(true)
-    expect(editor.track('t')).toEqual({ order: null, color: null, folder: null, folderCollapsed: false, laneSize: 'small' })
+    expect(editor.track('t')).toEqual({ order: null, color: null, folder: null, folderCollapsed: false, laneSize: 'small', laneHeight: null })
     expect(editor.position('n')).toEqual({ x: 0, y: 0 })
   })
 
@@ -159,5 +159,37 @@ describe('a clip colour', () => {
     expect(editor.clip('c').color).toBe('#e5484d')
     editor.prune(new Set(), new Set(), new Set())
     expect(editor.clip('c').color).toBe(null)
+  })
+
+  describe('a lane dragged to a height of its own', () => {
+    it('is kept as a whole number of pixels, and none when it has not been dragged', () => {
+      const editor = new EditorState()
+      expect(editor.track('t').laneHeight).toBeNull()
+      editor.setTrack('t', { laneHeight: 120 })
+      expect(editor.track('t').laneHeight).toBe(120)
+      editor.setTrack('t', { laneHeight: null })
+      expect(editor.track('t').laneHeight).toBeNull()
+    })
+
+    it('refuses a height that is not a whole number from 24 to 800, and keeps what it had', () => {
+      const editor = new EditorState()
+      editor.setTrack('t', { laneHeight: 100 })
+      for (const bad of [23, 801, 100.5, NaN, Infinity, '100', -1, 0]) expect(() => editor.setTrack('t', { laneHeight: bad }), String(bad)).toThrow(/laneHeight must be a whole number of pixels from 24 to 800, or null/)
+      expect(editor.track('t').laneHeight).toBe(100)
+    })
+
+    it('is accepted at either end of the range', () => {
+      const editor = new EditorState()
+      editor.setTrack('t', { laneHeight: 24 })
+      editor.setTrack('t', { laneHeight: 800 })
+      expect(editor.track('t').laneHeight).toBe(800)
+    })
+
+    it('is kept beside the size it was dragged from, and setting a size alone does not touch it', () => {
+      const editor = new EditorState()
+      editor.setTrack('t', { laneSize: 'large', laneHeight: 200 })
+      editor.setTrack('t', { laneSize: 'medium' })
+      expect(editor.track('t')).toMatchObject({ laneSize: 'medium', laneHeight: 200 })
+    })
   })
 })

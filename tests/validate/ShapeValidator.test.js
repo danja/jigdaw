@@ -25,6 +25,7 @@ const EXPECTED = {
   'plugins/boost/profile.ttl': 0,
   'plugins/ferrite/profile.ttl': 0,
   'plugins/squelch/profile.ttl': 0,
+  'plugins/quartet/profile.ttl': 0,
   'examples/reference-provenance.ttl': 0,
   'examples/reference-foreign.ttl': 0,
   'examples/reference-collection.ttl': 0,

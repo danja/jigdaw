@@ -721,3 +721,66 @@ describe('dragging a track by its grip', () => {
     expect(document.querySelectorAll('.dragging, .drop-target').length).toBe(0)
   })
 })
+
+describe('a lane dragged to a height of its own', () => {
+  const make = (extra = {}) => {
+    const calls = []
+    const record = name => (...args) => calls.push([name, ...args])
+    const timeline = createTimeline(document, {
+      onAdd: record('add'), onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onBypass () {}, onMoveInChain () {}, onEnvelope () {}, onAutomateMaster () {}, onRemoveEnvelope () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onFolderCollapse () {}, onArm () {}, ...extra(record)
+    })
+    document.body.append(timeline.element)
+    return { timeline, calls }
+  }
+  const draw = (timeline, layout) => timeline.draw({
+    tracks: [{ id: 't1', label: 'Keys', midiInput: 'n1' }], clips: [{ id: 'c1', track: 't1', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [] }], beatsPerBar: 4,
+    labelFor: t => t.label, playsIntoNothing: () => false, layoutFor: () => layout
+  })
+
+  it('has a grip in each lane where the page can keep a height, and none where it cannot', () => {
+    const withGrip = make(record => ({ onLaneHeight: record('height') }))
+    draw(withGrip.timeline, { laneSize: 'small', laneHeight: null })
+    expect(document.querySelectorAll('.timeline-lane .lane-resize')).toHaveLength(1)
+    document.body.replaceChildren()
+    const without = make(() => ({}))
+    draw(without.timeline, { laneSize: 'small', laneHeight: null })
+    expect(document.querySelectorAll('.lane-resize')).toHaveLength(0)
+  })
+
+  it('keeps its grip when the lane is drawn again, which replaces the clips in it', () => {
+    const { timeline } = make(record => ({ onLaneHeight: record('height') }))
+    draw(timeline, { laneSize: 'small', laneHeight: null })
+    draw(timeline, { laneSize: 'small', laneHeight: null })
+    draw(timeline, { laneSize: 'small', laneHeight: null })
+    expect(document.querySelectorAll('.lane-resize')).toHaveLength(1)
+    expect(document.querySelector('.timeline-lane').lastElementChild.className).toBe('lane-resize')
+  })
+
+  it('draws the lane at the height it was dragged to, and at the height of its size when it was not', () => {
+    const { timeline } = make(record => ({ onLaneHeight: record('height') }))
+    draw(timeline, { laneSize: 'small', laneHeight: 180 })
+    const lane = document.querySelector('.timeline-lane')
+    expect(lane.style.minHeight).toBe('180px')
+    draw(timeline, { laneSize: 'small', laneHeight: null })
+    expect(lane.style.minHeight).toBe('')
+  })
+
+  it('does not apply a dragged height to a collapsed lane, which stays a bar', () => {
+    const { timeline } = make(record => ({ onLaneHeight: record('height') }))
+    draw(timeline, { laneSize: 'collapsed', laneHeight: 180 })
+    expect(document.querySelector('.timeline-lane').style.minHeight).toBe('')
+  })
+
+  it('tells the page which track was dragged to what height, and which was reset', () => {
+    const { timeline, calls } = make(record => ({ onLaneHeight: record('height'), onLaneReset: record('reset') }))
+    draw(timeline, { laneSize: 'small', laneHeight: null })
+    const grip = document.querySelector('.lane-resize')
+    document.querySelector('.timeline-lane').getBoundingClientRect = () => ({ height: 56 })
+    grip.dispatchEvent(event('pointerdown', { button: 0, clientY: 10 }))
+    document.dispatchEvent(event('pointermove', { clientY: 50 }))
+    document.dispatchEvent(event('pointerup', { clientY: 50 }))
+    grip.dispatchEvent(event('dblclick'))
+    expect(calls.filter(c => c[0] === 'height' || c[0] === 'reset')).toEqual([['height', 't1', 96], ['reset', 't1']])
+  })
+})
+

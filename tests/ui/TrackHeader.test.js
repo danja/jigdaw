@@ -46,6 +46,19 @@ describe('a track header', () => {
     expect($('add-clip-t1').getAttribute('aria-label')).toBe('Add a MIDI clip to Bass at bar 3 beat 1')
   })
 
+  it('draws level and pan as small knobs in the one row with mute and solo', () => {
+    const { $ } = build()
+    const row = $('head-t1-muted').parentElement
+    expect(row.className).toBe('head-mix')
+    for (const id of ['head-t1-soloed', 'head-t1-gain', 'head-t1-pan']) expect(row.contains($(id)), id).toBe(true)
+    // A knob is still a range input underneath, so the keys and the screen reader's value come with it.
+    expect($('head-t1-gain').type).toBe('range')
+    expect($('head-t1-gain').closest('.dial')).not.toBeNull()
+    expect($('head-t1-pan').closest('.dial').classList.contains('head-dial')).toBe(true)
+    // And a hover says what the knob is set to.
+    expect($('head-t1-pan').closest('.dial').title).toBe('Pan centre')
+  })
+
   it('sends only the part that changed, once per movement', () => {
     const { $, calls } = build()
     $('head-t1-muted').dispatchEvent(event('click'))

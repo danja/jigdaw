@@ -8,11 +8,39 @@
   :root {
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
-    --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --wire:#4a5464;
-    }
+    --line:#2a2f38; --accent:#2c78c2; --ok:#7ddc8e; --err:#ff8a8a; --solo:#f2c94c; --wire:#4a5464;
+    --ok-ink:#7ddc8e; --err-ink:#ff8a8a; --on-accent:#fff;
+    --field:#0e1013; --lane:#13161b; --raised:#1a1e24; --control:#2a2f38; --control-hover:#2d343f; --rule:#3a4150;
+    --hilite:#ffd166; --focus:#7fb3ff; --cell-selected:#6aa6ff; --outline-strong:#fff;
+    --notice-warn:#2d2a1d; --notice-info:#1d2a3d; --clip-midi:#23405f; --clip-audio:#2f3b27;
+    --wash:rgba(255,255,255,.02); --veil:rgba(255,255,255,.18); --veil-strong:rgba(255,255,255,.35); --grid-line:#ffffff10; --loop-line:rgba(255,255,255,.4);
+    --play-ink:#5ddc7e; --rec-ink:#ff6b6b; --play-fill:#1b7f35; --rec-fill:#b3261e;
+  }
+  /* The light theme: the same names with values that read on a pale page (tests/web/Theme.test.js checks the contrast of the
+     pairs). The theme is put on <html> by theme.js before the page is drawn. A fill that carries dark text (--err, --solo) keeps its
+     value; the -ink tokens are the ones used as text or lines on a light page. */
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg:#f4f6f9; --panel:#ffffff; --fg:#1a1d23; --dim:#566070;
+    --line:#c9d0da; --accent:#2b6cb0; --ok:#2f9e4f; --err:#ff8a8a; --solo:#f2c94c; --wire:#8a94a6;
+    --ok-ink:#1a7f37; --err-ink:#b42318; --on-accent:#fff;
+    --field:#ffffff; --lane:#eef1f5; --raised:#e6eaf0; --control:#dde3ea; --control-hover:#cfd7e1; --rule:#aab4c3;
+    --hilite:#9a5b00; --focus:#1d4ed8; --cell-selected:#3b82f6; --outline-strong:#111;
+    --notice-warn:#fff3d1; --notice-info:#e1edfb; --clip-midi:#cfe2f8; --clip-audio:#d6efdb;
+    --wash:rgba(0,0,0,.03); --veil:rgba(0,0,0,.14); --veil-strong:rgba(0,0,0,.28); --grid-line:#0000001a; --loop-line:rgba(0,0,0,.35);
+    --play-ink:#1a7f37; --rec-ink:#c62828; --play-fill:#1b7f35; --rec-fill:#b3261e;
+  }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
-  :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  :focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  .keys-overlay { position:fixed; inset:5vh 0 auto 0; margin:0 auto; width:min(40rem, calc(100% - 32px)); max-height:90vh;
+                  overflow:auto; z-index:50; padding:1rem 1.25rem; background:var(--panel); color:var(--fg);
+                  border:2px solid var(--accent); border-radius:6px; }
+  .keys-overlay dl { display:grid; grid-template-columns:minmax(0,14rem) 1fr; gap:6px 12px; margin:0; }
+  .keys-overlay dt, .keys-overlay dd { margin:0; }
+  .keys-overlay kbd { font:inherit; border:1px solid var(--line); border-radius:3px; padding:0 4px; }
+  .keys-overlay button { min-height:44px; min-width:44px; margin-top:1rem; }
+  @media (max-width:720px) { .keys-overlay dl { grid-template-columns:1fr; } .keys-overlay dd { margin-bottom:6px; } }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 
 /* Channel strip. Not a plugin panel: these are host services. */
@@ -20,27 +48,52 @@
      this; the outline is a second signal for a sighted reader and never the
      only one, because section 12.5 forbids colour alone. */
   .foreign { font-size:11px; letter-spacing:.04em; text-transform:uppercase;
-             border:1px solid var(--err); color:var(--err); border-radius:3px;
+             border:1px solid var(--err); color:var(--err-ink); border-radius:3px;
              padding:1px 5px; margin-left:6px; vertical-align:middle; }
   .is-foreign { outline:1px dashed var(--err); outline-offset:2px; }
   /* Contract section 12.4. Wide enough to read four statements, and the
      refusal is the plain button while running it is the marked one. */
-  .consent { max-width:34rem; border:1px solid var(--rule,#3a4150); border-radius:8px;
-             background:#1a1d23; color:var(--fg,#e6e8ec); padding:1.25rem; }
+  .consent { max-width:34rem; border:1px solid var(--rule,var(--rule)); border-radius:8px;
+             background:var(--raised); color:var(--fg,var(--fg)); padding:1.25rem; }
   .consent::backdrop { background:rgba(0,0,0,.6); }
   .consent h2 { font-size:1.1rem; margin:0 0 .75rem; }
   .consent ul { margin:0 0 1.25rem; padding-left:1.1rem; line-height:1.55; }
   .consent li { margin-bottom:.4rem; }
+  /* The Add a track chooser: a name and a line on the left, Hear and Add on the right, wrapping under at phone width. */
+  .chooser { max-width:36rem; width:calc(100% - 2rem); border:1px solid var(--rule,var(--rule)); border-radius:8px;
+             background:var(--raised); color:var(--fg,var(--fg)); padding:1.25rem; box-sizing:border-box; }
+  .chooser::backdrop { background:rgba(0,0,0,.6); }
+  .chooser h2 { font-size:1.1rem; margin:0 0 .5rem; }
+  .sound-scroll { max-height:50vh; overflow:auto; margin:.5rem 0 1rem; }
+  .sound-scroll h3 { margin:12px 0 0; font-size:13px; font-weight:600; letter-spacing:.4px; color:var(--dim); }
+  .sound-list { list-style:none; margin:0; padding:0; }
+  .sound-list li { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .sound-words { flex:1 1 14rem; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .sound-about, .sound-mark { color:var(--dim); font-size:14px; }
+  .sound-list button { min-height:44px; min-width:44px; padding:8px 16px; font-size:16px; }
   .consent-buttons { display:flex; gap:10px; flex-wrap:wrap; }
   .consent-buttons button { min-height:44px; font-size:16px; padding:8px 16px; }
-  .consent-buttons .danger { border-color:var(--err); color:var(--err); }
+  .consent-buttons .danger { border-color:var(--err); color:var(--err-ink); }
   /* A row of knobs and the two buttons, rather than a column of full width
      sliders. Wraps, so a narrow screen puts the buttons underneath instead of
      pushing them off the side. */
   .strip { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center;
            gap:6px 18px; padding:10px 14px;
-           border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
+           border-bottom:1px solid var(--line); background:var(--wash); }
   .strip.silent { opacity:.55; }
+  /* A mixer channel: the knob above, the fader standing up, the buttons under. The range is the native one on its side,
+     so the arrow keys, Home and End and the value text all stay the platform's. */
+  .strip-desk { flex-direction:column; flex-wrap:nowrap; gap:10px; padding:10px 8px 14px; }
+  .strip-desk input.strip-fader[type=range] { writing-mode:vertical-lr; direction:rtl; width:44px; min-width:44px; height:170px; margin:0; padding:0; cursor:pointer; }
+  .strip-desk .strip-control .value { min-width:0; }
+  /* The fader with its meter standing beside it, and Mute over Solo, so a channel is narrow. */
+  .strip-faderbox { display:flex; align-items:flex-start; gap:6px; }
+  .strip-desk .strip-buttons { flex-direction:column; gap:6px; }
+  .mixer-channel .meter-group { flex-direction:column; justify-content:flex-start; align-items:center; gap:4px; margin:0; padding:0; }
+  .mixer-channel .meter { flex-direction:column-reverse; align-items:center; height:170px; width:14px; gap:2px; }
+  .mixer-channel .meter i { width:100%; height:auto; flex:1 1 0; }
+  .mixer-channel .meter-readout { min-width:0; font-size:11px; white-space:nowrap; }
+  .mixer-channel .meter-clip { min-width:44px; }
   .strip-control { display:flex; flex-direction:column; align-items:center; gap:3px; }
   .strip-control label { color:var(--dim); font-size:11px; }
   .strip-control .value { min-width:78px; text-align:center;
@@ -48,14 +101,18 @@
   .strip-buttons { display:flex; gap:8px; }
   /* State is said by aria-pressed as well as shown, because it must not be
      signalled by colour alone. */
-  .strip-toggle { min-height:32px; min-width:64px; padding:6px 12px; font-size:12px;
-                  border:1px solid var(--line); border-radius:4px;
-                  background:var(--panel); color:var(--fg); cursor:pointer; }
-  .strip-toggle[aria-pressed="true"] { border-color:var(--accent); }
+  /* Mute and Solo are small lettered squares (src/ui/ChannelToggle.js). Off is an outline and a plain letter; on is a
+     filled square with an underlined letter, so the state is not carried by colour alone. */
+  .strip-toggle { box-sizing:border-box; min-height:32px; min-width:32px; padding:0; font-size:14px; font-weight:700;
+                  border:2px solid var(--line); border-radius:4px;
+                  background:var(--panel); color:var(--fg); cursor:pointer; line-height:1; }
+  .strip-toggle.muted  { border-color:var(--err); }
+  .strip-toggle.soloed { border-color:var(--solo); }
+  .strip-toggle[aria-pressed="true"] { text-decoration:underline; text-underline-offset:3px; }
   .strip-toggle.muted[aria-pressed="true"]  { background:var(--err); color:#111; }
-  .strip-toggle.soloed[aria-pressed="true"] { background:var(--ok);  color:#111; }
-  @media (max-width: 760px) {
-    .strip-toggle { min-height:44px; }
+  .strip-toggle.soloed[aria-pressed="true"] { background:var(--solo); color:#111; }
+  @media (max-width: 760px), (pointer: coarse) {
+    .strip-toggle { min-height:44px; min-width:44px; }
   }
 
 
@@ -73,7 +130,7 @@
   .port:disabled { opacity:.4; cursor:not-allowed; }
   .port-out { border-left:3px solid var(--accent); }
   .port-in  { border-left:3px solid var(--dim); }
-  .port.pending { background:var(--accent); color:#111; border-color:var(--accent); }
+  .port.pending { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
   .port-none { color:var(--dim); font-size:12px; }
 
   .connections-heading { margin:18px 0 8px; font-size:13px; color:var(--dim);
@@ -86,14 +143,14 @@
      handled by entirely different machinery. */
   .connection-kind { flex:0 0 auto; font-size:11px; padding:2px 7px; border-radius:3px;
                      border:1px solid var(--line); color:var(--dim); }
-  .connection-kind.MIDI { border-color:var(--ok); color:var(--ok); }
+  .connection-kind.MIDI { border-color:var(--ok); color:var(--ok-ink); }
   .connection-remove { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                        border:1px solid var(--line); border-radius:4px;
                        background:transparent; color:var(--dim); cursor:pointer; }
   .connection-watch { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                       border:1px solid var(--line); border-radius:4px;
                       background:transparent; color:var(--dim); cursor:pointer; }
-  .connection-watch[aria-pressed="true"] { border-color:#ffd166; color:var(--fg); }
+  .connection-watch[aria-pressed="true"] { border-color:var(--hilite); color:var(--fg); }
   .connection-log { margin:0 0 8px 28px; padding:0 0 0 16px; font-size:12px; color:var(--dim); max-height:12rem; overflow:auto; }
   /* A gap where a wire is not, so a stack of slots does not imply a chain. */
   .gap { height:20px; }
@@ -106,37 +163,65 @@
 
 
   /* Transport */
-  .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
-    padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  .transport { display:flex; flex-direction:column; align-items:stretch; gap:8px;
+    padding:10px 16px; background:var(--lane); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
   .brand { font-weight:700; letter-spacing:.5px; margin-right:4px; }
   .transport button { min-height:44px; min-width:44px; padding:8px 14px; font-size:15px;
-    background:#242a33; color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
-  .transport button:hover { background:#2d343f; }
+    background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
+  .transport button:hover { background:var(--control-hover); }
   .transport button[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
   .transport button:disabled { opacity:.4; cursor:not-allowed; }
-  .transport button:disabled:hover { background:#242a33; }
+  .transport button:disabled:hover { background:var(--control); }
   .tempo { display:flex; align-items:center; gap:6px; }
-  .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
-    background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  /* A group of related controls, named for a screen reader and kept together when the bar wraps. */
+  .tgroup { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .transport-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px; }
+  /* The two icons a person looks for first: Play in green and Record in red, the shape saying which and the colour helping. While it is on, the
+     button is filled and its icon turns white, so it is never a green icon on a blue fill. */
+  .transport #play .icon { color:var(--play-ink); }
+  .transport #record .icon { color:var(--rec-ink); }
+  .transport #play[aria-pressed=true] { background:var(--play-fill); border-color:var(--play-fill); color:#fff; }
+  .transport #record[aria-pressed=true] { background:var(--rec-fill); border-color:var(--rec-fill); color:#fff; }
+  .transport #play[aria-pressed=true] .icon, .transport #record[aria-pressed=true] .icon { color:#fff; }
+  .more > summary { min-height:44px; min-width:44px; padding:0 14px; display:inline-flex; align-items:center; cursor:pointer;
+    background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:5px; list-style:none; }
+  .more > summary::-webkit-details-marker { display:none; }
+  .more[open] { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .icon-words { margin-left:6px; }
+  /* On a narrow screen the bar is mostly wrapping, so the words give way to the icons, which keep their accessible names. */
+  @media (max-width: 760px) { .transport-row { gap:8px 12px; } }
+  @media (max-width: 480px) { .icon-words { display:none; } }
+  .tempo input { width:70px; min-height:44px; box-sizing:border-box; padding:8px; font-size:16px; text-align:right;
+    background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  /* A select in the bar (Show, count-in) is a touch target like the buttons, and 16px so iOS does not zoom when it takes focus. */
+  .tempo select { min-height:44px; font-size:16px; }
   .position { font-family:ui-monospace,monospace; font-size:15px; min-width:7ch; color:var(--dim); }
-  .links { display:flex; gap:14px; font-size:13px; margin-left:auto; }
-  .links a { color:var(--dim); text-decoration:none; padding:6px 2px; }
+  .site-footer { padding:12px 16px 24px; border-top:1px solid var(--line); margin-top:16px; }
+  .links { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:14px; }
+  .links a { color:var(--dim); text-decoration:none; padding:0 2px; min-height:44px; display:inline-flex; align-items:center; }
   .links a:hover { color:var(--fg); text-decoration:underline; }
   /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
      nothing to act on because .send-level sets a display and that beat the attribute. */
   [hidden] { display:none !important; }
+  /* A control's title, drawn beside it while it has the keyboard focus (web/app/Help.js). Never takes a click, so it covers nothing a person aims at. */
+  .help-tip { position:fixed; z-index:60; max-width:22rem; padding:6px 10px; font-size:14px; line-height:1.4; color:var(--fg); background:var(--raised);
+    border:1px solid var(--rule); border-radius:6px; pointer-events:none; }
+  /* The step the person is on (src/ui/Show.js). What it does not reach is left out of the layout, the tab order and the
+     accessibility tree, and never disabled. The step is on <html> and each control's first step is on the control. */
+  html[data-step="simple"] [data-from="standard"], html[data-step="simple"] [data-from="advanced"],
+  html[data-step="standard"] [data-from="advanced"] { display:none !important; }
   .note-range { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
   .note-range-end { display:inline-flex; align-items:center; gap:6px; }
   .note-range input { width:5.5rem; min-height:44px; font-size:16px; }
-  .note-name { min-width:3.5ch; color:var(--muted, #9aa4b2); font-size:13px; }
+  .note-name { min-width:3.5ch; color:var(--muted, var(--dim)); font-size:13px; }
   .meter-group { display:flex; align-items:center; gap:8px; margin-top:6px; }
   .meter-clip { min-height:28px; padding:0 8px; background:var(--err); color:#111; border:1px solid var(--err); border-radius:4px; font:inherit; font-size:12px; cursor:pointer; }
   @media (pointer: coarse), (max-width: 760px) { .meter-clip { min-height:44px; min-width:44px; } }
-  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, #9aa4b2); }
+  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, var(--dim)); }
   .level { display:inline-flex; align-items:center; gap:8px; }
   .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:3px; align-items:flex-end; height:26px; }
-  .meter i { display:block; width:5px; background:#232a33; border-radius:1px; height:100%; }
+  .meter i { display:block; width:5px; background:var(--raised); border-radius:1px; height:100%; }
   .meter i.on { background:var(--ok); }
   .meter i.hot { background:var(--err); }
 
@@ -148,7 +233,7 @@
   /* The browser closed: it is hidden, and the stage has the whole width. */
   main.no-browser { grid-template-columns: minmax(0, 1fr); }
   .browser[hidden] { display:none; }
-  .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
+  .browser { border-right:1px solid var(--line); padding:14px; background:var(--lane); }
   /* The Browser's header: its name and a Close button. Opening it is the Browser
      button in the transport bar, which aria-expanded keeps honest. */
   .browser-head { display:flex; align-items:center; gap:8px; margin:0 0 10px; }
@@ -172,7 +257,7 @@
 
   /* Browser */
   .searchbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .searchbar input, .searchbar select { padding:9px 10px; font-size:16px; background:#0e1013;
+  .searchbar input, .searchbar select { padding:9px 10px; font-size:16px; background:var(--field);
     color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .searchbar input { flex:1 1 8rem; min-width:0; }
   .searchbar select { flex:1 1 100%; min-height:40px; }
@@ -192,7 +277,7 @@
   .script-label { font-size:12px; color:var(--dim); }
   .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
                    font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
-                   background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+                   background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
   .script-button { min-height:44px; padding:8px 16px; font-size:16px; background:var(--panel); color:var(--fg);
                    border:1px solid var(--line); border-radius:4px; cursor:pointer; }
@@ -202,10 +287,10 @@
   .script ol, .script ul { margin:0; padding-left:1.4rem; }
   .script-problems-list li { margin-bottom:6px; overflow-wrap:anywhere; }
   .script-problems-list .script-button { min-height:44px; margin-left:6px; padding:4px 12px; font-size:14px; }
-  .script-error-word { font-weight:700; color:var(--err); }
+  .script-error-word { font-weight:700; color:var(--err-ink); }
   .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:12px; }
   .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
-  .script-log-error { color:var(--err); }
+  .script-log-error { color:var(--err-ink); }
   /* No display:flex here: it removes the disclosure triangle, which is what says this opens. */
   .script-syntax summary { cursor:pointer; color:var(--dim); font-size:14px; padding:12px 0; min-height:44px; }
   .script-syntax dt { margin-top:8px; }
@@ -218,17 +303,17 @@
   /* Rack */
   .rack { display:flex; flex-direction:column; gap:0; }
   .slot { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:12px 14px; }
-  .slot.source, .slot.output { background:#161a20; border-style:dashed; color:var(--dim); }
+  .slot.source, .slot.output { background:var(--lane); border-style:dashed; color:var(--dim); }
   /* Wraps, because a plugin's header holds a grip, its name, two move buttons,
      a track menu and Remove, which is wider than a phone. */
   .slot header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-bottom:8px; }
   .slot h3 { margin:0; font-size:15px; flex:1 1 6rem; min-width:0; overflow-wrap:anywhere; }
   .slot .kind { font-size:11px; color:var(--dim); }
-  .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:#2a2f38;
+  .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:var(--control);
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
-  .slot .remove:hover { color:var(--err); border-color:var(--err); }
+  .slot .remove:hover { color:var(--err-ink); border-color:var(--err); }
   .slot .reorder { min-height:32px; min-width:32px; padding:4px 8px; font-size:12px;
-    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    background:var(--control); color:var(--dim); border:1px solid var(--line); border-radius:4px;
     cursor:pointer; }
   .slot .reorder:hover:not(:disabled) { color:var(--fg); border-color:var(--accent); }
   .slot .reorder:disabled { opacity:.4; cursor:default; }
@@ -238,7 +323,7 @@
      same mousedown. */
   .slot .grip { display:inline-flex; align-items:center; justify-content:center;
     min-height:32px; min-width:32px; padding:4px 8px; font-size:14px;
-    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    background:var(--control); color:var(--dim); border:1px solid var(--line); border-radius:4px;
     cursor:grab; touch-action:none; }
   .slot.drag-over { outline:2px dashed var(--accent); outline-offset:-2px; }
   .wire { height:20px; margin-left:26px; border-left:2px solid var(--wire); position:relative; }
@@ -253,9 +338,9 @@
   .track { border-left:3px solid var(--line); padding-left:10px; margin-bottom:22px; min-width:0; }
   .track-header { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
   .track-header h3 { margin:0; font-size:16px; flex:1 1 8rem; }
-  .track-header input { padding:8px 10px; font-size:16px; background:#0e1013; color:var(--fg);
+  .track-header input { padding:8px 10px; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; min-width:0; flex:1 1 8rem; }
-  .track-header button { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+  .track-header button { min-height:44px; padding:6px 12px; font-size:13px; background:var(--control);
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .track-header button:hover { color:var(--fg); border-color:var(--accent); }
   .slot .move-track { flex:0 1 auto; min-width:0; }
@@ -269,7 +354,7 @@
   .editor { background:var(--panel); border:1px solid var(--accent); border-radius:7px; overflow:hidden; }
   .editor header { display:flex; align-items:center; gap:10px; padding:8px 12px; }
   .editor h3 { margin:0; font-size:14px; flex:1; }
-  .editor button, .slot .open-editor, .slot .unpack { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+  .editor button, .slot .open-editor, .slot .unpack { min-height:44px; padding:6px 12px; font-size:13px; background:var(--control);
     color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   /* content-box: the height a frame asks for is for its document, and a
      border counted inside it leaves the document a pixel short and scrolling. */
@@ -282,32 +367,38 @@
      view at the bottom of it and never down the page past every track. The ruler and the loop row stay at the top, and
      the track names stay at the left, while the lanes scroll under them. */
   .timeline-scroll { position:relative; overflow:auto; max-height:calc(100vh - 11.5rem); min-height:12rem;
-    border:1px solid var(--line); border-radius:7px; background:#13161b; }
+    border:1px solid var(--line); border-radius:7px; background:var(--lane); }
   /* Where the transport is, in the timeline and the piano roll. Drawn over,
      never in the way of a press. */
-  .playhead { position:absolute; top:0; width:2px; height:100%; background:#ffd166; z-index:3; pointer-events:none; }
+  .playhead { position:absolute; top:0; width:2px; height:100%; background:var(--hilite); z-index:3; pointer-events:none; }
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
-  .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:#13161b; }
+  .timeline-scroll:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:var(--lane); }
   .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
-  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
+  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, var(--rule)); border-radius:6px; background:var(--control); color:var(--fg); font:inherit; }
   button[data-icon] { min-width:32px; min-height:32px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
   button[data-icon] .icon { display:block; }
-  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
+  #recover { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:var(--notice-warn); border:2px solid var(--solo); border-radius:12px; }
+  #recover[hidden] { display:none; }
+  #recover-text { flex:1 1 14rem; }
+  #recover button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:var(--notice-info); border:2px solid var(--accent); border-radius:12px; }
   #carry[hidden] { display:none; }
   #carry-text { flex:1 1 14rem; }
-  #carry button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  #carry button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
   .clip-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
-  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; font:inherit; }
+  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; font:inherit; }
   .timeline-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
-  .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg);
+  .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:var(--control); color:var(--fg);
                            border:1px solid var(--line); border-radius:6px; }
-  .timeline-tools select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg);
+  .timeline-tools select { min-height:44px; font-size:16px; background:var(--control); color:var(--fg);
                            border:1px solid var(--line); border-radius:6px; }
   .timeline-zoom { color:var(--dim); font-size:13px; min-width:5.5em; }
   .timeline .empty { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px; margin-left:var(--head); }
   .timeline .empty p { flex:1 1 100%; margin:0; color:var(--dim); }
-  .timeline .empty button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .timeline .empty-group { flex:1 1 100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; }
+  .timeline .empty-group h3 { flex:1 1 100%; margin:6px 0 0; font-size:13px; font-weight:600; letter-spacing:.4px; color:var(--dim); text-align:left; }
+  .timeline .empty button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   /* The chain under a lane stays in view as the lanes scroll, and wraps inside what is visible. */
   .timeline-chain { position:sticky; left:var(--head); margin-left:var(--head); width:calc(var(--view, 100vw) - var(--head) - 16px); box-sizing:border-box;
@@ -315,36 +406,39 @@
   .timeline-chain[hidden], .timeline[data-routing="off"] .timeline-chain, .timeline-row[data-size="small"] .timeline-chain { display:none; }
   .chain-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
   .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
-    border:1px solid var(--line); border-radius:6px; background:#161a20; }
+    border:1px solid var(--line); border-radius:6px; background:var(--lane); }
   .chain-item.failed { border-style:dashed; border-color:var(--err); }
   .master-row { margin-top:8px; padding:6px 0; border-top:2px solid var(--line); }
   .master-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 8px 6px; }
   .master-title { font-weight:600; }
-  .master-head button { min-height:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
-  .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .master-head button { min-height:44px; padding:0 12px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .master-head select { min-height:44px; font-size:16px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
   .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
-  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
+  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:var(--lane); }
   /* Stuck to the left of the scroll box, so Fold, Add point and Remove are in reach however far along the piece is scrolled. */
   .envelope-head { position:sticky; left:0; width:max-content; max-width:calc(100vw - 4rem); display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
   .envelope-title { flex:1 1 auto; }
-  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:#2a2f38; color:var(--fg);
+  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
-  .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
+  .envelope-body { position:relative; background-image:linear-gradient(to right, var(--grid-line) 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
   .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
   .envelope-line path { fill:none; stroke:var(--accent); stroke-width:2; }
   .envelope-point { position:absolute; width:44px; height:44px; padding:0; border:0; background:transparent; cursor:grab; touch-action:none;
     display:flex; align-items:center; justify-content:center; }
   .envelope-dot { width:12px; height:12px; border-radius:50%; background:var(--fg); border:2px solid var(--accent); }
-  .envelope-point:focus-visible .envelope-dot { outline:3px solid #ffd166; outline-offset:2px; }
+  .envelope-point:focus-visible .envelope-dot { outline:3px solid var(--hilite); outline-offset:2px; }
   .chain-head { display:flex; gap:4px; }
-  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
   .chain-head .chain-node { flex:1 1 auto; min-width:0; }
-  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
-  .chain-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-replace { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
+  .replacing { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; border:2px solid var(--solo); border-radius:4px; margin:0 0 8px; }
+  .replacing button { min-height:44px; }
+  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
+  .chain-bypass[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   .chain-item.bypassed { border-style:dotted; opacity:.75; }
-  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:#2a2f38; color:var(--fg);
+  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:5px; cursor:pointer; font-size:13px; }
-  .chain-node[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-node[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   .chain-io { font-size:11px; color:var(--dim); }
   .chain-links { list-style:none; margin:0; padding:0; font-size:11px; color:var(--dim); }
   .chain-links li.other { color:var(--fg); }
@@ -352,13 +446,18 @@
   /* The routing table scrolls inside its own box, so a wide graph never makes the page scroll sideways. */
   .routing-matrix { overflow:auto; max-height:70vh; border:1px solid var(--line); border-radius:7px; }
   .routing-matrix table { border-collapse:separate; border-spacing:0; font-size:12px; }
-  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:#13161b; border-bottom:1px solid var(--line); }
+  .matrix-ends { padding:8px 10px; font-size:13px; color:var(--dim); }
+  .matrix-ends p { margin:0 0 4px; }
+  .matrix-ends ul { margin:0; padding-left:20px; color:var(--fg); }
+  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:var(--lane); border-bottom:1px solid var(--line); }
   .routing-matrix thead th[scope="col"] { max-width:9rem; vertical-align:bottom; }
   .routing-matrix tbody th { position:sticky; left:0; z-index:1; text-align:left; white-space:nowrap; border-right:1px solid var(--line); }
   .routing-matrix td { padding:0; border-bottom:1px solid var(--line); border-right:1px solid var(--line); text-align:center; }
   .matrix-cell { width:44px; height:44px; padding:0; background:transparent; color:var(--dim); border:0; cursor:pointer; font-size:16px; }
   .matrix-cell[aria-pressed="true"] { background:var(--accent); color:#fff; }
-  .matrix-cell:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .matrix-cell:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
+  .head-kind { font-size:12px; color:var(--dim); border:1px solid var(--dim); border-radius:4px; padding:0 6px; }
+  .timeline-head[data-size="small"] .head-kind { display:none; }
   .head-routing { flex:1 1 100%; margin:0; font-size:12px; color:var(--fg); }
   .timeline-head[data-size="small"] .head-routing { display:none; }
   .sends-panel { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
@@ -367,13 +466,13 @@
   .send-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
   .send-level { display:inline-flex; align-items:center; gap:6px; }
   .send-level input { min-height:44px; width:8rem; }
-  .send-row select, .send-add select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
-  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .send-row select, .send-add select { min-height:44px; font-size:16px; background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .master-channel { border-color:var(--accent); }
   .align { margin:0 0 10px; }
   .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
   .align input { width:24px; height:24px; }
-  .timeline-loop { position:sticky; top:22px; z-index:2; background:#13161b; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
+  .timeline-loop { position:sticky; top:22px; z-index:2; background:var(--lane); height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
   .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
     border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
   .loop-brace.on { border:2px solid var(--accent); background:rgba(127,179,255,.18); }
@@ -383,28 +482,43 @@
     cursor:ew-resize; touch-action:none; }
   .loop-handle::after { content:''; position:absolute; left:20px; top:8px; width:4px; height:28px;
     background:var(--accent); border-radius:2px; }
-  .loop-handle:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .loop-handle:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .timeline-ruler i { position:absolute; bottom:0; height:6px; border-left:1px solid var(--line); }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
   .timeline { --head:13rem; }
   .timeline-row { border-top:1px solid var(--line); width:max-content; }
+  .timeline-folder { position:sticky; left:0; width:var(--view, 100%); border-top:1px solid var(--line); background:var(--panel, transparent); }
+  .folder-toggle { min-height:44px; padding:0 0.75rem; text-align:left; background:none; border:0; color:var(--fg); font-weight:600; }
+  .folder-grip { min-width:44px; min-height:44px; padding:0 8px; background:none; border:0; color:var(--fg); cursor:grab; touch-action:none; }
+  .folder-move { min-height:44px; min-width:44px; padding:0 0.75rem; background:none; border:0; color:var(--fg); }
   .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
-    flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
+    flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:var(--lane); border-right:1px solid var(--line); }
   .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
   .timeline-head .show-track { min-height:28px; text-align:left; background:none; border:0; color:var(--fg);
     padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
-  .timeline-head button { min-height:28px; font-size:12px; background:#2a2f38; color:var(--fg);
+  .timeline-head button { min-height:28px; font-size:12px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .timeline-head .show-track, .head-mix { flex:1 1 100%; }
+  .head-title { flex:1 1 100%; display:flex; align-items:center; gap:4px; }
+  .head-title .show-track { flex:1 1 auto; }
+  .timeline-head > .head-title > .head-grip { flex:none; min-width:44px; min-height:44px; cursor:grab; touch-action:none; }
+  .timeline-row.dragging { opacity:.6; }
+  .timeline-row.drop-target { outline:3px dashed var(--accent); outline-offset:-3px; }
+  .timeline-folder.drop-target { outline:3px dashed var(--accent); outline-offset:-3px; }
   .timeline-head > button:not(.show-track) { flex:1 1 45%; }
-  .head-mix { display:flex; flex-wrap:wrap; gap:4px; }
+  .head-mix { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; }
   .head-mix[hidden] { display:none; }
-  .head-mix .strip-toggle { flex:1 1 4rem; }
-  .head-slider { flex:1 1 100%; display:grid; grid-template-columns:2.4rem 1fr 3.8rem; align-items:center; gap:4px; font-size:12px; }
-  .head-slider input { min-height:28px; margin:0; width:100%; }
-  .head-slider .value { font-size:11px; color:var(--dim); text-align:right; font-variant-numeric:tabular-nums; }
+  .head-mix .strip-toggle { flex:0 0 auto; }
+  /* Level and Pan: small knobs in the row with M and S. */
+  .head-mix .head-dial { flex:0 0 auto; width:32px; height:32px; }
   .midi-state { color:var(--dim); font-size:12px; max-width:16rem; }
+  .mic-devices { color:var(--dim); font-size:12px; display:inline-flex; align-items:center; gap:6px; min-height:44px; }
+  .mic-devices select { min-height:44px; max-width:14rem; }
+  .midi-devices { border:0; margin:0; padding:0; color:var(--dim); font-size:12px; display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; }
+  .midi-devices legend { float:left; padding:0 6px 0 0; }
+  .midi-devices label { display:inline-flex; align-items:center; gap:4px; min-height:44px; }
+  .midi-devices input { min-width:24px; min-height:24px; }
   .timeline-head > .head-arm.head-arm { flex:1 1 100%; }
   .head-arm[aria-pressed="true"] { background:var(--err); color:#111; border-color:var(--err); }
   .head-latency { flex:1 1 100%; margin:0; font-size:12px; color:var(--dim); }
@@ -413,9 +527,9 @@
   .timeline-lane { position:relative; min-height:56px;
     background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); }
   .clip { position:absolute; top:6px; bottom:6px; min-width:12px; min-height:44px; padding:0 14px 0 6px;
-    background:#23405f; color:var(--fg); border:1px solid var(--accent); border-radius:5px;
+    background:var(--clip-midi); color:var(--fg); border:1px solid var(--accent); border-radius:5px;
     font-size:12px; text-align:left; cursor:grab; overflow:hidden; touch-action:none; }
-  .clip-audio { background:#2f3b27; border-color:var(--ok); }
+  .clip-audio { background:var(--clip-audio); border-color:var(--ok); }
   .clip-orphan { border-style:dashed; }
   .clip-colored { border-color:var(--clip-color); border-top-width:5px; }
   .clip-muted { opacity:.5; border-style:dotted; }
@@ -424,7 +538,11 @@
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
   .clip-notes { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-notes path { stroke:var(--fg); stroke-width:2; vector-effect:non-scaling-stroke; opacity:.75; fill:none; }
-  .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .clip:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  /* The corner that repeats a MIDI clip: a loop mark at the top right, above the resize edge, which still runs the whole height. */
+  .clip-loop { position:absolute; right:0; top:0; width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1; cursor:copy; background:var(--veil); border-radius:0 4px 0 6px; z-index:2; }
+  .clip-loop:hover { background:var(--veil-strong); }
   .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
     border-left:1px solid var(--accent); }
 
@@ -432,7 +550,7 @@
   .dock h2 { margin:0; padding:6px 12px 0; font-size:14px; }
   .dock-splitter { height:44px; cursor:row-resize; border-radius:7px 7px 0 0; touch-action:none;
     background:linear-gradient(var(--line), var(--line)) center / 48px 3px no-repeat; }
-  .dock-splitter:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .dock-splitter:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .dock-body { overflow:auto; padding:0 12px 12px; }
   .dock-slot[hidden] { display:none; }
   /* With nothing selected the dock is a line of text, not a 320px empty box. */
@@ -441,70 +559,129 @@
   .dock .piano-roll { margin-top:0; border:0; padding:0; }
   .dock-hint, .audio-source { color:var(--dim); font-size:13px; overflow-wrap:anywhere; }
   .audio-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:6px 0; font-size:13px; }
-  .audio-field input { min-height:44px; width:8rem; font-size:16px; background:#0e1116; color:var(--fg);
+  .audio-field input { min-height:44px; width:8rem; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
-  .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
-  .track-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
-  .track-field input, .track-field select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg);
+  .track-fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(11rem, 1fr)); gap:10px 14px; }
+  .track-field { display:flex; flex-direction:column; align-items:stretch; gap:4px; font-size:12px; color:var(--dim); }
+  .track-fields .track-field input, .track-fields .track-field select { width:100%; box-sizing:border-box; }
+  .track-caption { font-size:12px; color:var(--dim); margin-right:4px; }
+  .track-main-actions { padding-top:10px; border-top:1px solid var(--line); }
+  .track-main-actions .danger { margin-left:auto; }
+  .track-field input, .track-field select { min-height:44px; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
-  .track-field input { width:min(16rem, 100%); }
+  .track-field.amount-field input { width:8rem; }
   .track-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .swatch { width:44px; height:44px; padding:0; border:2px solid var(--line); border-radius:6px; cursor:pointer;
-    color:var(--fg); background:#2a2f38; font-size:18px; }
-  .swatch[aria-pressed="true"] { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+    color:var(--fg); background:var(--control); font-size:18px; }
+  .swatch[aria-pressed="true"] { border-color:var(--outline-strong); box-shadow:0 0 0 2px var(--accent); }
   .swatch[aria-pressed="true"]::after { content:'✓'; color:#0b1220; font-weight:700; mix-blend-mode:normal; }
+  .swatch[data-color=""][aria-pressed="true"]::after { content:''; }
   .track-color-said { font-size:13px; color:var(--dim); }
   .track-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .track-position { font-size:13px; color:var(--dim); margin-right:auto; }
-  .track-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .track-panel button:not(.swatch), .bulk-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel .danger { border-color:var(--err); }
   .timeline-row { border-left:4px solid var(--track-color, transparent); }
+  /* The grip along a lane's bottom edge, dragged to make the lane taller or shorter (src/ui/LaneResize.js). Quiet until the pointer is over it. */
+  .lane-resize { position:absolute; left:0; right:0; bottom:0; height:8px; cursor:row-resize; z-index:3; touch-action:none; }
+  .lane-resize::after { content:''; position:absolute; left:50%; bottom:2px; width:36px; height:3px; margin-left:-18px; border-radius:2px; background:var(--rule); opacity:.6; }
+  .lane-resize:hover { background:var(--veil); }
+  .lane-resize:hover::after { opacity:1; }
+  @media (pointer: coarse) { .lane-resize { height:16px; } }
+  .timeline-row[data-size="collapsed"] .lane-resize { display:none; }
   .timeline-row[data-size="small"] .timeline-lane { min-height:44px; }
   .timeline-row[data-size="large"] .timeline-lane { min-height:320px; }
-  .timeline-head[data-size="small"] .head-slider, .timeline-head[data-size="small"] > button:not(.show-track) { display:none; }
+  /* A collapsed lane is a thin bar: the name and the grip, and nothing else. The Lane size choice in the dock brings it back. */
+  .timeline-row[data-size="collapsed"] > :not(.timeline-body) { display:none; }
+  .timeline-row[data-size="collapsed"] .timeline-lane { min-height:0; height:8px; overflow:hidden; }
+  .timeline-row[data-size="collapsed"] .timeline-lane > * { visibility:hidden; }
+  .timeline-head[data-size="collapsed"] > :not(.head-title) { display:none; }
+  .timeline-head[data-size="collapsed"] { align-items:center; flex-wrap:nowrap; }
+  .timeline-head[data-size="collapsed"] .head-title { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="collapsed"] .show-track { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="collapsed"] { padding-block:1px; min-height:0; }
+  .timeline-head[data-size="collapsed"] .show-track, .timeline-head[data-size="collapsed"] .head-expand { min-height:24px; }
+  .timeline-head[data-size="collapsed"] > .head-title > .head-expand { flex:none; }
+  .timeline-head[data-size="collapsed"] > .head-title > .head-grip { min-width:28px; min-height:24px; padding:0 4px; }
+  .timeline-head[data-size="small"] .head-dial, .timeline-head[data-size="small"] > button:not(.show-track) { display:none; }
   .timeline-head[data-size="small"] .head-mix { flex-wrap:nowrap; }
   /* A small track is one row: the name takes what the Mute and Solo buttons leave. */
   .timeline-head[data-size="small"] { align-items:center; align-content:center; flex-wrap:nowrap; }
   .timeline-head[data-size="small"] .show-track { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="small"] .head-title { flex:1 1 0; min-width:0; }
+  .timeline-head[data-size="small"] > .head-title > .head-grip { min-width:28px; min-height:28px; padding:0 4px; }
   .timeline-head[data-size="small"] .head-mix { flex:0 0 auto; }
-  .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; min-width:3.2rem; }
+  .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; }
   .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
-  .clip.selected, .timeline-head.selected { outline:2px solid #ffd166; outline-offset:-2px; }
+  .clip.selected, .timeline-head.selected { outline:2px solid var(--hilite); outline-offset:-2px; }
   .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
   .piano-roll header { display:flex; align-items:center; gap:10px; }
   .piano-roll h3 { margin:0; font-size:14px; flex:1; }
-  .piano-roll header button { min-height:44px; padding:6px 12px; background:#2a2f38; color:var(--fg);
+  .piano-roll header button { min-height:44px; padding:6px 12px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .piano-roll-tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-tools button, .piano-roll-tools select { min-height:44px; padding:6px 12px; }
   .piano-roll-scroll { overflow:auto; max-height:60vh; border:1px solid var(--line); }
-  .piano-roll-grid { position:relative; width:max-content; --key:3rem; --cell:28px; }
+  .piano-roll-scroll { --key:3rem; --cell:28px; --steps-per-beat:4; }
+  .piano-roll-grid { position:relative; width:max-content; }
+  /* The lane stays at the foot of the roll while the pitches scroll, and its columns are the grid's. */
+  .piano-roll-lane-host { display:contents; }
+  .piano-roll-lanes { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-lanes select, .piano-roll-lanes input { min-height:44px; padding:6px 12px; font-size:16px; }
+  .piano-roll-lane { position:sticky; bottom:0; left:0; z-index:3; display:flex; width:max-content; background:var(--lane); border-top:1px solid var(--line); }
+  .piano-roll-lane[hidden] { display:none; }
+  .piano-roll-lane-title { position:sticky; left:0; flex:none; width:var(--key); padding:4px; font-size:11px; color:var(--dim); background:var(--lane); border-right:1px solid var(--line); z-index:2; }
+  .piano-roll-lane-bars { position:relative; flex:none; height:96px; width:calc(var(--steps) * var(--cell)); }
+  .piano-roll-lane-bar { position:absolute; bottom:0; top:0; display:flex; align-items:flex-end; cursor:ns-resize; touch-action:none; border-left:1px solid var(--field); }
+  .piano-roll-lane-fill { display:block; width:100%; background:var(--accent); border-radius:3px 3px 0 0; }
+  .piano-roll-lane-bar.chosen .piano-roll-lane-fill { background:#f5a524; }
+  .piano-roll-lane-bar:focus-visible { outline:3px solid var(--hilite); outline-offset:-3px; }
   .piano-roll-row { display:flex; }
-  .piano-roll-row.black .piano-roll-cell { background:#15181d; }
+  .piano-roll-row.black .piano-roll-cell { background:var(--lane); }
+  .piano-roll-scale { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-scale select { min-height:44px; padding:6px 12px; }
+  .piano-roll-loop { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
+  .piano-roll-loop button, .piano-roll-loop input { min-height:44px; padding:6px 12px; box-sizing:border-box; }
+  .piano-roll-euclid { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin:8px 0; }
+  .piano-roll-euclid input, .piano-roll-euclid select, .piano-roll-euclid button { min-height:44px; padding:6px 12px; box-sizing:border-box; font-size:16px; }
+  .piano-roll-euclid input { width:5rem; }
+  .piano-roll-step { margin:8px 0; }
+  .piano-roll-step button, .piano-roll-step select { min-height:44px; padding:6px 12px; }
+  .piano-roll-step-body { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+  .piano-roll-step-notes { display:flex; flex-wrap:wrap; gap:6px; flex-basis:100%; }
+  .piano-roll-step-notes button { min-width:44px; padding:6px 8px; }
+  .piano-roll-step button[aria-pressed="true"] { outline:2px solid var(--fg); outline-offset:1px; }
+  .piano-roll-step-body .note { flex-basis:100%; margin:0; }
+  .piano-roll-row.off-scale .piano-roll-cell:not(.on) { opacity:0.55; }
   .piano-roll-key { position:sticky; left:0; z-index:2; width:var(--key); flex:none; font-size:11px; color:var(--dim);
-    background:#13161b; border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
-  .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;
-    background:#1a1e24; color:#fff; font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
+    background:var(--lane); border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
+  .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid var(--raised); border-bottom:1px solid var(--raised);
+    background:var(--raised); color:var(--fg); font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
   .piano-roll-cell.beat { border-left:1px solid var(--line); }
   .piano-roll-cell.on { background:var(--accent); cursor:grab; }
   /* A gap at each end of a note, so notes that touch still read as separate. */
-  .piano-roll-cell.on.start { box-shadow:inset 3px 0 0 #0e1013; border-top-left-radius:4px; border-bottom-left-radius:4px; }
-  .piano-roll-cell.on.end { box-shadow:inset -3px 0 0 #0e1013; border-top-right-radius:4px; border-bottom-right-radius:4px; }
-  .piano-roll-cell.on.start.end { box-shadow:inset 3px 0 0 #0e1013, inset -3px 0 0 #0e1013; }
+  .piano-roll-cell.on.start { box-shadow:inset 3px 0 0 var(--field); border-top-left-radius:4px; border-bottom-left-radius:4px; }
+  .piano-roll-cell.on.end { box-shadow:inset -3px 0 0 var(--field); border-top-right-radius:4px; border-bottom-right-radius:4px; }
+  .piano-roll-cell.on.start.end { box-shadow:inset 3px 0 0 var(--field), inset -3px 0 0 var(--field); }
   /* The last square of a longer note is its handle. */
   .piano-roll-cell.on.end:not(.start) { cursor:ew-resize; }
-  .piano-roll-cell.on.selected { background:#6aa6ff; }
+  .piano-roll-cell.on.selected { background:var(--cell-selected); }
+  .piano-roll-cell.band { outline:2px dashed var(--outline-strong); outline-offset:-2px; background-image:linear-gradient(var(--veil),var(--veil)); }
+  .piano-roll-cell.on.chosen { background:#f5a524; outline:2px solid var(--outline-strong); outline-offset:-2px; }
   /* The bar past the end of the clip: drawing into it makes the clip longer. */
   .piano-roll-cell.beyond { opacity:.5; }
-  .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
-  .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
+  .piano-roll-cell.cursor { outline:2px solid var(--hilite); outline-offset:-2px; }
+  .piano-roll-cell:focus-visible { outline:3px solid var(--hilite); outline-offset:-3px; }
   /* A mouse hits 28px easily (WCAG 2.2 asks 24); a finger needs the full 44 on a touch screen or a phone. */
   @media (pointer: coarse), (max-width: 760px) {
-    .timeline-head .show-track, .timeline-head button, .head-slider input, .envelope-fold, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
+    .timeline-head .show-track, .timeline-head button, .head-mix .head-dial, .envelope-fold, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
   }
   @media (pointer: coarse) {
-    .piano-roll-grid { --cell:44px; }
+    .piano-roll-scroll { --cell:44px; }
     .piano-roll-cell { height:44px; line-height:44px; }
   }
 
@@ -513,13 +690,34 @@
      that would need its own narrow-screen redesign, which this does not take
      on. Each channel gets a heading the strip itself does not draw, because
      nothing else on this tab says which track it belongs to. */
-  .mixer { display:flex; flex-direction:column; gap:10px; }
-  .mixer-channel { background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
-  .mixer-channel h3 { margin:0; padding:10px 14px 0; font-size:14px; }
+  .mixer { display:flex; flex-direction:row; flex-wrap:wrap; align-items:flex-start; gap:10px; }
+  /* The track channels, then the master at the right end as on a desk; a narrow screen wraps it underneath. */
+  .desk { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 28px; }
+  .desk > #mixer { flex:1 1 280px; min-width:0; }
+  .desk > #master-mount { flex:none; }
+  .mixer-channel { width:96px; flex:none; text-align:center; background:var(--panel); border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+  .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
   .mixer-channel .strip { border-bottom:0; }
+  .fx { padding:0 8px 10px; }
+  .fx-toggle, .fx-add { width:100%; min-height:44px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-actions { display:flex; flex-wrap:wrap; gap:4px; }
+  .fx-actions button { flex:none; min-width:44px; min-height:44px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-actions .fx-show, .fx-actions .fx-remove { flex:1 1 auto; }
+  .fx-bypass[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
+  /* A channel is narrow, so a plugin's buttons stacked one to a row make a long list. With its list open the channel is wider, and
+     the buttons wrap four to a row. Where :has is not supported the channel stays as it was and the list is only taller. */
+  .mixer-channel:has(.fx-toggle[aria-expanded="true"]) { min-width:min(220px, 100%); }
+  .mono-switch { padding:0 8px 8px; display:flex; flex-direction:column; gap:4px; }
+  .mono-button { width:100%; min-height:44px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .mono-button[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
+  .mono-said { font-size:12px; color:var(--dim); min-height:1em; overflow-wrap:anywhere; }
+  .fx-list ul { list-style:none; margin:8px 0 0; padding:0; }
+  .fx-list li { margin:0 0 8px; padding:6px; border:1px solid var(--line); border-radius:4px; }
+  .fx-name { display:block; margin-bottom:4px; font-size:13px; overflow-wrap:anywhere; }
+  .fx-add { margin-top:4px; }
 
   /* The generated panel and the knob are in panel.css, shared with the simple page. */
-  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
+  select { background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px;
     padding:8px; font-size:16px; min-height:40px; max-width:100%; }
 
   /* Keyboard */
@@ -534,28 +732,36 @@
     --black-width: calc(100% / var(--white-count) * 0.62); }
   .keys-white { display:flex; height:100%; }
   .key { padding:0; border:0; cursor:pointer; }
-  .key-white { flex:1 1 0; min-width:0; height:100%; background:#e8eaed; border:1px solid #9aa1ab;
+  .key-white { flex:1 1 0; min-width:0; height:100%; background:var(--fg); border:1px solid var(--dim);
     border-radius:0 0 4px 4px; }
   .key-white.held { background:var(--accent); }
   .keys-black { position:absolute; top:0; left:0; height:64%; width:100%; }
-  .key-black { position:absolute; width:var(--black-width); height:100%; background:#16181d;
+  .key-black { position:absolute; width:var(--black-width); height:100%; background:var(--lane);
     border:1px solid #000; border-radius:0 0 3px 3px; }
   .key-black.held { background:var(--accent); }
 
   /* Log */
-  details.log { border-top:1px solid var(--line); padding:8px 14px; background:#13161b; }
+  details.log { border-top:1px solid var(--line); padding:8px 14px; background:var(--lane); }
+  .history-list ol { list-style:none; margin:8px 0 0; padding:0; }
+  .history-step { min-height:44px; width:100%; text-align:left; padding:6px 12px; background:var(--raised); color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .history-step[aria-current="step"] { border-color:var(--accent); font-weight:600; }
+  .history-step.undone { opacity:.6; }
+  #templates input, #templates select { min-height:44px; box-sizing:border-box; }
+  .project-info { display:grid; gap:10px; max-width:640px; margin-top:8px; }
+  .project-info-field { display:grid; gap:4px; color:var(--dim); font-size:12px; }
+  .project-info-field input, .project-info-field textarea { font-size:16px; min-height:44px; box-sizing:border-box; width:100%; }
   details.log summary { cursor:pointer; color:var(--dim); font-size:12px; }
   #log { font-family:ui-monospace,monospace; font-size:11px; max-height:28vh; overflow:auto; margin-top:8px; }
-  .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
-  .log-ok { color:var(--ok); } .log-error { color:var(--err); }
+  .log-line { padding:2px 0; border-bottom:1px solid var(--raised); overflow-wrap:anywhere; }
+  .log-ok { color:var(--ok-ink); } .log-error { color:var(--err-ink); }
 
   /* Local agent. Shares .searchbar's row layout and .log's disclosure look;
      only the transcript styling is its own. */
-  details.agent { border-top:1px solid var(--line); padding:8px 14px; background:#13161b; }
+  details.agent { border-top:1px solid var(--line); padding:8px 14px; background:var(--lane); }
   details.agent summary { cursor:pointer; color:var(--dim); font-size:12px; }
   details.agent .note { margin-top:8px; }
   #agent-log { font-family:ui-monospace,monospace; font-size:11px; max-height:32vh; overflow:auto; margin-top:8px; }
-  .agent-step { padding:4px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
+  .agent-step { padding:4px 0; border-bottom:1px solid var(--raised); overflow-wrap:anywhere; }
   .agent-step .role { color:var(--dim); font-size:10px; margin-right:6px; }
   .agent-step.tool_call .role, .agent-step.tool_result .role { color:var(--accent); }
 
@@ -568,7 +774,6 @@
        need the room, and they take the full width rather than two cells. */
     .control-selector { grid-column:1 / -1; }
     .control-asset { grid-column:1 / -1; }
-    .links { margin-left:0; }
     /* Wrapped onto several rows the bar is a third of a phone's height, so it scrolls away
        with the page rather than staying put. */
     .transport { position:static; }
@@ -578,15 +783,48 @@
     .timeline { --head:10.5rem; }
     .timeline .empty { margin-left:0; }
     .timeline-head { padding:4px 6px; }
-    .head-slider { grid-template-columns:2.2rem 1fr 3.2rem; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition-duration:0.01ms !important; } }
+  .context-menu { position:fixed; z-index:50; min-width:12rem; max-width:min(20rem, 92vw); margin:0; padding:4px; list-style:none; background:var(--panel); color:var(--fg);
+    border:1px solid var(--line); border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.5); }
+  .context-menu li { margin:0; }
+  .context-menu li[role=separator] { height:1px; margin:4px 2px; background:var(--line); }
+  .context-menu button { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:44px; padding:0 10px; text-align:left;
+    background:transparent; color:var(--fg); border:0; border-radius:4px; font:inherit; font-size:14px; cursor:pointer; }
+  .context-menu button:hover, .context-menu button:focus-visible { background:var(--control); }
+  .context-menu button[aria-checked=true]::before { content:'\2713'; margin-right:-8px; }
+  .context-menu button.danger { color:var(--err-ink); }
+  .context-menu kbd { font-size:12px; color:var(--dim); }
+  .launcher-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 10px; }
+  .launcher-grid { display:grid; gap:6px; overflow-x:auto; padding-bottom:6px; }
+  .launcher-row { display:grid; grid-template-columns:56px repeat(var(--tracks), minmax(96px, 160px)); gap:6px; align-items:stretch; }
+  .launcher-track { align-self:end; padding:0 4px; font-size:13px; font-weight:600; overflow-wrap:anywhere; text-align:center; }
+  .launcher-cell, .launcher-scene, .launcher-stop { min-height:44px; padding:0 8px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; cursor:pointer; }
+  .launcher-cell[data-state=empty] { background:transparent; border-style:dashed; color:var(--dim); }
+  .launcher-cell[data-state=playing] { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
+  .launcher-cell[data-state=queued], .launcher-cell[data-state=stopping] { border:2px dashed var(--solo); }
+  /* Compact controls where a mouse is the pointer and the window is wide. The 44px targets above are for a finger and for a
+     narrow window (WCAG 2.5.8 asks 24px; the coarse and narrow cases keep 44). `:not(#compact)` is only there to outweigh
+     the class selectors above without editing each one. */
+  @media (pointer: fine) and (min-width: 761px) {
+    button:not(#compact):not(.swatch):not(.tab), select:not(#compact), input:not(#compact):not([type=range]):not([type=checkbox]):not([type=radio]) {
+      min-height:30px; padding-top:3px; padding-bottom:3px; }
+    button:not(#compact):not([data-icon]):not(.chain-move):not(.chain-replace):not(.chain-bypass):not(.strip-toggle) { min-width:0; }
+    .strip-toggle:not(#compact) { min-width:30px; min-height:30px; }
+    button[data-icon]:not(#compact), .chain-move:not(#compact), .chain-replace:not(#compact), .chain-bypass:not(#compact) { min-width:30px; min-height:30px; }
+    .fx-toggle:not(#compact), .fx-add:not(#compact), .fx-actions button:not(#compact) { min-height:28px; min-width:30px; }
+    .mono-button:not(#compact) { min-height:28px; }
+    .swatch:not(#compact) { width:30px; height:30px; }
+  }
 
 
 /* web/panel.css
    The generated control panel and the knob (src/ui/Panel.js, src/ui/Dial.js), shared by the
    studio page and the simple page so the two draw a plugin's controls the same way.
    Expects the colour tokens --line, --accent, --fg and --dim on :root. */
+
+/* An element left out with the hidden attribute stays out whatever display its class gives it (tests/web/HiddenAttribute.test.js). */
+[hidden] { display:none !important; }
 /* Controls.
 
    A grid of knobs rather than a stack of sliders. A slider needs the width
@@ -615,6 +853,13 @@
    two-cell span. */
 .control-asset { grid-column:span 2; align-items:flex-start; }
 .control-asset input[type=file] { width:100%; max-width:100%; font-size:16px; color:var(--dim); }
+/* A text asset is a place to type: the whole width, with how much of its limit is used and what Apply did under it. */
+.control-text { grid-column:1 / -1; align-items:stretch; }
+.control-text label { text-align:left; }
+.control-text textarea { width:100%; min-height:7em; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:8px; }
+.control-hint { color:var(--dim); font-size:14px; }
+.control-hint.over { color:var(--err); }
+.control-status { color:var(--dim); font-size:14px; }
 
 /* The knob. The input is still the control: it is laid over the face,
    invisible, and keeps the role, the value and every key. pointer-events
@@ -624,7 +869,7 @@
   border-radius:50%; }
 /* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
    so the ring goes on the wrapper. */
-.dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+.dial:focus-within { outline:2px solid var(--focus); outline-offset:3px; }
 .dial-face { display:block; width:100%; height:100%; }
 .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
 .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
@@ -640,10 +885,50 @@
    inside a 52px knob. Invisible today, since it is out of flow and takes no
    pointer events, and exactly the kind of thing that is not invisible the
    day one of those changes. */
-input[type=range]:not(.dial-input) { width:100%; min-width:0; height:40px; }
-input[type=checkbox] { width:22px; height:22px; }
+input[type=range]:not(.dial-input):not(.skin-input) { width:100%; min-width:0; height:40px; }
+input[type=checkbox]:not(.skin-input) { width:22px; height:22px; }
 /* A touch target is 44px (CLAUDE.md): on a phone the generated switches and triggers are that size. */
-@media (max-width: 720px) { input[type=checkbox] { width:44px; height:44px; } }
+@media (max-width: 720px) { input[type=checkbox]:not(.skin-input) { width:44px; height:44px; } }
+
+/* A skin: the author's artwork, drawn and operated by the host (docs/svg-skins.md). As with the knob, a
+   native input is laid over each control's hit area, invisible and still focusable, and the focus ring goes
+   on the box around it. The box is at least 44px each way however small the drawing of the control is. */
+.skin { position:relative; width:100%; margin:0 auto 12px; }
+.skin svg { display:block; width:100%; height:auto; }
+.skin-hit { position:absolute; transform:translate(-50%,-50%); min-width:44px; min-height:44px; touch-action:none; cursor:pointer; }
+/* Two tones, because the artwork's background is the author's: a blue ring that is visible on a dark panel is
+   not on a cream one. The blue sits against the control and the white outside it, so one of them contrasts
+   with whatever is behind (WCAG 2.4.7, 1.4.11). */
+.skin-hit:focus-within { outline:2px solid #fff; outline-offset:2px; box-shadow:0 0 0 2px #1d4ed8; }
+.skin-input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; pointer-events:none; }
+
+/* The controls an author put second, under a disclosure. The summary is a 44px target and says how many are in it. */
+.more-controls { margin-top:10px; }
+.more-controls > summary { min-height:44px; display:flex; align-items:center; padding:0 6px; cursor:pointer; color:var(--dim); }
+.more-controls > summary:hover { color:var(--fg); }
+.more-controls[open] > summary { margin-bottom:6px; }
+
+/* The help line under a plugin's heading: what the hovered or focused control does. It keeps its height empty, so showing it moves nothing. */
+.control-help { min-height:1.6em; margin:0 0 6px; font-size:14px; line-height:1.6; color:var(--dim); }
+.control-help b { margin-right:2px; color:var(--fg); font-weight:600; }
+
+/* A pad: a square that sets two controls at once. It is a pointer shortcut and the controls stay, so it is sized for a thumb and no more. */
+.pads { display:flex; flex-wrap:wrap; gap:12px; margin:0 0 12px; }
+.pad { flex:0 1 220px; min-width:160px; }
+.pad-surface { position:relative; width:100%; aspect-ratio:1; min-height:160px; touch-action:none; cursor:crosshair; border:1px solid var(--line); border-radius:8px;
+  background:linear-gradient(to right, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)), linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)), var(--field); }
+.pad-puck { position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%; background:var(--accent); border:2px solid var(--fg); pointer-events:none; }
+.pad-caption { margin:6px 0 0; font-size:14px; color:var(--dim); }
+.pad-caption b { color:var(--fg); }
+
+/* Words at the ends of a pad's axes, inside the square at its edges, quiet so the puck stays what the eye goes to. */
+.pad-end { position:absolute; font-size:12px; line-height:1; color:var(--dim); pointer-events:none; }
+.pad-end-left { left:6px; bottom:6px; }
+.pad-end-right { right:6px; bottom:6px; }
+.pad-end-top { top:6px; left:50%; transform:translateX(-50%); }
+.pad-end-bottom { bottom:20px; left:50%; transform:translateX(-50%); }
+.pad-with-choice { flex:1 1 100%; display:flex; flex-wrap:wrap; align-items:flex-start; gap:12px; }
+.pad-choice { flex:0 1 13rem; min-width:10rem; padding-top:4px; }
 </style>
 <style>body{max-width:900px;margin:24px auto;padding:0 16px}</style>
 </head>
@@ -652,6 +937,6 @@ input[type=checkbox] { width:22px; height:22px; }
 <h1>DrumGen</h1>
 <p>Transport synced MIDI drum generator. Genre, style mode and resolution shape a seeded pattern that plays in time with the session, with fills on the last bar of the loop and Conductor CC control.</p>
 <p>https://strandz.it/jigdaw/plugins/drumgen/ . 21 controls.</p>
-<section aria-labelledby="https___strandz_it_jigdaw_plugins_drumgen_-heading" role="group" class="panel"><h3 id="https___strandz_it_jigdaw_plugins_drumgen_-heading">DrumGen</h3><div class="controls"><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__genre">Genre</label><select title="Genre" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__genre-value" id="https___strandz_it_jigdaw_plugins_drumgen__genre"><option value="0">Rock</option><option value="1">Disco</option><option value="2">Shuffle</option><option value="3">Electro</option><option value="4">Dub</option><option value="5">Motorik</option><option value="6">Bossa</option><option value="7">Afro</option><option value="8">Breakbeat</option><option value="9">Amen</option><option value="10">Jungle</option><option value="11">Hip Hop</option><option value="12">Jazz</option><option value="13">Fugue</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__genre-value" class="value">Rock</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__style_mode">Style</label><select title="Style" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" id="https___strandz_it_jigdaw_plugins_drumgen__style_mode"><option value="0">Auto</option><option value="1">Straight</option><option value="2">Reel</option><option value="3">Waltz</option><option value="4">Jig</option><option value="5">Slip Jig</option><option value="6">Diddley</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" class="value">Auto</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__channel">Channel</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="107.44 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="16.14" x2="67.25" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="10.00" title="Channel" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__channel-value" value="10" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__channel" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__channel-value" class="value">10.00</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__kit_map">Kit Map</label><input title="Kit Map" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" id="https___strandz_it_jigdaw_plugins_drumgen__kit_map" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" class="value">Flues Drumkit</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__bars">Bars</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="59.69 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="23.13" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="2.00" title="Bars" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__bars-value" value="2" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__bars" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__bars-value" class="value">2.00</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__resolution">Resolution</label><select title="Resolution" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" id="https___strandz_it_jigdaw_plugins_drumgen__resolution"><option value="0">Eighth</option><option value="1">Sixteenth</option><option value="2">Sixteenth Triplet</option><option value="3">Quarter</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" class="value">Sixteenth</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__density">Density</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="103.86 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="14.67" x2="63.99" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.58" title="Density" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__density-value" value="0.58" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__density" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__density-value" class="value">0.58</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__variation">Variation</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="62.67 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="21.1" x2="25.32" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.35" title="Variation" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__variation-value" value="0.35" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__variation" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__variation-value" class="value">0.35</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill_amount">Fill Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Fill Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" class="value">0.30</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__seed">Seed</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="1" title="Seed" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__seed-value" value="1" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__seed" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__seed-value" class="value">1</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__kick_amt">Kick Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="139.68 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="40.55" x2="86.81" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.78" title="Kick Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value" value="0.78" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value" class="value">0.78</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt">Backbeat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="136.09 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="37.13" x2="85.75" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.76" title="Backbeat Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value" value="0.76" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value" class="value">0.76</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__hat_amt">Hat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="146.84 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="47.61" x2="87.93" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.82" title="Hat Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value" value="0.82" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value" class="value">0.82</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__aux_amt">Perc Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="50.14 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="30.66" x2="17.29" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.28" title="Perc Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" value="0.28" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" class="value">0.28</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__new">New</label><input title="New" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__new-value" id="https___strandz_it_jigdaw_plugins_drumgen__new" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__new-value" class="value">off</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__mutate">Mutate</label><input title="Mutate" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" id="https___strandz_it_jigdaw_plugins_drumgen__mutate" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" class="value">off</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill">Fill</label><input title="Fill" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill-value" id="https___strandz_it_jigdaw_plugins_drumgen__fill" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__fill-value" class="value">off</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__tom_amt">Tom Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Tom Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" class="value">0.30</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__metal_amt">Metal Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="46.56 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="33.82" x2="15.62" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.26" title="Metal Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" value="0.26" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" class="value">0.26</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__vary">Vary</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Vary" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__vary-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__vary" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__vary-value" class="value">0.00</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch">Conductor Ch</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Conductor Ch" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" class="value">0.00</span></div></div></section>
+<section aria-labelledby="https___strandz_it_jigdaw_plugins_drumgen_-heading" role="group" class="panel"><h3 id="https___strandz_it_jigdaw_plugins_drumgen_-heading">DrumGen</h3><p aria-hidden="true" class="control-help"></p><div class="pads"><div class="pad-with-choice"><div aria-labelledby="https___strandz_it_jigdaw_plugins_drumgen_-pad-0-caption" role="group" class="pad"><div aria-hidden="true" class="pad-surface"><div style="left:57.99999999999999%;top:65%" class="pad-puck"></div><span class="pad-end pad-end-left">simple</span><span class="pad-end pad-end-right">busy</span><span class="pad-end pad-end-bottom">steady</span><span class="pad-end pad-end-top">varied</span></div><p id="https___strandz_it_jigdaw_plugins_drumgen_-pad-0-caption" class="pad-caption"><b>Feel</b> Across is Density, from simple to busy, up is Variation, from steady to varied.</p></div><div class="pad-choice"><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__pad-genre">Genre</label><select aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__pad-genre-value https___strandz_it_jigdaw_plugins_drumgen__pad-genre-help" id="https___strandz_it_jigdaw_plugins_drumgen__pad-genre"><option value="0">Rock</option><option value="1">Disco</option><option value="2">Shuffle</option><option value="3">Electro</option><option value="4">Dub</option><option value="5">Motorik</option><option value="6">Bossa</option><option value="7">Afro</option><option value="8">Breakbeat</option><option value="9">Amen</option><option value="10">Jungle</option><option value="11">Hip Hop</option><option value="12">Jazz</option><option value="13">Fugue</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__pad-genre-value" class="value">Rock</span><span id="https___strandz_it_jigdaw_plugins_drumgen__pad-genre-help" class="visually-hidden">The drum style the pattern is built in.</span></div></div></div></div><div class="controls"><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__density">Density</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="103.86 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="14.67" x2="63.99" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.58" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__density-value https___strandz_it_jigdaw_plugins_drumgen__density-help" value="0.58" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__density" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__density-value" class="value">0.58</span><span id="https___strandz_it_jigdaw_plugins_drumgen__density-help" class="visually-hidden">How busy the pattern is: more hits across the bar.</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__variation">Variation</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="62.67 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="21.1" x2="25.32" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.35" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__variation-value https___strandz_it_jigdaw_plugins_drumgen__variation-help" value="0.35" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__variation" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__variation-value" class="value">0.35</span><span id="https___strandz_it_jigdaw_plugins_drumgen__variation-help" class="visually-hidden">How much the pattern changes as it plays.</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__kick_amt">Kick Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="139.68 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="40.55" x2="86.81" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.78" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value https___strandz_it_jigdaw_plugins_drumgen__kick_amt-help" value="0.78" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-value" class="value">0.78</span><span id="https___strandz_it_jigdaw_plugins_drumgen__kick_amt-help" class="visually-hidden">How much kick drum the pattern uses.</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt">Backbeat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="136.09 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="37.13" x2="85.75" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.76" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-help" value="0.76" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-value" class="value">0.76</span><span id="https___strandz_it_jigdaw_plugins_drumgen__backbeat_amt-help" class="visually-hidden">How strongly the backbeat, beats two and four, is played.</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__hat_amt">Hat Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="146.84 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="47.61" x2="87.93" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.82" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value https___strandz_it_jigdaw_plugins_drumgen__hat_amt-help" value="0.82" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-value" class="value">0.82</span><span id="https___strandz_it_jigdaw_plugins_drumgen__hat_amt-help" class="visually-hidden">How much hi-hat the pattern uses.</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__new">New</label><input aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__new-value https___strandz_it_jigdaw_plugins_drumgen__new-help" id="https___strandz_it_jigdaw_plugins_drumgen__new" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__new-value" class="value">off</span><span id="https___strandz_it_jigdaw_plugins_drumgen__new-help" class="visually-hidden">Starts a fresh pattern.</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill">Fill</label><input aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill-value https___strandz_it_jigdaw_plugins_drumgen__fill-help" id="https___strandz_it_jigdaw_plugins_drumgen__fill" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__fill-value" class="value">off</span><span id="https___strandz_it_jigdaw_plugins_drumgen__fill-help" class="visually-hidden">Builds a drum fill into the bar about to play.</span></div></div><details class="more-controls"><summary>More controls (13)</summary><div class="controls"><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__style_mode">Style</label><select title="Style" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" id="https___strandz_it_jigdaw_plugins_drumgen__style_mode"><option value="0">Auto</option><option value="1">Straight</option><option value="2">Reel</option><option value="3">Waltz</option><option value="4">Jig</option><option value="5">Slip Jig</option><option value="6">Diddley</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__style_mode-value" class="value">Auto</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__channel">Channel</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="107.44 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="16.14" x2="67.25" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="10.00" title="Channel" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__channel-value" value="10" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__channel" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__channel-value" class="value">10.00</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__kit_map">Kit Map</label><input title="Kit Map" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" id="https___strandz_it_jigdaw_plugins_drumgen__kit_map" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__kit_map-value" class="value">Flues Drumkit</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__bars">Bars</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="59.69 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="23.13" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="2.00" title="Bars" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__bars-value" value="2" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__bars" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__bars-value" class="value">2.00</span></div><div class="control control-selector"><label for="https___strandz_it_jigdaw_plugins_drumgen__resolution">Resolution</label><select title="Resolution" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" id="https___strandz_it_jigdaw_plugins_drumgen__resolution"><option value="0">Eighth</option><option value="1">Sixteenth</option><option value="2">Sixteenth Triplet</option><option value="3">Quarter</option></select><span id="https___strandz_it_jigdaw_plugins_drumgen__resolution-value" class="value">Sixteenth</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__fill_amount">Fill Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Fill Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__fill_amount-value" class="value">0.30</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__seed">Seed</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="1" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__seed-value https___strandz_it_jigdaw_plugins_drumgen__seed-help" value="1" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__seed" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__seed-value" class="value">1</span><span id="https___strandz_it_jigdaw_plugins_drumgen__seed-help" class="visually-hidden">The number of the pattern: the same number always gives the same beat.</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__aux_amt">Perc Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="50.14 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="30.66" x2="17.29" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.28" title="Perc Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" value="0.28" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__aux_amt-value" class="value">0.28</span></div><div class="control control-switch"><label for="https___strandz_it_jigdaw_plugins_drumgen__mutate">Mutate</label><input title="Mutate" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" id="https___strandz_it_jigdaw_plugins_drumgen__mutate" type="checkbox"><span id="https___strandz_it_jigdaw_plugins_drumgen__mutate-value" class="value">off</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__tom_amt">Tom Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="53.72 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="27.66" x2="19.26" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.30" title="Tom Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" value="0.3" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__tom_amt-value" class="value">0.30</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__metal_amt">Metal Amount</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="46.56 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="33.82" x2="15.62" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.26" title="Metal Amount" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" value="0.26" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__metal_amt-value" class="value">0.26</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__vary">Vary</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Vary" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__vary-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__vary" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__vary-value" class="value">0.00</span></div><div class="control control-dial"><label for="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch">Conductor Ch</label><div class="dial"><svg focusable="false" aria-hidden="true" class="dial-face" viewBox="0 0 100 100"><circle stroke-dashoffset="0" stroke-dasharray="179.07 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-track" /><circle stroke-dashoffset="0" stroke-dasharray="0 238.76" transform="rotate(135 50 50)" fill="none" r="38" cy="50" cx="50" class="dial-value" /><line y2="76.87" x2="23.13" y1="50" x1="50" class="dial-pointer" /></svg><input aria-valuetext="0.00" title="Conductor Ch" aria-describedby="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" value="0" class="dial-input" id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch" type="range"></div><span id="https___strandz_it_jigdaw_plugins_drumgen__conductor_ch-value" class="value">0.00</span></div></div></details></section>
 </body>
 </html>

@@ -1,0 +1,825 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/quartet/",
+  "label": "Quartet",
+  "comment": "Eight-voice four-operator FM synthesiser with eleven algorithms, band-limited sine, saw and square operators, per-operator envelopes, feedback, optional 2x oversampling, a pitch envelope and a multimode filter. It opens as a mono bass.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "quartet",
+  "roles": [
+    "trn:Instrument",
+    "trn:AudioInstrument"
+  ],
+  "accepts": [
+    "trn:Midi"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "FM synthesis",
+    "Bass",
+    "Synthesizer"
+  ],
+  "cautions": [
+    "It opens as a bass: algorithm 1, mono, a 24 dB low-pass at 2.4 kHz. Set Play Mode to Poly for chords.",
+    "A ninth note steals the quietest voice rather than being refused.",
+    "The panel does not draw the routing or the filter response the VST3 does; the algorithm is named in its choice list instead."
+  ],
+  "format": "trn:Jig",
+  "abi": "jig:Abi2",
+  "requires": [
+    "jig:MidiEvents"
+  ],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 0,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "tailFrames": 384000
+  },
+  "resources": {
+    "module": "quartet.wasm",
+    "processor": "quartet-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "opa_wave",
+      "name": "Op A Waveform",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Operator A",
+      "paramIndex": 0,
+      "scalePoints": [
+        {
+          "label": "Sine",
+          "value": 0
+        },
+        {
+          "label": "Saw",
+          "value": 1
+        },
+        {
+          "label": "Square",
+          "value": 2
+        }
+      ],
+      "comment": "Operator A: sine, saw or square. Saw and square are band-limited."
+    },
+    {
+      "symbol": "opa_fixed",
+      "name": "Op A Fixed Frequency",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator A",
+      "paramIndex": 1,
+      "toggled": true,
+      "comment": "Operator A: off follows the note (ratio), on plays a fixed frequency."
+    },
+    {
+      "symbol": "opa_ratio",
+      "name": "Op A Ratio",
+      "default": 1.0,
+      "minimum": 0.25,
+      "maximum": 32,
+      "group": "Operator A",
+      "paramIndex": 2,
+      "comment": "Operator A: frequency as a multiple of the note."
+    },
+    {
+      "symbol": "opa_fine",
+      "name": "Op A Fine",
+      "default": 0,
+      "minimum": -50,
+      "maximum": 50,
+      "group": "Operator A",
+      "paramIndex": 3,
+      "unit": "cent",
+      "comment": "Operator A: fine tuning in cents."
+    },
+    {
+      "symbol": "opa_fixed_hz",
+      "name": "Op A Fixed Hz",
+      "default": 440,
+      "minimum": 10,
+      "maximum": 20000,
+      "group": "Operator A",
+      "paramIndex": 4,
+      "unit": "hz",
+      "comment": "Operator A: the frequency when Fixed Frequency is on."
+    },
+    {
+      "symbol": "opa_level",
+      "name": "Op A Level",
+      "default": 0.9,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator A",
+      "paramIndex": 5,
+      "comment": "Operator A: the loudness of a carrier, or how hard a modulator pushes its target.",
+      "displayPriority": 60
+    },
+    {
+      "symbol": "opa_attack",
+      "name": "Op A Attack",
+      "default": 2.0,
+      "minimum": 0.5,
+      "maximum": 5000,
+      "group": "Operator A",
+      "paramIndex": 6,
+      "unit": "ms",
+      "comment": "Operator A envelope: time to rise to full."
+    },
+    {
+      "symbol": "opa_decay",
+      "name": "Op A Decay",
+      "default": 600.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator A",
+      "paramIndex": 7,
+      "unit": "ms",
+      "comment": "Operator A envelope: time to fall to Sustain."
+    },
+    {
+      "symbol": "opa_sustain",
+      "name": "Op A Sustain",
+      "default": 0.8,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator A",
+      "paramIndex": 8,
+      "comment": "Operator A envelope: the level held while the key is down."
+    },
+    {
+      "symbol": "opa_release",
+      "name": "Op A Release",
+      "default": 140.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator A",
+      "paramIndex": 9,
+      "unit": "ms",
+      "comment": "Operator A envelope: time to fade after the key is let go."
+    },
+    {
+      "symbol": "opb_wave",
+      "name": "Op B Waveform",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Operator B",
+      "paramIndex": 10,
+      "scalePoints": [
+        {
+          "label": "Sine",
+          "value": 0
+        },
+        {
+          "label": "Saw",
+          "value": 1
+        },
+        {
+          "label": "Square",
+          "value": 2
+        }
+      ],
+      "comment": "Operator B: sine, saw or square. Saw and square are band-limited."
+    },
+    {
+      "symbol": "opb_fixed",
+      "name": "Op B Fixed Frequency",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator B",
+      "paramIndex": 11,
+      "toggled": true,
+      "comment": "Operator B: off follows the note (ratio), on plays a fixed frequency."
+    },
+    {
+      "symbol": "opb_ratio",
+      "name": "Op B Ratio",
+      "default": 1.0,
+      "minimum": 0.25,
+      "maximum": 32,
+      "group": "Operator B",
+      "paramIndex": 12,
+      "comment": "Operator B: frequency as a multiple of the note."
+    },
+    {
+      "symbol": "opb_fine",
+      "name": "Op B Fine",
+      "default": 0,
+      "minimum": -50,
+      "maximum": 50,
+      "group": "Operator B",
+      "paramIndex": 13,
+      "unit": "cent",
+      "comment": "Operator B: fine tuning in cents."
+    },
+    {
+      "symbol": "opb_fixed_hz",
+      "name": "Op B Fixed Hz",
+      "default": 440,
+      "minimum": 10,
+      "maximum": 20000,
+      "group": "Operator B",
+      "paramIndex": 14,
+      "unit": "hz",
+      "comment": "Operator B: the frequency when Fixed Frequency is on."
+    },
+    {
+      "symbol": "opb_level",
+      "name": "Op B Level",
+      "default": 0.42,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator B",
+      "paramIndex": 15,
+      "comment": "Operator B: the loudness of a carrier, or how hard a modulator pushes its target.",
+      "displayPriority": 55
+    },
+    {
+      "symbol": "opb_attack",
+      "name": "Op B Attack",
+      "default": 1.0,
+      "minimum": 0.5,
+      "maximum": 5000,
+      "group": "Operator B",
+      "paramIndex": 16,
+      "unit": "ms",
+      "comment": "Operator B envelope: time to rise to full."
+    },
+    {
+      "symbol": "opb_decay",
+      "name": "Op B Decay",
+      "default": 220.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator B",
+      "paramIndex": 17,
+      "unit": "ms",
+      "comment": "Operator B envelope: time to fall to Sustain."
+    },
+    {
+      "symbol": "opb_sustain",
+      "name": "Op B Sustain",
+      "default": 0.18,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator B",
+      "paramIndex": 18,
+      "comment": "Operator B envelope: the level held while the key is down."
+    },
+    {
+      "symbol": "opb_release",
+      "name": "Op B Release",
+      "default": 90.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator B",
+      "paramIndex": 19,
+      "unit": "ms",
+      "comment": "Operator B envelope: time to fade after the key is let go."
+    },
+    {
+      "symbol": "opc_wave",
+      "name": "Op C Waveform",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Operator C",
+      "paramIndex": 20,
+      "scalePoints": [
+        {
+          "label": "Sine",
+          "value": 0
+        },
+        {
+          "label": "Saw",
+          "value": 1
+        },
+        {
+          "label": "Square",
+          "value": 2
+        }
+      ],
+      "comment": "Operator C: sine, saw or square. Saw and square are band-limited."
+    },
+    {
+      "symbol": "opc_fixed",
+      "name": "Op C Fixed Frequency",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator C",
+      "paramIndex": 21,
+      "toggled": true,
+      "comment": "Operator C: off follows the note (ratio), on plays a fixed frequency."
+    },
+    {
+      "symbol": "opc_ratio",
+      "name": "Op C Ratio",
+      "default": 2.0,
+      "minimum": 0.25,
+      "maximum": 32,
+      "group": "Operator C",
+      "paramIndex": 22,
+      "comment": "Operator C: frequency as a multiple of the note."
+    },
+    {
+      "symbol": "opc_fine",
+      "name": "Op C Fine",
+      "default": 0,
+      "minimum": -50,
+      "maximum": 50,
+      "group": "Operator C",
+      "paramIndex": 23,
+      "unit": "cent",
+      "comment": "Operator C: fine tuning in cents."
+    },
+    {
+      "symbol": "opc_fixed_hz",
+      "name": "Op C Fixed Hz",
+      "default": 440,
+      "minimum": 10,
+      "maximum": 20000,
+      "group": "Operator C",
+      "paramIndex": 24,
+      "unit": "hz",
+      "comment": "Operator C: the frequency when Fixed Frequency is on."
+    },
+    {
+      "symbol": "opc_level",
+      "name": "Op C Level",
+      "default": 0.14,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator C",
+      "paramIndex": 25,
+      "comment": "Operator C: the loudness of a carrier, or how hard a modulator pushes its target.",
+      "displayPriority": 43
+    },
+    {
+      "symbol": "opc_attack",
+      "name": "Op C Attack",
+      "default": 1.0,
+      "minimum": 0.5,
+      "maximum": 5000,
+      "group": "Operator C",
+      "paramIndex": 26,
+      "unit": "ms",
+      "comment": "Operator C envelope: time to rise to full."
+    },
+    {
+      "symbol": "opc_decay",
+      "name": "Op C Decay",
+      "default": 120.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator C",
+      "paramIndex": 27,
+      "unit": "ms",
+      "comment": "Operator C envelope: time to fall to Sustain."
+    },
+    {
+      "symbol": "opc_sustain",
+      "name": "Op C Sustain",
+      "default": 0.0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator C",
+      "paramIndex": 28,
+      "comment": "Operator C envelope: the level held while the key is down."
+    },
+    {
+      "symbol": "opc_release",
+      "name": "Op C Release",
+      "default": 60.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator C",
+      "paramIndex": 29,
+      "unit": "ms",
+      "comment": "Operator C envelope: time to fade after the key is let go."
+    },
+    {
+      "symbol": "opd_wave",
+      "name": "Op D Waveform",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Operator D",
+      "paramIndex": 30,
+      "scalePoints": [
+        {
+          "label": "Sine",
+          "value": 0
+        },
+        {
+          "label": "Saw",
+          "value": 1
+        },
+        {
+          "label": "Square",
+          "value": 2
+        }
+      ],
+      "comment": "Operator D: sine, saw or square. Saw and square are band-limited."
+    },
+    {
+      "symbol": "opd_fixed",
+      "name": "Op D Fixed Frequency",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator D",
+      "paramIndex": 31,
+      "toggled": true,
+      "comment": "Operator D: off follows the note (ratio), on plays a fixed frequency."
+    },
+    {
+      "symbol": "opd_ratio",
+      "name": "Op D Ratio",
+      "default": 1.0,
+      "minimum": 0.25,
+      "maximum": 32,
+      "group": "Operator D",
+      "paramIndex": 32,
+      "comment": "Operator D: frequency as a multiple of the note."
+    },
+    {
+      "symbol": "opd_fine",
+      "name": "Op D Fine",
+      "default": 0,
+      "minimum": -50,
+      "maximum": 50,
+      "group": "Operator D",
+      "paramIndex": 33,
+      "unit": "cent",
+      "comment": "Operator D: fine tuning in cents."
+    },
+    {
+      "symbol": "opd_fixed_hz",
+      "name": "Op D Fixed Hz",
+      "default": 440,
+      "minimum": 10,
+      "maximum": 20000,
+      "group": "Operator D",
+      "paramIndex": 34,
+      "unit": "hz",
+      "comment": "Operator D: the frequency when Fixed Frequency is on."
+    },
+    {
+      "symbol": "opd_level",
+      "name": "Op D Level",
+      "default": 0.0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator D",
+      "paramIndex": 35,
+      "comment": "Operator D: the loudness of a carrier, or how hard a modulator pushes its target.",
+      "displayPriority": 42
+    },
+    {
+      "symbol": "opd_attack",
+      "name": "Op D Attack",
+      "default": 1.0,
+      "minimum": 0.5,
+      "maximum": 5000,
+      "group": "Operator D",
+      "paramIndex": 36,
+      "unit": "ms",
+      "comment": "Operator D envelope: time to rise to full."
+    },
+    {
+      "symbol": "opd_decay",
+      "name": "Op D Decay",
+      "default": 100.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator D",
+      "paramIndex": 37,
+      "unit": "ms",
+      "comment": "Operator D envelope: time to fall to Sustain."
+    },
+    {
+      "symbol": "opd_sustain",
+      "name": "Op D Sustain",
+      "default": 0.0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Operator D",
+      "paramIndex": 38,
+      "comment": "Operator D envelope: the level held while the key is down."
+    },
+    {
+      "symbol": "opd_release",
+      "name": "Op D Release",
+      "default": 60.0,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Operator D",
+      "paramIndex": 39,
+      "unit": "ms",
+      "comment": "Operator D envelope: time to fade after the key is let go."
+    },
+    {
+      "symbol": "algorithm",
+      "name": "Algorithm",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 10,
+      "group": "FM",
+      "paramIndex": 40,
+      "scalePoints": [
+        {
+          "label": "1: D > C > B > A",
+          "value": 0
+        },
+        {
+          "label": "2: (C + D) > B > A",
+          "value": 1
+        },
+        {
+          "label": "3: (B + (D > C)) > A",
+          "value": 2
+        },
+        {
+          "label": "4: D > (B + C) > A",
+          "value": 3
+        },
+        {
+          "label": "5: (B > A) + (D > C)",
+          "value": 4
+        },
+        {
+          "label": "6: (B + C + D) > A",
+          "value": 5
+        },
+        {
+          "label": "7: A + B + (D > C)",
+          "value": 6
+        },
+        {
+          "label": "8: A + (D > C > B)",
+          "value": 7
+        },
+        {
+          "label": "9: A + ((C + D) > B)",
+          "value": 8
+        },
+        {
+          "label": "10: D > (A + B + C)",
+          "value": 9
+        },
+        {
+          "label": "11: A + B + C + D",
+          "value": 10
+        }
+      ],
+      "displayPriority": 100,
+      "comment": "Which operators modulate which, and which are heard. A letter is an operator and a greater-than sign means it modulates the next."
+    },
+    {
+      "symbol": "feedback",
+      "name": "Feedback",
+      "default": 0.1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "FM",
+      "paramIndex": 41,
+      "comment": "Operator D feeding back into itself, for a brighter, rougher tone."
+    },
+    {
+      "symbol": "depth",
+      "name": "FM Depth",
+      "default": 1.0,
+      "minimum": 0,
+      "maximum": 4,
+      "group": "FM",
+      "paramIndex": 42,
+      "displayPriority": 90,
+      "comment": "How far a full-level modulator moves its target, in cycles. More is brighter."
+    },
+    {
+      "symbol": "pitch_env",
+      "name": "Pitch Envelope",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Pitch envelope",
+      "paramIndex": 43,
+      "toggled": true,
+      "comment": "Sweeps the pitch of every operator with its own envelope."
+    },
+    {
+      "symbol": "pitch_env_amount",
+      "name": "Pitch Envelope Amount",
+      "default": 12,
+      "minimum": -48,
+      "maximum": 48,
+      "group": "Pitch envelope",
+      "paramIndex": 44,
+      "unit": "semitone12TET",
+      "comment": "How far the pitch envelope moves the pitch at full."
+    },
+    {
+      "symbol": "pitch_attack",
+      "name": "Pitch Attack",
+      "default": 1,
+      "minimum": 0.5,
+      "maximum": 5000,
+      "group": "Pitch envelope",
+      "paramIndex": 45,
+      "unit": "ms"
+    },
+    {
+      "symbol": "pitch_decay",
+      "name": "Pitch Decay",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Pitch envelope",
+      "paramIndex": 46,
+      "unit": "ms"
+    },
+    {
+      "symbol": "pitch_sustain",
+      "name": "Pitch Sustain",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Pitch envelope",
+      "paramIndex": 47
+    },
+    {
+      "symbol": "pitch_release",
+      "name": "Pitch Release",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 8000,
+      "group": "Pitch envelope",
+      "paramIndex": 48,
+      "unit": "ms"
+    },
+    {
+      "symbol": "filter_type",
+      "name": "Filter Type",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 4,
+      "group": "Filter",
+      "paramIndex": 49,
+      "scalePoints": [
+        {
+          "label": "Low-pass 12",
+          "value": 0
+        },
+        {
+          "label": "Low-pass 24",
+          "value": 1
+        },
+        {
+          "label": "High-pass 12",
+          "value": 2
+        },
+        {
+          "label": "Band-pass",
+          "value": 3
+        },
+        {
+          "label": "Notch",
+          "value": 4
+        }
+      ],
+      "comment": "The shape of the one filter every voice passes through."
+    },
+    {
+      "symbol": "cutoff",
+      "name": "Cutoff",
+      "default": 2400,
+      "minimum": 20,
+      "maximum": 20000,
+      "group": "Filter",
+      "paramIndex": 50,
+      "unit": "hz",
+      "displayPriority": 80,
+      "comment": "Where the filter starts to cut. Lower is darker."
+    },
+    {
+      "symbol": "resonance",
+      "name": "Resonance",
+      "default": 0.2,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Filter",
+      "paramIndex": 51,
+      "displayPriority": 70,
+      "comment": "A peak at the cutoff."
+    },
+    {
+      "symbol": "key_track",
+      "name": "Key Track",
+      "default": 0.3,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Filter",
+      "paramIndex": 52,
+      "comment": "How much the cutoff follows the note, so high notes stay as bright as low ones."
+    },
+    {
+      "symbol": "master",
+      "name": "Master",
+      "default": 0.6,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 53,
+      "displayPriority": 95,
+      "comment": "The overall level of the instrument."
+    },
+    {
+      "symbol": "velocity",
+      "name": "Velocity",
+      "default": 0.7,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 54,
+      "comment": "How much a harder key is louder. At 0 every note is at full level."
+    },
+    {
+      "symbol": "bend_range",
+      "name": "Bend Range",
+      "default": 2,
+      "minimum": 0,
+      "maximum": 24,
+      "group": "Output",
+      "paramIndex": 55,
+      "unit": "semitone12TET",
+      "comment": "How far the pitch wheel bends the pitch."
+    },
+    {
+      "symbol": "quality",
+      "name": "Quality",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "group": "Output",
+      "paramIndex": 56,
+      "scalePoints": [
+        {
+          "label": "1x",
+          "value": 0
+        },
+        {
+          "label": "2x",
+          "value": 1
+        }
+      ],
+      "comment": "2x oversamples the FM and filters it back down: cleaner at high depth, about twice the CPU."
+    },
+    {
+      "symbol": "play_mode",
+      "name": "Play Mode",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 2,
+      "group": "Voicing",
+      "paramIndex": 57,
+      "scalePoints": [
+        {
+          "label": "Poly",
+          "value": 0
+        },
+        {
+          "label": "Mono",
+          "value": 1
+        },
+        {
+          "label": "Legato",
+          "value": 2
+        }
+      ],
+      "comment": "Poly plays every note on its own voice. Mono plays the last note. Legato does the same without restarting the envelopes."
+    },
+    {
+      "symbol": "glide",
+      "name": "Glide",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 2000,
+      "group": "Voicing",
+      "paramIndex": 58,
+      "unit": "ms",
+      "comment": "Time to slide from the previous note. 0 is off."
+    }
+  ],
+  "licenceId": "MIT"
+}

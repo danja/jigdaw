@@ -803,6 +803,10 @@ jig:EditorLaneSizeShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:laneSize ;
     sh:property [ sh:path jig:laneSize ; sh:maxCount 1 ; sh:in ( "collapsed" "small" "medium" "large" ) ; sh:message "A lane is collapsed, small, medium or large." ] .
 
+jig:EditorLaneHeightShape a sh:NodeShape ;
+    sh:targetSubjectsOf jig:laneHeight ;
+    sh:property [ sh:path jig:laneHeight ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 24 ; sh:maxInclusive 800 ; sh:message "A lane dragged to a height of its own is one whole number of pixels, from 24 to 800." ] .
+
 jig:EditorFolderShape a sh:NodeShape ;
     sh:targetSubjectsOf jig:folder ;
     sh:property [ sh:path jig:folder ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:minLength 1 ; sh:maxLength 60 ; sh:message "A folder name is one string of 1 to 60 characters." ] .

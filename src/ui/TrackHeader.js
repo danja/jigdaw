@@ -12,6 +12,7 @@
 // Level, pan, mute and solo are left out for a track that has nothing to hear:
 // four controls that move and change nothing are worse than none (CLAUDE.md).
 import { createChannelToggle } from './ChannelToggle.js'
+import { createDial } from './Dial.js'
 import { decibels, panPosition } from './Strip.js'
 import { TRACK_KIND_LABELS } from '../model/TrackKind.js'
 import { DEFAULT_LANE_SIZE, LANE_SIZES } from '../model/EditorState.js'
@@ -152,29 +153,24 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const mute = toggle('muted')
   const solo = toggle('soloed')
 
-  const slider = (text, key, min, max, format, speak) => {
-    const label = document.createElement('label')
-    label.className = 'head-slider'
-    const caption = document.createElement('span')
-    caption.textContent = text
-    const input = document.createElement('input')
-    input.type = 'range'
-    input.min = String(min)
-    input.max = String(max)
+  // A small knob, not a slider: it sits in the row with M and S. The input inside the dial is still the control, so the
+  // name, the value as text and the arrow keys come from it.
+  const slider = (text, key, min, max, defaultValue, format, speak) => {
+    const dial = createDial(document, { minimum: min, maximum: max, defaultValue }, `head-${id}-${key}`)
+    dial.element.classList.add('head-dial')
+    const input = dial.input
     input.step = '0.01'
-    input.id = `head-${id}-${key}`
-    const value = document.createElement('span')
-    value.className = 'value'
+    const label = dial.element
     const show = n => {
-      value.textContent = format(n)
+      dial.render(n)
+      label.title = `${text} ${format(n)}`
       input.setAttribute('aria-valuetext', speak(n))
     }
     input.addEventListener('input', () => { show(Number(input.value)); onChannel(id, { [key]: Number(input.value) }) })
-    label.append(caption, input, value)
     return { label, input, show }
   }
-  const level = slider('Level', 'gain', 0, 2, n => `${decibels(n)} dB`, n => `${decibels(n)} decibels`)
-  const pan = slider('Pan', 'pan', -1, 1, panPosition, panPosition)
+  const level = slider('Level', 'gain', 0, 2, 1, n => `${decibels(n)} dB`, n => `${decibels(n)} decibels`)
+  const pan = slider('Pan', 'pan', -1, 1, 0, panPosition, panPosition)
 
   // How this track is routed besides straight to the master, in words.
   const routing = document.createElement('p')

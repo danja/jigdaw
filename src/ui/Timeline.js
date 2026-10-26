@@ -46,6 +46,7 @@ import { createTimelineTools } from './TimelineTools.js'
 import { Selection } from '../model/Selection.js'
 import { barBeat, describeClip } from './ClipText.js'
 import { createClipButton } from './ClipButton.js'
+import { createLaneResize } from './LaneResize.js'
 import { attachMenu } from './ContextMenu.js'
 import { TimeView, DEFAULT_PIXELS_PER_BEAT } from './TimeView.js'
 import { DEFAULT_LANE_SIZE } from '../model/EditorState.js'
@@ -65,6 +66,8 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onAddAudio(trackId, startBeat)`: a new audio clip, from a file the page
  *   asks the person for.
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
+ * - `onLaneHeight(trackId, height)` and `onLaneReset(trackId)`: a lane dragged to a height of its own, and a double click on its grip to put it back.
+ *   Optional: without `onLaneHeight` a lane has no grip.
  * - `onLoops()`: open the loop library. Optional: without it the toolbar has no Loops button.
  * - `onRepeat(clipId, lengthBeats)` and `onStopRepeat(clipId)`: make a MIDI clip that long by repeating its pattern, and stop it
  *   repeating. Optional: without `onRepeat` a clip has no loop handle, no R key and no repeat menu items.
@@ -87,7 +90,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null, onLoops = null, onLaneHeight = null, onLaneReset = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -273,6 +276,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         })
         const lane = document.createElement('div')
         lane.className = 'timeline-lane'
+        // The grip to drag the lane taller or shorter, only where the page can keep a height; plus and minus do it by size without the pointer.
+        const grip = onLaneHeight ? createLaneResize(document, { lane, onCommit: height => onLaneHeight(track.id, height), onReset: () => onLaneReset?.(track.id) }) : null
         // The header and lane sit side by side; the chain strip is under both.
         const body = document.createElement('div')
         body.className = 'timeline-body'
@@ -294,7 +299,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
           })
         }
         row.append(body, automation.element, strip.element)
-        entry = { row, header, lane, strip, automation }
+        entry = { row, header, lane, grip, strip, automation }
         rows.set(track.id, entry)
       }
       const own = clips.filter(c => c.track === track.id)
@@ -304,6 +309,9 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       entry.row.setAttribute('aria-label', `Track ${label}`)
       const layout = layoutFor(track)
       entry.row.dataset.size = layout.laneSize
+      // A height of its own, dragged to, replaces the height of the size; a collapsed lane stays a bar.
+      if (layout.laneHeight && layout.laneSize !== 'collapsed') entry.lane.style.minHeight = `${layout.laneHeight}px`
+      else entry.lane.style.removeProperty('min-height')
       if (layout.color) entry.row.style.setProperty('--track-color', layout.color); else entry.row.style.removeProperty('--track-color')
       entry.header.update({
         label, channel: track.channel ?? {}, mixable: mixable(track), silent: silent(track), at, where: barBeat(at, beatsPerBar), selected: selection.has('track', track.id),
@@ -320,6 +328,8 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
         peaks: clip.kind === 'audio' ? peaksFor(clip, Math.max(1, Math.round(clip.lengthBeats * ppb() / 3))) : null,
         problem: clip.kind === 'audio' ? unplayable(clip) : null
       })))
+      // The clips are replaced on every draw, and the grip is not one of them.
+      if (entry.grip) entry.lane.append(entry.grip)
       return entry.row
     })
     // Only when the list differs, so a redraw that changes no track's place

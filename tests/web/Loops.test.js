@@ -16,7 +16,8 @@ const index = {
 }
 const instruments = [
   { iri: 'https://example.test/plugins/drumkit/', homepage: 'https://example.test/kit/', label: 'DrumKit', comment: 'Drums.', roles: ['Instrument', 'DrumInstrument'], web: true },
-  { iri: 'https://example.test/plugins/pulse/', homepage: 'https://example.test/pulse/', label: 'Pulse', comment: 'A synth.', roles: ['Instrument'], web: true }
+  { iri: 'https://example.test/plugins/pulse/', homepage: 'https://example.test/pulse/', label: 'Pulse', comment: 'A synth.', roles: ['Instrument'], web: true },
+  { iri: 'https://example.test/plugins/quartet/', homepage: 'https://example.test/quartet/', label: 'Quartet', comment: 'An FM synth.', roles: ['Instrument'], web: true }
 ]
 
 const realFetch = globalThis.fetch
@@ -183,6 +184,24 @@ describe('adding a loop with no track for it', () => {
     click(document, 'Add Walk')
     await settle()
     expect(loaded[0].url).toBe('https://example.test/pulse/')
+  })
+
+  it('uses the sound a loop names, in place of the usual one for its kind', async () => {
+    const { loops, document, loaded } = setup({ fetchResult: { ok: true, status: 200, json: async () => ({ ...index, loops: [index.loops[0], { ...index.loops[1], voice: 'quartet' }] }) } })
+    await loops.open()
+    click(document, 'Add Walk')
+    await settle()
+    expect(loaded[0].url).toBe('https://example.test/quartet/')
+  })
+
+  it('says there is no such sound when the one a loop names cannot be run, and adds nothing', async () => {
+    const { loops, document, loaded, applied, logs } = setup({ fetchResult: { ok: true, status: 200, json: async () => ({ ...index, loops: [index.loops[0], { ...index.loops[1], voice: 'absent' }] }) } })
+    await loops.open()
+    click(document, 'Add Walk')
+    await settle()
+    expect(loaded).toEqual([])
+    expect(applied).toEqual([])
+    expect(logs.some(l => /no absent here/.test(l.message))).toBe(true)
   })
 
   it('gives a track made for a loop the level the loop suggests, and a loop with no suggestion no change to the fader', async () => {

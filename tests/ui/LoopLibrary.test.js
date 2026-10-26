@@ -38,6 +38,9 @@ describe('checkLoop', () => {
       [{ gain: -1 }, /gain that is not from 0 to 2/],
       [{ gain: 3 }, /gain that is not from 0 to 2/],
       [{ gain: 'loud' }, /gain that is not from 0 to 2/],
+      [{ voice: '' }, /voice that is not a plugin directory name/],
+      [{ voice: 7 }, /voice that is not a plugin directory name/],
+      [{ voice: '../x' }, /voice that is not a plugin directory name/],
       [{ notes: [] }, /at least one note/],
       [{ notes: [{ startBeat: -1, lengthBeats: 1, pitch: 60, velocity: 90 }] }, /note 0 starts before the loop/],
       [{ notes: [{ startBeat: 0, lengthBeats: 0, pitch: 60, velocity: 90 }] }, /note 0 has no length/],
@@ -337,5 +340,19 @@ describe('the loop dialog', () => {
   it('says there are none, rather than showing an empty dialog, when it has no loops', () => {
     const { element } = build({ groups: [] })
     expect(element.textContent).toMatch(/There are no loops to offer/)
+  })
+})
+
+describe('the shipped library', () => {
+  it('names only voices that are plugins in the catalogue, so a loop never asks for a sound that is not there', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { resolve } = await import('node:path')
+    const root = resolve(import.meta.dirname, '../..')
+    const library = JSON.parse(readFileSync(resolve(root, 'web/loops/index.json'), 'utf8'))
+    const catalogue = JSON.parse(readFileSync(resolve(root, 'plugins/index.json'), 'utf8'))
+    const directories = JSON.stringify(catalogue)
+    const named = library.loops.filter(l => l.voice).map(l => l.voice)
+    expect(named.length).toBeGreaterThan(0)
+    for (const voice of named) expect(directories, `no plugin directory ${voice}`).toContain(`/${voice}/`)
   })
 })

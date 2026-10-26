@@ -31,6 +31,7 @@ export const FROM = Object.freeze({
   // Play, stop and the things a person needs the first minute.
   '#toggle-browser': 'simple',
   '#toggle-keys': 'simple',
+  '#rewind': 'simple',
   '#play': 'simple',
   '#stop': 'simple',
   '#loop': 'simple',

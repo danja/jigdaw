@@ -63,7 +63,7 @@ export function createDockPanel (ctx) {
     onLevelShift: decibels => shift(describeLevelShift, decibels),
     onPanShift: amount => shift(describePanShift, amount),
     onColor: color => { for (const id of ctx.selection.ids) layoutOf(id, { color }) },
-    onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize }) },
+    onSize: laneSize => { for (const id of ctx.selection.ids) layoutOf(id, { laneSize, laneHeight: null }) },
     onFolder: folder => { for (const id of ctx.selection.ids) layoutOf(id, { folder }) },
     onExportMidi: () => exportMidi(ctx.selection.ids),
     onBus: label => {
@@ -150,7 +150,7 @@ export function createDockPanel (ctx) {
       if (!result.ok) log(result.message, 'error')
     },
     onColor: (id, color) => layoutOf(id, { color }),
-    onSize: (id, laneSize) => layoutOf(id, { laneSize }),
+    onSize: (id, laneSize) => layoutOf(id, { laneSize, laneHeight: null }),
     onFolder: (id, folder) => layoutOf(id, { folder }),
     onGroupLevel: (id, decibels) => shift(describeLevelShift, decibels, groupMembers(ctx.dispatcher.project, id)),
     onGroupPan: (id, amount) => shift(describePanShift, amount, groupMembers(ctx.dispatcher.project, id)),

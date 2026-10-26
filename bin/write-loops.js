@@ -115,10 +115,10 @@ function deepHouse () {
   const common = { bpm: DEEP_HOUSE.bpm, lengthBeats: 4 * DEEP_HOUSE.bars, licence: LICENCE }
   // Track levels that balance the four parts on the instruments the host gives them and leave the master room to add them, set from measured
   // peaks (docs/learning-curve.md). The first try balanced the parts and clipped the master, because four balanced parts still add.
-  const gains = { drums: 0.5, bass: 1, stabs: 0.3, pad: 0.22 }
+  const gains = { drums: 0.5, bass: 0.5, stabs: 0.3, pad: 0.22 }
   const loops = [
     { id: 'deep-house-drums', label: 'Deep house drums', kind: 'drums', gain: gains.drums, ...common, about: 'Kick on every beat, clap on two and four, open hat on the offbeats, and a busy hat with a fifth of its hits missing: four rules, no written notes.', notes: drumNotes },
-    { id: 'deep-house-bass', label: 'Deep house bass', kind: 'bass', key: DEEP_HOUSE.key, gain: gains.bass, ...common, about: 'Five hits a bar, each the root of the chord of that bar in one of two octaves: a rubbery bass line that follows Am7, Fmaj7, Dm7 and Em7.', notes: bassNotes },
+    { id: 'deep-house-bass', label: 'Deep house bass', kind: 'bass', voice: 'quartet', key: DEEP_HOUSE.key, gain: gains.bass, ...common, about: 'Five hits a bar, each the root of the chord of that bar in one of two octaves: a rubbery bass line that follows Am7, Fmaj7, Dm7 and Em7.', notes: bassNotes },
     { id: 'deep-house-stabs', label: 'Deep house stabs', kind: 'chords', key: DEEP_HOUSE.key, gain: gains.stabs, ...common, about: 'The whole chord struck on four offbeat hits a bar, for an electric piano.', notes: stabNotes },
     { id: 'deep-house-pad', label: 'Deep house pad', kind: 'chords', key: DEEP_HOUSE.key, gain: gains.pad, ...common, about: 'Each chord held for its bar, for strings: the one part that is written and not made by a rule.', notes: padNotes }
   ]

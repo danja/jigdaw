@@ -992,6 +992,13 @@ jig:laneSize a owl:DatatypeProperty ;
         metadata. Small when absent: it was medium until 2026-10-10, and a session written before then that
         said nothing is drawn small now.""" .
 
+jig:laneHeight a owl:DatatypeProperty ;
+    rdfs:domain jig:Track ; rdfs:range xsd:integer ;
+    rdfs:label "lane height" ;
+    rdfs:comment """How tall the track's lane is drawn, in pixels, when it has been dragged to a height of its own.
+        Editor metadata, and when present it replaces the height of the track's jig:laneSize; absent, the lane is the
+        height of its size. A whole number from 24 to 800. Choosing a size again puts the height away.""" .
+
 jig:folder a owl:DatatypeProperty ;
     rdfs:domain jig:Track ; rdfs:range xsd:string ;
     rdfs:label "folder" ;

@@ -30,6 +30,8 @@ export function checkLoop (loop) {
   if (loop.bpm !== undefined && !(Number.isFinite(loop.bpm) && loop.bpm > 0)) fail(loop, 'has a tempo that is not above zero')
   // A suggested level for the track the loop gets when it is added with a track of its own, so the parts of a set start in balance.
   if (loop.gain !== undefined && !(Number.isFinite(loop.gain) && loop.gain >= 0 && loop.gain <= 2)) fail(loop, 'has a gain that is not from 0 to 2')
+  // The directory of the plugin that should play this loop, where it asks for one other than the kind's usual voice.
+  if (loop.voice !== undefined && !(typeof loop.voice === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(loop.voice))) fail(loop, 'has a voice that is not a plugin directory name')
   if (!Array.isArray(loop.notes) || loop.notes.length === 0) fail(loop, 'needs at least one note')
   for (const [i, note] of loop.notes.entries()) {
     const where = `note ${i}`

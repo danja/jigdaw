@@ -13428,6 +13428,7 @@ var init_Vocabulary = __esm({
         order: `${JIG}order`,
         color: `${JIG}color`,
         laneSize: `${JIG}laneSize`,
+        laneHeight: `${JIG}laneHeight`,
         folder: `${JIG}folder`,
         folderCollapsed: `${JIG}folderCollapsed`,
         // Scripts saved with a session. docs/project-format.md.
@@ -23300,6 +23301,8 @@ var Engine = class {
 
 // src/model/EditorState.js
 var LANE_SIZES = Object.freeze(["collapsed", "small", "medium", "large"]);
+var MIN_LANE_HEIGHT = 24;
+var MAX_LANE_HEIGHT = 800;
 var DEFAULT_LANE_SIZE = "small";
 var MAX_FOLDER_NAME = 60;
 var COLOR = /^#[0-9a-f]{6}$/;
@@ -23326,7 +23329,7 @@ var EditorState = class _EditorState {
   }
   /** Layout of one track. `order` is null until a person has placed it. */
   track(id) {
-    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) };
+    return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, laneHeight: null, ...this.#tracks.get(id) };
   }
   setTrack(id, patch) {
     const next = { ...this.#tracks.get(id) };
@@ -23351,6 +23354,12 @@ var EditorState = class _EditorState {
     if (patch.laneSize !== void 0) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(", ")}`);
       next.laneSize = patch.laneSize;
+    }
+    if (patch.laneHeight !== void 0) {
+      if (patch.laneHeight !== null && !(Number.isInteger(patch.laneHeight) && patch.laneHeight >= MIN_LANE_HEIGHT && patch.laneHeight <= MAX_LANE_HEIGHT)) {
+        throw new Error(`laneHeight must be a whole number of pixels from ${MIN_LANE_HEIGHT} to ${MAX_LANE_HEIGHT}, or null`);
+      }
+      next.laneHeight = patch.laneHeight;
     }
     this.#tracks.set(id, next);
     this.#changed();
@@ -30447,11 +30456,12 @@ function writeEditor(project, { iri: iri4 } = {}) {
     lines.push(`<#${node.id}> ${term3(jig4.x)} ${decimal(x)} ; ${term3(jig4.y)} ${decimal(y)} .`);
   }
   for (const track of [...project.tracks].sort(byId)) {
-    const { order, color, laneSize, folder, folderCollapsed } = editor.track(track.id);
+    const { order, color, laneSize, laneHeight, folder, folderCollapsed } = editor.track(track.id);
     const parts = [];
     if (order !== null) parts.push(`${term3(jig4.order)} ${integer(order)}`);
     if (color !== null) parts.push(`${term3(jig4.color)} ${string(color)}`);
     if (laneSize !== DEFAULT_LANE_SIZE) parts.push(`${term3(jig4.laneSize)} ${string(laneSize)}`);
+    if (laneHeight !== null) parts.push(`${term3(jig4.laneHeight)} ${integer(laneHeight)}`);
     if (folder !== null) parts.push(`${term3(jig4.folder)} ${string(folder)}`);
     if (folderCollapsed) parts.push(`${term3(jig4.folderCollapsed)} true`);
     if (parts.length > 0) lines.push(`<#${track.id}> ${parts.join(" ; ")} .`);
@@ -30547,6 +30557,8 @@ function readEditor(dataset2, projectIri) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).color = quad3.object.value;
     } else if (p === jig5.laneSize) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).laneSize = quad3.object.value;
+    } else if (p === jig5.laneHeight) {
+      layout(idOf(quad3.subject.value, projectIri, "track layout")).laneHeight = number3(quad3.object, "laneHeight");
     } else if (p === jig5.folder) {
       layout(idOf(quad3.subject.value, projectIri, "track layout")).folder = quad3.object.value;
     } else if (p === jig5.folderCollapsed) {

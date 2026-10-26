@@ -30,7 +30,7 @@ starts on the simple page.
 
 ## The track view
 
-- **Tracks.** Rename, colour, three lane sizes, reorder (Alt with Up or Down on a name), select several
+- **Tracks.** Rename, colour, three lane sizes (or drag the bottom edge of a lane to any height; Escape cancels the drag), Level and Pan as small knobs in the row with Mute and Solo, reorder (Alt with Up or Down on a name), select several
   and edit them together, delete with their plugins in one undoable step. A track says its own latency
   and how much it was delayed to line up with the others.
 - **Timeline.** A ruler with zoom, a snap grid (bar, beat, halves, quarters, eighths, off), a loop row with
@@ -219,7 +219,7 @@ starts on the simple page.
 
 ## The plugins
 
-**34 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
+**35 plugins** are served beside the page, written in Rust, C++, JavaScript and JSFX, each described by a
 profile and loadable by its IRI:
 
 - *Instruments:* Pulse (subtractive), Canticle (tonal), DrumKit, Mop (OPL3 FM), 8-Bit 8asterd (AY chip).

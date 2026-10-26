@@ -99,7 +99,7 @@ describe('the step list and the page', () => {
 
   it('puts every transport control in a named group, so a screen reader hears where it is', () => {
     const groups = [...document.querySelectorAll('.transport [role="group"]')]
-    expect(groups.map(g => g.getAttribute('aria-label'))).toEqual(['Sounds and help', 'Play', 'Tempo and time', 'Input', 'Edit', 'File', 'More', 'Output'])
+    expect(groups.map(g => g.getAttribute('aria-label'))).toEqual(['Tempo and time', 'Input', 'Edit', 'File', 'More', 'Output', 'Sounds and help', 'Play'])
     const loose = [...document.querySelectorAll('.transport button, .transport select:not(#show-step), .transport input:not([type=file]):not(#show-step)')]
       .filter(el => !el.closest('[role="group"]'))
     expect(loose.map(el => el.id)).toEqual([])
@@ -115,7 +115,7 @@ describe('the step list and the page', () => {
 
   it('writes the words beside the icon on the five buttons that matter first, and on no others', () => {
     const wordy = [...document.querySelectorAll('.transport button[data-words]')].map(b => b.id)
-    expect(wordy).toEqual(['play', 'stop', 'record', 'save', 'open'])
+    expect(wordy.sort()).toEqual(['open', 'play', 'record', 'save', 'stop'])
   })
 
   it('has a place to say where a tab is when the step does not draw it', () => {

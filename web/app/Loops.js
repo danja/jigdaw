@@ -50,8 +50,8 @@ export function createLoops (ctx) {
   }
 
   /** The instrument that suits a kind of loop, found among the plugins this host can run. */
-  async function voiceFor (kind) {
-    const directory = KINDS.find(k => k.kind === kind).voice
+  async function voiceFor (kind, voice = null) {
+    const directory = voice ?? KINDS.find(k => k.kind === kind).voice
     instruments ??= (await ctx.browser.catalogue().search({ role: 'Instrument', limit: MAX_RESULTS })).results
     const sound = soundsFrom(instruments).find(s => directoryOf(s.iri) === directory)
     if (!sound) throw new Error(`there is no ${directory} here to play a ${kind} loop`)
@@ -100,7 +100,7 @@ export function createLoops (ctx) {
           trackId = track.id
           startBeat = Math.max(0, Math.round(ctx.transport.position().beat))
         } else {
-          const voice = await voiceFor(loop.kind)
+          const voice = await voiceFor(loop.kind, loop.voice)
           const loaded = await ctx.loading.loadPlugin(voice.load, { newTrack: true })
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`)
           trackId = loaded.trackId
@@ -142,7 +142,7 @@ export function createLoops (ctx) {
         }
         const made = []
         for (const loop of parts) {
-          const voice = await voiceFor(loop.kind)
+          const voice = await voiceFor(loop.kind, loop.voice)
           const loaded = await ctx.loading.loadPlugin(voice.load, { newTrack: true })
           if (!loaded) throw new Error(`${voice.label} did not load, so there is nothing to play ${loop.label}. The log says why.`)
           const applied = d.apply([

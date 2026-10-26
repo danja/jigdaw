@@ -307,6 +307,7 @@ export const vocabulary = Object.freeze({
     order: `${JIG}order`,
     color: `${JIG}color`,
     laneSize: `${JIG}laneSize`,
+    laneHeight: `${JIG}laneHeight`,
     folder: `${JIG}folder`,
     folderCollapsed: `${JIG}folderCollapsed`,
 

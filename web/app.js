@@ -140,6 +140,8 @@ $('collectionbar').addEventListener('submit', e => {
   browser.openCollection($('collection').value.trim()).catch(error => log(error.message, 'error'))
 })
 $('play').addEventListener('click', () => transport.play().catch(error => log(error.message, 'error')))
+// Back to the start of the piece, whether it is playing or stopped: while playing it carries on from there, and stopped it is where Play will begin.
+$('rewind').addEventListener('click', () => { try { transport.seek(0) } catch (error) { log(error.message, 'error') } })
 $('stop').addEventListener('click', () => {
   // The take first, so nothing after the last captured quantum trails in,
   // then the transport. Idle when nothing records: still just stopping.

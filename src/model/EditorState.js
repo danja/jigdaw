@@ -7,6 +7,9 @@
 // docs/project-format.md, "Two graphs".
 
 export const LANE_SIZES = Object.freeze(['collapsed', 'small', 'medium', 'large'])
+// The least and most a lane may be dragged to, in pixels. A lane under 24 is a bar nothing can be done on, and past 800 is more than any screen.
+export const MIN_LANE_HEIGHT = 24
+export const MAX_LANE_HEIGHT = 800
 // Small, so that a piece of seven tracks fits a screen: a row is the track's name and its mute and solo, and the rest of its
 // controls are a size up or in the Mixer tab. Absent in a file means this, and it is not written.
 export const DEFAULT_LANE_SIZE = 'small'
@@ -34,7 +37,7 @@ export class EditorState {
   }
 
   /** Layout of one track. `order` is null until a person has placed it. */
-  track (id) { return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, ...this.#tracks.get(id) } }
+  track (id) { return { order: null, color: null, folder: null, folderCollapsed: false, laneSize: DEFAULT_LANE_SIZE, laneHeight: null, ...this.#tracks.get(id) } }
 
   setTrack (id, patch) {
     const next = { ...this.#tracks.get(id) }
@@ -59,6 +62,12 @@ export class EditorState {
     if (patch.laneSize !== undefined) {
       if (!LANE_SIZES.includes(patch.laneSize)) throw new Error(`laneSize must be one of ${LANE_SIZES.join(', ')}`)
       next.laneSize = patch.laneSize
+    }
+    if (patch.laneHeight !== undefined) {
+      if (patch.laneHeight !== null && !(Number.isInteger(patch.laneHeight) && patch.laneHeight >= MIN_LANE_HEIGHT && patch.laneHeight <= MAX_LANE_HEIGHT)) {
+        throw new Error(`laneHeight must be a whole number of pixels from ${MIN_LANE_HEIGHT} to ${MAX_LANE_HEIGHT}, or null`)
+      }
+      next.laneHeight = patch.laneHeight
     }
     this.#tracks.set(id, next)
     this.#changed()

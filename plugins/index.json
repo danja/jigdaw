@@ -1334,6 +1334,97 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/quartet/",
+      "label": "Quartet",
+      "comment": "Eight-voice four-operator FM synthesiser with eleven algorithms, band-limited sine, saw and square operators, per-operator envelopes, feedback, optional 2x oversampling, a pitch envelope and a multimode filter. It opens as a mono bass.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/quartet/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "Instrument",
+        "AudioInstrument"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Midi"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [
+        "http://purl.org/stuff/jigdaw/MidiEvents"
+      ],
+      "cautions": [
+        "It opens as a bass: algorithm 1, mono, a 24 dB low-pass at 2.4 kHz. Set Play Mode to Poly for chords.",
+        "A ninth note steals the quietest voice rather than being refused.",
+        "The panel does not draw the routing or the filter response the VST3 does; the algorithm is named in its choice list instead."
+      ],
+      "parameters": [
+        "opa_wave",
+        "opa_fixed",
+        "opa_ratio",
+        "opa_fine",
+        "opa_fixed_hz",
+        "opa_level",
+        "opa_attack",
+        "opa_decay",
+        "opa_sustain",
+        "opa_release",
+        "opb_wave",
+        "opb_fixed",
+        "opb_ratio",
+        "opb_fine",
+        "opb_fixed_hz",
+        "opb_level",
+        "opb_attack",
+        "opb_decay",
+        "opb_sustain",
+        "opb_release",
+        "opc_wave",
+        "opc_fixed",
+        "opc_ratio",
+        "opc_fine",
+        "opc_fixed_hz",
+        "opc_level",
+        "opc_attack",
+        "opc_decay",
+        "opc_sustain",
+        "opc_release",
+        "opd_wave",
+        "opd_fixed",
+        "opd_ratio",
+        "opd_fine",
+        "opd_fixed_hz",
+        "opd_level",
+        "opd_attack",
+        "opd_decay",
+        "opd_sustain",
+        "opd_release",
+        "algorithm",
+        "feedback",
+        "depth",
+        "pitch_env",
+        "pitch_env_amount",
+        "pitch_attack",
+        "pitch_decay",
+        "pitch_sustain",
+        "pitch_release",
+        "filter_type",
+        "cutoff",
+        "resonance",
+        "key_track",
+        "master",
+        "velocity",
+        "bend_range",
+        "quality",
+        "play_mode",
+        "glide"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/quefrency/",
       "label": "Quefrency",
       "comment": "Separates its input through the cepstrum into a formant envelope and a harmonic structure, shifts and reshapes each independently, and multiplies them back together.",

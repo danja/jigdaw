@@ -77,9 +77,13 @@ export function createArrangement (ctx) {
     onSizeStep: (trackId, by) => {
       const { laneSize } = ctx.dispatcher.project.trackLayout(trackId)
       const next = LANE_SIZES[LANE_SIZES.indexOf(laneSize) + by]
-      if (next) ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: next })
+      // Choosing a size puts a dragged height away, so plus and minus always do what they say.
+      if (next) ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: next, laneHeight: null })
     },
-    onExpandTrack: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: 'small' }),
+    onExpandTrack: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: 'small', laneHeight: null }),
+    // The grip along a lane's bottom edge: a height of its own, kept with the layout, and put back by a double click.
+    onLaneHeight: (trackId, height) => ctx.dispatcher.project.setTrackLayout(trackId, { laneHeight: height }),
+    onLaneReset: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneHeight: null }),
     // The toolbar's Add track opens the chooser, which has An empty track in it.
     onAddTrack: () => ctx.addTrack.open(),
     onLoops: () => ctx.loops.open(),
@@ -338,6 +342,8 @@ export function createArrangement (ctx) {
     if (!clip || clip.kind !== 'midi') return
     const track = project.tracks.find(t => t.id === clip.track)
     pianoRoll.show(clip, { beatsPerBar: project.transport.beatsPerBar, label: ctx.rack.trackLabel(track, project.tracks.indexOf(track)) })
+    // The dock sits below the timeline, off screen on a short window, so opening the roll looked like nothing happened.
+    pianoRoll.element.scrollIntoView?.({ block: 'nearest' })
   }
 
   /**
