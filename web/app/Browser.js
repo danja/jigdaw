@@ -266,5 +266,61 @@ export function createBrowser (ctx) {
     }
   }
 
-  return { search, openCollection, loadCollection, catalogue: () => browserCatalogue(document) }
+  /**
+   * Modal browser: a floating dialog over the page, keyboard-first. Used by the
+   * FX button (and anywhere a plugin is wanted without leaving the current
+   * view). Selecting a result loads it onto the target track and closes.
+   */
+  function openModal (trackId) {
+    if (trackId !== undefined && trackId !== null) ctx.rack.loadedOnto(trackId)
+    const dialog = document.createElement('dialog')
+    dialog.className = 'plugin-browser-modal'
+    const box = document.createElement('div')
+    box.className = 'plugin-browser'
+    const input = document.createElement('input')
+    input.type = 'search'
+    input.placeholder = 'Search plugins'
+    input.setAttribute('aria-label', 'Search plugins')
+    const results = document.createElement('div')
+    results.className = 'results'
+    box.append(input, results)
+    dialog.append(box)
+    document.body.append(dialog)
+
+    async function runSearch () {
+      const text = input.value.trim()
+      try {
+        const body = await browserCatalogue(document).search({ text, limit: MAX_RESULTS })
+        results.textContent = ''
+        for (const r of body.results) {
+          if (!r.web) continue
+          const row = document.createElement('div')
+          row.className = 'result'
+          const name = document.createElement('button')
+          name.type = 'button'
+          name.textContent = r.label ?? r.iri
+          name.addEventListener('click', async () => {
+            await ctx.loading.loadPlugin(r.homepage ?? r.iri).catch(() => {})
+            dialog.close()
+          })
+          row.append(name)
+          results.append(row)
+        }
+        if (results.children.length === 0) {
+          const empty = document.createElement('p')
+          empty.className = 'note'
+          empty.textContent = `Nothing matched ${text}.`
+          results.append(empty)
+        }
+      } catch (error) { results.textContent = error.message }
+    }
+    input.addEventListener('input', () => { clearTimeout(input._t); input._t = setTimeout(runSearch, 200) })
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(input._t); runSearch() } })
+    dialog.addEventListener('close', () => dialog.remove())
+    dialog.showModal()
+    input.focus()
+    runSearch()
+  }
+
+  return { search, openCollection, loadCollection, openModal, catalogue: () => browserCatalogue(document) }
 }

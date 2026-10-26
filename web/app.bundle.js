@@ -34562,7 +34562,7 @@ function createRack(ctx2) {
   function addPluginTo(trackId) {
     loadTarget = trackId;
     drawTargets();
-    ctx2.layout.showBrowser(true);
+    ctx2.browser.openModal(trackId);
   }
   function removePlugin(nodeId) {
     const node = ctx2.dispatcher.project.node(nodeId);
@@ -41758,7 +41758,67 @@ function createBrowser(ctx2) {
       log2(`search failed: ${error2.message}`, "error");
     }
   }
-  return { search, openCollection, loadCollection, catalogue: () => browserCatalogue(document2) };
+  function openModal(trackId) {
+    if (trackId !== void 0 && trackId !== null) ctx2.rack.loadedOnto(trackId);
+    const dialog = document2.createElement("dialog");
+    dialog.className = "plugin-browser-modal";
+    const box = document2.createElement("div");
+    box.className = "plugin-browser";
+    const input = document2.createElement("input");
+    input.type = "search";
+    input.placeholder = "Search plugins";
+    input.setAttribute("aria-label", "Search plugins");
+    const results = document2.createElement("div");
+    results.className = "results";
+    box.append(input, results);
+    dialog.append(box);
+    document2.body.append(dialog);
+    async function runSearch() {
+      const text = input.value.trim();
+      try {
+        const body = await browserCatalogue(document2).search({ text, limit: MAX_RESULTS });
+        results.textContent = "";
+        for (const r of body.results) {
+          if (!r.web) continue;
+          const row = document2.createElement("div");
+          row.className = "result";
+          const name2 = document2.createElement("button");
+          name2.type = "button";
+          name2.textContent = r.label ?? r.iri;
+          name2.addEventListener("click", async () => {
+            await ctx2.loading.loadPlugin(r.homepage ?? r.iri).catch(() => {
+            });
+            dialog.close();
+          });
+          row.append(name2);
+          results.append(row);
+        }
+        if (results.children.length === 0) {
+          const empty = document2.createElement("p");
+          empty.className = "note";
+          empty.textContent = `Nothing matched ${text}.`;
+          results.append(empty);
+        }
+      } catch (error2) {
+        results.textContent = error2.message;
+      }
+    }
+    input.addEventListener("input", () => {
+      clearTimeout(input._t);
+      input._t = setTimeout(runSearch, 200);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        clearTimeout(input._t);
+        runSearch();
+      }
+    });
+    dialog.addEventListener("close", () => dialog.remove());
+    dialog.showModal();
+    input.focus();
+    runSearch();
+  }
+  return { search, openCollection, loadCollection, openModal, catalogue: () => browserCatalogue(document2) };
 }
 
 // web/app/Sessions.js

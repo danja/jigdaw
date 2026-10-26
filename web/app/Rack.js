@@ -97,7 +97,7 @@ export function createRack (ctx) {
   function addPluginTo (trackId) {
     loadTarget = trackId
     drawTargets()
-    ctx.layout.showBrowser(true)
+    ctx.browser.openModal(trackId)
   }
 
   /** The FX list's Remove: the same Op as Remove on the Plugins tab, healing the chain where it stood. */
