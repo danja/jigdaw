@@ -204,3 +204,12 @@ curling through a real nginx rather than by reading the configuration.
 - Whether plugin resources are served by `app` or by nginx directly. Directly is faster and
   puts the CORS and media-type rules into nginx, where they are easier to get wrong and
   harder to test.
+
+## The app as a zip
+
+`npm run build:app` writes `dist/jiggy.zip`: the page, the plugins it loads (each profile and the files it names, no sources or
+build output), `src/`, the shapes and examples the page fetches, and `bin/serve.js` with a trimmed `package.json`. It leaves out the
+tests, the documentation and the plugin gallery. Unzip it, run `npm install --omit=dev` and `npm start`, and it serves on
+`127.0.0.1:8748` as the repository does. The same command runs in `.github/workflows/app-zip.yml`, which keeps the zip as a workflow
+artifact on every push to `main` and attaches it to the release when a tag beginning with `v` is pushed. `tests/bin/package-app.test.js`
+starts the server from the staged folder and asks for everything the page precaches, which is what notices a file left out.

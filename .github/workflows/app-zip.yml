@@ -1,0 +1,50 @@
+# .github/workflows/app-zip.yml
+#
+# Builds jiggy.zip: the Jiggy app on its own, as a folder that unzips and runs (bin/package-app.js says what goes in and
+# what does not). Every push to main and every manual run leaves the zip as a workflow artifact; pushing a tag that starts
+# with v also attaches it to the release for that tag, creating the release if it is not there.
+#
+# The page is rebuilt from its sources first rather than taken as committed, so the zip never carries a stale bundle even if
+# a commit forgot to regenerate one. ci.yml is what fails a commit that did.
+name: App zip
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zip:
+    name: jiggy.zip
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # attaching the zip to a release; unused on a branch push
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: rebuild the page and its offline list
+        run: npm run build:web
+      - name: the packaging test, which starts the staged server and fetches what the page asks for
+        run: npx vitest run tests/bin/package-app.test.js
+      - name: build the zip
+        run: npm run build:app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jiggy
+          path: dist/jiggy.zip
+          if-no-files-found: error
+      - name: attach it to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/jiggy.zip --clobber

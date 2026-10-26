@@ -20,6 +20,7 @@
     "check:layout": "node bin/check-layout.js",
     "check:alignment": "node bin/build-web.js && node bin/build-precache.js && node bin/check-alignment.js",
     "build:web": "node bin/build-web.js && node bin/build-precache.js",
+    "build:app": "node bin/package-app.js",
     "serve": "node bin/serve.js",
     "mcp-bridge": "node bin/mcp-bridge.js",
     "build:vocab": "node bin/build-vocab-site.js",

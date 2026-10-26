@@ -382,12 +382,12 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, measured at a real phone width.
 - [ ] **Agent-driven arrangement.** An agent builds a track from profiles: chooses plugins by role, connects them, writes a
       clip. Regress with a scripted session against the real dispatcher.
-- [ ] **Replace the RDF libraries with `factoidal-core` (npm).** Today `@zazuko/env`, `@rdfjs/parser-n3` and
+- [ ] **Replace the RDF libraries with `factoidal/core` (npm).** Today `@zazuko/env`, `@rdfjs/parser-n3` and
       `rdf-validate-shacl` do the parsing, dataset and SHACL work. Find every import of them (`src/rdf/`, `src/validate/`, `bin/`),
-      list what each one is used for, and move them onto `factoidal-core` behind the existing modules so callers do not change.
+      list what each one is used for, and move them onto `factoidal/core` behind the existing modules so callers do not change.
       Do it before live collaboration, which builds its RDF mapping and canonical form on whichever library is left. Gate: the
       full suite, `tests/rdf/Canonical.test.js` over every tracked `.ttl`, the shape counterexample counts and the 3000 note
-      round-trip timing all unchanged. Check first that `factoidal-core` runs in the browser bundle and in node 20.
+      round-trip timing all unchanged. Check first that `factoidal/core` runs in the browser bundle and in node 20.
 - [ ] **Live collaboration** (a band of 3 or 4, remote). Design written 2026-10-26: [docs/collaboration.md](docs/collaboration.md).
       A CRDT replica (Yjs first) behind an RDF mapping derived from `vocabs/shapes.ttl`, wrapped in an envelope with a negotiated
       codec so the engine can change. Join by secret link and knock; "anyone with the link" is a room mode that stays open until

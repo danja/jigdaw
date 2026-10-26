@@ -9,9 +9,12 @@ plugin is, what signals it accepts and produces, what it needs from a host, and 
 WebAssembly module, its AudioWorklet processor and its user interface are, each with an
 integrity digest. There is no registry, and no install step distinct from having fetched it.
 
-The rest of this repository exists to support the specification: a host that runs the plugins in a
-browser, a second host that runs them as a VST3, 35 worked plugins, and a validator that
-enforces the specification on its own files.
+**The main purpose of this repository is to host the Jig specification**: the normative documents in
+[docs/](docs/), the vocabulary and shapes in [vocabs/](vocabs/), and the examples that validate against
+them. The code is here too, as sample applications that show the specification working and test it
+by implementing it: Jiggy, a host that runs the plugins in a browser ([below](#sample-applications)),
+a second host that runs them as a VST3, 35 worked plugins, and a validator that enforces the
+specification on its own files. None of it is required to use the format.
 
 The specification is published at [danja.github.io/jigdaw](https://danja.github.io/jigdaw/),
 rendered from the markdown in [docs/](docs/), which is the authoritative copy.
@@ -152,17 +155,53 @@ URIs, which any host already reads, and a `.jig` archive that unpacks into a wor
 origin. Both carry a provenance record and can carry an Ed25519 signature over a canonical
 form of the graph. See [plugin-bundles.md](docs/plugin-bundles.md).
 
-## The reference host
+## Sample applications
 
-There is a working digital audio workstation in the browser, called **Jiggy**: a plugin rack,
-an arbitrary directed graph with cycle refusal and latency compensation, a channel strip,
-transport, a catalogue search, sessions that save and reopen as RDF, and a WebMCP surface an
-agent can drive. `npm run serve`, then open the page.
+The code in this repository is sample code for the specification, and the first sample is a
+working digital audio workstation in the browser, called **Jiggy**: a plugin rack, an arbitrary
+directed graph with cycle refusal and latency compensation, a channel strip, transport, a
+catalogue search, sessions that save and reopen as RDF, and a WebMCP surface an agent can drive.
+It is a reference host, and a real one, and you can use it without reading the specification.
 
 **It is here to exercise the specification.** A normative document with no implementation is a
 claim about behaviour nobody has, and most of what this project has learned came from the host
-refusing to do what the specification said. It is a real DAW and it is not the point of the
-repository; if it disappeared, the format would still be the thing.
+refusing to do what the specification said. It is not the point of the repository; if it
+disappeared, the format would still be the thing.
+
+### Running Jiggy from the repository
+
+```sh
+npm install
+npm run serve          # http://127.0.0.1:8748/
+```
+
+Needs Node 20.11 or later. `PORT` and `HOST` set where it listens, and it is loopback only by default.
+
+### The Jiggy package
+
+Jiggy on its own, without the specification, the tests or the plugin sources, is one zip of about
+3 MB: the page, the plugins it loads, and the small server that gives the page its plugin
+catalogue.
+
+```sh
+unzip jiggy.zip -d jiggy && cd jiggy
+npm install --omit=dev
+npm start              # http://127.0.0.1:8748/
+```
+
+Get the zip from the **App zip** workflow on this repository's Actions tab (every push to `main`
+leaves one as an artifact), or from the Releases page for a tagged version. To build it yourself:
+
+```sh
+npm install
+npm run build:app      # writes dist/jiggy.zip
+```
+
+What goes in is decided by [bin/package-app.js](bin/package-app.js), which reads each plugin's own
+profile for the files it needs, and
+[tests/bin/package-app.test.js](tests/bin/package-app.test.js) starts the server from the unpacked
+folder and asks for everything the page asks for. [docs/deployment.md](docs/deployment.md) covers
+putting it behind a web server.
 
 [architecture.md](docs/architecture.md) covers the layers and why they are where they are. The
 separation that matters is that RDF persistence, the project model, the compiled audio graph
