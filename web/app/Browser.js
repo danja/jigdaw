@@ -207,6 +207,29 @@ export function createBrowser (ctx) {
     log(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? 'ok' : 'error')
   }
 
+  // Keyboard-first: Enter in the search box runs the search; in the results,
+  // ArrowUp/ArrowDown move between loadable plugins and Enter loads the
+  // focused one onto the target track (the Load onto menu). A mouse is not
+  // required for any of it.
+  function focusResult (index) {
+    const buttons = [...$('results').querySelectorAll('button')]
+    if (buttons.length === 0) return
+    const i = Math.max(0, Math.min(buttons.length - 1, index))
+    buttons[i].focus()
+  }
+
+  $('q').addEventListener('keydown', event => {
+    if (event.key === 'Enter') { event.preventDefault(); search() }
+  })
+  $('results').addEventListener('keydown', event => {
+    const buttons = [...$('results').querySelectorAll('button')]
+    if (buttons.length === 0) return
+    const current = buttons.indexOf(document.activeElement)
+    if (event.key === 'ArrowDown') { event.preventDefault(); focusResult(current < 0 ? 0 : current + 1) }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); focusResult(current < 0 ? buttons.length - 1 : current - 1) }
+    else if (event.key === 'Enter' && current >= 0) { event.preventDefault(); buttons[current].click() }
+  })
+
   async function search () {
     const text = $('q').value.trim()
     const facet = $('facet').value
@@ -219,7 +242,9 @@ export function createBrowser (ctx) {
         ...(facet ? { [facet.split('=')[0]]: facet.split('=')[1] } : {})
       })
       renderResults(body.results, text || facet)
-
+      // Keep the keyboard flow going: after a search, the first loadable
+      // result is focused, so Enter loads it without reaching for the mouse.
+      requestAnimationFrame(() => focusResult(0))
       if (body.upstreamError) {
         // The wider catalogue being down must not hide the plugins held here.
         log(`the wider catalogue is unavailable: ${body.upstreamError}`, 'error')

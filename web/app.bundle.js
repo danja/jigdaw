@@ -41699,6 +41699,33 @@ function createBrowser(ctx2) {
     }
     log2(`opened ${collection.label}: ${ready.length} of ${members.length} loadable`, ready.length > 0 ? "ok" : "error");
   }
+  function focusResult(index) {
+    const buttons = [...$2("results").querySelectorAll("button")];
+    if (buttons.length === 0) return;
+    const i2 = Math.max(0, Math.min(buttons.length - 1, index));
+    buttons[i2].focus();
+  }
+  $2("q").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      search();
+    }
+  });
+  $2("results").addEventListener("keydown", (event) => {
+    const buttons = [...$2("results").querySelectorAll("button")];
+    if (buttons.length === 0) return;
+    const current = buttons.indexOf(document2.activeElement);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusResult(current < 0 ? 0 : current + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusResult(current < 0 ? buttons.length - 1 : current - 1);
+    } else if (event.key === "Enter" && current >= 0) {
+      event.preventDefault();
+      buttons[current].click();
+    }
+  });
   async function search() {
     const text = $2("q").value.trim();
     const facet = $2("facet").value;
@@ -41709,6 +41736,7 @@ function createBrowser(ctx2) {
         ...facet ? { [facet.split("=")[0]]: facet.split("=")[1] } : {}
       });
       renderResults(body.results, text || facet);
+      requestAnimationFrame(() => focusResult(0));
       if (body.upstreamError) {
         log2(`the wider catalogue is unavailable: ${body.upstreamError}`, "error");
       }
