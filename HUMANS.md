@@ -62,15 +62,14 @@ is wrong in INBOX.md.
   usable at that width.
 - **Older checks still owed:** press Rec with the window in front, play, Stop, remove every plugin and play the takes; move
   Lookahead's Position while a parallel dry path plays beside it and listen for the realignment; and a real pointer through a
-  plugin's own editor frame (load `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on the
-  page's own origin is refused).
+  plugin's own editor frame (load `http://127.0.0.1:8748/plugins/tremolo/` and open its editor).
 - **Run the first-hour test** (2026-10-26, [docs/learning-curve.md](docs/learning-curve.md)): give someone who has used another DAW,
   and someone who has not, the eleven steps there with no instructions, and write down where each stopped in their words. The
   Show steps, start screen, Add a track chooser, grouped transport, clip repeat, light and dark themes and "More controls" were all
   checked by code and in Chrome, none by a person who did not build them. Also listen to the Hear button on each of the eight
   instruments, and to a DrumKit loaded through it.
 - **Listen to the new sounds and loops** (2026-10-26, nothing here has been heard, only measured): the four "Make notes for me" pairs in the Add a track chooser (BassGen with Pulse, MelGen with Canticle, Markov with Moka, Sprout with Monochord) and whether each pairing is a good one, DrumKit with DrumGen and the Feel pad, and the 19 loops and the Deep house set in the Loops dialog (`web/loops/index.json`), which were written as patterns and never played by a person. Add all of the deep house set and say whether it sounds like the recipe: the bass is Quartet (a mono FM bass, its default voicing) and the stabs and pad are Canticle, not the e-piano described, and there is no delay. Say which are weak or wrong, and whether Hear and Add feel right.
-- **Listen to Quartet and Octet and use Octet's editor** (2026-10-26, measured and checked in Chrome, never heard): Quartet's default bass and whether its algorithm and filter controls make sense; Octet on a real signal, its Drift controllers from a real controller, and its editor with a real mouse, the wheel for Q and the keys. The editor shows only for a plugin on another origin than its page, so load `http://localhost:8748/plugins/octet/` from the page on `127.0.0.1`.
+- **Listen to Quartet and Octet and use Octet's editor** (2026-10-26, measured and checked in Chrome, never heard): Quartet's default bass and whether its algorithm and filter controls make sense; Octet on a real signal, its Drift controllers from a real controller, and its editor with a real mouse, the wheel for Q and the keys. Load `http://127.0.0.1:8748/plugins/octet/` from the rack and click Open editor; headless Chrome shows the curves painting, but no person has dragged a band node yet.
 - **Deploy the help text:** the page loads plugins from their canonical address, so the help on Pulse's and DrumKit's controls (new 2026-10-26)
   shows on the live site only after a deploy; it was checked by loading the local copies. The same goes for the ranked controls and help on BassGen, DrumGen, MelGen, Moka, Monochord, Canticle and Mop, the pads' end labels, and `web/loops/index.json`. DrumKit's "More controls (61)" was deployed and is live.
 

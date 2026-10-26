@@ -242,9 +242,12 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
 
     // A plugin's own interface, where it has one. Beside the generated panel
     // rather than instead of it, so every plugin has controls this page drew
-    // and knows to be accessible, whatever its own editor is like. Not offered
-    // for an interface on this page's own origin, which contract 9.1 forbids
-    // framing: a button that can only ever refuse is a control nobody can use.
+    // and knows to be accessible, whatever its own editor is like. Offered only
+    // where the interface is fetchable over http or https, since a button that
+    // can only ever refuse is a control nobody can use. Same-origin counts: this
+    // page serves its own plugins, and PluginFrame reports that case as
+    // `sameOrigin` because the sandbox is then a document boundary, not a
+    // security one.
     if (profile?.ui && frameableOrigin(profile.ui.location, window.location.origin).ok) {
       const open = ctx.editors.isOpen(node.id)
       const toggle = document.createElement('button')

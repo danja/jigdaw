@@ -13,7 +13,7 @@ replacement for the editor a plugin may also have.
 |---|---|
 | `jig:skin` | The panel is the author's artwork, drawn and operated by the host. Ports it does not bind follow, generated |
 | no skin, or a skin that fails | The panel is generated from the port declarations |
-| `jig:ui`, as well as either | An editor beside the panel: the author's page, in a sandboxed frame on another origin |
+| `jig:ui`, as well as either | An editor beside the panel: the author's page, in a sandboxed frame, on the plugin's origin or the host's own |
 
 The panel is always there and always accessible, so a `jig:ui` never has to be. A skin that is
 refused or fails to load leaves the generated panel, and the editor, where there is one, is

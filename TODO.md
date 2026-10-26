@@ -129,10 +129,11 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       have no equivalent in a profile). The plotted response is held to the module's own audio within 0.15 dB for every shape at 48 and
       96 kHz. Seen in real Chrome with the page on `127.0.0.1` and the plugin on `localhost`: a real drag of a node, and the analyser
       following a held Quartet note through the relay. It accepts `trn:MidiCC`, not `trn:Midi`, as Quefrency does: with `trn:Midi` the
-      rack gave an equalizer a piano keyboard. Open: the editor shows only for a plugin on another origin than its page, so it is not
-      on strandz.it (contract 9.1); the generated panel's frequency knobs are linear, since a profile has no logarithmic hint (an
-      `pprops:logarithmic` port property would fix Octet, Quartet and every other frequency knob); the Drift controllers and the
-      editor have not been used by a person.
+      rack gave an equalizer a piano keyboard. The editor used to show only for a plugin on another origin, because contract 9.1
+      refused a same-origin frame, so it never appeared in Jiggy for a plugin Jiggy serves; 9.1 was changed the same day to allow it,
+      and `src/ui/PluginFrame.js` reports `sameOrigin` rather than claiming isolation. Open: the generated panel's frequency knobs are
+      linear, since a profile has no logarithmic hint (an `pprops:logarithmic` port property would fix Octet, Quartet and every other
+      frequency knob); the Drift controllers and the editor have not been used by a person.
 - [x] **Ported Downspout's Quartet to a Jig, opening as a bass, and made it the bass of the Deep house set** (asked 2026-10-26, done
       the same day). `plugins/quartet/`: freestanding C++ (`jig:Abi2`, 59 parameters, no state), checked against the original core
       compiled natively over four scripts (largest difference 6e-8 of full scale; a fixture holds the module to it). The defaults are

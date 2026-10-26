@@ -1,17 +1,22 @@
 // src/ui/PluginFrame.js
 //
-// A plugin's own user interface, in a sandboxed frame on another origin.
-// Contract section 9 and docs/messaging.md section 2.
+// A plugin's own user interface, in a frame of its own, never in the host
+// document. Contract section 9 and docs/messaging.md section 2.
 //
 // The frame is code the host does not control, so everything about it is a
 // boundary:
 //
-// - It MUST NOT be same-origin with the host (contract 9.1). An interface
-//   served from the host's own origin is refused rather than framed. The
-//   sandbox keeps allow-same-origin so the frame has its own, real origin:
-//   without it the origin is opaque, a message to it can only be addressed to
-//   "*", and messaging.md 2.1 forbids "*" in both directions. Cross-origin by
-//   URL and sandboxed by attribute together are what 9.1 asks for.
+// - It is always an iframe with a sandbox attribute, and never markup in the
+//   host document (9.1). The sandbox keeps allow-same-origin so the frame has
+//   its own, real origin: without it the origin is opaque, a message to it can
+//   only be addressed to "*", and messaging.md 2.1 forbids "*" in both
+//   directions.
+// - An interface on the host's own origin is framed only because the host
+//   serves it, and then it runs with the page's access: the frame is a
+//   document boundary, not a security boundary. That is the host vouching for
+//   its own plugin's code, and `frameableOrigin` reports it as `sameOrigin` so
+//   a caller can say so rather than claim isolation. A plugin the host does
+//   not serve comes from another origin, where the sandbox does isolate it.
 // - A message is accepted only from that frame's window and only from its
 //   origin (2.1), and is sent only to that origin.
 // - It gets no reference to the context, the node, the port or the project
@@ -27,7 +32,11 @@ export const FRAME_HEIGHT = Object.freeze({ minimum: 80, maximum: 900 })
 
 /**
  * Whether an interface at `location` may be framed by a host at `hostOrigin`.
- * Returns `{ ok, origin }` or `{ ok: false, message }`.
+ * Returns `{ ok, origin, sameOrigin }` or `{ ok: false, message }`.
+ *
+ * A location on the host's own origin is accepted: a host may serve a plugin
+ * itself, and contract 9.1 lets it offer that plugin's editor. The frame then
+ * runs with the host's access, so `sameOrigin` is reported rather than hidden.
  */
 export function frameableOrigin (location, hostOrigin) {
   let url
@@ -35,14 +44,7 @@ export function frameableOrigin (location, hostOrigin) {
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     return { ok: false, message: `a plugin interface is fetched over http or https, not ${url.protocol}` }
   }
-  if (url.origin === hostOrigin) {
-    return {
-      ok: false,
-      message: `the interface at ${location} is on this page's own origin, and contract section 9.1 ` +
-        'forbids framing it there: it would run with this page\'s access. Serve the plugin from another origin.'
-    }
-  }
-  return { ok: true, origin: url.origin }
+  return { ok: true, origin: url.origin, sameOrigin: url.origin === hostOrigin }
 }
 
 /**
@@ -77,8 +79,8 @@ function rateLimit (limit, now) {
  *   what the frame asked for. A parameter request is only a request.
  * - `onRefused(message)`: told once when a relay payload is dropped for rate.
  *
- * Returns `{ element, parameter, relay, dispose }`. Throws when the origin
- * cannot be framed, so a caller shows its generated panel instead.
+ * Returns `{ element, parameter, relay, dispose, sameOrigin }`. Throws when
+ * the location cannot be framed, so a caller shows its generated panel instead.
  */
 export function createPluginFrame (document, {
   ui, label, hostOrigin, window, relayLimit, init,
@@ -97,6 +99,9 @@ export function createPluginFrame (document, {
   const element = document.createElement('iframe')
   // allow-scripts so it runs, allow-same-origin so it keeps its own origin
   // (see the header). Nothing else: no popups, no top navigation, no forms.
+  // On the host's own origin those two flags together mean the frame could
+  // reach into this document; it is kept out by the frame boundary alone,
+  // which is why `sameOrigin` is reported rather than passed off as isolation.
   element.setAttribute('sandbox', 'allow-scripts allow-same-origin')
   element.setAttribute('title', `${label} editor`)
   element.setAttribute('referrerpolicy', 'no-referrer')
@@ -158,6 +163,8 @@ export function createPluginFrame (document, {
 
   return {
     element,
+    /** True when the interface is on this page's origin, so the sandbox is not isolation. */
+    sameOrigin: allowed.sameOrigin,
     /** Tell the frame what a parameter is now, after the host applied it. */
     parameter (symbol, value) {
       if (initialised) post({ type: 'parameter', symbol, value })

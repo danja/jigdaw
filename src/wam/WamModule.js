@@ -17,7 +17,7 @@
 // host that never asked for it.
 //
 // **A sandboxed interface.** `createGui` must return an `Element`, and an
-// iframe is an Element, so the cross-origin sandbox that contract section 9.1
+// iframe is an Element, so the sandboxed frame that contract section 9.1
 // requires and the WAM contract are satisfied by the same object. A plugin with
 // no `jig:ui` gets nothing here and the host draws its own controls from the
 // parameter info, which is what WAM hosts do anyway.
@@ -344,7 +344,7 @@ export function webAudioModule (data, {
     }
 
     /**
-     * The plugin's own interface, cross-origin in a sandboxed frame.
+     * The plugin's own interface, in a sandboxed frame.
      *
      * Contract section 9.1 is absolute: a plugin UI is never loaded into the
      * host document. An iframe satisfies both that and WAM's requirement to

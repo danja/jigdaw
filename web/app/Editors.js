@@ -16,8 +16,8 @@ export function createEditors (ctx) {
 
   /**
    * Open a plugin's own interface. A frame that cannot be opened, such as one
-   * on this page's own origin, is reported and the generated panel is still
-   * there.
+   * whose location is not http or https, is reported and the generated panel
+   * is still there.
    */
   function openEditor (nodeId, profile, label) {
     const { dispatcher } = ctx

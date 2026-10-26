@@ -10,7 +10,7 @@ VST3 and LV2 spread identity, discovery and delivery over different mechanisms: 
 
 ## Security
 
-A plugin is arbitrary code from an origin the host doesn't control, so the host treats it that way. It fetches, parses and validates the profile before fetching anything the profile names. Every resource gets a SHA-384 check before it's instantiated, and there's no continue-anyway path past a failure. If a plugin has its own user interface, that goes in a sandboxed cross-origin frame, never the host document.
+A plugin is arbitrary code from an origin the host doesn't control, so the host treats it that way. It fetches, parses and validates the profile before fetching anything the profile names. Every resource gets a SHA-384 check before it's instantiated, and there's no continue-anyway path past a failure. If a plugin has its own user interface, that goes in a sandboxed frame, never the host document.
 
 ## Linked Data
 

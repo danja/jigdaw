@@ -42,7 +42,7 @@ checked before anything is registered or instantiated, exactly as contract secti
 requires. A WAM host gets verification it cannot express and did not ask for.
 
 **A sandboxed interface.** `createGui` must return an `Element`, and an iframe is an Element,
-so the cross-origin sandbox of contract section 9.1 and the WAM contract are satisfied by the
+so the sandboxed frame of contract section 9.1 and the WAM contract are satisfied by the
 same object. A plugin with no `jig:ui` returns null and the host draws its own controls from
 `getParameterInfo`, which is what WAM hosts do anyway.
 

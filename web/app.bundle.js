@@ -33720,13 +33720,7 @@ function frameableOrigin(location2, hostOrigin) {
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     return { ok: false, message: `a plugin interface is fetched over http or https, not ${url.protocol}` };
   }
-  if (url.origin === hostOrigin) {
-    return {
-      ok: false,
-      message: `the interface at ${location2} is on this page's own origin, and contract section 9.1 forbids framing it there: it would run with this page's access. Serve the plugin from another origin.`
-    };
-  }
-  return { ok: true, origin: url.origin };
+  return { ok: true, origin: url.origin, sameOrigin: url.origin === hostOrigin };
 }
 function rateLimit(limit, now) {
   let windowStart = now();
@@ -33826,6 +33820,8 @@ function createPluginFrame(document2, {
   window2.addEventListener("message", listener);
   return {
     element,
+    /** True when the interface is on this page's origin, so the sandbox is not isolation. */
+    sameOrigin: allowed.sameOrigin,
     /** Tell the frame what a parameter is now, after the host applied it. */
     parameter(symbol, value2) {
       if (initialised) post({ type: "parameter", symbol, value: value2 });

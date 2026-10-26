@@ -44,8 +44,8 @@ Rests on: [pwa.md](pwa.md), `web/sw.js`, `tests/web/Pwa.test.js`.
 ### Verified before it runs
 
 **Built.** Every resource is checked against its SHA-384 digest before it is instantiated, with
-no continue-anyway path. A plugin's own interface loads into a sandboxed cross-origin frame,
-never into the host page. A bundle can carry a signature, and an unsigned one is reported as a
+no continue-anyway path. A plugin's own interface loads into a sandboxed frame, never into the
+host page. A bundle can carry a signature, and an unsigned one is reported as a
 claim by whoever handed it over.
 
 Rests on: [host-plugin-contract.md](host-plugin-contract.md), [plugin-bundles.md](plugin-bundles.md),

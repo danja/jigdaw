@@ -29,20 +29,21 @@ function hostWindow () {
 }
 
 /** The frame's window, refusing what a real one refuses. */
-function frameWindow () {
+function frameWindow (origin = PLUGIN) {
   return {
     received: [],
     postMessage (message, targetOrigin) {
       if (targetOrigin === '*') throw new Error('messaging.md 2.1: never "*"')
-      if (targetOrigin !== PLUGIN) return // a real window drops a mismatched target silently
+      if (targetOrigin !== origin) return // a real window drops a mismatched target silently
       this.received.push(structuredClone(message))
     }
   }
 }
 
 function build (over = {}) {
+  const { frameOrigin = PLUGIN, ...rest } = over
   const win = hostWindow()
-  const inside = frameWindow()
+  const inside = frameWindow(frameOrigin)
   const seen = { parameters: [], gestures: [], relays: [], refused: [] }
   let clock = 0
   const frame = createPluginFrame(document, {
@@ -57,7 +58,7 @@ function build (over = {}) {
     onGesture: (s, p) => seen.gestures.push([s, p]),
     onRelay: p => seen.relays.push(p),
     onRefused: m => seen.refused.push(m),
-    ...over
+    ...rest
   })
   Object.defineProperty(frame.element, 'contentWindow', { value: inside })
   const fromFrame = (data, { origin = PLUGIN, source = inside } = {}) => win.deliver({ data, origin, source })
@@ -65,9 +66,15 @@ function build (over = {}) {
 }
 
 describe('which interfaces may be framed', () => {
-  it('refuses one on the host\'s own origin, which would run with the host\'s access', () => {
-    expect(frameableOrigin(`${HOST}/plugins/x/ui.html`, HOST).ok).toBe(false)
-    expect(() => build({ ui: { location: `${HOST}/plugins/x/ui.html` } })).toThrow(/9\.1/)
+  it('accepts one on the host\'s own origin, and says the sandbox is no isolation there', () => {
+    const location = `${HOST}/plugins/x/ui.html`
+    expect(frameableOrigin(location, HOST)).toEqual({ ok: true, origin: HOST, sameOrigin: true })
+    const { frame, win, inside } = build({ ui: { location }, frameOrigin: HOST })
+    expect(frame.sameOrigin).toBe(true)
+    expect(frame.element.getAttribute('src')).toBe(location)
+    // Still addressed to that origin, never to "*".
+    win.deliver({ data: { type: 'ready' }, origin: HOST, source: inside })
+    expect(inside.received).toHaveLength(1)
   })
 
   it('refuses anything but http and https', () => {
@@ -76,8 +83,9 @@ describe('which interfaces may be framed', () => {
     expect(frameableOrigin('not a url', HOST).ok).toBe(false)
   })
 
-  it('accepts another origin, and names it', () => {
-    expect(frameableOrigin(UI.location, HOST)).toEqual({ ok: true, origin: PLUGIN })
+  it('accepts another origin, and does not claim it is the host\'s own', () => {
+    expect(frameableOrigin(UI.location, HOST)).toEqual({ ok: true, origin: PLUGIN, sameOrigin: false })
+    expect(build().frame.sameOrigin).toBe(false)
   })
 })
 

@@ -426,18 +426,25 @@ disagree and it is not defined which wins.
 
 ### 9.1 Sandboxed
 
-A plugin's user interface, where it is code, MUST be loaded into an `iframe` with a `sandbox` attribute, and
-that frame MUST NOT be same-origin with the host document. A host MUST NOT load plugin UI
-code into its own document by any means. A skin (section 9.4) is data and is the one thing
-a host MAY draw in its own document. A host MUST refuse to frame a user interface
-whose location is on the host's own origin, rather than framing it with an opaque origin,
-because [messaging.md](messaging.md) section 2.1 requires every message to be addressed to
-the frame's real origin.
+A plugin's user interface, where it is code, MUST be loaded into an `iframe` with a `sandbox`
+attribute. A host MUST NOT load plugin UI code into its own document by any means. A skin
+(section 9.4) is data and is the one thing a host MAY draw in its own document. The frame
+MUST keep `allow-scripts` and `allow-same-origin` and MUST NOT grant anything else, because
+[messaging.md](messaging.md) section 2.1 requires every message to be addressed to the
+frame's real origin and forbids `"*"` in both directions.
 
-A plugin is code fetched from an origin the host does not control. Any UI script running in
-the host's document could read the project, the user's storage, any credentials present and
-every other plugin, and could rewire the audio graph directly. The sandbox is what makes
-section 1.1 a reasonable thing to propose.
+An interface MAY be served from the host's own origin. A host that serves plugins itself must
+be able to offer their editors, and a frame at all is better than no editor. It is still a
+separate document, and `postMessage` in the protocol above is the only channel the host gives
+it. It is not isolated, though: `allow-same-origin` on the host's origin runs that code with
+the page's access, so the frame is a document boundary and not a security boundary. A host
+that serves a plugin is vouching for it, and MUST NOT describe such a frame as isolated. A
+plugin the host does not serve is on another origin, and there the sandbox does isolate it.
+
+A plugin fetched from an origin the host does not control is code the host has no reason to
+trust. Any UI script running in the host's document could read the project, the user's
+storage, any credentials present and every other plugin, and could rewire the audio graph
+directly. The sandbox is what makes section 1.1 a reasonable thing to propose.
 
 A plugin with no `jig:skin` gets a panel generated from its port declarations, whether or not it
 has a `jig:ui`. This is the expected case, not a degraded one: a generated panel is consistent
@@ -526,7 +533,8 @@ A host MUST:
 - serve itself over TLS, with a Content Security Policy that permits WebAssembly
   compilation and frames only the sandboxed plugin UI origin;
 - verify every resource against its declared integrity digest (section 3.2);
-- sandbox all plugin user interfaces cross-origin (section 9.1);
+- sandbox every plugin user interface (section 9.1), and never describe one it serves itself
+  as isolated;
 - treat every value arriving from a plugin, a profile or a catalogue as data and never as
   markup or as code.
 
@@ -553,9 +561,9 @@ the safe default.
 ### 12.1 What is given up, stated rather than relaxed
 
 A native plugin never runs in the host's document. Its processor is an `AudioWorklet`, which
-has no `fetch` and no DOM, and its interface is cross-origin in a sandbox (section 9.1). That
-is what makes section 1.1 a reasonable thing to propose: install is a HTTP GET, and the thing
-installed cannot reach the page.
+has no `fetch` and no DOM, and its interface is a separate document in a sandbox (section
+9.1). That is what makes section 1.1 a reasonable thing to propose: install is a HTTP GET,
+and the thing installed does not run in the page.
 
 **A foreign plugin's entry point is a JavaScript module the host imports into its own
 document and calls.** It runs with the host's origin and the host's privileges. It can read

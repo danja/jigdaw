@@ -44,7 +44,7 @@ rather than discovering them later.
    plus arbitrary main-thread JavaScript from an arbitrary origin.
 
 Resolved as: require CORS, negotiate shared memory rather than assume it, verify every
-resource against a declared digest, and sandbox plugin user interfaces cross-origin.
+resource against a declared digest, and sandbox plugin user interfaces.
 
 ## Decisions taken
 
@@ -626,8 +626,8 @@ a keyboard-first piano roll (`src/ui/PianoRoll.js`), and audio clips referring t
 against the transport, a lookahead ahead of the clock, located by stream position and wrapped
 at the loop. A session with imported audio saves as a zip with its media beside it
 (`src/host/Zip.js`), and one saved before tracks is folded into them on opening. A plugin's own
-`jig:ui` opens in a sandboxed frame on its own origin (`src/ui/PluginFrame.js`), resolving a
-contradiction the message protocol had carried since phase 0; Tremolo ships the worked example.
+`jig:ui` opens in a sandboxed frame (`src/ui/PluginFrame.js`), on the plugin's own origin or,
+where the host serves that plugin, the host's; Tremolo ships the worked example.
 The format is in [project-format.md](project-format.md) "Tracks" and "Clips".
 
 Still thin: no automation, no master strip. See [index.md](index.md) for the

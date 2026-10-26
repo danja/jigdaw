@@ -27,7 +27,7 @@ for (const [key, file] of Object.entries(template.resources)) {
 const hasModule = Boolean(resources.module)
 
 // jig:ui: optional, a plugin's own editor, loaded by a host into a sandboxed
-// cross-origin frame (contract section 9.1). One file, so the digest covers
+// frame (contract section 9.1). One file, so the digest covers
 // all of it: a frame's document cannot be integrity checked by the browser the
 // way a script can, and a page that loaded further scripts of its own would be
 // running code this digest says nothing about.

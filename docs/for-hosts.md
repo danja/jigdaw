@@ -172,8 +172,8 @@ composite can gain a member without breaking a session saved before it.
 - Locations are resolved against the URL you actually fetched the profile from, not against
   the IRI in it: a mirror serves the same profile from a different origin.
 - `trn:requires` is checked before fetching any code, not after.
-- A plugin's own user interface, if it has one, loads cross-origin into a sandboxed frame,
-  never into your own document.
+- A plugin's own user interface, if it has one, loads into a sandboxed frame, never into
+  your own document. Where you serve the plugin yourself, that frame is not isolated: say so.
 - A failed plugin is muted and disconnected. The rest of the graph keeps running.
 - Every string arriving from a profile or a catalogue (a name, a description, a caution) is
   treated as data. None of it is evaluated or inserted as markup.
@@ -184,8 +184,9 @@ composite can gain a member without breaking a session saved before it.
 ## Security posture
 
 A plugin is arbitrary WebAssembly plus arbitrary JavaScript from an origin you do not
-control. Verify every digest. Load plugin user interfaces cross-origin into a sandboxed
-frame, never into your own document. Treat every value from a profile or a catalogue as data
+control. Verify every digest. Load plugin user interfaces into a sandboxed frame, never into
+your own document, and do not call a frame you served yourself isolated. Treat every value
+from a profile or a catalogue as data
 and never as markup. A failed plugin must be muted and disconnected, leaving the rest of the
 graph running: a host whose failure mode is silence for the whole project is one nobody will
 load an unfamiliar plugin into.

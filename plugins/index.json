@@ -1265,7 +1265,7 @@
         "http://purl.org/stuff/jigdaw/MidiEvents"
       ],
       "cautions": [
-        "The graphic display (the response curves, a node to drag for each band and the spectrum analyser) is the plugin's own editor. A host shows it only for a plugin served from another origin than its own page; every control is also on the generated panel.",
+        "The graphic display (the response curves, a node to drag for each band and the spectrum analyser) is the plugin's own editor, offered beside the generated panel where the host can frame it; every control is also on the generated panel.",
         "MIDI controllers 1 to 4 on the CC channel drive one band and the output, as in Drift. The panel does not follow them.",
         "The 48 dB cuts are 8th-order Butterworth; a corner within a few percent of half the sample rate behaves like a gentler slope, because the bilinear transform compresses the top octave."
       ],

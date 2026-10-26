@@ -165,17 +165,23 @@ The host MUST verify `event.origin` against the UI's expected origin on every me
 received, and MUST pass an explicit `targetOrigin` on every message sent. It MUST NOT use
 `"*"` for either.
 
-The UI frame is cross-origin by construction, so `event.source` comparison is available and
-SHOULD also be used. A host that accepts a message from any origin has a sandbox that any
-page can reach into.
+The UI frame's origin may be the host's own, so `event.origin` alone does not identify it:
+`event.source` comparison is available and MUST also be used. A host that accepts a message
+from any window on the expected origin has a sandbox that any other document on that origin
+can reach into.
 
-The frame therefore keeps a real origin of its own. A frame sandboxed without
-`allow-same-origin` has the opaque origin `"null"`, and a message to it can only be
-addressed to `"*"`, which this section forbids. So the host sandboxes with
-`allow-scripts allow-same-origin` and loads the UI from an origin other than its own, and a
-host MUST refuse to frame a UI on its own origin: `allow-same-origin` on a same-origin frame
-would hand the plugin the host's document. Jiggy does both in `src/ui/PluginFrame.js`, and
-offers no editor for a plugin served from the page's own origin.
+The frame keeps a real origin of its own. A frame sandboxed without `allow-same-origin` has
+the opaque origin `"null"`, and a message to it can only be addressed to `"*"`, which this
+section forbids. So the host sandboxes with `allow-scripts allow-same-origin` and MUST NOT
+grant anything else.
+
+That origin may be the host's own: a host that serves a plugin may offer its editor, and
+contract section 9.1 permits the frame. `event.source` comparison is then the check that
+still separates the frame from any other window, and the host MUST use it, since every other
+document on the origin now shares the expected `event.origin`. The frame is a document
+boundary, not a security boundary, and a host MUST NOT call it isolated. Jiggy allows both
+cases in `src/ui/PluginFrame.js`, which reports `sameOrigin` so the caller can say which it
+has.
 
 The UI does not know the host's origin until `init` arrives, so it MAY address `ready` to
 `"*"`. `ready` carries nothing, and every later message from the UI goes to the origin the

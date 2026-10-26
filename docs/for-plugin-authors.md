@@ -258,8 +258,10 @@ script inline, so the digest covers everything that runs.
   value the host sends back in its own `parameter` message, not the one you asked for: it may
   have been clamped.
 - Report your height with `resize` whenever it changes.
-- A host will not frame an editor served from its own origin, so it is only offered where the
-  plugin comes from another one. `plugins/tremolo/ui/index.html` is the worked example.
+- It is offered whether your plugin comes from another origin or from the host's own. A
+  same-origin frame is a separate document but not an isolated one, so a host may offer it
+  only for plugins it serves and vouches for. `plugins/tremolo/ui/index.html` is the worked
+  example, and `plugins/octet/ui/index.html` draws to a canvas.
 
 ## 5. Publishing
 

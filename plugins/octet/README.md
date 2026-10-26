@@ -24,9 +24,9 @@ not zipper. All 53 controls are ordinary automatable parameters, with the origin
 ## The graphic display
 
 The editor draws what a graphic equalizer draws: every band's curve and the total, computed from the coefficients the audio uses; a
-numbered node for each band; and the spectrum behind them. It is offered by a host beside the generated panel, and only for a
-plugin served from another origin than its page (contract section 9.1), so it does not show for a plugin on the host's own
-origin. Every control in it is also on the generated panel.
+numbered node for each band; and the spectrum behind them. It is offered by a host beside the generated panel, in a sandboxed frame
+([contract section 9.1](../docs/host-plugin-contract.md)), whether the plugin comes from another origin or from the host's own.
+Every control in it is also on the generated panel.
 
 - **Drag a node:** across for frequency, up and down for gain. A band that is off is switched on when grabbed. Cuts and notches have
   no gain, so their nodes move across only.

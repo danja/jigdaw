@@ -25,7 +25,7 @@ A plugin is arbitrary code from an origin the host does not control. A host fetc
 and validates the profile before fetching anything the profile names; verifies a SHA-384
 digest on every resource before it is instantiated, with no continue-anyway path past a
 failed one; and, where a plugin carries its own user interface, loads it into a sandboxed
-cross-origin frame rather than the host's own document.
+frame rather than the host's own document.
 
 ## Linked Data
 
