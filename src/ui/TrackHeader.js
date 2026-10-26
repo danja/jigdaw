@@ -221,7 +221,7 @@ export function createTrackHeader (document, { id, onSelect, onAdd, onAddAudio, 
   const title = document.createElement('div')
   title.className = 'head-title'
   title.append(name, ...(onGrip ? [grip] : []), ...(onExpand ? [expand] : []))
-  element.append(title, kindLabel, arm, source, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...(onDuplicateTrack ? [duplicate] : []))
 
   return {
     element,

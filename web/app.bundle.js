@@ -35546,7 +35546,7 @@ function createTrackHeader(document2, { id, onSelect, onAdd, onAddAudio, onChann
   const title = document2.createElement("div");
   title.className = "head-title";
   title.append(name2, ...onGrip ? [grip] : [], ...onExpand ? [expand2] : []);
-  element.append(title, kindLabel, arm, source, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
+  element.append(title, kindLabel, arm, mix, routing, latency, add, addAudio, ...onDuplicateTrack ? [duplicate] : []);
   return {
     element,
     /**
