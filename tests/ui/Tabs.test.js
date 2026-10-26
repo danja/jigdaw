@@ -190,3 +190,35 @@ describe('choosing a tab from outside a keypress or a click', () => {
     expect(tabs.selected()).toBe('second')
   })
 })
+
+describe('a tab that is not drawn', () => {
+  it('is not selected from code, and the caller is told which one was asked for', () => {
+    const refused = []
+    const first = document.createElement('div')
+    const second = document.createElement('div')
+    first.id = 'a-panel'
+    second.id = 'b-panel'
+    document.body.append(first, second)
+    const tabs = createTabs(document, [
+      { id: 'a', label: 'A', panel: first },
+      { id: 'b', label: 'B', panel: second }
+    ], { allowed: id => id !== 'b', onRefused: id => refused.push(id) })
+    expect(tabs.select('b')).toBe(false)
+    expect(tabs.selected()).toBe('a')
+    expect(second.hidden).toBe(true)
+    expect(refused).toEqual(['b'])
+  })
+
+  it('still selects one that is allowed, and says so', () => {
+    const { tabs } = build()
+    expect(tabs.select('second')).toBe(true)
+  })
+
+  it('still refuses an id that names no tab, whatever allowed says', () => {
+    const first = document.createElement('div')
+    first.id = 'only-panel'
+    document.body.append(first)
+    const tabs = createTabs(document, [{ id: 'only', label: 'Only', panel: first }], { allowed: () => false })
+    expect(() => tabs.select('nope')).toThrow(/no such tab/)
+  })
+})

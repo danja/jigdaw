@@ -64,6 +64,13 @@ is wrong in INBOX.md.
   Lookahead's Position while a parallel dry path plays beside it and listen for the realignment; and a real pointer through a
   plugin's own editor frame (load `http://localhost:8748/plugins/tremolo/` from the page on `127.0.0.1`, because an editor on the
   page's own origin is refused).
+- **Run the first-hour test** (2026-10-26, [docs/learning-curve.md](docs/learning-curve.md)): give someone who has used another DAW,
+  and someone who has not, the eleven steps there with no instructions, and write down where each stopped in their words. The
+  Show steps, start screen, Add a track chooser, grouped transport, clip repeat, light and dark themes and "More controls" were all
+  checked by code and in Chrome, none by a person who did not build them. Also listen to the Hear button on each of the eight
+  instruments, and to a DrumKit loaded through it.
+- **Deploy to see DrumKit's primary controls:** the live site still serves the old `plugins/drumkit/profile.ttl`, and the page loads
+  plugins from their canonical address, so "More controls (61)" appears only after a deploy (checked locally by loading the local copy).
 
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 

@@ -42,6 +42,7 @@
 @prefix jig:  <http://purl.org/stuff/jigdaw/> .
 @prefix trn:  <http://purl.org/stuff/transmissions/> .
 @prefix lv2:  <http://lv2plug.in/ns/lv2core#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
@@ -319,6 +320,11 @@ jig:PortShape a sh:NodeShape ;
         sh:path lv2:name ;
         sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
         sh:message "A port needs a human-readable name, because the generated panel has nothing else to print on the control."
+    ] ;
+    sh:property [
+        sh:path pprops:displayPriority ;
+        sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "pprops:displayPriority, where a port has one, is a single nonnegative integer. A panel shows the ports that have one first, highest first, so a negative or fractional priority is a priority nothing can order by."
     ] ;
     sh:property [
         sh:path jig:automationRate ;

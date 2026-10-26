@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="view.js"></script>
+<script src="theme.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14171d">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -14,26 +15,34 @@
   :root {
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#a3abb8;
-    --line:#2a2f38; --accent:#3e8ef7; --ok:#7ddc8e; --err:#ff8a8a;
+    --line:#2a2f38; --accent:#2c78c2; --ok:#7ddc8e; --err:#ff8a8a;
     --controls:#222c3a; --controls-line:#34445a;
     --play:#1b7f35; --play-hover:#166a2c; --rec:#b3261e; --rec-hover:#951d17;
+    --link:#8fc0ff; --focus:#7fb3ff; --control:#242a33; --control-hover:#2d343f; --track-bg:#232a33; --notice-info:#1d2a3d; --field:#0e1013;
+  }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg:#f4f6f9; --panel:#ffffff; --fg:#1a1d23; --dim:#566070;
+    --line:#c9d0da; --accent:#2b6cb0; --ok:#1a7f37; --err:#b42318;
+    --link:#1d4ed8; --focus:#1d4ed8; --control:#dde3ea; --control-hover:#cfd7e1; --track-bg:#d5dbe3; --notice-info:#e1edfb; --field:#ffffff;
+    --controls:#dbe6f4; --controls-line:#a9bdd6;
   }
   * { box-sizing:border-box; }
   body { margin:0; font:18px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
-  :focus-visible { outline:3px solid #7fb3ff; outline-offset:2px; }
+  :focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
   .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   header, main { max-width:60rem; margin:0 auto; padding:16px; }
   header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
   header h1 { font-size:26px; margin:0; flex:1 1 auto; }
   h2 { font-size:22px; margin:28px 0 12px; }
-  a { color:#8fc0ff; }
+  a { color:var(--link); }
   #studio-link { display:inline-flex; align-items:center; min-height:44px; }
   /* 44px is the floor for a touch target (CLAUDE.md), so the 56px buttons are 44 and the 72px ones 48. */
-  button, select { font:inherit; min-height:44px; padding:0 20px; background:#242a33; color:var(--fg);
+  button, select { font:inherit; min-height:44px; padding:0 20px; background:var(--control); color:var(--fg);
     border:2px solid var(--line); border-radius:12px; cursor:pointer; }
-  button:hover { background:#2d343f; }
+  button:hover { background:var(--control-hover); }
   button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
-  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
+  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:var(--notice-info); border:2px solid var(--accent); border-radius:12px; }
   #carry[hidden] { display:none; }
   #carry-text { flex:1 1 14rem; }
   #carry button { min-height:44px; }
@@ -63,7 +72,7 @@
   .level { display:inline-flex; align-items:center; gap:8px; }
   .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:4px; align-items:flex-end; height:36px; }
-  .meter i { display:block; width:8px; background:#232a33; border-radius:2px; height:100%; }
+  .meter i { display:block; width:8px; background:var(--track-bg); border-radius:2px; height:100%; }
   .meter i.on { background:var(--ok); }
   .meter i.hot { background:var(--err); }
   /* One card per track. */
@@ -73,7 +82,7 @@
   .card-head { display:flex; align-items:center; gap:12px; }
   .card-head h3 { margin:0; flex:1; font-size:22px; }
   .switch { min-width:6rem; font-weight:600; }
-  .card-open { width:100%; min-height:48px; margin-top:6px; color:#8fc0ff; }
+  .card-open { width:100%; min-height:48px; margin-top:6px; color:var(--link); }
   /* The rack for one track replaces the instruments while it is open. */
   #rack[hidden] { display:none; }
   #rack-back { min-height:48px; margin:8px 0 0; }

@@ -77,3 +77,36 @@ describe('icons', () => {
     expect(unused).toEqual([])
   })
 })
+
+describe('words beside an icon', () => {
+  const make = (extra = '') => {
+    document.body.innerHTML = `<button id="b" data-icon="play" ${extra}>Play</button>`
+    applyIcons(document.body)
+    return document.getElementById('b')
+  }
+
+  it('are drawn after the icon when the button asks, and the accessible name is the same words', () => {
+    const button = make('data-words')
+    expect(button.querySelector('.icon-words').textContent).toBe('Play')
+    expect(button.getAttribute('aria-label')).toBe('Play')
+    expect(button.firstElementChild.tagName.toLowerCase()).toBe('svg')
+  })
+
+  it('are not drawn when the button does not ask, so an icon button stays an icon', () => {
+    expect(make().querySelector('.icon-words')).toBeNull()
+  })
+
+  it('are not added a second time when icons are applied again', () => {
+    const button = make('data-words')
+    applyIcons(document.body)
+    expect(button.querySelectorAll('.icon-words')).toHaveLength(1)
+  })
+
+  it('are the label the setIcon call was given', () => {
+    document.body.innerHTML = '<button id="c"></button>'
+    const button = document.getElementById('c')
+    setIcon(document, button, 'stop', 'Halt', { words: true })
+    expect(button.querySelector('.icon-words').textContent).toBe('Halt')
+    expect(button.getAttribute('aria-label')).toBe('Halt')
+  })
+})

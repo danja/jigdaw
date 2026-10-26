@@ -9,13 +9,18 @@
 // drag that stops at the button's own edge is the failure CLAUDE.md names.
 import { describeClip } from './ClipText.js'
 import { attachMenu } from './ContextMenu.js'
+import { playedContent, oneMoreRepeat } from '../model/ClipLoop.js'
 
 /**
  * `ppb()` is the current pixels per beat, a function because zoom changes it. The handlers are Timeline's own
  * (see createTimeline): onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste,
  * onLock and onTrim. `menu` is the page's context menu (ContextMenu.js), or null for none.
+ *
+ * A MIDI clip can be repeated to fill more time (`onRepeat(clipId, lengthBeats)`, src/model/ClipLoop.js): by dragging the loop handle
+ * at its top right, by R (one more pattern), and from the menu, which can also stop the repeating (`onStopRepeat(clipId)`). Without
+ * `onRepeat` there is none of it. A locked clip has no loop handle, since it would only be refused.
  */
-export function createClipButton (document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu = null }) {
+export function createClipButton (document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, onRepeat = null, onStopRepeat = null, menu = null }) {
   function clipButton (clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
     const button = document.createElement('button')
     button.type = 'button'
@@ -35,6 +40,12 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
     // Said in the label as well as faded, so it is not colour or opacity alone.
     if (clip.muted) button.textContent = `\u2298 ${button.textContent}`
     if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`
+    // Where the pattern comes round again, as a line, so a repeated clip reads as repeats and not as one long clip.
+    if (clip.kind === 'midi' && clip.loopBeats && clip.loopBeats < clip.lengthBeats) {
+      const every = clip.loopBeats * ppb()
+      button.classList.add('clip-looped')
+      button.style.backgroundImage = `repeating-linear-gradient(to right, transparent 0, transparent ${every - 1}px, var(--loop-line) ${every - 1}px, var(--loop-line) ${every}px)`
+    }
     if (peaks) button.append(waveform(peaks))
     else if (clip.kind === 'midi' && clip.notes.length > 0) button.append(noteGlyph(clip))
 
@@ -75,6 +86,9 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
         if (which === 'c') onCopy(clip.id)
         else if (which === 'x') onCut(clip.id)
         else onPaste(clip.id)
+      } else if (onRepeat && clip.kind === 'midi' && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault()
+        onRepeat(clip.id, oneMoreRepeat(clip))
       } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'l') {
         event.preventDefault()
         onLock(clip.id, !clip.locked)
@@ -106,6 +120,11 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
           ...(editable ? [{ label: 'Cut', hint: 'Ctrl+X', run: () => onCut(clip.id) }] : []),
           { label: 'Paste at the playhead', hint: 'Ctrl+V', run: () => onPaste(clip.id) },
           '-',
+          ...(onRepeat && clip.kind === 'midi' && editable
+            ? [{ label: 'Repeat once more', hint: 'R', run: () => onRepeat(clip.id, oneMoreRepeat(clip)) },
+                ...(onStopRepeat && clip.loopBeats ? [{ label: 'Stop repeating', run: () => onStopRepeat(clip.id) }] : []),
+                '-']
+            : []),
           { label: 'Mute', hint: 'M', checked: Boolean(clip.muted), run: () => onMute(clip.id, !clip.muted) },
           { label: 'Lock', hint: 'L', checked: Boolean(clip.locked), run: () => onLock(clip.id, !clip.locked) },
           ...(editable
@@ -126,11 +145,21 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
     handle.className = 'clip-resize'
     handle.setAttribute('aria-hidden', 'true')
     button.append(handle)
+    // The corner that repeats the clip. Drawn only where it can act, and not read: R and the menu do the same for a keyboard.
+    let loopHandle = null
+    if (onRepeat && clip.kind === 'midi' && !clip.locked) {
+      loopHandle = document.createElement('span')
+      loopHandle.className = 'clip-loop'
+      loopHandle.setAttribute('aria-hidden', 'true')
+      loopHandle.textContent = '\u21BB'
+      button.append(loopHandle)
+    }
 
     let dragged = false
     button.addEventListener('pointerdown', event => {
       if (event.button !== 0) return
-      const resizing = event.target === handle
+      const repeating = loopHandle !== null && event.target === loopHandle
+      const resizing = event.target === handle || repeating
       const originX = event.clientX
       dragged = false
       // Where the clip's edge lands: the pointer's movement in beats, on the
@@ -154,7 +183,7 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
       }
       const up = e => {
         const to = place(e)
-        if (resizing) { if (to.length !== clip.lengthBeats) onResize(clip.id, to.length) } else if (to.start !== clip.startBeat) onMove(clip.id, to.start)
+        if (repeating) { if (to.length !== clip.lengthBeats) onRepeat(clip.id, to.length) } else if (resizing) { if (to.length !== clip.lengthBeats) onResize(clip.id, to.length) } else if (to.start !== clip.startBeat) onMove(clip.id, to.start)
       }
       // Escape during a drag puts the clip back and sends nothing.
       const stop = () => {
@@ -208,10 +237,12 @@ export function createClipButton (document, { ppb, view, selection, onMove, onRe
     svg.setAttribute('preserveAspectRatio', 'none')
     let low = Infinity
     let high = -Infinity
-    for (const n of clip.notes) { low = Math.min(low, n.pitch); high = Math.max(high, n.pitch) }
+    // What plays, repeats included, so a repeated clip shows its notes coming round and not only the first pattern.
+    const { notes } = playedContent(clip)
+    for (const n of notes) { low = Math.min(low, n.pitch); high = Math.max(high, n.pitch) }
     const span = high - low
     let d = ''
-    for (const n of clip.notes) {
+    for (const n of notes) {
       if (n.startBeat >= clip.lengthBeats) continue
       const y = span === 0 ? 0.5 : Math.round((0.1 + 0.8 * (high - n.pitch) / span) * 1000) / 1000
       d += `M${n.startBeat} ${y}h${Math.min(n.lengthBeats, clip.lengthBeats - n.startBeat)}`

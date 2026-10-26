@@ -13146,7 +13146,7 @@ var init_env = __esm({
 });
 
 // src/rdf/Vocabulary.js
-var JIG, TRN, LV2, MIDI, UNITS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
+var JIG, TRN, LV2, MIDI, UNITS, PPROPS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
 var init_Vocabulary = __esm({
   "src/rdf/Vocabulary.js"() {
     JIG = "http://purl.org/stuff/jigdaw/";
@@ -13154,6 +13154,7 @@ var init_Vocabulary = __esm({
     LV2 = "http://lv2plug.in/ns/lv2core#";
     MIDI = "http://lv2plug.in/ns/ext/midi#";
     UNITS = "http://lv2plug.in/ns/extensions/units#";
+    PPROPS = "http://lv2plug.in/ns/ext/port-props#";
     RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     RDFS = "http://www.w3.org/2000/01/rdf-schema#";
     FOAF = "http://xmlns.com/foaf/0.1/";
@@ -13475,6 +13476,11 @@ var init_Vocabulary = __esm({
       }),
       units: Object.freeze({
         unit: `${UNITS}unit`
+      }),
+      // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
+      // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
+      pprops: Object.freeze({
+        displayPriority: `${PPROPS}displayPriority`
       })
     });
   }
@@ -13551,6 +13557,13 @@ function orderPorts(ports) {
   const authored = ports.length > 0 && ports.every((p) => p.paramIndex != null);
   return ports.sort(authored ? (a2, b) => a2.paramIndex - b.paramIndex : (a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""));
 }
+function readDisplayPriority(dataset2, term5) {
+  const priority = asNumber(one(dataset2, term5, pprops.displayPriority));
+  if (priority !== null && !(Number.isInteger(priority) && priority >= 0)) {
+    throw new Error(`port ${term5.value}: pprops:displayPriority must be a nonnegative integer, not ${priority}`);
+  }
+  return priority;
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
@@ -13571,6 +13584,8 @@ function readPort(dataset2, term5) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset2, term5, jig.controlGroup)),
+    // How much the author says this control matters, or null. A panel shows the ports that have one first (src/ui/PrimaryControls.js).
+    displayPriority: readDisplayPriority(dataset2, term5),
     // The author's order, where the profile gives one; the panel follows it.
     paramIndex: asNumber(one(dataset2, term5, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
@@ -13684,12 +13699,12 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
   };
 }
-var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;
+var jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdfTerms, iri, asString, values;
 var init_ProfileReader = __esm({
   "src/rdf/ProfileReader.js"() {
     init_env();
     init_Vocabulary();
-    ({ jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
+    ({ jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdf: rdfTerms } = vocabulary);
     iri = (value2) => env_default.namedNode(value2);
     asString = (term5) => term5 ? term5.value : null;
     values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
@@ -20149,6 +20164,16 @@ function playedContent(clip) {
   }
   return out;
 }
+function repeatClip(clip, lengthBeats) {
+  if (clip.kind !== "midi") throw new Error("only a MIDI clip can repeat");
+  if (!(typeof lengthBeats === "number" && Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error("a clip must be longer than zero beats");
+  const change = { op: "setClip", id: clip.id, lengthBeats };
+  if (lengthBeats > clip.lengthBeats && !clip.loopBeats) change.loopBeats = clip.lengthBeats;
+  return change;
+}
+function oneMoreRepeat(clip) {
+  return clip.lengthBeats + (clip.loopBeats ?? clip.lengthBeats);
+}
 
 // src/engine/Chance.js
 function drawFor(key) {
@@ -25990,8 +26015,14 @@ function iconElement(document2, name2) {
   svg.append(path);
   return svg;
 }
-function setIcon(document2, button, name2, label, { keepTitle = false } = {}) {
+function setIcon(document2, button, name2, label, { keepTitle = false, words: words2 = false } = {}) {
   button.replaceChildren(iconElement(document2, name2));
+  if (words2) {
+    const text = document2.createElement("span");
+    text.className = "icon-words";
+    text.textContent = label;
+    button.append(text);
+  }
   button.setAttribute("aria-label", label);
   if (!keepTitle || !button.getAttribute("title")) button.setAttribute("title", label);
   button.dataset.icon = name2;
@@ -26001,7 +26032,7 @@ function applyIcons(root) {
   for (const button of root.querySelectorAll("button[data-icon]")) {
     if (button.querySelector("svg")) continue;
     const label = (button.getAttribute("aria-label") ?? button.textContent).trim();
-    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true });
+    setIcon(document2, button, button.dataset.icon, label, { keepTitle: true, words: button.hasAttribute("data-words") });
   }
 }
 
@@ -26389,6 +26420,7 @@ function createRecoveryCopy(ctx2) {
 
 // src/ui/Tabs.js
 function createTabs(document2, tabs, { onSelect = () => {
+}, allowed = () => true, onRefused = () => {
 } } = {}) {
   if (tabs.length === 0) throw new Error("a tab list needs at least one tab");
   const tablist = document2.createElement("div");
@@ -26443,7 +26475,12 @@ function createTabs(document2, tabs, { onSelect = () => {
     select(id) {
       const index = tabs.findIndex((tab) => tab.id === id);
       if (index === -1) throw new Error(`no such tab: ${id}`);
+      if (!allowed(id)) {
+        onRefused(id);
+        return false;
+      }
       select(index);
+      return true;
     },
     /** The id of whichever tab is currently shown. */
     selected() {
@@ -33170,6 +33207,15 @@ function attachTrackDrag(box, input, port, track2, isHorizontal) {
   });
 }
 
+// src/ui/PrimaryControls.js
+function splitPrimary(ports) {
+  const ranked = ports.filter((p) => p.displayPriority !== null && p.displayPriority !== void 0);
+  if (ranked.length === 0 || ranked.length === ports.length) return { primary: ports, rest: [] };
+  const order = new Map(ports.map((p, i2) => [p, i2]));
+  const primary = [...ranked].sort((a2, b) => b.displayPriority - a2.displayPriority || order.get(a2) - order.get(b));
+  return { primary, rest: ports.filter((p) => !ranked.includes(p)) };
+}
+
 // src/ui/Panel.js
 function createPanel(document2, profile, onChange, onLoadAsset, { scope = profile.iri, skin = null, skinLayout = {} } = {}) {
   const root = document2.createElement("section");
@@ -33294,15 +33340,27 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     if (ungrouped.length > 0) addGrid(ungroupedLegend ? fieldset(ungroupedLegend) : parent, ungrouped, tag);
     for (const group of groups) addGrid(fieldset(group.label), group.ports, tag);
   }
-  if (!skinPanel) addSections(root, profile.ports, "", null);
+  function addWithMore(parent, ports, tag, ungroupedLegend) {
+    const { primary, rest } = splitPrimary(ports);
+    addSections(parent, rest.length === 0 ? primary : primary.map((p) => ({ ...p, group: null })), tag, ungroupedLegend);
+    if (rest.length === 0) return;
+    const more = document2.createElement("details");
+    more.className = "more-controls";
+    const summary = document2.createElement("summary");
+    summary.textContent = `More controls (${rest.length})`;
+    more.append(summary);
+    addSections(more, rest, tag, null);
+    parent.append(more);
+  }
+  if (!skinPanel) addWithMore(root, profile.ports, "", null);
   else {
     const others = document2.createElement("div");
     others.className = "skin-others";
-    addSections(others, unskinned, "", "Other controls");
+    addWithMore(others, unskinned, "", "Other controls");
     const everything = document2.createElement("div");
     everything.className = "skin-fallback";
     everything.hidden = true;
-    addSections(everything, profile.ports, "all-", null);
+    addWithMore(everything, profile.ports, "all-", null);
     root.append(others, everything);
     skinPanel.onCramped((cramped) => {
       skinPanel.element.hidden = cramped;
@@ -36546,7 +36604,7 @@ var Selection = class {
 };
 
 // src/ui/ClipButton.js
-function createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu = null }) {
+function createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, onRepeat = null, onStopRepeat = null, menu = null }) {
   function clipButton(clip, { beatsPerBar, playsIntoNothing, peaks, problem, color = null }) {
     const button = document2.createElement("button");
     button.type = "button";
@@ -36565,6 +36623,11 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
     }
     if (clip.muted) button.textContent = `\u2298 ${button.textContent}`;
     if (clip.locked) button.textContent = `\u25A3 ${button.textContent}`;
+    if (clip.kind === "midi" && clip.loopBeats && clip.loopBeats < clip.lengthBeats) {
+      const every = clip.loopBeats * ppb();
+      button.classList.add("clip-looped");
+      button.style.backgroundImage = `repeating-linear-gradient(to right, transparent 0, transparent ${every - 1}px, var(--loop-line) ${every - 1}px, var(--loop-line) ${every}px)`;
+    }
     if (peaks) button.append(waveform(peaks));
     else if (clip.kind === "midi" && clip.notes.length > 0) button.append(noteGlyph(clip));
     button.addEventListener("keydown", (event) => {
@@ -36600,6 +36663,9 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
         if (which === "c") onCopy(clip.id);
         else if (which === "x") onCut(clip.id);
         else onPaste(clip.id);
+      } else if (onRepeat && clip.kind === "midi" && !event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "r") {
+        event.preventDefault();
+        onRepeat(clip.id, oneMoreRepeat(clip));
       } else if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === "l") {
         event.preventDefault();
         onLock(clip.id, !clip.locked);
@@ -36631,6 +36697,11 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
           ...editable ? [{ label: "Cut", hint: "Ctrl+X", run: () => onCut(clip.id) }] : [],
           { label: "Paste at the playhead", hint: "Ctrl+V", run: () => onPaste(clip.id) },
           "-",
+          ...onRepeat && clip.kind === "midi" && editable ? [
+            { label: "Repeat once more", hint: "R", run: () => onRepeat(clip.id, oneMoreRepeat(clip)) },
+            ...onStopRepeat && clip.loopBeats ? [{ label: "Stop repeating", run: () => onStopRepeat(clip.id) }] : [],
+            "-"
+          ] : [],
           { label: "Mute", hint: "M", checked: Boolean(clip.muted), run: () => onMute(clip.id, !clip.muted) },
           { label: "Lock", hint: "L", checked: Boolean(clip.locked), run: () => onLock(clip.id, !clip.locked) },
           ...editable ? [
@@ -36650,10 +36721,19 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
     handle.className = "clip-resize";
     handle.setAttribute("aria-hidden", "true");
     button.append(handle);
+    let loopHandle = null;
+    if (onRepeat && clip.kind === "midi" && !clip.locked) {
+      loopHandle = document2.createElement("span");
+      loopHandle.className = "clip-loop";
+      loopHandle.setAttribute("aria-hidden", "true");
+      loopHandle.textContent = "\u21BB";
+      button.append(loopHandle);
+    }
     let dragged = false;
     button.addEventListener("pointerdown", (event) => {
       if (event.button !== 0) return;
-      const resizing = event.target === handle;
+      const repeating = loopHandle !== null && event.target === loopHandle;
+      const resizing = event.target === handle || repeating;
       const originX = event.clientX;
       dragged = false;
       const step = view.step(beatsPerBar);
@@ -36671,7 +36751,9 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
       };
       const up = (e) => {
         const to = place(e);
-        if (resizing) {
+        if (repeating) {
+          if (to.length !== clip.lengthBeats) onRepeat(clip.id, to.length);
+        } else if (resizing) {
           if (to.length !== clip.lengthBeats) onResize(clip.id, to.length);
         } else if (to.start !== clip.startBeat) onMove(clip.id, to.start);
       };
@@ -36721,13 +36803,14 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
     svg.setAttribute("preserveAspectRatio", "none");
     let low = Infinity;
     let high = -Infinity;
-    for (const n2 of clip.notes) {
+    const { notes } = playedContent(clip);
+    for (const n2 of notes) {
       low = Math.min(low, n2.pitch);
       high = Math.max(high, n2.pitch);
     }
     const span = high - low;
     let d = "";
-    for (const n2 of clip.notes) {
+    for (const n2 of notes) {
       if (n2.startBeat >= clip.lengthBeats) continue;
       const y = span === 0 ? 0.5 : Math.round((0.1 + 0.8 * (high - n2.pitch) / span) * 1e3) / 1e3;
       d += `M${n2.startBeat} ${y}h${Math.min(n2.lengthBeats, clip.lengthBeats - n2.startBeat)}`;
@@ -36741,7 +36824,7 @@ function createClipButton(document2, { ppb, view, selection, onMove, onResize, o
 }
 
 // src/ui/Timeline.js
-function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name2, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== "function") throw new Error(`createTimeline needs ${name2}`);
   }
@@ -36833,7 +36916,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
     const rect = scroller.getBoundingClientRect();
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx());
   }, { passive: false });
-  const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu });
+  const clipButton = createClipButton(document2, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, onRepeat, onStopRepeat, menu });
   const reorder = createReorder(document2, { rows, current: () => lastArgs, scroller, selection, say: (text) => {
     said.textContent = text;
   }, onMoveTrack, onFolderCollapse });
@@ -36862,7 +36945,7 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       canArm = () => false,
       armed = () => false,
       routingFor = () => null,
-      empty: emptyState = { text: "No tracks yet. Load a plugin and its track appears here.", actions: [] }
+      empty: emptyState = { text: "No tracks yet. Load a plugin and its track appears here.", actions: [], groups: [] }
     } = args;
     const lastBeat = Math.max(0, ...clips.map((c3) => c3.startBeat + c3.lengthBeats));
     const bars = Math.ceil(lastBeat / beatsPerBar) + 4;
@@ -36875,7 +36958,25 @@ function createTimeline(document2, { onAdd, onAddAudio, onMove, onResize, onOpen
       const text = document2.createElement("p");
       text.textContent = emptyState.text;
       empty.append(text);
-      for (const action2 of emptyState.actions) {
+      for (const [index, group] of (emptyState.groups ?? []).entries()) {
+        const box = document2.createElement("div");
+        box.className = "empty-group";
+        box.setAttribute("role", "group");
+        const heading = document2.createElement("h3");
+        heading.id = `empty-group-${index}`;
+        heading.textContent = group.heading;
+        box.setAttribute("aria-labelledby", heading.id);
+        box.append(heading);
+        for (const action2 of group.actions) {
+          const button = document2.createElement("button");
+          button.type = "button";
+          button.textContent = action2.label;
+          button.addEventListener("click", () => action2.run());
+          box.append(button);
+        }
+        empty.append(box);
+      }
+      for (const action2 of emptyState.actions ?? []) {
         const button = document2.createElement("button");
         button.type = "button";
         button.textContent = action2.label;
@@ -38402,6 +38503,27 @@ function createClipActions(document2, { onAction, onColor }) {
   return { element, draw: draw2 };
 }
 
+// src/ui/StartScreen.js
+function describeStart({ tunes, templates, run }) {
+  for (const key of ["tune", "template", "emptyTrack", "sound", "browse", "open"]) {
+    if (typeof run[key] !== "function") throw new Error(`the start screen needs run.${key}`);
+  }
+  const groups = [
+    { heading: "Play a tune", actions: tunes.map((name2) => ({ label: name2, run: () => run.tune(name2) })) },
+    {
+      heading: "Start a new piece",
+      actions: [
+        { label: "A track with a sound", run: () => run.sound() },
+        { label: "An empty track", run: () => run.emptyTrack() },
+        { label: "Find a plugin", run: () => run.browse() }
+      ]
+    },
+    { heading: "From a template", actions: templates.map((name2) => ({ label: name2, run: () => run.template(name2) })) },
+    { heading: "Open a saved piece", actions: [{ label: "Choose a file", run: () => run.open() }] }
+  ];
+  return groups.filter((group) => group.actions.length > 0);
+}
+
 // web/app/Arrangement.js
 function createArrangement(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
@@ -38410,9 +38532,17 @@ function createArrangement(ctx2) {
     if (!result.ok) log2(result.message, "error");
     return result;
   };
+  async function addTrack() {
+    await ctx2.runtime.ensureRunning();
+    const result = edit([{ op: "addTrack" }]);
+    if (result.ok) ctx2.selection.set("track", [result.results[0]]);
+  }
   let pendingAudio = null;
   const waveformsRequested = /* @__PURE__ */ new Set();
   const handlers = {
+    // The loop handle on a clip, the R key and the menu: the same one change (src/model/ClipLoop.js), so one undo takes back a repeat.
+    onRepeat: (id, lengthBeats) => edit([repeatClip(ctx2.dispatcher.project.clip(id), lengthBeats)]),
+    onStopRepeat: (id) => edit([{ op: "setClip", id, loopBeats: null }]),
     onAdd: (trackId, startBeat) => {
       const result = edit([{ op: "addClip", track: trackId, kind: "midi", startBeat, lengthBeats: ctx2.dispatcher.project.transport.beatsPerBar }]);
       if (result.ok) openClip(result.results[0]);
@@ -38445,12 +38575,8 @@ function createArrangement(ctx2) {
       if (next) ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: next });
     },
     onExpandTrack: (trackId) => ctx2.dispatcher.project.setTrackLayout(trackId, { laneSize: "small" }),
-    // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
-    onAddTrack: async () => {
-      await ctx2.runtime.ensureRunning();
-      const result = edit([{ op: "addTrack" }]);
-      if (result.ok) ctx2.selection.set("track", [result.results[0]]);
-    },
+    // The toolbar's Add track opens the chooser, which has An empty track in it.
+    onAddTrack: () => ctx2.addTrack.open(),
     onDuplicateTrack: async (trackId) => {
       const result = await duplicateTrack(ctx2.dispatcher, trackId);
       if (!result.ok) {
@@ -38743,13 +38869,19 @@ function createArrangement(ctx2) {
       beatsPerBar: project?.transport.beatsPerBar ?? 4,
       // What to do first, as buttons over the requests the page already makes.
       empty: {
-        text: "No tracks yet. Start from a preset, or load one plugin.",
-        actions: [
-          { label: "Browse plugins", run: () => ctx2.layout.showBrowser(true) },
-          { label: "Open the Chiptune preset", run: () => ctx2.sessions.openPreset("Chiptune") },
-          { label: "Load the Pulse synth", run: () => ctx2.loading.loadPlugin(new URL("plugins/pulse/", document2.baseURI).href).catch(() => {
-          }) }
-        ]
+        text: "Nothing here yet. Play a tune, start something new, or open a piece you saved.",
+        groups: describeStart({
+          tunes: ctx2.sessions.presetNames(),
+          templates: ctx2.templates.names(),
+          run: {
+            tune: (name2) => ctx2.sessions.openPreset(name2),
+            template: (name2) => ctx2.templates.open(name2).catch((error2) => log2(error2.message, "error")),
+            emptyTrack: () => addTrack(),
+            sound: () => ctx2.addTrack.open(),
+            browse: () => ctx2.layout.showBrowser(true),
+            open: () => document2.getElementById("openfile").click()
+          }
+        })
       },
       layoutFor: (track2) => project.trackLayout(track2.id),
       lanesFor: (track2) => automationLanes(project, track2),
@@ -38844,6 +38976,7 @@ function createArrangement(ctx2) {
   return {
     draw: draw2,
     mount,
+    addTrack,
     /** Show where the transport is, as a beat, or null when it is stopped. */
     playhead(beat) {
       timeline.playhead(beat);
@@ -39845,7 +39978,8 @@ function createDockPanel(ctx2) {
       trackPanel.show({
         id: track2.id,
         name: track2.label,
-        defaultName: trackLabel({ ...track2, label: null }),
+        // Indexed by the track itself: a copy of it is not in the list, and indexOf would say -1 and name the first track "Track 0".
+        defaultName: ctx2.rack.trackLabel({ ...track2, label: null }, project.tracks.indexOf(track2)),
         layout: project.trackLayout(track2.id),
         folders: [...new Set(ordered.map((t) => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex((t) => t.id === track2.id),
@@ -40181,7 +40315,7 @@ function askConsent(document2, request) {
 }
 function createLoading(ctx2) {
   const { document: document2, log: log2 } = ctx2;
-  async function loadPlugin(input) {
+  async function loadPlugin(input, { newTrack = false } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const iri5 = new URL(input, document2.baseURI).href;
     log2(`GET ${iri5}`);
@@ -40191,8 +40325,8 @@ function createLoading(ctx2) {
       const seen = await support.classify(iri5).catch(() => null);
       foreign = seen?.kind === "foreign";
     }
-    const track2 = ctx2.rack.targetTrack();
-    const replacing = ctx2.swap.target();
+    const track2 = newTrack ? null : ctx2.rack.targetTrack();
+    const replacing = newTrack ? null : ctx2.swap.target();
     if (replacing) {
       ctx2.swap.end();
       const swapped = await d.swapPlugin(replacing, iri5);
@@ -40244,8 +40378,219 @@ function createLoading(ctx2) {
     }
     ctx2.rack.draw();
     ctx2.expose();
+    return trackId;
   }
   return { loadPlugin };
+}
+
+// src/catalogue/limits.js
+var MAX_RESULTS = 200;
+
+// src/ui/SoundChooser.js
+function firstSentence(text, limit = 110) {
+  const flat = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (flat === "") return "";
+  const end = flat.search(/[.!?](\s|$)/);
+  const sentence = end === -1 ? flat : flat.slice(0, end + 1);
+  if (sentence.length <= limit) return sentence;
+  const cut = sentence.slice(0, limit);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > 0 ? cut.slice(0, space) : cut).replace(/[,;:\s]+$/, "")}\u2026`;
+}
+function soundsFrom(results) {
+  return results.filter((r) => r.web && (r.roles ?? []).includes("Instrument")).map((r) => ({ iri: r.iri, load: r.homepage ?? r.iri, label: r.label, about: firstSentence(r.comment), drums: (r.roles ?? []).includes("DrumInstrument") })).sort((a2, b) => a2.label.localeCompare(b.label));
+}
+function phraseFor(sound) {
+  const notes = sound.drums ? [36, 42, 38, 42] : [60, 64, 67, 72];
+  const step = sound.drums ? 0.25 : 0.3;
+  return notes.map((pitch, i2) => ({ at: i2 * step, length: sound.drums ? 0.15 : 0.45, pitch, velocity: 100 }));
+}
+function createSoundChooser(document2, { sounds: sounds2, onHear, onAdd, onEmpty, onCancel }) {
+  const dialog = document2.createElement("dialog");
+  dialog.className = "chooser";
+  dialog.setAttribute("aria-labelledby", "sound-chooser-title");
+  const title = document2.createElement("h2");
+  title.id = "sound-chooser-title";
+  title.textContent = "Add a track";
+  const help = document2.createElement("p");
+  help.className = "note";
+  help.textContent = "Choose a sound. Hear plays a few notes on a trial track, which is taken away again unless you add it.";
+  const status = document2.createElement("p");
+  status.className = "note";
+  status.setAttribute("role", "status");
+  const list = document2.createElement("ul");
+  list.className = "sound-list";
+  const rows = /* @__PURE__ */ new Map();
+  for (const sound of sounds2) {
+    const item = document2.createElement("li");
+    const words2 = document2.createElement("div");
+    words2.className = "sound-words";
+    const name2 = document2.createElement("strong");
+    name2.textContent = sound.label;
+    const mark = document2.createElement("span");
+    mark.className = "sound-mark";
+    const about = document2.createElement("span");
+    about.className = "sound-about";
+    about.textContent = sound.about;
+    words2.append(name2, mark, about);
+    const hear = document2.createElement("button");
+    hear.type = "button";
+    hear.textContent = "Hear";
+    hear.setAttribute("aria-label", `Hear ${sound.label}`);
+    hear.addEventListener("click", () => onHear(sound));
+    const add = document2.createElement("button");
+    add.type = "button";
+    add.textContent = "Add";
+    add.setAttribute("aria-label", `Add ${sound.label}`);
+    add.addEventListener("click", () => onAdd(sound));
+    item.append(words2, hear, add);
+    list.append(item);
+    rows.set(sound.iri, mark);
+  }
+  const none = document2.createElement("p");
+  none.className = "note";
+  none.textContent = "No sounds are available to load here.";
+  none.hidden = sounds2.length > 0;
+  const buttons = document2.createElement("div");
+  buttons.className = "consent-buttons";
+  const empty = document2.createElement("button");
+  empty.type = "button";
+  empty.textContent = "An empty track";
+  empty.addEventListener("click", () => onEmpty());
+  const cancel = document2.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => onCancel());
+  buttons.append(empty, cancel);
+  dialog.append(title, help, status, list, none, buttons);
+  dialog.addEventListener("cancel", () => onCancel());
+  return {
+    element: dialog,
+    say(text) {
+      status.textContent = text;
+    },
+    heard(iri5) {
+      for (const [key, mark] of rows) mark.textContent = key === iri5 ? " (on the trial track)" : "";
+    }
+  };
+}
+
+// web/app/AddTrack.js
+function createAddTrack(ctx2) {
+  const { document: document2, log: log2 } = ctx2;
+  let chooser = null;
+  let trial = null;
+  let busy = false;
+  const isOpen = () => chooser !== null;
+  async function removeTrial() {
+    if (!trial) return;
+    const { nodeId, trackId } = trial;
+    trial = null;
+    const d = ctx2.dispatcher;
+    await d.withoutRecording(() => {
+      const result = d.apply([{ op: "removeNode", id: nodeId }, { op: "removeTrack", id: trackId }]);
+      if (!result.ok) log2(result.message, "error");
+    });
+    ctx2.rack.forgetNode(nodeId);
+    ctx2.rack.draw();
+    ctx2.expose();
+  }
+  function close() {
+    const { element } = chooser;
+    chooser = null;
+    if (element.open) element.close();
+    element.remove();
+  }
+  function play(nodeId, sound) {
+    const { currentTime, sampleRate } = ctx2.engine.context;
+    const start = Math.round((currentTime + 0.05) * sampleRate);
+    const frames = (seconds) => start + Math.round(seconds * sampleRate);
+    ctx2.dispatcher.sendEvents(nodeId, phraseFor(sound).flatMap((n2) => [
+      { frame: frames(n2.at), bytes: Uint8Array.from([144, n2.pitch, n2.velocity]) },
+      { frame: frames(n2.at + n2.length), bytes: Uint8Array.from([128, n2.pitch, 0]) }
+    ]));
+  }
+  async function hear(sound) {
+    if (busy) return;
+    busy = true;
+    try {
+      chooser.say(`Loading ${sound.label}`);
+      await removeTrial();
+      const d = await ctx2.runtime.ensureRunning();
+      const result = await d.withoutRecording(() => d.addPlugin(sound.load));
+      if (!result.ok) {
+        log2(`${result.step ? `[${result.step}] ` : ""}${result.message}`, "error");
+        chooser?.say(`${sound.label} did not load: ${result.message}`);
+        return;
+      }
+      trial = { nodeId: result.nodeId, trackId: result.trackId };
+      if (!isOpen()) {
+        await removeTrial();
+        return;
+      }
+      ctx2.rack.draw();
+      ctx2.expose();
+      chooser.heard(sound.iri);
+      play(result.nodeId, sound);
+      chooser.say(`Playing ${sound.label}. Add keeps it, or hear another.`);
+    } catch (error2) {
+      log2(error2.message, "error");
+      chooser?.say(error2.message);
+    } finally {
+      busy = false;
+    }
+  }
+  async function add(sound) {
+    if (busy) return;
+    busy = true;
+    try {
+      chooser.say(`Adding ${sound.label}`);
+      await removeTrial();
+      const trackId = await ctx2.loading.loadPlugin(sound.load, { newTrack: true });
+      if (!trackId) {
+        chooser?.say(`${sound.label} did not load. The log says why.`);
+        return;
+      }
+      ctx2.selection.set("track", [trackId]);
+      if (isOpen()) close();
+    } catch (error2) {
+      log2(error2.message, "error");
+      chooser?.say(error2.message);
+    } finally {
+      busy = false;
+    }
+  }
+  async function dismiss() {
+    if (!isOpen()) return;
+    close();
+    await removeTrial();
+  }
+  async function open() {
+    if (isOpen()) return;
+    let sounds2 = [];
+    let problem = null;
+    try {
+      sounds2 = soundsFrom((await ctx2.browser.catalogue().search({ role: "Instrument", limit: MAX_RESULTS })).results);
+    } catch (error2) {
+      problem = error2.message;
+      log2(`sounds: ${error2.message}`, "error");
+    }
+    chooser = createSoundChooser(document2, {
+      sounds: sounds2,
+      onHear: hear,
+      onAdd: add,
+      onEmpty: async () => {
+        await dismiss();
+        await ctx2.arrangement.addTrack();
+      },
+      onCancel: dismiss
+    });
+    document2.body.append(chooser.element);
+    chooser.element.showModal();
+    chooser.element.querySelector("button")?.focus();
+    if (problem) chooser.say(`The sounds could not be listed: ${problem}`);
+  }
+  return { open, isOpen };
 }
 
 // src/rdf/CollectionReader.js
@@ -40395,9 +40740,6 @@ var CollectionLoader = class {
     return { url, collection, warnings, members: results };
   }
 };
-
-// src/catalogue/limits.js
-var MAX_RESULTS = 200;
 
 // web/app/Browser.js
 init_parse();
@@ -41372,6 +41714,7 @@ function createSessions(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   const progress = createLoadProgress(document2);
   let openPresetByLabel = () => Promise.resolve();
+  let listedPresets = [];
   async function pack({ recorded = true } = {}) {
     const { dispatcher, media } = ctx2;
     const states = await Promise.all(dispatcher.project.nodes.map(async (node) => [node.id, await dispatcher.getNodeState(node.id)]));
@@ -41534,6 +41877,7 @@ function createSessions(ctx2) {
       index: new URL("presets/index.json", document2.baseURI).href
     }).then((found) => {
       presets = found;
+      listedPresets = found.map((p) => p.label);
       $2("preset").replaceChildren(...found.map(({ label }, i2) => {
         const option = document2.createElement("option");
         option.value = String(i2);
@@ -41541,9 +41885,10 @@ function createSessions(ctx2) {
         return option;
       }));
       $2("presets").hidden = found.length === 0;
+      ctx2.rack?.draw();
     }).catch((error2) => log2(`presets: ${error2.message}`, "error"));
   }
-  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label), presetNames: () => [...listedPresets] };
 }
 
 // src/ui/HistoryList.js
@@ -41835,8 +42180,10 @@ function createTemplatesPanel(ctx2, { store = createTemplates() } = {}) {
     status.textContent = text;
     log2(text, kind);
   };
+  let listed = [];
   async function refresh(choose = null) {
     const names = (await store.list()).map((t) => t.name);
+    listed = names;
     pick.replaceChildren(...names.map((name2) => {
       const option = document2.createElement("option");
       option.value = name2;
@@ -41845,6 +42192,7 @@ function createTemplatesPanel(ctx2, { store = createTemplates() } = {}) {
     }));
     for (const option of pick.options) option.selected = option.value === choose;
     openForm.hidden = names.length === 0;
+    ctx2.rack?.draw();
     return names;
   }
   async function save(name2) {
@@ -41884,6 +42232,7 @@ function createTemplatesPanel(ctx2, { store = createTemplates() } = {}) {
     open,
     remove,
     refresh,
+    names: () => [...listed],
     mount() {
       $2("presets").after(element);
       return refresh().catch((error2) => log2(`templates: ${error2.message}`, "error"));
@@ -42136,6 +42485,7 @@ var KEY_ROWS = Object.freeze([
   { scope: "clip", keys: "Space", does: "Add the clip to the selection, or take it out; Enter opens it", press: [plain(" ")] },
   { scope: "clip", keys: "S", does: "Split at the playhead", press: [plain("s")] },
   { scope: "clip", keys: "D", does: "Duplicate", press: [plain("d")] },
+  { scope: "clip", keys: "R", does: "Repeat a MIDI clip once more: it gets one pattern longer, the notes coming round again", press: [plain("r")] },
   { scope: "clip", keys: "M", does: "Mute or unmute", press: [plain("m")] },
   { scope: "clip", keys: "L", does: "Lock or unlock", press: [plain("l")] },
   { scope: "clip", keys: "[ and ]", does: "Trim the start or the end to the playhead", press: [plain("["), plain("]")] },
@@ -44222,6 +44572,167 @@ function createScript(ctx2) {
   return { panel, attach, agentReel, clockStart, clockTick, clockStop, captureInto, restore, stop, run, check };
 }
 
+// src/ui/Show.js
+var STEPS3 = Object.freeze(["simple", "standard", "advanced"]);
+var STEP_LABELS = Object.freeze({ simple: "Simple", standard: "Standard", advanced: "Advanced" });
+var NARROW_QUERY = "(max-width: 760px)";
+var FROM = Object.freeze({
+  // The transport bar is in groups, each named for a screen reader. A group is drawn from the first step of its first control, and
+  // never earlier than any control in it, since a drawn control inside an undrawn group is not on the screen.
+  "#group-view": "simple",
+  "#group-play": "simple",
+  "#group-time": "simple",
+  "#group-input": "standard",
+  "#group-edit": "simple",
+  "#group-file": "simple",
+  "#transport-more": "advanced",
+  // Play, stop and the things a person needs the first minute.
+  "#toggle-browser": "simple",
+  "#toggle-keys": "simple",
+  "#play": "simple",
+  "#stop": "simple",
+  "#loop": "simple",
+  "#metronome": "simple",
+  "#count-in-group": "simple",
+  "#tempo-group": "simple",
+  "#show-group": "simple",
+  "#undo": "simple",
+  "#redo": "simple",
+  "#save": "simple",
+  "#open": "simple",
+  "#clip": "simple",
+  // Making a piece: recording, playing in, tapping a tempo, moving notes and sound in and out.
+  "#record": "standard",
+  "#record-midi": "standard",
+  "#tap-tempo": "standard",
+  "#signature-group": "standard",
+  "#midi-in": "standard",
+  "#mic-in": "standard",
+  "#export": "standard",
+  "#export-midi": "standard",
+  "#import-midi": "standard",
+  // Building: the controls whose job is to put right something that went wrong, or to publish.
+  "#panic": "advanced",
+  "#export-stems": "advanced",
+  "#install": "advanced",
+  // The tabs, which web/app.js builds. Simple has none: the arrangement is the whole stage.
+  "#tab-arrangement": "simple",
+  "#tab-mixer": "standard",
+  "#tab-launcher": "standard",
+  "#tab-settings": "standard",
+  "#tab-tracks": "advanced",
+  "#tab-routing": "advanced",
+  "#tab-script": "advanced",
+  // Below the stage.
+  "#history": "standard",
+  "#log-details": "advanced",
+  // In the Settings tab.
+  "#local-agent": "advanced",
+  "#bridge": "advanced"
+});
+function drawnAt(step, from) {
+  const at = STEPS3.indexOf(step);
+  const first4 = STEPS3.indexOf(from);
+  if (at === -1) throw new Error(`no such step: ${step}`);
+  if (first4 === -1) throw new Error(`no such step: ${from}`);
+  return at >= first4;
+}
+function asStep(value2) {
+  return STEPS3.includes(value2) ? value2 : null;
+}
+function defaultStep({ narrow }) {
+  return narrow ? "simple" : "standard";
+}
+function tabsDrawnAt(step, tabs) {
+  return tabs.filter((tab) => drawnAt(step, FROM[`#tab-${tab.id}`])).map((tab) => tab.id);
+}
+
+// web/app/Show.js
+var KEY5 = "jigdaw.show";
+function createShow(ctx2) {
+  const { document: document2, window: window2, $: $2 } = ctx2;
+  let step = null;
+  let tabs = null;
+  let tabList = [];
+  function stored() {
+    try {
+      return asStep(window2.localStorage.getItem(KEY5));
+    } catch {
+      return null;
+    }
+  }
+  function remember(next) {
+    try {
+      window2.localStorage.setItem(KEY5, next);
+    } catch {
+    }
+  }
+  function clearNote() {
+    $2("show-note").hidden = true;
+  }
+  function allowsTab(id) {
+    return drawnAt(step, FROM[`#tab-${id}`]);
+  }
+  function refuseTab(id) {
+    const from = FROM[`#tab-${id}`];
+    const label = $2(`tab-${id}`).textContent;
+    $2("show-note-text").textContent = `The ${label} tab is drawn in ${STEP_LABELS[from]}.`;
+    const raise = $2("show-note-raise");
+    raise.textContent = `Show ${STEP_LABELS[from]}`;
+    raise.onclick = () => {
+      set(from, { remember: true });
+      tabs.select(id);
+      clearNote();
+    };
+    $2("show-note").hidden = false;
+  }
+  function set(next, { remember: choose = false } = {}) {
+    if (!STEPS3.includes(next)) throw new Error(`no such step: ${next}`);
+    step = next;
+    document2.documentElement.dataset.step = next;
+    $2("show-step").value = next;
+    if (choose) remember(next);
+    clearNote();
+    const drawn = tabsDrawnAt(next, tabList);
+    tabs.element.hidden = drawn.length < 2;
+    if (!drawn.includes(tabs.selected())) tabs.select(drawn[0]);
+  }
+  function mount(list, tabsApi) {
+    tabList = list;
+    tabs = tabsApi;
+    for (const [selector, from] of Object.entries(FROM)) {
+      for (const element of document2.querySelectorAll(selector)) element.dataset.from = from;
+    }
+    $2("show-step").addEventListener("change", () => {
+      const chosen = asStep($2("show-step").value);
+      if (chosen) set(chosen, { remember: true });
+    });
+    set(stored() ?? defaultStep({ narrow: window2.matchMedia(NARROW_QUERY).matches }));
+  }
+  return { mount, set, allowsTab, refuseTab, get step() {
+    return step;
+  } };
+}
+
+// web/app/Theme.js
+function createTheme(ctx2) {
+  const { window: window2, $: $2, log: log2 } = ctx2;
+  function mount() {
+    const select = $2("theme-choice");
+    const theme = window2.__jigdawTheme;
+    if (!theme) throw new Error("theme.js did not run: the page is missing its script tag");
+    select.value = theme.current();
+    select.addEventListener("change", () => {
+      try {
+        log2(`theme: ${theme.choose(select.value)}`);
+      } catch (error2) {
+        log2(error2.message, "error");
+      }
+    });
+  }
+  return { mount };
+}
+
 // web/app.js
 var $ = (id) => document.getElementById(id);
 var log = (message, kind = "info") => {
@@ -44270,6 +44781,7 @@ ctx.rack = createRack(ctx);
 ctx.skins.onReady(() => ctx.rack.draw());
 ctx.loading = createLoading(ctx);
 ctx.browser = createBrowser(ctx);
+ctx.addTrack = createAddTrack(ctx);
 ctx.sessions = createSessions(ctx);
 ctx.history = createHistory(ctx);
 ctx.projectInfo = createProjectInfo(ctx);
@@ -44390,7 +44902,7 @@ if (linked) {
   $("collection").value = new URL(linked, document.baseURI).href;
   browser.openCollection(linked).catch((error2) => log(error2.message, "error"));
 }
-ctx.tabs = createTabs(document, [
+var TABS = [
   { id: "arrangement", label: "Arrangement", panel: $("arrangement-panel") },
   { id: "tracks", label: "Plugins", panel: $("tracks-panel") },
   { id: "routing", label: "Routing", panel: $("routing-panel") },
@@ -44398,8 +44910,12 @@ ctx.tabs = createTabs(document, [
   { id: "launcher", label: "Launcher", panel: $("launcher-panel") },
   { id: "script", label: "Script", panel: $("script-panel") },
   { id: "settings", label: "Settings", panel: $("settings-panel") }
-]);
+];
+ctx.show = createShow(ctx);
+ctx.tabs = createTabs(document, TABS, { allowed: (id) => ctx.show.allowsTab(id), onRefused: (id) => ctx.show.refuseTab(id) });
 $("tabs-mount").append(ctx.tabs.element);
+ctx.show.mount(TABS, ctx.tabs);
+createTheme(ctx).mount();
 ctx.rack.draw();
 log("ready. Load the synth and press a key, or search for a plugin.");
 window.__jigdawLoad = loading.loadPlugin;

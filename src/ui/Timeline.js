@@ -65,6 +65,8 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onAddAudio(trackId, startBeat)`: a new audio clip, from a file the page
  *   asks the person for.
  * - `onMove(clipId, startBeat)` and `onResize(clipId, lengthBeats)`.
+ * - `onRepeat(clipId, lengthBeats)` and `onStopRepeat(clipId)`: make a MIDI clip that long by repeating its pattern, and stop it
+ *   repeating. Optional: without `onRepeat` a clip has no loop handle, no R key and no repeat menu items.
  * - `onOpen(clipId)` and `onRemove(clipId)`.
  * - `onSplit(clipId)` and `onDuplicate(clipId)`: the page knows the playhead.
  * - `onLock(clipId, locked)`: protect a clip from being moved, edited or deleted.
@@ -84,7 +86,7 @@ export const PIXELS_PER_BEAT = DEFAULT_PIXELS_PER_BEAT
  * - `onDuplicateTrack(trackId)`: copy a track with its plugins. Optional: without it a track has no Duplicate button.
  * - `onSetLoop({ start, end })`: a new loop range in beats, which the page also turns on.
  */
-export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
+export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onCut, onPaste, onLock, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm, onSeek = null, onReplace = null, onDuplicateTrack = null, onAddTrack = null, onExpandTrack = null, onSizeStep = null, onEditTrack = null, onDeleteTrack = null, onRemoveNode = null, onShowNode = null, onRepeat = null, onStopRepeat = null }, { view = new TimeView(), selection = new Selection(), menu = null } = {}) {
   for (const [name, fn] of Object.entries({ onAdd, onAddAudio, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onBypass, onMoveInChain, onEnvelope, onRemoveEnvelope, onAutomateMaster, onMute, onTrim, onCopy, onPaste, onChannel, onSetLoop, onMoveTrack, onFolderCollapse, onArm })) {
     if (typeof fn !== 'function') throw new Error(`createTimeline needs ${name}`)
   }
@@ -187,7 +189,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
     zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, event.clientX - rect.left - headPx())
   }, { passive: false })
 
-  const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, menu })
+  const clipButton = createClipButton(document, { ppb, view, selection, onMove, onResize, onOpen, onRemove, onSplit, onDuplicate, onMute, onCopy, onCut, onPaste, onLock, onTrim, onRepeat, onStopRepeat, menu })
 
   const reorder = createReorder(document, { rows, current: () => lastArgs, scroller, selection, say: text => { said.textContent = text }, onMoveTrack, onFolderCollapse })
   const { withFolders, moveTrack, dragTrack, extendTrackSelection } = reorder
@@ -204,7 +206,7 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       latencyFor = () => null,
       chainFor = () => ({ nodes: [] }),
       kindFor = () => null, canArm = () => false, armed = () => false, routingFor = () => null,
-      empty: emptyState = { text: 'No tracks yet. Load a plugin and its track appears here.', actions: [] }
+      empty: emptyState = { text: 'No tracks yet. Load a plugin and its track appears here.', actions: [], groups: [] }
     } = args
     const lastBeat = Math.max(0, ...clips.map(c => c.startBeat + c.lengthBeats))
     // Room for a few bars past the last clip, so there is always somewhere to put the next.
@@ -220,8 +222,27 @@ export function createTimeline (document, { onAdd, onAddAudio, onMove, onResize,
       const text = document.createElement('p')
       text.textContent = emptyState.text
       empty.append(text)
+      // Groups, each a heading over its buttons (src/ui/StartScreen.js): a named group for a screen reader, a row for the eye.
+      for (const [index, group] of (emptyState.groups ?? []).entries()) {
+        const box = document.createElement('div')
+        box.className = 'empty-group'
+        box.setAttribute('role', 'group')
+        const heading = document.createElement('h3')
+        heading.id = `empty-group-${index}`
+        heading.textContent = group.heading
+        box.setAttribute('aria-labelledby', heading.id)
+        box.append(heading)
+        for (const action of group.actions) {
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.textContent = action.label
+          button.addEventListener('click', () => action.run())
+          box.append(button)
+        }
+        empty.append(box)
+      }
       // Real actions, each the same request the page makes elsewhere.
-      for (const action of emptyState.actions) {
+      for (const action of emptyState.actions ?? []) {
         const button = document.createElement('button')
         button.type = 'button'
         button.textContent = action.label

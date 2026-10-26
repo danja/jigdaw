@@ -527,3 +527,62 @@ describe('createPanel with a skin', () => {
     expect(Number(all.value)).toBeCloseTo(0.8)
   })
 })
+
+
+describe('which controls come first', () => {
+  const ranked = (symbol, displayPriority) => port({ symbol, name: symbol.toUpperCase(), displayPriority })
+  const plain = symbol => port({ symbol, name: symbol.toUpperCase(), displayPriority: null })
+  const names = element => [...element.querySelectorAll('label')].map(l => l.textContent)
+
+  it('draws the ports with a priority first, highest first, and puts the rest under a disclosure that says how many', () => {
+    const { element } = build([plain('a'), ranked('b', 10), plain('c'), ranked('d', 90)])
+    const more = element.querySelector('details.more-controls')
+    expect(more).not.toBeNull()
+    expect(more.querySelector('summary').textContent).toBe('More controls (2)')
+    const outside = [...element.querySelectorAll('label')].filter(l => !more.contains(l)).map(l => l.textContent)
+    expect(outside).toEqual(['D', 'B'])
+    expect([...more.querySelectorAll('label')].map(l => l.textContent)).toEqual(['A', 'C'])
+  })
+
+  it('still draws every port once, so nothing a person or an agent could set is lost', () => {
+    const { element } = build([plain('a'), ranked('b', 10), plain('c'), ranked('d', 90)])
+    expect(names(element).sort()).toEqual(['A', 'B', 'C', 'D'])
+    expect(element.querySelectorAll('input, select')).toHaveLength(4)
+  })
+
+  it('draws no disclosure when no port has a priority, as a profile that says nothing was always drawn', () => {
+    expect(build([plain('a'), plain('b')]).element.querySelector('details')).toBeNull()
+  })
+
+  it('draws no disclosure when every port has one, since there is nothing to put away', () => {
+    const { element } = build([ranked('a', 1), ranked('b', 2)])
+    expect(element.querySelector('details')).toBeNull()
+    // Nothing is put away, so the author's own order stands and not the priority order.
+    expect(names(element)).toEqual(['A', 'B'])
+  })
+
+  it('draws the first view as one flat grid with no group headings, and keeps the groups inside the disclosure', () => {
+    const { element } = build([
+      port({ symbol: 'l', name: 'L', displayPriority: 5, group: 'Kick' }), port({ symbol: 's', name: 'S', displayPriority: 4, group: 'Snare' }),
+      port({ symbol: 'p', name: 'P', displayPriority: null, group: 'Kick' }), port({ symbol: 'm', name: 'M', displayPriority: null, group: 'Snare' })
+    ])
+    const more = element.querySelector('details.more-controls')
+    expect([...more.querySelectorAll('legend')].map(l => l.textContent)).toEqual(['Kick', 'Snare'])
+    expect([...element.querySelectorAll('legend')].filter(l => !more.contains(l))).toEqual([])
+    expect([...element.querySelectorAll('label')].filter(l => !more.contains(l)).map(l => l.textContent)).toEqual(['L', 'S'])
+  })
+
+  it('keeps the groups when there is no split, since then nothing was put away', () => {
+    const { element } = build([port({ symbol: 'a', name: 'A', displayPriority: null, group: 'Kick' }), port({ symbol: 'b', name: 'B', displayPriority: null, group: 'Snare' })])
+    expect([...element.querySelectorAll('legend')].map(l => l.textContent)).toEqual(['Kick', 'Snare'])
+  })
+
+  it('names the disclosure with a summary a keyboard reaches and opens, which is what a details element is', () => {
+    const { element } = build([plain('a'), ranked('b', 1)])
+    const more = element.querySelector('details.more-controls')
+    expect(more.hasAttribute('open')).toBe(false)
+    expect(more.querySelector('summary')).not.toBeNull()
+    // The controls inside keep their labels whether or not the disclosure is open.
+    expect(more.querySelector('label[for]')).not.toBeNull()
+  })
+})

@@ -85,7 +85,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 4,
-      "group": "Kick"
+      "group": "Kick",
+      "displayPriority": 60
     },
     {
       "symbol": "snare_tone",
@@ -112,7 +113,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 7,
-      "group": "Snare"
+      "group": "Snare",
+      "displayPriority": 60
     },
     {
       "symbol": "clap_density",
@@ -139,7 +141,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 10,
-      "group": "Clap"
+      "group": "Clap",
+      "displayPriority": 60
     },
     {
       "symbol": "tom1_pitch",
@@ -166,7 +169,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 13,
-      "group": "Tom 1"
+      "group": "Tom 1",
+      "displayPriority": 60
     },
     {
       "symbol": "tom2_pitch",
@@ -193,7 +197,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 16,
-      "group": "Tom 2"
+      "group": "Tom 2",
+      "displayPriority": 60
     },
     {
       "symbol": "hh_closed_brightness",
@@ -220,7 +225,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 19,
-      "group": "Closed HH"
+      "group": "Closed HH",
+      "displayPriority": 60
     },
     {
       "symbol": "hh_open_brightness",
@@ -247,7 +253,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 22,
-      "group": "Open HH"
+      "group": "Open HH",
+      "displayPriority": 60
     },
     {
       "symbol": "crash_brightness",
@@ -274,7 +281,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 25,
-      "group": "Crash"
+      "group": "Crash",
+      "displayPriority": 60
     },
     {
       "symbol": "cowbell_tone",
@@ -301,7 +309,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 28,
-      "group": "Cowbell"
+      "group": "Cowbell",
+      "displayPriority": 60
     },
     {
       "symbol": "clave_tone",
@@ -328,7 +337,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 31,
-      "group": "Clave"
+      "group": "Clave",
+      "displayPriority": 60
     },
     {
       "symbol": "bash_size",
@@ -391,7 +401,8 @@
       "minimum": 0.0,
       "maximum": 1.5,
       "paramIndex": 38,
-      "group": "Bash"
+      "group": "Bash",
+      "displayPriority": 60
     },
     {
       "symbol": "bit_crush",
@@ -408,7 +419,8 @@
       "minimum": 0.0,
       "maximum": 1.0,
       "paramIndex": 40,
-      "group": "Master"
+      "group": "Master",
+      "displayPriority": 80
     },
     {
       "symbol": "master_reverb",
@@ -417,7 +429,8 @@
       "minimum": 0.0,
       "maximum": 1.0,
       "paramIndex": 41,
-      "group": "Master"
+      "group": "Master",
+      "displayPriority": 80
     },
     {
       "symbol": "master_gain",
@@ -426,7 +439,8 @@
       "minimum": 0.0,
       "maximum": 1.0,
       "paramIndex": 42,
-      "group": "Master"
+      "group": "Master",
+      "displayPriority": 100
     },
     {
       "symbol": "kick_mute",

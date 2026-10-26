@@ -197,7 +197,9 @@ Workflow alongside from Routing, and the launcher last.
 
 - [ ] **Arrangement and mixer UIs follow Reaper where possible** (inbox, 2026-10-01). Write a note of what Reaper's track
       control panel, mixer strip and arrange conventions are, and what to keep from Jiggy's routing-first model, before
-      changes. The shell and mixer items below are where it lands. The tab row (seven tabs now) has no horizontal overflow from 320px up (`npm run check:layout`); its wrapped height is not measured.
+      changes. The shell and mixer items below are where it lands.
+      The wider path, with GarageBand's first-day ideas and three steps of what is shown (Simple, Standard, Everything), is
+      [docs/learning-curve.md](docs/learning-curve.md), written 2026-10-26; its "Order of work" is the build list. Steps 1 (the Show control and step list), 2 (the start screen), 3 (the add-track chooser, for instruments) and 4 (the grouped transport) and 5 (the clip corner for repeating) are built; step 6 (primary controls, with `pprops:displayPriority` and no new term) is built, and DrumKit is the only plugin ranked so far (Conductor, Ground, 8-Bit 8asterd and Parameq are the next largest); step 7 is help text from the profile. BandLab ideas (a chooser by kind, loop packs with licences, forking a published session) are in the same note. The chooser still lacks saved chains as sounds, "make notes for me", effects and a microphone. The tab row (seven tabs now) has no horizontal overflow from 320px up (`npm run check:layout`); its wrapped height is not measured.
 - [ ] **Editor-graph shape.** Marker and region colour, and folders (`jig:parent`), have no model or writer yet, so their
       shapes come with them.
 - [ ] **From the Oxide Studio review: what is left** ([docs/oxide-studio-review.md](docs/oxide-studio-review.md), 2026-10-23; read, not run). Built from it: the
@@ -374,8 +376,23 @@ Workflow alongside from Routing, and the launcher last.
 - [ ] **Touch.** Long press for the context menu, two-finger pinch zoom, measured at a real phone width.
 - [ ] **Agent-driven arrangement.** An agent builds a track from profiles: chooses plugins by role, connects them, writes a
       clip. Regress with a scripted session against the real dispatcher.
-- [ ] **Live collaboration, considered.** openDAW runs Yjs sync and a peer-to-peer room. Jiggy has revisions and
-      `expectedRevision` changesets, a better base for merge. Design note only.
+- [ ] **Live collaboration** (a band of 3 or 4, remote). Design written 2026-10-26: [docs/collaboration.md](docs/collaboration.md).
+      A CRDT replica (Yjs first) behind an RDF mapping derived from `vocabs/shapes.ttl`, wrapped in an envelope with a negotiated
+      codec so the engine can change. Join by secret link and knock; "anyone with the link" is a room mode that stays open until
+      closed. Steps, each useful alone:
+      1. Mergeable model and envelope, no network: peer-tagged ids, note ids (check how `ProjectWriter` emits notes first; the
+         format, shapes and round-trip tests move together), the mapping table and its shapes test, `src/collab/` with the
+         deterministic filter, convergence tests on 3 in-memory replicas.
+      2. Two tabs: dispatcher wiring (local `changed` writes to the replica, a remote update is filtered, reconciled and applied
+         unrecorded, echo guard), `BroadcastChannel` provider, undo off in a room, presence.
+      3. Selective per-user undo.
+      4. Two machines, then four: WebRTC, serverless signalling trial, identity, knock, roster, introduction, open mode, plugin-load
+         consent. Evaluate m-ld and NextGraph first.
+      5. Audio files and bundles between peers by hash.
+      6. Shared transport (its own note). 7. Per-edit attribution history, if wanted.
+      Open: rekeying on removal, read-only roles, whether a saved file says it came from a room.
+
+- [ ] **Theme the rest.** The studio, simple and Reel pages have light and dark themes (2026-10-26, `web/theme.js`). Not yet themed: `web/gallery.html`, the generated docs site, and plugin interfaces and skins, which draw their own colours (a plugin could be offered the theme as a CSS variable or a message, which is a contract question). Not looked at in light: the piano roll, the plugin rack and the routing matrix with a session open, and the Reel page itself.
 
 ## DAW features by phase
 
@@ -487,7 +504,7 @@ plugins are IRIs" premise.
       1. *Discovery.* Can the browser search plugin-universe.com's public SPARQL and MCP endpoints directly and offer Jigs the
          catalogue marks as compatible? Needs CORS on those endpoints (check, do not assume) and a rule for trusting what it
          returns: a catalogue entry is a claim, and the profile at the plugin's own IRI is the authority.
-      2. *Sync between instances.* Two or more pages sharing one session live. Peer to peer first (WebRTC data channels; a
+      2. *Sync between instances* (see [docs/collaboration.md](docs/collaboration.md)). Two or more pages sharing one session live. Peer to peer first (WebRTC data channels; a
          signalling step needs a minimal server or a copy-and-paste offer; failing that a small relay). The wire could be
          changesets over a channel with the revision as the conflict check. Decide what does not sync (the transport clock,
          the audio, editor state) before any code.

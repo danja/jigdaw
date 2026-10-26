@@ -27,6 +27,7 @@ export function shellFiles () {
     web('app.bundle.js'),
     web('simple.html'),
     web('view.js'),
+    web('theme.js'),
     web('simple.bundle.js'),
     web('reel.html'),
     web('reel.bundle.js'),

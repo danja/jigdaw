@@ -70,10 +70,17 @@ export function iconElement (document, name) {
 /**
  * Make a button an icon button. The label is its accessible name and its
  * tooltip; a `title` already set by the page, which says more than the name
- * does, is kept as the tooltip.
+ * does, is kept as the tooltip. With `words` the label is drawn beside the icon as well, for the few buttons a person needs to
+ * recognise at once; the accessible name is the same words, so what is read out is what is seen.
  */
-export function setIcon (document, button, name, label, { keepTitle = false } = {}) {
+export function setIcon (document, button, name, label, { keepTitle = false, words = false } = {}) {
   button.replaceChildren(iconElement(document, name))
+  if (words) {
+    const text = document.createElement('span')
+    text.className = 'icon-words'
+    text.textContent = label
+    button.append(text)
+  }
   button.setAttribute('aria-label', label)
   if (!keepTitle || !button.getAttribute('title')) button.setAttribute('title', label)
   button.dataset.icon = name
@@ -82,13 +89,13 @@ export function setIcon (document, button, name, label, { keepTitle = false } = 
 /**
  * Turn the buttons the page marks with `data-icon` into icon buttons, using
  * the words they already hold as the label. Left as words where the script
- * does not run.
+ * does not run. A button also marked `data-words` keeps its words visible beside the icon.
  */
 export function applyIcons (root) {
   const document = root.ownerDocument ?? root
   for (const button of root.querySelectorAll('button[data-icon]')) {
     if (button.querySelector('svg')) continue
     const label = (button.getAttribute('aria-label') ?? button.textContent).trim()
-    setIcon(document, button, button.dataset.icon, label, { keepTitle: true })
+    setIcon(document, button, button.dataset.icon, label, { keepTitle: true, words: button.hasAttribute('data-words') })
   }
 }

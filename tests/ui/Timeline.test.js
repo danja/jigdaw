@@ -548,6 +548,33 @@ describe('an empty arrangement', () => {
     expect(ran).toEqual(['two'])
   })
 
+  it('draws groups as a named group each, a heading over its buttons, and runs the one pressed', () => {
+    const ran = []
+    const timeline = createTimeline(document, {
+      onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onBypass () {}, onMoveInChain () {}, onEnvelope () {}, onAutomateMaster () {}, onRemoveEnvelope () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onFolderCollapse () {}, onArm () {}
+    })
+    document.body.append(timeline.element)
+    timeline.draw({
+      tracks: [], clips: [], beatsPerBar: 4, labelFor: () => '', playsIntoNothing: () => false,
+      empty: { text: 'Start.', groups: [
+        { heading: 'Play a tune', actions: [{ label: 'Acid', run: () => ran.push('acid') }] },
+        { heading: 'Open', actions: [{ label: 'File', run: () => ran.push('file') }] }
+      ] }
+    })
+    const groups = [...document.querySelectorAll('.empty [role="group"]')]
+    expect(groups).toHaveLength(2)
+    for (const group of groups) {
+      const heading = document.getElementById(group.getAttribute('aria-labelledby'))
+      expect(heading.tagName).toBe('H3')
+      expect(group.contains(heading)).toBe(true)
+    }
+    expect(groups.map(g => g.querySelector('h3').textContent)).toEqual(['Play a tune', 'Open'])
+    groups[1].querySelector('button').dispatchEvent(event('click'))
+    expect(ran).toEqual(['file'])
+    // The ids the groups are named by are distinct, or two groups would both be called by the first.
+    expect(new Set(groups.map(g => g.getAttribute('aria-labelledby'))).size).toBe(2)
+  })
+
   it('still says something with no actions given', () => {
     const timeline = createTimeline(document, {
       onAdd () {}, onAddAudio () {}, onMove () {}, onResize () {}, onOpen () {}, onRemove () {}, onSplit () {}, onDuplicate () {}, onBypass () {}, onMoveInChain () {}, onEnvelope () {}, onAutomateMaster () {}, onRemoveEnvelope () {}, onMute () {}, onLock () {}, onTrim () {}, onCopy () {}, onCut () {}, onPaste () {}, onChannel () {}, onSetLoop () {}, onMoveTrack () {}, onFolderCollapse () {}, onArm () {}

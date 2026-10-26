@@ -34,6 +34,7 @@ import { createDockPanel } from './app/Dock.js'
 import { createMatrix } from './app/Matrix.js'
 import { Selection } from '../src/model/Selection.js'
 import { createLoading } from './app/Loading.js'
+import { createAddTrack } from './app/AddTrack.js'
 import { createBrowser } from './app/Browser.js'
 import { createSessions } from './app/Sessions.js'
 import { createHistory } from './app/History.js'
@@ -52,6 +53,8 @@ import { createMaster } from './app/Master.js'
 import { createMeters } from './app/Meters.js'
 import { createPwa } from './app/Pwa.js'
 import { createScript } from './app/Script.js'
+import { createShow } from './app/Show.js'
+import { createTheme } from './app/Theme.js'
 
 const $ = id => document.getElementById(id)
 
@@ -104,6 +107,7 @@ ctx.rack = createRack(ctx)
 ctx.skins.onReady(() => ctx.rack.draw())
 ctx.loading = createLoading(ctx)
 ctx.browser = createBrowser(ctx)
+ctx.addTrack = createAddTrack(ctx)
 ctx.sessions = createSessions(ctx)
 ctx.history = createHistory(ctx)
 ctx.projectInfo = createProjectInfo(ctx)
@@ -229,7 +233,7 @@ if (linked) {
 // change. The arrangement first, because it is what a DAW opens on: the tracks
 // and what they play. A track's plugins are one tab along, and each track's
 // name in the arrangement leads there.
-ctx.tabs = createTabs(document, [
+const TABS = [
   { id: 'arrangement', label: 'Arrangement', panel: $('arrangement-panel') },
   { id: 'tracks', label: 'Plugins', panel: $('tracks-panel') },
   { id: 'routing', label: 'Routing', panel: $('routing-panel') },
@@ -237,8 +241,13 @@ ctx.tabs = createTabs(document, [
   { id: 'launcher', label: 'Launcher', panel: $('launcher-panel') },
   { id: 'script', label: 'Script', panel: $('script-panel') },
   { id: 'settings', label: 'Settings', panel: $('settings-panel') }
-])
+]
+// Which tabs the step draws is Show's to say, so it is asked, and told when a tab was wanted that it does not draw.
+ctx.show = createShow(ctx)
+ctx.tabs = createTabs(document, TABS, { allowed: id => ctx.show.allowsTab(id), onRefused: id => ctx.show.refuseTab(id) })
 $('tabs-mount').append(ctx.tabs.element)
+ctx.show.mount(TABS, ctx.tabs)
+createTheme(ctx).mount()
 
 ctx.rack.draw()
 log('ready. Load the synth and press a key, or search for a plugin.')

@@ -16,6 +16,8 @@ export const TRN = 'http://purl.org/stuff/transmissions/'
 export const LV2 = 'http://lv2plug.in/ns/lv2core#'
 export const MIDI = 'http://lv2plug.in/ns/ext/midi#'
 export const UNITS = 'http://lv2plug.in/ns/extensions/units#'
+// LV2's port properties extension. Reused for displayPriority, the hint a host that can show only some of a plugin's ports reads.
+export const PPROPS = 'http://lv2plug.in/ns/ext/port-props#'
 export const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
 export const RDFS = 'http://www.w3.org/2000/01/rdf-schema#'
 export const FOAF = 'http://xmlns.com/foaf/0.1/'
@@ -361,6 +363,12 @@ export const vocabulary = Object.freeze({
 
   units: Object.freeze({
     unit: `${UNITS}unit`
+  }),
+
+  // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
+  // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
+  pprops: Object.freeze({
+    displayPriority: `${PPROPS}displayPriority`
   })
 })
 

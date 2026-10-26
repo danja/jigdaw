@@ -22,6 +22,7 @@
 // changed when the look did.
 import { createDial } from './Dial.js'
 import { createSkinPanel } from './SkinPanel.js'
+import { splitPrimary } from './PrimaryControls.js'
 import { formatValue, spokenValue } from './PortText.js'
 
 export { UNIT_LABELS, formatValue, SPOKEN_UNITS, spokenValue } from './PortText.js'
@@ -244,19 +245,37 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
     for (const group of groups) addGrid(fieldset(group.label), group.ports, tag)
   }
 
-  if (!skinPanel) addSections(root, profile.ports, '', null)
+  // The ports the author said matter most come first, highest first; the others wait under a disclosure, which a keyboard opens like
+  // any other and which stays as the person left it for as long as the panel does. A profile that says nothing, or that ranks every
+  // port, is drawn whole, as it always was (src/ui/PrimaryControls.js).
+  function addWithMore (parent, ports, tag, ungroupedLegend) {
+    const { primary, rest } = splitPrimary(ports)
+    // The first view is one flat grid in priority order. A group's heading over a single knob is no help, and a plugin that groups by
+    // voice would otherwise open as a column of boxes with one control in each. The groups are kept inside the disclosure.
+    addSections(parent, rest.length === 0 ? primary : primary.map(p => ({ ...p, group: null })), tag, ungroupedLegend)
+    if (rest.length === 0) return
+    const more = document.createElement('details')
+    more.className = 'more-controls'
+    const summary = document.createElement('summary')
+    summary.textContent = `More controls (${rest.length})`
+    more.append(summary)
+    addSections(more, rest, tag, null)
+    parent.append(more)
+  }
+
+  if (!skinPanel) addWithMore(root, profile.ports, '', null)
   else {
     // Under a drawing, controls the drawing does not have need saying so.
     const others = document.createElement('div')
     others.className = 'skin-others'
-    addSections(others, unskinned, '', 'Other controls')
+    addWithMore(others, unskinned, '', 'Other controls')
     // The skin's controls are padded to 44px, and at a narrow width a dense drawing cannot give each one that
     // without them overlapping. Then the drawing is put away and every port is drawn as a generated control, which
     // a person can use at any width. Both exist, and one is hidden, so a resize either way needs no rebuild.
     const everything = document.createElement('div')
     everything.className = 'skin-fallback'
     everything.hidden = true
-    addSections(everything, profile.ports, 'all-', null)
+    addWithMore(everything, profile.ports, 'all-', null)
     root.append(others, everything)
     skinPanel.onCramped(cramped => {
       skinPanel.element.hidden = cramped

@@ -95,6 +95,42 @@ describe('readProfile', () => {
   })
 })
 
+describe('a port\'s display priority', () => {
+  const read = async priority => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText([
+      '@prefix jig: <http://purl.org/stuff/jigdaw/> .',
+      '@prefix lv2: <http://lv2plug.in/ns/lv2core#> .',
+      '@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .',
+      '<> a jig:WebPlugin ; lv2:port <#mix> .',
+      '<#mix> a lv2:InputPort , lv2:ControlPort ;',
+      '  lv2:symbol "mix" ; lv2:name "Mix" ;',
+      `  lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1${priority === undefined ? '' : ` ; pprops:displayPriority ${priority}`} .`
+    ].join('\n'), 'urn:test')
+    return readProfile(dataset).ports[0]
+  }
+
+  it('is read as the integer the profile gives, zero included', async () => {
+    expect((await read('90')).displayPriority).toBe(90)
+    expect((await read('0')).displayPriority).toBe(0)
+  })
+
+  it('is null where the profile says nothing, and not zero', async () => {
+    expect((await read(undefined)).displayPriority).toBeNull()
+  })
+
+  it('is refused when it is not a nonnegative integer, naming the port, rather than guessed at', async () => {
+    await expect(read('-1')).rejects.toThrow(/port .*#mix: pprops:displayPriority must be a nonnegative integer, not -1/)
+    await expect(read('2.5')).rejects.toThrow(/nonnegative integer, not 2.5/)
+    await expect(read('"high"')).rejects.toThrow(/not a number: high/)
+  })
+
+  it('is on every port of the reference profile as null, since it asks for no ordering', async () => {
+    const profile = readProfile(await parseTurtle(at('examples/reference-profile.ttl'), 'urn:test'))
+    for (const port of profile.ports) expect(port.displayPriority, port.symbol).toBeNull()
+  })
+})
+
 describe('widgetFor', () => {
   // Contract section 5.3. The shape of the declaration decides, never a name.
   const port = over => ({ toggled: false, enumeration: false, scalePoints: [], ...over })

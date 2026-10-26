@@ -37,3 +37,22 @@ export function playedContent (clip) {
   }
   return out
 }
+
+/**
+ * The one change that makes a MIDI clip `lengthBeats` long by repeating what it holds: the corner drag, the R key and the menu all
+ * ask for this. A clip that does not loop yet starts to, repeating its own length as it stands, so what was there is the pattern. A
+ * clip that already loops keeps its pattern and only gets longer. A shorter length is an ordinary resize and touches no loop, and so
+ * is a length that is not a number above zero, which is refused rather than turned into something else.
+ */
+export function repeatClip (clip, lengthBeats) {
+  if (clip.kind !== 'midi') throw new Error('only a MIDI clip can repeat')
+  if (!(typeof lengthBeats === 'number' && Number.isFinite(lengthBeats) && lengthBeats > 0)) throw new Error('a clip must be longer than zero beats')
+  const change = { op: 'setClip', id: clip.id, lengthBeats }
+  if (lengthBeats > clip.lengthBeats && !clip.loopBeats) change.loopBeats = clip.lengthBeats
+  return change
+}
+
+/** One more pattern's worth: the length R asks for. A clip that does not loop doubles, since its whole length is its pattern. */
+export function oneMoreRepeat (clip) {
+  return clip.lengthBeats + (clip.loopBeats ?? clip.lengthBeats)
+}

@@ -248,7 +248,8 @@ export function createDockPanel (ctx) {
       trackPanel.show({
         id: track.id,
         name: track.label,
-        defaultName: trackLabel({ ...track, label: null }),
+        // Indexed by the track itself: a copy of it is not in the list, and indexOf would say -1 and name the first track "Track 0".
+        defaultName: ctx.rack.trackLabel({ ...track, label: null }, project.tracks.indexOf(track)),
         layout: project.trackLayout(track.id),
         folders: [...new Set(ordered.map(t => project.trackLayout(t.id).folder).filter(Boolean))],
         index: ordered.findIndex(t => t.id === track.id),

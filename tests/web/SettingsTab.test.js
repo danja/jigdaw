@@ -37,7 +37,7 @@ describe('the Settings tab', () => {
   })
 
   it('names each section with a heading, so the tab can be read in pieces', () => {
-    expect([...panel.querySelectorAll('h2, h3')].map(h => h.textContent)).toEqual(['Settings', 'Playback', 'Project', 'Agents'])
+    expect([...panel.querySelectorAll('h2, h3')].map(h => h.textContent)).toEqual(['Settings', 'Appearance', 'Playback', 'Project', 'Agents'])
   })
 })
 

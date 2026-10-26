@@ -5,7 +5,7 @@
 // its use there.
 import { describe, it, expect } from 'vitest'
 import { Project, changesFor } from '../../src/model/Project.js'
-import { playedContent, checkLoopBeats } from '../../src/model/ClipLoop.js'
+import { playedContent, checkLoopBeats, repeatClip, oneMoreRepeat } from '../../src/model/ClipLoop.js'
 import { splitClip, trimClip, duplicateClip, copyClips, pasteClips } from '../../src/model/ClipEdit.js'
 import { clipNotes, clipControllers } from '../../src/engine/Scheduler.js'
 import { writeMidiFile } from '../../src/model/MidiFile.js'
@@ -118,5 +118,67 @@ describe('editing a looped clip', () => {
     expect(p.clips.find(c => c.id !== 'c').loopBeats).toBe(4)
     p.apply(pasteClips(p, copyClips(p, ['c']), { startBeat: 40 }))
     expect(p.clips.filter(c => c.loopBeats === 4)).toHaveLength(3)
+  })
+})
+
+describe('repeatClip', () => {
+  const clip = { id: 'c1', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [] }
+
+  it('makes a clip that does not loop repeat its own length, as one change', () => {
+    expect(repeatClip(clip, 12)).toEqual({ op: 'setClip', id: 'c1', lengthBeats: 12, loopBeats: 4 })
+  })
+
+  it('keeps the pattern of a clip that already loops and only lengthens it', () => {
+    expect(repeatClip({ ...clip, lengthBeats: 8, loopBeats: 2 }, 12)).toEqual({ op: 'setClip', id: 'c1', lengthBeats: 12 })
+  })
+
+  it('is an ordinary resize when the clip gets shorter, and starts no loop', () => {
+    expect(repeatClip(clip, 2)).toEqual({ op: 'setClip', id: 'c1', lengthBeats: 2 })
+  })
+
+  it('is an ordinary resize at the same length, since nothing is repeated', () => {
+    expect(repeatClip(clip, 4)).toEqual({ op: 'setClip', id: 'c1', lengthBeats: 4 })
+  })
+
+  it('refuses an audio clip, which has no pattern to repeat', () => {
+    expect(() => repeatClip({ id: 'a', kind: 'audio', lengthBeats: 4 }, 8)).toThrow('only a MIDI clip can repeat')
+  })
+
+  it('refuses a length that is not a number above zero, rather than guessing one', () => {
+    for (const bad of [0, -1, NaN, Infinity, '8', null, undefined]) expect(() => repeatClip(clip, bad), String(bad)).toThrow('longer than zero')
+  })
+
+  it('plays what it says: the notes come round again to fill the new length', () => {
+    const withNotes = { ...clip, notes: [{ startBeat: 0, lengthBeats: 1, pitch: 60, velocity: 100 }] }
+    const change = repeatClip(withNotes, 12)
+    const played = playedContent({ ...withNotes, lengthBeats: change.lengthBeats, loopBeats: change.loopBeats })
+    expect(played.notes.map(n => n.startBeat)).toEqual([0, 4, 8])
+  })
+
+  it('is accepted by the model as one change, and one undo takes it back', async () => {
+    const { Project } = await import('../../src/model/Project.js')
+    const project = new Project()
+    project.apply([{ op: 'addTrack', id: 't' }, { op: 'addClip', id: 'c1', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [] }])
+    const before = project.revision
+    project.apply([repeatClip(project.clip('c1'), 12)])
+    expect(project.revision).toBe(before + 1)
+    expect(project.clip('c1')).toMatchObject({ lengthBeats: 12, loopBeats: 4 })
+  })
+
+  it('is refused by the model for a locked clip, as any change to a locked clip is', async () => {
+    const { Project } = await import('../../src/model/Project.js')
+    const project = new Project()
+    project.apply([{ op: 'addTrack', id: 't' }, { op: 'addClip', id: 'c1', track: 't', kind: 'midi', startBeat: 0, lengthBeats: 4, notes: [], locked: true }])
+    expect(() => project.apply([repeatClip(project.clip('c1'), 12)])).toThrow(/locked/)
+  })
+})
+
+describe('oneMoreRepeat', () => {
+  it('doubles a clip that does not loop, since its whole length is its pattern', () => {
+    expect(oneMoreRepeat({ lengthBeats: 4 })).toBe(8)
+  })
+
+  it('adds one pattern to a clip that loops, whatever its length is now', () => {
+    expect(oneMoreRepeat({ lengthBeats: 7, loopBeats: 2 })).toBe(9)
   })
 })

@@ -12,7 +12,7 @@
 .script-label { font-size:16px; color:var(--dim); }
 .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
                  font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
-                 background:#0e1013; color:var(--fg); border:2px solid var(--line); border-radius:8px; }
+                 background:var(--field); color:var(--fg); border:2px solid var(--line); border-radius:8px; }
 .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
 #script-run { background:var(--accent); border-color:var(--accent); color:#fff; }
 .script-status { margin:0; min-height:1.5em; }

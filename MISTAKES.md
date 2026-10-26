@@ -5,6 +5,18 @@ instance is promoted to [CLAUDE.md](CLAUDE.md) ("Lessons kept from the mistakes 
 entry is removed from here; a fix held by a test alone is dropped. Cleared on 2026-10-12 from a
 346 line file, and everything it held is in CLAUDE.md.
 
+## 2026-10-26: The first track's name field said "Track 0"
+
+**What happened.** The track editor in the dock showed "Track 0" as the placeholder of the first track's name field, while its heading said "Track 1". Found
+by looking at the page after building the start screen, not by a test.
+
+**Root cause.** `web/app/Dock.js` named the default by passing a copy of the track, `{ ...track, label: null }`, to a helper that finds the track's place with
+`indexOf`. A copy is not in the list, so `indexOf` said -1 and the label was `Track ${-1 + 1}`. Every first track was affected, and nothing drew it into a test
+because the dock's wiring has no unit test and the label helper was right for what it was given.
+
+**Prevention.** The index is now taken from the track itself. The general point is the old one: a helper that locates a thing by identity is wrong for a copy of
+it, and the wrong answer is a plausible one. Checked in Chrome, where it showed.
+
 ## 2026-10-24: Splitting a module left guards reading text that had moved
 
 **What happened.** Seven large source files were split along their seams (the agent tools, the dispatcher, the project model, the engine, the

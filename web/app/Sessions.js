@@ -25,6 +25,8 @@ export function createSessions (ctx) {
   const { document, $, log } = ctx
   const progress = createLoadProgress(document)
   let openPresetByLabel = () => Promise.resolve()
+  // The names of the bundled presets once the index has arrived. The start screen offers them, so it is drawn again when they do.
+  let listedPresets = []
 
   /**
    * The open session as a file's worth of bytes: Turtle, or a zip when it holds audio or a layout. What Save
@@ -211,6 +213,7 @@ export function createSessions (ctx) {
       index: new URL('presets/index.json', document.baseURI).href
     }).then(found => {
       presets = found
+      listedPresets = found.map(p => p.label)
       $('preset').replaceChildren(...found.map(({ label }, i) => {
         const option = document.createElement('option')
         option.value = String(i)
@@ -218,8 +221,9 @@ export function createSessions (ctx) {
         return option
       }))
       $('presets').hidden = found.length === 0
+      ctx.rack?.draw()
     }).catch(error => log(`presets: ${error.message}`, 'error'))
   }
 
-  return { saveSession, pack, openBytes, openSession, mount, openPreset: label => openPresetByLabel(label) }
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: label => openPresetByLabel(label), presetNames: () => [...listedPresets] }
 }

@@ -13146,7 +13146,7 @@ var init_env = __esm({
 });
 
 // src/rdf/Vocabulary.js
-var JIG, TRN, LV2, MIDI, UNITS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
+var JIG, TRN, LV2, MIDI, UNITS, PPROPS, RDF, RDFS, FOAF, DCTERMS, DOAP, PROV, SEC, vocabulary;
 var init_Vocabulary = __esm({
   "src/rdf/Vocabulary.js"() {
     JIG = "http://purl.org/stuff/jigdaw/";
@@ -13154,6 +13154,7 @@ var init_Vocabulary = __esm({
     LV2 = "http://lv2plug.in/ns/lv2core#";
     MIDI = "http://lv2plug.in/ns/ext/midi#";
     UNITS = "http://lv2plug.in/ns/extensions/units#";
+    PPROPS = "http://lv2plug.in/ns/ext/port-props#";
     RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     RDFS = "http://www.w3.org/2000/01/rdf-schema#";
     FOAF = "http://xmlns.com/foaf/0.1/";
@@ -13475,6 +13476,11 @@ var init_Vocabulary = __esm({
       }),
       units: Object.freeze({
         unit: `${UNITS}unit`
+      }),
+      // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
+      // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
+      pprops: Object.freeze({
+        displayPriority: `${PPROPS}displayPriority`
       })
     });
   }
@@ -13551,6 +13557,13 @@ function orderPorts(ports) {
   const authored = ports.length > 0 && ports.every((p) => p.paramIndex != null);
   return ports.sort(authored ? (a2, b) => a2.paramIndex - b.paramIndex : (a2, b) => (a2.symbol ?? "").localeCompare(b.symbol ?? ""));
 }
+function readDisplayPriority(dataset2, term5) {
+  const priority = asNumber(one(dataset2, term5, pprops.displayPriority));
+  if (priority !== null && !(Number.isInteger(priority) && priority >= 0)) {
+    throw new Error(`port ${term5.value}: pprops:displayPriority must be a nonnegative integer, not ${priority}`);
+  }
+  return priority;
+}
 function readPort(dataset2, term5) {
   const properties = values(dataset2, term5, lv2.portProperty);
   const port = {
@@ -13571,6 +13584,8 @@ function readPort(dataset2, term5) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset2, term5, jig.controlGroup)),
+    // How much the author says this control matters, or null. A panel shows the ports that have one first (src/ui/PrimaryControls.js).
+    displayPriority: readDisplayPriority(dataset2, term5),
     // The author's order, where the profile gives one; the panel follows it.
     paramIndex: asNumber(one(dataset2, term5, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element
@@ -13684,12 +13699,12 @@ function readProfile(dataset2, { baseIRI } = {}) {
     ports: orderPorts(objects(dataset2, subject, lv2.port).map((t) => readPort(dataset2, t)))
   };
 }
-var jig, trn, lv2, midi, rdfs, foaf, units, rdfTerms, iri, asString, values;
+var jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdfTerms, iri, asString, values;
 var init_ProfileReader = __esm({
   "src/rdf/ProfileReader.js"() {
     init_env();
     init_Vocabulary();
-    ({ jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = vocabulary);
+    ({ jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdf: rdfTerms } = vocabulary);
     iri = (value2) => env_default.namedNode(value2);
     asString = (term5) => term5 ? term5.value : null;
     values = (dataset2, subject, predicate) => objects(dataset2, subject, predicate).map((t) => t.value);
@@ -31102,6 +31117,7 @@ function createSessions(ctx2) {
   const { document: document2, $: $2, log: log2 } = ctx2;
   const progress = createLoadProgress(document2);
   let openPresetByLabel = () => Promise.resolve();
+  let listedPresets = [];
   async function pack({ recorded = true } = {}) {
     const { dispatcher, media } = ctx2;
     const states = await Promise.all(dispatcher.project.nodes.map(async (node) => [node.id, await dispatcher.getNodeState(node.id)]));
@@ -31264,6 +31280,7 @@ function createSessions(ctx2) {
       index: new URL("presets/index.json", document2.baseURI).href
     }).then((found) => {
       presets = found;
+      listedPresets = found.map((p) => p.label);
       $2("preset").replaceChildren(...found.map(({ label }, i2) => {
         const option = document2.createElement("option");
         option.value = String(i2);
@@ -31271,9 +31288,10 @@ function createSessions(ctx2) {
         return option;
       }));
       $2("presets").hidden = found.length === 0;
+      ctx2.rack?.draw();
     }).catch((error2) => log2(`presets: ${error2.message}`, "error"));
   }
-  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label) };
+  return { saveSession, pack, openBytes, openSession, mount, openPreset: (label) => openPresetByLabel(label), presetNames: () => [...listedPresets] };
 }
 
 // web/app/Media.js
@@ -32754,6 +32772,7 @@ function createScript(ctx2) {
 
 // src/ui/Tabs.js
 function createTabs(document2, tabs, { onSelect = () => {
+}, allowed = () => true, onRefused = () => {
 } } = {}) {
   if (tabs.length === 0) throw new Error("a tab list needs at least one tab");
   const tablist = document2.createElement("div");
@@ -32808,7 +32827,12 @@ function createTabs(document2, tabs, { onSelect = () => {
     select(id) {
       const index = tabs.findIndex((tab) => tab.id === id);
       if (index === -1) throw new Error(`no such tab: ${id}`);
+      if (!allowed(id)) {
+        onRefused(id);
+        return false;
+      }
       select(index);
+      return true;
     },
     /** The id of whichever tab is currently shown. */
     selected() {

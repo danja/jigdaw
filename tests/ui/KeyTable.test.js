@@ -36,7 +36,7 @@ const BINDERS = {
       const { document, window } = page()
       const calls = []
       const rec = name => (...a) => calls.push([name, ...a])
-      const names = ['onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onMute', 'onCopy', 'onCut', 'onPaste', 'onLock', 'onTrim']
+      const names = ['onMove', 'onResize', 'onOpen', 'onRemove', 'onSplit', 'onDuplicate', 'onMute', 'onCopy', 'onCut', 'onPaste', 'onLock', 'onTrim', 'onRepeat']
       const view = new TimeView()
       const selection = new Selection()
       selection.subscribe(() => calls.push(['selection']))
@@ -196,6 +196,31 @@ describe('the list of shortcuts', () => {
   it('is not fooled: a key nobody handles makes no control react', async () => {
     for (const scope of Object.keys(BINDERS)) expect(await BINDERS[scope]()({ key: 'q' }), scope).toBe(0)
   })
+
+  // The probe above is one letter. A handler for a key the table does not list passes it, so every letter, arrow and common
+  // punctuation key is tried at each control, with and without each modifier, and whatever reacts has to be a key some row of that scope names.
+  const PROBES = [
+    ...'abcdefghijklmnopqrstuvwxyz'.split(''), '[', ']', '+', '-', '.', ',', 'Delete', 'Backspace', 'Escape', 'Home', 'End',
+    'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'
+  ]
+  const MODS = [{}, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { ctrlKey: true, shiftKey: true }]
+  // By the key alone: a handler that also answers Shift+S is lax, not unlisted. A key no row names at all is what this is for.
+  const same = (a, b) => String(a.key).toLowerCase() === String(b.key).toLowerCase()
+
+  for (const scope of ['clip', 'track', 'chain', 'point']) {
+    it(`${scope}: no key reacts that the table does not list`, async () => {
+      const listed = KEY_ROWS.filter(r => r.scope === scope).flatMap(r => r.press)
+      const unlisted = []
+      for (const key of PROBES) {
+        for (const mods of MODS) {
+          const init = { key, ...mods }
+          if (listed.some(l => same(l, init))) continue
+          if (await BINDERS[scope]()(init) > 0) unlisted.push(JSON.stringify(init))
+        }
+      }
+      expect(unlisted).toEqual([])
+    })
+  }
 
   it('has the panic key wired in web/app.js to the predicate the table was checked against', () => {
     const text = readFileSync('web/app.js', 'utf8')

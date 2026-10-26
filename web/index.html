@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="view.js"></script>
+<script src="theme.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14171d">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -13,11 +14,29 @@
   :root {
     color-scheme: dark;
     --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#8b93a1;
-    --line:#2a2f38; --accent:#3182ce; --ok:#7ddc8e; --err:#ff8a8a; --solo:#f2c94c; --wire:#4a5464;
-    }
+    --line:#2a2f38; --accent:#2c78c2; --ok:#7ddc8e; --err:#ff8a8a; --solo:#f2c94c; --wire:#4a5464;
+    --ok-ink:#7ddc8e; --err-ink:#ff8a8a; --on-accent:#fff;
+    --field:#0e1013; --lane:#13161b; --raised:#1a1e24; --control:#2a2f38; --control-hover:#2d343f; --rule:#3a4150;
+    --hilite:#ffd166; --focus:#7fb3ff; --cell-selected:#6aa6ff; --outline-strong:#fff;
+    --notice-warn:#2d2a1d; --notice-info:#1d2a3d; --clip-midi:#23405f; --clip-audio:#2f3b27;
+    --wash:rgba(255,255,255,.02); --veil:rgba(255,255,255,.18); --veil-strong:rgba(255,255,255,.35); --grid-line:#ffffff10; --loop-line:rgba(255,255,255,.4);
+  }
+  /* The light theme: the same names with values that read on a pale page (tests/web/Theme.test.js checks the contrast of the
+     pairs). The theme is put on <html> by theme.js before the page is drawn. A fill that carries dark text (--err, --solo) keeps its
+     value; the -ink tokens are the ones used as text or lines on a light page. */
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg:#f4f6f9; --panel:#ffffff; --fg:#1a1d23; --dim:#566070;
+    --line:#c9d0da; --accent:#2b6cb0; --ok:#2f9e4f; --err:#ff8a8a; --solo:#f2c94c; --wire:#8a94a6;
+    --ok-ink:#1a7f37; --err-ink:#b42318; --on-accent:#fff;
+    --field:#ffffff; --lane:#eef1f5; --raised:#e6eaf0; --control:#dde3ea; --control-hover:#cfd7e1; --rule:#aab4c3;
+    --hilite:#9a5b00; --focus:#1d4ed8; --cell-selected:#3b82f6; --outline-strong:#111;
+    --notice-warn:#fff3d1; --notice-info:#e1edfb; --clip-midi:#cfe2f8; --clip-audio:#d6efdb;
+    --wash:rgba(0,0,0,.03); --veil:rgba(0,0,0,.14); --veil-strong:rgba(0,0,0,.28); --grid-line:#0000001a; --loop-line:rgba(0,0,0,.35);
+  }
   * { box-sizing:border-box; }
   body { margin:0; font:14px/1.5 system-ui,sans-serif; background:var(--bg); color:var(--fg); }
-  :focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  :focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
   .keys-overlay { position:fixed; inset:5vh 0 auto 0; margin:0 auto; width:min(40rem, calc(100% - 32px)); max-height:90vh;
                   overflow:auto; z-index:50; padding:1rem 1.25rem; background:var(--panel); color:var(--fg);
                   border:2px solid var(--accent); border-radius:6px; }
@@ -33,26 +52,36 @@
      this; the outline is a second signal for a sighted reader and never the
      only one, because section 12.5 forbids colour alone. */
   .foreign { font-size:11px; letter-spacing:.04em; text-transform:uppercase;
-             border:1px solid var(--err); color:var(--err); border-radius:3px;
+             border:1px solid var(--err); color:var(--err-ink); border-radius:3px;
              padding:1px 5px; margin-left:6px; vertical-align:middle; }
   .is-foreign { outline:1px dashed var(--err); outline-offset:2px; }
   /* Contract section 12.4. Wide enough to read four statements, and the
      refusal is the plain button while running it is the marked one. */
-  .consent { max-width:34rem; border:1px solid var(--rule,#3a4150); border-radius:8px;
-             background:#1a1d23; color:var(--fg,#e6e8ec); padding:1.25rem; }
+  .consent { max-width:34rem; border:1px solid var(--rule,var(--rule)); border-radius:8px;
+             background:var(--raised); color:var(--fg,var(--fg)); padding:1.25rem; }
   .consent::backdrop { background:rgba(0,0,0,.6); }
   .consent h2 { font-size:1.1rem; margin:0 0 .75rem; }
   .consent ul { margin:0 0 1.25rem; padding-left:1.1rem; line-height:1.55; }
   .consent li { margin-bottom:.4rem; }
+  /* The Add a track chooser: a name and a line on the left, Hear and Add on the right, wrapping under at phone width. */
+  .chooser { max-width:36rem; width:calc(100% - 2rem); border:1px solid var(--rule,var(--rule)); border-radius:8px;
+             background:var(--raised); color:var(--fg,var(--fg)); padding:1.25rem; box-sizing:border-box; }
+  .chooser::backdrop { background:rgba(0,0,0,.6); }
+  .chooser h2 { font-size:1.1rem; margin:0 0 .5rem; }
+  .sound-list { list-style:none; margin:.5rem 0 1rem; padding:0; max-height:50vh; overflow:auto; }
+  .sound-list li { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:8px 0; border-bottom:1px solid var(--line); }
+  .sound-words { flex:1 1 14rem; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .sound-about, .sound-mark { color:var(--dim); font-size:14px; }
+  .sound-list button { min-height:44px; min-width:44px; padding:8px 16px; font-size:16px; }
   .consent-buttons { display:flex; gap:10px; flex-wrap:wrap; }
   .consent-buttons button { min-height:44px; font-size:16px; padding:8px 16px; }
-  .consent-buttons .danger { border-color:var(--err); color:var(--err); }
+  .consent-buttons .danger { border-color:var(--err); color:var(--err-ink); }
   /* A row of knobs and the two buttons, rather than a column of full width
      sliders. Wraps, so a narrow screen puts the buttons underneath instead of
      pushing them off the side. */
   .strip { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center;
            gap:6px 18px; padding:10px 14px;
-           border-bottom:1px solid var(--line); background:rgba(255,255,255,.02); }
+           border-bottom:1px solid var(--line); background:var(--wash); }
   .strip.silent { opacity:.55; }
   /* A mixer channel: the knob above, the fader standing up, the buttons under. The range is the native one on its side,
      so the arrow keys, Home and End and the value text all stay the platform's. */
@@ -103,7 +132,7 @@
   .port:disabled { opacity:.4; cursor:not-allowed; }
   .port-out { border-left:3px solid var(--accent); }
   .port-in  { border-left:3px solid var(--dim); }
-  .port.pending { background:var(--accent); color:#111; border-color:var(--accent); }
+  .port.pending { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
   .port-none { color:var(--dim); font-size:12px; }
 
   .connections-heading { margin:18px 0 8px; font-size:13px; color:var(--dim);
@@ -116,14 +145,14 @@
      handled by entirely different machinery. */
   .connection-kind { flex:0 0 auto; font-size:11px; padding:2px 7px; border-radius:3px;
                      border:1px solid var(--line); color:var(--dim); }
-  .connection-kind.MIDI { border-color:var(--ok); color:var(--ok); }
+  .connection-kind.MIDI { border-color:var(--ok); color:var(--ok-ink); }
   .connection-remove { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                        border:1px solid var(--line); border-radius:4px;
                        background:transparent; color:var(--dim); cursor:pointer; }
   .connection-watch { flex:0 0 auto; min-height:32px; padding:5px 10px; font-size:12px;
                       border:1px solid var(--line); border-radius:4px;
                       background:transparent; color:var(--dim); cursor:pointer; }
-  .connection-watch[aria-pressed="true"] { border-color:#ffd166; color:var(--fg); }
+  .connection-watch[aria-pressed="true"] { border-color:var(--hilite); color:var(--fg); }
   .connection-log { margin:0 0 8px 28px; padding:0 0 0 16px; font-size:12px; color:var(--dim); max-height:12rem; overflow:auto; }
   /* A gap where a wire is not, so a stack of slots does not imply a chain. */
   .gap { height:20px; }
@@ -136,18 +165,30 @@
 
 
   /* Transport */
-  .transport { display:flex; flex-wrap:wrap; align-items:center; gap:12px;
-    padding:10px 16px; background:#14171d; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  .transport { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px;
+    padding:10px 16px; background:var(--lane); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
   .brand { font-weight:700; letter-spacing:.5px; margin-right:4px; }
   .transport button { min-height:44px; min-width:44px; padding:8px 14px; font-size:15px;
-    background:#242a33; color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
-  .transport button:hover { background:#2d343f; }
+    background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:5px; cursor:pointer; }
+  .transport button:hover { background:var(--control-hover); }
   .transport button[aria-pressed=true] { background:var(--accent); border-color:var(--accent); color:#fff; }
   .transport button:disabled { opacity:.4; cursor:not-allowed; }
-  .transport button:disabled:hover { background:#242a33; }
+  .transport button:disabled:hover { background:var(--control); }
   .tempo { display:flex; align-items:center; gap:6px; }
-  .tempo input { width:70px; padding:8px; font-size:16px; text-align:right;
-    background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  /* A group of related controls, named for a screen reader and kept together when the bar wraps. */
+  .tgroup { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .more > summary { min-height:44px; min-width:44px; padding:0 14px; display:inline-flex; align-items:center; cursor:pointer;
+    background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:5px; list-style:none; }
+  .more > summary::-webkit-details-marker { display:none; }
+  .more[open] { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+  .icon-words { margin-left:6px; }
+  /* On a narrow screen the bar is mostly wrapping, so the words give way to the icons, which keep their accessible names. */
+  @media (max-width: 760px) { .transport { gap:8px 12px; } }
+  @media (max-width: 480px) { .icon-words { display:none; } }
+  .tempo input { width:70px; min-height:44px; box-sizing:border-box; padding:8px; font-size:16px; text-align:right;
+    background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+  /* A select in the bar (Show, count-in) is a touch target like the buttons, and 16px so iOS does not zoom when it takes focus. */
+  .tempo select { min-height:44px; font-size:16px; }
   .position { font-family:ui-monospace,monospace; font-size:15px; min-width:7ch; color:var(--dim); }
   .site-footer { padding:12px 16px 24px; border-top:1px solid var(--line); margin-top:16px; }
   .links { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:14px; }
@@ -156,18 +197,22 @@
   /* An element that is left out stays out, whatever display a rule gives its class: a MIDI send's Level was drawn with
      nothing to act on because .send-level sets a display and that beat the attribute. */
   [hidden] { display:none !important; }
+  /* The step the person is on (src/ui/Show.js). What it does not reach is left out of the layout, the tab order and the
+     accessibility tree, and never disabled. The step is on <html> and each control's first step is on the control. */
+  html[data-step="simple"] [data-from="standard"], html[data-step="simple"] [data-from="advanced"],
+  html[data-step="standard"] [data-from="advanced"] { display:none !important; }
   .note-range { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px 16px; }
   .note-range-end { display:inline-flex; align-items:center; gap:6px; }
   .note-range input { width:5.5rem; min-height:44px; font-size:16px; }
-  .note-name { min-width:3.5ch; color:var(--muted, #9aa4b2); font-size:13px; }
+  .note-name { min-width:3.5ch; color:var(--muted, var(--dim)); font-size:13px; }
   .meter-group { display:flex; align-items:center; gap:8px; margin-top:6px; }
   .meter-clip { min-height:28px; padding:0 8px; background:var(--err); color:#111; border:1px solid var(--err); border-radius:4px; font:inherit; font-size:12px; cursor:pointer; }
   @media (pointer: coarse), (max-width: 760px) { .meter-clip { min-height:44px; min-width:44px; } }
-  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, #9aa4b2); }
+  .meter-readout { font-variant-numeric:tabular-nums; font-size:13px; min-width:7ch; color:var(--muted, var(--dim)); }
   .level { display:inline-flex; align-items:center; gap:8px; }
   .level .clip { align-self:center; height:44px; min-height:44px; min-width:44px; }
   .meter { display:flex; gap:3px; align-items:flex-end; height:26px; }
-  .meter i { display:block; width:5px; background:#232a33; border-radius:1px; height:100%; }
+  .meter i { display:block; width:5px; background:var(--raised); border-radius:1px; height:100%; }
   .meter i.on { background:var(--ok); }
   .meter i.hot { background:var(--err); }
 
@@ -179,7 +224,7 @@
   /* The browser closed: it is hidden, and the stage has the whole width. */
   main.no-browser { grid-template-columns: minmax(0, 1fr); }
   .browser[hidden] { display:none; }
-  .browser { border-right:1px solid var(--line); padding:14px; background:#13161b; }
+  .browser { border-right:1px solid var(--line); padding:14px; background:var(--lane); }
   /* The Browser's header: its name and a Close button. Opening it is the Browser
      button in the transport bar, which aria-expanded keeps honest. */
   .browser-head { display:flex; align-items:center; gap:8px; margin:0 0 10px; }
@@ -203,7 +248,7 @@
 
   /* Browser */
   .searchbar { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .searchbar input, .searchbar select { padding:9px 10px; font-size:16px; background:#0e1013;
+  .searchbar input, .searchbar select { padding:9px 10px; font-size:16px; background:var(--field);
     color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .searchbar input { flex:1 1 8rem; min-width:0; }
   .searchbar select { flex:1 1 100%; min-height:40px; }
@@ -223,7 +268,7 @@
   .script-label { font-size:12px; color:var(--dim); }
   .script-source { width:100%; min-height:12rem; padding:10px; resize:vertical; tab-size:2;
                    font:16px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
-                   background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px; }
+                   background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px; }
   .script-actions { display:flex; flex-wrap:wrap; gap:8px; }
   .script-button { min-height:44px; padding:8px 16px; font-size:16px; background:var(--panel); color:var(--fg);
                    border:1px solid var(--line); border-radius:4px; cursor:pointer; }
@@ -233,10 +278,10 @@
   .script ol, .script ul { margin:0; padding-left:1.4rem; }
   .script-problems-list li { margin-bottom:6px; overflow-wrap:anywhere; }
   .script-problems-list .script-button { min-height:44px; margin-left:6px; padding:4px 12px; font-size:14px; }
-  .script-error-word { font-weight:700; color:var(--err); }
+  .script-error-word { font-weight:700; color:var(--err-ink); }
   .script-plan-list li, .script-log-list li { overflow-wrap:anywhere; font-family:ui-monospace,monospace; font-size:12px; }
   .script-log-list { list-style:none; padding-left:0; max-height:30vh; overflow:auto; }
-  .script-log-error { color:var(--err); }
+  .script-log-error { color:var(--err-ink); }
   /* No display:flex here: it removes the disclosure triangle, which is what says this opens. */
   .script-syntax summary { cursor:pointer; color:var(--dim); font-size:14px; padding:12px 0; min-height:44px; }
   .script-syntax dt { margin-top:8px; }
@@ -249,17 +294,17 @@
   /* Rack */
   .rack { display:flex; flex-direction:column; gap:0; }
   .slot { background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:12px 14px; }
-  .slot.source, .slot.output { background:#161a20; border-style:dashed; color:var(--dim); }
+  .slot.source, .slot.output { background:var(--lane); border-style:dashed; color:var(--dim); }
   /* Wraps, because a plugin's header holds a grip, its name, two move buttons,
      a track menu and Remove, which is wider than a phone. */
   .slot header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-bottom:8px; }
   .slot h3 { margin:0; font-size:15px; flex:1 1 6rem; min-width:0; overflow-wrap:anywhere; }
   .slot .kind { font-size:11px; color:var(--dim); }
-  .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:#2a2f38;
+  .slot .remove { min-height:32px; padding:4px 10px; font-size:12px; background:var(--control);
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
-  .slot .remove:hover { color:var(--err); border-color:var(--err); }
+  .slot .remove:hover { color:var(--err-ink); border-color:var(--err); }
   .slot .reorder { min-height:32px; min-width:32px; padding:4px 8px; font-size:12px;
-    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    background:var(--control); color:var(--dim); border:1px solid var(--line); border-radius:4px;
     cursor:pointer; }
   .slot .reorder:hover:not(:disabled) { color:var(--fg); border-color:var(--accent); }
   .slot .reorder:disabled { opacity:.4; cursor:default; }
@@ -269,7 +314,7 @@
      same mousedown. */
   .slot .grip { display:inline-flex; align-items:center; justify-content:center;
     min-height:32px; min-width:32px; padding:4px 8px; font-size:14px;
-    background:#2a2f38; color:var(--dim); border:1px solid var(--line); border-radius:4px;
+    background:var(--control); color:var(--dim); border:1px solid var(--line); border-radius:4px;
     cursor:grab; touch-action:none; }
   .slot.drag-over { outline:2px dashed var(--accent); outline-offset:-2px; }
   .wire { height:20px; margin-left:26px; border-left:2px solid var(--wire); position:relative; }
@@ -284,9 +329,9 @@
   .track { border-left:3px solid var(--line); padding-left:10px; margin-bottom:22px; min-width:0; }
   .track-header { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
   .track-header h3 { margin:0; font-size:16px; flex:1 1 8rem; }
-  .track-header input { padding:8px 10px; font-size:16px; background:#0e1013; color:var(--fg);
+  .track-header input { padding:8px 10px; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; min-width:0; flex:1 1 8rem; }
-  .track-header button { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+  .track-header button { min-height:44px; padding:6px 12px; font-size:13px; background:var(--control);
     color:var(--dim); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .track-header button:hover { color:var(--fg); border-color:var(--accent); }
   .slot .move-track { flex:0 1 auto; min-width:0; }
@@ -300,7 +345,7 @@
   .editor { background:var(--panel); border:1px solid var(--accent); border-radius:7px; overflow:hidden; }
   .editor header { display:flex; align-items:center; gap:10px; padding:8px 12px; }
   .editor h3 { margin:0; font-size:14px; flex:1; }
-  .editor button, .slot .open-editor, .slot .unpack { min-height:44px; padding:6px 12px; font-size:13px; background:#2a2f38;
+  .editor button, .slot .open-editor, .slot .unpack { min-height:44px; padding:6px 12px; font-size:13px; background:var(--control);
     color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   /* content-box: the height a frame asks for is for its document, and a
      border counted inside it leaves the document a pixel short and scrolling. */
@@ -313,36 +358,38 @@
      view at the bottom of it and never down the page past every track. The ruler and the loop row stay at the top, and
      the track names stay at the left, while the lanes scroll under them. */
   .timeline-scroll { position:relative; overflow:auto; max-height:calc(100vh - 11.5rem); min-height:12rem;
-    border:1px solid var(--line); border-radius:7px; background:#13161b; }
+    border:1px solid var(--line); border-radius:7px; background:var(--lane); }
   /* Where the transport is, in the timeline and the piano roll. Drawn over,
      never in the way of a press. */
-  .playhead { position:absolute; top:0; width:2px; height:100%; background:#ffd166; z-index:3; pointer-events:none; }
+  .playhead { position:absolute; top:0; width:2px; height:100%; background:var(--hilite); z-index:3; pointer-events:none; }
   .piano-roll .playhead { left:calc(var(--key) + var(--cell) * var(--at)); }
-  .timeline-scroll:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
-  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:#13161b; }
+  .timeline-scroll:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  .timeline-ruler { position:sticky; top:0; z-index:2; height:22px; margin-left:var(--head); color:var(--dim); font-size:11px; background:var(--lane); }
   .clip-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
-  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, #3a4150); border-radius:6px; background:#2a2f38; color:var(--fg); font:inherit; }
+  .clip-colors button { min-width:44px; min-height:44px; padding:0; border:1px solid var(--line, var(--rule)); border-radius:6px; background:var(--control); color:var(--fg); font:inherit; }
   button[data-icon] { min-width:32px; min-height:32px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; }
   button[data-icon] .icon { display:block; }
-  #recover { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#2d2a1d; border:2px solid var(--solo); border-radius:12px; }
+  #recover { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:var(--notice-warn); border:2px solid var(--solo); border-radius:12px; }
   #recover[hidden] { display:none; }
   #recover-text { flex:1 1 14rem; }
-  #recover button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
-  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:#1d2a3d; border:2px solid var(--accent); border-radius:12px; }
+  #recover button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  #carry { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:12px 16px; margin:8px 0; background:var(--notice-info); border:2px solid var(--accent); border-radius:12px; }
   #carry[hidden] { display:none; }
   #carry-text { flex:1 1 14rem; }
-  #carry button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  #carry button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
   .clip-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
-  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; font:inherit; }
+  .clip-actions button { min-height:44px; min-width:44px; padding:0 12px; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; font:inherit; }
   .timeline-tools { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px; }
-  .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:#2a2f38; color:var(--fg);
+  .timeline-tools button { min-height:44px; min-width:44px; padding:0 12px; background:var(--control); color:var(--fg);
                            border:1px solid var(--line); border-radius:6px; }
-  .timeline-tools select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg);
+  .timeline-tools select { min-height:44px; font-size:16px; background:var(--control); color:var(--fg);
                            border:1px solid var(--line); border-radius:6px; }
   .timeline-zoom { color:var(--dim); font-size:13px; min-width:5.5em; }
   .timeline .empty { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px; margin-left:var(--head); }
   .timeline .empty p { flex:1 1 100%; margin:0; color:var(--dim); }
-  .timeline .empty button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .timeline .empty-group { flex:1 1 100%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; }
+  .timeline .empty-group h3 { flex:1 1 100%; margin:6px 0 0; font-size:13px; font-weight:600; letter-spacing:.4px; color:var(--dim); text-align:left; }
+  .timeline .empty button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   /* The chain under a lane stays in view as the lanes scroll, and wraps inside what is visible. */
   .timeline-chain { position:sticky; left:var(--head); margin-left:var(--head); width:calc(var(--view, 100vw) - var(--head) - 16px); box-sizing:border-box;
@@ -350,39 +397,39 @@
   .timeline-chain[hidden], .timeline[data-routing="off"] .timeline-chain, .timeline-row[data-size="small"] .timeline-chain { display:none; }
   .chain-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
   .chain-item { display:flex; flex-direction:column; gap:2px; min-width:8rem; max-width:16rem; padding:4px 6px;
-    border:1px solid var(--line); border-radius:6px; background:#161a20; }
+    border:1px solid var(--line); border-radius:6px; background:var(--lane); }
   .chain-item.failed { border-style:dashed; border-color:var(--err); }
   .master-row { margin-top:8px; padding:6px 0; border-top:2px solid var(--line); }
   .master-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 8px 6px; }
   .master-title { font-weight:600; }
-  .master-head button { min-height:44px; padding:0 12px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
-  .master-head select { min-height:44px; font-size:16px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .master-head button { min-height:44px; padding:0 12px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; }
+  .master-head select { min-height:44px; font-size:16px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
   .envelope-lanes { margin:6px 0 0; display:flex; flex-direction:column; gap:6px; }
-  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:#151922; }
+  .envelope-lane { border:1px solid var(--line); border-radius:6px; background:var(--lane); }
   /* Stuck to the left of the scroll box, so Fold, Add point and Remove are in reach however far along the piece is scrolled. */
   .envelope-head { position:sticky; left:0; width:max-content; max-width:calc(100vw - 4rem); display:flex; align-items:center; gap:8px; padding:4px 8px; font-size:13px; color:var(--dim); }
   .envelope-title { flex:1 1 auto; }
-  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:#2a2f38; color:var(--fg);
+  .envelope-fold, .envelope-add, .envelope-remove { min-height:28px; min-width:28px; padding:0 10px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; font:inherit; display:inline-flex; align-items:center; justify-content:center; }
-  .envelope-body { position:relative; background-image:linear-gradient(to right, #ffffff10 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
+  .envelope-body { position:relative; background-image:linear-gradient(to right, var(--grid-line) 1px, transparent 1px); background-size:96px 100%; cursor:crosshair; }
   .envelope-line { position:absolute; left:0; top:0; pointer-events:none; }
   .envelope-line path { fill:none; stroke:var(--accent); stroke-width:2; }
   .envelope-point { position:absolute; width:44px; height:44px; padding:0; border:0; background:transparent; cursor:grab; touch-action:none;
     display:flex; align-items:center; justify-content:center; }
   .envelope-dot { width:12px; height:12px; border-radius:50%; background:var(--fg); border:2px solid var(--accent); }
-  .envelope-point:focus-visible .envelope-dot { outline:3px solid #ffd166; outline-offset:2px; }
+  .envelope-point:focus-visible .envelope-dot { outline:3px solid var(--hilite); outline-offset:2px; }
   .chain-head { display:flex; gap:4px; }
-  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-move { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
   .chain-head .chain-node { flex:1 1 auto; min-width:0; }
-  .chain-replace { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
+  .chain-replace { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
   .replacing { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 12px; border:2px solid var(--solo); border-radius:4px; margin:0 0 8px; }
   .replacing button { min-height:44px; }
-  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line, #3a4150); border-radius:6px; }
-  .chain-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-bypass { flex:none; min-width:44px; min-height:44px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line, var(--rule)); border-radius:6px; }
+  .chain-bypass[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   .chain-item.bypassed { border-style:dotted; opacity:.75; }
-  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:#2a2f38; color:var(--fg);
+  .chain-node { min-height:44px; text-align:left; padding:0 8px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:5px; cursor:pointer; font-size:13px; }
-  .chain-node[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .chain-node[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   .chain-io { font-size:11px; color:var(--dim); }
   .chain-links { list-style:none; margin:0; padding:0; font-size:11px; color:var(--dim); }
   .chain-links li.other { color:var(--fg); }
@@ -393,13 +440,13 @@
   .matrix-ends { padding:8px 10px; font-size:13px; color:var(--dim); }
   .matrix-ends p { margin:0 0 4px; }
   .matrix-ends ul { margin:0; padding-left:20px; color:var(--fg); }
-  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:#13161b; border-bottom:1px solid var(--line); }
+  .routing-matrix th { font-weight:500; color:var(--dim); padding:6px 8px; background:var(--lane); border-bottom:1px solid var(--line); }
   .routing-matrix thead th[scope="col"] { max-width:9rem; vertical-align:bottom; }
   .routing-matrix tbody th { position:sticky; left:0; z-index:1; text-align:left; white-space:nowrap; border-right:1px solid var(--line); }
   .routing-matrix td { padding:0; border-bottom:1px solid var(--line); border-right:1px solid var(--line); text-align:center; }
   .matrix-cell { width:44px; height:44px; padding:0; background:transparent; color:var(--dim); border:0; cursor:pointer; font-size:16px; }
   .matrix-cell[aria-pressed="true"] { background:var(--accent); color:#fff; }
-  .matrix-cell:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .matrix-cell:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .head-kind { font-size:12px; color:var(--dim); border:1px solid var(--dim); border-radius:4px; padding:0 6px; }
   .timeline-head[data-size="small"] .head-kind { display:none; }
   .head-routing { flex:1 1 100%; margin:0; font-size:12px; color:var(--fg); }
@@ -410,13 +457,13 @@
   .send-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px; }
   .send-level { display:inline-flex; align-items:center; gap:6px; }
   .send-level input { min-height:44px; width:8rem; }
-  .send-row select, .send-add select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg); border:1px solid var(--line); border-radius:6px; }
-  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
+  .send-row select, .send-add select { min-height:44px; font-size:16px; background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  .send-row button, .send-add button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .master-channel { border-color:var(--accent); }
   .align { margin:0 0 10px; }
   .align label { display:inline-flex; align-items:center; gap:8px; min-height:44px; font-size:14px; }
   .align input { width:24px; height:24px; }
-  .timeline-loop { position:sticky; top:22px; z-index:2; background:#13161b; height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
+  .timeline-loop { position:sticky; top:22px; z-index:2; background:var(--lane); height:44px; margin-left:var(--head); cursor:crosshair; touch-action:none; }
   .loop-brace { position:absolute; top:6px; height:32px; box-sizing:border-box; border:1px dashed var(--dim);
     border-radius:4px; background:rgba(127,179,255,.08); pointer-events:none; }
   .loop-brace.on { border:2px solid var(--accent); background:rgba(127,179,255,.18); }
@@ -426,7 +473,7 @@
     cursor:ew-resize; touch-action:none; }
   .loop-handle::after { content:''; position:absolute; left:20px; top:8px; width:4px; height:28px;
     background:var(--accent); border-radius:2px; }
-  .loop-handle:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .loop-handle:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .timeline-ruler i { position:absolute; bottom:0; height:6px; border-left:1px solid var(--line); }
   .timeline-ruler span { position:absolute; top:4px; padding-left:3px; border-left:1px solid var(--line); }
   .timeline { --head:13rem; }
@@ -437,11 +484,11 @@
   .folder-move { min-height:44px; min-width:44px; padding:0 0.75rem; background:none; border:0; color:var(--fg); }
   .timeline-body { display:flex; align-items:stretch; }
   .timeline-head { position:sticky; left:0; z-index:1; width:var(--head); flex:none; display:flex;
-    flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:#13161b; border-right:1px solid var(--line); }
+    flex-flow:row wrap; align-content:flex-start; gap:4px; padding:6px 8px; background:var(--lane); border-right:1px solid var(--line); }
   .timeline-head span, .timeline-head .show-track { font-size:13px; overflow-wrap:anywhere; }
   .timeline-head .show-track { min-height:28px; text-align:left; background:none; border:0; color:var(--fg);
     padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
-  .timeline-head button { min-height:28px; font-size:12px; background:#2a2f38; color:var(--fg);
+  .timeline-head button { min-height:28px; font-size:12px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .timeline-head .show-track, .head-mix { flex:1 1 100%; }
   .head-title { flex:1 1 100%; display:flex; align-items:center; gap:4px; }
@@ -472,9 +519,9 @@
   .timeline-lane { position:relative; min-height:56px;
     background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); }
   .clip { position:absolute; top:6px; bottom:6px; min-width:12px; min-height:44px; padding:0 14px 0 6px;
-    background:#23405f; color:var(--fg); border:1px solid var(--accent); border-radius:5px;
+    background:var(--clip-midi); color:var(--fg); border:1px solid var(--accent); border-radius:5px;
     font-size:12px; text-align:left; cursor:grab; overflow:hidden; touch-action:none; }
-  .clip-audio { background:#2f3b27; border-color:var(--ok); }
+  .clip-audio { background:var(--clip-audio); border-color:var(--ok); }
   .clip-orphan { border-style:dashed; }
   .clip-colored { border-color:var(--clip-color); border-top-width:5px; }
   .clip-muted { opacity:.5; border-style:dotted; }
@@ -483,7 +530,11 @@
   .clip-wave path { stroke:var(--ok); stroke-width:0.6; vector-effect:non-scaling-stroke; opacity:.7; }
   .clip-notes { position:absolute; inset:0 12px 0 0; width:calc(100% - 12px); height:100%; pointer-events:none; }
   .clip-notes path { stroke:var(--fg); stroke-width:2; vector-effect:non-scaling-stroke; opacity:.75; fill:none; }
-  .clip:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  .clip:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  /* The corner that repeats a MIDI clip: a loop mark at the top right, above the resize edge, which still runs the whole height. */
+  .clip-loop { position:absolute; right:0; top:0; width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1; cursor:copy; background:var(--veil); border-radius:0 4px 0 6px; z-index:2; }
+  .clip-loop:hover { background:var(--veil-strong); }
   .clip-resize { position:absolute; right:0; top:0; bottom:0; width:12px; cursor:ew-resize;
     border-left:1px solid var(--accent); }
 
@@ -491,7 +542,7 @@
   .dock h2 { margin:0; padding:6px 12px 0; font-size:14px; }
   .dock-splitter { height:44px; cursor:row-resize; border-radius:7px 7px 0 0; touch-action:none;
     background:linear-gradient(var(--line), var(--line)) center / 48px 3px no-repeat; }
-  .dock-splitter:focus-visible { outline:2px solid #7fb3ff; outline-offset:-2px; }
+  .dock-splitter:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
   .dock-body { overflow:auto; padding:0 12px 12px; }
   .dock-slot[hidden] { display:none; }
   /* With nothing selected the dock is a line of text, not a 320px empty box. */
@@ -500,9 +551,9 @@
   .dock .piano-roll { margin-top:0; border:0; padding:0; }
   .dock-hint, .audio-source { color:var(--dim); font-size:13px; overflow-wrap:anywhere; }
   .audio-field { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:6px 0; font-size:13px; }
-  .audio-field input { min-height:44px; width:8rem; font-size:16px; background:#0e1116; color:var(--fg);
+  .audio-field input { min-height:44px; width:8rem; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
-  .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .audio-panel button, .chain-summary button { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
   .track-fields { display:grid; grid-template-columns:repeat(auto-fit, minmax(11rem, 1fr)); gap:10px 14px; }
@@ -511,19 +562,19 @@
   .track-caption { font-size:12px; color:var(--dim); margin-right:4px; }
   .track-main-actions { padding-top:10px; border-top:1px solid var(--line); }
   .track-main-actions .danger { margin-left:auto; }
-  .track-field input, .track-field select { min-height:44px; font-size:16px; background:#0e1116; color:var(--fg);
+  .track-field input, .track-field select { min-height:44px; font-size:16px; background:var(--field); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; padding:0 8px; }
   .track-field.amount-field input { width:8rem; }
   .track-colors { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
   .swatch { width:44px; height:44px; padding:0; border:2px solid var(--line); border-radius:6px; cursor:pointer;
-    color:var(--fg); background:#2a2f38; font-size:18px; }
-  .swatch[aria-pressed="true"] { border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+    color:var(--fg); background:var(--control); font-size:18px; }
+  .swatch[aria-pressed="true"] { border-color:var(--outline-strong); box-shadow:0 0 0 2px var(--accent); }
   .swatch[aria-pressed="true"]::after { content:'✓'; color:#0b1220; font-weight:700; mix-blend-mode:normal; }
   .swatch[data-color=""][aria-pressed="true"]::after { content:''; }
   .track-color-said { font-size:13px; color:var(--dim); }
   .track-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
   .track-position { font-size:13px; color:var(--dim); margin-right:auto; }
-  .track-panel button:not(.swatch), .bulk-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:#2a2f38; color:var(--fg);
+  .track-panel button:not(.swatch), .bulk-panel button:not(.swatch) { min-height:44px; padding:0 14px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; }
   .track-panel .danger { border-color:var(--err); }
   .timeline-row { border-left:4px solid var(--track-color, transparent); }
@@ -551,11 +602,11 @@
   .timeline-head[data-size="small"] .head-mix { flex:0 0 auto; }
   .timeline-head[data-size="small"] .head-mix .strip-toggle { flex:0 0 auto; }
   .chain-summary ol { margin:6px 0 10px; padding-left:1.4rem; }
-  .clip.selected, .timeline-head.selected { outline:2px solid #ffd166; outline-offset:-2px; }
+  .clip.selected, .timeline-head.selected { outline:2px solid var(--hilite); outline-offset:-2px; }
   .piano-roll { margin-top:14px; background:var(--panel); border:1px solid var(--accent); border-radius:7px; padding:10px; }
   .piano-roll header { display:flex; align-items:center; gap:10px; }
   .piano-roll h3 { margin:0; font-size:14px; flex:1; }
-  .piano-roll header button { min-height:44px; padding:6px 12px; background:#2a2f38; color:var(--fg);
+  .piano-roll header button { min-height:44px; padding:6px 12px; background:var(--control); color:var(--fg);
     border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .piano-roll-tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
   .piano-roll-tools button, .piano-roll-tools select { min-height:44px; padding:6px 12px; }
@@ -566,16 +617,16 @@
   .piano-roll-lane-host { display:contents; }
   .piano-roll-lanes { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
   .piano-roll-lanes select, .piano-roll-lanes input { min-height:44px; padding:6px 12px; font-size:16px; }
-  .piano-roll-lane { position:sticky; bottom:0; left:0; z-index:3; display:flex; width:max-content; background:#13161b; border-top:1px solid var(--line); }
+  .piano-roll-lane { position:sticky; bottom:0; left:0; z-index:3; display:flex; width:max-content; background:var(--lane); border-top:1px solid var(--line); }
   .piano-roll-lane[hidden] { display:none; }
-  .piano-roll-lane-title { position:sticky; left:0; flex:none; width:var(--key); padding:4px; font-size:11px; color:var(--dim); background:#13161b; border-right:1px solid var(--line); z-index:2; }
+  .piano-roll-lane-title { position:sticky; left:0; flex:none; width:var(--key); padding:4px; font-size:11px; color:var(--dim); background:var(--lane); border-right:1px solid var(--line); z-index:2; }
   .piano-roll-lane-bars { position:relative; flex:none; height:96px; width:calc(var(--steps) * var(--cell)); }
-  .piano-roll-lane-bar { position:absolute; bottom:0; top:0; display:flex; align-items:flex-end; cursor:ns-resize; touch-action:none; border-left:1px solid #0e1013; }
+  .piano-roll-lane-bar { position:absolute; bottom:0; top:0; display:flex; align-items:flex-end; cursor:ns-resize; touch-action:none; border-left:1px solid var(--field); }
   .piano-roll-lane-fill { display:block; width:100%; background:var(--accent); border-radius:3px 3px 0 0; }
   .piano-roll-lane-bar.chosen .piano-roll-lane-fill { background:#f5a524; }
-  .piano-roll-lane-bar:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
+  .piano-roll-lane-bar:focus-visible { outline:3px solid var(--hilite); outline-offset:-3px; }
   .piano-roll-row { display:flex; }
-  .piano-roll-row.black .piano-roll-cell { background:#15181d; }
+  .piano-roll-row.black .piano-roll-cell { background:var(--lane); }
   .piano-roll-scale { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
   .piano-roll-scale select { min-height:44px; padding:6px 12px; }
   .piano-roll-loop { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0; }
@@ -592,24 +643,24 @@
   .piano-roll-step-body .note { flex-basis:100%; margin:0; }
   .piano-roll-row.off-scale .piano-roll-cell:not(.on) { opacity:0.55; }
   .piano-roll-key { position:sticky; left:0; z-index:2; width:var(--key); flex:none; font-size:11px; color:var(--dim);
-    background:#13161b; border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
-  .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid #1f242b; border-bottom:1px solid #1f242b;
-    background:#1a1e24; color:#fff; font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
+    background:var(--lane); border-right:1px solid var(--line); padding:0 4px; display:flex; align-items:center; }
+  .piano-roll-cell { width:var(--cell); height:28px; flex:none; border-right:1px solid var(--raised); border-bottom:1px solid var(--raised);
+    background:var(--raised); color:var(--fg); font-size:12px; line-height:28px; text-align:center; cursor:pointer; }
   .piano-roll-cell.beat { border-left:1px solid var(--line); }
   .piano-roll-cell.on { background:var(--accent); cursor:grab; }
   /* A gap at each end of a note, so notes that touch still read as separate. */
-  .piano-roll-cell.on.start { box-shadow:inset 3px 0 0 #0e1013; border-top-left-radius:4px; border-bottom-left-radius:4px; }
-  .piano-roll-cell.on.end { box-shadow:inset -3px 0 0 #0e1013; border-top-right-radius:4px; border-bottom-right-radius:4px; }
-  .piano-roll-cell.on.start.end { box-shadow:inset 3px 0 0 #0e1013, inset -3px 0 0 #0e1013; }
+  .piano-roll-cell.on.start { box-shadow:inset 3px 0 0 var(--field); border-top-left-radius:4px; border-bottom-left-radius:4px; }
+  .piano-roll-cell.on.end { box-shadow:inset -3px 0 0 var(--field); border-top-right-radius:4px; border-bottom-right-radius:4px; }
+  .piano-roll-cell.on.start.end { box-shadow:inset 3px 0 0 var(--field), inset -3px 0 0 var(--field); }
   /* The last square of a longer note is its handle. */
   .piano-roll-cell.on.end:not(.start) { cursor:ew-resize; }
-  .piano-roll-cell.on.selected { background:#6aa6ff; }
-  .piano-roll-cell.band { outline:2px dashed #fff; outline-offset:-2px; background-image:linear-gradient(rgba(255,255,255,.18),rgba(255,255,255,.18)); }
-  .piano-roll-cell.on.chosen { background:#f5a524; outline:2px solid #fff; outline-offset:-2px; }
+  .piano-roll-cell.on.selected { background:var(--cell-selected); }
+  .piano-roll-cell.band { outline:2px dashed var(--outline-strong); outline-offset:-2px; background-image:linear-gradient(var(--veil),var(--veil)); }
+  .piano-roll-cell.on.chosen { background:#f5a524; outline:2px solid var(--outline-strong); outline-offset:-2px; }
   /* The bar past the end of the clip: drawing into it makes the clip longer. */
   .piano-roll-cell.beyond { opacity:.5; }
-  .piano-roll-cell.cursor { outline:2px solid #ffd166; outline-offset:-2px; }
-  .piano-roll-cell:focus-visible { outline:3px solid #ffd166; outline-offset:-3px; }
+  .piano-roll-cell.cursor { outline:2px solid var(--hilite); outline-offset:-2px; }
+  .piano-roll-cell:focus-visible { outline:3px solid var(--hilite); outline-offset:-3px; }
   /* A mouse hits 28px easily (WCAG 2.2 asks 24); a finger needs the full 44 on a touch screen or a phone. */
   @media (pointer: coarse), (max-width: 760px) {
     .timeline-head .show-track, .timeline-head button, .head-slider input, .envelope-fold, .envelope-add, .envelope-remove, button[data-icon] { min-height:44px; min-width:44px; }
@@ -633,17 +684,17 @@
   .mixer-channel h3 { margin:0; padding:10px 8px 0; font-size:14px; overflow-wrap:anywhere; }
   .mixer-channel .strip { border-bottom:0; }
   .fx { padding:0 8px 10px; }
-  .fx-toggle, .fx-add { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-toggle, .fx-add { width:100%; min-height:44px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
   .fx-actions { display:flex; flex-wrap:wrap; gap:4px; }
-  .fx-actions button { flex:none; min-width:44px; min-height:44px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .fx-actions button { flex:none; min-width:44px; min-height:44px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
   .fx-actions .fx-show, .fx-actions .fx-remove { flex:1 1 auto; }
-  .fx-bypass[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .fx-bypass[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   /* A channel is narrow, so a plugin's buttons stacked one to a row make a long list. With its list open the channel is wider, and
      the buttons wrap four to a row. Where :has is not supported the channel stays as it was and the list is only taller. */
   .mixer-channel:has(.fx-toggle[aria-expanded="true"]) { min-width:min(220px, 100%); }
   .mono-switch { padding:0 8px 8px; display:flex; flex-direction:column; gap:4px; }
-  .mono-button { width:100%; min-height:44px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
-  .mono-button[aria-pressed="true"] { border-color:#ffd166; box-shadow:0 0 0 1px #ffd166; }
+  .mono-button { width:100%; min-height:44px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; }
+  .mono-button[aria-pressed="true"] { border-color:var(--hilite); box-shadow:0 0 0 1px var(--hilite); }
   .mono-said { font-size:12px; color:var(--dim); min-height:1em; overflow-wrap:anywhere; }
   .fx-list ul { list-style:none; margin:8px 0 0; padding:0; }
   .fx-list li { margin:0 0 8px; padding:6px; border:1px solid var(--line); border-radius:4px; }
@@ -651,7 +702,7 @@
   .fx-add { margin-top:4px; }
 
   /* The generated panel and the knob are in panel.css, shared with the simple page. */
-  select { background:#0e1013; color:var(--fg); border:1px solid var(--line); border-radius:4px;
+  select { background:var(--field); color:var(--fg); border:1px solid var(--line); border-radius:4px;
     padding:8px; font-size:16px; min-height:40px; max-width:100%; }
 
   /* Keyboard */
@@ -666,18 +717,18 @@
     --black-width: calc(100% / var(--white-count) * 0.62); }
   .keys-white { display:flex; height:100%; }
   .key { padding:0; border:0; cursor:pointer; }
-  .key-white { flex:1 1 0; min-width:0; height:100%; background:#e8eaed; border:1px solid #9aa1ab;
+  .key-white { flex:1 1 0; min-width:0; height:100%; background:var(--fg); border:1px solid var(--dim);
     border-radius:0 0 4px 4px; }
   .key-white.held { background:var(--accent); }
   .keys-black { position:absolute; top:0; left:0; height:64%; width:100%; }
-  .key-black { position:absolute; width:var(--black-width); height:100%; background:#16181d;
+  .key-black { position:absolute; width:var(--black-width); height:100%; background:var(--lane);
     border:1px solid #000; border-radius:0 0 3px 3px; }
   .key-black.held { background:var(--accent); }
 
   /* Log */
-  details.log { border-top:1px solid var(--line); padding:8px 14px; background:#13161b; }
+  details.log { border-top:1px solid var(--line); padding:8px 14px; background:var(--lane); }
   .history-list ol { list-style:none; margin:8px 0 0; padding:0; }
-  .history-step { min-height:44px; width:100%; text-align:left; padding:6px 12px; background:#1a1e24; color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
+  .history-step { min-height:44px; width:100%; text-align:left; padding:6px 12px; background:var(--raised); color:var(--fg); border:1px solid var(--line); border-radius:4px; cursor:pointer; }
   .history-step[aria-current="step"] { border-color:var(--accent); font-weight:600; }
   .history-step.undone { opacity:.6; }
   #templates input, #templates select { min-height:44px; box-sizing:border-box; }
@@ -686,16 +737,16 @@
   .project-info-field input, .project-info-field textarea { font-size:16px; min-height:44px; box-sizing:border-box; width:100%; }
   details.log summary { cursor:pointer; color:var(--dim); font-size:12px; }
   #log { font-family:ui-monospace,monospace; font-size:11px; max-height:28vh; overflow:auto; margin-top:8px; }
-  .log-line { padding:2px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
-  .log-ok { color:var(--ok); } .log-error { color:var(--err); }
+  .log-line { padding:2px 0; border-bottom:1px solid var(--raised); overflow-wrap:anywhere; }
+  .log-ok { color:var(--ok-ink); } .log-error { color:var(--err-ink); }
 
   /* Local agent. Shares .searchbar's row layout and .log's disclosure look;
      only the transcript styling is its own. */
-  details.agent { border-top:1px solid var(--line); padding:8px 14px; background:#13161b; }
+  details.agent { border-top:1px solid var(--line); padding:8px 14px; background:var(--lane); }
   details.agent summary { cursor:pointer; color:var(--dim); font-size:12px; }
   details.agent .note { margin-top:8px; }
   #agent-log { font-family:ui-monospace,monospace; font-size:11px; max-height:32vh; overflow:auto; margin-top:8px; }
-  .agent-step { padding:4px 0; border-bottom:1px solid #1b1f26; overflow-wrap:anywhere; }
+  .agent-step { padding:4px 0; border-bottom:1px solid var(--raised); overflow-wrap:anywhere; }
   .agent-step .role { color:var(--dim); font-size:10px; margin-right:6px; }
   .agent-step.tool_call .role, .agent-step.tool_result .role { color:var(--accent); }
 
@@ -726,15 +777,15 @@
   .context-menu li[role=separator] { height:1px; margin:4px 2px; background:var(--line); }
   .context-menu button { display:flex; justify-content:space-between; align-items:center; gap:16px; width:100%; min-height:44px; padding:0 10px; text-align:left;
     background:transparent; color:var(--fg); border:0; border-radius:4px; font:inherit; font-size:14px; cursor:pointer; }
-  .context-menu button:hover, .context-menu button:focus-visible { background:#2a2f38; }
+  .context-menu button:hover, .context-menu button:focus-visible { background:var(--control); }
   .context-menu button[aria-checked=true]::before { content:'\2713'; margin-right:-8px; }
-  .context-menu button.danger { color:var(--err); }
+  .context-menu button.danger { color:var(--err-ink); }
   .context-menu kbd { font-size:12px; color:var(--dim); }
   .launcher-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 10px; }
   .launcher-grid { display:grid; gap:6px; overflow-x:auto; padding-bottom:6px; }
   .launcher-row { display:grid; grid-template-columns:56px repeat(var(--tracks), minmax(96px, 160px)); gap:6px; align-items:stretch; }
   .launcher-track { align-self:end; padding:0 4px; font-size:13px; font-weight:600; overflow-wrap:anywhere; text-align:center; }
-  .launcher-cell, .launcher-scene, .launcher-stop { min-height:44px; padding:0 8px; background:#2a2f38; color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; cursor:pointer; }
+  .launcher-cell, .launcher-scene, .launcher-stop { min-height:44px; padding:0 8px; background:var(--control); color:var(--fg); border:1px solid var(--line); border-radius:6px; font:inherit; font-size:13px; cursor:pointer; }
   .launcher-cell[data-state=empty] { background:transparent; border-style:dashed; color:var(--dim); }
   .launcher-cell[data-state=playing] { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
   .launcher-cell[data-state=queued], .launcher-cell[data-state=stopping] { border:2px dashed var(--solo); }
@@ -757,59 +808,80 @@
 
 <div class="transport">
   <span class="brand">Jiggy</span>
-  <button id="toggle-browser" data-icon="browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
-  <button id="toggle-keys" data-icon="keys" type="button" title="List the keyboard shortcuts (F1)">Keys</button>
-  <button id="play" data-icon="play" aria-pressed="false">Play</button>
-  <button id="stop" data-icon="stop">Stop</button>
-  <button id="panic" data-icon="panic" type="button" title="Silence every note that is stuck on, and keep playing (Ctrl or Cmd and full stop)">Panic</button>
-  <button id="record" data-icon="record" aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
-  <button id="record-midi" data-icon="recordMidi" aria-pressed="false" title="Play and keep what you play on a MIDI keyboard or the on-screen keys as MIDI clips, on the armed tracks or the selected one">Rec MIDI</button>
-  <span class="tempo" id="tempo-group">
-    <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
-    <input type="number" id="tempo" value="120" min="20" max="300" step="0.1">
-    <span style="color:var(--dim);font-size:12px">BPM</span>
-    <button id="tap-tempo" data-icon="tap" title="Tap this to the beat, four or five times, to set the tempo">Tap</button>
-    <span id="tap-said" class="visually-hidden" role="status"></span>
-  </span>
-  <span id="tempo-note" role="status" hidden style="color:var(--dim);font-size:13px">Tempo follows its lane</span>
-  <span class="tempo">
-    <label for="signature" class="visually-hidden">Time signature, beats per bar over beat unit</label>
-    <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
-  </span>
-  <button id="loop" data-icon="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
-  <button id="metronome" data-icon="click" type="button" aria-pressed="false" title="Click on every beat, louder on the first of a bar. Heard by you only: never in an export">Click</button>
-  <span class="tempo">
-    <label for="count-in" class="visually-hidden">Count-in before play, in bars</label>
-    <select id="count-in" title="Bars of click before the music starts">
-      <option value="0">No count-in</option>
-      <option value="1">Count in 1 bar</option>
-      <option value="2">Count in 2 bars</option>
+  <span class="tempo" id="show-group">
+    <label for="show-step">Show</label>
+    <select id="show-step" title="How much of the studio is drawn. Nothing is locked: choose any step at any time">
+      <option value="simple">Simple</option>
+      <option value="standard">Standard</option>
+      <option value="advanced">Advanced</option>
     </select>
   </span>
-  <span class="position" id="position" aria-live="off" title="Bar and beat">1 . 1</span>
-  <span class="position" id="clock" aria-live="off" title="Minutes, seconds and tenths, from the tempo map">0:00.0</span>
-  <button id="midi-in" data-icon="midiIn" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
-  <span id="midi-state" class="midi-state" role="status"></span>
-  <button id="mic-in" data-icon="mic" type="button" aria-pressed="false" hidden title="Play a microphone into the selected track. Mute the track to record it without hearing it">Mic in</button>
-  <span id="mic-state" class="midi-state" role="status"></span>
-  <span class="history">
-      <button id="undo" data-icon="undo" title="Undo the last edit" disabled>Undo</button>
-      <button id="redo" data-icon="redo" title="Redo the last undone edit" disabled>Redo</button>
+  <div class="tgroup" id="group-view" role="group" aria-label="Sounds and help">
+    <button id="toggle-browser" data-icon="browser" type="button" aria-expanded="false" aria-controls="browser" title="Find and load plugins, open presets">Browser</button>
+    <button id="toggle-keys" data-icon="keys" type="button" title="List the keyboard shortcuts (F1)">Keys</button>
+  </div>
+  <div class="tgroup" id="group-play" role="group" aria-label="Play">
+    <button id="play" data-icon="play" data-words aria-pressed="false">Play</button>
+    <button id="stop" data-icon="stop" data-words>Stop</button>
+    <button id="record" data-icon="record" data-words aria-pressed="false" title="Play and keep each track as an audio clip">Record</button>
+    <button id="loop" data-icon="loop" aria-pressed="false" title="Repeat the loop range while playing">Loop</button>
+    <button id="metronome" data-icon="click" type="button" aria-pressed="false" title="Click on every beat, louder on the first of a bar. Heard by you only: never in an export">Click</button>
+    <span class="tempo" id="count-in-group">
+      <label for="count-in" class="visually-hidden">Count-in before play, in bars</label>
+      <select id="count-in" title="Bars of click before the music starts">
+        <option value="0">No count-in</option>
+        <option value="1">Count in 1 bar</option>
+        <option value="2">Count in 2 bars</option>
+      </select>
     </span>
-  <span class="session">
-      <button id="save" data-icon="save" title="Save this session as RDF">Save</button>
-      <button id="export" data-icon="download" title="Render the mix to a WAV file (the loop, when the loop is on)">Export</button>
-      <button id="export-midi" data-icon="midiExport" title="Save the notes of every MIDI clip to a Standard MIDI file, one track each">Export MIDI</button>
-      <button id="import-midi" data-icon="midiImport" title="Add the parts of a Standard MIDI file as new tracks">Import MIDI</button>
+  </div>
+  <div class="tgroup" id="group-time" role="group" aria-label="Tempo and time">
+    <span class="tempo" id="tempo-group">
+      <label for="tempo" class="visually-hidden">Tempo in beats per minute</label>
+      <input type="number" id="tempo" value="120" min="20" max="300" step="0.1">
+      <span style="color:var(--dim);font-size:12px">BPM</span>
+      <button id="tap-tempo" data-icon="tap" title="Tap this to the beat, four or five times, to set the tempo">Tap</button>
+      <span id="tap-said" class="visually-hidden" role="status"></span>
+    </span>
+    <span id="tempo-note" role="status" hidden style="color:var(--dim);font-size:13px">Tempo follows its lane</span>
+    <span class="tempo" id="signature-group">
+      <label for="signature" class="visually-hidden">Time signature, beats per bar over beat unit</label>
+      <input type="text" id="signature" value="4/4" size="4" inputmode="numeric" autocomplete="off" spellcheck="false">
+    </span>
+    <span class="position" id="position" aria-live="off" title="Bar and beat">1 . 1</span>
+    <span class="position" id="clock" aria-live="off" title="Minutes, seconds and tenths, from the tempo map">0:00.0</span>
+  </div>
+  <div class="tgroup" id="group-input" role="group" aria-label="Input">
+    <button id="record-midi" data-icon="recordMidi" aria-pressed="false" title="Play and keep what you play on a MIDI keyboard or the on-screen keys as MIDI clips, on the armed tracks or the selected one">Rec MIDI</button>
+    <button id="midi-in" data-icon="midiIn" type="button" aria-pressed="false" title="Play a MIDI controller into the armed or selected track">MIDI in</button>
+    <span id="midi-state" class="midi-state" role="status"></span>
+    <button id="mic-in" data-icon="mic" type="button" aria-pressed="false" hidden title="Play a microphone into the selected track. Mute the track to record it without hearing it">Mic in</button>
+    <span id="mic-state" class="midi-state" role="status"></span>
+  </div>
+  <div class="tgroup" id="group-edit" role="group" aria-label="Edit">
+    <button id="undo" data-icon="undo" title="Undo the last edit" disabled>Undo</button>
+    <button id="redo" data-icon="redo" title="Redo the last undone edit" disabled>Redo</button>
+  </div>
+  <div class="tgroup" id="group-file" role="group" aria-label="File">
+    <button id="save" data-icon="save" data-words title="Save this session as RDF">Save</button>
+    <button id="open" data-icon="open" data-words title="Open a saved session">Open</button>
+    <button id="export" data-icon="download" title="Render the mix to a WAV file (the loop, when the loop is on)">Export</button>
+    <button id="export-midi" data-icon="midiExport" title="Save the notes of every MIDI clip to a Standard MIDI file, one track each">Export MIDI</button>
+    <button id="import-midi" data-icon="midiImport" title="Add the parts of a Standard MIDI file as new tracks">Import MIDI</button>
+    <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
+    <input type="file" id="midifile" accept=".mid,.midi,audio/midi,audio/x-midi" class="visually-hidden" aria-label="MIDI file to import">
+    <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
+  </div>
+  <details class="more" id="transport-more">
+    <summary>More</summary>
+    <div class="tgroup" role="group" aria-label="More">
+      <button id="panic" data-icon="panic" type="button" title="Silence every note that is stuck on, and keep playing (Ctrl or Cmd and full stop)">Panic</button>
       <button id="export-stems" data-icon="stems" title="Render every track that makes sound to its own WAV, in one zip">Stems</button>
-      <button id="open" data-icon="open" title="Open a saved session">Open</button>
-      <input type="file" id="openfile" accept=".ttl,text/turtle,.zip,application/zip" class="visually-hidden">
-      <input type="file" id="midifile" accept=".mid,.midi,audio/midi,audio/x-midi" class="visually-hidden" aria-label="MIDI file to import">
-      <input type="file" id="audiofile" accept="audio/*" class="visually-hidden" aria-label="Audio file to add">
-    </span>
-  <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
+      <button id="install" type="button" hidden title="Install Jiggy as an app on this device">Install app</button>
+    </div>
+  </details>
   <span id="net-state" class="midi-state" role="status"></span>
-  <span class="level"><span class="meter" id="meter" role="img" aria-label="Output level"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
+  <span class="level" role="group" aria-label="Output"><span class="meter" id="meter" role="img" aria-label="Output level"></span> <button type="button" id="clip" class="clip" hidden aria-label="The output clipped. Press to clear" title="The output clipped. Press to clear">Clip</button></span>
 </div>
 
 <div id="recover" class="carry" role="status" hidden>
@@ -884,6 +956,10 @@
          the tabs and never rebuilt, because moving a frame in the document
          reloads it, and the rack is rebuilt on every edit. -->
     <section class="editors" id="editors" aria-label="Plugin editors" hidden></section>
+    <p id="show-note" class="note" role="status" hidden>
+      <span id="show-note-text"></span>
+      <button type="button" id="show-note-raise"></button>
+    </p>
     <div id="tabs-mount"></div>
 
     <div class="tabpanel" id="tracks-panel" hidden>
@@ -926,6 +1002,16 @@
 
     <div class="tabpanel" id="settings-panel" hidden>
       <h2>Settings</h2>
+      <h3>Appearance</h3>
+      <div class="align">
+        <label for="theme-choice">Theme</label>
+        <select id="theme-choice">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="auto">Match my device</option>
+        </select>
+      </div>
+
       <h3>Playback</h3>
       <div class="align">
         <label><input type="checkbox" id="align-tracks"> Line tracks up for latency</label>
@@ -940,7 +1026,7 @@
       <p id="recovery-status" class="note" role="status"></p>
 
       <h3>Agents</h3>
-<details class="agent">
+<details class="agent" id="local-agent">
   <summary>Local agent (experimental)</summary>
   <p class="note">
     Runs a tool-calling loop against a local model's chat API, in this page. Nothing new
@@ -986,7 +1072,7 @@
   <div id="history-body"></div>
 </details>
 
-<details class="log">
+<details class="log" id="log-details">
   <summary>Log <span id="state" style="color:var(--dim)"></span></summary>
   <div id="log"></div>
 </details>

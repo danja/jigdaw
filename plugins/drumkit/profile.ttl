@@ -12,6 +12,7 @@
 @prefix lv2:   <http://lv2plug.in/ns/lv2core#> .
 @prefix midi:  <http://lv2plug.in/ns/ext/midi#> .
 @prefix units: <http://lv2plug.in/ns/extensions/units#> .
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
 @prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix doap:  <http://usefulinc.com/ns/doap#> .
 @prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
@@ -94,7 +95,8 @@
     lv2:symbol "kick_level" ; lv2:name "Kick Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 4 ;
-    jig:controlGroup "Kick" .
+    jig:controlGroup "Kick" ;
+    pprops:displayPriority 60 .
 
 <#snare_tone>
     a lv2:InputPort , lv2:ControlPort ;
@@ -115,7 +117,8 @@
     lv2:symbol "snare_level" ; lv2:name "Snare Level" ;
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 7 ;
-    jig:controlGroup "Snare" .
+    jig:controlGroup "Snare" ;
+    pprops:displayPriority 60 .
 
 <#clap_density>
     a lv2:InputPort , lv2:ControlPort ;
@@ -136,7 +139,8 @@
     lv2:symbol "clap_level" ; lv2:name "Clap Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 10 ;
-    jig:controlGroup "Clap" .
+    jig:controlGroup "Clap" ;
+    pprops:displayPriority 60 .
 
 <#tom1_pitch>
     a lv2:InputPort , lv2:ControlPort ;
@@ -157,7 +161,8 @@
     lv2:symbol "tom1_level" ; lv2:name "Tom 1 Level" ;
     lv2:default 0.74 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 13 ;
-    jig:controlGroup "Tom 1" .
+    jig:controlGroup "Tom 1" ;
+    pprops:displayPriority 60 .
 
 <#tom2_pitch>
     a lv2:InputPort , lv2:ControlPort ;
@@ -178,7 +183,8 @@
     lv2:symbol "tom2_level" ; lv2:name "Tom 2 Level" ;
     lv2:default 0.72 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 16 ;
-    jig:controlGroup "Tom 2" .
+    jig:controlGroup "Tom 2" ;
+    pprops:displayPriority 60 .
 
 <#hh_closed_brightness>
     a lv2:InputPort , lv2:ControlPort ;
@@ -199,7 +205,8 @@
     lv2:symbol "hh_closed_level" ; lv2:name "Closed HH Level" ;
     lv2:default 1.05 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 19 ;
-    jig:controlGroup "Closed HH" .
+    jig:controlGroup "Closed HH" ;
+    pprops:displayPriority 60 .
 
 <#hh_open_brightness>
     a lv2:InputPort , lv2:ControlPort ;
@@ -220,7 +227,8 @@
     lv2:symbol "hh_open_level" ; lv2:name "Open HH Level" ;
     lv2:default 1.02 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 22 ;
-    jig:controlGroup "Open HH" .
+    jig:controlGroup "Open HH" ;
+    pprops:displayPriority 60 .
 
 <#crash_brightness>
     a lv2:InputPort , lv2:ControlPort ;
@@ -241,7 +249,8 @@
     lv2:symbol "crash_level" ; lv2:name "Crash Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 25 ;
-    jig:controlGroup "Crash" .
+    jig:controlGroup "Crash" ;
+    pprops:displayPriority 60 .
 
 <#cowbell_tone>
     a lv2:InputPort , lv2:ControlPort ;
@@ -262,7 +271,8 @@
     lv2:symbol "cowbell_level" ; lv2:name "Cowbell Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 28 ;
-    jig:controlGroup "Cowbell" .
+    jig:controlGroup "Cowbell" ;
+    pprops:displayPriority 60 .
 
 <#clave_tone>
     a lv2:InputPort , lv2:ControlPort ;
@@ -283,7 +293,8 @@
     lv2:symbol "clave_level" ; lv2:name "Clave Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 31 ;
-    jig:controlGroup "Clave" .
+    jig:controlGroup "Clave" ;
+    pprops:displayPriority 60 .
 
 <#bash_size>
     a lv2:InputPort , lv2:ControlPort ;
@@ -332,7 +343,8 @@
     lv2:symbol "bash_level" ; lv2:name "Bash Level" ;
     lv2:default 1 ; lv2:minimum 0 ; lv2:maximum 1.5 ;
     jig:paramIndex 38 ;
-    jig:controlGroup "Bash" .
+    jig:controlGroup "Bash" ;
+    pprops:displayPriority 60 .
 
 <#bit_crush>
     a lv2:InputPort , lv2:ControlPort ;
@@ -345,21 +357,24 @@
     lv2:symbol "master_drive" ; lv2:name "Master Drive" ;
     lv2:default 0.25 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 40 ;
-    jig:controlGroup "Master" .
+    jig:controlGroup "Master" ;
+    pprops:displayPriority 80 .
 
 <#master_reverb>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "master_reverb" ; lv2:name "Master Reverb" ;
     lv2:default 0.2 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 41 ;
-    jig:controlGroup "Master" .
+    jig:controlGroup "Master" ;
+    pprops:displayPriority 80 .
 
 <#master_gain>
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "master_gain" ; lv2:name "Master Gain" ;
     lv2:default 0.7 ; lv2:minimum 0 ; lv2:maximum 1 ;
     jig:paramIndex 42 ;
-    jig:controlGroup "Master" .
+    jig:controlGroup "Master" ;
+    pprops:displayPriority 100 .
 
 <#kick_mute>
     a lv2:InputPort , lv2:ControlPort ;

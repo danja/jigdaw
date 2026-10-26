@@ -17,6 +17,8 @@ import { describeRouting } from '../../src/ui/SendsModel.js'
 import { spokenValue } from '../../src/ui/Panel.js'
 import { createClipActions } from '../../src/ui/ClipActions.js'
 import { duplicateTrack } from '../../src/ops/DuplicateTrack.js'
+import { describeStart } from '../../src/ui/StartScreen.js'
+import { repeatClip } from '../../src/model/ClipLoop.js'
 import { chainSwapChanges } from '../../src/ops/ChainReorder.js'
 import { splitClip, duplicateClip, trimClip, copyClips, pasteClips } from '../../src/model/ClipEdit.js'
 
@@ -29,6 +31,14 @@ export function createArrangement (ctx) {
     return result
   }
 
+  // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
+  // The toolbar's Add track and the start screen's "An empty track" are this one function.
+  async function addTrack () {
+    await ctx.runtime.ensureRunning()
+    const result = edit([{ op: 'addTrack' }])
+    if (result.ok) ctx.selection.set('track', [result.results[0]])
+  }
+
   // Where the next imported audio file goes, while the file picker is open.
   let pendingAudio = null
   // Sources already asked to load for drawing, so a redraw asks once.
@@ -36,6 +46,9 @@ export function createArrangement (ctx) {
 
   // Each is a request for one clip; the keys and the buttons below both make them.
   const handlers = {
+    // The loop handle on a clip, the R key and the menu: the same one change (src/model/ClipLoop.js), so one undo takes back a repeat.
+    onRepeat: (id, lengthBeats) => edit([repeatClip(ctx.dispatcher.project.clip(id), lengthBeats)]),
+    onStopRepeat: id => edit([{ op: 'setClip', id, loopBeats: null }]),
     onAdd: (trackId, startBeat) => {
       const result = edit([{ op: 'addClip', track: trackId, kind: 'midi', startBeat, lengthBeats: ctx.dispatcher.project.transport.beatsPerBar }])
       if (result.ok) openClip(result.results[0])
@@ -65,12 +78,8 @@ export function createArrangement (ctx) {
       if (next) ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: next })
     },
     onExpandTrack: trackId => ctx.dispatcher.project.setTrackLayout(trackId, { laneSize: 'small' }),
-    // The first thing done in an empty session, so there may be no dispatcher yet: the click is the gesture that starts audio.
-    onAddTrack: async () => {
-      await ctx.runtime.ensureRunning()
-      const result = edit([{ op: 'addTrack' }])
-      if (result.ok) ctx.selection.set('track', [result.results[0]])
-    },
+    // The toolbar's Add track opens the chooser, which has An empty track in it.
+    onAddTrack: () => ctx.addTrack.open(),
     onDuplicateTrack: async trackId => {
       const result = await duplicateTrack(ctx.dispatcher, trackId)
       if (!result.ok) { log(result.message, 'error'); return }
@@ -351,12 +360,19 @@ export function createArrangement (ctx) {
       beatsPerBar: project?.transport.beatsPerBar ?? 4,
       // What to do first, as buttons over the requests the page already makes.
       empty: {
-        text: 'No tracks yet. Start from a preset, or load one plugin.',
-        actions: [
-          { label: 'Browse plugins', run: () => ctx.layout.showBrowser(true) },
-          { label: 'Open the Chiptune preset', run: () => ctx.sessions.openPreset('Chiptune') },
-          { label: 'Load the Pulse synth', run: () => ctx.loading.loadPlugin(new URL('plugins/pulse/', document.baseURI).href).catch(() => {}) }
-        ]
+        text: 'Nothing here yet. Play a tune, start something new, or open a piece you saved.',
+        groups: describeStart({
+          tunes: ctx.sessions.presetNames(),
+          templates: ctx.templates.names(),
+          run: {
+            tune: name => ctx.sessions.openPreset(name),
+            template: name => ctx.templates.open(name).catch(error => log(error.message, 'error')),
+            emptyTrack: () => addTrack(),
+            sound: () => ctx.addTrack.open(),
+            browse: () => ctx.layout.showBrowser(true),
+            open: () => document.getElementById('openfile').click()
+          }
+        })
       },
       layoutFor: track => project.trackLayout(track.id),
       lanesFor: track => automationLanes(project, track),
@@ -462,6 +478,7 @@ export function createArrangement (ctx) {
   return {
     draw,
     mount,
+    addTrack,
     /** Show where the transport is, as a beat, or null when it is stopped. */
     playhead (beat) { timeline.playhead(beat); pianoRoll.playhead(beat) },
     /** Forget what was drawn for the session being replaced. */

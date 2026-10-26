@@ -49,7 +49,7 @@
   border-radius:50%; }
 /* 2.4.7 wants the focus visible, and the input it belongs to is invisible,
    so the ring goes on the wrapper. */
-.dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+.dial:focus-within { outline:2px solid var(--focus); outline-offset:3px; }
 .dial-face { display:block; width:100%; height:100%; }
 .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
 .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
@@ -81,3 +81,9 @@ input[type=checkbox]:not(.skin-input) { width:22px; height:22px; }
    with whatever is behind (WCAG 2.4.7, 1.4.11). */
 .skin-hit:focus-within { outline:2px solid #fff; outline-offset:2px; box-shadow:0 0 0 2px #1d4ed8; }
 .skin-input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; pointer-events:none; }
+
+/* The controls an author put second, under a disclosure. The summary is a 44px target and says how many are in it. */
+.more-controls { margin-top:10px; }
+.more-controls > summary { min-height:44px; display:flex; align-items:center; padding:0 6px; cursor:pointer; color:var(--dim); }
+.more-controls > summary:hover { color:var(--fg); }
+.more-controls[open] > summary { margin-bottom:6px; }

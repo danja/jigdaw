@@ -9,7 +9,7 @@
 import rdf from '@zazuko/env'
 import { vocabulary as v, JIG, TRN } from './Vocabulary.js'
 
-const { jig, trn, lv2, midi, rdfs, foaf, units, rdf: rdfTerms } = v
+const { jig, trn, lv2, midi, rdfs, foaf, units, pprops, rdf: rdfTerms } = v
 
 const iri = value => rdf.namedNode(value)
 
@@ -147,6 +147,18 @@ function orderPorts (ports) {
     : (a, b) => (a.symbol ?? '').localeCompare(b.symbol ?? ''))
 }
 
+/**
+ * A port's display priority: null when the profile says nothing, else a nonnegative integer. Anything else is a defect in the profile
+ * and is refused, since a priority the panel could not order by would be guessed at.
+ */
+function readDisplayPriority (dataset, term) {
+  const priority = asNumber(one(dataset, term, pprops.displayPriority))
+  if (priority !== null && !(Number.isInteger(priority) && priority >= 0)) {
+    throw new Error(`port ${term.value}: pprops:displayPriority must be a nonnegative integer, not ${priority}`)
+  }
+  return priority
+}
+
 export function readPort (dataset, term) {
   const properties = values(dataset, term, lv2.portProperty)
   const port = {
@@ -167,6 +179,8 @@ export function readPort (dataset, term) {
     // The panel section this control belongs under, if the profile groups
     // its ports. Absent means ungrouped, which renders as today.
     group: asString(one(dataset, term, jig.controlGroup)),
+    // How much the author says this control matters, or null. A panel shows the ports that have one first (src/ui/PrimaryControls.js).
+    displayPriority: readDisplayPriority(dataset, term),
     // The author's order, where the profile gives one; the panel follows it.
     paramIndex: asNumber(one(dataset, term, jig.paramIndex)),
     // k-rate is the default. An a-rate parameter costs a 128 element

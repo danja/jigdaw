@@ -33,6 +33,7 @@ export const KEY_ROWS = Object.freeze([
   { scope: 'clip', keys: 'Space', does: 'Add the clip to the selection, or take it out; Enter opens it', press: [plain(' ')] },
   { scope: 'clip', keys: 'S', does: 'Split at the playhead', press: [plain('s')] },
   { scope: 'clip', keys: 'D', does: 'Duplicate', press: [plain('d')] },
+  { scope: 'clip', keys: 'R', does: 'Repeat a MIDI clip once more: it gets one pattern longer, the notes coming round again', press: [plain('r')] },
   { scope: 'clip', keys: 'M', does: 'Mute or unmute', press: [plain('m')] },
   { scope: 'clip', keys: 'L', does: 'Lock or unlock', press: [plain('l')] },
   { scope: 'clip', keys: '[ and ]', does: 'Trim the start or the end to the playhead', press: [plain('['), plain(']')] },

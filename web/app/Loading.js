@@ -68,7 +68,11 @@ export function askConsent (document, request) {
 export function createLoading (ctx) {
   const { document, log } = ctx
 
-  async function loadPlugin (input) {
+  /**
+   * `newTrack` loads onto a track of its own, whatever the Load onto menu says and without taking the place of a plugin being
+   * replaced: for the Add a track chooser, which means a new track. Returns the id of the track it went onto, or nothing when it did not load.
+   */
+  async function loadPlugin (input, { newTrack = false } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const iri = new URL(input, document.baseURI).href
     log(`GET ${iri}`)
@@ -86,9 +90,9 @@ export function createLoading (ctx) {
 
     // The Load onto menu. Read before anything is awaited, so a second Load
     // pressed while this one fetches does not change where this one lands.
-    const track = ctx.rack.targetTrack()
+    const track = newTrack ? null : ctx.rack.targetTrack()
     // A Replace asked for first: this load swaps the plugin in, and is the end of that mode whether it works or not.
-    const replacing = ctx.swap.target()
+    const replacing = newTrack ? null : ctx.swap.target()
     if (replacing) {
       ctx.swap.end()
       const swapped = await d.swapPlugin(replacing, iri)
@@ -167,6 +171,7 @@ export function createLoading (ctx) {
     // anything.
     ctx.rack.draw()
     ctx.expose()
+    return trackId
   }
 
   return { loadPlugin }

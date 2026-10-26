@@ -198,6 +198,38 @@ A plugin with no `jig:ui` gets a generated panel from these declarations. That i
 expected case rather than a degraded one: it is consistent with every other plugin, it is
 accessible, and it costs the author nothing.
 
+## Which controls come first
+
+**A plugin with many parameters can say which few matter most, and the generated panel shows those first.** Give a port
+`pprops:displayPriority`, a nonnegative integer from [LV2's port properties extension](https://drobilla.net/files/lv2_docs/ns/ext/port-props.html),
+where a higher number means the control matters more for playing the plugin. No term of ours is involved.
+
+```turtle
+@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .
+
+<#master_gain>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "master_gain" ; lv2:name "Master Gain" ;
+    lv2:default 0.8 ; lv2:minimum 0 ; lv2:maximum 1 ;
+    pprops:displayPriority 100 .
+```
+
+What the host does with it, in Jiggy:
+
+- The ports that have a priority are drawn first, highest first. Ports of equal priority keep the order the profile gives them.
+- The other ports are drawn under a disclosure called "More controls", with a count. They are all there, every one still has a
+  label, and a person, a keyboard or an agent can reach any of them. A priority hides nothing from anything but the first look.
+- A profile that gives no port a priority is drawn whole, as it always was. So is one that gives every port a priority, since
+  there is nothing to put away.
+- Groups (`jig:controlGroup`) apply inside the disclosure. The first view is one flat grid in priority order with no group headings,
+  since a heading over a single knob is no help; name the voice in the control's own name, as DrumKit does ("Kick Level").
+- A priority is only compared with the priorities in the same plugin. A priority below zero, or one that is not a whole number,
+  makes the profile invalid.
+
+It is a hint. A host with room for every control, or one that draws the plugin's own interface, is free to ignore it. DrumKit is the
+worked example: of its 75 ports it ranks the three master controls and each voice's level (14 in all), and the other 61 are under
+"More controls". Choose the few a person reaches for when they first play the plugin, not the ones you built it around.
+
 ## Discovered and curated
 
 JigDAW keeps two kinds of knowledge about a plugin, and inherits the distinction from

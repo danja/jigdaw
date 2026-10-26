@@ -61,8 +61,12 @@ export function createTemplatesPanel (ctx, { store = createTemplates() } = {}) {
 
   const say = (text, kind = 'ok') => { status.textContent = text; log(text, kind) }
 
+  // The names as last listed, for the start screen, which is drawn again when they change.
+  let listed = []
+
   async function refresh (choose = null) {
     const names = (await store.list()).map(t => t.name)
+    listed = names
     pick.replaceChildren(...names.map(name => {
       const option = document.createElement('option')
       option.value = name
@@ -71,6 +75,7 @@ export function createTemplatesPanel (ctx, { store = createTemplates() } = {}) {
     }))
     for (const option of pick.options) option.selected = option.value === choose
     openForm.hidden = names.length === 0
+    ctx.rack?.draw()
     return names
   }
 
@@ -113,6 +118,7 @@ export function createTemplatesPanel (ctx, { store = createTemplates() } = {}) {
     open,
     remove,
     refresh,
+    names: () => [...listed],
     mount () {
       $('presets').after(element)
       return refresh().catch(error => log(`templates: ${error.message}`, 'error'))

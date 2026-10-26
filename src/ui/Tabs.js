@@ -16,7 +16,10 @@
 // carries no request to a server. Left and Right move by one tab and wrap at
 // the ends; Home and End jump to the first and last. A pointer click selects
 // directly, the same destination either way.
-export function createTabs (document, tabs, { onSelect = () => {} } = {}) {
+//
+// `allowed(id)` is asked only of a selection that comes from code, never of a click or a key on a tab, since a tab that is not
+// drawn cannot be clicked. When it says no, nothing changes and `onRefused(id)` is told, so the caller can say where the tab is.
+export function createTabs (document, tabs, { onSelect = () => {}, allowed = () => true, onRefused = () => {} } = {}) {
   if (tabs.length === 0) throw new Error('a tab list needs at least one tab')
 
   const tablist = document.createElement('div')
@@ -92,7 +95,9 @@ export function createTabs (document, tabs, { onSelect = () => {} } = {}) {
     select (id) {
       const index = tabs.findIndex(tab => tab.id === id)
       if (index === -1) throw new Error(`no such tab: ${id}`)
+      if (!allowed(id)) { onRefused(id); return false }
       select(index)
+      return true
     },
     /** The id of whichever tab is currently shown. */
     selected () { return tabs[current].id }

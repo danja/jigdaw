@@ -108,6 +108,8 @@ w('@prefix pu:    <http://purl.org/stuff/plugin-universe/> .')
 w('@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .')
 w('@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .')
 w('@prefix units: <http://lv2plug.in/ns/extensions/units#> .')
+// Only where it is used, so a profile that sets no priority is written exactly as it always was.
+if (template.ports.some(p => p.displayPriority !== undefined)) w('@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .')
 w('@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .')
 w('@prefix doap:  <http://usefulinc.com/ns/doap#> .')
 w('@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .')
@@ -220,6 +222,8 @@ for (const port of template.ports) {
   // The panel section this control belongs under. A plain label: groups are
   // per-plugin display hints, never addressed across documents.
   if (port.group) line += ` ;\n    jig:controlGroup ${JSON.stringify(port.group)}`
+  // How much the author says this control matters, for a panel that shows the few first. Higher is more important.
+  if (port.displayPriority !== undefined) line += ` ;\n    pprops:displayPriority ${port.displayPriority}`
   if (port.unit) line += ` ;\n    units:unit units:${port.unit}`
   if (port.toggled) line += ' ;\n    lv2:portProperty lv2:toggled'
   if (port.scalePoints) {
