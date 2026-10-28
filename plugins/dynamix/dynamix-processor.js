@@ -59,6 +59,10 @@ class DynamixProcessor extends AudioWorkletProcessor {
     this.outputViews = []
     this.lastValues = new Float32Array(Object.keys(PARAM_INDEX).length).fill(NaN)
     this.lastSidechainActive = null
+    // A snapshot for the editor, one object for the life of the processor, mutated and reposted so the
+    // per-quantum path allocates nothing (as tremolo does). Only sent when the module exports the meters.
+    this.snapshot = { type: 'plugin', payload: { reduction: 0, level: -120 } }
+    this.quanta = 0
 
     this.port.onmessage = event => this.handle(event.data)
   }
@@ -113,6 +117,8 @@ class DynamixProcessor extends AudioWorkletProcessor {
 
     this.exports = exports
     this.maxFrames = maxFrames
+    // Optional exports (module comment in src/lib.rs): a module without them still plays, the editor just has no meter.
+    this.hasMeter = 'jig_gain_reduction_db' in exports && 'jig_detector_db' in exports
   }
 
   /** Copy one Web Audio input's channels into two of the wasm's four input
@@ -170,6 +176,15 @@ class DynamixProcessor extends AudioWorkletProcessor {
       const view = this.outputViews[Math.min(channel, 1)]
       output[channel].set(view.subarray(0, frames))
       if (frames < output[channel].length) output[channel].fill(0, frames)
+    }
+
+    // Every 16th quantum, about 23 snapshots a second at 48 kHz: smooth enough for a meter and under the host's
+    // relay limit (web/host.json relayPerSecond).
+    this.quanta += 1
+    if (this.hasMeter && this.quanta % 16 === 0) {
+      this.snapshot.payload.reduction = this.exports.jig_gain_reduction_db()
+      this.snapshot.payload.level = this.exports.jig_detector_db()
+      this.port.postMessage(this.snapshot)
     }
 
     // Always true: a dynamics processor may yet produce output even from a

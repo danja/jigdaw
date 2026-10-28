@@ -40,7 +40,8 @@
   },
   "resources": {
     "module": "dynamix.wasm",
-    "processor": "dynamix-processor.js"
+    "processor": "dynamix-processor.js",
+    "ui": "ui/index.html"
   },
   "ports": [
     {

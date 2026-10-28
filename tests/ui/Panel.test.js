@@ -704,3 +704,44 @@ describe('a pad with a choice beside it', () => {
     expect(element.querySelectorAll('.controls .control')).toHaveLength(4)
   })
 })
+
+// An HTML skin (docs/html-skins.md) is drawn in the same place as an SVG one, answers the same calls, and the ports it does
+// not bind are drawn as generated controls beside it.
+describe('createPanel with an HTML skin', () => {
+  const ports = [port({ symbol: 'mix', name: 'Mix' }), port({ symbol: 'size', name: 'Size', defaultValue: 0.5 })]
+
+  async function withHtmlSkin (body = '<div><input id="m" type="range" data-param="mix"></div>') {
+    const { buildHtmlSkin } = await import('../../src/ui/HtmlSkin.js')
+    const { parseHTML } = await import('linkedom')
+    const doc = parseHTML(`<!doctype html><html><head></head><body>${body}</body></html>`).document
+    const prof = profile(ports)
+    const built = buildHtmlSkin(doc, { ports: prof.ports }, { document, prefix: 'h-' })
+    const sent = []
+    const panel = createPanel(document, prof, (s, v) => sent.push([s, v]), null, { scope: 'p', skin: { ...built, kind: 'html' } })
+    document.body.append(panel.element)
+    return { panel, sent }
+  }
+
+  it('draws the skin, then generated controls for the ports it leaves out, under their own heading', async () => {
+    const { panel } = await withHtmlSkin()
+    expect(panel.skinned).toBe(true)
+    expect(panel.element.querySelector('.html-skin-host')).not.toBeNull()
+    const others = panel.element.querySelector('.skin-others')
+    expect([...others.querySelectorAll('input')].map(i => i.id)).toEqual(['p_size'])
+  })
+
+  it('sends a move of the skin\'s slider through onChange, as a generated one does', async () => {
+    const { panel, sent } = await withHtmlSkin()
+    const input = (panel.skinView.element.shadowRoot ?? panel.skinView.element).querySelector('#h-m')
+    input.value = '0.7'
+    input.dispatchEvent(new document.defaultView.Event('input'))
+    expect(sent).toEqual([['mix', 0.7]])
+  })
+
+  it('draws a value the host applies, on the skin and on the generated control for the same port', async () => {
+    const { panel } = await withHtmlSkin()
+    panel.update('mix', 0.25)
+    const input = (panel.skinView.element.shadowRoot ?? panel.skinView.element).querySelector('#h-m')
+    expect(input.value).toBe('0.25')
+  })
+})

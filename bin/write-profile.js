@@ -49,7 +49,13 @@ for (const asset of template.assets ?? []) {
 // a digest written by hand goes stale.
 const SKIN_CLASS = { rotary: 'RotaryControl', linear: 'LinearControl', toggle: 'ToggleControl', selector: 'SelectorControl', readout: 'ReadoutControl' }
 const skin = template.skin
-if (skin) {
+// An HTML skin is one file the profile points at directly (docs/html-skins.md): no skin.ttl, no second resource.
+if (skin?.html) {
+  skin.file = skin.html
+  skin.mediaType = 'text/html'
+  skin.integrity = await digestFor(skin.html)
+} else if (skin) {
+  skin.mediaType = 'text/turtle'
   const artwork = { file: skin.artwork, integrity: await digestFor(skin.artwork) }
   const out = []
   const sw = s => out.push(s)
@@ -144,7 +150,7 @@ if (skin) w('    jig:skin <#skin> ;')
 // A skin's two files are also listed as assets, which is what jig:asset is for: a bundle, a verifier
 // and an offline copy know a plugin is complete by walking this list, and the artwork is named only
 // inside skin.ttl, where none of them look.
-const listed = [...assets.map(a => `<#${a.key}>`), ...(skin ? ['<#skin>', '<#skin-artwork>'] : [])]
+const listed = [...assets.map(a => `<#${a.key}>`), ...(skin ? (skin.html ? ['<#skin>'] : ['<#skin>', '<#skin-artwork>']) : [])]
 if (listed.length > 0) w(`    jig:asset ${listed.join(' , ')} ;`)
 w('')
 const pads = template.pads ?? []
@@ -190,14 +196,16 @@ if (skin) {
   w('<#skin>')
   w('    a jig:Skin ;')
   w(`    jig:location <${skin.file}> ;`)
-  w('    jig:mediaType "text/turtle" ;')
+  w(`    jig:mediaType "${skin.mediaType}" ;`)
   w(`    jig:integrity "${skin.integrity}" .`)
-  w('')
-  w('<#skin-artwork>')
-  w('    a jig:Resource ;')
-  w(`    jig:location <${skin.artwork}> ;`)
-  w('    jig:mediaType "image/svg+xml" ;')
-  w(`    jig:integrity "${skin.artworkIntegrity}" .`)
+  if (!skin.html) {
+    w('')
+    w('<#skin-artwork>')
+    w('    a jig:Resource ;')
+    w(`    jig:location <${skin.artwork}> ;`)
+    w('    jig:mediaType "image/svg+xml" ;')
+    w(`    jig:integrity "${skin.artworkIntegrity}" .`)
+  }
 }
 
 // A pad is a named pair of this plugin's own ports; the panel draws it as a square the pointer drags across. Checked here so a pad that

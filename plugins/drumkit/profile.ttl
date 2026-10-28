@@ -45,6 +45,8 @@
 
     jig:module <#module> ;
     jig:processor <#processor> ;
+    jig:skin <#skin> ;
+    jig:asset <#skin> ;
 
     lv2:port <#kick_pitch> , <#kick_decay> , <#kick_drive> , <#kick_punch> , <#kick_level> , <#snare_tone> , <#snare_snap> , <#snare_level> , <#clap_density> , <#clap_tone> , <#clap_level> , <#tom1_pitch> , <#tom1_decay> , <#tom1_level> , <#tom2_pitch> , <#tom2_decay> , <#tom2_level> , <#hh_closed_brightness> , <#hh_closed_decay> , <#hh_closed_level> , <#hh_open_brightness> , <#hh_open_decay> , <#hh_open_level> , <#crash_brightness> , <#crash_decay> , <#crash_level> , <#cowbell_tone> , <#cowbell_decay> , <#cowbell_level> , <#clave_tone> , <#clave_decay> , <#clave_level> , <#bash_size> , <#bash_spread> , <#bash_decay> , <#bash_drive> , <#bash_noise> , <#bash_edge> , <#bash_level> , <#bit_crush> , <#master_drive> , <#master_reverb> , <#master_gain> , <#kick_mute> , <#clap_mute> , <#snare_mute> , <#crash_mute> , <#hh_closed_mute> , <#tom1_mute> , <#hh_open_mute> , <#tom2_mute> , <#bash_mute> , <#cowbell_mute> , <#clave_mute> , <#kick_transient> , <#clap_metal> , <#snare_metal> , <#crash_metal> , <#hh_closed_metal> , <#tom1_metal> , <#hh_open_metal> , <#tom2_metal> , <#cowbell_metal> , <#clave_metal> , <#kick_pan> , <#clap_pan> , <#snare_pan> , <#crash_pan> , <#hh_closed_pan> , <#tom1_pan> , <#hh_open_pan> , <#tom2_pan> , <#bash_pan> , <#cowbell_pan> , <#clave_pan> .
 
@@ -61,6 +63,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "drumkit" ;
     jig:integrity "sha384-lEYEa6ps27riM702lhycoGjXDLPJZwZokA9G4D6rNLX94CFUzcTTgsozKV0m3pCn" .
+
+<#skin>
+    a jig:Skin ;
+    jig:location <skin/skin.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-th7FBlO0pRularhysBMUdzQmSztPYTkJ2MkzdqCo48pAm9XaCSaQfNsMyqurdR1R" .
 
 <#kick_pitch>
     a lv2:InputPort , lv2:ControlPort ;

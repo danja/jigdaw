@@ -1,0 +1,68 @@
+<!doctype html>
+<!--
+  plugins/canticle/skin/skin.html
+
+  Canticle's skin: an HTML skin (docs/html-skins.md). Markup bound with data-param and one stylesheet, no script, built by the
+  host from an allowlist and drawn in its own document. It began as an editor page written to find out whether an interface
+  of controls and labels needs code, and it did not.
+-->
+<html lang="en">
+<head></head>
+<body>
+<div class="panel">
+  <h1>Canticle</h1>
+  <p class="help" data-param-help></p>
+  <div class="cards">
+    <section class="card">
+      <h2>Voice</h2>
+      <div class="row"><label for="model" data-param-name="model"></label><select id="model" data-param="model"></select></div>
+      <div class="row"><label for="tone" data-param-name="tone"></label><input id="tone" type="range" data-param="tone"><output data-param-text="tone"></output></div>
+      <div class="row"><label for="body" data-param-name="body"></label><input id="body" type="range" data-param="body"><output data-param-text="body"></output></div>
+      <div class="row"><label for="movement" data-param-name="movement"></label><input id="movement" type="range" data-param="movement"><output data-param-text="movement"></output></div>
+      <div class="row"><label for="metal" data-param-name="metal"></label><input id="metal" type="range" data-param="metal"><output data-param-text="metal"></output></div>
+    </section>
+    <section class="card">
+      <h2>Envelope</h2>
+      <div class="row"><label for="attack" data-param-name="attack"></label><input id="attack" type="range" data-param="attack"><output data-param-text="attack"></output></div>
+      <div class="row"><label for="decay" data-param-name="decay"></label><input id="decay" type="range" data-param="decay"><output data-param-text="decay"></output></div>
+      <div class="row"><label for="sustain" data-param-name="sustain"></label><input id="sustain" type="range" data-param="sustain"><output data-param-text="sustain"></output></div>
+      <div class="row"><label for="release" data-param-name="release"></label><input id="release" type="range" data-param="release"><output data-param-text="release"></output></div>
+    </section>
+    <section class="card">
+      <h2>Space and level</h2>
+      <div class="row"><label for="detune" data-param-name="detune"></label><input id="detune" type="range" data-param="detune"><output data-param-text="detune"></output></div>
+      <div class="row"><label for="width" data-param-name="width"></label><input id="width" type="range" data-param="width"><output data-param-text="width"></output></div>
+      <div class="row"><label for="drive" data-param-name="drive"></label><input id="drive" type="range" data-param="drive"><output data-param-text="drive"></output></div>
+      <div class="row"><label for="output" data-param-name="output"></label><input id="output" type="range" data-param="output"><output data-param-text="output"></output></div>
+    </section>
+    <section class="card">
+      <h2>Playing</h2>
+      <div class="row"><label for="articulation" data-param-name="articulation"></label><select id="articulation" data-param="articulation"></select></div>
+      <div class="row"><label for="range" data-param-name="range"></label><select id="range" data-param="range"></select></div>
+      <div class="row"><label for="ensemble" data-param-name="ensemble"></label><select id="ensemble" data-param="ensemble"></select></div>
+    </section>
+  </div>
+  <style>
+    @layer skin {
+      .panel { container-type: inline-size; background-color: #1a1e24; color: #e6e8eb; padding: 12px; font-family: sans-serif; font-size: 16px; }
+      h1 { font-size: 14px; margin: 0 0 10px; color: #9aa3ad; font-weight: 600; letter-spacing: 0.04em; }
+      .help { margin: 0 0 8px; min-height: 3em; color: #9aa3ad; font-size: 14px; }
+      h2 { font-size: 14px; margin: 0 0 6px; color: #9aa3ad; font-weight: 600; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: 12px; }
+      .card { min-width: 0; background-color: #0e1116; border: 1px solid #2c333c; border-radius: 8px; padding: 10px 12px; }
+      .row { display: grid; grid-template-columns: 6rem 1fr 4rem; align-items: center; column-gap: 10px; min-height: 44px; }
+      label { color: #9aa3ad; }
+      output { text-align: right; }
+      select { grid-column: 2 / 4; min-height: 44px; font-size: 16px; background-color: #1a1e24; color: #e6e8eb; border: 1px solid #2c333c; border-radius: 6px; }
+      input { accent-color: #3d8bfd; }
+      .row input { width: 100%; min-width: 0; }
+      @container (max-width: 360px) {
+        .row { grid-template-columns: 1fr 4rem; }
+        input { grid-column: 1 / 3; }
+        select { grid-column: 1 / 3; }
+      }
+    }
+  </style>
+</div>
+</body>
+</html>

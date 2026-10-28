@@ -26,6 +26,20 @@
 export function preserveFocus (container) {
   const document = container?.ownerDocument
   const active = document?.activeElement
+  // A control inside a shadow root (an HTML skin, docs/html-skins.md) is not document.activeElement: the host is, and the host
+  // has no focus to give back. So the control is noted by the host's id and its own, and found again through the host's
+  // shadow root, where getElementById cannot reach.
+  const inner = active?.shadowRoot?.activeElement
+  if (inner && container.contains(active)) {
+    const hostId = active.id
+    const innerId = inner.id
+    return () => {
+      if (!hostId || !innerId) return null
+      const again = document.getElementById(hostId)?.shadowRoot?.getElementById(innerId)
+      again?.focus?.({ preventScroll: true })
+      return again ?? null
+    }
+  }
   const id = active && active !== document.body && container.contains(active) ? active.id : null
 
   return () => {

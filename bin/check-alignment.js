@@ -14,8 +14,8 @@
 // The "off" render is the positive control: a measure that could not see a misalignment would pass "on" for nothing.
 //
 //   npm run check:alignment   exit 0 aligned, 1 not aligned or the page failed, 3 Chrome is not available
-import { fileURLToPath } from 'node:url'
 import { withChrome } from './chrome-session.js'
+import { isMain } from './is-main.js'
 
 export const LATENCY_FRAMES = 512
 export const BUS_FRAMES = 256
@@ -112,7 +112,7 @@ export async function checkAlignment () {
   }, { flags: ['--autoplay-policy=no-user-gesture-required'] })
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const { code, lines } = await checkAlignment()
   for (const l of lines) console.log(l)
   process.exit(code)

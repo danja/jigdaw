@@ -46,6 +46,8 @@
 
     jig:module <#module> ;
     jig:processor <#processor> ;
+    jig:skin <#skin> ;
+    jig:asset <#skin> ;
 
     lv2:port <#opa_wave> , <#opa_fixed> , <#opa_ratio> , <#opa_fine> , <#opa_fixed_hz> , <#opa_level> , <#opa_attack> , <#opa_decay> , <#opa_sustain> , <#opa_release> , <#opb_wave> , <#opb_fixed> , <#opb_ratio> , <#opb_fine> , <#opb_fixed_hz> , <#opb_level> , <#opb_attack> , <#opb_decay> , <#opb_sustain> , <#opb_release> , <#opc_wave> , <#opc_fixed> , <#opc_ratio> , <#opc_fine> , <#opc_fixed_hz> , <#opc_level> , <#opc_attack> , <#opc_decay> , <#opc_sustain> , <#opc_release> , <#opd_wave> , <#opd_fixed> , <#opd_ratio> , <#opd_fine> , <#opd_fixed_hz> , <#opd_level> , <#opd_attack> , <#opd_decay> , <#opd_sustain> , <#opd_release> , <#algorithm> , <#feedback> , <#depth> , <#pitch_env> , <#pitch_env_amount> , <#pitch_attack> , <#pitch_decay> , <#pitch_sustain> , <#pitch_release> , <#filter_type> , <#cutoff> , <#resonance> , <#key_track> , <#master> , <#velocity> , <#bend_range> , <#quality> , <#play_mode> , <#glide> .
 
@@ -62,6 +64,12 @@
     jig:mediaType "text/javascript" ;
     jig:registeredName "quartet" ;
     jig:integrity "sha384-Ot6G+khz/VEbG+uGCEt7u4ScNRXqQ/j5pHobkxvGZMHCOrjPVBr4CVLNz2bKGCyV" .
+
+<#skin>
+    a jig:Skin ;
+    jig:location <skin/skin.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-p9WjIW8YUaqPCmr9lA1bOQMb+0Jl9kijPguDaaUt0xioAX16JcTDLniZHpvtVP1j" .
 
 <#opa_wave>
     a lv2:InputPort , lv2:ControlPort ;

@@ -46,6 +46,7 @@
 
     jig:module <#module> ;
     jig:processor <#processor> ;
+    jig:ui <#ui> ;
 
     lv2:port <#comp_enable> , <#comp_mode> , <#threshold> , <#ratio> , <#attack> , <#release> , <#knee> , <#makeup> , <#limit_enable> , <#ceiling> , <#limit_release> , <#clip_enable> , <#drive> , <#shape> .
 
@@ -54,14 +55,20 @@
     jig:location <dynamix.wasm> ;
     jig:mediaType "application/wasm" ;
     jig:abi jig:Abi1 ;
-    jig:integrity "sha384-2UahciePbw9UdX79I6Cqg0FmJcv8rHzUnwtiwf4dZ+qna162GdqIOyt/UNerseoT" .
+    jig:integrity "sha384-GvqcWw2XFBkjTFSdRoRgg2k08PutBnVEwkCeOsn9kdO9v7vo0tdLIY0yAd/goqXV" .
 
 <#processor>
     a jig:Processor ;
     jig:location <dynamix-processor.js> ;
     jig:mediaType "text/javascript" ;
     jig:registeredName "dynamix" ;
-    jig:integrity "sha384-mqg/vA9EacSXYT13/iQysJMxuBLfEuizLNMuudMWAjitk7/nKpmhstUpY3rVFrS3" .
+    jig:integrity "sha384-DLd52ade+L6FgtOTVInIcbc1l7hSD6fOE+D+CnxIW7GbZ0W7m60OKrBX3HpvVz2o" .
+
+<#ui>
+    a jig:UserInterface ;
+    jig:location <ui/index.html> ;
+    jig:mediaType "text/html" ;
+    jig:integrity "sha384-6drv9xJrHOnJDmbOKM5Kutm/QL7Ggg/BVE/I0AIvr1k27RcgyWhwDChFSmYDpRts" .
 
 <#comp_enable>
     a lv2:InputPort , lv2:ControlPort ;

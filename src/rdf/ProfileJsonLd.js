@@ -19,7 +19,14 @@ const CONTEXT = Object.freeze({
   name: v.lv2.name,
   minimum: v.lv2.minimum,
   maximum: v.lv2.maximum,
-  default: v.lv2.default
+  default: v.lv2.default,
+  // What a bound control needs to read a port: its unit, its named values, and the port properties that choose a
+  // widget (contract section 5.3). A unit and a property are IRIs, as in the profile, so a frame compares them
+  // with the same table the host uses.
+  unit: { '@id': v.units.unit, '@type': '@id' },
+  portProperty: { '@id': v.lv2.portProperty, '@type': '@id', '@container': '@set' },
+  scalePoint: { '@id': v.lv2.scalePoint, '@container': '@set' },
+  value: v.rdf.value
 })
 
 /** The profile ProfileReader returned, as a JSON-LD object an editor can read. */
@@ -36,7 +43,11 @@ export function profileAsJsonLd (profile) {
       name: p.name ?? p.symbol,
       minimum: p.minimum,
       maximum: p.maximum,
-      default: p.defaultValue
+      default: p.defaultValue,
+      comment: p.comment ?? undefined,
+      unit: p.unit ?? undefined,
+      portProperty: [p.toggled && v.lv2.toggled, p.enumeration && v.lv2.enumeration].filter(Boolean),
+      scalePoint: p.scalePoints.map(sp => ({ label: sp.label, value: sp.value }))
     }))
   }
 }

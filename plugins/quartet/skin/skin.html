@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+  skin/skin.html
+
+  Quartet's skin: an HTML skin (docs/html-skins.md). One card for each group of ports. Markup bound with
+  data-param and one stylesheet, no script, built by the host from an allowlist and drawn in its own document.
+
+  Started by bin/skin-from-profile.js and then edited by hand: it is not generated again over this file.
+-->
+<html lang="en">
+<head></head>
+<body>
+<div class="panel">
+  <h1>Quartet</h1>
+  <p class="help" data-param-help></p>
+  <div class="cards">
+    <section class="card">
+      <h2>Operator A</h2>
+      <div class="row pick"><label for="opa_wave">Waveform</label><select id="opa_wave" data-param="opa_wave"></select></div>
+      <div class="row flip"><label for="opa_fixed">Fixed Frequency</label><input id="opa_fixed" type="checkbox" data-param="opa_fixed"></div>
+      <div class="row"><label for="opa_ratio">Ratio</label><input id="opa_ratio" type="range" data-param="opa_ratio"><output data-param-text="opa_ratio"></output></div>
+      <div class="row"><label for="opa_fine">Fine</label><input id="opa_fine" type="range" data-param="opa_fine"><output data-param-text="opa_fine"></output></div>
+      <div class="row"><label for="opa_fixed_hz">Fixed Hz</label><input id="opa_fixed_hz" type="range" data-param="opa_fixed_hz"><output data-param-text="opa_fixed_hz"></output></div>
+      <div class="row"><label for="opa_level">Level</label><input id="opa_level" type="range" data-param="opa_level"><output data-param-text="opa_level"></output></div>
+      <div class="row"><label for="opa_attack">Attack</label><input id="opa_attack" type="range" data-param="opa_attack"><output data-param-text="opa_attack"></output></div>
+      <div class="row"><label for="opa_decay">Decay</label><input id="opa_decay" type="range" data-param="opa_decay"><output data-param-text="opa_decay"></output></div>
+      <div class="row"><label for="opa_sustain">Sustain</label><input id="opa_sustain" type="range" data-param="opa_sustain"><output data-param-text="opa_sustain"></output></div>
+      <div class="row"><label for="opa_release">Release</label><input id="opa_release" type="range" data-param="opa_release"><output data-param-text="opa_release"></output></div>
+    </section>
+    <section class="card">
+      <h2>Operator B</h2>
+      <div class="row pick"><label for="opb_wave">Waveform</label><select id="opb_wave" data-param="opb_wave"></select></div>
+      <div class="row flip"><label for="opb_fixed">Fixed Frequency</label><input id="opb_fixed" type="checkbox" data-param="opb_fixed"></div>
+      <div class="row"><label for="opb_ratio">Ratio</label><input id="opb_ratio" type="range" data-param="opb_ratio"><output data-param-text="opb_ratio"></output></div>
+      <div class="row"><label for="opb_fine">Fine</label><input id="opb_fine" type="range" data-param="opb_fine"><output data-param-text="opb_fine"></output></div>
+      <div class="row"><label for="opb_fixed_hz">Fixed Hz</label><input id="opb_fixed_hz" type="range" data-param="opb_fixed_hz"><output data-param-text="opb_fixed_hz"></output></div>
+      <div class="row"><label for="opb_level">Level</label><input id="opb_level" type="range" data-param="opb_level"><output data-param-text="opb_level"></output></div>
+      <div class="row"><label for="opb_attack">Attack</label><input id="opb_attack" type="range" data-param="opb_attack"><output data-param-text="opb_attack"></output></div>
+      <div class="row"><label for="opb_decay">Decay</label><input id="opb_decay" type="range" data-param="opb_decay"><output data-param-text="opb_decay"></output></div>
+      <div class="row"><label for="opb_sustain">Sustain</label><input id="opb_sustain" type="range" data-param="opb_sustain"><output data-param-text="opb_sustain"></output></div>
+      <div class="row"><label for="opb_release">Release</label><input id="opb_release" type="range" data-param="opb_release"><output data-param-text="opb_release"></output></div>
+    </section>
+    <section class="card">
+      <h2>Operator C</h2>
+      <div class="row pick"><label for="opc_wave">Waveform</label><select id="opc_wave" data-param="opc_wave"></select></div>
+      <div class="row flip"><label for="opc_fixed">Fixed Frequency</label><input id="opc_fixed" type="checkbox" data-param="opc_fixed"></div>
+      <div class="row"><label for="opc_ratio">Ratio</label><input id="opc_ratio" type="range" data-param="opc_ratio"><output data-param-text="opc_ratio"></output></div>
+      <div class="row"><label for="opc_fine">Fine</label><input id="opc_fine" type="range" data-param="opc_fine"><output data-param-text="opc_fine"></output></div>
+      <div class="row"><label for="opc_fixed_hz">Fixed Hz</label><input id="opc_fixed_hz" type="range" data-param="opc_fixed_hz"><output data-param-text="opc_fixed_hz"></output></div>
+      <div class="row"><label for="opc_level">Level</label><input id="opc_level" type="range" data-param="opc_level"><output data-param-text="opc_level"></output></div>
+      <div class="row"><label for="opc_attack">Attack</label><input id="opc_attack" type="range" data-param="opc_attack"><output data-param-text="opc_attack"></output></div>
+      <div class="row"><label for="opc_decay">Decay</label><input id="opc_decay" type="range" data-param="opc_decay"><output data-param-text="opc_decay"></output></div>
+      <div class="row"><label for="opc_sustain">Sustain</label><input id="opc_sustain" type="range" data-param="opc_sustain"><output data-param-text="opc_sustain"></output></div>
+      <div class="row"><label for="opc_release">Release</label><input id="opc_release" type="range" data-param="opc_release"><output data-param-text="opc_release"></output></div>
+    </section>
+    <section class="card">
+      <h2>Operator D</h2>
+      <div class="row pick"><label for="opd_wave">Waveform</label><select id="opd_wave" data-param="opd_wave"></select></div>
+      <div class="row flip"><label for="opd_fixed">Fixed Frequency</label><input id="opd_fixed" type="checkbox" data-param="opd_fixed"></div>
+      <div class="row"><label for="opd_ratio">Ratio</label><input id="opd_ratio" type="range" data-param="opd_ratio"><output data-param-text="opd_ratio"></output></div>
+      <div class="row"><label for="opd_fine">Fine</label><input id="opd_fine" type="range" data-param="opd_fine"><output data-param-text="opd_fine"></output></div>
+      <div class="row"><label for="opd_fixed_hz">Fixed Hz</label><input id="opd_fixed_hz" type="range" data-param="opd_fixed_hz"><output data-param-text="opd_fixed_hz"></output></div>
+      <div class="row"><label for="opd_level">Level</label><input id="opd_level" type="range" data-param="opd_level"><output data-param-text="opd_level"></output></div>
+      <div class="row"><label for="opd_attack">Attack</label><input id="opd_attack" type="range" data-param="opd_attack"><output data-param-text="opd_attack"></output></div>
+      <div class="row"><label for="opd_decay">Decay</label><input id="opd_decay" type="range" data-param="opd_decay"><output data-param-text="opd_decay"></output></div>
+      <div class="row"><label for="opd_sustain">Sustain</label><input id="opd_sustain" type="range" data-param="opd_sustain"><output data-param-text="opd_sustain"></output></div>
+      <div class="row"><label for="opd_release">Release</label><input id="opd_release" type="range" data-param="opd_release"><output data-param-text="opd_release"></output></div>
+    </section>
+    <section class="card">
+      <h2>FM</h2>
+      <div class="row pick"><label for="algorithm">Algorithm</label><select id="algorithm" data-param="algorithm"></select></div>
+      <div class="row"><label for="feedback">Feedback</label><input id="feedback" type="range" data-param="feedback"><output data-param-text="feedback"></output></div>
+      <div class="row"><label for="depth">FM Depth</label><input id="depth" type="range" data-param="depth"><output data-param-text="depth"></output></div>
+    </section>
+    <section class="card">
+      <h2>Pitch envelope</h2>
+      <div class="row flip"><label for="pitch_env">Envelope</label><input id="pitch_env" type="checkbox" data-param="pitch_env"></div>
+      <div class="row"><label for="pitch_env_amount">Envelope Amount</label><input id="pitch_env_amount" type="range" data-param="pitch_env_amount"><output data-param-text="pitch_env_amount"></output></div>
+      <div class="row"><label for="pitch_attack">Attack</label><input id="pitch_attack" type="range" data-param="pitch_attack"><output data-param-text="pitch_attack"></output></div>
+      <div class="row"><label for="pitch_decay">Decay</label><input id="pitch_decay" type="range" data-param="pitch_decay"><output data-param-text="pitch_decay"></output></div>
+      <div class="row"><label for="pitch_sustain">Sustain</label><input id="pitch_sustain" type="range" data-param="pitch_sustain"><output data-param-text="pitch_sustain"></output></div>
+      <div class="row"><label for="pitch_release">Release</label><input id="pitch_release" type="range" data-param="pitch_release"><output data-param-text="pitch_release"></output></div>
+    </section>
+    <section class="card">
+      <h2>Filter</h2>
+      <div class="row pick"><label for="filter_type">Filter Type</label><select id="filter_type" data-param="filter_type"></select></div>
+      <div class="row"><label for="cutoff">Cutoff</label><input id="cutoff" type="range" data-param="cutoff"><output data-param-text="cutoff"></output></div>
+      <div class="row"><label for="resonance">Resonance</label><input id="resonance" type="range" data-param="resonance"><output data-param-text="resonance"></output></div>
+      <div class="row"><label for="key_track">Key Track</label><input id="key_track" type="range" data-param="key_track"><output data-param-text="key_track"></output></div>
+    </section>
+    <section class="card">
+      <h2>Output</h2>
+      <div class="row"><label for="master">Master</label><input id="master" type="range" data-param="master"><output data-param-text="master"></output></div>
+      <div class="row"><label for="velocity">Velocity</label><input id="velocity" type="range" data-param="velocity"><output data-param-text="velocity"></output></div>
+      <div class="row"><label for="bend_range">Bend Range</label><input id="bend_range" type="range" data-param="bend_range"><output data-param-text="bend_range"></output></div>
+      <div class="row flip"><label for="quality">Quality</label><input id="quality" type="checkbox" data-param="quality"></div>
+    </section>
+    <section class="card">
+      <h2>Voicing</h2>
+      <div class="row pick"><label for="play_mode">Play Mode</label><select id="play_mode" data-param="play_mode"></select></div>
+      <div class="row"><label for="glide">Glide</label><input id="glide" type="range" data-param="glide"><output data-param-text="glide"></output></div>
+    </section>
+  </div>
+  <style>
+    @layer skin {
+      .panel { container-type: inline-size; color-scheme: dark; background-color: #1a1e24; color: #e6e8eb; padding: 12px; font-family: sans-serif; font-size: 16px; }
+      h1 { font-size: 14px; margin: 0 0 10px; color: #9aa3ad; font-weight: 600; letter-spacing: 0.04em; }
+      h2 { font-size: 14px; margin: 0 0 6px; color: #e6e8eb; font-weight: 600; }
+      .help { margin: 0 0 8px; min-height: 3em; color: #9aa3ad; font-size: 14px; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: 12px; }
+      .card { min-width: 0; background-color: #0e1116; border: 1px solid #2c333c; border-radius: 8px; padding: 8px 12px; }
+      .row { display: grid; grid-template-columns: 5.5rem 1fr 4.5rem; align-items: center; column-gap: 10px; min-height: 44px; }
+      .row input { width: 100%; min-width: 0; }
+      .flip { grid-template-columns: 1fr auto; }
+      .flip input { width: auto; justify-self: end; }
+      .pick select { grid-column: 2 / 4; min-width: 0; font-size: 16px; background-color: #1a1e24; color: #e6e8eb; border: 1px solid #2c333c; border-radius: 6px; }
+      label { color: #9aa3ad; }
+      output { text-align: right; white-space: nowrap; }
+      input { accent-color: #3d8bfd; }
+      @container (max-width: 360px) {
+        .row { grid-template-columns: 1fr 4.5rem; }
+        .flip { grid-template-columns: 1fr auto; }
+        .row input { grid-column: 1 / 3; }
+        .flip input { grid-column: 2; }
+        .pick select { grid-column: 1 / 3; }
+      }
+    }
+  </style>
+</div>
+</body>
+</html>

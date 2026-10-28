@@ -43,7 +43,9 @@ describe('the staged app', () => {
       const wanted = pluginFiles(join(root, 'plugins', name)).map(f => resolve(join(root, 'plugins', name), f))
       for (const file of wanted) expect(existsSync(file.replace(root, out)), file).toBe(true)
     }
-    expect(readdirSync(join(out, 'plugins/quartet')).sort()).toEqual(['profile.ttl', 'quartet-processor.js', 'quartet.wasm'])
+    // Quartet names its processor, module and skin, and its sources, build script and build output are not staged.
+    expect(readdirSync(join(out, 'plugins/quartet')).sort()).toEqual(['profile.ttl', 'quartet-processor.js', 'quartet.wasm', 'skin'])
+    expect(readdirSync(join(out, 'plugins/quartet/skin'))).toEqual(['skin.html'])
   })
 
   it('refuses to stage when a profile names a file the tree does not hold', async () => {

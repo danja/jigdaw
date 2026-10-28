@@ -11,6 +11,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { crc32 } from '../src/host/Zip.js'
+import { isMain } from './is-main.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const BACKGROUND = [0x13, 0x16, 0x1b]
@@ -86,7 +87,7 @@ export const ICONS = Object.freeze([
   { file: 'apple-touch-icon.png', size: 180, inset: 0 }
 ])
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const dir = resolve(root, 'web/icons')
   mkdirSync(dir, { recursive: true })
   for (const { file, size, inset } of ICONS) {

@@ -34,7 +34,7 @@ has no idea what a unit is.
 
 Not every plugin is Rust. The same list of layers applies to the C++ plugins (`boost`, `parameq`),
 the JavaScript-only ones (`tremolo`, `dice`) and the JSFX conversions, which is why the interface
-cannot depend on the language. Of the four plugins that ship a skin today, only `cascade` is Rust.
+cannot depend on the language. Of the seven plugins that ship a skin today, `cascade` (SVG), `canticle` and `drumkit` (HTML) are Rust, and `quartet` (HTML) is C++.
 
 The native adapter (`native/jigdaw-adapter/`) is C++, built on DPF and WAMR, and is the other place
 an interface is made. It follows the same rule without sharing the code: its editor
@@ -161,6 +161,16 @@ checks do:
   Chrome, and feeds the builder hostile artwork through the browser's own XML parser. The unit tests
   cannot do this, because a DOM without a renderer accepts malformed XML a browser refuses.
 
+### HTML skins
+
+**A skin can also be laid out by the browser.** An HTML skin is one file of markup and a stylesheet, with no script, bound to
+ports with the same `data-param` attributes the editor bridge uses ([html-skins.md](html-skins.md)). It suits a plugin whose
+interface is controls and labels, and it reflows where an SVG skin has one fixed drawing: Canticle's sixteen controls go from
+one column to four. The host builds it the way it builds SVG artwork, from an allowlist and never by inserting the file, and
+draws it in a shadow root with `src/ui/HtmlSkinPanel.js`. Its stylesheet is parsed and rewritten, not passed through
+(`src/ui/HtmlSkinCss.js`), and the host's own rules, which give every control a 44 pixel target and a focus ring, sit outside
+the layer the author's are confined to, so a skin cannot remove them. `npm run check:skins` holds that in a real Chrome.
+
 ## `jig:ui`, the editor beside the panel
 
 **A plugin's own page is offered beside the panel and never instead of it.** `jig:ui` points at a web
@@ -170,7 +180,11 @@ message can be addressed to its real origin. It is given the profile and the cur
 only `postMessage` back. It cannot see the `AudioContext`, the worklet node or the project model
 (contract section 9.2), and what it asks for goes to the dispatcher like any other edit.
 
-Four plugins declare one today: `conductor`, `octet`, `parameq` and `tremolo`. The generated panel is
+A page does not have to implement the message protocol by hand: `src/plugin-ui/JigUi.js` binds elements to ports
+by attribute (`<input type="range" data-param="threshold">`) and does the messaging, see
+[plugin-ui.md](plugin-ui.md). `dynamix` uses it for a transfer curve with a live gain reduction dot.
+
+Five plugins declare an editor today: `conductor`, `dynamix`, `octet`, `parameq` and `tremolo`. The generated panel is
 still drawn for each, so an editor a person cannot use costs them nothing.
 
 ## Choosing between them
@@ -179,7 +193,7 @@ still drawn for each, so an editor a person cannot use costs them nothing.
 |---|---|---|
 | Nothing, or to get started | Nothing | The generated panel is accessible, phone friendly and consistent |
 | Your own look on dials, sliders, switches and selectors | A skin | Data only, so the host draws it with its own accessibility and can verify it |
-| Curves, XY pads, waveform displays, anything that needs code | A `jig:ui` | Needs a sandbox, which is why it sits beside the panel |
+| Curves, XY pads, waveform displays, anything that needs code | A `jig:ui`, built with the bridge ([plugin-ui.md](plugin-ui.md)) | Needs a sandbox, which is why it sits beside the panel |
 
 Skins do not yet cover meters, since a meter binds a signal and not a port, nor separate layouts for
 narrow and wide screens, animation or theming ([svg-skins.md](svg-skins.md) lists them).
@@ -193,9 +207,13 @@ narrow and wide screens, animation or theming ([svg-skins.md](svg-skins.md) list
 | Port to widget | `widgetFor` in `src/rdf/ProfileReader.js`, `src/ui/Panel.js` |
 | The dial and the drag | `src/ui/Dial.js` |
 | Fetch and verify a skin | `src/host/SkinLoader.js`, `src/rdf/SkinReader.js` |
+| An HTML skin | `src/ui/HtmlSkin.js`, `src/ui/HtmlSkinCss.js`, `src/ui/HtmlSkinPanel.js` |
 | The SVG allowlist | `src/ui/SkinArtwork.js` |
 | Operating a skin | `src/ui/SkinPanel.js` |
 | The page's skin cache | `web/app/Skins.js` |
-| A Rust plugin with a skin | `plugins/cascade/skin/` |
+| A Rust plugin with an SVG skin | `plugins/cascade/skin/` |
+| A Rust plugin with an HTML skin | `plugins/canticle/skin/skin.html`, `plugins/drumkit/skin/skin.html` |
+| A first draft of an HTML skin | `bin/skin-from-profile.js`, then `.claude/skills/html-skin/SKILL.md` |
 | The sandboxed editor | `src/ui/PluginFrame.js` |
+| The page-side bridge | `src/plugin-ui/JigUi.js`, `bin/inline-ui.js` |
 | The native panel | `native/jigdaw-adapter/src/dpf/JigdawUI.cpp` |

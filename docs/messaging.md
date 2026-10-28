@@ -191,7 +191,7 @@ The UI does not know the host's origin until `init` arrives, so it MAY address `
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `init` | `{ profile, parameters, capabilities, state? }` | `profile` is the plugin's own profile as JSON-LD. Sent once, after the frame reports `ready` |
+| `init` | `{ profile, parameters, capabilities, state? }` | `profile` is the plugin's own profile as JSON-LD: identity and, for each port, its symbol, name, range, default, unit, port properties, scale points and, where it has one, a sentence saying what it does. Sent once, after the frame reports `ready` |
 | `parameter` | `{ symbol, value }` | A parameter changed, from automation, a generated panel, or another surface |
 | `state` | `{ state }` | The processor's state, after a restore or on request |
 | `plugin` | `{ payload }` | Opaque, relayed from the processor |

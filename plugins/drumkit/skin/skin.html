@@ -1,0 +1,142 @@
+<!doctype html>
+<!--
+  plugins/drumkit/skin/skin.html
+
+  DrumKit's skin: an HTML skin (docs/html-skins.md). One card for each of the eleven voices, with its mute in the header, and a
+  master card. Markup bound with data-param and one stylesheet, no script, built by the host from an allowlist and drawn in
+  its own document. The labels in a card are short ("Pitch") because the accessible name is the port's ("Kick Pitch"), which
+  contains them (WCAG 2.5.3).
+-->
+<html lang="en">
+<head></head>
+<body>
+<div class="panel">
+  <h1>DrumKit</h1>
+  <p class="help" data-param-help></p>
+  <div class="kit">
+    <section class="card">
+      <header class="head"><h2>Kick</h2><label class="mute" for="kick_mute"><input id="kick_mute" type="checkbox" data-param="kick_mute">Mute</label></header>
+      <div class="row"><label for="kick_pitch">Pitch</label><input id="kick_pitch" type="range" data-param="kick_pitch"><output data-param-text="kick_pitch"></output></div>
+      <div class="row"><label for="kick_decay">Decay</label><input id="kick_decay" type="range" data-param="kick_decay"><output data-param-text="kick_decay"></output></div>
+      <div class="row"><label for="kick_drive">Drive</label><input id="kick_drive" type="range" data-param="kick_drive"><output data-param-text="kick_drive"></output></div>
+      <div class="row"><label for="kick_punch">Punch</label><input id="kick_punch" type="range" data-param="kick_punch"><output data-param-text="kick_punch"></output></div>
+      <div class="row"><label for="kick_transient">Transient</label><input id="kick_transient" type="range" data-param="kick_transient"><output data-param-text="kick_transient"></output></div>
+      <div class="row"><label for="kick_level">Level</label><input id="kick_level" type="range" data-param="kick_level"><output data-param-text="kick_level"></output></div>
+      <div class="row"><label for="kick_pan">Pan</label><input id="kick_pan" type="range" data-param="kick_pan"><output data-param-text="kick_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Snare</h2><label class="mute" for="snare_mute"><input id="snare_mute" type="checkbox" data-param="snare_mute">Mute</label></header>
+      <div class="row"><label for="snare_tone">Tone</label><input id="snare_tone" type="range" data-param="snare_tone"><output data-param-text="snare_tone"></output></div>
+      <div class="row"><label for="snare_snap">Snap</label><input id="snare_snap" type="range" data-param="snare_snap"><output data-param-text="snare_snap"></output></div>
+      <div class="row"><label for="snare_metal">Metal</label><input id="snare_metal" type="range" data-param="snare_metal"><output data-param-text="snare_metal"></output></div>
+      <div class="row"><label for="snare_level">Level</label><input id="snare_level" type="range" data-param="snare_level"><output data-param-text="snare_level"></output></div>
+      <div class="row"><label for="snare_pan">Pan</label><input id="snare_pan" type="range" data-param="snare_pan"><output data-param-text="snare_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Clap</h2><label class="mute" for="clap_mute"><input id="clap_mute" type="checkbox" data-param="clap_mute">Mute</label></header>
+      <div class="row"><label for="clap_density">Density</label><input id="clap_density" type="range" data-param="clap_density"><output data-param-text="clap_density"></output></div>
+      <div class="row"><label for="clap_tone">Tone</label><input id="clap_tone" type="range" data-param="clap_tone"><output data-param-text="clap_tone"></output></div>
+      <div class="row"><label for="clap_metal">Metal</label><input id="clap_metal" type="range" data-param="clap_metal"><output data-param-text="clap_metal"></output></div>
+      <div class="row"><label for="clap_level">Level</label><input id="clap_level" type="range" data-param="clap_level"><output data-param-text="clap_level"></output></div>
+      <div class="row"><label for="clap_pan">Pan</label><input id="clap_pan" type="range" data-param="clap_pan"><output data-param-text="clap_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Tom 1</h2><label class="mute" for="tom1_mute"><input id="tom1_mute" type="checkbox" data-param="tom1_mute">Mute</label></header>
+      <div class="row"><label for="tom1_pitch">Pitch</label><input id="tom1_pitch" type="range" data-param="tom1_pitch"><output data-param-text="tom1_pitch"></output></div>
+      <div class="row"><label for="tom1_decay">Decay</label><input id="tom1_decay" type="range" data-param="tom1_decay"><output data-param-text="tom1_decay"></output></div>
+      <div class="row"><label for="tom1_metal">Metal</label><input id="tom1_metal" type="range" data-param="tom1_metal"><output data-param-text="tom1_metal"></output></div>
+      <div class="row"><label for="tom1_level">Level</label><input id="tom1_level" type="range" data-param="tom1_level"><output data-param-text="tom1_level"></output></div>
+      <div class="row"><label for="tom1_pan">Pan</label><input id="tom1_pan" type="range" data-param="tom1_pan"><output data-param-text="tom1_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Tom 2</h2><label class="mute" for="tom2_mute"><input id="tom2_mute" type="checkbox" data-param="tom2_mute">Mute</label></header>
+      <div class="row"><label for="tom2_pitch">Pitch</label><input id="tom2_pitch" type="range" data-param="tom2_pitch"><output data-param-text="tom2_pitch"></output></div>
+      <div class="row"><label for="tom2_decay">Decay</label><input id="tom2_decay" type="range" data-param="tom2_decay"><output data-param-text="tom2_decay"></output></div>
+      <div class="row"><label for="tom2_metal">Metal</label><input id="tom2_metal" type="range" data-param="tom2_metal"><output data-param-text="tom2_metal"></output></div>
+      <div class="row"><label for="tom2_level">Level</label><input id="tom2_level" type="range" data-param="tom2_level"><output data-param-text="tom2_level"></output></div>
+      <div class="row"><label for="tom2_pan">Pan</label><input id="tom2_pan" type="range" data-param="tom2_pan"><output data-param-text="tom2_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Closed HH</h2><label class="mute" for="hh_closed_mute"><input id="hh_closed_mute" type="checkbox" data-param="hh_closed_mute">Mute</label></header>
+      <div class="row"><label for="hh_closed_brightness">Brightness</label><input id="hh_closed_brightness" type="range" data-param="hh_closed_brightness"><output data-param-text="hh_closed_brightness"></output></div>
+      <div class="row"><label for="hh_closed_decay">Decay</label><input id="hh_closed_decay" type="range" data-param="hh_closed_decay"><output data-param-text="hh_closed_decay"></output></div>
+      <div class="row"><label for="hh_closed_metal">Metal</label><input id="hh_closed_metal" type="range" data-param="hh_closed_metal"><output data-param-text="hh_closed_metal"></output></div>
+      <div class="row"><label for="hh_closed_level">Level</label><input id="hh_closed_level" type="range" data-param="hh_closed_level"><output data-param-text="hh_closed_level"></output></div>
+      <div class="row"><label for="hh_closed_pan">Pan</label><input id="hh_closed_pan" type="range" data-param="hh_closed_pan"><output data-param-text="hh_closed_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Open HH</h2><label class="mute" for="hh_open_mute"><input id="hh_open_mute" type="checkbox" data-param="hh_open_mute">Mute</label></header>
+      <div class="row"><label for="hh_open_brightness">Brightness</label><input id="hh_open_brightness" type="range" data-param="hh_open_brightness"><output data-param-text="hh_open_brightness"></output></div>
+      <div class="row"><label for="hh_open_decay">Decay</label><input id="hh_open_decay" type="range" data-param="hh_open_decay"><output data-param-text="hh_open_decay"></output></div>
+      <div class="row"><label for="hh_open_metal">Metal</label><input id="hh_open_metal" type="range" data-param="hh_open_metal"><output data-param-text="hh_open_metal"></output></div>
+      <div class="row"><label for="hh_open_level">Level</label><input id="hh_open_level" type="range" data-param="hh_open_level"><output data-param-text="hh_open_level"></output></div>
+      <div class="row"><label for="hh_open_pan">Pan</label><input id="hh_open_pan" type="range" data-param="hh_open_pan"><output data-param-text="hh_open_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Crash</h2><label class="mute" for="crash_mute"><input id="crash_mute" type="checkbox" data-param="crash_mute">Mute</label></header>
+      <div class="row"><label for="crash_brightness">Brightness</label><input id="crash_brightness" type="range" data-param="crash_brightness"><output data-param-text="crash_brightness"></output></div>
+      <div class="row"><label for="crash_decay">Decay</label><input id="crash_decay" type="range" data-param="crash_decay"><output data-param-text="crash_decay"></output></div>
+      <div class="row"><label for="crash_metal">Metal</label><input id="crash_metal" type="range" data-param="crash_metal"><output data-param-text="crash_metal"></output></div>
+      <div class="row"><label for="crash_level">Level</label><input id="crash_level" type="range" data-param="crash_level"><output data-param-text="crash_level"></output></div>
+      <div class="row"><label for="crash_pan">Pan</label><input id="crash_pan" type="range" data-param="crash_pan"><output data-param-text="crash_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Cowbell</h2><label class="mute" for="cowbell_mute"><input id="cowbell_mute" type="checkbox" data-param="cowbell_mute">Mute</label></header>
+      <div class="row"><label for="cowbell_tone">Tone</label><input id="cowbell_tone" type="range" data-param="cowbell_tone"><output data-param-text="cowbell_tone"></output></div>
+      <div class="row"><label for="cowbell_decay">Decay</label><input id="cowbell_decay" type="range" data-param="cowbell_decay"><output data-param-text="cowbell_decay"></output></div>
+      <div class="row"><label for="cowbell_metal">Metal</label><input id="cowbell_metal" type="range" data-param="cowbell_metal"><output data-param-text="cowbell_metal"></output></div>
+      <div class="row"><label for="cowbell_level">Level</label><input id="cowbell_level" type="range" data-param="cowbell_level"><output data-param-text="cowbell_level"></output></div>
+      <div class="row"><label for="cowbell_pan">Pan</label><input id="cowbell_pan" type="range" data-param="cowbell_pan"><output data-param-text="cowbell_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Clave</h2><label class="mute" for="clave_mute"><input id="clave_mute" type="checkbox" data-param="clave_mute">Mute</label></header>
+      <div class="row"><label for="clave_tone">Tone</label><input id="clave_tone" type="range" data-param="clave_tone"><output data-param-text="clave_tone"></output></div>
+      <div class="row"><label for="clave_decay">Decay</label><input id="clave_decay" type="range" data-param="clave_decay"><output data-param-text="clave_decay"></output></div>
+      <div class="row"><label for="clave_metal">Metal</label><input id="clave_metal" type="range" data-param="clave_metal"><output data-param-text="clave_metal"></output></div>
+      <div class="row"><label for="clave_level">Level</label><input id="clave_level" type="range" data-param="clave_level"><output data-param-text="clave_level"></output></div>
+      <div class="row"><label for="clave_pan">Pan</label><input id="clave_pan" type="range" data-param="clave_pan"><output data-param-text="clave_pan"></output></div>
+    </section>
+    <section class="card">
+      <header class="head"><h2>Bash</h2><label class="mute" for="bash_mute"><input id="bash_mute" type="checkbox" data-param="bash_mute">Mute</label></header>
+      <div class="row"><label for="bash_size">Size</label><input id="bash_size" type="range" data-param="bash_size"><output data-param-text="bash_size"></output></div>
+      <div class="row"><label for="bash_spread">Spread</label><input id="bash_spread" type="range" data-param="bash_spread"><output data-param-text="bash_spread"></output></div>
+      <div class="row"><label for="bash_decay">Decay</label><input id="bash_decay" type="range" data-param="bash_decay"><output data-param-text="bash_decay"></output></div>
+      <div class="row"><label for="bash_drive">Drive</label><input id="bash_drive" type="range" data-param="bash_drive"><output data-param-text="bash_drive"></output></div>
+      <div class="row"><label for="bash_noise">Noise</label><input id="bash_noise" type="range" data-param="bash_noise"><output data-param-text="bash_noise"></output></div>
+      <div class="row"><label for="bash_edge">Edge</label><input id="bash_edge" type="range" data-param="bash_edge"><output data-param-text="bash_edge"></output></div>
+      <div class="row"><label for="bash_level">Level</label><input id="bash_level" type="range" data-param="bash_level"><output data-param-text="bash_level"></output></div>
+      <div class="row"><label for="bash_pan">Pan</label><input id="bash_pan" type="range" data-param="bash_pan"><output data-param-text="bash_pan"></output></div>
+    </section>
+    <section class="card master">
+      <header class="head"><h2>Master</h2></header>
+      <div class="row"><label for="master_drive">Drive</label><input id="master_drive" type="range" data-param="master_drive"><output data-param-text="master_drive"></output></div>
+      <div class="row"><label for="master_reverb">Reverb</label><input id="master_reverb" type="range" data-param="master_reverb"><output data-param-text="master_reverb"></output></div>
+      <div class="row"><label for="master_gain">Gain</label><input id="master_gain" type="range" data-param="master_gain"><output data-param-text="master_gain"></output></div>
+      <div class="row"><label for="bit_crush">Bit Crush</label><input id="bit_crush" type="range" data-param="bit_crush"><output data-param-text="bit_crush"></output></div>
+    </section>
+  </div>
+  <style>
+    @layer skin {
+      .panel { container-type: inline-size; color-scheme: dark; background-color: #1a1e24; color: #e6e8eb; padding: 12px; font-family: sans-serif; font-size: 16px; }
+      h1 { font-size: 14px; margin: 0 0 10px; color: #9aa3ad; font-weight: 600; letter-spacing: 0.04em; }
+      h2 { font-size: 14px; margin: 0; color: #e6e8eb; font-weight: 600; }
+      .help { margin: 0 0 8px; min-height: 3em; color: #9aa3ad; font-size: 14px; }
+      .kit { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr)); gap: 12px; }
+      .card { min-width: 0; background-color: #0e1116; border: 1px solid #2c333c; border-radius: 8px; padding: 6px 12px 8px; }
+      .head { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+      .mute { display: flex; align-items: center; gap: 6px; min-height: 44px; color: #9aa3ad; }
+      .row { display: grid; grid-template-columns: 5.5rem 1fr 3.5rem; align-items: center; column-gap: 10px; min-height: 44px; }
+      label { color: #9aa3ad; }
+      output { text-align: right; }
+      input { accent-color: #3d8bfd; }
+      .row input { width: 100%; min-width: 0; }
+      .master { border-color: #3d8bfd; }
+      @container (max-width: 360px) {
+        .row { grid-template-columns: 1fr 3.5rem; }
+        .row input { grid-column: 1 / 3; }
+      }
+    }
+  </style>
+</div>
+</body>
+</html>

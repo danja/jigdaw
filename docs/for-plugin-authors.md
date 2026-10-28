@@ -246,7 +246,8 @@ panel and keeps the host's controls under it. Preview yours with `node bin/jig.j
 of them on the [plugin gallery](https://strandz.it/jigdaw/gallery.html). [ui.md](ui.md) follows the whole path
 from module to panel to skin.
 
-If you do ship one, it is a web page that the host loads into a sandboxed frame on your
+If you do ship one, [plugin-ui.md](plugin-ui.md) shows how to bind its controls to ports with attributes instead of writing the
+message handling yourself. It is a web page that the host loads into a sandboxed frame on your
 plugin's origin and talks to only by `postMessage`
 ([messaging.md](messaging.md) section 2). Name it in `profile.json` as `resources.ui` and
 `bin/write-profile.js` adds the `jig:ui` and its digest. Keep it to one HTML file with its

@@ -65,8 +65,17 @@ Each of these is blocked on a choice, not on work.
 
 ## Checks in a real browser or by a person
 
-Built and tested offline, not yet seen. Use Chrome with the window in front (a hidden tab grants no activation).
 
+- [ ] **Watch the Dynamix editor's meter with audio running** (`plugins/dynamix/ui`, docs/plugin-ui.md). Checked in Chrome: the
+      frame loads, a real drag and the mode select round trip through the host, and the curve and the capped reduction text
+      draw. Not checked: the live gain reduction dot while a signal plays, since the window had no user activation and the
+      context never ran.
+- [ ] **Bridge and HTML skin follow-ups from the APF comparison** (docs/plugin-ui.md, docs/html-skins.md). Built: the editor
+      bridge, and the HTML skin with Canticle as its first (builder, panel, loader, `write-profile`, and its hostile corpus and
+      cascade checks in `npm run check:skins`). Left: a named meter feed so a skin can show a level; double click to reset and
+      MIDI learn on bound controls, which needs a message for each; inline `svg` in an HTML skin; and deciding which further
+      plugins should have an HTML skin (Canticle, Drumkit and Quartet are done; Octet has an editor and is a separate question, below). Not checked on a phone:
+      the HTML skin was measured in iframes from 200 to 1200 pixels and driven with a real pointer and keys, not on a touch device.
 - [ ] **Timeline after the split, what Chrome did not cover.** Seen working on 2026-10-21 in real Chrome with real pointer and
       keys: drawing a loop, dragging an edge past the row, arrow keys on a handle, Zoom in, Go to bar, Tab through the
       tools, Follow and Routing. Left: Ctrl with the wheel (a dispatched event only, since the tool cannot hold Ctrl while
@@ -108,6 +117,51 @@ Built and tested offline, not yet seen. Use Chrome with the window in front (a h
       page load, not once per tune (a run that did the latter read two tunes as silent).
 
 ## Plugins
+
+### Claude skills for building plugins
+
+- [x] **A first skill, `html-skin`** (`.claude/skills/html-skin/SKILL.md`), written from building Drumkit's and Quartet's skins and used
+      for Quartet's. The mechanical part is a script, `bin/skin-from-profile.js`, which drafts a skin from `profile.json`; the
+      skill is the judgement and the traps. Every path, npm script and port count the skill names is bound by
+      `tests/docs/skills.test.js`, which was itself too narrow at first (it bound only one of three quoted counts) and was
+      found by breaking each claim in turn.
+- [x] **A second skill, `browser-check`** (`.claude/skills/browser-check/SKILL.md`): the real-Chrome procedure that was repeated and
+      got wrong most often (a clean page, loading by the local IRI and not the catalogue, scaled coordinates, counted keyboard,
+      drag and width checks). Followed once on Canticle to write it, which found the console history trap it now names.
+- [x] **A third skill, `break-the-guard`** (`.claude/skills/break-the-guard/SKILL.md`) and its tool, `bin/break-guard.js`, which
+      replaces one exact piece of text, runs a command, and restores the file byte for byte, refusing a mutation that does not
+      apply exactly once and a command that already fails. The tool was broken with itself seven ways and two survivors were
+      found and fixed (a literal-replacement test that checked no content, and a restore check that could not fail while the real
+      failure, an unrestorable file, was unhandled). Used on six untried guards in the HTML skin builder: none survived.
+      Worth telling the maintainer: CLAUDE.md's "Break every guard once" could point at this tool and skill.
+- [x] **A fourth skill, `finish-plugin`** (`.claude/skills/finish-plugin/SKILL.md`): what a plugin owes after `/new-plugin`, or instead
+      of it for a WebAssembly plugin: the three places a parameter is named, the digest rebuild, the index, the document figures, the
+      checks and what each proves. Its commands were run on Canticle and Quartet to write it. It found that the test binding
+      the count of worked plugins (`tests/docs/conventions.test.js`) reads line by line, so it cannot see the figure in `CLAUDE.md`'s
+      first paragraph, which wraps across two lines and is stale (the directories with a `profile.ttl` number two more than it
+      says), and that figures phrased as a number and "plugins" without "worked" are not bound
+      at all (`docs/jiggy-features.md`, `docs/usp.md`). Left for the maintainer: correct CLAUDE.md, and decide whether to widen that test
+      to read whole paragraphs, which would make it fail until CLAUDE.md is fixed.
+- [x] **A fifth skill, `wasm-dsp`** (`.claude/skills/wasm-dsp/SKILL.md`): the module ABI, the Rust and C++ build recipes, the processor that
+      wraps a module, freestanding maths measured against `Math` through a test hook, deterministic DSP tests, and the failures
+      recorded in CLAUDE.md. Its commands were run on Pulse, Mop, Sam and Monochord; running `check-plugin` on Mop without `--note`
+      reported no audio, which is correct for an instrument and is now said in the skill. Identifiers it names inside code
+      (`jig_math`, `jig_exp2`) are checked by hand and not by `tests/docs/skills.test.js`, which binds paths, npm scripts and port counts.
+- [x] **A sixth skill, `jig-ui-editor`** (`.claude/skills/jig-ui-editor/SKILL.md`): when a plugin needs an editor and not a skin, the page and the
+      bridge, the build order, data from the processor and its rate, accessibility, the sandbox, testing a page against linkedom and
+      holding a drawn law to the module, and the real-browser pass. Followed on Dynamix in Chrome: the frame is same-origin with
+      `sandbox="allow-scripts allow-same-origin"`, five key presses on Ratio moved it 0.475 as predicted, and the host's panel agreed after
+      the asynchronous echo (a read before it arrived looked like a failure, now in the skill and in `browser-check`). Writing it also
+      widened `tests/docs/skills.test.js`: a script written as `node "$root/bin/..."` and a path inside a code block were not bound, found by
+      breaking them with `bin/break-guard.js` and seeing nothing fail, and the three extraction patterns became one.
+- [ ] **Further skills, if wanted:** porting a plugin from another format (JSFX import, JUCE params, WAM). The scripts and docs exist
+      (`bin/jsfx-import.js`, `bin/juce-params-to-profile.js`, `docs/wam.md`) and it is rarely done, so the case for a skill is the weakest of
+      the list. The six that exist cover the work that was repeated. Find out for each
+      whether a skill is the right shape, against a command or a section of CLAUDE.md, and keep any that are written short and
+      tested by following them on a real plugin. Add each new skill to the guard in `tests/docs/skills.test.js`, which finds it
+      by walking `.claude/skills/`.
+- [ ] **Decide whether Octet wants an HTML skin beside its editor.** Its 776-line `jig:ui` is the plot and the spectrum, which
+      are code and stay. A skin would only replace the generated panel for its 53 controls, so build it only if someone wants that.
 
 ### Downspout ports (Moka, Sprout, Markov, Retune)
 

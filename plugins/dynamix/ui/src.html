@@ -1,0 +1,170 @@
+<!doctype html>
+<!--
+  plugins/dynamix/ui/src.html
+
+  Dynamix's own editor: the compressor/expander's transfer curve with a live dot on it, and a gain
+  reduction meter. A curve is what a skin cannot draw (docs/svg-skins.md), so this is a jig:ui. It is
+  built with the page-side bridge (docs/plugin-ui.md): the controls are plain elements with data-param,
+  and bin/inline-ui.js writes the bridge in where the marker is, to make ui/index.html.
+
+  The generated panel is still there beside it and reaches every port, so nothing here is the only way to
+  anything. The curve and the meter are decoration for the eye and are hidden from assistive technology;
+  the same facts are written as text in the status line.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dynamix</title>
+<style>
+  :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --warn:#f0a030; --panel:#1a1e24; --deep:#0e1116; --line:#2c333c; }
+  html { height:auto; }
+  body { margin:0; padding:12px; background:var(--panel); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
+  h2 { font-size:14px; margin:16px 0 4px; color:var(--dim); font-weight:600; }
+  .top { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+  .scope { flex:0 1 260px; min-width:0; }
+  .scope svg { width:100%; height:auto; display:block; background:var(--deep); border:1px solid var(--line); border-radius:6px; }
+  .controls { flex:1 1 260px; min-width:0; }
+  .row { display:grid; grid-template-columns:6.5rem 1fr 6rem; gap:10px; align-items:center; min-height:44px; }
+  .switches { display:flex; flex-wrap:wrap; gap:8px 20px; min-height:44px; align-items:center; }
+  .switches label { display:flex; gap:8px; align-items:center; min-height:44px; }
+  label { color:var(--dim); }
+  input[type=range] { width:100%; min-width:0; height:44px; accent-color:var(--accent); }
+  input[type=checkbox] { width:24px; height:24px; accent-color:var(--accent); }
+  select { min-height:44px; font:inherit; background:var(--deep); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:0 8px; }
+  input:focus-visible, select:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
+  output { font-family:ui-monospace, monospace; text-align:right; }
+  #reduction { margin-top:10px; }
+  .meter { height:12px; border-radius:6px; background:var(--deep); margin-top:6px; overflow:hidden; border:1px solid var(--line); }
+  .meter i { display:block; height:100%; width:0; background:var(--warn); }
+  @media (max-width: 360px) { .row { grid-template-columns:1fr; } output { text-align:left; } }
+</style>
+</head>
+<body>
+<main id="root">
+<h1>Dynamix</h1>
+<div class="top">
+  <div class="scope">
+    <svg id="curve" viewBox="0 0 240 240" aria-hidden="true" focusable="false">
+      <g stroke="#2c333c" stroke-width="1" id="grid"></g>
+      <line id="unity" x1="0" y1="240" x2="240" y2="0" stroke="#4a5360" stroke-width="1" stroke-dasharray="3 3"/>
+      <line id="threshold-line" y1="0" y2="240" stroke="#9aa3ad" stroke-width="1" stroke-dasharray="2 4"/>
+      <path id="transfer" fill="none" stroke="#3d8bfd" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle id="dot" r="5" fill="#f0a030" stroke="#e6e8eb" stroke-width="1.5" cx="-10" cy="-10"/>
+    </svg>
+    <div id="reduction">
+      <div id="reduction-text">Gain reduction 0.0 dB</div>
+      <div class="meter" aria-hidden="true"><i id="reduction-bar"></i></div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="switches">
+      <label><input type="checkbox" data-param="comp_enable"><span data-param-name="comp_enable"></span></label>
+      <label><span data-param-name="comp_mode"></span><select data-param="comp_mode"></select></label>
+    </div>
+    <div class="row"><label for="threshold" data-param-name="threshold"></label><input id="threshold" type="range" data-param="threshold"><output data-param-text="threshold" aria-hidden="true"></output></div>
+    <div class="row"><label for="ratio" data-param-name="ratio"></label><input id="ratio" type="range" data-param="ratio"><output data-param-text="ratio" aria-hidden="true"></output></div>
+    <div class="row"><label for="knee" data-param-name="knee"></label><input id="knee" type="range" data-param="knee"><output data-param-text="knee" aria-hidden="true"></output></div>
+    <div class="row"><label for="attack" data-param-name="attack"></label><input id="attack" type="range" data-param="attack"><output data-param-text="attack" aria-hidden="true"></output></div>
+    <div class="row"><label for="release" data-param-name="release"></label><input id="release" type="range" data-param="release"><output data-param-text="release" aria-hidden="true"></output></div>
+    <div class="row"><label for="makeup" data-param-name="makeup"></label><input id="makeup" type="range" data-param="makeup"><output data-param-text="makeup" aria-hidden="true"></output></div>
+  </div>
+</div>
+
+<h2>Limiter</h2>
+<div class="switches"><label><input type="checkbox" data-param="limit_enable"><span data-param-name="limit_enable"></span></label></div>
+<div class="row"><label for="ceiling" data-param-name="ceiling"></label><input id="ceiling" type="range" data-param="ceiling"><output data-param-text="ceiling" aria-hidden="true"></output></div>
+<div class="row"><label for="limit_release" data-param-name="limit_release"></label><input id="limit_release" type="range" data-param="limit_release"><output data-param-text="limit_release" aria-hidden="true"></output></div>
+
+<h2>Clipper</h2>
+<div class="switches"><label><input type="checkbox" data-param="clip_enable"><span data-param-name="clip_enable"></span></label></div>
+<div class="row"><label for="drive" data-param-name="drive"></label><input id="drive" type="range" data-param="drive"><output data-param-text="drive" aria-hidden="true"></output></div>
+<div class="row"><label for="shape" data-param-name="shape"></label><input id="shape" type="range" data-param="shape"><output data-param-text="shape" aria-hidden="true"></output></div>
+</main>
+
+<script data-jig-bridge></script>
+<script>
+  'use strict'
+  // The curve covers -60 to 0 dB in and out, drawn from the same law as src/lib.rs (knee_reduction), so a
+  // test can hold the two to each other.
+  const SPAN = { low: -60, high: 0, size: 240 }
+  const toX = db => ((db - SPAN.low) / (SPAN.high - SPAN.low)) * SPAN.size
+  const toY = db => SPAN.size - ((db - SPAN.low) / (SPAN.high - SPAN.low)) * SPAN.size
+
+  /** Gain reduction in dB for a level `over` the threshold on the reacting side. */
+  function kneeReduction (over, knee, slope) {
+    const half = knee * 0.5
+    if (over <= -half) return 0
+    if (over >= half || half <= 0) return Math.max(over, 0) * slope
+    const t = over + half
+    return (t * t) / (2 * knee) * slope
+  }
+
+  /** The level out, in dB, for a level in, under the settings p = { mode, threshold, ratio, knee, makeup }. */
+  function transferDb (level, p) {
+    const expander = p.mode >= 0.5
+    const slope = expander ? p.ratio - 1 : 1 - 1 / p.ratio
+    const over = expander ? p.threshold - level : level - p.threshold
+    return level - kneeReduction(over, p.knee, slope) + p.makeup
+  }
+
+  const REDUCTION_CAP = 60
+  const settings = { mode: 0, threshold: -18, ratio: 4, knee: 6, makeup: 0 }
+  const get = id => document.getElementById(id)
+
+  function drawGrid () {
+    const grid = get('grid')
+    for (let db = -48; db < 0; db += 12) {
+      for (const [x1, y1, x2, y2] of [[toX(db), 0, toX(db), 240], [0, toY(db), 240, toY(db)]]) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+        for (const [k, v] of Object.entries({ x1, y1, x2, y2 })) line.setAttribute(k, String(v))
+        grid.append(line)
+      }
+    }
+  }
+
+  function drawCurve () {
+    const points = []
+    for (let level = SPAN.low; level <= SPAN.high; level += 1) {
+      const out = Math.max(SPAN.low, Math.min(SPAN.high, transferDb(level, settings)))
+      points.push(`${points.length ? 'L' : 'M'}${toX(level).toFixed(1)} ${toY(out).toFixed(1)}`)
+    }
+    get('transfer').setAttribute('d', points.join(' '))
+    get('threshold-line').setAttribute('x1', String(toX(settings.threshold)))
+    get('threshold-line').setAttribute('x2', String(toX(settings.threshold)))
+  }
+
+  function drawMeter (reductionDb, levelDb) {
+    // Text first, so it reads without sight. It is not a live region: twenty updates a second would drown
+    // everything else a screen reader has to say, and the value is there to be read when asked for.
+    // An expander on silence is attenuating by hundreds of dB, which is true and unreadable, so the text stops at a cap.
+    get('reduction-text').textContent = reductionDb > REDUCTION_CAP ? `Gain reduction over ${REDUCTION_CAP} dB` : `Gain reduction ${reductionDb.toFixed(1)} dB`
+    get('reduction-bar').style.width = `${Math.min(1, reductionDb / 24) * 100}%`
+    const dot = get('dot')
+    // Below the curve's own range there is no level to show: the detector reads about -180 dB on silence.
+    if (levelDb > SPAN.low - 30) {
+      const out = Math.max(SPAN.low, Math.min(SPAN.high, levelDb - reductionDb + settings.makeup))
+      dot.setAttribute('cx', String(toX(Math.max(SPAN.low, Math.min(SPAN.high, levelDb)))))
+      dot.setAttribute('cy', String(toY(out)))
+    } else {
+      dot.setAttribute('cx', '-10')
+    }
+  }
+
+  drawGrid()
+  drawCurve()
+
+  jig.ready.then(() => {
+    for (const key of ['threshold', 'ratio', 'knee', 'makeup']) {
+      jig.on(key, value => { settings[key] = value; drawCurve() })
+    }
+    jig.on('comp_mode', value => { settings.mode = value; drawCurve() })
+  })
+  // The processor's snapshots: { reduction, level } in dB (plugins/dynamix/dynamix-processor.js).
+  jig.onPlugin(payload => {
+    if (Number.isFinite(payload?.reduction) && Number.isFinite(payload?.level)) drawMeter(payload.reduction, payload.level)
+  })
+</script>
+</body>
+</html>

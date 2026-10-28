@@ -21,6 +21,7 @@ export default defineConfig({
       'tests/host/**/*.test.js',
       'tests/dsp/**/*.test.js',
       'tests/ui/**/*.test.js',
+      'tests/plugin-ui/**/*.test.js',
       'tests/model/**/*.test.js',
       'tests/compiler/**/*.test.js',
       'tests/ops/**/*.test.js',

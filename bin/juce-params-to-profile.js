@@ -17,6 +17,7 @@
 // processBlock to a form with no JUCE types is still yours; see
 // docs/for-juce-developers.md.
 import { readFile, writeFile } from 'node:fs/promises'
+import { isMain } from './is-main.js'
 
 /** A JUCE parameter id, as an lv2:symbol. vocabs/shapes.ttl's pattern is
  * ^[a-zA-Z_][a-zA-Z0-9_]*$; a JUCE id is usually already that shape, and
@@ -97,7 +98,7 @@ export async function mergeIntoProfile (profilePath, ports) {
 
 // ── Command line ───────────────────────────────────────────────────────────
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const [paramsPath, profilePath] = process.argv.slice(2)
   if (!paramsPath) {
     console.error([

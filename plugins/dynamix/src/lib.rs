@@ -138,6 +138,12 @@ struct State {
     // Running state, updated every sample.
     envelope: f32,
     limiter_gain: f32,
+
+    // What the editor reads (jig_gain_reduction_db, jig_detector_db): the deepest
+    // gain reduction of the last block and the detector level at its end. Written
+    // once per block, never read by the audio path.
+    meter_reduction_db: f32,
+    meter_detector_db: f32,
 }
 
 impl State {
@@ -173,6 +179,9 @@ impl State {
 
             envelope: 0.0,
             limiter_gain: 1.0,
+
+            meter_reduction_db: 0.0,
+            meter_detector_db: -120.0,
         }
     }
 
@@ -296,6 +305,8 @@ pub extern "C" fn jig_process(frames: u32) {
     let limit_on = s.limit_enable >= 0.5;
     let clip_on = s.clip_enable >= 0.5;
     let use_sidechain = s.sidechain_active;
+    let mut block_reduction_db = 0.0f32;
+    let mut block_detector_db = -120.0f32;
 
     for frame in 0..frames {
         let main_l = s.input[0][frame];
@@ -323,6 +334,8 @@ pub extern "C" fn jig_process(frames: u32) {
             let over = if is_expander { s.threshold - level_db } else { level_db - s.threshold };
             let reduction_db = knee_reduction(over, s.knee, slope);
             let gain = db_to_lin(-reduction_db) * s.makeup_lin;
+            if reduction_db > block_reduction_db { block_reduction_db = reduction_db; }
+            block_detector_db = level_db;
 
             out_l = main_l * gain;
             out_r = main_r * gain;
@@ -359,4 +372,22 @@ pub extern "C" fn jig_process(frames: u32) {
         s.output[0][frame] = out_l;
         s.output[1][frame] = out_r;
     }
+
+    s.meter_reduction_db = block_reduction_db;
+    s.meter_detector_db = block_detector_db;
+}
+
+/// The deepest gain reduction the compressor/expander applied in the last
+/// block, in dB and never negative. 0 when the stage is off. Optional: a
+/// processor that does not read it loses only the editor's meter.
+#[no_mangle]
+pub extern "C" fn jig_gain_reduction_db() -> f32 {
+    state().meter_reduction_db
+}
+
+/// The detector level at the end of the last block, in dB, or -120 when the
+/// stage is off. Optional, like jig_gain_reduction_db.
+#[no_mangle]
+pub extern "C" fn jig_detector_db() -> f32 {
+    state().meter_detector_db
 }

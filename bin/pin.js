@@ -17,6 +17,7 @@ import { readProfile } from '../src/rdf/ProfileReader.js'
 import { pluginForm } from '../src/rdf/Canonical.js'
 import { digestOf } from '../src/host/Integrity.js'
 import { memberDirectoryUnder } from './bundle-composite.js'
+import { isMain } from './is-main.js'
 
 /**
  * One row per member: `{ member, plugin, digest, pinned, state }`, where `state` is `current`, `stale` or
@@ -48,7 +49,7 @@ export async function pinsFor (directory, resolveMember) {
   return rows
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2)
   const check = args.includes('--check')
   const at = args.indexOf('--members')

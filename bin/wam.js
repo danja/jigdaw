@@ -26,6 +26,7 @@ import { digestOf } from '../src/host/Integrity.js'
 import { detectCapabilities } from '../src/host/Capabilities.js'
 import { vocabulary as v, TRN, DOAP, FOAF } from '../src/rdf/Vocabulary.js'
 import { shapeValidatorFromFile } from '../src/validate/files.js'
+import { isMain } from './is-main.js'
 
 /** The WAM API version this packaging targets. */
 export const WAM_API_VERSION = '2.0.0-alpha.6'
@@ -267,7 +268,7 @@ export async function writeWamPackage (dir, out, options = {}) {
 
 // ── Command line ───────────────────────────────────────────────────────────
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2)
   const options = {}
   const positional = []

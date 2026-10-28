@@ -44,6 +44,9 @@
     "module": "quartet.wasm",
     "processor": "quartet-processor.js"
   },
+  "skin": {
+    "html": "skin/skin.html"
+  },
   "ports": [
     {
       "symbol": "opa_wave",

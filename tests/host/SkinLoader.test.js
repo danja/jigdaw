@@ -119,3 +119,63 @@ describe('prepareSkin', () => {
     expect(result.omitted[0].reason).toContain('declares no port "depth"')
   })
 })
+
+// An HTML skin is one file, which the profile's jig:skin points at directly (docs/html-skins.md).
+describe('an HTML skin', () => {
+  const HTML = `<!doctype html><html><head></head><body><div><label for="d" data-param-name="depth"></label><input id="d" type="range" data-param="depth"></div></body></html>`
+  const htmlProfile = { skin: { location: `${BASE}skin.html`, integrity: PIN, mediaType: 'text/html' }, ports: [{ symbol: 'depth', name: 'Depth', widget: 'dial', toggled: false, scalePoints: [], minimum: 0, maximum: 1 }] }
+  const htmlDeps = (overrides = {}) => {
+    const asked = []
+    return {
+      asked,
+      fetchVerified: async (resource, { kind }) => { asked.push([kind, resource.location]); return new TextEncoder().encode(HTML) },
+      parseTurtle: () => { throw new Error('an HTML skin has no Turtle to read') },
+      parseSvg: () => { throw new Error('an HTML skin has no SVG to parse') },
+      parseHtml: text => parseHTML(text).document,
+      ...overrides
+    }
+  }
+
+  it('fetches the one file through the verifying fetch, and reads no Turtle and no SVG', async () => {
+    const d = htmlDeps()
+    const loaded = await loadSkin(htmlProfile, d)
+    expect(d.asked).toEqual([['skin', `${BASE}skin.html`]])
+    expect(loaded.kind).toBe('html')
+    expect(loaded.size).toBe(HTML.length)
+  })
+
+  it('reports a file the browser cannot parse as a SkinLoadError', async () => {
+    await expect(loadSkin(htmlProfile, htmlDeps({ parseHtml: () => { throw new Error('bad') } }))).rejects.toThrow(SkinLoadError)
+  })
+
+  it('refuses a file the verifying fetch refuses, and builds nothing', async () => {
+    await expect(loadSkin(htmlProfile, htmlDeps({ fetchVerified: async () => { throw new Error('digest mismatch') } }))).rejects.toThrow(/digest mismatch/)
+  })
+
+  it('prepares a built skin whose left-out controls are reported in the page\'s usual shape', async () => {
+    const loaded = await loadSkin(htmlProfile, htmlDeps({ fetchVerified: async () => new TextEncoder().encode(HTML.replace('data-param="depth"', 'data-param="ghost"')) }))
+    const prepared = prepareSkin(loaded, htmlProfile, { document, prefix: 'skin-x-' })
+    expect(prepared.kind).toBe('html')
+    expect(prepared.controls).toEqual([])
+    expect(prepared.omitted).toEqual([{ control: 'div[1] > input[1]', reason: 'data-param="ghost" names no port of this plugin' }])
+  })
+
+  it('prepares each panel its own nodes, with its own ids', async () => {
+    const loaded = await loadSkin(htmlProfile, htmlDeps())
+    const one = prepareSkin(loaded, htmlProfile, { document, prefix: 'skin-a-' })
+    const two = prepareSkin(loaded, htmlProfile, { document, prefix: 'skin-b-' })
+    expect(one.root.querySelector('input').id).toBe('skin-a-d')
+    expect(two.root.querySelector('input').id).toBe('skin-b-d')
+  })
+
+  it('refuses a skin that breaks a rule, and names it', async () => {
+    const loaded = await loadSkin(htmlProfile, htmlDeps({ fetchVerified: async () => new TextEncoder().encode(HTML.replace('<div>', '<div><script>1</script>')) }))
+    expect(() => prepareSkin(loaded, htmlProfile, { document, prefix: 'p-' })).toThrow(/script\[1\]: <script> is not an allowed element/)
+  })
+
+  it('still reads an SVG skin when the media type says so', async () => {
+    const d = deps()
+    const loaded = await loadSkin({ ...profile, skin: { ...profile.skin, mediaType: 'text/turtle' } }, d)
+    expect(loaded.skin.controls.map(c => c.boundSymbol)).toEqual(['depth'])
+  })
+})

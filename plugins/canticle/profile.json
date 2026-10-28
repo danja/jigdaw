@@ -258,5 +258,8 @@
         }
       ]
     }
-  ]
+  ],
+  "skin": {
+    "html": "skin/skin.html"
+  }
 }

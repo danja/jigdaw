@@ -5,6 +5,7 @@
 // has been fetched and says when a panel waiting on a skin should be drawn again.
 import { parseText } from '../../src/rdf/parse.js'
 import { parseSvg } from '../../src/ui/SkinArtwork.js'
+import { parseHtml } from '../../src/ui/HtmlSkin.js'
 import { loadSkin, prepareSkin } from '../../src/host/SkinLoader.js'
 
 export function createSkins (ctx) {
@@ -21,7 +22,8 @@ export function createSkins (ctx) {
     loadSkin(profile, {
       fetchVerified: (resource, options) => ctx.loader.fetchVerified(resource, options),
       parseTurtle: parseText,
-      parseSvg
+      parseSvg,
+      parseHtml
     }).then(loaded => {
       entry.loaded = loaded
       entry.state = 'ready'

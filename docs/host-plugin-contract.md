@@ -499,6 +499,15 @@ A skin MUST NOT cause a port to become unreachable. The host draws every port th
 not bind in a generated group beside it, and leaves out a binding to a port the profile does
 not declare.
 
+A skin MAY instead be an HTML skin, specified in [html-skins.md](html-skins.md): one HTML file with one stylesheet and no
+script, which the profile's `jig:skin` points at directly and whose `jig:mediaType` is `text/html`. The three rules above
+hold for it, and the host MUST keep the further ones that its stylesheet needs. It MUST NOT hand the author's stylesheet to
+the browser as text: it MUST parse it, check every rule and declaration against an allowlist that refuses `url()`,
+`@import`, `@font-face`, `!important`, quotes and escapes, hiding properties and `fixed` or `sticky` positioning, and write a
+new stylesheet from what it recognised. It MUST draw the skin in a shadow root that contains and isolates it, and its own
+rules, which give every control a visible focus indicator and a target of at least 44 CSS pixels, MUST be outside the cascade
+layer the author's rules are confined to, so that no author declaration can override them.
+
 ---
 
 ## 10. Errors

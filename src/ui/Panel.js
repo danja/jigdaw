@@ -22,6 +22,7 @@
 // changed when the look did.
 import { createDial } from './Dial.js'
 import { createSkinPanel } from './SkinPanel.js'
+import { createHtmlSkinPanel } from './HtmlSkinPanel.js'
 import { splitPrimary } from './PrimaryControls.js'
 import { createPad } from './Pad.js'
 import { formatValue, spokenValue } from './PortText.js'
@@ -136,7 +137,9 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
   const setters = new Map()
   const onValue = (symbol, fn) => { if (!setters.has(symbol)) setters.set(symbol, []); setters.get(symbol).push(fn) }
 
-  const skinPanel = skin ? createSkinPanel(document, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout }) : null
+  const skinPanel = !skin ? null
+    : skin.kind === 'html' ? createHtmlSkinPanel(document, skin, profile.ports, onChange, { scope })
+    : createSkinPanel(document, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout })
   if (skinPanel) {
     root.append(skinPanel.element)
     root.classList.add('has-skin')

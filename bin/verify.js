@@ -28,6 +28,7 @@ import { pluginForm } from '../src/rdf/Canonical.js'
 import { bundledFromGraph } from '../src/host/CompositeResolver.js'
 import { vocabulary } from '../src/rdf/Vocabulary.js'
 import { unzip } from './bundle.js'
+import { isMain } from './is-main.js'
 
 /**
  * Everything a bundle is, whichever of the three shapes it arrived in.
@@ -282,7 +283,7 @@ export function report (found) {
 
 // ── Command line ───────────────────────────────────────────────────────────
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2)
   const online = args.includes('--online')
   const [path] = args.filter(a => !a.startsWith('--'))

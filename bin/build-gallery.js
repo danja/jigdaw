@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url'
 import { pluginDirs } from '../src/catalogue/PluginDirectories.js'
 import { parseText } from '../src/rdf/parse.js'
 import { readPlugin } from '../src/rdf/PluginReader.js'
+import { isMain } from './is-main.js'
 import {
   escapeHtml, listLocalPlugins, dirNameOf, renderPanelHTML, shotPanel
 } from './jig.js'
@@ -202,7 +203,7 @@ ${lightboxMarkup()}
   return { entries: entries.length, shots: shotCount }
 }
 
-const invoked = process.argv[1] === fileURLToPath(import.meta.url)
+const invoked = isMain(import.meta.url)
 if (invoked) {
   const args = process.argv.slice(2)
   const shots = !args.includes('--no-shots')

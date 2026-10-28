@@ -13579,27 +13579,27 @@ function readDisplayPriority(dataset2, term5) {
 }
 function readPads(dataset2, subject, ports) {
   return objects(dataset2, subject, jig.pad).map((pad) => {
-    const where = `pad ${pad.value}`;
+    const where2 = `pad ${pad.value}`;
     const label = asString(one(dataset2, pad, rdfs.label));
-    if (!label) throw new Error(`${where}: a control pad needs an rdfs:label`);
+    if (!label) throw new Error(`${where2}: a control pad needs an rdfs:label`);
     const axis = (predicate) => {
       const target2 = one(dataset2, pad, predicate);
-      if (!target2) throw new Error(`${where}: missing ${predicate.slice(JIG.length)}`);
+      if (!target2) throw new Error(`${where2}: missing ${predicate.slice(JIG.length)}`);
       const port = ports.find((p) => p.iri === target2.value);
-      if (!port) throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${target2.value}, which is not a port of this profile`);
-      if (port.widget !== "dial") throw new Error(`${where}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`);
+      if (!port) throw new Error(`${where2}: ${predicate.slice(JIG.length)} names ${target2.value}, which is not a port of this profile`);
+      if (port.widget !== "dial") throw new Error(`${where2}: ${predicate.slice(JIG.length)} names ${port.symbol}, which is a ${port.widget}, and a pad needs a continuous control`);
       return port.symbol;
     };
     const x = axis(jig.padX);
     const y = axis(jig.padY);
-    if (x === y) throw new Error(`${where}: both axes are ${x}`);
+    if (x === y) throw new Error(`${where2}: both axes are ${x}`);
     let choice = null;
     const choiceTerm = one(dataset2, pad, jig.padChoice);
     if (choiceTerm) {
       const port = ports.find((p) => p.iri === choiceTerm.value);
-      if (!port) throw new Error(`${where}: padChoice names ${choiceTerm.value}, which is not a port of this profile`);
-      if (port.widget !== "selector") throw new Error(`${where}: padChoice names ${port.symbol}, which is a ${port.widget}, and a pad's choice must be a selector`);
-      if (port.symbol === x || port.symbol === y) throw new Error(`${where}: padChoice is ${port.symbol}, which is also an axis`);
+      if (!port) throw new Error(`${where2}: padChoice names ${choiceTerm.value}, which is not a port of this profile`);
+      if (port.widget !== "selector") throw new Error(`${where2}: padChoice names ${port.symbol}, which is a ${port.widget}, and a pad's choice must be a selector`);
+      if (port.symbol === x || port.symbol === y) throw new Error(`${where2}: padChoice is ${port.symbol}, which is also an axis`);
       choice = port.symbol;
     }
     const end = (predicate) => asString(one(dataset2, pad, predicate));
@@ -22113,14 +22113,14 @@ function checkDrives(iri4, composite, members) {
       if (!member) continue;
       const available = member.tree.kind === "plugin" ? member.tree.profile.ports : member.tree.composite.ports;
       const target2 = available.find((p) => p.symbol === drive.portSymbol);
-      const where = `${iri4}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
+      const where2 = `${iri4}: port "${port.symbol}" drives "${drive.portSymbol}" of ${member.id}`;
       if (!target2) {
-        throw new LoadError(STEPS.composite, `${where}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri4 });
+        throw new LoadError(STEPS.composite, `${where2}, which has no such parameter. It has: ${available.map((p) => p.symbol).join(", ") || "none"}.`, { iri: iri4 });
       }
       if ((port.minimum ?? -Infinity) < (target2.minimum ?? -Infinity) || (port.maximum ?? Infinity) > (target2.maximum ?? Infinity)) {
         throw new LoadError(
           STEPS.composite,
-          `${where}, whose range is ${target2.minimum} to ${target2.maximum}, and the port declares ${port.minimum} to ${port.maximum}. A port must lie within the range of what it drives.`,
+          `${where2}, whose range is ${target2.minimum} to ${target2.maximum}, and the port declares ${port.minimum} to ${port.maximum}. A port must lie within the range of what it drives.`,
           { iri: iri4 }
         );
       }
@@ -28051,8 +28051,8 @@ function duplicateClip(project, id, { track, startBeat } = {}) {
   const clip = project.clip(id);
   if (!clip) throw new Error(`no such clip: ${id}`);
   const at = startBeat ?? clip.startBeat + clip.lengthBeats;
-  const where = track ?? clip.track;
-  return [clip.kind === "midi" ? { op: "addClip", track: where, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })), ...clip.loopBeats ? { loopBeats: clip.loopBeats } : {} } : { op: "addClip", track: where, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
+  const where2 = track ?? clip.track;
+  return [clip.kind === "midi" ? { op: "addClip", track: where2, kind: "midi", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, notes: clip.notes.map((n2) => ({ ...n2 })), controllers: (clip.controllers ?? []).map((e) => ({ ...e })), ...clip.loopBeats ? { loopBeats: clip.loopBeats } : {} } : { op: "addClip", track: where2, kind: "audio", startBeat: at, lengthBeats: clip.lengthBeats, muted: clip.muted, source: clip.source, offsetSeconds: clip.offsetSeconds, fadeInBeats: clip.fadeInBeats, fadeOutBeats: clip.fadeOutBeats }];
 }
 function trimClip(project, id, { from, to } = {}, { transport = null } = {}) {
   const clip = project.clip(id);
@@ -28100,9 +28100,9 @@ function copyClips(project, ids) {
 function pasteClips(project, copied, { startBeat, track = null } = {}) {
   if (!Array.isArray(copied) || copied.length === 0) throw new Error("there is nothing copied to paste");
   return copied.map((c3) => {
-    const where = track ?? c3.track;
-    if (!project.track(where)) throw new Error(`the track this was copied from is gone: ${where}`);
-    const common = { op: "addClip", track: where, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
+    const where2 = track ?? c3.track;
+    if (!project.track(where2)) throw new Error(`the track this was copied from is gone: ${where2}`);
+    const common = { op: "addClip", track: where2, kind: c3.kind, startBeat: startBeat + c3.offset, lengthBeats: c3.lengthBeats, muted: c3.muted };
     return c3.kind === "midi" ? { ...common, notes: c3.notes.map((n2) => ({ ...n2 })), controllers: (c3.controllers ?? []).map((e) => ({ ...e })), ...c3.loopBeats ? { loopBeats: c3.loopBeats } : {} } : { ...common, source: c3.source, offsetSeconds: c3.offsetSeconds, fadeInBeats: c3.fadeInBeats, fadeOutBeats: c3.fadeOutBeats };
   });
 }
@@ -33391,8 +33391,8 @@ function createScriptPanel(document2, { mount, onRun, onCheck, onStop, storage =
       }
       problemsHeading.textContent = `Problems (${list.length})`;
       for (const p of list) {
-        const where = p.line ? `Line ${p.line}${p.column ? `, column ${p.column}` : ""}: ` : "";
-        const item = el("li", {}, el("span", { class: "script-error-word" }, "Error"), ` ${where}${p.message} `);
+        const where2 = p.line ? `Line ${p.line}${p.column ? `, column ${p.column}` : ""}: ` : "";
+        const item = el("li", {}, el("span", { class: "script-error-word" }, "Error"), ` ${where2}${p.message} `);
         if (p.line) {
           const go = button(`script-go-${p.line}`, "Go to line", { "aria-label": `Go to line ${p.line}` });
           go.addEventListener("click", () => goToLine(p.line));
@@ -33669,11 +33669,11 @@ function parseSvg(text, DOMParserClass = globalThis.DOMParser) {
 }
 var FRAGMENT = /^#([^\s()'"]+)$/;
 var URL_REFERENCE = /url\(\s*([^)]*?)\s*\)/gi;
-function checkValue(value2, where) {
-  if (/javascript:|@import|expression\(/i.test(value2)) throw new SkinError(`an attribute value runs or imports code: ${value2.slice(0, 40)}`, where);
+function checkValue(value2, where2) {
+  if (/javascript:|@import|expression\(/i.test(value2)) throw new SkinError(`an attribute value runs or imports code: ${value2.slice(0, 40)}`, where2);
   for (const m of value2.matchAll(URL_REFERENCE)) {
     if (!FRAGMENT.test(m[1].replace(/^['"]|['"]$/g, ""))) {
-      throw new SkinError(`a url() leaves the file: ${m[0]}`, where);
+      throw new SkinError(`a url() leaves the file: ${m[0]}`, where2);
     }
   }
 }
@@ -33749,6 +33749,357 @@ function buildArtwork(doc, { document: document2, prefix, limits = SKIN_LIMITS, 
   }
   const svg = copy(root, ["svg"]);
   return { svg, ids, elements };
+}
+
+// src/ui/HtmlSkinCss.js
+var CSS_LIMITS = Object.freeze({ bytes: 64 * 1024, rules: 500 });
+var PROPERTY = new RegExp("^(" + [
+  "display",
+  "position",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "inset(-.*)?",
+  "z-index",
+  "flex(-.*)?",
+  "grid(-.*)?",
+  "(row-|column-)?gap",
+  "align-.*",
+  "justify-.*",
+  "place-.*",
+  "order",
+  "width",
+  "height",
+  "min-.*",
+  "max-.*",
+  "margin(-.*)?",
+  "padding(-.*)?",
+  "box-sizing",
+  "overflow(-.*)?",
+  "color",
+  "background-color",
+  "border(-.*)?",
+  "outline(-.*)?",
+  "box-shadow",
+  "accent-color",
+  "color-scheme",
+  "container-type",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "line-height",
+  "letter-spacing",
+  "text-align",
+  "text-transform",
+  "white-space"
+].join("|") + ")$");
+var ELEMENTS2 = /* @__PURE__ */ new Set(["section", "div", "span", "header", "footer", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "fieldset", "legend", "label", "output", "input", "select"]);
+var DISPLAY = /* @__PURE__ */ new Set(["block", "inline", "inline-block", "flex", "grid", "contents"]);
+var POSITION = /* @__PURE__ */ new Set(["static", "relative", "absolute"]);
+var FAMILIES = /* @__PURE__ */ new Set(["sans-serif", "serif", "monospace", "system-ui", "ui-monospace", "ui-sans-serif", "ui-serif"]);
+var FUNCTION_REFUSED = /\b(url|image-set|attr|env|var|expression)\s*\(/i;
+var VALUE_CHARS = /^[A-Za-z0-9\s.,%#()+\-*/_]*$/;
+var SELECTOR_CHARS = /^[A-Za-z0-9\s.#>:\-_[\]]+$/;
+var MEDIA = /^\(\s*(min|max)-(width|height)\s*:\s*[^()]+\)(\s+and\s+\(\s*(min|max)-(width|height)\s*:\s*[^()]+\))*$/;
+var COMPOUND = /^(?:[a-z][a-z0-9]*)?(?:\.[A-Za-z_-][\w-]*|#[A-Za-z_-][\w-]*|\[data-param(?:-name|-text|-help)?\]|:(?:hover|focus-visible|checked|first-child))*$/;
+function blocks(text) {
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  let open = -1;
+  for (let i2 = 0; i2 < text.length; i2++) {
+    const c3 = text[i2];
+    if (c3 === "{") {
+      if (depth === 0) open = i2;
+      depth++;
+    } else if (c3 === "}") {
+      depth--;
+      if (depth < 0) return { error: "an unmatched closing brace" };
+      if (depth === 0) {
+        out.push({ prelude: text.slice(start, open).trim(), body: text.slice(open + 1, i2) });
+        start = i2 + 1;
+      }
+    } else if (c3 === ";" && depth === 0) {
+      out.push({ prelude: text.slice(start, i2).trim(), body: null });
+      start = i2 + 1;
+    }
+  }
+  if (depth !== 0) return { error: "an unclosed brace" };
+  if (text.slice(start).trim()) out.push({ prelude: text.slice(start).trim(), body: null });
+  return out;
+}
+function declarations(selector, body, problems) {
+  const kept = [];
+  for (const raw of body.split(";")) {
+    if (!raw.trim()) continue;
+    const at = raw.indexOf(":");
+    if (at < 0) {
+      problems.push(`${selector}: a declaration with no colon`);
+      continue;
+    }
+    const property = raw.slice(0, at).trim().toLowerCase();
+    const value2 = raw.slice(at + 1).trim();
+    if (property.startsWith("--")) {
+      problems.push(`${selector}: custom property ${property} is refused`);
+      continue;
+    }
+    if (!PROPERTY.test(property) || property.startsWith("border-image")) {
+      problems.push(`${selector}: property ${property} is not allowed`);
+      continue;
+    }
+    if (!VALUE_CHARS.test(value2)) {
+      problems.push(`${selector}: ${property} has a character a value may not hold (a quote, a backslash or !important, for one)`);
+      continue;
+    }
+    if (FUNCTION_REFUSED.test(value2)) {
+      problems.push(`${selector}: ${property} uses a refused function`);
+      continue;
+    }
+    if (property === "display" && !DISPLAY.has(value2)) {
+      problems.push(`${selector}: display ${value2} is not allowed`);
+      continue;
+    }
+    if (property === "position" && !POSITION.has(value2)) {
+      problems.push(`${selector}: position ${value2} is not allowed`);
+      continue;
+    }
+    if (property === "z-index" && !(/^\d+$/.test(value2) && Number(value2) <= 10)) {
+      problems.push(`${selector}: z-index ${value2} is not a whole number from 0 to 10`);
+      continue;
+    }
+    if (property === "container-type" && value2 !== "inline-size") {
+      problems.push(`${selector}: container-type ${value2} is not allowed`);
+      continue;
+    }
+    if (property === "font-family") {
+      const bad = value2.split(",").map((f) => f.trim().toLowerCase()).filter((f) => !FAMILIES.has(f));
+      if (bad.length) {
+        problems.push(`${selector}: font-family ${bad[0]} is not a generic family`);
+        continue;
+      }
+    }
+    if (property === "box-shadow") {
+      const blur = Number(value2.match(/-?\d+(\.\d+)?px\s+-?\d+(\.\d+)?px\s+(\d+(\.\d+)?)px/)?.[3] ?? 0);
+      if (blur > 16) {
+        problems.push(`${selector}: box-shadow blur ${blur}px is over 16px`);
+        continue;
+      }
+    }
+    kept.push(`${property}:${value2}`);
+  }
+  return kept;
+}
+function selectorOf(selector, prefix, problems) {
+  const refusedPseudo = selector.match(/(?<!:):([a-z-]+)/g)?.map((p) => p.slice(1)).find((name) => !/^(hover|focus-visible|checked|first-child)$/.test(name));
+  if (refusedPseudo) {
+    problems.push(`${selector}: :${refusedPseudo} is not allowed`);
+    return null;
+  }
+  if (!SELECTOR_CHARS.test(selector)) {
+    problems.push(`${selector}: a character a selector may not hold`);
+    return null;
+  }
+  if (/::/.test(selector)) {
+    problems.push(`${selector}: a pseudo-element is refused`);
+    return null;
+  }
+  const parts = selector.trim().split(/\s*>\s*|\s+/).filter(Boolean);
+  if (parts.length > 4) {
+    problems.push(`${selector}: more than four compound parts`);
+    return null;
+  }
+  for (const part of parts) {
+    const type = part.match(/^[a-z][a-z0-9]*/)?.[0];
+    if (COMPOUND.test(part) && (!type || ELEMENTS2.has(type))) continue;
+    problems.push(`${selector}: ${part} is not an allowed selector`);
+    return null;
+  }
+  return selector.trim().replace(/#([A-Za-z_-][\w-]*)/g, (_, id) => `#${prefix}${id}`);
+}
+function rules(text, prefix, problems, insideLayer, counter2) {
+  const parsed = blocks(text);
+  if (parsed.error) {
+    problems.push(parsed.error);
+    return "";
+  }
+  let out = "";
+  for (const { prelude, body } of parsed) {
+    if (prelude.startsWith("@")) {
+      const [name, ...rest] = prelude.slice(1).split(/\s+/);
+      const argument = rest.join(" ");
+      if (body === null) {
+        problems.push(`@${name} is refused`);
+        continue;
+      }
+      if (name === "layer") {
+        if (insideLayer || argument !== "skin") {
+          problems.push(`@layer ${argument} is not the one skin layer`);
+          continue;
+        }
+        out += rules(body, prefix, problems, true, counter2);
+      } else if (name === "media" || name === "container") {
+        if (!insideLayer) {
+          problems.push(`@${name} sits outside @layer skin`);
+          continue;
+        }
+        if (!MEDIA.test(argument)) {
+          problems.push(`@${name} ${argument}: only width and height conditions are allowed`);
+          continue;
+        }
+        out += `@${name} ${argument}{${rules(body, prefix, problems, true, counter2)}}`;
+      } else problems.push(`@${name} is refused`);
+      continue;
+    }
+    counter2.rules++;
+    if (!insideLayer) {
+      problems.push(`${prelude}: a rule outside @layer skin`);
+      continue;
+    }
+    const selectors = prelude.split(",").map((s) => selectorOf(s.trim(), prefix, problems));
+    const kept = declarations(prelude, body ?? "", problems);
+    if (selectors.every(Boolean) && kept.length) out += `${selectors.join(",")}{${kept.join(";")}}`;
+  }
+  return out;
+}
+function checkCss(text, prefix) {
+  const problems = [];
+  if (text.length > CSS_LIMITS.bytes) return { css: "", problems: [`the stylesheet is ${text.length} bytes, over the ${CSS_LIMITS.bytes} limit`] };
+  const counter2 = { rules: 0 };
+  const inner = rules(text.replace(/\/\*[\s\S]*?\*\//g, ""), prefix, problems, false, counter2);
+  if (counter2.rules > CSS_LIMITS.rules) problems.push(`${counter2.rules} rules, over the ${CSS_LIMITS.rules} limit`);
+  return { css: problems.length || !inner ? "" : `@layer skin{${inner}}`, problems };
+}
+
+// src/ui/HtmlSkin.js
+var HTML_SKIN_LIMITS = Object.freeze({ bytes: 256 * 1024, elements: 2e3 });
+var HtmlSkinError = class extends Error {
+  constructor(problems) {
+    super(problems.length === 1 ? problems[0] : `${problems[0]} (and ${problems.length - 1} more)`);
+    this.name = "HtmlSkinError";
+    this.problems = problems;
+  }
+};
+function parseHtml(text, DOMParserClass = globalThis.DOMParser) {
+  return new DOMParserClass().parseFromString(text, "text/html");
+}
+var ATTRIBUTES2 = /* @__PURE__ */ new Set(["class", "id", "lang", "title", "aria-hidden", "data-param", "data-param-name", "data-param-text", "data-param-help"]);
+var PER_ELEMENT = { input: ["type"], label: ["for"] };
+var BOUND = ["data-param", "data-param-name", "data-param-text"];
+var KIND = { range: "dial", checkbox: "switch", select: "selector" };
+function where(el) {
+  const path = [];
+  for (let node = el; node && node.tagName && node.tagName !== "BODY" && node.tagName !== "HTML"; node = node.parentElement) {
+    const same = [...node.parentElement?.children ?? []].filter((s) => s.tagName === node.tagName);
+    path.unshift(`${node.tagName.toLowerCase()}[${same.indexOf(node) + 1}]`);
+  }
+  return path.join(" > ") || "body";
+}
+function kindOf3(el) {
+  const tag = el.tagName.toLowerCase();
+  if (tag === "select") return "select";
+  if (tag === "input") return el.getAttribute("type");
+  return null;
+}
+function checkHtmlSkin(doc, ports, { prefix = "" } = {}) {
+  const problems = [];
+  const omitted = [];
+  const bySymbol = new Map(ports.map((p) => [p.symbol, p]));
+  const head = [...doc.head?.children ?? []];
+  const body = doc.body;
+  if (!body) return { problems: ["the skin has no body"], omitted, css: "" };
+  for (const el of head) {
+    const tag = el.tagName.toLowerCase();
+    if (tag !== "style" && tag !== "title") problems.push(`head > ${tag} is not allowed`);
+  }
+  const elements = [...body.querySelectorAll("*")];
+  if (elements.length + head.length > HTML_SKIN_LIMITS.elements) problems.push(`${elements.length} elements, over the ${HTML_SKIN_LIMITS.elements} limit`);
+  const styles = [...head.filter((e) => e.tagName === "STYLE"), ...elements.filter((e) => e.tagName === "STYLE")];
+  if (styles.length > 1) problems.push(`${styles.length} style elements, at most one is allowed`);
+  const ids = new Set(elements.map((e) => e.getAttribute("id")).filter(Boolean));
+  for (const el of elements) {
+    const tag = el.tagName.toLowerCase();
+    const at = where(el);
+    if (tag === "style") continue;
+    if (!ELEMENTS2.has(tag)) {
+      problems.push(`${at}: <${tag}> is not an allowed element`);
+      continue;
+    }
+    for (const attribute of el.getAttributeNames()) {
+      if (!ATTRIBUTES2.has(attribute) && !(PER_ELEMENT[tag] ?? []).includes(attribute)) problems.push(`${at}: ${attribute} is not an allowed attribute on <${tag}>`);
+    }
+    if (tag === "label" && el.hasAttribute("for") && !ids.has(el.getAttribute("for"))) problems.push(`${at}: for="${el.getAttribute("for")}" names no element of this file`);
+    if (tag === "input") {
+      const type = el.getAttribute("type");
+      if (type !== "range" && type !== "checkbox") problems.push(`${at}: <input type=${type}> is not allowed`);
+    }
+    if ((tag === "input" || tag === "select") && !el.hasAttribute("data-param")) problems.push(`${at}: <${tag}> without data-param is not allowed`);
+    if (tag === "select" && el.querySelector("option")) problems.push(`${at}: <select> has option children, which the host makes`);
+    for (const attribute of BOUND) {
+      const symbol = el.getAttribute(attribute);
+      if (symbol === null) continue;
+      const port = bySymbol.get(symbol);
+      if (!port) {
+        omitted.push({ element: at, reason: `${attribute}="${symbol}" names no port of this plugin` });
+        continue;
+      }
+      if (attribute === "data-param") {
+        const kind = kindOf3(el);
+        if (KIND[kind] && KIND[kind] !== port.widget) omitted.push({ element: at, reason: `a ${kind} cannot set ${symbol}, which is a ${port.widget}` });
+      }
+    }
+  }
+  let css = "";
+  if (styles.length === 1) {
+    const checked = checkCss(styles[0].textContent, prefix);
+    css = checked.css;
+    for (const p of checked.problems) problems.push(`style: ${p}`);
+  }
+  return { problems, omitted, css };
+}
+var copyAttributes = (from, to, prefix) => {
+  for (const name of from.getAttributeNames()) {
+    if (name === "id" || name === "for") to.setAttribute(name, `${prefix}${from.getAttribute(name)}`);
+    else to.setAttribute(name, from.getAttribute(name));
+  }
+};
+function buildHtmlSkin(doc, profile, { document: document2, prefix, size = 0 }) {
+  if (size > HTML_SKIN_LIMITS.bytes) throw new HtmlSkinError([`the skin is ${size} bytes, over the ${HTML_SKIN_LIMITS.bytes} limit`]);
+  const { problems, omitted, css } = checkHtmlSkin(doc, profile.ports, { prefix });
+  if (problems.length) throw new HtmlSkinError(problems);
+  const bySymbol = new Map(profile.ports.map((p) => [p.symbol, p]));
+  const dropped = new Set(omitted.map((o2) => o2.element));
+  const controls = [];
+  const texts = [];
+  const names = [];
+  const help = [];
+  const root = document2.createElement("div");
+  root.className = "html-skin";
+  const copy = (from, into) => {
+    for (const child of from.childNodes) {
+      if (child.nodeType === 3) {
+        into.append(document2.createTextNode(child.textContent));
+        continue;
+      }
+      if (child.nodeType !== 1 || child.tagName === "STYLE") continue;
+      const tag = child.tagName.toLowerCase();
+      const at = where(child);
+      if (dropped.has(at) && child.hasAttribute("data-param")) continue;
+      const made = document2.createElement(tag);
+      copyAttributes(child, made, prefix);
+      if (dropped.has(at)) for (const a2 of BOUND) made.removeAttribute(a2);
+      into.append(made);
+      const symbol = child.getAttribute("data-param");
+      if (symbol !== null && bySymbol.has(symbol)) controls.push({ element: made, port: bySymbol.get(symbol), kind: kindOf3(child) });
+      if (child.hasAttribute("data-param-text") && !dropped.has(at)) texts.push({ element: made, symbol: child.getAttribute("data-param-text") });
+      if (child.hasAttribute("data-param-name") && !dropped.has(at)) names.push({ element: made, symbol: child.getAttribute("data-param-name") });
+      if (child.hasAttribute("data-param-help")) help.push(made);
+      if (tag !== "select" && tag !== "input") copy(child, made);
+    }
+  };
+  copy(doc.body, root);
+  return { root, css, controls, texts, names, help, omitted };
 }
 
 // src/rdf/SkinReader.js
@@ -33870,9 +34221,19 @@ var SkinLoadError = class extends Error {
     this.name = "SkinLoadError";
   }
 };
-async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSvg2 }) {
+async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSvg2, parseHtml: parseHtml2 }) {
   if (!profile.skin) throw new SkinLoadError("the profile declares no skin");
   const decoder2 = new TextDecoder();
+  if (profile.skin.mediaType === "text/html") {
+    const bytes = await fetchVerified(profile.skin, { kind: "skin" });
+    let document2;
+    try {
+      document2 = parseHtml2(decoder2.decode(bytes));
+    } catch (cause) {
+      throw new SkinLoadError(`the skin at ${profile.skin.location}: ${cause.message}`, { cause });
+    }
+    return { kind: "html", document: document2, size: bytes.byteLength };
+  }
   const skinBytes = await fetchVerified(profile.skin, { kind: "skin" });
   const skinIri = profile.skin.location;
   let skin;
@@ -33896,6 +34257,10 @@ async function loadSkin(profile, { fetchVerified, parseTurtle, parseSvg: parseSv
   return { skin, artwork: { doc, size: artBytes.byteLength } };
 }
 function prepareSkin(loaded, profile, { document: document2, prefix }) {
+  if (loaded.kind === "html") {
+    const built2 = buildHtmlSkin(loaded.document, profile, { document: document2, prefix, size: loaded.size });
+    return { ...built2, kind: "html", omitted: built2.omitted.map((o2) => ({ control: o2.element, reason: o2.reason })) };
+  }
   const built = buildArtwork(loaded.artwork.doc, { document: document2, prefix, size: loaded.artwork.size });
   const { keep, omitted } = checkSkin(loaded.skin, { ids: built.ids }, profile.ports);
   return { svg: built.svg, elements: built.elements, controls: keep, omitted };
@@ -33914,7 +34279,8 @@ function createSkins(ctx2) {
     loadSkin(profile, {
       fetchVerified: (resource, options) => ctx2.loader.fetchVerified(resource, options),
       parseTurtle: parseText,
-      parseSvg
+      parseSvg,
+      parseHtml
     }).then((loaded) => {
       entry.loaded = loaded;
       entry.state = "ready";
@@ -34344,6 +34710,197 @@ function attachTrackDrag(box, input, port, track, isHorizontal) {
   });
 }
 
+// src/ui/SliderDrag.js
+var THUMB = 16;
+function attachSliderDrag(input, port) {
+  const owner = input.ownerDocument;
+  const Event = owner.defaultView?.Event;
+  if (!Event) return;
+  const span = port.maximum - port.minimum;
+  const step = Number(input.step) > 0 ? Number(input.step) : span / 200;
+  let grab = null;
+  const valueAt2 = (x) => {
+    const box = input.getBoundingClientRect();
+    const room = box.width - THUMB;
+    if (!(room > 0)) return null;
+    const fraction = Math.min(1, Math.max(0, (x - box.left - THUMB / 2) / room));
+    const raw = port.minimum + fraction * span;
+    return Math.min(port.maximum, Math.max(port.minimum, port.minimum + Math.round((raw - port.minimum) / step) * step));
+  };
+  const move = (event) => {
+    if (!grab) return;
+    const next = valueAt2(event.clientX + grab.offset);
+    if (next === null || Number(input.value) === next) return;
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  };
+  const end = () => {
+    if (!grab) return;
+    grab = null;
+    owner.removeEventListener("pointermove", move);
+    owner.removeEventListener("pointerup", end);
+    owner.removeEventListener("pointercancel", end);
+  };
+  input.addEventListener("pointerdown", (event) => {
+    if (event.button !== void 0 && event.button !== 0) return;
+    const box = input.getBoundingClientRect();
+    const room = box.width - THUMB;
+    if (!(room > 0)) return;
+    const centre = box.left + THUMB / 2 + (Number(input.value) - port.minimum) / span * room;
+    const onThumb = Math.abs(event.clientX - centre) <= THUMB;
+    grab = { offset: onThumb ? centre - event.clientX : 0 };
+    input.focus?.({ preventScroll: true });
+    event.preventDefault?.();
+    owner.addEventListener("pointermove", move);
+    owner.addEventListener("pointerup", end);
+    owner.addEventListener("pointercancel", end);
+    move(event);
+  });
+}
+
+// src/ui/HtmlSkinPanel.js
+var HOST_SHEET = [
+  ":host{display:block;contain:layout paint style;isolation:isolate;container-type:inline-size}",
+  "input[type=range],select{min-height:44px}",
+  // The drag is ours (SliderDrag.js), so the browser must not take a touch for a scroll halfway through it.
+  "input[type=range]{touch-action:none}",
+  "input[type=checkbox]{min-width:44px;min-height:44px}",
+  "select{font-size:max(16px,1em)}",
+  "input:focus-visible,select:focus-visible{outline:2px solid #7fb3ff;outline-offset:2px}",
+  ".control-help{min-height:1.4em;margin:6px 0 0}",
+  ".visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}"
+].join("");
+var clamp2 = (n2, low, high) => Math.min(high, Math.max(low, n2));
+function createHtmlSkinPanel(document2, skin, ports, onChange, { scope }) {
+  const host = document2.createElement("div");
+  host.className = "skin html-skin-host";
+  host.id = `${scope}#skin-host`.replace(/[^\w-]/g, "_");
+  const shadow = host.attachShadow ? host.attachShadow({ mode: "open" }) : host;
+  const sheet = document2.createElement("style");
+  sheet.textContent = `${skin.css}${HOST_SHEET}`;
+  shadow.append(sheet, skin.root);
+  const bySymbol = new Map(ports.map((p) => [p.symbol, p]));
+  const bound = /* @__PURE__ */ new Set();
+  const warnings = [];
+  const setters = /* @__PURE__ */ new Map();
+  const onValue = (symbol, fn) => {
+    if (!setters.has(symbol)) setters.set(symbol, []);
+    setters.get(symbol).push(fn);
+  };
+  let focused = null;
+  const lines = skin.help.length ? skin.help : [Object.assign(document2.createElement("p"), { className: "control-help" })];
+  if (!skin.help.length) skin.root.append(lines[0]);
+  for (const line of lines) line.setAttribute("aria-hidden", "true");
+  const showHelp = (port) => {
+    for (const line of lines) {
+      line.replaceChildren();
+      if (!port?.comment) continue;
+      const name = document2.createElement("b");
+      name.textContent = port.name ?? port.symbol;
+      line.append(name, document2.createTextNode(` ${port.comment}`));
+    }
+  };
+  for (const { element, symbol } of skin.names) element.textContent = bySymbol.get(symbol)?.name ?? symbol;
+  const labelFor = new Map([...skin.root.querySelectorAll("label[for]")].map((l) => [l.getAttribute("for"), l]));
+  const namedByHost = new Set(skin.names.map((n2) => n2.element));
+  for (const { element, port, kind } of skin.controls) {
+    bound.add(port.symbol);
+    const id = element.getAttribute("id");
+    const label = id ? labelFor.get(id) : null;
+    if (label && !namedByHost.has(label) && label.textContent.trim() && !port.name.toLowerCase().includes(label.textContent.trim().toLowerCase())) {
+      warnings.push(`the label "${label.textContent.trim()}" is not part of the port's name "${port.name}"`);
+    }
+    element.setAttribute("aria-label", port.name ?? port.symbol);
+    if (!id) element.setAttribute("id", `${scope}#skin-${port.symbol}`.replace(/[^\w-]/g, "_"));
+    if (kind === "select") {
+      element.replaceChildren(...port.scalePoints.map((sp) => Object.assign(document2.createElement("option"), { value: String(sp.value), textContent: sp.label })));
+      element.addEventListener("change", () => onChange(port.symbol, Number(element.value)));
+      onValue(port.symbol, (value2) => {
+        for (const option of element.options) option.selected = option.value === String(value2);
+      });
+    } else if (kind === "checkbox") {
+      element.addEventListener("change", () => onChange(port.symbol, element.checked ? port.maximum : port.minimum));
+      onValue(port.symbol, (value2) => {
+        element.checked = value2 >= (port.minimum + port.maximum) / 2;
+      });
+    } else {
+      element.min = String(port.minimum);
+      element.max = String(port.maximum);
+      element.step = String((port.maximum - port.minimum) / 200);
+      element.addEventListener("input", () => onChange(port.symbol, Number(element.value)));
+      attachSliderDrag(element, port);
+      onValue(port.symbol, (value2) => {
+        element.value = String(clamp2(value2, port.minimum, port.maximum));
+        element.setAttribute("aria-valuetext", spokenValue(port, value2));
+      });
+    }
+    if (port.comment) {
+      const words = document2.createElement("span");
+      words.className = "visually-hidden";
+      words.id = `${element.getAttribute("id")}-help`;
+      words.textContent = port.comment;
+      element.after(words);
+      element.setAttribute("aria-describedby", words.id);
+      element.addEventListener("pointerenter", () => showHelp(port));
+      element.addEventListener("pointerleave", () => showHelp(focused));
+      element.addEventListener("focus", () => {
+        focused = port;
+        showHelp(port);
+      });
+      element.addEventListener("blur", () => {
+        focused = null;
+        showHelp(null);
+      });
+      element.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") showHelp(null);
+      });
+    }
+  }
+  for (const { element, symbol } of skin.texts) {
+    const port = bySymbol.get(symbol);
+    if (!port) continue;
+    element.setAttribute("aria-hidden", "true");
+    onValue(symbol, (value2) => {
+      const named2 = port.scalePoints?.find((sp) => sp.value === value2);
+      element.textContent = named2 ? named2.label : formatValue(port, value2);
+    });
+  }
+  let cramped = false;
+  const listeners = [];
+  const measure = () => {
+    const room = host.clientWidth;
+    if (!room) return null;
+    if (skin.root.scrollWidth > room + 1) return true;
+    return skin.controls.some((c3) => {
+      const box = c3.element.getBoundingClientRect?.();
+      return box && box.width === 0 && box.height === 0;
+    });
+  };
+  return {
+    element: host,
+    bound,
+    warnings,
+    get cramped() {
+      return cramped;
+    },
+    update(symbol, value2) {
+      for (const fn of setters.get(symbol) ?? []) fn(value2);
+    },
+    onCramped(fn) {
+      listeners.push(fn);
+    },
+    fit() {
+      const wasHidden = host.hidden;
+      host.hidden = false;
+      const next = measure();
+      host.hidden = wasHidden;
+      if (next === null || next === cramped) return;
+      cramped = next;
+      for (const fn of listeners) fn(cramped);
+    }
+  };
+}
+
 // src/ui/PrimaryControls.js
 function splitPrimary(ports) {
   const ranked = ports.filter((p) => p.displayPriority !== null && p.displayPriority !== void 0);
@@ -34491,7 +35048,7 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     if (!setters.has(symbol)) setters.set(symbol, []);
     setters.get(symbol).push(fn);
   };
-  const skinPanel = skin ? createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout }) : null;
+  const skinPanel = !skin ? null : skin.kind === "html" ? createHtmlSkinPanel(document2, skin, profile.ports, onChange, { scope }) : createSkinPanel(document2, { ...skin, ports: profile.ports }, onChange, { scope, ...skinLayout });
   if (skinPanel) {
     root.append(skinPanel.element);
     root.classList.add("has-skin");

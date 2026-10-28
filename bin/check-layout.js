@@ -10,8 +10,8 @@
 //
 // It starts bin/serve.js on a free port and drives Chrome over the DevTools protocol with Node's own WebSocket, so it needs
 // nothing installed. Touch-target sizes are reported for the controls named in TARGETS, as warnings, not failures.
-import { fileURLToPath } from 'node:url'
 import { withChrome, sleep } from './chrome-session.js'
+import { isMain } from './is-main.js'
 
 export const WIDTHS = Object.freeze([320, 360, 390, 720, 1280])
 // ?studio asks for the studio at any width: below 720px the bare address redirects to the simple page (web/view.js).
@@ -104,7 +104,7 @@ export async function checkLayout () {
   })
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const { code, lines } = await checkLayout()
   for (const l of lines) console.log(l)
   process.exit(code)

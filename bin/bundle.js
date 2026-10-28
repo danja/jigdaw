@@ -8,12 +8,13 @@
 import { writeFile } from 'node:fs/promises'
 import { resolve, join, basename } from 'node:path'
 import { bundle } from './bundle-core.js'
+import { isMain } from './is-main.js'
 
 export * from './bundle-core.js'
 
 // ── Command line ───────────────────────────────────────────────────────────
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const args = process.argv.slice(2)
   const options = {}
   const positional = []

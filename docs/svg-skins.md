@@ -5,7 +5,8 @@ in Chrome; toggle and selector controls are tested only without a browser. The r
 adds to the contract is [host-plugin-contract.md](host-plugin-contract.md) section 9.4.
 
 A skin is a plugin interface made of data: a picture in SVG and a Turtle file saying which
-part of the picture sets which port. It has no code, so a host can draw it in its own
+part of the picture sets which port. (A skin may also be laid out by the browser instead of drawn at fixed
+coordinates, see [html-skins.md](html-skins.md).) It has no code, so a host can draw it in its own
 document, which a plugin interface otherwise may not be. It is a better-looking panel, not a
 replacement for the editor a plugin may also have.
 
@@ -204,7 +205,8 @@ feeds the builder hostile artwork through the browser's own XML parser.
 - **Meters.** A meter binds a signal, not a port, and the host's meter feed is not yet a
   named thing a skin can point at. This waits for that.
 - **Layouts for narrow and wide screens.** One `viewBox` first. Two artworks selected by width
-  is the obvious extension, and the `jig:skin` arc would not change.
+  is the obvious extension, and the `jig:skin` arc would not change. [html-skins.md](html-skins.md) proposes a
+  different answer, a laid-out skin whose layout is CSS.
 - **Curves, XY pads, waveform displays.** They need code. They are what `jig:ui` is for.
 - **Animation.** None. Controls move because the host sets an attribute.
 - **Theming.** A skin is drawn as authored. A host that wants dark mode draws a different

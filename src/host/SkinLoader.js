@@ -9,6 +9,7 @@
 import { readSkin, checkSkin } from '../rdf/SkinReader.js'
 import { rebaseLocation } from '../rdf/ProfileReader.js'
 import { buildArtwork } from '../ui/SkinArtwork.js'
+import { buildHtmlSkin } from '../ui/HtmlSkin.js'
 
 export class SkinLoadError extends Error {
   constructor (message, options) {
@@ -21,11 +22,24 @@ export class SkinLoadError extends Error {
  * @param {{ skin: { location: string, integrity: string } }} profile from readProfile
  * @param {{ fetchVerified: Function, parseTurtle: Function, parseSvg: Function }} deps
  *   fetchVerified(resource, { kind }) is PluginLoader's: it throws unless the digest matches
- * @returns {Promise<{ skin: object, artwork: { doc: Document, size: number } }>}
+ * @returns {Promise<{ skin: object, artwork: { doc: Document, size: number } } | { kind: 'html', document: Document, size: number }>}
  */
-export async function loadSkin (profile, { fetchVerified, parseTurtle, parseSvg }) {
+export async function loadSkin (profile, { fetchVerified, parseTurtle, parseSvg, parseHtml }) {
   if (!profile.skin) throw new SkinLoadError('the profile declares no skin')
   const decoder = new TextDecoder()
+
+  // An HTML skin is one file and the profile points at it directly (docs/html-skins.md). An SVG skin is a Turtle
+  // document that names its artwork. The media type on the profile's own jig:skin node says which.
+  if (profile.skin.mediaType === 'text/html') {
+    const bytes = await fetchVerified(profile.skin, { kind: 'skin' })
+    let document
+    try {
+      document = parseHtml(decoder.decode(bytes))
+    } catch (cause) {
+      throw new SkinLoadError(`the skin at ${profile.skin.location}: ${cause.message}`, { cause })
+    }
+    return { kind: 'html', document, size: bytes.byteLength }
+  }
 
   const skinBytes = await fetchVerified(profile.skin, { kind: 'skin' })
   const skinIri = profile.skin.location
@@ -61,10 +75,15 @@ export async function loadSkin (profile, { fetchVerified, parseTurtle, parseSvg 
  * @param {{ skin: object, artwork: { doc, size } }} loaded from loadSkin
  * @param {{ ports: object[] }} profile
  * @param {{ document: Document, prefix: string }} context prefix makes this panel's ids its own
- * @returns {{ svg, elements, controls, omitted: { control, reason }[] }}
- * @throws {SkinError} when the artwork breaks the allowlist
+ * @returns {{ svg, elements, controls, omitted: { control, reason }[] } | { kind: 'html', root, css, controls, omitted }}
+ * @throws {SkinError | HtmlSkinError} when the artwork breaks the allowlist
  */
 export function prepareSkin (loaded, profile, { document, prefix }) {
+  if (loaded.kind === 'html') {
+    const built = buildHtmlSkin(loaded.document, profile, { document, prefix, size: loaded.size })
+    // The same shape the page logs for an SVG skin's left-out controls.
+    return { ...built, kind: 'html', omitted: built.omitted.map(o => ({ control: o.element, reason: o.reason })) }
+  }
   const built = buildArtwork(loaded.artwork.doc, { document, prefix, size: loaded.artwork.size })
   const { keep, omitted } = checkSkin(loaded.skin, { ids: built.ids }, profile.ports)
   return { svg: built.svg, elements: built.elements, controls: keep, omitted }

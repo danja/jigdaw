@@ -19,6 +19,7 @@ import { homedir } from 'node:os'
 import { resolve, join, dirname } from 'node:path'
 import { generateKeyPair, exportPrivateKey, importPrivateKey } from '../src/host/Signature.js'
 import { SEC } from '../src/rdf/Vocabulary.js'
+import { isMain } from './is-main.js'
 
 export const DEFAULT_DIRECTORY = join(homedir(), '.config', 'jigdaw', 'keys')
 
@@ -106,7 +107,7 @@ export function publicKeyDocument ({ verificationMethod, publicKeyMultibase }) {
 
 // ── Command line ───────────────────────────────────────────────────────────
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   const [command, ...rest] = process.argv.slice(2)
   const usage = [
     'usage:',

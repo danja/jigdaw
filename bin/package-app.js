@@ -14,6 +14,7 @@ import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, ex
 import { execFileSync } from 'node:child_process'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isMain } from './is-main.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -99,7 +100,7 @@ function option (name, fallback) {
   return at === -1 ? fallback : process.argv[at + 1]
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   const out = resolve(option('--out', join(root, 'dist/jiggy')))
   const zip = resolve(option('--zip', join(root, 'dist/jiggy.zip')))
   stage(out)

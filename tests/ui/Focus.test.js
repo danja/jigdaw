@@ -89,3 +89,64 @@ describe('the application uses it', () => {
     expect(restored, 'the focus is never put back').toBeGreaterThan(emptied)
   })
 })
+
+// An HTML skin (docs/html-skins.md) lives in a shadow root. document.activeElement is then its host, which has no focus
+// to give back, so a control in it was nudged once with an arrow key and never again: found in Chrome, with the keys
+// counted, after every other test passed.
+describe('keeping the keyboard inside a shadow root', () => {
+  function withSkin () {
+    const host = document.createElement('div')
+    host.id = 'skin-host'
+    const shadow = host.attachShadow({ mode: 'open' })
+    const slider = document.createElement('input')
+    slider.id = 'tone'
+    shadow.append(slider)
+    rack.append(host)
+    return { host, shadow, slider }
+  }
+  // The rack is built again and the same host is put back, as the panel cache does.
+  const redrawKeeping = host => { rack.textContent = ''; rack.append(host) }
+
+  it('puts the focus back on the control inside the host', () => {
+    const { host, shadow, slider } = withSkin()
+    document.activeElement = host
+    shadow.activeElement = slider
+    const restore = preserveFocus(rack)
+    redrawKeeping(host)
+    expect(restore()).toBe(shadow.getElementById('tone'))
+  })
+
+  it('finds the control again when the host is a new element with the same id', () => {
+    const { host, shadow, slider } = withSkin()
+    document.activeElement = host
+    shadow.activeElement = slider
+    const restore = preserveFocus(rack)
+    rack.textContent = ''
+    const again = withSkin()
+    expect(restore()).toBe(again.shadow.getElementById('tone'))
+  })
+
+  it('does not guess when the host or the control has no id', () => {
+    const { host, shadow, slider } = withSkin()
+    host.removeAttribute('id')
+    document.activeElement = host
+    shadow.activeElement = slider
+    expect(preserveFocus(rack)()).toBeNull()
+  })
+
+  it('reports nothing rather than throwing when the host did not come back', () => {
+    const { host, shadow, slider } = withSkin()
+    document.activeElement = host
+    shadow.activeElement = slider
+    const restore = preserveFocus(rack)
+    rack.textContent = ''
+    expect(() => restore()).not.toThrow()
+    expect(restore()).toBeNull()
+  })
+
+  it('treats a host with nothing focused in it as the ordinary element it is', () => {
+    const { host } = withSkin()
+    document.activeElement = host
+    expect(preserveFocus(rack)()).toBe(document.getElementById('skin-host'))
+  })
+})

@@ -14,5 +14,7 @@ cd "$here"
 cargo build --release --target wasm32-unknown-unknown
 cp target/wasm32-unknown-unknown/release/dynamix.wasm dynamix.wasm
 
+# The editor page, with the bridge written into it, before the profile digests it.
+node "$root/bin/inline-ui.js" "$here"
 node "$root/bin/write-profile.js" "$here"
 echo "built $(wc -c < dynamix.wasm) bytes of wasm, profile.ttl regenerated"

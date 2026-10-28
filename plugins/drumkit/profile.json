@@ -755,5 +755,8 @@
       "paramIndex": 74,
       "group": "Clave"
     }
-  ]
+  ],
+  "skin": {
+    "html": "skin/skin.html"
+  }
 }
