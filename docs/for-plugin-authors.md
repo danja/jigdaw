@@ -243,7 +243,8 @@ declarations, and that is the expected case: it is consistent with every other p
 accessible. A `jig:ui` is an editor the host offers beside that panel, not a replacement for it.
 If you want your own look without writing a page, a [skin](svg-skins.md) replaces the look of the
 panel and keeps the host's controls under it. Preview yours with `node bin/jig.js panel <name>`, or see all
-of them on the [plugin gallery](https://strandz.it/jigdaw/gallery.html).
+of them on the [plugin gallery](https://strandz.it/jigdaw/gallery.html). [ui.md](ui.md) follows the whole path
+from module to panel to skin.
 
 If you do ship one, it is a web page that the host loads into a sandboxed frame on your
 plugin's origin and talks to only by `postMessage`
