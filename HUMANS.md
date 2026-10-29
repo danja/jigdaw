@@ -73,6 +73,32 @@ is wrong in INBOX.md.
 - **Deploy the help text:** the page loads plugins from their canonical address, so the help on Pulse's and DrumKit's controls (new 2026-10-26)
   shows on the live site only after a deploy; it was checked by loading the local copies. The same goes for the ranked controls and help on BassGen, DrumGen, MelGen, Moka, Monochord, Canticle and Mop, the pads' end labels, and `web/loops/index.json`. DrumKit's "More controls (61)" was deployed and is live.
 
+## 1b. Passes moved here from TODO.md
+
+Each needs ears, a screen reader, a real finger or hardware, so they are yours and not the agent's. Taken from the "Checks in a real browser or by a person" section on 2026-10-29. Say what you find in INBOX.md.
+
+- **Studio layout on a phone:** a person should look at it. The master row and the editor dock below the arrangement are
+  untouched by the layout work, and an automation lane's buttons stay at the left edge while scrolling.
+- **Master chain controls:** a screen reader pass.
+- **Conductor's `jig:ui`:** the selects and the reset checkboxes (only the number field was driven), then hear and see it in
+  a browser.
+- **Keyframe:** sound through it in the live page, since no source was connected; where Time rate sits now that the panel
+  follows `paramIndex`.
+- **Quefrency:** listen to it, and check compensation against a graph where a parallel path has to be delayed to line up
+  with it. The meter dropped from 8 to 4 segments under shift (partials past Nyquist are dropped); not fully explained.
+- **Skins:** a real screen reader and a real finger are still not tried.
+- **A composite on a phone.** Every other part of the composite page was checked in Chrome.
+- **Mute, lock and fades** by ear.
+- **A real MIDI controller** against hardware, and **real key presses** into the piano roll, the clip keys and the lane
+  points (dispatched events were driven, and a few real keys).
+- **A real pointer through a cross-origin plugin frame** was seen once; repeat it.
+- **Microphone** with a real one (verified only with a stand-in stream, `window.__jigdawMicrophone`).
+- **Built 2026-10-24 and seen only by eye and by recorded events:** the clip launcher (hear a launched slot, and the arrangement going quiet
+  under it), `clip_euclidean`, context menus and double clicks (a real screen reader and a real long press), the mixer FX list, the compact
+  button sizes on every tab, and a recovery copy of a session that holds audio (quota). Chrome showed each working; none was heard or touched.
+
+- **Listen to Retune and play Moka from the keyboard** (2026-10-29): Markov and Sprout into Moka sound through the transport by a meter, and Markov through Retune into Moka stayed live after a quarter-tone `.scl` was applied, but none of it has been heard. Say whether a 24-note scale in Retune's panel is audibly quarter-tone, and whether Moka plays from the computer keyboard.
+
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 
 Headless measurement says Mop costs 1.70x realtime through the adapter's
@@ -98,6 +124,13 @@ deployed host, so shipping them is publishing them. Decide whether `plugins/sam/
 the deployment. If not, delete the directory, `web/presets/sam.ttl` and its line in `web/presets/index.json`,
 then `npm run build:index`, and `npm run build:precache`. The plugin's profile carries no `pu:licenceId` for this
 reason.
+
+## 2c. Run the app zip workflow once
+
+`.github/workflows/app-zip.yml` builds `jiggy.zip` (the app alone, no tests, docs or plugin sources). Locally `npm run build:app` and
+`tests/bin/package-app.test.js` pass (550 files, 3.1 MB), but the workflow has never run on GitHub. Push to `main`, open the
+Actions tab, and check that the "App zip" run goes green and its `jiggy` artifact unzips and starts with `node bin/serve.js`.
+Then push a tag starting with `v` once to see the zip attached to a release.
 
 ## 3. Tools that would help
 

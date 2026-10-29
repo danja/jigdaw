@@ -91,6 +91,9 @@ export function createTransport (ctx) {
   async function play ({ fromBeat = null } = {}) {
     const d = await ctx.runtime.ensureRunning()
     const { engine, clipPlayer, hostConfig } = ctx
+    // Not awaited: with no user activation (an agent's call) it stays pending, and the stream position only starts to
+    // advance once it settles, so what is scheduled from here is still where it was meant to be.
+    if (ctx.audioContext.state !== 'running') ctx.audioContext.resume().catch(error => ctx.log(`audio could not start: ${error.message}`, 'error'))
     if (playing) return
     if (fromBeat !== null && !(Number.isFinite(fromBeat) && fromBeat >= 0)) throw new Error(`fromBeat is a beat at or after zero: ${fromBeat}`)
     playing = true

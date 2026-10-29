@@ -258,3 +258,5 @@ createHelp(ctx).mount()
 ctx.rack.draw()
 log('ready. Load the synth and press a key, or search for a plugin.')
 window.__jigdawLoad = loading.loadPlugin
+// Built now and not at the first click, so the agent tools are on the page as soon as it is (docs/webmcp.md).
+ctx.runtime.ensureRunning().catch(error => log(`could not start the engine: ${error.message}`, 'error'))

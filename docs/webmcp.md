@@ -119,9 +119,9 @@ first to find out whether it will run here. Load a chosen member afterwards with
 | `graph_apply_changes` | `changes[]`, `expectedRevision`, `dryRun?` | New revision, or a conflict |
 | `node_add` | `pluginIri`, `position?` | Node id |
 | `node_remove` | `nodeId` | |
-| `connection_add` | `from`, `to`, `fromPort`, `toPort`, `kind`, `lowNote?`, `highNote?` | |
+| `connection_add` | `from`, `to`, `fromPort?`, `toPort?`, `toParameter?`, `signalKind?` (`Audio` by default, or `Midi`), `lowNote?`, `highNote?` | Connection id |
 | `connection_set` | `connectionId`, `lowNote?`, `highNote?` | A MIDI connection only |
-| `connection_remove` | `from`, `to`, `fromPort`, `toPort` | |
+| `connection_remove` | `connectionId`, `expectedRevision?` | |
 
 `graph_apply_changes` is the primitive and the rest are conveniences over it. Every
 changeset is atomic: all of it applies or none does.

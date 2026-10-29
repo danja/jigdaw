@@ -29181,6 +29181,14 @@ function createRuntime(ctx2) {
     return shapes;
   }
   let starting = null;
+  function resumeOnGesture(context) {
+    const events = ["pointerdown", "keydown", "touchend"];
+    const resume = () => {
+      for (const name of events) document2.removeEventListener(name, resume, true);
+      context.resume().catch((error2) => ctx2.log(`audio could not start: ${error2.message}`, "error"));
+    };
+    for (const name of events) document2.addEventListener(name, resume, true);
+  }
   function ensureRunning() {
     starting ??= start().catch((error2) => {
       starting = null;
@@ -29190,7 +29198,9 @@ function createRuntime(ctx2) {
   }
   async function start() {
     const context = new AudioContext();
-    await context.resume();
+    ctx2.audioContext = context;
+    if (navigator.userActivation?.hasBeenActive) await context.resume();
+    else resumeOnGesture(context);
     const validator = await shapeValidator();
     const analyser = context.createAnalyser();
     analyser.fftSize = 1024;
@@ -29961,6 +29971,7 @@ function createTransport(ctx2) {
   async function play({ fromBeat = null } = {}) {
     const d = await ctx2.runtime.ensureRunning();
     const { engine, clipPlayer, hostConfig } = ctx2;
+    if (ctx2.audioContext.state !== "running") ctx2.audioContext.resume().catch((error2) => ctx2.log(`audio could not start: ${error2.message}`, "error"));
     if (playing) return;
     if (fromBeat !== null && !(Number.isFinite(fromBeat) && fromBeat >= 0)) throw new Error(`fromBeat is a beat at or after zero: ${fromBeat}`);
     playing = true;

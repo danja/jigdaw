@@ -33,6 +33,14 @@ export function createRuntime (ctx) {
   // context.resume() used to find no dispatcher yet and build a second engine,
   // so the first click's plugin landed somewhere nothing drew.
   let starting = null
+  function resumeOnGesture (context) {
+    const events = ['pointerdown', 'keydown', 'touchend']
+    const resume = () => {
+      for (const name of events) document.removeEventListener(name, resume, true)
+      context.resume().catch(error => ctx.log(`audio could not start: ${error.message}`, 'error'))
+    }
+    for (const name of events) document.addEventListener(name, resume, true)
+  }
   function ensureRunning () {
     starting ??= start().catch(error => { starting = null; throw error })
     return starting
@@ -40,7 +48,11 @@ export function createRuntime (ctx) {
 
   async function start () {
     const context = new AudioContext()
-    await context.resume()
+    ctx.audioContext = context
+    // resume() settles only with user activation, so waiting for it here meant nothing below ran, and no agent tool was
+    // offered, until a person had clicked. The engine is built on a suspended context and the first gesture starts it.
+    if (navigator.userActivation?.hasBeenActive) await context.resume()
+    else resumeOnGesture(context)
 
     const validator = await shapeValidator()
 

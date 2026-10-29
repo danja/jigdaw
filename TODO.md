@@ -16,20 +16,13 @@ Sections: [Next](#next), [Decisions](#decisions-for-the-maintainer), [Checks in 
 Where to start, in order. Everything else is below and is not ordered.
 
 1. The Mop glitch in Reaper (first item under Decisions): confirmation from a person, then WAMR AOT or JIT.
-2. (done 2026-10-24: see the trn:Jig item under Decisions.)
-3. The browser checks that need only a window in front (Checks in a real browser).
-4. The rest of the Tracks section: a drop target on another folder's bar, and the screen reader and touch passes it lists.
-5. (done 2026-10-25: the mixer stays in a tab for now; see Decisions.)
+2. The browser checks that need only a window in front (Checks in a real browser).
+3. The rest of the Tracks section: the screen reader and touch passes it lists.
 
 ## Decisions for the maintainer
 
 Each of these is blocked on a choice, not on work.
 
-- [x] **"Fender into the Ropery" did not load on a phone** (reported 2026-10-24, "room: ferrite did not report ready"; fixed
-      the same day, confirmed working on the phone). Three changes, which one mattered is not known: the ready limit is 30 s
-      (`READY_TIMEOUT_MS`), Ferrite has a Light switch (the small network of a slimmable `.nam`, 3.6x cheaper in
-      measurement) that the preset turns on for the amp, and opening a session loads every plugin before connecting any
-      (`OpDispatcher.withWiringHeld`). A progress bar and a visible failure message were added with it.
 - [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report, no buffer size or version yet. Mop costs
       1.70x realtime through the adapter's pure-interpreter WAMR, so every realtime block overruns. Output is otherwise correct,
       so it is throughput. 8b8 costs 0.20x through the same path and Mop under node's JIT 0.06x, which is why no browser or
@@ -37,13 +30,7 @@ Each of these is blocked on a choice, not on work.
       build dependencies; the interpreter was chosen in `native/cmake/FindOrFetchWamr.cmake` because the gain was not
       needed, and for Mop 2x or more is), or Mop-side surgery against the unmodified-Opal rule. Confirmation from a person is
       in HUMANS.md.
-- [x] **Generated profiles declared the deprecated `trn:WebAudio`** (found 2026-10-02, done 2026-10-24). Every plugin's `profile.json`
-      now says `"format": "trn:Jig"` (8b8 declared only `trn:WebAudio`), as does `bin/jsfx-import.js` and
-      `examples/reference-profile.ttl`; every `profile.ttl` was regenerated, the index and bundles rebuilt, and the three
-      pins of `plugins/stomp-rack` renewed by hand from `bin/pin.js`, which only prints them. This changed every plugin's
-      canonical digest: anything pinned to one or signed over one before today needs renewing. `tests/validate/DeprecatedFormat.test.js`
-      holds the rule over every plugin's sources and profiles and both generators. Not yet run: plugin-universe's own raw
-      shape over the new profiles (its repository is the check that matters).
+- [ ] **Run plugin-universe's own raw shape over the regenerated profiles** (every `profile.ttl` now declares `trn:Jig`, 2026-10-24). Its repository is the check that matters.
 - [ ] **MIDI loops are refused** (error kind `midi-cycle`, `docs/latency.md`). This was an agent decision, not the
       maintainer's; say if they should be allowed with some limit instead.
 - [ ] **Keyframe: should `quality` default to Balanced?** Measured 2026-10-01 under WAMR: Economy is about 15 percent cheaper
@@ -60,8 +47,6 @@ Each of these is blocked on a choice, not on work.
 - [ ] **Reel: a failure after the swap begins has already stopped the old script.** Decide whether that is acceptable.
 - [ ] **Reel: timed parameter sets are accurate to the tick.** Sample accuracy means giving `parameter_set` an `atFrame`.
 - [ ] **Reel: parse errors are reported before planning,** so a typo shows before a bad range. Decide whether the order matters.
-- [x] **Layout of the main view: docked mixer or tab.** Decided 2026-10-25: for now the mixer stays in a tab, and
-      [docs/main-view.md](docs/main-view.md) says so and what would reopen it. The Mixer section below is unblocked on that basis.
 
 ## Checks in a real browser or by a person
 
@@ -82,32 +67,19 @@ Each of these is blocked on a choice, not on work.
       scrolling), Fit, the zoom read-out at phone width, and a screen reader pass over the tools.
 - [ ] **Downspout ports (Moka, Sprout, Markov, Retune):** load each; play Moka from the keyboard; run Sprout and Markov against
       the transport; chain Retune into Moka with a `.scl` loaded from the panel.
+      Seen 2026-10-29 in real Chrome, loaded by local IRI one after another: all four load with no console error (panels of 10, 17, 20
+      and 4 controls). Sprout's MIDI out wired into Moka (`connection_add`, `signalKind: 'Midi'`) and a real Play press lit the master meter, which went dark
+      when the connection was removed (the control). Markov wired into Moka and played from the transport lit the master meter, and dark with the connection removed (the control);
+      Markov through Retune into Moka stayed lit with the default 12-tet scale, and after a 24-note quarter-tone `.scl` was typed into
+      Retune's panel and applied (no error, meter still lit). Left: playing Moka from the keyboard, and hearing that the quarter-tone scale
+      is in tune (HUMANS.md).
 - [ ] **Transport click and count-in:** that it clicks in time, accents the bar, keeps time through a loop, and that a count-in
       leaves the playhead at the top and then starts everything together (a script's clock starts in the future during one).
-- [ ] **Studio layout on a phone:** a person should look at it. The master row and the editor dock below the arrangement are
-      untouched by the layout work, and an automation lane's buttons stay at the left edge while scrolling.
-- [ ] **Master chain controls:** a screen reader pass.
-- [ ] **Conductor's `jig:ui`:** the selects and the reset checkboxes (only the number field was driven), then hear and see it in
-      a browser.
+      Seen 2026-10-29 in real Chrome (Chiptune, 90 bpm, "Count in 1 bar", real Play click): the clock held 0:00.0 for about 3.0 s
+      (a bar is 2.67 s, plus start latency), then ran at 1.0x (0:00.1 to 0:06.3 over 6.25 s) and the meter lit. Left: hearing the
+      click, its accent and a loop, and a script's clock during a count-in.
 - [ ] **Script tab:** the one hop not yet seen, a session carrying a script back into the studio's Script tab (covered by
       `tests/web/Script.test.js`); the saved-session round trip on the simple page; a screen reader pass over the tab.
-- [ ] **Keyframe:** sound through it in the live page, since no source was connected; where Time rate sits now that the panel
-      follows `paramIndex`.
-- [ ] **Quefrency:** listen to it, and check compensation against a graph where a parallel path has to be delayed to line up
-      with it. The meter dropped from 8 to 4 segments under shift (partials past Nyquist are dropped); not fully explained.
-- [ ] **Skins:** a real screen reader and a real finger are still not tried.
-- [ ] **A composite on a phone.** Every other part of the composite page was checked in Chrome.
-- [x] **Failed load stays isolated** (seen 2026-10-24 in real Chrome: Monochord's profile answered 404 while opening "Fender into
-      the Ropery"; the other three plugins opened, the simple page said "opened with 3 of 4 instruments" in red, and the
-      bar at the foot said which one and why until dismissed). The chain strip in the studio is still only tested at model and strip.
-- [ ] **Mute, lock and fades** by ear.
-- [ ] **A real MIDI controller** against hardware, and **real key presses** into the piano roll, the clip keys and the lane
-      points (dispatched events were driven, and a few real keys).
-- [ ] **A real pointer through a cross-origin plugin frame** was seen once; repeat it.
-- [ ] **Microphone** with a real one (verified only with a stand-in stream, `window.__jigdawMicrophone`).
-- [ ] **Built 2026-10-24 and seen only by eye and by recorded events:** the clip launcher (hear a launched slot, and the arrangement going quiet
-      under it), `clip_euclidean`, context menus and double clicks (a real screen reader and a real long press), the mixer FX list, the compact
-      button sizes on every tab, and a recovery copy of a session that holds audio (quota). Chrome showed each working; none was heard or touched.
 - [ ] **Play every preset** after any change to a plugin processor or the engine (see Recurring). Last done 2026-10-24, all nine on
       the simple page in real Chrome, each lit the meter after a real Play press (Keyframe also at bar 170 at 600 bpm).
       The Clip lamp is a latch, so it carried over from Acid to the tunes after it. Measured offline (pre-fader), Chiptune
@@ -120,40 +92,8 @@ Each of these is blocked on a choice, not on work.
 
 ### Claude skills for building plugins
 
-- [x] **A first skill, `html-skin`** (`.claude/skills/html-skin/SKILL.md`), written from building Drumkit's and Quartet's skins and used
-      for Quartet's. The mechanical part is a script, `bin/skin-from-profile.js`, which drafts a skin from `profile.json`; the
-      skill is the judgement and the traps. Every path, npm script and port count the skill names is bound by
-      `tests/docs/skills.test.js`, which was itself too narrow at first (it bound only one of three quoted counts) and was
-      found by breaking each claim in turn.
-- [x] **A second skill, `browser-check`** (`.claude/skills/browser-check/SKILL.md`): the real-Chrome procedure that was repeated and
-      got wrong most often (a clean page, loading by the local IRI and not the catalogue, scaled coordinates, counted keyboard,
-      drag and width checks). Followed once on Canticle to write it, which found the console history trap it now names.
-- [x] **A third skill, `break-the-guard`** (`.claude/skills/break-the-guard/SKILL.md`) and its tool, `bin/break-guard.js`, which
-      replaces one exact piece of text, runs a command, and restores the file byte for byte, refusing a mutation that does not
-      apply exactly once and a command that already fails. The tool was broken with itself seven ways and two survivors were
-      found and fixed (a literal-replacement test that checked no content, and a restore check that could not fail while the real
-      failure, an unrestorable file, was unhandled). Used on six untried guards in the HTML skin builder: none survived.
-      Worth telling the maintainer: CLAUDE.md's "Break every guard once" could point at this tool and skill.
-- [x] **A fourth skill, `finish-plugin`** (`.claude/skills/finish-plugin/SKILL.md`): what a plugin owes after `/new-plugin`, or instead
-      of it for a WebAssembly plugin: the three places a parameter is named, the digest rebuild, the index, the document figures, the
-      checks and what each proves. Its commands were run on Canticle and Quartet to write it. It found that the test binding
-      the count of worked plugins (`tests/docs/conventions.test.js`) reads line by line, so it cannot see the figure in `CLAUDE.md`'s
-      first paragraph, which wraps across two lines and is stale (the directories with a `profile.ttl` number two more than it
-      says), and that figures phrased as a number and "plugins" without "worked" are not bound
-      at all (`docs/jiggy-features.md`, `docs/usp.md`). Left for the maintainer: correct CLAUDE.md, and decide whether to widen that test
-      to read whole paragraphs, which would make it fail until CLAUDE.md is fixed.
-- [x] **A fifth skill, `wasm-dsp`** (`.claude/skills/wasm-dsp/SKILL.md`): the module ABI, the Rust and C++ build recipes, the processor that
-      wraps a module, freestanding maths measured against `Math` through a test hook, deterministic DSP tests, and the failures
-      recorded in CLAUDE.md. Its commands were run on Pulse, Mop, Sam and Monochord; running `check-plugin` on Mop without `--note`
-      reported no audio, which is correct for an instrument and is now said in the skill. Identifiers it names inside code
-      (`jig_math`, `jig_exp2`) are checked by hand and not by `tests/docs/skills.test.js`, which binds paths, npm scripts and port counts.
-- [x] **A sixth skill, `jig-ui-editor`** (`.claude/skills/jig-ui-editor/SKILL.md`): when a plugin needs an editor and not a skin, the page and the
-      bridge, the build order, data from the processor and its rate, accessibility, the sandbox, testing a page against linkedom and
-      holding a drawn law to the module, and the real-browser pass. Followed on Dynamix in Chrome: the frame is same-origin with
-      `sandbox="allow-scripts allow-same-origin"`, five key presses on Ratio moved it 0.475 as predicted, and the host's panel agreed after
-      the asynchronous echo (a read before it arrived looked like a failure, now in the skill and in `browser-check`). Writing it also
-      widened `tests/docs/skills.test.js`: a script written as `node "$root/bin/..."` and a path inside a code block were not bound, found by
-      breaking them with `bin/break-guard.js` and seeing nothing fail, and the three extraction patterns became one.
+- [ ] **Point CLAUDE.md's "Break every guard once" at `bin/break-guard.js` and the `break-the-guard` skill.** A maintainer's call, since CLAUDE.md is the conventions file.
+- [ ] **CLAUDE.md's first-paragraph plugin count is stale, and the test that should bind it cannot see it.** The directories with a `profile.ttl` number two more than it says. `tests/docs/conventions.test.js` reads line by line, so it misses a figure wrapped across two lines, and figures phrased as "N plugins" without "worked" (`docs/jiggy-features.md`, `docs/usp.md`) are not bound at all. Correct CLAUDE.md, then widen the test to read whole paragraphs.
 - [ ] **Further skills, if wanted:** porting a plugin from another format (JSFX import, JUCE params, WAM). The scripts and docs exist
       (`bin/jsfx-import.js`, `bin/juce-params-to-profile.js`, `docs/wam.md`) and it is rarely done, so the case for a skill is the weakest of
       the list. The six that exist cover the work that was repeated. Find out for each
@@ -174,41 +114,10 @@ Each of these is blocked on a choice, not on work.
       `plugins_search` tool to 25, so a caller that does not pass a limit sees a page of 34 plugins and nothing says there is more.
       The page's search bar was fixed 2026-10-24 (it asked for 25 and hid eight, Sam among them; it now asks for `MAX_RESULTS`,
       `tests/catalogue/BrowseAll.test.js`). Decide whether a result set should say when it was cut short.
-- [x] **Ported Downspout's Octet to a Jig, with its graphic display** (asked 2026-10-26, done the same day). `plugins/octet/`:
-      freestanding C++ (`jig:Abi2`, 53 parameters at the original's indices, no state), the eight-band equalizer, the Drift
-      controllers and the 4096 point spectrum analyser, checked against the original core compiled natively over five scripts (bit for
-      bit for three, 1.2e-7 for the others; a fixture holds it). The display is its own editor, `ui/index.html`: every band's curve and
-      the total, a node to drag for each band, the wheel for Q, the spectrum behind, keyboard equivalents and a control for everything
-      the plot does. The spectrum reaches it as `plugin` messages from the processor (the original's 64 read-only output parameters
-      have no equivalent in a profile). The plotted response is held to the module's own audio within 0.15 dB for every shape at 48 and
-      96 kHz. Seen in real Chrome with the page on `127.0.0.1` and the plugin on `localhost`: a real drag of a node, and the analyser
-      following a held Quartet note through the relay. It accepts `trn:MidiCC`, not `trn:Midi`, as Quefrency does: with `trn:Midi` the
-      rack gave an equalizer a piano keyboard. The editor used to show only for a plugin on another origin, because contract 9.1
-      refused a same-origin frame, so it never appeared in Jiggy for a plugin Jiggy serves; 9.1 was changed the same day to allow it,
-      and `src/ui/PluginFrame.js` reports `sameOrigin` rather than claiming isolation. Open: the generated panel's frequency knobs are
-      linear, since a profile has no logarithmic hint (an `pprops:logarithmic` port property would fix Octet, Quartet and every other
-      frequency knob); the Drift controllers and the editor have not been used by a person.
-- [x] **Ported Downspout's Quartet to a Jig, opening as a bass, and made it the bass of the Deep house set** (asked 2026-10-26, done
-      the same day). `plugins/quartet/`: freestanding C++ (`jig:Abi2`, 59 parameters, no state), checked against the original core
-      compiled natively over four scripts (largest difference 6e-8 of full scale; a fixture holds the module to it). The defaults are
-      a mono FM bass. A loop may name its own voice (`voice` in `web/loops/index.json`, `bin/write-loops.js`), and Deep house bass names
-      Quartet; its level was set so its RMS matches what Pulse had at gain 1 (0.5). Open: the VST3's routing drawing and filter plot are not
-      reproduced; the sound has not been listened to by a person.
-- [x] **Ported Downspout's Monochord to a Jig and made it the voice in "Fender into the Ropery"** (asked 2026-10-24, done the
-      same day). `plugins/monochord/`: freestanding C++ (`jig:Abi2`, 14 parameters, no state), checked against the original
-      core compiled natively (largest difference 3e-11 of full scale for each exciter). The Guitar node in
-      `web/presets/fender-into-the-ropery.ttl` is now Monochord (plucked, Master 0.06 so the amp sees about what it saw from
-      Mop: the master peak is 0.577 either way, which is the amp's ceiling). Open: the VST3's string plot and its log
-      sliders (Decay, Release, Body size) are not reproduced, since a profile has no scale hint; and the sound has not been
-      listened to by a person.
+- [ ] **Frequency knobs are linear.** A profile has no logarithmic hint, so the generated panel's frequency knobs (Octet, Quartet and every other) are linear. A `pprops:logarithmic` port property would fix them, and Monochord's log sliders (Decay, Release, Body size) with them.
+- [ ] **Quartet and Monochord: the VST3 drawings are not reproduced** (Quartet's routing drawing and filter plot, Monochord's string plot). Listening to them is in HUMANS.md.
 
-- [x] **A text asset is edited as text** (asked 2026-10-24: Sam's own editor box never shows on the deployed site because a plugin
-      UI may not share the host's origin). Spec: contract section 5.5, `jig:maxBytes` (vocab, shape, reader, writer,
-      counterexample), messaging.md 1.2, for-plugin-authors. The generated panel draws a text area, Apply and Ctrl+Enter for a
-      `text/plain` replaceable asset (`src/ui/Panel.js`, `src/ui/AssetText.js`), on the full and the simple page; seen in real
-      Chrome: the lyric shows, typing then Ctrl+Enter reaches the plugin's own state. Retune's `.scl` gets one too. Open: a screen
-      reader pass and a phone. Sam's own `jig:ui` editor (a sandboxed frame, only offered cross-origin, so never on the live site) was
-      removed once the panel did its job everywhere: its findings on what a `jig:ui` costs stay in this log's history.
+- [ ] **Text asset editing (`jig:maxBytes`): a screen reader pass and a phone.** Built and seen in real Chrome (Sam's lyric, Retune's `.scl`).
 
 ### Conductor
 
@@ -271,7 +180,8 @@ Workflow alongside from Routing, and the launcher last.
 
 - [ ] **Arrangement and mixer UIs follow Reaper where possible** (inbox, 2026-10-01). Write a note of what Reaper's track
       control panel, mixer strip and arrange conventions are, and what to keep from Jiggy's routing-first model, before
-      changes. The shell and mixer items below are where it lands.
+      changes. The plugin management half is written: [docs/reaper-plugin-management.md](docs/reaper-plugin-management.md); the track
+      control panel, mixer strip and arrange conventions are not. The shell and mixer items below are where it lands.
       The wider path, with GarageBand's first-day ideas and three steps of what is shown (Simple, Standard, Everything), is
       [docs/learning-curve.md](docs/learning-curve.md), written 2026-10-26; its "Order of work" is the build list. Steps 1 (the Show control and step list), 2 (the start screen), 3 (the add-track chooser, for instruments) and 4 (the grouped transport) and 5 (the clip corner for repeating) are built; step 6 (primary controls, with `pprops:displayPriority` and no new term) is built, and DrumKit is the only plugin ranked so far (Conductor, Ground, 8-Bit 8asterd and Parameq are the next largest); step 7 (help text from the profile, for plugin controls) is built, with help on Pulse and DrumKit only; the studio's own controls still have tooltips and no keyboard help; step 8's pad for generator sounds is built (DrumGen, BassGen and MelGen each offer a Feel pad, using four new `jig:` terms); the Drums kind in the Add a track chooser is built too (a kit played by a beat generator, joined on one track, with the Feel pad in front); step 8 is now finished apart from the loose ends below (pad end labels and a style choice, the chooser's Make notes for me and Voice kinds, help and ranking on seven more plugins, keyboard help for the studio's own controls, and a 19 loop MIDI library and a deep house starter set, with a Loops dialog). Left: help and ranking on the other 27 plugins, sounds as saved chains with settings, a project key that loops could follow, a Stop for Hear, more loops, and the first-hour test with a person. BandLab ideas (a chooser by kind, loop packs with licences, forking a published session) are in the same note. The chooser still lacks saved chains as sounds, "make notes for me", effects and a microphone. The tab row (seven tabs now) has no horizontal overflow from 320px up (`npm run check:layout`); its wrapped height is not measured.
 - [ ] **Editor-graph shape.** Marker and region colour, and folders (`jig:parent`), have no model or writer yet, so their
@@ -336,11 +246,6 @@ Workflow alongside from Routing, and the launcher last.
       track that feeds it, after a folder rather than inside one, by both the panel and the tool (order only, so no undo of its
       own); seen in real Chrome: Lead and Counter named "Melodics" landed between Counter and Chords. Not seen: audible summing of
       tracks with plugins; a bus already in the order when more tracks are later added to it.
-- [x] **Linked faders as a group parameter.** Done. The folder case of Members by was seen in real Chrome on 2026-10-25: Kick and
-      Snare in the folder "Drums", Bass outside it, Kick selected, a real click on the Members by field, -6 and Apply; Snare went to
-      0.5012 (-6 dB), Kick and Bass stayed at 1, and one real click on Undo put Snare back. Decided: no fader in the track's header.
-      A relative control that springs back to zero sits awkwardly beside the steppers and typed amounts, and the panel already has
-      both ways to move a group, so a third would only be a second place to find the same thing.
 - [ ] **Collapsed lane and reorder: what is left.** Not seen: reorder by touch, on a medium or large lane, onto a folder's collapsed rows.
       Done 2026-10-24: a move says where the track went ("Lead moved to place 2 of 6.", or that it is already first or last; a
       folder says it moved) in a polite status region in `src/ui/Timeline.js`; the Alt and Down key seen in real Chrome. Left of
