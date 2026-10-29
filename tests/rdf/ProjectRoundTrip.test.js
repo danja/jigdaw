@@ -240,6 +240,19 @@ describe('a project survives being written and read back', () => {
     await expect(reopen(bad)).rejects.toThrow(/alignTracks is true or false, not "maybe"/)
   })
 
+  it('keeps a track armed with its record source, including one that takes no input, and writes neither where unset', async () => {
+    const original = builtProject()
+    const track = original.tracks.find(x => x.midiInput === null && x.audioInput === null) ?? original.tracks[0]
+    expect(writeProject(original, { iri: IRI })).not.toMatch(/jig:armed|jig:recordSource/)
+    original.apply([{ op: 'setTrack', id: track.id, midiInput: null, audioInput: null, armed: true, recordSource: 'audio' }])
+    const turtle = writeProject(original, { iri: IRI })
+    expect(turtle).toContain('jig:armed true')
+    expect(turtle).toContain('jig:recordSource "audio"')
+    const { project } = await reopen(turtle)
+    expect(project.track(track.id)).toMatchObject({ armed: true, recordSource: 'audio' })
+    expect(project.tracks.filter(x => x.armed)).toHaveLength(1)
+  })
+
   it('keeps a muted clip muted, writing the flag only where it is true', async () => {
     const original = builtProject()
     const clip = original.clips[0]
@@ -679,8 +692,8 @@ describe('a session saved before tracks', () => {
     expect(project.tracks).toEqual([
       // Verb is the end of gen -> synth -> verb, so its strip was the one the
       // whole chain was heard through. Synth's own gain is dropped.
-      { id: 'track-1', label: 'Verb', channel: { gain: 1, pan: -0.5, muted: true, soloed: false }, midiInput: null, audioInput: null, output: null },
-      { id: 'track-2', label: 'Lone', channel: { gain: 1, pan: 0, muted: false, soloed: true }, midiInput: null, audioInput: null, output: null }
+      { id: 'track-1', label: 'Verb', channel: { gain: 1, pan: -0.5, muted: true, soloed: false }, midiInput: null, audioInput: null, output: null, armed: false, recordSource: null },
+      { id: 'track-2', label: 'Lone', channel: { gain: 1, pan: 0, muted: false, soloed: true }, midiInput: null, audioInput: null, output: null, armed: false, recordSource: null }
     ])
     expect(Object.fromEntries(project.nodes.map(n => [n.id, n.track]))).toEqual({
       gen: 'track-1', synth: 'track-1', verb: 'track-1', lone: 'track-2'

@@ -68,7 +68,7 @@
     a jig:UserInterface ;
     jig:location <ui/index.html> ;
     jig:mediaType "text/html" ;
-    jig:integrity "sha384-6drv9xJrHOnJDmbOKM5Kutm/QL7Ggg/BVE/I0AIvr1k27RcgyWhwDChFSmYDpRts" .
+    jig:integrity "sha384-txywzPPZjC6Ei+DcitFYgKNa+t99bN7i6L+K+53QZMpalxa49sAbuYAVwGq7NFhi" .
 
 <#comp_enable>
     a lv2:InputPort , lv2:ControlPort ;

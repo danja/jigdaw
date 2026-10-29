@@ -17,6 +17,7 @@
 // jig:integrity digest covers everything that runs in the frame. That is why this file imports nothing it
 // cannot have inlined and exports one function.
 import { formatValue, spokenValue } from '../ui/PortText.js'
+import { createDial } from '../ui/Dial.js'
 
 const LV2 = 'http://lv2plug.in/ns/lv2core#'
 
@@ -39,6 +40,7 @@ function readPorts (profile) {
       maximum: Number(p.maximum),
       default: Number(p.default),
       unit: p.unit ?? null,
+      logarithmic: (p.portProperty ?? []).includes('http://lv2plug.in/ns/ext/port-props#logarithmic'),
       comment: p.comment ?? null,
       scalePoints: [...(p.scalePoint ?? [])].map(sp => ({ label: sp.label, value: Number(sp.value) })).sort((a, b) => a.value - b.value)
     }
@@ -167,19 +169,30 @@ export function createBridge ({ window, document, parent }) {
       el.addEventListener('change', () => bridge.change(symbol, el.checked ? port.maximum : port.minimum))
       bridge.on(symbol, value => { el.checked = value >= (port.minimum + port.maximum) / 2 })
     } else {
-      el.min = String(port.minimum)
-      el.max = String(port.maximum)
-      el.step = String((port.maximum - port.minimum) / 200)
-      // A drag is one gesture, so automation records it as one. A key press or a tap has no pointer to
-      // bracket it, and input without a gesture open is a whole edit of its own.
-      el.addEventListener('pointerdown', () => bridge.begin(symbol))
-      for (const type of ['pointerup', 'pointercancel']) el.addEventListener(type, () => bridge.end(symbol))
+      // `data-knob` draws the range as a rotary knob (src/ui/Dial.js). It is still this input underneath, so the name, the role, the
+      // value and every key are the native ones; the knob replaces the pixels and the pointer.
+      let dial = null
+      if (el.hasAttribute('data-knob')) {
+        const anchor = document.createComment('')
+        el.before(anchor)
+        dial = createDial(document, port, el.id, { input: el, begin: () => bridge.begin(symbol), end: () => bridge.end(symbol) })
+        anchor.replaceWith(dial.element)
+      } else {
+        el.min = String(port.minimum)
+        el.max = String(port.maximum)
+        el.step = String((port.maximum - port.minimum) / 200)
+        // A drag is one gesture, so automation records it as one. A key press or a tap has no pointer to
+        // bracket it, and input without a gesture open is a whole edit of its own.
+        el.addEventListener('pointerdown', () => bridge.begin(symbol))
+        for (const type of ['pointerup', 'pointercancel']) el.addEventListener(type, () => bridge.end(symbol))
+      }
+      const current = () => dial ? dial.read() : el.value
       el.addEventListener('input', () => {
-        if (open.has(symbol)) bridge.set(symbol, el.value)
-        else bridge.change(symbol, el.value)
+        if (open.has(symbol)) bridge.set(symbol, current())
+        else bridge.change(symbol, current())
       })
       bridge.on(symbol, (value, text) => {
-        el.value = String(value)
+        if (dial) { dial.write(value); dial.render(value) } else el.value = String(value)
         // "-18" and "-18 decibels" are different information (WCAG 4.1.2).
         el.setAttribute('aria-valuetext', text.spoken)
       })

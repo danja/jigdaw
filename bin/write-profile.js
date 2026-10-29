@@ -115,7 +115,7 @@ w('@prefix lv2:   <http://lv2plug.in/ns/lv2core#> .')
 w('@prefix midi:  <http://lv2plug.in/ns/ext/midi#> .')
 w('@prefix units: <http://lv2plug.in/ns/extensions/units#> .')
 // Only where it is used, so a profile that sets no priority is written exactly as it always was.
-if (template.ports.some(p => p.displayPriority !== undefined)) w('@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .')
+if (template.ports.some(p => p.displayPriority !== undefined || p.logarithmic)) w('@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .')
 w('@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .')
 w('@prefix doap:  <http://usefulinc.com/ns/doap#> .')
 w('@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .')
@@ -265,6 +265,8 @@ for (const port of template.ports) {
   if (port.displayPriority !== undefined) line += ` ;\n    pprops:displayPriority ${port.displayPriority}`
   if (port.unit) line += ` ;\n    units:unit units:${port.unit}`
   if (port.toggled) line += ' ;\n    lv2:portProperty lv2:toggled'
+  // A log scale for the panel's knob. Needs a minimum above zero, which the shape checks.
+  if (port.logarithmic) line += ' ;\n    lv2:portProperty pprops:logarithmic'
   if (port.scalePoints) {
     line += ' ;\n    lv2:portProperty lv2:enumeration ;\n    lv2:scalePoint\n'
     line += port.scalePoints

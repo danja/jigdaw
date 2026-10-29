@@ -357,3 +357,28 @@ describe('port order', () => {
     expect(symbols).toEqual([...symbols].sort((a, b) => a.localeCompare(b)))
   })
 })
+
+describe('a logarithmic port', () => {
+  const read = async (minimum, logarithmic = true) => {
+    const { parseText } = await import('../../src/rdf/parse.js')
+    const dataset = await parseText([
+      '@prefix jig: <http://purl.org/stuff/jigdaw/> .',
+      '@prefix lv2: <http://lv2plug.in/ns/lv2core#> .',
+      '@prefix pprops: <http://lv2plug.in/ns/ext/port-props#> .',
+      '<> a jig:WebPlugin ; lv2:port <#freq> .',
+      '<#freq> a lv2:InputPort , lv2:ControlPort ;',
+      '  lv2:symbol "freq" ; lv2:name "Frequency" ;',
+      `  lv2:default 1000 ; lv2:minimum ${minimum} ; lv2:maximum 20000${logarithmic ? ' ; lv2:portProperty pprops:logarithmic' : ''} .`
+    ].join('\n'), 'urn:test')
+    return readProfile(dataset).ports[0]
+  }
+
+  it('is read as logarithmic, and is not where the profile does not say so', async () => {
+    expect((await read(20)).logarithmic).toBe(true)
+    expect((await read(20, false)).logarithmic).toBe(false)
+  })
+
+  it('is refused with a minimum of zero, which has no logarithm, naming the port', async () => {
+    await expect(read(0)).rejects.toThrow(/port .*#freq: pprops:logarithmic needs an lv2:minimum above zero, not 0/)
+  })
+})

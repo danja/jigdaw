@@ -33,6 +33,8 @@ export function slotTitle (node, profile, name) {
 export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, forgetNode }) {
   const { document, window, log } = ctx
   let pending = null
+  // Nodes whose generated panel a person has opened beside an editor; closed otherwise, since the editor has the same controls.
+  const panelsShown = new Set()
   const slots = { pending: () => pending, setPending: from => { pending = from }, redraw: slots_redraw }
 
   function slot (title, kind, className) {
@@ -248,7 +250,11 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
     // page serves its own plugins, and PluginFrame reports that case as
     // `sameOrigin` because the sandbox is then a document boundary, not a
     // security one.
-    if (profile?.ui && frameableOrigin(profile.ui.location, window.location.origin).ok) {
+    const hasEditor = Boolean(profile?.ui && frameableOrigin(profile.ui.location, window.location.origin).ok)
+    // The editor is the interface a person is shown first (contract 9.4 lets a host do that), and the generated panel is one
+    // control away rather than a second copy of the same knobs beside it.
+    if (hasEditor && ctx.editors.firstOffer(node.id)) ctx.editors.open(node.id, profile, labelFor(node.id))
+    if (hasEditor) {
       const open = ctx.editors.isOpen(node.id)
       const toggle = document.createElement('button')
       toggle.type = 'button'
@@ -329,7 +335,19 @@ export function createSlots (ctx, { panels, keyboards, redraw: slots_redraw, for
 
     if (!profile) return
     const panel = panelFor(node, profile, panels)
-    element.append(panel.element)
+    if (hasEditor) {
+      // A details element is a button and a state to assistive technology and to the keyboard without any code of ours.
+      const details = document.createElement('details')
+      details.className = 'generated-controls'
+      details.open = panelsShown.has(node.id)
+      const summary = document.createElement('summary')
+      summary.textContent = 'Generated controls'
+      details.addEventListener('toggle', () => { if (details.open) panelsShown.add(node.id); else panelsShown.delete(node.id) })
+      details.append(summary, panel.element)
+      element.append(details)
+    } else {
+      element.append(panel.element)
+    }
 
     // An instrument gets a keyboard, so it can be played. Only an
     // instrument: see playable() for why accepting MIDI is not the same

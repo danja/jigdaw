@@ -241,9 +241,9 @@ export function createPanel (document, profile, onChange, onLoadAsset, { scope =
       input = dial.input
       // One listener for both, because a drag dispatches the same event an
       // arrow key does. Nothing here knows which happened.
-      input.addEventListener('input', () => onChange(port.symbol, Number(input.value)))
+      input.addEventListener('input', () => onChange(port.symbol, dial.read()))
       onValue(port.symbol, v => {
-        input.value = String(v)
+        dial.write(v)
         readout.textContent = formatValue(port, v)
         // aria-valuetext, because a range otherwise announces the raw number
         // and loses the unit entirely.

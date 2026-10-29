@@ -51,6 +51,9 @@
     a jig:Track ;
     # An inverted fader, and a pan past the right-hand end.
     jig:gain -0.5 ;
+    # Armed to something that is not true or false, recording from something that is not midi or audio.
+    jig:armed "yes" ;
+    jig:recordSource "video" ;
     jig:pan 1.5 ;
     # MIDI clips played into something that is not a node.
     jig:midiInput <#track> ;

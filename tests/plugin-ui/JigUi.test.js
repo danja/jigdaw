@@ -30,8 +30,8 @@ const MARKUP = `<body>
   <input id="ghost" type="range" data-param="no_such_port">
 </body>`
 
-function start () {
-  const { document, window } = parseHTML(MARKUP)
+function start (markup = MARKUP) {
+  const { document, window } = parseHTML(markup)
   const posted = []
   const parent = { postMessage: (message, origin) => posted.push({ message, origin }) }
   const listeners = []
@@ -222,5 +222,73 @@ describe('the plugin relay', () => {
     deliver(init())
     deliver({ type: 'plugin', payload: 1 })
     expect(seen).toEqual([1])
+  })
+})
+
+describe('a range drawn as a knob (data-knob)', () => {
+  const KNOB = '<body><label for="k">Ratio</label><input id="k" type="range" data-param="ratio" data-knob></body>'
+
+  it('is still the native range under the knob, with its id, its label and the port\'s limits', () => {
+    const { deliver, document } = start(KNOB)
+    deliver(init())
+    const k = document.getElementById('k')
+    expect(k.type).toBe('range')
+    expect(k.parentNode.className).toBe('dial')
+    expect(k.className).toBe('dial-input')
+    expect(document.querySelector('label[for="k"]')).not.toBeNull()
+    expect(Number(k.min)).toBeLessThan(Number(k.max))
+  })
+
+  it('draws the value the host sends back, and says it in words', () => {
+    const { deliver, document } = start(KNOB)
+    deliver(init())
+    deliver({ type: 'parameter', symbol: 'ratio', value: 10 })
+    const k = document.getElementById('k')
+    expect(Number(k.value)).toBe(10)
+    expect(k.getAttribute('aria-valuetext')).toMatch(/10/)
+    const pointer = document.querySelector('.dial-pointer')
+    expect(pointer.getAttribute('x2')).not.toBeNull()
+  })
+
+  it('sends a key press as a request of its own, and a drag as one gesture', () => {
+    const { deliver, document, fire, sent } = start(KNOB)
+    deliver(init())
+    const k = document.getElementById('k')
+    k.value = '6'; fire(k, 'input')
+    expect(sent()).toEqual([
+      { type: 'gesture', symbol: 'ratio', phase: 'begin' },
+      { type: 'parameter', symbol: 'ratio', value: 6 },
+      { type: 'gesture', symbol: 'ratio', phase: 'end' }
+    ])
+    const dial = document.querySelector('.dial')
+    fire(dial, 'pointerdown')
+    k.value = '7'; fire(k, 'input')
+    fire(document, 'pointerup')
+    expect(sent().slice(3)).toEqual([
+      { type: 'gesture', symbol: 'ratio', phase: 'begin' },
+      { type: 'parameter', symbol: 'ratio', value: 7 },
+      { type: 'gesture', symbol: 'ratio', phase: 'end' }
+    ])
+  })
+
+  it('sends the port\'s own value for a logarithmic port, and puts a value the host sends at its place on the log scale', () => {
+    const logged = structuredClone(ld)
+    const ratio = logged.port.find(p => p.symbol === 'ratio')
+    ratio.portProperty = [...(ratio.portProperty ?? []), 'http://lv2plug.in/ns/ext/port-props#logarithmic']
+    const { deliver, document, fire, sent } = start(KNOB)
+    deliver({ type: 'init', profile: logged, parameters: {} })
+    const k = document.getElementById('k')
+    expect(k.min).toBe('0')
+    expect(k.max).toBe('1')
+    k.value = '1'; fire(k, 'input')
+    expect(sent().find(m => m.type === 'parameter').value).toBeCloseTo(Number(ratio.maximum), 6)
+    deliver({ type: 'parameter', symbol: 'ratio', value: Number(ratio.minimum) })
+    expect(Number(k.value)).toBeCloseTo(0, 6)
+  })
+
+  it('leaves a range without data-knob as the plain slider it was', () => {
+    const { deliver, document } = start()
+    deliver(init())
+    expect(document.querySelector('.dial')).toBeNull()
   })
 })

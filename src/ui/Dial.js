@@ -56,20 +56,29 @@ function facePoint (fraction, radius) {
  * listens to it, so a drag and an arrow key arrive by the same route and
  * there is one place that decides what an input means.
  */
-export function createDial (document, port, id) {
+export function createDial (document, port, id, { input: adopted = null, begin = null, end = null } = {}) {
   const element = document.createElement('div')
   element.className = 'dial'
 
-  const input = document.createElement('input')
+  // An editor page has its own `<input type="range">` already, named and labelled by its own markup, and asks for it to be
+  // drawn as a knob. `begin` and `end` bracket a pointer drag, as the editor's bridge needs to record one gesture.
+  const input = adopted ?? document.createElement('input')
   input.type = 'range'
-  input.id = id
+  if (adopted === null || id) input.id = id
   input.className = 'dial-input'
-  input.min = String(port.minimum)
-  input.max = String(port.maximum)
+  // A logarithmic port is a ratio range, so the input holds a position from 0 to 1 and the port's value is read and set through
+  // `read` and `write`. The native range then steps and drags evenly in ratio: linear steps on 20 to 18000 Hz would make every
+  // arrow key below 1 kHz a hundredth of what it should be.
+  const log = port.logarithmic === true
+  const ratio = Math.log(port.maximum / port.minimum)
+  const toPosition = value => Math.log(Math.min(port.maximum, Math.max(port.minimum, value)) / port.minimum) / ratio
+  const fromPosition = position => port.minimum * Math.exp(position * ratio)
+  input.min = log ? '0' : String(port.minimum)
+  input.max = log ? '1' : String(port.maximum)
   // 200 steps across any range, so a dial feels the same whether it spans
   // 0 to 1 or 200 to 18000.
-  input.step = String((port.maximum - port.minimum) / 200)
-  input.value = String(port.defaultValue)
+  input.step = String(log ? 1 / 200 : (port.maximum - port.minimum) / 200)
+  input.value = String(log ? toPosition(port.defaultValue) : port.defaultValue)
 
   const svg = document.createElementNS(SVG_NS, 'svg')
   svg.setAttribute('viewBox', '0 0 100 100')
@@ -104,7 +113,7 @@ export function createDial (document, port, id) {
   // minus twelve semitones looks like a quarter turn of level. Anything that
   // does not cross zero grows from its minimum, which is every gain, time and
   // frequency there is.
-  const origin = port.minimum < 0 && port.maximum > 0
+  const origin = !log && port.minimum < 0 && port.maximum > 0
     ? -port.minimum / (port.maximum - port.minimum)
     : 0
 
@@ -122,16 +131,21 @@ export function createDial (document, port, id) {
   /** Draw the control at a value the host has confirmed. */
   function render (current) {
     const span = port.maximum - port.minimum
-    const fraction = span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span))
+    const fraction = log ? toPosition(current) : span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span))
     setSweep(value, origin, fraction)
     const [x, y] = facePoint(fraction, RADIUS)
     pointer.setAttribute('x2', String(x))
     pointer.setAttribute('y2', String(y))
   }
 
-  attachDrag(element, input, port)
+  attachDrag(element, input, log ? { minimum: 0, maximum: 1 } : port, { begin, end })
 
-  return { element, input, render }
+  /** The port's value the input stands for now. */
+  const read = () => log ? fromPosition(Number(input.value)) : Number(input.value)
+  /** Move the input to a port value, as a host update does. */
+  const write = value => { input.value = String(log ? toPosition(value) : value) }
+
+  return { element, input, render, read, write }
 }
 
 /**
@@ -174,7 +188,7 @@ function setSweep (circle, from, to) {
  * the unit tests passed, because a DOM with no layout has no pointer capture
  * to fail. The document always has the events.
  */
-export function attachDrag (element, input, port) {
+export function attachDrag (element, input, port, { begin = null, end: finished = null } = {}) {
   const span = port.maximum - port.minimum
   const owner = element.ownerDocument
   const Event = owner.defaultView?.Event
@@ -196,6 +210,7 @@ export function attachDrag (element, input, port) {
   const end = () => {
     if (!dragging) return
     dragging = null
+    finished?.()
     owner.removeEventListener('pointermove', move)
     owner.removeEventListener('pointerup', end)
     owner.removeEventListener('pointercancel', end)
@@ -204,6 +219,7 @@ export function attachDrag (element, input, port) {
   element.addEventListener('pointerdown', event => {
     if (event.button !== undefined && event.button !== 0) return
     dragging = { y: event.clientY, from: Number(input.value) }
+    begin?.()
     // pointer-events are off on the input so the drag can reach this element,
     // which means the press cannot focus it. Focusing here keeps the keyboard
     // where the hand left it.

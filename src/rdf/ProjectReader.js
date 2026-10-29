@@ -355,7 +355,8 @@ export function readProject (dataset) {
   }
   for (const { channel, ...node } of nodes) changes.push({ op: 'addNode', ...node })
   for (const t of tracks) {
-    if (t.midiInput === null && t.audioInput === null) continue
+    // An armed track with no input of its own still has to be armed on reopening.
+    if (t.midiInput === null && t.audioInput === null && !t.armed && !t.recordSource) continue
     const input = (nodeIri, what) => (nodeIri === null ? null : idOf(nodeIri, iri, `${what} of track ${t.id}`))
     const extra = {}
     if (t.armed) extra.armed = true

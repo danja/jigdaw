@@ -184,8 +184,9 @@ A page does not have to implement the message protocol by hand: `src/plugin-ui/J
 by attribute (`<input type="range" data-param="threshold">`) and does the messaging, see
 [plugin-ui.md](plugin-ui.md). `dynamix` uses it for a transfer curve with a live gain reduction dot.
 
-Five plugins declare an editor today: `conductor`, `dynamix`, `octet`, `parameq` and `tremolo`. The generated panel is
-still drawn for each, so an editor a person cannot use costs them nothing.
+Five plugins declare an editor today: `conductor`, `dynamix`, `octet`, `parameq` and `tremolo`. Jiggy opens the editor the first
+time it draws such a plugin and keeps the generated panel behind a "Generated controls" disclosure, closed until asked for, so
+the same knobs are not on screen twice and an editor a person cannot use still costs them nothing.
 
 ## Choosing between them
 

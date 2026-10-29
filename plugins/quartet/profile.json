@@ -113,7 +113,8 @@
       "group": "Operator A",
       "paramIndex": 4,
       "unit": "hz",
-      "comment": "Operator A: the frequency when Fixed Frequency is on."
+      "comment": "Operator A: the frequency when Fixed Frequency is on.",
+      "logarithmic": true
     },
     {
       "symbol": "opa_level",
@@ -234,7 +235,8 @@
       "group": "Operator B",
       "paramIndex": 14,
       "unit": "hz",
-      "comment": "Operator B: the frequency when Fixed Frequency is on."
+      "comment": "Operator B: the frequency when Fixed Frequency is on.",
+      "logarithmic": true
     },
     {
       "symbol": "opb_level",
@@ -355,7 +357,8 @@
       "group": "Operator C",
       "paramIndex": 24,
       "unit": "hz",
-      "comment": "Operator C: the frequency when Fixed Frequency is on."
+      "comment": "Operator C: the frequency when Fixed Frequency is on.",
+      "logarithmic": true
     },
     {
       "symbol": "opc_level",
@@ -476,7 +479,8 @@
       "group": "Operator D",
       "paramIndex": 34,
       "unit": "hz",
-      "comment": "Operator D: the frequency when Fixed Frequency is on."
+      "comment": "Operator D: the frequency when Fixed Frequency is on.",
+      "logarithmic": true
     },
     {
       "symbol": "opd_level",
@@ -713,7 +717,8 @@
       "paramIndex": 50,
       "unit": "hz",
       "displayPriority": 80,
-      "comment": "Where the filter starts to cut. Lower is darker."
+      "comment": "Where the filter starts to cut. Lower is darker.",
+      "logarithmic": true
     },
     {
       "symbol": "resonance",

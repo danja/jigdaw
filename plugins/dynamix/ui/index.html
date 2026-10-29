@@ -5,7 +5,7 @@
 
   Dynamix's own editor: the compressor/expander's transfer curve with a live dot on it, and a gain
   reduction meter. A curve is what a skin cannot draw (docs/svg-skins.md), so this is a jig:ui. It is
-  built with the page-side bridge (docs/plugin-ui.md): the controls are plain elements with data-param,
+  built with the page-side bridge (docs/plugin-ui.md): the controls are plain elements with data-param (the continuous ones drawn as knobs by data-knob),
   and bin/inline-ui.js writes the bridge in where the marker is, to make ui/index.html.
 
   The generated panel is still there beside it and reaches every port, so nothing here is the only way to
@@ -21,25 +21,39 @@
   :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --warn:#f0a030; --panel:#1a1e24; --deep:#0e1116; --line:#2c333c; }
   html { height:auto; }
   body { margin:0; padding:12px; background:var(--panel); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  /* A wide frame would pull the stages to opposite edges; the content keeps the width it needs. */
+  main { max-width:760px; }
   h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
-  h2 { font-size:14px; margin:16px 0 4px; color:var(--dim); font-weight:600; }
-  .top { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
-  .scope { flex:0 1 260px; min-width:0; }
+  h2 { font-size:14px; margin:0 0 2px; color:var(--dim); font-weight:600; }
+  /* The limiter and the clipper sit side by side under the compressor, and stack only when the frame is too narrow for two. */
+  .stages { display:flex; flex-wrap:wrap; gap:8px 24px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+  .stage { flex:1 1 200px; min-width:0; }
+  .top { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-start; }
+  .scope { flex:0 1 220px; min-width:0; }
   .scope svg { width:100%; height:auto; display:block; background:var(--deep); border:1px solid var(--line); border-radius:6px; }
-  .controls { flex:1 1 260px; min-width:0; }
-  .row { display:grid; grid-template-columns:6.5rem 1fr 6rem; gap:10px; align-items:center; min-height:44px; }
+  .controls { flex:1 1 280px; min-width:0; }
+  /* Knobs, drawn by the bridge from the native range under each (src/ui/Dial.js). The input stays the control: it is laid over the face
+     and invisible, and keeps the role, the value and every key. A knob is 52px, over the 44px a finger needs. */
+  .knobs { display:flex; flex-wrap:wrap; gap:2px 4px; }
+  .knob { display:grid; justify-items:center; align-content:start; width:80px; padding:2px 0; }
+  .knob label { text-align:center; font-size:14px; line-height:1.2; margin-top:4px; }
+  .dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize; border-radius:50%; }
+  .dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+  .dial-face { display:block; width:100%; height:100%; }
+  .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
+  .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
+  .dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
+  .dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; pointer-events:none; }
   .switches { display:flex; flex-wrap:wrap; gap:8px 20px; min-height:44px; align-items:center; }
   .switches label { display:flex; gap:8px; align-items:center; min-height:44px; }
   label { color:var(--dim); }
-  input[type=range] { width:100%; min-width:0; height:44px; accent-color:var(--accent); }
   input[type=checkbox] { width:24px; height:24px; accent-color:var(--accent); }
   select { min-height:44px; font:inherit; background:var(--deep); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:0 8px; }
   input:focus-visible, select:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   output { font-family:ui-monospace, monospace; text-align:right; }
-  #reduction { margin-top:10px; }
+  #reduction { margin-top:8px; }
   .meter { height:12px; border-radius:6px; background:var(--deep); margin-top:6px; overflow:hidden; border:1px solid var(--line); }
   .meter i { display:block; height:100%; width:0; background:var(--warn); }
-  @media (max-width: 360px) { .row { grid-template-columns:1fr; } output { text-align:left; } }
 </style>
 </head>
 <body>
@@ -64,24 +78,35 @@
       <label><input type="checkbox" data-param="comp_enable"><span data-param-name="comp_enable"></span></label>
       <label><span data-param-name="comp_mode"></span><select data-param="comp_mode"></select></label>
     </div>
-    <div class="row"><label for="threshold" data-param-name="threshold"></label><input id="threshold" type="range" data-param="threshold"><output data-param-text="threshold" aria-hidden="true"></output></div>
-    <div class="row"><label for="ratio" data-param-name="ratio"></label><input id="ratio" type="range" data-param="ratio"><output data-param-text="ratio" aria-hidden="true"></output></div>
-    <div class="row"><label for="knee" data-param-name="knee"></label><input id="knee" type="range" data-param="knee"><output data-param-text="knee" aria-hidden="true"></output></div>
-    <div class="row"><label for="attack" data-param-name="attack"></label><input id="attack" type="range" data-param="attack"><output data-param-text="attack" aria-hidden="true"></output></div>
-    <div class="row"><label for="release" data-param-name="release"></label><input id="release" type="range" data-param="release"><output data-param-text="release" aria-hidden="true"></output></div>
-    <div class="row"><label for="makeup" data-param-name="makeup"></label><input id="makeup" type="range" data-param="makeup"><output data-param-text="makeup" aria-hidden="true"></output></div>
+<div class="knobs">
+    <div class="knob"><input id="threshold" type="range" data-param="threshold" data-knob><label for="threshold" data-param-name="threshold"></label><output data-param-text="threshold" aria-hidden="true"></output></div>
+    <div class="knob"><input id="ratio" type="range" data-param="ratio" data-knob><label for="ratio" data-param-name="ratio"></label><output data-param-text="ratio" aria-hidden="true"></output></div>
+    <div class="knob"><input id="knee" type="range" data-param="knee" data-knob><label for="knee" data-param-name="knee"></label><output data-param-text="knee" aria-hidden="true"></output></div>
+    <div class="knob"><input id="attack" type="range" data-param="attack" data-knob><label for="attack" data-param-name="attack"></label><output data-param-text="attack" aria-hidden="true"></output></div>
+    <div class="knob"><input id="release" type="range" data-param="release" data-knob><label for="release" data-param-name="release"></label><output data-param-text="release" aria-hidden="true"></output></div>
+    <div class="knob"><input id="makeup" type="range" data-param="makeup" data-knob><label for="makeup" data-param-name="makeup"></label><output data-param-text="makeup" aria-hidden="true"></output></div>
+</div>
   </div>
 </div>
 
-<h2>Limiter</h2>
-<div class="switches"><label><input type="checkbox" data-param="limit_enable"><span data-param-name="limit_enable"></span></label></div>
-<div class="row"><label for="ceiling" data-param-name="ceiling"></label><input id="ceiling" type="range" data-param="ceiling"><output data-param-text="ceiling" aria-hidden="true"></output></div>
-<div class="row"><label for="limit_release" data-param-name="limit_release"></label><input id="limit_release" type="range" data-param="limit_release"><output data-param-text="limit_release" aria-hidden="true"></output></div>
-
-<h2>Clipper</h2>
-<div class="switches"><label><input type="checkbox" data-param="clip_enable"><span data-param-name="clip_enable"></span></label></div>
-<div class="row"><label for="drive" data-param-name="drive"></label><input id="drive" type="range" data-param="drive"><output data-param-text="drive" aria-hidden="true"></output></div>
-<div class="row"><label for="shape" data-param-name="shape"></label><input id="shape" type="range" data-param="shape"><output data-param-text="shape" aria-hidden="true"></output></div>
+<div class="stages">
+  <section class="stage" aria-labelledby="limiter-h">
+    <h2 id="limiter-h">Limiter</h2>
+    <div class="switches"><label><input type="checkbox" data-param="limit_enable"><span data-param-name="limit_enable"></span></label></div>
+    <div class="knobs">
+      <div class="knob"><input id="ceiling" type="range" data-param="ceiling" data-knob><label for="ceiling" data-param-name="ceiling"></label><output data-param-text="ceiling" aria-hidden="true"></output></div>
+      <div class="knob"><input id="limit_release" type="range" data-param="limit_release" data-knob><label for="limit_release" data-param-name="limit_release"></label><output data-param-text="limit_release" aria-hidden="true"></output></div>
+    </div>
+  </section>
+  <section class="stage" aria-labelledby="clipper-h">
+    <h2 id="clipper-h">Clipper</h2>
+    <div class="switches"><label><input type="checkbox" data-param="clip_enable"><span data-param-name="clip_enable"></span></label></div>
+    <div class="knobs">
+      <div class="knob"><input id="drive" type="range" data-param="drive" data-knob><label for="drive" data-param-name="drive"></label><output data-param-text="drive" aria-hidden="true"></output></div>
+      <div class="knob"><input id="shape" type="range" data-param="shape" data-knob><label for="shape" data-param-name="shape"></label><output data-param-text="shape" aria-hidden="true"></output></div>
+    </div>
+  </section>
+</div>
 </main>
 
 <script>
@@ -137,6 +162,239 @@ const spokenValue = (port, value) => {
   return `${value.toFixed(decimals)}${unit ? ` ${unit}` : ''}`
 }
 
+// src/ui/Dial.js
+//
+// A rotary control: the knob a hardware synthesiser has, in place of a slider.
+//
+// A slider needs the width of the panel to be usable and a knob needs about
+// 50 pixels, which is the whole reason this exists: a plugin with 42 controls
+// was two thousand pixels of scrolling, and the same controls as knobs fit on
+// one screen.
+//
+// **The control is still an `<input type="range">`.** Everything a person
+// reaches by keyboard, and everything a screen reader reads, comes from the
+// native element: the slider role, the minimum, the maximum, the current
+// value, the arrow keys, Home and End, Page Up and Page Down. None of it is
+// reimplemented. AGENTS.md says the cheapest way to satisfy WCAG 2.1.1 is not
+// to leave the platform, and a knob is exactly the control that tempts a
+// developer to build a div with a drag handler and lose all of it.
+//
+// What is replaced is the pixels and the pointer. The input is laid over the
+// knob and made invisible, the knob is drawn as SVG beside it, and a drag is
+// handled here because a native range maps horizontal position across its own
+// width to its whole range, which on a 50 pixel target is about twenty usable
+// positions.
+
+// The sweep, in degrees, measured clockwise from three o'clock. A knob that
+// starts at seven thirty and ends at four thirty is the convention on every
+// piece of hardware, and the gap at the bottom is what tells you which way is
+// up at a glance.
+const START_DEGREES = 135
+const SWEEP_DEGREES = 270
+
+const RADIUS = 38
+const CENTRE = 50
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
+// How far the pointer travels for the whole range, in CSS pixels. Longer than
+// the knob is wide on purpose: the knob is the target, the travel is the
+// gesture, and tying the two together is what makes a small knob unusable.
+const TRAVEL = 160
+// Held shift divides the movement, for setting a cutoff to the hertz.
+const FINE = 6
+
+const SVG_NS = 'http://www.w3.org/2000/svg'
+
+const round = n => Math.round(n * 100) / 100
+
+/** Where a fraction of the sweep lands, as a point on the dial face. */
+function facePoint (fraction, radius) {
+  const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180
+  return [round(CENTRE + radius * Math.cos(radians)), round(CENTRE + radius * Math.sin(radians))]
+}
+
+/**
+ * Build a rotary control for one port.
+ *
+ * `onInput` is not called from here: the input is returned and the caller
+ * listens to it, so a drag and an arrow key arrive by the same route and
+ * there is one place that decides what an input means.
+ */
+function createDial (document, port, id, { input: adopted = null, begin = null, end = null } = {}) {
+  const element = document.createElement('div')
+  element.className = 'dial'
+
+  // An editor page has its own `<input type="range">` already, named and labelled by its own markup, and asks for it to be
+  // drawn as a knob. `begin` and `end` bracket a pointer drag, as the editor's bridge needs to record one gesture.
+  const input = adopted ?? document.createElement('input')
+  input.type = 'range'
+  if (adopted === null || id) input.id = id
+  input.className = 'dial-input'
+  // A logarithmic port is a ratio range, so the input holds a position from 0 to 1 and the port's value is read and set through
+  // `read` and `write`. The native range then steps and drags evenly in ratio: linear steps on 20 to 18000 Hz would make every
+  // arrow key below 1 kHz a hundredth of what it should be.
+  const log = port.logarithmic === true
+  const ratio = Math.log(port.maximum / port.minimum)
+  const toPosition = value => Math.log(Math.min(port.maximum, Math.max(port.minimum, value)) / port.minimum) / ratio
+  const fromPosition = position => port.minimum * Math.exp(position * ratio)
+  input.min = log ? '0' : String(port.minimum)
+  input.max = log ? '1' : String(port.maximum)
+  // 200 steps across any range, so a dial feels the same whether it spans
+  // 0 to 1 or 200 to 18000.
+  input.step = String(log ? 1 / 200 : (port.maximum - port.minimum) / 200)
+  input.value = String(log ? toPosition(port.defaultValue) : port.defaultValue)
+
+  const svg = document.createElementNS(SVG_NS, 'svg')
+  svg.setAttribute('viewBox', '0 0 100 100')
+  svg.setAttribute('class', 'dial-face')
+  // The input carries the name, the role and the value. The drawing is
+  // decoration and a reader that announces it twice is a reader announcing
+  // the same control twice.
+  svg.setAttribute('aria-hidden', 'true')
+  svg.setAttribute('focusable', 'false')
+
+  // Track and value as one dashed circle each, rather than as arc paths: an
+  // arc path has to be rebuilt on every change and a dash offset does not,
+  // and the large-arc flag is a well known place to put a bug.
+  const arc = className => {
+    const circle = document.createElementNS(SVG_NS, 'circle')
+    circle.setAttribute('class', className)
+    circle.setAttribute('cx', String(CENTRE))
+    circle.setAttribute('cy', String(CENTRE))
+    circle.setAttribute('r', String(RADIUS))
+    circle.setAttribute('fill', 'none')
+    circle.setAttribute('transform', `rotate(${START_DEGREES} ${CENTRE} ${CENTRE})`)
+    return circle
+  }
+
+  const track = arc('dial-track')
+  setSweep(track, 0, 1)
+  const value = arc('dial-value')
+
+  // Where the arc grows from. A control that runs through zero, like a pan or
+  // a transpose, is read from the middle: drawn from the left end instead, a
+  // centred pan looks like half of something rather than like nothing, and
+  // minus twelve semitones looks like a quarter turn of level. Anything that
+  // does not cross zero grows from its minimum, which is every gain, time and
+  // frequency there is.
+  const origin = !log && port.minimum < 0 && port.maximum > 0
+    ? -port.minimum / (port.maximum - port.minimum)
+    : 0
+
+  // The line from the centre. A ring alone reads as a progress bar; the
+  // pointer is what makes it a knob, and it is the part that stays legible
+  // when the ring is too thin to see.
+  const pointer = document.createElementNS(SVG_NS, 'line')
+  pointer.setAttribute('class', 'dial-pointer')
+  pointer.setAttribute('x1', String(CENTRE))
+  pointer.setAttribute('y1', String(CENTRE))
+
+  svg.append(track, value, pointer)
+  element.append(svg, input)
+
+  /** Draw the control at a value the host has confirmed. */
+  function render (current) {
+    const span = port.maximum - port.minimum
+    const fraction = log ? toPosition(current) : span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span))
+    setSweep(value, origin, fraction)
+    const [x, y] = facePoint(fraction, RADIUS)
+    pointer.setAttribute('x2', String(x))
+    pointer.setAttribute('y2', String(y))
+  }
+
+  attachDrag(element, input, log ? { minimum: 0, maximum: 1 } : port, { begin, end })
+
+  /** The port's value the input stands for now. */
+  const read = () => log ? fromPosition(Number(input.value)) : Number(input.value)
+  /** Move the input to a port value, as a host update does. */
+  const write = value => { input.value = String(log ? toPosition(value) : value) }
+
+  return { element, input, render, read, write }
+}
+
+/**
+ * Draw the part of the ring between two fractions of the sweep.
+ *
+ * A dash the length of the span, and a negative dash offset to move its start
+ * round to where the span begins. Offsetting rather than rebuilding a path
+ * means the arc has no large-arc flag to get wrong and nothing to recompute
+ * but two numbers.
+ */
+function setSweep (circle, from, to) {
+  const sweep = CIRCUMFERENCE * (SWEEP_DEGREES / 360)
+  const low = Math.min(from, to)
+  const high = Math.max(from, to)
+  circle.setAttribute('stroke-dasharray', `${round((high - low) * sweep)} ${round(CIRCUMFERENCE)}`)
+  circle.setAttribute('stroke-dashoffset', String(round(-low * sweep)))
+}
+
+/**
+ * Turn a vertical drag into input events on the range.
+ *
+ * Vertical rather than horizontal, because the panel scrolls vertically and a
+ * horizontal drag on a knob is what every hardware emulation has used for
+ * thirty years. `touch-action: none` in the stylesheet is what stops the drag
+ * scrolling the page instead.
+ *
+ * The event is dispatched on the input rather than calling back, so a drag
+ * and an arrow key are indistinguishable downstream. The input's own value
+ * moves with the pointer, which is what a native range does under a thumb;
+ * the readout and the drawing do not, because messaging.md section 2.3 says a
+ * panel renders what it is told and not what it was asked for.
+ *
+ * **The move and the release are listened for on the document, not on the
+ * knob, and not through setPointerCapture.** A knob is 52 pixels across and a
+ * useful drag is three times that, so almost every drag leaves the element it
+ * started on. Capture is the API for exactly this and it is the thing that
+ * fails quietly: it throws on a pointerId the implementation does not
+ * recognise, which takes the rest of the pointerdown handler with it, and the
+ * drag then tracks only as far as the edge of the knob. Found in Chrome after
+ * the unit tests passed, because a DOM with no layout has no pointer capture
+ * to fail. The document always has the events.
+ */
+function attachDrag (element, input, port, { begin = null, end: finished = null } = {}) {
+  const span = port.maximum - port.minimum
+  const owner = element.ownerDocument
+  const Event = owner.defaultView?.Event
+  if (!Event) return    // no event constructor, so no pointer: keyboard alone
+
+  let dragging = null
+
+  const move = event => {
+    if (!dragging) return
+    const sensitivity = event.shiftKey ? TRAVEL * FINE : TRAVEL
+    // Up is more, which is the direction every fader and every knob agrees on.
+    const moved = (dragging.y - event.clientY) / sensitivity
+    const next = Math.min(port.maximum, Math.max(port.minimum, dragging.from + moved * span))
+    if (Number(input.value) === next) return
+    input.value = String(next)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  const end = () => {
+    if (!dragging) return
+    dragging = null
+    finished?.()
+    owner.removeEventListener('pointermove', move)
+    owner.removeEventListener('pointerup', end)
+    owner.removeEventListener('pointercancel', end)
+  }
+
+  element.addEventListener('pointerdown', event => {
+    if (event.button !== undefined && event.button !== 0) return
+    dragging = { y: event.clientY, from: Number(input.value) }
+    begin?.()
+    // pointer-events are off on the input so the drag can reach this element,
+    // which means the press cannot focus it. Focusing here keeps the keyboard
+    // where the hand left it.
+    input.focus?.()
+    event.preventDefault?.()
+    owner.addEventListener('pointermove', move)
+    owner.addEventListener('pointerup', end)
+    owner.addEventListener('pointercancel', end)
+  })
+}
+
 // src/plugin-ui/JigUi.js
 //
 // The page side of a plugin's own editor (docs/plugin-ui.md). It speaks docs/messaging.md section 2 so an
@@ -177,6 +435,7 @@ function readPorts (profile) {
       maximum: Number(p.maximum),
       default: Number(p.default),
       unit: p.unit ?? null,
+      logarithmic: (p.portProperty ?? []).includes('http://lv2plug.in/ns/ext/port-props#logarithmic'),
       comment: p.comment ?? null,
       scalePoints: [...(p.scalePoint ?? [])].map(sp => ({ label: sp.label, value: Number(sp.value) })).sort((a, b) => a.value - b.value)
     }
@@ -305,19 +564,30 @@ function createBridge ({ window, document, parent }) {
       el.addEventListener('change', () => bridge.change(symbol, el.checked ? port.maximum : port.minimum))
       bridge.on(symbol, value => { el.checked = value >= (port.minimum + port.maximum) / 2 })
     } else {
-      el.min = String(port.minimum)
-      el.max = String(port.maximum)
-      el.step = String((port.maximum - port.minimum) / 200)
-      // A drag is one gesture, so automation records it as one. A key press or a tap has no pointer to
-      // bracket it, and input without a gesture open is a whole edit of its own.
-      el.addEventListener('pointerdown', () => bridge.begin(symbol))
-      for (const type of ['pointerup', 'pointercancel']) el.addEventListener(type, () => bridge.end(symbol))
+      // `data-knob` draws the range as a rotary knob (src/ui/Dial.js). It is still this input underneath, so the name, the role, the
+      // value and every key are the native ones; the knob replaces the pixels and the pointer.
+      let dial = null
+      if (el.hasAttribute('data-knob')) {
+        const anchor = document.createComment('')
+        el.before(anchor)
+        dial = createDial(document, port, el.id, { input: el, begin: () => bridge.begin(symbol), end: () => bridge.end(symbol) })
+        anchor.replaceWith(dial.element)
+      } else {
+        el.min = String(port.minimum)
+        el.max = String(port.maximum)
+        el.step = String((port.maximum - port.minimum) / 200)
+        // A drag is one gesture, so automation records it as one. A key press or a tap has no pointer to
+        // bracket it, and input without a gesture open is a whole edit of its own.
+        el.addEventListener('pointerdown', () => bridge.begin(symbol))
+        for (const type of ['pointerup', 'pointercancel']) el.addEventListener(type, () => bridge.end(symbol))
+      }
+      const current = () => dial ? dial.read() : el.value
       el.addEventListener('input', () => {
-        if (open.has(symbol)) bridge.set(symbol, el.value)
-        else bridge.change(symbol, el.value)
+        if (open.has(symbol)) bridge.set(symbol, current())
+        else bridge.change(symbol, current())
       })
       bridge.on(symbol, (value, text) => {
-        el.value = String(value)
+        if (dial) { dial.write(value); dial.render(value) } else el.value = String(value)
         // "-18" and "-18 decibels" are different information (WCAG 4.1.2).
         el.setAttribute('aria-valuetext', text.spoken)
       })

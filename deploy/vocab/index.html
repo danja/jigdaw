@@ -35,7 +35,7 @@
 </p>
 <p>
   This page is generated from the vocabulary, so it cannot drift from it.
-  207 terms.
+  209 terms.
 </p>
 
 <h2>Classes</h2>
@@ -410,6 +410,10 @@
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="angleMin"><code>jig:angleMin</code> <span class="label">angle at minimum</span></dt>
   <dd><span class="undescribed">No description.</span></dd>
+  <dt id="armed"><code>jig:armed</code></dt>
+  <dd>The track is armed to record, so a take made while the transport runs is
+        kept on it. Which kind of take is jig:recordSource. Absent means false, and a host
+        writes it only where it is true.</dd>
   <dt id="atBeat"><code>jig:atBeat</code></dt>
   <dd><span class="undescribed">No description.</span></dd>
   <dt id="audioInputs"><code>jig:audioInputs</code> <span class="label">audio inputs</span></dt>
@@ -596,6 +600,9 @@
   <dd>The lv2:symbol of a parameter, when a connection targets one rather than
         an audio port. Modulating a parameter is an edge to a named thing, not to a numbered
         one.</dd>
+  <dt id="recordSource"><code>jig:recordSource</code> <span class="label">record source</span></dt>
+  <dd>What an armed track records: "midi" for notes played in, or "audio" for the
+        microphone. Absent means the host decides from what the track takes in.</dd>
   <dt id="registeredName"><code>jig:registeredName</code> <span class="label">registered name</span></dt>
   <dd>The name the processor module passes to registerProcessor. The host
         needs it to construct the AudioWorkletNode, and there is no way to ask a worklet

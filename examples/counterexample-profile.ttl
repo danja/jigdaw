@@ -85,7 +85,9 @@
     a lv2:InputPort , lv2:ControlPort ;
     lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
     # Default sits outside its own range.
-    lv2:default 25000.0 ; lv2:minimum 20.0 ; lv2:maximum 18000.0 ;
+    lv2:default 25000.0 ; lv2:minimum 0.0 ; lv2:maximum 18000.0 ;
+    # A logarithmic scale from zero: it has no zero.
+    lv2:portProperty pprops:logarithmic ;
     # A help of more than 240 characters: the panel has one line for it.
     rdfs:comment "This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence. This comment is a paragraph and not a sentence." .
 

@@ -99,6 +99,8 @@ Each needs ears, a screen reader, a real finger or hardware, so they are yours a
 
 - **Listen to Retune and play Moka from the keyboard** (2026-10-29): Markov and Sprout into Moka sound through the transport by a meter, and Markov through Retune into Moka stayed live after a quarter-tone `.scl` was applied, but none of it has been heard. Say whether a 24-note scale in Retune's panel is audibly quarter-tone, and whether Moka plays from the computer keyboard.
 
+- **Turn Dynamix's new knobs, and a logarithmic frequency knob, with your hands** (2026-10-29): Dynamix's editor now draws its ten controls as rotary knobs (`data-knob` in `plugins/dynamix/ui/src.html`); a real drag and five arrow presses were counted in Chrome, but not a finger on a phone or a screen reader. Open Octet's panel and turn Band 1 Frequency: it should feel even from 20 Hz to 20 kHz, with the middle near 632 Hz.
+
 ## 2. Confirm the Mop glitch diagnosis in Reaper
 
 Headless measurement says Mop costs 1.70x realtime through the adapter's

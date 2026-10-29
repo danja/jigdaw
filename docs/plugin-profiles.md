@@ -290,6 +290,30 @@ It is a hint. A host with room for every control, or one that draws the plugin's
 worked example: of its 75 ports it ranks the three master controls and each voice's level (14 in all), and the other 61 are under
 "More controls". Choose the few a person reaches for when they first play the plugin, not the ones you built it around.
 
+## A frequency or a time is drawn on a log scale
+
+**A port that spans a ratio, such as 20 to 20000 Hz, can say so, and the generated panel's knob then turns evenly in ratio.** Give
+the port `lv2:portProperty pprops:logarithmic`, from [LV2's port properties extension](https://drobilla.net/files/lv2_docs/ns/ext/port-props.html).
+No term of ours is involved.
+
+```turtle
+<#cutoff>
+    a lv2:InputPort , lv2:ControlPort ;
+    lv2:symbol "cutoff" ; lv2:name "Cutoff" ;
+    lv2:default 1000 ; lv2:minimum 20 ; lv2:maximum 20000 ;
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
+```
+
+- The knob's middle is the geometric middle of the range (632 Hz for 20 to 20000), and an arrow key or a drag changes the value by the
+  same ratio at the bottom as at the top. On a linear knob the whole range below 1 kHz is a few degrees of turn.
+- The values the plugin receives, the readout, the saved session and automation are unchanged: they are the port's own values.
+  Only the position of the knob and the size of a step differ.
+- The minimum must be above zero, since a logarithmic scale has no zero. A profile that marks a port logarithmic with a minimum of zero
+  or below is invalid, and the shape and the reader both refuse it.
+- It is a hint for the generated panel's knob. An HTML skin, an SVG skin or a plugin's own editor draws its own control and is free to
+  ignore it. Octet and Quartet mark their frequency ports.
+
 ## Discovered and curated
 
 JigDAW keeps two kinds of knowledge about a plugin, and inherits the distinction from

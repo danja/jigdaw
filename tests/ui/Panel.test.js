@@ -745,3 +745,28 @@ describe('createPanel with an HTML skin', () => {
     expect(input.value).toBe('0.25')
   })
 })
+
+describe('a logarithmic port\'s knob', () => {
+  const freq = over => port({ symbol: 'cutoff', name: 'Cutoff', minimum: 20, maximum: 20000, defaultValue: 632.45553, unit: 'hz', logarithmic: true, ...over })
+
+  it('reports the port\'s own value to onChange, not the knob\'s position', () => {
+    const calls = []
+    const { element } = build([freq()], (symbol, value) => calls.push([symbol, value]))
+    const input = element.querySelector('input')
+    input.value = '1'
+    input.dispatchEvent(new document.defaultView.Event('input', { bubbles: true }))
+    expect(calls).toHaveLength(1)
+    expect(calls[0][0]).toBe('cutoff')
+    expect(calls[0][1]).toBeCloseTo(20000, 3)
+  })
+
+  it('draws a value the host sends at its place on the log scale, and reads it out in hertz', () => {
+    const panel = build([freq()])
+    panel.update('cutoff', 20)
+    const input = panel.element.querySelector('input')
+    expect(Number(input.value)).toBeCloseTo(0, 6)
+    panel.update('cutoff', 2000)
+    expect(Number(input.value)).toBeCloseTo(2 / 3, 6)
+    expect(input.getAttribute('aria-valuetext')).toMatch(/2000/)
+  })
+})

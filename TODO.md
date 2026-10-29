@@ -51,10 +51,6 @@ Each of these is blocked on a choice, not on work.
 ## Checks in a real browser or by a person
 
 
-- [ ] **Watch the Dynamix editor's meter with audio running** (`plugins/dynamix/ui`, docs/plugin-ui.md). Checked in Chrome: the
-      frame loads, a real drag and the mode select round trip through the host, and the curve and the capped reduction text
-      draw. Not checked: the live gain reduction dot while a signal plays, since the window had no user activation and the
-      context never ran.
 - [ ] **Bridge and HTML skin follow-ups from the APF comparison** (docs/plugin-ui.md, docs/html-skins.md). Built: the editor
       bridge, and the HTML skin with Canticle as its first (builder, panel, loader, `write-profile`, and its hostile corpus and
       cascade checks in `npm run check:skins`). Left: a named meter feed so a skin can show a level; double click to reset and
@@ -114,7 +110,12 @@ Each of these is blocked on a choice, not on work.
       `plugins_search` tool to 25, so a caller that does not pass a limit sees a page of 34 plugins and nothing says there is more.
       The page's search bar was fixed 2026-10-24 (it asked for 25 and hid eight, Sam among them; it now asks for `MAX_RESULTS`,
       `tests/catalogue/BrowseAll.test.js`). Decide whether a result set should say when it was cut short.
-- [ ] **Frequency knobs are linear.** A profile has no logarithmic hint, so the generated panel's frequency knobs (Octet, Quartet and every other) are linear. A `pprops:logarithmic` port property would fix them, and Monochord's log sliders (Decay, Release, Body size) with them.
+- [ ] **Logarithmic ports: the rest.** `pprops:logarithmic` is built (shape, reader, writer, the generated panel's knob and the editor
+      bridge's `data-knob`; seen in real Chrome on Octet: five Right presses took Band 1 from 30 to 36 Hz, a ratio of 1.19). Octet and
+      Quartet mark their frequency ports. Left: the other plugins' frequency and time ports (Parameq, Quefrency, Canticle, Monochord,
+      Dynamix's attack and release and any others spanning 100 to 1), which each change a profile digest; a skin or a plugin's own
+      editor that draws a slider for a marked port ignores the hint (an HTML or SVG skin has its own control), and Octet's editor plots
+      on its own log axis already; the hint is not yet shown by `web/gallery` shots.
 - [ ] **Quartet and Monochord: the VST3 drawings are not reproduced** (Quartet's routing drawing and filter plot, Monochord's string plot). Listening to them is in HUMANS.md.
 
 - [ ] **Text asset editing (`jig:maxBytes`): a screen reader pass and a phone.** Built and seen in real Chrome (Sam's lyric, Retune's `.scl`).

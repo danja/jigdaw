@@ -17,7 +17,7 @@ import { isMain } from './is-main.js'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 // In dependency order. Each is an ES module whose imports are all among the others.
-const MODULES = ['src/ui/PortText.js', 'src/plugin-ui/JigUi.js']
+const MODULES = ['src/ui/PortText.js', 'src/ui/Dial.js', 'src/plugin-ui/JigUi.js']
 
 export const MARKER = '<script data-jig-bridge></script>'
 

@@ -123,7 +123,8 @@
     jig:paramIndex 4 ;
     jig:controlGroup "Operator A" ;
     rdfs:comment "Operator A: the frequency when Fixed Frequency is on." ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#opa_level>
     a lv2:InputPort , lv2:ControlPort ;
@@ -221,7 +222,8 @@
     jig:paramIndex 14 ;
     jig:controlGroup "Operator B" ;
     rdfs:comment "Operator B: the frequency when Fixed Frequency is on." ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#opb_level>
     a lv2:InputPort , lv2:ControlPort ;
@@ -319,7 +321,8 @@
     jig:paramIndex 24 ;
     jig:controlGroup "Operator C" ;
     rdfs:comment "Operator C: the frequency when Fixed Frequency is on." ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#opc_level>
     a lv2:InputPort , lv2:ControlPort ;
@@ -417,7 +420,8 @@
     jig:paramIndex 34 ;
     jig:controlGroup "Operator D" ;
     rdfs:comment "Operator D: the frequency when Fixed Frequency is on." ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#opd_level>
     a lv2:InputPort , lv2:ControlPort ;
@@ -606,7 +610,8 @@
     jig:controlGroup "Filter" ;
     rdfs:comment "Where the filter starts to cut. Lower is darker." ;
     pprops:displayPriority 80 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#resonance>
     a lv2:InputPort , lv2:ControlPort ;

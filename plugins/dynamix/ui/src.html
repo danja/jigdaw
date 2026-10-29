@@ -4,7 +4,7 @@
 
   Dynamix's own editor: the compressor/expander's transfer curve with a live dot on it, and a gain
   reduction meter. A curve is what a skin cannot draw (docs/svg-skins.md), so this is a jig:ui. It is
-  built with the page-side bridge (docs/plugin-ui.md): the controls are plain elements with data-param,
+  built with the page-side bridge (docs/plugin-ui.md): the controls are plain elements with data-param (the continuous ones drawn as knobs by data-knob),
   and bin/inline-ui.js writes the bridge in where the marker is, to make ui/index.html.
 
   The generated panel is still there beside it and reaches every port, so nothing here is the only way to
@@ -20,25 +20,39 @@
   :root { color-scheme: dark; --fg:#e6e8eb; --dim:#9aa3ad; --accent:#3d8bfd; --warn:#f0a030; --panel:#1a1e24; --deep:#0e1116; --line:#2c333c; }
   html { height:auto; }
   body { margin:0; padding:12px; background:var(--panel); color:var(--fg); font:16px/1.4 system-ui, sans-serif; }
+  /* A wide frame would pull the stages to opposite edges; the content keeps the width it needs. */
+  main { max-width:760px; }
   h1 { font-size:14px; margin:0 0 10px; color:var(--dim); font-weight:600; letter-spacing:.04em; }
-  h2 { font-size:14px; margin:16px 0 4px; color:var(--dim); font-weight:600; }
-  .top { display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
-  .scope { flex:0 1 260px; min-width:0; }
+  h2 { font-size:14px; margin:0 0 2px; color:var(--dim); font-weight:600; }
+  /* The limiter and the clipper sit side by side under the compressor, and stack only when the frame is too narrow for two. */
+  .stages { display:flex; flex-wrap:wrap; gap:8px 24px; margin-top:12px; padding-top:10px; border-top:1px solid var(--line); }
+  .stage { flex:1 1 200px; min-width:0; }
+  .top { display:flex; flex-wrap:wrap; gap:12px 20px; align-items:flex-start; }
+  .scope { flex:0 1 220px; min-width:0; }
   .scope svg { width:100%; height:auto; display:block; background:var(--deep); border:1px solid var(--line); border-radius:6px; }
-  .controls { flex:1 1 260px; min-width:0; }
-  .row { display:grid; grid-template-columns:6.5rem 1fr 6rem; gap:10px; align-items:center; min-height:44px; }
+  .controls { flex:1 1 280px; min-width:0; }
+  /* Knobs, drawn by the bridge from the native range under each (src/ui/Dial.js). The input stays the control: it is laid over the face
+     and invisible, and keeps the role, the value and every key. A knob is 52px, over the 44px a finger needs. */
+  .knobs { display:flex; flex-wrap:wrap; gap:2px 4px; }
+  .knob { display:grid; justify-items:center; align-content:start; width:80px; padding:2px 0; }
+  .knob label { text-align:center; font-size:14px; line-height:1.2; margin-top:4px; }
+  .dial { position:relative; width:52px; height:52px; touch-action:none; cursor:ns-resize; border-radius:50%; }
+  .dial:focus-within { outline:2px solid #7fb3ff; outline-offset:3px; }
+  .dial-face { display:block; width:100%; height:100%; }
+  .dial-track { stroke:var(--line); stroke-width:9; stroke-linecap:round; }
+  .dial-value { stroke:var(--accent); stroke-width:9; stroke-linecap:round; }
+  .dial-pointer { stroke:var(--fg); stroke-width:6; stroke-linecap:round; }
+  .dial-input { position:absolute; inset:0; width:100%; height:100%; margin:0; opacity:0; pointer-events:none; }
   .switches { display:flex; flex-wrap:wrap; gap:8px 20px; min-height:44px; align-items:center; }
   .switches label { display:flex; gap:8px; align-items:center; min-height:44px; }
   label { color:var(--dim); }
-  input[type=range] { width:100%; min-width:0; height:44px; accent-color:var(--accent); }
   input[type=checkbox] { width:24px; height:24px; accent-color:var(--accent); }
   select { min-height:44px; font:inherit; background:var(--deep); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:0 8px; }
   input:focus-visible, select:focus-visible { outline:2px solid #7fb3ff; outline-offset:2px; }
   output { font-family:ui-monospace, monospace; text-align:right; }
-  #reduction { margin-top:10px; }
+  #reduction { margin-top:8px; }
   .meter { height:12px; border-radius:6px; background:var(--deep); margin-top:6px; overflow:hidden; border:1px solid var(--line); }
   .meter i { display:block; height:100%; width:0; background:var(--warn); }
-  @media (max-width: 360px) { .row { grid-template-columns:1fr; } output { text-align:left; } }
 </style>
 </head>
 <body>
@@ -63,24 +77,35 @@
       <label><input type="checkbox" data-param="comp_enable"><span data-param-name="comp_enable"></span></label>
       <label><span data-param-name="comp_mode"></span><select data-param="comp_mode"></select></label>
     </div>
-    <div class="row"><label for="threshold" data-param-name="threshold"></label><input id="threshold" type="range" data-param="threshold"><output data-param-text="threshold" aria-hidden="true"></output></div>
-    <div class="row"><label for="ratio" data-param-name="ratio"></label><input id="ratio" type="range" data-param="ratio"><output data-param-text="ratio" aria-hidden="true"></output></div>
-    <div class="row"><label for="knee" data-param-name="knee"></label><input id="knee" type="range" data-param="knee"><output data-param-text="knee" aria-hidden="true"></output></div>
-    <div class="row"><label for="attack" data-param-name="attack"></label><input id="attack" type="range" data-param="attack"><output data-param-text="attack" aria-hidden="true"></output></div>
-    <div class="row"><label for="release" data-param-name="release"></label><input id="release" type="range" data-param="release"><output data-param-text="release" aria-hidden="true"></output></div>
-    <div class="row"><label for="makeup" data-param-name="makeup"></label><input id="makeup" type="range" data-param="makeup"><output data-param-text="makeup" aria-hidden="true"></output></div>
+<div class="knobs">
+    <div class="knob"><input id="threshold" type="range" data-param="threshold" data-knob><label for="threshold" data-param-name="threshold"></label><output data-param-text="threshold" aria-hidden="true"></output></div>
+    <div class="knob"><input id="ratio" type="range" data-param="ratio" data-knob><label for="ratio" data-param-name="ratio"></label><output data-param-text="ratio" aria-hidden="true"></output></div>
+    <div class="knob"><input id="knee" type="range" data-param="knee" data-knob><label for="knee" data-param-name="knee"></label><output data-param-text="knee" aria-hidden="true"></output></div>
+    <div class="knob"><input id="attack" type="range" data-param="attack" data-knob><label for="attack" data-param-name="attack"></label><output data-param-text="attack" aria-hidden="true"></output></div>
+    <div class="knob"><input id="release" type="range" data-param="release" data-knob><label for="release" data-param-name="release"></label><output data-param-text="release" aria-hidden="true"></output></div>
+    <div class="knob"><input id="makeup" type="range" data-param="makeup" data-knob><label for="makeup" data-param-name="makeup"></label><output data-param-text="makeup" aria-hidden="true"></output></div>
+</div>
   </div>
 </div>
 
-<h2>Limiter</h2>
-<div class="switches"><label><input type="checkbox" data-param="limit_enable"><span data-param-name="limit_enable"></span></label></div>
-<div class="row"><label for="ceiling" data-param-name="ceiling"></label><input id="ceiling" type="range" data-param="ceiling"><output data-param-text="ceiling" aria-hidden="true"></output></div>
-<div class="row"><label for="limit_release" data-param-name="limit_release"></label><input id="limit_release" type="range" data-param="limit_release"><output data-param-text="limit_release" aria-hidden="true"></output></div>
-
-<h2>Clipper</h2>
-<div class="switches"><label><input type="checkbox" data-param="clip_enable"><span data-param-name="clip_enable"></span></label></div>
-<div class="row"><label for="drive" data-param-name="drive"></label><input id="drive" type="range" data-param="drive"><output data-param-text="drive" aria-hidden="true"></output></div>
-<div class="row"><label for="shape" data-param-name="shape"></label><input id="shape" type="range" data-param="shape"><output data-param-text="shape" aria-hidden="true"></output></div>
+<div class="stages">
+  <section class="stage" aria-labelledby="limiter-h">
+    <h2 id="limiter-h">Limiter</h2>
+    <div class="switches"><label><input type="checkbox" data-param="limit_enable"><span data-param-name="limit_enable"></span></label></div>
+    <div class="knobs">
+      <div class="knob"><input id="ceiling" type="range" data-param="ceiling" data-knob><label for="ceiling" data-param-name="ceiling"></label><output data-param-text="ceiling" aria-hidden="true"></output></div>
+      <div class="knob"><input id="limit_release" type="range" data-param="limit_release" data-knob><label for="limit_release" data-param-name="limit_release"></label><output data-param-text="limit_release" aria-hidden="true"></output></div>
+    </div>
+  </section>
+  <section class="stage" aria-labelledby="clipper-h">
+    <h2 id="clipper-h">Clipper</h2>
+    <div class="switches"><label><input type="checkbox" data-param="clip_enable"><span data-param-name="clip_enable"></span></label></div>
+    <div class="knobs">
+      <div class="knob"><input id="drive" type="range" data-param="drive" data-knob><label for="drive" data-param-name="drive"></label><output data-param-text="drive" aria-hidden="true"></output></div>
+      <div class="knob"><input id="shape" type="range" data-param="shape" data-knob><label for="shape" data-param-name="shape"></label><output data-param-text="shape" aria-hidden="true"></output></div>
+    </div>
+  </section>
+</div>
 </main>
 
 <script data-jig-bridge></script>

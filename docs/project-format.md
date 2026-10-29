@@ -124,6 +124,9 @@ host services, not plugin parameters: no `lv2:port` declares them, and solo is a
 the whole mix. If any track is soloed, every track that is not is silent, and a muted track is
 silent whether or not it is soloed. Absent means unity, centre, heard.
 
+`jig:armed` says the track is armed to record and `jig:recordSource` (`"midi"` or `"audio"`) what it records. A writer
+puts them down only where they are set; absent means not armed, and the host chooses the source from what the track takes in.
+
 Membership is stated on the node with `jig:onTrack`, not listed on the track, so that moving a
 node between tracks is one triple and nothing about it is an ordering.
 

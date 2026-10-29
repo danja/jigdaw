@@ -152,7 +152,8 @@
     jig:controlGroup "Band 1" ;
     rdfs:comment "Band 1: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band1_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -242,7 +243,8 @@
     jig:controlGroup "Band 2" ;
     rdfs:comment "Band 2: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band2_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -332,7 +334,8 @@
     jig:controlGroup "Band 3" ;
     rdfs:comment "Band 3: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band3_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -422,7 +425,8 @@
     jig:controlGroup "Band 4" ;
     rdfs:comment "Band 4: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band4_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -512,7 +516,8 @@
     jig:controlGroup "Band 5" ;
     rdfs:comment "Band 5: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band5_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -602,7 +607,8 @@
     jig:controlGroup "Band 6" ;
     rdfs:comment "Band 6: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band6_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -692,7 +698,8 @@
     jig:controlGroup "Band 7" ;
     rdfs:comment "Band 7: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band7_gain>
     a lv2:InputPort , lv2:ControlPort ;
@@ -782,7 +789,8 @@
     jig:controlGroup "Band 8" ;
     rdfs:comment "Band 8: the corner or centre frequency." ;
     pprops:displayPriority 50 ;
-    units:unit units:hz .
+    units:unit units:hz ;
+    lv2:portProperty pprops:logarithmic .
 
 <#band8_gain>
     a lv2:InputPort , lv2:ControlPort ;

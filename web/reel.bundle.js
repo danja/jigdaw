@@ -13493,7 +13493,9 @@ var init_Vocabulary = __esm({
       // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
       // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
       pprops: Object.freeze({
-        displayPriority: `${PPROPS}displayPriority`
+        displayPriority: `${PPROPS}displayPriority`,
+        // A port whose range is better read as ratios than as steps, such as a frequency: a panel places it on a log scale.
+        logarithmic: `${PPROPS}logarithmic`
       })
     });
   }
@@ -13577,6 +13579,12 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readLogarithmic(properties, dataset2, term5) {
+  if (!properties.includes(pprops.logarithmic)) return false;
+  const minimum = asNumber(one(dataset2, term5, lv2.minimum));
+  if (!(minimum > 0)) throw new Error(`port ${term5.value}: pprops:logarithmic needs an lv2:minimum above zero, not ${minimum}`);
+  return true;
+}
 function readPads(dataset2, subject, ports) {
   return objects(dataset2, subject, jig.pad).map((pad) => {
     const where = `pad ${pad.value}`;
@@ -13619,6 +13627,8 @@ function readPort(dataset2, term5) {
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
     unit: asString(one(dataset2, term5, units.unit)),
     toggled: properties.includes(lv2.toggled),
+    // A frequency or a time is heard in ratios, so a panel places it on a log scale. Needs a minimum above zero (readLogarithmic).
+    logarithmic: readLogarithmic(properties, dataset2, term5),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset2, term5),
     // The MIDI controller driving this port, if the profile binds one. Absent
@@ -30849,7 +30859,7 @@ function readProject(dataset2) {
   }
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
-    if (t.midiInput === null && t.audioInput === null) continue;
+    if (t.midiInput === null && t.audioInput === null && !t.armed && !t.recordSource) continue;
     const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri3, `${what} of track ${t.id}`);
     const extra = {};
     if (t.armed) extra.armed = true;

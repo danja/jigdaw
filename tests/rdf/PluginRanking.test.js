@@ -83,3 +83,16 @@ describe('every plugin profile in the repository', () => {
     expect(missing).toEqual([])
   })
 })
+
+// A frequency knob that is linear puts 20 to 1000 Hz in a few degrees of turn. These plugins say their frequencies are logarithmic.
+describe('plugins that mark their frequency ports logarithmic', () => {
+  for (const [name, expected] of [['octet', 8], ['quartet', 5]]) {
+    it(`${name} marks ${expected} ports, each in hertz with a minimum above zero`, async () => {
+      const { readFileSync } = await import('node:fs')
+      const profile = JSON.parse(readFileSync(new URL(`../../plugins/${name}/profile.json`, import.meta.url), 'utf8'))
+      const marked = profile.ports.filter(p => p.logarithmic)
+      expect(marked.length).toBe(expected)
+      for (const port of marked) { expect(port.unit, port.symbol).toBe('hz'); expect(port.minimum, port.symbol).toBeGreaterThan(0) }
+    })
+  }
+})

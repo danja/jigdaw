@@ -13,6 +13,8 @@ export function createEditors (ctx) {
   const { document, window, $, log } = ctx
   // By node id: { wrapper, frame, stopRelay }.
   const open = new Map()
+  // Nodes whose editor has been opened for them once, so a person who closes it is not given it back on the next redraw.
+  const offered = new Set()
 
   /**
    * Open a plugin's own interface. A frame that cannot be opened, such as one
@@ -85,8 +87,16 @@ export function createEditors (ctx) {
     /** Close every editor whose plugin is not in `nodeIds`: removed, or undone. */
     keepOnly (nodeIds) {
       for (const id of [...open.keys()]) if (!nodeIds.has(id)) closeEditor(id)
+      // Ids are reused by the next piece, so a node that has gone must not count as already offered.
+      for (const id of [...offered]) if (!nodeIds.has(id)) offered.delete(id)
     },
-    closeAll () { for (const id of [...open.keys()]) closeEditor(id) },
+    closeAll () { for (const id of [...open.keys()]) closeEditor(id); offered.clear() },
+    /** True the first time it is asked for a node, so the rack opens an editor by default once. */
+    firstOffer (nodeId) {
+      if (offered.has(nodeId)) return false
+      offered.add(nodeId)
+      return true
+    },
     /** Tell an open editor what a parameter now is. */
     parameter (nodeId, symbol, value) { open.get(nodeId)?.frame.parameter(symbol, value) }
   }

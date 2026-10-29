@@ -381,7 +381,9 @@ export const vocabulary = Object.freeze({
   // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
   // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
   pprops: Object.freeze({
-    displayPriority: `${PPROPS}displayPriority`
+    displayPriority: `${PPROPS}displayPriority`,
+    // A port whose range is better read as ratios than as steps, such as a frequency: a panel places it on a log scale.
+    logarithmic: `${PPROPS}logarithmic`
   })
 })
 

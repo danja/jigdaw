@@ -147,7 +147,8 @@
       "paramIndex": 4,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 1: the corner or centre frequency."
+      "comment": "Band 1: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band1_gain",
@@ -260,7 +261,8 @@
       "paramIndex": 10,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 2: the corner or centre frequency."
+      "comment": "Band 2: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band2_gain",
@@ -373,7 +375,8 @@
       "paramIndex": 16,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 3: the corner or centre frequency."
+      "comment": "Band 3: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band3_gain",
@@ -486,7 +489,8 @@
       "paramIndex": 22,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 4: the corner or centre frequency."
+      "comment": "Band 4: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band4_gain",
@@ -599,7 +603,8 @@
       "paramIndex": 28,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 5: the corner or centre frequency."
+      "comment": "Band 5: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band5_gain",
@@ -712,7 +717,8 @@
       "paramIndex": 34,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 6: the corner or centre frequency."
+      "comment": "Band 6: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band6_gain",
@@ -825,7 +831,8 @@
       "paramIndex": 40,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 7: the corner or centre frequency."
+      "comment": "Band 7: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band7_gain",
@@ -938,7 +945,8 @@
       "paramIndex": 46,
       "unit": "hz",
       "displayPriority": 50,
-      "comment": "Band 8: the corner or centre frequency."
+      "comment": "Band 8: the corner or centre frequency.",
+      "logarithmic": true
     },
     {
       "symbol": "band8_gain",

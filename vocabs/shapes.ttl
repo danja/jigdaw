@@ -346,7 +346,15 @@ jig:PortShape a sh:NodeShape ;
         sh:greaterThanOrEquals lv2:minimum ;
         sh:lessThanOrEquals lv2:maximum ;
         sh:message "A port's lv2:default must lie between its lv2:minimum and lv2:maximum."
-    ] .
+    ] ;
+
+    # A logarithmic scale has no place for zero or below, so a port that asks for one needs a minimum above zero. Written as
+    # core sh:or (not logarithmic, or minimum above zero) because a sh:sparql constraint is not run by every validator.
+    sh:or (
+        [ sh:not [ sh:property [ sh:path lv2:portProperty ; sh:hasValue pprops:logarithmic ] ] ]
+        [ sh:property [ sh:path lv2:minimum ; sh:minExclusive 0 ] ]
+    ) ;
+    sh:message "A port marked pprops:logarithmic needs an lv2:minimum above zero, since a logarithmic scale has no zero." .
 
 jig:ControlPadShape a sh:NodeShape ;
     sh:targetClass jig:ControlPad ;
@@ -492,6 +500,8 @@ jig:TrackShape a sh:NodeShape ;
     ] ;
     sh:property [ sh:path jig:muted  ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
     sh:property [ sh:path jig:soloed ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [ sh:path jig:armed ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:message "A track is armed or it is not: jig:armed is one true or false." ] ;
+    sh:property [ sh:path jig:recordSource ; sh:maxCount 1 ; sh:in ( "midi" "audio" ) ; sh:message "jig:recordSource is \"midi\" or \"audio\", once." ] ;
     sh:property [
         sh:path jig:midiInput ;
         sh:maxCount 1 ; sh:class jig:Node ;

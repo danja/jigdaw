@@ -159,6 +159,14 @@ function readDisplayPriority (dataset, term) {
   return priority
 }
 
+/** Whether a port asks for a logarithmic scale. A minimum of zero or below has no logarithm and is refused, not drawn wrongly. */
+function readLogarithmic (properties, dataset, term) {
+  if (!properties.includes(pprops.logarithmic)) return false
+  const minimum = asNumber(one(dataset, term, lv2.minimum))
+  if (!(minimum > 0)) throw new Error(`port ${term.value}: pprops:logarithmic needs an lv2:minimum above zero, not ${minimum}`)
+  return true
+}
+
 /**
  * The pads a plugin offers, with each axis resolved to a port's symbol. An axis that names no port of the profile, a port that is not a
  * continuous control, or the same port twice is a defect in the profile and is refused, naming the pad: a pad that moved nothing, or a
@@ -208,6 +216,8 @@ export function readPort (dataset, term) {
     maximum: asNumber(one(dataset, term, lv2.maximum)),
     unit: asString(one(dataset, term, units.unit)),
     toggled: properties.includes(lv2.toggled),
+    // A frequency or a time is heard in ratios, so a panel places it on a log scale. Needs a minimum above zero (readLogarithmic).
+    logarithmic: readLogarithmic(properties, dataset, term),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset, term),
     // The MIDI controller driving this port, if the profile binds one. Absent

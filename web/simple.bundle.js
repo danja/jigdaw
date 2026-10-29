@@ -13493,7 +13493,9 @@ var init_Vocabulary = __esm({
       // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
       // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
       pprops: Object.freeze({
-        displayPriority: `${PPROPS}displayPriority`
+        displayPriority: `${PPROPS}displayPriority`,
+        // A port whose range is better read as ratios than as steps, such as a frequency: a panel places it on a log scale.
+        logarithmic: `${PPROPS}logarithmic`
       })
     });
   }
@@ -13577,6 +13579,12 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readLogarithmic(properties, dataset2, term5) {
+  if (!properties.includes(pprops.logarithmic)) return false;
+  const minimum = asNumber(one(dataset2, term5, lv2.minimum));
+  if (!(minimum > 0)) throw new Error(`port ${term5.value}: pprops:logarithmic needs an lv2:minimum above zero, not ${minimum}`);
+  return true;
+}
 function readPads(dataset2, subject, ports) {
   return objects(dataset2, subject, jig.pad).map((pad) => {
     const where2 = `pad ${pad.value}`;
@@ -13619,6 +13627,8 @@ function readPort(dataset2, term5) {
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
     unit: asString(one(dataset2, term5, units.unit)),
     toggled: properties.includes(lv2.toggled),
+    // A frequency or a time is heard in ratios, so a panel places it on a log scale. Needs a minimum above zero (readLogarithmic).
+    logarithmic: readLogarithmic(properties, dataset2, term5),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset2, term5),
     // The MIDI controller driving this port, if the profile binds one. Absent
@@ -30904,7 +30914,7 @@ function readProject(dataset2) {
   }
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
-    if (t.midiInput === null && t.audioInput === null) continue;
+    if (t.midiInput === null && t.audioInput === null && !t.armed && !t.recordSource) continue;
     const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri4, `${what} of track ${t.id}`);
     const extra = {};
     if (t.armed) extra.armed = true;
@@ -34343,17 +34353,21 @@ function facePoint(fraction, radius) {
   const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180;
   return [round(CENTRE + radius * Math.cos(radians)), round(CENTRE + radius * Math.sin(radians))];
 }
-function createDial(document2, port, id) {
+function createDial(document2, port, id, { input: adopted = null, begin = null, end = null } = {}) {
   const element = document2.createElement("div");
   element.className = "dial";
-  const input = document2.createElement("input");
+  const input = adopted ?? document2.createElement("input");
   input.type = "range";
-  input.id = id;
+  if (adopted === null || id) input.id = id;
   input.className = "dial-input";
-  input.min = String(port.minimum);
-  input.max = String(port.maximum);
-  input.step = String((port.maximum - port.minimum) / 200);
-  input.value = String(port.defaultValue);
+  const log2 = port.logarithmic === true;
+  const ratio = Math.log(port.maximum / port.minimum);
+  const toPosition = (value3) => Math.log(Math.min(port.maximum, Math.max(port.minimum, value3)) / port.minimum) / ratio;
+  const fromPosition = (position2) => port.minimum * Math.exp(position2 * ratio);
+  input.min = log2 ? "0" : String(port.minimum);
+  input.max = log2 ? "1" : String(port.maximum);
+  input.step = String(log2 ? 1 / 200 : (port.maximum - port.minimum) / 200);
+  input.value = String(log2 ? toPosition(port.defaultValue) : port.defaultValue);
   const svg = document2.createElementNS(SVG_NS2, "svg");
   svg.setAttribute("viewBox", "0 0 100 100");
   svg.setAttribute("class", "dial-face");
@@ -34372,7 +34386,7 @@ function createDial(document2, port, id) {
   const track = arc("dial-track");
   setSweep(track, 0, 1);
   const value2 = arc("dial-value");
-  const origin = port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
+  const origin = !log2 && port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
   const pointer = document2.createElementNS(SVG_NS2, "line");
   pointer.setAttribute("class", "dial-pointer");
   pointer.setAttribute("x1", String(CENTRE));
@@ -34381,14 +34395,18 @@ function createDial(document2, port, id) {
   element.append(svg, input);
   function render(current2) {
     const span = port.maximum - port.minimum;
-    const fraction = span === 0 ? 0 : Math.min(1, Math.max(0, (current2 - port.minimum) / span));
+    const fraction = log2 ? toPosition(current2) : span === 0 ? 0 : Math.min(1, Math.max(0, (current2 - port.minimum) / span));
     setSweep(value2, origin, fraction);
     const [x, y] = facePoint(fraction, RADIUS);
     pointer.setAttribute("x2", String(x));
     pointer.setAttribute("y2", String(y));
   }
-  attachDrag(element, input, port);
-  return { element, input, render };
+  attachDrag(element, input, log2 ? { minimum: 0, maximum: 1 } : port, { begin, end });
+  const read = () => log2 ? fromPosition(Number(input.value)) : Number(input.value);
+  const write = (value3) => {
+    input.value = String(log2 ? toPosition(value3) : value3);
+  };
+  return { element, input, render, read, write };
 }
 function setSweep(circle, from, to) {
   const sweep = CIRCUMFERENCE * (SWEEP_DEGREES / 360);
@@ -34397,7 +34415,7 @@ function setSweep(circle, from, to) {
   circle.setAttribute("stroke-dasharray", `${round((high - low) * sweep)} ${round(CIRCUMFERENCE)}`);
   circle.setAttribute("stroke-dashoffset", String(round(-low * sweep)));
 }
-function attachDrag(element, input, port) {
+function attachDrag(element, input, port, { begin = null, end: finished2 = null } = {}) {
   const span = port.maximum - port.minimum;
   const owner = element.ownerDocument;
   const Event = owner.defaultView?.Event;
@@ -34415,6 +34433,7 @@ function attachDrag(element, input, port) {
   const end = () => {
     if (!dragging) return;
     dragging = null;
+    finished2?.();
     owner.removeEventListener("pointermove", move);
     owner.removeEventListener("pointerup", end);
     owner.removeEventListener("pointercancel", end);
@@ -34422,6 +34441,7 @@ function attachDrag(element, input, port) {
   element.addEventListener("pointerdown", (event) => {
     if (event.button !== void 0 && event.button !== 0) return;
     dragging = { y: event.clientY, from: Number(input.value) };
+    begin?.();
     input.focus?.();
     event.preventDefault?.();
     owner.addEventListener("pointermove", move);
@@ -35138,9 +35158,9 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     } else {
       const dial = createDial(document2, port, id);
       input = dial.input;
-      input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
+      input.addEventListener("input", () => onChange(port.symbol, dial.read()));
       onValue(port.symbol, (v) => {
-        input.value = String(v);
+        dial.write(v);
         readout.textContent = formatValue(port, v);
         input.setAttribute("aria-valuetext", spokenValue(port, v));
         dial.render(v);

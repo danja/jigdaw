@@ -82,5 +82,9 @@ export const UNLISTED_KEY_FILES = Object.freeze({
   'src/ui/PianoRoll.js': 'not listed yet: the roll has many keys and wants its own section',
   'src/ui/RollLane.js': 'not listed yet: goes with the piano roll section',
   'src/ui/Timeline.js': 'not listed yet: plus and minus zoom the timeline when it has focus',
+  'src/plugin-ui/JigUi.js': 'Escape puts the help line away on a plugin editor control; no other key is read',
+  'src/ui/HtmlSkinPanel.js': 'Escape puts the help line away on a skin control; no other key is read',
+  'web/app/Browser.js': 'Enter searches and the arrows move through the results list, said by the dialog itself',
+  'web/app/Runtime.js': 'the first key press starts audio, which the browser allows only after a gesture; it reads no key and has no shortcut',
   'src/ui/TimelineReorder.js': 'Escape drops a track or a folder being dragged where it started, said in docs/jiggy-features.md; the grip is a second way to what Alt with Up or Down, listed above, already does'
 })

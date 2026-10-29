@@ -346,3 +346,45 @@ describe('the stylesheet and the generator agree', () => {
     expect(rule[1]).toMatch(/touch-action\s*:\s*none/)
   })
 })
+
+describe('a logarithmic dial', () => {
+  const log = over => build({ symbol: 'freq', name: 'Frequency', minimum: 20, maximum: 20000, defaultValue: 632.45553, logarithmic: true, ...over })
+
+  it('holds a position from 0 to 1 and reads back the port value, so the geometric middle of 20 to 20000 is the middle of the knob', () => {
+    const dial = log()
+    expect(dial.input.min).toBe('0')
+    expect(dial.input.max).toBe('1')
+    expect(Number(dial.input.value)).toBeCloseTo(0.5, 5)
+    expect(dial.read()).toBeCloseTo(632.45553, 3)
+  })
+
+  it('writes a port value as a position and reads the same value back', () => {
+    const dial = log()
+    for (const value of [20, 100, 1000, 20000]) {
+      dial.write(value)
+      expect(dial.read()).toBeCloseTo(value, 6)
+    }
+  })
+
+  it('steps by the same ratio from the bottom as from the top, which a linear range would not', () => {
+    const dial = log()
+    const step = Number(dial.input.step)
+    dial.input.value = String(step)
+    const low = dial.read() / 20
+    dial.input.value = String(1 - step)
+    const high = 20000 / dial.read()
+    expect(low).toBeCloseTo(high, 6)
+  })
+
+  it('draws the knob at the position of the value, not its linear fraction', () => {
+    const dial = log()
+    dial.render(632.45553)
+    expect(drawn(dial)).toBeCloseTo(0.5, 2)
+  })
+
+  it('leaves a port that is not logarithmic as it was: the input holds the value itself', () => {
+    const dial = build({ minimum: 20, maximum: 20000, defaultValue: 1000 })
+    expect(dial.input.min).toBe('20')
+    expect(dial.read()).toBe(1000)
+  })
+})

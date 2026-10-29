@@ -13493,7 +13493,9 @@ var init_Vocabulary = __esm({
       // How much a port matters for controlling the plugin: a nonnegative integer, higher is more important, comparable only within one
       // plugin. A host with room for a few controls shows those first (docs/plugin-profiles.md, "Which controls come first").
       pprops: Object.freeze({
-        displayPriority: `${PPROPS}displayPriority`
+        displayPriority: `${PPROPS}displayPriority`,
+        // A port whose range is better read as ratios than as steps, such as a frequency: a panel places it on a log scale.
+        logarithmic: `${PPROPS}logarithmic`
       })
     });
   }
@@ -13577,6 +13579,12 @@ function readDisplayPriority(dataset2, term5) {
   }
   return priority;
 }
+function readLogarithmic(properties, dataset2, term5) {
+  if (!properties.includes(pprops.logarithmic)) return false;
+  const minimum = asNumber(one(dataset2, term5, lv2.minimum));
+  if (!(minimum > 0)) throw new Error(`port ${term5.value}: pprops:logarithmic needs an lv2:minimum above zero, not ${minimum}`);
+  return true;
+}
 function readPads(dataset2, subject, ports) {
   return objects(dataset2, subject, jig.pad).map((pad) => {
     const where2 = `pad ${pad.value}`;
@@ -13619,6 +13627,8 @@ function readPort(dataset2, term5) {
     maximum: asNumber(one(dataset2, term5, lv2.maximum)),
     unit: asString(one(dataset2, term5, units.unit)),
     toggled: properties.includes(lv2.toggled),
+    // A frequency or a time is heard in ratios, so a panel places it on a log scale. Needs a minimum above zero (readLogarithmic).
+    logarithmic: readLogarithmic(properties, dataset2, term5),
     enumeration: properties.includes(lv2.enumeration),
     scalePoints: readScalePoints(dataset2, term5),
     // The MIDI controller driving this port, if the profile binds one. Absent
@@ -32504,17 +32514,21 @@ function facePoint(fraction, radius) {
   const radians = (START_DEGREES + SWEEP_DEGREES * fraction) * Math.PI / 180;
   return [round2(CENTRE + radius * Math.cos(radians)), round2(CENTRE + radius * Math.sin(radians))];
 }
-function createDial(document2, port, id) {
+function createDial(document2, port, id, { input: adopted = null, begin = null, end = null } = {}) {
   const element = document2.createElement("div");
   element.className = "dial";
-  const input = document2.createElement("input");
+  const input = adopted ?? document2.createElement("input");
   input.type = "range";
-  input.id = id;
+  if (adopted === null || id) input.id = id;
   input.className = "dial-input";
-  input.min = String(port.minimum);
-  input.max = String(port.maximum);
-  input.step = String((port.maximum - port.minimum) / 200);
-  input.value = String(port.defaultValue);
+  const log2 = port.logarithmic === true;
+  const ratio = Math.log(port.maximum / port.minimum);
+  const toPosition = (value3) => Math.log(Math.min(port.maximum, Math.max(port.minimum, value3)) / port.minimum) / ratio;
+  const fromPosition = (position2) => port.minimum * Math.exp(position2 * ratio);
+  input.min = log2 ? "0" : String(port.minimum);
+  input.max = log2 ? "1" : String(port.maximum);
+  input.step = String(log2 ? 1 / 200 : (port.maximum - port.minimum) / 200);
+  input.value = String(log2 ? toPosition(port.defaultValue) : port.defaultValue);
   const svg = document2.createElementNS(SVG_NS2, "svg");
   svg.setAttribute("viewBox", "0 0 100 100");
   svg.setAttribute("class", "dial-face");
@@ -32533,7 +32547,7 @@ function createDial(document2, port, id) {
   const track2 = arc("dial-track");
   setSweep(track2, 0, 1);
   const value2 = arc("dial-value");
-  const origin = port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
+  const origin = !log2 && port.minimum < 0 && port.maximum > 0 ? -port.minimum / (port.maximum - port.minimum) : 0;
   const pointer = document2.createElementNS(SVG_NS2, "line");
   pointer.setAttribute("class", "dial-pointer");
   pointer.setAttribute("x1", String(CENTRE));
@@ -32542,14 +32556,18 @@ function createDial(document2, port, id) {
   element.append(svg, input);
   function render(current) {
     const span = port.maximum - port.minimum;
-    const fraction = span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span));
+    const fraction = log2 ? toPosition(current) : span === 0 ? 0 : Math.min(1, Math.max(0, (current - port.minimum) / span));
     setSweep(value2, origin, fraction);
     const [x, y] = facePoint(fraction, RADIUS);
     pointer.setAttribute("x2", String(x));
     pointer.setAttribute("y2", String(y));
   }
-  attachDrag(element, input, port);
-  return { element, input, render };
+  attachDrag(element, input, log2 ? { minimum: 0, maximum: 1 } : port, { begin, end });
+  const read = () => log2 ? fromPosition(Number(input.value)) : Number(input.value);
+  const write = (value3) => {
+    input.value = String(log2 ? toPosition(value3) : value3);
+  };
+  return { element, input, render, read, write };
 }
 function setSweep(circle, from, to) {
   const sweep = CIRCUMFERENCE * (SWEEP_DEGREES / 360);
@@ -32558,7 +32576,7 @@ function setSweep(circle, from, to) {
   circle.setAttribute("stroke-dasharray", `${round2((high - low) * sweep)} ${round2(CIRCUMFERENCE)}`);
   circle.setAttribute("stroke-dashoffset", String(round2(-low * sweep)));
 }
-function attachDrag(element, input, port) {
+function attachDrag(element, input, port, { begin = null, end: finished4 = null } = {}) {
   const span = port.maximum - port.minimum;
   const owner = element.ownerDocument;
   const Event = owner.defaultView?.Event;
@@ -32576,6 +32594,7 @@ function attachDrag(element, input, port) {
   const end = () => {
     if (!dragging) return;
     dragging = null;
+    finished4?.();
     owner.removeEventListener("pointermove", move);
     owner.removeEventListener("pointerup", end);
     owner.removeEventListener("pointercancel", end);
@@ -32583,6 +32602,7 @@ function attachDrag(element, input, port) {
   element.addEventListener("pointerdown", (event) => {
     if (event.button !== void 0 && event.button !== 0) return;
     dragging = { y: event.clientY, from: Number(input.value) };
+    begin?.();
     input.focus?.();
     event.preventDefault?.();
     owner.addEventListener("pointermove", move);
@@ -33724,9 +33744,9 @@ function createPanel(document2, profile, onChange, onLoadAsset, { scope = profil
     } else {
       const dial = createDial(document2, port, id);
       input = dial.input;
-      input.addEventListener("input", () => onChange(port.symbol, Number(input.value)));
+      input.addEventListener("input", () => onChange(port.symbol, dial.read()));
       onValue(port.symbol, (v) => {
-        input.value = String(v);
+        dial.write(v);
         readout2.textContent = formatValue(port, v);
         input.setAttribute("aria-valuetext", spokenValue(port, v));
         dial.render(v);
@@ -34364,6 +34384,7 @@ function slotTitle(node, profile, name2) {
 function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode }) {
   const { document: document2, window: window2, log: log2 } = ctx2;
   let pending = null;
+  const panelsShown = /* @__PURE__ */ new Set();
   const slots = { pending: () => pending, setPending: (from) => {
     pending = from;
   }, redraw: slots_redraw };
@@ -34513,7 +34534,9 @@ function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode
       });
       header.append(move);
     }
-    if (profile?.ui && frameableOrigin(profile.ui.location, window2.location.origin).ok) {
+    const hasEditor = Boolean(profile?.ui && frameableOrigin(profile.ui.location, window2.location.origin).ok);
+    if (hasEditor && ctx2.editors.firstOffer(node.id)) ctx2.editors.open(node.id, profile, labelFor(node.id));
+    if (hasEditor) {
       const open = ctx2.editors.isOpen(node.id);
       const toggle = document2.createElement("button");
       toggle.type = "button";
@@ -34593,7 +34616,21 @@ function createSlots(ctx2, { panels, keyboards, redraw: slots_redraw, forgetNode
     group.append(element);
     if (!profile) return;
     const panel = panelFor(node, profile, panels);
-    element.append(panel.element);
+    if (hasEditor) {
+      const details = document2.createElement("details");
+      details.className = "generated-controls";
+      details.open = panelsShown.has(node.id);
+      const summary = document2.createElement("summary");
+      summary.textContent = "Generated controls";
+      details.addEventListener("toggle", () => {
+        if (details.open) panelsShown.add(node.id);
+        else panelsShown.delete(node.id);
+      });
+      details.append(summary, panel.element);
+      element.append(details);
+    } else {
+      element.append(panel.element);
+    }
     if (playable(profile)) {
       const style = getComputedStyle(element);
       const available = element.clientWidth ? element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) : document2.body.clientWidth;
@@ -35131,6 +35168,7 @@ function profileAsJsonLd(profile) {
 function createEditors(ctx2) {
   const { document: document2, window: window2, $: $2, log: log2 } = ctx2;
   const open = /* @__PURE__ */ new Map();
+  const offered = /* @__PURE__ */ new Set();
   function openEditor(nodeId, profile, label) {
     const { dispatcher } = ctx2;
     let frame;
@@ -35196,9 +35234,17 @@ function createEditors(ctx2) {
     /** Close every editor whose plugin is not in `nodeIds`: removed, or undone. */
     keepOnly(nodeIds) {
       for (const id of [...open.keys()]) if (!nodeIds.has(id)) closeEditor(id);
+      for (const id of [...offered]) if (!nodeIds.has(id)) offered.delete(id);
     },
     closeAll() {
       for (const id of [...open.keys()]) closeEditor(id);
+      offered.clear();
+    },
+    /** True the first time it is asked for a node, so the rack opens an editor by default once. */
+    firstOffer(nodeId) {
+      if (offered.has(nodeId)) return false;
+      offered.add(nodeId);
+      return true;
     },
     /** Tell an open editor what a parameter now is. */
     parameter(nodeId, symbol, value2) {
@@ -43105,7 +43151,7 @@ function readProject(dataset2) {
   }
   for (const { channel, ...node } of nodes) changes.push({ op: "addNode", ...node });
   for (const t of tracks) {
-    if (t.midiInput === null && t.audioInput === null) continue;
+    if (t.midiInput === null && t.audioInput === null && !t.armed && !t.recordSource) continue;
     const input = (nodeIri, what) => nodeIri === null ? null : idOf(nodeIri, iri5, `${what} of track ${t.id}`);
     const extra = {};
     if (t.armed) extra.armed = true;
@@ -44075,6 +44121,10 @@ var UNLISTED_KEY_FILES = Object.freeze({
   "src/ui/PianoRoll.js": "not listed yet: the roll has many keys and wants its own section",
   "src/ui/RollLane.js": "not listed yet: goes with the piano roll section",
   "src/ui/Timeline.js": "not listed yet: plus and minus zoom the timeline when it has focus",
+  "src/plugin-ui/JigUi.js": "Escape puts the help line away on a plugin editor control; no other key is read",
+  "src/ui/HtmlSkinPanel.js": "Escape puts the help line away on a skin control; no other key is read",
+  "web/app/Browser.js": "Enter searches and the arrows move through the results list, said by the dialog itself",
+  "web/app/Runtime.js": "the first key press starts audio, which the browser allows only after a gesture; it reads no key and has no shortcut",
   "src/ui/TimelineReorder.js": "Escape drops a track or a folder being dragged where it started, said in docs/jiggy-features.md; the grip is a second way to what Alt with Up or Down, listed above, already does"
 });
 

@@ -475,7 +475,7 @@ A plugin MAY declare `jig:skin`: a Turtle document of control bindings that poin
 artwork, specified in [svg-skins.md](svg-skins.md). The panel a host draws for a plugin is its
 skin where it has one and the skin loads, and a generated panel otherwise. A `jig:ui`, where
 present, is an editor the host MAY offer beside the panel; it MUST NOT be the only way to reach
-a port. A host MAY show the editor in place of the panel when a person asks it to. A host that
+a port. A host MAY show the editor in place of the panel when a person asks it to, and MAY open the editor by default and keep the generated panel one control away, as Jiggy does. A host that
 does not implement skins ignores `jig:skin` and generates the panel.
 
 A skin is data. The sandbox in section 9.1 exists because UI code could read the host's
