@@ -73,8 +73,14 @@ Each of these is blocked on a choice, not on work.
       Seen 2026-10-29 in real Chrome (Chiptune, 90 bpm, "Count in 1 bar", real Play click): the clock held 0:00.0 for about 3.0 s
       (a bar is 2.67 s, plus start latency), then ran at 1.0x (0:00.1 to 0:06.3 over 6.25 s) and the meter lit. Left: hearing the
       click, its accent and a loop, and a script's clock during a count-in.
-- [ ] **Script tab:** the one hop not yet seen, a session carrying a script back into the studio's Script tab (covered by
-      `tests/web/Script.test.js`); the saved-session round trip on the simple page; a screen reader pass over the tab.
+- [ ] **Script tab:** the saved-session round trip on the simple page; a screen reader pass over the tab.
+      Seen 2026-10-30 in real Chrome on the studio page: a typed script (real keys) was saved with Save (a 1360 byte `session.zip`,
+      carrying the script), a different draft was typed into the tab, and the saved file given to the Open input replaced the draft with
+      the saved script and said "A script was saved with this session. It has not been run. Check it, then run it.", log "opened a
+      script saved with the session; it has not been run". Notes: the file was handed to `#openfile` as a `File` by script, since
+      Chrome here did not write the download to disk (Save said "Saved" and no `session.ttl` or zip appeared anywhere), so the
+      picker itself and the download were not exercised. The tab also keeps its own draft in `localStorage` (`jigdaw.reel.draft`), which a
+      test of Open must differ from. The Script tab is hidden until Show is set to Advanced.
 - [ ] **Play every preset** after any change to a plugin processor or the engine (see Recurring). Last done 2026-10-24, all nine on
       the simple page in real Chrome, each lit the meter after a real Play press (Keyframe also at bar 170 at 600 bpm).
       The Clip lamp is a latch, so it carried over from Acid to the tunes after it. Measured offline (pre-fader), Chiptune
