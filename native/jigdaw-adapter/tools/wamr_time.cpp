@@ -1,7 +1,7 @@
 // native/jigdaw-adapter/tools/wamr_time.cpp
 //
-// Times a plugin through the adapter's real Chain, which runs it in WAMR's pure
-// interpreter, against the audio it renders. It exists because the render budget
+// Times a plugin through the adapter's real Chain, which runs it in WAMR (the LLVM JIT by
+// default, the interpreter with -DJIGDAW_WAMR_MODE=interp), against the audio it renders. It exists because the render budget
 // in node runs under the JIT and a plugin that is cheap there can overrun on
 // every block here (MISTAKES.md, the Mop entry). Diagnostic, not an assertion:
 // machines differ, so the figures are recorded with the date and not tested.

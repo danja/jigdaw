@@ -25,10 +25,11 @@ lv2_dir="${JIGDAW_LV2_DIR:-$HOME/.lv2}"
 run_tests="${JIGDAW_RUN_TESTS:-1}"
 install_clap="${JIGDAW_INSTALL_CLAP:-0}"
 install_lv2="${JIGDAW_INSTALL_LV2:-0}"
+wamr_mode="${JIGDAW_WAMR_MODE:-jit}"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh [--clap] [--lv2] [--no-tests] [--debug]
+Usage: ./install.sh [--clap] [--lv2] [--no-tests] [--debug] [--interp]
 
 Builds the JigDAW Adapter and installs the VST3 into ~/.vst3.
 
@@ -37,11 +38,15 @@ Builds the JigDAW Adapter and installs the VST3 into ~/.vst3.
   --all         install all three
   --no-tests    skip the test run
   --debug       build with CMAKE_BUILD_TYPE=Debug
+  --interp      run modules in WAMR's interpreter instead of its LLVM JIT. Needs no
+                LLVM, but is about 30 times slower on Mop, which overruns every block
 
 Environment:
   JIGDAW_VST3_DIR   where the VST3 goes        (default ~/.vst3)
   JIGDAW_BUILD_DIR  where the build happens    (default native/build)
   JIGDAW_DPF_DIR    a DPF checkout             (default downspout's)
+  JIGDAW_WAMR_MODE  jit or interp              (default jit)
+  WAMR_ROOT         a wasm-micro-runtime checkout (default ~/github/wasm-micro-runtime)
 EOF
 }
 
@@ -52,6 +57,7 @@ while [[ $# -gt 0 ]]; do
     --all) install_clap=1; install_lv2=1 ;;
     --no-tests) run_tests=0 ;;
     --debug) build_type=Debug ;;
+    --interp) wamr_mode=interp ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -74,10 +80,43 @@ EOF
   exit 1
 fi
 
-echo "Building the JigDAW Adapter ($build_type)"
-cmake -S "$native_dir" -B "$build_dir" \
+# The JIT links LLVM statically. Ubuntu's llvm-18-dev names libraries in its CMake
+# config that live in other packages, and the configure then fails with a trace
+# that names a CMake target, not a package. Check for them here instead.
+if [[ "$wamr_mode" == "jit" ]]; then
+  missing=()
+  compgen -G "/usr/lib/llvm-*/lib/cmake/llvm" >/dev/null || [[ -n "${LLVM_DIR:-}" ]] || missing+=(llvm-18-dev)
+  [[ -f /usr/include/histedit.h ]] || missing+=(libedit-dev)
+  [[ -f /usr/include/curl/curl.h || -f /usr/include/x86_64-linux-gnu/curl/curl.h ]] || missing+=(libcurl4-openssl-dev)
+  compgen -G "/usr/lib/llvm-*/lib/libPolly.a" >/dev/null || [[ -n "${LLVM_DIR:-}" ]] || missing+=(libpolly-18-dev)
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    cat >&2 <<EOF
+The adapter runs plugin modules through WAMR's LLVM JIT, which needs LLVM
+development files. Missing: ${missing[*]}
+
+  sudo apt install ${missing[*]}
+
+Without them, ./install.sh --interp builds the interpreter instead. It works, but
+Mop takes about 1.5 times as long as real time to render, so it glitches.
+EOF
+    exit 1
+  fi
+fi
+
+echo "Building the JigDAW Adapter ($build_type, WAMR $wamr_mode)"
+# Passed every time, not only the first: the mode is a cache entry, and a build
+# directory configured earlier would otherwise keep the old one.
+configure_log="$(mktemp)"
+if ! cmake -S "$native_dir" -B "$build_dir" \
   -DCMAKE_BUILD_TYPE="$build_type" \
-  -DJIGDAW_DPF_DIR="$dpf_dir" >/dev/null
+  -DJIGDAW_WAMR_MODE="$wamr_mode" \
+  -DJIGDAW_DPF_DIR="$dpf_dir" >"$configure_log" 2>&1; then
+  cat "$configure_log" >&2
+  rm -f "$configure_log"
+  echo "cmake could not configure the build; its output is above." >&2
+  exit 1
+fi
+rm -f "$configure_log"
 
 cmake --build "$build_dir" -j "$(nproc 2>/dev/null || echo 4)"
 

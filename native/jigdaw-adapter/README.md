@@ -142,7 +142,10 @@ ctest --test-dir build --output-on-failure
 ```
 
 Artefacts land in `build/bin/`. Needs OpenSSL, CMake 3.20, and a compiler with C++20. WAMR
-is fetched. DPF is taken from a downspout checkout by default; point
+is a local checkout (`-DWAMR_ROOT`), and by default runs modules through its LLVM JIT, which needs
+LLVM development files: on Ubuntu `llvm-18-dev libedit-dev libcurl4-openssl-dev libpolly-18-dev`.
+`-DJIGDAW_WAMR_MODE=interp` builds the interpreter instead and needs none of them, at about 30
+times the cost on Mop (see below). DPF is taken from a downspout checkout by default; point
 `-DJIGDAW_DPF_DIR=/path/to/DPF` elsewhere, or `-DJIGDAW_BUILD_PLUGIN=OFF` to build only the
 core and its tests.
 
@@ -184,6 +187,19 @@ generated panel belongs to the browser host. No transport, no outgoing MIDI from
 state saving inside a loaded plugin, and no latency reporting. Those are either profile
 statements or processor messages, and `jig:Abi1` version 1 deliberately carries none of them.
 A Jig needing them is a plugin for a browser.
+
+## Why the JIT rather than the interpreter
+
+The adapter first ran WAMR's interpreter. Mop, an emulated sound chip, took 1.46x realtime
+through it on 2026-10-30 (10.2 s of wall time for 7.0 s of audio; its worst 512-frame block
+took 21.6 ms against a 10.7 ms budget at 48 kHz), so it dropped out in Reaper. The LLVM JIT
+takes 0.046x (worst block 1.0 ms), 8b8 0.13x to 0.005x, and Keyframe's worst block fell from
+1.1 ms to 0.07 ms. `FindOrFetchWamr.cmake` compiles every function when a module is
+instantiated (`WAMR_BUILD_LAZY_JIT 0`), so the cost moves to load: 140 to 310 ms per plugin,
+on the message thread, and the first block is as cheap as any other (0.05 to 0.95 ms).
+The JIT code is linked statically into the plugin, which still loads as a dlopen'd module
+with local symbols (checked with a probe library and a host that exports nothing). Timing is
+diagnostic and machine dependent: run `tools/wamr_time.cpp` on yours.
 
 ## Why WAMR rather than wasm3
 

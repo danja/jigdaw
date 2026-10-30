@@ -6,9 +6,10 @@
 // that knows about any runtime. Swapping it is a change here and nowhere
 // else. It replaces wasm3 for one reason: wasm3's interpreter has no
 // WebAssembly SIMD support, and Ferrite (jig:wasmFeature jig:Simd128) needs
-// it. Built as WAMR's fast interpreter with SIMD on and AOT/JIT off — pure
-// bytecode interpretation, same as wasm3 before it: no executable pages, no
-// JIT-at-runtime, nothing platform-specific to debug.
+// it. Built either as WAMR's LLVM JIT (JIGDAW_WAMR_JIT, the default; every
+// function is compiled at load, never on the audio thread) or as its fast
+// interpreter with SIMD (cmake -DJIGDAW_WAMR_MODE=interp), which needs no LLVM
+// and no executable pages but ran Mop at 1.70x realtime.
 #include "jigdaw/Module.hpp"
 
 #include <wasm_export.h>
@@ -29,7 +30,11 @@ void ensureRuntimeInitialized() {
         RuntimeInitArgs args;
         std::memset(&args, 0, sizeof(args));
         args.mem_alloc_type = Alloc_With_System_Allocator;
+#ifdef JIGDAW_WAMR_JIT
+        args.running_mode = Mode_LLVM_JIT;
+#else
         args.running_mode = Mode_Interp;
+#endif
         wasm_runtime_full_init(&args);
     });
 }

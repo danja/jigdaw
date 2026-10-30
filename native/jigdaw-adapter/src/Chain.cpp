@@ -58,7 +58,14 @@ std::string Chain::add(const std::string& iri, double sampleRate) {
     // module, and loaded before the plugin sees any real audio — a default
     // shipped by the profile's own author, not yet a person's replacement.
     // Every one of them is control-thread work, same as everything above.
+    // Only the ones the module takes. A profile also lists a skin and its
+    // artwork as assets (docs/svg-skins.md) for the host's own interface; the
+    // module has no loader for them, and the browser host likewise just posts
+    // them to a processor that ignores what it has no use for. Treating that as
+    // a failed load kept every skinned plugin out of the adapter.
+    const auto loadable = slot->module->assetKeys();
     for (const auto& asset : profile.assets) {
+        if (std::find(loadable.begin(), loadable.end(), asset.key) == loadable.end()) continue;
         const auto bytes = fetchUrl(asset.resource.location);
         if (!bytes.ok) {
             return profile.label + ": could not fetch \"" + asset.key + "\": " + bytes.error;

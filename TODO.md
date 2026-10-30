@@ -23,13 +23,12 @@ Where to start, in order. Everything else is below and is not ordered.
 
 Each of these is blocked on a choice, not on work.
 
-- [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report, no buffer size or version yet. Mop costs
-      1.70x realtime through the adapter's pure-interpreter WAMR, so every realtime block overruns. Output is otherwise correct,
-      so it is throughput. 8b8 costs 0.20x through the same path and Mop under node's JIT 0.06x, which is why no browser or
-      offline test saw it. The voice cap and the buffer size change nothing. Fixes: WAMR AOT or JIT (needs wamrc and LLVM as
-      build dependencies; the interpreter was chosen in `native/cmake/FindOrFetchWamr.cmake` because the gain was not
-      needed, and for Mop 2x or more is), or Mop-side surgery against the unmodified-Opal rule. Confirmation from a person is
-      in HUMANS.md.
+- [ ] **Mop glitches in the JigDAW Adapter VST in Reaper.** 2026-09-30, user report. Cause: 1.46x realtime through the
+      adapter's WAMR interpreter. Fix built 2026-10-30: WAMR's LLVM JIT is now the default (`JIGDAW_WAMR_MODE`,
+      `native/cmake/FindOrFetchWamr.cmake`), compiling at load. Measured through the real Chain: Mop 1.46x to 0.046x, worst
+      block 21.6 ms to 1.0 ms; load costs 140 to 310 ms. Left: rebuild `native/build` (reconfigure; it still holds the
+      interpreter setting), confirm in Reaper that Mop is clean and that the VST3 and CLAP load there (a probe library
+      loaded with local symbols, Reaper itself not tried), and check the JACK/LV2 builds. `ctest` in a JIT build passes 11 of 11 with the plugins served (`chain` is skipped without a server). The `chain_file` failure on Cascade (the adapter fed a skin's `jig:asset` to the module, which has no loader for it, so every skinned plugin failed to load natively) was fixed in `Chain.cpp` 2026-10-30.
 - [ ] **Run plugin-universe's own raw shape over the regenerated profiles** (every `profile.ttl` now declares `trn:Jig`, 2026-10-24). Its repository is the check that matters.
 - [ ] **MIDI loops are refused** (error kind `midi-cycle`, `docs/latency.md`). This was an agent decision, not the
       maintainer's; say if they should be allowed with some limit instead.

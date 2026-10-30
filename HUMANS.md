@@ -5,6 +5,14 @@ Actions only you can take. Everything else is in [AGENTS.md](AGENTS.md) and
 
 Ordered by what blocks most.
 
+## 0. Rebuild the adapter and try Mop in Reaper
+
+The Mop glitch fix is built and measured (Mop 1.46x to 0.046x realtime, TODO.md). Reconfigure so `native/build` picks up the
+JIT: `cmake -S native -B native/build` then `cmake --build native/build -j`. It needs `llvm-18-dev libedit-dev
+libcurl4-openssl-dev libpolly-18-dev`, which are installed here. Then load Mop in Reaper and say whether it is clean, and
+whether the VST3 loads at all (a probe library loaded fine; Reaper has not been tried). Section 2 still wants your report of the
+original glitch.
+
 ## 1. Listen, and use it with real hands
 
 Everything below was checked by code or by reading a meter, never by ear or by a real finger. `npm run serve`, open
