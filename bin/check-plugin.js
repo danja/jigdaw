@@ -28,6 +28,7 @@ import { resolve, dirname, join } from 'node:path'
 import { readdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { checkPlugin, checkRenderBudget } from '../src/host/PluginCheck.js'
+import { measureFrequencyResponse } from '../src/host/PluginAnalysis.js'
 import { shapeValidatorFromFile } from '../src/validate/files.js'
 import { parseText } from '../src/rdf/parse.js'
 import { readProfile } from '../src/rdf/ProfileReader.js'
@@ -54,6 +55,7 @@ function parseArgs (argv) {
   const roots = {}
   const notes = []
   const members = []
+  let sweep = null
   let seconds = 2
   let sampleRate = 48000
   let peakBound = 1
@@ -83,6 +85,17 @@ function parseArgs (argv) {
       validate = false
     } else if (arg === '--measure-budget') {
       measureBudget = true
+    } else if (arg === '--frequency') {
+      const value = argv[++i]
+      const frequency = Number(value)
+      if (!Number.isFinite(frequency) || frequency <= 0) throw new Error('--frequency needs a positive value')
+      sweep = [frequency]
+    } else if (arg === '--sweep') {
+      const value = argv[++i]
+      if (!value) throw new Error('--sweep needs a comma-separated list of positive frequencies')
+      const list = value.split(',').map(v => Number(v.trim())).filter(v => Number.isFinite(v) && v > 0)
+      if (list.length === 0) throw new Error('--sweep needs a comma-separated list of positive frequencies')
+      sweep = list
     } else if (arg === '--note') {
       const value = argv[++i]
       const match = /^(\d+)@([\d.]+)(?::([\d.]+))?$/.exec(value ?? '')
@@ -94,12 +107,13 @@ function parseArgs (argv) {
       iris.push(arg)
     }
   }
-  return { iris, roots, members, notes, seconds, sampleRate, peakBound, validate, measureBudget }
+  return { iris, roots, members, notes, sweep, seconds, sampleRate, peakBound, validate, measureBudget }
 }
 
 function usage () {
   console.error('usage: node bin/check-plugin.js [--root PREFIX=DIR]... [--seconds N] ' +
-    '[--members DIR] [--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--measure-budget] [--no-validate] IRI...')
+    '[--members DIR] [--frequency N | --sweep FREQ1,FREQ2,...] ' +
+    '[--note NOTE@ONTIME[:OFFTIME]]... [--peak-bound N] [--measure-budget] [--no-validate] IRI...')
 }
 
 async function main () {
@@ -129,6 +143,25 @@ async function main () {
   for (const { note, on, off } of args.notes) {
     notes.push({ frame: Math.round(on * args.sampleRate), note })
     if (off !== null) notes.push({ frame: Math.round(off * args.sampleRate), note, off: true })
+  }
+
+  if (args.sweep) {
+    if (args.iris.length !== 1) {
+      console.error('frequency checks need exactly one plugin IRI')
+      process.exit(2)
+    }
+    const response = await measureFrequencyResponse({
+      iri: args.iris[0],
+      roots: args.roots,
+      frequencies: args.sweep,
+      seconds: args.seconds,
+      sampleRate: args.sampleRate,
+      validator
+    })
+    for (const point of response) {
+      console.log(`${point.frequency} Hz: ${point.gainDb.toFixed(2)} dB (in ${point.inputRms.toFixed(6)}, out ${point.outputRms.toFixed(6)})`)
+    }
+    process.exit(0)
   }
 
   let result

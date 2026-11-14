@@ -1,0 +1,78 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/jigeqa/",
+  "label": "JigEQa",
+  "comment": "Minimal three-band equalizer benchmark with only the generated panel. It serves as the baseline for measuring UI cost without a custom editor.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "jigeqa",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "EQ"
+  ],
+  "cautions": [
+    "This is the baseline for the JigEQ ABC suite: the DSP stays the same across the variants and only the interface changes."
+  ],
+  "format": "trn:Jig",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "stateless": true
+  },
+  "resources": {
+    "processor": "jigeqa-processor.js"
+  },
+  "ports": [
+    {
+      "symbol": "enabled",
+      "name": "Enabled",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "low_gain",
+      "name": "Low Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "mid_gain",
+      "name": "Mid Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "high_gain",
+      "name": "High Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 3
+    }
+  ]
+}

@@ -891,6 +891,99 @@
       ]
     },
     {
+      "iri": "https://strandz.it/jigdaw/plugins/jigeqa/",
+      "label": "JigEQa",
+      "comment": "Minimal three-band equalizer benchmark with only the generated panel. It serves as the baseline for measuring UI cost without a custom editor.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jigeqa/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "This is the baseline for the JigEQ ABC suite: the DSP stays the same across the variants and only the interface changes."
+      ],
+      "parameters": [
+        "enabled",
+        "low_gain",
+        "mid_gain",
+        "high_gain"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/jigeqb/",
+      "label": "JigEQb",
+      "comment": "Three-band equalizer benchmark with a declarative SVG skin. This variant tests the cost and clarity of a drawn interface without custom JavaScript code behind the controls.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jigeqb/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "The DSP is shared with JigEQa and JigEQc. The only intentional difference is the SVG skin, which is data and not executable code."
+      ],
+      "parameters": [
+        "enabled",
+        "low_gain",
+        "mid_gain",
+        "high_gain"
+      ]
+    },
+    {
+      "iri": "https://strandz.it/jigdaw/plugins/jigeqc/",
+      "label": "JigEQc",
+      "comment": "Three-band equalizer benchmark with an HTML UI. It shares the same DSP path as JigEQa and JigEQb, while measuring the cost of a custom browser-side editor.",
+      "vendor": "danja",
+      "homepage": "https://strandz.it/jigdaw/plugins/jigeqc/",
+      "web": true,
+      "local": true,
+      "roles": [
+        "AudioEffect"
+      ],
+      "formats": [
+        "Jig"
+      ],
+      "accepts": [
+        "Audio"
+      ],
+      "produces": [
+        "Audio"
+      ],
+      "requires": [],
+      "cautions": [
+        "The HTML UI is intentionally separate from the DSP. This keeps the comparison honest: the same filters are used in each variant, with only the controls and presentation different."
+      ],
+      "parameters": [
+        "enabled",
+        "low_gain",
+        "mid_gain",
+        "high_gain"
+      ]
+    },
+    {
       "iri": "https://strandz.it/jigdaw/plugins/keyframe/",
       "label": "Keyframe",
       "comment": "Stretches audio in time and shifts its pitch, independently, by reducing the signal to its local extrema and crossfading between playheads over a span the extrema's own density chooses.",

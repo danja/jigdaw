@@ -10,7 +10,8 @@ const result = await build({
   entryPoints: {
     'app.bundle': resolve(root, 'web/app.js'),
     'simple.bundle': resolve(root, 'web/simple.js'),
-    'reel.bundle': resolve(root, 'web/reel.js')
+    'reel.bundle': resolve(root, 'web/reel.js'),
+    'jigeq-abc.bundle': resolve(root, 'web/jigeq-abc.js')
   },
   bundle: true,
   format: 'esm',

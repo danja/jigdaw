@@ -38,6 +38,9 @@
         <../plugins/dynamix/> ,
         <../plugins/ferrite/> ,
         <../plugins/ground/> ,
+        <../plugins/jigeqa/> ,
+        <../plugins/jigeqb/> ,
+        <../plugins/jigeqc/> ,
         <../plugins/jsfx-gain-trim/> ,
         <../plugins/jsfx-one-pole-filter/> ,
         <../plugins/jsfx-soft-clipper/> ,
@@ -75,6 +78,9 @@
 <../plugins/dynamix/> rdfs:label "Dynamix" .
 <../plugins/ferrite/> rdfs:label "Ferrite" .
 <../plugins/ground/> rdfs:label "Ground" .
+<../plugins/jigeqa/> rdfs:label "JigEQa" .
+<../plugins/jigeqb/> rdfs:label "JigEQb" .
+<../plugins/jigeqc/> rdfs:label "JigEQc" .
 <../plugins/jsfx-gain-trim/> rdfs:label "JigDAW Gain Trim" .
 <../plugins/jsfx-one-pole-filter/> rdfs:label "JigDAW One-Pole Filter" .
 <../plugins/jsfx-soft-clipper/> rdfs:label "JigDAW Soft Clipper" .

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JigEQc</title>
+  <style>
+    :root { color-scheme: dark; --bg: #0f1723; --panel: #172534; --line: #4da3ff; --text: #edf6ff; --muted: #abbee0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, sans-serif; }
+    main { max-width: 420px; margin: 0 auto; padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+    h1 { margin: 0 0 14px; font-size: 20px; }
+    .row { display: grid; grid-template-columns: 100px 1fr 72px; gap: 10px; align-items: center; margin-bottom: 12px; }
+    label { color: var(--muted); }
+    input[type="range"] { width: 100%; accent-color: #74b9ff; }
+    output { text-align: right; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+    .toggle { display: flex; align-items: center; gap: 12px; }
+    .toggle input { width: 20px; height: 20px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>JigEQc</h1>
+    <div class="row toggle">
+      <label for="enabled">Enabled</label>
+      <input id="enabled" type="checkbox" checked>
+      <output id="enabled-value">On</output>
+    </div>
+    <div class="row">
+      <label for="low_gain">Low</label>
+      <input id="low_gain" type="range" min="-18" max="18" step="0.1" value="0">
+      <output id="low_gain-value">0 dB</output>
+    </div>
+    <div class="row">
+      <label for="mid_gain">Mid</label>
+      <input id="mid_gain" type="range" min="-18" max="18" step="0.1" value="0">
+      <output id="mid_gain-value">0 dB</output>
+    </div>
+    <div class="row">
+      <label for="high_gain">High</label>
+      <input id="high_gain" type="range" min="-18" max="18" step="0.1" value="0">
+      <output id="high_gain-value">0 dB</output>
+    </div>
+  </main>
+  <script>
+    'use strict'
+    const host = null
+    const fields = ['low_gain', 'mid_gain', 'high_gain']
+    const format = value => `${Number(value).toFixed(1)} dB`
+    for (const key of fields) {
+      const input = document.getElementById(key)
+      const output = document.getElementById(`${key}-value`)
+      input.addEventListener('input', () => {
+        output.textContent = format(input.value)
+        parent.postMessage({ type: 'parameter', symbol: key, value: Number(input.value) }, '*')
+      })
+    }
+    const enabled = document.getElementById('enabled')
+    const enabledValue = document.getElementById('enabled-value')
+    enabled.addEventListener('change', () => {
+      enabledValue.textContent = enabled.checked ? 'On' : 'Off'
+      parent.postMessage({ type: 'parameter', symbol: 'enabled', value: enabled.checked ? 1 : 0 }, '*')
+    })
+    parent.postMessage({ type: 'ready' }, '*')
+  </script>
+</body>
+</html>

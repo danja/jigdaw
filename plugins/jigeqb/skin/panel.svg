@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 220" role="img" aria-labelledby="title desc">
+  <title id="title">JigEQb panel</title>
+  <desc id="desc">A compact three-band EQ panel with three rotary controls and a master toggle.</desc>
+  <rect width="360" height="220" rx="18" fill="#121821"/>
+  <rect x="18" y="18" width="324" height="184" rx="14" fill="#1f2d39" stroke="#4dc5ff" stroke-width="2"/>
+  <g id="enabled-switch">
+    <rect x="42" y="36" width="64" height="30" rx="15" fill="#2a3d4f"/>
+    <circle cx="76" cy="51" r="11" fill="#9ad4ff"/>
+  </g>
+  <text x="120" y="58" fill="#edf7ff" font-size="16" font-family="sans-serif">On</text>
+
+  <g id="low-knob">
+    <circle cx="86" cy="128" r="34" fill="#dfe9f5" stroke="#8aa0b9" stroke-width="2"/>
+    <circle id="low-hub" cx="86" cy="128" r="8" fill="#2b3b50"/>
+    <path d="M86,106 L86,122" stroke="#163a52" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="48" y="190" fill="#edf7ff" font-size="14" font-family="sans-serif">Low</text>
+  <text id="low-value" x="52" y="170" fill="#9ad4ff" font-size="12" font-family="monospace">0 dB</text>
+
+  <g id="mid-knob">
+    <circle cx="180" cy="128" r="34" fill="#dfe9f5" stroke="#8aa0b9" stroke-width="2"/>
+    <circle id="mid-hub" cx="180" cy="128" r="8" fill="#2b3b50"/>
+    <path d="M180,106 L180,122" stroke="#163a52" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="148" y="190" fill="#edf7ff" font-size="14" font-family="sans-serif">Mid</text>
+  <text id="mid-value" x="152" y="170" fill="#9ad4ff" font-size="12" font-family="monospace">0 dB</text>
+
+  <g id="high-knob">
+    <circle cx="274" cy="128" r="34" fill="#dfe9f5" stroke="#8aa0b9" stroke-width="2"/>
+    <circle id="high-hub" cx="274" cy="128" r="8" fill="#2b3b50"/>
+    <path d="M274,106 L274,122" stroke="#163a52" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="236" y="190" fill="#edf7ff" font-size="14" font-family="sans-serif">High</text>
+  <text id="high-value" x="240" y="170" fill="#9ad4ff" font-size="12" font-family="monospace">0 dB</text>
+</svg>

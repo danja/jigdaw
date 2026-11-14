@@ -1,0 +1,91 @@
+{
+  "iri": "https://strandz.it/jigdaw/plugins/jigeqb/",
+  "label": "JigEQb",
+  "comment": "Three-band equalizer benchmark with a declarative SVG skin. This variant tests the cost and clarity of a drawn interface without custom JavaScript code behind the controls.",
+  "vendor": "danja",
+  "developer": "http://danny.ayers.name",
+  "version": "1.0.0",
+  "registeredName": "jigeqb",
+  "roles": [
+    "trn:AudioEffect"
+  ],
+  "accepts": [
+    "trn:Audio"
+  ],
+  "produces": [
+    "trn:Audio"
+  ],
+  "genres": [
+    "EQ"
+  ],
+  "cautions": [
+    "The DSP is shared with JigEQa and JigEQc. The only intentional difference is the SVG skin, which is data and not executable code."
+  ],
+  "format": "trn:Jig",
+  "licenceId": "Apache-2.0",
+  "requires": [],
+  "prefers": [],
+  "shape": {
+    "audioInputs": 1,
+    "inputChannels": 2,
+    "audioOutputs": 1,
+    "outputChannels": 2,
+    "renderQuantum": 128,
+    "latencyFrames": 0,
+    "stateless": true
+  },
+  "resources": {
+    "processor": "jigeqb-processor.js"
+  },
+  "skin": {
+    "file": "skin/skin.ttl",
+    "artwork": "skin/panel.svg",
+    "controls": [
+      { "id": "enabled", "kind": "toggle", "port": "enabled", "element": "enabled-switch" },
+      { "id": "low-gain", "kind": "rotary", "port": "low_gain", "element": "low-knob", "pivot": "low-hub", "angleMin": -135, "angleMax": 135 },
+      { "id": "low-readout", "kind": "readout", "port": "low_gain", "element": "low-value" },
+      { "id": "mid-gain", "kind": "rotary", "port": "mid_gain", "element": "mid-knob", "pivot": "mid-hub", "angleMin": -135, "angleMax": 135 },
+      { "id": "mid-readout", "kind": "readout", "port": "mid_gain", "element": "mid-value" },
+      { "id": "high-gain", "kind": "rotary", "port": "high_gain", "element": "high-knob", "pivot": "high-hub", "angleMin": -135, "angleMax": 135 },
+      { "id": "high-readout", "kind": "readout", "port": "high_gain", "element": "high-value" }
+    ]
+  },
+  "ports": [
+    {
+      "symbol": "enabled",
+      "name": "Enabled",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "toggled": true,
+      "paramIndex": 0
+    },
+    {
+      "symbol": "low_gain",
+      "name": "Low Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 1
+    },
+    {
+      "symbol": "mid_gain",
+      "name": "Mid Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 2
+    },
+    {
+      "symbol": "high_gain",
+      "name": "High Gain",
+      "default": 0,
+      "minimum": -18,
+      "maximum": 18,
+      "unit": "db",
+      "paramIndex": 3
+    }
+  ]
+}

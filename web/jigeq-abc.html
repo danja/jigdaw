@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101216">
+  <link rel="stylesheet" href="/panel.css">
+  <title>JigEQ A/B/C visual harness</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#101216; --panel:#181b21; --fg:#e8eaed; --dim:#a3aab5;
+      --line:#3a414c; --accent:#4b9bea; --focus:#8dbbff;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,sans-serif; }
+    main { width:min(100%, 980px); margin:0 auto; padding:24px; }
+    h1 { margin:0; font-size:clamp(1.35rem, 3vw, 2rem); }
+    .intro { color:var(--dim); margin:6px 0 20px; }
+    .audio { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:14px;
+      border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+    button, input { font:inherit; }
+    button { min-height:44px; padding:8px 16px; border:1px solid var(--line); border-radius:6px;
+      color:var(--fg); background:#252b34; cursor:pointer; }
+    button:hover { background:#303946; }
+    button:disabled { opacity:.55; cursor:wait; }
+    :focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+    .audio label { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:var(--dim); }
+    .audio input[type=range] { width:min(220px, 45vw); min-height:44px; }
+    output { min-width:4.5em; color:var(--fg); font-variant-numeric:tabular-nums; }
+    #status { flex:1 1 100%; margin:0; min-height:1.5em; color:var(--dim); }
+    #status[data-state=error] { color:#ff9b9b; }
+    .tabs { display:flex; gap:8px; margin:20px 0 0; border-bottom:1px solid var(--line); }
+    .tabs button { min-width:88px; border-radius:6px 6px 0 0; }
+    .tabs button[aria-selected=true] { border-color:var(--accent); background:#20334a; color:#fff; }
+    .tab-panel { padding:18px 0; }
+    .plugin-note { color:var(--dim); margin:0 0 12px; }
+    .plugin-note[data-state=error] { color:#ff9b9b; }
+    .plugin-surface { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); align-items:start; gap:18px; }
+    .plugin-surface > * { min-width:0; }
+    .panel { padding:16px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+    .plugin-frame { display:block; width:100%; border:1px solid var(--line); border-radius:8px; background:#0f1723; }
+    .editor-title { margin:0 0 8px; font-size:1rem; }
+    @media (max-width:720px) {
+      main { padding:16px; }
+      .plugin-surface { grid-template-columns:minmax(0,1fr); }
+      .tabs { gap:4px; }
+      .tabs button { flex:1; min-width:0; padding:8px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>JigEQ A/B/C visual harness</h1>
+    <p class="intro">Compare the generated panel, SVG skin and HTML editor. Start noise to hear the selected EQ through your default audio output.</p>
+    <section class="audio" aria-label="Audio test signal">
+      <button id="audio-toggle" type="button" disabled>Start white noise</button>
+      <label for="noise-level">Noise input
+        <input id="noise-level" type="range" min="-36" max="-18" step="1" value="-24">
+        <output id="noise-level-value" for="noise-level">-24 dB</output>
+      </label>
+      <label for="output-level">Output
+        <input id="output-level" type="range" min="-24" max="0" step="1" value="-6">
+        <output id="output-level-value" for="output-level">-6 dB</output>
+      </label>
+      <p id="status" role="status" aria-live="polite">Loading plugin profiles…</p>
+    </section>
+
+    <div id="tabs" class="tabs" role="tablist" aria-label="Equalizer variants">
+      <button id="tab-a" type="button" role="tab" aria-controls="panel-a" aria-selected="true" tabindex="0">JigEQa</button>
+      <button id="tab-b" type="button" role="tab" aria-controls="panel-b" aria-selected="false" tabindex="-1">JigEQb</button>
+      <button id="tab-c" type="button" role="tab" aria-controls="panel-c" aria-selected="false" tabindex="-1">JigEQc</button>
+    </div>
+    <section id="panel-a" class="tab-panel" role="tabpanel" aria-labelledby="tab-a">
+      <p class="plugin-note" role="status" aria-live="polite">Generated panel</p>
+      <div id="surface-a" class="plugin-surface"></div>
+    </section>
+    <section id="panel-b" class="tab-panel" role="tabpanel" aria-labelledby="tab-b" hidden>
+      <p class="plugin-note" role="status" aria-live="polite">SVG skin</p>
+      <div id="surface-b" class="plugin-surface"></div>
+    </section>
+    <section id="panel-c" class="tab-panel" role="tabpanel" aria-labelledby="tab-c" hidden>
+      <p class="plugin-note" role="status" aria-live="polite">Generated panel and HTML editor</p>
+      <div id="surface-c" class="plugin-surface"></div>
+    </section>
+  </main>
+  <script type="module" src="/jigeq-abc.bundle.js"></script>
+</body>
+</html>
